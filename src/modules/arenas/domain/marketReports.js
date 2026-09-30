@@ -16,6 +16,8 @@
  * Sem I/O e sem React — apenas cálculo, testável.
  */
 
+import { todayISO } from './calendar.js';
+
 export const REPORT_PERIOD = Object.freeze({ WEEKLY: 'weekly', MONTHLY: 'monthly' });
 export const REPORT_PERIODS_LIST = Object.values(REPORT_PERIOD);
 
@@ -52,7 +54,7 @@ export function isoWeek(date) {
 
 /** Chave do período de uma data ('YYYY-MM' ou 'YYYY-Www'). */
 export function periodKeyFor(ymd, periodType) {
-  const d = parseYmd(ymd) || parseYmd(new Date().toISOString().slice(0, 10));
+  const d = parseYmd(ymd) || parseYmd(todayISO());
   if (periodType === REPORT_PERIOD.WEEKLY) {
     const { year, week } = isoWeek(d);
     return `${year}-W${pad2(week)}`;
@@ -117,7 +119,7 @@ export function inRange(ymd, start, end) {
  */
 export function listActivePeriods(entries = [], exits = [], periodType, today) {
   const keys = new Set();
-  const now = today || new Date().toISOString().slice(0, 10);
+  const now = today || todayISO();
   keys.add(periodKeyFor(now, periodType));
   for (const e of entries) if (e?.date) keys.add(periodKeyFor(e.date, periodType));
   for (const x of exits) if (x?.date) keys.add(periodKeyFor(x.date, periodType));

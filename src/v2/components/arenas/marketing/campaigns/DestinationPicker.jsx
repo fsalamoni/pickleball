@@ -67,8 +67,12 @@ function useOpcoes(arenaId, alvo) {
     if (alvo === 'product') {
       return {
         q: produtos,
+        // O esgotado continua escolhível (a campanha dura mais que o estoque de
+        // hoje), mas a arena sabe: a loja avisa quem chegar pela campanha.
         opcoes: (produtos.data || []).map((p) => ({
-          id: p.id, label: `${p.name}${Number(p.price) > 0 ? ` · ${formatPrice(p.price)}` : ''}`,
+          id: p.id,
+          label: `${p.name}${Number(p.price) > 0 ? ` · ${formatPrice(p.price)}` : ''}`
+            + (p.motivo === 'esgotado' ? ' · esgotado agora' : p.motivo === 'vencido' ? ' · validade vencida' : ''),
         })),
         vazio: 'Nenhum produto está à venda pelo app. Marque "Vender pelo app" no Mercado.',
       };

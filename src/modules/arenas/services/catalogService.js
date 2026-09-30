@@ -25,6 +25,7 @@ import {
   CATALOG_PRODUCT_SOURCE, CATALOG_PRODUCT_STATUS,
 } from '../domain/productCatalog.js';
 import { buildCatalogSeed, buildSeedCatalogProducts } from '../domain/catalogSeed.js';
+import { todayISO } from '../domain/calendar.js';
 
 const COL = ARENA_COLLECTIONS.catalog_products;
 
@@ -172,7 +173,7 @@ export async function adoptCatalogToArena(arenaId, catalogProduct, arenaFields =
   if (Number.isFinite(qty) && qty > 0) {
     await addInventoryEntry(arenaId, {
       product_id: productId,
-      date: new Date().toISOString().slice(0, 10),
+      date: todayISO(),
       quantity: qty,
       unit_cost: Number(arenaFields.purchase_price) || 0,
       supplier: arenaFields.supplier || '',

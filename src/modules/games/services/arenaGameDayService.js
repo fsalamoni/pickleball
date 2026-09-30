@@ -40,6 +40,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS } from '@/modules/arenas/domain/constants';
 import { checkBookingConflict } from '@/modules/arenas/domain/booking_conflict';
+import { playGenderOf } from '@/modules/athletes/domain/profileMeta';
 import { GAME_DAY_STATUS, GD_PARTICIPANT_SOURCE, GAME_DAY_VISIBILITY } from '../domain/gameDay.js';
 import {
   normalizeArenaGameDayInput, findGameDayOverlaps, slotsAsBookingCandidates,
@@ -356,7 +357,7 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
     photo_url: profile?.photo_url || user?.photoURL || null,
     source: GD_PARTICIPANT_SOURCE.JOINED,
     play_level: profile?.level || profile?.leveling_level || null,
-    play_gender: profile?.gender || null,
+    play_gender: playGenderOf(profile),
     arena_court_id: courtId || null,
   }, user);
 

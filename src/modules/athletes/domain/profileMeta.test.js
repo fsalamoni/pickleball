@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   COURT_SIDE, courtSideLabel, normalizeCourtSide,
-  PLATFORM_INTEREST, PLATFORM_INTEREST_META, interestLabel, interestMeta, sanitizeInterests,
+  PLATFORM_INTEREST, PLATFORM_INTEREST_META, interestLabel, interestMeta, sanitizeInterests, playGenderOf,
 } from './profileMeta.js';
 
 describe('court side', () => {
@@ -37,5 +37,22 @@ describe('interesses', () => {
     ]);
     expect(out).toEqual([PLATFORM_INTEREST.CLUBS, PLATFORM_INTEREST.RANKING]);
     expect(sanitizeInterests(null)).toEqual([]);
+  });
+});
+
+describe('playGenderOf — em que lado das duplas mistas a pessoa entra', () => {
+  it('⭐ vale a CATEGORIA em que joga, antes do gênero do perfil', () => {
+    expect(playGenderOf({ competition_gender: 'female', gender: 'other' })).toBe('female');
+    expect(playGenderOf({ competition_gender: 'male', gender: 'female' })).toBe('male');
+  });
+
+  it('sem categoria, usa o gênero do perfil como reserva', () => {
+    expect(playGenderOf({ gender: 'male' })).toBe('male');
+  });
+
+  it('"Outro" e "Prefiro não informar" não viram palpite', () => {
+    expect(playGenderOf({ gender: 'other' })).toBeNull();
+    expect(playGenderOf({ gender: 'prefer_not_to_say' })).toBeNull();
+    expect(playGenderOf(null)).toBeNull();
   });
 });

@@ -68,7 +68,7 @@ import {
   checklistRunState, checklistsPendingToday, isMaintenanceOpen,
   maintenanceDates, normalizeStaffMember, staffByRole, staffOnDuty,
 } from '@/modules/arenas/domain/operations';
-import { calculateStock, expiryStatus, stockStatus } from '@/modules/arenas/domain/inventory';
+import { STOCK_SITUATION, stockPosition } from '@/modules/arenas/domain/inventory';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -906,21 +906,24 @@ export function ArenaOperationsPanel({ arena, view }) {
 
   const pendencias = useMemo(() => checklistsPendingToday(checklists, dia), [checklists, dia]);
 
-  // O alerta de estoque é o que a arena precisa ver de manhã. A quantidade
-  // sai de entradas − saídas (não há campo `quantity` no produto), e só entra
-  // na lista o que está acabando, esgotado, vencido ou perto de vencer.
+  // O alerta de estoque é o que a arena precisa ver de manhã. A situação sai
+  // de `stockPosition` — a MESMA conta do Mercado: só entra o que está
+  // acabando ou esgotado (de produto que a arena já comprou alguma vez) e a
+  // validade do que está NA PRATELEIRA. 🐞 Antes, todo produto puxado do
+  // catálogo e nunca comprado aparecia aqui como "Esgotado".
   const estoqueAlerta = useMemo(() => (qProdutos.data || [])
-    .filter((p) => p.active !== false)
     .map((p) => {
-      const { quantity } = calculateStock(p.id, qEntradas.data || [], qSaidas.data || []);
+      const pos = stockPosition(p, qEntradas.data || [], qSaidas.data || [], { today: dia });
       return {
         ...p,
-        quantity,
-        estoque: stockStatus(quantity, p.min_stock),
-        validade: expiryStatus(p.expiry_date, { today: dia }),
+        quantity: Math.max(0, pos.quantity),
+        estoque: pos.situacao === STOCK_SITUATION.ESGOTADO ? 'out'
+          : pos.situacao === STOCK_SITUATION.BAIXO ? 'low' : 'ok',
+        validade: pos.alertaValidade ? pos.validade : null,
+        alerta: pos.repor || pos.alertaValidade,
       };
     })
-    .filter((p) => p.estoque !== 'ok' || p.validade === 'expired' || p.validade === 'soon')
+    .filter((p) => p.alerta)
     .sort((a, b) => a.quantity - b.quantity),
   [qProdutos.data, qEntradas.data, qSaidas.data, dia]);
   const estoqueFalhou = qProdutos.isError || qEntradas.isError || qSaidas.isError;

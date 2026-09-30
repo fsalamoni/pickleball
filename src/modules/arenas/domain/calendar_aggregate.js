@@ -39,7 +39,7 @@ import { generateTimeSlots } from './slot_status.js';
 import { weekdayOf } from './booking.js';
 // A soma de dias já existe em `calendar.js` (local, sem escorregar de fuso).
 // Uma segunda cópia seria uma segunda chance de errar a virada do mês.
-import { addDaysISO } from './calendar.js';
+import { addDaysISO, formatDateISO } from './calendar.js';
 
 const STEP = 60; // min — 1 hora
 
@@ -307,7 +307,7 @@ function buildMonthGrid(yearMonth) {
   for (let i = 0; i < 42; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    grid.push(d.toISOString().slice(0, 10));
+    grid.push(formatDateISO(d));
   }
   return grid;
 }

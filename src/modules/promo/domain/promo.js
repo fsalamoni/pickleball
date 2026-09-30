@@ -29,6 +29,7 @@ import {
 } from '../../arenas/domain/campaignBanner.js';
 import { BANNER_REGION, cityKey, normalizeLocality } from '../../arenas/domain/homeBanners.js';
 import { LESSON_COUPON_STATUS } from './lessonCoupon.js';
+import { BR_UFS } from '../../../core/domain/ufs.js';
 
 /* ------------------------------------------------------------------ */
 /*  Emissor                                                           */
@@ -147,11 +148,8 @@ export const PROMO_REACH = Object.freeze({
 
 const uf = (v) => String(v || '').trim().toUpperCase().slice(0, 2);
 
-/** As 27 unidades da federação, para os seletores de estado. */
-export const BR_UFS = Object.freeze([
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
-  'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-]);
+/** As 27 unidades da federação, para os seletores de estado (fonte única no núcleo). */
+export { BR_UFS };
 
 /**
  * O alcance normalizado. Estado exige a UF; cidade exige cidade e UF. Sem o

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, sanitizeAdminUserPatch,
   diffAdminUserPatch, missingUserFields, isUserRecordComplete, userRecordStatus,
-  validateAdminEdit, fieldOptions, isValidOptionValue, derivedFieldsFor,
+  validateAdminEdit, fieldOptions, isValidOptionValue, derivedFieldsFor, isRequiredField,
 } from './adminUserEdit.js';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { COURT_SIDE_OPTIONS } from '@/modules/athletes/domain/profileMeta';
@@ -134,22 +134,41 @@ describe('missingUserFields — a parte "complementar o que falta"', () => {
     expect(chaves).not.toContain('platform_name');
   });
 
-  it('⭐ separa o que é OBRIGATÓRIO do que é opcional', () => {
+  it('⭐ separa o que é OBRIGATÓRIO do que é opcional — a mesma regra do cadastro', () => {
     const s = userRecordStatus({ platform_name: 'Ana' });
     expect(s.complete).toBe(false);
+    // 🐞 antes eram só nome, nascimento, telefone e experiência: o painel dizia
+    // "completo" de um cadastro que o assistente ia reabrir pedindo o resto.
     expect(s.missingRequired.map((f) => f.key).sort())
-      .toEqual(['birth_date', 'phone', 'pickleball_experience']);
+      .toEqual(['birth_date', 'city', 'court_side', 'gender', 'phone', 'pickleball_experience', 'state']);
     expect(s.filledCount).toBe(1);
     expect(s.totalCount).toBe(ADMIN_EDITABLE_FIELDS.length);
   });
 
+  const SO_OBRIGATORIOS = {
+    platform_name: 'Ana', birth_date: '1990-01-01', phone: '51999999999',
+    pickleball_experience: '1-2 anos', gender: 'female', city: 'Porto Alegre', state: 'RS',
+    court_side: 'left',
+  };
+
   it('cadastro só com obrigatórios já conta como completo', () => {
-    const s = userRecordStatus({
-      platform_name: 'Ana', birth_date: '1990-01-01', phone: '51999999999',
-      pickleball_experience: '1-2 anos',
-    });
+    const s = userRecordStatus(SO_OBRIGATORIOS);
     expect(s.complete).toBe(true);
     expect(s.missingCount).toBeGreaterThan(0); // ainda há opcionais a preencher
+  });
+
+  it('⭐ com o cadastro essencial, categoria e nível passam a ser obrigatórios', () => {
+    const essencial = { essencial: true };
+    const s = userRecordStatus(SO_OBRIGATORIOS, essencial);
+    expect(s.complete).toBe(false);
+    expect(s.missingRequired.map((f) => f.key).sort()).toEqual(['competition_gender', 'leveling_level']);
+    // o nível vale também pelo rating DUPR
+    const comDupr = userRecordStatus({ ...SO_OBRIGATORIOS, competition_gender: 'female', dupr_rating: 3.5 }, essencial);
+    expect(comDupr.complete).toBe(true);
+    expect(isUserRecordComplete({ ...SO_OBRIGATORIOS, competition_gender: 'male', leveling_level: 'x' }, essencial)).toBe(true);
+    // sem a flag, nada disso é cobrado
+    expect(isUserRecordComplete(SO_OBRIGATORIOS)).toBe(true);
+    expect(isRequiredField(ADMIN_EDITABLE_FIELDS.find((f) => f.key === 'leveling_level'))).toBe(false);
   });
 
   it('documento vazio não quebra', () => {

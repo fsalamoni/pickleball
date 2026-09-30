@@ -29,7 +29,7 @@ import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useShopProducts, useMySales, useMyPayments } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-import { myOrderView, shopHasStock } from '@/modules/arenas/domain/shop';
+import { myOrderView, shopAvailable, shopHasStock } from '@/modules/arenas/domain/shop';
 import ShopProductCard from '@/v2/components/arenas/shop/ShopProductCard';
 import ShopCart from '@/v2/components/arenas/shop/ShopCart';
 import MyOrderCard from '@/v2/components/arenas/shop/MyOrderCard';
@@ -85,7 +85,11 @@ export default function V2ArenaPDV() {
 
   const [carrinho, setCarrinho] = useState({});
 
-  const produtos = useMemo(() => produtosQ.data || [], [produtosQ.data]);
+  // Na vitrine vai só o que pode ser pedido agora: esgotado e vencido saem da
+  // frente. A lista inteira fica para saber se a arena vende algo pelo app e
+  // se o produto de uma campanha existe (e só esgotou).
+  const marcados = useMemo(() => produtosQ.data || [], [produtosQ.data]);
+  const produtos = useMemo(() => shopAvailable(marcados), [marcados]);
   const porCategoria = useMemo(() => {
     const m = new Map();
     produtos.forEach((p) => m.set(p.category, [...(m.get(p.category) || []), p]));
@@ -95,6 +99,12 @@ export default function V2ArenaPDV() {
   const destaque = useMemo(
     () => (produtoDaCampanha ? produtos.find((p) => p.id === produtoDaCampanha) || null : null),
     [produtos, produtoDaCampanha],
+  );
+  // O produto da campanha existe mas não pode ser pedido agora — dizer isso,
+  // em vez de deixar a pessoa procurando na lista algo que não está lá.
+  const destaqueIndisponivel = useMemo(
+    () => (produtoDaCampanha && !destaque ? marcados.find((p) => p.id === produtoDaCampanha) || null : null),
+    [marcados, produtoDaCampanha, destaque],
   );
 
   const podeGerir = arena?.owner_id === user?.uid
@@ -152,6 +162,14 @@ export default function V2ArenaPDV() {
 
       <MinhasCompras arena={arena} temPix={temPix} />
 
+      {destaqueIndisponivel && (
+        <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>{destaqueIndisponivel.name}</strong>, o produto desta campanha,{' '}
+          {destaqueIndisponivel.motivo === 'vencido' ? 'saiu da loja por enquanto.' : 'esgotou por enquanto.'}
+          {' '}O resto do que a arena vende está logo abaixo.
+        </p>
+      )}
+
       {destaque && (
         <V2Surface className="mb-4 ring-2 ring-acid">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
@@ -179,7 +197,15 @@ export default function V2ArenaPDV() {
             description="Tente de novo em instantes." onRetry={() => produtosQ.refetch()} />
         )}
         {produtosQ.isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
-        {produtosQ.isSuccess && produtos.length === 0 && (
+        {produtosQ.isSuccess && produtos.length === 0 && (marcados.length > 0 ? (
+          <V2EmptyState
+            icon={ShoppingBag}
+            title="Tudo o que a arena vende pelo app esgotou por enquanto"
+            description={podeGerir
+              ? 'Registre a compra no Mercado (aba Compras) e o produto volta para a loja na hora.'
+              : 'Quando a arena repuser, os produtos voltam a aparecer aqui.'}
+          />
+        ) : (
           <V2EmptyState
             icon={ShoppingBag}
             title="A arena ainda não colocou produtos à venda pelo app"
@@ -187,7 +213,7 @@ export default function V2ArenaPDV() {
               ? 'No Mercado, edite o produto e marque "Vender pelo app".'
               : 'Quando ela colocar, o que estiver à venda aparece aqui.'}
           />
-        )}
+        ))}
 
         <div className="space-y-4">
           {porCategoria.map(([categoria, itens]) => (

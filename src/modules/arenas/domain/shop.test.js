@@ -3,7 +3,7 @@ import {
   SHOP_CATALOG, isSoldOnline, shopProducts, shopHasStock, priceCartFromCatalog, exitsForSale,
   stockDriftFixes, counterSummary, myShopStatus, salesOutsideMercado, trackedStock,
   quantitiesByProduct, saleTotalMismatch, saleShares, isSaleFullyPaid, saleDateISO, saleTimeHHMM,
-  myOrderView, saleWhenLabel, appOrdersSummary,
+  myOrderView, saleWhenLabel, appOrdersSummary, shopAvailable, shopUnavailableReason,
 } from './shop.js';
 
 const agua = { id: 'agua', name: 'Água', category: 'Bebida', sale_price: 5, sell_online: true, stock_qty: 10 };
@@ -286,5 +286,37 @@ describe('appOrdersSummary — os pedidos do app nas Métricas', () => {
       { catalog: 'mercado', status: 'cancelled' },
       { status: 'paid' },
     ])).toEqual({ total: 2, entregues: 1, pagos: 1 });
+  });
+});
+
+describe('shopProducts / shopAvailable — a vitrine do atleta mostra só o que pode ser pedido', () => {
+  const HOJE = '2026-09-30';
+
+  it('⭐ esgotado (estoque controlado e zerado) sai da vitrine, mas continua na lista inteira', () => {
+    const todos = shopProducts([agua, { ...grip, stock_qty: 0 }], { today: HOJE });
+    expect(todos.map((p) => [p.id, p.disponivel, p.motivo])).toEqual([
+      ['agua', true, null], ['grip', false, 'esgotado'],
+    ]);
+    expect(shopAvailable(todos).map((p) => p.id)).toEqual(['agua']);
+  });
+
+  it('⭐ validade vencida sai da vitrine', () => {
+    const [suco] = shopProducts([{ ...agua, id: 'suco', name: 'Suco', expiry_date: '2026-09-01' }], { today: HOJE });
+    expect(suco.disponivel).toBe(false);
+    expect(suco.motivo).toBe('vencido');
+  });
+
+  it('estoque sem controle (sem cópia) continua na vitrine', () => {
+    expect(shopUnavailableReason(grip, { today: HOJE })).toBeNull();
+    expect(shopAvailable(shopProducts([grip], { today: HOJE }))).toHaveLength(1);
+  });
+
+  it('⭐ o pedido de produto vencido é recusado (carrinho aberto antes de vencer)', () => {
+    const suco = { ...agua, id: 'suco', name: 'Suco', expiry_date: '2026-09-01' };
+    const r = priceCartFromCatalog([{ product_id: 'suco', quantity: 1 }], new Map([['suco', suco]]), { today: HOJE });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/validade vencida/);
+    const ok = priceCartFromCatalog([{ product_id: 'suco', quantity: 1 }], new Map([['suco', suco]]), { today: '2026-08-31' });
+    expect(ok.ok).toBe(true);
   });
 });

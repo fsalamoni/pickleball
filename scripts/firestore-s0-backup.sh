@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-PROJECT_ID="${PROJECT_ID:-picklerush}"
+PROJECT_ID="${PROJECT_ID:-antonov-82411}"
 DATABASE_ID="${DATABASE_ID:-pickleball}"
 RESTORE_DATABASE_ID="${RESTORE_DATABASE_ID:-pickleball-restore-teste}"
 BACKUP_RETENTION="${BACKUP_RETENTION:-14w}"
@@ -24,7 +24,7 @@ Uso:
   SOURCE_BACKUP=projects/.../backups/... APPLY=1 bash scripts/firestore-s0-backup.sh restore-test
 
 Variáveis:
-  PROJECT_ID              padrão: picklerush
+  PROJECT_ID              padrão: antonov-82411 (o projeto Firebase real; "picklerush" é o site)
   DATABASE_ID             padrão: pickleball
   RESTORE_DATABASE_ID     padrão: pickleball-restore-teste
   BACKUP_RETENTION        padrão: 14w

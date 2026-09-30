@@ -10,8 +10,18 @@
 > **Status 2026-09-29**: o dono confirmou que o restore foi testado no
 > Console e está funcionando. A limpeza de e-mails legados pode seguir, mas
 > continua passando por dry-run, confirmação explícita e etapas separadas.
+>
+> **Status 2026-09-30 — S0 CONCLUÍDO**, conferido no console (Google Cloud →
+> Firestore → `pickleball` → Recuperação de desastres): **PITR ativado**
+> (7 dias) e **backup programado diário** (retenção de 98 dias = 14 semanas),
+> com backups diários aparecendo na lista. Os bancos `(default)` e
+> `gerador3d` do mesmo projeto são de OUTROS aplicativos — não os toque.
+>
+> ⚠️ O id do projeto é **`antonov-82411`** (nome exibido "Antonov"), não
+> "picklerush" — `picklerush` é o SITE de hospedagem dentro dele. Versões
+> anteriores deste runbook usavam o nome errado nos comandos.
 
-Projeto: `picklerush` · banco Firestore: **`pickleball`** (banco nomeado, não
+Projeto: `antonov-82411` (nome exibido: "Antonov") · banco Firestore: **`pickleball`** (banco nomeado, não
 o `(default)` — atenção nos comandos).
 
 ---
@@ -26,11 +36,11 @@ filtro `role == platform_admin`.
 
 Ou, no Cloud Shell (já autenticado):
 ```bash
-gcloud firestore databases list --project=picklerush
+gcloud firestore databases list --project=antonov-82411
 
 # lista os admins atuais
 gcloud alpha firestore documents list users \
-  --database=pickleball --project=picklerush \
+  --database=pickleball --project=antonov-82411 \
   --format="table(name, fields.role.stringValue, fields.email.stringValue)" \
   2>/dev/null | grep platform_admin
 ```
@@ -57,12 +67,12 @@ todo o plano.
 Ou:
 ```bash
 gcloud firestore databases update \
-  --database=pickleball --project=picklerush \
+  --database=pickleball --project=antonov-82411 \
   --enable-pitr
 ```
 
 - [ ] PITR ativado (retenção padrão: 7 dias)
-- [ ] Confirmado: `gcloud firestore databases describe --database=pickleball --project=picklerush` mostra `pointInTimeRecoveryEnablement: POINT_IN_TIME_RECOVERY_ENABLED`
+- [ ] Confirmado: `gcloud firestore databases describe --database=pickleball --project=antonov-82411` mostra `pointInTimeRecoveryEnablement: POINT_IN_TIME_RECOVERY_ENABLED`
 
 **Custo**: proporcional ao tamanho do banco. Para esta base, poucos dólares
 por mês.
@@ -95,19 +105,19 @@ comprometimento da conta.
 ```bash
 # backup diário, retenção de 14 semanas
 gcloud firestore backups schedules create \
-  --database=pickleball --project=picklerush \
+  --database=pickleball --project=antonov-82411 \
   --recurrence=daily --retention=14w
 ```
 
 - [ ] Agendamento criado
-- [ ] Verificado: `gcloud firestore backups schedules list --database=pickleball --project=picklerush`
+- [ ] Verificado: `gcloud firestore backups schedules list --database=pickleball --project=antonov-82411`
 
 **Reforço recomendado** (protege contra "admin comprometido apaga base e
 backups"): export periódico para um bucket em **outro projeto/conta**, com
 IAM separado do projeto principal.
 ```bash
 gcloud firestore export gs://SEU-BUCKET-DE-BACKUP \
-  --database=pickleball --project=picklerush
+  --database=pickleball --project=antonov-82411
 ```
 - [ ] Bucket de backup em conta separada (opcional, mas é o que protege no pior caso)
 
@@ -172,9 +182,9 @@ Backup que nunca foi restaurado é esperança, não backup.
 ```bash
 # restaura para um banco NOVO — nunca por cima do de produção
 gcloud firestore databases restore \
-  --source-backup=projects/picklerush/locations/LOCAL/backups/ID_DO_BACKUP \
+  --source-backup=projects/antonov-82411/locations/LOCAL/backups/ID_DO_BACKUP \
   --destination-database=pickleball-restore-teste \
-  --project=picklerush
+  --project=antonov-82411
 ```
 
 - [ ] Restauração concluída num banco de teste
@@ -188,7 +198,7 @@ Com o helper:
 
 ```bash
 # substitua pelo caminho do backup listado no console/gcloud
-export SOURCE_BACKUP=projects/picklerush/locations/LOCAL/backups/ID_DO_BACKUP
+export SOURCE_BACKUP=projects/antonov-82411/locations/LOCAL/backups/ID_DO_BACKUP
 
 # conferir comando sem executar
 bash scripts/firestore-s0-backup.sh restore-test
@@ -249,9 +259,9 @@ Para declarar a transferência internacional na Política de Privacidade
 (`06-LGPD-CONFORMIDADE.md` §6) é preciso saber onde o dado está de fato.
 
 ```bash
-gcloud firestore databases describe --database=pickleball --project=picklerush \
+gcloud firestore databases describe --database=pickleball --project=antonov-82411 \
   --format="value(locationId)"
-gsutil ls -L -b gs://picklerush.appspot.com | grep -i "location"
+gsutil ls -L -b gs://antonov-82411.firebasestorage.app | grep -i "location"
 ```
 
 - [ ] Região do Firestore anotada: ______________

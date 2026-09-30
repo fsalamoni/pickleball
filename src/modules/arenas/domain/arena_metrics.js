@@ -28,7 +28,7 @@
 import { BOOKING_STATUS } from './constants.js';
 import { SALE_STATUS } from './pdv.js';
 import { timeToMinutes, normalizeWeekdays } from './court_schedule.js';
-import { weekdayOf } from './calendar.js';
+import { todayISO, weekdayOf } from './calendar.js';
 
 /** Converte valor em número seguro (null/undefined/NaN → 0). */
 function num(v) {
@@ -155,7 +155,7 @@ function revenueBySource(bookings = [], sales = []) {
 
 /** Próximas N reservas (futuras, CONFIRMED, ordenadas por data). */
 function upcomingBookings(bookings = [], limit = 5) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   return bookings
     .filter((b) => b?.status === BOOKING_STATUS.CONFIRMED)
     .filter((b) => {

@@ -35,6 +35,7 @@ import { ARENA_MODULE_ID, moduleStateDocId } from '../domain/modules.js';
 import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
+import { todayISO } from '../domain/calendar.js';
 
 const COL_COACHES = 'arena_coaches';
 const COL_CLASSES = 'arena_classes';
@@ -108,7 +109,7 @@ export async function listArenaClasses(arenaId, { onlyFuture = false, lim = 100,
   // Idem: tres condicoes e uma ordenacao, sem indice nenhum em
   // `arena_classes`. A agenda de aulas da arena nunca carregou.
   const snap = await getDocs(query(collection(db, COL_CLASSES), where('arena_id', '==', arenaId)));
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = todayISO();
   const lista = snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     // `includeClosed` traz também as dadas e as canceladas. 🐞 Sem isso, marcar
