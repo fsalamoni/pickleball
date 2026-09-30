@@ -344,6 +344,11 @@ export const FEATURE_FLAG = Object.freeze({
    * `leveling_level`, `dupr_id`). Desligada, o cadastro segue como está.
    */
   ESSENTIAL_PROFILE: 'essential_profile',
+  // MINHA REGIÃO: o que a plataforma mostra (dias de jogo, torneios, arenas,
+  // professores, clubes, promoções) segue a região de cada pessoa — a cidade
+  // e um raio, o estado, outro lugar ou todo lugar. Escolha no navegador, por
+  // usuário; zero banco. Ver docs/34-MINHA-REGIAO.md.
+  MY_REGION: 'my_region',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -433,6 +438,18 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'completar só o que falta, na próxima entrada. ID e rating DUPR seguem '
       + 'opcionais. Nada é gravado além do que a pessoa preencher. Desligada, o '
       + 'cadastro segue como está.',
+  },
+  [FEATURE_FLAG.MY_REGION]: {
+    label: 'Minha região (cidade + raio, estado ou todo lugar)',
+    description:
+      'O que a plataforma mostra passa a seguir a região de cada pessoa: dias '
+      + 'de jogo e jogos com vaga, torneios, arenas, professores, clubes e '
+      + 'promoções. O padrão é a cidade do perfil e até 50 km; em Configurações '
+      + '→ Minha região a pessoa escolhe outro raio, o estado inteiro, outro '
+      + 'lugar (quem vai viajar), a localização do aparelho ou todo lugar. O que '
+      + 'fica de fora não some: cada tela diz quantos são e oferece ver também. '
+      + 'A escolha fica no navegador; nada é gravado no banco. Desligada, as '
+      + 'telas seguem como estão.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

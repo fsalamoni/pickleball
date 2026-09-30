@@ -84,6 +84,7 @@
 | [`31-INICIO-SOB-MEDIDA.md`](./31-INICIO-SOB-MEDIDA.md) | ⭐ Onda CI: cada pessoa escolhe os cards do seu início e a ordem (flag `home_cards`, sobre `personalized_home`). Padrão: Dias de jogo, Horários da arena e Ranking; sugestões; grade sem buraco; zero banco. |
 | [`32-DICAS-GUIADAS.md`](./32-DICAS-GUIADAS.md) | ⭐ Onda CJ: dicas que a pessoa liga e desliga (flag `guided_tips`). Nada aparece sozinho; 27 guias que levam à tela, apontam o botão de verdade com seta e avançam quando a pessoa faz; 40 pontos de dica; os tutoriais viraram guias; "Mostre na tela" na ajuda; zero banco. |
 | [`33-CADASTRO-ESSENCIAL.md`](./33-CADASTRO-ESSENCIAL.md) | ⭐ O que o cadastro exige e por quê. Flag `essential_profile`: categoria em que joga e nível passam a ser obrigatórios, UF de lista, quem já tinha cadastro vê só o que falta; o admin conta o mesmo que o cadastro; o sorteio misto usa a categoria. Zero banco. |
+| [`34-MINHA-REGIAO.md`](./34-MINHA-REGIAO.md) | ⭐ O "Jogar" com os dias de jogo das ARENAS (que nunca apareciam), "Participar" dentro do dia de jogo e nada do que já passou nas listas — sempre ligados. E a Minha região (flag `my_region`): cidade + raio, estado, outro lugar ou todo lugar, em toda tela de descoberta. Zero banco. |
 | [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
 | [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
@@ -135,6 +136,7 @@ docs/
 ├── 31-INICIO-SOB-MEDIDA.md           # ⭐ os cards do início, escolhidos por cada pessoa
 ├── 32-DICAS-GUIADAS.md               # ⭐ dicas sob pedido: guias com seta sobre a tela de verdade
 ├── 33-CADASTRO-ESSENCIAL.md          # ⭐ categoria e nível obrigatórios; o cadastro, o perfil e o admin com a mesma regra
+├── 34-MINHA-REGIAO.md               # ⭐ o "Jogar" com os dias de jogo das arenas + a região de cada pessoa
 │
 ├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
 │   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)

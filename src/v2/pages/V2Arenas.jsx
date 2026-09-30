@@ -4,6 +4,9 @@ import { Building2, Clock, LayoutGrid, MapPin, Search } from 'lucide-react';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaPrefetch } from '@/modules/arenas/hooks/useArenaPrefetch';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import {
   V2Badge,
   V2Button,
@@ -56,13 +59,23 @@ function V2ArenasContent() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [arenas]);
 
-  const filtered = useMemo(() => {
+  const porFiltro = useMemo(() => {
     const term = search.trim().toLowerCase();
     return arenas
       .filter((a) => (!city ? true : String(a.city || '').trim() === city))
       .filter((a) => (!term ? true : [a.name, a.city, a.state, a.address].filter(Boolean).join(' ').toLowerCase().includes(term)))
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
   }, [arenas, search, city]);
+  // Minha região: por padrão, as arenas da região, da mais perto à mais longe.
+  // Buscar pelo nome ou tocar numa cidade é procurar em TODO lugar — quem
+  // digita o nome de uma arena quer achá-la onde ela estiver.
+  const regional = useRegionalList(porFiltro, (a) => ({ city: a.city, state: a.state }), {
+    ignorar: Boolean(search.trim()) || Boolean(city),
+  });
+  const filtered = useMemo(() => {
+    if (!regional.ativa) return regional.itens;
+    return [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity));
+  }, [regional]);
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -87,9 +100,10 @@ function V2ArenasContent() {
             ))}
           </div>
         )}
+        <RegionBar regional={regional} className="mt-4" nomeItens={['arena', 'arenas']} />
         <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
           <span className="font-bold text-ink">{filtered.length}</span> arena(s)
-          {city ? ` em ${city}` : ' disponíveis'}.
+          {city ? ` em ${city}` : (regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : ' disponíveis')}.
         </p>
       </V2Surface>
 
@@ -106,6 +120,8 @@ function V2ArenasContent() {
             action={<V2Button onClick={() => refetch()}>Tentar de novo</V2Button>}
           />
         </V2Surface>
+      ) : filtered.length === 0 && regional.fora > 0 ? (
+        <RegionEmptyHint regional={regional} oque="Nenhuma arena" />
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -123,7 +139,14 @@ function V2ArenasContent() {
         </V2Surface>
       ) : (
         <div data-dica="arenas-lista" className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((arena) => <ArenaCard key={arena.id} arena={arena} onIntencao={prefetchArena} />)}
+          {filtered.map((arena) => (
+            <ArenaCard
+              key={arena.id}
+              arena={arena}
+              onIntencao={prefetchArena}
+              distancia={regional.ativa ? distanceLabel(regional.infoDe(arena)?.km) : null}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -135,7 +158,7 @@ function V2ArenasContent() {
  *   pessoa demonstra que vai abrir esta arena. Pré-busca o que a página pede,
  *   enquanto o pacote da tela baixa — ver `useArenaPrefetch`.
  */
-function ArenaCard({ arena, onIntencao }) {
+function ArenaCard({ arena, onIntencao, distancia = null }) {
   const cover = arenaCover(arena);
   const hours = arenaHours(arena);
   const location = [arena.city, arena.state].filter(Boolean).join(' / ');
@@ -163,7 +186,7 @@ function ArenaCard({ arena, onIntencao }) {
         )}
         <div className="absolute bottom-4 left-4 right-24 text-white">
           <p className="font-display text-xl font-bold leading-tight">{arena.name}</p>
-          {location && <p className="mt-1 truncate text-sm text-white/80"><MapPin className="mr-1 inline h-3.5 w-3.5" />{location}</p>}
+          {location && <p className="mt-1 truncate text-sm text-white/80"><MapPin className="mr-1 inline h-3.5 w-3.5" />{location}{distancia ? ` · ${distancia}` : ''}</p>}
         </div>
       </div>
 

@@ -1,33 +1,55 @@
+/**
+ * Procura-se jogo (`/procura-jogo`) — onde dá para jogar nos próximos dias.
+ *
+ * É o "ver todos" do "Jogar" do início, com as MESMAS regras
+ * (`usePlayDiscovery` → `buildPlayList`):
+ *  - ⭐ os DIAS DE JOGO públicos — do atleta e da ARENA. 🐞 O dia que a arena
+ *    marca no calendário nunca aparecia aqui (nem no início): ele não cria
+ *    convite, e a tela só lia convites;
+ *  - os jogos abertos das arenas (com entrar, fila e nível ali mesmo);
+ *  - os convites soltos dos atletas.
+ *
+ * Tocar num dia de jogo leva para DENTRO dele, onde a pessoa vê o formato e
+ * quem vai e se inscreve.
+ *
+ * "O que já passou, não mostre mais": convite vencido de outra pessoa não
+ * aparece (antes ficava numa seção de "passados"); o SEU convite vencido
+ * continua na sua caixa, marcado, para você encerrar.
+ *
+ * Com a MINHA REGIÃO (flag `my_region`), tudo obedece à região da pessoa,
+ * com a barra no topo dizendo qual é.
+ */
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { CalendarDays, Clock, Dices, Globe, History, MapPin, Megaphone, Plus, Trophy, X } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useOpenGames, useMyOpenGames, useCloseOpenGame } from '@/modules/games/hooks/useOpenGames';
-import { useJoinPublicGameDay } from '@/modules/games/hooks/useGameDays';
-import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS, partitionOpenGamesByDate } from '@/modules/games/domain/openGames';
+import { Link } from 'react-router-dom';
+import {
+  ArrowRight, Building2, CalendarDays, Clock, Dices, MapPin, Megaphone, Plus, Trophy, Users, X,
+} from 'lucide-react';
+import { useRelogio } from '@/core/lib/useRelogio';
+import { useMyOpenGames, useCloseOpenGame } from '@/modules/games/hooks/useOpenGames';
+import { usePlayDiscovery } from '@/modules/games/hooks/usePlayDiscovery';
+import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS } from '@/modules/games/domain/openGames';
+import { PLAY_KIND } from '@/modules/games/domain/playDiscovery';
+import { hojeLocal } from '@/modules/home/domain/freshness';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import OpenSlotsDiscovery from '@/v2/components/arenas/openMatch/OpenSlotsDiscovery';
+import RegionBar, { RegionEmptyHint, RegionForaNote } from '@/v2/components/region/RegionBar';
 import {
   V2Avatar,
   V2Badge,
   V2Button,
-  V2CollapsibleSection,
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface, V2ErrorState} from '@/v2/ui/primitives';
+  V2Surface, V2ErrorState,
+} from '@/v2/ui/primitives';
 
 function levelLabel(code) {
   if (!code) return null;
   return getLevelByCode(code)?.name || code;
-}
-
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function formatDate(iso) {
@@ -37,10 +59,44 @@ function formatDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
 }
 
-function OpenGameCard({ g, gameDayOn, joining, onJoin, muted }) {
+const lugarDe = (item) => item.place;
+
+/** Um dia de jogo com vaga (do atleta ou da arena). */
+function GameDayCard({ item, distancia }) {
+  const Icone = item.daArena ? Building2 : Dices;
+  return (
+    <Link
+      to={item.link}
+      className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-acid/20 text-ink">
+          <Icone className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-lg font-bold leading-tight text-ink">{item.title}</p>
+          <p className="mt-1 text-sm text-gray-500">{item.subtitle}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        <V2Badge tone={item.daArena ? 'acid' : 'blue'}>
+          <Dices className="h-3 w-3" aria-hidden="true" /> {item.daArena ? 'Dia de jogo da arena' : 'Dia de jogo'}
+        </V2Badge>
+        {item.badge && <V2Badge tone="green"><Users className="h-3 w-3" aria-hidden="true" /> {item.badge}</V2Badge>}
+        {distancia && <V2Badge tone="neutral"><MapPin className="h-3 w-3" aria-hidden="true" /> {distancia}</V2Badge>}
+      </div>
+      <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-bold text-ink group-hover:text-acid-dark">
+        Ver e participar <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </span>
+    </Link>
+  );
+}
+
+/** Um convite solto de "Procura-se jogo". */
+function OpenGameCard({ g, distancia }) {
   const dateLabel = formatDate(g.date);
   return (
-    <div className={`flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic ${muted ? 'opacity-75' : ''}`}>
+    <div className="flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic">
       <div className="flex items-center gap-3">
         <V2Avatar name={g.creator_name} photoUrl={g.creator_photo} size="md" />
         <span className="truncate font-bold text-ink">{g.creator_name}</span>
@@ -49,7 +105,7 @@ function OpenGameCard({ g, gameDayOn, joining, onJoin, muted }) {
         {dateLabel && <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-gray-400" /> <span className="font-semibold text-ink">{dateLabel}</span></div>}
         {g.when_text && <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-gray-400" /> {g.when_text}</div>}
         {(g.city || g.state) && (
-          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-gray-400" /> {[g.city, g.state].filter(Boolean).join(' / ')}</div>
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-gray-400" /> {[g.city, g.state].filter(Boolean).join(' / ')}{distancia ? ` · ${distancia}` : ''}</div>
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-1.5">
@@ -60,9 +116,11 @@ function OpenGameCard({ g, gameDayOn, joining, onJoin, muted }) {
       </div>
       {g.notes && <p className="mt-3 text-sm text-gray-500">{g.notes}</p>}
       <div className="mt-auto space-y-2 pt-5">
-        {g.kind === 'game_day' && gameDayOn && g.game_day_id && (
-          <V2Button className="w-full" onClick={() => onJoin(g)} disabled={joining}>
-            <Globe className="h-4 w-4" /> Participar do dia de jogo
+        {/* O dia de jogo se abre por DENTRO: lá estão o formato, quem vai e o
+            botão de participar. */}
+        {g.kind === 'game_day' && g.game_day_id && (
+          <V2Button asChild className="w-full">
+            <Link to={`/dia-de-jogo/${g.game_day_id}`}>Ver e participar <ArrowRight className="h-4 w-4" /></Link>
           </V2Button>
         )}
         <V2ChatLauncherButton
@@ -76,32 +134,20 @@ function OpenGameCard({ g, gameDayOn, joining, onJoin, muted }) {
 }
 
 export default function V2OpenGames() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const {
-    data: games = [], isLoading, isError: falhouConvites, refetch: recarregarConvites,
-  } = useOpenGames();
+  const { ms: agora } = useRelogio(60_000);
+  const hoje = hojeLocal(new Date(agora));
+  const jogos = usePlayDiscovery({ hoje, agora });
   const { data: myGames = [] } = useMyOpenGames();
   const closeGame = useCloseOpenGame();
-  const gameDayOn = true;
-  const joinGameDay = useJoinPublicGameDay();
   const [createOpen, setCreateOpen] = useState(false);
 
-  const handleJoinGameDay = async (g) => {
-    try {
-      await joinGameDay.mutateAsync({ id: g.game_day_id, created_by: g.created_by, title: g.when_text });
-      toast.success('Você entrou no dia de jogo! Ele já aparece em "Dia de jogo".');
-      navigate('/dia-de-jogo');
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível participar.');
-    }
-  };
-
-  const today = todayISO();
-  const { upcoming, past } = useMemo(
-    () => partitionOpenGamesByDate(games.filter((g) => g.created_by !== user?.uid), today),
-    [games, user?.uid, today],
-  );
+  // As duas listas desta tela, na ordem da lista única (do mais cedo ao mais
+  // tarde). O jogo aberto tem a seção própria, com entrar e fila.
+  const itensDia = useMemo(() => jogos.itens.filter((i) => i.kind === PLAY_KIND.DIA), [jogos.itens]);
+  const itensConvite = useMemo(() => jogos.itens.filter((i) => i.kind === PLAY_KIND.CONVITE), [jogos.itens]);
+  const dias = useRegionalList(itensDia, lugarDe);
+  const convites = useRegionalList(itensConvite, lugarDe);
+  const conviteDoc = useMemo(() => new Map(jogos.convites.map((g) => [g.id, g])), [jogos.convites]);
 
   const myOpen = useMemo(
     () => myGames.filter((g) => g.status === OPEN_GAME_STATUS.OPEN)
@@ -114,17 +160,20 @@ export default function V2OpenGames() {
     [myGames],
   );
 
+  const carregando = jogos.carregando || dias.carregando;
+  const nada = !carregando && !jogos.isError
+    && dias.itens.length === 0 && convites.itens.length === 0 && dias.fora === 0 && convites.fora === 0;
+
   return (
     <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title="Procura-se jogo"
-        subtitle="Publique um convite e encontre parceiros para jogar fora dos torneios."
+        subtitle="Dias de jogo com vaga, jogos abertos das arenas e convites — de hoje em diante."
         action={<V2Button onClick={() => setCreateOpen(true)} data-dica="procura-publicar"><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
       />
 
-      {/* Os jogos com vaga que as ARENAS publicaram — o que quem procura
-          jogo mais quer, e que só existia dentro da página de cada arena. */}
-      <OpenSlotsDiscovery />
+      {/* A região vale para a tela inteira; o que ficou de fora é dito em cada seção. */}
+      <RegionBar regional={dias} className="mb-6" mostrarFora={false} />
 
       {myOpen.length > 0 && (
         <V2Surface className="mb-8">
@@ -132,14 +181,14 @@ export default function V2OpenGames() {
           <div className="mt-4 space-y-2">
             {myOpen.map((g) => {
               const dateLabel = formatDate(g.date);
-              const isPast = g.date && g.date < today;
+              const isPast = g.date && g.date < hoje;
               return (
                 <div key={g.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
                   <div className="min-w-0 text-sm">
                     <span className="font-bold text-ink">{dateLabel || g.when_text || 'Dia de jogo'}</span>
                     {dateLabel && g.when_text && <span className="text-gray-500"> · {g.when_text}</span>}
                     <span className="text-gray-500"> · {[g.city, g.state].filter(Boolean).join(' / ')}</span>
-                    {isPast && <V2Badge tone="neutral" className="ml-2">Data passada</V2Badge>}
+                    {isPast && <V2Badge tone="neutral" className="ml-2">Data passada — encerre</V2Badge>}
                   </div>
                   <V2Button variant="ghost" size="sm" onClick={() => closeGame.mutate(g.id)} disabled={closeGame.isPending}>
                     <X className="h-4 w-4" /> Encerrar
@@ -151,60 +200,89 @@ export default function V2OpenGames() {
         </V2Surface>
       )}
 
-      {isLoading ? (
+      {jogos.falhas.dias && (
+        <div className="mb-6">
+          <V2ErrorState inline title="Não foi possível carregar os dias de jogo" description="A conexão falhou. Os dias de jogo continuam lá — tente de novo." onRetry={jogos.recarregar.dias} />
+        </div>
+      )}
+      {jogos.falhas.convites && (
+        <div className="mb-6">
+          <V2ErrorState inline title="Não foi possível carregar os convites" description="A conexão falhou. Os convites publicados continuam lá — tente de novo." onRetry={jogos.recarregar.convites} />
+        </div>
+      )}
+
+      {carregando ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-64 rounded-4xl" />)}
         </div>
-      ) : falhouConvites ? (
-        <V2Surface>
-          <V2ErrorState
-            title="Não foi possível carregar os convites"
-            description="A conexão falhou. Os convites publicados continuam lá — tente de novo."
-            onRetry={recarregarConvites}
-          />
-        </V2Surface>
-      ) : upcoming.length === 0 && past.length === 0 ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={Megaphone}
-            title="Nenhum convite aberto"
-            description="Seja o primeiro a publicar um convite e abrir a rodada para a comunidade."
-            action={<V2Button onClick={() => setCreateOpen(true)}>Publicar convite</V2Button>}
-          />
-        </V2Surface>
       ) : (
-        <div className="space-y-8">
-          {upcoming.length > 0 ? (
-            <div data-dica="procura-lista" className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {upcoming.map((g) => (
-                <OpenGameCard key={g.id} g={g} gameDayOn={gameDayOn} joining={joinGameDay.isPending} onJoin={handleJoinGameDay} />
-              ))}
-            </div>
-          ) : (
+        <div data-dica="procura-lista" className="space-y-10">
+          {(dias.itens.length > 0 || dias.fora > 0) && (
+            <section>
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Dias de jogo com vaga
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Públicos, dos atletas e das arenas. Abra para ver o formato e quem vai — e entre.
+              </p>
+              <RegionForaNote regional={dias} nomeItens={['dia de jogo', 'dias de jogo']} className="mt-1 block text-sm" />
+              <RegionEmptyHint regional={dias} oque="Nenhum dia de jogo com vaga" className="mt-4" />
+              {dias.itens.length > 0 && (
+                <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  {dias.itens.map((item) => (
+                    <GameDayCard
+                      key={item.key}
+                      item={item}
+                      distancia={dias.ativa ? distanceLabel(dias.infoDe(item)?.km) : null}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Os jogos com vaga que as ARENAS publicaram — entrar e fila ali mesmo. */}
+          <OpenSlotsDiscovery />
+
+          {(convites.itens.length > 0 || convites.fora > 0) && (
+            <section>
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> Convites de quem procura jogo
+              </p>
+              <RegionForaNote regional={convites} nomeItens={['convite', 'convites']} className="mt-1 block text-sm" />
+              <RegionEmptyHint regional={convites} oque="Nenhum convite" className="mt-4" />
+              {convites.itens.length > 0 && (
+                <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  {convites.itens.map((item) => {
+                    const g = conviteDoc.get(item.id);
+                    if (!g) return null;
+                    return (
+                      <OpenGameCard
+                        key={item.key}
+                        g={g}
+                        distancia={convites.ativa ? distanceLabel(convites.infoDe(item)?.km) : null}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {nada && (
             <V2Surface>
               <V2EmptyState
                 icon={Megaphone}
-                title="Nenhum convite futuro"
-                description="Não há convites com data a partir de hoje. Veja os convites passados abaixo ou publique o seu."
-                action={<V2Button onClick={() => setCreateOpen(true)}>Publicar convite</V2Button>}
+                title="Nenhum jogo marcado para os próximos dias"
+                description={`Nenhum dia de jogo nem convite${dias.limita ? ` ${dias.frase}` : ''} de hoje em diante. Publique um convite ou crie um dia de jogo público — ele aparece aqui para quem procura jogo.`}
+                action={(
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <V2Button onClick={() => setCreateOpen(true)}>Publicar convite</V2Button>
+                    <V2Button asChild variant="secondary"><Link to="/dia-de-jogo?criar=1">Criar dia de jogo</Link></V2Button>
+                  </div>
+                )}
               />
             </V2Surface>
-          )}
-
-          {past.length > 0 && (
-            <V2CollapsibleSection
-              title={`Convites passados (${past.length})`}
-              eyebrow="Encerrados"
-              collapseId="open-games-past"
-              defaultCollapsed
-              headerAction={<History className="h-5 w-5 text-gray-300" />}
-            >
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {past.map((g) => (
-                  <OpenGameCard key={g.id} g={g} gameDayOn={gameDayOn} joining={joinGameDay.isPending} onJoin={handleJoinGameDay} muted />
-                ))}
-              </div>
-            </V2CollapsibleSection>
           )}
         </div>
       )}

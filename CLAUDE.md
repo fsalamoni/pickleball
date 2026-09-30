@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **27 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **30 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -127,6 +127,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │                                     tela de verdade, pontos de dica (Onda CJ)
 │   ├── 33-CADASTRO-ESSENCIAL.md    🪪 ⭐ o que o cadastro exige e por quê; categoria
 │   │                                     e nível obrigatórios (flag essential_profile)
+│   ├── 34-MINHA-REGIAO.md          📍 ⭐ o "Jogar" com os dias de jogo das arenas,
+│   │                                     "Participar" dentro do dia e a região de cada
+│   │                                     pessoa: cidade + raio, estado, todo lugar (my_region)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -354,6 +357,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mostrar ESTOQUE (esgotado, acabando, à venda)"** → ⭐ `stockPosition(produto, entradas, saídas, { vendePeloApp })` (`arenas/domain/inventory.js`) — uma resposta só para a aba Estoque, o Resumo, a Operação e a loja do app. **Nunca** decida "esgotado" por `quantity <= 0` numa tela: produto SEM NENHUMA COMPRA não está esgotado, está só cadastrado (`sem_compra`) — 🐞 era o relatado: *"o estoque mostra a lista completa do mercado, mesmo esgotados"*, e cada item puxado do catálogo virava "Estoque: 0" e "Esgotado" na reposição. Vencido com estoque NÃO está à venda; validade só alerta o que está na prateleira. A aba Estoque abre em "À venda" e o resto fica em filtros (`STOCK_FILTERS`). Na loja do atleta, `shopAvailable` tira esgotado e vencido da vitrine. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` (atualização 2026-09-30)
 **"Preciso do HOJE (data) na arena"** → `todayISO()` / `formatDateISO(d)` (`arenas/domain/calendar.js`). **Nunca** `new Date().toISOString().slice(0, 10)`: é a data de Greenwich, e das 21h à meia-noite já é AMANHÃ — 🐞 o calendário tratava hoje como passado, jogos abertos/aulas/torneios de hoje sumiam das listas e a compra lançada à noite saía com a data de amanhã (17 lugares). Guarda em `src/core/guards/dataLocalArena.test.js`
 **"O que o cadastro exige? Quero tornar um campo obrigatório"** → ⭐ `missingRegistrationFields(perfil, { essencial })` (`core/lib/profileValidation.js`) é a fonte ÚNICA — o assistente (`V2OnboardingWizard`), a edição do perfil e o painel do admin (`isRequiredField`) perguntam a ela. Sempre: nome, nascimento, telefone, experiência, gênero, cidade, UF, lado da quadra, interesses. Com a flag `essential_profile`: também a **categoria em que joga** (`competition_gender`, masculina/feminina) e o **nível** (autoindicação, teste ou rating DUPR — `hasDeclaredLevel`), UF de lista (`core/domain/ufs.js`), e quem já tinha cadastro vê SÓ o passo do que falta. DUPR é opcional. Ver `docs/33-CADASTRO-ESSENCIAL.md`
+**"Por que o 'Jogar' do início não mostrava os dias de jogo com vaga?"** → 🐞 ele só lia os convites (`open_games`) e os jogos abertos; o dia de jogo que a ARENA marca no calendário nunca cria convite e ficava de fora (do início E do Procura-se jogo). Agora é uma lista só, `buildPlayList` (`modules/games/domain/playDiscovery.js`) via `usePlayDiscovery`, a MESMA no início e no Procura-se jogo: dias públicos dos próximos 30 dias (atleta e arena, com as vagas que sobram), jogos abertos e convites — do mais cedo ao mais tarde, sem o que já terminou (dia: pelo FIM; convite sem data: 14 dias), sem o que a pessoa já tem. A consulta é `visibility == 'public'` + `date IN [30 dias]`: a igualdade torna a regra provável e a LISTA de datas dispensa índice composto — **nunca** troque por faixa (`>=`), que pede índice novo (guarda `listUpcomingPublicGameDays.guard.test.js`; emulador em `tests/rules/publicGameDaysAhead.rules.test.js`). Ver `docs/34-MINHA-REGIAO.md`
+**"Tocar num dia de jogo leva para onde?"** → para DENTRO dele (`/dia-de-jogo/:id`), nunca para a página da arena. Lá o `GameDayJoinPanel` é a porta de entrada: dia da arena = `ArenaGameDaySignupCard` (vagas, quadra, marcar/desmarcar — o mesmo da página da arena); dia público do atleta = entrar/sair. Quem vê o painel decide `joinPanelApplies` (`games/domain/gameDayJoin.js`). 🐞 E entrar pelo caminho do atleta num dia de ARENA pulava o teto de vagas e, no jogo aberto, gravava só uma lista: `joinPublicGameDay` agora confere o dia no banco e delega a `signUpToArenaGameDay`
+**"Onde está a MINHA REGIÃO? Minha tela de descoberta precisa dela?"** → ⭐ flag `my_region` (default OFF) + `docs/34-MINHA-REGIAO.md`. Padrão: a cidade do perfil + 50 km; também só a cidade, outros raios, o estado, outro lugar (ou a localização do aparelho, que vira a cidade mais próxima — nunca guardada) e todo lugar. Numa lista: `useRegionalList(itens, (x) => ({ city, state }))` devolve os itens da região, quantos ficaram de fora e `infoDe(item).km`; na tela, `<RegionBar regional={…} />` (+ `RegionEmptyHint`). **Nunca** esconda o que ficou de fora calado, e **busca pelo nome ignora a região** (`{ ignorar: busca }`). A distância é entre CIDADES pelo mapa do IBGE (`core/geo/cidadesBR.data.js`, 57 kB, **só import dinâmico** — guarda em `minhaRegiao.test.js`). Zero banco: a escolha é `v2:view:<uid>:regiao`. A comparação de nome de cidade é do núcleo (`core/domain/locality.js`)
+**"A lista pública mostra o que já passou?"** → não deve. Torneios: `discoverTournaments` (`tournament/domain/tournamentDiscovery.js`) separa atuais (rolando → abertos → por começar) de encerrados (inclui o "esquecido"), que ficam atrás de um botão; o dia de jogo, pelo FIM (`gameDayEndsAt`); o convite vencido de outra pessoa sai do Procura-se jogo
 **"Em que lado das duplas MISTAS a pessoa entra no sorteio?"** → `playGenderOf(perfil)` (`athletes/domain/profileMeta.js`): a categoria em que joga, e só na falta dela o gênero do perfil. "Outro" e "Prefiro não informar" não viram palpite. **Nunca** grave `play_gender: profile.gender` direto
 **"Escrevi uma consulta com `orderBy` e o guarda de índices passou"** → ele agora exige índice EXATO: depois das igualdades, os campos do índice têm de ser os da ordenação, **nem um a mais** — o Firestore desempata por `__name__`, e um índice mais comprido não serve. 🐞 `listMatches` (lista de jogos da fase do torneio) passava pelo índice de 4 campos e só funcionava porque alguém criou o de 3 pelo link do erro, direto no painel; o deploy passou a pular os índices pela divergência. O índice foi importado para `firestore.indexes.json`
 **"Vou rolar até uma âncora (`#secao`)"** → `rolarAte(el)` (`src/v2/ui/rolarAte.js`) ou `useHashScroll()`, **nunca** `scrollIntoView` cru numa tela do V2: ele rola TODOS os ancestrais, inclusive o `.v2-root` (`overflow: hidden`), e deslocava o app inteiro — 131 px medidos, sem volta. E a rolagem na chegada à página espera um quadro: o layout volta o `<main>` ao topo num efeito que roda DEPOIS dos da página (pai depois dos filhos)
@@ -531,13 +538,37 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-09-30 (estoque que diz o que há para vender +
+> Última atualização: 2026-09-30 (o "Jogar" com os dias de jogo das arenas +
+> Minha região). Antes: 2026-09-30 (estoque que diz o que há para vender +
 > cadastro essencial). Antes: 2026-09-30 (varredura da plataforma). Antes: 2026-09-27 (Onda CJ — dicas guiadas); Onda CI (início sob medida); Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **O "Jogar" que mostra os dias de jogo, e a Minha região** (2026-09-30):
+>   *"para muitos usuários, na sessão 'jogar', não estão aparecendo os dias de
+>   jogo abertos e com vaga… que leve em consideração primeiro a sua cidade, mas
+>   também uma margem de raio… em toda plataforma… e o que já passou, não mostre
+>   mais"*. **🐞 O "Jogar" nunca mostrou o dia de jogo das ARENAS**: ele lia só
+>   convites e jogos abertos, e o dia que a arena marca no calendário não cria
+>   convite. Agora a lista é uma só no início e no Procura-se jogo (dias
+>   públicos dos próximos 30 dias, do atleta e da arena, com as vagas; jogos
+>   abertos; convites), numa consulta que dispensa índice novo — conferida na
+>   produção. **Tocar no dia de jogo abre o próprio dia**, com um painel
+>   "Participar" (vagas, quadra, entrar e sair). **🐞 E entrar pelo Play num dia
+>   de arena lotado passava**: a entrada do atleta agora delega à da arena. **O
+>   que já passou sai**: o dia que terminou hoje, o convite vencido de outra
+>   pessoa, o convite sem data com mais de 14 dias, e os torneios encerrados da
+>   aba Públicos (atrás de um botão). **Minha região** (flag `my_region`): a
+>   cidade do perfil + 50 km por padrão, ou outro raio, o estado, outro lugar, a
+>   localização do aparelho ou todo lugar — no início (Jogar, Torneios,
+>   Destaques, Horários da arena), Procura-se jogo, Torneios, Arenas,
+>   Professores, Clubes, Promoções e Encontrar jogadores, com a distância e o
+>   que ficou de fora dito. A distância é entre cidades, pelo mapa do IBGE
+>   baixado sob demanda. `Permissions-Policy` passa a `geolocation=(self)`.
+>   **Banco: zero.** Ver `docs/34-MINHA-REGIAO.md`.
 >
 > - **Estoque, cadastro essencial e o índice do painel** (2026-09-30): três
 >   pedidos do dono depois da varredura. **(1) O estoque** mostrava o
@@ -2386,14 +2417,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6695 passing** (418 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +6287 (era 408) |
+| **Testes Vitest** | **6776 passing** (427 arquivos) + 455 asserções de regras no emulador (Firestore + Storage) | +6287 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **34 em `firestore.indexes.json`** (+`tournament_matches[modality_id, stage_index, round]`, importado do painel; +`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **29 default OFF** (+`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **30 default OFF** (+`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

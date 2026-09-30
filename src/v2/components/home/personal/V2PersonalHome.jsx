@@ -182,7 +182,7 @@ export default function V2PersonalHome() {
       case HOME_SECTION.RANKING:
         return <HomeRankingSection reason={motivo} />;
       case HOME_SECTION.JOGAR:
-        return <HomePlaySection reason={motivo} hoje={hoje} perfil={perfil} arenaModulesOn={arenaModulesOn} />;
+        return <HomePlaySection reason={motivo} hoje={hoje} agora={agora} perfil={perfil} />;
       case HOME_SECTION.RESERVAR:
         return <HomeBookingSection reason={motivo} hoje={hoje} agora={agora} />;
       case HOME_SECTION.AULAS:

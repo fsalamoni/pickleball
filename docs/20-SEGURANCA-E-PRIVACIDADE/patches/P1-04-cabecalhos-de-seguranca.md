@@ -73,3 +73,12 @@ curl -sI https://<canal>.web.app | grep -iE "x-frame|content-security|strict-tra
 
 Publicar em canal de pré-visualização **antes** de `main` é obrigatório
 aqui — é a única mudança deste estudo que pode deixar o site em branco.
+
+## Atualização 2026-09-30
+
+`geolocation=(self)` foi aplicado no `firebase.json` com a "Minha região"
+(`docs/34-MINHA-REGIAO.md`): o botão "Usar a minha localização atual" pede a
+localização ao navegador SÓ pelo próprio site; ela é convertida, no aparelho,
+na cidade mais próxima e não é enviada nem guardada. O resto da
+`Permissions-Policy` segue fechado (guarda em
+`src/core/guards/minhaRegiao.test.js`).

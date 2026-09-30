@@ -584,3 +584,14 @@ campo `kind` do jogo já existia e já aceitava `singles`; o dia de jogo não
 ganhou nada. Provas: 7 asserções no emulador
 (`tests/rules/gameDaySingles.rules.test.js`) e 5 testes dos motores do
 servidor (`functions/singlesRankings.test.js`).
+
+## Atualização 2026-09-30 — entrar pelo próprio dia de jogo
+
+Quem chega a um dia de jogo PÚBLICO de outra pessoa (pelo "Jogar" do início ou
+pelo Procura-se jogo) entra pela própria página, no painel "Participar"
+(`GameDayJoinPanel`, montado logo abaixo do cabeçalho): dia da arena com vagas
+e quadra; dia do atleta com entrar e sair. A regra de quem vê o painel é uma só
+(`joinPanelApplies`, `games/domain/gameDayJoin.js`): não vale para quem
+organiza, nem no dia privado, no de clube, no do jogo aberto (painel próprio) ou
+no arquivado. No Play, "Minha participação" aponta para o "Participar" em vez
+de repetir o botão. Ver `docs/34-MINHA-REGIAO.md` §3.

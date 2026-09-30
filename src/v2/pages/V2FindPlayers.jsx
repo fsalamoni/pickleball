@@ -9,6 +9,9 @@ import { rankSmartMatchmaking } from '@/modules/rating/domain/smartMatchmaking';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import {
   V2Avatar,
   V2Badge,
@@ -35,6 +38,10 @@ export default function V2FindPlayers() {
   const { data: directory = [] } = useAthletes(smartOn);
   const [sameCityOnly, setSameCityOnly] = useState(false);
   const [closeLevelOnly, setCloseLevelOnly] = useState(true);
+  // Com a MINHA REGIÃO, o recorte de lugar é a região (cidade + raio, estado…),
+  // ligado por padrão — é quem pode, de fato, jogar com você.
+  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const [soRegiao, setSoRegiao] = useState(true);
 
   const me = useMemo(() => players.find((p) => p.id === user?.uid || p.uid === user?.uid) || null, [players, user?.uid]);
   const myCity = me?.city || userProfile?.city || null;
@@ -83,6 +90,11 @@ export default function V2FindPlayers() {
       maxDiff: closeLevelOnly ? DEFAULT_MAX_RATING_DIFF : null,
     });
   }, [me, players, user?.uid, smartOn, dirById, userProfile?.court_side, userProfile?.interests, sameCityOnly, closeLevelOnly, myCity]);
+
+  const regional = useRegionalList(suggestions, (p) => ({ city: p.city, state: p.state }), {
+    ignorar: !regiaoOn || !soRegiao,
+  });
+  const lista = regiaoOn ? regional.itens : suggestions;
 
   if (isLoading) {
     return (
@@ -142,23 +154,34 @@ export default function V2FindPlayers() {
           <V2FilterChip active={closeLevelOnly} onClick={() => setCloseLevelOnly((v) => !v)}>
             Nível parecido (±{DEFAULT_MAX_RATING_DIFF})
           </V2FilterChip>
-          <V2FilterChip active={sameCityOnly} onClick={() => setSameCityOnly((v) => !v)} disabled={!myCity}>
-            <MapPin className="h-3.5 w-3.5" /> Minha cidade
-          </V2FilterChip>
+          {regiaoOn ? (
+            <V2FilterChip active={soRegiao} onClick={() => setSoRegiao((v) => !v)}>
+              <MapPin className="h-3.5 w-3.5" /> Na minha região
+            </V2FilterChip>
+          ) : (
+            <V2FilterChip active={sameCityOnly} onClick={() => setSameCityOnly((v) => !v)} disabled={!myCity}>
+              <MapPin className="h-3.5 w-3.5" /> Minha cidade
+            </V2FilterChip>
+          )}
         </div>
+        {regiaoOn && soRegiao && <RegionBar regional={regional} className="mt-4" nomeItens={['jogador', 'jogadores']} />}
       </V2Surface>
 
-      {suggestions.length === 0 ? (
+      {lista.length === 0 && regional.fora > 0 ? (
+        <RegionEmptyHint regional={regional} oque="Nenhum jogador para os filtros atuais" />
+      ) : lista.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={Swords}
             title="Nenhum jogador para os filtros atuais"
-            description="Amplie a faixa de nível ou remova a restrição de cidade para ver mais combinações."
+            description={regiaoOn
+              ? 'Amplie a faixa de nível ou a sua região para ver mais combinações.'
+              : 'Amplie a faixa de nível ou remova a restrição de cidade para ver mais combinações.'}
           />
         </V2Surface>
       ) : (
         <div data-dica="jogadores-lista" className="grid gap-4 sm:grid-cols-2">
-          {suggestions.map((p) => (
+          {lista.map((p) => (
             <div key={p.id} className="flex items-center gap-3 rounded-4xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
               <V2Avatar name={p.platform_name} photoUrl={p.photo_url} size="lg" />
               <div className="min-w-0 flex-1">
@@ -172,7 +195,12 @@ export default function V2FindPlayers() {
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
                   <V2Badge tone="acid">Rating {p.rating}</V2Badge>
-                  {[p.city, p.state].filter(Boolean).length > 0 && <span>{[p.city, p.state].filter(Boolean).join(' / ')}</span>}
+                  {[p.city, p.state].filter(Boolean).length > 0 && (
+                    <span>
+                      {[p.city, p.state].filter(Boolean).join(' / ')}
+                      {regiaoOn && distanceLabel(regional.infoDe(p)?.km) ? ` · ${distanceLabel(regional.infoDe(p)?.km)}` : ''}
+                    </span>
+                  )}
                   {!smartOn && <span className="text-gray-400">· Δ {p.ratingDiff}</span>}
                 </div>
                 {smartOn && p.compatibility?.reasons?.length > 0 && (

@@ -1,4 +1,10 @@
 import React, { useMemo, useState } from 'react';
+import { useRelogio } from '@/core/lib/useRelogio';
+import { hojeLocal } from '@/modules/home/domain/freshness';
+import { discoverTournaments, sortMyTournaments } from '@/modules/tournament/domain/tournamentDiscovery';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { Link } from 'react-router-dom';
 import { Archive, Calendar, Globe, Hash, MapPin, Plus, Trophy } from 'lucide-react';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -57,17 +63,25 @@ export default function V2Tournaments() {
   } = usePublicTournaments();
   const [tab, setTab] = useState('public');
 
-  const list = tab === 'mine' ? myTournaments : publicTournaments;
+  const { ms: agora } = useRelogio(60_000);
+  const hoje = hojeLocal(new Date(agora));
   const isLoading = tab === 'mine' ? loadingMine : loadingPublic;
   // ⚠️ "Você ainda não tem torneios" numa falha de rede faz quem TEM torneios
   // criar um duplicado — e é a porta de entrada de toda a área.
   const falhou = tab === 'mine' ? falhouMeus : falhouPublicos;
   const recarregar = tab === 'mine' ? recarregarMeus : recarregarPublicos;
 
-  const sorted = useMemo(
-    () => [...list].sort((a, b) => (parseDate(b.starts_at)?.getTime() || 0) - (parseDate(a.starts_at)?.getTime() || 0)),
-    [list],
-  );
+  // Públicos: o que ainda vale (rolando, aberto, por começar), do mais
+  // próximo ao mais distante. O que já passou sai da frente — e só aparece se
+  // a pessoa pedir. Meus: tudo, com o que pede atenção primeiro.
+  const publicos = useMemo(() => discoverTournaments(publicTournaments, hoje), [publicTournaments, hoje]);
+  const meus = useMemo(() => sortMyTournaments(myTournaments, hoje), [myTournaments, hoje]);
+  const regional = useRegionalList(publicos.atuais, (t) => ({ city: t.city, state: t.state }));
+  const [verEncerrados, setVerEncerrados] = useState(false);
+
+  const sorted = tab === 'mine' ? meus : regional.itens;
+  const encerrados = tab === 'mine' ? [] : publicos.encerrados;
+  const vazio = sorted.length === 0 && !(tab === 'public' && regional.fora > 0);
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -77,12 +91,15 @@ export default function V2Tournaments() {
         action={<V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
       />
 
-      <div data-dica="torneios-abas" className="mb-8 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+      <div data-dica="torneios-abas" className="mb-4 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
         <TabButton active={tab === 'public'} onClick={() => setTab('public')}>Públicos</TabButton>
         <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>Meus torneios</TabButton>
       </div>
 
-      {isLoading ? (
+      {tab === 'public' && <RegionBar regional={regional} className="mb-6" nomeItens={['torneio', 'torneios']} />}
+      {!(tab === 'public' && regional.ativa) && <div className="mb-4" />}
+
+      {isLoading || (tab === 'public' && regional.carregando) ? (
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-56 rounded-4xl" />)}
         </div>
@@ -94,20 +111,53 @@ export default function V2Tournaments() {
             onRetry={() => recarregar()}
           />
         </V2Surface>
-      ) : sorted.length === 0 ? (
+      ) : vazio ? (
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
-            title={tab === 'mine' ? 'Você ainda não tem torneios' : 'Nenhum torneio público no momento'}
+            title={tab === 'mine' ? 'Você ainda não tem torneios' : 'Nenhum torneio aberto ou por vir'}
             description={tab === 'mine'
               ? 'Crie o seu primeiro evento ou ingresse com um código de convite.'
-              : 'Assim que houver eventos abertos, eles aparecerão aqui.'}
+              : `Nenhum torneio acontecendo ou com data pela frente${regional.limita ? ` ${regional.frase}` : ''}. Assim que houver, ele aparece aqui.`}
             action={<V2Button asChild><Link to="/torneios/criar">Criar torneio</Link></V2Button>}
           />
         </V2Surface>
       ) : (
-        <div data-dica="torneios-lista" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {sorted.map((t) => <TournamentCard key={t.id} tournament={t} />)}
+        <>
+          <RegionEmptyHint regional={tab === 'public' ? regional : null} oque="Nenhum torneio aberto ou por vir" className="mb-6" />
+          {sorted.length > 0 && (
+            <div data-dica="torneios-lista" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {sorted.map((t) => (
+                <TournamentCard
+                  key={t.id}
+                  tournament={t}
+                  distancia={tab === 'public' && regional.ativa ? distanceLabel(regional.infoDe(t)?.km) : null}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* O que já passou fica fora da frente — mas não some: resultado de
+          torneio encerrado continua a um toque. */}
+      {tab === 'public' && !isLoading && !falhou && encerrados.length > 0 && (
+        <div className="mt-10">
+          {verEncerrados ? (
+            <>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Encerrados ({encerrados.length})</p>
+                <V2Button variant="ghost" size="sm" onClick={() => setVerEncerrados(false)}>Esconder encerrados</V2Button>
+              </div>
+              <div className="grid gap-6 opacity-80 lg:grid-cols-2 xl:grid-cols-3">
+                {encerrados.map((t) => <TournamentCard key={t.id} tournament={t} />)}
+              </div>
+            </>
+          ) : (
+            <V2Button variant="secondary" size="sm" onClick={() => setVerEncerrados(true)}>
+              <Archive className="h-4 w-4" aria-hidden="true" /> Ver os {encerrados.length} torneios encerrados
+            </V2Button>
+          )}
         </div>
       )}
     </div>
@@ -129,7 +179,7 @@ function TabButton({ active, onClick, children }) {
   );
 }
 
-function TournamentCard({ tournament }) {
+function TournamentCard({ tournament, distancia = null }) {
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
   const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local a definir';
 
@@ -158,7 +208,7 @@ function TournamentCard({ tournament }) {
       </div>
 
       <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-        <MapPin className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">{location}</span>
+        <MapPin className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">{location}{distancia ? ` · ${distancia}` : ''}</span>
       </div>
 
       {tournament.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-500">{tournament.description}</p>}

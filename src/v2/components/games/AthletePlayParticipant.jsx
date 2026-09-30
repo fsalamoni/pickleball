@@ -17,6 +17,9 @@ import {
 import {
   statusBadge, SkipDialog, PartnerDialog, PlayCourtsSection, PlayOrderSection,
 } from '@/v2/components/games/AthletePlayOrganizer';
+import { useLeaveArenaGameDay } from '@/modules/games/hooks/useArenaGameDays';
+import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
+import { joinPanelApplies } from '@/modules/games/domain/gameDayJoin';
 
 /**
  * Visão do PARTICIPANTE de um dia de jogo no formato Play (para quem não é o
@@ -51,7 +54,13 @@ export default function AthletePlayParticipant({ gameDay }) {
 }
 
 function MyParticipationCard({ gameDay, participants, view, me }) {
+  const { user } = useAuth();
   const join = useJoinPublicGameDay();
+  const sairDaArena = useLeaveArenaGameDay();
+  // Dia público de outra pessoa: quem entra usa o "Participar", no alto da
+  // página — o mesmo em todo formato, e o que mostra as vagas e a quadra.
+  // Repetir o botão aqui seria oferecer duas portas para a mesma sala.
+  const entraPeloPainel = joinPanelApplies(gameDay, { uid: user?.uid });
   const setSkip = useSetPlayParticipantSkip(gameDay.id);
   const setPartner = useSetPlayParticipantPartner(gameDay.id);
   const removeSelf = useRemoveGameDayParticipant(gameDay.id);
@@ -75,7 +84,10 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
 
   const handleLeave = async () => {
     try {
-      await removeSelf.mutateAsync(me.id);
+      // Dia de ARENA sai pelo caminho da arena: no dia de um jogo aberto,
+      // sair também libera a vaga da vitrine (e chama a fila).
+      if (isArenaGameDay(gameDay)) await sairDaArena.mutateAsync({ gameDayId: gameDay.id, uid: user?.uid, arenaId: gameDay.arena_id });
+      else await removeSelf.mutateAsync(me.id);
       toast.success('Você saiu do Play.');
       setConfirmLeave(false);
     } catch (err) {
@@ -102,13 +114,23 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
       <div className="space-y-4">
         {!me ? (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              Você ainda não está participando deste Play. Ao iniciar, você entra na ordem de participação e
-              pode ser chamado para as quadras.
-            </p>
-            <V2Button onClick={handleJoin} disabled={join.isPending}>
-              <PlayCircle className="mr-1.5 h-4 w-4" /> {join.isPending ? 'Entrando…' : 'Iniciar minha participação'}
-            </V2Button>
+            {entraPeloPainel ? (
+              <p className="text-sm text-gray-600">
+                Você ainda não está participando deste Play. Para entrar, use{' '}
+                <strong className="font-semibold text-ink">“Participar”</strong>, no alto da página — você vai para a
+                ordem de participação e pode ser chamado para as quadras.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Você ainda não está participando deste Play. Ao iniciar, você entra na ordem de participação e
+                pode ser chamado para as quadras.
+              </p>
+            )}
+            {entraPeloPainel ? null : (
+              <V2Button onClick={handleJoin} disabled={join.isPending}>
+                <PlayCircle className="mr-1.5 h-4 w-4" /> {join.isPending ? 'Entrando…' : 'Iniciar minha participação'}
+              </V2Button>
+            )}
           </div>
         ) : (
           <>
@@ -170,7 +192,7 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
         title="Sair do Play?"
         description="Você será removido da ordem de participação deste dia de jogo. Pode entrar de novo depois."
         confirmLabel="Sair"
-        loading={removeSelf.isPending}
+        loading={removeSelf.isPending || sairDaArena.isPending}
         onConfirm={handleLeave}
       />
     </V2CollapsibleCard>

@@ -22,7 +22,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
   normalizeGameDayInput, computeMemberUids, GAME_DAY_STATUS,
-  GD_PARTICIPANT_SOURCE, isPublicGameDay,
+  GD_PARTICIPANT_SOURCE, isPublicGameDay, GAME_DAY_VISIBILITY,
 } from '../domain/gameDay.js';
 import { GAME_DAY_MANAGE_MODE } from '../domain/gameDayRoles.js';
 import {
@@ -125,6 +125,34 @@ export async function listMyGameDays(uid) {
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED)
     .sort((a, b) => Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0));
+}
+
+/**
+ * Os dias de jogo PÚBLICOS dos próximos dias — do atleta e da ARENA — para o
+ * "Jogar" do início e o Procura-se jogo.
+ *
+ * ⚠️ A forma da consulta é contrato, em DOIS sentidos:
+ *  - `visibility == 'public'` é o que a regra de `game_days` consegue provar
+ *    para uma consulta (sem ele o Firestore recusa para todo mundo menos o
+ *    admin — a lição da Onda CB);
+ *  - `date IN [os próximos dias]` é uma lista de IGUALDADES, que o Firestore
+ *    serve juntando os índices de campo único — **sem índice composto**. Uma
+ *    faixa (`date >= hoje`) com a igualdade exigiria um índice novo, e aí
+ *    seria mexer no banco. Conferido na produção com a mesma forma de consulta.
+ *
+ * @param {{ dias: string[] }} p os dias ('YYYY-MM-DD'), no máximo 30
+ */
+export async function listUpcomingPublicGameDays({ dias = [] } = {}) {
+  const janela = [...new Set(dias)].filter(Boolean).slice(0, 30);
+  if (!db || janela.length === 0) return [];
+  const snap = await getDocs(query(
+    collection(db, COL),
+    where('visibility', '==', GAME_DAY_VISIBILITY.PUBLIC),
+    where('date', 'in', janela),
+  ));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED);
 }
 
 /** Atualiza campos do dia de jogo (somente o criador — reforçado nas rules). */
@@ -232,6 +260,22 @@ export async function joinPublicGameDay(gameDay, user, profile) {
   if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
   if (gameDay.created_by === user.uid) return; // já é o dono
 
+  // 🐞 Dia de jogo de ARENA tem TETO de vagas, inscrição por quadra e, quando
+  // nasceu de um jogo aberto, DUAS listas gravadas juntas. Entrar por aqui
+  // (o "Iniciar minha participação" do Play, por exemplo) pulava tudo isso.
+  // O documento é conferido no banco — quem chama pode ter só o id — e o dia
+  // de arena entra pelo caminho dele. Importação dinâmica: os dois serviços
+  // se conhecem, e um import estático faria um ciclo.
+  // Leitura que falha não vira "entra sem conferir": a exceção sobe e a tela
+  // diz que não deu.
+  const atual = await getGameDay(gameDay.id);
+  if (!atual) throw new Error('Dia de jogo não encontrado.');
+  if (atual.arena_id) {
+    const { signUpToArenaGameDay } = await import('./arenaGameDayService.js');
+    await signUpToArenaGameDay(atual, user, profile);
+    return;
+  }
+
   const existing = await getDocs(query(
     collection(db, COL, gameDay.id, SUB_PARTICIPANTS), where('user_id', '==', user.uid),
   ));
@@ -251,9 +295,9 @@ export async function joinPublicGameDay(gameDay, user, profile) {
 
   notifyUsers([gameDay.created_by], {
     title: 'Novo participante no seu dia de jogo',
-    message: `${name} entrou no dia de jogo "${gameDay.title}" pelo convite.`,
+    message: `${name} entrou no dia de jogo "${gameDay.title}".`,
     type: NOTIFICATION_TYPE.GENERIC,
-    link: '/dia-de-jogo',
+    link: `/dia-de-jogo/${gameDay.id}`,
     actor: { uid: user.uid, displayName: name },
   });
   await createAuditLog({ action: 'game_day_joined', actor: user, details: { game_day_id: gameDay.id } });

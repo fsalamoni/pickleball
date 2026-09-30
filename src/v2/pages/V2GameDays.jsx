@@ -35,11 +35,13 @@ import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/arenaGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import { isOpenMatchGameDay, arenaGameDayEditLink } from '@/modules/arenas/domain/openMatchGameDay';
+import GameDayJoinPanel from '@/v2/components/games/GameDayJoinPanel';
 
 // O painel do JOGO ABERTO (Onda CA) só existe no dia de jogo que nasceu de um
 // jogo aberto — e ele puxa os hooks da arena. Sob demanda, para o dia de jogo
 // comum (atleta, clube) não baixar nada disso.
 const OpenMatchGameDayPanel = lazy(() => import('@/v2/components/arenas/openMatch/OpenMatchGameDayPanel'));
+
 
 export default function V2GameDays() {
   const enabled = true;
@@ -329,6 +331,11 @@ function GameDayDetail({ gameDayId }) {
           </p>
         )}
       </V2Surface>
+
+      {/* Participar: quem chegou pelo "Jogar" (ou pelo Procura-se jogo) entra
+          AQUI, dentro do dia — dia público do atleta ou dia da arena (com as
+          vagas e a quadra). O jogo aberto tem o painel próprio, logo abaixo. */}
+      <GameDayJoinPanel gameDay={gameDay} podeConfigurar={podeConfigurar} className="mb-4" />
 
       {/* O jogo aberto por trás deste dia (Onda CA): nível, valor, vagas e o
           botão de entrar — o mesmo da página da arena. */}

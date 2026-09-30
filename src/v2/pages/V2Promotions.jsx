@@ -13,15 +13,18 @@
  *
  * Falha não é vazio: "nenhuma promoção no ar" só com a leitura em mãos.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { GraduationCap, Megaphone, Tag } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
-  PROMO_ISSUER, isVisibleTo, livePromoBanners, livePromoCoupons,
+  PROMO_ISSUER, isVisibleTo, livePromoBanners, livePromoCoupons, reachMatchesRegion,
 } from '@/modules/promo/domain/promo';
+import { BANNER_REGION, bannerRegionFromMyRegion } from '@/modules/arenas/domain/homeBanners';
+import { useMyRegion } from '@/core/lib/useMyRegion';
+import RegionBar from '@/v2/components/region/RegionBar';
 import { usePromoShowcase, usePromoViewer } from '@/modules/promo/hooks/usePromo';
 import {
   V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
@@ -38,16 +41,45 @@ export default function V2Promotions() {
   const quem = usePromoViewer({ enabled: professoresOn });
   const today = todayISO();
 
-  const { banners, cuponsPlataforma, cuponsProfessores } = useMemo(() => {
+  // Minha região: as promoções da região da pessoa (as nacionais sempre
+  // entram). Sem saber onde ela está, a vitrine mostra tudo — ela é a página
+  // de "ver todas".
+  const minha = useMyRegion();
+  const [verTodas, setVerTodas] = useState(false);
+  const regiaoPromo = minha.ativa ? bannerRegionFromMyRegion(minha.region, minha.matcher) : null;
+  const filtraRegiao = Boolean(regiaoPromo) && regiaoPromo.mode !== BANNER_REGION.UNKNOWN
+    && regiaoPromo.mode !== BANNER_REGION.ALL && !verTodas;
+
+  const { banners, cuponsPlataforma, cuponsProfessores, fora } = useMemo(() => {
     const emissorLigado = (d) => (d.issuer_type === PROMO_ISSUER.PLATFORM ? plataformaOn : professoresOn);
-    const visivel = (d) => emissorLigado(d) && isVisibleTo(d, quem);
+    const visivelSemRegiao = (d) => emissorLigado(d) && isVisibleTo(d, quem);
+    const naRegiao = (d) => !filtraRegiao || reachMatchesRegion(d.reach, regiaoPromo);
+    let foraDaRegiao = 0;
+    const visivel = (d) => {
+      if (!visivelSemRegiao(d)) return false;
+      if (naRegiao(d)) return true;
+      foraDaRegiao += 1;
+      return false;
+    };
     const cupons = livePromoCoupons(q.data?.coupons || []).filter(visivel);
     return {
       banners: livePromoBanners(q.data?.campaigns || [], { today, lugar: 'page' }).filter(visivel),
       cuponsPlataforma: cupons.filter((c) => c.issuer_type === PROMO_ISSUER.PLATFORM),
       cuponsProfessores: cupons.filter((c) => c.issuer_type === PROMO_ISSUER.COACH),
+      fora: foraDaRegiao,
     };
-  }, [q.data, quem, today, plataformaOn, professoresOn]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data, quem, today, plataformaOn, professoresOn, filtraRegiao, minha.matcher, minha.region]);
+  // A barra da região, no formato que ela espera.
+  const regional = {
+    ...minha,
+    fora: filtraRegiao ? fora : 0,
+    ampliado: verTodas,
+    ampliadoCom: verTodas ? 1 : 0,
+    ampliar: () => setVerTodas(true),
+    recolher: () => setVerTodas(false),
+    buscando: false,
+  };
 
   if (!flagsCarregando && !ligado) return <Navigate to="/" replace />;
 
@@ -59,6 +91,8 @@ export default function V2Promotions() {
         title="Promoções"
         subtitle="Cupons e campanhas da plataforma e dos professores que estão valendo agora. Toque no código para copiar."
       />
+
+      <RegionBar regional={regional} className="mb-6" nomeItens={['promoção', 'promoções']} />
 
       {flagsCarregando || q.isLoading ? (
         <div className="space-y-3">
@@ -86,8 +120,10 @@ export default function V2Promotions() {
             <V2Surface>
               <V2EmptyState
                 icon={Tag}
-                title="Nenhuma promoção no ar agora"
-                description="Quando a plataforma ou um professor lançar um cupom ou campanha, ele aparece aqui — e na sua tela inicial, se for da sua região."
+                title={fora > 0 && filtraRegiao ? `Nenhuma promoção ${minha.frase} agora` : 'Nenhuma promoção no ar agora'}
+                description={fora > 0 && filtraRegiao
+                  ? `Há ${fora} em outras regiões — toque em "Ver também", acima, para vê-las.`
+                  : 'Quando a plataforma ou um professor lançar um cupom ou campanha, ele aparece aqui — e na sua tela inicial, se for da sua região.'}
               />
             </V2Surface>
           )}

@@ -397,6 +397,17 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
   (autoindicação, teste ou rating DUPR); a UF vira lista; quem já tinha
   cadastro vê só o que falta. DUPR segue opcional. Zero banco.
 
+**Minha região (2026-09-30)** — mais uma, default OFF (ver `docs/34-MINHA-REGIAO.md`):
+- `my_region` — o que a plataforma mostra segue a região de cada pessoa: a
+  cidade do perfil + 50 km por padrão, ou só a cidade, outro raio, o estado,
+  outro lugar (ou a localização do aparelho) e todo lugar. Vale no início
+  (Jogar, Torneios, Destaques, Horários da arena), Procura-se jogo, Torneios,
+  Arenas, Professores, Clubes, Promoções e Encontrar jogadores. A distância é
+  entre cidades (mapa do IBGE sob demanda). Zero banco (navegador, por
+  usuário). **Sempre ligados, sem flag**: o "Jogar" e o Procura-se jogo com os
+  dias de jogo das ARENAS, "Participar" dentro do dia de jogo e nada do que já
+  passou nas listas.
+
 Padrão de uso:
 
 ```jsx
