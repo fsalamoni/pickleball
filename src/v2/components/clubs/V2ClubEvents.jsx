@@ -12,8 +12,8 @@ import {
   isGameDayEvent,
   isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
-import { EventFormDialog } from '@/modules/clubs/components/ClubEventsTab';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 
 function formatDateTime(value) {
   if (!value) return null;
@@ -32,7 +32,7 @@ const TYPE_TONE = {
 };
 
 export default function V2ClubEvents({ clubId, isAdmin }) {
-  const { data: events = [], isLoading } = useClubEvents(clubId);
+  const { data: events = [], isLoading, isError, refetch } = useClubEvents(clubId);
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
@@ -44,6 +44,14 @@ export default function V2ClubEvents({ clubId, isAdmin }) {
 
       {isLoading ? (
         <div className="space-y-3">{[1, 2].map((i) => <V2Skeleton key={i} className="h-28 rounded-4xl" />)}</div>
+      ) : isError ? (
+        // Falha não é "nenhum evento — crie o primeiro": isso convidaria a
+        // duplicar um evento que existe (docs/27-FALHA-NAO-E-VAZIO.md).
+        <V2ErrorState
+          title="Não foi possível carregar os eventos"
+          description="Os eventos continuam lá — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
       ) : events.length === 0 ? (
         <V2EmptyState
           icon={CalendarDays}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   subscribeToConversations,
@@ -19,44 +19,70 @@ export function useConversations() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Falha não é "nenhuma conversa" (docs/27-FALHA-NAO-E-VAZIO.md). Uma
+  // assinatura que falhou está encerrada: `retry` assina de novo.
+  const [isError, setIsError] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     if (!user?.uid) {
       setConversations([]);
       setIsLoading(false);
+      setIsError(false);
       return undefined;
     }
     setIsLoading(true);
-    const unsubscribe = subscribeToConversations(user.uid, (list) => {
-      setConversations(list);
-      setIsLoading(false);
-    });
+    setIsError(false);
+    const unsubscribe = subscribeToConversations(
+      user.uid,
+      (list) => {
+        setConversations(list);
+        setIsLoading(false);
+      },
+      () => {
+        setIsError(true);
+        setIsLoading(false);
+      },
+    );
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, tentativa]);
 
-  return { conversations, isLoading };
+  const retry = useCallback(() => setTentativa((n) => n + 1), []);
+  return { conversations, isLoading, isError, retry };
 }
 
 /** Assina, em tempo real, as mensagens de uma conversa. */
 export function useMessages(conversationId) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
       setIsLoading(false);
+      setIsError(false);
       return undefined;
     }
     setIsLoading(true);
-    const unsubscribe = subscribeToMessages(conversationId, (list) => {
-      setMessages(list);
-      setIsLoading(false);
-    });
+    setIsError(false);
+    const unsubscribe = subscribeToMessages(
+      conversationId,
+      (list) => {
+        setMessages(list);
+        setIsLoading(false);
+      },
+      () => {
+        setIsError(true);
+        setIsLoading(false);
+      },
+    );
     return () => unsubscribe();
-  }, [conversationId]);
+  }, [conversationId, tentativa]);
 
-  return { messages, isLoading };
+  const retry = useCallback(() => setTentativa((n) => n + 1), []);
+  return { messages, isLoading, isError, retry };
 }
 
 /**

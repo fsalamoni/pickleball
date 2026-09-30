@@ -5,7 +5,7 @@ import {
 import { toast } from 'sonner';
 
 import {
-  V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2Select, V2FilterChip,
+  V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2Select, V2FilterChip, V2ErrorState,
 } from '@/v2/ui/primitives';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -51,7 +51,7 @@ const GRUPOS = [
  */
 export default function AdminUserRecordsTab() {
   const { isPlatformAdmin, user } = useAuth();
-  const { data: users = [], isLoading } = useAllPlatformUsers({ enabled: isPlatformAdmin });
+  const { data: users = [], isLoading, isError, refetch } = useAllPlatformUsers({ enabled: isPlatformAdmin });
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('todos'); // todos | incompletos | pendentes | teste
   const [alvo, setAlvo] = useState(null);
@@ -114,6 +114,17 @@ export default function AdminUserRecordsTab() {
   const abrirExclusao = (lista) => setParaExcluir(lista);
 
   if (isLoading) return <V2Skeleton lines={6} />;
+  if (isError) {
+    return (
+      <V2Surface>
+        <V2ErrorState
+          title="Não foi possível carregar os cadastros"
+          description="Os cadastros continuam lá — só não conseguimos listá-los agora."
+          onRetry={() => refetch()}
+        />
+      </V2Surface>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -32,7 +32,7 @@ import { CONVERSATION_TYPE } from '@/modules/chat/domain/constants';
 import { conversationTitle, directCounterpart } from '@/modules/chat/domain/conversations';
 import { useMessages, useChatActions } from '@/modules/chat/hooks/useChat';
 import NewChatDialog from '@/modules/chat/components/NewChatDialog';
-import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import V2MessageBubble from './V2MessageBubble';
 import V2ChatComposer from './V2ChatComposer';
@@ -50,7 +50,9 @@ function dayLabel(ms) {
 }
 
 export default function V2ChatWindow({ conversation, currentUserId, onBack, onClose, onOpenConversation }) {
-  const { messages, isLoading } = useMessages(conversation?.id);
+  const {
+    messages, isLoading, isError: mensagensFalharam, retry: tentarMensagensDeNovo,
+  } = useMessages(conversation?.id);
   const actions = useChatActions();
   const scrollRef = useRef(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -188,6 +190,13 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <V2Skeleton key={i} className={`h-12 max-w-[60%] rounded-2xl ${i % 2 ? '' : 'ml-auto'}`} />)}
           </div>
+        ) : mensagensFalharam ? (
+          // Falha não é "nenhuma mensagem ainda. Diga olá!".
+          <V2ErrorState
+            title="Não foi possível carregar as mensagens"
+            description="A conversa continua lá — só não conseguimos buscá-la agora."
+            onRetry={tentarMensagensDeNovo}
+          />
         ) : rendered.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
             <MessagesSquare className="mb-3 h-10 w-10 text-gray-300" />

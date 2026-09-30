@@ -43,6 +43,7 @@ import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerI
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
+import { destinoDeAviso } from '@/core/domain/internalLink';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import {
   DropdownMenu,
@@ -345,7 +346,9 @@ function NavItem({ item, active, onClick }) {
 
 function NotificationsMenu() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications, unreadCount, isError: avisosFalharam, retry: tentarAvisosDeNovo, markAsRead, markAllAsRead,
+  } = useNotifications();
   const markAllOn = true;
   const quickConfirmOn = true;
 
@@ -388,14 +391,27 @@ function NotificationsMenu() {
             </button>
           )}
         </div>
-        {notifications.length === 0 ? (
+        {avisosFalharam ? (
+          // Falha não é "nenhuma notificação".
+          <div role="alert" className="p-4 text-center text-sm text-amber-800">
+            <p>Não foi possível carregar os avisos.</p>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); tentarAvisosDeNovo(); }}
+              className="mt-2 text-xs font-bold text-ink underline"
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">Nenhuma notificação.</div>
         ) : (
           notifications.map((n) => (
             <DropdownMenuItem
               key={n.id}
               onClick={() => {
-                if (n.link) navigate(n.link);
+                const destino = destinoDeAviso(n.link);
+                if (destino) navigate(destino);
                 if (!n.read) markAsRead(n.id);
               }}
               className={cn('cursor-pointer items-start', !n.read && 'bg-acid/10')}

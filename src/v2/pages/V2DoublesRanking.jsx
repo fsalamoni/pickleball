@@ -35,7 +35,7 @@ import { paginate, normalizePageSize, DEFAULT_PAGE_SIZE } from '@/core/domain/pa
 import { readNumericPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  V2Avatar, V2EmptyState, V2PageIntro, V2SearchInput, V2Select, V2Skeleton, V2Surface,
+  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import V2Pagination from '@/v2/ui/V2Pagination';
 import { cn } from '@/core/lib/utils';
@@ -64,7 +64,7 @@ function aproveitamento(winRate) {
 }
 
 export default function V2DoublesRanking() {
-  const { data: ranking = [], isLoading } = useDoublesRanking(true);
+  const { data: ranking = [], isLoading, isError, refetch } = useDoublesRanking(true);
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
 
@@ -192,6 +192,16 @@ export default function V2DoublesRanking() {
 
       {isLoading ? (
         <V2Skeleton className="h-64 rounded-4xl" />
+      ) : isError ? (
+        // Um quarto caso, antes dos três vazios: a consulta FALHOU. Dizer
+        // "ainda não há parceria" aqui seria afirmar o que não se sabe.
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar o ranking de duplas"
+            description="As duplas continuam no ranking — só não conseguimos buscá-lo agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : filtered.length === 0 ? (
         <V2Surface>
           {/* Três vazios diferentes: dizer QUAL filtro esvaziou a tela é a

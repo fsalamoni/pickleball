@@ -4,7 +4,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { useForumThreads } from '@/modules/clubs/hooks/useClubForum';
 import CreateThreadDialog from '@/modules/clubs/components/CreateThreadDialog';
 import V2ForumThreadView from '@/v2/components/clubs/V2ForumThreadView';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 
 function timeAgo(ms) {
   if (!ms) return '';
@@ -25,7 +25,7 @@ function snippet(body) {
 }
 
 export default function V2ClubForums({ clubId, isAdmin, initialThreadId, onThreadChange }) {
-  const { data: threads = [], isLoading } = useForumThreads(clubId);
+  const { data: threads = [], isLoading, isError, refetch } = useForumThreads(clubId);
   const [selectedId, setSelectedId] = useState(initialThreadId || null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -62,6 +62,12 @@ export default function V2ClubForums({ clubId, isAdmin, initialThreadId, onThrea
 
       {isLoading ? (
         <div className="space-y-3">{[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-24 rounded-4xl" />)}</div>
+      ) : isError ? (
+        <V2ErrorState
+          title="Não foi possível carregar o fórum"
+          description="Os tópicos continuam lá — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
       ) : threads.length === 0 ? (
         <V2EmptyState
           icon={MessagesSquare}

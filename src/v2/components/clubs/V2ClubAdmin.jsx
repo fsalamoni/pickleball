@@ -19,7 +19,7 @@ import {
   useClubMembers,
 } from '@/modules/clubs/hooks/useClubs';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { V2Badge, V2Button, V2Surface, V2Toggle } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 export default function V2ClubAdmin({ club }) {
@@ -201,6 +201,9 @@ export default function V2ClubAdmin({ club }) {
   );
 }
 
+/** Referência estável: `[]` novo a cada render refaria os `useMemo`. */
+const SEM_ITENS = [];
+
 function V2ClubPublicPageCard({ club, updateClub, copy }) {
   const isPublic = club.is_public === true;
   const publicLink = typeof window !== 'undefined' ? `${window.location.origin}/c/${club.id}` : `/c/${club.id}`;
@@ -244,7 +247,7 @@ function V2ClubPublicPageCard({ club, updateClub, copy }) {
 }
 
 function V2ClubJoinRequests({ club }) {
-  const { data: requests = [], isLoading } = useJoinRequests(club.id);
+  const { data: requests = [], isLoading, isError, refetch } = useJoinRequests(club.id);
   const approve = useApproveJoinRequest(club.id);
   const reject = useRejectJoinRequest(club.id);
 
@@ -268,6 +271,14 @@ function V2ClubJoinRequests({ club }) {
       <div className="mt-5 space-y-2">
         {isLoading ? (
           <p className="text-sm text-gray-500">Carregando…</p>
+        ) : isError ? (
+          // Falha não é "nenhum pedido pendente": quem pediu para entrar ficaria esperando.
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os pedidos"
+            description="Os pedidos continuam lá — só não conseguimos buscá-los agora."
+            onRetry={() => refetch()}
+          />
         ) : requests.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum pedido pendente.</p>
         ) : (
@@ -299,9 +310,20 @@ function V2ClubJoinRequests({ club }) {
 function V2ClubAddMembers({ club }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState({});
-  const { data: athletes = [], isLoading } = useAllAthletes();
-  const { data: members = [] } = useClubMembers(club.id);
-  const { data: invites = [] } = useClubInvites(club.id);
+  const atletasQ = useAllAthletes();
+  const membrosQ = useClubMembers(club.id);
+  const convitesQ = useClubInvites(club.id);
+  const athletes = atletasQ.data ?? SEM_ITENS;
+  const members = membrosQ.data ?? SEM_ITENS;
+  const invites = convitesQ.data ?? SEM_ITENS;
+  const isLoading = atletasQ.isLoading;
+  // A lista de "disponíveis" é atletas MENOS membros MENOS convidados. Com
+  // membros ou convites falhando, ela ofereceria convidar quem já está no
+  // clube — então sem as três em mãos não se oferece convite nenhum.
+  const falhou = atletasQ.isError || membrosQ.isError || convitesQ.isError;
+  const tentarDeNovo = () => {
+    [atletasQ, membrosQ, convitesQ].filter((q) => q.isError).forEach((q) => q.refetch());
+  };
   const inviteMany = useInviteMembersToClub(club);
   const cancelInvite = useCancelClubInvite(club.id);
 
@@ -375,6 +397,13 @@ function V2ClubAddMembers({ club }) {
 
         {isLoading ? (
           <p className="text-sm text-gray-500">Carregando atletas…</p>
+        ) : falhou ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os atletas"
+            description="Sem saber quem já é membro, não oferecemos convites — tente de novo."
+            onRetry={tentarDeNovo}
+          />
         ) : available.length === 0 ? (
           <div className="flex items-center gap-2 rounded-2xl bg-paper px-4 py-5 text-sm text-gray-500">
             <Users className="h-4 w-4 shrink-0" />
@@ -417,7 +446,7 @@ function V2ClubAddMembers({ club }) {
 
         <V2Button
           onClick={handleInviteSelected}
-          disabled={selectedCount === 0 || inviteMany.isPending}
+          disabled={selectedCount === 0 || inviteMany.isPending || falhou}
           className="w-full"
         >
           <UserPlus className="h-4 w-4" />

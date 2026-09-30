@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -9,6 +9,10 @@ export function useNotifications() {
   const { user, userProfile } = useAuth();
   const [allNotifications, setAllNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Falha não é "nenhuma notificação" (docs/27-FALHA-NAO-E-VAZIO.md). Uma
+  // assinatura que falhou está encerrada: `retry` assina de novo.
+  const [isError, setIsError] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   // Imposição das preferências na leitura: esconde do sino as notificações
   // de categorias que o usuário silenciou.
@@ -21,8 +25,10 @@ export function useNotifications() {
     if (!user) {
       setAllNotifications([]);
       setIsLoading(false);
+      setIsError(false);
       return;
     }
+    setIsError(false);
     const q = query(collection(db, 'notifications'), where('user_id', '==', user.uid));
     const unsubscribe = onSnapshot(
       q,
@@ -37,6 +43,7 @@ export function useNotifications() {
             }),
         );
         setIsLoading(false);
+        setIsError(false);
       },
       (err) => {
         // Falha (ex.: regra de leitura) não pode quebrar a aplicação; loga e
@@ -44,10 +51,11 @@ export function useNotifications() {
         logger.error('Falha ao escutar notificações:', err);
         setAllNotifications([]);
         setIsLoading(false);
+        setIsError(true);
       },
     );
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, tentativa]);
 
   const markAsRead = async (notifId) => {
     await updateDoc(doc(db, 'notifications', notifId), {
@@ -75,5 +83,9 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead };
+  const retry = useCallback(() => setTentativa((n) => n + 1), []);
+
+  return {
+    notifications, unreadCount, isLoading, isError, retry, markAsRead, markAllAsRead,
+  };
 }

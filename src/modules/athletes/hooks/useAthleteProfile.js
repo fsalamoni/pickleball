@@ -16,12 +16,25 @@ export function useAthleteProfile(uid) {
     queryKey: ['athlete-profile', uid],
     enabled: !!uid,
     queryFn: async () => {
-      const [athlete, rating, history] = await Promise.all([
-        getAthlete(uid).catch(() => null),
-        getPlayerRating(uid).catch(() => null),
-        getMyTournamentHistory(uid).catch(() => []),
+      const [athlete, rating, history] = await Promise.allSettled([
+        getAthlete(uid),
+        getPlayerRating(uid),
+        getMyTournamentHistory(uid),
       ]);
-      return { athlete, rating, history, stats: buildPlayerStats(history) };
+      // ⚠️ Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md). O perfil que não
+      // carregou virava `null` e a página afirmava "Atleta não encontrado — o
+      // perfil não existe" para quem existe: agora a consulta FALHA e a página
+      // diz que falhou. O histórico que não carregou é marcado, para os
+      // números não virarem "0 torneios, 0 jogos".
+      if (athlete.status === 'rejected') throw athlete.reason;
+      const historico = history.status === 'fulfilled' ? history.value || [] : [];
+      return {
+        athlete: athlete.value,
+        rating: rating.status === 'fulfilled' ? rating.value : null,
+        history: historico,
+        stats: buildPlayerStats(historico),
+        historicoFalhou: history.status === 'rejected',
+      };
     },
   });
 }

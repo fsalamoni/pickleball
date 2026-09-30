@@ -7,6 +7,7 @@ import { genderLabel } from '@/modules/athletes/domain/constants';
 import {
   V2Avatar,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
@@ -107,7 +108,7 @@ function RankingExplainer() {
 }
 
 function NationalRankingView() {
-  const { data: players = [], isLoading } = useNationalRanking();
+  const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
   const profilePageOn = true;
   const rankingFiltersOn = true;
   const doublesRankingOn = true;
@@ -215,6 +216,15 @@ function NationalRankingView() {
 
       {isLoading ? (
         <V2Skeleton className="h-96 rounded-4xl" />
+      ) : isError ? (
+        // Falha não é "ranking ainda não calculado" (docs/27-FALHA-NAO-E-VAZIO.md).
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar o ranking"
+            description="O ranking continua calculado — só não conseguimos buscá-lo agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState

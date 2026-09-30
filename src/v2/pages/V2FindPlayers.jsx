@@ -13,6 +13,7 @@ import {
   V2Avatar,
   V2Badge,
   V2EmptyState,
+  V2ErrorState,
   V2FilterChip,
   V2PageIntro,
   V2Skeleton,
@@ -29,7 +30,7 @@ function compatTone(score) {
 export default function V2FindPlayers() {
   const { user, userProfile } = useAuth();
   const smartOn = useFeatureFlag(FEATURE_FLAG.SMART_MATCHMAKING);
-  const { data: players = [], isLoading } = useNationalRanking();
+  const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
   // Diretório (lado da quadra + interesses) só é buscado no modo inteligente.
   const { data: directory = [] } = useAthletes(smartOn);
   const [sameCityOnly, setSameCityOnly] = useState(false);
@@ -88,6 +89,23 @@ export default function V2FindPlayers() {
       <div className="mx-auto max-w-[1100px]">
         <V2PageIntro title="Encontrar jogadores" subtitle="Parceiros e adversários do seu nível, prontos para um jogo." />
         <V2Skeleton className="h-64 rounded-4xl" />
+      </div>
+    );
+  }
+
+  // Com o ranking falhando, `me` sai nulo — e a tela diria "Você ainda não tem
+  // rating" a quem tem. Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md).
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-[900px]">
+        <V2PageIntro title="Encontrar jogadores" subtitle="Parceiros e adversários do seu nível." />
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar as sugestões"
+            description="Seu rating continua o mesmo — só não conseguimos buscar o ranking agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       </div>
     );
   }

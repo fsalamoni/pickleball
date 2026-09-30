@@ -15,7 +15,7 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
-import { V2Avatar, V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 
@@ -36,7 +36,7 @@ export default function V2AthleteProfile() {
   const coachResidentOn = true;
   const levelingOn = true;
   const { uid } = useParams();
-  const { data, isLoading, isError } = useAthleteProfile(uid);
+  const { data, isLoading, isError, refetch } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
   const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
   const { data: followers = [] } = useFollowers(uid, followOn);
@@ -55,8 +55,23 @@ export default function V2AthleteProfile() {
     );
   }
 
+  if (isError) {
+    // Falhar não é "o perfil não existe" (docs/27-FALHA-NAO-E-VAZIO.md).
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar o perfil"
+            description="O perfil continua lá — só não conseguimos buscá-lo agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
+      </div>
+    );
+  }
+
   const athlete = data?.athlete;
-  if (isError || !athlete) {
+  if (!athlete) {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
@@ -71,7 +86,7 @@ export default function V2AthleteProfile() {
     );
   }
 
-  const { rating, history = [], stats } = data;
+  const { rating, history = [], stats, historicoFalhou } = data;
   const location = [athlete.city, athlete.state].filter(Boolean).join(' / ');
   const clubs = clubNames(athlete);
   const formats = Object.entries(stats?.byFormat || {});
@@ -150,14 +165,23 @@ export default function V2AthleteProfile() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <MiniStat icon={Trophy} label="Torneios" value={stats.tournaments} />
-        <MiniStat icon={Swords} label="Jogos" value={stats.played} />
-        <MiniStat icon={Percent} label="Aproveit." value={formatPercent(stats.winRate)} />
-        <MiniStat icon={Award} label="Títulos" value={stats.titles} />
-        <MiniStat icon={Medal} label="Pódios" value={stats.podiums} />
-        <MiniStat icon={Trophy} label="Inscrições" value={stats.registrations} />
+      {/* Stats — com o histórico sem carregar, os números são "—", nunca zero. */}
+      {historicoFalhou && (
+        <V2ErrorState
+          inline
+          className="mt-8"
+          title="O histórico de torneios não carregou"
+          description="Os números abaixo ficam em branco até ele chegar."
+          onRetry={() => refetch()}
+        />
+      )}
+      <div className={`${historicoFalhou ? 'mt-4' : 'mt-8'} grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6`}>
+        <MiniStat icon={Trophy} label="Torneios" value={historicoFalhou ? '—' : stats.tournaments} />
+        <MiniStat icon={Swords} label="Jogos" value={historicoFalhou ? '—' : stats.played} />
+        <MiniStat icon={Percent} label="Aproveit." value={historicoFalhou ? '—' : formatPercent(stats.winRate)} />
+        <MiniStat icon={Award} label="Títulos" value={historicoFalhou ? '—' : stats.titles} />
+        <MiniStat icon={Medal} label="Pódios" value={historicoFalhou ? '—' : stats.podiums} />
+        <MiniStat icon={Trophy} label="Inscrições" value={historicoFalhou ? '—' : stats.registrations} />
       </div>
 
       {coachResidentOn && coachProfile?.active && (
@@ -209,7 +233,7 @@ export default function V2AthleteProfile() {
       {/* Evolução do Nível 2.0–8.0 (estilo DUPR) — auto-oculto pela flag/dados. */}
       <V2DuprEvolution uid={uid} />
 
-      {achievementsOn && (
+      {achievementsOn && !historicoFalhou && (
         <div className="mt-8"><AchievementsCard summary={{ ...stats, rating: rating?.rating }} /></div>
       )}
 

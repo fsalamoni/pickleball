@@ -4,7 +4,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/core/lib/utils';
 import { CONVERSATION_TYPE } from '@/modules/chat/domain/constants';
 import { conversationTitle, directCounterpart, lastMessagePreview } from '@/modules/chat/domain/conversations';
-import { V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 
 function timeLabel(ms) {
   if (!ms) return '';
@@ -19,9 +19,24 @@ function timeLabel(ms) {
   return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-export default function V2ConversationList({ conversations, isLoading, selectedId, currentUserId, onSelect }) {
+export default function V2ConversationList({
+  conversations, isLoading, isError = false, onRetry, selectedId, currentUserId, onSelect,
+}) {
   if (isLoading) {
     return <div className="space-y-1 p-2">{[1, 2, 3, 4].map((i) => <V2Skeleton key={i} className="h-16 rounded-2xl" />)}</div>;
+  }
+
+  // Falha não é "nenhuma conversa" — dizer isso convidaria a recomeçar do zero
+  // uma conversa que existe.
+  if (isError) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar as conversas"
+        description="Suas conversas continuam lá — só não conseguimos buscá-las agora."
+        onRetry={onRetry}
+        className="py-10"
+      />
+    );
   }
 
   if (conversations.length === 0) {

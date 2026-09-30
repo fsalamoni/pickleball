@@ -215,8 +215,13 @@ export async function hideConversation(conversation, user) {
 /**
  * Assina a lista de conversas do usuário em tempo real. Ordena no cliente e
  * oculta conversas marcadas como excluídas pelo próprio usuário.
+ *
+ * @param {string} userId
+ * @param {(list: object[]) => void} callback
+ * @param {(err: Error) => void} [onError] quem quiser distinguir FALHA de
+ *   "nenhuma conversa". Sem ele, o comportamento de sempre: lista vazia.
  */
-export function subscribeToConversations(userId, callback) {
+export function subscribeToConversations(userId, callback, onError) {
   if (!db || !userId) {
     callback?.([]);
     return noop;
@@ -233,7 +238,8 @@ export function subscribeToConversations(userId, callback) {
     },
     (err) => {
       logger.error('Falha ao assinar conversas:', err);
-      callback?.([]);
+      if (onError) onError(err);
+      else callback?.([]);
     },
   );
 }
@@ -245,8 +251,11 @@ function messagesCol(conversationId) {
   return collection(db, COL.conversations, conversationId, COL.messages);
 }
 
-/** Assina as mensagens de uma conversa em tempo real (ordem crescente). */
-export function subscribeToMessages(conversationId, callback) {
+/**
+ * Assina as mensagens de uma conversa em tempo real (ordem crescente). Mesmo
+ * contrato de `subscribeToConversations` (o `onError` é opcional).
+ */
+export function subscribeToMessages(conversationId, callback, onError) {
   if (!db || !conversationId) {
     callback?.([]);
     return noop;
@@ -262,7 +271,8 @@ export function subscribeToMessages(conversationId, callback) {
     },
     (err) => {
       logger.error('Falha ao assinar mensagens:', err);
-      callback?.([]);
+      if (onError) onError(err);
+      else callback?.([]);
     },
   );
 }

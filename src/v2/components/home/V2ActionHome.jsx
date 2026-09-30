@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { destinoDeAviso } from '@/core/domain/internalLink';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight, Award, Bell, CalendarClock, CheckCircle2, ChevronRight, Flame,
@@ -84,7 +85,8 @@ export default function V2ActionHome() {
 
   function openNotification(n) {
     if (!n.read && n.id) markAsRead(n.id).catch(() => {});
-    if (n.link) navigate(n.link);
+    const destino = destinoDeAviso(n.link);
+    if (destino) navigate(destino);
   }
 
   return (

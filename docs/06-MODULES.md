@@ -396,11 +396,14 @@ abas; só admin acessa Administração.
   (Onda 8), `V2ClubPublicPage` (Onda 8b), `V2ClubRecurringEvents` (Onda 8b),
   `V2ClubInviteLink` (Onda 8b). `V2GameDayOrganizer` foi **removido** na Onda
   AS (cópia morta, sem import e fora do bundle).
-- **V1 (legado)**: `ClubsDirectory`, `CreateClub`, `ClubDetail`, `EventDetail`,
-  com `ClubMembersTab`, `ClubFeedTab`, `ClubForumsTab`, `ClubEventsTab`,
-  `GameDayOrganizer`, `ClubAdminTab`, `ForumThreadView`, `CreateThreadDialog`,
-  `ForumPoll`, `PollBuilder`, `EventChat`, `EventParticipantsPanel`,
-  `EventDatesPanel`.
+- **Peças de `modules/clubs/components/` usadas pelo V2** (a casca V1 —
+  `ClubsDirectory`, `ClubDetail`, `EventDetail` e as abas — já não existe):
+  `GameDayOrganizer` (o organizador LEGADO do dia de jogo, servido a toda data
+  anterior à Onda AS), `EventFormDialog` (o formulário de evento; era o
+  `ClubEventsTab`, cuja aba V1 morta saiu na varredura de 2026-09-30),
+  `CreateThreadDialog`, `PollBuilder`, `LinkedClubsSection`,
+  `GameDayLeaderboard`, `PublishToRankingToggle`. O guarda `src/core/guards/telaMorta.test.js`
+  reprova componente que ninguém importa.
 - **services**: `clubService` (clube, membros, pedidos, convites, com
   `is_public`, `public_slug`, `invite_link` — Onda 8b), `forumService`.
 - **domain (puro, testado)**: `clubRanking` (Onda 8), `forumPoll`,
@@ -427,8 +430,11 @@ Conversas 1:1 e em grupo.
 
 - **V2 (ativo)**: `V2Chat`; componentes `V2ConversationList`, `V2ChatWindow`,
   `V2MessageBubble`, `V2ChatComposer`, `V2ChatLauncherButton`.
-- **V1 (legado)**: `ChatPage`; componentes `ConversationList`, `ChatWindow`,
-  `MessageBubble`, `ChatComposer`, `NewChatDialog`, `ChatLauncherButton`.
+- **Compartilhado**: `NewChatDialog` (`modules/chat/components/`). A versão
+  V1 do chat (`ChatPage` e as cinco peças) saiu — sem nenhum import, e ainda
+  afirmando "Nenhuma conversa" numa falha que tela nenhuma mostrava.
+- **Falha não é vazio**: `useConversations`/`useMessages` devolvem `isError`
+  e `retry` (a assinatura que falha está encerrada; `retry` assina de novo).
 - **services**: `chatService`.
 - **hooks**: `useChat`.
 - **domain**: `conversations` (resolução/ordenação, testado).
@@ -440,8 +446,8 @@ Tabela de níveis + questionário auto-avaliativo.
 
 - **V2 (ativo)**: `V2Leveling` (página pública `/nivelamento`); componentes
   `V2LevelTable`, `V2LevelingQuestionnaire`.
-- **V1 (legado)**: `Leveling`; componentes `LevelTable`,
-  `LevelingQuestionnaire`, `LevelingResultCard`.
+- A versão V1 (`Leveling`, `LevelTable`, `LevelingQuestionnaire`,
+  `LevelingResultCard`) saiu na varredura de 2026-09-30 — sem nenhum import.
 - `data/levels.js` (catálogo), `domain/questionnaire.js` (cálculo do nível).
 - Resultado salvo em `users.leveling_*`. Integração no `Profile` (V1 e V2).
 - **Onda 7b**: validação por outro professor (coach_level_validations).

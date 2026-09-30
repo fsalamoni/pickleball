@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, MapPin, Pencil, Plus, Repeat, Trash2, Users, ArrowRight, Globe, Lock } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/ui/empty-state';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog,
   DialogContent,
@@ -19,161 +12,23 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  useClubEvents,
   useCreateClubEvent,
   useUpdateClubEvent,
-  useDeleteClubEvent,
-  useEventInvites,
 } from '@/modules/clubs/hooks/useClubs';
 import {
   CLUB_EVENT_TYPE,
   CLUB_EVENT_TYPE_LABELS,
-  INVITE_STATUS,
   EVENT_VISIBILITY,
   EVENT_VISIBILITY_LABELS,
-  eventTypeLabel,
   isGameDayEvent,
-  isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
 
-function formatDateTime(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-const TYPE_TONE = {
-  [CLUB_EVENT_TYPE.GAME_DAY]: 'success',
-  [CLUB_EVENT_TYPE.SOCIAL]: 'success',
-  [CLUB_EVENT_TYPE.TOURNAMENT]: 'warning',
-  [CLUB_EVENT_TYPE.MEETING]: 'outline',
-  [CLUB_EVENT_TYPE.OTHER]: 'outline',
-  training: 'success',
-};
-
-export default function ClubEventsTab({ clubId, isAdmin }) {
-  const { data: events = [], isLoading } = useClubEvents(clubId);
-  const [createOpen, setCreateOpen] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-gray-500">Dias de jogo, confraternizações, torneios internos e reuniões do clube.</p>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" /> Novo evento
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-3">{[1, 2].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
-      ) : events.length === 0 ? (
-        <EmptyState
-          icon={CalendarDays}
-          title="Nenhum evento planejado"
-          description="Crie o primeiro evento do clube e convide os membros."
-          action={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="mr-1.5 h-4 w-4" /> Criar evento</Button>}
-        />
-      ) : (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <EventCard key={event.id} event={event} clubId={clubId} isAdmin={isAdmin} />
-          ))}
-        </div>
-      )}
-
-      <EventFormDialog clubId={clubId} open={createOpen} onClose={() => setCreateOpen(false)} />
-    </div>
-  );
-}
-
-function EventCard({ event, clubId, isAdmin }) {
-  const { user } = useAuth();
-  const { data: invites = [] } = useEventInvites(event.id);
-  const deleteEvent = useDeleteClubEvent(clubId);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-
-  const canManage = isAdmin || event.created_by === user?.uid;
-  const participantCount = invites.filter((r) => r.status !== INVITE_STATUS.INVITED).length;
-  const when = formatDateTime(event.starts_at);
-  const gameDay = isGameDayEvent(event.type);
-  const isPrivate = isPrivateEvent(event);
-
-  const handleDelete = async () => {
-    try {
-      await deleteEvent.mutateAsync(event.id);
-      toast.success('Evento removido.');
-      setConfirmDelete(false);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível remover o evento.');
-    }
-  };
-
-  return (
-    <Card className="rounded-xl">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={TYPE_TONE[event.type] || 'outline'} className="rounded-full">
-                {eventTypeLabel(event.type)}
-              </Badge>
-              <Badge variant="outline" className="rounded-full">
-                {isPrivate ? <Lock className="mr-1 h-3 w-3" /> : <Globe className="mr-1 h-3 w-3" />}
-                {isPrivate ? 'Privado' : 'Público'}
-              </Badge>
-              {event.recurring && (
-                <Badge variant="secondary" className="rounded-full">
-                  <Repeat className="mr-1 h-3 w-3" /> Recorrente
-                </Badge>
-              )}
-              <h4 className="text-base font-semibold text-ink">{event.title}</h4>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-              {when && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {when}</span>}
-              {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>}
-              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {participantCount} participante(s)</span>
-            </div>
-          </div>
-          {canManage && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-500">{event.description}</p>}
-
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-          <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
-            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
-          </Button>
-          <Button asChild size="sm" variant="secondary" className="ml-auto">
-            <Link to={`/clubes/${clubId}/eventos/${event.id}`}>
-              {gameDay ? 'Organizar / ingressar' : 'Ingressar no evento'} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-
-        <EventFormDialog clubId={clubId} event={event} open={editOpen} onClose={() => setEditOpen(false)} />
-
-        <ConfirmDialog
-          open={confirmDelete}
-          onOpenChange={setConfirmDelete}
-          title="Remover evento"
-          description={`Tem certeza que deseja remover "${event.title}"?`}
-          confirmLabel="Remover"
-          destructive
-          loading={deleteEvent.isPending}
-          onConfirm={handleDelete}
-        />
-      </CardContent>
-    </Card>
-  );
-}
+/*
+ * O formulário de criar/editar evento de clube. A lista de eventos que
+ * morava neste arquivo (`ClubEventsTab`, V1) saiu: a tela viva é
+ * `v2/components/clubs/V2ClubEvents.jsx`, que importa só este diálogo.
+ */
 
 function toLocalInput(value) {
   if (!value) return '';
