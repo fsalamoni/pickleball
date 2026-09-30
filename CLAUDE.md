@@ -2401,6 +2401,14 @@ Quando você for commitar, atualize esta seção se os números mudarem.
   assim o projeto segue compartilhado: **Auth e o bucket do Storage são os
   mesmos dos dois apps** (excluir cadastro aqui apaga o login lá). Ver
   `docs/03-WORKFLOW.md` §9.1
+- **O `--only` do Firestore tem de NOMEAR o banco.** O `firebase.json` declara
+  o banco `pickleball` em lista, e a firebase-tools 13 só o enxerga quando o
+  alvo o nomeia: `firestore:rules` sozinho resolve ZERO bancos (o passo fica
+  verde sem publicar nada) e `firestore:indexes` sozinho quebra com "An
+  unexpected error has occurred". Use o par `firestore:rules,firestore:pickleball`.
+  🐞 Foi o que segurou os deploys dos PRs #175–#178 (site parado no #174 e
+  regras de segurança novas nunca publicadas). Guarda em
+  `src/core/guards/deployFirebaseWorkflow.test.js`; ver `docs/03-WORKFLOW.md` §4.3
 - **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
   precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
   rodapé (campos + botão salvar) fica fora da viewport e inacessível.
