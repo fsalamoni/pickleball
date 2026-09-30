@@ -11,6 +11,8 @@
  * Categorias: Vestuário, Bebida, Comida, Raquete, Bola, Acessórios, Brindes, Outros
  */
 
+import { todayISO } from './calendar.js';
+
 export const INVENTORY_CATEGORIES = Object.freeze({
   VESTUARIO: 'Vestuário',
   BEBIDA: 'Bebida',
@@ -118,7 +120,7 @@ export function stockStatus(quantity, minStock = 0) {
  */
 export function daysToExpiry(expiryDate, today) {
   if (!isValidDate(expiryDate)) return null;
-  const ref = isValidDate(today) ? today : new Date().toISOString().slice(0, 10);
+  const ref = isValidDate(today) ? today : todayISO();
   const a = Date.parse(`${expiryDate}T00:00:00Z`);
   const b = Date.parse(`${ref}T00:00:00Z`);
   if (Number.isNaN(a) || Number.isNaN(b)) return null;
@@ -226,6 +228,111 @@ export function calculateStock(productId, entries = [], exits = []) {
     total_invested: Math.round(e.reduce((s, x) => s + Number(x.total_cost || 0), 0) * 100) / 100,
     total_revenue: Math.round(x.reduce((s, x) => s + Number(x.total_price || 0), 0) * 100) / 100,
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * ONDE O PRODUTO ESTÁ — uma resposta só para todas as telas
+ *
+ * 🐞 Cada tela respondia por conta própria, e todas contavam o produto
+ * CADASTRADO como se estivesse no ESTOQUE. Puxar 40 itens do catálogo punha
+ * 40 linhas "Estoque: 0" na aba Estoque, 40 "Esgotado" na Reposição do Resumo
+ * e na Operação de hoje — de produto que a arena nunca comprou. E o vencido
+ * com a prateleira vazia disparava alerta de validade de uma coisa que não
+ * existe mais.
+ *
+ * A diferença que importa é o que a arena FEZ (a mesma regra de `trackedStock`
+ * da loja do app): produto com pelo menos uma COMPRA tem estoque controlado;
+ * sem nenhuma, ele está só cadastrado.
+ * ------------------------------------------------------------------ */
+
+export const STOCK_SITUATION = Object.freeze({
+  /** Tem estoque e está dentro da validade. */
+  A_VENDA: 'a_venda',
+  /** À venda, mas acabando (abaixo do mínimo, ou menos de 5 sem mínimo). */
+  BAIXO: 'baixo',
+  /** Vende pelo app sem nenhuma compra registrada — estoque não controlado. */
+  SEM_CONTROLE: 'sem_controle',
+  /** Já teve compra; hoje não tem nada. */
+  ESGOTADO: 'esgotado',
+  /** Tem estoque, mas a validade passou: não se vende (é perda ou troca). */
+  VENCIDO: 'vencido',
+  /** Cadastrado (ex.: puxado do catálogo) e nunca comprado. */
+  SEM_COMPRA: 'sem_compra',
+  /** Desativado pela arena. */
+  INATIVO: 'inativo',
+});
+
+const S = STOCK_SITUATION;
+const A_VENDA_AGORA = new Set([S.A_VENDA, S.BAIXO, S.SEM_CONTROLE]);
+
+/**
+ * A situação de um produto no estoque, com a conta junto.
+ *
+ * @param {object} product produto do Mercado
+ * @param {object[]} entries entradas (compras) da arena
+ * @param {object[]} exits saídas da arena
+ * @param {{ today?: string, vendePeloApp?: boolean }} [opts]
+ *   `vendePeloApp`: a loja do app está ligada — só então um produto sem compra
+ *   marcado "Vender pelo app" está de fato à venda.
+ */
+export function stockPosition(product, entries = [], exits = [], { today, vendePeloApp = false } = {}) {
+  const id = product?.id;
+  const controla = entries.some((e) => e?.product_id === id);
+  const conta = calculateStock(id, entries, exits);
+  const validade = expiryStatus(product?.expiry_date, { today });
+  const ativo = product?.active !== false;
+
+  let situacao;
+  if (!ativo) situacao = S.INATIVO;
+  else if (!controla) {
+    situacao = vendePeloApp && product?.sell_online === true && Number(product?.sale_price) > 0
+      ? S.SEM_CONTROLE
+      : S.SEM_COMPRA;
+  } else if (conta.quantity <= 0) situacao = S.ESGOTADO;
+  else if (validade === 'expired') situacao = S.VENCIDO;
+  else if (stockStatus(conta.quantity, product?.min_stock) === 'low') situacao = S.BAIXO;
+  else situacao = S.A_VENDA;
+
+  return {
+    ...conta,
+    controla,
+    validade,
+    situacao,
+    /** Pode ser vendido agora. */
+    aVenda: A_VENDA_AGORA.has(situacao),
+    /** Precisa de reposição: esgotou ou está acabando. */
+    repor: situacao === S.ESGOTADO || situacao === S.BAIXO,
+    /** Validade merece aviso: só do que está NA PRATELEIRA. */
+    alertaValidade: ativo && controla && conta.quantity > 0 && (validade === 'expired' || validade === 'soon'),
+  };
+}
+
+/**
+ * Os filtros da aba Estoque. "À venda" é o padrão: é o que a arena tem para
+ * vender agora. O resto não some — fica num filtro, fora da frente.
+ */
+export const STOCK_FILTERS = Object.freeze([
+  { value: 'a_venda', label: 'À venda', situacoes: [S.A_VENDA, S.BAIXO, S.SEM_CONTROLE] },
+  { value: 'esgotados', label: 'Esgotados', situacoes: [S.ESGOTADO] },
+  { value: 'vencidos', label: 'Vencidos', situacoes: [S.VENCIDO] },
+  { value: 'sem_compra', label: 'Sem compra registrada', situacoes: [S.SEM_COMPRA] },
+  { value: 'inativos', label: 'Inativos', situacoes: [S.INATIVO] },
+  { value: 'todos', label: 'Todos', situacoes: null },
+]);
+
+/** O filtro deixa passar esta situação? */
+export function stockFilterAccepts(filterValue, situacao) {
+  const f = STOCK_FILTERS.find((x) => x.value === filterValue) || STOCK_FILTERS[0];
+  return f.situacoes === null || f.situacoes.includes(situacao);
+}
+
+/** Quantos produtos cabem em cada filtro. */
+export function countByStockFilter(positions = []) {
+  const out = {};
+  for (const f of STOCK_FILTERS) {
+    out[f.value] = positions.filter((p) => stockFilterAccepts(f.value, p?.situacao)).length;
+  }
+  return out;
 }
 
 /** Calcula margem de lucro (% de lucro sobre o custo). */

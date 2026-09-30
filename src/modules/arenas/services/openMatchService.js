@@ -36,7 +36,7 @@ import {
   getAvailableSpots,
 } from '../domain/openMatch.js';
 import { openSlotConflict } from '../domain/openMatch.js';
-import { formatSlotLabel } from '../domain/calendar.js';
+import { formatSlotLabel, todayISO } from '../domain/calendar.js';
 import { getNextInLine, WAITLIST_STATUS, compactPositions, computePromotionExpiresAt, DEFAULT_PROMOTION_WINDOW_MINUTES } from '../domain/waitlist.js';
 import { getArena, listArenaManagerIds } from './arenaService.js';
 import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService.js';
@@ -48,6 +48,7 @@ import {
   normalizeArenaGameDayInput, slotsAsBookingCandidates,
 } from '@/modules/games/domain/arenaGameDay.js';
 import { GD_PARTICIPANT_SOURCE } from '@/modules/games/domain/gameDay.js';
+import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import {
   getGameDay, listGameDayParticipants, listGameDayGames, buildGameDayParticipant,
   sealParticipantBeforeRemoval,
@@ -502,7 +503,7 @@ export async function listOpenSlotsGlobal({ limit: lim = 100, onlyFuture = true 
     where('status', '==', OPEN_SLOT_STATUS.OPEN),
     limit(500),
   ));
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = todayISO();
   return ordenarPorDataHora(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
     .filter((s) => !onlyFuture || (s.date || '') >= hoje)
     .slice(0, Math.max(1, Number(lim) || 100));
@@ -626,7 +627,7 @@ async function entrarNoJogoLigado(slot, user, profile) {
       photo_url: profile?.photo_url || user?.photoURL || null,
       source: GD_PARTICIPANT_SOURCE.JOINED,
       play_level: profile?.level || profile?.leveling_level || null,
-      play_gender: profile?.gender || null,
+      play_gender: playGenderOf(profile),
     }));
     batch.update(doc(db, COL_GAME_DAYS, gdId), {
       member_uids: arrayUnion(user.uid),

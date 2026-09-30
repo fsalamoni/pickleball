@@ -616,6 +616,55 @@ documento inexistente, ver acima). Nada foi migrado.
 
 ---
 
+### Atualização 2026-09-30 — o estoque diz o que HÁ PARA VENDER
+
+Relatado: *"o estoque está aparecendo a lista completa de itens do mercado,
+mesmo que já esgotados. No estoque deve aparecer apenas o que há disponível
+para venda"*. Era isso — e a mesma confusão se repetia em quatro telas.
+
+**A causa.** Cada tela respondia sozinha "onde este produto está", e todas
+tratavam o produto CADASTRADO como se estivesse no ESTOQUE. Puxar 40 itens do
+catálogo punha 40 linhas "Estoque: 0" na aba Estoque, 40 "Esgotado" na
+Reposição do Resumo e na Operação de hoje — de produto que a arena nunca
+comprou. E o vencido de prateleira vazia disparava alerta de validade de uma
+coisa que não existe mais.
+
+**A regra, uma só: `stockPosition`** (`arenas/domain/inventory.js`). A
+diferença que importa é o que a arena FEZ — a mesma regra de `trackedStock` da
+loja do app: produto com pelo menos uma COMPRA tem estoque controlado; sem
+nenhuma, está só cadastrado.
+
+| Situação | Quando | À venda? | Alerta |
+|---|---|---|---|
+| `a_venda` | tem estoque, dentro da validade | sim | — |
+| `baixo` | à venda, abaixo do mínimo (ou < 5 sem mínimo) | sim | reposição |
+| `sem_controle` | sem compra, marcado "Vender pelo app", loja ligada | sim (só no app) | — |
+| `esgotado` | já teve compra; hoje zero | não | reposição |
+| `vencido` | tem estoque, validade passou | **não** (é perda ou troca) | validade |
+| `sem_compra` | cadastrado (ex.: do catálogo) e nunca comprado | não | **nenhum** |
+| `inativo` | desativado pela arena | não | nenhum |
+
+**Onde vale.** A aba **Estoque** abre em **"À venda"** e o resto fica em
+filtros com a contagem (Esgotados, Vencidos, Sem compra registrada, Inativos,
+Todos — o filtro sem ninguém não aparece); o **Resumo** conta "À venda agora de
+N cadastrados", alerta reposição só do que já foi comprado, validade só do que
+está na prateleira, e diz numa linha quantos estão sem compra ("Ver quais"); a
+**Operação → Hoje** usa a mesma conta; **Vendas** avisa ao vender como "Venda"
+um produto vencido (registre como Perda); **Compras** mostra quanto já há de
+cada produto na busca. Na **loja do app**, esgotado e vencido saem da vitrine
+(`shopAvailable`), o pedido de produto vencido é recusado
+(`priceCartFromCatalog`) e quem chega por uma campanha de produto esgotado é
+avisado — o destino da campanha segue escolhível, com "esgotado agora" no nome.
+
+**De quebra, "hoje" na arena era o dia de Greenwich.** Dezessete lugares do
+módulo faziam `new Date().toISOString().slice(0, 10)`, que das 21h à
+meia-noite já é AMANHÃ: o calendário de reserva tratava hoje como passado, jogos
+abertos, aulas e torneios de hoje sumiam das listas, e compra/venda lançadas à
+noite saíam com a data de amanhã. Agora é `todayISO()`/`formatDateISO()`, com
+guarda em `src/core/guards/dataLocalArena.test.js`.
+
+**Banco: zero.** Nenhum campo, coleção, índice ou regra.
+
 ## 11. I-8 — Operação, presença e avançado dentro da arena (entregue)
 
 Com esta parte, **todo módulo de arena que tem tela está integrado**: nenhum

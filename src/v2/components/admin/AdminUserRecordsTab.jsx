@@ -11,13 +11,15 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useAllPlatformUsers, useUpdateUserRecordAsAdmin,
 } from '@/modules/admin/hooks/usePlatformUsers';
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, userRecordStatus,
   diffAdminUserPatch, sanitizeAdminUserPatch, validateAdminEdit,
-  fieldOptions, isValidOptionValue,
+  fieldOptions, isValidOptionValue, isRequiredField,
 } from '@/modules/admin/domain/adminUserEdit';
 import {
   deletionBlockedReason, testAccountSignals, DELETION_BATCH_MAX,
@@ -63,12 +65,15 @@ export default function AdminUserRecordsTab() {
     [user?.uid],
   );
 
+  // "Obrigatório" aqui é a MESMA regra do cadastro — com o cadastro essencial
+  // ligado, a categoria e o nível entram na conta.
+  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
   const comStatus = useMemo(() => (users || []).map((u) => ({
     ...u,
-    _status: userRecordStatus(u),
+    _status: userRecordStatus(u, { essencial }),
     _teste: testAccountSignals(u),
     _bloqueio: deletionBlockedReason(u, ctxExclusao),
-  })), [users, ctxExclusao]);
+  })), [users, ctxExclusao, essencial]);
 
   const listados = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -324,6 +329,7 @@ function RecordEditDialog({ user, onClose }) {
   const changes = diffAdminUserPatch(user, patch);
   const validacao = validateAdminEdit({ changes, reason: motivo });
   const faltando = new Set(user._status?.missing?.map((f) => f.key) || []);
+  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -356,7 +362,7 @@ function RecordEditDialog({ user, onClose }) {
                   <label key={f.key} className="block text-xs font-semibold text-ink">
                     <span className="flex items-center gap-1.5">
                       {f.label}
-                      {f.required && <span className="text-red-500">*</span>}
+                      {isRequiredField(f, { essencial }) && <span className="text-red-500">*</span>}
                       {faltando.has(f.key) && (
                         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
                           vazio

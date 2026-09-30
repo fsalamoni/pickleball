@@ -327,6 +327,23 @@ export const FEATURE_FLAG = Object.freeze({
    * seguem como antes (abrindo na primeira vez).
    */
   GUIDED_TIPS: 'guided_tips',
+
+  /**
+   * CADASTRO ESSENCIAL — o que o sorteio e a busca por perto precisam.
+   *
+   * O assistente de cadastro já exigia nome, nascimento, telefone, gênero,
+   * cidade, UF, experiência, lado da quadra e interesses. Faltavam duas coisas
+   * que o sorteio usa e que ficavam em branco: a CATEGORIA em que a pessoa
+   * joga (masculina/feminina — a das duplas mistas e das categorias dos
+   * torneios) e o NÍVEL (ao menos a autoindicação). Ligada, as duas passam a
+   * ser obrigatórias, a UF precisa ser uma UF de verdade, e quem já está
+   * dentro é chamado a completar SÓ o que falta, na próxima entrada. DUPR
+   * (ID e rating) segue opcional, pedido junto do nível.
+   *
+   * Zero banco: são campos que o perfil já tinha (`competition_gender`,
+   * `leveling_level`, `dupr_id`). Desligada, o cadastro segue como está.
+   */
+  ESSENTIAL_PROFILE: 'essential_profile',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -405,6 +422,17 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'das ferramentas viram guias na tela e param de abrir sozinhos. A '
       + 'escolha fica no navegador de cada um; nada é gravado no banco. '
       + 'Desligada, tudo segue como antes.',
+  },
+  [FEATURE_FLAG.ESSENTIAL_PROFILE]: {
+    label: 'Cadastro essencial (categoria e nível obrigatórios)',
+    description:
+      'O cadastro passa a exigir também a categoria em que a pessoa joga '
+      + '(masculina ou feminina — usada nas duplas mistas do dia de jogo e nas '
+      + 'categorias dos torneios) e o nível, ao menos o que ela mesma indica. '
+      + 'A UF passa a ser escolhida numa lista. Quem já tem conta é chamado a '
+      + 'completar só o que falta, na próxima entrada. ID e rating DUPR seguem '
+      + 'opcionais. Nada é gravado além do que a pessoa preencher. Desligada, o '
+      + 'cadastro segue como está.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

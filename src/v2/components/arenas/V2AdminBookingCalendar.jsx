@@ -37,7 +37,7 @@ import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
 import { useArenaOpenSlots, useArenaClasses, useArenaInternalTournaments } from '@/modules/arenas/hooks/useArenaV3';
-import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
+import { formatDateISO, formatDateShortBR, todayISO } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import {
@@ -51,7 +51,7 @@ import CourtDayGrid from '@/v2/components/arenas/CourtDayGrid';
 function addDays(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return formatDateISO(d);
 }
 
 function formatDateBR(dateStr) {
@@ -102,7 +102,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const noShowOn = true;
   const cancellationPolicyOn = true;
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayISO());
   const [courtId, setCourtId] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' = grade por quadra, 'list' = lista de horários
   const [selectedSlot, setSelectedSlot] = useState(null); // { time, status, booking, unavailability }

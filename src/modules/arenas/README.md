@@ -159,6 +159,11 @@ import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellatio
 - **`domain/inventory.js`**: campos ADITIVOS no produto do mercado
   (`catalog_id`, `subcategory`, `packaging`, `size`, `sale_price`, `min_stock`,
   `expiry_date`) + helpers `stockStatus`, `daysToExpiry`, `expiryStatus`.
+  **Onde o produto está** sai de `stockPosition` (à venda, baixo, sem controle,
+  esgotado, vencido, sem compra, inativo) — a MESMA conta no Estoque, no
+  Resumo, na Operação e na loja do app (`shopAvailable`). Nunca decida
+  "esgotado" por `quantity <= 0` numa tela: produto sem compra não está
+  esgotado, está só cadastrado.
 - **`services/catalogService.js`**: `listCatalogProducts`,
   `checkCatalogDuplicates`, `proposeCatalogProduct` (bloqueia duplicata exata),
   `adoptCatalogToArena` (puxa p/ o mercado + entrada inicial), `seedCatalog`

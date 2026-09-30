@@ -262,6 +262,15 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   que quebrava, o painel do professor que ignorava `?aba=` e os tutoriais que
   ensinavam botões que não existem mais. Zero banco. Ver
   `docs/32-DICAS-GUIADAS.md`.
+- ✅ **TRV-23** estoque que diz o que há para vender: a aba Estoque abre em
+  "À venda" e o resto (esgotados, vencidos, sem compra registrada, inativos)
+  fica em filtros; Resumo, Operação e a loja do app com a mesma regra
+  (`stockPosition`); "hoje" na arena deixou de ser o dia de Greenwich. Zero
+  banco. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`.
+- ✅ **TRV-24** cadastro essencial (flag `essential_profile`): categoria em
+  que joga e nível obrigatórios, UF de lista, quem já tinha cadastro vê só o
+  que falta; perfil e admin com a mesma regra do cadastro. Zero banco. Ver
+  `docs/33-CADASTRO-ESSENCIAL.md`.
 - ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
   das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
   público e grava os avisos em lotes — correto e honesto (a campanha mostra o

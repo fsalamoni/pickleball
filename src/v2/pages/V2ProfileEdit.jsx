@@ -4,8 +4,13 @@ import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { ArrowLeft, Printer, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete } from '@/core/lib/profileValidation';
+import {
+  birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete, parseDuprRating,
+} from '@/core/lib/profileValidation';
 import { cn } from '@/core/lib/utils';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { BR_UFS, isBrazilUF } from '@/core/domain/ufs';
 import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
 import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -25,16 +30,6 @@ import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
-
-/**
- * Converte o campo "rating DUPR atual" em número na escala 2.000–8.000, ou null
- * quando vazio/inválido. Aceita vírgula ou ponto.
- */
-function parseDuprRating(raw) {
-  const n = Number(String(raw ?? '').trim().replace(',', '.'));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.min(8, Math.max(2, Math.round(n * 1000) / 1000));
-}
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -77,6 +72,8 @@ export default function V2ProfileEdit() {
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [communityBusy, setCommunityBusy] = useState(false);
+  const [communityErrors, setCommunityErrors] = useState({});
+  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
   const [coachBusy, setCoachBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
   const [formMode, setFormMode] = useState(null);
@@ -130,7 +127,19 @@ export default function V2ProfileEdit() {
   const onSaveIdentity = async (e) => {
     e.preventDefault();
     const validation = validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience });
-    if (!validation.isValid) { setErrors(validation.errors); return; }
+    // O lado da quadra (e, com o cadastro essencial, a categoria) é obrigatório
+    // no cadastro: apagá-lo aqui só faria o assistente reabrir na próxima
+    // entrada pedindo de volta.
+    const extras = {};
+    if (!courtSide) extras.courtSide = 'Escolha o lado da quadra que prefere.';
+    if (essencial && competitionGender !== 'male' && competitionGender !== 'female') {
+      extras.competitionGender = 'Escolha a categoria em que você joga.';
+    }
+    if (!validation.isValid || Object.keys(extras).length > 0) {
+      setErrors({ ...validation.errors, ...extras });
+      return;
+    }
+    setErrors({});
     const wasComplete = isRequiredProfileComplete(userProfile);
     setBusy(true);
     try {
@@ -168,6 +177,15 @@ export default function V2ProfileEdit() {
   };
 
   const saveCommunity = async () => {
+    // Gênero, cidade e UF são do cadastro obrigatório — é por eles que a busca
+    // por perto e o filtro de região acham a pessoa. Em branco, não salva.
+    const faltas = {};
+    if (!gender) faltas.gender = 'Informe seu gênero (há a opção "Prefiro não informar").';
+    if (!city.trim()) faltas.city = 'Informe sua cidade.';
+    if (!stateUf.trim()) faltas.state = 'Informe a UF.';
+    else if (essencial && !isBrazilUF(stateUf)) faltas.state = 'Escolha a UF na lista.';
+    setCommunityErrors(faltas);
+    if (Object.keys(faltas).length > 0) return;
     setCommunityBusy(true);
     try {
       await updateUserProfile({
@@ -334,13 +352,20 @@ export default function V2ProfileEdit() {
                 {Object.entries(PICKLEBALL_EXPERIENCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </V2Select>
             </V2Field>
-            <V2Field label="Categoria em que deseja competir" hint="Preferência competitiva (não é sobre identidade de gênero).">
+            <V2Field
+              label="Categoria em que deseja competir"
+              required={essencial}
+              error={errors.competitionGender}
+              hint={essencial
+                ? 'Usada nas duplas mistas do dia de jogo e nas categorias dos torneios. Preferência competitiva (não é sobre identidade de gênero).'
+                : 'Preferência competitiva (não é sobre identidade de gênero).'}
+            >
               <V2Select value={competitionGender} onChange={(e) => setCompetitionGender(e.target.value)}>
-                <option value="">Não informar (decido na inscrição)</option>
+                <option value="">{essencial ? 'Selecione' : 'Não informar (decido na inscrição)'}</option>
                 {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </V2Select>
             </V2Field>
-            <V2Field label="ID DUPR" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Fica visível no seu perfil e nos torneios.">
+            <V2Field label="ID DUPR (opcional)" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.">
               <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder="Ex.: ABC123" />
             </V2Field>
             {skillRatingOn && (
@@ -348,7 +373,7 @@ export default function V2ProfileEdit() {
                 <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder="Ex.: 3.500" />
               </V2Field>
             )}
-            <V2Field label="Lado da quadra que prefere jogar" hint="Ajuda a encontrar parcerias compatíveis.">
+            <V2Field label="Lado da quadra que prefere jogar" required error={errors.courtSide} hint="Ajuda a encontrar parcerias compatíveis.">
               <V2Select value={courtSide} onChange={(e) => setCourtSide(e.target.value)}>
                 <option value="">Selecione</option>
                 {COURT_SIDE_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
@@ -364,15 +389,26 @@ export default function V2ProfileEdit() {
         <V2Surface collapsible collapseId="perfil-comunidade" data-dica="perfil-comunidade" eyebrow="Comunidade" title="Comunidade e privacidade"
           description="Defina como você aparece no diretório e quais contatos são públicos.">
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <V2Field label="Gênero">
+            <V2Field label="Gênero" required error={communityErrors.gender}>
               <V2Select value={gender} onChange={(e) => setGender(e.target.value)}>
-                <option value="">Não informar</option>
+                <option value="">Selecione</option>
                 {Object.entries(ATHLETE_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </V2Select>
             </V2Field>
-            <div className="grid grid-cols-[1fr,80px] gap-3">
-              <V2Field label="Cidade"><V2Input value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} /></V2Field>
-              <V2Field label="UF"><V2Input value={stateUf} onChange={(e) => setStateUf(e.target.value)} maxLength={2} placeholder="SP" /></V2Field>
+            <div className="grid grid-cols-[1fr,96px] gap-3">
+              <V2Field label="Cidade" required error={communityErrors.city}>
+                <V2Input value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} />
+              </V2Field>
+              <V2Field label="UF" required error={communityErrors.state}>
+                {essencial ? (
+                  <V2Select value={isBrazilUF(stateUf) ? stateUf.trim().toUpperCase() : ''} onChange={(e) => setStateUf(e.target.value)} aria-label="UF">
+                    <option value="">UF</option>
+                    {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </V2Select>
+                ) : (
+                  <V2Input value={stateUf} onChange={(e) => setStateUf(e.target.value)} maxLength={2} placeholder="SP" />
+                )}
+              </V2Field>
             </div>
           </div>
           <V2Field label="Endereço" className="mt-4" hint="Só é exibido se você marcar como público abaixo.">
@@ -477,7 +513,11 @@ export default function V2ProfileEdit() {
         <V2Surface collapsible collapseId="perfil-nivelamento" data-dica="perfil-nivel" eyebrow="Nivelamento" title="Seu nível competitivo"
           description="Informe pela tabela detalhada ou preencha o formulário para obter a recomendação.">
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
-            <V2Field label="Meu nível informado" hint={selectedLevel?.tagline}>
+            <V2Field
+              label="Meu nível informado"
+              required={essencial}
+              hint={selectedLevel?.tagline || (essencial ? 'O sorteio equilibra os jogos pelo nível — escolha o seu (o teste abaixo refina).' : undefined)}
+            >
               <V2Select value={manualLevel} onChange={(e) => setManualLevel(e.target.value)}>
                 <option value="">Selecione um nível</option>
                 {LEVEL_OPTIONS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}

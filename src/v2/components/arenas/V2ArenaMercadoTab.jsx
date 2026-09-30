@@ -25,11 +25,11 @@ import {
 import {
   INVENTORY_CATEGORIES, INVENTORY_CATEGORIES_LIST,
   calculateStock, calculateMargin, filterProductsByCategory, searchProducts,
-  stockStatus, expiryStatus, daysToExpiry,
+  daysToExpiry, stockPosition, STOCK_SITUATION, STOCK_FILTERS, stockFilterAccepts, countByStockFilter,
 } from '@/modules/arenas/domain/inventory';
 import { CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS } from '@/modules/arenas/domain/productCatalog';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
+import { formatDateShortBR, todayISO } from '@/modules/arenas/domain/calendar';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import ProductTypeahead from '@/v2/components/arenas/ProductTypeahead';
@@ -48,7 +48,7 @@ const EXIT_TYPE_LABELS = {
 
 const SUB_HINTS = {
   resumo: 'Visão geral do seu mercado: primeiros passos, alertas de estoque e validade.',
-  estoque: 'O que está na sua vitrine: produtos, quantidade em estoque e preço de venda. Adicione do catálogo ou cadastre um produto próprio.',
+  estoque: 'O que você tem para vender agora, com a quantidade e o preço. Esgotados, vencidos e produtos ainda sem compra ficam nos filtros — nada some, só sai da frente.',
   compras: 'Registre o que você comprou e colocou à venda (entradas de estoque).',
   vendas: 'Registre e acompanhe as vendas. Só é possível vender o que está em estoque; itens esgotados continuam aqui para ver o total vendido.',
   financeiro: 'Compras, vendas e lucro por período (semanal ou mensal, à sua escolha).',
@@ -110,16 +110,21 @@ export default function V2ArenaMercadoTab() {
   const reportsOn = true;
   const [sub, setSub] = useState('resumo');
   const [estoqueMode, setEstoqueMode] = useState('list'); // list | catalog
+  const [estoqueFiltro, setEstoqueFiltro] = useState(STOCK_FILTERS[0].value);
 
   const tabs = [
     { value: 'resumo', label: 'Resumo' },
-    { value: 'estoque', label: 'Estoque / Vitrine' },
+    { value: 'estoque', label: 'Estoque' },
     { value: 'compras', label: 'Compras' },
     { value: 'vendas', label: 'Vendas' },
     reportsOn && { value: 'financeiro', label: 'Financeiro' },
   ].filter(Boolean);
 
-  const goEstoque = (mode = 'list') => { setSub('estoque'); setEstoqueMode(catalogOn && mode === 'catalog' ? 'catalog' : 'list'); };
+  const goEstoque = (mode = 'list', filtro) => {
+    setSub('estoque');
+    setEstoqueMode(catalogOn && mode === 'catalog' ? 'catalog' : 'list');
+    if (filtro) setEstoqueFiltro(filtro);
+  };
 
   return (
     <div className="space-y-3">
@@ -145,11 +150,16 @@ export default function V2ArenaMercadoTab() {
       {sub === 'resumo' && (
         <V2ArenaGestaoTab
           onGoToCatalog={() => goEstoque('catalog')}
-          onGoToMercado={() => setSub('compras')}
+          onGoToEstoque={(filtro) => goEstoque('list', filtro)}
+          onGoToCompras={() => setSub('compras')}
+          onGoToVendas={() => setSub('vendas')}
         />
       )}
       {sub === 'estoque' && (
-        <EstoqueSection arenaId={arenaId} catalogOn={catalogOn} mode={estoqueMode} setMode={setEstoqueMode} />
+        <EstoqueSection
+          arenaId={arenaId} catalogOn={catalogOn} mode={estoqueMode} setMode={setEstoqueMode}
+          filtro={estoqueFiltro} setFiltro={setEstoqueFiltro} onGoToCompras={() => setSub('compras')}
+        />
       )}
       {sub === 'compras' && <EntriesSection arenaId={arenaId} />}
       {sub === 'vendas' && <ExitsSection arenaId={arenaId} />}
@@ -159,7 +169,7 @@ export default function V2ArenaMercadoTab() {
 }
 
 /** Estoque/Vitrine: lista de produtos + adicionar do catálogo / produto próprio. */
-function EstoqueSection({ arenaId, catalogOn, mode, setMode }) {
+function EstoqueSection({ arenaId, catalogOn, mode, setMode, filtro, setFiltro, onGoToCompras }) {
   if (catalogOn && mode === 'catalog') {
     return (
       <div className="space-y-2">
@@ -168,7 +178,15 @@ function EstoqueSection({ arenaId, catalogOn, mode, setMode }) {
       </div>
     );
   }
-  return <ProductsSection arenaId={arenaId} onOpenCatalog={catalogOn ? () => setMode('catalog') : undefined} />;
+  return (
+    <ProductsSection
+      arenaId={arenaId}
+      onOpenCatalog={catalogOn ? () => setMode('catalog') : undefined}
+      filtro={filtro}
+      setFiltro={setFiltro}
+      onGoToCompras={onGoToCompras}
+    />
+  );
 }
 
 const EMPTY_PRODUCT = {
@@ -209,7 +227,7 @@ function SellOnlineToggle({ checked, onChange, price }) {
   );
 }
 
-function ProductsSection({ arenaId, onOpenCatalog }) {
+function ProductsSection({ arenaId, onOpenCatalog, filtro = STOCK_FILTERS[0].value, setFiltro, onGoToCompras }) {
   const { products, entries, exits, carregando: isLoading, falhou, tentar } = useEstoqueDaArena(arenaId);
   const create = useCreateInventoryProduct(arenaId);
   const update = useUpdateInventoryProduct(arenaId);
@@ -223,17 +241,32 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
   const [form, setForm] = useState(EMPTY_PRODUCT);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const stockById = useMemo(() => {
+  // Onde cada produto está — a MESMA conta do Resumo, da Operação e da loja
+  // do app. 🐞 Antes esta lista era o CADASTRO inteiro: todo item puxado do
+  // catálogo aparecia como "Estoque: 0", e o que havia para vender se perdia
+  // no meio.
+  const posicoes = useMemo(() => {
     const map = new Map();
-    for (const p of products) map.set(p.id, calculateStock(p.id, entries, exits).quantity);
+    for (const p of products) map.set(p.id, stockPosition(p, entries, exits, { vendePeloApp: lojaOn }));
     return map;
-  }, [products, entries, exits]);
+  }, [products, entries, exits, lojaOn]);
 
-  const filtered = useMemo(() => {
-    let list = filterProductsByCategory(products, filter);
-    list = searchProducts(list, search);
-    return list;
-  }, [products, filter, search]);
+  const porCategoriaEBusca = useMemo(
+    () => searchProducts(filterProductsByCategory(products, filter), search),
+    [products, filter, search],
+  );
+  const contagem = useMemo(
+    () => countByStockFilter(porCategoriaEBusca.map((p) => posicoes.get(p.id))),
+    [porCategoriaEBusca, posicoes],
+  );
+  const filtered = useMemo(
+    () => porCategoriaEBusca
+      .filter((p) => stockFilterAccepts(filtro, posicoes.get(p.id)?.situacao))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR')),
+    [porCategoriaEBusca, posicoes, filtro],
+  );
+  const filtroAtual = STOCK_FILTERS.find((f) => f.value === filtro) || STOCK_FILTERS[0];
+  const buscando = search.trim() !== '' || filter !== 'all';
 
   const subOptions = CATALOG_SUBCATEGORIES[form.category] || [];
 
@@ -359,18 +392,30 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
         </form>
       )}
 
+      {!isLoading && !falhou && products.length > 0 && (
+        <StockFilterChips filtro={filtroAtual.value} contagem={contagem} onChange={setFiltro} />
+      )}
+
       <div className="mt-3 space-y-2">
         {isLoading ? <V2Skeleton lines={3} /> : falhou ? (
           <FalhaNoEstoque onRetry={tentar} />
-        ) : filtered.length === 0 ? (
+        ) : products.length === 0 ? (
           <V2EmptyState icon={Package} title="Nenhum produto" description="Puxe do catálogo ou cadastre um produto próprio." />
+        ) : filtered.length === 0 ? (
+          <EstoqueVazio
+            filtro={filtroAtual}
+            buscando={buscando}
+            contagem={contagem}
+            onVerFiltro={setFiltro}
+            onGoToCompras={onGoToCompras}
+          />
         ) : (
           filtered.map((p) => (
             <ProductRow
               key={p.id}
               product={p}
               lojaOn={lojaOn}
-              quantity={stockById.get(p.id) ?? 0}
+              posicao={posicoes.get(p.id)}
               editing={editingId === p.id}
               onToggleEdit={() => setEditingId(editingId === p.id ? null : p.id)}
               onToggleActive={() => handleToggleActive(p)}
@@ -391,26 +436,124 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
   );
 }
 
+/** Os filtros da aba Estoque, com a contagem de cada um. */
+function StockFilterChips({ filtro, contagem, onChange }) {
+  // "À venda" e "Todos" ficam sempre; os outros só quando têm alguém — um
+  // filtro "Vencidos (0)" é uma pergunta que ninguém fez.
+  const visiveis = STOCK_FILTERS.filter((f) => f.value === 'a_venda' || f.value === 'todos'
+    || f.value === filtro || (contagem[f.value] || 0) > 0);
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Mostrar no estoque">
+      {visiveis.map((f) => (
+        <button
+          key={f.value}
+          type="button"
+          aria-pressed={filtro === f.value}
+          onClick={() => onChange?.(f.value)}
+          className={cn(
+            'rounded-full border px-3 py-1 text-xs font-bold transition-colors',
+            filtro === f.value ? 'border-ink bg-ink text-paper' : 'border-gray-200 bg-paper text-ink hover:border-ink/40',
+          )}
+        >
+          {f.label} <span className={filtro === f.value ? 'text-paper/70' : 'text-gray-400'}>{contagem[f.value] || 0}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** O que dizer quando o filtro escolhido não tem ninguém. */
+function EstoqueVazio({ filtro, buscando, contagem, onVerFiltro, onGoToCompras }) {
+  if (buscando) {
+    return <V2EmptyState icon={Search} title="Nada com essa busca" description="Troque a categoria ou o texto da busca." />;
+  }
+  if (filtro.value === 'a_venda') {
+    const semCompra = contagem.sem_compra || 0;
+    const esgotados = contagem.esgotados || 0;
+    const partes = [
+      esgotados > 0 && `${esgotados} ${esgotados === 1 ? 'esgotou' : 'esgotaram'}`,
+      semCompra > 0 && `${semCompra} ${semCompra === 1 ? 'está cadastrado' : 'estão cadastrados'} sem compra registrada`,
+    ].filter(Boolean);
+    return (
+      <V2EmptyState
+        icon={Package}
+        title="Nada à venda agora"
+        description={`${partes.length ? `Dos seus produtos, ${partes.join(' e ')}. ` : ''}O produto entra no estoque quando você registra a compra dele.`}
+        action={(
+          <div className="flex flex-wrap justify-center gap-2">
+            {onGoToCompras && (
+              <V2Button size="sm" onClick={onGoToCompras}><Plus className="h-4 w-4" /> Registrar compra</V2Button>
+            )}
+            {esgotados > 0 && (
+              <V2Button size="sm" variant="ghost" onClick={() => onVerFiltro?.('esgotados')}>Ver esgotados</V2Button>
+            )}
+          </div>
+        )}
+      />
+    );
+  }
+  return (
+    <V2EmptyState
+      icon={Package}
+      title={`Nenhum produto em "${filtro.label}"`}
+      description="Os outros produtos estão nos demais filtros."
+      action={<V2Button size="sm" variant="ghost" onClick={() => onVerFiltro?.('a_venda')}>Ver o que está à venda</V2Button>}
+    />
+  );
+}
+
+/** A situação do produto no estoque, dita em palavras. */
+function StockBadge({ product: p, posicao }) {
+  if (!posicao) return null;
+  const q = posicao.quantity;
+  const minimo = p.min_stock ? ` / mín ${p.min_stock}` : '';
+  switch (posicao.situacao) {
+    case STOCK_SITUATION.A_VENDA:
+      return <V2Badge tone="green">Em estoque: {q}{minimo}</V2Badge>;
+    case STOCK_SITUATION.BAIXO:
+      return <V2Badge tone="amber">Acabando: {q}{minimo}</V2Badge>;
+    case STOCK_SITUATION.SEM_CONTROLE:
+      return (
+        <V2Badge tone="neutral" title="Vende pelo app sem nenhuma compra registrada. Registre uma compra para controlar o estoque.">
+          À venda no app · sem controle de estoque
+        </V2Badge>
+      );
+    case STOCK_SITUATION.ESGOTADO:
+      return (
+        <V2Badge tone="red" title={q < 0 ? `Há ${Math.abs(q)} saída(s) a mais que compras — confira as compras registradas.` : undefined}>
+          Esgotado{q < 0 ? ` · confira (${q})` : ''}
+        </V2Badge>
+      );
+    case STOCK_SITUATION.VENCIDO:
+      return <V2Badge tone="red">Fora da venda · {q} na prateleira</V2Badge>;
+    case STOCK_SITUATION.SEM_COMPRA:
+      return <V2Badge tone="neutral">Sem compra registrada</V2Badge>;
+    case STOCK_SITUATION.INATIVO:
+    default:
+      return posicao.controla ? <V2Badge tone="neutral">Estoque: {Math.max(0, q)}</V2Badge> : null;
+  }
+}
+
 /** Linha de produto do mercado: detalhes, preço de venda, estoque e validade. */
-function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving, lojaOn }) {
+function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving, lojaOn }) {
   const [edit, setEdit] = useState({
     sale_price: p.sale_price ?? '', min_stock: p.min_stock ?? '', expiry_date: p.expiry_date ?? '',
     sell_online: p.sell_online === true,
   });
-  const stStatus = stockStatus(quantity, p.min_stock);
-  const exStatus = expiryStatus(p.expiry_date);
   const exDays = daysToExpiry(p.expiry_date);
   const packInfo = [p.packaging, p.size].filter(Boolean).join(' ');
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper p-3">
-      <div className="flex items-center gap-2">
+      {/* No celular os botões descem para baixo do conteúdo: disputando a
+          largura com eles, o nome cortava e os selos quebravam em duas linhas. */}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
           <Package className="h-4 w-4" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[11rem] flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h4 className="truncate text-sm font-bold text-ink">{p.name}</h4>
+            <h4 className="min-w-0 break-words text-sm font-bold text-ink">{p.name}</h4>
             {p.catalog_id && <V2Badge tone="neutral">catálogo</V2Badge>}
             {lojaOn && p.sell_online === true && (
               <V2Badge tone={Number(p.sale_price) > 0 && p.active !== false ? 'green' : 'amber'}>
@@ -432,18 +575,20 @@ function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActiv
                 <Tag className="h-3 w-3" /> {formatPrice(p.sale_price)}
               </span>
             )}
-            <V2Badge tone={stStatus === 'out' ? 'red' : stStatus === 'low' ? 'amber' : 'green'}>
-              Estoque: {quantity}{p.min_stock ? ` / mín ${p.min_stock}` : ''}
-            </V2Badge>
-            {exStatus && (
-              <V2Badge tone={exStatus === 'expired' ? 'red' : exStatus === 'soon' ? 'amber' : 'neutral'}>
+            <StockBadge product={p} posicao={posicao} />
+            {p.expiry_date && (
+              <V2Badge tone={
+                posicao?.alertaValidade ? (posicao.validade === 'expired' ? 'red' : 'amber') : 'neutral'
+              }>
                 <CalendarClock className="mr-1 h-3 w-3" />
-                {exStatus === 'expired' ? `Vencido ${Math.abs(exDays)}d` : exStatus === 'soon' ? `Vence ${exDays}d` : p.expiry_date}
+                {posicao?.alertaValidade && posicao.validade === 'expired' ? `Vencido há ${Math.abs(exDays)}d`
+                  : posicao?.alertaValidade ? `Vence em ${exDays}d`
+                    : `Validade ${formatDateShortBR(p.expiry_date) || p.expiry_date}`}
               </V2Badge>
             )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <button type="button" onClick={onToggleEdit} className="text-gray-500 hover:text-ink" aria-label={`Editar ${p.name}`}>
             <Pencil className="h-4 w-4" />
           </button>
@@ -509,10 +654,22 @@ function EntriesSection({ arenaId }) {
   const add = useAddInventoryEntry(arenaId);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
-    product_id: '', date: new Date().toISOString().slice(0, 10), quantity: 1, unit_cost: 0,
+    product_id: '', date: todayISO(), quantity: 1, unit_cost: 0,
     supplier: '', buyer_name: '', notes: '',
   });
   const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+  // Na hora de comprar, o que importa é quanto já tem: a busca mostra.
+  const situacaoPorId = useMemo(() => {
+    const m = new Map();
+    for (const p of products) m.set(p.id, stockPosition(p, entries, exits));
+    return m;
+  }, [products, entries, exits]);
+  const metaDaCompra = (p) => {
+    const pos = situacaoPorId.get(p.id);
+    const estoque = !pos ? '' : !pos.controla ? 'sem compra ainda'
+      : pos.quantity <= 0 ? 'esgotado' : `em estoque: ${pos.quantity}`;
+    return [p.brand, estoque].filter(Boolean).join(' · ');
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -548,7 +705,7 @@ function EntriesSection({ arenaId }) {
                 products={products}
                 value={form.product_id}
                 onSelect={(p) => setForm((f) => ({ ...f, product_id: p?.id || '' }))}
-                metaFor={(p) => (p.brand || '')}
+                metaFor={metaDaCompra}
               />
             </V2Field>
             <V2Field label="Data" required>
@@ -616,7 +773,7 @@ function ExitsSection({ arenaId }) {
   const add = useAddInventoryExit(arenaId);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
-    product_id: '', date: new Date().toISOString().slice(0, 10), quantity: 1, unit_price: 0,
+    product_id: '', date: todayISO(), quantity: 1, unit_price: 0,
     exit_type: 'sale', buyer_name: '', reason: '',
   });
   const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -648,6 +805,9 @@ function ExitsSection({ arenaId }) {
         product: p, ...stock, margin: calculateMargin(stock),
         sold_qty: soldByProduct.get(p.id) || 0,
         ever_stocked: movedIds.has(p.id),
+        // A mesma situação da aba Estoque — o "acabando" respeita o mínimo do
+        // produto, e o vencido não é vendido como se estivesse bom.
+        posicao: stockPosition(p, entries, exits),
       });
     }
     return map;
@@ -672,6 +832,9 @@ function ExitsSection({ arenaId }) {
   const availableFor = (id) => summary.get(id)?.quantity ?? 0;
   const selectedAvailable = form.product_id ? availableFor(form.product_id) : null;
   const overSells = selectedAvailable != null && Number(form.quantity) > selectedAvailable;
+  const selectedVencido = form.product_id
+    ? summary.get(form.product_id)?.posicao?.situacao === STOCK_SITUATION.VENCIDO
+    : false;
 
   function onSelectProduct(p) {
     setForm((f) => ({
@@ -710,8 +873,8 @@ function ExitsSection({ arenaId }) {
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {managedSales.map((s) => (
             <div key={s.product.id} className={cn('rounded-2xl border p-3',
-              s.quantity <= 0 ? 'border-red-200 bg-red-50' :
-              s.quantity < 5 ? 'border-amber-200 bg-amber-50/40' :
+              s.quantity <= 0 || s.posicao.situacao === STOCK_SITUATION.VENCIDO ? 'border-red-200 bg-red-50' :
+              s.posicao.situacao === STOCK_SITUATION.BAIXO ? 'border-amber-200 bg-amber-50/40' :
               'border-green-200 bg-green-50/40',
             )}>
               <div className="flex items-center gap-2">
@@ -725,8 +888,13 @@ function ExitsSection({ arenaId }) {
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between text-[11px]">
-                <V2Badge tone={s.quantity <= 0 ? 'red' : s.quantity < 5 ? 'amber' : 'green'}>
-                  {s.quantity <= 0 ? 'Esgotado' : `Em estoque: ${s.quantity}`}
+                <V2Badge tone={
+                  s.quantity <= 0 || s.posicao.situacao === STOCK_SITUATION.VENCIDO ? 'red'
+                    : s.posicao.situacao === STOCK_SITUATION.BAIXO ? 'amber' : 'green'
+                }>
+                  {s.quantity <= 0 ? 'Esgotado'
+                    : s.posicao.situacao === STOCK_SITUATION.VENCIDO ? `Vencido · ${s.quantity}`
+                      : `Em estoque: ${s.quantity}`}
                 </V2Badge>
                 <span className="text-gray-500">Receita: <span className="font-bold text-green-700">{formatPrice(s.total_revenue)}</span></span>
               </div>
@@ -750,7 +918,8 @@ function ExitsSection({ arenaId }) {
                 onSelect={onSelectProduct}
                 placeholder="Digite para buscar no estoque…"
                 emptyHint="Nenhum produto em estoque com esse nome."
-                metaFor={(p) => `Em estoque: ${availableFor(p.id)}`}
+                metaFor={(p) => `Em estoque: ${availableFor(p.id)}${
+                  summary.get(p.id)?.posicao?.situacao === STOCK_SITUATION.VENCIDO ? ' · validade vencida' : ''}`}
               />
             </V2Field>
             <V2Field label="Data" required>
@@ -771,6 +940,12 @@ function ExitsSection({ arenaId }) {
               </V2Select>
             </V2Field>
           </div>
+          {selectedVencido && form.exit_type === 'sale' && (
+            <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+              A validade deste produto venceu. Se ele vai para o lixo, registre como <strong>Perda</strong> —
+              assim o estoque fica certo e a receita não conta uma venda que não houve.
+            </p>
+          )}
           <V2Field label="Comprador / responsável">
             <V2Input value={form.buyer_name} onChange={setField('buyer_name')} maxLength={80} />
           </V2Field>

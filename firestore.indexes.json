@@ -141,6 +141,24 @@
         {
           "fieldPath": "round",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_matches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "modality_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "stage_index",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "round",
+          "order": "ASCENDING"
         },
         {
           "fieldPath": "position",

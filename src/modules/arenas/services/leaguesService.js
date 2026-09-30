@@ -31,6 +31,7 @@ import {
 import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
+import { todayISO } from '../domain/calendar.js';
 
 const COL_TOURNAMENTS = 'arena_internal_tournaments';
 const COL_LADDERS = 'arena_ladders';
@@ -46,7 +47,7 @@ export async function listArenaTournaments(arenaId, { onlyFuture = false, lim = 
   // nunca apareceram. Ordenacao e recorte em memoria (a colecao e pequena por
   // arena), com o corte DEPOIS de ordenar.
   const snap = await getDocs(query(collection(db, COL_TOURNAMENTS), where('arena_id', '==', arenaId)));
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = todayISO();
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((x) => !onlyFuture || String(x.date || '') >= hoje)

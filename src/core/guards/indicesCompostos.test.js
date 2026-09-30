@@ -33,17 +33,30 @@ const INDICES_POR_COLECAO = indices.indexes.reduce((acc, i) => {
 
 /**
  * O Firestore serve a consulta se existir um índice que comece pelos campos de
- * IGUALDADE (em qualquer ordem entre si) e siga pelos de ordenação.
+ * IGUALDADE (em qualquer ordem entre si) e siga EXATAMENTE pelos de ordenação —
+ * nem um campo a mais depois deles.
+ *
+ * 🐞 Antes bastava o índice COMEÇAR pela ordenação, e isso aceitava um índice
+ * mais comprido do que a consulta: `listMatches` (modality_id, stage_index,
+ * ordenado por round) passava por causa do índice (…, round, position). Só que
+ * a consulta ordena implicitamente por `__name__` depois de `round`, e aquele
+ * índice ordena por `position` antes — o Firestore NÃO o usa. A lista de jogos
+ * da fase só funcionava porque alguém criou o índice de três campos pelo link
+ * do erro, direto no painel, fora deste arquivo (e o deploy passou a pular os
+ * índices por causa da divergência).
  */
+function indiceServe(campos, igualdades, ordenacoes) {
+  const prefixo = campos.slice(0, igualdades.length);
+  const cobreIgualdades = igualdades.every((c) => prefixo.includes(c));
+  const resto = campos.slice(igualdades.length);
+  const cobreOrdem = resto.length === ordenacoes.length
+    && ordenacoes.every((c, i) => resto[i] === c);
+  return cobreIgualdades && cobreOrdem;
+}
+
 function temIndice(colecao, igualdades, ordenacoes) {
   const candidatos = INDICES_POR_COLECAO[colecao] || [];
-  return candidatos.some((campos) => {
-    const prefixo = campos.slice(0, igualdades.length);
-    const cobreIgualdades = igualdades.every((c) => prefixo.includes(c));
-    const resto = campos.slice(igualdades.length);
-    const cobreOrdem = ordenacoes.every((c, i) => resto[i] === c);
-    return cobreIgualdades && cobreOrdem;
-  });
+  return candidatos.some((campos) => indiceServe(campos, igualdades, ordenacoes));
 }
 
 /* -------------------------------------------------------------- código -- */
@@ -234,6 +247,20 @@ describe('🛡️ nenhuma consulta pede índice composto que não existe', () =>
       .filter((c) => c.colecao && !temIndice(c.colecao, [...c.igualdades, ...c.faixas], c.ordenacoes))
       .map((c) => `${c.arquivo}:${c.linha} · ${c.funcao} · ${c.colecao} · ==[${c.igualdades}] faixa[${c.faixas}] orderBy[${c.ordenacoes}]`);
     expect(semIndice).toEqual([]);
+  });
+
+  it('⭐ índice MAIS COMPRIDO que a ordenação não serve (o Firestore desempata por __name__)', () => {
+    // a lista de jogos da fase: igualdade em modalidade e fase, ordenada por rodada
+    expect(indiceServe(['modality_id', 'stage_index', 'round'], ['modality_id', 'stage_index'], ['round'])).toBe(true);
+    expect(indiceServe(['modality_id', 'stage_index', 'round', 'position'], ['modality_id', 'stage_index'], ['round'])).toBe(false);
+    // igualdades em qualquer ordem entre si; ordenação na ordem certa
+    expect(indiceServe(['stage_index', 'modality_id', 'round'], ['modality_id', 'stage_index'], ['round'])).toBe(true);
+    expect(indiceServe(['a', 'c', 'b'], ['a'], ['b', 'c'])).toBe(false);
+  });
+
+  it('⭐ os dois índices da lista de jogos existem (o de 3 campos nasceu no painel e foi importado)', () => {
+    expect(temIndice('tournament_matches', ['modality_id', 'stage_index'], ['round'])).toBe(true);
+    expect(temIndice('tournament_matches', ['modality_id', 'stage_index'], ['round', 'position'])).toBe(true);
   });
 
   it('as coleções que o varredor não resolve estão conferidas à mão', () => {

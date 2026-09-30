@@ -32,8 +32,9 @@ import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
   V2EmptyState, V2ErrorState, V2Skeleton,
 } from '@/v2/ui/primitives';
+import { todayISO } from '@/modules/arenas/domain/calendar';
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => todayISO();
 
 export default function V2ArenaCatalogBrowser() {
   const { arenaId } = useParams();

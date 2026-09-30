@@ -89,3 +89,20 @@ export function sanitizeInterests(list) {
 export function normalizeCourtSide(value) {
   return Object.values(COURT_SIDE).includes(value) ? value : COURT_SIDE.ANY;
 }
+
+/**
+ * Em que lado das duplas MISTAS a pessoa entra no sorteio do dia de jogo:
+ * 'male', 'female' ou null (não conta para misturar).
+ *
+ * Vale primeiro a CATEGORIA em que ela joga (`competition_gender`) — é a
+ * pergunta que o sorteio faz. O gênero do perfil fica como reserva para quem
+ * ainda não disse a categoria; "Outro" e "Prefiro não informar" não viram
+ * palpite.
+ */
+export function playGenderOf(profile) {
+  const categoria = profile?.competition_gender;
+  if (categoria === 'male' || categoria === 'female') return categoria;
+  const genero = profile?.gender;
+  if (genero === 'male' || genero === 'female') return genero;
+  return null;
+}

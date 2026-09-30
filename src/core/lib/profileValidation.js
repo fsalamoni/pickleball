@@ -1,3 +1,5 @@
+import { isBrazilUF } from '../domain/ufs.js';
+
 export function calculateAge(birthDateValue, referenceDate = new Date()) {
   if (!birthDateValue) return null;
 
@@ -51,15 +53,61 @@ export function isRequiredProfileComplete(profile) {
 }
 
 /**
+ * Converte o campo "rating DUPR atual" em número na escala 2.000–8.000, ou null
+ * quando vazio/inválido. Aceita vírgula ou ponto.
+ */
+export function parseDuprRating(raw) {
+  const n = Number(String(raw ?? '').trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(8, Math.max(2, Math.round(n * 1000) / 1000));
+}
+
+/** As categorias em que se compete (as mesmas de `COMPETITION_GENDER`). */
+const CATEGORIAS = new Set(['male', 'female']);
+
+/**
+ * A pessoa já disse o nível dela? Vale a autoindicação ou o teste
+ * (`leveling_level`) — o mínimo — e também um rating DUPR válido (2.0–8.0),
+ * que é melhor que os dois.
+ */
+export function hasDeclaredLevel(profile) {
+  if (String(profile?.leveling_level || '').trim()) return true;
+  const dupr = Number(profile?.dupr_rating);
+  return profile?.dupr_rating != null && profile?.dupr_rating !== '' && Number.isFinite(dupr) && dupr >= 2 && dupr <= 8;
+}
+
+/** Como cada campo do cadastro se chama na tela (e no painel do admin). */
+export const REGISTRATION_FIELD_LABELS = Object.freeze({
+  platform_name: 'Nome de exibição',
+  birth_date: 'Data de nascimento',
+  phone: 'Telefone',
+  pickleball_experience: 'Tempo de experiência',
+  gender: 'Gênero',
+  city: 'Cidade',
+  state: 'UF',
+  court_side: 'Lado da quadra',
+  interests: 'Interesses',
+  competition_gender: 'Categoria em que joga',
+  level: 'Nível',
+});
+
+/**
  * Campos obrigatórios do CADASTRO COMPLETO (obrigatório uma vez, no onboarding).
  * Além dos essenciais (nome, nascimento, telefone, experiência), exige gênero,
  * cidade, UF, lado da quadra e ao menos um interesse. Endereço e ID DUPR
  * permanecem opcionais. Tudo editável depois pelo próprio usuário.
  *
+ * Com `essencial` (flag `essential_profile`), o cadastro passa a exigir também
+ * o que o SORTEIO usa e ficava em branco: a categoria em que a pessoa joga
+ * (masculina/feminina — duplas mistas, categorias de torneio) e o nível (ao
+ * menos a autoindicação). E a UF tem de ser uma UF de verdade: é ela que a
+ * busca por perto e o filtro de região comparam.
+ *
  * @param {object} profile
+ * @param {{ essencial?: boolean }} [opts]
  * @returns {string[]} lista de chaves de campos ainda ausentes (vazio = completo)
  */
-export function missingRegistrationFields(profile) {
+export function missingRegistrationFields(profile, { essencial = false } = {}) {
   if (!profile) return ['platform_name'];
   const missing = [];
   const essentials = validateRequiredProfile({
@@ -75,14 +123,19 @@ export function missingRegistrationFields(profile) {
 
   if (!String(profile.gender || '').trim()) missing.push('gender');
   if (!String(profile.city || '').trim()) missing.push('city');
-  if (!String(profile.state || '').trim()) missing.push('state');
+  if (essencial ? !isBrazilUF(profile.state) : !String(profile.state || '').trim()) missing.push('state');
   if (!String(profile.court_side || '').trim()) missing.push('court_side');
   if (!Array.isArray(profile.interests) || profile.interests.length === 0) missing.push('interests');
+
+  if (essencial) {
+    if (!CATEGORIAS.has(profile.competition_gender)) missing.push('competition_gender');
+    if (!hasDeclaredLevel(profile)) missing.push('level');
+  }
 
   return missing;
 }
 
 /** O cadastro completo foi preenchido? (base do portão de onboarding). */
-export function isRegistrationComplete(profile) {
-  return missingRegistrationFields(profile).length === 0;
+export function isRegistrationComplete(profile, opts) {
+  return missingRegistrationFields(profile, opts).length === 0;
 }

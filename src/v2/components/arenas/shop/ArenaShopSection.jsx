@@ -21,7 +21,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { useShopProducts, useMySales, useMyPayments } from '@/modules/arenas/hooks/useArenaV3';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-import { myOrderView } from '@/modules/arenas/domain/shop';
+import { myOrderView, shopAvailable } from '@/modules/arenas/domain/shop';
 import ShopProductCard from './ShopProductCard';
 import MyOrderCard from './MyOrderCard';
 import { V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -41,7 +41,8 @@ export default function ArenaShopSection({ arena }) {
 
   if (modulosCarregando || !loja) return null;
 
-  const produtos = produtosQ.data || [];
+  // Só o que pode ser pedido agora — esgotado e vencido não entram na vitrine.
+  const produtos = shopAvailable(produtosQ.data || []);
   const meusAbertos = (minhasQ.data || []).filter((s) => {
     const v = myOrderView(s, user?.uid, pagamentos);
     return (v.etapa === 'a_retirar' && v.souComprador) || v.podeRegistrarParte;

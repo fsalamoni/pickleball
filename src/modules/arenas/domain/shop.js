@@ -41,7 +41,7 @@
  * o app vende sem limite (`stock_qty` fica vazio). Ver `trackedStock`.
  */
 
-import { calculateStock } from './inventory.js';
+import { calculateStock, expiryStatus } from './inventory.js';
 import { formatDateShortBR, todayISO } from './calendar.js';
 
 /** Marca da venda feita a partir do Mercado. */
@@ -78,26 +78,58 @@ export function isSoldOnline(product) {
 }
 
 /**
- * A vitrine do app, a partir dos produtos do Mercado.
+ * Por que um produto marcado para o app NÃO pode ser pedido agora:
+ * `'esgotado'` (estoque controlado e zerado), `'vencido'` (a validade do lote
+ * passou) ou `null` (pode).
+ */
+export function shopUnavailableReason(product, { today } = {}) {
+  const estoque = numero(product?.stock ?? product?.stock_qty);
+  if (estoque != null && estoque <= 0) return 'esgotado';
+  if (expiryStatus(product?.expiry_date, { today }) === 'expired') return 'vencido';
+  return null;
+}
+
+/**
+ * Os produtos marcados para o app, a partir dos produtos do Mercado — os que
+ * podem ser pedidos agora (`disponivel`) e os que não (`motivo`).
  * `stock` é `null` quando a cópia do estoque ainda não existe — aí o produto
- * não aparece como esgotado (quem confere de verdade é a entrega).
+ * não conta como esgotado (quem confere de verdade é a entrega).
+ *
+ * A vitrine do atleta mostra só os disponíveis (`shopAvailable`); a lista
+ * inteira serve a quem precisa saber que o produto EXISTE (o destino de uma
+ * campanha, o aviso "o produto desta campanha esgotou").
  *
  * @param {object[]} inventoryProducts
  * @returns {Array<{ id: string, name: string, price: number, category: string,
- *   stock: number|null, detail: string }>}
+ *   stock: number|null, detail: string, disponivel: boolean,
+ *   motivo: 'esgotado'|'vencido'|null }>}
  */
-export function shopProducts(inventoryProducts = []) {
+export function shopProducts(inventoryProducts = [], { today } = {}) {
   return inventoryProducts
     .filter(isSoldOnline)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: numero(p.sale_price),
-      category: p.category || 'Outros',
-      stock: numero(p.stock_qty),
-      detail: [p.brand, p.size, p.flavor, p.packaging].filter(Boolean).join(' · '),
-    }))
+    .map((p) => {
+      const motivo = shopUnavailableReason(p, { today });
+      return {
+        id: p.id,
+        name: p.name,
+        price: numero(p.sale_price),
+        category: p.category || 'Outros',
+        stock: numero(p.stock_qty),
+        detail: [p.brand, p.size, p.flavor, p.packaging].filter(Boolean).join(' · '),
+        disponivel: motivo === null,
+        motivo,
+      };
+    })
     .sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
+}
+
+/**
+ * A vitrine do atleta: só o que pode ser pedido agora. Esgotado e vencido
+ * saem da frente — um cartão "Esgotado" atrás do outro não vende nada e
+ * esconde o que tem.
+ */
+export function shopAvailable(products = []) {
+  return products.filter((p) => p?.disponivel !== false);
 }
 
 /** Tem estoque para esta quantidade? Estoque desconhecido não barra. */
@@ -116,9 +148,10 @@ export function shopHasStock(product, quantity = 1) {
  *
  * @param {Array<{ product_id: string, quantity: number }>} items
  * @param {Map<string, object>} productsById produtos do Mercado, lidos do banco
+ * @param {{ today?: string }} [opts] dia de referência da validade (padrão: hoje, local)
  * @returns {{ ok: boolean, error?: string, items: object[], total: number }}
  */
-export function priceCartFromCatalog(items = [], productsById = new Map()) {
+export function priceCartFromCatalog(items = [], productsById = new Map(), { today } = {}) {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, error: 'Carrinho vazio.', items: [], total: 0 };
   }
@@ -132,6 +165,9 @@ export function priceCartFromCatalog(items = [], productsById = new Map()) {
     }
     if (!shopHasStock(p, quantity)) {
       return { ok: false, error: `Estoque insuficiente de ${p.name}.`, items: [], total: 0 };
+    }
+    if (expiryStatus(p.expiry_date, { today }) === 'expired') {
+      return { ok: false, error: `${p.name} saiu da loja (validade vencida). Atualize a loja e tente de novo.`, items: [], total: 0 };
     }
     const price = numero(p.sale_price);
     saida.push({ product_id: p.id, name: p.name, price, quantity });

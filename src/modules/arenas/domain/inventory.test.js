@@ -7,7 +7,7 @@ import {
   normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit,
   calculateStock, calculateMargin, filterProductsByCategory, searchProducts,
   stockStatus, daysToExpiry, expiryStatus,
-  INVENTORY_CATEGORIES,
+  INVENTORY_CATEGORIES, stockPosition, STOCK_SITUATION, STOCK_FILTERS, stockFilterAccepts, countByStockFilter,
 } from './inventory.js';
 
 describe('normalizeInventoryProduct', () => {
@@ -248,5 +248,89 @@ describe('campos da loja do app (aditivos)', () => {
   it('canal desconhecido é ignorado', () => {
     const r = normalizeInventoryExit({ product_id: 'p', date: '2026-09-24', quantity: 1, unit_price: 5, channel: 'x' });
     expect('channel' in r.value).toBe(false);
+  });
+});
+
+describe('stockPosition — onde o produto está (uma resposta para todas as telas)', () => {
+  const HOJE = '2026-09-30';
+  const compra = (product_id, quantity) => ({ product_id, quantity, total_cost: 0 });
+  const venda = (product_id, quantity) => ({ product_id, quantity, total_price: 0 });
+
+  it('⭐ produto CADASTRADO e nunca comprado não está no estoque — nem "Esgotado"', () => {
+    const p = stockPosition({ id: 'agua' }, [], [], { today: HOJE });
+    expect(p.situacao).toBe(STOCK_SITUATION.SEM_COMPRA);
+    expect(p.aVenda).toBe(false);
+    expect(p.repor).toBe(false);
+    expect(p.controla).toBe(false);
+  });
+
+  it('com compra e estoque: à venda; zerado: esgotado (e pede reposição)', () => {
+    const entradas = [compra('agua', 10)];
+    expect(stockPosition({ id: 'agua' }, entradas, [], { today: HOJE }).situacao).toBe(STOCK_SITUATION.A_VENDA);
+    const zerado = stockPosition({ id: 'agua' }, entradas, [venda('agua', 10)], { today: HOJE });
+    expect(zerado.situacao).toBe(STOCK_SITUATION.ESGOTADO);
+    expect(zerado.aVenda).toBe(false);
+    expect(zerado.repor).toBe(true);
+  });
+
+  it('abaixo do mínimo: à venda E pede reposição', () => {
+    const p = stockPosition({ id: 'agua', min_stock: 6 }, [compra('agua', 10)], [venda('agua', 5)], { today: HOJE });
+    expect(p.situacao).toBe(STOCK_SITUATION.BAIXO);
+    expect(p.aVenda).toBe(true);
+    expect(p.repor).toBe(true);
+  });
+
+  it('⭐ vencido com estoque não está à venda; vencido SEM estoque não dispara alerta', () => {
+    const vencido = { id: 'suco', expiry_date: '2026-09-01' };
+    const naPrateleira = stockPosition(vencido, [compra('suco', 3)], [], { today: HOJE });
+    expect(naPrateleira.situacao).toBe(STOCK_SITUATION.VENCIDO);
+    expect(naPrateleira.aVenda).toBe(false);
+    expect(naPrateleira.alertaValidade).toBe(true);
+    const acabou = stockPosition(vencido, [compra('suco', 3)], [venda('suco', 3)], { today: HOJE });
+    expect(acabou.alertaValidade).toBe(false);
+    const nuncaComprado = stockPosition(vencido, [], [], { today: HOJE });
+    expect(nuncaComprado.alertaValidade).toBe(false);
+  });
+
+  it('sem compra, marcado para o app e com a loja ligada: à venda sem controle de estoque', () => {
+    const grip = { id: 'grip', sell_online: true, sale_price: 25 };
+    expect(stockPosition(grip, [], [], { today: HOJE, vendePeloApp: true }).situacao).toBe(STOCK_SITUATION.SEM_CONTROLE);
+    expect(stockPosition(grip, [], [], { today: HOJE, vendePeloApp: true }).aVenda).toBe(true);
+    // loja desligada: não vende em lugar nenhum
+    expect(stockPosition(grip, [], [], { today: HOJE }).situacao).toBe(STOCK_SITUATION.SEM_COMPRA);
+    // sem preço, o app não vende
+    expect(stockPosition({ ...grip, sale_price: 0 }, [], [], { today: HOJE, vendePeloApp: true }).situacao)
+      .toBe(STOCK_SITUATION.SEM_COMPRA);
+  });
+
+  it('entregas do app sem compra registrada não viram "esgotado" (a mesma regra de trackedStock)', () => {
+    const grip = { id: 'grip', sell_online: true, sale_price: 25 };
+    const p = stockPosition(grip, [], [venda('grip', 2)], { today: HOJE, vendePeloApp: true });
+    expect(p.situacao).toBe(STOCK_SITUATION.SEM_CONTROLE);
+  });
+
+  it('inativo não está à venda nem gera alerta, mesmo com estoque', () => {
+    const p = stockPosition({ id: 'agua', active: false }, [compra('agua', 2)], [], { today: HOJE });
+    expect(p.situacao).toBe(STOCK_SITUATION.INATIVO);
+    expect(p.aVenda).toBe(false);
+    expect(p.repor).toBe(false);
+  });
+
+  it('os filtros: "À venda" é o padrão e cada situação cai em um filtro só (além de "Todos")', () => {
+    expect(STOCK_FILTERS[0].value).toBe('a_venda');
+    for (const situacao of Object.values(STOCK_SITUATION)) {
+      const filtros = STOCK_FILTERS.filter((f) => f.value !== 'todos' && stockFilterAccepts(f.value, situacao));
+      expect(filtros).toHaveLength(1);
+      expect(stockFilterAccepts('todos', situacao)).toBe(true);
+    }
+    expect(stockFilterAccepts('inexistente', STOCK_SITUATION.A_VENDA)).toBe(true); // cai no padrão
+    expect(stockFilterAccepts('inexistente', STOCK_SITUATION.ESGOTADO)).toBe(false);
+  });
+
+  it('conta quantos cabem em cada filtro', () => {
+    const c = countByStockFilter([
+      { situacao: 'a_venda' }, { situacao: 'baixo' }, { situacao: 'esgotado' }, { situacao: 'sem_compra' },
+    ]);
+    expect(c).toMatchObject({ a_venda: 2, esgotados: 1, vencidos: 0, sem_compra: 1, inativos: 0, todos: 4 });
   });
 });

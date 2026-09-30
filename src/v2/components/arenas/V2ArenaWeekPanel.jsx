@@ -5,6 +5,7 @@ import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
 import { weekSummary, bookingsHeatmap } from '@/modules/arenas/domain/arena_week';
 import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { formatDateISO } from '@/modules/arenas/domain/calendar';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -12,7 +13,7 @@ const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL',
 function isoDaysAgo(n) {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
+  return formatDateISO(d);
 }
 
 /**

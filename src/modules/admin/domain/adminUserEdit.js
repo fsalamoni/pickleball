@@ -27,6 +27,7 @@ import {
   PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
+import { hasDeclaredLevel } from '@/core/lib/profileValidation';
 
 /** `{ valor: rótulo }` vira `[{ value, label }]`, o formato do formulário. */
 const deRotulos = (labels) => Object.entries(labels).map(([value, label]) => ({ value, label }));
@@ -51,14 +52,14 @@ export const ADMIN_EDITABLE_FIELDS = Object.freeze([
   { key: 'full_name', label: 'Nome completo', type: 'text', group: 'identidade' },
   { key: 'birth_date', label: 'Data de nascimento', type: 'date', group: 'identidade', required: true },
   { key: 'phone', label: 'Telefone', type: 'text', group: 'identidade', required: true },
-  { key: 'gender', label: 'Gênero', type: 'select', group: 'identidade' },
-  { key: 'city', label: 'Cidade', type: 'text', group: 'local' },
-  { key: 'state', label: 'Estado (UF)', type: 'text', group: 'local', maxLength: 2 },
+  { key: 'gender', label: 'Gênero', type: 'select', group: 'identidade', required: true },
+  { key: 'city', label: 'Cidade', type: 'text', group: 'local', required: true },
+  { key: 'state', label: 'Estado (UF)', type: 'text', group: 'local', maxLength: 2, required: true },
   { key: 'address', label: 'Endereço', type: 'text', group: 'local' },
   { key: 'pickleball_experience', label: 'Experiência no pickleball', type: 'select', group: 'jogo', required: true },
-  { key: 'competition_gender', label: 'Categoria competitiva', type: 'select', group: 'jogo' },
-  { key: 'court_side', label: 'Lado na quadra', type: 'select', group: 'jogo' },
-  { key: 'leveling_level', label: 'Nível declarado', type: 'select', group: 'jogo' },
+  { key: 'competition_gender', label: 'Categoria competitiva', type: 'select', group: 'jogo', requiredWithEssential: true },
+  { key: 'court_side', label: 'Lado na quadra', type: 'select', group: 'jogo', required: true },
+  { key: 'leveling_level', label: 'Nível declarado', type: 'select', group: 'jogo', requiredWithEssential: true },
   { key: 'dupr_id', label: 'DUPR ID', type: 'text', group: 'jogo' },
   { key: 'dupr_rating', label: 'DUPR rating', type: 'number', group: 'jogo' },
   { key: 'photo_url', label: 'URL da foto', type: 'text', group: 'jogo' },
@@ -86,8 +87,27 @@ export const ADMIN_FORBIDDEN_FIELDS = Object.freeze({
   last_login: 'Histórico.',
 });
 
-/** Campos exigidos para o cadastro ser considerado completo. */
-const OBRIGATORIOS = ADMIN_EDITABLE_FIELDS.filter((f) => f.required);
+/**
+ * O campo é obrigatório? A MESMA regra do cadastro (`missingRegistrationFields`):
+ * nome, nascimento, telefone, experiência, gênero, cidade, UF e lado da quadra
+ * sempre; com o cadastro essencial (flag `essential_profile`), também a
+ * categoria em que joga e o nível.
+ *
+ * 🐞 Antes o painel só chamava de obrigatórios os quatro primeiros — e dizia
+ * "completo" de um cadastro que o assistente ainda ia reabrir pedindo gênero,
+ * cidade, UF e lado. O admin e o cadastro tinham duas respostas para a mesma
+ * pergunta.
+ */
+export function isRequiredField(field, { essencial = false } = {}) {
+  return Boolean(field?.required || (essencial && field?.requiredWithEssential));
+}
+
+/** O campo obrigatório está faltando? O nível vale também por um rating DUPR. */
+function faltaObrigatorio(field, user, opts) {
+  if (!isRequiredField(field, opts)) return false;
+  if (field.key === 'leveling_level') return !hasDeclaredLevel(user);
+  return texto(user?.[field.key]) === '';
+}
 
 const texto = (v) => String(v ?? '').trim();
 
@@ -208,27 +228,27 @@ export function diffAdminUserPatch(before = {}, patch = {}) {
  *
  * @returns {Array<{key:string,label:string,required:boolean}>}
  */
-export function missingUserFields(user = {}) {
+export function missingUserFields(user = {}, opts = {}) {
   return ADMIN_EDITABLE_FIELDS
     .filter((f) => {
       const v = user?.[f.key];
       if (f.type === 'number') return v == null || v === '';
       return texto(v) === '';
     })
-    .map((f) => ({ key: f.key, label: f.label, required: Boolean(f.required) }));
+    .map((f) => ({ key: f.key, label: f.label, required: faltaObrigatorio(f, user, opts) }));
 }
 
 /** O cadastro está completo no que é obrigatório? */
-export function isUserRecordComplete(user = {}) {
-  return OBRIGATORIOS.every((f) => texto(user?.[f.key]) !== '');
+export function isUserRecordComplete(user = {}, opts = {}) {
+  return !ADMIN_EDITABLE_FIELDS.some((f) => faltaObrigatorio(f, user, opts));
 }
 
 /**
  * Resumo de completude, para a lista de cadastros: quantos campos faltam e se
  * algum obrigatório está entre eles.
  */
-export function userRecordStatus(user = {}) {
-  const faltando = missingUserFields(user);
+export function userRecordStatus(user = {}, opts = {}) {
+  const faltando = missingUserFields(user, opts);
   const obrigatoriosFaltando = faltando.filter((f) => f.required);
   return {
     missing: faltando,

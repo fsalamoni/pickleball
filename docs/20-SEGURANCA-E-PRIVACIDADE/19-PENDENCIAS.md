@@ -14,7 +14,7 @@
 
 | # | Pendência | Bloqueio | Quem resolve |
 |---|---|---|---|
-| 1 | Backup agendado + PITR + teste de restauração | — | **dono** (console) |
+| 1 | ~~Backup agendado + PITR + teste de restauração~~ ✅ **concluído** (2026-09-30: PITR 7 dias + backup diário 98 dias, restauração testada) | — | dono |
 | 2 | Migração destrutiva do P0-02 (apagar e-mails antigos das inscrições) | item 1 | agente |
 | 3 | Migração destrutiva do P1-01 (apagar `user_email` legado) | item 1 | agente |
 | 4 | Direitos do titular (exclusão, exportação, canal) — **obrigação legal** | nenhum | agente |
@@ -31,7 +31,11 @@ Passo a passo pronto em **`15-RUNBOOK-S0-CONSOLE.md`**, com os comandos
 `gcloud`. ~30-40 min, sem tocar em código.
 
 Em 2026-09-29, o dono confirmou que o **restore no Console foi testado e está
-funcionando**. Isso destrava a próxima etapa de privacidade, desde que ela
+funcionando**.
+
+✅ **2026-09-30 — concluído.** Conferido no console: PITR ativado (7 dias) e
+backup programado diário com retenção de 98 dias no banco `pickleball`
+(projeto `antonov-82411`). Isso destrava a próxima etapa de privacidade, desde que ela
 continue em passos pequenos, com relatório/dry-run e confirmação forte.
 
 Regra que continua valendo: qualquer deleção precisa rodar primeiro em dry-run,

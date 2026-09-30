@@ -391,6 +391,12 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
   sozinhos; a ajuda ganha "Mostre na tela". Zero banco (navegador, por
   usuário). Âncoras: `data-dica="…"` nos elementos reais.
 
+**Cadastro essencial (2026-09-30)** — mais uma, default OFF (ver `docs/33-CADASTRO-ESSENCIAL.md`):
+- `essential_profile` — o cadastro passa a exigir a CATEGORIA em que a pessoa
+  joga (masculina/feminina — duplas mistas e categorias de torneio) e o NÍVEL
+  (autoindicação, teste ou rating DUPR); a UF vira lista; quem já tinha
+  cadastro vê só o que falta. DUPR segue opcional. Zero banco.
+
 Padrão de uso:
 
 ```jsx

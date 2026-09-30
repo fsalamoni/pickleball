@@ -85,6 +85,7 @@ import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
 import { useArenaOpenSlots, useArenaClasses, useArenaInternalTournaments } from '@/modules/arenas/hooks/useArenaV3';
+import { todayISO } from '@/modules/arenas/domain/calendar';
 
 const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -128,7 +129,7 @@ function faixasDeOcupacao(count = {}) {
 }
 
 function isPast(dateStr) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   return dateStr < today;
 }
 
@@ -189,7 +190,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     };
   }, []);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const [yearMonth, setYearMonth] = useState(today.slice(0, 7));
   const [courtId, setCourtId] = useState('all');
   const [selectedDate, setSelectedDate] = useState(null);

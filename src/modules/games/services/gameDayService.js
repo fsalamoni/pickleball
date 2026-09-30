@@ -52,6 +52,7 @@ import {
 } from '../domain/americanoLive.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
+import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 
 const COL = 'game_days';
 // O jogo aberto ligado a este dia de jogo (Onda CA). Escrito direto aqui, e
@@ -245,7 +246,7 @@ export async function joinPublicGameDay(gameDay, user, profile) {
     user_id: user.uid, name, photo_url: profile?.photo_url || user?.photoURL || null,
     source: GD_PARTICIPANT_SOURCE.JOINED,
     play_level: profile?.level || profile?.leveling_level || null,
-    play_gender: profile?.gender || null,
+    play_gender: playGenderOf(profile),
   }, user);
 
   notifyUsers([gameDay.created_by], {
