@@ -33,4 +33,30 @@ describe('workflow de deploy do Firebase', () => {
     expect(workflow).toMatch(/firestore\.indexes\.json/);
     expect(workflow).toMatch(/echo "::warning title=Índice remoto preservado::/);
   });
+
+  // 🐞 O firebase.json declara o banco NOMEADO em lista, e com essa forma a
+  // firebase-tools 13 só enxerga o banco quando o `--only` o nomeia:
+  // `firestore:rules` sozinho resolvia ZERO bancos (o passo ficava verde sem
+  // publicar regra nenhuma — as regras dos PRs #175–#178 nunca chegaram à
+  // produção) e `firestore:indexes` sozinho quebrava com "An unexpected error
+  // has occurred", derrubando o deploy inteiro do site.
+  it('⭐ todo deploy de Firestore nomeia o banco do firebase.json', () => {
+    const firebaseJson = JSON.parse(readFileSync('firebase.json', 'utf8'));
+    const bancos = [].concat(firebaseJson.firestore || []).map((c) => c.database).filter(Boolean);
+    expect(bancos).toEqual(['pickleball']);
+    expect(workflow).toMatch(/FIRESTORE_DATABASE_ID: pickleball/);
+
+    const alvos = [...workflow.matchAll(/firebase deploy --only "([^"]*firestore[^"]*)"/g)].map((m) => m[1]);
+    expect(alvos.length).toBeGreaterThanOrEqual(2);
+    for (const alvo of alvos) {
+      expect(alvo.split(','), `alvo sem o banco nomeado: ${alvo}`).toContain('firestore:$FIRESTORE_DATABASE_ID');
+    }
+    expect(alvos).toContain('firestore:rules,firestore:$FIRESTORE_DATABASE_ID');
+    expect(alvos).toContain('firestore:indexes,firestore:$FIRESTORE_DATABASE_ID');
+  });
+
+  it('⭐ o passo de regras não fica verde sem a CLI confirmar a publicação', () => {
+    expect(workflow).toMatch(/grep -q "released rules"/);
+    expect(workflow).toMatch(/::error title=Regras do Firestore não publicadas::/);
+  });
 });

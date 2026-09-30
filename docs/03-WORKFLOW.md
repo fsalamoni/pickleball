@@ -251,8 +251,8 @@ GitHub Actions: .github/workflows/deploy-firebase.yml
 6. Ensure Hosting sites exist (cria se faltar — picklerush + pickletour)
 7. Build (vite build → dist/)
 8. Deploy:
-   - firebase deploy --only firestore:rules (bloqueante)
-   - firebase deploy --only firestore:indexes (sem `--force`; se houver índice remoto não versionado, preserva e avisa)
+   - firebase deploy --only firestore:rules,firestore:pickleball (bloqueante; falha se a CLI não disser "released rules")
+   - firebase deploy --only firestore:indexes,firestore:pickleball (sem `--force`; se houver índice remoto não versionado, preserva e avisa)
    - firebase deploy --only functions (por codebase/nome, via script seguro)
    - firebase deploy --only hosting
   ↓
@@ -289,6 +289,7 @@ Ou no GitHub: **Actions** tab → último workflow → verificar verde.
 | `Lint errors` | ESLint quebrou | Rodar `npm run lint`, ver warnings |
 | `Tests failed` | Algum teste quebrou | Rodar `npm test`, ver qual |
 | `Pass the --force flag` ao publicar índices | Existe índice remoto que não está em `firestore.indexes.json` | **Não use `--force` às cegas**: ele apagaria o índice remoto. O workflow preserva o índice e continua; importe o índice para o JSON antes de voltar a tratar índices como bloqueantes. |
+| `An unexpected error has occurred` logo depois de "deploying indexes…", ou o passo de regras verde **sem** "released rules" | O `--only` não nomeia o banco. O `firebase.json` declara o banco nomeado em LISTA, e a firebase-tools 13 só o enxerga quando o alvo o nomeia: `firestore:rules` sozinho resolve **zero** bancos (verde sem publicar nada) e `firestore:indexes` sozinho quebra | Use sempre o PAR `firestore:<parte>,firestore:pickleball`. 🐞 Foi o que segurou os deploys de 29/09 (PRs #175–#178): o site parou no #174 e as regras de segurança novas nunca foram publicadas, com o passo de regras verde. Guarda em `src/core/guards/deployFirebaseWorkflow.test.js` |
 
 ### 4.4 Deploy manual (emergência)
 
@@ -697,7 +698,7 @@ npm run e2e:install  # primeira vez
 firebase login
 firebase deploy
 firebase deploy --only hosting
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules,firestore:pickleball   # o banco nomeado PRECISA estar no alvo
 firebase emulators:start
 
 # === Diagnóstico ===

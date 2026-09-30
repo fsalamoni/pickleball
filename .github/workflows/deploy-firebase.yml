@@ -173,13 +173,30 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
+      # ⚠️ O firebase.json declara o banco NOMEADO em lista
+      # (`"firestore": [{ "database": "pickleball", … }]`). Com essa forma, a
+      # firebase-tools 13 só enxerga o banco quando o `--only` o NOMEIA:
+      # `firestore:rules` sozinho resolve ZERO bancos — o passo imprimia
+      # "Deploy complete!" sem compilar nem publicar regra nenhuma — e
+      # `firestore:indexes` sozinho quebrava com "An unexpected error has
+      # occurred" (a lista de índices nunca era montada). Por isso o alvo é o
+      # PAR `firestore:<parte>,firestore:<banco>`. Guarda em
+      # src/core/guards/deployFirebaseWorkflow.test.js.
       - name: Deploy Firestore rules
         run: |
           set +e
-          OUT=$(firebase deploy --only "firestore:rules" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          OUT=$(firebase deploy --only "firestore:rules,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
           RC=$?
           echo "$OUT"
-          if [ $RC -eq 0 ]; then exit 0; fi
+          if [ $RC -eq 0 ]; then
+            # Verde sem publicar é o pior desfecho: parece que as regras estão
+            # no ar e não estão. Sem a confirmação da CLI, o passo falha.
+            if ! echo "$OUT" | grep -q "released rules"; then
+              echo "::error title=Regras do Firestore não publicadas::A CLI terminou sem publicar regra nenhuma no banco '$FIRESTORE_DATABASE_ID'. Confira o alvo do --only contra o firebase.json."
+              exit 1
+            fi
+            exit 0
+          fi
           if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
             echo "::error title=Missing IAM permission for Firestore rules deploy::Service account '$SA_EMAIL' cannot deploy Firestore rules to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
           fi
@@ -189,7 +206,7 @@ jobs:
         id: firestore_indexes
         run: |
           set +e
-          OUT=$(firebase deploy --only "firestore:indexes" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          OUT=$(firebase deploy --only "firestore:indexes,firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
           RC=$?
           echo "$OUT"
           if [ $RC -eq 0 ]; then
