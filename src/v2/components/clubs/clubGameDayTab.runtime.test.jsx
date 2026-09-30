@@ -26,8 +26,11 @@ const papel = { role: 'admin' };
 // A data LEGADA também consulta o clube e as listas do evento, para decidir se
 // a conversão para o módulo é segura (só quando a data está VAZIA).
 const legado = { participants: [], games: [], falhou: false };
+// Os clubes da pessoa — é por ser do clube que ela entra sozinha no dia.
+const meusClubes = { lista: [{ id: 'clube1', name: 'Clube' }] };
 vi.mock('@/modules/clubs/hooks/useClubs', () => ({
   useMyMembership: () => ({ data: papel }),
+  useMyClubs: () => ({ data: meusClubes.lista, isLoading: false }),
   useClub: () => ({ data: { id: 'clube1', name: 'Clube' } }),
   useEventParticipants: () => ({ data: legado.participants, isError: legado.falhou }),
   useEventGames: () => ({ data: legado.games, isError: legado.falhou }),
@@ -60,6 +63,8 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useAddGameDayParticipant: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
   useRemoveGameDayParticipant: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
   useUpdateGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
+  useJoinPublicGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
+  useLeaveGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
 }));
 
 const { default: ClubGameDayTab } = await import('./ClubGameDayTab.jsx');
@@ -86,6 +91,7 @@ beforeEach(() => {
   legado.games = [];
   legado.falhou = false;
   converteu.chamadas = [];
+  meusClubes.lista = [{ id: 'clube1', name: 'Clube' }];
 });
 
 afterEach(() => {
@@ -198,17 +204,29 @@ describe('⭐ o membro entra e sai sozinho (era o que o legado já permitia)', (
     estado.gameDay = { id: 'gd1', title: 'Rachão', format: 'americano', club_id: 'clube1', created_by: 'outra' };
   });
 
-  it('⭐ quem não está no dia vê "Marcar presença"', () => {
+  it('⭐ quem não está no dia vê "Participar" — o MESMO painel do dia aberto pelo "Jogar"', () => {
     const texto = render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    expect(texto).toContain('Marcar presença');
-    expect(texto).toContain('ainda não está');
+    expect(texto).toContain('Participar do dia de jogo');
+    expect(texto).toContain('dia de jogo do seu clube');
   });
 
   it('⭐ quem já está vê a saída, não o convite para entrar de novo', () => {
     estado.participants = [{ id: 'p1', user_id: 'u1', name: 'Eu' }];
     const texto = render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
     expect(texto).toContain('Sair do dia de jogo');
-    expect(texto).not.toContain('Marcar presença');
+    expect(texto).not.toContain('Participar do dia de jogo');
+  });
+
+  it('quem organiza também pode jogar: quem agenda a data não vira jogador', () => {
+    estado.gameDay = { ...estado.gameDay, created_by: 'u1' };
+    const texto = render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
+    expect(texto).toContain('Participar do dia de jogo');
+  });
+
+  it('quem não é do clube não recebe o botão (a regra recusaria)', () => {
+    meusClubes.lista = [];
+    const texto = render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
+    expect(texto).not.toContain('Participar do dia de jogo');
   });
 });
 

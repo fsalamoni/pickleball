@@ -157,6 +157,15 @@ describe('openSlotsForDiscovery — Procura-se jogo', () => {
     ], (id) => id === 'a1', AGORA);
     expect(r.map((s) => s.id)).toEqual(['ok']);
   });
+
+  it('o jogo LOTADO em que eu estou continua (é onde fica o meu "Sair")', () => {
+    const lotadoComigo = vaga('meu', { participants: ['a', 'b', 'c', 'eu'] });
+    const lotado = vaga('cheia', { participants: ['a', 'b', 'c', 'd'] });
+    const semUid = openSlotsForDiscovery([lotadoComigo, lotado], () => true, AGORA);
+    expect(semUid).toEqual([]);
+    const comUid = openSlotsForDiscovery([lotadoComigo, lotado], () => true, AGORA, { uid: 'eu' });
+    expect(comUid.map((s) => s.id)).toEqual(['meu']);
+  });
 });
 
 describe('slotActionState — o botão da vaga', () => {

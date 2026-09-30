@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Timestamp } from 'firebase/firestore';
 import {
   PLAY_KIND, PLAY_WINDOW_DAYS, nextDaysISO, gameDayEndsAt, gameDayStartsAt, gameDayPlace,
-  arenaGameDayHasLimit, gameDayVacanciesLeft, buildPlayList,
+  arenaGameDayHasLimit, gameDayVacanciesLeft, buildPlayList, playItemsForMe, PLAY_ORIGIN,
 } from './playDiscovery.js';
 
 // Quarta, 30/09/2026, 10:00 (hora local).
@@ -117,13 +117,37 @@ describe('buildPlayList', () => {
     expect(lista[0].link).toBe('/procura-jogo');
   });
 
-  it('não mostra o que a pessoa já tem: o que ela criou e o dia em que já está', () => {
+  it('o que a pessoa CRIOU não aparece (ela organiza); o que ela já tem aparece com "Você vai"', () => {
     const lista = buildPlayList({
       ...base,
       diasPublicos: [diaAtleta({ created_by: 'eu' }), diaArena({ member_uids: ['gestor', 'eu'] }), diaAtleta({ id: 'outro' })],
       meusDias: new Set(['outro']),
     });
-    expect(lista).toEqual([]);
+    expect(lista.map((i) => [i.id, i.estou, i.badge])).toEqual([
+      ['arena1', true, 'Você vai'],
+      ['outro', true, 'Você vai'],
+    ]);
+  });
+
+  it('⭐ ficar na lista depois de entrar: sumir no clique parece que falhou', () => {
+    const lotadoComigo = diaArena({ capacity: 2, member_uids: ['gestor', 'eu'] });
+    const inscritos = new Map([['arena1', [{ user_id: 'eu' }, { user_id: 'b' }]]]);
+    const [item] = buildPlayList({ ...base, diasPublicos: [lotadoComigo], inscritosPorDia: inscritos });
+    expect(item).toMatchObject({ estou: true, badge: 'Você vai', vagas: null });
+  });
+
+  it('quem administra (nomeado) é membro do dia sem ser jogador: não conta como "estou"', () => {
+    const [item] = buildPlayList({
+      ...base,
+      diasPublicos: [diaAtleta({ admin_uids: ['eu'], member_uids: ['ana', 'eu'] })],
+    });
+    expect(item.estou).toBe(false);
+  });
+
+  it('com a lista de inscritos em mãos, é ela que diz se estou', () => {
+    const dia = diaAtleta({ member_uids: ['ana', 'eu'] });
+    const [comLista] = buildPlayList({ ...base, diasPublicos: [dia], inscritosPorDia: new Map([['atleta1', []]]) });
+    expect(comLista.estou).toBe(false);
   });
 
   it('um jogo, um item: o espelho do dia de jogo não duplica; o órfão não aparece', () => {
@@ -153,12 +177,31 @@ describe('buildPlayList', () => {
     });
   });
 
-  it('jogo aberto em que já estou, ou lotado, não entra', () => {
+  it('jogo aberto lotado não entra; o que já tenho entra, com "Você vai"', () => {
     const vagas = [
       { id: 's1', arena_id: 'A', date: '2026-10-01', start: '19:00', total_spots: 4, participants: ['eu'] },
       { id: 's2', arena_id: 'A', date: '2026-10-01', start: '19:00', total_spots: 2, participants: ['a', 'b'] },
+      { id: 's3', arena_id: 'A', date: '2026-10-01', start: '20:00', total_spots: 2, participants: ['a', 'eu'] },
     ];
-    expect(buildPlayList({ ...base, vagas })).toEqual([]);
+    expect(buildPlayList({ ...base, vagas }).map((i) => [i.id, i.estou])).toEqual([['s1', true], ['s3', true]]);
+  });
+
+  it('⭐ requisitos: o jogo aberto diz se o meu nível cabe na faixa (e por quê, quando não)', () => {
+    const vagas = [
+      { id: 'baixo', arena_id: 'A', date: '2026-10-01', start: '19:00', total_spots: 4, participants: [], min_level: 2.5, max_level: 3.0 },
+      { id: 'meu', arena_id: 'A', date: '2026-10-01', start: '20:00', total_spots: 4, participants: [], min_level: 3.5, max_level: 4.5 },
+      { id: 'livre', arena_id: 'A', date: '2026-10-01', start: '21:00', total_spots: 4, participants: [] },
+    ];
+    const lista = buildPlayList({ ...base, vagas, nivel: 4.0 });
+    expect(lista.map((i) => [i.id, i.cabe])).toEqual([['baixo', false], ['meu', true], ['livre', true]]);
+    expect(lista[0].motivo).toMatch(/até o nível 3.0/);
+    // O início mostra só o que eu posso entrar (ou já tenho).
+    expect(playItemsForMe(lista).map((i) => i.id)).toEqual(['meu', 'livre']);
+  });
+
+  it('nível desconhecido não barra ninguém (a plataforma não inventa nível)', () => {
+    const vagas = [{ id: 'faixa', arena_id: 'A', date: '2026-10-01', start: '19:00', total_spots: 4, participants: [], min_level: 4.0 }];
+    expect(buildPlayList({ ...base, vagas, nivel: null })[0].cabe).toBe(true);
   });
 
   it('ordena do mais cedo para o mais tarde; convite sem data no fim', () => {
@@ -172,5 +215,59 @@ describe('buildPlayList', () => {
 
   it('privado ou arquivado não entra, mesmo que chegue', () => {
     expect(buildPlayList({ ...base, diasPublicos: [diaAtleta({ visibility: 'private' }), diaArena({ status: 'archived' })] })).toEqual([]);
+  });
+});
+
+describe('⭐ os dias de jogo dos CLUBES da pessoa', () => {
+  const base = { hoje, agora, uid: 'eu' };
+  const diaClube = (over = {}) => ({
+    id: 'clube1',
+    title: 'Terça do clube · 06/10',
+    visibility: 'private',
+    status: 'active',
+    club_id: 'c1',
+    club_name: 'Clube Ace',
+    created_by: 'org',
+    member_uids: ['org'],
+    date: '2026-10-06',
+    time: '19:00',
+    ...over,
+  });
+  const clubesById = new Map([['c1', { id: 'c1', name: 'Clube Ace', city: 'Canoas', state: 'RS' }]]);
+
+  it('entram mesmo privados — é por ser do clube que a pessoa os recebe —, com a cidade do clube', () => {
+    const [item] = buildPlayList({ ...base, diasDoClube: [diaClube()], clubesById });
+    expect(item).toMatchObject({
+      origem: PLAY_ORIGIN.CLUBE, link: '/dia-de-jogo/clube1', estou: false, cabe: true, badge: 'Do seu clube',
+      place: { city: 'Canoas', state: 'RS' },
+    });
+    expect(item.subtitle).toMatch(/Clube Ace/);
+  });
+
+  it('quem agendou a data pode entrar para jogar: a lista de inscritos diz se ele vai', () => {
+    const dia = diaClube({ created_by: 'eu', member_uids: ['eu'] });
+    const [semEntrar] = buildPlayList({ ...base, diasDoClube: [dia], inscritosPorDia: new Map([['clube1', []]]) });
+    expect(semEntrar.estou).toBe(false);
+    const [jogando] = buildPlayList({ ...base, diasDoClube: [dia], inscritosPorDia: new Map([['clube1', [{ user_id: 'eu' }]]]) });
+    expect(jogando).toMatchObject({ estou: true, badge: 'Você vai' });
+  });
+
+  it('o que já passou e o arquivado não aparecem; sem `club_id` não é dia de clube', () => {
+    const lista = buildPlayList({
+      ...base,
+      diasDoClube: [
+        diaClube({ id: 'ontem', date: '2026-09-29' }),
+        diaClube({ id: 'arq', status: 'archived' }),
+        diaClube({ id: 'sem', club_id: undefined }),
+      ],
+      clubesById,
+    });
+    expect(lista).toEqual([]);
+  });
+
+  it('o mesmo dia não aparece duas vezes (público e do clube)', () => {
+    const dia = diaClube({ visibility: 'public' });
+    const lista = buildPlayList({ ...base, diasPublicos: [dia], diasDoClube: [dia], clubesById });
+    expect(lista).toHaveLength(1);
   });
 });

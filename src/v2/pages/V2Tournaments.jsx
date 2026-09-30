@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useRelogio } from '@/core/lib/useRelogio';
-import { hojeLocal } from '@/modules/home/domain/freshness';
+import { hojeLocal, isTournamentOpen } from '@/modules/home/domain/freshness';
 import { discoverTournaments, sortMyTournaments } from '@/modules/tournament/domain/tournamentDiscovery';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
@@ -219,8 +219,10 @@ function TournamentCard({ tournament, distancia = null }) {
         {tournament.invite_code && <V2Badge tone="neutral"><Hash className="h-3 w-3" /> {tournament.invite_code}</V2Badge>}
       </div>
 
+      {/* Com a inscrição aberta, o cartão diz o que dá para FAZER nele: é lá
+          dentro, em cada modalidade, que fica o "Inscrever-se". */}
       <div className="mt-auto flex items-center justify-between pt-6 text-sm font-bold text-ink">
-        <span>Abrir torneio</span>
+        <span>{isTournamentOpen(tournament, hojeLocal()) ? 'Ver modalidades e se inscrever' : 'Abrir torneio'}</span>
         <span className="transition-transform group-hover:translate-x-1">→</span>
       </div>
     </Link>

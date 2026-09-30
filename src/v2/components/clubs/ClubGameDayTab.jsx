@@ -17,12 +17,13 @@
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { UserPlus, UserMinus, Users, Check, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { UserPlus, Users, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { V2Button, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { Skeleton } from '@/components/ui/skeleton';
 import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
+import GameDayJoinPanel from '@/v2/components/games/GameDayJoinPanel';
 import GameDayOrganizer from '@/modules/clubs/components/GameDayOrganizer';
 import { isModularEventDate, canUpgradeLegacyDate } from '@/modules/games/domain/clubGameDay';
 import { useUpgradeEventDate } from '@/modules/games/hooks/useClubGameDay';
@@ -32,9 +33,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GD_PARTICIPANT_SOURCE } from '@/modules/games/domain/gameDay';
 import {
   useGameDay, useGameDayParticipants, useAddGameDayParticipant,
-  useRemoveGameDayParticipant,
 } from '@/modules/games/hooks/useGameDays';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { RSVP_STATUS } from '@/modules/clubs/domain/constants';
 
@@ -186,8 +185,10 @@ function ModularGameDay({ gameDayId, rsvps }) {
 
       {/* O membro do clube entra e sai sozinho — era o que ele já podia no
           evento legado, e sem isso ele dependeria de alguém lembrar de
-          importá-lo depois de ele ter confirmado presença. */}
-      <MyPresenceCard gameDay={gameDay} participants={participants} />
+          importá-lo depois de ele ter confirmado presença. É o MESMO painel
+          "Participar" do dia de jogo aberto pelo "Jogar" e pelo Procura-se
+          jogo: um caminho de entrar e sair, em todo lugar. */}
+      <GameDayJoinPanel gameDay={gameDay} podeConfigurar={podeGerenciar} />
 
       {/* Formato, quadras e quem organiza NÃO estão mais aqui: são as
           configurações DO DIA DE JOGO, e moram no `GameDayModule`
@@ -206,65 +207,6 @@ function ModularGameDay({ gameDayId, rsvps }) {
 
       <GameDayModule gameDay={gameDay} podeGerenciar={podeGerenciar} />
     </div>
-  );
-}
-
-/** Entrar e sair do dia de jogo, para quem está olhando. */
-function MyPresenceCard({ gameDay, participants }) {
-  const { user, userProfile } = useAuth();
-  const add = useAddGameDayParticipant(gameDay.id);
-  const remove = useRemoveGameDayParticipant(gameDay.id);
-  const uid = user?.uid || null;
-  const minhaEntrada = (participants || []).find((p) => p.user_id && p.user_id === uid) || null;
-
-  if (!uid) return null;
-
-  const entrar = async () => {
-    try {
-      await add.mutateAsync({
-        user_id: uid,
-        name: userProfile?.platform_name || userProfile?.full_name || user.displayName || 'Atleta',
-        photo_url: userProfile?.photo_url || user.photoURL || '',
-        source: GD_PARTICIPANT_SOURCE.JOINED,
-        play_level: userProfile?.level || userProfile?.leveling_level || null,
-        play_gender: userProfile?.gender || null,
-      });
-      toast.success('Presença confirmada no dia de jogo.');
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível marcar presença.');
-    }
-  };
-
-  const sair = async () => {
-    try {
-      await remove.mutateAsync(minhaEntrada.id);
-      toast.success('Você saiu do dia de jogo.');
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível sair.');
-    }
-  };
-
-  const ocupado = add.isPending || remove.isPending;
-
-  return (
-    <V2Surface className="rounded-xl">
-      <div className="flex flex-wrap items-center justify-between gap-2 p-4">
-        <span className="text-sm text-gray-600">
-          {minhaEntrada
-            ? 'Você está neste dia de jogo.'
-            : 'Você ainda não está neste dia de jogo.'}
-        </span>
-        {minhaEntrada ? (
-          <V2Button size="sm" variant="ghost" disabled={ocupado} onClick={sair}>
-            <UserMinus className="mr-1.5 h-4 w-4" /> Sair do dia de jogo
-          </V2Button>
-        ) : (
-          <V2Button size="sm" disabled={ocupado} onClick={entrar}>
-            <Check className="mr-1.5 h-4 w-4" /> Marcar presença
-          </V2Button>
-        )}
-      </div>
-    </V2Surface>
   );
 }
 

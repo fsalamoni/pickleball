@@ -11,15 +11,13 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { computePlayOrder, PLAY_STATUS } from '@/modules/games/domain/gamePlay';
 import {
-  useGameDayParticipants, useGameDayGames, useJoinPublicGameDay,
-  useSetPlayParticipantSkip, useSetPlayParticipantPartner, useRemoveGameDayParticipant,
+  useGameDayParticipants, useGameDayGames, useJoinPublicGameDay, useLeaveGameDay,
+  useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
 import {
   statusBadge, SkipDialog, PartnerDialog, PlayCourtsSection, PlayOrderSection,
 } from '@/v2/components/games/AthletePlayOrganizer';
-import { useLeaveArenaGameDay } from '@/modules/games/hooks/useArenaGameDays';
-import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
-import { joinPanelApplies } from '@/modules/games/domain/gameDayJoin';
+import { useJoinPanelApplies } from '@/modules/games/hooks/useGameDayJoin';
 
 /**
  * Visão do PARTICIPANTE de um dia de jogo no formato Play (para quem não é o
@@ -54,16 +52,16 @@ export default function AthletePlayParticipant({ gameDay }) {
 }
 
 function MyParticipationCard({ gameDay, participants, view, me }) {
-  const { user } = useAuth();
   const join = useJoinPublicGameDay();
-  const sairDaArena = useLeaveArenaGameDay();
+  // Sair é o mesmo em toda origem (`leaveGameDay`): no dia de ARENA de um jogo
+  // aberto também libera a vaga da vitrine e chama a fila.
+  const sair = useLeaveGameDay();
   // Dia público de outra pessoa: quem entra usa o "Participar", no alto da
   // página — o mesmo em todo formato, e o que mostra as vagas e a quadra.
   // Repetir o botão aqui seria oferecer duas portas para a mesma sala.
-  const entraPeloPainel = joinPanelApplies(gameDay, { uid: user?.uid });
+  const entraPeloPainel = useJoinPanelApplies(gameDay);
   const setSkip = useSetPlayParticipantSkip(gameDay.id);
   const setPartner = useSetPlayParticipantPartner(gameDay.id);
-  const removeSelf = useRemoveGameDayParticipant(gameDay.id);
   const [skipOpen, setSkipOpen] = useState(false);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -84,10 +82,7 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
 
   const handleLeave = async () => {
     try {
-      // Dia de ARENA sai pelo caminho da arena: no dia de um jogo aberto,
-      // sair também libera a vaga da vitrine (e chama a fila).
-      if (isArenaGameDay(gameDay)) await sairDaArena.mutateAsync({ gameDayId: gameDay.id, uid: user?.uid, arenaId: gameDay.arena_id });
-      else await removeSelf.mutateAsync(me.id);
+      await sair.mutateAsync(gameDay.id);
       toast.success('Você saiu do Play.');
       setConfirmLeave(false);
     } catch (err) {
@@ -192,7 +187,7 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
         title="Sair do Play?"
         description="Você será removido da ordem de participação deste dia de jogo. Pode entrar de novo depois."
         confirmLabel="Sair"
-        loading={removeSelf.isPending || sairDaArena.isPending}
+        loading={sair.isPending}
         onConfirm={handleLeave}
       />
     </V2CollapsibleCard>

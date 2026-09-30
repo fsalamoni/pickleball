@@ -44,7 +44,8 @@ export default function OpenSlotsDiscovery() {
   const { isOnIn, isLoading: modulosCarregando } = useModuleOnInArenas(arenaIds, ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
   // Conta barata (no máximo 100 vagas): refeita a cada render, nunca fica
   // atrás de uma arena que ligou ou desligou o módulo.
-  const vagas = openSlotsForDiscovery(vagasQ.data || [], isOnIn);
+  // O jogo LOTADO em que a pessoa está continua — é onde fica o "Sair".
+  const vagas = openSlotsForDiscovery(vagasQ.data || [], isOnIn, Date.now(), { uid: user?.uid });
   const naFila = useMemo(() => new Set(fila.map((f) => f.slot_id)), [fila]);
   // A vaga não guarda a cidade: ela vem da arena (mesma chave de cache da
   // página da arena). Só com a Minha região ligada — senão não há o que medir.

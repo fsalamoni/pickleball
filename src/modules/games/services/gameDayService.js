@@ -25,6 +25,7 @@ import {
   GD_PARTICIPANT_SOURCE, isPublicGameDay, GAME_DAY_VISIBILITY,
 } from '../domain/gameDay.js';
 import { GAME_DAY_MANAGE_MODE } from '../domain/gameDayRoles.js';
+import { isClubGameDay } from '../domain/clubGameDay.js';
 import {
   buildGameDayRankingMatches, gameDayRankingId, GAME_DAY_DATE_ID,
   sealParticipantUidIntoGames,
@@ -155,6 +156,34 @@ export async function listUpcomingPublicGameDays({ dias = [] } = {}) {
     .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED);
 }
 
+/**
+ * Os dias de jogo de UM CLUBE nos próximos dias — para quem é membro dele
+ * (o "Jogar" do início e o Procura-se jogo).
+ *
+ * O dia de jogo de clube é PRIVADO (o dia é do clube), então ele não vem na
+ * consulta dos públicos. ⚠️ A forma desta consulta também é contrato:
+ *  - `club_id == X` é o que a regra de `game_days` consegue provar para uma
+ *    consulta — ela confere `isClubMember(resource.data.club_id)`, e com o
+ *    `club_id` fixo pelo filtro a conta é uma só. Só o membro recebe; para
+ *    quem não é do clube a consulta é recusada (provado no emulador);
+ *  - `date IN [os próximos dias]`, igualdades — sem índice composto, como a
+ *    dos públicos.
+ *
+ * @param {{ clubId: string, dias: string[] }} p os dias ('YYYY-MM-DD'), no máximo 30
+ */
+export async function listUpcomingClubGameDays({ clubId, dias = [] } = {}) {
+  const janela = [...new Set(dias)].filter(Boolean).slice(0, 30);
+  if (!db || !clubId || janela.length === 0) return [];
+  const snap = await getDocs(query(
+    collection(db, COL),
+    where('club_id', '==', clubId),
+    where('date', 'in', janela),
+  ));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((g) => g.status !== GAME_DAY_STATUS.ARCHIVED);
+}
+
 /** Atualiza campos do dia de jogo (somente o criador — reforçado nas rules). */
 export async function updateGameDay(id, patch, actor) {
   if (!id) return;
@@ -251,14 +280,21 @@ async function publishGameDayInvite(gameDay, actor, creatorName, creatorPhoto) {
 }
 
 /**
- * Participar de um dia de jogo público (a partir de "Procura-se jogo").
+ * ENTRAR SOZINHO num dia de jogo — o "Participar" do Procura-se jogo, do
+ * "Jogar" do início e da página do dia.
+ *
+ * Vale para o dia PÚBLICO (do atleta; o da arena delega ao caminho dela, com
+ * teto e quadra) e para o dia do CLUBE, para quem é do clube — a regra do
+ * Firestore confere a associação (`isClubGameDayMemberOf` + `user_id == uid`).
  * Adiciona o atleta como participante e como membro (passa a ver o dia de jogo).
  * Idempotente: se já participa, apenas retorna.
  */
 export async function joinPublicGameDay(gameDay, user, profile) {
   if (!user?.uid) throw new Error('Entre na plataforma para participar.');
   if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
-  if (gameDay.created_by === user.uid) return; // já é o dono
+  // O dono já está no dia — exceto no de CLUBE, em que quem agendou a data
+  // organiza sem ser jogador e pode querer jogar.
+  if (gameDay.created_by === user.uid && !isClubGameDay(gameDay)) return;
 
   // 🐞 Dia de jogo de ARENA tem TETO de vagas, inscrição por quadra e, quando
   // nasceu de um jogo aberto, DUAS listas gravadas juntas. Entrar por aqui
@@ -274,6 +310,14 @@ export async function joinPublicGameDay(gameDay, user, profile) {
     const { signUpToArenaGameDay } = await import('./arenaGameDayService.js');
     await signUpToArenaGameDay(atual, user, profile);
     return;
+  }
+  // Quem pode entrar sozinho: o dia PÚBLICO e o do CLUBE (para quem é do
+  // clube — a regra confere). No privado, só por convite: dizer isso é melhor
+  // que deixar a regra recusar com um "permissão negada" genérico.
+  const doClube = isClubGameDay(atual);
+  if (atual.created_by === user.uid && !doClube) return;
+  if (!isPublicGameDay(atual) && !doClube) {
+    throw new Error('Este dia de jogo é privado — só entra quem foi convidado.');
   }
 
   const existing = await getDocs(query(
@@ -293,14 +337,22 @@ export async function joinPublicGameDay(gameDay, user, profile) {
     play_gender: playGenderOf(profile),
   }, user);
 
-  notifyUsers([gameDay.created_by], {
-    title: 'Novo participante no seu dia de jogo',
-    message: `${name} entrou no dia de jogo "${gameDay.title}".`,
-    type: NOTIFICATION_TYPE.GENERIC,
-    link: `/dia-de-jogo/${gameDay.id}`,
-    actor: { uid: user.uid, displayName: name },
+  // No dia do clube, a presença de cada membro não vira aviso: quem agendou
+  // uma data semanal receberia um por pessoa, toda semana (a lista está no dia).
+  if (!doClube && atual.created_by && atual.created_by !== user.uid) {
+    notifyUsers([atual.created_by], {
+      title: 'Novo participante no seu dia de jogo',
+      message: `${name} entrou no dia de jogo "${atual.title || gameDay.title}".`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/dia-de-jogo/${gameDay.id}`,
+      actor: { uid: user.uid, displayName: name },
+    });
+  }
+  await createAuditLog({
+    action: 'game_day_joined',
+    actor: user,
+    details: { game_day_id: gameDay.id, ...(doClube ? { club_id: atual.club_id } : {}) },
   });
-  await createAuditLog({ action: 'game_day_joined', actor: user, details: { game_day_id: gameDay.id } });
 }
 
 /* ------------------------------ Participantes ---------------------------- */
@@ -413,6 +465,52 @@ export async function removeGameDayParticipant(gdId, pid, actor) {
   await deleteDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid));
   await recomputeGameDayMembers(gdId);
   await createAuditLog({ action: 'game_day_participant_removed', actor, details: { game_day_id: gdId, participant_id: pid } });
+}
+
+/**
+ * SAIR SOZINHO de um dia de jogo — o "Sair" do Procura-se jogo, do "Jogar" do
+ * início e da página do dia, em qualquer origem (atleta, arena, clube).
+ *
+ * 🐞 Antes, sair passava por `removeGameDayParticipant`, que RECALCULA a lista
+ * de membros inteira (criador + convidados + inscritos). Só que a regra só
+ * deixa quem sai gravar a lista antiga MENOS ele mesmo — e a recontagem tira
+ * também quem é membro sem estar inscrito (um administrador nomeado): a regra
+ * recusava, com a inscrição já apagada e um erro na tela. Aqui a lista perde
+ * exatamente quem saiu (`arrayRemove`), que é o que a regra confere.
+ *
+ * Continua membro (vê o dia) quem é mais que jogador: quem criou, quem
+ * administra e quem foi convidado — como na recontagem de sempre.
+ *
+ * Dia de um JOGO ABERTO: sair é sair do jogo aberto (libera a vaga e chama a
+ * fila) — Onda CA.
+ */
+export async function leaveGameDay(gameDayId, uid, actor) {
+  if (!gameDayId || !uid) return;
+  const gd = await getGameDay(gameDayId);
+  if (!gd) return;
+  if (gd.open_slot_id) {
+    const { leaveOpenSlot } = await import('@/modules/arenas/services/openMatchService.js');
+    await leaveOpenSlot(gd.open_slot_id, uid);
+    return;
+  }
+  const participants = await listGameDayParticipants(gameDayId);
+  const meus = participants.filter((p) => p.user_id === uid);
+  for (const p of meus) {
+    // Os jogos já decididos seguem contando depois da saída (selagem da uid).
+    await sealParticipantBeforeRemoval(gameDayId, p);
+    await deleteDoc(doc(db, COL, gameDayId, SUB_PARTICIPANTS, p.id));
+  }
+  const continuaMembro = gd.created_by === uid
+    || (gd.admin_uids || []).includes(uid)
+    || (gd.invited_uids || []).includes(uid);
+  if (!continuaMembro && (gd.member_uids || []).includes(uid)) {
+    await updateDoc(doc(db, COL, gameDayId), { member_uids: arrayRemove(uid), updated_at: serverTimestamp() });
+  }
+  await createAuditLog({
+    action: gd.arena_id ? 'arena_game_day_left' : 'game_day_left',
+    actor: actor || { uid },
+    details: { game_day_id: gameDayId, ...(gd.club_id ? { club_id: gd.club_id } : {}) },
+  });
 }
 
 /** Recalcula `member_uids` a partir do criador + convidados + participantes. */

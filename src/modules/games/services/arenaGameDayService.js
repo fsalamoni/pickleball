@@ -33,7 +33,7 @@
 
 import {
   collection, doc, getDocs, setDoc, updateDoc,
-  query, where, serverTimestamp, writeBatch, arrayRemove,
+  query, where, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
@@ -49,7 +49,7 @@ import {
 } from '../domain/arenaGameDay.js';
 import {
   getGameDay, listGameDayParticipants, addGameDayParticipant,
-  removeGameDayParticipant, deleteGameDay,
+  deleteGameDay, leaveGameDay,
 } from './gameDayService.js';
 
 const COL = 'game_days';
@@ -377,33 +377,16 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
   });
 }
 
-/** Desmarca presença: tira o participante e a associação ao dia de jogo. */
+/**
+ * Desmarca presença: tira o participante e a associação ao dia de jogo.
+ *
+ * É o mesmo "sair" de qualquer dia de jogo (`leaveGameDay`): no dia de um
+ * JOGO ABERTO, sai do jogo aberto e libera a vaga para a fila (Onda CA); nos
+ * outros, apaga a própria inscrição e tira só a própria pessoa da lista de
+ * membros — que é o que a regra deixa quem sai gravar.
+ */
 export async function leaveArenaGameDay(gameDayId, uid, actor) {
-  if (!gameDayId || !uid) return;
-  const gd = await getGameDay(gameDayId);
-  if (gd?.open_slot_id) {
-    // Mesma razão da entrada: sair do dia de um JOGO ABERTO é sair do jogo
-    // aberto, e isso libera a vaga para a fila (Onda CA).
-    const { leaveOpenSlot } = await import('@/modules/arenas/services/openMatchService.js');
-    await leaveOpenSlot(gd.open_slot_id, uid);
-    return;
-  }
-  const participants = await listGameDayParticipants(gameDayId);
-  const meu = participants.find((p) => p.user_id === uid);
-  if (!meu) return;
-  await removeGameDayParticipant(gameDayId, meu.id, actor || { uid });
-  // `removeGameDayParticipant` recalcula os membros a partir da lista; o
-  // arrayRemove é a garantia de que quem saiu perde o acesso mesmo se a
-  // recontagem tiver visto uma lista antiga.
-  await updateDoc(doc(db, COL, gameDayId), {
-    member_uids: arrayRemove(uid),
-    updated_at: serverTimestamp(),
-  }).catch(() => {});
-  await createAuditLog({
-    action: 'arena_game_day_left',
-    actor: actor || { uid },
-    details: { game_day_id: gameDayId },
-  });
+  await leaveGameDay(gameDayId, uid, actor);
 }
 
 /** Troca a quadra de um inscrito (modo "por quadra"). */

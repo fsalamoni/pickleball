@@ -9,8 +9,15 @@
  *  - os jogos abertos das arenas (com entrar, fila e nível ali mesmo);
  *  - os convites soltos dos atletas.
  *
- * Tocar num dia de jogo leva para DENTRO dele, onde a pessoa vê o formato e
- * quem vai e se inscreve.
+ * ⭐ Cada cartão tem o BOTÃO de entrar e de sair ali mesmo (`PlayItemAction`),
+ * pelo caminho de cada origem; o título leva para DENTRO do dia de jogo, onde
+ * estão o formato e quem vai. O que a pessoa já tem fica na lista, com "Você
+ * vai" e o "Sair" — sumir no clique que entrou pareceria falha.
+ *
+ * ⭐ Os dias de jogo dos CLUBES da pessoa entram também: são privados do
+ * clube, e é por ser membro que ela os vê (uma consulta por clube, que a
+ * regra só deixa passar para quem é do clube). O dia da ARENA é sempre
+ * público — não há dia de arena "só para membros".
  *
  * "O que já passou, não mostre mais": convite vencido de outra pessoa não
  * aparece (antes ficava numa seção de "passados"); o SEU convite vencido
@@ -22,7 +29,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Building2, CalendarDays, Clock, Dices, MapPin, Megaphone, Plus, Trophy, Users, X,
+  ArrowRight, CalendarDays, Clock, Dices, MapPin, Megaphone, Plus, Trophy, X,
 } from 'lucide-react';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { useMyOpenGames, useCloseOpenGame } from '@/modules/games/hooks/useOpenGames';
@@ -36,6 +43,7 @@ import { distanceLabel } from '@/core/domain/region';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import OpenSlotsDiscovery from '@/v2/components/arenas/openMatch/OpenSlotsDiscovery';
+import PlayGameDayCard from '@/v2/components/games/play/PlayGameDayCard';
 import RegionBar, { RegionEmptyHint, RegionForaNote } from '@/v2/components/region/RegionBar';
 import {
   V2Avatar,
@@ -60,37 +68,6 @@ function formatDate(iso) {
 }
 
 const lugarDe = (item) => item.place;
-
-/** Um dia de jogo com vaga (do atleta ou da arena). */
-function GameDayCard({ item, distancia }) {
-  const Icone = item.daArena ? Building2 : Dices;
-  return (
-    <Link
-      to={item.link}
-      className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
-    >
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-acid/20 text-ink">
-          <Icone className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-display text-lg font-bold leading-tight text-ink">{item.title}</p>
-          <p className="mt-1 text-sm text-gray-500">{item.subtitle}</p>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        <V2Badge tone={item.daArena ? 'acid' : 'blue'}>
-          <Dices className="h-3 w-3" aria-hidden="true" /> {item.daArena ? 'Dia de jogo da arena' : 'Dia de jogo'}
-        </V2Badge>
-        {item.badge && <V2Badge tone="green"><Users className="h-3 w-3" aria-hidden="true" /> {item.badge}</V2Badge>}
-        {distancia && <V2Badge tone="neutral"><MapPin className="h-3 w-3" aria-hidden="true" /> {distancia}</V2Badge>}
-      </div>
-      <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-bold text-ink group-hover:text-acid-dark">
-        Ver e participar <ArrowRight className="h-4 w-4" aria-hidden="true" />
-      </span>
-    </Link>
-  );
-}
 
 /** Um convite solto de "Procura-se jogo". */
 function OpenGameCard({ g, distancia }) {
@@ -205,6 +182,11 @@ export default function V2OpenGames() {
           <V2ErrorState inline title="Não foi possível carregar os dias de jogo" description="A conexão falhou. Os dias de jogo continuam lá — tente de novo." onRetry={jogos.recarregar.dias} />
         </div>
       )}
+      {jogos.falhas.clubes && (
+        <div className="mb-6">
+          <V2ErrorState inline title="Não foi possível carregar os dias de jogo dos seus clubes" description="A conexão falhou. Os dias marcados nos seus clubes continuam lá — tente de novo." onRetry={jogos.recarregar.clubes} />
+        </div>
+      )}
       {jogos.falhas.convites && (
         <div className="mb-6">
           <V2ErrorState inline title="Não foi possível carregar os convites" description="A conexão falhou. Os convites publicados continuam lá — tente de novo." onRetry={jogos.recarregar.convites} />
@@ -223,14 +205,14 @@ export default function V2OpenGames() {
                 <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Dias de jogo com vaga
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                Públicos, dos atletas e das arenas. Abra para ver o formato e quem vai — e entre.
+                Os públicos, dos atletas e das arenas, e os dos seus clubes. Entre direto — ou abra para ver o formato e quem vai.
               </p>
               <RegionForaNote regional={dias} nomeItens={['dia de jogo', 'dias de jogo']} className="mt-1 block text-sm" />
               <RegionEmptyHint regional={dias} oque="Nenhum dia de jogo com vaga" className="mt-4" />
               {dias.itens.length > 0 && (
                 <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {dias.itens.map((item) => (
-                    <GameDayCard
+                    <PlayGameDayCard
                       key={item.key}
                       item={item}
                       distancia={dias.ativa ? distanceLabel(dias.infoDe(item)?.km) : null}
@@ -274,7 +256,7 @@ export default function V2OpenGames() {
               <V2EmptyState
                 icon={Megaphone}
                 title="Nenhum jogo marcado para os próximos dias"
-                description={`Nenhum dia de jogo nem convite${dias.limita ? ` ${dias.frase}` : ''} de hoje em diante. Publique um convite ou crie um dia de jogo público — ele aparece aqui para quem procura jogo.`}
+                description={`Nenhum dia de jogo nem convite${dias.limita ? ` ${dias.frase}` : ''} de hoje em diante — nem nos seus clubes. Publique um convite ou crie um dia de jogo público: ele aparece aqui para quem procura jogo.`}
                 action={(
                   <div className="flex flex-wrap justify-center gap-2">
                     <V2Button onClick={() => setCreateOpen(true)}>Publicar convite</V2Button>

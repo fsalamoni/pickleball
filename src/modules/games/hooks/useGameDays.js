@@ -9,7 +9,7 @@ import {
   listGameDayParticipants, addGameDayParticipant, removeGameDayParticipant,
   listGameDayGames, addGameDayGame, updateGameDayGame, deleteGameDayGame,
   replaceGameDayGames, appendGameDayGames, clearGameDayGames,
-  joinPublicGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
+  joinPublicGameDay, leaveGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
   getGameDayRankingMeta, getMyGameDayGames,
   createNextPlayGame, createManualPlayGame, finishPlayGame, cancelPlayGame,
   noShowSwapPlayGame, setPlayParticipantSkip, setPlayParticipantPartner,
@@ -86,15 +86,39 @@ export function useDeleteGameDay() {
   });
 }
 
+/**
+ * Entrar ou sair mexe em mais de uma tela: a lista do dia, os "com vaga" do
+ * início e do Procura-se jogo, a página da arena (dia de ARENA) e a vitrine do
+ * jogo aberto (dia de JOGO ABERTO). Invalida pelo prefixo de cada uma — quem
+ * entra pelo início e abre a arena em seguida vê a mesma lista.
+ */
+function invalidarEntradaESaida(qc) {
+  qc.invalidateQueries({ queryKey: ['game-days'] });
+  qc.invalidateQueries({ queryKey: ['open-games'] });
+  qc.invalidateQueries({ queryKey: ['arena-game-days'] });
+  qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+  qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
+  qc.invalidateQueries({ queryKey: ['my-open-slots'] });
+  qc.invalidateQueries({ queryKey: ['open-slot'] });
+}
+
+/** Entrar sozinho num dia de jogo público ou do meu clube (a arena delega). */
 export function useJoinPublicGameDay() {
   const { user, userProfile } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (gameDay) => joinPublicGameDay(gameDay, user, userProfile),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['game-days'] });
-      qc.invalidateQueries({ queryKey: ['open-games'] });
-    },
+    onSuccess: () => invalidarEntradaESaida(qc),
+  });
+}
+
+/** Sair sozinho de um dia de jogo (de qualquer origem). */
+export function useLeaveGameDay() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (gameDayId) => leaveGameDay(gameDayId, user?.uid, user),
+    onSuccess: () => invalidarEntradaESaida(qc),
   });
 }
 

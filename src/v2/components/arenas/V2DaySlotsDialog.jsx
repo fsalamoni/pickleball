@@ -34,6 +34,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Calendar, X, ShoppingCart, Loader2, Users, Ban, Check, Clock, AlertCircle, MapPin,
@@ -68,6 +69,7 @@ import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDial
 import CourtTimePicker from './CourtTimePicker';
 import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/bookingSelection';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
+import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
 
 const STEP = 60;
@@ -471,17 +473,29 @@ export default function V2DaySlotsDialog({
           {gameDays.length > 0 && (
             <div className="border-b border-acid/40 bg-acid/10 p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink/60">Dia de jogo na arena</p>
-              <ul className="mt-1.5 space-y-1">
+              <ul className="mt-1.5 space-y-1.5">
                 {gameDays.map((g) => (
-                  <li key={g.id} className="text-sm text-ink">
-                    <strong>{g.title}</strong>
-                    <span className="text-gray-600"> · {(arenaGameDayTimeRange(g) ? `${arenaGameDayTimeRange(g).start}–${arenaGameDayTimeRange(g).end}` : '')}</span>
+                  <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink">
+                    <span>
+                      <strong>{g.title}</strong>
+                      <span className="text-gray-600"> · {(arenaGameDayTimeRange(g) ? `${arenaGameDayTimeRange(g).start}–${arenaGameDayTimeRange(g).end}` : '')}</span>
+                    </span>
+                    {/* O dia de jogo é JOGÁVEL: quem abriu o calendário para
+                        reservar e achou um, entra por aqui — antes a tela só
+                        dizia onde procurar o botão. Já terminado, não oferece. */}
+                    {gameDayEndsAt(g) > Date.now() && (
+                      <V2Button asChild size="sm">
+                        <Link to={`/dia-de-jogo/${g.id}`} aria-label={`Participar de ${g.title}`}>
+                          <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Participar
+                        </Link>
+                      </V2Button>
+                    )}
                   </li>
                 ))}
               </ul>
               <p className="mt-1.5 text-xs text-gray-600">
-                As quadras usadas ficam fechadas para reserva neste horário. Para jogar, marque
-                presença em <strong>Dias de jogo</strong>, na página da arena.
+                As quadras usadas ficam fechadas para reserva neste horário. Para jogar, entre no
+                dia de jogo: lá estão as vagas e a inscrição.
               </p>
             </div>
           )}

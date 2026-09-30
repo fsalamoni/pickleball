@@ -45,3 +45,27 @@ describe('listUpcomingPublicGameDays', () => {
     expect(codigo).toMatch(/\.slice\(0, 30\)/);
   });
 });
+
+/**
+ * A mesma armadilha na consulta dos dias de jogo do CLUBE (privados): o
+ * `club_id` fixo é o que deixa a regra provar `isClubMember(club_id)` para a
+ * consulta inteira — sem ele, recusada para todo mundo. E a data, de novo,
+ * numa lista. Prova no emulador: `tests/rules/clubGameDaysAhead.rules.test.js`.
+ */
+describe('listUpcomingClubGameDays', () => {
+  const corpo = corpoDe('listUpcomingClubGameDays');
+  const codigo = corpo.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('existe', () => {
+    expect(corpo).not.toBe('');
+  });
+  it('filtra pelo clube (é o campo que a regra confere)', () => {
+    expect(codigo).toMatch(/where\('club_id', '==', clubId\)/);
+  });
+  it('a data vai numa LISTA de dias, nunca numa faixa, e sem ordenação no servidor', () => {
+    expect(codigo).toMatch(/where\('date', 'in', janela\)/);
+    expect(codigo).not.toMatch(/where\('date', '(>=|>|<=|<)'/);
+    expect(codigo).not.toMatch(/orderBy\(/);
+    expect(codigo).toMatch(/\.slice\(0, 30\)/);
+  });
+});

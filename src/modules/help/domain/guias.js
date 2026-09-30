@@ -122,7 +122,7 @@ const GUIAS_BASE = [
         route: '/',
         target: ['menu-jogar', 'menu-celular'],
         title: 'Jogar',
-        body: 'Procura-se jogo (convites de quem quer parceiros), Dia de jogo (uma tarde de partidas organizada, com placar se você quiser) e Encontrar jogadores do seu nível.',
+        body: 'Abre no Dia de jogo (os seus e os com vaga para você entrar), depois Procura-se jogo (tudo o que tem vaga nos próximos dias, com o botão de entrar) e Encontrar jogadores do seu nível.',
       },
       {
         id: 'arenas',

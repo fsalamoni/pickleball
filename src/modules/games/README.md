@@ -472,8 +472,8 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
 ## Jogos com vaga (2026-09-30)
 
 - `domain/playDiscovery.js` — `buildPlayList`: a lista única de "onde dá para
-  jogar" (dias de jogo públicos do atleta e da ARENA, jogos abertos, convites),
-  do mais cedo ao mais tarde, sem o que já terminou nem o que a pessoa já tem.
+  jogar" (dias de jogo públicos do atleta e da ARENA, os do CLUBE da pessoa,
+  jogos abertos, convites), do mais cedo ao mais tarde, sem o que já terminou.
   `gameDayEndsAt`/`gameDayStartsAt`/`gameDayVacanciesLeft`.
 - `hooks/usePlayDiscovery.js` — as leituras (a mesma no início e no
   Procura-se jogo); `services/gameDayService.js#listUpcomingPublicGameDays`
@@ -481,3 +481,23 @@ Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
 - `domain/gameDayJoin.js` — `joinPanelApplies`: quem vê o "Participar" dentro
   do dia de jogo. `joinPublicGameDay` delega a `signUpToArenaGameDay` quando o
   dia é de arena. Ver `docs/34-MINHA-REGIAO.md`.
+
+### Entrar e sair em todo lugar (2026-09-30, doc 35)
+
+- A lista agora traz os dias de jogo dos **CLUBES** da pessoa
+  (`listUpcomingClubGameDays`: `club_id == X` + `date IN [30 dias]`, uma
+  consulta por clube, que a regra só deixa passar para o membro) e cada item
+  diz `origem`, `estou`, `cabe`/`motivo` (faixa de nível do jogo aberto),
+  `porQuadra` e `fonte`. O que a pessoa já tem fica ("Você vai"); o que ela
+  criou, não. `playItemsForMe` = o que ela pode entrar (o início usa).
+- `joinPublicGameDay` aceita o dia de **clube** (inclusive para quem agendou a
+  data) e recusa o privado que não é de clube DIZENDO que é só por convite.
+- `leaveGameDay` — sair sozinho, em qualquer origem: apaga a própria inscrição
+  e tira SÓ quem saiu da lista (`arrayRemove`); nunca recalcula a lista inteira
+  (a regra recusava quando havia administrador nomeado). `leaveArenaGameDay`
+  delega a ele; `useLeaveGameDay` é o hook.
+- `hooks/useGameDayJoin.js` — `useJoinPanelApplies`: o painel "Participar" e o
+  cartão do Play fazem a MESMA pergunta (no clube, "sou do clube?").
+- Telas: `v2/components/games/play/` — `PlayItemAction` (o botão, por origem),
+  `PlayGameDayCard`, `OpenGameDaysForMe` ("Com vaga para você" no Dia de
+  jogo). Ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`.

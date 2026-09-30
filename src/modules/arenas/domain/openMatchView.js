@@ -214,9 +214,15 @@ export function waitlistBySlot(entries = []) {
  *
  * @param {object[]} slots vagas abertas de todas as arenas
  * @param {(arenaId: string) => boolean} arenaAtiva a arena mantém o jogo aberto ligado?
+ * @param {number} [now]
+ * @param {{ uid?: string|null }} [opts] `uid`: o jogo em que esta pessoa está
+ *   continua na lista mesmo lotado (é onde ela sai).
  */
-export function openSlotsForDiscovery(slots = [], arenaAtiva = () => true, now = Date.now()) {
+export function openSlotsForDiscovery(slots = [], arenaAtiva = () => true, now = Date.now(), { uid = null } = {}) {
+  // O jogo em que EU estou fica mesmo lotado: é onde está o meu "Sair", e ele
+  // sumir no clique que pegou a última vaga parece que a entrada falhou.
+  const estou = (s) => Boolean(uid) && (s.participants || []).includes(uid);
   return sortSlotsBySchedule(slots.filter((s) => (
-    isUpcomingSlot(s, now) && getAvailableSpots(s) > 0 && arenaAtiva(s.arena_id)
+    isUpcomingSlot(s, now) && (getAvailableSpots(s) > 0 || estou(s)) && arenaAtiva(s.arena_id)
   )));
 }
