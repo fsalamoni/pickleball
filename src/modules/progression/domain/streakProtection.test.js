@@ -21,6 +21,11 @@ import {
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
 
+// O mês do grace é o do BRASIL (UTC−3), como em `monthKeyBR`. Montá-lo pelo
+// fuso da máquina fazia estes testes reprovarem entre 0h e 3h UTC do dia 1º
+// (no Brasil ainda é o último dia do mês anterior).
+const mesBR = (ms) => new Date(ms - 3 * 60 * 60 * 1000).toISOString().slice(0, 7);
+
 describe('streakProtection · computeProtectedStreak', () => {
   it('retorna weeks=0 para array vazio', () => {
     const r = computeProtectedStreak([]);
@@ -55,7 +60,7 @@ describe('streakProtection · computeProtectedStreak', () => {
   it('NÃO aplica grace se já usou este mês', () => {
     const now = Date.now();
     const dates = [now - 2 * WEEK, now - 3 * WEEK, now - 4 * WEEK];
-    const currentMonth = new Date(now).toISOString().slice(0, 7); // YYYY-MM
+    const currentMonth = mesBR(now); // YYYY-MM, no Brasil
     const r = computeProtectedStreak(dates, {
       now: new Date(now),
       meta: {
@@ -103,16 +108,21 @@ describe('streakProtection · grace', () => {
 
   it('canUseGrace retorna false se usou no mês corrente', () => {
     const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: month }, now)).toBe(false);
+    expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: mesBR(now.getTime()) }, now)).toBe(false);
   });
 
   it('canUseGrace retorna true se usou no mês passado', () => {
     const now = new Date();
-    const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-    const lastYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const month = `${lastYear}-${String(lastMonth).padStart(2, '0')}`;
+    const inicioDoMesBR = new Date(`${mesBR(now.getTime())}-01T12:00:00Z`).getTime();
+    const month = mesBR(inicioDoMesBR - 2 * DAY);
     expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: month }, now)).toBe(true);
+  });
+
+  it('a virada do mês é a do BRASIL: 01h UTC do dia 1º ainda é o mês anterior', () => {
+    const viradaUTC = new Date('2026-10-01T01:00:00Z');
+    expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: '2026-09' }, viradaUTC)).toBe(false);
+    expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: '2026-10' }, viradaUTC)).toBe(true);
+    expect(canUseGrace({ usedGraceThisMonth: true, graceMonth: '2026-09' }, new Date('2026-10-01T03:30:00Z'))).toBe(true);
   });
 
   it('applyGrace retorna novo meta com grace usado', () => {

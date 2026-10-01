@@ -543,15 +543,24 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
 
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
-      my_region: true,
+      my_region: true, notifications_center: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
-      guided_tips: true, my_region: true,
+      guided_tips: true, my_region: true, notifications_center: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
+  });
+
+  it('a central de notificações: o artigo só existe com a flag, e a tela tem ajuda própria', () => {
+    const desligado = helpCatalog({});
+    expect(desligado.getArticle(HELP_SECTION.ACCOUNT, 'central-de-notificacoes')).toBeNull();
+    expect(desligado.search('notificações antigas').map((a) => a.id)).not.toContain('central-de-notificacoes');
+    const ligado = helpCatalog({ notifications_center: true });
+    expect(ligado.getArticle(HELP_SECTION.ACCOUNT, 'central-de-notificacoes')).not.toBeNull();
+    expect(ligado.forRoute('/notificacoes').articles.map((a) => a.id)).toEqual(['central-de-notificacoes', 'notificacoes']);
   });
 
   it('o modo escuro: sem a flag, "Ajuda para esta tela" em Configurações não o cita', () => {

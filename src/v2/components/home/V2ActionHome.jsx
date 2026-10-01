@@ -4,11 +4,14 @@ import { destinoDeAviso } from '@/core/domain/internalLink';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight, Award, Bell, CalendarClock, CheckCircle2, ChevronRight, Flame,
-  Handshake, MapPin, Megaphone, MessageCircle, Sparkles, Target, Trophy, Users,
+  MapPin, Sparkles, Target, Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
-import { NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { formatUnreadBadge } from '@/modules/notifications/domain/noticeFeed';
+import { NoticeIcon } from '@/v2/components/notifications/noticeParts';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
@@ -19,20 +22,6 @@ import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { hojeLocal, isTournamentOpen } from '@/modules/home/domain/freshness';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-
-/** Ícone por tipo de notificação (fallback: sino). */
-const NOTIF_ICON = {
-  [NOTIFICATION_TYPE.PARTNER_INVITE]: Handshake,
-  [NOTIFICATION_TYPE.PARTNER_RESPONSE]: Handshake,
-  [NOTIFICATION_TYPE.CHAT_MESSAGE]: MessageCircle,
-  [NOTIFICATION_TYPE.CHAT_INVITE]: MessageCircle,
-  [NOTIFICATION_TYPE.TOURNAMENT_ANNOUNCEMENT]: Megaphone,
-  [NOTIFICATION_TYPE.TOURNAMENT_OPEN]: Trophy,
-  [NOTIFICATION_TYPE.EVENT_INVITE]: CalendarClock,
-  [NOTIFICATION_TYPE.CLUB_JOIN_REQUEST]: Users,
-  [NOTIFICATION_TYPE.CLUB_INVITE]: Users,
-  [NOTIFICATION_TYPE.CLUB_EVENT_PUBLISHED]: CalendarClock,
-};
 
 function formatWhen(ms) {
   if (!ms) return 'Horário a definir';
@@ -50,7 +39,11 @@ export default function V2ActionHome() {
   const navigate = useNavigate();
   const uid = user?.uid || null;
 
-  const { notifications = [], markAsRead } = useNotifications();
+  const {
+    notifications = [], unreadCount, isLoading: avisosCarregando, isError: avisosFalharam,
+    retry: tentarAvisosDeNovo, markAsRead,
+  } = useNotifications();
+  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
   const { data: publicTournaments = [] } = usePublicTournaments();
   const {
     data: upcoming = [], isLoading: loadingUpcoming, isError: upcomingFailed, refetch: refetchUpcoming,
@@ -80,8 +73,9 @@ export default function V2ActionHome() {
       .slice(0, 3);
   }, [publicTournaments, myCity]);
 
-  // Com os próximos jogos sem carregar, "tudo em dia" seria um palpite.
-  const nothingToDo = !upcomingFailed && !nextMatch && pending.length === 0 && nearby.length === 0;
+  // Com os próximos jogos ou os avisos sem carregar, "tudo em dia" seria um palpite.
+  const avisosConhecidos = !avisosCarregando && !avisosFalharam;
+  const nothingToDo = !upcomingFailed && avisosConhecidos && !nextMatch && pending.length === 0 && nearby.length === 0;
 
   function openNotification(n) {
     if (!n.read && n.id) markAsRead(n.id).catch(() => {});
@@ -144,18 +138,33 @@ export default function V2ActionHome() {
               <div className="mb-3 flex items-center gap-2">
                 <Bell className="h-4 w-4 text-ink" />
                 <h3 className="font-display text-sm font-bold text-ink">Pendências</h3>
-                {pending.length > 0 && (
-                  <span className="rounded-full bg-acid/20 px-2 py-0.5 text-xs font-bold text-ink">{pending.length}</span>
+                {/* O total de não lidas, não o tamanho do recorte (4). */}
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-acid/20 px-2 py-0.5 text-xs font-bold text-ink">{formatUnreadBadge(unreadCount)}</span>
+                )}
+                {centralAvisosOn && (
+                  <Link to="/notificacoes" className="ml-auto text-xs font-semibold text-gray-500 hover:text-ink">
+                    Ver todas
+                  </Link>
                 )}
               </div>
-              {pending.length === 0 ? (
+              {avisosFalharam ? (
+                // Falha não é "nada pendente".
+                <V2ErrorState
+                  inline
+                  title="Não foi possível carregar os avisos"
+                  description="Pode haver pendência — tente de novo."
+                  onRetry={tentarAvisosDeNovo}
+                />
+              ) : avisosCarregando ? (
+                <V2Skeleton lines={2} className="py-2" />
+              ) : pending.length === 0 ? (
                 <p className="flex items-center gap-2 py-2 text-sm text-gray-500">
                   <CheckCircle2 className="h-4 w-4 text-acid" /> Nada pendente.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
                   {pending.map((n) => {
-                    const Icon = NOTIF_ICON[n.type] || Bell;
                     return (
                       <li key={n.id}>
                         <button
@@ -163,9 +172,7 @@ export default function V2ActionHome() {
                           onClick={() => openNotification(n)}
                           className="flex w-full items-center gap-3 rounded-2xl border border-transparent p-2 text-left transition-colors hover:border-gray-100 hover:bg-paper"
                         >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-paper text-ink">
-                            <Icon className="h-4 w-4" />
-                          </span>
+                          <NoticeIcon notice={n} size="sm" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold text-ink">{n.title || 'Novidade'}</span>
                             {n.message && <span className="block truncate text-xs text-gray-500">{n.message}</span>}

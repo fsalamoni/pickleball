@@ -39,6 +39,7 @@ export default function V2Settings() {
   const enabled = true;
   const notifPrefsOn = true;
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
+  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
   const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
@@ -126,7 +127,8 @@ export default function V2Settings() {
         {/* Dicas: ligar, desligar e abrir os guias (flag guided_tips). */}
         <DicasSettingsCard />
 
-        <V2Surface data-dica="config-notificacoes">
+        {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
+        <V2Surface id="notificacoes" data-dica="config-notificacoes" className="scroll-mt-4">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">Notificações</h2>
@@ -134,7 +136,8 @@ export default function V2Settings() {
           {notifPrefsOn ? (
             <>
               <p className="mt-1 text-sm text-gray-500">
-                Escolha quais categorias de notificação aparecem no sino do topo.
+                Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino
+                {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
               </p>
               <div className="mt-4 space-y-3">
                 {NOTIFICATION_CATEGORIES.map((cat) => (
@@ -150,6 +153,13 @@ export default function V2Settings() {
                 ))}
               </div>
               {savingPrefs && <p className="mt-3 text-xs text-gray-400">Salvando…</p>}
+              {centralAvisosOn && (
+                <div className="mt-4">
+                  <V2Button asChild variant="secondary" size="sm">
+                    <Link to="/notificacoes">Ver todas as notificações</Link>
+                  </V2Button>
+                </div>
+              )}
             </>
           ) : (
             <p className="mt-1 text-sm text-gray-500">

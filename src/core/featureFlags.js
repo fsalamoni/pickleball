@@ -349,6 +349,18 @@ export const FEATURE_FLAG = Object.freeze({
   // e um raio, o estado, outro lugar ou todo lugar. Escolha no navegador, por
   // usuário; zero banco. Ver docs/34-MINHA-REGIAO.md.
   MY_REGION: 'my_region',
+
+  /**
+   * CENTRAL DE NOTIFICAÇÕES — a página `/notificacoes`, com TODOS os avisos
+   * da pessoa, os novos e os antigos: agrupados por dia, filtráveis (não
+   * lidas, área, busca), marcar como lida ou não lida. O sino passa a mostrar
+   * os 20 mais novos e "Ver todas". Desligada, o sino mostra a lista inteira
+   * (agora com rolagem) e a página não existe.
+   *
+   * Zero banco: lê a mesma consulta do sino (`user_id == uid`), e marcar lida
+   * ou não lida usa os campos de sempre (`read`, `read_at`).
+   */
+  NOTIFICATIONS_CENTER: 'notifications_center',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -450,6 +462,17 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'fica de fora não some: cada tela diz quantos são e oferece ver também. '
       + 'A escolha fica no navegador; nada é gravado no banco. Desligada, as '
       + 'telas seguem como estão.',
+  },
+  [FEATURE_FLAG.NOTIFICATIONS_CENTER]: {
+    label: 'Central de notificações (histórico de avisos)',
+    description:
+      'Publica a página Notificações: todos os avisos de cada pessoa, os '
+      + 'novos e os antigos, agrupados por dia (hoje, ontem, últimos 7 dias e '
+      + 'por mês), com filtro de não lidas, filtro por área (jogos, torneios, '
+      + 'arenas, clubes, aulas, mensagens, promoções), busca e marcar como '
+      + 'lida ou não lida. O sino mostra os 20 mais novos e leva à página. '
+      + 'Nada novo é gravado no banco. Desligada, o sino mostra a lista '
+      + 'inteira, com rolagem, e a página não existe.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

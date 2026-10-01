@@ -86,6 +86,7 @@
 | [`33-CADASTRO-ESSENCIAL.md`](./33-CADASTRO-ESSENCIAL.md) | ⭐ O que o cadastro exige e por quê. Flag `essential_profile`: categoria em que joga e nível passam a ser obrigatórios, UF de lista, quem já tinha cadastro vê só o que falta; o admin conta o mesmo que o cadastro; o sorteio misto usa a categoria. Zero banco. |
 | [`34-MINHA-REGIAO.md`](./34-MINHA-REGIAO.md) | ⭐ O "Jogar" com os dias de jogo das ARENAS (que nunca apareciam), "Participar" dentro do dia de jogo e nada do que já passou nas listas — sempre ligados. E a Minha região (flag `my_region`): cidade + raio, estado, outro lugar ou todo lugar, em toda tela de descoberta. Zero banco. |
 | [`35-JOGAR-ENTRAR-E-SAIR.md`](./35-JOGAR-ENTRAR-E-SAIR.md) | ⭐ O "Jogar" abre no Dia de jogo (abas: Dia de jogo, Procura-se jogo, Encontrar jogadores), os dias de jogo dos CLUBES para quem é membro e um botão só de entrar e sair (`PlayItemAction`) no início, no Procura-se jogo e no Dia de jogo, com os requisitos de cada jogo. 🐞 Sair podia falhar com administrador nomeado. Zero banco. |
+| [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md) | 🔔 ⭐ O sino que rola (🐞 a caixa crescia além da tela e escondia a maior parte dos avisos) e a central de notificações `/notificacoes` (flag `notifications_center`): os avisos novos e os antigos, por dia, com filtros de não lidas, área e busca, marcar lida/não lida. Uma escuta só por pessoa. Zero banco. |
 | [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
 | [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
@@ -139,6 +140,7 @@ docs/
 ├── 33-CADASTRO-ESSENCIAL.md          # ⭐ categoria e nível obrigatórios; o cadastro, o perfil e o admin com a mesma regra
 ├── 34-MINHA-REGIAO.md               # ⭐ o "Jogar" com os dias de jogo das arenas + a região de cada pessoa
 ├── 35-JOGAR-ENTRAR-E-SAIR.md        # ⭐ o "Jogar" abre no Dia de jogo, dias do clube, botão de entrar em todo lugar
+├── 36-NOTIFICACOES.md               # 🔔 o sino que rola + a central de notificações (flag notifications_center)
 │
 ├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
 │   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)

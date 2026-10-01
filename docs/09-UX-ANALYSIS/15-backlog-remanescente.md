@@ -284,6 +284,20 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   no calendário da arena e nos eventos dos clubes do início; e sair não falha
   mais com administrador nomeado (`leaveGameDay`). Zero banco. Ver
   `docs/35-JOGAR-ENTRAR-E-SAIR.md`.
+- ✅ **TRV-29** notificações: o sino rola e cabe na tela (🐞 a caixa crescia
+  além dela e escondia a maior parte dos avisos), com hora, ícone da área,
+  selo 99+ e falha que não vira "nenhuma"; a central `/notificacoes` (flag
+  `notifications_center`) com os avisos novos e antigos, por dia, filtros de
+  não lidas, área e busca na URL, marcar lida/não lida e o que está silenciado
+  dito; uma escuta só por pessoa. Zero banco. Ver `docs/36-NOTIFICACOES.md`.
+- ⏳ **TRV-30** (sugestão) silenciar CAMPANHAS (arenas, plataforma,
+  professores): hoje são gravadas como `generic`, sem marca, e as preferências
+  são por tipo. Pediria uma marca no `data` do aviso (`data.kind: 'campaign'`)
+  daqui para frente e uma categoria nova nas preferências.
+- ⏳ **TRV-31** (sugestão) paginar as notificações NO SERVIDOR e fazer valer a
+  função `expireStaleNotifications`: as duas pedem índice composto em
+  `notifications` (`user_id` + `created_at`; `read` + `created_at`). Hoje a
+  consulta traz tudo do usuário (a mesma de sempre) e a tela pagina.
 - ⏳ **TRV-28** (sugestão) as datas LEGADAS de evento de clube (anteriores à
   Onda AS, fora de `game_days`) no "Jogar": pediria ler eventos e datas de cada
   clube (N consultas por visita) ou uma regra de `collectionGroup` para as

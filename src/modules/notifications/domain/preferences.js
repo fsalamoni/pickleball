@@ -95,3 +95,26 @@ export function isNotificationMuted(prefs, type) {
   const normalized = normalizeNotificationPrefs(prefs);
   return normalized[catId] === false;
 }
+
+/**
+ * O que as preferências estão escondendo: quantos avisos e de quais
+ * categorias. A central diz isso em vez de esconder calada — senão "não
+ * recebi o aviso" vira chamado de suporte para algo que a própria pessoa
+ * desligou.
+ * @returns {{ total: number, naoLidas: number, categorias: string[] }}
+ */
+export function mutedNotificationsSummary(notifications = [], prefs) {
+  const normalized = normalizeNotificationPrefs(prefs);
+  const porCategoria = new Map();
+  let total = 0;
+  let naoLidas = 0;
+  (notifications || []).forEach((n) => {
+    const catId = categoryOfType(n?.type);
+    if (!catId || normalized[catId] !== false) return;
+    total += 1;
+    if (!n.read) naoLidas += 1;
+    porCategoria.set(catId, true);
+  });
+  const categorias = NOTIFICATION_CATEGORIES.filter((c) => porCategoria.has(c.id)).map((c) => c.label);
+  return { total, naoLidas, categorias };
+}

@@ -36,7 +36,7 @@ coberta por testes — é o que dá confiança sem ambiente de execução.
   `Tabs`, `Select`, `Toast`/`sonner`…) — não reinvente.
 - `cn()` (`core/lib/utils`) para compor classes (clsx + tailwind-merge).
 - **Layout** (`src/components/Layout.jsx`): shell autenticado — navegação
-  lateral/mobile, sino de notificações (`NotificationsMenu`), menu de usuário.
+  lateral/mobile, sino de notificações (`NotificationsBell`, em `v2/components/notifications/`), menu de usuário.
   Páginas públicas "standalone" (ex.: `/p/:id`) renderizam fora do shell.
 - Ícones: `lucide-react`. Datas: `date-fns` / `date-fns-tz` (fuso BRT).
 

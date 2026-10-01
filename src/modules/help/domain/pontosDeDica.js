@@ -334,6 +334,22 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Notificações',
     body: 'Liga e desliga cada tipo de aviso.',
   },
+  {
+    id: 'notificacoes:filtros',
+    route: '/notificacoes',
+    target: 'notificacoes-filtros',
+    title: 'Ache um aviso antigo',
+    body: 'Só as não lidas, uma área (jogos, torneios, arenas…) ou uma palavra do aviso.',
+    flags: ['notifications_center'],
+  },
+  {
+    id: 'notificacoes:lista',
+    route: '/notificacoes',
+    target: 'notificacoes-lista',
+    title: 'Lida ou não lida',
+    body: 'Tocar no aviso abre o assunto. O botão ao lado marca como lido — ou como não lido, para voltar nele depois.',
+    flags: ['notifications_center'],
+  },
 ]);
 
 /**
