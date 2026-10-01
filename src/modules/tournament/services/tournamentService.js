@@ -38,6 +38,7 @@ import {
 } from '../domain/constants.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
 import { isTournamentComplete } from '../domain/tournamentCompletion.js';
+import { summarizeMyRegistrations } from '../domain/participation.js';
 import {
   validateArchiveRequest,
   validateUnarchiveRequest,
@@ -393,8 +394,16 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
     query(collection(db, COL.registrations), where('player_b_user_id', '==', userId)),
   ];
   const registrationSnaps = await Promise.all(registrationQueries.map((regQ) => getDocs(regQ)));
+  // As MINHAS inscrições por torneio (sem repetir: a mesma inscrição volta nas
+  // três consultas). É o que diz se, além de organizar, eu também jogo.
+  const minhasPorTorneio = new Map();
   registrationSnaps.forEach((regSnap) => {
-    regSnap.docs.forEach((d) => tournamentIds.push(d.data().tournament_id));
+    regSnap.docs.forEach((d) => {
+      const reg = d.data();
+      tournamentIds.push(reg.tournament_id);
+      if (!minhasPorTorneio.has(reg.tournament_id)) minhasPorTorneio.set(reg.tournament_id, new Map());
+      minhasPorTorneio.get(reg.tournament_id).set(d.id, reg);
+    });
   });
 
   const unique = Array.from(new Set(tournamentIds));
@@ -408,9 +417,16 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
     // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
     if (!includeArchived && t.archived) return;
     const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
+    // `my_role` segue como sempre (o PAPEL: owner/admin vence player). Ao lado,
+    // calculado — nada gravado —, se eu também JOGO: quem organiza e se
+    // inscreveu no próprio torneio é as duas coisas, e a tela inicial o
+    // tratava só como organizador (sumia de "Você está inscrito").
+    const minhas = summarizeMyRegistrations([...(minhasPorTorneio.get(id)?.values() || [])]);
     results.push({
       ...t,
       my_role: adminDoc ? adminDoc.data().role : 'player',
+      is_player: minhas.isPlayer,
+      my_registration_status: minhas.status,
     });
   });
   return results;

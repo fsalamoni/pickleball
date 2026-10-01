@@ -126,3 +126,22 @@ describe('formatExplain', () => {
     expect(compatibleStageTypes(MODALITY_FORMAT.DOUBLES)).not.toContain(TOURNAMENT_STAGE_TYPE.AMERICANO);
   });
 });
+
+describe('2 turnos (ida e volta) na explicação', () => {
+  it('pontos corridos: o dobro de jogos e de rodadas', async () => {
+    const { explainStage } = await import('./formatExplain.js');
+    const ida = explainStage({ stageType: 'round_robin', playerCount: 4 });
+    const volta = explainStage({ stageType: 'round_robin', playerCount: 4, legs: 2 });
+    expect(volta.stats.totalMatches).toBe(ida.stats.totalMatches * 2);
+    expect(volta.stats.rounds).toBe(ida.stats.rounds * 2);
+    expect(volta.lines.join(' ')).toMatch(/ida e volta/);
+    expect(volta.lines.join(' ')).toMatch(/disputa 6 jogos/);
+  });
+
+  it('americano: cada dupla joga junta 2 vezes', async () => {
+    const { explainStage } = await import('./formatExplain.js');
+    const volta = explainStage({ stageType: 'americano', playerCount: 8, legs: 2 });
+    expect(volta.stats.totalMatches).toBe(28);
+    expect(volta.lines.join(' ')).toMatch(/14 jogos/);
+  });
+});

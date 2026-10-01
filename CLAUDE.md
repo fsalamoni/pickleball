@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **31 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **32 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio). PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -136,6 +136,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 36-NOTIFICACOES.md          🔔 ⭐ o sino que rola e cabe na tela + a central
 │   │                                     de notificações /notificacoes: os avisos
 │   │                                     antigos, por dia, com filtros (notifications_center)
+│   ├── 37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md 🏆 ⭐ o torneio que organizo e em que
+│   │                                     jogo aparece como meu no início; check-in que
+│   │                                     não trava (isActiveRegistration); 2 turnos de
+│   │                                     verdade; Americano aprimorado em etapas
+│   │                                     (tournament_americano_etapas)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -357,6 +362,12 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
+**"O torneio que eu criei e em que me inscrevi não aparece como meu no início"** → 🐞 era isso: `my_role` é o PAPEL (organizar vence jogar), e a seção Torneios só olhava `my_role === 'player'`. Agora `listMyTournaments` calcula `is_player`/`my_registration_status` (nada gravado) e o início mostra **"Seus torneios"** (`myTournamentsForHome` em `home/domain/homeTournaments.js`): o que a pessoa joga e o que organiza, uma linha por torneio, com o papel no subtítulo. **Nunca** decida "inscrito" por `my_role` — use `jogoNoTorneio(t)`. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §1
+**"Esta inscrição de torneio joga? E o check-in?"** → `isActiveRegistration` (`tournament/domain/checkin.js`): confirmada OU com check-in feito, igual — sorteio, fases, vagas, contagens. O check-in é opcional e só diz que a pessoa chegou. **Nunca** compare `status === REGISTRATION_STATUS.CONFIRMED` à mão (guarda `src/core/guards/checkinNaoTrava.test.js`). O PRÓPRIO check-in só para quem CRIOU a inscrição (`selfCheckInState`) — 🐞 o botão aparecia ao jogador vinculado por outra pessoa e a regra recusava ("permissão negada", que parecia "você não está inscrito"). Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §2
+**"2 turnos (ida e volta) num torneio"** → `stages[].round_robin_legs: 2`, no cartão da fase ("Turnos"). Vale em pontos corridos, grupos e Americano — 🐞 numa modalidade de VÁRIAS fases o sorteio (`buildPhaseDraw`) não repassava o turno, e o Americano o ignorava sempre. O returno é `withReturnLeg` (`domain/draw.js`): os mesmos jogos com os lados trocados, rodadas em seguida
+**"Americano aprimorado em etapas"** → ⭐ flag `tournament_americano_etapas` (default OFF), `type: 'americano_etapas'`, domínio em `tournament/domain/americanoEtapas.js` (+ `americanoEtapasConfig.js`, leve, para `phases.js`). Em cada etapa um Americano em grupos (4, 5, 8 ou 9 — os que fecham), grupos REFEITOS a cada etapa para o máximo de encontros inéditos (`planEtapas` olha as etapas que faltam juntas; 8 em 3 etapas e 16 em 5 dão todos se encontrando), classificação ÚNICA. A etapa mora no NOME DO GRUPO do jogo (`"Etapa 2 · Grupo A"`, `etapaOfMatch`) — zero campo novo nos jogos; a fase ganha `etapa_count` (só ela). O sorteio é a etapa 1 (`firstEtapaDraw`, nos dois caminhos); a próxima sai do avanço de rodada (`advanceStage` → `nextEtapa`, botão "Gerar etapa 2 de 3"); a fase seguinte só depois da última etapa. Três coisas que não podem regredir: (1) a fase NUNCA é "grupo único" (a limpeza de marcas de grupo apagaria as etapas — `matchesWithStaleSingleGroup` também a ignora); (2) nenhum `tournament_groups` é gravado e a classificação ignora grupos gravados (`rankingService`, `advanceToNextPhase`, `NextPhasePreview`); (3) "Editar grupos" e "Re-sortear jogos (manter grupos)" não aparecem no formato. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §4
+**"A tabela de classificação do torneio mostra uma ordem e quem avança é outro"** → 🐞 era a ordem de desempate da fase: valia na progressão e a tabela usava sempre a padrão. Agora `computeModalityRankingStructured` usa `phase.tiebreak_order`
+**"Re-sortear os jogos restantes"** → não existe em chave, dupla eliminação, suíço e Mexicano (o número da rodada é a estrutura — 🐞 renumerar a partir de 1 fazia o avanço gerar a rodada seguinte por cima); no Americano em etapas as rodadas seguem depois das já jogadas
 **"Onde está a tela inicial personalizada? Por que ela mostra isto para mim?"** → ⭐ flag `personalized_home` (default OFF; desligada, `/` segue a clássica). `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`): o que a pessoa FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE (`users.interests`), e a atividade traz a seção sem passar na frente. Telas em `src/v2/components/home/personal/`. ⚠️ Toda data da tela inicial passa por `home/domain/freshness.js` — **nunca** `Date.parse('2026-09-26')` (é meia-noite UTC, 21h do dia ANTERIOR no Brasil: o torneio de hoje sumiria às 21h de ontem). Seção que não é da pessoa não consulta nada (hooks com `{ enabled }`). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1
 **"Onde está o MODO ESCURO? Minha tela nova precisa de algo?"** → ⭐ flag `dark_mode` (default OFF) + `docs/30-MODO-ESCURO.md`. **A tela não precisa de nada**: escreva `bg-white`/`text-gray-500`/`border-gray-100`/`bg-ink` como sempre, e a paleta (`src/core/theme/palette.js`, fonte única) decide a cor nos dois modos — cada cor compila para `rgb(calc(CLARO + (ESCURO − CLARO) × var(--k)))`, e com `--k: 0` o claro é o de sempre bit a bit (teste token a token). Cor arbitrária (`bg-[#…]`, `style`) **não** troca. **Nunca** use `dark:` para cor (só para trocar ARQUIVO — o logo, via `BrandMark`). O que fica claro de propósito: telão, totem e impressão (`<AparenciaClara>` na rota, casando com `ROTA_SEMPRE_CLARA`, que o script de `index.html` também usa) e o que vira imagem (`tema-claro` no elemento do `toPng`) — guarda em `src/core/guards/modoEscuro.test.js`. A escolha é por usuário no navegador (`v2:view:<uid>:aparencia:tema`) + um espelho (`picklerush:tema`) para a primeira tela não piscar; **zero banco**. Seletor: `src/v2/components/theme/ThemeSwitcher.jsx` (menu do avatar, gaveta do celular, Configurações). ⚠️ `palette.js`/`tailwindTheme.js` são de BUILD — importá-los de uma tela põe o `tailwindcss/colors` no pacote (guarda travando)
 **"Onde a pessoa escolhe os CARDS do início? Criei um card/seção nova na tela inicial"** → ⭐ flag `home_cards` (default OFF, só vale sobre `personalized_home`) + `docs/31-INICIO-SOB-MEDIDA.md`. Catálogo ÚNICO em `src/modules/home/domain/homeCards.js` (`HOME_CARD_META`: rótulo, descrição, grupo, as frentes que o SUGEREM, a funcionalidade de que depende); padrão **Dias de jogo, Horários da arena e Ranking** (`DEFAULT_HOME_CARDS`). Card novo precisa de desenho em `V2PersonalHome` (`renderSecao` ou `renderCardExtra`) — `src/core/guards/inicioSobMedida.test.js` reprova o esquecido (a pessoa ligaria o interruptor e nada apareceria). O seletor é UM (`src/v2/components/home/cards/HomeCardsPicker.jsx`), no "Personalizar" do início (diálogo lazy) e em Configurações → Página inicial (`#pagina-inicial`). A escolha mora no navegador por uid (`v2:view:<uid>:inicio:cards`, `{"v":1,"cards":[…]}`): sem a chave vale o padrão, `[]` é escolha ("só o resumo do dia"), restaurar apaga — **zero banco**. Três regras que não podem regredir: (1) card escondido **não é montado**, então não consulta; (2) o que tem PRAZO (a chamada da fila) aparece fora dos cards, sempre; (3) a grade não deixa buraco (`wideHomeCards` estica o card que sobraria sozinho), o que exige que todo card desenhe ALGO — por isso "Seu último torneio" escolhido e sem resultado diz que não há, em vez de sumir
@@ -550,7 +561,9 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-01 (notificações: o sino que rola e a central
+> Última atualização: 2026-10-01 (torneio: o meu torneio no início, check-in
+> que não trava, 2 turnos e o Americano aprimorado em etapas). Antes:
+> 2026-10-01 (notificações: o sino que rola e a central
 > com os avisos antigos). Antes: 2026-09-30 (o "Jogar" abre no Dia de jogo, os dias do
 > clube e o botão de entrar em todo lugar). Antes: 2026-09-30 (o "Jogar" com os
 > dias de jogo das arenas + Minha região). Antes: 2026-09-30 (estoque que diz o que há para vender +
@@ -560,6 +573,31 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Torneio: o meu torneio no início, check-in que não trava, 2 turnos e o
+>   Americano aprimorado em etapas** (2026-10-01): *"criei um torneio e abri as
+>   inscrições… ele não aparece na seção torneios do meu início… se fizer
+>   checkin dá erro na modalidade… eu deveria poder criar modalidades com 2
+>   turnos… americano aprimorado em etapas"*. **(1) 🐞 O meu torneio** sumia de
+>   "Você está inscrito": o papel (`my_role`) dizia "organiza" e escondia a
+>   inscrição; agora o início tem **"Seus torneios"** (o que a pessoa joga e o
+>   que organiza, uma linha por torneio) e "Inscrições abertas" não repete os
+>   dela. **(2) 🐞 O check-in** de quem foi inscrito pela organização ou pela
+>   dupla dava "permissão negada" (a regra só aceita quem criou a inscrição) —
+>   o botão só aparece para quem pode e os outros leem onde fazer; o check-in
+>   da organização avisa quando falha; "inscrição que joga" virou fonte única
+>   (`isActiveRegistration`, com guarda) e a ajuda deixou de dizer que o
+>   check-in decide o sorteio. **(3) 🐞 2 turnos** não valiam em modalidade de
+>   várias fases nem no Americano — agora valem, e a explicação conta o returno.
+>   **(4) Americano aprimorado em etapas** (flag `tournament_americano_etapas`):
+>   etapas de Americano em grupos refeitos a cada etapa para o máximo de jogos
+>   inéditos (8 atletas em 3 etapas: todos jogam com e contra todos), quantas
+>   etapas o organizador quiser, classificação única e, se quiser, uma chave
+>   depois. De quebra: a tabela passou a usar a ordem de desempate da fase, e
+>   "re-sortear os jogos restantes" deixou de renumerar rodadas de chave, suíço
+>   e Mexicano. **Banco: zero coleção, índice ou regra** — `etapa_count` dentro
+>   de `stages[]` e a etapa no nome do grupo. Ver
+>   `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
 >
 > - **Notificações: o sino que rola e a central com os avisos antigos**
 >   (2026-10-01): *"não há rolagem suficiente para ver todas as notificações
@@ -2478,14 +2516,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6884 passing** (433 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
+| **Testes Vitest** | **6947 passing** (435 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 85 (+V2Notifications — a central de notificações; +V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **34 em `firestore.indexes.json`** (+`tournament_matches[modality_id, stage_index, round]`, importado do painel; +`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **31 default OFF** (+`notifications_center` — a central de notificações; +`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **32 default OFF** (+`tournament_americano_etapas` — o Americano aprimorado em etapas; +`notifications_center` — a central de notificações; +`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

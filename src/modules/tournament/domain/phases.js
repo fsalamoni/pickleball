@@ -31,6 +31,7 @@ import { normalizeStageScoringOverride } from './scoring.js';
 import { normalizeDirectEntry } from './directEntry.js';
 import { normalizeTiebreakOrder } from './tiebreak.js';
 import { normalizeCrossGroupMethod } from './crossGroup.js';
+import { normalizeEtapaCount, normalizeEtapaGroupSize } from './americanoEtapasConfig.js';
 
 /** Formatos que se dividem naturalmente em grupos paralelos. */
 const GROUPED_FORMATS = new Set([
@@ -61,6 +62,11 @@ export function supportsGroups(stageType) {
 export function normalizePhase(raw = {}, ctx = {}) {
   const type = raw.type || TOURNAMENT_STAGE_TYPE.ROUND_ROBIN;
   const isGrouped = supportsGroups(type);
+  // Americano em etapas: SEMPRE em grupos (refeitos a cada etapa), do tamanho
+  // escolhido (4, 5, 8 ou 9 — os que fecham um Americano). Nunca "grupo
+  // único": a rotina que limpa marcas de grupo das fases de grupo único
+  // apagaria a etapa de cada jogo.
+  const isEtapas = type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
 
   // Modo de divisão: herda do legado (group_count > 1 → por nº de grupos).
   let divisionMode = raw.division_mode;
@@ -70,9 +76,12 @@ export function normalizePhase(raw = {}, ctx = {}) {
     else divisionMode = PHASE_DIVISION_MODE.SINGLE;
   }
   if (!isGrouped) divisionMode = PHASE_DIVISION_MODE.SINGLE;
+  if (isEtapas) divisionMode = PHASE_DIVISION_MODE.MAX_PER_GROUP;
 
   const groupCount = Math.max(1, Math.floor(Number(raw.group_count)) || 1);
-  const maxPerGroup = Math.max(2, Math.floor(Number(raw.max_per_group)) || 4);
+  const maxPerGroup = isEtapas
+    ? normalizeEtapaGroupSize(raw.max_per_group)
+    : Math.max(2, Math.floor(Number(raw.max_per_group)) || 4);
 
   const qualifierMode = Object.values(PHASE_QUALIFIER_MODE).includes(raw.qualifier_mode)
     ? raw.qualifier_mode
@@ -163,6 +172,9 @@ export function normalizePhase(raw = {}, ctx = {}) {
     bracket_seeding: bracketSeeding,
     // Disputa de 3º lugar (só faz sentido em mata-mata simples).
     third_place: Boolean(raw.third_place),
+    // Quantas etapas (só no Americano em etapas — nas outras fases o campo nem
+    // aparece, para nenhuma modalidade ganhar um campo que não usa).
+    ...(isEtapas ? { etapa_count: normalizeEtapaCount(raw.etapa_count) } : {}),
   };
 }
 
@@ -288,6 +300,8 @@ export function matchesWithStaleSingleGroup(matches = [], stages = []) {
     .filter((m) => {
       if (!m?.group) return false;
       const si = Number(m?.stage_index ?? 0);
+      // A etapa de cada jogo do Americano em etapas mora no nome do grupo.
+      if (stages?.[si]?.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) return false;
       return stages?.[si]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
     })
     .map((m) => m.id)

@@ -19,13 +19,14 @@ import { persistMatches, clearStaleSingleGroupMarkers, assertCanDiscardStageMatc
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
 import {
-  REGISTRATION_STATUS,
   MODALITY_FORMAT,
   GENDER_CATEGORY,
   COMPETITION_GENDER,
   TOURNAMENT_STAGE_TYPE,
   PHASE_DIVISION_MODE,
 } from '../domain/constants.js';
+import { isActiveRegistration } from '../domain/checkin.js';
+import { firstEtapaDraw } from '../domain/americanoEtapas.js';
 
 /**
  * Deriva o gênero competitivo de uma inscrição, dentro do que é conhecido:
@@ -181,7 +182,11 @@ export async function runDraw(params, actor) {
 
   // A estrutura escolhida precisa ser compatível com o formato de inscrição
   // (ex.: Americano exige inscrição Simples). Falha cedo com mensagem clara.
-  if (isTeam && (stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO || stage.type === TOURNAMENT_STAGE_TYPE.MEXICANO)) {
+  if (isTeam && (
+    stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO
+    || stage.type === TOURNAMENT_STAGE_TYPE.MEXICANO
+    || stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
+  )) {
     throw new Error(
       'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
       + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
@@ -192,10 +197,8 @@ export async function runDraw(params, actor) {
 
   const registrations = await listRegistrations(modalityId);
   // Check-in NÃO retira a inscrição do sorteio: um atleta com check-in continua
-  // confirmado. Aceita CONFIRMED e CHECKED_IN como inscritos válidos.
-  const confirmed = registrations.filter(
-    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
-  );
+  // confirmado (`isActiveRegistration`, a fonte única).
+  const confirmed = registrations.filter(isActiveRegistration);
   if (confirmed.length < 2) {
     throw new Error(isTeam
       ? 'São necessárias ao menos 2 equipes inscritas para sortear.'
@@ -260,8 +263,9 @@ export async function runDraw(params, actor) {
   // Para a Americana, o equilíbrio de adversários (regra absoluta) é resolvido
   // pelo motor de sorteio; aqui apenas fornecemos os metadados de gênero/nível
   // por jogador para a preferência secundária (mesmo gênero/nível se enfrentam).
+  const isEtapas = stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
   const playerMeta =
-    stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO
+    stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO || isEtapas
       ? buildAmericanoPlayerMeta(
         byCreation, modality,
         // Reaproveita a leitura já feita acima; só busca se o caminho aleatório
@@ -270,7 +274,12 @@ export async function runDraw(params, actor) {
       )
       : null;
 
-  const draw = generateDraw({
+  // Americano em etapas: o sorteio é a 1ª ETAPA (grupos do formato, um
+  // Americano em cada). As próximas saem do avanço da fase.
+  const draw = isEtapas ? {
+    stageType: stage.type,
+    matches: firstEtapaDraw(participants, normalizePhase(stage), { seed, playerMeta }).matches,
+  } : generateDraw({
     format: modality.format,
     stageType: stage.type,
     participants,
@@ -306,7 +315,7 @@ export async function runDraw(params, actor) {
   // modalidade define grupo único, limpamos esses resíduos automaticamente logo
   // após persistir — igual ao botão "Corrigir grupos", só que silencioso — para
   // o dado nunca ficar inconsistente. Idempotente e restrito às fases single.
-  if (stage.division_mode === PHASE_DIVISION_MODE.SINGLE) {
+  if (stage.division_mode === PHASE_DIVISION_MODE.SINGLE && !isEtapas) {
     await clearStaleSingleGroupMarkers(modalityId, modality, actor);
   }
 

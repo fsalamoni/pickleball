@@ -505,3 +505,11 @@ foram corrigidos, e um guarda compara o que a ajuda afirma contra
 Tutorial errado é pior que tutorial nenhum: quem segue passo a passo conclui
 que está fazendo algo errado — aqui, ia procurar um botão de "encerrar" para
 liberar um ranking que já estava atualizado.
+
+## 12. Depois desta onda: 2 turnos de verdade e o Americano em etapas
+
+Os **turnos** (`round_robin_legs`) passaram a valer também numa modalidade de
+VÁRIAS fases e no Americano, e a tabela da tela passou a usar a ordem de
+desempate da fase (antes só quem avançava a usava). E há um formato novo, o
+**Americano aprimorado em etapas** (flag `tournament_americano_etapas`). Ver
+`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.

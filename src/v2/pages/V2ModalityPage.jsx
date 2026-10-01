@@ -5,8 +5,9 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useTournament, useIsTournamentAdmin, useModalities, useRegistrations } from '@/modules/tournament/hooks/useTournament';
 import {
   MODALITY_FORMAT_LABELS, SKILL_LEVEL_LABELS, GENDER_CATEGORY_LABELS, AGE_CATEGORY_LABELS,
-  REGISTRATION_STATUS, TOURNAMENT_VISIBILITY, TOURNAMENT_STAGE_TYPE_LABELS,
+  TOURNAMENT_VISIBILITY, TOURNAMENT_STAGE_TYPE_LABELS,
 } from '@/modules/tournament/domain/constants';
+import { isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { countOccupiedRegistrations, isRegistrationCapacityReached, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
 import V2ModalityInfoContent from '@/v2/components/tournament/V2ModalityInfoContent';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
@@ -87,9 +88,7 @@ export default function V2ModalityPage() {
   // comuns seguem exatamente como antes.
   const isTeam = !!modality.team_config;
 
-  const confirmed = registrations.filter(
-    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
-  );
+  const confirmed = registrations.filter(isActiveRegistration);
   const occupiedCount = countOccupiedRegistrations(registrations);
   const slotsFull = isRegistrationCapacityReached(occupiedCount, modality.max_entries);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));

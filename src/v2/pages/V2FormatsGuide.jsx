@@ -15,6 +15,8 @@ import { FORMAT_DESCRIPTION, STAGE_DESCRIPTION, STAGE_MIN_PLAYERS } from '@/modu
 import { TOURNAMENT_PRESETS } from '@/modules/tournament/domain/tournamentPresets';
 import { describeTiebreakOrder } from '@/modules/tournament/domain/tiebreak';
 import { V2Badge, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const STAGE_ORDER = [
   TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
@@ -39,6 +41,9 @@ function Item({ title, badge, children }) {
 }
 
 export default function V2FormatsGuide() {
+  // O Americano em etapas só aparece no guia quando pode ser escolhido.
+  const etapasOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS);
+  const ordem = etapasOn ? [...STAGE_ORDER, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS] : STAGE_ORDER;
   return (
     <div className="mx-auto max-w-[900px]">
       <V2ContentHero
@@ -58,7 +63,7 @@ export default function V2FormatsGuide() {
 
         <V2ContentSection icon={Trophy} title="Sistemas de jogo (formatos de fase)">
           <div className="space-y-2">
-            {STAGE_ORDER.map((s) => (
+            {ordem.map((s) => (
               <Item key={s} title={TOURNAMENT_STAGE_TYPE_LABELS[s]} badge={`mín. ${STAGE_MIN_PLAYERS[s] ?? 2} jogadores`}>
                 {STAGE_DESCRIPTION[s]}
               </Item>

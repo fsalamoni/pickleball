@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   proximidade, prazoTexto, periodoTexto, localTexto,
   openTournamentsForMe, myCurrentTournaments, managedTournamentsForHome, organizerHint,
+  myTournamentsForHome, jogoNoTorneio, organizoOTorneio, meuPapelTexto,
   lastTournamentResult, colocacaoTexto,
 } from './homeTournaments.js';
 import { TOURNAMENT_PHASE } from './freshness.js';
@@ -78,6 +79,60 @@ describe('meus torneios (atleta e organizador)', () => {
     expect(r[0].phase).toBe(TOURNAMENT_PHASE.STALE);
     expect(organizerHint(TOURNAMENT_PHASE.STALE)).toMatch(/encerre/);
     expect(organizerHint(TOURNAMENT_PHASE.DRAFT)).toMatch(/Rascunho/);
+  });
+});
+
+describe('🐞 quem organiza E se inscreveu no próprio torneio', () => {
+  // O caso relatado: criou o torneio, abriu as inscrições, se inscreveu — e na
+  // tela inicial ele não aparecia como seu, só como "inscreva-se".
+  const meu = {
+    id: 'meu', my_role: 'owner', is_player: true, my_registration_status: 'confirmed',
+    status: 'registrations_open', registration_deadline: '2026-10-01', starts_at: '2026-10-03',
+  };
+
+  it('⭐ conta como inscrito (o papel de organizador não apaga a inscrição)', () => {
+    expect(jogoNoTorneio(meu)).toBe(true);
+    expect(organizoOTorneio(meu)).toBe(true);
+    expect(myCurrentTournaments([meu], HOJE).map((x) => x.tournament.id)).toEqual(['meu']);
+    expect(managedTournamentsForHome([meu], HOJE).map((x) => x.tournament.id)).toEqual(['meu']);
+  });
+
+  it('⭐ "Seus torneios": UMA linha, com as duas marcas', () => {
+    const r = myTournamentsForHome([meu], HOJE);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ organizo: true, inscrito: true, status: 'confirmed', phase: TOURNAMENT_PHASE.OPEN });
+  });
+
+  it('organizo sem jogar, jogo sem organizar, e o rascunho só para quem organiza', () => {
+    const lista = [
+      { id: 'org', my_role: 'admin', is_player: false, status: 'draft' },
+      { id: 'jog', my_role: 'player', is_player: true, my_registration_status: 'waitlist', status: 'in_progress', ends_at: '2026-09-27' },
+      { id: 'sai', my_role: 'player', is_player: false, status: 'registrations_open', registration_deadline: '2026-10-01' },
+      { id: 'fim', my_role: 'owner', is_player: true, status: 'finished' },
+    ];
+    const r = myTournamentsForHome(lista, HOJE);
+    expect(r.map((x) => [x.tournament.id, x.organizo, x.inscrito, x.status])).toEqual([
+      ['jog', false, true, 'waitlist'],
+      ['org', true, false, null],
+    ]);
+  });
+
+  it('inscrição cancelada não é "inscrito" (is_player falso vence o papel de jogador)', () => {
+    expect(jogoNoTorneio({ my_role: 'player', is_player: false })).toBe(false);
+  });
+
+  it('o papel em palavras (vai no subtítulo, que aparece no celular)', () => {
+    expect(meuPapelTexto({ organizo: true, inscrito: true, status: 'confirmed' })).toBe('Você organiza e joga');
+    expect(meuPapelTexto({ organizo: true, inscrito: true, status: 'pending_payment' })).toBe('Você organiza e joga · pagamento pendente');
+    expect(meuPapelTexto({ organizo: true, inscrito: false })).toBe('Você organiza');
+    expect(meuPapelTexto({ inscrito: true, status: 'checked_in' })).toBe('Check-in feito');
+    expect(meuPapelTexto({ inscrito: true, status: 'waitlist' })).toBe('Na lista de espera');
+    expect(meuPapelTexto({ inscrito: true })).toBe('Inscrito');
+  });
+
+  it('dado sem is_player (cache antigo) segue o papel, como antes', () => {
+    expect(jogoNoTorneio({ my_role: 'player' })).toBe(true);
+    expect(jogoNoTorneio({ my_role: 'owner' })).toBe(false);
   });
 });
 

@@ -8,7 +8,7 @@
  */
 import { formatDateShortBR } from '../../arenas/domain/calendar.js';
 import { normalizeLocality } from '../../arenas/domain/homeBanners.js';
-import { TOURNAMENT_STATUS } from '../../tournament/domain/constants.js';
+import { REGISTRATION_STATUS, TOURNAMENT_STATUS } from '../../tournament/domain/constants.js';
 import {
   TOURNAMENT_PHASE, diaLocal, isTournamentCurrent, isTournamentOpen, prazoRelativo, tournamentPhase,
 } from './freshness.js';
@@ -78,10 +78,29 @@ export function openTournamentsForMe(publicos = [], { hoje, perfil = {}, inscrit
     .map(({ tournament, perto, inscrito }) => ({ tournament, perto, inscrito }));
 }
 
+/**
+ * Eu JOGO neste torneio? `is_player` (calculado por `listMyTournaments` a
+ * partir das minhas inscrições) responde mesmo quando eu também organizo. Sem
+ * ele (dado antigo em cache), vale o papel: `player`.
+ *
+ * 🐞 Antes era só `my_role === 'player'` — e `my_role` diz o PAPEL, em que
+ * organizador vence jogador. Quem criou o torneio e se inscreveu nele sumia de
+ * "Você está inscrito" e aparecia em "Inscrições abertas" com "inscreva-se",
+ * como se ainda não estivesse.
+ */
+export function jogoNoTorneio(t) {
+  return typeof t?.is_player === 'boolean' ? t.is_player : t?.my_role === 'player';
+}
+
+/** Eu organizo este torneio (dono ou administrador)? */
+export function organizoOTorneio(t) {
+  return ADMIN_ROLES.has(t?.my_role);
+}
+
 /** Torneios em que ESTOU INSCRITO e que ainda valem (abertos, por começar, rolando). */
 export function myCurrentTournaments(meus = [], hoje) {
   return (meus || [])
-    .filter((t) => t?.id && t.my_role === 'player' && isTournamentCurrent(t, hoje))
+    .filter((t) => t?.id && jogoNoTorneio(t) && isTournamentCurrent(t, hoje))
     .map((t) => ({ tournament: t, phase: tournamentPhase(t, hoje) }))
     .sort((a, b) => ordemFase(a.phase) - ordemFase(b.phase)
       || String(diaLocal(a.tournament.starts_at) || '9').localeCompare(String(diaLocal(b.tournament.starts_at) || '9')));
@@ -95,13 +114,65 @@ function ordemFase(fase) {
 }
 
 /**
+ * "Seus torneios" na tela inicial: o que eu JOGO (abertos, por começar,
+ * rolando) e o que eu ORGANIZO (o mesmo, mais rascunho e o "esquecido"), numa
+ * lista só e sem repetir — quem organiza e se inscreveu vê o torneio UMA vez,
+ * com as duas marcas.
+ *
+ * @returns {Array<{ tournament, phase, organizo: boolean, inscrito: boolean, status: string|null }>}
+ */
+export function myTournamentsForHome(meus = [], hoje) {
+  return (meus || [])
+    .filter((t) => t?.id)
+    .map((t) => {
+      const phase = tournamentPhase(t, hoje);
+      const organizo = organizoOTorneio(t) && phase !== TOURNAMENT_PHASE.OVER;
+      const inscrito = jogoNoTorneio(t) && isTournamentCurrent(t, hoje);
+      return { tournament: t, phase, organizo, inscrito, status: inscrito ? (t.my_registration_status || null) : null };
+    })
+    .filter((x) => x.organizo || x.inscrito)
+    .sort((a, b) => ordemFase(a.phase) - ordemFase(b.phase)
+      || String(diaLocal(a.tournament.starts_at) || '9').localeCompare(String(diaLocal(b.tournament.starts_at) || '9')));
+}
+
+/** Como a pessoa está no torneio, em poucas palavras. */
+const MEU_STATUS = Object.freeze({
+  [REGISTRATION_STATUS.CHECKED_IN]: 'check-in feito',
+  [REGISTRATION_STATUS.CONFIRMED]: 'inscrição confirmada',
+  [REGISTRATION_STATUS.PENDING_PAYMENT]: 'pagamento pendente',
+  [REGISTRATION_STATUS.WAITLIST]: 'na lista de espera',
+});
+
+/** O que aparece ao lado de "Você organiza e joga" (confirmada é o normal). */
+const STATUS_QUE_MERECE_NOTA = new Set([
+  REGISTRATION_STATUS.CHECKED_IN,
+  REGISTRATION_STATUS.PENDING_PAYMENT,
+  REGISTRATION_STATUS.WAITLIST,
+]);
+
+/**
+ * "Você organiza e joga · inscrição confirmada" — o papel na linha de "Seus
+ * torneios". Vai no SUBTÍTULO de propósito: o selo da linha some no celular.
+ */
+export function meuPapelTexto({ organizo, inscrito, status } = {}) {
+  const comoJogo = MEU_STATUS[status] || 'inscrito';
+  // Confirmada é o normal: só o que pede atenção (pagamento, espera) ou o
+  // que é notícia (check-in) ganha espaço ao lado — o subtítulo é curto.
+  if (organizo && inscrito) {
+    return STATUS_QUE_MERECE_NOTA.has(status) ? `Você organiza e joga · ${comoJogo}` : 'Você organiza e joga';
+  }
+  if (organizo) return 'Você organiza';
+  return comoJogo.charAt(0).toUpperCase() + comoJogo.slice(1);
+}
+
+/**
  * Torneios que EU ORGANIZO e que ainda pedem trabalho: rascunho, aberto, por
  * começar, rolando — e o "esquecido" (data de fim vencida sem encerrar), que é
  * justamente o que o organizador precisa ver para fechar.
  */
 export function managedTournamentsForHome(meus = [], hoje) {
   return (meus || [])
-    .filter((t) => t?.id && ADMIN_ROLES.has(t.my_role))
+    .filter((t) => t?.id && organizoOTorneio(t))
     .map((t) => ({ tournament: t, phase: tournamentPhase(t, hoje) }))
     .filter(({ phase }) => phase !== TOURNAMENT_PHASE.OVER)
     .sort((a, b) => ordemFase(a.phase) - ordemFase(b.phase)

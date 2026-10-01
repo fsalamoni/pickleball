@@ -121,6 +121,8 @@ export default function ModalityInfoContent({ modality, tournament, registration
               seedCount={seedCount}
               qualifiersPerGroup={qualifiersPerGroup}
               legs={legs}
+              etapaCount={stages[0]?.etapa_count}
+              maxPerGroup={stages[0]?.max_per_group}
               showAlternatives={false}
             />
           </section>

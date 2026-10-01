@@ -80,3 +80,37 @@ describe('computeModalityRankingStructured — grupo único segue a modalidade',
     expect(phases[0].groups.map((g) => g.name).sort()).toEqual(['A', 'B']);
   });
 });
+
+describe('Americano aprimorado em etapas — UMA tabela, somando todas as etapas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.getTournament.mockResolvedValue({ id: 'trn1' });
+    h.listRegistrations.mockResolvedValue(regs(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']));
+    // Mesmo que houvesse grupo gravado de um sorteio antigo, a tabela é única.
+    h.getDocs.mockResolvedValue({ docs: [{ data: () => ({ name: 'Grupo A', participants: ['p1', 'p2'] }) }] });
+  });
+
+  it('⭐ jogos de etapas e grupos diferentes entram numa só classificação', async () => {
+    h.getModality.mockResolvedValue({
+      id: MID, tournament_id: 'trn1',
+      stages: [{ type: TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS, max_per_group: 4, etapa_count: 2 }],
+    });
+    const jogo = (id, group, a, b, sa, sb) => ({
+      id, stage_index: 0, group, side_a_ids: a, side_b_ids: b, status: 'finished',
+      winner_side: sa > sb ? 'a' : 'b', games: [{ a: sa, b: sb }],
+    });
+    h.listAllMatchesForModality.mockResolvedValue([
+      jogo('m1', 'Etapa 1 · Grupo A', ['p1', 'p2'], ['p3', 'p4'], 11, 5),
+      jogo('m2', 'Etapa 1 · Grupo B', ['p5', 'p6'], ['p7', 'p8'], 11, 9),
+      jogo('m3', 'Etapa 2 · Grupo A', ['p1', 'p5'], ['p2', 'p6'], 11, 3),
+    ]);
+
+    const { phases } = await computeModalityRankingStructured(MID);
+    expect(phases[0].groups).toHaveLength(1);
+    expect(phases[0].groups[0].name).toBeNull();
+    const linhas = phases[0].groups[0].rows;
+    expect(linhas).toHaveLength(8);
+    expect(linhas[0].key).toBe('p1');
+    expect(linhas[0].wins).toBe(2);
+  });
+});

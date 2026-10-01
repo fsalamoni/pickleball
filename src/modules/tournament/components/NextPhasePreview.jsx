@@ -8,7 +8,8 @@ import { headToHeadFromMatches } from '@/modules/tournament/domain/ranking';
 import { planDirectEntries } from '@/modules/tournament/domain/directEntry';
 import { registrationsToEntrants } from '@/modules/tournament/domain/registrationEntrant';
 import { previewPhaseAdvance, describePhaseAdvance } from '@/modules/tournament/domain/phaseAdvancePreview';
-import { MATCH_STATUS } from '@/modules/tournament/domain/constants';
+import { etapasProgress } from '@/modules/tournament/domain/americanoEtapas';
+import { MATCH_STATUS, TOURNAMENT_STAGE_TYPE } from '@/modules/tournament/domain/constants';
 
 const CONCLUIDOS = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
 
@@ -80,12 +81,15 @@ export default function NextPhasePreview({
     const entrantById = new Map(entrants.map((e) => [e.id, e]));
     const scoringConfig = resolveStageScoringConfig(modality, tournament, stageIndex);
 
-    const base = gruposDaFase(groups, decididos, entrantById);
+    // Americano em etapas: tabela ÚNICA, somando todas as etapas — o mesmo
+    // que o serviço faz ao avançar (os grupos de cada etapa não classificam).
+    const tabelaUnica = prevPhase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+    const base = gruposDaFase(tabelaUnica ? [] : groups, decididos, entrantById);
     if (base.length === 0) return null;
 
     const rankedGroups = base.map((g, i) => {
       const memberSet = new Set(g.entrants.flatMap((e) => e.members || [e.id]));
-      const groupMatches = decididos.filter((m) => (
+      const groupMatches = tabelaUnica ? decididos : decididos.filter((m) => (
         m.group ? m.group === g.name : (m.side_a_ids || []).some((id) => memberSet.has(id))
       ));
       return {
@@ -113,7 +117,13 @@ export default function NextPhasePreview({
 
   if (!preview) return null;
 
-  const parcial = matches.some((m) => !CONCLUIDOS.has(m.status));
+  // Parcial: há jogo por decidir — ou, no Americano em etapas, ainda há
+  // ETAPA por jogar (entre uma etapa e outra nenhum jogo está pendente, mas
+  // a classificação ainda vai mudar).
+  const faseEtapas = normalizePhases(modality?.stages)[stageIndex];
+  const etapasFaltando = faseEtapas?.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
+    && !etapasProgress(matches, faseEtapas).completa;
+  const parcial = etapasFaltando || matches.some((m) => !CONCLUIDOS.has(m.status));
 
   return (
     <div
@@ -157,8 +167,9 @@ export default function NextPhasePreview({
 
           {parcial && (
             <p className="text-[11px] leading-snug opacity-80">
-              Ainda há jogos por decidir nesta fase — esta prévia considera só os resultados já
-              lançados e vai mudar até o último jogo.
+              {etapasFaltando
+                ? 'Ainda há etapas por jogar — esta prévia considera só as etapas já jogadas e vai mudar até a última.'
+                : 'Ainda há jogos por decidir nesta fase — esta prévia considera só os resultados já lançados e vai mudar até o último jogo.'}
             </p>
           )}
         </div>

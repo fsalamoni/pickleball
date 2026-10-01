@@ -171,3 +171,23 @@ para a mesa da organização parecendo completa. Por isso aquele aviso é o úni
 da plataforma que **precisa ser impresso junto**.
 
 Ver `docs/27-FALHA-NAO-E-VAZIO.md`.
+
+## Check-in, 2 turnos e o Americano aprimorado em etapas
+
+- **"Esta inscrição joga?"** → `isActiveRegistration` (`domain/checkin.js`):
+  confirmada ou com check-in feito, igual. Nunca compare com
+  `REGISTRATION_STATUS.CONFIRMED` à mão — o guarda
+  `src/core/guards/checkinNaoTrava.test.js` reprova.
+- **O próprio check-in** → `selfCheckInState`: só quem CRIOU a inscrição (é o
+  que a regra do banco aceita); para quem foi inscrito por outra pessoa a tela
+  diz o caminho.
+- **2 turnos** (`stages[].round_robin_legs: 2`) valem em pontos corridos,
+  grupos e Americano — inclusive em modalidade de várias fases
+  (`buildPhaseDraw` repassa o turno; `withReturnLeg` faz o returno).
+- **Americano aprimorado em etapas** (`type: 'americano_etapas'`, flag
+  `tournament_americano_etapas`) → `domain/americanoEtapas.js`. A etapa mora no
+  nome do grupo do jogo; a próxima etapa sai do avanço de rodada
+  (`advanceStage`); a classificação é única (`rankingService`); a fase seguinte
+  só depois da última etapa.
+
+Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.

@@ -24,12 +24,15 @@ import {
   useMovePhaseEntrant,
 } from '@/modules/tournament/hooks/useTournament';
 import {
+  TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
   MATCH_STATUS,
-  REGISTRATION_STATUS,
+  MATCH_STATUS_LABELS,
 } from '@/modules/tournament/domain/constants';
+import { isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
+import { etapasProgress, etapasResumo, etapaBotaoTexto } from '@/modules/tournament/domain/americanoEtapas';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { V2ErrorState } from '@/v2/ui/primitives';
 import { useUpdateModality } from '@/modules/tournament/hooks/useTournament';
@@ -64,11 +67,7 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
 
   const activeRegistrations = useMemo(
     () =>
-      registrations.filter(
-        (r) =>
-          r.status === REGISTRATION_STATUS.CONFIRMED ||
-          r.status === REGISTRATION_STATUS.CHECKED_IN,
-      ),
+      registrations.filter(isActiveRegistration),
     [registrations],
   );
 
@@ -119,6 +118,8 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
             seedCount={phases[0].seed_count}
             qualifiersPerGroup={phases[0].qualifiers_per_group}
             legs={phases[0].round_robin_legs}
+            etapaCount={phases[0].etapa_count}
+            maxPerGroup={phases[0].max_per_group}
           />
         )}
 
@@ -167,6 +168,11 @@ function PhaseSection({
   const playedCount = matches.filter((m) => doneStatuses.has(m.status)).length;
   const allDone = matches.length > 0 && playedCount === matches.length;
   const withinAdvance = stageSupportsAdvance(phase.type);
+  // Americano em etapas: "avançar" gera a próxima ETAPA (quando a atual
+  // termina), e a fase seguinte só sai depois da ÚLTIMA etapa.
+  const ehEtapas = phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+  const progEtapas = ehEtapas ? etapasProgress(matches, phase) : null;
+  const faseFechada = allDone && (!ehEtapas || progEtapas.completa);
   const hasGroups = groups.length > 0;
 
   async function doDraw() {
@@ -200,8 +206,10 @@ function PhaseSection({
         modality,
         tournament,
       });
-      if (res.complete) toast.success('Fase concluída — definido! 🏆');
-      else toast.success(`Próxima rodada gerada (${res.created} jogo(s)).`);
+      if (res.complete) toast.success(ehEtapas ? 'Todas as etapas foram jogadas — a classificação final está valendo. 🏆' : 'Fase concluída — definido! 🏆');
+      else toast.success(ehEtapas
+        ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
+        : `Próxima rodada gerada (${res.created} jogo(s)).`);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível avançar a rodada.');
     } finally {
@@ -244,9 +252,15 @@ function PhaseSection({
           <Users className="w-4 h-4 mr-1" /> Editar grupos
         </Button>
       )}
-      {withinAdvance && matches.length > 0 && (
-        <Button size="sm" variant="outline" onClick={doWithinAdvance} disabled={running}>
-          <ChevronsRight className="w-4 h-4 mr-1" /> Avançar rodada
+      {withinAdvance && matches.length > 0 && (!ehEtapas || progEtapas.podeGerar) && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={doWithinAdvance}
+          disabled={running}
+          title={ehEtapas ? 'Refaz os grupos, misturando quem ainda não se encontrou' : undefined}
+        >
+          <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : 'Avançar rodada'}
         </Button>
       )}
       {!isLast && (
@@ -254,8 +268,10 @@ function PhaseSection({
           size="sm"
           variant="outline"
           onClick={doAdvanceToNext}
-          disabled={running || !allDone}
-          title={allDone ? 'Classificar e gerar a próxima fase' : 'Conclua todos os jogos desta fase'}
+          disabled={running || !faseFechada}
+          title={faseFechada
+            ? 'Classificar e gerar a próxima fase'
+            : (ehEtapas && allDone ? `Jogue as ${progEtapas.total} etapas antes de gerar a próxima fase` : 'Conclua todos os jogos desta fase')}
         >
           <ArrowDownToLine className="w-4 h-4 mr-1" /> Gerar próxima fase
         </Button>
@@ -298,6 +314,12 @@ function PhaseSection({
           isLast={isLast}
           groupCount={groups.length || undefined}
         />
+
+        {ehEtapas && etapasResumo(progEtapas) && !falhouJogos && (
+          <p className="rounded-md bg-white px-2.5 py-2 text-xs font-medium text-gray-600 border border-gray-200" role="status">
+            {etapasResumo(progEtapas)}
+          </p>
+        )}
 
         {/* QUEM VAI PARA A PRÓXIMA FASE, antes de clicar. Sai da mesma função
             que o serviço usa para gravar — o que se anuncia é o que acontece. */}
@@ -384,7 +406,7 @@ function PhaseSection({
                         onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
                       />
                     </td>
-                    <td className="px-2 py-1"><Badge variant="secondary">{m.status}</Badge></td>
+                    <td className="px-2 py-1"><Badge variant="secondary">{MATCH_STATUS_LABELS[m.status] || m.status}</Badge></td>
                   </tr>
                 ))}
               </tbody>

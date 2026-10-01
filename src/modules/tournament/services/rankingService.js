@@ -13,7 +13,7 @@ import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { buildRanking } from '../domain/ranking.js';
 import { normalizePhase, normalizePhases, supportsGroups } from '../domain/phases.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
-import { TOURNAMENT_STAGE_TYPE_LABELS, PHASE_DIVISION_MODE } from '../domain/constants.js';
+import { TOURNAMENT_STAGE_TYPE, TOURNAMENT_STAGE_TYPE_LABELS, PHASE_DIVISION_MODE } from '../domain/constants.js';
 
 /**
  * Calcula o ranking de uma modalidade considerando todas as fases já jogadas
@@ -177,7 +177,14 @@ export async function computeModalityRankingStructured(modalityId) {
       });
       continue;
     }
-    const storedGroups = await readPhaseGroups(modalityId, i);
+    // Americano em etapas: UMA tabela, somando todas as etapas — os grupos de
+    // cada etapa são só a organização dos jogos (e não há grupo gravado).
+    const tabelaUnica = phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+    const storedGroups = tabelaUnica ? [] : await readPhaseGroups(modalityId, i);
+    // 🐞 A ordem de desempate que o organizador escolheu para a fase decidia
+    // quem AVANÇAVA, mas a tabela da tela usava sempre a ordem padrão — e a
+    // tela podia mostrar uma classificação diferente da que valeu.
+    const phaseRankOptions = { ...rankOptions, tiebreakOrder: phase.tiebreak_order };
 
     // Linhas de uma tabela a partir de um conjunto de jogos (participantes
     // deduzidos dos lados dos jogos). Usado em ambos os ramos abaixo.
@@ -188,7 +195,7 @@ export async function computeModalityRankingStructured(modalityId) {
         (m.side_b_ids || []).forEach((id) => ids.add(id));
       });
       const entrants = [...ids].map((id) => ({ id, members: [id] }));
-      const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
+      const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, phaseRankOptions);
       return ranked.map((r) => rowFromRanked(r, regById));
     };
 
@@ -204,7 +211,7 @@ export async function computeModalityRankingStructured(modalityId) {
       modality.stages?.[i]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
 
     let groups;
-    if (singleGroupIntended) {
+    if (singleGroupIntended || tabelaUnica) {
       groups = [{ name: null, rows: buildGroupRows(matches) }];
     } else if (storedGroups.length > 0) {
       groups = storedGroups.map((g) => {
@@ -214,7 +221,7 @@ export async function computeModalityRankingStructured(modalityId) {
         const memberSet = new Set(entrants.flatMap((e) => e.members || [e.id]));
         const groupMatches = matches.filter((m) =>
           (m.group ? m.group === g.name : (m.side_a_ids || []).some((id) => memberSet.has(id))));
-        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
+        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, phaseRankOptions);
         return { name: g.name, rows: ranked.map((r) => rowFromRanked(r, regById)) };
       });
     } else {

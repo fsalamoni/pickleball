@@ -29,8 +29,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
+import { isActiveRegistration } from '../domain/checkin.js';
 import {
-  REGISTRATION_STATUS,
   MODALITY_FORMAT,
   GENDER_CATEGORY,
   COMPETITION_GENDER,
@@ -46,6 +46,7 @@ import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
 import { phaseDrawIssues, previewPhaseAdvance } from '../domain/phaseAdvancePreview.js';
 import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
+import { etapasProgress } from '../domain/americanoEtapas.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
@@ -226,9 +227,7 @@ export async function getFirstPhaseEntrants(modalityId, modality) {
  */
 export async function planPhaseEntries(modalityId, modality) {
   const regs = await listRegistrations(modalityId);
-  const active = regs.filter(
-    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
-  );
+  const active = regs.filter(isActiveRegistration);
   const entrants = active.map((r) => registrationToEntrant(r, modality));
   const phases = normalizePhases(modality?.stages);
   const plano = planDirectEntries(entrants, phases);
@@ -319,7 +318,11 @@ export async function runPhaseDraw(params, actor) {
   if (!phase) throw new Error('Fase não encontrada na modalidade.');
 
   const isTeam = Boolean(modality.team_config);
-  if (isTeam && (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO || phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO)) {
+  if (isTeam && (
+    phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO
+    || phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO
+    || phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
+  )) {
     throw new Error(
       'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
       + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
@@ -343,7 +346,11 @@ export async function runPhaseDraw(params, actor) {
 
   // Forma os grupos: manual (validado) ou sorteio equilibrado.
   let groups;
-  if (manualGroups && manualGroups.length > 0) {
+  if (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
+    // Americano em etapas: os grupos são do próprio formato (refeitos a cada
+    // etapa). Todos entram num pote só, e o sorteio monta a 1ª etapa.
+    groups = [{ name: null, entrants }];
+  } else if (manualGroups && manualGroups.length > 0) {
     groups = manualGroups;
   } else {
     groups = drawGroups(entrants, {
@@ -459,9 +466,20 @@ export async function advanceToNextPhase(params, actor) {
   if (undecided.length > 0) {
     throw new Error(`Conclua todos os jogos da fase atual (${undecided.length} pendente(s)).`);
   }
+  // Americano em etapas: entre uma etapa e a próxima não há jogo pendente, e
+  // a fase ainda não acabou. A próxima fase só sai depois da ÚLTIMA etapa.
+  if (prevPhase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
+    const prog = etapasProgress(matches, prevPhase);
+    if (!prog.completa) {
+      throw new Error(`Jogue as ${prog.total} etapas antes de gerar a próxima fase (a fase está na etapa ${prog.atual}).`);
+    }
+  }
 
   // Reconstrói os grupos da fase atual (ou um grupo único, se não houver subdivisão).
-  let storedGroups = await listPhaseGroups(modalityId, stageIndex);
+  // Americano em etapas: a classificação é UMA só, somando todas as etapas —
+  // os grupos de cada etapa não classificam ninguém sozinhos.
+  const tabelaUnica = prevPhase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+  let storedGroups = tabelaUnica ? [] : await listPhaseGroups(modalityId, stageIndex);
   if (storedGroups.length === 0) {
     // Fase de grupo único: monta um grupo a partir dos ids dos jogos, enriquecendo
     // cada entrant com gênero/nível/rótulo das inscrições (essencial para a
@@ -488,7 +506,7 @@ export async function advanceToNextPhase(params, actor) {
   const groupsRanked = storedGroups.map((g, i) => {
     const entrants = groupEntrants(g);
     const memberSet = new Set(entrants.flatMap((e) => e.members || [e.id]));
-    const groupMatches = matches.filter((m) => {
+    const groupMatches = tabelaUnica ? matches : matches.filter((m) => {
       if (m.group) return m.group === g.name;
       // grupo único: todos os jogos pertencem a ele
       return (m.side_a_ids || []).some((id) => memberSet.has(id));

@@ -66,6 +66,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.GAMIFICATION_V2],
   },
   {
+    id: 'tournament',
+    label: 'Torneios',
+    keys: [FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS],
+  },
+  {
     id: 'game_day',
     label: 'Dia de jogo',
     keys: [

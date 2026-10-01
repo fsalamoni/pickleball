@@ -74,6 +74,40 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     rows.push({ key, label, value, help, changed });
   };
 
+  // ----------------------------------------------------- americano em etapas
+  // Formato próprio: os grupos são refeitos a cada etapa e a tabela é uma só.
+  if (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
+    const volta = phase.round_robin_legs === 2;
+    add(
+      'etapas',
+      'Etapas',
+      `${phase.etapa_count} ${phase.etapa_count === 1 ? 'etapa' : 'etapas'}, grupos de ${phase.max_per_group}`,
+      'Em cada etapa, um Americano em cada grupo. A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou — e a próxima etapa só é gerada quando a anterior termina.',
+      true,
+    );
+    add(
+      'turnos',
+      'Turnos',
+      volta ? '2 turnos — cada dupla joga junta 2 vezes por etapa' : '1 turno — cada dupla joga junta 1 vez por etapa',
+      volta ? 'No returno, os mesmos parceiros e adversários, com os lados trocados.' : 'O padrão do Americano.',
+      volta,
+    );
+    const ordem = describeTiebreakOrder(phase.tiebreak_order);
+    const mudou = phase.tiebreak_order.length > 0
+      && phase.tiebreak_order.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
+    add(
+      'desempate',
+      'Classificação',
+      `Uma só, somando todas as etapas: ${ordem.map((c) => c.label).join(' → ')}`,
+      'O campeão é quem foi melhor no total. Com grupos de tamanhos diferentes alguém pode ter um jogo a mais — se quiser comparar por percentual, use o aproveitamento.',
+      mudou,
+    );
+    if (!isLast) {
+      add('classificados', 'Quem passa de fase', `Os ${phase.qualifiers_per_group} melhores da classificação geral`, 'Depois da última etapa.', phase.qualifiers_per_group !== 2);
+    }
+    return { rows, changedCount: rows.filter((r) => r.changed).length };
+  }
+
   // ---------------------------------------------------------------- divisão
   if (agrupada && gruposManuais > 0) {
     add(

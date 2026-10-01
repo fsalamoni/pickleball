@@ -26,8 +26,22 @@ import { normalizePhase, normalizePhases, supportsGroups, BRACKET_FORMATS } from
 import PhaseAdvancedRules from './PhaseAdvancedRules';
 import { describeStage } from '@/modules/tournament/domain/formatExplain';
 import { presetsForFormat, buildPreset } from '@/modules/tournament/domain/tournamentPresets';
+import { compatibleStageTypes } from '@/modules/tournament/domain/formatExplain';
+import {
+  ETAPAS_MIN, ETAPAS_MAX, TAMANHOS_DE_GRUPO,
+} from '@/modules/tournament/domain/americanoEtapasConfig';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
-const ROTATION_TYPES = [TOURNAMENT_STAGE_TYPE.AMERICANO, TOURNAMENT_STAGE_TYPE.MEXICANO];
+const ROTATION_TYPES = [
+  TOURNAMENT_STAGE_TYPE.AMERICANO, TOURNAMENT_STAGE_TYPE.MEXICANO, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS,
+];
+const isEtapas = (t) => t === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+
+/** "4 atletas — 3 jogos para cada um por etapa" */
+const TAMANHO_LABEL = Object.fromEntries(
+  TAMANHOS_DE_GRUPO.map((t) => [t, `${t} atletas — ${t - 1} jogos para cada um por etapa`]),
+);
 const isRotation = (t) => ROTATION_TYPES.includes(t);
 
 /* ----- Textos de ajuda (o que é cada opção e o que preencher a seguir) ----- */
@@ -103,7 +117,10 @@ function computePlayUnits(phases, format) {
 function phaseSummary(phase, index, phases) {
   const parts = [TOURNAMENT_STAGE_TYPE_LABELS[phase.type]];
   if (phase.scoring_override) parts.push(formatScoringSummary(phase.scoring_override));
-  if (supportsGroups(phase.type)) {
+  if (isEtapas(phase.type)) {
+    parts.push(`${phase.etapa_count} ${phase.etapa_count === 1 ? 'etapa' : 'etapas'}`);
+    parts.push(`grupos de ${phase.max_per_group}`);
+  } else if (supportsGroups(phase.type)) {
     if (phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT) parts.push(`${phase.group_count} grupos`);
     else if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) parts.push(`até ${phase.max_per_group}/grupo`);
     else parts.push('grupo único');
@@ -123,7 +140,9 @@ function phaseSummary(phase, index, phases) {
 function phaseIssues(phase, index, phases, format) {
   const issues = [];
   const isLast = index === phases.length - 1;
-  const allowed = availableStageTypes(format, true);
+  // Compatibilidade é do FORMATO (não da flag): um formato que saiu da lista
+  // de escolha continua válido para quem já o tem gravado.
+  const allowed = compatibleStageTypes(format);
   if (!allowed.includes(phase.type)) {
     issues.push('Formato incompatível com o tipo de inscrição desta modalidade.');
   }
@@ -156,8 +175,13 @@ function phaseIssues(phase, index, phases, format) {
  */
 export default function PhasesEditor({ phases, format, onChange, unit = 'atletas' }) {
   const DIVISION_HELP = divisionHelp(unit);
-  const stageOptions = Object.fromEntries(
-    availableStageTypes(format, true).map((k) => [k, TOURNAMENT_STAGE_TYPE_LABELS[k]]),
+  // Americano em etapas: só se OFERECE com a flag. A fase que já está nele
+  // continua com ele no seletor (flag tira a opção de escolher, não a de manter).
+  const etapasOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS);
+  const ofertados = availableStageTypes(format, true, { americanoEtapas: etapasOn });
+  const stageOptionsFor = (atual) => Object.fromEntries(
+    [...ofertados, ...(atual && !ofertados.includes(atual) && compatibleStageTypes(format).includes(atual) ? [atual] : [])]
+      .map((k) => [k, TOURNAMENT_STAGE_TYPE_LABELS[k]]),
   );
   const presets = presetsForFormat(format);
   const normalized = phases.map((p, i) => normalizePhase(p, { isFirst: i === 0 }));
@@ -295,9 +319,41 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                 <MiniSelect
                   label="Formato da fase"
                   value={phase.type}
-                  options={stageOptions}
+                  options={stageOptionsFor(phase.type)}
                   onChange={(v) => update(index, { type: v })}
                 />
+
+                {/* AMERICANO EM ETAPAS: quantas etapas e o tamanho dos grupos.
+                    A divisão é do formato (refeita a cada etapa), então os
+                    controles de grupo comuns não aparecem. */}
+                {isEtapas(phase.type) && (
+                  <>
+                    <div>
+                      <Label className="text-xs" htmlFor={`fase-${index}-etapas`}>Número de etapas</Label>
+                      <Input
+                        id={`fase-${index}-etapas`}
+                        type="number"
+                        min={ETAPAS_MIN}
+                        max={ETAPAS_MAX}
+                        value={phase.etapa_count}
+                        onChange={(e) => update(index, { etapa_count: e.target.value })}
+                        className="h-9"
+                      />
+                      <HelpText>
+                        Em cada etapa os grupos são refeitos, misturando quem ainda não se encontrou.
+                        A classificação soma todas as etapas. Dá para mudar depois: a próxima etapa
+                        só é gerada quando a anterior termina.
+                      </HelpText>
+                    </div>
+                    <MiniSelect
+                      label="Atletas por grupo"
+                      value={String(phase.max_per_group)}
+                      options={TAMANHO_LABEL}
+                      onChange={(v) => update(index, { max_per_group: Number(v) })}
+                      help="O Americano só fecha com 4, 5, 8 ou 9 atletas no grupo. Quando o número de inscritos não divide certo, a plataforma usa grupos de tamanhos vizinhos (ex.: 9 = 5 + 4) e reveza quem fica no maior."
+                    />
+                  </>
+                )}
 
                 {grouped && (
                   <MiniSelect
@@ -325,19 +381,23 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                 {/* IDA E VOLTA: existe para o grupo pequeno. Com 3 atletas, a
                     ida dá 2 jogos e a ida e volta dá 4 — que é o que quem se
                     inscreve espera. Só aparece onde há todos-contra-todos. */}
-                {(grouped || phase.type === TOURNAMENT_STAGE_TYPE.ROUND_ROBIN) && (
+                {(grouped || phase.type === TOURNAMENT_STAGE_TYPE.ROUND_ROBIN || isEtapas(phase.type)) && (
                   <MiniSelect
                     label="Turnos"
                     value={String(phase.round_robin_legs ?? 1)}
-                    options={{ 1: 'Só ida (cada confronto uma vez)', 2: 'Ida e volta (cada confronto duas vezes)' }}
+                    options={{ 1: '1 turno (só ida: cada confronto uma vez)', 2: '2 turnos (ida e volta: cada confronto duas vezes)' }}
                     onChange={(v) => update(index, { round_robin_legs: Number(v) })}
-                    help={String(phase.round_robin_legs) === '2'
-                      ? 'Dobra os jogos: bom para grupo pequeno, em que a ida sozinha deixaria cada um com dois jogos.'
-                      : 'O padrão. Com grupo de 3, considere ida e volta — dois jogos por atleta é pouco para quem se inscreveu.'}
+                    help={isRotation(phase.type)
+                      ? (String(phase.round_robin_legs) === '2'
+                        ? 'Cada dupla joga junta duas vezes (uma por turno), com os lados trocados no returno — o dobro de jogos.'
+                        : 'O padrão: cada dupla joga junta uma vez. Em 2 turnos, tudo se repete no returno, com os lados trocados.')
+                      : (String(phase.round_robin_legs) === '2'
+                        ? 'Dobra os jogos: bom para grupo pequeno, em que a ida sozinha deixaria cada um com dois jogos.'
+                        : 'O padrão. Com grupo de 3, considere ida e volta — dois jogos por atleta é pouco para quem se inscreveu.')}
                   />
                 )}
 
-                {!grouped && isFirst && (
+                {!grouped && isFirst && !isEtapas(phase.type) && (
                   <div>
                     <Label className="text-xs">Cabeças-de-chave</Label>
                     <Input type="number" min={0} value={phase.seed_count} onChange={(e) => update(index, { seed_count: e.target.value })} className="h-9" />
@@ -426,9 +486,13 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                     Quem se classifica para a próxima fase
                   </div>
                   <div>
-                    <Label className="text-xs">Classificados por grupo</Label>
+                    <Label className="text-xs">{isEtapas(phase.type) ? 'Classificados (da classificação geral das etapas)' : 'Classificados por grupo'}</Label>
                     <Input type="number" min={1} value={phase.qualifiers_per_group} onChange={(e) => update(index, { qualifiers_per_group: e.target.value })} className="h-9" />
+                    {isEtapas(phase.type) && (
+                      <HelpText>Os N primeiros da tabela única, somando todas as etapas.</HelpText>
+                    )}
                   </div>
+                  {!isEtapas(phase.type) && (
                   <div>
                     <Label className="text-xs">Repescagem (vagas extras)</Label>
                     <Input
@@ -448,6 +512,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                       0 = sem repescagem.
                     </HelpText>
                   </div>
+                  )}
                   <MiniSelect
                     label="Critério"
                     value={phase.qualifier_mode}

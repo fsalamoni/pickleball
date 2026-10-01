@@ -26,7 +26,9 @@ import { assignSchedule } from '../domain/scheduling.js';
 import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
 import { recommendedSwissRounds } from '../domain/swiss.js';
 import { recommendedMexicanoRounds } from '../domain/mexicano.js';
-import { matchesWithStaleSingleGroup, groupDocsInSingleGroupStages } from '../domain/phases.js';
+import { matchesWithStaleSingleGroup, groupDocsInSingleGroupStages, normalizePhase } from '../domain/phases.js';
+import { isActiveRegistration } from '../domain/checkin.js';
+import { listRegistrations } from './registrationService.js';
 
 const COL = 'tournament_matches';
 const GROUPS_COL = 'tournament_groups';
@@ -204,6 +206,15 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
         ? recommendedMexicanoRounds(ctx.participantIds.length)
         : recommendedSwissRounds(ctx.participantIds.length);
     ctx.seed = `${modalityId}_${stageIndex}_${stageType}`;
+  } else if (stageType === 'americano_etapas') {
+    // Próxima ETAPA: grupos refeitos, misturando quem ainda não se encontrou.
+    // Quem saiu da modalidade (inscrição cancelada ou desistência) não entra
+    // nos grupos novos — os jogos que já fez continuam valendo na tabela.
+    ctx.phase = normalizePhase(stage);
+    ctx.seed = `${modalityId}_${stageIndex}_etapas`;
+    const regs = await listRegistrations(modalityId);
+    const ativas = new Set(regs.filter(isActiveRegistration).map((r) => r.id));
+    ctx.excluir = regs.filter((r) => !ativas.has(r.id)).map((r) => r.id);
   } else if (stageType === 'double_knockout') {
     // Tamanho da chave derivado dos jogos da 1ª rodada (consistente com o sorteio).
     const wbR1 = matches.filter((m) => (m.bracket || 'wb') === 'wb' && (m.round || 1) === 1);
@@ -211,11 +222,14 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
   }
 
   const result = computeStageAdvance(stageType, matches, ctx);
+  if (result.error) throw new Error(result.error);
   if (result.complete) {
     return { created: 0, complete: true, championIds: result.championIds || [], scheduleWarnings: [] };
   }
   if (result.pending || !result.matches || result.matches.length === 0) {
-    throw new Error('Conclua todos os jogos da rodada atual antes de avançar.');
+    throw new Error(stageType === 'americano_etapas'
+      ? 'Conclua todos os jogos da etapa atual antes de gerar a próxima.'
+      : 'Conclua todos os jogos da rodada atual antes de avançar.');
   }
 
   // Monta os payloads dos novos jogos (ids estáveis). Numa modalidade de
@@ -237,7 +251,9 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
     modality_id: modalityId,
     stage_index: stageIndex,
     stage_type: stageType,
-    group: null,
+    // Só o Americano em etapas traz grupo aqui ("Etapa 2 · Grupo A"); nos
+    // outros formatos a rodada nova nasce sem grupo, como sempre.
+    group: m.group || null,
     bracket: m.bracket || null,
     round: m.round || 1,
     position: m.position || idx + 1,
@@ -509,6 +525,16 @@ export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
 
   if (pending.length === 0) throw new Error('Nenhum jogo pendente para resortear.');
 
+  // 🐞 Nos formatos em que a RODADA nasce do resultado (chave, dupla
+  // eliminação, suíço, Mexicano), o número da rodada é a estrutura: renumerar
+  // os jogos pendentes a partir de 1 faz o avanço achar que a rodada atual já
+  // acabou e gerar a seguinte por cima. Esses não se re-sorteiam.
+  const tipo = allMatches[0]?.stage_type;
+  const ehEtapas = tipo === 'americano_etapas';
+  if (stageSupportsAdvance(tipo) && !ehEtapas) {
+    throw new Error('Neste formato as rodadas saem dos resultados (chave, suíço ou Mexicano): a ordem dos jogos restantes não pode ser re-sorteada.');
+  }
+
   // Fisher-Yates inline com Math.random (reshuffle não precisa ser reproduzível)
   const shuffled = pending.slice();
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -516,10 +542,13 @@ export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 
-  // Reatribui rodadas garantindo que nenhum jogador jogue duas vezes na mesma rodada
+  // Reatribui rodadas garantindo que nenhum jogador jogue duas vezes na mesma rodada.
+  // No Americano em etapas as rodadas da etapa seguem DEPOIS das já jogadas
+  // (a numeração atravessa as etapas).
   const reassigned = [];
   const remaining = shuffled.slice();
-  let round = 1;
+  const jaJogadas = allMatches.filter((m) => doneStatuses.has(m.status)).map((m) => Number(m.round) || 0);
+  let round = ehEtapas && jaJogadas.length > 0 ? Math.max(...jaJogadas) + 1 : 1;
   while (remaining.length > 0) {
     const busy = new Set();
     const scheduled = [];
