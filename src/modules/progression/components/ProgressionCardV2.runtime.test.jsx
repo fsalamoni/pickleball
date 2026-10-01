@@ -79,7 +79,9 @@ describe('ProgressionCardV2', () => {
 
   it('streak com grace (última jogatina há 2 semanas) = 🔥 + grace', async () => {
     const now = Date.now();
-    const currentMonth = `${new Date(now).getFullYear()}-${String(new Date(now).getMonth() + 1).padStart(2, '0')}`;
+    // O mês do grace é o do Brasil (UTC−3), como em `monthKeyBR` — pelo fuso
+    // da máquina o teste reprovava entre 0h e 3h UTC do dia 1º.
+    const currentMonth = new Date(now - 3 * 60 * 60 * 1000).toISOString().slice(0, 7);
     await render({
       summary: { played: 0, wins: 0, podiums: 0, titles: 0, tournaments: 0 },
       matchDates: [now - 2 * 7 * 86400000, now - 3 * 7 * 86400000, now - 4 * 7 * 86400000],

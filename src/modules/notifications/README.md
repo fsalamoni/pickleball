@@ -4,10 +4,17 @@ Notificações in-app com **preferências por categoria** (Onda 9b).
 
 ## Status
 - **Services**: compartilhado em `core/services/notificationService.js`
-- **Hooks**: `useNotifications` (lê + `unreadCount` + `markAsRead` +
-  `markAllAsRead` Onda 1), `useNotificationPreferences` (Onda 9b)
-- **Domain**: `preferences.js` (puro, testado)
-- **Renderizado por**: `NotificationsMenu` no `V2Layout`
+- **Hooks**: `useNotifications` — UMA assinatura por usuário, compartilhada
+  por todos os leitores (sino, menu do avatar, gaveta, início, central); lê +
+  `unreadCount` + `markAsRead` + `markAsUnread` + `markAllAsRead` +
+  `allNotifications` (inclui as silenciadas) + `muted` (resumo do que as
+  preferências escondem). `useNotificationPreferences` (Onda 9b).
+- **Domain**: `preferences.js` e `noticeFeed.js` (área de cada aviso — pelo
+  tipo e, no `generic`, pelo destino —, hora, ordem, grupos por dia, filtros,
+  selo, recorte do sino, filtros na URL). Puros, testados.
+- **Renderizado por**: `NotificationsBell` (`v2/components/notifications/`) no
+  `V2Layout` e a central `/notificacoes` (`V2Notifications`, flag
+  `notifications_center`). Ver `docs/36-NOTIFICACOES.md`.
 - **Tests**: 15+
 
 ## Schema

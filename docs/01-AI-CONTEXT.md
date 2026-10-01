@@ -157,6 +157,7 @@ navegação nova.
 | `/inicio` | autenticado (V2) | Dashboard |
 | `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
 | `/configuracoes` | autenticado (V2) | Settings (privacidade, notificações, exportar dados) |
+| `/notificacoes` | autenticado (V2) | Central de notificações — todos os avisos, por dia, com filtros (flag `notifications_center`) |
 | `/404` | autenticado (V2) | NotFound (page_titles + not_found_page) |
 | `/buscar` | autenticado (V2) | GlobalSearch (busca federada) |
 | `/torneios` `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | autenticado (V2) | lista/criar/ingressar/guia |
@@ -302,8 +303,13 @@ flag OFF no Firestore + código**, depois migra (ver `migrateLegacyFlags`).
 
 `core/services/notificationService.js`: `createNotification(...)` e
 `notifyUsers(ids, ...)` (em lote, ≤400/batch). Coleção `notifications`.
-Hook `modules/notifications/hooks/useNotifications.js` alimenta o sino no
-`Layout`. Tipos (`NOTIFICATION_TYPE`): `chat_message`, `chat_invite`,
+Hook `modules/notifications/hooks/useNotifications.js` — **uma assinatura por
+usuário, compartilhada** (sino, menu do avatar, gaveta, início e central) —
+alimenta o sino (`v2/components/notifications/NotificationsBell.jsx`, com
+rolagem própria) e a central `/notificacoes` (flag `notifications_center`):
+todos os avisos, por dia, filtráveis por não lidas, ÁREA (`noticeArea`, que
+lê o tipo e, no `generic`, o destino do `link`) e busca; marcar lida e não
+lida. Ver `docs/36-NOTIFICACOES.md`. Tipos (`NOTIFICATION_TYPE`): `chat_message`, `chat_invite`,
 `forum_reply`, `forum_mention`, `event_invite`, `club_join_request`,
 `club_join_approved`, `club_join_rejected`, `club_invite`,
 `club_invite_accepted`, `club_event_published`, `tournament_open`,

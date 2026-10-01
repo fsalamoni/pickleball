@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **30 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **31 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -133,6 +133,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 35-JOGAR-ENTRAR-E-SAIR.md   🎾 ⭐ o "Jogar" abre no Dia de jogo; os dias do
 │   │                                     CLUBE para quem é membro; o botão de entrar e
 │   │                                     sair em todo lugar (PlayItemAction)
+│   ├── 36-NOTIFICACOES.md          🔔 ⭐ o sino que rola e cabe na tela + a central
+│   │                                     de notificações /notificacoes: os avisos
+│   │                                     antigos, por dia, com filtros (notifications_center)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -363,6 +366,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Por que o 'Jogar' do início não mostrava os dias de jogo com vaga?"** → 🐞 ele só lia os convites (`open_games`) e os jogos abertos; o dia de jogo que a ARENA marca no calendário nunca cria convite e ficava de fora (do início E do Procura-se jogo). Agora é uma lista só, `buildPlayList` (`modules/games/domain/playDiscovery.js`) via `usePlayDiscovery`, a MESMA no início e no Procura-se jogo: dias públicos dos próximos 30 dias (atleta e arena, com as vagas que sobram), jogos abertos e convites — do mais cedo ao mais tarde, sem o que já terminou (dia: pelo FIM; convite sem data: 14 dias); o que a pessoa já tem aparece com "Você vai" e o "Sair" (desde a onda do doc 35). A consulta é `visibility == 'public'` + `date IN [30 dias]`: a igualdade torna a regra provável e a LISTA de datas dispensa índice composto — **nunca** troque por faixa (`>=`), que pede índice novo (guarda `listUpcomingPublicGameDays.guard.test.js`; emulador em `tests/rules/publicGameDaysAhead.rules.test.js`). Ver `docs/34-MINHA-REGIAO.md`
 **"Quais são as abas do 'Jogar' e onde ele abre?"** → ⭐ **Dia de jogo → Procura-se jogo → Encontrar jogadores**, e tocar em "Jogar" abre `/dia-de-jogo` (`jogarHubTo` em `V2Layout.jsx`; guarda `src/core/guards/jogarAbas.test.js`). O Dia de jogo mostra os dias da pessoa E "Com vaga para você" (`OpenGameDaysForMe`); sem dia próprio, os com vaga vêm primeiro. Ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`
 **"Vou pôr um botão de ENTRAR num jogo/dia de jogo numa lista"** → `<PlayItemAction item={…} />` (`v2/components/games/play/`), sobre um item de `buildPlayList`. **Nunca** escreva o botão à mão: ele decide pela ORIGEM (atleta/clube → `joinPublicGameDay`; arena → `signUpToArenaGameDay`, com teto; arena por quadra → "Escolher a quadra", que abre o dia; jogo aberto → `slotActionState`; convite → conversa) e sai por `leaveGameDay`. O que a pessoa já tem fica com "Você vai" + "Sair" (sumir no clique parece falha); o início filtra por `playItemsForMe` (requisitos: faixa de nível do jogo aberto). O cartão é `PlayGameDayCard`, o mesmo no Procura-se jogo e no Dia de jogo
+**"O sino não mostra todas as notificações / onde vejo as antigas?"** → 🐞 a caixa do sino não tinha altura máxima e crescia além da tela (2.858 px medidos com 46 avisos numa tela de 900), escondendo a maior parte. Agora é `NotificationsBell` (`v2/components/notifications/`): cabe no espaço abaixo do botão e **só a lista rola**. Os antigos ficam na central `/notificacoes` (`V2Notifications`, flag `notifications_center`, default OFF): por dia, filtros de não lidas, área e busca **na URL**, marcar lida/NÃO lida, 30 por vez e o que está silenciado dito com "Mostrar também". Com a flag o sino mostra os 20 mais novos (`bellSlice`) e diz quantos ficaram de fora e quantos deles não foram lidos. Ver `docs/36-NOTIFICACOES.md`
+**"Vou ler notificações numa tela (lista, número de não lidas)"** → `useNotifications()`, **nunca** um `onSnapshot` próprio: é UMA assinatura por usuário, compartilhada (sino, menu do avatar, gaveta, início, central) — antes cada componente abria a sua e a mesma lista era lida duas e três vezes. A área do aviso é `noticeArea` (`notifications/domain/noticeFeed.js`): o tipo quando é específico e, no `generic` (quase todos), o DESTINO do `link`; a hora é `noticeTime` (o `created_at` pelo `instanteEmMs`, e na falta o `created_at_ms`). A consulta é `user_id == uid` **sem** `orderBy` — paginar no servidor pediria índice composto (backlog TRV-31); a tela pagina. Ninguém apaga aviso (a regra só deixa o admin): para tirar do caminho, marcar como lida
 **"O membro de um CLUBE vê os dias de jogo do clube no 'Jogar'?"** → vê: `listUpcomingClubGameDays` (`club_id == X` + `date IN [30 dias]`, uma consulta por clube, até 10) — privados, e é o `club_id` fixo que deixa a regra provar `isClubMember` (emulador: `tests/rules/clubGameDaysAhead.rules.test.js`; guarda de fonte no mesmo arquivo dos públicos). Entrar é `joinPublicGameDay` (que aceita o dia de clube; o privado que não é de clube recusa DIZENDO que é só por convite). Dentro do dia, `GameDayJoinPanel` vale para quem é do clube (`useJoinPanelApplies`) — inclusive quem organiza, porque quem agenda a data não vira jogador. Dia de arena "só para membros" **não existe**: todo dia de arena é público
 **"Vou tirar alguém que SAIU SOZINHO de um dia de jogo"** → `leaveGameDay(gameDayId, uid)` (`gameDayService.js`), **nunca** `removeGameDayParticipant` (que recalcula a lista de membros inteira). 🐞 A regra só deixa quem sai gravar a lista antiga MENOS ele; a recontagem tirava também o administrador nomeado não inscrito e era recusada, com a inscrição já apagada. `leaveGameDay` apaga a própria inscrição e faz `arrayRemove(uid)` — criador, administrador e convidado continuam membros; o dia do jogo aberto sai pela vitrine
 **"Tocar num dia de jogo leva para onde?"** → para DENTRO dele (`/dia-de-jogo/:id`), nunca para a página da arena. Lá o `GameDayJoinPanel` é a porta de entrada: dia da arena = `ArenaGameDaySignupCard` (vagas, quadra, marcar/desmarcar — o mesmo da página da arena); dia público do atleta = entrar/sair. Quem vê o painel decide `joinPanelApplies` (`games/domain/gameDayJoin.js`). 🐞 E entrar pelo caminho do atleta num dia de ARENA pulava o teto de vagas e, no jogo aberto, gravava só uma lista: `joinPublicGameDay` agora confere o dia no banco e delega a `signUpToArenaGameDay`
@@ -545,7 +550,8 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-09-30 (o "Jogar" abre no Dia de jogo, os dias do
+> Última atualização: 2026-10-01 (notificações: o sino que rola e a central
+> com os avisos antigos). Antes: 2026-09-30 (o "Jogar" abre no Dia de jogo, os dias do
 > clube e o botão de entrar em todo lugar). Antes: 2026-09-30 (o "Jogar" com os
 > dias de jogo das arenas + Minha região). Antes: 2026-09-30 (estoque que diz o que há para vender +
 > cadastro essencial). Antes: 2026-09-30 (varredura da plataforma). Antes: 2026-09-27 (Onda CJ — dicas guiadas); Onda CI (início sob medida); Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
@@ -554,6 +560,26 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Notificações: o sino que rola e a central com os avisos antigos**
+>   (2026-10-01): *"não há rolagem suficiente para ver todas as notificações
+>   que existem ou um ambiente para ver notificações passadas"*. **🐞 O sino
+>   escondia a maior parte dos avisos**: a caixa não tinha altura máxima e
+>   crescia além da tela — medido com 46 avisos numa tela de 900 px, ela tinha
+>   2.858 px, sem rolagem. Agora cabe no espaço abaixo do botão e só a lista
+>   rola, com o ícone da área, a hora ("há 5 min", "ontem, 14:05"), o selo 99+ e
+>   carregando/falha que não viram "nenhuma notificação" (sempre ligado). **A
+>   central** `/notificacoes` (flag `notifications_center`): os avisos novos e
+>   os antigos, por dia (Hoje, Ontem, últimos 7 dias, mês a mês), filtros de não
+>   lidas, área e busca na URL, marcar lida e NÃO lida, 30 por vez, e o que está
+>   silenciado dito; o sino mostra os 20 mais novos e "Ver todas" diz quantos
+>   ficaram de fora. "Notificações" no menu do avatar e na gaveta. **A área** de
+>   cada aviso sai do tipo e, no `generic` (quase todos), do destino do link.
+>   **Uma escuta só por pessoa** — o sino e o início liam a mesma lista duas
+>   vezes. De quebra: "Pendências" do início orientado a ação dizia "Nada
+>   pendente" com os avisos falhando; e quatro testes de progressão que
+>   reprovavam entre 0h e 3h UTC do dia 1º (o mês do grace é o do Brasil).
+>   **Banco: zero.** Ver `docs/36-NOTIFICACOES.md`.
 >
 > - **O "Jogar" que abre no Dia de jogo, os dias do clube e o botão de entrar
 >   em todo lugar** (2026-09-30): *"em jogar, a ordem de abas deve ser… dia de
@@ -2452,14 +2478,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6815 passing** (429 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
+| **Testes Vitest** | **6884 passing** (433 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
+| **V2 pages** | 85 (+V2Notifications — a central de notificações; +V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **34 em `firestore.indexes.json`** (+`tournament_matches[modality_id, stage_index, round]`, importado do painel; +`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **30 default OFF** (+`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **31 default OFF** (+`notifications_center` — a central de notificações; +`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

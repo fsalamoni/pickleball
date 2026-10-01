@@ -89,6 +89,7 @@ const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
 const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
 const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
+const V2Notifications = lazy(() => import('@/v2/pages/V2Notifications'));
 const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
 // Conteúdo de referência — nativo v2.
@@ -237,6 +238,8 @@ export default function V2App() {
           <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
           <Route path="configuracoes" element={<V2Settings />} />
+          {/* Central de notificações (flag notifications_center): todos os avisos, os novos e os antigos. */}
+          <Route path="notificacoes" element={<Isolada nome="notificacoes"><V2Notifications /></Isolada>} />
 
           {/* Conteúdo do esporte */}
           <Route path="ajuda" element={<V2Help />} />

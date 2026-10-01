@@ -454,9 +454,15 @@ Tabela de níveis + questionário auto-avaliativo.
 
 ## notifications/ — sino + preferências
 
-- `hooks/useNotifications` — lê `notifications` do usuário, expõe
-  `unreadCount`, `markAsRead`, **`markAllAsRead`** (Onda 1). Renderizado pelo
-  `NotificationsMenu` no `Layout`.
+- `hooks/useNotifications` — lê `notifications` do usuário numa assinatura
+  ÚNICA e compartilhada (`useSyncExternalStore`), expõe `unreadCount`,
+  `markAsRead`, `markAsUnread`, **`markAllAsRead`**, `allNotifications` e
+  `muted` (o que as preferências escondem). Renderizado pelo
+  `NotificationsBell` (`v2/components/notifications/`) no `V2Layout`.
+- `domain/noticeFeed` — área de cada aviso (tipo → destino), hora, ordem,
+  grupos por dia, filtros e o recorte do sino. Rota `/notificacoes`
+  (`V2Notifications`, flag `notifications_center`). Ver
+  `docs/36-NOTIFICACOES.md`.
 - **Preferências (Onda 9b)**: hook `useNotificationPreferences` — categorias
   silenciáveis (booking_confirmed, tournament_*, chat_*, forum_*, etc).
   Salvo em `users/{uid}.notification_prefs: {category: bool}`.

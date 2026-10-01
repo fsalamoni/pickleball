@@ -143,7 +143,7 @@ const GUIAS_BASE = [
         route: '/',
         target: 'botao-notificacoes',
         title: 'Seus avisos',
-        body: 'Convites, respostas de reserva, resultados e novidades dos seus clubes chegam neste sino.',
+        body: 'Convites, respostas de reserva, resultados e novidades dos seus clubes chegam neste sino. A lista rola: os mais antigos ficam embaixo.',
       },
       {
         id: 'dicas',

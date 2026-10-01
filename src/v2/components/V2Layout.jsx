@@ -39,11 +39,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
-import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
+import NotificationsBell, { NOTIFICATIONS_PATH } from '@/v2/components/notifications/NotificationsBell';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
-import { destinoDeAviso } from '@/core/domain/internalLink';
+import { formatUnreadBadge } from '@/modules/notifications/domain/noticeFeed';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import {
   DropdownMenu,
@@ -356,97 +356,6 @@ function NavItem({ item, active, onClick }) {
   );
 }
 
-function NotificationsMenu() {
-  const navigate = useNavigate();
-  const {
-    notifications, unreadCount, isError: avisosFalharam, retry: tentarAvisosDeNovo, markAsRead, markAllAsRead,
-  } = useNotifications();
-  const markAllOn = true;
-  const quickConfirmOn = true;
-
-  const handleMarkAll = async (event) => {
-    // Mantém o dropdown aberto enquanto marca.
-    event.preventDefault();
-    try {
-      await markAllAsRead();
-    } catch {
-      // Falha silenciosa: as notificações continuam não lidas.
-    }
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          data-dica="botao-notificacoes"
-          aria-label={unreadCount > 0 ? `Avisos (${unreadCount} não lidos)` : 'Avisos'}
-          className="btn-press relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm transition-colors hover:text-ink"
-        >
-          <Bell className="h-5 w-5" aria-hidden="true" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-acid text-[10px] font-bold text-ink">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <div className="flex items-center justify-between gap-2 p-2">
-          <span className="font-bold">Notificações</span>
-          {markAllOn && unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAll}
-              className="text-xs font-semibold text-gray-500 transition-colors hover:text-ink"
-            >
-              Marcar todas como lidas
-            </button>
-          )}
-        </div>
-        {avisosFalharam ? (
-          // Falha não é "nenhuma notificação".
-          <div role="alert" className="p-4 text-center text-sm text-amber-800">
-            <p>Não foi possível carregar os avisos.</p>
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); tentarAvisosDeNovo(); }}
-              className="mt-2 text-xs font-bold text-ink underline"
-            >
-              Tentar de novo
-            </button>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="p-4 text-center text-sm text-gray-500">Nenhuma notificação.</div>
-        ) : (
-          notifications.map((n) => (
-            <DropdownMenuItem
-              key={n.id}
-              onClick={() => {
-                const destino = destinoDeAviso(n.link);
-                if (destino) navigate(destino);
-                if (!n.read) markAsRead(n.id);
-              }}
-              className={cn('cursor-pointer items-start', !n.read && 'bg-acid/10')}
-            >
-              <div className="flex-1 space-y-1">
-                <p className="font-semibold">{n.title}</p>
-                <p className="text-xs text-gray-500">{n.message}</p>
-                {quickConfirmOn && (
-                  <PartnerInviteNotificationAction
-                    notification={n}
-                    onResolved={() => { if (!n.read) markAsRead(n.id); }}
-                  />
-                )}
-              </div>
-              {!n.read && <div className="ml-2 mt-1 h-2 w-2 rounded-full bg-acid" />}
-            </DropdownMenuItem>
-          ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 const BOTTOM_NAV_ITEMS = [
   { to: '/', label: 'Início', icon: LayoutGrid, exact: true },
   { to: '/torneios', label: 'Torneios', icon: Trophy, dica: 'nav-inferior-torneios' },
@@ -493,6 +402,10 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  // A mesma assinatura do sino (uma só por pessoa): contar aqui não custa leitura.
+  const { unreadCount } = useNotifications();
+  const seloAvisos = formatUnreadBadge(unreadCount);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -515,6 +428,17 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
           <Pencil className="mr-2 h-4 w-4" /> Editar perfil
         </DropdownMenuItem>
+        {/* A central de notificações (flag notifications_center): o histórico
+            completo, também a partir daqui — o sino mostra só os mais novos. */}
+        {centralAvisosOn && (
+          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(NOTIFICATIONS_PATH)}>
+            <Bell className="mr-2 h-4 w-4" />
+            <span className="flex-1">Notificações</span>
+            {seloAvisos && (
+              <span className="ml-2 rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">{seloAvisos}</span>
+            )}
+          </DropdownMenuItem>
+        )}
         {/* Terceiro ponto de acesso à ajuda (além da barra lateral e da gaveta
             do celular): é aqui que a pessoa procura quando não sabe nem por
             onde começar a procurar. */}
@@ -616,6 +540,9 @@ export default function V2Layout({ children }) {
   const navHubsOn = true;
   const legalCenterOn = true;
   const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  // A mesma assinatura do sino: o selo da gaveta não custa leitura nenhuma.
+  const { unreadCount: avisosNaoLidos } = useNotifications();
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
   // completa quando a flag está ligada; página de política como fallback.
   const legalDocsPath = legalCenterOn ? '/legal' : '/politica-uso';
@@ -857,7 +784,7 @@ export default function V2Layout({ children }) {
             {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
                 elas desligadas — é por ele que a pessoa liga. */}
             <BotaoDicas />
-            <NotificationsMenu />
+            <NotificationsBell />
             {userMenuOn && (
               <UserMenu
                 displayName={displayName}
@@ -972,6 +899,21 @@ export default function V2Layout({ children }) {
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
             {/* No celular não há o menu do avatar: a aparência mora aqui. */}
             <ThemeDrawerSwitcher />
+            {centralAvisosOn && (
+              <Link
+                to={NOTIFICATIONS_PATH}
+                onClick={closeMobile}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="flex-1">Notificações</span>
+                {avisosNaoLidos > 0 && (
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+                    {formatUnreadBadge(avisosNaoLidos)}
+                  </span>
+                )}
+              </Link>
+            )}
             {helpCenterOn && (
               <Link
                 to={helpLinkFor(location.pathname)}
