@@ -122,6 +122,14 @@ Configuração avançada do admin do torneio (**todos opcionais**, Onda AT):
 | `tiebreak_order` | `[]` | ordem dos critérios de desempate (vazio = a oficial) |
 | `cross_group_method` | `rate` | `rate` \| `absolute` \| `drop_last` |
 | `direct_entry` | `{mode:'none'}` | quem **entra direto** nesta fase, pulando as anteriores |
+| `etapa_count` | 3 | **só** em `type: 'americano_etapas'` (Americano aprimorado em etapas): quantas etapas (1–12). O tamanho do grupo é o `max_per_group` de sempre (4, 5, 8 ou 9) |
+
+Americano aprimorado em etapas (`type: 'americano_etapas'`, flag
+`tournament_americano_etapas`): a ETAPA de cada jogo mora no nome do grupo
+do jogo (`tournament_matches.group = "Etapa 2 · Grupo A"`), as rodadas seguem
+em sequência de uma etapa para a outra, e nenhum `tournament_groups` é gravado
+para o formato (a classificação é uma só). Ver
+`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
 
 `direct_entry` é `{ mode: 'none'\|'seeds'\|'manual', count, ids[] }`. Quem entra
 direto na fase 3 não aparece no sorteio nem na classificação das fases 1 e 2 —

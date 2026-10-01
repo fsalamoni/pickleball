@@ -13,6 +13,7 @@
 import { MODALITY_FORMAT, TOURNAMENT_STAGE_TYPE } from './constants.js';
 import { generateDraw, nextPowerOfTwo } from './draw.js';
 import { supportsGroups, BRACKET_FORMATS } from './phases.js';
+import { firstEtapaDraw } from './americanoEtapas.js';
 
 /** Dentro de um grupo, qual formato de jogo se aplica ao tipo da fase. */
 function withinGroupFormat(stageType) {
@@ -31,7 +32,7 @@ function withinGroupFormat(stageType) {
  * @returns {{ stageType: string, matches: object[] }}
  */
 export function buildPoolDraw(entrants, stageType, options = {}) {
-  const { seed = 'pool', seedCount = 0, playerMetaByMember = null } = options;
+  const { seed = 'pool', seedCount = 0, playerMetaByMember = null, legs = 1 } = options;
   const tokens = entrants.map((e) => e.id);
   const membersByToken = new Map(entrants.map((e) => [e.id, e.members || [e.id]]));
 
@@ -53,6 +54,10 @@ export function buildPoolDraw(entrants, stageType, options = {}) {
     seedCount,
     seed,
     playerMeta,
+    // Ida e volta (2 turnos) dentro do grupo. 🐞 Antes não chegava aqui: a
+    // fase de uma modalidade com VÁRIAS fases sorteava sempre só a ida, mesmo
+    // com "Ida e volta" escolhido no editor.
+    legs,
   });
 
   const mapSide = (side) => {
@@ -117,6 +122,17 @@ export function buildPhaseDraw(phase, groups, options = {}) {
   const seed = options.seed || 'phase';
   const playerMetaByMember = options.playerMetaByMember || null;
 
+  // Americano em etapas: o sorteio é a 1ª ETAPA. Os grupos são do formato
+  // (tamanhos que fecham o Americano, refeitos a cada etapa), então junta
+  // todos os atletas que chegaram e deixa o formato dividir. Nenhum grupo é
+  // gravado à parte: a etapa e o grupo de cada jogo moram no nome do grupo do
+  // jogo, e a classificação é uma só.
+  if (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
+    const ids = (groups || []).flatMap((g) => (g.entrants || []).map((e) => (e.members || [e.id])[0]));
+    const { matches } = firstEtapaDraw(ids, phase, { seed, playerMeta: playerMetaByMember });
+    return { stageType: phase.type, matches };
+  }
+
   if (supportsGroups(phase.type)) {
     const within = withinGroupFormat(phase.type);
     const isSingle = groups.length <= 1;
@@ -125,6 +141,7 @@ export function buildPhaseDraw(phase, groups, options = {}) {
       const d = buildPoolDraw(g.entrants, within, {
         seed: `${seed}:${g.name}`,
         playerMetaByMember,
+        legs: phase.round_robin_legs,
       });
       d.matches.forEach((m) => matches.push({ ...m, group: isSingle ? null : g.name }));
     });

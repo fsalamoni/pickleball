@@ -290,6 +290,17 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   `notifications_center`) com os avisos novos e antigos, por dia, filtros de
   não lidas, área e busca na URL, marcar lida/não lida e o que está silenciado
   dito; uma escuta só por pessoa. Zero banco. Ver `docs/36-NOTIFICACOES.md`.
+- ✅ **TRV-32** torneio: o torneio que a pessoa organiza e em que se
+  inscreveu aparece como dela no início ("Seus torneios"); 🐞 o check-in de
+  quem foi inscrito por outra pessoa dava "permissão negada" (o botão só
+  aparece para quem criou a inscrição) e "inscrição que joga" virou fonte única
+  (`isActiveRegistration`); 🐞 2 turnos valem em várias fases e no Americano;
+  🐞 a tabela da tela usa a ordem de desempate da fase; o **Americano
+  aprimorado em etapas** (flag `tournament_americano_etapas`). Zero coleção,
+  índice ou regra. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+- ⏳ **TRV-33** (sugestão) deixar o JOGADOR vinculado por outra pessoa fazer o
+  próprio check-in: pediria uma regra nova em `tournament_registrations` que
+  aceite só `status` confirmada → check-in + `checked_in_at`/`checked_in_by`.
 - ⏳ **TRV-30** (sugestão) silenciar CAMPANHAS (arenas, plataforma,
   professores): hoje são gravadas como `generic`, sem marca, e as preferências
   são por tipo. Pediria uma marca no `data` do aviso (`data.kind: 'campaign'`)

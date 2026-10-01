@@ -53,6 +53,7 @@ import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
 import { resolveRegistrationContact } from '@/modules/tournament/domain/registrationContact';
+import { hasCheckedIn, isActiveRegistration } from '@/modules/tournament/domain/checkin';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
@@ -140,6 +141,14 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
   const checkInMutation = useSetRegistrationCheckIn(modality.id);
+  // O check-in é opcional e só confirma presença: a inscrição continua jogando
+  // igual (`isActiveRegistration`). Falha não passa calada.
+  const setCheckIn = (r, checkedIn) => checkInMutation.mutate({ id: r.id, checkedIn }, {
+    onSuccess: () => toast.success(checkedIn
+      ? `Check-in feito: ${r.label || r.player_a_name || 'inscrição'}.`
+      : 'Check-in desfeito. A inscrição segue confirmada.'),
+    onError: (err) => toast.error(err?.message || 'Não foi possível registrar o check-in.'),
+  });
   const waitlistOn = true;
   const checkinOn = true;
   const paymentOn = true;
@@ -154,9 +163,8 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
         && (r.created_by === currentUserId || r.player_a_user_id === currentUserId)
       )) || null
     : null;
-  const checkedInCount = registrations.filter((r) => r.status === REGISTRATION_STATUS.CHECKED_IN).length;
-  const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length
-    + (checkinOn ? checkedInCount : 0);
+  const checkedInCount = registrations.filter(hasCheckedIn).length;
+  const confirmed = registrations.filter(isActiveRegistration).length;
   const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
@@ -239,8 +247,8 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <V2Badge variant={r.status === REGISTRATION_STATUS.CONFIRMED ? 'success' : 'secondary'}>
-                        {REGISTRATION_STATUS_LABELS[r.status]}
+                      <V2Badge tone={isActiveRegistration(r) ? 'green' : 'neutral'}>
+                        {REGISTRATION_STATUS_LABELS[r.status] || r.status}
                       </V2Badge>
                       {paymentOn && isAdmin && r.status === REGISTRATION_STATUS.PENDING_PAYMENT && r.payment_declared_at && (
                         <div className="mt-1 text-[11px] font-medium text-amber-700">pagamento informado</div>
@@ -267,12 +275,12 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                           </V2Button>
                         )}
                         {checkinOn && r.status === REGISTRATION_STATUS.CONFIRMED && (
-                          <V2Button size="icon" variant="ghost" title="Fazer check-in" aria-label="Fazer check-in" onClick={() => checkInMutation.mutate({ id: r.id, checkedIn: true })}>
+                          <V2Button size="icon" variant="ghost" title="Fazer check-in" aria-label="Fazer check-in" disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, true)}>
                             <UserCheck className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {checkinOn && r.status === REGISTRATION_STATUS.CHECKED_IN && (
-                          <V2Button size="icon" variant="ghost" title="Desfazer check-in" aria-label="Desfazer check-in" onClick={() => checkInMutation.mutate({ id: r.id, checkedIn: false })}>
+                          <V2Button size="icon" variant="ghost" title="Desfazer check-in" aria-label="Desfazer check-in" disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, false)}>
                             <Undo2 className="w-4 h-4 text-amber-600" />
                           </V2Button>
                         )}

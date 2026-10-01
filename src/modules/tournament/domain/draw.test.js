@@ -589,3 +589,18 @@ describe('⭐ ida e volta no grupo (o caso do grupo pequeno)', () => {
     expect(buildGroupMatches(grupos, { legs: 2 })).toHaveLength(12);
   });
 });
+
+describe('withReturnLeg — o returno', () => {
+  it('repete os jogos com os lados trocados e as rodadas em seguida', async () => {
+    const { withReturnLeg } = await import('./draw.js');
+    const ida = [{ round: 1, side_a: 'a', side_b: 'b' }, { round: 2, side_a: 'a', side_b: 'c' }];
+    expect(withReturnLeg(ida, 2)).toEqual([
+      ...ida,
+      { round: 3, side_a: 'b', side_b: 'a' },
+      { round: 4, side_a: 'c', side_b: 'a' },
+    ]);
+    expect(withReturnLeg(ida, 1)).toBe(ida);
+    expect(withReturnLeg(ida)).toBe(ida);
+    expect(withReturnLeg([], 2)).toEqual([]);
+  });
+});

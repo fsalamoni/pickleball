@@ -69,3 +69,43 @@ describe('buildPhaseDraw — mata-mata define confrontos pela ordem (A×B, C×D)
     expect([...r1[1].side_a, ...r1[1].side_b].sort()).toEqual(['cf', 'cm', 'df', 'dm']);
   });
 });
+
+describe('🐞 2 turnos (ida e volta) valem também na modalidade de VÁRIAS fases', () => {
+  const grupos = [
+    { name: 'Grupo A', entrants: ['a1', 'a2', 'a3'].map((id) => entrant(id)) },
+    { name: 'Grupo B', entrants: ['b1', 'b2', 'b3'].map((id) => entrant(id)) },
+  ];
+
+  it('⭐ grupo de 3 em ida e volta: 6 jogos por grupo, 4 por atleta, lados trocados no returno', () => {
+    const fase = normalizePhase({ type: TOURNAMENT_STAGE_TYPE.GROUPS, division_mode: PHASE_DIVISION_MODE.GROUP_COUNT, group_count: 2, round_robin_legs: 2 });
+    const draw = buildPhaseDraw(fase, grupos, { seed: 'v' });
+    const doA = draw.matches.filter((m) => m.group === 'Grupo A');
+    expect(doA).toHaveLength(6);
+    const jogosDe = (id) => doA.filter((m) => [].concat(m.side_a, m.side_b).includes(id)).length;
+    expect(jogosDe('a1')).toBe(4);
+    const chave = (m) => `${[].concat(m.side_a)}|${[].concat(m.side_b)}`;
+    const ida = doA.slice(0, 3).map(chave);
+    const volta = doA.slice(3).map((m) => `${[].concat(m.side_b)}|${[].concat(m.side_a)}`);
+    expect(volta.sort()).toEqual(ida.sort());
+    expect(Math.min(...doA.slice(3).map((m) => m.round))).toBeGreaterThan(Math.max(...doA.slice(0, 3).map((m) => m.round)));
+  });
+
+  it('só ida (o padrão) segue igual a antes', () => {
+    const fase = normalizePhase({ type: TOURNAMENT_STAGE_TYPE.GROUPS, division_mode: PHASE_DIVISION_MODE.GROUP_COUNT, group_count: 2 });
+    expect(buildPhaseDraw(fase, grupos, { seed: 'v' }).matches.filter((m) => m.group === 'Grupo A')).toHaveLength(3);
+  });
+
+  it('⭐ Americano em ida e volta: cada dupla joga junta 2 vezes', () => {
+    const fase = normalizePhase({ type: TOURNAMENT_STAGE_TYPE.AMERICANO, round_robin_legs: 2 });
+    const quatro = [{ name: 'Grupo A', entrants: ['p1', 'p2', 'p3', 'p4'].map((id) => entrant(id)) }];
+    const { matches } = buildPhaseDraw(fase, quatro, { seed: 'v' });
+    expect(matches).toHaveLength(6);
+    const duplas = new Map();
+    matches.forEach((m) => [m.side_a, m.side_b].forEach((lado) => {
+      const k = [...lado].sort().join('+');
+      duplas.set(k, (duplas.get(k) || 0) + 1);
+    }));
+    expect([...duplas.values()].every((v) => v === 2)).toBe(true);
+    expect(duplas.size).toBe(6);
+  });
+});

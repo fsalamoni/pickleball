@@ -71,7 +71,7 @@ const TORNEIO = {
         'Modalidade é cada disputa dentro do torneio — "Dupla Masculina B", "Simples Feminina A", "Mista Open". É nela que ficam as inscrições, os jogos e a classificação.',
         'Para cada uma você define: FORMATO (simples, duplas ou equipes), GÊNERO, FAIXA ETÁRIA, o MODELO DA CHAVE (grupos, eliminatória, todos contra todos, suíço, americano, mexicano…), as quadras disponíveis e o horário de início.',
         'Não existe limite: crie quantas modalidades o seu torneio tiver. Cada uma corre de forma independente das outras.',
-        'Cada FASE tem um bloco "Regras avançadas", e ali praticamente tudo é seu: tamanho de cada grupo à mão, ida e volta, quantos passam em cada grupo, REPESCAGEM (vagas extras para os melhores da colocação seguinte ao corte), a ORDEM dos critérios de desempate e como comparar quem veio de grupos de tamanhos diferentes.',
+        'No cartão de cada fase ficam os TURNOS (1 turno, ou 2 turnos: ida e volta). E cada FASE tem um bloco "Regras avançadas", e ali praticamente tudo é seu: tamanho de cada grupo à mão, quantos passam em cada grupo, REPESCAGEM (vagas extras para os melhores da colocação seguinte ao corte), a ORDEM dos critérios de desempate e como comparar quem veio de grupos de tamanhos diferentes.',
       ],
       tip: 'Não mexer em nada é uma escolha legítima: em branco, cada campo vale o padrão do regulamento. Na dúvida sobre o modelo de chave, abra o Guia de formatos (Torneios → Guia).',
     },
@@ -83,7 +83,7 @@ const TORNEIO = {
         'Cada inscrição tem um estado que você controla: Pagamento pendente → Confirmada → Check-in feito. Há também Lista de espera, para quando a modalidade lota, e Cancelada.',
         'Na aba você confirma pagamento, faz e desfaz check-in, promove alguém da lista de espera, edita os dados da inscrição e remove quem desistiu.',
       ],
-      tip: 'O check-in serve para o dia do torneio: é como você separa quem apareceu de quem só se inscreveu, antes de sortear.',
+      tip: 'O check-in é opcional e não muda o sorteio: confirmada, com ou sem check-in, a inscrição joga. Ele serve para conferir, no dia, quem já chegou — quem não veio sai pela inscrição (cancelar), não pela falta do check-in.',
     },
     {
       id: 'sorteio',

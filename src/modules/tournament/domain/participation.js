@@ -41,6 +41,33 @@ function isInactiveStatus(status) {
   return status === REGISTRATION_STATUS.CANCELLED || status === REGISTRATION_STATUS.WITHDRAWN;
 }
 
+/** Da inscrição que mais "vale" para a que menos vale (para resumir várias). */
+const ORDEM_DO_MEU_STATUS = [
+  REGISTRATION_STATUS.CHECKED_IN,
+  REGISTRATION_STATUS.CONFIRMED,
+  REGISTRATION_STATUS.PENDING_PAYMENT,
+  REGISTRATION_STATUS.WAITLIST,
+];
+
+/**
+ * Resume as MINHAS inscrições num torneio: estou nele como jogador? Com que
+ * status? (Várias modalidades ⇒ vale a que mais "vale": com check-in, depois
+ * confirmada, depois pagamento pendente, depois lista de espera.)
+ *
+ * Cancelada e desistência não contam: quem saiu não está "inscrito". Inscrição
+ * sem status conhecido conta como inscrição (é o caso conservador — melhor
+ * mostrar o torneio do que escondê-lo).
+ *
+ * @param {Array<{ status?: string }>} registrations  as minhas, de um torneio
+ * @returns {{ isPlayer: boolean, status: string|null }}
+ */
+export function summarizeMyRegistrations(registrations = []) {
+  const valendo = (registrations || []).filter((r) => r && !isInactiveStatus(r.status));
+  if (valendo.length === 0) return { isPlayer: false, status: null };
+  const melhor = ORDEM_DO_MEU_STATUS.find((st) => valendo.some((r) => r.status === st));
+  return { isPlayer: true, status: melhor || valendo[0].status || null };
+}
+
 /**
  * Monta o histórico agrupado por torneio.
  *

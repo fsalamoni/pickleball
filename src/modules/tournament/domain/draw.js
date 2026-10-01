@@ -187,6 +187,30 @@ export function buildRoundRobinMatches(participantIds, options = {}) {
   return [...ida, ...volta];
 }
 
+/**
+ * Segundo TURNO (returno) de uma programação já pronta: os mesmos jogos de
+ * novo, com os lados trocados, em rodadas numeradas em seguida.
+ *
+ * É o "ida e volta" do Americano: no returno cada dupla volta a jogar junta e
+ * cada um volta a enfrentar os mesmos adversários — o dobro de jogos, com o
+ * mesmo equilíbrio. Com `legs` 1 (o padrão) devolve a lista intacta.
+ *
+ * @param {Array<{ round?: number, side_a: any, side_b: any }>} matches
+ * @param {number} [legs]
+ */
+export function withReturnLeg(matches, legs = 1) {
+  const turnos = Math.max(1, Math.min(2, Math.floor(Number(legs)) || 1));
+  if (turnos === 1 || !Array.isArray(matches) || matches.length === 0) return matches;
+  const ultimaRodada = Math.max(...matches.map((m) => Number(m.round) || 1));
+  const volta = matches.map((m) => ({
+    ...m,
+    side_a: m.side_b,
+    side_b: m.side_a,
+    round: (Number(m.round) || 1) + ultimaRodada,
+  }));
+  return [...matches, ...volta];
+}
+
 /* ----------------------------- Mata-mata (chaves) ----------------------- */
 
 /**
@@ -1072,7 +1096,7 @@ export function generateDraw(input) {
     }
     return {
       stageType: 'americano',
-      matches: buildAmericanoRotation(participants, { seed, playerMeta }),
+      matches: withReturnLeg(buildAmericanoRotation(participants, { seed, playerMeta }), legs),
     };
   }
   if (stageType === 'mexicano') {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toMillis, partnerNameFor, partnerPhotoFor, buildParticipationHistory } from './participation.js';
+import { toMillis, partnerNameFor, partnerPhotoFor, buildParticipationHistory, summarizeMyRegistrations } from './participation.js';
 import { REGISTRATION_STATUS } from './constants.js';
 
 describe('toMillis', () => {
@@ -110,5 +110,22 @@ describe('buildParticipationHistory', () => {
     expect(history[0].tournament).toBeNull();
     expect(history[0].entries[0].modality).toBeNull();
     expect(history[0].entries[0].ranking).toBeNull();
+  });
+});
+
+describe('summarizeMyRegistrations — estou no torneio como jogador?', () => {
+  it('sem inscrição, ou só canceladas/desistências: não', () => {
+    expect(summarizeMyRegistrations([])).toEqual({ isPlayer: false, status: null });
+    expect(summarizeMyRegistrations([{ status: 'cancelled' }, { status: 'withdrawn' }])).toEqual({ isPlayer: false, status: null });
+  });
+
+  it('várias modalidades: vale a que mais vale (check-in > confirmada > pagamento > espera)', () => {
+    expect(summarizeMyRegistrations([{ status: 'waitlist' }, { status: 'confirmed' }]).status).toBe('confirmed');
+    expect(summarizeMyRegistrations([{ status: 'checked_in' }, { status: 'confirmed' }]).status).toBe('checked_in');
+    expect(summarizeMyRegistrations([{ status: 'pending_payment' }, { status: 'cancelled' }])).toEqual({ isPlayer: true, status: 'pending_payment' });
+  });
+
+  it('status desconhecido conta como inscrição (melhor mostrar do que esconder)', () => {
+    expect(summarizeMyRegistrations([{}])).toEqual({ isPlayer: true, status: null });
   });
 });

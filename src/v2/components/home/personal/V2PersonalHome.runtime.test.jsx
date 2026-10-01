@@ -226,6 +226,38 @@ describe('⭐ cada pessoa vê a SUA tela inicial', () => {
   });
 });
 
+describe('🐞 o torneio que eu criei e em que me inscrevi', () => {
+  it('⭐ aparece em "Seus torneios" como meu (organizo e jogo) — e não em "inscreva-se"', async () => {
+    estado.perfil.interests = ['play_tournaments'];
+    const meu = {
+      id: 'meu', name: 'Aberto da Ana', my_role: 'owner', is_player: true, my_registration_status: 'confirmed',
+      status: 'registrations_open', city: 'Porto Alegre', state: 'RS', registration_deadline: '2026-10-01', starts_at: '2026-10-03',
+    };
+    estado.meus = ok([meu]);
+    estado.publicos = ok([meu, { id: 'outro', name: 'Torneio de Canoas', status: 'registrations_open', city: 'Canoas', state: 'RS', registration_deadline: '2026-10-02' }]);
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="torneios"]');
+    expect(secao.textContent).toContain('Seus torneios');
+    expect(secao.textContent).toContain('Você organiza e joga');
+    const linhasDoMeu = [...secao.querySelectorAll('a')].filter((a) => a.textContent.includes('Aberto da Ana'));
+    expect(linhasDoMeu).toHaveLength(1);
+    expect(linhasDoMeu[0].getAttribute('href')).toBe('/torneios/meu');
+    expect(linhasDoMeu[0].textContent).not.toContain('inscreva-se');
+    expect(secao.textContent).toContain('Torneio de Canoas');
+  });
+
+  it('organizo sem jogar: entra em "Seus torneios" levando à gestão', async () => {
+    estado.perfil.interests = ['play_tournaments'];
+    estado.meus = ok([{ id: 'org', name: 'Copa do Clube', my_role: 'admin', is_player: false, status: 'registrations_open', registration_deadline: '2026-10-01' }]);
+    estado.publicos = ok([]);
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="torneios"]');
+    const link = [...secao.querySelectorAll('a')].find((a) => a.textContent.includes('Copa do Clube'));
+    expect(link.getAttribute('href')).toBe('/torneios/org/gerenciar');
+    expect(link.textContent).toContain('Você organiza');
+  });
+});
+
 describe('⭐ falha não é vazio', () => {
   it('torneios que não carregaram: diz que falhou, nunca "nenhum torneio"', async () => {
     estado.perfil.interests = ['play_tournaments'];

@@ -13,6 +13,7 @@ import {
   REGISTRATION_STATUS,
   TOURNAMENT_STATUS,
 } from '@/modules/tournament/domain/constants';
+import { isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { V2Badge, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 function formatDate(value) {
@@ -33,7 +34,7 @@ function tournamentStatusTone(status) {
 }
 
 function registrationStatusTone(status) {
-  if (status === REGISTRATION_STATUS.CONFIRMED || status === REGISTRATION_STATUS.CHECKED_IN) return 'green';
+  if (isActiveRegistration({ status })) return 'green';
   if (status === REGISTRATION_STATUS.PENDING_PAYMENT || status === REGISTRATION_STATUS.WAITLIST) return 'amber';
   if (status === REGISTRATION_STATUS.CANCELLED || status === REGISTRATION_STATUS.WITHDRAWN) return 'red';
   return 'neutral';

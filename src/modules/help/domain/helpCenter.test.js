@@ -543,13 +543,13 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
 
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
-      my_region: true, notifications_center: true,
+      my_region: true, notifications_center: true, tournament_americano_etapas: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
-      guided_tips: true, my_region: true, notifications_center: true,
+      guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
@@ -580,5 +580,22 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     expect(ligado.getArticle(HELP_SECTION.START, 'dicas')).not.toBeNull();
     expect(ligado.forRoute('/configuracoes').articles.map((a) => a.id)).toContain('dicas');
     expect(ligado.faq().map((f) => f.id)).toContain('dicas');
+  });
+});
+
+describe('o Americano aprimorado em etapas na ajuda', () => {
+  it('o artigo só existe com a flag; o de 2 turnos vale sempre', () => {
+    const desligado = helpCatalog({});
+    const ids = desligado.all().map((a) => a.id);
+    expect(ids).not.toContain('americano-etapas');
+    expect(ids).toContain('dois-turnos');
+    expect(helpCatalog({ tournament_americano_etapas: true }).all().map((a) => a.id)).toContain('americano-etapas');
+  });
+
+  it('o check-in é explicado como OPCIONAL, sem mexer no sorteio', () => {
+    const artigo = allHelpArticles().find((a) => a.id === 'inscrever-torneio');
+    const texto = JSON.stringify(artigo.blocks);
+    expect(texto).toMatch(/opcional/);
+    expect(texto).not.toMatch(/é como o torneio sabe quem apareceu, antes de sortear/);
   });
 });

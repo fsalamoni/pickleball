@@ -29,6 +29,7 @@
 
 import { TOURNAMENT_STAGE_TYPE, TOURNAMENT_STAGE_TYPE_LABELS } from './constants.js';
 import { americanoMatchCount } from './draw.js';
+import { etapaGroupSizes } from './americanoEtapas.js';
 import { buildNextPhaseEntrants } from './phaseProgression.js';
 
 /**
@@ -42,6 +43,19 @@ import { buildNextPhaseEntrants } from './phaseProgression.js';
 export function phaseDrawIssues(phase, groups, { isTeam = false } = {}) {
   const issues = [];
   const unidade = isTeam ? 'equipe(s)' : 'atleta(s)';
+  // Americano em etapas: os grupos são do próprio formato (refeitos a cada
+  // etapa), então o que se confere é o TOTAL de atletas, não cada grupo.
+  if (phase?.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
+    const todos = (groups || []).flatMap((g) => g.entrants || []);
+    if (isTeam) issues.push('o Americano em etapas é individual e não vale para modalidades de equipes');
+    if (todos.some((e) => (e.members || [e.id]).length !== 1)) {
+      issues.push('o Americano em etapas é individual: cada participante precisa ser um atleta, não uma dupla formada');
+    }
+    if (!etapaGroupSizes(todos.length, phase.max_per_group)) {
+      issues.push(`com ${todos.length} atleta(s) os grupos do Americano não fecham (eles fecham com 4, 5, 8, 9, 12, 13… atletas)`);
+    }
+    return issues;
+  }
   (groups || []).forEach((g) => {
     const n = (g.entrants || []).length;
     const name = g.name || 'único';

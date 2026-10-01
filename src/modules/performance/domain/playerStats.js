@@ -18,6 +18,8 @@ import { MODALITY_FORMAT, TOURNAMENT_STATUS, TOURNAMENT_STAGE_TYPE } from '@/mod
 const ROTATION_DOUBLES_STAGES = new Set([
   TOURNAMENT_STAGE_TYPE.AMERICANO,
   TOURNAMENT_STAGE_TYPE.MEXICANO,
+  // Americano em etapas: cada etapa é um Americano — duplas por rotação.
+  TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS,
 ]);
 
 /** A modalidade tem alguma fase de rotação (americana/mexicano) → jogos 2×2. */

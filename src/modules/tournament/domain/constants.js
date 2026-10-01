@@ -33,6 +33,10 @@ export const TOURNAMENT_STAGE_TYPE = Object.freeze({
   SWISS: 'swiss',                     // sistema suíço (pareamento por pontuação)
   AMERICANO: 'americano',             // formato americano (rotação)
   MEXICANO: 'mexicano',               // mexicano (rotação dinâmica por classificação)
+  // Americano em ETAPAS: a cada etapa os grupos são refeitos, misturando quem
+  // ainda não se encontrou; a classificação soma todas as etapas. Ver
+  // `domain/americanoEtapas.js` (flag `tournament_americano_etapas`).
+  AMERICANO_ETAPAS: 'americano_etapas',
 });
 
 export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
@@ -43,6 +47,7 @@ export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.SWISS]: 'Sistema suíço',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 'Americana (rotação)',
   [TOURNAMENT_STAGE_TYPE.MEXICANO]: 'Mexicano (rotação dinâmica)',
+  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]: 'Americano aprimorado em etapas',
 });
 
 /**
@@ -64,6 +69,7 @@ export const STAGE_TYPES_BY_FORMAT = Object.freeze({
     TOURNAMENT_STAGE_TYPE.SWISS,
     TOURNAMENT_STAGE_TYPE.AMERICANO,
     TOURNAMENT_STAGE_TYPE.MEXICANO,
+    TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS,
   ]),
   [MODALITY_FORMAT.DOUBLES]: Object.freeze([
     TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
@@ -89,8 +95,13 @@ export const ADVANCED_STAGE_TYPES = Object.freeze([TOURNAMENT_STAGE_TYPE.MEXICAN
  * @param {boolean} [advancedEnabled]
  * @returns {string[]}
  */
-export function availableStageTypes(format, advancedEnabled = false) {
-  const all = STAGE_TYPES_BY_FORMAT[format] || [];
+export function availableStageTypes(format, advancedEnabled = false, options = {}) {
+  // Formatos atrás de flag própria: só se OFERECE com a flag ligada. Quem já
+  // tem a fase gravada num deles continua com ela (o editor acrescenta o tipo
+  // atual à lista) — flag tira a opção de escolher, nunca a de manter.
+  const all = (STAGE_TYPES_BY_FORMAT[format] || []).filter(
+    (t) => t !== TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS || options.americanoEtapas === true,
+  );
   if (advancedEnabled) return [...all];
   return all.filter((t) => !ADVANCED_STAGE_TYPES.includes(t));
 }

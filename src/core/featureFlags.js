@@ -361,6 +361,19 @@ export const FEATURE_FLAG = Object.freeze({
    * ou não lida usa os campos de sempre (`read`, `read_at`).
    */
   NOTIFICATIONS_CENTER: 'notifications_center',
+
+  /**
+   * AMERICANO APRIMORADO EM ETAPAS — formato de fase de torneio (inscrição
+   * individual): em cada etapa os atletas jogam um Americano em grupos (de 4,
+   * por padrão); a cada etapa os grupos são refeitos misturando quem ainda não
+   * se encontrou, e a classificação é uma só, somando todas as etapas.
+   * Desligada, o formato não é oferecido no editor de fases — modalidades já
+   * criadas nele seguem funcionando.
+   *
+   * Zero banco: a etapa de cada jogo mora no nome do grupo que o jogo sempre
+   * teve, e a fase ganha só `etapa_count` dentro de `stages[]`.
+   */
+  TOURNAMENT_AMERICANO_ETAPAS: 'tournament_americano_etapas',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -473,6 +486,18 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'lida ou não lida. O sino mostra os 20 mais novos e leva à página. '
       + 'Nada novo é gravado no banco. Desligada, o sino mostra a lista '
       + 'inteira, com rolagem, e a página não existe.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS]: {
+    label: 'Torneio — Americano aprimorado em etapas',
+    description:
+      'Oferece um formato novo de fase para modalidades de inscrição '
+      + 'individual: os atletas jogam em etapas, cada etapa um Americano em '
+      + 'grupos (de 4, 5, 8 ou 9). A cada etapa os grupos são refeitos, '
+      + 'misturando quem ainda não se encontrou para criar o máximo de jogos '
+      + 'inéditos, e a classificação é uma só, somando todas as etapas — o '
+      + 'campeão é quem foi melhor no total. O organizador escolhe quantas '
+      + 'etapas. Desligada, o formato some do editor daqui para frente; as '
+      + 'modalidades já criadas nele seguem funcionando.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

@@ -52,7 +52,7 @@ import {
   buildPartnerInviteNotificationData,
   canRespondToPartnerInvite,
 } from '../domain/partnerInvite.js';
-import { canSelfCheckIn } from '../domain/checkin.js';
+import { isActiveRegistration, selfCheckInState } from '../domain/checkin.js';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -606,10 +606,7 @@ export async function ensurePlaceholderRegistrations(modality, actor) {
   }
   const all = await listRegistrations(modality.id);
   const existingPlaceholders = all.filter((r) => r.is_placeholder);
-  const realConfirmed = all.filter(
-    (r) => !r.is_placeholder
-      && (r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN),
-  );
+  const realConfirmed = all.filter((r) => !r.is_placeholder && isActiveRegistration(r));
   const need = neededPlaceholderCount(realConfirmed.length, max);
 
   const ops = [];
@@ -775,17 +772,28 @@ export async function undoRegistrationCheckIn(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, checked_in_at: null }, actor);
 }
 
+/** O que dizer a quem tentou o próprio check-in e não pode (`selfCheckInState`). */
+const SELF_CHECKIN_RECUSA = Object.freeze({
+  feito: 'O check-in desta inscrição já foi feito.',
+  fora_do_dia: 'O check-in abre quando o torneio começa.',
+  nao_confirmada: 'O check-in vale para inscrição confirmada.',
+  outra_pessoa: 'Esta inscrição foi feita por outra pessoa: o check-in é com ela ou com a organização, na mesa do torneio.',
+  nao_e_minha: 'Esta inscrição não é sua.',
+});
+
 /**
- * Check-in feito pelo próprio atleta (flag athlete_self_checkin): válido
- * apenas com o torneio em andamento e a inscrição confirmada, pelo criador
- * da inscrição ou jogador A vinculado.
+ * Check-in feito pelo próprio atleta: válido com o torneio em andamento e a
+ * inscrição confirmada, por QUEM CRIOU a inscrição — o mesmo que a regra do
+ * banco aceita. Recusa dizendo o motivo, em vez de deixar o banco recusar com
+ * um "permissão negada" que parece dizer que a pessoa não está inscrita.
  */
 export async function selfCheckInRegistration(id, actor) {
   const registration = await getRegistration(id);
   if (!registration) throw new Error('Inscrição não encontrada.');
   const tournament = await getTournament(registration.tournament_id);
-  if (!canSelfCheckIn({ tournament, registration, uid: actor?.uid })) {
-    throw new Error('O check-in não está disponível para esta inscrição.');
+  const estado = selfCheckInState({ tournament, registration, uid: actor?.uid });
+  if (!estado.pode) {
+    throw new Error(SELF_CHECKIN_RECUSA[estado.motivo] || 'O check-in não está disponível para esta inscrição.');
   }
   await updateRegistration(id, {
     status: REGISTRATION_STATUS.CHECKED_IN,

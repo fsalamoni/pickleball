@@ -14,6 +14,7 @@ import { MATCH_STATUS } from './constants.js';
 import { nextPowerOfTwo } from './draw.js';
 import { pairSwissRound, recommendedSwissRounds } from './swiss.js';
 import { mexicanoNextRound } from './mexicano.js';
+import { nextEtapa } from './americanoEtapas.js';
 
 /* ------------------------------ helpers --------------------------------- */
 
@@ -443,6 +444,15 @@ export function computeStageAdvance(stageType, matches, ctx = {}) {
       totalRounds: ctx.totalRounds,
     });
   }
+  if (stageType === 'americano_etapas') {
+    // A próxima ETAPA: grupos refeitos, misturando quem ainda não se
+    // encontrou. `ctx.phase` traz quantas etapas e o tamanho dos grupos.
+    return nextEtapa(matches, ctx.phase || {}, {
+      seed: ctx.seed,
+      excluir: ctx.excluir,
+      playerMeta: ctx.playerMeta || null,
+    });
+  }
   if (stageType === 'double_knockout') {
     return doubleEliminationNextMatches(
       matches,
@@ -460,5 +470,6 @@ export function stageSupportsAdvance(stageType) {
     || stageType === 'swiss'
     || stageType === 'double_knockout'
     || stageType === 'mexicano'
+    || stageType === 'americano_etapas'
   );
 }

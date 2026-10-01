@@ -35,11 +35,15 @@ import {
 import { neededPlaceholderCount } from '@/modules/tournament/domain/placeholders';
 import { matchesWithStaleSingleGroup } from '@/modules/tournament/domain/phases';
 import {
+  TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
-  REGISTRATION_STATUS,
   MATCH_STATUS,
+  MATCH_STATUS_LABELS,
 } from '@/modules/tournament/domain/constants';
+import { isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
+import { etapasProgress, etapasResumo, etapaBotaoTexto } from '@/modules/tournament/domain/americanoEtapas';
+import { normalizePhase } from '@/modules/tournament/domain/phases';
 import { buildRosterSlots } from '@/modules/tournament/domain/teamFormat';
 import MultiPhaseDrawBlock from '@/modules/tournament/components/MultiPhaseDrawBlock';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
@@ -138,11 +142,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
   const activeRegistrations = useMemo(
     () =>
-      registrations.filter(
-        (r) =>
-          r.status === REGISTRATION_STATUS.CONFIRMED ||
-          r.status === REGISTRATION_STATUS.CHECKED_IN,
-      ),
+      registrations.filter(isActiveRegistration),
     [registrations],
   );
 
@@ -178,7 +178,11 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const doneStatuses = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
   const playedCount = matches.filter((m) => doneStatuses.has(m.status)).length;
   const pendingCount = matches.length - playedCount;
-  const canReshuffleRemaining = isAdmin && playedCount > 0 && pendingCount > 0;
+  // Nos formatos em que a rodada nasce do resultado (chave, suíço, Mexicano) a
+  // ordem não se re-sorteia — o número da rodada é a estrutura.
+  const tipoDaFase = modality.stages?.[0]?.type;
+  const canReshuffleRemaining = isAdmin && playedCount > 0 && pendingCount > 0
+    && (!stageSupportsAdvance(tipoDaFase) || tipoDaFase === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS);
 
   // Resumo do agendamento (quadras/horários).
   const startedCount = matches.filter(
@@ -191,7 +195,12 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
   // Avanço de fase (mata-mata, dupla eliminação, suíço).
   const stageType = modality.stages?.[0]?.type;
-  const canAdvance = isAdmin && matches.length > 0 && stageSupportsAdvance(stageType);
+  // Americano em etapas: o "avançar" gera a PRÓXIMA ETAPA, e só quando a atual
+  // terminou — a tela diz em que pé está e não oferece o que o serviço recusa.
+  const ehEtapas = stageType === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+  const progEtapas = ehEtapas ? etapasProgress(matches, normalizePhase(modality.stages?.[0] || {})) : null;
+  const canAdvance = isAdmin && matches.length > 0 && stageSupportsAdvance(stageType)
+    && (!ehEtapas || progEtapas.podeGerar);
 
   async function performAdvance() {
     setRunning(true);
@@ -203,10 +212,12 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         tournament,
       });
       if (res.complete) {
-        toast.success('Fase concluída — campeão definido! 🏆');
+        toast.success(ehEtapas ? 'Todas as etapas foram jogadas — a classificação final está valendo. 🏆' : 'Fase concluída — campeão definido! 🏆');
       } else {
         const warns = res.scheduleWarnings || [];
-        toast.success(`Próxima rodada gerada (${res.created} jogo(s)).`);
+        toast.success(ehEtapas
+          ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
+          : `Próxima rodada gerada (${res.created} jogo(s)).`);
         if (warns.length > 0) {
           toast.warning(`${warns.length} jogo(s) sem horário — ajuste quadras/horário de término.`);
         }
@@ -344,6 +355,10 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     }
   };
   const hasGroups = matches.some((m) => m.group);
+  // No Americano em etapas os grupos são do FORMATO (refeitos a cada etapa):
+  // mover gente entre eles ou regenerar "mantendo os grupos" desmontaria as
+  // etapas. Esses comandos não aparecem ali.
+  const gruposEditaveis = hasGroups && !ehEtapas;
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   // Marcadores de grupo resquício de sorteios antigos numa fase de grupo único
   // (o dado precisa ser corrigido para seguir a definição da modalidade).
@@ -406,6 +421,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             seedCount={Number(modality.stages?.[0]?.seed_count) || 0}
             qualifiersPerGroup={Number(modality.stages?.[0]?.qualifiers_per_group ?? 2)}
             legs={Number(modality.stages?.[0]?.round_robin_legs) === 2 ? 2 : 1}
+            etapaCount={modality.stages?.[0]?.etapa_count}
+            maxPerGroup={modality.stages?.[0]?.max_per_group}
           />
         </div>
       )}
@@ -422,6 +439,12 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           />
         )}
 
+        {ehEtapas && etapasResumo(progEtapas) && !falhouJogos && (
+          <p className="mb-2 rounded-2xl bg-paper px-3 py-2 text-xs font-medium text-gray-600" role="status">
+            {etapasResumo(progEtapas)}
+          </p>
+        )}
+
         <div className="mb-1 flex flex-wrap justify-end">
           {isAdmin && !falhouJogos && (
             <div className="flex gap-2 flex-wrap">
@@ -431,9 +454,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={performAdvance}
                   disabled={running}
-                  title="Gerar a próxima rodada com base nos resultados"
+                  title={ehEtapas ? 'Refaz os grupos, misturando quem ainda não se encontrou' : 'Gerar a próxima rodada com base nos resultados'}
                 >
-                  <ChevronsRight className="w-4 h-4 mr-1" /> Avançar fase
+                  <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : 'Avançar fase'}
                 </V2Button>
               )}
               {canReschedule && (
@@ -468,7 +491,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <Wrench className="w-4 h-4 mr-1" /> Corrigir grupos ({staleGroupIds.length})
                 </V2Button>
               )}
-              {hasGroups && staleGroupIds.length === 0 && (
+              {gruposEditaveis && staleGroupIds.length === 0 && (
                 <V2Button
                   size="sm"
                   variant="ghost"
@@ -479,7 +502,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <Users className="w-4 h-4 mr-1" /> Editar grupos
                 </V2Button>
               )}
-              {hasGroups && staleGroupIds.length === 0 && (
+              {gruposEditaveis && staleGroupIds.length === 0 && (
                 <V2Button
                   size="sm"
                   variant="ghost"
@@ -601,7 +624,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <V2Badge tone="neutral">{m.status}</V2Badge>
+                      <V2Badge tone="neutral">{MATCH_STATUS_LABELS[m.status] || m.status}</V2Badge>
                     </td>
                   </tr>
                 ))}

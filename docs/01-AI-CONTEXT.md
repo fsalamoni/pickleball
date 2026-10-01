@@ -15,7 +15,7 @@ oficial. UI e textos em **português (pt-BR)**.
 
 Pilares:
 1. **Torneios** — formatos (single, duplas, americana, Mexicano, Rei da
-   Quadra), modalidades por nível/categoria, sorteio, agendamento por
+   Quadra, Americano aprimorado em etapas), 1 ou 2 turnos, modalidades por nível/categoria, sorteio, agendamento por
    quadra, ranking ao vivo, visão pública sem login, versão impressão,
    telão e courtside scoring.
 2. **Comunidade** — diretório de atletas, clubes (membros, mural, fórum com
@@ -331,7 +331,12 @@ Em `modules/tournament/domain/` — funções puras com `.test.js`:
 reproduzível) · `progression`/`doubleElimination`/`swiss`/`mexicano`/
 `reinaQuadra` (formatos de fase) · `schedule`/`scheduling` (quadras, slots,
 descanso) · `ranking` (por formato) · `capacity`/`eligibility`/
-`participation` · `formatExplain`/`whistTables`.
+`participation` · `formatExplain`/`whistTables` · `americanoEtapas`
+(Americano aprimorado em etapas: grupos refeitos a cada etapa para o máximo de
+encontros inéditos, classificação única — flag `tournament_americano_etapas`)
+· `checkin` (`isActiveRegistration`: confirmada ou com check-in JOGA igual;
+`selfCheckInState`: o próprio check-in só para quem criou a inscrição). Ver
+`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
 **Regra de ouro**: lógica de negócio mora aqui (pura, testável), nunca em
 componentes ou services.
 
@@ -366,6 +371,10 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
 - `coach_booking_pay` — booking pay.
 - `coach_student_progress` — alunos ligados à evolução.
 - `coach_level_rating_seed` — semente por nível validado.
+
+**Torneio (2026-10-01)** — `tournament_americano_etapas`, default OFF: o
+formato de fase **Americano aprimorado em etapas** (grupos refeitos a cada
+etapa, classificação única). Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
 
 **Onda CG (2026-09-26)** — mais três, default OFF (ver
 `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`):

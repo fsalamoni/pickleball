@@ -153,6 +153,9 @@ function TiebreakOrderEditor({ value, onChange }) {
 export default function PhaseAdvancedRules({
   phase, index, isFirst, isLast, grouped, unit = 'atletas', onChange,
 }) {
+  // Americano em etapas: uma tabela só (sem grupos que classifiquem nem
+  // repescagem), mas a ordem de desempate é dele.
+  const tabelaUnica = phase.type === 'americano_etapas';
   const [aberto, setAberto] = useState(false);
   const direct = phase.direct_entry || { mode: DIRECT_ENTRY_MODE.NONE, count: 0, ids: [] };
 
@@ -202,7 +205,7 @@ export default function PhaseAdvancedRules({
             </div>
           )}
 
-          {(grouped || phase.type === 'round_robin') && (
+          {(grouped || phase.type === 'round_robin' || tabelaUnica) && (
             <TiebreakOrderEditor
               value={phase.tiebreak_order}
               onChange={(v) => onChange({ tiebreak_order: v })}
@@ -229,6 +232,7 @@ export default function PhaseAdvancedRules({
                 </div>
               )}
 
+              {!tabelaUnica && (
               <div>
                 <Label className="text-xs">Repescagem: de qual colocação</Label>
                 <Input
@@ -244,6 +248,7 @@ export default function PhaseAdvancedRules({
                   repescagem — útil quando o seu regulamento repesca de outro lugar.
                 </Help>
               </div>
+              )}
 
               {grouped && (
                 <div className="md:col-span-2">

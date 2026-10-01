@@ -39,7 +39,7 @@ import {
   canRespondToPartnerInvite,
   partnerInviteBadge,
 } from '@/modules/tournament/domain/partnerInvite';
-import { canSelfCheckIn, hasCheckedIn } from '@/modules/tournament/domain/checkin';
+import { hasCheckedIn, isActiveRegistration, selfCheckInState } from '@/modules/tournament/domain/checkin';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
 import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/hooks/useTournament';
 import { toast } from 'sonner';
@@ -110,8 +110,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
   const [registerModalityId, setRegisterModalityId] = useState(null);
 
   const confirmedByModality = (mid) =>
-    registrations.filter((r) => r.modality_id === mid
-      && (r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN)).length;
+    registrations.filter((r) => r.modality_id === mid && isActiveRegistration(r)).length;
 
   const startsAt = formatDate(tournament.starts_at);
   const endsAt = formatDate(tournament.ends_at);
@@ -123,9 +122,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
   const hasPrivateAccess =
     typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
-  const confirmedRegistrations = registrations.filter(
-    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
-  ).length;
+  const confirmedRegistrations = registrations.filter(isActiveRegistration).length;
 
   const datesText = startsAt || endsAt
     ? (startsAt && endsAt ? (startsAt === endsAt ? startsAt : `${startsAt} a ${endsAt}`) : startsAt || endsAt)
@@ -284,10 +281,14 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   // Self check-in (flag athlete_self_checkin).
   const selfCheckinOn = true;
   const selfCheckInMutation = useSelfCheckIn();
-  const canCheckInOwn = Boolean(
-    selfCheckinOn && myRegistration
-    && canSelfCheckIn({ tournament, registration: myRegistration, uid: currentUserId }),
-  );
+  const checkInState = myRegistration
+    ? selfCheckInState({ tournament, registration: myRegistration, uid: currentUserId })
+    : null;
+  const canCheckInOwn = Boolean(selfCheckinOn && checkInState?.pode);
+  // Inscrito por outra pessoa (a organização, ou a dupla): a regra do banco não
+  // deixa esta conta mudar a inscrição — então nada de botão que falha; a tela
+  // diz onde o check-in se faz.
+  const checkInWithOthers = Boolean(selfCheckinOn && checkInState?.motivo === 'outra_pessoa');
 
   async function handleSelfCheckIn() {
     if (!myRegistration) return;
@@ -451,6 +452,9 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
             )}
             {selfCheckinOn && hasCheckedIn(myRegistration) && (
               <V2Badge tone="green">Check-in feito</V2Badge>
+            )}
+            {checkInWithOthers && (
+              <span className="text-xs font-medium text-gray-500">Check-in com quem fez a inscrição ou na mesa da organização</span>
             )}
             {isTeam ? (
               /* Equipes: inscreve pelo modal de equipes; a gestão do elenco e

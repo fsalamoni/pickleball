@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CheckCircle2, Info, AlertTriangle, XCircle, ListChecks, Lightbulb } from 'lucide-react';
 import { explainStage } from '@/modules/tournament/domain/formatExplain';
 import { suggestGroupPlans } from '@/modules/tournament/domain/groupPlan';
@@ -44,6 +44,8 @@ const STATUS_STYLES = {
  *   seedCount?: number,
  *   qualifiersPerGroup?: number,
  *   legs?: number,
+ *   etapaCount?: number,
+ *   maxPerGroup?: number,
  *   showStats?: boolean,
  *   showAlternatives?: boolean,
  * }} props
@@ -55,13 +57,17 @@ export default function StageExplanation({
   seedCount = 0,
   qualifiersPerGroup = 2,
   legs = 1,
+  // Americano em etapas: quantas etapas e o tamanho dos grupos (a explicação
+  // simula a mistura, por isso é memorizada).
+  etapaCount,
+  maxPerGroup,
   showStats = true,
   showAlternatives = true,
 }) {
-  if (!stageType) return null;
-  const explanation = explainStage({
-    stageType, playerCount, groupCount, seedCount, qualifiersPerGroup, legs,
-  });
+  const explanation = useMemo(() => (stageType ? explainStage({
+    stageType, playerCount, groupCount, seedCount, qualifiersPerGroup, legs, etapaCount, maxPerGroup,
+  }) : null), [stageType, playerCount, groupCount, seedCount, qualifiersPerGroup, legs, etapaCount, maxPerGroup]);
+  if (!stageType || !explanation) return null;
   const alternativas = (showAlternatives && stageType === TOURNAMENT_STAGE_TYPE.GROUPS)
     ? suggestGroupPlans(playerCount, { qualifiersPerGroup, legs, limit: 3 })
       .filter((p) => p.groupCount !== Number(groupCount))

@@ -173,3 +173,14 @@ describe('describePhaseRules — toda linha explica o porquê', () => {
     expect(() => describePhaseRules(null, { isFirst: false, isLast: true })).not.toThrow();
   });
 });
+
+describe('Americano aprimorado em etapas', () => {
+  it('mostra etapas, turnos e a classificação única — e nada de grupos que classificam', async () => {
+    const { describePhaseRules } = await import('./phaseRules.js');
+    const { rows } = describePhaseRules({ type: 'americano_etapas', etapa_count: 4, max_per_group: 5 }, { isFirst: true, isLast: true });
+    const chaves = rows.map((r) => r.key);
+    expect(chaves).toEqual(['etapas', 'turnos', 'desempate']);
+    expect(rows[0].value).toBe('4 etapas, grupos de 5');
+    expect(rows[2].value).toMatch(/somando todas as etapas/);
+  });
+});

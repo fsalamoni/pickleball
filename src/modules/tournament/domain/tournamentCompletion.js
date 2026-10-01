@@ -8,7 +8,8 @@
  *   3. essa última fase realmente terminou:
  *        - formatos "completos" (grupos/americana): todos os jogos já saem no
  *          sorteio, então basta não haver pendências;
- *        - formatos progressivos (mata-mata, dupla eliminação, suíço, mexicano):
+ *        - formatos progressivos (mata-mata, dupla eliminação, suíço, mexicano,
+ *          americano em etapas):
  *          as rodadas são geradas sob demanda, então usamos a MESMA lógica de
  *          avanço (`computeStageAdvance`) para saber se já há campeão — evitando
  *          encerrar cedo demais, entre uma rodada e a próxima.
@@ -21,6 +22,8 @@ import { MATCH_STATUS } from './constants.js';
 import { computeStageAdvance, stageSupportsAdvance } from './progression.js';
 import { recommendedSwissRounds } from './swiss.js';
 import { recommendedMexicanoRounds } from './mexicano.js';
+import { etapasProgress } from './americanoEtapas.js';
+import { normalizePhase } from './phases.js';
 
 const PENDING_STATUSES = new Set([MATCH_STATUS.SCHEDULED, MATCH_STATUS.IN_PROGRESS]);
 
@@ -91,6 +94,13 @@ export function isModalityComplete(modality, modalityMatches = []) {
   if (!stageSupportsAdvance(stageType)) {
     // Grupos/americana: todos os jogos saem no sorteio → sem pendências = fim.
     return true;
+  }
+
+  // Americano em etapas: termina quando a última etapa pedida foi jogada —
+  // não antes (entre uma etapa e a próxima não há jogo pendente, e a
+  // modalidade não está concluída).
+  if (stageType === 'americano_etapas') {
+    return etapasProgress(finalStageMatches, normalizePhase(stage || {})).completa;
   }
 
   // Progressivos: só está concluída quando há campeão (não há próxima rodada).

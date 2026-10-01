@@ -70,6 +70,15 @@ Fluxo típico: criar torneio → adicionar modalidades → abrir inscrições
 agendar quadras → registrar resultados (`matchService`) → ranking recalculado
 (`rankingService`+`domain/ranking`).
 
+**Americano aprimorado em etapas** (flag `tournament_americano_etapas`):
+`domain/americanoEtapas.js` — etapas de Americano em grupos refeitos a cada
+etapa para o máximo de encontros inéditos (`planEtapas` olha as etapas que
+faltam juntas), classificação única; a próxima etapa sai do avanço de rodada
+(`advanceStage` → `nextEtapa`). **Check-in**: "esta inscrição joga?" é
+`isActiveRegistration` (`domain/checkin.js`), e o próprio check-in só para
+quem criou a inscrição (`selfCheckInState`). Ver
+`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+
 **Formatos extras (Onda 2)**: Mexicano (rodízio de duplas por rodada) e
 Rei da Quadra (vencedor fica, demais rotacionam) — ambos com domínio puro
 testado em `domain/mexicano.js` / `domain/reinaQuadra.js`.

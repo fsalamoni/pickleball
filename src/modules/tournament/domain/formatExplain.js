@@ -25,6 +25,7 @@ import { nextPowerOfTwo, americanoMatchCount } from './draw.js';
 import { recommendedSwissRounds } from './swiss.js';
 import { recommendedMexicanoRounds } from './mexicano.js';
 import { describeGroupPlan, suggestGroupPlans, scoreGroupPlan } from './groupPlan.js';
+import { explainAmericanoEtapas } from './americanoEtapas.js';
 
 /* ----------------------------- Utilitários ------------------------------ */
 
@@ -51,6 +52,7 @@ export const STAGE_MIN_PLAYERS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.SWISS]: 2,
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 4,
   [TOURNAMENT_STAGE_TYPE.MEXICANO]: 4,
+  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]: 4,
 });
 
 /** Descrição curta (independente de N) de cada formato de inscrição. */
@@ -75,6 +77,8 @@ export const STAGE_DESCRIPTION = Object.freeze({
     'Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados, sem eliminação direta e sem repetir confrontos.',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]:
     'Americana (rotação): só para inscrição individual (Simples). Os jogos são em duplas (2×2) montadas por rotação, de modo que cada jogador forma dupla com todos os demais e nenhuma dupla se repete. Exige um número de inscritos que permita exatidão (N ≡ 0 ou 1 mod 4): 4, 5, 8, 9, 12, 13, 16, 17… O total de jogos é N·(N−1)/4.',
+  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]:
+    'Americano aprimorado em etapas: só para inscrição individual (Simples). Os atletas jogam em etapas; em cada etapa, um Americano em grupos (de 4, por padrão: 3 jogos para cada um). A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou para criar o máximo de jogos inéditos, e a classificação é uma só, somando todas as etapas — o campeão é quem foi melhor no total.',
   [TOURNAMENT_STAGE_TYPE.MEXICANO]:
     'Mexicano (rotação dinâmica): só para inscrição individual (Simples). Como na Americana joga-se 2×2 em quadras de 4, mas os pares de cada rodada são definidos pela classificação: a cada rodada todos são reordenados por pontos e reagrupados (1º+4º × 2º+3º). Quem vence sobe de quadra e enfrenta os melhores — os jogos ficam sempre equilibrados.',
 });
@@ -95,12 +99,16 @@ export const STAGE_DESCRIPTION = Object.freeze({
 
 /* ----------------------------- Explicadores por formato ----------------- */
 
-function explainRoundRobin(n) {
-  const totalMatches = comb2(n);
-  const rounds = n % 2 === 0 ? n - 1 : n;
+function explainRoundRobin(n, legs = 1) {
+  const volta = legs === 2;
+  const turnos = volta ? 2 : 1;
+  const totalMatches = comb2(n) * turnos;
+  const rounds = (n % 2 === 0 ? n - 1 : n) * turnos;
   const lines = [
-    `${n} jogadores → ${totalMatches} jogos no total (todos contra todos uma vez).`,
-    `Cada jogador disputa ${n - 1} jogos.`,
+    volta
+      ? `${n} jogadores → ${totalMatches} jogos no total (todos contra todos em 2 turnos: ida e volta).`
+      : `${n} jogadores → ${totalMatches} jogos no total (todos contra todos uma vez).`,
+    `Cada jogador disputa ${(n - 1) * turnos} jogos.`,
     `O torneio é organizado em ${rounds} rodadas${
       n % 2 === 1 ? ' (como o número é ímpar, 1 jogador descansa por rodada)' : ''
     }.`,
@@ -267,7 +275,8 @@ function explainSwiss(n) {
   };
 }
 
-function explainAmericano(n) {
+function explainAmericano(n, legs = 1) {
+  const volta = legs === 2;
   const check = americanoMatchCount(n);
   const totalPairs = comb2(n); // parcerias possíveis C(N,2)
 
@@ -288,8 +297,14 @@ function explainAmericano(n) {
     };
   }
 
-  const totalMatches = check.totalMatches;
-  const lines = [
+  const totalMatches = check.totalMatches * (volta ? 2 : 1);
+  const lines = volta ? [
+    `${n} jogadores → ${totalMatches} jogos no total, em 2 turnos (ida e volta).`,
+    `Cada uma das ${totalPairs} duplas possíveis joga junta 2 vezes — uma em cada turno.`,
+    `Cada jogador faz ${(n - 1) * 2} jogos: no returno, os mesmos parceiros e adversários do 1º turno, com os lados trocados.`,
+    'Adversários equilibrados: você enfrenta cada outro jogador exatamente 4 vezes (2 por turno).',
+    'A grade sai em rodadas (todos jogam uma vez por rodada), o que ocupa as quadras em paralelo e iguala o tempo de espera de cada jogador.',
+  ] : [
     `${n} jogadores → ${totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).`,
     `Cobertura perfeita: cada uma das ${totalPairs} duplas possíveis acontece exatamente uma vez.`,
     `Cada jogador faz ${n - 1} jogos, formando dupla com cada outro jogador uma única vez.`,
@@ -321,13 +336,16 @@ function explainMexicano(n) {
 }
 
 const STAGE_EXPLAINERS = {
-  [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: (n) => explainRoundRobin(n),
+  [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: (n, opts) => explainRoundRobin(n, opts.legs),
   [TOURNAMENT_STAGE_TYPE.GROUPS]: (n, opts) => explainGroups(n, opts.groupCount, opts),
   [TOURNAMENT_STAGE_TYPE.KNOCKOUT]: (n) => explainKnockout(n),
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: (n) => explainDoubleKnockout(n),
   [TOURNAMENT_STAGE_TYPE.SWISS]: (n) => explainSwiss(n),
-  [TOURNAMENT_STAGE_TYPE.AMERICANO]: (n) => explainAmericano(n),
+  [TOURNAMENT_STAGE_TYPE.AMERICANO]: (n, opts) => explainAmericano(n, opts.legs),
   [TOURNAMENT_STAGE_TYPE.MEXICANO]: (n) => explainMexicano(n),
+  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]: (n, opts) => explainAmericanoEtapas(n, {
+    etapa_count: opts.etapaCount, max_per_group: opts.maxPerGroup, round_robin_legs: opts.legs,
+  }),
 };
 
 /* ----------------------------- API pública ------------------------------ */
@@ -348,6 +366,8 @@ export function explainStage(input) {
   const {
     stageType, playerCount, groupCount = 1,
     qualifiersPerGroup, legs,
+    // Americano em etapas: quantas etapas e o tamanho dos grupos.
+    etapaCount, maxPerGroup,
   } = input || {};
   const label = TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType || '—';
   const description = STAGE_DESCRIPTION[stageType] || 'Formato definido pelo organizador.';
@@ -388,7 +408,7 @@ export function explainStage(input) {
     };
   }
 
-  const result = explainer(n, { groupCount, qualifiersPerGroup, legs });
+  const result = explainer(n, { groupCount, qualifiersPerGroup, legs, etapaCount, maxPerGroup });
   return {
     ...base,
     eligible: true,
@@ -444,7 +464,7 @@ export function stageFormatCompatibility(format, stageType) {
     return { compatible: true, reason: null };
   }
   const reason =
-    stageType === TOURNAMENT_STAGE_TYPE.AMERICANO
+    stageType === TOURNAMENT_STAGE_TYPE.AMERICANO || stageType === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
       ? 'O formato Americano (rotação de duplas) só funciona com inscrição individual (Simples), pois monta as duplas sorteando parceiros. Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'
       : `O sistema "${TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType}" não é compatível com inscrição em ${MODALITY_FORMAT_LABELS[format] || format}.`;
   return { compatible: false, reason };
