@@ -12,6 +12,22 @@
 
 import { winRate, normalizeStatsFormat } from '@/modules/performance/domain/playerStats.js';
 import { toMillis } from '@/modules/tournament/domain/participation.js';
+import { buildParticipantResolver, resolveSlotUid } from '@/modules/clubs/domain/rankingPublishing.js';
+
+/**
+ * Por que um jogo do atleta NÃO está no ranking da plataforma. O jogo continua
+ * contando no "Meu desempenho" — o motivo existe para a tela EXPLICAR a
+ * diferença entre "joguei 30" e "o ranking mostra 12", em vez de deixá-la
+ * parecer defeito.
+ */
+export const OUT_OF_RANKING_REASON = Object.freeze({
+  /** O dia de jogo não foi publicado no ranking (é decisão de quem organiza). */
+  NOT_PUBLISHED: 'nao_publicado',
+  /** Há atleta sem conta (convidado) na partida — o ranking só conta quem tem conta. */
+  GUEST: 'convidado_sem_conta',
+  /** Publicado e completo, mas ainda não espelhado (a publicação precisa ser atualizada). */
+  PENDING_SYNC: 'publicacao_desatualizada',
+});
 
 /** Origem de um jogo agregado. */
 export const MY_GAME_SOURCE = Object.freeze({
@@ -51,13 +67,22 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
     kind: normalizeStatsFormat(m.kind),
     label: m.event_title || 'Dia de jogo',
     source,
+    // Só o dia de jogo modular tem página própria (`/dia-de-jogo/:id`); o
+    // `event_id` do legado de clube é o EVENTO, não um dia de jogo.
+    gameDayId: m.source === 'athlete_game_day' ? (m.event_id || null) : null,
     // Parceiro(s) da MINHA dupla (os do meu lado que não sou eu). Vazio = individual.
     partner: myUids.filter((id) => id !== uid).map(resolveName).join(' / '),
     opponent: oppUids.map(resolveName).join(' / ') || 'Adversário',
+    // Um a um (confronto direto por PESSOA): no dia de jogo as duplas giram,
+    // e "Caio / Duda" quase nunca se repete — "Caio" se repete sempre.
+    opponents: oppUids.map(resolveName),
     myScore: mine === 'a' ? scoreA : scoreB,
     oppScore: mine === 'a' ? scoreB : scoreA,
     won: m.winner_side === mine,
     walkover: false,
+    // Veio do espelho publicado: é exatamente o que o ranking conta.
+    ranked: true,
+    outReason: null,
   };
 }
 
@@ -72,42 +97,78 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
  * @param {object} game
  * @param {Map<string,object>} partById - participantId → participante (com user_id)
  */
-export function sourceGameToMyGame(uid, gameDayId, gdTitle, game, partById) {
+export function sourceGameToMyGame(uid, gameDayId, gdTitle, game, partById, { published = false } = {}) {
   if (!game) return null;
   const sa = Number(game.score_a);
   const sb = Number(game.score_b);
   if (game.score_a == null || game.score_b == null || sa === sb) return null; // só decididos
-  const sideUids = (side) => (side || []).map((p) => partById.get(p.id)?.user_id).filter(Boolean);
-  const aU = sideUids(game.side_a);
-  const bU = sideUids(game.side_b);
+  // Mesma resolução da PUBLICAÇÃO (`resolveSlotUid`): pelo participante, pelo
+  // uid selado no próprio slot (atleta que saiu do dia depois de jogar) e pelo
+  // nome único do dia. Antes só o id do participante valia, e o jogo de quem
+  // tinha saído do dia sumia do "Meu desempenho".
+  const participants = Array.from((partById || new Map()).entries())
+    .map(([id, p]) => ({ id, ...(p || {}) }));
+  const resolver = buildParticipantResolver(participants);
+  const slotUid = (slot) => resolveSlotUid(slot, resolver);
+  const aU = (game.side_a || []).map(slotUid);
+  const bU = (game.side_b || []).map(slotUid);
   const mine = aU.includes(uid) ? 'a' : (bU.includes(uid) ? 'b' : null);
   if (!mine) return null;
   const mySide = mine === 'a' ? game.side_a : game.side_b;
+  const myUids = mine === 'a' ? aU : bU;
   const oppSide = mine === 'a' ? game.side_b : game.side_a;
   // Dia de jogo do atleta é sempre em DUPLAS (americano/mexicano/rei da quadra).
   // O formato não muda por um parceiro não estar cadastrado — vale o `kind` do
   // jogo (que nasce 'doubles'); a heurística por nº de jogadores foi removida
   // porque contava como individual um jogo de duplas com parceiro avulso.
   const kind = normalizeStatsFormat(game.kind);
-  // Parceiro(s) da MINHA dupla: os do meu lado cujo user_id não sou eu (inclui
+  // Parceiro(s) da MINHA dupla: os do meu lado que não sou eu (inclui
   // convidados avulsos, que não têm user_id).
   const partner = (mySide || [])
-    .filter((p) => partById.get(p.id)?.user_id !== uid)
+    .filter((p, i) => myUids[i] !== uid)
     .map((p) => p.name)
     .join(' / ');
+  const temConvidado = [...aU, ...bU].some((u) => !u);
+  let outReason = OUT_OF_RANKING_REASON.PENDING_SYNC;
+  if (!published) outReason = OUT_OF_RANKING_REASON.NOT_PUBLISHED;
+  else if (temConvidado) outReason = OUT_OF_RANKING_REASON.GUEST;
   return {
     id: gameDayMirrorId(gameDayId, game.id),
     at: toMillis(game.updated_at) || toMillis(game.created_at) || 0,
     kind,
     label: gdTitle || 'Dia de jogo',
     source: MY_GAME_SOURCE.GAME_DAY,
+    gameDayId,
     partner,
     opponent: (oppSide || []).map((p) => p.name).join(' / ') || 'Adversário',
     myScore: mine === 'a' ? sa : sb,
     oppScore: mine === 'a' ? sb : sa,
     won: mine === 'a' ? sa > sb : sb > sa,
     walkover: false,
+    // Só a FONTE do dia de jogo: o espelho publicado (que é o que o ranking
+    // conta) chega por `mirrorGameToMyGame` e vence a deduplicação.
+    ranked: false,
+    outReason,
   };
+}
+
+/**
+ * Resumo do que, entre os jogos de dia de jogo do atleta, está FORA do
+ * ranking, por motivo. Pura.
+ *
+ * @param {Array<{ ranked?: boolean, outReason?: string|null }>} games
+ * @returns {{ total: number, ranked: number, out: number, byReason: Record<string, number> }}
+ */
+export function summarizeRankingCoverage(games) {
+  const lista = Array.isArray(games) ? games : [];
+  const byReason = {};
+  let ranked = 0;
+  lista.forEach((g) => {
+    if (g?.ranked) { ranked += 1; return; }
+    const motivo = g?.outReason || OUT_OF_RANKING_REASON.PENDING_SYNC;
+    byReason[motivo] = (byReason[motivo] || 0) + 1;
+  });
+  return { total: lista.length, ranked, out: lista.length - ranked, byReason };
 }
 
 /**
@@ -145,4 +206,28 @@ export function foldGameDayGamesIntoStats(stats, games) {
     winRate: winRate(wins, losses),
     byFormat,
   };
+}
+
+/**
+ * Registros de confronto direto (`{ opponent, won, at }`) a partir dos jogos
+ * de dia de jogo — UM por adversário, não por dupla adversária. Pura.
+ *
+ * @param {Array<{ opponents?: string[], opponent?: string, won: boolean, at?: number }>} games
+ * @returns {Array<{ opponent: string, won: boolean, at: number }>}
+ */
+export function gameDayGamesToH2HRecords(games) {
+  const out = [];
+  (games || []).forEach((g) => {
+    const nomes = Array.isArray(g?.opponents) && g.opponents.length > 0
+      ? g.opponents
+      : [g?.opponent].filter(Boolean);
+    nomes.forEach((nome) => {
+      const opponent = String(nome || '').trim();
+      // "Atleta" é o nome de quem não tem perfil: juntar todos sob um nome só
+      // inventaria um rival que não existe.
+      if (!opponent || opponent === 'Atleta') return;
+      out.push({ opponent, won: Boolean(g.won), at: Number(g.at) || 0 });
+    });
+  });
+  return out;
 }

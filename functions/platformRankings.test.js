@@ -259,3 +259,79 @@ describe('proximoHistoricoElo — o histórico é evolução, não contagem de p
     expect(proximoHistoricoElo({ points: 'x' }, 1000, 3)).toEqual([{ at: 3, rating: 1000 }]);
   });
 });
+
+/* ------------------------------------- por que uma partida ficou de fora */
+
+describe('normalizeMatches — relatório do que ficou FORA (e por quê)', () => {
+  const { relatorioVazio, MOTIVO_FORA } = require('../functions/platformRankings.js');
+  const torneios = new Map([
+    ['t-ok', { id: 't-ok', name: 'Aberto', visibility: 'public', status: 'in_progress' }],
+    ['t-rasc', { id: 't-rasc', name: 'Ensaio', visibility: 'public', status: 'draft' }],
+    ['t-arq', { id: 't-arq', name: 'Secreto', visibility: 'public', status: 'cancelled', archived: true }],
+  ]);
+
+  it('o resultado é IDÊNTICO com e sem relatório (medir não muda o ranking)', () => {
+    const entrada = {
+      tournamentMatches: [partidaTorneio(), partidaTorneio({ side_b_ids: ['r-incompleta'] })],
+      clubEventMatches: [jogoEvento(), jogoEvento({ side_a_ids: ['u1', null] })],
+      regById,
+      eligibleTournamentIds: elegiveis,
+    };
+    const sem = normalizeMatches(entrada);
+    const com = normalizeMatches({ ...entrada, tournamentById: torneios, report: relatorioVazio() });
+    expect(com).toEqual(sem);
+  });
+
+  it('conta por motivo: inscrição sem conta, torneio fora, jogo incompleto, sem vencedor', () => {
+    const report = relatorioVazio();
+    normalizeMatches({
+      tournamentMatches: [
+        partidaTorneio(),
+        partidaTorneio({ side_b_ids: ['r-incompleta'] }),
+        partidaTorneio({ tournament_id: 't-rasc' }),
+        partidaTorneio({ tournament_id: 't-arq' }),
+        partidaTorneio({ tournament_id: 't-apagado' }),
+        partidaTorneio({ winner_side: null }),
+        partidaTorneio({ team_confrontation: true }),
+      ],
+      clubEventMatches: [jogoEvento(), jogoEvento({ side_a_ids: ['u1', null] }), jogoEvento({ score_a: 0, score_b: 0 })],
+      regById,
+      eligibleTournamentIds: elegiveis,
+      tournamentById: torneios,
+      report,
+    });
+    // A partida de equipe nem é "lida" aqui: ela conta pelo espelho por etapa.
+    expect(report.torneio.lidas).toBe(6);
+    expect(report.torneio.usadas).toBe(1);
+    expect(report.torneio.por_motivo).toEqual({
+      [MOTIVO_FORA.SEM_CONTA]: 1,
+      [MOTIVO_FORA.TORNEIO_FORA]: 3,
+      [MOTIVO_FORA.SEM_VENCEDOR]: 1,
+    });
+    expect(report.torneio.torneio_fora).toEqual({ rascunho: 1, arquivado: 1, apagado: 1 });
+    expect(report.dia_de_jogo).toEqual({
+      lidas: 3, usadas: 2, por_motivo: { [MOTIVO_FORA.JOGO_INCOMPLETO]: 1 },
+    });
+    expect(report.sem_placar).toBe(1);
+  });
+
+  it('lista os torneios que perdem partidas — sem o nome do ARQUIVADO (o documento é público)', () => {
+    const report = relatorioVazio();
+    normalizeMatches({
+      tournamentMatches: [
+        partidaTorneio({ side_b_ids: ['r-incompleta'] }),
+        partidaTorneio({ side_b_ids: ['r-incompleta'] }),
+        partidaTorneio({ tournament_id: 't-arq' }),
+      ],
+      clubEventMatches: [],
+      regById,
+      eligibleTournamentIds: elegiveis,
+      tournamentById: torneios,
+      report,
+    });
+    expect(report.torneios).toEqual([
+      { id: 't-ok', nome: 'Aberto', motivo: 'sem_conta', partidas_fora: 2, inscricoes_sem_conta: 1 },
+      { id: 't-arq', nome: null, motivo: 'arquivado', partidas_fora: 1, inscricoes_sem_conta: 0 },
+    ]);
+  });
+});

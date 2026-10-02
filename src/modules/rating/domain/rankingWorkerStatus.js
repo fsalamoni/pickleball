@@ -71,3 +71,72 @@ export function formatarMomento(ms) {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   }).format(new Date(ms));
 }
+
+/** Por que o torneio inteiro ficou fora — dito como a pessoa resolve. */
+export const TORNEIO_FORA_LABEL = Object.freeze({
+  rascunho: 'em rascunho (publique o torneio)',
+  privado: 'privado (só torneio público conta)',
+  cancelado: 'cancelado',
+  arquivado: 'arquivado',
+  apagado: 'apagado',
+  outro: 'fora do ranking',
+});
+
+/**
+ * O que ficou FORA dos rankings na última passada do servidor, e por quê
+ * (`last_result.excluded`, gravado por `functions/platformRankings.js`).
+ *
+ * É a resposta para "lancei vários jogos e o atleta não aparece". O servidor
+ * só registra CONTAGENS e ids — o documento é de leitura pública.
+ *
+ * @param {object|null} worker documento `platform_settings/ranking_worker`
+ * @returns {null | {
+ *   usadas: number,
+ *   fora: number,
+ *   linhas: Array<{ chave: string, quantidade: number, texto: string }>,
+ *   torneios: Array<{ id: string|null, nome: string|null, motivo: string, partidasFora: number, inscricoesSemConta: number, texto: string }>,
+ *   semPlacar: number,
+ * }} `null` quando a passada ainda não registrou o relatório (servidor antigo).
+ */
+export function describeRankingExclusions(worker) {
+  const ex = worker?.last_result?.excluded;
+  if (!ex || typeof ex !== 'object') return null;
+  const n = (v) => Math.max(0, Number(v) || 0);
+  const t = ex.torneio || {};
+  const d = ex.dia_de_jogo || {};
+  const pt = t.por_motivo || {};
+  const pd = d.por_motivo || {};
+  const foraDoTorneio = t.torneio_fora || {};
+
+  const linhas = [];
+  const add = (chave, quantidade, texto) => {
+    if (n(quantidade) > 0) linhas.push({ chave, quantidade: n(quantidade), texto });
+  };
+  add('sem_conta', pt.sem_conta,
+    'partida(s) de torneio com jogador SEM CONTA na plataforma (inscrito só pelo nome, provisório ou vaga). Vincule a conta na inscrição.');
+  Object.entries(foraDoTorneio).forEach(([motivo, q]) => {
+    add(`torneio_${motivo}`, q, `partida(s) de torneio ${TORNEIO_FORA_LABEL[motivo] || TORNEIO_FORA_LABEL.outro}.`);
+  });
+  add('sem_vencedor_torneio', pt.sem_vencedor, 'partida(s) de torneio encerrada(s) sem vencedor.');
+  add('jogo_incompleto', pd.jogo_incompleto, 'jogo(s) de dia de jogo publicados com atleta sem conta.');
+  add('sem_vencedor_dia', pd.sem_vencedor, 'jogo(s) de dia de jogo sem vencedor.');
+
+  const torneios = (Array.isArray(ex.torneios) ? ex.torneios : []).map((x) => ({
+    id: x?.id || null,
+    nome: x?.nome || null,
+    motivo: x?.motivo || 'outro',
+    partidasFora: n(x?.partidas_fora),
+    inscricoesSemConta: n(x?.inscricoes_sem_conta),
+    texto: x?.motivo === 'sem_conta'
+      ? `${n(x?.inscricoes_sem_conta)} inscrição(ões) sem conta`
+      : (TORNEIO_FORA_LABEL[x?.motivo] || TORNEIO_FORA_LABEL.outro),
+  }));
+
+  return {
+    usadas: n(t.usadas) + n(d.usadas),
+    fora: linhas.reduce((s, l) => s + l.quantidade, 0),
+    linhas,
+    torneios,
+    semPlacar: n(ex.sem_placar),
+  };
+}

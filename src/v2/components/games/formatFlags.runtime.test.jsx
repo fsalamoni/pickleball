@@ -39,6 +39,7 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useAppendGameDayGames: () => semMutacao,
   useClearGameDayGames: () => semMutacao,
   useGameDayRankingMeta: () => ({ data: null }),
+  useLinkGuestParticipant: () => semMutacao,
   usePublishGameDayRanking: () => semMutacao,
   useUnpublishGameDayRanking: () => semMutacao,
 }));

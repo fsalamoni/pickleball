@@ -362,6 +362,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
+**"Lancei os jogos e o atleta não aparece no ranking / no perfil"** → ⭐ `docs/18-RANKINGS.md` §10. Três causas, nenhuma no motor: (1) 🐞 o perfil público contava SÓ torneio — agora soma os jogos de dia de jogo **publicados** (`listPublishedGameDayGamesFor`, leitura pública de `club_event_games`; hook `usePublishedGameDayGames`, mesma chave no confronto direto); (2) partida com alguém **sem conta** sai do ranking para TODOS da partida — a regra fica, mas agora é VISÍVEL e tem conserto: prévia na publicação do dia (`previewGameDayPublication`, mesma conta de `buildGameDayMatch`) + **Vincular a uma conta** (`linkGuestParticipantToAccount`), e no torneio o selo "sem conta · não pontua" (`registrationSlotsWithoutAccount`, com paridade contra `functions/ranking.js`) + escolher a conta no lápis da inscrição (`linkRegistrationPlayerToAccount`). Vínculo **só preenche lado vazio** — nunca troca a conta de quem já tem uma; (3) Meu desempenho diz POR QUE um jogo não conta (`rankingCoverageSummary`). O servidor grava o que deixou de fora por motivo em `ranking_worker.last_result.excluded` (só contagens e ids — o documento é público) e o painel admin mostra (`describeRankingExclusions`)
 **"O torneio que eu criei e em que me inscrevi não aparece como meu no início"** → 🐞 era isso: `my_role` é o PAPEL (organizar vence jogar), e a seção Torneios só olhava `my_role === 'player'`. Agora `listMyTournaments` calcula `is_player`/`my_registration_status` (nada gravado) e o início mostra **"Seus torneios"** (`myTournamentsForHome` em `home/domain/homeTournaments.js`): o que a pessoa joga e o que organiza, uma linha por torneio, com o papel no subtítulo. **Nunca** decida "inscrito" por `my_role` — use `jogoNoTorneio(t)`. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §1
 **"Esta inscrição de torneio joga? E o check-in?"** → `isActiveRegistration` (`tournament/domain/checkin.js`): confirmada OU com check-in feito, igual — sorteio, fases, vagas, contagens. O check-in é opcional e só diz que a pessoa chegou. **Nunca** compare `status === REGISTRATION_STATUS.CONFIRMED` à mão (guarda `src/core/guards/checkinNaoTrava.test.js`). O PRÓPRIO check-in só para quem CRIOU a inscrição (`selfCheckInState`) — 🐞 o botão aparecia ao jogador vinculado por outra pessoa e a regra recusava ("permissão negada", que parecia "você não está inscrito"). Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §2
 **"2 turnos (ida e volta) num torneio"** → `stages[].round_robin_legs: 2`, no cartão da fase ("Turnos"). Vale em pontos corridos, grupos e Americano — 🐞 numa modalidade de VÁRIAS fases o sorteio (`buildPhaseDraw`) não repassava o turno, e o Americano o ignorava sempre. O returno é `withReturnLeg` (`domain/draw.js`): os mesmos jogos com os lados trocados, rodadas em seguida
@@ -561,7 +562,10 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-01 (torneio: o meu torneio no início, check-in
+> Última atualização: 2026-10-02 (ranking, rating e contagem de jogos: o
+> perfil conta os dias de jogo, o convidado sem conta ficou visível e
+> vinculável, e o servidor diz o que deixou de fora). Antes: 2026-10-01
+> (torneio: o meu torneio no início, check-in
 > que não trava, 2 turnos e o Americano aprimorado em etapas). Antes:
 > 2026-10-01 (notificações: o sino que rola e a central
 > com os avisos antigos). Antes: 2026-09-30 (o "Jogar" abre no Dia de jogo, os dias do
@@ -573,6 +577,24 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Ranking, rating e a contagem de jogos** (2026-10-02): *"lancei vários
+>   jogos e tem atletas que aparecem sem nenhum jogo. Atletas com vários jogos
+>   que não aparecem no rating e nos seus perfis"*. O motor estava certo; eram
+>   três defeitos em volta dele. **(1) 🐞 O perfil do atleta contava só
+>   torneio**: quem joga em dia de jogo aparecia no ranking com dezenas de jogos
+>   e no perfil com 0 — agora soma os jogos publicados, lista os recentes e o
+>   confronto direto os inclui. **(2) 🐞 A partida com alguém sem conta saía do
+>   ranking para todos, em silêncio**: a publicação do dia mostra antes quantos
+>   jogos entram, quantos ficam de fora e quem os tira, com **Vincular a uma
+>   conta**; no torneio, o selo "sem conta · não pontua" e a conta escolhida no
+>   lápis da inscrição — os jogos já lançados passam a contar sozinhos.
+>   **(3) Meu desempenho explica** quantos jogos não estão no ranking e por quê
+>   (dia não publicado, alguém sem conta, torneio em rascunho/privado). O
+>   servidor passou a contar o que deixa de fora, e o painel admin mostra com
+>   link para cada torneio. Textos do ranking corrigidos (diziam "só torneios
+>   encerrados"). **Banco: zero** coleção, índice, regra ou migração. Ver
+>   `docs/18-RANKINGS.md` §10.
 >
 > - **Torneio: o meu torneio no início, check-in que não trava, 2 turnos e o
 >   Americano aprimorado em etapas** (2026-10-01): *"criei um torneio e abri as

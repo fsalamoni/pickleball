@@ -468,6 +468,78 @@ export async function removeGameDayParticipant(gdId, pid, actor) {
 }
 
 /**
+ * VINCULA um convidado (inserido só pelo nome) à conta do atleta na
+ * plataforma.
+ *
+ * É o conserto de "lancei os jogos e o atleta não aparece no ranking": a
+ * partida com alguém sem conta não entra no ranking — e não entra para
+ * NINGUÉM da partida. Quase sempre o "convidado" tem conta: foi digitado em
+ * vez de escolhido na lista. Vinculando, todas as partidas dele no dia passam
+ * a resolver para a conta (o slot aponta para o participante, e o participante
+ * agora tem `user_id`) e, se o dia já está publicado, o espelho é atualizado
+ * na hora — o servidor recalcula os rankings pelo gatilho de sempre.
+ *
+ * Travas: só convidado SEM conta (nunca troca a conta de quem já tem uma) e a
+ * conta não pode já estar no dia (seriam duas pessoas iguais no ranking do
+ * dia). O nome digitado fica como está — é o que aparece nos jogos já
+ * lançados. O atleta é avisado: os resultados passam a ser dele.
+ *
+ * @param {string} gdId
+ * @param {string} pid participante convidado
+ * @param {{ user_id: string, name?: string, photo_url?: string }} athlete
+ * @param {object} actor
+ */
+export async function linkGuestParticipantToAccount(gdId, pid, athlete, actor) {
+  const uid = athlete?.user_id;
+  if (!gdId || !pid || !uid) throw new Error('Escolha o atleta da plataforma.');
+  const participants = await listGameDayParticipants(gdId);
+  const alvo = participants.find((p) => p.id === pid);
+  if (!alvo) throw new Error('Participante não encontrado — ele pode ter saído do dia.');
+  if (alvo.user_id) throw new Error(`${alvo.name || 'Este participante'} já está ligado a uma conta.`);
+  const jaNoDia = participants.find((p) => p.user_id === uid);
+  if (jaNoDia) {
+    throw new Error(`${jaNoDia.name || 'Este atleta'} já está neste dia de jogo. Remova um dos dois antes de vincular.`);
+  }
+
+  await updateDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
+    user_id: uid,
+    photo_url: alvo.photo_url || athlete.photo_url || null,
+    source: GD_PARTICIPANT_SOURCE.INVITED,
+    linked_from_guest_at: serverTimestamp(),
+    linked_by: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  });
+  // Membro do dia: passa a ver o dia de jogo (e os próprios jogos nele).
+  await updateDoc(doc(db, COL, gdId), {
+    member_uids: arrayUnion(uid),
+    invited_uids: arrayUnion(uid),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'game_day_guest_linked',
+    actor,
+    details: { game_day_id: gdId, participant_id: pid, user_id: uid },
+  });
+  if (actor?.uid && uid !== actor.uid) {
+    notifyUsers([uid], {
+      title: 'Seus jogos foram ligados à sua conta',
+      message: `Você jogou num dia de jogo como "${alvo.name || 'convidado'}". Os resultados agora são seus e entram no seu histórico.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/dia-de-jogo/${gdId}`,
+      actor: { uid: actor.uid },
+    }).catch((err) => logger.warn('Aviso do vínculo de convidado falhou:', err));
+  }
+  // Dia de um JOGO ABERTO: a vitrine espelha a lista (Onda CA).
+  await espelharJogoAberto(gdId);
+  // Dia já publicado: os jogos que agora resolvem entram no espelho na hora.
+  const sync = await syncGameDayRankingIfPublished(gdId, actor).catch((err) => {
+    logger.error('Sincronização do ranking após vincular convidado falhou:', err);
+    return { synced: false, reason: 'sync-failed' };
+  });
+  return { linked: true, ...sync };
+}
+
+/**
  * SAIR SOZINHO de um dia de jogo — o "Sair" do Procura-se jogo, do "Jogar" do
  * início e da página do dia, em qualquer origem (atleta, arena, clube).
  *
@@ -1448,6 +1520,48 @@ async function loadNamesByUid(uids) {
 }
 
 /**
+ * Os jogos PUBLICADOS no ranking em que o atleta jogou (`club_event_games`),
+ * já normalizados — os mesmos que alimentam o ranking, o rating 2.0–8.0 e o de
+ * duplas. É leitura pública (a regra de `club_event_games` é `read: if true`),
+ * então serve tanto para "Meu desempenho" quanto para o perfil de OUTRO
+ * atleta, que não enxerga os dias de jogo privados de ninguém.
+ *
+ * 🐞 O perfil público contava só torneios: quem jogava em dia de jogo aparecia
+ * no ranking com dezenas de jogos e, no próprio perfil, com "0 jogos".
+ *
+ * Uma consulta que FALHA lança (docs/27-FALHA-NAO-E-VAZIO.md).
+ *
+ * @param {string} uid
+ * @returns {Promise<Array>} jogos normalizados (ver domain/myGames), do mais novo ao mais antigo
+ */
+export async function listPublishedGameDayGamesFor(uid) {
+  if (!db || !uid) return [];
+  // Duas consultas array-contains (o Firestore não junta as duas numa só).
+  const [aSnap, bSnap] = await Promise.all([
+    getDocs(query(collection(db, COL_RANKING), where('side_a_ids', 'array-contains', uid))),
+    getDocs(query(collection(db, COL_RANKING), where('side_b_ids', 'array-contains', uid))),
+  ]);
+  const mirrorDocs = new Map();
+  [...aSnap.docs, ...bSnap.docs].forEach((d) => mirrorDocs.set(d.id, { id: d.id, ...d.data() }));
+
+  // Nomes dos parceiros e adversários (uids do espelho).
+  const uidSet = new Set();
+  mirrorDocs.forEach((m) => {
+    (m.side_a_ids || []).forEach((x) => uidSet.add(x));
+    (m.side_b_ids || []).forEach((x) => uidSet.add(x));
+  });
+  uidSet.delete(uid);
+  const nameByUid = await loadNamesByUid(Array.from(uidSet)).catch(() => new Map());
+
+  const out = [];
+  mirrorDocs.forEach((m) => {
+    const g = mirrorGameToMyGame(uid, m, nameByUid);
+    if (g) out.push(g);
+  });
+  return out.sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
+}
+
+/**
  * Todos os jogos de DIA DE JOGO em que o atleta participou (decididos), para o
  * "Meu desempenho". Inclui:
  *  - o espelho publicado (`club_event_games`) — dias de jogo de clube e de atleta
@@ -1461,29 +1575,9 @@ async function loadNamesByUid(uids) {
 export async function getMyGameDayGames(uid) {
   if (!db || !uid) return [];
 
-  // 1) Espelho publicado onde o atleta aparece (2 queries array-contains).
-  const [aSnap, bSnap] = await Promise.all([
-    getDocs(query(collection(db, COL_RANKING), where('side_a_ids', 'array-contains', uid))),
-    getDocs(query(collection(db, COL_RANKING), where('side_b_ids', 'array-contains', uid))),
-  ]);
-  const mirrorDocs = new Map();
-  [...aSnap.docs, ...bSnap.docs].forEach((d) => mirrorDocs.set(d.id, { id: d.id, ...d.data() }));
-
-  // Nomes dos adversários (uids do espelho).
-  const uidSet = new Set();
-  mirrorDocs.forEach((m) => {
-    (m.side_a_ids || []).forEach((x) => uidSet.add(x));
-    (m.side_b_ids || []).forEach((x) => uidSet.add(x));
-  });
-  uidSet.delete(uid);
-  const nameByUid = await loadNamesByUid(Array.from(uidSet));
-
-  const out = [];
-  const seen = new Set();
-  mirrorDocs.forEach((m) => {
-    const g = mirrorGameToMyGame(uid, m, nameByUid);
-    if (g) { out.push(g); seen.add(g.id); }
-  });
+  // 1) Espelho publicado onde o atleta aparece.
+  const out = await listPublishedGameDayGamesFor(uid);
+  const seen = new Set(out.map((g) => g.id));
 
   // 2) Fonte dos dias de jogo do atleta (inclui não publicados).
   const gdSnap = await getDocs(query(collection(db, COL), where('member_uids', 'array-contains', uid)));
@@ -1498,7 +1592,9 @@ export async function getMyGameDayGames(uid) {
     gamesSnap.docs.forEach((gDoc) => {
       const game = { id: gDoc.id, ...gDoc.data() };
       if (seen.has(gameDayMirrorId(gd.id, game.id))) return; // já veio do espelho
-      const g = sourceGameToMyGame(uid, gd.id, gdData.title, game, partById);
+      const g = sourceGameToMyGame(uid, gd.id, gdData.title, game, partById, {
+        published: Boolean(gdData.publish_to_ranking),
+      });
       if (g) { out.push(g); seen.add(g.id); }
     });
   }

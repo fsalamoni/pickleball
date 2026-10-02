@@ -63,6 +63,7 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useAppendGameDayGames: () => vazio,
   useClearGameDayGames: () => vazio,
   useGameDayRankingMeta: () => ({ data: null, isLoading: false }),
+  useLinkGuestParticipant: () => vazio,
   usePublishGameDayRanking: () => vazio,
   useUnpublishGameDayRanking: () => vazio,
   useDeleteGameDayGame: () => comMutacao(mutacoes.apagar),
