@@ -347,6 +347,55 @@ async function apagarOrfaos(db, colecao, idsAtuais, idsExistentes) {
   return mortos.length;
 }
 
+/** O nome de quem teve a conta excluída — o MESMO de `accountDeletion.js`. */
+const ATLETA_REMOVIDO = 'Atleta removido';
+
+/**
+ * Quais destes uids são de CONTA EXCLUÍDA: sem perfil público E sem
+ * `users/{uid}`. Só consulta `users` para quem já está sem perfil (poucos).
+ *
+ * 🐞 A exclusão de cadastro apaga o rating da pessoa e pseudonimiza o
+ * histórico, mas o uid fica nas partidas — e a passada seguinte RECRIAVA a
+ * linha dela no ranking, como "Atleta", "Local não informado", ocupando uma
+ * posição e abrindo um perfil que não existe.
+ *
+ * Quem não tem perfil mas TEM conta (não apareceu no diretório ainda) segue
+ * no ranking como sempre.
+ *
+ * @param {import('firebase-admin/firestore').Firestore} db
+ * @param {string[]} uids
+ * @param {Map<string, object>} profileById
+ * @returns {Promise<Set<string>>}
+ */
+async function contasExcluidas(db, uids, profileById) {
+  const semPerfil = [...new Set(uids)].filter((u) => u && !profileById.has(u));
+  const fora = new Set();
+  for (let i = 0; i < semPerfil.length; i += 100) {
+    const fatia = semPerfil.slice(i, i + 100);
+    // eslint-disable-next-line no-await-in-loop
+    const docs = await db.getAll(...fatia.map((u) => db.collection('users').doc(u)));
+    docs.forEach((d, j) => { if (!d.exists) fora.add(fatia[j]); });
+  }
+  return fora;
+}
+
+/**
+ * Tira do ranking INDIVIDUAL as linhas de contas excluídas e renumera. Pura.
+ * Os jogos continuam valendo para os adversários — a conta só não ocupa
+ * posição. (No de duplas a parceria segue, com o nome "Atleta removido": a
+ * linha é também de quem continua na plataforma.)
+ *
+ * @template T
+ * @param {Array<T & { uid: string }>} linhas
+ * @param {Set<string>} excluidas
+ * @param {{ renumerar?: boolean }} [opts]
+ * @returns {T[]}
+ */
+function semContasExcluidas(linhas, excluidas, { renumerar = false } = {}) {
+  const ficam = (linhas || []).filter((l) => !excluidas.has(l.uid));
+  return renumerar ? ficam.map((l, i) => ({ ...l, position: i + 1 })) : ficam;
+}
+
 /* --------------------------------------------------------------- o recálculo */
 
 /**
@@ -401,8 +450,12 @@ async function recomputeAllPlatformRankings(db) {
 
   const snapshotAt = Date.now();
 
+  // Contas excluídas: jogam nas contas dos outros, mas não ocupam posição.
+  const excluidas = await contasExcluidas(db, elo.map((p) => p.player_id)
+    .concat(dupr.map((p) => p.player_id)), profileById);
+
   /* -------------------------------------------------------- ELO / nacional */
-  const eloRows = elo.map((p, index) => ({
+  const eloRows = semContasExcluidas(elo.map((p, index) => ({
     uid: p.player_id,
     rating: p.rating,
     peak_rating: p.peak_rating,
@@ -415,7 +468,7 @@ async function recomputeAllPlatformRankings(db) {
     tournaments: p.tournaments,
     position: index + 1,
     ...perfilResumo(profileById.get(p.player_id) || {}),
-  }));
+  })), excluidas, { renumerar: true });
 
   const [eloHistorySnap, eloExistingSnap] = await Promise.all([
     db.collection(ELO_HISTORY).get(),
@@ -446,7 +499,7 @@ async function recomputeAllPlatformRankings(db) {
   );
 
   /* ------------------------------------------------- rating estilo DUPR 2–8 */
-  const duprRows = dupr.map((p) => {
+  const duprRows = semContasExcluidas(dupr.map((p) => {
     const profile = profileById.get(p.player_id) || {};
     const d = flattenSide(p.doubles);
     const s = flattenSide(p.singles);
@@ -472,7 +525,7 @@ async function recomputeAllPlatformRankings(db) {
       singles_reliability: s.reliability,
       singles_provisional: s.provisional,
     };
-  });
+  }), excluidas);
   const trajByUid = new Map(dupr.map((p) => [p.player_id, {
     doubles: (p.doubles.trajectory || []).slice(-DUPR_HISTORY_MAX),
     singles: (p.singles.trajectory || []).slice(-DUPR_HISTORY_MAX),
@@ -510,8 +563,10 @@ async function recomputeAllPlatformRankings(db) {
       const perfil = profileById.get(uid) || {};
       return {
         uid,
-        name: perfil.platform_name || perfil.full_name || 'Atleta',
-        photo: perfil.photo_url || '',
+        name: excluidas.has(uid) ? ATLETA_REMOVIDO : (perfil.platform_name || perfil.full_name || 'Atleta'),
+        photo: excluidas.has(uid) ? '' : (perfil.photo_url || ''),
+        // A tela não abre perfil de conta excluída (ele não existe mais).
+        ...(excluidas.has(uid) ? { removed: true } : {}),
       };
     }),
     games: r.games,
@@ -552,6 +607,9 @@ async function recomputeAllPlatformRankings(db) {
     excluded: foraDoRanking,
     eloPlayers: eloRows.length,
     duprPlayers: duprRows.length,
+    // Contas excluídas que ainda aparecem em partidas (fora do ranking
+    // individual). Só a contagem: o documento do worker é público.
+    removedAccounts: excluidas.size,
     doublesPairs: duplasRows.length,
     removed: { elo: eloRemovidos, dupr: duprRemovidos, doubles: duplasRemovidas },
   };
@@ -736,6 +794,9 @@ module.exports = {
   normalizeMatches,
   relatorioVazio,
   MOTIVO_FORA,
+  contasExcluidas,
+  semContasExcluidas,
+  ATLETA_REMOVIDO,
   proximoHistoricoElo,
   LEVEL_TABLE,
   DOUBLES_COLLECTION,

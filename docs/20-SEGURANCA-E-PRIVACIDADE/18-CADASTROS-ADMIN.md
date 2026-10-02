@@ -230,6 +230,92 @@ resolve antes:
   documento de outra pessoa é apagado**
 - 10 de tela (`AdminUserRecordsTab.deletion.runtime.test.jsx`)
 
+## Unificar o histórico de uma conta excluída (2026-10-02)
+
+Relatado com um print do ranking: *"o número 20 está com o nome 'Atleta' e,
+quando se entra, aparece que não existe. Era de um usuário que tinha dois
+cadastros e um foi excluído… o nome era Leonardo, e o perfil que ficou também
+é Leonardo. Dá para unificar tudo na conta que ficou?"*
+
+### O que estava acontecendo
+
+A exclusão faz o certo por desenho: apaga a identidade e PSEUDONIMIZA o
+histórico esportivo — o uid fica nas partidas, porque apagá-lo reescreveria o
+resultado e o rating dos adversários. Só que a passada seguinte do ranking
+**recriava a linha** daquele uid (sem perfil: "Atleta", "Local não
+informado"), ocupando uma posição e abrindo um perfil inexistente.
+
+Duas correções, de naturezas diferentes:
+
+1. **Conta excluída não ocupa posição** (automático, para todas). O servidor
+   reconhece a conta excluída — sem perfil público E sem `users/{uid}` — e não
+   grava linha dela no ranking nacional nem no 2.0–8.0; os jogos continuam
+   valendo para os adversários. No de duplas a parceria fica (é também de quem
+   continua), com "Atleta removido" e sem perfil para abrir. Quem tem conta mas
+   ainda não tem perfil público segue no ranking como sempre.
+2. **Unificar** (decisão do admin, caso a caso). Quando a conta excluída era o
+   SEGUNDO cadastro de quem continua, o histórico é dela.
+
+### Onde e como
+
+**Painel admin → Comunidade → Cadastros → Contas excluídas.** A lista sai da
+Auditoria (`admin_account_deleted` guarda nome, e-mail e uid de quem foi
+excluído — é a única prova de quem era). Em cada linha, **Unificar com outra
+conta**:
+
+1. **Quem fica** — sugestões pela semelhança de nome e e-mail
+   (`suggestMergeTargets`, `src/modules/admin/domain/accountMerge.js`), ou
+   busca livre;
+2. **Prévia do servidor** — as duas contas lado a lado (nome, e-mail, uid), o
+   que passa para a conta que fica, e os **conflitos**;
+3. **Confirmação** — motivo + `UNIFICAR`, **só o dono executa**;
+4. **Resultado** — e o ranking se refaz sozinho.
+
+A unificação roda na função `adminMergeAccountHistory`
+(`functions/accountMerge.js`).
+
+### O que passa (só o histórico ESPORTIVO)
+
+| Onde | O que muda |
+|---|---|
+| `club_event_games` (o que o ranking lê) | o uid nos lados |
+| dias de jogo: participantes, jogos, `member_uids` | uid; "Atleta removido" volta a ser o nome da conta |
+| eventos de clube (datas legadas): participantes e jogos | idem |
+| inscrições de torneio (+ rótulo nos grupos) | jogador, titular, rótulo |
+| torneios internos e ladder de arena | elenco, classificação (ladder com as duas: soma) |
+| validações de nível (como aluno) | o aluno |
+
+**Fica de fora, de propósito**: posse e poder (torneio, clube, dia de jogo que
+a conta criou), o financeiro (reservas, carteira, compras — retidos pela
+arena) e o social (conversas, fórum). Unificar números não transfere
+propriedade. Nome que NÃO é o pseudônimo é mantido (o que a pessoa digitou
+num jogo continua igual).
+
+### As travas
+
+- **Só conta EXCLUÍDA vira origem**: sem `users/{uid}` E sem conta de login.
+  Juntar duas contas VIVAS tiraria a história de alguém que continua aqui.
+- **Conflito bloqueia tudo**: as duas contas na MESMA partida ou inscrição
+  significaria a pessoa jogando com/contra ela mesma. A prévia mostra onde;
+  nada é gravado.
+- **A execução refaz a análise** no servidor — nunca age sobre plano do
+  navegador. **Idempotente**: rodar de novo não acha mais nada.
+- **Auditoria** `admin_account_history_merged` com origem, destino, motivo,
+  contagens e os caminhos alterados (até 400) — é o que permite desfazer.
+- **Zero regra, zero coleção, zero índice.** Os dados só mudam quando o dono
+  confirma. Os gatilhos de sempre recalculam os rankings, e a função ainda
+  pede uma passada no fim.
+
+### Cobertura
+
+`functions/accountMerge.test.js` (Firestore falso: conta viva nunca é origem,
+conflito bloqueia sem gravar, só o que é da conta antiga muda, o nome volta,
+idempotência, auditoria e recálculo), `src/modules/admin/domain/accountMerge.test.js`
+(auditoria → lista, sugestões, validação),
+`AdminAccountMergeDialog.runtime.test.jsx` e o painel em
+`AdminUserRecordsTab.deletion.runtime.test.jsx`; ranking sem conta excluída
+em `functions/platformRankings.test.js`.
+
 ## O que esta entrega NÃO é
 
 A especificação completa do console de suporte (`05-ADMIN-SUPORTE.md`) desenha

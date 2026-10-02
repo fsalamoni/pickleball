@@ -48,6 +48,9 @@ export function useDoublesRanking(enabled = true) {
             id: p.uid || p.id,
             name: p.name || 'Atleta',
             photo: p.photo || '',
+            // Conta excluída: a parceria fica (é também de quem continua),
+            // mas não há perfil para abrir.
+            removed: p.removed === true,
           })),
         }));
       }
