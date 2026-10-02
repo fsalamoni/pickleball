@@ -32,7 +32,8 @@ import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchie
 import { useSyncAchievementsV2 } from '@/modules/achievements/hooks/useSyncAchievementsV2';
 import { computeAchievementsV2 } from '@/modules/achievements/domain/achievementsV2';
 import { setUserProgressionV2 } from '@/modules/progression/services/progressionV2Service';
-import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
+import { computeWeekStreak, vacationPeriodsOf } from '@/modules/progression/domain/weekStreak';
+import { useStreakMetaV2 } from './useStreakMetaV2';
 import { computeTotalXpV2 } from '@/modules/progression/domain/xpTotal';
 import { levelFromXpV2 } from '@/modules/progression/domain/progressionV2';
 import { tierFromXp, tierProgress } from '@/modules/progression/domain/tiers';
@@ -43,7 +44,7 @@ import { achievementUserFromFacts } from '@/modules/progression/domain/activityF
 import { evaluateOnboarding, shouldShowOnboarding, daysSinceJoined } from '@/modules/progression/domain/onboarding';
 import { reachedMarks } from '@/modules/progression/domain/marks';
 import {
-  splitAchievements, statsToXpSources, calcProgressionFields, progressionIsCurrent, nextProgressionDoc,
+  splitAchievements, statsToXpSources, skillTreeSources, calcProgressionFields, progressionIsCurrent, nextProgressionDoc,
   countUniqueOpponents,
 } from '@/modules/progression/domain/gamificationSnapshot';
 import { instanteEmMs } from '@/core/domain/instant';
@@ -74,7 +75,10 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
 
   const dates = useMemo(() => extractActivityDates({ history, gameDayGames }), [history, gameDayGames]);
   const allGameDates = useMemo(() => [...matchDates, ...dates.gameDayDates], [matchDates, dates.gameDayDates]);
-  const streak = useMemo(() => computeProtectedStreak(allGameDates, { now: new Date() }), [allGameDates]);
+  // A sequência: a conta é a do domínio (`weekStreak.js`), com as férias da pessoa.
+  const streakMeta = useStreakMetaV2(uid, on);
+  const vacations = useMemo(() => vacationPeriodsOf(streakMeta.meta), [streakMeta.meta]);
+  const streak = useMemo(() => computeWeekStreak(allGameDates, { now: new Date(), vacations }), [allGameDates, vacations]);
 
   const rating = ratingHistory.length ? Number(ratingHistory[ratingHistory.length - 1].rating) || 0 : 0;
   const position = useMemo(() => {
@@ -91,7 +95,8 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
   const achievementUser = useMemo(() => {
     const base = {
       uid, rating, stats: { tournaments: stats?.tournaments || 0, played: stats?.played || 0, wins: stats?.wins || 0, podiums: stats?.podiums || 0, titles: stats?.titles || 0 },
-      streakWeeks: streak.weeks,
+      // as conquistas guardam o RECORDE: quem já emendou 12 semanas conquistou, mesmo parado
+      streakWeeks: streak.best,
       level: userProfile?.level || userProfile?.leveling_level || null,
       xpTotal: progression?.xpTotal || 0,
       matchDates, gameDayDates: dates.gameDayDates, tournamentDates: dates.tournamentDates,
@@ -99,8 +104,8 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     };
     if (factsQ.facts) return achievementUserFromFacts(factsQ.facts, base);
     // sem fatos ainda: o que já se sabe, sem inventar o resto
-    return { uid, rating, stats: base.stats, streak: { weeks: streak.weeks }, level: base.level, position, unique_opponents: opponents };
-  }, [uid, rating, stats, streak.weeks, userProfile, progression?.xpTotal, matchDates, dates, opponents, position, factsQ.facts]);
+    return { uid, rating, stats: base.stats, streak: { weeks: streak.best }, level: base.level, position, unique_opponents: opponents };
+  }, [uid, rating, stats, streak.best, userProfile, progression?.xpTotal, matchDates, dates, opponents, position, factsQ.facts]);
 
   const achievementsRaw = useMemo(() => computeAchievementsV2(achievementUser), [achievementUser]);
   const achievements = useMemo(() => splitAchievements(achievementsRaw), [achievementsRaw]);
@@ -120,7 +125,7 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     return { total: xpTotal, breakdown, level, tier: tierFromXp(xpTotal), tierProgress: tierProgress(xpTotal) };
   }, [stats, persistedIds, missionXpQ.total, missionXpQ.docs, prefsQ.prefs.onboarding?.done, grantsQ.grants, uid]);
 
-  const skillTrees = useMemo(() => buildSkillTrees(statsToXpSources(stats), XP_WEIGHTS_V2).trees, [stats]);
+  const skillTrees = useMemo(() => buildSkillTrees(skillTreeSources(stats, factsQ.facts), XP_WEIGHTS_V2).trees, [stats, factsQ.facts]);
 
   // ===== primeiros passos =====
   const joinedDays = daysSinceJoined(instanteEmMs(userProfile?.created_at ?? user?.metadata?.creationTime));
@@ -167,6 +172,7 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     if (!on || !sync || !ready) return;
     const calc = calcProgressionFields({
       xpTotal: xp.total, breakdown: xp.breakdown, stats, unlockedCount: persistedIds.size || achievements.unlockedCount,
+      facts: factsQ.facts,
     });
     if (progressionIsCurrent(progression, calc)) return;
     const sig = `${uid}|${calc.xpTotal}|${calc.achievementsUnlocked}|${calc.grantsXp}|${calc.xpBreakdown.missions}|${calc.xpBreakdown.onboarding}`;
@@ -182,7 +188,7 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
         logger.warn('[useGamificationEngine] falha ao gravar a progressão', err);
       }
     })();
-  }, [on, sync, ready, xp, stats, persistedIds, achievements.unlockedCount, progression, uid, qc]);
+  }, [on, sync, ready, xp, stats, factsQ.facts, persistedIds, achievements.unlockedCount, progression, uid, qc]);
 
   return {
     uid,
@@ -194,6 +200,7 @@ export function useGamificationEngine(uid, { enabled = true, sync = false } = {}
     matchDates,
     dates,
     streak,
+    streakMeta,
     facts: factsQ.facts,
     sources: factsQ.sources,
     prefs: prefsQ.prefs,

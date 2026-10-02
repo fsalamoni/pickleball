@@ -56,6 +56,22 @@ describe('streakMetaService', () => {
     const updated = await disableVacation('u1');
     expect(updated.vacationMode).toBe(false);
     expect(updated.vacationStartedAt).toBeNull();
+    // o período fica gravado, com fim: é o que a sequência usa para saber o que cobrir
+    expect(updated.vacations).toHaveLength(1);
+    expect(updated.vacations[0].from).toBeGreaterThan(0);
+    expect(updated.vacations[0].to).toBeGreaterThanOrEqual(updated.vacations[0].from);
+  });
+
+  it('enableVacation grava a pausa em aberto e recusa começar outra por cima', async () => {
+    const updated = await enableVacation('u1');
+    expect(updated.vacations).toEqual([{ from: updated.vacationStartedAt, to: null }]);
+    await expect(enableVacation('u1')).rejects.toThrow('já estão em andamento');
+  });
+
+  it('enableVacation recusa quando as últimas férias foram há menos de 90 dias', async () => {
+    await enableVacation('u1');
+    await disableVacation('u1');
+    await expect(enableVacation('u1')).rejects.toThrow('menos de 90 dias');
   });
 
   it('consumeFreeze decrementa freezesAvailable e soma freezesUsed', async () => {

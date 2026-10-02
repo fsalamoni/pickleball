@@ -1,14 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Award, ChevronRight, Settings2, Sparkles, Target, TrendingUp, Trophy, Users, Zap,
+  Award, ChevronRight, CircleHelp, Flame, Settings2, Sparkles, Target, Trophy, Users, Zap,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useKudoActions } from '@/modules/progression/hooks/useKudoActions';
 import { useUserReferralCode } from '@/modules/progression/hooks/useUserReferralCode';
-import { useStreakMetaV2 } from '@/modules/progression/hooks/useStreakMetaV2';
 import { useScopedMissions } from '@/modules/progression/hooks/useScopedMissions';
 import { useCelebrationListener } from '@/modules/progression/hooks/useCelebrationListener';
 import { useGamificationTracker } from '@/modules/progression/hooks/useGamificationTracker';
@@ -22,11 +21,13 @@ import TierBadge from '@/modules/progression/components/TierBadge';
 import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import ReferralCard from '@/modules/progression/components/ReferralCard';
 import MissionCompleteToast from '@/modules/progression/components/MissionCompleteToast';
-import StreakShieldBadge from '@/modules/progression/components/StreakShieldBadge';
 import SeasonBanner from '@/modules/progression/components/SeasonBanner';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
 import AchievementUnlockToast from '@/modules/achievements/components/AchievementUnlockToast';
 import MissionsPanel from '@/v2/components/gamification/MissionsPanel';
+import StreakCard from '@/v2/components/gamification/StreakCard';
+import HowItWorks from '@/v2/components/gamification/HowItWorks';
+import TermHint from '@/v2/components/gamification/TermHint';
 import OnboardingRoadmap from '@/v2/components/gamification/OnboardingRoadmap';
 import PeriodReviewCard from '@/v2/components/gamification/PeriodReviewCard';
 import CelebrationHost from '@/v2/components/gamification/CelebrationHost';
@@ -98,7 +99,7 @@ function V2GamificationHomeOn() {
 
   const { index: kudoIndex } = useKudoActions(uid, !!uid);
   const { code: referralCode } = useUserReferralCode(uid, !!uid);
-  const streakMeta = useStreakMetaV2(uid, !!uid);
+  const streakMeta = engine.streakMeta;
   const tier = engine.xp.tier.name;
 
   // Fontes de ATIVIDADE REAL das missões — nenhuma vem de clique.
@@ -177,7 +178,8 @@ function V2GamificationHomeOn() {
         action={
           <div className="flex items-center gap-2">
             <V2Badge tone="green"><Zap className="h-3.5 w-3.5" /> {xp.total.toLocaleString('pt-BR')} XP</V2Badge>
-            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/configuracoes" aria-label="Preferências da gamificação"><Settings2 className="h-4 w-4" /></Link></V2Button>
+            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/como-funciona" data-dica="gamificacao-guia" aria-label="Como funciona a gamificação"><CircleHelp className="h-4 w-4" /></Link></V2Button>
+            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/configuracoes" data-dica="gamificacao-preferencias" aria-label="Preferências da gamificação"><Settings2 className="h-4 w-4" /></Link></V2Button>
           </div>
         }
       />
@@ -188,17 +190,17 @@ function V2GamificationHomeOn() {
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><Sparkles className="h-5 w-5" /></div>
             <div>
-              <TierBadge xp={xp.total} size="sm" />
-              <p className="mt-1 text-xs text-gray-500">Nível {xp.level.level} · {xp.level.xpIntoLevel}/{xp.level.xpForNext} XP</p>
+              <div className="flex items-center gap-1"><TierBadge xp={xp.total} size="sm" /><TermHint term="tier" /></div>
+              <p className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">Nível {xp.level.level} · {xp.level.xpIntoLevel}/{xp.level.xpForNext} XP <TermHint term="nivel" className="h-5 w-5" /></p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><TrendingUp className="h-5 w-5" /></div>
+          <Link to="/gamification#sequencia-card" className="flex items-center gap-3 rounded-2xl hover:bg-paper">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Flame className="h-5 w-5" aria-hidden="true" /></div>
             <div>
               <p className="text-2xl font-bold tabular-nums text-ink">{streak.weeks}</p>
-              <p className="text-xs text-gray-500">semanas seguidas</p>
+              <p className="text-xs text-gray-500">{streak.weeks === 1 ? 'semana seguida' : 'semanas seguidas'}{streak.status === 'em_risco' ? ' · jogue até domingo' : ''}</p>
             </div>
-          </div>
+          </Link>
           <Link to="/conquistas" className="flex items-center gap-3 rounded-2xl hover:bg-paper">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><Award className="h-5 w-5" /></div>
             <div>
@@ -222,6 +224,8 @@ function V2GamificationHomeOn() {
 
       <V2SectionNav sections={abasVisiveis} activeId={aba} onSelect={trocarAba} ariaLabel="Seções da gamificação" dica="gamificacao-abas" />
 
+      <HowItWorks tab={aba} />
+
       {aba === 'jornada' && (
         <div className="space-y-5">
           {isModuleOn('onboarding') && engine.onboarding.visible && (
@@ -238,11 +242,14 @@ function V2GamificationHomeOn() {
               {unlockedHighlights.map((a) => <AchievementCardV2 key={a.id} achievement={a} compact />)}
             </div>
           </div>
-          <StreakShieldBadge
+          <div id="sequencia-card" className="scroll-mt-6"><StreakCard
+            streak={streak}
             meta={streakMeta.meta}
-            onUseFreeze={streakMeta.useFreeze}
-            onToggleVacation={streakMeta.meta?.vacationMode ? streakMeta.disableVacation : streakMeta.enableVacation}
-          />
+            onStartVacation={streakMeta.enableVacation}
+            onEndVacation={streakMeta.disableVacation}
+            busy={streakMeta.isMutating}
+            error={streakMeta.vacationError}
+          /></div>
           <XpBreakdownCard uid={uid} xp={xp} />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <V2Surface>
@@ -305,8 +312,6 @@ function V2GamificationHomeOn() {
       )}
 
       {aba !== 'recompensas' && <IssuerShortcuts />}
-
-      {telemetryOn && <p className="text-center text-[10px] text-gray-400">Telemetria de gamificação ativa · eventos emitidos pra Firebase Analytics</p>}
 
       <CelebrationHost marks={engine.marks} prefs={engine.prefs} ready={engine.ready} update={engine.updatePrefs} enabled={isModuleOn('celebrations')} />
       <MissionCompleteToast mission={celebratedMission} onClose={() => setCelebratedMission(null)} />

@@ -145,6 +145,14 @@ export const UserStreakMetaSchema = z.object({
   vacationMode: z.boolean(),
   vacationStartedAt: z.number().int().min(0).nullable(),
   comebackBonus: z.number().int().min(0).max(500),
+  /**
+   * As pausas de férias, da mais antiga à mais recente (opcional: documentos
+   * anteriores não têm). `to: null` = em andamento. Ver `weekStreak.js`.
+   */
+  vacations: z.array(z.object({
+    from: z.number().int().min(0),
+    to: z.number().int().min(0).nullable(),
+  })).max(8).optional(),
   updatedAt: z.number().int().min(0),
 });
 

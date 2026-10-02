@@ -48,6 +48,8 @@ export function useStreakMetaV2(uid, enabled = true) {
     disableVacation: () => vacationMut.mutate(false),
     useFreeze: () => freezeMut.mutate('use'),
     addFreeze: () => freezeMut.mutate('add'),
+    /** Por que as férias não puderam começar (texto para a pessoa), ou null. */
+    vacationError: vacationMut.error?.message || null,
     isMutating: vacationMut.isPending || freezeMut.isPending,
   };
 }
