@@ -58,8 +58,8 @@ function V2PublicAchievementsOn() {
   // O perfil é público: identifique o atleta pelo NOME, como no resto do app.
   // Antes a página estampava o uid cru como se fosse a identidade da pessoa.
   const { data: athlete } = useAthlete(uid);
-  const { progression } = useUserProgressionV2(uid, !!uid);
-  const { unlocked, unlockedIds, isLoading } = useUserAchievementsV2(uid, !!uid);
+  const { progression, error: progressionError } = useUserProgressionV2(uid, !!uid);
+  const { unlocked, unlockedIds, isLoading, error: achievementsError } = useUserAchievementsV2(uid, !!uid);
   const kudos = useKudoActions(me?.uid, !!me);
   const { stats } = usePlayerStats();
   const { data: ranking = [] } = useNationalRanking();
@@ -72,6 +72,30 @@ function V2PublicAchievementsOn() {
   const allAchievements = useMemo(() => [...ACHIEVEMENTS_V2], []);
   const isOwnProfile = me?.uid === uid;
   const athleteName = athlete?.platform_name || 'Atleta';
+
+  // A pessoa pode ter pedido para não mostrar tier e conquistas. Quem barra é a
+  // REGRA do banco (permissão negada) — aqui só se diz isso com gentileza, sem
+  // fingir que o perfil não existe nem que está vazio.
+  const privado = !isOwnProfile && [progressionError, achievementsError].some((e) => e?.code === 'permission-denied');
+  if (privado) {
+    return (
+      <div className="mx-auto max-w-[1000px]" data-testid="achievements-private">
+        <V2PageIntro
+          title="Conquistas"
+          subtitle={`Conquistas de ${athleteName}`}
+          action={<Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline"><ChevronLeft className="h-4 w-4" /> Voltar</Link>}
+        />
+        <V2Surface>
+          <V2EmptyState
+            icon={Award}
+            title="Este perfil prefere manter as conquistas privadas"
+            description="A pessoa escolheu não mostrar tier e conquistas. Você ainda pode ver o perfil completo."
+            action={<V2Button asChild><Link to={`/atleta/${uid}`}>Ver perfil</Link></V2Button>}
+          />
+        </V2Surface>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

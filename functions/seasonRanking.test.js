@@ -184,6 +184,11 @@ describe('buildRankingRows · quem aparece no placar público', () => {
     expect(temporada.find((r) => r.uid === 'c').public).toBe(false); // perfil escondido
   });
 
+  it('grava em que fatia do ranking a pessoa está (para os critérios "estar entre os X%")', () => {
+    const { temporada } = buildRankingRows({ progressoes: progs, perfis, config: CONFIG, now: 1 });
+    expect(temporada.map((r) => r.percent)).toEqual([20, 40, 60, 80, 100]);
+  });
+
   it('sem perfil no diretório não é público', () => {
     const { hall } = buildRankingRows({ progressoes: [progs[0]], perfis: new Map(), config: CONFIG, now: 1 });
     expect(hall).toEqual([]);

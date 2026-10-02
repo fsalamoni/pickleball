@@ -550,3 +550,55 @@ describe('⭐ consultas que a tela faz (a regra tem de conseguir prová-las)', (
     await assertFails(getDocs(query(collection(anonimo(), 'hall_of_fame'), where('state', '==', 'PR'))));
   });
 });
+
+describe('⭐ privacidade do perfil público: a REGRA barra, não a tela', () => {
+  const conquista = (uid, id = 'career_first_win') => ({
+    uid, achievementId: id, family: 'career', rarity: 'common', progress: 1, unlockedAt: AGORA, notified: false, shareCount: 0, schemaVersion: 1,
+  });
+  const progressao = (uid) => ({
+    uid, schemaVersion: 1, xpTotal: 100, level: 2, tier: 'Calouro', skillTrees: [], achievementsUnlocked: 1, achievementsTotal: 83,
+    source: 'recomputed', updatedAt: AGORA, createdAt: AGORA,
+  });
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'user_achievements_v2', `${BIA}_career_first_win`), conquista(BIA));
+      await setDoc(doc(db, 'user_progression_v2', BIA), progressao(BIA));
+    });
+  });
+
+  it('sem preferência gravada, o padrão é aparecer (nada muda para quem nunca abriu a tela)', async () => {
+    await assertSucceeds(getDoc(doc(como(ANA), 'user_progression_v2', BIA)));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'user_achievements_v2'), where('uid', '==', BIA))));
+  });
+
+  it('quem desligou "mostrar no perfil" some para os outros — documento e consulta', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'user_gamification_prefs', BIA), { uid: BIA, schemaVersion: 1, privacy: { showOnPublicProfile: false } });
+    });
+    await assertFails(getDoc(doc(como(ANA), 'user_progression_v2', BIA)));
+    await assertFails(getDocs(query(collection(como(ANA), 'user_achievements_v2'), where('uid', '==', BIA))));
+  });
+
+  it('mas a própria pessoa e o admin continuam lendo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'user_gamification_prefs', BIA), { uid: BIA, schemaVersion: 1, privacy: { showOnPublicProfile: false } });
+    });
+    await assertSucceeds(getDoc(doc(como(BIA), 'user_progression_v2', BIA)));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'user_achievements_v2'), where('uid', '==', BIA))));
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'user_progression_v2', BIA)));
+    await assertSucceeds(getDocs(query(collection(como(ADMIN), 'user_achievements_v2'), where('uid', '==', BIA))));
+  });
+
+  it('preferência com o campo ausente ou ligada continua mostrando', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'user_gamification_prefs', BIA), { uid: BIA, schemaVersion: 1, privacy: { showInHallOfFame: false } });
+    });
+    await assertSucceeds(getDoc(doc(como(ANA), 'user_progression_v2', BIA)));
+  });
+
+  it('documento que não existe continua devolvendo "não existe", não erro de permissão', async () => {
+    await assertSucceeds(getDoc(doc(como(ANA), 'user_progression_v2', CRIS)));
+  });
+});

@@ -140,6 +140,8 @@ export function validateChallenge(input = {}, issuer = {}) {
     value: {
       issuerType: issuer.type,
       issuerId: issuer.id,
+      // nome do emissor para a vitrine ("Arena Sol", "Clube X"): cosmético, o vínculo é issuerId
+      issuerName: String(issuer.name || '').trim().slice(0, 80),
       title: titulo,
       description: String(input.description || '').trim().slice(0, 400),
       rules: String(input.rules || '').trim().slice(0, 600),

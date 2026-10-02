@@ -5,22 +5,11 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
-  computeAchievementsV2,
   ACHIEVEMENT_FAMILY,
   ACHIEVEMENT_FAMILY_META,
   ACHIEVEMENT_RARITY,
 } from '@/modules/achievements/domain/achievementsV2';
-import {
-  usePlayerStats,
-} from '@/modules/performance/hooks/usePlayerStats';
-import {
-  useRatingHistory,
-  useNationalRanking,
-} from '@/modules/rating/hooks/useRating';
-import {
-  usePlayerMatchDates,
-} from '@/modules/progression/hooks/useProgression';
-import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
+import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
 import {
   V2Badge,
@@ -31,41 +20,6 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-
-/**
- * Helper: monta um "user" aditivo pro `computeAchievementsV2` a partir
- * do que existe hoje (userProfile, stats, rating, matchDates).
- * Quando o hook `useUserProgressionV2` for implementado (S1.5+), essa
- * montagem vira uma leitura direta da nova coleção.
- */
-function buildGamificationUser({ userProfile, stats, ratingHistory, matchDates, ranking, followsCount = 0, followersCount = 0 }) {
-  const currentRating = ratingHistory && ratingHistory.length > 0
-    ? Number(ratingHistory[ratingHistory.length - 1].rating) || 0
-    : 0;
-
-  const me = ranking && ranking.length > 0
-    ? ranking.find((p) => p.id === userProfile?.uid || p.uid === userProfile?.uid) || null
-    : null;
-
-  const streakInfo = computeProtectedStreak(matchDates || [], { now: new Date() });
-
-  return {
-    uid: userProfile?.uid,
-    rating: currentRating,
-    stats: {
-      tournaments: stats?.tournaments || 0,
-      played: stats?.played || 0,
-      wins: stats?.wins || 0,
-      podiums: stats?.podiums || 0,
-      titles: stats?.titles || 0,
-    },
-    streak: { weeks: streakInfo.weeks },
-    level: userProfile?.level || userProfile?.leveling_level || null,
-    position: me?.position || null,
-    follows_count: followsCount,
-    followers_count: followersCount,
-  };
-}
 
 const FAMILY_TABS = [
   { key: 'all', label: 'Todas' },
@@ -117,35 +71,27 @@ export default function V2Achievements() {
 }
 
 function V2AchievementsOn({ user }) {
-  const { stats, isLoading } = usePlayerStats();
-  const { data: ratingHistory = [] } = useRatingHistory(user?.uid, true);
-  const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, true);
-  const { data: ranking = [] } = useNationalRanking();
+  // O mesmo motor do hub: conquistas medidas com os fatos reais da pessoa.
+  const engine = useGamificationEngine(user?.uid, { enabled: !!user, sync: true });
+  const isLoading = engine.isLoading;
 
   const [family, setFamily] = useState('all');
   const [rarity, setRarity] = useState('all');
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
 
-  const gamificationUser = useMemo(
-    () => buildGamificationUser({ userProfile: user, stats, ratingHistory, matchDates, ranking }),
-    [user, stats, ratingHistory, matchDates, ranking],
-  );
-
-  const filters = useMemo(() => {
-    const f = {};
-    if (family !== 'all') f.family = family;
-    if (rarity !== 'all') f.rarity = rarity;
-    return f;
-  }, [family, rarity]);
-
-  const result = useMemo(
-    () => computeAchievementsV2(gamificationUser, {}, filters),
-    [gamificationUser, filters],
-  );
+  const filtrar = (lista) => lista.filter((a) => (family === 'all' || a.family === family) && (rarity === 'all' || a.rarity === rarity));
+  const result = useMemo(() => {
+    const ach = engine.achievements;
+    const unlocked = filtrar(ach.unlocked);
+    const locked = filtrar(ach.locked);
+    const soon = filtrar(ach.soon);
+    return { unlocked, locked, soon, total: ach.total, unlockedCount: ach.unlockedCount, byFamily: ach.byFamily };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.achievements, family, rarity]);
 
   const visibleItems = useMemo(() => {
     const all = [...result.unlocked, ...result.locked];
-    if (showUnlockedOnly) return all.filter((a) => result.unlocked.find((u) => u.id === a.id));
+    if (showUnlockedOnly) return result.unlocked;
     return all;
   }, [result, showUnlockedOnly]);
 
@@ -267,6 +213,26 @@ function V2AchievementsOn({ user }) {
             );
           })}
         </div>
+      )}
+
+      {result.soon.length > 0 && !showUnlockedOnly && (
+        <V2Surface className="mt-8" data-testid="achievements-soon">
+          <h2 className="font-display text-lg font-bold text-ink">Em breve ({result.soon.length})</h2>
+          <p className="mb-4 mt-1 text-sm text-gray-500">
+            A plataforma ainda não consegue medir estas — elas não entram na sua conta de “x de y”. Quando o dado existir, elas se destravam sozinhas.
+          </p>
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {result.soon.map((a) => (
+              <li key={a.id} className="flex items-start gap-3 rounded-2xl border border-dashed border-gray-200 p-3">
+                <span className="text-2xl opacity-60" aria-hidden="true">{a.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-600">{a.name}</p>
+                  <p className="text-xs text-gray-400">{a.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </V2Surface>
       )}
     </div>
   );

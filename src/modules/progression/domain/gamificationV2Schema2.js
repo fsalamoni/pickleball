@@ -188,6 +188,18 @@ export const SeasonRankingSchema = z.object({
   deltaPosition: z.number().int(), // pode ser negativo
   prizeXp: z.number().int().min(0),
   updatedAt: z.number().int().min(0),
+  // Camada pública (aditiva): só vem preenchida quando a pessoa aceitou aparecer
+  // no placar. O servidor decide — o cliente só lê.
+  level: z.number().int().min(1).optional(),
+  percent: z.number().min(0).max(100).optional(),
+  public: z.boolean().optional(),
+  publicPosition: z.number().int().min(1).nullable().optional(),
+  displayName: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  heldForReview: z.boolean().optional(),
+  finalized: z.boolean().optional(),
 });
 
 export const seasonRankingPath = (seasonId, uid) => `season_rankings/${seasonId}_${uid}`;

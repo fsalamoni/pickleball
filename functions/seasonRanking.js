@@ -170,6 +170,9 @@ function buildRankingRows({
       tier: r.tier, level: r.level, position,
       deltaPosition: r.posicaoAnterior === null ? 0 : r.posicaoAnterior - position,
       prizeXp: prizeFromConfig(position, temporada.length, r.xp, config.season),
+      // Em que fatia do ranking a pessoa está (1 = o topo): é o que os critérios
+      // "estar entre os X%" das recompensas leem — o cliente não conhece o total.
+      percent: Math.round((position / temporada.length) * 10000) / 100,
       public: publica, publicPosition: publica ? pub : null,
       // O que é público só vai junto quando a linha é pública.
       displayName: publica ? String(perfil.platform_name || 'Atleta').slice(0, 60) : null,
