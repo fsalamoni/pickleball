@@ -370,7 +370,7 @@ export function buildGamificationGuide(config = null) {
         'Uma crew é a sua turma fixa de dupla ou de quadra. Cada uma tem dono e membros.',
         'Dá para sair quando quiser.',
       ],
-      where: { label: 'Ver as crews', to: '/vinculos' },
+      where: { label: 'Ver as crews', to: '/vinculos?aba=crews' },
     },
     {
       id: 'mentoria', group: G.SOCIAL, audiences: [A.ATHLETE], module: 'social_bonds',
@@ -380,7 +380,7 @@ export function buildGamificationGuide(config = null) {
         'Quem convida (mentor ou aprendiz) manda o convite; só a OUTRA pessoa pode aceitar. Enquanto não aceitar, a mentoria fica pendente e nada acontece.',
         'Aceita a mentoria, o mentor registra as aulas e o aprendiz acompanha as metas. Qualquer um dos dois pode pausar ou encerrar.',
       ],
-      where: { label: 'Ver as mentorias', to: '/vinculos?aba=mentoria' },
+      where: { label: 'Ver as mentorias', to: '/vinculos?aba=mentorias' },
     },
     {
       id: 'convite', group: G.SOCIAL, audiences: [A.ATHLETE],
