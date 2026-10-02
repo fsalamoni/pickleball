@@ -10,6 +10,9 @@ import { useGamificationConfig } from '@/modules/progression/hooks/useGamificati
 import { stepForVisit } from '@/modules/progression/domain/onboarding';
 import { syncIsDue } from '@/modules/progression/domain/syncSchedule';
 
+/** Chave (por usuário, no navegador) da última sincronização de fundo. */
+const SYNC_PREF = 'gamificacao:sync';
+
 /**
  * O motor em segundo plano: recalcula e grava a progressão (e as conquistas e os
  * primeiros passos detectados) quando o app é aberto e a última passada tem mais
