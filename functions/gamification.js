@@ -636,6 +636,27 @@ async function contar(db, colecao, consulta = (q) => q) {
   return snap.data().count;
 }
 
+/**
+ * Os ids dos "primeiros passos" — o MESMO catálogo do cliente
+ * (`src/modules/progression/domain/onboarding.js`); há teste de paridade.
+ * O id é contrato: está gravado em `user_gamification_prefs.onboarding.done`.
+ */
+const ONBOARDING_STEP_IDS = Object.freeze(['level', 'photo', 'profile', 'ranking', 'follow', 'club', 'watch', 'tournament', 'share']);
+
+/**
+ * O funil dos primeiros passos: quantas pessoas concluíram cada etapa e quantas
+ * dispensaram o roteiro. Etapa detectada é GRAVADA com a data em
+ * `onboarding.done.<id>`, então contar é uma consulta de agregação por etapa
+ * (índice de campo único, automático — nenhum índice novo).
+ */
+async function funilDosPrimeirosPassos(db) {
+  const [dispensaram, ...porEtapa] = await Promise.all([
+    contar(db, 'user_gamification_prefs', (q) => q.where('onboarding.dismissed', '==', true)),
+    ...ONBOARDING_STEP_IDS.map((id) => contar(db, 'user_gamification_prefs', (q) => q.where(`onboarding.done.${id}`, '>', 0))),
+  ]);
+  return { dismissed: dispensaram, steps: Object.fromEntries(ONBOARDING_STEP_IDS.map((id, i) => [id, porEtapa[i]])) };
+}
+
 async function runMetricsSnapshot(db, { now = Date.now(), logger = console } = {}) {
   if (!(await gamificacaoLigada(db))) return { skipped: 'flag_desligada' };
   const dia = core.brDay(now);
@@ -665,6 +686,13 @@ async function runMetricsSnapshot(db, { now = Date.now(), logger = console } = {
     kudos7, reviews7, letters7: cartas7, challengesActive: desafiosAtivos, duelsActive: duelosAtivos,
     rewardClaimsOpen: pedidosRecompensa, flagsOpen: flagsAbertas, prefsDocs, schemaVersion: 1,
   };
+  // O funil é um campo ADITIVO do retrato; se a contagem falhar, o retrato
+  // do dia sai sem ele (a tela diz que ainda não mediu) em vez de não sair.
+  try {
+    linha.onboarding = await funilDosPrimeirosPassos(db);
+  } catch (e) {
+    logger.warn('Funil dos primeiros passos não medido.', e && e.message);
+  }
   await db.collection('gamification_metrics').doc(dia).set(linha);
   logger.info('Métricas da gamificação gravadas.', linha);
   return linha;
@@ -673,6 +701,6 @@ async function runMetricsSnapshot(db, { now = Date.now(), logger = console } = {
 module.exports = {
   normalizarConfig, carregarConfig, gamificacaoLigada, moduloLigado,
   runChallengeStandings, runWeeklyDuels, runReputation, runIntegrity, runWeeklyDigest, runMetricsSnapshot,
-  conceder, avisar, carregarJogos, lerPorIds, lerColecao, lerPrefs,
+  ONBOARDING_STEP_IDS, conceder, avisar, carregarJogos, lerPorIds, lerColecao, lerPrefs,
   elegivelParaDesafio, verificarAvaliacoes,
 };

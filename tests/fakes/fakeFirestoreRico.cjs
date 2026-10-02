@@ -43,8 +43,11 @@ class Ref {
   async delete() { this.store.log.push(['delete', this.path]); this.store.docs.delete(this.path); }
 }
 
+/** `a.b.c` percorre mapas aninhados, como o Firestore faz num `where`. */
+const valorDoCampo = (data, campo) => String(campo).split('.').reduce((o, k) => (o == null ? undefined : o[k]), data);
+
 const casa = (data, [campo, op, valor]) => {
-  const v = data[campo];
+  const v = valorDoCampo(data, campo);
   switch (op) {
     case '==': return v === valor;
     case 'in': return Array.isArray(valor) && valor.includes(v);

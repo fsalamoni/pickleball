@@ -512,6 +512,7 @@ export function buildGamificationGuide(config = null) {
       short: 'Um retrato por dia, gravado pelo servidor: quantos atletas, quantos ativos, convites, desafios e sinais abertos.',
       body: [
         'Servem para saber se a gamificação funciona: ativos em 7 e 30 dias, convites que viraram cadastro, avaliações e kudos por semana.',
+        'O funil dos primeiros passos mostra, etapa por etapa, quantas pessoas concluíram o roteiro de quem chegou agora e quantas o dispensaram — é onde dá para ver em que passo as pessoas travam.',
         'O retrato é gravado uma vez por dia; a evolução mostra os últimos dias.',
       ],
     },

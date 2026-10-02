@@ -18,6 +18,7 @@ import { aggregateReviews, suspiciousPairs, REVIEW_TAGS } from './matchReviews.j
 import { rankEntries } from './challenges.js';
 import { XP_WEIGHTS_V2 } from './progressionV2.js';
 import { TIER_NAMES } from './tiers.js';
+import { ONBOARDING_STEPS } from './onboarding.js';
 
 const requerer = createRequire(import.meta.url);
 const core = requerer('../../../../functions/gamificationCore.js');
@@ -130,5 +131,12 @@ describe('vocabulário e pesos', () => {
     const m = /const TIER_ORDEM = \[([^\]]+)\]/.exec(fonte);
     const servidor = m[1].split(',').map((s) => s.trim().replace(/['"]/g, ''));
     expect(servidor).toEqual([...TIER_NAMES]);
+  });
+});
+
+describe('primeiros passos: o funil das métricas conta as mesmas etapas do roteiro', () => {
+  it('os ids que o servidor conta são os do catálogo do cliente, na mesma ordem', () => {
+    const servidor = requerer('../../../../functions/gamification.js').ONBOARDING_STEP_IDS;
+    expect([...servidor]).toEqual(ONBOARDING_STEPS.map((p) => p.id));
   });
 });

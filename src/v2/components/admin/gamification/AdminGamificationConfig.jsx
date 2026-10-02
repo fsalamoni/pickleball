@@ -9,21 +9,47 @@ import {
   diffGamificationConfig, normalizeGamificationConfig,
 } from '@/modules/progression/domain/gamificationConfig';
 import { TIER_NAMES } from '@/modules/progression/domain/tiers';
-import { V2Button, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
 
-const NUM = [
-  { path: 'season.prizeTop1', label: 'Prêmio do 1º da temporada (XP)', hint: 'Concedido uma única vez, quando o mês fecha.' },
-  { path: 'season.prizeTop10Percent', label: 'Prêmio do top 10% (XP)' },
-  { path: 'season.prizeParticipation', label: 'Prêmio de participação (XP)', hint: 'Só para quem teve XP no mês.' },
-  { path: 'duels.winnerXp', label: 'XP de quem vence o duelo' },
-  { path: 'duels.participationXp', label: 'XP de quem joga o duelo e não vence' },
-  { path: 'duels.maxLevelGap', label: 'Diferença máxima de nível no duelo', hint: 'Em pontos da régua 2.0–8.0. Menor = duelos mais parelhos, mas menos pares.', step: 0.25 },
-  { path: 'reviews.minForPublicScore', label: 'Avaliações para a nota aparecer', hint: 'Antes disso a pessoa não tem nota pública — poucas notas dizem pouco.' },
-  { path: 'reviews.windowDays', label: 'Dias para avaliar um jogo' },
-  { path: 'antiFarm.xpJumpPerDay', label: 'Salto de XP por dia que gera sinal', hint: 'Acima disso o servidor abre um sinal para você revisar. Nunca pune sozinho.' },
-  { path: 'antiFarm.kudosRingMin', label: 'Kudos trocados que formam um “anel”' },
-  { path: 'antiFarm.unverifiedXpFactor', label: 'XP além do que os jogos verificados sustentam (fator)', step: 0.5 },
+/**
+ * Os números, agrupados pela parte da gamificação a que pertencem — o admin
+ * ajusta "o duelo" ou "a integridade", não uma lista solta de onze campos.
+ * `modulo`: se o admin desligou o módulo, o grupo diz que o valor só vale
+ * quando ele for ligado (o campo continua editável: dá para preparar antes).
+ */
+const GRUPOS_NUM = [
+  {
+    id: 'season', titulo: 'Temporada e placar público', modulo: 'hall_of_fame', tier: true,
+    campos: [
+      { path: 'season.prizeTop1', label: 'Prêmio do 1º da temporada (XP)', hint: 'Concedido uma única vez, quando o mês fecha.' },
+      { path: 'season.prizeTop10Percent', label: 'Prêmio do top 10% (XP)' },
+      { path: 'season.prizeParticipation', label: 'Prêmio de participação (XP)', hint: 'Só para quem teve XP no mês.' },
+    ],
+  },
+  {
+    id: 'duels', titulo: 'Duelo da semana', modulo: 'duels',
+    campos: [
+      { path: 'duels.winnerXp', label: 'XP de quem vence o duelo' },
+      { path: 'duels.participationXp', label: 'XP de quem joga o duelo e não vence' },
+      { path: 'duels.maxLevelGap', label: 'Diferença máxima de nível no duelo', hint: 'Em pontos da régua 2.0–8.0. Menor = duelos mais parelhos, mas menos pares.', step: 0.25 },
+    ],
+  },
+  {
+    id: 'reviews', titulo: 'Avaliações pós-jogo', modulo: 'match_reviews',
+    campos: [
+      { path: 'reviews.minForPublicScore', label: 'Avaliações para a nota aparecer', hint: 'Antes disso a pessoa não tem nota pública — poucas notas dizem pouco.' },
+      { path: 'reviews.windowDays', label: 'Dias para avaliar um jogo' },
+    ],
+  },
+  {
+    id: 'antiFarm', titulo: 'Integridade (antifarm)', modulo: null,
+    campos: [
+      { path: 'antiFarm.xpJumpPerDay', label: 'Salto de XP por dia que gera sinal', hint: 'Acima disso o servidor abre um sinal para você revisar. Nunca pune sozinho.' },
+      { path: 'antiFarm.kudosRingMin', label: 'Kudos trocados que formam um “anel”' },
+      { path: 'antiFarm.unverifiedXpFactor', label: 'XP além do que os jogos verificados sustentam (fator)', step: 0.5 },
+    ],
+  },
 ];
 
 const get = (o, path) => path.split('.').reduce((a, k) => a?.[k], o);
@@ -77,22 +103,35 @@ export default function AdminGamificationConfig() {
 
       <V2Surface className="space-y-4" data-dica="admin-gam-premios">
         <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Prêmios e limiares <TermHint term="admin-premios" /></h2>
-        <V2Field label="Tier mínimo para aparecer no placar público" htmlFor="cfg-mintier" hint="Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.">
-          <V2Select id="cfg-mintier" value={draft.season.publicMinTier} onChange={(e) => setDraft((d) => setIn(d, 'season.publicMinTier', e.target.value))}>
-            {TIER_NAMES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </V2Select>
-        </V2Field>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {NUM.map((n) => {
-            const [min, max] = GAMIFICATION_CONFIG_LIMITS[n.path];
-            return (
-              <V2Field key={n.path} label={n.label} htmlFor={`cfg-${n.path}`} hint={n.hint ? `${n.hint} (${min}–${max})` : `${min}–${max}`}>
-                <V2Input id={`cfg-${n.path}`} type="number" min={min} max={max} step={n.step || 1} value={get(draft, n.path)}
-                  onChange={(e) => setDraft((d) => setIn(d, n.path, e.target.value === '' ? '' : Number(e.target.value)))} />
-              </V2Field>
-            );
-          })}
-        </div>
+        {GRUPOS_NUM.map((g, i) => {
+          const desligado = g.modulo && draft.modules[g.modulo] === false;
+          return (
+            <div key={g.id} className={`space-y-3 ${i > 0 ? 'border-t border-gray-100 pt-4' : ''}`} data-grupo={g.id}>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{g.titulo}</p>
+                {desligado && <V2Badge tone="amber">módulo desligado — só vale quando você ligar</V2Badge>}
+              </div>
+              {g.tier && (
+                <V2Field label="Tier mínimo para aparecer no placar público" htmlFor="cfg-mintier" hint="Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.">
+                  <V2Select id="cfg-mintier" value={draft.season.publicMinTier} onChange={(e) => setDraft((d) => setIn(d, 'season.publicMinTier', e.target.value))}>
+                    {TIER_NAMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </V2Select>
+                </V2Field>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {g.campos.map((n) => {
+                  const [min, max] = GAMIFICATION_CONFIG_LIMITS[n.path];
+                  return (
+                    <V2Field key={n.path} label={n.label} htmlFor={`cfg-${n.path}`} hint={n.hint ? `${n.hint} (${min}–${max})` : `${min}–${max}`}>
+                      <V2Input id={`cfg-${n.path}`} type="number" min={min} max={max} step={n.step || 1} value={get(draft, n.path)}
+                        onChange={(e) => setDraft((d) => setIn(d, n.path, e.target.value === '' ? '' : Number(e.target.value)))} />
+                    </V2Field>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </V2Surface>
 
       <V2Surface className="space-y-4" data-dica="admin-gam-avisos">

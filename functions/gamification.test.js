@@ -339,4 +339,32 @@ describe('métricas', () => {
     expect(r).toMatchObject({ athletes: 2, active7: 1, active30: 2, challengesActive: 1, duelsActive: 1, flagsOpen: 1 });
     expect(db.dump('gamification_metrics')['2026-10-05']).toMatchObject({ athletes: 2 });
   });
+
+  it('⭐ o funil dos primeiros passos: quantas pessoas concluíram cada etapa e quantas dispensaram', async () => {
+    const db = createRichFakeDb({
+      ...LIGADA,
+      'user_gamification_prefs/a': { onboarding: { done: { level: NOW - 1000, photo: NOW - 900, share: NOW - 10 } } },
+      'user_gamification_prefs/b': { onboarding: { done: { level: NOW - 5000 }, dismissed: true } },
+      'user_gamification_prefs/c': { privacy: { showInHallOfFame: false } }, // sem roteiro nenhum
+    });
+    const r = await g.runMetricsSnapshot(db, { now: NOW, logger });
+    expect(r.prefsDocs).toBe(3);
+    expect(r.onboarding.dismissed).toBe(1);
+    expect(r.onboarding.steps).toMatchObject({ level: 2, photo: 1, share: 1, profile: 0, tournament: 0 });
+    expect(Object.keys(r.onboarding.steps)).toEqual(g.ONBOARDING_STEP_IDS);
+    expect(db.dump('gamification_metrics')['2026-10-05'].onboarding.steps.level).toBe(2);
+  });
+
+  it('se a contagem do funil falhar, o retrato do dia sai mesmo assim (sem o funil)', async () => {
+    const db = createRichFakeDb({ ...LIGADA, 'user_progression_v2/a': { updatedAt: NOW - 1000 } });
+    const original = db.collection.bind(db);
+    db.collection = (nome) => {
+      const col = original(nome);
+      if (nome !== 'user_gamification_prefs') return col;
+      return new Proxy(col, { get: (alvo, k) => (k === 'where' ? () => { throw new Error('índice ausente'); } : alvo[k]) });
+    };
+    const r = await g.runMetricsSnapshot(db, { now: NOW, logger });
+    expect(r.athletes).toBe(1);
+    expect(r.onboarding).toBeUndefined();
+  });
 });
