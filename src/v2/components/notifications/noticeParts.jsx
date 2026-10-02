@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import {
-  Bell, Building2, CalendarDays, GraduationCap, Megaphone, MessageSquare, Trophy, UserCog, Users,
+  Bell, Building2, CalendarDays, GraduationCap, Megaphone, MessageSquare, Sparkles, Trophy, UserCog, Users,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import {
@@ -20,6 +20,7 @@ export const AREA_ICON = Object.freeze({
   [NOTICE_AREA.AULAS]: GraduationCap,
   [NOTICE_AREA.SOCIAL]: MessageSquare,
   [NOTICE_AREA.PROMOCOES]: Megaphone,
+  [NOTICE_AREA.GAMIFICACAO]: Sparkles,
   [NOTICE_AREA.CONTA]: UserCog,
   [NOTICE_AREA.OUTROS]: Bell,
 });

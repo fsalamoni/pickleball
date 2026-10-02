@@ -32,6 +32,8 @@ import SkillTreeBars from './SkillTreeBars.jsx';
 export default function ProgressionCardV2({
   summary = null,
   xpBySource = null,
+  xpTotal: xpTotalProp = null,
+  trees: treesProp = null,
   matchDates = [],
   streakMeta = null,
   compact = false,
@@ -39,6 +41,9 @@ export default function ProgressionCardV2({
 }) {
   // XP total: prefere V2 multi-fonte se xpBySource foi passado; senão usa V1.
   const xpTotal = useMemo(() => {
+    // O total composto pelo motor (atividade + conquistas + missões + roteiro +
+    // prêmios), quando a tela o tem: é o MESMO número do hub.
+    if (Number.isFinite(xpTotalProp)) return Math.max(0, xpTotalProp);
     if (xpBySource) return computeXpV2(xpBySource).xpTotal;
     if (summary) {
       return (
@@ -50,15 +55,16 @@ export default function ProgressionCardV2({
       );
     }
     return 0;
-  }, [xpBySource, summary]);
+  }, [xpTotalProp, xpBySource, summary]);
 
   const level = useMemo(() => levelFromXpV2(xpTotal), [xpTotal]);
 
   // Skill trees (se xpBySource foi passado, computa; senão zera)
   const trees = useMemo(() => {
+    if (treesProp) return treesProp;
     if (xpBySource) return buildSkillTrees(xpBySource, XP_WEIGHTS_V2).trees;
     return null;
-  }, [xpBySource]);
+  }, [treesProp, xpBySource]);
 
   // Streak com proteção
   const streakInfo = useMemo(

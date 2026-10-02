@@ -38,7 +38,7 @@ export const ARENA_SECTION_GROUPS = Object.freeze([
 // competidor. Desligado o módulo, a seção não existe e a Central fica
 // idêntica ao que era.
 export function buildArenaSections({
-  coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, modulos = {},
+  coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn = false, modulos = {},
 }) {
   return [
     {
@@ -191,6 +191,9 @@ export function buildArenaSections({
       tabs: [
         ...(opsKpisOn ? [{ value: 'semana', label: 'Semana', icon: CalendarRange }] : []),
         { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        // Gamificação V2: saúde da arena, metas, desafios e recompensas (flag
+        // `gamification_v2`). Mora com os números porque começa por eles.
+        ...(engajamentoOn ? [{ value: 'engajamento', label: 'Engajamento', icon: Trophy, dica: 'arena-aba-engajamento' }] : []),
         { value: 'retornos', label: 'Retornos', icon: Star },
         // Leituras do negócio: a rede somada e a leitura automática dos números.
         ...(modulos.inteligencia ? [{ value: 'inteligencia', label: 'Inteligência', icon: Sparkles }] : []),

@@ -1,29 +1,32 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Sparkles, Trophy, Calendar } from 'lucide-react';
 import { useUserCurrentSeason, useSeasonTop } from '@/modules/progression/hooks/useUserSeasonRanking';
+import { useGamificationConfig } from '@/modules/progression/hooks/useGamificationConfig';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { MONTHLY_SEASON_PRIZES } from '@/modules/progression/domain/seasons';
+import { daysRemainingInMonth } from '@/modules/progression/domain/seasons';
 
 /**
  * SeasonBanner — banner da season atual.
- * Mostra:
- *  - Mês da temporada corrente (ex.: "setembro de 2026")
- *  - Sua posição se estiver no top
- *  - Prêmios disponíveis
+ * Mostra o mês, quantos dias faltam, a sua posição, o top 3 PÚBLICO (com nome)
+ * e os prêmios que o admin configurou. Some se o admin desligou o módulo.
  *
- * Aparece no topo de /gamification (e futuramente em outras páginas).
  * Gated por GAMIFICATION_V2.
  */
 export default function SeasonBanner({ className }) {
   const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   const { user } = useAuth();
-  const { season, seasonId } = useUserCurrentSeason(user?.uid, gamificationOn && !!user);
-  const { data: top = [] } = useSeasonTop({ seasonId, limit: 3, enabled: gamificationOn });
+  const { config, isModuleOn } = useGamificationConfig();
+  const moduloOn = isModuleOn('hall_of_fame');
+  const { season, seasonId } = useUserCurrentSeason(user?.uid, gamificationOn && moduloOn && !!user);
+  const { data: top = [] } = useSeasonTop({ seasonId, limit: 3, enabled: gamificationOn && moduloOn });
 
-  if (!gamificationOn) return null;
+  if (!gamificationOn || !moduloOn) return null;
   const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const dias = daysRemainingInMonth();
+  const p = config.season;
 
   return (
     <div
@@ -33,15 +36,15 @@ export default function SeasonBanner({ className }) {
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-purple-200 text-purple-800">
         <Trophy className="h-5 w-5" aria-hidden="true" />
       </div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-purple-700">
-          <Sparkles className="h-3 w-3" aria-hidden="true" /> Temporada
+          <Sparkles className="h-3 w-3" aria-hidden="true" /> Temporada · {dias === 1 ? 'último dia' : `faltam ${dias} dias`}
         </p>
         <p className="mt-0.5 text-sm font-bold text-ink capitalize">{currentMonth}</p>
         {season && (
           <p className="mt-0.5 text-xs text-gray-600">
-            Você está em #{season.position} · {season.xp.toLocaleString('pt-BR')} XP
-            {season.prizeXp > 0 && ` · +${season.prizeXp} XP prêmio`}
+            Você tem {season.xp.toLocaleString('pt-BR')} XP no mês · posição #{season.position}
+            {season.prizeXp > 0 && ` · prêmio previsto +${season.prizeXp} XP`}
           </p>
         )}
       </div>
@@ -52,16 +55,17 @@ export default function SeasonBanner({ className }) {
         </p>
         {top.slice(0, 3).map((t) => (
           <p key={t.uid} className="text-xs text-gray-700">
-            #{t.position} · {t.tier}
+            #{t.publicPosition ?? t.position} · {t.displayName || t.tier}
           </p>
         ))}
-        {top.length === 0 && (
-          <p className="text-xs text-gray-500">Ranking ainda em formação</p>
-        )}
+        {top.length === 0 && <p className="text-xs text-gray-500">Ranking ainda em formação</p>}
       </div>
 
-      <div className="w-full border-t border-purple-100 pt-2 text-[10px] text-gray-500">
-        Prêmios: {Object.values(MONTHLY_SEASON_PRIZES).slice(0, 3).map((p) => p.label).join(' · ')}
+      <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-purple-100 pt-2 text-[10px] text-gray-500">
+        <span>
+          Prêmios: 1º {p.prizeTop1} XP · top 10% {p.prizeTop10Percent} XP · participação {p.prizeParticipation} XP
+        </span>
+        <Link to="/hall-da-fama" className="font-bold text-ink hover:underline">Ver o placar →</Link>
       </div>
     </div>
   );

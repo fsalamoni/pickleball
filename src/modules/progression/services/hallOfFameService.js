@@ -1,74 +1,63 @@
 /**
- * hallOfFameService — adapter para o Hall da Fama público.
+ * hallOfFameService — o Hall da Fama público (XP de vida).
  *
- * Lê de user_progression_v2 (já existente) e retorna top 50 por XP.
- * Filtro: só mostra quem tem tier >= 'Jogador' (privacidade).
+ * Lê `hall_of_fame`, que é gravado pelo SERVIDOR já com a privacidade aplicada:
+ * só entra quem tem perfil no diretório, aceitou aparecer, não foi escondido
+ * pela moderação nem está retido para revisão e atinge o tier mínimo. O cliente
+ * não decide quem aparece — antes ele lia `user_progression_v2` e mostrava
+ * "UID: a1b2c3d4…" no lugar do nome, para qualquer um, sem respeitar nada.
  *
- * Em produção, usar collectionGroup query + índice composto
- * (xpTotal desc, tier). Aqui é interface simples.
+ * Nome, foto, estado e cidade vêm no próprio documento (a leitura é uma só, sem
+ * resolver cada atleta). Filtro por UF é por consulta (índice `state+position`).
  */
 import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
+  collection, getDocs, limit, orderBy, query, where, doc, getDoc,
 } from 'firebase/firestore';
-import { TIER_NAMES } from '@/modules/progression/domain/tiers';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
+import { gamificationDb } from './firestoreDb.js';
 
-function db() { return getFirestore(); }
-
-const PUBLIC_MIN_TIER = 'Jogador'; // tier mínimo pra aparecer
+function db() { return gamificationDb(); }
 
 export const HALL_OF_FAME_LIMIT = 50;
 
-/**
- * O Firestore aceita no máximo 10 valores num filtro `in`. Com 9 tiers
- * cabe folgado hoje; se a tabela crescer, o filtro precisa virar um campo
- * numérico (`tierRank >= N`) em vez de `in`.
- */
-const MAX_IN_VALUES = 10;
-
-/**
- * Retorna top N do Hall da Fama.
- * @param {Object} args
- * @param {number} args.limit - default 50, max 200
- * @param {string} args.tierMin - tier mínimo (default Jogador)
- * @returns {Promise<Array<{uid, xpTotal, tier, level, achievementsUnlocked, achievementsTotal}>>}
- */
-export async function fetchHallOfFame({ limit: lim = HALL_OF_FAME_LIMIT, tierMin = PUBLIC_MIN_TIER } = {}) {
-  // TIER_NAMES é a fonte única (domínio). A lista escrita à mão que existia
-  // aqui divergia dos tiers reais e o filtro não casava com ninguém.
-  const tierIdx = TIER_NAMES.indexOf(tierMin);
-  const validTiers = TIER_NAMES.slice(tierIdx >= 0 ? tierIdx : 0).slice(0, MAX_IN_VALUES);
-
-  // firestore: in + orderBy por xpTotal desc
-  // necessário índice composto: tier IN, xpTotal DESC
-  const q = query(
-    collection(db(), 'user_progression_v2'),
-    where('tier', 'in', validTiers),
-    orderBy('xpTotal', 'desc'),
-    limit(lim),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      uid: d.id,
-      xpTotal: data.xpTotal || 0,
-      tier: data.tier || 'Calouro',
-      level: data.level || 1,
-      achievementsUnlocked: data.achievementsUnlocked || 0,
-      achievementsTotal: data.achievementsTotal || ACHIEVEMENTS_V2.length,
-    };
-  });
+/** O documento do Hall → o formato que a tela usa. */
+export function hallRowToView(id, d = {}) {
+  return {
+    uid: d.uid || id,
+    position: Number(d.position) || 0,
+    xpTotal: Number(d.xp) || 0,
+    tier: d.tier || 'Calouro',
+    level: Number(d.level) || 1,
+    achievementsUnlocked: Number(d.achievements) || 0,
+    achievementsTotal: ACHIEVEMENTS_V2.length,
+    name: d.displayName || 'Atleta',
+    photoUrl: d.photoUrl || '',
+    state: d.state || null,
+    city: d.city || null,
+  };
 }
 
-/** Hall do top 1 só (imortal atual). */
+/**
+ * Top N do Hall da Fama.
+ * @param {{ limit?: number, state?: string|null }} [args]
+ */
+export async function fetchHallOfFame({ limit: lim = HALL_OF_FAME_LIMIT, state = null } = {}) {
+  const filtros = state ? [where('state', '==', state)] : [];
+  const snap = await getDocs(query(
+    collection(db(), 'hall_of_fame'), ...filtros, orderBy('position', 'asc'), limit(Math.min(200, lim)),
+  ));
+  return snap.docs.map((d) => hallRowToView(d.id, d.data()));
+}
+
+/** O campeão atual (top 1). */
 export async function fetchTopPlayer() {
   const list = await fetchHallOfFame({ limit: 1 });
   return list[0] || null;
+}
+
+/** A linha de UMA pessoa no Hall (ou null se ela não aparece). */
+export async function fetchMyHallRow(uid) {
+  if (!uid) return null;
+  const snap = await getDoc(doc(db(), 'hall_of_fame', uid));
+  return snap.exists() ? hallRowToView(snap.id, snap.data()) : null;
 }

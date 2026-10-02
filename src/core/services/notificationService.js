@@ -41,6 +41,9 @@ export const NOTIFICATION_TYPE = Object.freeze({
   // O admin corrigiu o cadastro do titular. Transparência é exigência da LGPD:
   // a pessoa tem de saber quando alguém mexe no dado dela.
   PROFILE_ADMIN_EDIT: 'profile_admin_edit',
+  // Gamificação: pedido de recompensa, decisão do emissor, resultado de
+  // desafio. A categoria é silenciável pela pessoa (central de notificações).
+  GAMIFICATION: 'gamification',
   GENERIC: 'generic',
 });
 

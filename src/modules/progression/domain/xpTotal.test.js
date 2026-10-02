@@ -121,7 +121,7 @@ describe('computeTotalXpV2', () => {
   it('atleta sem nada tem 0 e não quebra', () => {
     const r = computeTotalXpV2();
     expect(r.xpTotal).toBe(0);
-    expect(r.breakdown).toEqual({ activity: 0, achievements: 0, missions: 0 });
+    expect(r.breakdown).toEqual({ activity: 0, achievements: 0, missions: 0, onboarding: 0, grants: 0 });
   });
 
   it('o total nunca é negativo', () => {
@@ -135,5 +135,33 @@ describe('computeTotalXpV2', () => {
       statsSources: STATS, unlockedAchievementIds: [A1.id],
     }).xpTotal;
     expect(comRegistro).toBe(semRegistro + A1.xpBonus);
+  });
+});
+
+
+describe('computeTotalXpV2 — primeiros passos e concessões do servidor', () => {
+  it('soma os passos gravados e as concessões válidas, cada um uma vez', () => {
+    const r = computeTotalXpV2({
+      statsSources: {},
+      onboardingDone: { level: 1, photo: 2, inventado: 3 },
+      grantDocs: [
+        { id: 'u_season_2026-09', uid: 'u', kind: 'season', xp: 500 },
+        { id: 'u_season_2026-09', uid: 'u', kind: 'season', xp: 500 },
+      ],
+      uid: 'u',
+    });
+    expect(r.breakdown.onboarding).toBe(80);
+    expect(r.breakdown.grants).toBe(500);
+    expect(r.xpTotal).toBe(580);
+  });
+
+  it('recalcular do zero dá o mesmo número (idempotente)', () => {
+    const args = { onboardingDone: { club: 1 }, grantDocs: [{ id: 'a', uid: 'u', kind: 'duel', xp: 200 }], uid: 'u' };
+    expect(computeTotalXpV2(args)).toEqual(computeTotalXpV2(args));
+  });
+
+  it('concessão de outro uid não entra', () => {
+    const r = computeTotalXpV2({ grantDocs: [{ id: 'a', uid: 'outro', kind: 'duel', xp: 200 }], uid: 'u' });
+    expect(r.breakdown.grants).toBe(0);
   });
 });

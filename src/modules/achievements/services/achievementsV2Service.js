@@ -2,7 +2,6 @@
  * achievementsV2Service — Firestore adapter para user_achievements_v2/{uid}_{achId}
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -18,8 +17,10 @@ import {
   UserAchievementV2Schema,
 } from '@/modules/progression/domain/progressionV2Schema';
 
+import { gamificationDb } from '@/modules/progression/services/firestoreDb.js';
+
 function db() {
-  return getFirestore();
+  return gamificationDb();
 }
 
 function parseDoc(data) {

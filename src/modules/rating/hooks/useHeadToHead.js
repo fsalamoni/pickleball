@@ -25,7 +25,12 @@ export function useHeadToHead(uid, enabled = true) {
     staleTime: 60_000,
     queryFn: async () => {
       const [torneios, diasDeJogo] = await Promise.allSettled([
-        getPlayerH2HRecords(uid),
+        // A MESMA consulta que as datas de jogo usam (cache compartilhado).
+        qc.fetchQuery({
+          queryKey: ['player-h2h-records', uid],
+          queryFn: () => getPlayerH2HRecords(uid),
+          staleTime: 60_000,
+        }),
         qc.fetchQuery(publishedGameDayGamesQuery(uid)),
       ]);
       // O torneio é a base: se ele falha, a consulta falha (falha não é vazio).

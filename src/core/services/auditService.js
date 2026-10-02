@@ -81,6 +81,18 @@ export const AUDIT_ACTION_LABELS = {
   platform_promo_campaign_sent: 'Campanha da plataforma publicada',
   platform_promo_campaign_updated: 'Campanha da plataforma editada',
   platform_promo_campaign_deleted: 'Campanha da plataforma apagada',
+  // Gamificação V2 (Onda DA) — só o que muda configuração, distribui benefício
+  // ou mexe na conta de outra pessoa.
+  platform_gamification_config_changed: 'Configuração da gamificação alterada (admin)',
+  gamification_challenge_created: 'Desafio criado',
+  gamification_challenge_updated: 'Desafio editado',
+  gamification_challenge_cancelled: 'Desafio cancelado',
+  gamification_reward_created: 'Recompensa criada',
+  gamification_reward_updated: 'Recompensa editada',
+  gamification_claim_decided: 'Pedido de recompensa decidido',
+  gamification_flag_reviewed: 'Sinal de integridade revisado (admin)',
+  gamification_account_moderated: 'Conta moderada no placar da gamificação (admin)',
+  gamification_progress_reset: 'Progressão da gamificação recalculada do zero (admin)',
 };
 
 export async function createAuditLog({

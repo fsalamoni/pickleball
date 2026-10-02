@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
   UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
-  Sparkles, Megaphone, Tag,
+  Sparkles, Megaphone, Tag, Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -96,6 +96,15 @@ const COACH_SECTIONS = [
 // Cupons e campanhas DO PROFESSOR (Onda CG, flag `coach_marketing`). Sob
 // demanda: o console de divulgação só baixa quando a seção abre.
 const CoachPromoConsole = lazy(() => import('@/v2/components/promo/CoachPromoConsole'));
+// Engajamento (gamificação V2, flag `gamification_v2`): saúde do trabalho, metas, desafios e
+// recompensas do professor — também sob demanda.
+const CoachEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/CoachEngagementPanel'));
+const SECAO_ENGAJAMENTO = {
+  id: 'engajamento',
+  label: 'Engajamento',
+  icon: Trophy,
+  tabs: [{ value: 'engajamento', label: 'Saúde, desafios e recompensas', icon: Trophy }],
+};
 const SECAO_DIVULGACAO = {
   id: 'divulgacao',
   label: 'Divulgação',
@@ -333,6 +342,7 @@ function V2CoachAgendaContent() {
   const linkedClubsOn = true;
   const clinicsOn = true;
   const marketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
 
   const sections = useMemo(() => {
     const out = [...COACH_SECTIONS];
@@ -347,8 +357,13 @@ function V2CoachAgendaContent() {
       const idx = out.findIndex((s) => s.id === 'comercial');
       out.splice(idx >= 0 ? idx + 1 : out.length, 0, SECAO_DIVULGACAO);
     }
+    // Engajamento depois de Conteúdo: é o retrato de como o trabalho vai.
+    if (gamificationOn) {
+      const idx = out.findIndex((s) => s.id === 'conteudo');
+      out.splice(idx >= 0 ? idx + 1 : out.length, 0, SECAO_ENGAJAMENTO);
+    }
     return out;
-  }, [clinicsOn, marketingOn]);
+  }, [clinicsOn, marketingOn, gamificationOn]);
 
   const [params, setParams] = useSearchParams();
   const [tabEscolhida, setTabEscolhida] = useState(null);
@@ -503,6 +518,11 @@ function V2CoachAgendaContent() {
         {tab === 'divulgacao' && marketingOn && (
           <Suspense fallback={<V2Skeleton lines={4} />}>
             <CoachPromoConsole coachId={coachId} coach={coach} />
+          </Suspense>
+        )}
+        {tab === 'engajamento' && gamificationOn && (
+          <Suspense fallback={<V2Skeleton lines={4} />}>
+            <CoachEngagementPanel coach={{ id: coachId, name: coach.display_name || user?.displayName || '' }} />
           </Suspense>
         )}
         {tab === 'parceiros' && (

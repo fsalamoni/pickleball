@@ -831,6 +831,8 @@ Confronto equipe × equipe.
 
 ## Gamificação V2 (flag `gamification_v2`, default OFF)
 
+> Coleções da camada completa (prefs, grants de XP, hall, avaliações, reputação, cartas, desafios, duelos, recompensas, metas, integridade, métricas): ver `docs/38-GAMIFICACAO-V2.md` §3.
+
 > 13 coleções materializadas. Com a flag desligada nenhuma delas recebe
 > request — o schema V1 (`users/{uid}` XP/nível/conquistas) segue intacto.
 >

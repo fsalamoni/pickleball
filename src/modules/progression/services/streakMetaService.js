@@ -4,7 +4,6 @@
  * State do streak: grace days, freezes, vacation mode, comeback bonus.
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -17,7 +16,9 @@ import {
   STREAK_META_VERSION,
 } from '@/modules/progression/domain/progressionV2Schema';
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 /**
  * Teto de freezes DISPONÍVEIS ao mesmo tempo. Espelhado em `firestore.rules`.

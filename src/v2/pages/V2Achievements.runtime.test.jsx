@@ -9,8 +9,7 @@
  *  - Stats por família (5 cards) aparecem
  *  - Empty state quando filtro não retorna nada
  *
- * Estratégia: mockar hooks de dados (usePlayerStats, useRatingHistory, etc)
- * e o useFeatureFlag.
+ * Estratégia: mockar o motor (`useGamificationEngine`) e o useFeatureFlag.
  */
 
 import React from 'react';
@@ -32,38 +31,19 @@ vi.mock('@/core/lib/FeatureFlagsContext', () => ({
   useFeatureFlag: () => mockFlag,
 }));
 
-// Mock hooks de dados — Flávio (8T-22I-142J-66V-76D)
-vi.mock('@/modules/performance/hooks/usePlayerStats', () => ({
-  usePlayerStats: () => ({
-    stats: {
-      tournaments: 8, played: 142, wins: 66, podiums: 1, titles: 0,
-    },
-    isLoading: false,
-  }),
-}));
-
-vi.mock('@/modules/rating/hooks/useRating', () => ({
-  useRatingHistory: () => ({
-    data: [
-      { rating: 950, ts: 1 },
-      { rating: 1023, ts: 2 },
-    ],
-  }),
-  useNationalRanking: () => ({
-    data: [
-      { id: 'u1', position: 47, rating: 1023, games: 142, wins: 66 },
-    ],
-  }),
-}));
-
-vi.mock('@/modules/progression/hooks/useProgression', () => ({
-  usePlayerMatchDates: () => ({
-    data: [
-      Date.now() - 1 * 7 * 86400000,
-      Date.now() - 2 * 7 * 86400000,
-    ],
-  }),
-}));
+// O motor do cliente é o que monta as conquistas (com os fatos reais). Aqui ele
+// é substituído por um motor cujo resultado vem do MESMO domínio, para o
+// Flávio (8T-22I-142J-66V-76D, rating 1023, sequência de 2 semanas).
+vi.mock('@/modules/progression/hooks/useGamificationEngine', async () => {
+  const { computeAchievementsV2 } = await import('@/modules/achievements/domain/achievementsV2');
+  const { splitAchievements } = await import('@/modules/progression/domain/gamificationSnapshot');
+  const achievements = splitAchievements(computeAchievementsV2({
+    uid: 'u1', rating: 1023, position: 47,
+    stats: { tournaments: 8, played: 142, wins: 66, podiums: 1, titles: 0 },
+    streak: { weeks: 2 },
+  }));
+  return { useGamificationEngine: () => ({ achievements, isLoading: false }) };
+});
 
 import V2Achievements from './V2Achievements.jsx';
 
@@ -136,6 +116,17 @@ describe('V2Achievements · flag ON', () => {
       .find((c) => c.getAttribute('data-achievement-id') === 'career_rating_1100');
     expect(card).toBeTruthy();
     expect(card.getAttribute('data-unlocked')).toBe('false');
+  });
+
+  it('conquista que a plataforma ainda não mede fica em "Em breve", fora da conta de "x de y"', async () => {
+    await render();
+    const soon = container.querySelector('[data-testid="achievements-soon"]');
+    expect(soon).toBeTruthy();
+    expect(soon.textContent).toMatch(/Em breve \(\d+\)/);
+    // não aparece como card bloqueado na grade principal
+    const ids = Array.from(container.querySelectorAll('[data-testid="achievement-card"]')).map((c) => c.getAttribute('data-achievement-id'));
+    expect(ids).not.toContain('career_tri_champion');
+    expect(container.textContent).toContain('Tri-campeão');
   });
 
   it('stats por família: 5 cards com X/Y', async () => {

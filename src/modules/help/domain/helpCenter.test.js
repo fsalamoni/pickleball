@@ -142,16 +142,18 @@ describe('links internos', () => {
   });
 
   it('⭐ a ajuda NÃO documenta o que está atrás de flag desligada', () => {
-    // Gamificação (`conquistas`, `hall-da-fama`, `vinculos`) vive dentro de
-    // <Gamified>, e a flag `gamification_v2` está OFF: essas telas não existem
-    // para o usuário. Documentá-las seria mandar a pessoa para uma porta que
-    // não abre — o mesmo erro de um tutorial que ensina botão inexistente.
-    // Quando a flag for ligada, escreva os artigos E remova este teste.
+    // A gamificação (`conquistas`, `hall-da-fama`, `vinculos`, `gamification`) vive
+    // dentro de <Gamified>: com `gamification_v2` OFF essas telas não existem.
+    // Citá-las só é permitido num artigo que tenha a PRÓPRIA flag (o catálogo
+    // esconde o artigo junto com a tela) — senão a pessoa seria mandada a uma
+    // porta que não abre.
     const atrasDeFlagDesligada = ['/conquistas', '/hall-da-fama', '/vinculos', '/gamification'];
     const citados = [];
     artigos.forEach((a) => {
+      if ((a.flags || []).includes('gamification_v2')) return;
       a.blocks.filter((b) => b.type === 'link').forEach((b) => {
-        if (atrasDeFlagDesligada.includes(b.to)) citados.push(`${a.sectionId}/${a.id} → ${b.to}`);
+        const rota = String(b.to).split(/[?#]/)[0];
+        if (atrasDeFlagDesligada.includes(rota)) citados.push(`${a.sectionId}/${a.id} → ${b.to}`);
       });
     });
     expect(citados).toEqual([]);
@@ -543,13 +545,13 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
 
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
-      my_region: true, notifications_center: true, tournament_americano_etapas: true,
+      my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
-      guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true,
+      guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });

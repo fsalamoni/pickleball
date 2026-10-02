@@ -19,10 +19,10 @@ describe('isMeasurableMetric', () => {
     expect(isMeasurableMetric('game_played', 'monthly')).toBe(true);
   });
 
-  it('kudos só é medível no diário (o índice só guarda "hoje")', () => {
+  it('kudos é medível em qualquer janela porque cada kudo enviado tem data', () => {
     expect(isMeasurableMetric('kudos_given', 'daily')).toBe(true);
-    expect(isMeasurableMetric('kudos_given', 'weekly')).toBe(false);
-    expect(isMeasurableMetric('kudos_given', 'monthly')).toBe(false);
+    expect(isMeasurableMetric('kudos_given', 'weekly')).toBe(true);
+    expect(isMeasurableMetric('kudos_given', 'monthly')).toBe(true);
   });
 
   it('indicação só é medível no mensal (o código guarda "este mês")', () => {
@@ -246,5 +246,41 @@ describe('game_played soma torneio E dia de jogo', () => {
     }, { scope: 'daily', now: AGORA });
     expect(m.game_day_attended).toBe(1);
     expect(m.game_played).toBe(2);
+  });
+});
+
+
+describe('métricas vindas dos fatos de atividade', () => {
+  const NOW = new Date('2026-10-02T15:00:00Z'); // sexta, 12h em Brasília
+  const hoje = NOW.getTime() - 3600_000;
+  const segunda = new Date('2026-09-28T15:00:00Z').getTime();
+  const semanaPassada = new Date('2026-09-22T15:00:00Z').getTime();
+
+  it('a semana é a de segunda a domingo, não "os últimos 7 dias"', () => {
+    const m = computeMissionMetrics({ facts: { dates: { follows: [segunda, semanaPassada, hoje] } } }, { scope: 'weekly', now: NOW });
+    expect(m.follow_made).toBe(2);
+  });
+
+  it('dias distintos de jogo contam uma vez por dia', () => {
+    const m = computeMissionMetrics({
+      matchDates: [hoje, hoje - 1000, segunda],
+      gameDayDates: [segunda + 3600_000],
+    }, { scope: 'weekly', now: NOW });
+    expect(m.active_days).toBe(2);
+    expect(m.game_played).toBe(4);
+  });
+
+  it('kudos com data recortam semana e mês; sem data só vale o contador do dia', () => {
+    const comData = computeMissionMetrics({ facts: { dates: { kudosGiven: [hoje, segunda, semanaPassada] } } }, { scope: 'weekly', now: NOW });
+    expect(comData.kudos_given).toBe(2);
+    const semData = computeMissionMetrics({ kudoIndex: { givenToday: 4, lastKudoDay: '2026-10-02' } }, { scope: 'daily', now: NOW });
+    expect(semData.kudos_given).toBe(4);
+  });
+
+  it('reservas, aulas, avaliações e cartas entram pelas datas dos fatos', () => {
+    const m = computeMissionMetrics({
+      facts: { dates: { bookings: [hoje], lessons: [hoje], arenaReviews: [hoje], matchReviews: [hoje, hoje], letters: [hoje] } },
+    }, { scope: 'weekly', now: NOW });
+    expect(m).toMatchObject({ booking_attended: 1, lesson_attended: 1, arena_reviewed: 1, review_given: 2, letter_sent: 1 });
   });
 });

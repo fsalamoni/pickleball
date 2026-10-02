@@ -13,6 +13,7 @@ import {
   startMentorship,
   recordMentorLesson,
   endMentorship,
+  respondMentorship,
 } from '@/modules/progression/services/socialBondService';
 
 const RIVALS_KEY = (uid) => ['user-rivals', uid];
@@ -96,8 +97,8 @@ export function useUserMentorships(uid, enabled = true) {
 export function useMentorshipActions() {
   const qc = useQueryClient();
   const startMut = useMutation({
-    mutationFn: async ({ mentorUid, apprenticeUid }) => {
-      const res = await startMentorship({ mentorUid, apprenticeUid });
+    mutationFn: async ({ mentorUid, apprenticeUid, proposedBy = null, proposerName = '' }) => {
+      const res = await startMentorship({ mentorUid, apprenticeUid, proposedBy, proposerName });
       qc.invalidateQueries({ queryKey: ['user-mentorships', mentorUid] });
       qc.invalidateQueries({ queryKey: ['user-mentorships', apprenticeUid] });
       return res;
@@ -106,6 +107,13 @@ export function useMentorshipActions() {
   const recordMut = useMutation({
     mutationFn: async ({ pairKey }) => {
       const res = await recordMentorLesson(pairKey);
+      qc.invalidateQueries({ queryKey: ['user-mentorships'] });
+      return res;
+    },
+  });
+  const respondMut = useMutation({
+    mutationFn: async ({ pairKey, accept, actorUid }) => {
+      const res = await respondMentorship(pairKey, accept, actorUid);
       qc.invalidateQueries({ queryKey: ['user-mentorships'] });
       return res;
     },
@@ -119,9 +127,11 @@ export function useMentorshipActions() {
   });
   return {
     start: startMut.mutate,
+    respond: respondMut.mutate,
     recordLesson: recordMut.mutate,
     end: endMut.mutate,
     isStarting: startMut.isPending,
+    isResponding: respondMut.isPending,
     isRecording: recordMut.isPending,
     isEnding: endMut.isPending,
   };

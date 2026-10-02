@@ -2,7 +2,6 @@
  * socialBondService — Firestore adapter para user_rivals, crews, crew_members, mentorships
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -30,7 +29,11 @@ import {
   MENTORSHIP_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
 
-function db() { return getFirestore(); }
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { logger } from '@/core/lib/logger';
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 /** Teto de membros por crew. Espelhado em `firestore.rules` (crews). */
 export const CREW_MAX_MEMBERS = 50;
@@ -276,22 +279,69 @@ export function watchCrew(crewId, onChange, onError) {
 
 // ===== MENTORSHIPS =====
 
-export async function startMentorship({ mentorUid, apprenticeUid }) {
+/**
+ * Convida alguém para uma mentoria. Com `proposedBy` (o caminho da tela) o
+ * vínculo nasce `pending` e só vira `active` quando a OUTRA pessoa aceita —
+ * ninguém é posto numa mentoria sem saber. Sem `proposedBy`, nasce ativa (o
+ * comportamento antigo, que as regras só aceitam do admin).
+ */
+export async function startMentorship({ mentorUid, apprenticeUid, proposedBy = null, proposerName = '' }) {
   if (!mentorUid || !apprenticeUid || mentorUid === apprenticeUid) return null;
+  if (proposedBy && proposedBy !== mentorUid && proposedBy !== apprenticeUid) return null;
   const pairKey = mentorPairKey(mentorUid, apprenticeUid);
   const ref = doc(db(), mentorshipPath(pairKey));
   const snap = await getDoc(ref);
-  if (snap.exists()) return parseMentorship(snap.data());
+  // Um convite recusado ou uma mentoria que acabou pode ser reaberto; uma que
+  // está em curso (ou aguardando resposta) não se duplica.
+  const existente = snap.exists() ? parseMentorship(snap.data()) : null;
+  if (existente && ['pending', 'active', 'paused'].includes(existente.status)) return existente;
   const now = Date.now();
   const payload = {
     pairKey, schemaVersion: MENTORSHIP_VERSION,
-    mentorUid, apprenticeUid, status: 'active',
-    lessonsCompleted: 0, startedAt: now, endedAt: null, updatedAt: now,
+    mentorUid, apprenticeUid, status: proposedBy ? 'pending' : 'active',
+    ...(proposedBy ? { proposedBy } : {}),
+    lessonsCompleted: existente?.lessonsCompleted || 0, startedAt: now, endedAt: null, updatedAt: now,
   };
   const v = validateMentorship(payload);
   if (!v.success) throw new Error('mentorship schema inválido');
   await setDoc(ref, { ...v.data, serverStartedAt: serverTimestamp() });
+  if (proposedBy) {
+    // O aviso é consequência: se falhar, o convite continua valendo (a outra pessoa o vê em Vínculos).
+    try {
+      const outro = proposedBy === mentorUid ? apprenticeUid : mentorUid;
+      await notifyUsers([outro], {
+        title: 'Convite de mentoria',
+        message: `${proposerName || 'Um atleta'} convidou você para ${proposedBy === mentorUid ? 'ser aprendiz' : 'ser mentor'}. Responda em Vínculos.`,
+        type: NOTIFICATION_TYPE.GAMIFICATION,
+        link: '/vinculos?aba=mentorias',
+      });
+    } catch (err) {
+      logger.warn('[socialBondService] aviso do convite de mentoria falhou', err);
+    }
+  }
   return v.data;
+}
+
+/**
+ * Responde a um convite: quem NÃO o fez aceita (vira ativa) ou recusa (cancelada).
+ * Quem fez o convite só pode retirá-lo (cancelada).
+ */
+export async function respondMentorship(pairKey, accept, actorUid) {
+  if (!pairKey || !actorUid) return null;
+  const ref = doc(db(), mentorshipPath(pairKey));
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const m = parseMentorship(snap.data());
+  if (!m || m.status !== 'pending') return m;
+  if (actorUid !== m.mentorUid && actorUid !== m.apprenticeUid) throw new Error('Este convite não é seu.');
+  const souQuemConvidou = actorUid === m.proposedBy;
+  if (accept && souQuemConvidou) throw new Error('Quem convida não pode aceitar o próprio convite.');
+  const now = Date.now();
+  const updated = accept
+    ? { ...m, status: 'active', startedAt: now, updatedAt: now }
+    : { ...m, status: 'cancelled', endedAt: now, updatedAt: now };
+  await setDoc(ref, { ...updated, serverUpdatedAt: serverTimestamp() });
+  return updated;
 }
 
 export async function recordMentorLesson(pairKey) {
@@ -300,7 +350,8 @@ export async function recordMentorLesson(pairKey) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   const m = parseMentorship(snap.data());
-  if (!m) return null;
+  // Aula só se registra numa mentoria em curso (convite sem resposta não é mentoria ainda).
+  if (!m || m.status !== 'active') return null;
   const updated = { ...m, lessonsCompleted: m.lessonsCompleted + 1, updatedAt: Date.now() };
   await setDoc(ref, { ...updated, serverUpdatedAt: serverTimestamp() });
   return updated;

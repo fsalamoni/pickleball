@@ -216,3 +216,59 @@ describe('generateMissions · nenhum campo pode sair undefined', () => {
     expect(missoes[0].id).toContain('2026-09-03');
   });
 });
+
+import { MISSION_CATALOG } from './missions.js';
+import { isMeasurableMetric } from './missionMetrics.js';
+
+describe('catálogo e equilíbrio das missões', () => {
+  const NOW = new Date('2026-10-02T15:00:00Z');
+
+  it('toda missão do catálogo usa uma métrica que a plataforma sabe medir no escopo dela', () => {
+    MISSION_CATALOG.forEach((t) => {
+      const escopo = t.id.split('_')[0];
+      expect(isMeasurableMetric(t.metric, escopo), `${t.id} (${t.metric}) em ${escopo}`).toBe(true);
+    });
+  });
+
+  it('o pool de cada escopo é maior que a quantidade sorteada (há variedade de verdade)', () => {
+    const tam = (escopo) => MISSION_CATALOG.filter((t) => t.id.startsWith(`${escopo}_`)).length;
+    expect(tam('daily')).toBeGreaterThan(3);
+    expect(tam('weekly')).toBeGreaterThan(5);
+    expect(tam('monthly')).toBeGreaterThan(8);
+  });
+
+  it('o dia sempre traz ao menos uma missão de jogo e uma social', () => {
+    for (let dia = 1; dia <= 28; dia += 1) {
+      const now = new Date(Date.UTC(2026, 9, dia, 15));
+      const cats = generateMissions({ uid: 'u', scope: 'daily', now })
+        .map((m) => MISSION_CATALOG.find((t) => t.id === m.templateId).category);
+      expect(cats).toContain('play');
+      expect(cats).toContain('social');
+    }
+  });
+
+  it('a semana entrega 5, o mês 8, sem repetir template', () => {
+    const w = generateMissions({ uid: 'u', scope: 'weekly', now: NOW, currentTier: 'Aprendiz' });
+    const m = generateMissions({ uid: 'u', scope: 'monthly', now: NOW, currentTier: 'Aprendiz' });
+    expect(w).toHaveLength(5);
+    expect(m).toHaveLength(8);
+    expect(new Set(w.map((x) => x.templateId)).size).toBe(5);
+    expect(new Set(m.map((x) => x.templateId)).size).toBe(8);
+  });
+
+  it('módulo desligado pelo admin tira as missões que dependem dele', () => {
+    for (let dia = 1; dia <= 28; dia += 1) {
+      const now = new Date(Date.UTC(2026, 9, dia, 15));
+      const ids = generateMissions({
+        uid: 'u', scope: 'weekly', now, modules: { match_reviews: false, partner_letters: false },
+      }).map((x) => x.templateId);
+      expect(ids.some((id) => /review_2|letter/.test(id))).toBe(false);
+    }
+  });
+
+  it('todo texto de missão é pt-BR e específico (sem o genérico "Complete N")', () => {
+    MISSION_CATALOG.forEach((t) => {
+      expect(missionLabel(t).title, t.id).not.toMatch(/^Complete /);
+    });
+  });
+});

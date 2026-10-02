@@ -148,13 +148,17 @@ export const crewMemberPath = (crewId, uid) => `crew_members/${crewId}_${uid}`;
 // ===== MENTORSHIPS =====
 
 export const MENTORSHIP_VERSION = 2;
-export const MentorshipStatus = z.enum(['active', 'paused', 'completed', 'cancelled']);
+// `pending`: o convite foi feito e a outra pessoa ainda não respondeu — mentoria é
+// um vínculo entre DUAS pessoas, e ninguém entra em uma sem aceitar.
+export const MentorshipStatus = z.enum(['pending', 'active', 'paused', 'completed', 'cancelled']);
 export const MentorshipSchema = z.object({
   pairKey: z.string(),
   schemaVersion: z.literal(MENTORSHIP_VERSION),
   mentorUid: z.string(),
   apprenticeUid: z.string(),
   status: MentorshipStatus,
+  /** Quem fez o convite (só no `pending`): é a outra pessoa quem aceita. */
+  proposedBy: z.string().optional(),
   lessonsCompleted: z.number().int().min(0),
   startedAt: z.number().int().min(0),
   endedAt: z.number().int().min(0).nullable(),
@@ -188,6 +192,18 @@ export const SeasonRankingSchema = z.object({
   deltaPosition: z.number().int(), // pode ser negativo
   prizeXp: z.number().int().min(0),
   updatedAt: z.number().int().min(0),
+  // Camada pública (aditiva): só vem preenchida quando a pessoa aceitou aparecer
+  // no placar. O servidor decide — o cliente só lê.
+  level: z.number().int().min(1).optional(),
+  percent: z.number().min(0).max(100).optional(),
+  public: z.boolean().optional(),
+  publicPosition: z.number().int().min(1).nullable().optional(),
+  displayName: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  heldForReview: z.boolean().optional(),
+  finalized: z.boolean().optional(),
 });
 
 export const seasonRankingPath = (seasonId, uid) => `season_rankings/${seasonId}_${uid}`;

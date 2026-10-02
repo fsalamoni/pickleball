@@ -393,6 +393,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso da campanha leva à página da campanha. Para os outros avisos, `linkDeAviso` troca `#secao` por `?ancora=secao` (a regra aceita) e o layout devolve o `#secao` (`useAncoraDoAviso`) — a página rola até a seção. `isRuleSafeLink` tem teste de paridade contra o padrão da regra. E `notifyUsers` devolve quantos avisos GRAVOU: quem diz "enviado para N" usa esse número. Ao NAVEGAR a partir do link de um aviso, passe por `destinoDeAviso` (sino e tela inicial já passam): o `react-router-dom@6` tem redirecionamento aberto via barra invertida (GHSA-wrjc-x8rr-h8h6, corrigido só na v7), e o link é dado do banco
 **"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
 
+**"Onde está a GAMIFICAÇÃO V2? Posso criar uma segunda conta de XP?"** → ⭐ flag `gamification_v2` (default OFF) + `docs/38-GAMIFICACAO-V2.md`. **Não crie outra conta de XP**: o motor é UM, `useGamificationEngine` (`modules/progression/hooks`), e só grava com `ready`. XP é derivado (atividade + conquistas + missões + primeiros passos + `user_xp_grants`, que só o servidor escreve). Privacidade vale na REGRA (`gamificationPublicOk`) e no servidor (`buildRankingRows`); antifarm marca para o admin, nunca pune; falha numa fonte vira "não deu para medir", nunca zero. Treze módulos ligáveis em `platform_settings/gamification`. Paridade cliente×servidor travada em `domain/serverParity.test.js`
+
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
 # por nome
@@ -563,7 +565,7 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2` — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e

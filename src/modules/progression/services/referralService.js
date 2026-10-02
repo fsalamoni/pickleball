@@ -2,7 +2,6 @@
  * referralService — Firestore adapter para user_referral_codes + user_referrals
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -25,7 +24,9 @@ import {
 import { generateReferralCode } from '@/modules/progression/domain/referrals';
 import { platformMonthKey } from '@/modules/progression/domain/missionDay';
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 /**
  * Teto mensal de indicações por referrer (anti-farm). Espelhado em

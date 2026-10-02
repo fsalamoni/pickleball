@@ -2,7 +2,6 @@
  * seasonRankingService — Firestore adapter para season_rankings
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -34,7 +33,9 @@ export function currentSeasonId() {
   return platformMonthKey();
 }
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 function parseDoc(data) {
   const parsed = {
@@ -80,12 +81,20 @@ export async function getCurrentSeasonRanking(uid) {
   return getSeasonRanking(currentSeasonId(), uid);
 }
 
-export async function listSeasonTop({ seasonId, limit: lim = 50 } = {}) {
+/**
+ * O placar PÚBLICO da temporada: só quem aceitou aparecer (o servidor marca
+ * `public` e numera `publicPosition`). A consulta tem de levar `public == true`
+ * — é o que permite ordenar pela posição pública sem expor quem pediu para ficar
+ * de fora. `state` filtra por UF (índice composto já criado).
+ */
+export async function listSeasonTop({ seasonId, limit: lim = 50, state = null } = {}) {
   if (!seasonId) return [];
+  const filtros = [where('seasonId', '==', seasonId), where('public', '==', true)];
+  if (state) filtros.push(where('state', '==', state));
   const q = query(
     collection(db(), 'season_rankings'),
-    where('seasonId', '==', seasonId),
-    orderBy('xp', 'desc'),
+    ...filtros,
+    orderBy('publicPosition', 'asc'),
     limit(lim),
   );
   const snap = await getDocs(q);

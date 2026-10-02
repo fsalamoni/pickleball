@@ -319,6 +319,30 @@ const ATLETA = {
       ],
     },
     {
+      id: 'gamificacao-jornada',
+      title: 'Gamificação: XP, nível, missões e conquistas',
+      summary: 'Sua jornada na plataforma, sem cobrança: o que rende XP, as missões, a revisão da semana e o Hall da Fama.',
+      keywords: ['gamificação', 'gamificacao', 'xp', 'nível', 'nivel', 'missão', 'missao', 'conquista', 'hall da fama', 'temporada', 'desafio', 'recompensa', 'duelo', 'mentoria', 'avaliação', 'carta', 'reputação', 'revisão'],
+      flags: ['gamification_v2'],
+      blocks: [
+        p('A gamificação transforma o que você já faz — jogar, se inscrever, avaliar parceiros — em XP, nível e conquistas. Nada aqui é cobrança: ninguém perde pontos por ficar uma semana sem jogar.'),
+        list(
+          'XP — vem dos seus jogos e torneios, das conquistas, das missões e de recompensas dadas pela plataforma. A tela "Gamificação" mostra de onde veio cada ponto.',
+          'MISSÕES — pequenas metas da semana e do mês (jogar, jogar com gente nova, avaliar um jogo). Completar rende XP; passou o prazo, simplesmente recomeça.',
+          'PRIMEIROS PASSOS — um roteiro curto para quem chegou agora (nivelamento, foto, ver o ranking, achar atletas).',
+          'REVISÃO — um resumo da semana ou do mês: jogos, vitórias, parceiros e a conquista mais perto de sair.',
+          'COMPETIR — duelos entre amigos, desafios da comunidade e a Temporada, com o Hall da Fama.',
+          'SOCIAL — avaliar um jogo (a avaliação é anônima para quem recebe), escrever uma carta ao companheiro e mentoria: um convite que a outra pessoa precisa ACEITAR.',
+          'RECOMPENSAS — brindes e benefícios que arenas, professores e a plataforma oferecem.',
+        ),
+        link('/gamification', 'Abrir a Gamificação'),
+        link('/conquistas', 'Minhas conquistas'),
+        link('/hall-da-fama', 'Hall da Fama'),
+        warn('PRIVACIDADE: você aparece no Hall da Fama e no seu perfil público só se a sua conta for pública. Dá para sair do Hall e esconder nível e conquistas em Gamificação → Configurações — vale no servidor, não só na tela.'),
+        tip('Jogos avaliados em duplas muito repetidas ou combinadas entre as mesmas pessoas são marcados para revisão da plataforma — nunca punidos automaticamente.'),
+      ],
+    },
+    {
       id: 'jogo-aberto-arena',
       title: 'Entrar num jogo aberto de uma arena',
       summary: 'Horário com vaga, sem precisar montar o grupo.',
@@ -688,6 +712,20 @@ const ARENA = {
   audience: 'Quem tem quadra',
   articles: [
     {
+      id: 'gamificacao-engajamento-arena',
+      title: 'Engajamento dos seus clientes (gamificação)',
+      summary: 'Saúde da arena, metas, desafios e recompensas para quem joga aí.',
+      keywords: ['gamificação', 'gamificacao', 'engajamento', 'clientes', 'desafio', 'recompensa', 'meta', 'saúde'],
+      flags: ['gamification_v2'],
+      blocks: [
+        p('Na Central da arena, em Desempenho → Engajamento, você acompanha a saúde da arena (ocupação, clientes que voltaram), define metas e oferece desafios e recompensas para quem joga na sua arena.'),
+        list(
+          'Os números saem das reservas reais do mês. Fonte que falhou aparece como "não deu para medir", nunca como zero.',
+          'Uma recompensa vale na sua arena: você define o prazo e quem pode resgatar.',
+        ),
+      ],
+    },
+    {
       id: 'criar-arena',
       title: 'Publicar a sua arena',
       summary: 'O mínimo para aparecer e começar a receber pedidos.',
@@ -918,6 +956,21 @@ const PROFESSOR = {
   tagline: 'Ser encontrado, organizar a agenda e acompanhar alunos.',
   audience: 'Quem dá aula',
   articles: [
+    {
+      id: 'gamificacao-engajamento-professor',
+      title: 'Engajamento dos seus alunos (gamificação)',
+      summary: 'Saúde da sua base, metas e desafios e recompensas só para os seus alunos.',
+      keywords: ['gamificação', 'gamificacao', 'engajamento', 'alunos', 'desafio', 'recompensa', 'meta', 'saúde'],
+      flags: ['gamification_v2'],
+      blocks: [
+        p('No painel do professor, a seção "Engajamento" mostra a saúde da sua base (alunos ativos, aulas no mês), as metas que você define e os desafios e recompensas que você oferece aos seus alunos.'),
+        list(
+          'Os números vêm das suas aulas e alunos reais. Quando uma fonte não carrega, a tela diz "não deu para medir" — nunca mostra zero no lugar.',
+          'Desafios e recompensas ficam disponíveis só enquanto a plataforma tiver o módulo ligado.',
+        ),
+        link('/aulas', 'Abrir o painel de aulas (aba Engajamento)'),
+      ],
+    },
     {
       id: 'virar-professor',
       title: 'Ativar o seu perfil de professor',
@@ -1274,6 +1327,12 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   // --- ranking e evolução --------------------------------------------------
   { pattern: '/ranking/duplas', label: 'o ranking de duplas',
     refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.START, 'nivelamento']] },
+  { pattern: '/gamification', label: 'a gamificação',
+    refs: [[HELP_SECTION.ATHLETE, 'gamificacao-jornada']] },
+  { pattern: '/hall-da-fama', label: 'o Hall da Fama',
+    refs: [[HELP_SECTION.ATHLETE, 'gamificacao-jornada']] },
+  { pattern: '/conquistas', label: 'suas conquistas',
+    refs: [[HELP_SECTION.ATHLETE, 'gamificacao-jornada']] },
   { pattern: '/ranking', label: 'o ranking',
     refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.START, 'nivelamento']] },
   { pattern: '/meu-desempenho', label: 'seu desempenho',

@@ -34,6 +34,14 @@ const mockRunTransaction = vi.fn(async (_db, fn) => {
   return fn(tx);
 });
 
+const mockNotify = vi.fn(async () => 1);
+vi.mock('@/core/services/notificationService', () => ({
+  notifyUsers: (...a) => mockNotify(...a),
+  NOTIFICATION_TYPE: { GAMIFICATION: 'gamification' },
+}));
+
+vi.mock('@/core/config/firebase', () => ({ db: {} }));
+
 vi.mock('firebase/firestore', () => ({
   getFirestore: () => ({}),
   doc: (db, path) => ({ _path: path }),
@@ -55,6 +63,7 @@ import {
   joinCrew,
   leaveCrew,
   startMentorship,
+  respondMentorship,
   recordMentorLesson,
   endMentorship,
 } from './socialBondService';
@@ -163,5 +172,81 @@ describe('socialBondService · mentorships', () => {
     const res = await endMentorship(m.pairKey, 'completed');
     expect(res.status).toBe('completed');
     expect(res.endedAt).toBeGreaterThan(0);
+  });
+});
+
+describe('socialBondService · convite de mentoria (ninguém entra sem aceitar)', () => {
+  beforeEach(() => {
+    Object.keys(mockDocData).forEach((k) => delete mockDocData[k]);
+    mockSetDoc.mockClear();
+    mockNotify.mockClear();
+  });
+
+  it('com `proposedBy` o vínculo nasce PENDENTE e assinado, e a outra pessoa é avisada', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1', proposerName: 'Mara' });
+    expect(m).toMatchObject({ status: 'pending', proposedBy: 'm1' });
+    expect(mockNotify).toHaveBeenCalledTimes(1);
+    const [alvos, msg] = mockNotify.mock.calls[0];
+    expect(alvos).toEqual(['a1']);
+    expect(msg.message).toContain('Mara convidou você para ser aprendiz');
+    expect(msg.link).toBe('/vinculos?aba=mentorias');
+  });
+
+  it('quem convida o aprendiz avisa o mentor, com o papel certo', async () => {
+    await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'a1', proposerName: 'Ari' });
+    expect(mockNotify.mock.calls[0][0]).toEqual(['m1']);
+    expect(mockNotify.mock.calls[0][1].message).toContain('ser mentor');
+  });
+
+  it('um terceiro não convida por outros', async () => {
+    expect(await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'intruso' })).toBeNull();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('a falha do aviso não derruba o convite', async () => {
+    mockNotify.mockRejectedValueOnce(new Error('rede'));
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    expect(m.status).toBe('pending');
+  });
+
+  it('convite em aberto não se duplica', async () => {
+    await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    mockSetDoc.mockClear();
+    const de = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'a1' });
+    expect(de.proposedBy).toBe('m1');
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('quem foi convidado aceita: vira ativa e começa a contar', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    const r = await respondMentorship(m.pairKey, true, 'a1');
+    expect(r.status).toBe('active');
+  });
+
+  it('quem convidou NÃO aceita o próprio convite', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    await expect(respondMentorship(m.pairKey, true, 'm1')).rejects.toThrow(/próprio convite/);
+  });
+
+  it('recusar (ou retirar) cancela; terceiro não responde', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    await expect(respondMentorship(m.pairKey, false, 'intruso')).rejects.toThrow(/não é seu/);
+    const r = await respondMentorship(m.pairKey, false, 'm1');
+    expect(r.status).toBe('cancelled');
+    expect(r.endedAt).toBeGreaterThan(0);
+  });
+
+  it('aula só se registra em mentoria ativa (convite sem resposta não conta)', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    expect(await recordMentorLesson(m.pairKey)).toBeNull();
+    await respondMentorship(m.pairKey, true, 'a1');
+    expect((await recordMentorLesson(m.pairKey)).lessonsCompleted).toBe(1);
+  });
+
+  it('convite recusado pode ser refeito mais tarde', async () => {
+    const m = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    await respondMentorship(m.pairKey, false, 'a1');
+    const novo = await startMentorship({ mentorUid: 'm1', apprenticeUid: 'a1', proposedBy: 'm1' });
+    expect(novo.status).toBe('pending');
   });
 });

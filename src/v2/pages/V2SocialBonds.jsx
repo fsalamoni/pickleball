@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, GraduationCap, Swords, Users } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -13,6 +13,9 @@ import {
 import RivalsList from '@/modules/progression/components/RivalsList';
 import CrewsPanel from '@/modules/progression/components/CrewsPanel';
 import MentorshipsPanel from '@/modules/progression/components/MentorshipsPanel';
+import MentorshipInvite from '@/modules/progression/components/MentorshipInvite';
+import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
+import { usePeople } from '@/modules/progression/hooks/usePeople';
 import {
   V2Button, V2EmptyState, V2PageIntro, V2Surface,
 } from '@/v2/ui/primitives';
@@ -58,7 +61,9 @@ export default function V2SocialBonds() {
 function V2SocialBondsOn() {
   const { user } = useAuth();
   const uid = user?.uid;
-  const [aba, setAba] = useState('rivais');
+  // `?aba=mentorias` (o aviso do convite) abre direto na aba certa.
+  const [params] = useSearchParams();
+  const [aba, setAba] = useState(() => (ABAS.some((t) => t.key === params.get('aba')) ? params.get('aba') : 'rivais'));
 
   // Rivais vêm do histórico real de confrontos — não de uma coleção própria,
   // que nada preencheria.
@@ -71,7 +76,9 @@ function V2SocialBondsOn() {
   } = useCrewActions();
 
   const { data: mentorships = [], isLoading: mentoriasCarregando } = useUserMentorships(uid, !!uid);
-  const { recordLesson, end, isRecording, isEnding } = useMentorshipActions();
+  const { start, respond, recordLesson, end, isStarting, isResponding, isRecording, isEnding } = useMentorshipActions();
+  const { data: diretorio = [] } = useAthletes(aba === 'mentorias');
+  const { people } = usePeople(mentorships.flatMap((m) => [m.mentorUid, m.apprenticeUid]));
 
   const [erroCrew, setErroCrew] = useState(null);
   const crewOcupado = isCreating || isJoining || isLeaving;
@@ -81,7 +88,8 @@ function V2SocialBondsOn() {
   const contagem = {
     rivais: rivais.length,
     crews: myCrews.length,
-    mentorias: mentorships.filter((m) => m.status === 'active').length,
+    // convite que espera a MINHA resposta também conta: é o que pede atenção
+    mentorias: mentorships.filter((m) => m.status === 'active' || (m.status === 'pending' && m.proposedBy !== uid)).length,
   };
 
   // As mutações do React Query aceitam `{ onError }` como segundo argumento;
@@ -158,14 +166,30 @@ function V2SocialBondsOn() {
       )}
 
       {aba === 'mentorias' && (
-        <MentorshipsPanel
-          uid={uid}
-          mentorships={mentorships}
-          isLoading={mentoriasCarregando}
-          isBusy={isRecording || isEnding}
-          onRecordLesson={(pairKey) => recordLesson({ pairKey })}
-          onEnd={(pairKey) => end({ pairKey, status: 'completed' })}
-        />
+        <div className="space-y-5">
+          <MentorshipsPanel
+            uid={uid}
+            mentorships={mentorships}
+            isLoading={mentoriasCarregando}
+            isBusy={isRecording || isEnding || isResponding}
+            nameOf={(u) => people.get(u)?.name || 'um atleta'}
+            onRecordLesson={(pairKey) => recordLesson({ pairKey })}
+            onEnd={(pairKey) => end({ pairKey, status: 'completed' })}
+            onRespond={(pairKey, accept) => executar(respond, { pairKey, accept, actorUid: uid })}
+          />
+          <MentorshipInvite
+            uid={uid}
+            candidates={diretorio}
+            busy={isStarting}
+            onInvite={({ role, otherUid }) => executar(start, {
+              mentorUid: role === 'mentor' ? uid : otherUid,
+              apprenticeUid: role === 'mentor' ? otherUid : uid,
+              proposedBy: uid,
+              proposerName: user?.displayName || '',
+            })}
+          />
+          {erroCrew && <p role="alert" className="text-sm text-red-600">{erroCrew}</p>}
+        </div>
       )}
     </div>
   );

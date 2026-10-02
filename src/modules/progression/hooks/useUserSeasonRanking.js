@@ -11,7 +11,7 @@ import {
 } from '@/modules/progression/services/seasonRankingService';
 
 const KEY_CURRENT = (uid) => ['user-season-current', uid];
-const KEY_TOP = (seasonId) => ['season-top', seasonId];
+const KEY_TOP = (seasonId, state, lim) => ['season-top', seasonId, state || 'BR', lim];
 
 export function useUserCurrentSeason(uid, enabled = true) {
   const qc = useQueryClient();
@@ -32,11 +32,11 @@ export function useUserCurrentSeason(uid, enabled = true) {
   return { season: query.data || null, seasonId, isLoading: query.isLoading };
 }
 
-export function useSeasonTop({ seasonId, limit: lim = 50, enabled = true } = {}) {
+export function useSeasonTop({ seasonId, limit: lim = 50, state = null, enabled = true } = {}) {
   const id = seasonId || currentSeasonId();
   return useQuery({
-    queryKey: KEY_TOP(id),
-    queryFn: async () => listSeasonTop({ seasonId: id, limit: lim }),
+    queryKey: KEY_TOP(id, state, lim),
+    queryFn: async () => listSeasonTop({ seasonId: id, limit: lim, state }),
     enabled,
     staleTime: 5 * 60_000,
   });

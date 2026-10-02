@@ -18,7 +18,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // As funcionalidades com artigo próprio (Onda CG) ligadas por padrão, para
 // a tela mostrar o catálogo inteiro que os testes conferem.
-const TODAS = { personalized_home: true, platform_marketing: true, coach_marketing: true };
+const TODAS = { personalized_home: true, platform_marketing: true, coach_marketing: true, gamification_v2: true };
 const flags = { help: true, todas: { ...TODAS } };
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({
   useFeatureFlag: () => flags.help,

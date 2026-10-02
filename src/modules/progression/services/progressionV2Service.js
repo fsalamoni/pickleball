@@ -5,7 +5,6 @@
  * Toda regra de negócio (cálculo de XP, tier, etc) fica no DOMAIN.
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -19,8 +18,10 @@ import {
 } from '@/modules/progression/domain/progressionV2Schema';
 import { logger } from '@/core/lib/logger';
 
+import { gamificationDb } from './firestoreDb.js';
+
 function db() {
-  return getFirestore();
+  return gamificationDb();
 }
 
 /** Lê o snapshot do user (ou null se ainda não existir). */

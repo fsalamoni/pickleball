@@ -41,6 +41,12 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     types: ['partner_invite', 'partner_response'],
   },
   {
+    id: 'gamification',
+    label: 'Gamificação',
+    description: 'Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.',
+    types: ['gamification'],
+  },
+  {
     id: 'reminders',
     label: 'Lembretes',
     description: 'Lembretes para completar o perfil e o nivelamento.',

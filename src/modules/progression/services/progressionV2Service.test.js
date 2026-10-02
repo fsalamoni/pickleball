@@ -17,6 +17,8 @@ const mockOnSnapshot = vi.fn((ref, onChange) => {
   return () => {};
 });
 
+vi.mock('@/core/config/firebase', () => ({ db: {} }));
+
 vi.mock('firebase/firestore', () => ({
   getFirestore: () => ({}),
   doc: (db, path) => ({ _path: path }),

@@ -4,6 +4,7 @@ import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 const STATUS_META = {
+  pending: { label: 'Convite', tone: 'amber' },
   active: { label: 'Ativa', tone: 'green' },
   paused: { label: 'Pausada', tone: 'amber' },
   completed: { label: 'Concluída', tone: 'blue' },
@@ -13,9 +14,10 @@ const STATUS_META = {
 /**
  * MentorshipsPanel — mentorias do atleta, como mentor e como aprendiz.
  *
- * Só mostra e encerra o que já existe. Iniciar mentoria é um convite entre
- * duas pessoas, e o fluxo de convite ainda não existe — oferecer um botão
- * "iniciar" aqui criaria um vínculo unilateral, sem o outro lado aceitar.
+ * Mostra, registra aula e encerra o que existe, e responde aos CONVITES: mentoria
+ * é um vínculo entre duas pessoas e ninguém entra em uma sem aceitar — quem foi
+ * convidado aceita ou recusa; quem convidou só pode retirar. Quem convida está em
+ * `MentorshipInvite`.
  *
  * @param {{
  *   uid: string,
@@ -23,6 +25,8 @@ const STATUS_META = {
  *   isLoading?: boolean,
  *   onRecordLesson?: (pairKey: string) => void,
  *   onEnd?: (pairKey: string) => void,
+ *   onRespond?: (pairKey: string, accept: boolean) => void,
+ *   nameOf?: (uid: string) => string,
  *   isBusy?: boolean,
  *   className?: string,
  * }} props
@@ -33,10 +37,15 @@ export default function MentorshipsPanel({
   isLoading = false,
   onRecordLesson,
   onEnd,
+  onRespond,
+  nameOf = () => 'um atleta',
   isBusy = false,
   className,
 }) {
   if (isLoading) return <V2Skeleton className={cn('h-40 rounded-4xl', className)} />;
+
+  // convite recusado ou retirado não é histórico que mereça espaço na lista
+  mentorships = mentorships.filter((m) => !(m.status === 'cancelled' && m.proposedBy && m.lessonsCompleted === 0));
 
   if (mentorships.length === 0) {
     return (
@@ -57,6 +66,9 @@ export default function MentorshipsPanel({
           const souMentor = m.mentorUid === uid;
           const meta = STATUS_META[m.status] || STATUS_META.active;
           const ativa = m.status === 'active';
+          const pendente = m.status === 'pending';
+          const outro = nameOf(souMentor ? m.apprenticeUid : m.mentorUid);
+          const euConvidei = m.proposedBy === uid;
           return (
             <li
               key={m.pairKey}
@@ -70,13 +82,31 @@ export default function MentorshipsPanel({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-ink">
-                  {souMentor ? 'Você é o mentor' : 'Você é o aprendiz'}
+                  {pendente
+                    ? (euConvidei
+                      ? `Convite enviado a ${outro}`
+                      : `${outro} convidou você para ser ${souMentor ? 'mentor' : 'aprendiz'}`)
+                    : (souMentor ? 'Você é o mentor' : 'Você é o aprendiz')}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {m.lessonsCompleted} {m.lessonsCompleted === 1 ? 'aula registrada' : 'aulas registradas'}
+                  {pendente
+                    ? (euConvidei ? 'Aguardando a resposta. Você pode retirar o convite.' : 'Só começa se você aceitar.')
+                    : `${m.lessonsCompleted} ${m.lessonsCompleted === 1 ? 'aula registrada' : 'aulas registradas'}`}
                 </p>
               </div>
               <V2Badge tone={meta.tone}>{meta.label}</V2Badge>
+              {pendente && (
+                <div className="flex gap-2">
+                  {!euConvidei && (
+                    <V2Button size="sm" disabled={isBusy} onClick={() => onRespond?.(m.pairKey, true)} data-testid="mentorship-accept-btn">
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Aceitar
+                    </V2Button>
+                  )}
+                  <V2Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onRespond?.(m.pairKey, false)} data-testid="mentorship-decline-btn">
+                    <XCircle className="h-4 w-4" aria-hidden="true" /> {euConvidei ? 'Retirar' : 'Recusar'}
+                  </V2Button>
+                </div>
+              )}
               {ativa && (
                 <div className="flex gap-2">
                   <V2Button
