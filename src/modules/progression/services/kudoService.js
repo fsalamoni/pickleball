@@ -2,7 +2,6 @@
  * kudoService — Firestore adapter para user_kudos + user_kudos_index
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   onSnapshot,
@@ -24,7 +23,9 @@ import {
 import { missionDateKey } from '@/modules/progression/domain/missionDay';
 import { createAuditLog } from '@/core/services/auditService';
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 function makeEmptyIndex(uid) {
   return {

@@ -7,6 +7,8 @@ const mockDocs = [
 ];
 const mockGetDocs = vi.fn(async () => ({ docs: mockDocs }));
 
+vi.mock('@/core/config/firebase', () => ({ db: {} }));
+
 vi.mock('firebase/firestore', () => ({
   getFirestore: () => ({}),
   collection: (db, name) => ({ _name: name }),

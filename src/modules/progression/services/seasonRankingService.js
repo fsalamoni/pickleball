@@ -2,7 +2,6 @@
  * seasonRankingService — Firestore adapter para season_rankings
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -34,7 +33,9 @@ export function currentSeasonId() {
   return platformMonthKey();
 }
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 function parseDoc(data) {
   const parsed = {

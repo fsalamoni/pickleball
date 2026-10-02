@@ -2,7 +2,6 @@
  * socialBondService — Firestore adapter para user_rivals, crews, crew_members, mentorships
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -30,7 +29,9 @@ import {
   MENTORSHIP_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 /** Teto de membros por crew. Espelhado em `firestore.rules` (crews). */
 export const CREW_MAX_MEMBERS = 50;

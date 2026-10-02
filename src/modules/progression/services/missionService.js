@@ -7,7 +7,6 @@
  * - claimBonus: marca bonusClaimed
  */
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -25,8 +24,10 @@ import { generateMissions, MISSION_BONUS_XP } from '@/modules/progression/domain
 import { missionDateKey, missionDaySeed } from '@/modules/progression/domain/missionDay';
 import { applyRealProgress } from '@/modules/progression/domain/missionMetrics';
 
+import { gamificationDb } from './firestoreDb.js';
+
 function db() {
-  return getFirestore();
+  return gamificationDb();
 }
 
 /** Lê missões de um dia (ou null). */

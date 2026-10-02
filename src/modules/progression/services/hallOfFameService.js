@@ -8,7 +8,6 @@
  * (xpTotal desc, tier). Aqui é interface simples.
  */
 import {
-  getFirestore,
   collection,
   query,
   where,
@@ -19,7 +18,9 @@ import {
 import { TIER_NAMES } from '@/modules/progression/domain/tiers';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 
-function db() { return getFirestore(); }
+import { gamificationDb } from './firestoreDb.js';
+
+function db() { return gamificationDb(); }
 
 const PUBLIC_MIN_TIER = 'Jogador'; // tier mínimo pra aparecer
 

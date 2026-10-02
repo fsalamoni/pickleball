@@ -19,6 +19,8 @@ const mockGetDocs = vi.fn(async () => ({
   docs: mockQueryDocs.map((d) => ({ id: d.__id || 'x', data: () => d })),
 }));
 
+vi.mock('@/core/config/firebase', () => ({ db: {} }));
+
 vi.mock('firebase/firestore', () => ({
   getFirestore: () => ({}),
   doc: (db, path) => ({ _path: path }),
