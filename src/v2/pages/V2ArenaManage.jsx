@@ -24,6 +24,7 @@ const V2ArenaPaymentTab = lazy(() => import('@/v2/components/arenas/V2ArenaPayme
 const V2ArenaRulesTab = lazy(() => import('@/v2/components/arenas/V2ArenaRulesTab'));
 const V2ArenaMercadoTab = lazy(() => import('@/v2/components/arenas/V2ArenaMercadoTab'));
 const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPanel'));
+const ArenaEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ArenaEngagementPanel'));
 const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModulesPanel'));
 // Módulos que viraram parte da Central: o corpo das telas deles entra como aba.
 const ArenaOpenMatchAdminPanel = lazy(() => import('@/v2/components/arenas/openMatch/ArenaOpenMatchAdminPanel'));
@@ -211,6 +212,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const linkedClubsOn = true;
   const crmOn = true;
   const opsKpisOn = useFeatureFlag(FEATURE_FLAG.ARENA_OPS_KPIS);
+  const engajamentoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   // Dia de jogo da arena: rota própria (como Módulos e Open Match), por isso
   // entra como atalho no topo e não como aba — aba que navega para fora quebra
   // a promessa das outras.
@@ -283,7 +285,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
   const sections = buildArenaSections({
-    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, modulos,
+    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn, modulos,
   });
   // A aba pedida na URL só vale se existir. Aba de módulo desligado cai em
   // Reservas — mas, enquanto os módulos ainda CARREGAM, a aba pedida pode
@@ -405,6 +407,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'planos' && modulos.pacotes && <ArenaMembersPanel arena={arena} view="planos" />}
         {tab === 'semana' && opsKpisOn && <V2ArenaWeekPanel arenaId={arena.id} />}
         {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
+        {tab === 'engajamento' && engajamentoOn && <ArenaEngagementPanel arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}

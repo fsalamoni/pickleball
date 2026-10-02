@@ -19,7 +19,7 @@ export function issuerLinks({ isAdmin = false, arenas = [], coach = null, clubs 
     out.push({ key: 'coach', kind: 'coach', label: 'Painel do professor', hint: 'Engajamento dos alunos, desafios e recompensas', to: '/aulas?aba=engajamento' });
   }
   (clubs || []).filter((c) => c?.my_role === 'admin' || c?.my_role === 'owner').slice(0, 5).forEach((c) => {
-    out.push({ key: `club_${c.id}`, kind: 'club', label: c.name || 'Meu clube', hint: 'Atividade do clube, desafios e recompensas', to: `/clubes/${c.id}?aba=atividade` });
+    out.push({ key: `club_${c.id}`, kind: 'club', label: c.name || 'Meu clube', hint: 'Atividade do clube, desafios e recompensas', to: `/clubes/${c.id}?tab=atividade` });
   });
   return out;
 }

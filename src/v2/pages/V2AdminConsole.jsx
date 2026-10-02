@@ -57,6 +57,11 @@ import {
   X,
   KeyRound,
   Megaphone,
+  Sparkles,
+  SlidersHorizontal,
+  Gift,
+  ShieldAlert,
+  BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -163,8 +168,26 @@ const SECTIONS = Object.freeze([
  * `dupr_match_export` está ligada. Mantém `SECTIONS` intacto (base) e devolve
  * uma cópia aditiva — nada muda quando a flag está desligada.
  */
-function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false) {
+// A gamificação V2 (flag `gamification_v2`): cinco telas numa seção só, sob demanda.
+const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
+const SECAO_GAMIFICACAO = {
+  id: 'gamification', label: 'Gamificação', icon: Sparkles, tabs: [
+    { id: 'gam-config', label: 'Configuração', icon: SlidersHorizontal },
+    { id: 'gam-challenges', label: 'Desafios', icon: Trophy },
+    { id: 'gam-rewards', label: 'Recompensas', icon: Gift },
+    { id: 'gam-integrity', label: 'Integridade', icon: ShieldAlert },
+    { id: 'gam-metrics', label: 'Métricas', icon: BarChart3 },
+  ],
+};
+
+function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false, gamificationOn = false) {
   let out = SECTIONS;
+  // A seção da gamificação vem logo depois de Funcionalidades (é onde se decide
+  // o que existe) e some junto com a flag mestra.
+  if (gamificationOn) {
+    const idx = out.findIndex((section) => section.id === 'features');
+    out = [...out.slice(0, idx + 1), SECAO_GAMIFICACAO, ...out.slice(idx + 1)];
+  }
   // Cupons e campanhas DA PLATAFORMA (Onda CG): moram em Plataforma, ao lado
   // do branding e do conteúdo — é a voz da plataforma falando com todos.
   if (platformMarketingOn) {
@@ -218,13 +241,14 @@ export default function V2AdminConsole() {
   const duprExportOn = useFeatureFlag(FEATURE_FLAG.DUPR_MATCH_EXPORT);
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
   const sections = useMemo(
-    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn),
-    [duprExportOn, arenaModulesOn, platformMarketingOn],
+    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn),
+    [duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn],
   );
   const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
@@ -276,6 +300,11 @@ export default function V2AdminConsole() {
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
         {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
         {tab === 'arena-modules' && arenaModulesOn && <AdminArenaModulesTab />}
+        {tab.startsWith('gam-') && gamificationOn && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminGamificationPanel tab={tab} />
+          </Suspense>
+        )}
         {tab === 'promo' && platformMarketingOn && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <PlatformPromoConsole />

@@ -29,6 +29,7 @@ import V2PushCard from '@/v2/components/settings/V2PushCard';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
+import GamificationSettingsCard from '@/v2/components/gamification/GamificationSettingsCard';
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
@@ -40,6 +41,7 @@ export default function V2Settings() {
   const notifPrefsOn = true;
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
   const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
@@ -126,6 +128,9 @@ export default function V2Settings() {
 
         {/* Dicas: ligar, desligar e abrir os guias (flag guided_tips). */}
         <DicasSettingsCard />
+
+        {/* Gamificação: privacidade, interação e avisos (flag gamification_v2). */}
+        {gamificacaoOn && <GamificationSettingsCard />}
 
         {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
         <V2Surface id="notificacoes" data-dica="config-notificacoes" className="scroll-mt-4">

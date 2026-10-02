@@ -7,9 +7,10 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import { usePeriodReview } from '@/modules/progression/hooks/usePeriodReview';
 import { ReviewBody } from '@/v2/components/gamification/PeriodReviewCard';
-import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2StatCard } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { Sparkles } from 'lucide-react';
+import MiniStat from '@/v2/components/gamification/MiniStat';
 
 const KINDS = [
   { value: 'week', label: 'Semana' },
@@ -66,10 +67,10 @@ function ReviewOn() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <V2StatCard label="Jogos" value={review.games} />
-            <V2StatCard label="Vitórias" value={review.wins} />
-            <V2StatCard label="Dias ativos" value={review.activeDays} />
-            <V2StatCard label="Missões" value={review.missionsDone} />
+            <MiniStat label="Jogos" value={review.games} />
+            <MiniStat label="Vitórias" value={review.wins} />
+            <MiniStat label="Dias ativos" value={review.activeDays} />
+            <MiniStat label="Missões" value={review.missionsDone} />
           </div>
           <V2Surface>
             <ReviewBody review={review} />

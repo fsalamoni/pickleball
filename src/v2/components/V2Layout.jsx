@@ -18,6 +18,8 @@ import {
   Settings,
   BookOpen,
   Award,
+  Sparkles,
+  Crown,
   History,
   FileText,
   Menu,
@@ -65,6 +67,8 @@ import { helpLinkFor } from '@/modules/help/domain/helpLink';
 import DicasProvider from '@/v2/components/dicas/DicasProvider';
 import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
+// Gamificação V2 em segundo plano: só baixa o código com a flag ligada e uma conta logada.
+const GamificationBackground = lazy(() => import('@/v2/components/gamification/GamificationBackground'));
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
@@ -97,6 +101,11 @@ const PAGE_TITLES = [
   ['/conduta', 'Conduta e fair play'],
   ['/legal', 'Termos e Documentos'],
   ['/politica-uso', 'Política de Uso'],
+  ['/gamification', 'Gamificação'],
+  ['/hall-da-fama', 'Hall da Fama'],
+  ['/conquistas', 'Conquistas'],
+  ['/vinculos', 'Vínculos'],
+  ['/notificacoes', 'Notificações'],
   ['/admin', 'Admin'],
 ];
 
@@ -140,6 +149,8 @@ function useV2Nav() {
   const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
   const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = true;
+  // Gamificação V2 (flag `gamification_v2`): a jornada, o Hall e as conquistas entram no menu.
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
 
   const sections = useMemo(() => [
     {
@@ -171,6 +182,7 @@ function useV2Nav() {
         { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
+        gamificationOn && { to: '/gamification', label: 'Gamificação', icon: Sparkles },
         showMyArenas && {
           to: '/arenas',
           label: 'Minhas arenas',
@@ -204,7 +216,7 @@ function useV2Nav() {
         { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -222,6 +234,9 @@ function useV2Nav() {
           circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
           ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
           doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
+          // Gamificação V2: a temporada do mês, os desafios e o Hall da Fama são competição.
+          gamificationOn && { to: '/gamification', label: 'Gamificação', icon: Sparkles },
+          gamificationOn && { to: '/hall-da-fama', label: 'Hall da Fama', icon: Crown },
         ],
       }),
       // Jogar abre no DIA DE JOGO (os seus dias e os com vaga para você) e as
@@ -275,6 +290,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: 'Meu perfil', icon: User },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
+          gamificationOn && { to: '/conquistas', label: 'Conquistas', icon: Award },
           tournamentAdminConsoleOn && { to: '/perfil/torneios', label: 'Meus torneios', icon: Trophy },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
@@ -289,7 +305,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn]);
 
   return { sections, hubs };
 }
@@ -541,6 +557,7 @@ export default function V2Layout({ children }) {
   const legalCenterOn = true;
   const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
   const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   // A mesma assinatura do sino: o selo da gaveta não custa leitura nenhuma.
   const { unreadCount: avisosNaoLidos } = useNotifications();
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
@@ -817,6 +834,9 @@ export default function V2Layout({ children }) {
         >
           {children}
         </main>
+        {gamificacaoOn && user?.uid && (
+          <Suspense fallback={null}><GamificationBackground /></Suspense>
+        )}
         {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
       </div>
 

@@ -26,6 +26,8 @@ const V2Performance = lazy(() => import('@/v2/pages/V2Performance'));
 const V2Achievements = lazy(() => import('@/v2/pages/V2Achievements'));
 const V2GamificationHome = lazy(() => import('@/v2/pages/V2GamificationHome'));
 const V2HallOfFame = lazy(() => import('@/v2/pages/V2HallOfFame'));
+const V2GamificationReview = lazy(() => import('@/v2/pages/V2GamificationReview'));
+const V2GamificationSettings = lazy(() => import('@/v2/pages/V2GamificationSettings'));
 const V2PublicAchievements = lazy(() => import('@/v2/pages/V2PublicAchievements'));
 const V2SocialBonds = lazy(() => import('@/v2/pages/V2SocialBonds'));
 const V2Bookings = lazy(() => import('@/v2/pages/V2Bookings'));
@@ -232,6 +234,8 @@ export default function V2App() {
           <Route path="conquistas" element={<Gamified><V2Achievements /></Gamified>} />
           <Route path="conquistas/:uid" element={<Gamified><V2PublicAchievements /></Gamified>} />
           <Route path="gamification" element={<Gamified><V2GamificationHome /></Gamified>} />
+          <Route path="gamification/revisao" element={<Gamified><V2GamificationReview /></Gamified>} />
+          <Route path="gamification/configuracoes" element={<Gamified><V2GamificationSettings /></Gamified>} />
           <Route path="hall-da-fama" element={<Gamified><V2HallOfFame /></Gamified>} />
           <Route path="vinculos" element={<Gamified><V2SocialBonds /></Gamified>} />
           <Route path="perfil" element={<V2Profile />} />

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Globe2, ListChecks,
+  Globe2, ListChecks, Trophy,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
@@ -18,8 +18,13 @@ import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
 import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+
+// Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
+const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
 
 export default function V2ClubDetail() {
   const { clubId } = useParams();
@@ -35,6 +40,7 @@ export default function V2ClubDetail() {
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
   const clubRankingOn = true;
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   const inviteLinkOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
@@ -115,9 +121,10 @@ export default function V2ClubDetail() {
     ...(clubRankingOn ? [{ value: 'ranking', label: 'Ranking', icon: Medal }] : []),
     { value: 'feed', label: 'Mural', icon: MessageSquare },
     { value: 'forums', label: 'Fóruns', icon: MessagesSquare },
+    ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: 'Atividade', icon: Trophy }] : []),
     ...(isAdmin ? [{ value: 'admin', label: 'Administração', icon: Settings }] : []),
   ];
-  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'ranking' && !clubRankingOn)
+  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn)
     ? 'members' : activeTab;
 
   return (
@@ -239,6 +246,9 @@ export default function V2ClubDetail() {
             {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
+            {safeTab === 'atividade' && isAdmin && gamificationOn && (
+              <Suspense fallback={<V2Skeleton lines={4} />}><ClubEngagementPanel club={{ id: clubId, name: club.name }} /></Suspense>
+            )}
             {safeTab === 'admin' && isAdmin && <V2ClubAdmin club={club} />}
           </div>
         </>
