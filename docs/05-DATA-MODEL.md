@@ -870,12 +870,22 @@ Conquista desbloqueada.
 - **Regras**: escrita só do dono; `progress` pode avançar mas **nunca
   regredir**. Leitura por qualquer autenticado (perfil `/conquistas/:uid`).
 
-### `user_streak_meta/{uid}` (Onda R)
-Proteção da sequência.
+### `user_streak_meta/{uid}` (Onda R, férias na Onda W2)
+Férias da sequência (a sequência em si é **derivada** dos jogos, em
+`progression/domain/weekStreak.js`; nada dela é gravado).
 - `uid`, `schemaVersion: 1`, `lastPlayAt`, `graceDaysRemaining: 0..3`,
   `freezesAvailable: 0..3`, `freezesUsed: int` (**acumulativo, sem teto**),
   `vacationMode`, `vacationStartedAt`, `comebackBonus`, `updatedAt`.
-- **Regras**: privado — só o dono e o admin.
+  Os campos de folga/congelamento são do desenho antigo e seguem aceitos pela
+  regra, mas **o cálculo não os lê**.
+- **`vacations`** (opcional, Onda W2): `[{ from: ms, to: ms|null }]`, até 8
+  períodos, o mais novo por último; `to: null` é "em andamento". Quem escreve é
+  `streakMetaService.enableVacation/disableVacation`, que **recusa** férias com
+  outro período aberto ou a menos de 90 dias do começo das últimas. Documento
+  sem `vacations` (anterior) é lido por `vacationPeriodsOf`.
+- **Regras**: privado — só o dono e o admin. Nenhum campo novo é restringido;
+  quatro casos do emulador (`tests/rules/gamificationV2.rules.test.js`) provam
+  que a regra de sempre aceita `vacations`.
 
 ### `user_referral_codes/{uid}` · `user_referrals/{refereeUid}` (Onda R)
 Programa de indicação.

@@ -12,7 +12,7 @@
 
 | Pasta | O que é | Estado |
 |---|---|---|
-| [`GAMIFICACAO/`](./GAMIFICACAO/README.md) | Progressão V2: tiers, skill trees, XP multi-fonte, missões, achievements de 5 famílias, streak com proteção | 📐 desenhada · flag `gamification_v2` existe e está **OFF** |
+| [`GAMIFICACAO/`](./GAMIFICACAO/README.md) | Progressão V2: tiers, skill trees, XP multi-fonte, missões, achievements de 5 famílias, streak com proteção | ✅ implementada atrás da flag `gamification_v2` (default **OFF**) — ver `docs/38-GAMIFICACAO-V2.md`; esta pasta guarda o desenho |
 | [`MERCADO/`](./MERCADO/00-INDEX.md) | **Marketplace aberto** — um eBay/Mercado Livre/Amazon de pickleball dentro da plataforma | 📐 desenhada · nada no código |
 | [`FEED/`](./FEED/00-INDEX.md) | **Rede social** — um Instagram de pickleball, rolagem infinita de fotos, vídeos e posts | 📐 desenhada · nada no código |
 | [`CONFIANCA-E-MODERACAO/`](./CONFIANCA-E-MODERACAO/00-INDEX.md) | Denúncia, fila de moderação, bloqueio, silenciar, strikes — **infra compartilhada** pelo Mercado e pelo Feed | 📐 desenhada · nada no código |

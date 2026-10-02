@@ -667,3 +667,39 @@ describe('⭐ mentoria: ninguém entra sem aceitar', () => {
     await assertSucceeds(updateDoc(ref(como(BIA)), { lessonsCompleted: 2 }));
   });
 });
+
+describe('⭐ sequência: as férias gravam um campo opcional, sem regra nova', () => {
+  const meta = (uid, over = {}) => ({
+    uid, schemaVersion: 1, lastPlayAt: null, graceDaysRemaining: 3, freezesAvailable: 3,
+    freezesUsed: 0, vacationMode: false, vacationStartedAt: null, comebackBonus: 0, updatedAt: AGORA, ...over,
+  });
+  const ferias = [{ from: AGORA - 40 * DIA, to: AGORA - 30 * DIA }, { from: AGORA - DIA, to: null }];
+
+  it('a pessoa grava os períodos de férias no próprio documento (a regra de sempre os aceita)', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_streak_meta', ANA), meta(ANA, { vacationMode: true, vacationStartedAt: AGORA - DIA, vacations: ferias })));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'user_streak_meta', ANA), { vacationMode: false, vacationStartedAt: null, vacations: [{ ...ferias[0] }, { from: AGORA - DIA, to: AGORA }] }));
+  });
+
+  it('o documento antigo (sem `vacations`) continua válido', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_streak_meta', ANA), meta(ANA)));
+  });
+
+  it('é privado e é da própria pessoa: ninguém lê nem grava o de outra', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'user_streak_meta', ANA), meta(ANA, { vacations: ferias })); });
+    await assertFails(getDoc(doc(como(BIA), 'user_streak_meta', ANA)));
+    await assertFails(setDoc(doc(como(BIA), 'user_streak_meta', ANA), meta(ANA, { vacations: [] })));
+    await assertFails(setDoc(doc(como(ANA), 'user_streak_meta', ANA), meta(BIA, { vacations: ferias })));
+    await assertSucceeds(getDoc(doc(como(ANA), 'user_streak_meta', ANA)));
+  });
+
+  it('o retrato com o funil dos primeiros passos segue sendo só do admin (leitura) e do servidor (escrita)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'gamification_metrics', '2026-10-03'), { day: '2026-10-03', athletes: 3, onboarding: { dismissed: 1, steps: { level: 2 } } });
+    });
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'gamification_metrics', '2026-10-03')));
+    await assertFails(getDoc(doc(como(ANA), 'gamification_metrics', '2026-10-03')));
+    await assertFails(updateDoc(doc(como(ADMIN), 'gamification_metrics', '2026-10-03'), { onboarding: { dismissed: 0, steps: {} } }));
+    // o admin lista os mais novos (orderBy de um campo só) sem índice composto
+    await assertSucceeds(getDocs(query(collection(como(ADMIN), 'gamification_metrics'))));
+  });
+});

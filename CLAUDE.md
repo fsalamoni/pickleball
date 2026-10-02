@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **32 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio). PWA `sw-v7`. Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **32 feature flags ativas** (o resto virou código permanente), **491 arquivos de teste** (7.573 casos, mais 550 no emulador de regras), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio), **Gamificação V2 completa** (atrás de `gamification_v2`: XP, missões, sequência honesta, temporada, desafios, recompensas, painéis de professor/arena/clube/admin, com guia, dicas e ajuda). PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -141,6 +141,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │                                     não trava (isActiveRegistration); 2 turnos de
 │   │                                     verdade; Americano aprimorado em etapas
 │   │                                     (tournament_americano_etapas)
+│   ├── 38-GAMIFICACAO-V2.md        🎮 ⭐ a gamificação completa (flag gamification_v2):
+│   │                                     motor único de XP, sequência honesta, hub,
+│   │                                     guia /gamification/como-funciona, painéis de
+│   │                                     professor/arena/clube e console do admin
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -152,7 +156,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │
 │   └── FUTURO/                     📐 desenhado, NADA no código
 │       ├── 00-INDEX.md             ⭐ as 4 funcionalidades futuras
-│       ├── GAMIFICACAO/            🎮 progressão V2 (flag existe, OFF)
+│       ├── GAMIFICACAO/            🎮 o DESENHO original (o que está no código: docs/38)
 │       ├── MERCADO/                🛒 marketplace aberto (15 docs)
 │       ├── FEED/                   📣 rede social / Instagram (14 docs)
 │       ├── CONFIANCA-E-MODERACAO/  🛡️ moderação compartilhada (6 docs)
@@ -216,7 +220,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TESTE X?"** → `*.test.js` ao lado do arquivo; `*.runtime.test.jsx` em `src/v2/pages/` para componentes críticos
 **"Onde está a FEATURE que não existe mas devia?"** → `docs/09-UX-ANALYSIS/15-backlog-remanescente.md`
 **"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
-**"Onde está a GAMIFICAÇÃO?"** → `docs/FUTURO/GAMIFICACAO/README.md` (flag `gamification_v2`, default OFF)
+**"Onde está a GAMIFICAÇÃO?"** → ⭐ `docs/38-GAMIFICACAO-V2.md` (flag `gamification_v2`, default OFF; é o que está no código). O desenho de origem fica em `docs/FUTURO/GAMIFICACAO/README.md`
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
@@ -344,7 +348,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 49 artigos em 5 partes (6 atrás da flag da própria funcionalidade; com `guided_tips`, o fim do artigo ganha "Mostre na tela") — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 49 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
-**"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`. ⭐ Funcionalidade NOVA atrás de flag: escreva o artigo com `flags: ['chave']` — ele só aparece (parte, busca, link direto, "Ajuda para esta tela") quando a flag está ligada, via `helpCatalog(flags)`, que é o que `V2Help` usa. Há teste exigindo que a chave exista em `FEATURE_FLAG`
+**"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`, `/gamification…`) está atrás de `gamification_v2` — só os artigos com `flags: ['gamification_v2']` podem citar essas rotas, senão mandam a pessoa para uma porta que não abre (11 artigos escritos assim, mais 4 perguntas e 7 pistas de rota). Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`. ⭐ Funcionalidade NOVA atrás de flag: escreva o artigo com `flags: ['chave']` — ele só aparece (parte, busca, link direto, "Ajuda para esta tela") quando a flag está ligada, via `helpCatalog(flags)`, que é o que `V2Help` usa. Há teste exigindo que a chave exista em `FEATURE_FLAG`
 **"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`. ⭐ Com a flag `guided_tips` ligada o mesmo botão começa o GUIA na tela (o mesmo texto, com seta sobre os botões) e **nada abre sozinho**; `guia="…"` troca o guia, `explicar` mantém o modal (a tela do guia ainda não existe)
 **"Onde estão as DICAS? Quero ensinar uma tarefa na tela"** → ⭐ flag `guided_tips` (default OFF) + `docs/32-DICAS-GUIADAS.md`. Botão "Dicas" no topo → painel (interruptor, "Nesta tela", "O que você quer fazer?"). **Nada aparece sozinho**: o guia só começa quando a pessoa pede, leva à tela, aponta o botão de VERDADE com seta e avança quando ela faz (`advanceOn`: `'click'`, `{ route }`, `{ appears }`). Guias em `src/modules/help/domain/guias.js` (os tutoriais viram `tutorial:<id>` pelo mapa `ANCORAS_DOS_TUTORIAIS`), pontos em `pontosDeDica.js` (máx. 6 por tela), motor em `src/v2/components/dicas/`. O alvo é um `data-dica="…"` no elemento real (ou `dica` em `V2CollapsibleCard`, `V2TutorialLauncher`, `V2SectionNav`/`V2SubTabs` e nos itens de navegação). ⚠️ **A âncora é contrato**: renomear não dá erro, o guia diz "não encontrei" para sempre — `src/core/guards/dicas.test.js` confere que toda âncora e toda rota citadas existem, zero banco, e que só a camada preguiçosa importa o catálogo. No diálogo do Radix o cartão vira faixa DENTRO dele (fora, clicar fecharia o formulário)
 **"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado. E se a tela tem guia (dicas), mantenha o `data-dica` dos botões — o guarda reprova a âncora que sumiu
@@ -393,7 +397,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso da campanha leva à página da campanha. Para os outros avisos, `linkDeAviso` troca `#secao` por `?ancora=secao` (a regra aceita) e o layout devolve o `#secao` (`useAncoraDoAviso`) — a página rola até a seção. `isRuleSafeLink` tem teste de paridade contra o padrão da regra. E `notifyUsers` devolve quantos avisos GRAVOU: quem diz "enviado para N" usa esse número. Ao NAVEGAR a partir do link de um aviso, passe por `destinoDeAviso` (sino e tela inicial já passam): o `react-router-dom@6` tem redirecionamento aberto via barra invertida (GHSA-wrjc-x8rr-h8h6, corrigido só na v7), e o link é dado do banco
 **"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
 
-**"Onde está a GAMIFICAÇÃO V2? Posso criar uma segunda conta de XP?"** → ⭐ flag `gamification_v2` (default OFF) + `docs/38-GAMIFICACAO-V2.md`. **Não crie outra conta de XP**: o motor é UM, `useGamificationEngine` (`modules/progression/hooks`), e só grava com `ready`. XP é derivado (atividade + conquistas + missões + primeiros passos + `user_xp_grants`, que só o servidor escreve). Privacidade vale na REGRA (`gamificationPublicOk`) e no servidor (`buildRankingRows`); antifarm marca para o admin, nunca pune; falha numa fonte vira "não deu para medir", nunca zero. Treze módulos ligáveis em `platform_settings/gamification`. Paridade cliente×servidor travada em `domain/serverParity.test.js`
+**"Onde está a GAMIFICAÇÃO V2? Posso criar uma segunda conta de XP?"** → ⭐ flag `gamification_v2` (default OFF) + `docs/38-GAMIFICACAO-V2.md`. **Não crie outra conta de XP**: o motor é UM, `useGamificationEngine` (`modules/progression/hooks`), e só grava com `ready`. XP é derivado (atividade + conquistas + missões + primeiros passos + `user_xp_grants`, que só o servidor escreve). Privacidade vale na REGRA (`gamificationPublicOk`) e no servidor (`buildRankingRows`); antifarm marca para o admin, nunca pune; falha numa fonte vira "não deu para medir", nunca zero. Treze módulos ligáveis em `platform_settings/gamification`. Paridade cliente×servidor travada em `domain/serverParity.test.js`. ⭐ **A sequência tem UMA conta**, `weekStreak.js` (`computeWeekStreak`): semanas de segunda a domingo em Brasília, a semana de agora ainda aberta ("em risco", nunca quebrada), **zera** quando a pessoa para (🐞 antes a antiga ficava para sempre), folga automática de uma semana por mês, férias declaradas (4 semanas, intervalo de 90 dias — a regra mora no serviço, não só na tela, e o histórico fica em `user_streak_meta.vacations`, opcional). Hub, perfil, marcos e recompensas leem a mesma; as conquistas usam o recorde (`best`). **Nunca religue "dias de folga"/"congelamentos"** (eram decorativos). ⭐ **O que a plataforma diz sobre a gamificação sai de `gamificationGuide.js`** (glossário por público, "Como funciona" por aba, perguntas), com os números lidos das constantes e da configuração do admin — texto que repete um número à mão precisa de teste de paridade. Chega à pessoa por `TermHint`/`TermNote`/`HowItWorks` e pela página `/gamification/como-funciona`; as dicas guiadas (área "Gamificação", `audience: 'admin'` para o console) e a Central de Ajuda usam os mesmos guias e artigos atrás da flag. Os "?" levam a `?termo=<id>`: renomear o id de um termo quebra o link
 
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
@@ -427,7 +431,7 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Ver o que ainda falta fazer | `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` | Lista consolidada, com status ✅/🟡/⏳ |
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
 | Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
-| Retomar a gamificação | `docs/FUTURO/GAMIFICACAO/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
+| Mexer na gamificação | `docs/38-GAMIFICACAO-V2.md` | Um motor de XP só (`useGamificationEngine`); sequência só em `weekStreak.js`; texto explicativo só em `gamificationGuide.js`. O desenho original está em `docs/FUTURO/GAMIFICACAO/` |
 | Mostrar/esconder um comando de dia de jogo | `docs/15-DIA-DE-JOGO-PERMISSOES.md` | `canManageGameDay(gd, uid, { participants })` para operar partidas; `canConfigureGameDay(gd, uid)` para configurar. Comando sem atribuição **não é renderizado** (nunca só desabilitado) |
 | Tornar uma seção colapsável | `docs/14-DIA-DE-JOGO-TELAO.md` §1 | `<V2CollapsibleCard sectionId="..." summary="...">`; id ESTÁVEL (mudar apaga a preferência de todo mundo) e ações SEMPRE em `actions`, nunca dentro do corpo do cabeçalho |
 
@@ -565,7 +569,7 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2` — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
@@ -582,6 +586,33 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Gamificação V2 — a sequência honesta e a camada que explica** (2026-10-02):
+>   *"desenvolver por completo… inclusive com os textos explicativos, as dicas e
+>   tudo mais que é relacionado… usabilidade e experiência de todos os tipos de
+>   usuário… não afete o banco de dados"*. **(1) 🐞 A sequência mentia**: a conta
+>   antiga mantinha o número de quem parou (a pessoa abria o hub e via "12
+>   semanas" sem jogar há dois meses), a "proteção" (dias de folga, congelamentos)
+>   era decorativa — o motor nunca a lia — e as quatro trilhas sociais/de arena/
+>   de aula/de clube ficavam zeradas. Agora há UMA conta (`weekStreak.js`): zera
+>   quando a pessoa para, a semana de agora é "em risco" e não quebrada, uma folga
+>   automática por mês e férias de verdade (até 4 semanas, intervalo de 90 dias,
+>   recusadas pelo serviço), e as trilhas saem dos fatos reais. **(2) 🐞 O
+>   convite prometia XP que não era creditado** (`REFERRAL_REWARDS`): o cartão
+>   agora diz o que de fato acontece. **(3) A camada que explica**: o guia
+>   completo `/gamification/como-funciona` (≈36 termos, por público, com busca),
+>   um "?" em cada conceito, o "Como funciona" de cada aba — tudo com os números
+>   lidos das constantes e da configuração do admin, com teste de paridade.
+>   **(4) As dicas guiadas**: área "Gamificação" com 17 guias (atleta, arena,
+>   professor e admin) e 20 pontos, `audience: 'admin'`. **(5) A Central de
+>   Ajuda**: 11 artigos, 4 perguntas e 7 pistas de rota, só com a flag ligada.
+>   **(6) Para o admin**: configuração agrupada por parte e o **funil dos
+>   primeiros passos** nas métricas; 🐞 `listMetrics` pegava os 60 retratos mais
+>   *antigos* — passados 60 dias o painel mostraria um retrato velho como o
+>   último. **Banco: zero coleção, índice ou regra nova** — dois campos opcionais
+>   (`user_streak_meta.vacations`, `gamification_metrics.onboarding`), com casos
+>   do emulador provando que a regra de sempre os aceita. Ver
+>   `docs/38-GAMIFICACAO-V2.md` §6.1–§6.3.
 >
 > - **Conta excluída e a unificação do histórico** (2026-10-02): *"o número
 >   20 do ranking está como 'Atleta' e o perfil não existe… era um usuário que
@@ -2560,7 +2591,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6947 passing** (435 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
+| **Testes Vitest** | **7573 passing** (491 arquivos) + 550 casos de regras no emulador (Firestore + Storage) | +7165 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 85 (+V2Notifications — a central de notificações; +V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

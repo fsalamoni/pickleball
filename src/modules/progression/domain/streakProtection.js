@@ -1,4 +1,15 @@
 /**
+ * ⚠️ DESDE A ONDA W2 A SEQUÊNCIA TEM UMA CONTA SÓ: `weekStreak.js`
+ * (`computeWeekStreak`). O que o motor, o hub, o perfil, os marcos e as
+ * recompensas leem vem de lá — semana de segunda a domingo em Brasília, zera
+ * quando a pessoa para, folga automática e férias declaradas.
+ *
+ * Este arquivo segue por dois motivos: os MARCOS (`STREAK_MILESTONES`, que o
+ * guia e `weekStreak` leem) e a conta antiga, mantida só como alternativa do
+ * `ProgressionCardV2` quando ninguém lhe passa a sequência já calculada. Os
+ * "dias de folga" e "congelamentos" abaixo eram decorativos — o cálculo nunca
+ * os lia — e não devem ser religados a nenhuma tela.
+ *
  * Streak com proteção (lógica pura, sem I/O).
  *
  * **O QUE MUDA vs `computeWeekStreak` (V1)**:
