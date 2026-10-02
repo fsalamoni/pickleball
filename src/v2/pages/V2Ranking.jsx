@@ -90,8 +90,21 @@ function RankingExplainer() {
             <li>A cada jogo, quem <strong>vence ganha pontos</strong> e quem perde cede pontos. O ajuste depende da <strong>força do adversário</strong>: vencer alguém mais forte vale mais; perder para alguém mais fraco custa mais.</li>
             <li>Nos <strong>primeiros jogos</strong> a pontuação se move mais rápido e depois estabiliza.</li>
             <li>Em <strong>duplas</strong>, a dupla é avaliada pela média e cada jogador recebe o próprio ajuste.</li>
-            <li>Só entram jogos entre atletas <strong>com conta na plataforma</strong>.</li>
-            <li>O ranking oficial considera apenas <strong>torneios públicos e já encerrados</strong>; torneios apagados saem automaticamente. A atualização é <strong>automática</strong> conforme os torneios são encerrados.</li>
+            <li>
+              Entram os jogos de <strong>torneios públicos</strong> — a partir do momento em que o resultado
+              é lançado, sem esperar o encerramento — e os de <strong>dias de jogo publicados</strong> por quem
+              organiza. Torneio em rascunho, privado ou cancelado não conta.
+            </li>
+            <li>
+              Só entram partidas em que <strong>todos os atletas têm conta</strong> na plataforma. Se alguém foi
+              inscrito ou inserido só pelo nome, a partida fica de fora <strong>para todos</strong> — quem organiza
+              resolve ligando essa pessoa à conta dela, e os jogos passam a contar sozinhos.
+            </li>
+            <li>
+              A atualização é <strong>automática</strong>: cada resultado que entra, muda ou sai recalcula o
+              ranking em instantes. Em <Link to="/meu-desempenho" className="font-semibold text-ink underline">Meu desempenho</Link> você
+              vê todos os seus jogos e, se algum não estiver no ranking, o porquê.
+            </li>
           </ul>
           <p className="text-xs text-gray-500">
             <strong>Colunas:</strong> Torneios (disputados), Jogos, V–D (vitórias–derrotas), Saldo (pontos
@@ -161,7 +174,7 @@ function NationalRankingView() {
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
         title="Ranking nacional"
-        subtitle="Rating calculado a partir dos jogos disputados nos torneios da plataforma."
+        subtitle="Rating calculado a partir dos jogos de torneios e dias de jogo da plataforma."
         action={doublesRankingOn ? (
           <Link to="/ranking/duplas" data-dica="ranking-duplas-link" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-semibold text-ink hover:bg-white">
             <Users2 className="h-4 w-4" /> Ranking de duplas

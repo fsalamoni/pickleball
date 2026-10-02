@@ -25,6 +25,7 @@ import {
   useCancelRegistration,
   useDeleteRegistration,
   useEditRegistration,
+  useLinkRegistrationPlayer,
   useSetRegistrationCheckIn,
 } from '@/modules/tournament/hooks/useTournament';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -54,6 +55,8 @@ import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
 import { resolveRegistrationContact } from '@/modules/tournament/domain/registrationContact';
 import { hasCheckedIn, isActiveRegistration } from '@/modules/tournament/domain/checkin';
+import { registrationSlotsWithoutAccount } from '@/modules/tournament/domain/registrationAccounts';
+import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
@@ -130,7 +133,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
 }
 
 function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin, contacts }) {
-  const { data: allAthletes = [] } = useAthletes();
+  const { data: allAthletes = [], isSuccess: atletasCarregados, isError: atletasFalharam } = useAthletes();
   const duprByUid = React.useMemo(() => {
     const m = new Map();
     allAthletes.forEach((a) => { if (a.dupr_id) m.set(a.id, a.dupr_id); });
@@ -164,6 +167,12 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
       )) || null
     : null;
   const checkedInCount = registrations.filter(hasCheckedIn).length;
+  // Só vale avisar quando o ranking LERIA estas partidas: num torneio em
+  // rascunho ou privado nada pontua, com ou sem conta.
+  const semContaCount = isTournamentRankingEligible(tournament)
+    ? registrations.filter((r) => r.status !== REGISTRATION_STATUS.CANCELLED
+      && registrationSlotsWithoutAccount(r).length > 0).length
+    : 0;
   const confirmed = registrations.filter(isActiveRegistration).length;
   const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
@@ -202,6 +211,18 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             </V2Button>
           </div>
         )}
+        {isAdmin && semContaCount > 0 && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-3 text-sm text-gray-700">
+            <p className="font-semibold text-ink">
+              {semContaCount} inscrição(ões) com jogador sem conta na plataforma
+            </p>
+            <p className="mt-1 text-xs leading-5">
+              As partidas dessas inscrições <strong>não entram no ranking nem no rating</strong> — de
+              ninguém da partida, nem do adversário. Se o jogador tem conta, toque no lápis da
+              inscrição e escolha a conta dele: os jogos já lançados passam a contar sozinhos.
+            </p>
+          </div>
+        )}
         {registrations.length > 0 && (
           <div className="mt-3 overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
@@ -237,6 +258,13 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                               })()}
                             {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
                           </div>
+                          {isAdmin && r.status !== REGISTRATION_STATUS.CANCELLED
+                            && registrationSlotsWithoutAccount(r).length > 0 && (
+                            <div className="mt-0.5 text-[11px] font-medium text-amber-700">
+                              {registrationSlotsWithoutAccount(r).map((lado) => (lado === 'a' ? r.player_a_name : r.player_b_name) || `jogador ${lado.toUpperCase()}`).join(' e ')}
+                              {' '}sem conta · não pontua no ranking
+                            </div>
+                          )}
                           {(() => {
                             const duprs = [duprByUid.get(r.player_a_user_id), duprByUid.get(r.player_b_user_id)].filter(Boolean);
                             return duprs.length > 0 ? (
@@ -328,6 +356,10 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
         <RegistrationEditDialog
           registration={editTarget}
           modality={modality}
+          registrations={registrations}
+          athletes={allAthletes}
+          athletesReady={atletasCarregados}
+          athletesFailed={atletasFalharam}
           contact={contacts?.get?.(editTarget.id) || null}
           onClose={() => setEditTarget(null)}
         />
@@ -388,8 +420,87 @@ function PlayerFields({ prefix, value, onChange }) {
   );
 }
 
-function RegistrationEditDialog({ registration, modality, onClose, contact = null }) {
+/**
+ * Escolhe a CONTA de um jogador que foi inscrito só pelo nome. Só aparece para
+ * o lado sem conta — trocar a conta de quem já tem uma transferiria resultados
+ * de uma pessoa para outra, e isso não se faz por um lápis.
+ */
+function AccountLinkField({ label, nome, athletes, ready, failed, excluded, onPick, picked }) {
+  const [busca, setBusca] = useState(nome || '');
+  const pessoas = React.useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return [];
+    return athletes
+      .filter((a) => a.id && !excluded.has(a.id))
+      .map((a) => ({ user_id: a.id, name: a.platform_name || a.full_name || 'Atleta', photo_url: a.photo_url || '', city: a.city || '' }))
+      .filter((a) => a.name.toLowerCase().includes(q))
+      .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
+      .slice(0, 6);
+  }, [athletes, excluded, busca]);
+
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
+      <Label>{label} — conta na plataforma</Label>
+      <p className="mb-2 text-xs text-gray-600">
+        Sem conta, as partidas desta inscrição não entram no ranking. Se {nome || 'o jogador'} tem conta, escolha-a.
+      </p>
+      {picked ? (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm">
+          <span className="font-semibold text-ink">{picked.name}{picked.city ? <span className="font-normal text-gray-400"> · {picked.city}</span> : null}</span>
+          <V2Button size="sm" variant="ghost" onClick={() => onPick(null)}>Trocar</V2Button>
+        </div>
+      ) : (
+        <>
+          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar atleta pelo nome…" />
+          {busca.trim() && (
+            <div className="mt-1.5 space-y-1">
+              {failed ? (
+                <p className="py-2 text-xs text-red-600">A lista de atletas não carregou. Feche e abra de novo para tentar.</p>
+              ) : !ready ? (
+                // Sem a lista de atletas na mão, "nenhum atleta" seria mentira
+                // (docs/27-FALHA-NAO-E-VAZIO.md).
+                <p className="py-2 text-xs text-gray-500">A lista de atletas ainda não chegou — feche e abra de novo em instantes.</p>
+              ) : pessoas.length === 0 ? (
+                <p className="py-2 text-xs text-gray-500">Nenhum atleta com esse nome. Busque só pelo primeiro nome.</p>
+              ) : pessoas.map((p) => (
+                <button
+                  key={p.user_id}
+                  type="button"
+                  onClick={() => onPick(p)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-left text-sm hover:border-gray-300"
+                >
+                  <span className="truncate font-medium text-ink">{p.name}</span>
+                  {p.city && <span className="shrink-0 text-xs text-gray-400">{p.city}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RegistrationEditDialog({
+  registration, modality, onClose, contact = null, registrations = [], athletes = [], athletesReady = false, athletesFailed = false,
+}) {
   const editMutation = useEditRegistration(modality.id);
+  const linkMutation = useLinkRegistrationPlayer(modality.id);
+  const semConta = registrationSlotsWithoutAccount(registration);
+  const [contas, setContas] = useState({ a: null, b: null });
+  // Quem já está em alguma inscrição desta modalidade não pode ser escolhido
+  // de novo (seria a mesma pessoa em duas inscrições).
+  const jaInscritos = React.useMemo(() => {
+    const set = new Set();
+    registrations.forEach((r) => {
+      if (r.status === REGISTRATION_STATUS.CANCELLED) return;
+      if (r.player_a_user_id) set.add(r.player_a_user_id);
+      if (r.player_b_user_id) set.add(r.player_b_user_id);
+    });
+    if (contas.a) set.add(contas.a.user_id);
+    if (contas.b) set.add(contas.b.user_id);
+    return set;
+  }, [registrations, contas]);
   const isDoubles = modality.format === MODALITY_FORMAT.DOUBLES;
   // P0-02: o e-mail vem da subcoleção privada; `resolve` cai no campo público
   // enquanto existirem inscrições legadas.
@@ -421,7 +532,14 @@ function RegistrationEditDialog({ registration, modality, onClose, contact = nul
         id: registration.id,
         input: { format: modality.format, player_a: playerA, player_b: isDoubles ? playerB : null },
       });
-      toast.success('Dados da inscrição atualizados.');
+      const vinculos = ['a', 'b'].filter((lado) => contas[lado]);
+      for (const lado of vinculos) {
+        // eslint-disable-next-line no-await-in-loop
+        await linkMutation.mutateAsync({ id: registration.id, slot: lado, athlete: contas[lado] });
+      }
+      toast.success(vinculos.length > 0
+        ? 'Inscrição atualizada e ligada à conta. As partidas dela entram no ranking em instantes.'
+        : 'Dados da inscrição atualizados.');
       onClose();
     } catch (err) {
       toast.error(err?.message || 'Falha ao salvar os dados.');
@@ -439,16 +557,40 @@ function RegistrationEditDialog({ registration, modality, onClose, contact = nul
         </DialogHeader>
         <div className="space-y-4">
           <PlayerFields prefix="Jogador A" value={playerA} onChange={setPlayerA} />
+          {semConta.includes('a') && (
+            <AccountLinkField
+              label="Jogador A"
+              nome={registration.player_a_name}
+              athletes={athletes}
+              ready={athletesReady}
+              failed={athletesFailed}
+              excluded={jaInscritos}
+              picked={contas.a}
+              onPick={(p) => setContas((c) => ({ ...c, a: p }))}
+            />
+          )}
           {isDoubles && (
-            <div className="border-t pt-3">
+            <div className="space-y-4 border-t pt-3">
               <PlayerFields prefix="Jogador B" value={playerB} onChange={setPlayerB} />
+              {semConta.includes('b') && (
+                <AccountLinkField
+                  label="Jogador B"
+                  nome={registration.player_b_name}
+                  athletes={athletes}
+                  ready={athletesReady}
+                  failed={athletesFailed}
+                  excluded={jaInscritos}
+                  picked={contas.b}
+                  onPick={(p) => setContas((c) => ({ ...c, b: p }))}
+                />
+              )}
             </div>
           )}
         </div>
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button onClick={handleSave} disabled={editMutation.isPending}>
-            {editMutation.isPending ? 'Salvando…' : 'Salvar'}
+          <V2Button onClick={handleSave} disabled={editMutation.isPending || linkMutation.isPending}>
+            {editMutation.isPending || linkMutation.isPending ? 'Salvando…' : 'Salvar'}
           </V2Button>
         </DialogFooter>
       </DialogContent>

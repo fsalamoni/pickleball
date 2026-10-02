@@ -57,7 +57,9 @@ function DuprExplainer() {
             <li><strong>Simples e duplas</strong> têm ratings separados (como no DUPR).</li>
             <li>A <strong>semente inicial</strong> vem do rating DUPR informado no perfil (quando houver)
               ou do seu nível de nivelamento; W.O. não conta.</li>
-            <li>Conta os jogos finalizados de <strong>torneios e dias de jogo</strong> da plataforma.</li>
+            <li>Conta os jogos finalizados de <strong>torneios públicos e dias de jogo publicados</strong> da
+              plataforma, em que <strong>todos os atletas têm conta</strong> — partida com alguém inscrito só
+              pelo nome fica de fora para todos.</li>
           </ul>
           <p className="text-xs text-gray-500">
             ⚠️ Não é o <strong>rating oficial do DUPR</strong> (o algoritmo do DUPR é proprietário) —

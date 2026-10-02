@@ -107,6 +107,14 @@ export default function V2Profile() {
         </div>
       )}
 
+      {/* Quem joga e ainda não está no ranking via só o perfil vazio, sem saber
+          por quê. Todos os jogos (e o porquê de cada um fora do ranking) moram
+          em "Meu desempenho". */}
+      <div className="mt-4 text-center text-sm text-gray-500 sm:text-left">
+        Todos os seus jogos — e, se algum não contar no ranking, o porquê — estão em{' '}
+        <Link to="/meu-desempenho" className="font-bold text-ink underline">Meu desempenho</Link>.
+      </div>
+
       {arenaModulesOn && user && <MyReferralCodes />}
 
       <div className="mt-8 rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">

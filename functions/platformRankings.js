@@ -94,36 +94,120 @@ const LEVEL_TABLE = [
 /* ------------------------------------------------------------- normalização */
 
 /**
+ * Por que uma partida DECIDIDA ficou fora dos rankings. São os motivos que o
+ * painel do admin mostra — o "joguei e não apareci" deixa de ser mistério.
+ */
+const MOTIVO_FORA = Object.freeze({
+  /** Torneio em rascunho, privado, cancelado, arquivado ou apagado. */
+  TORNEIO_FORA: 'torneio_fora',
+  /** Inscrição sem conta na plataforma (jogador digitado, provisório, vaga). */
+  SEM_CONTA: 'sem_conta',
+  /** Jogo de dia de jogo com lado vazio ou atleta sem uid. */
+  JOGO_INCOMPLETO: 'jogo_incompleto',
+  /** Partida marcada como encerrada sem vencedor. */
+  SEM_VENCEDOR: 'sem_vencedor',
+});
+
+/** Por que o torneio não é elegível — o motivo que a pessoa consegue agir. */
+function motivoDoTorneio(t) {
+  if (!t) return 'apagado';
+  if (t.archived === true) return 'arquivado';
+  if (t.status === 'draft') return 'rascunho';
+  if (t.status === 'cancelled') return 'cancelado';
+  if (t.visibility !== 'public') return 'privado';
+  return 'outro';
+}
+
+/** Relatório vazio: só contagens e ids — o documento do worker é público. */
+function relatorioVazio() {
+  return {
+    torneio: { lidas: 0, usadas: 0, por_motivo: {}, torneio_fora: {} },
+    dia_de_jogo: { lidas: 0, usadas: 0, por_motivo: {} },
+    /** W.O. e jogo sem placar: contam no ELO e no de duplas, não no 2.0–8.0. */
+    sem_placar: 0,
+    /** Torneios com partidas fora, os que mais perdem primeiro (até 10). */
+    torneios: [],
+  };
+}
+
+function somar(mapa, chave) {
+  mapa[chave] = (mapa[chave] || 0) + 1;
+}
+
+/**
  * Constrói a lista de jogos normalizados a partir das DUAS fontes.
  * Espelha `src/modules/rating/domain/gameLog.js` + o filtro de elegibilidade
  * de `ratingService.recomputeAllRatings({ onlyPublicClosed: true })`.
+ *
+ * Com `report` (ver `relatorioVazio`), conta POR QUE cada partida decidida
+ * ficou de fora — o resultado é o mesmo com ou sem ele.
  *
  * @param {object} p
  * @param {Array} p.tournamentMatches jogos de torneio finalizados
  * @param {Array} p.clubEventMatches jogos de `club_event_games` finalizados
  * @param {Map} p.regById inscrições por id
  * @param {Set} p.eligibleTournamentIds torneios públicos e encerrados
+ * @param {Map} [p.tournamentById] torneios por id (só para o relatório)
+ * @param {object} [p.report] relatório a preencher
  * @returns {Array<object>}
  */
-function normalizeMatches({ tournamentMatches, clubEventMatches, regById, eligibleTournamentIds }) {
+function normalizeMatches({
+  tournamentMatches, clubEventMatches, regById, eligibleTournamentIds,
+  tournamentById = null, report = null,
+}) {
   const out = [];
+  const porTorneio = new Map();
+  const foraDoTorneio = (tid, motivo, extra = {}) => {
+    if (!report) return;
+    somar(report.torneio.por_motivo, motivo);
+    const chave = tid || 'sem_torneio';
+    const atual = porTorneio.get(chave) || { id: tid || null, fora: 0, motivo, sem_conta: 0, inscricoes_sem_conta: new Set() };
+    atual.fora += 1;
+    if (extra.semConta) {
+      atual.sem_conta += 1;
+      extra.semConta.forEach((rid) => atual.inscricoes_sem_conta.add(rid));
+    }
+    porTorneio.set(chave, atual);
+  };
 
   tournamentMatches.forEach((m) => {
     // Confrontos de EQUIPES não pontuam aqui: cada etapa já é espelhada com os
     // uids reais em `club_event_games`, e contariam duas vezes.
     if (m.team_confrontation) return;
-    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
-    if (!eligibleTournamentIds.has(m.tournament_id)) return;
+    if (report) report.torneio.lidas += 1;
+    if (m.winner_side !== 'a' && m.winner_side !== 'b') {
+      if (report) somar(report.torneio.por_motivo, MOTIVO_FORA.SEM_VENCEDOR);
+      return;
+    }
+    if (!eligibleTournamentIds.has(m.tournament_id)) {
+      if (report) {
+        const t = tournamentById ? tournamentById.get(m.tournament_id) : null;
+        somar(report.torneio.torneio_fora, motivoDoTorneio(t));
+      }
+      foraDoTorneio(m.tournament_id, MOTIVO_FORA.TORNEIO_FORA);
+      return;
+    }
     const a = resolveSideUids(m.side_a_ids, regById);
     const b = resolveSideUids(m.side_b_ids, regById);
-    if (!a.complete || !b.complete) return;
+    if (!a.complete || !b.complete) {
+      const semConta = [...(m.side_a_ids || []), ...(m.side_b_ids || [])]
+        .filter((rid) => !resolveSideUids([rid], regById).complete);
+      foraDoTorneio(m.tournament_id, MOTIVO_FORA.SEM_CONTA, { semConta });
+      return;
+    }
     const games = Array.isArray(m.games) ? m.games : [];
+    const pontosA = games.reduce((s, g) => s + (Number(g.a) || 0), 0);
+    const pontosB = games.reduce((s, g) => s + (Number(g.b) || 0), 0);
+    if (report) {
+      report.torneio.usadas += 1;
+      if (pontosA + pontosB <= 0) report.sem_placar += 1;
+    }
     out.push({
       side_a: a.uids,
       side_b: b.uids,
       winner: m.winner_side,
-      points_a: games.reduce((s, g) => s + (Number(g.a) || 0), 0),
-      points_b: games.reduce((s, g) => s + (Number(g.b) || 0), 0),
+      points_a: pontosA,
+      points_b: pontosB,
       tournament_id: m.tournament_id || null,
       at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
     });
@@ -132,17 +216,30 @@ function normalizeMatches({ tournamentMatches, clubEventMatches, regById, eligib
   // Dias de jogo (clube e atleta): os ids já são uids de verdade e NÃO
   // dependem de torneio público/encerrado — publicar já é a escolha do dono.
   clubEventMatches.forEach((m) => {
-    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
+    if (report) report.dia_de_jogo.lidas += 1;
+    if (m.winner_side !== 'a' && m.winner_side !== 'b') {
+      if (report) somar(report.dia_de_jogo.por_motivo, MOTIVO_FORA.SEM_VENCEDOR);
+      return;
+    }
     const sideA = Array.isArray(m.side_a_ids) ? m.side_a_ids : [];
     const sideB = Array.isArray(m.side_b_ids) ? m.side_b_ids : [];
-    if (sideA.length === 0 || sideB.length === 0) return;
-    if (sideA.some((u) => !u) || sideB.some((u) => !u)) return;
+    if (sideA.length === 0 || sideB.length === 0
+      || sideA.some((u) => !u) || sideB.some((u) => !u)) {
+      if (report) somar(report.dia_de_jogo.por_motivo, MOTIVO_FORA.JOGO_INCOMPLETO);
+      return;
+    }
+    const pontosA = Number(m.score_a) || 0;
+    const pontosB = Number(m.score_b) || 0;
+    if (report) {
+      report.dia_de_jogo.usadas += 1;
+      if (pontosA + pontosB <= 0) report.sem_placar += 1;
+    }
     out.push({
       side_a: sideA,
       side_b: sideB,
       winner: m.winner_side,
-      points_a: Number(m.score_a) || 0,
-      points_b: Number(m.score_b) || 0,
+      points_a: pontosA,
+      points_b: pontosB,
       tournament_id: m.tournament_id || null,
       source: m.source || 'club_event_game',
       event_id: m.event_id || null,
@@ -150,6 +247,24 @@ function normalizeMatches({ tournamentMatches, clubEventMatches, regById, eligib
       at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || Date.now(),
     });
   });
+
+  if (report) {
+    report.torneios = Array.from(porTorneio.values())
+      .sort((x, y) => y.fora - x.fora || String(x.id).localeCompare(String(y.id)))
+      .slice(0, 10)
+      .map((t) => {
+        const torneio = tournamentById && t.id ? tournamentById.get(t.id) : null;
+        return {
+          id: t.id,
+          // O nome só vai quando o torneio é legível por todos (não arquivado):
+          // este relatório mora num documento de leitura pública.
+          nome: torneio && torneio.archived !== true ? String(torneio.name || '') : null,
+          motivo: t.motivo === MOTIVO_FORA.TORNEIO_FORA ? motivoDoTorneio(torneio) : MOTIVO_FORA.SEM_CONTA,
+          partidas_fora: t.fora,
+          inscricoes_sem_conta: t.inscricoes_sem_conta.size,
+        };
+      });
+  }
 
   return out;
 }
@@ -259,11 +374,15 @@ async function recomputeAllPlatformRankings(db) {
   const regById = new Map(regsSnap.docs.map((d) => [d.id, d.data()]));
   const profileById = new Map(profilesSnap.docs.map((d) => [d.id, { uid: d.id, ...d.data() }]));
 
+  const tournamentById = new Map(tournaments.map((t) => [t.id, t]));
+  const foraDoRanking = relatorioVazio();
   const matches = normalizeMatches({
     tournamentMatches: tournamentMatchesSnap.docs.map((d) => d.data()),
     clubEventMatches: clubEventGamesSnap.docs.map((d) => d.data()),
     regById,
     eligibleTournamentIds,
+    tournamentById,
+    report: foraDoRanking,
   });
 
   // 2) Sementes — cada motor tem a sua escala.
@@ -429,6 +548,8 @@ async function recomputeAllPlatformRankings(db) {
       assinatura: ratingSignature,
     }),
     matchesUsed: matches.length,
+    // POR QUE o que não entrou não entrou — o painel do admin explica.
+    excluded: foraDoRanking,
     eloPlayers: eloRows.length,
     duprPlayers: duprRows.length,
     doublesPairs: duplasRows.length,
@@ -613,6 +734,8 @@ module.exports = {
   recomputeAllPlatformRankings,
   requestRankingRecompute,
   normalizeMatches,
+  relatorioVazio,
+  MOTIVO_FORA,
   proximoHistoricoElo,
   LEVEL_TABLE,
   DOUBLES_COLLECTION,

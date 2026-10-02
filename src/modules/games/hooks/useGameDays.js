@@ -7,6 +7,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   createGameDay, getGameDay, listMyGameDays, updateGameDay, deleteGameDay,
   listGameDayParticipants, addGameDayParticipant, removeGameDayParticipant,
+  linkGuestParticipantToAccount,
   listGameDayGames, addGameDayGame, updateGameDayGame, deleteGameDayGame,
   replaceGameDayGames, appendGameDayGames, clearGameDayGames,
   joinPublicGameDay, leaveGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
@@ -182,6 +183,22 @@ export function useAddGameDayParticipant(gdId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['game-days', gdId, 'participants'] });
       qc.invalidateQueries({ queryKey: ['game-days'] });
+    },
+  });
+}
+
+/** Vincula um convidado (só nome) à conta do atleta — ver o serviço. */
+export function useLinkGuestParticipant(gdId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pid, athlete }) => linkGuestParticipantToAccount(gdId, pid, athlete, user),
+    onSuccess: () => {
+      // `['game-days']` cobre participantes, jogos, metadados de publicação e
+      // os jogos publicados de cada atleta (perfil e "Meu desempenho").
+      qc.invalidateQueries({ queryKey: ['game-days'] });
+      qc.invalidateQueries({ queryKey: ['athlete-profile'] });
+      qc.invalidateQueries({ queryKey: ['head-to-head'] });
     },
   });
 }
@@ -425,6 +442,12 @@ export function usePublishGameDayRanking() {
     onSuccess: (_, gameDay) => {
       qc.invalidateQueries({ queryKey: ['game-days', gameDay.id, 'ranking-meta'] });
       qc.invalidateQueries({ queryKey: ['game-days', 'detail', gameDay.id] });
+      // O que entrou ou saiu do ranking muda os jogos publicados de cada atleta
+      // (perfil público, confronto direto e "Meu desempenho").
+      qc.invalidateQueries({ queryKey: ['game-days', 'published-games'] });
+      qc.invalidateQueries({ queryKey: ['game-days', 'my-games'] });
+      qc.invalidateQueries({ queryKey: ['athlete-profile'] });
+      qc.invalidateQueries({ queryKey: ['head-to-head'] });
     },
   });
 }
@@ -437,6 +460,12 @@ export function useUnpublishGameDayRanking() {
     onSuccess: (_, gameDay) => {
       qc.invalidateQueries({ queryKey: ['game-days', gameDay.id, 'ranking-meta'] });
       qc.invalidateQueries({ queryKey: ['game-days', 'detail', gameDay.id] });
+      // O que entrou ou saiu do ranking muda os jogos publicados de cada atleta
+      // (perfil público, confronto direto e "Meu desempenho").
+      qc.invalidateQueries({ queryKey: ['game-days', 'published-games'] });
+      qc.invalidateQueries({ queryKey: ['game-days', 'my-games'] });
+      qc.invalidateQueries({ queryKey: ['athlete-profile'] });
+      qc.invalidateQueries({ queryKey: ['head-to-head'] });
     },
   });
 }

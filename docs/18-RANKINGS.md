@@ -376,3 +376,76 @@ Três rankings discordando entre si, sem nada na tela avisar. O conserto:
    ordem relativa, e guarda a posição geral em `overall_position`.
 6. **Não mude o id da preferência** (`ranking:duplas:min-jogos`). Ele é
    contrato: mudar apaga, de uma vez, a escolha salva de todo mundo.
+
+## 10. "Lancei os jogos e o atleta não aparece" (2026-10-02)
+
+Relatado pelo dono: *"lancei vários jogos e tem atletas que aparecem sem nenhum
+jogo. Atletas com vários jogos que não aparecem no rating e nos seus perfis."*
+Eram **três defeitos diferentes** com o mesmo sintoma, e nenhum deles era o
+motor de cálculo (conferido: a última passada do servidor tinha rodado e
+usado 413 das 477 partidas lidas).
+
+### 10.1 🐞 O perfil do atleta contava só torneio
+
+`useAthleteProfile` montava "Jogos / Aproveit. / por formato" só com o
+histórico de **torneios**. Quem joga em dia de jogo — a maior parte dos jogos
+da plataforma — aparecia no ranking com dezenas de jogos e, no próprio perfil,
+com **0 jogos**. Agora o perfil soma os jogos de dia de jogo **publicados**
+(`listPublishedGameDayGamesFor`, a mesma leitura pública que o ranking usa —
+`club_event_games` é `read: if true`), mostra os "Jogos recentes em dias de
+jogo" e o confronto direto passou a incluí-los (por PESSOA, não por dupla: no
+dia de jogo as duplas giram). Com uma das fontes falhando, os números ficam
+"—", nunca um total pela metade.
+
+### 10.2 🐞 A partida com alguém sem conta sumia para TODOS — sem ninguém saber
+
+O ranking só conta partida em que **todos** têm conta (regra de integridade:
+um rating precisa saber quem estava em quadra — mantida). Só que isso era
+invisível: a tela de publicação dizia *"convidados sem conta são ignorados"*,
+quando na verdade a **partida inteira** sai, inclusive para os três que têm
+conta. Num Americano com dois convidados, metade do dia sumia do ranking. E no
+torneio, a dupla inscrita digitando o nome do parceiro (em vez de escolhê-lo)
+tirava do ranking todas as partidas da dupla **e dos adversários**.
+
+O conserto ataca a causa, não a regra:
+
+| Onde | O que mudou |
+|---|---|
+| Dia de jogo → **Resultados no ranking** | prévia ANTES de publicar: *"N de M jogos entram"*, quantos ficam de fora e **quem** os deixa de fora (`previewGameDayPublication`, a MESMA conta de `buildGameDayMatch`) |
+| idem | **Vincular a uma conta**: o convidado vira o atleta da plataforma (`linkGuestParticipantToAccount`) — os jogos dele no dia passam a resolver e, se o dia está publicado, o espelho é atualizado na hora |
+| Torneio → **Inscrições** | aviso no topo e selo por inscrição: *"Zé sem conta · não pontua no ranking"* (`registrationSlotsWithoutAccount`, com teste de PARIDADE contra o servidor) |
+| idem, no lápis da inscrição | escolher a **conta** do jogador sem conta (`linkRegistrationPlayerToAccount`); o gatilho de inscrição recalcula sozinho |
+
+Travas dos dois vínculos: só preenchem lado **vazio** (nunca trocam a conta de
+quem já tem uma — seria transferir resultados entre pessoas), recusam a conta
+que já está no dia/na modalidade, gravam auditoria e **avisam o atleta**. É o
+mesmo poder que o organizador já tinha ao inserir escolhendo da lista. Nenhuma
+regra do Firestore mudou: o dono do dia já atualiza participante e
+`member_uids`; o organizador do torneio já atualiza a inscrição.
+
+### 10.3 Meu desempenho diz POR QUE um jogo não está no ranking
+
+"Meu desempenho" sempre contou todos os jogos; o ranking, não — e a diferença
+parecia defeito. `rankingCoverageSummary` (`performance/domain/rankingCoverage.js`)
+classifica: dia de jogo **não publicado**, partida com **alguém sem conta**,
+**torneio** em rascunho/privado/cancelado e publicação **desatualizada** — com
+os dias de jogo para abrir. Em "Meus jogos", cada jogo fora do ranking leva a
+marca *"fora do ranking"*. A fonte dos dias de jogo passou a resolver o atleta
+como a publicação resolve (`resolveSlotUid`): o jogo de quem SAIU do dia depois
+de jogar sumia do próprio desempenho.
+
+### 10.4 O servidor conta o que deixou de fora
+
+Cada passada grava em `platform_settings/ranking_worker.last_result.excluded`
+**contagens por motivo** (inscrição sem conta, torneio em rascunho/privado/
+cancelado/arquivado/apagado, jogo incompleto, sem vencedor, sem placar) e os
+até 10 torneios que mais perdem partidas — só **ids e contagens**, e o nome
+apenas de torneio não arquivado: o documento é de leitura pública. O painel do
+admin (`RankingAutomatico` → `describeRankingExclusions`) mostra isso com link
+para cada torneio. Medir não muda o ranking: há teste exigindo resultado
+idêntico com e sem relatório.
+
+**Banco: zero coleção, zero índice, zero regra, zero migração.** Campos
+opcionais: `game_days/{id}/participants/{pid}.linked_from_guest_at/linked_by`,
+`tournament_registrations/{id}.player_{a|b}_linked_at/_linked_by` e o
+`excluded` dentro de `last_result`.

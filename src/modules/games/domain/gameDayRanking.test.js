@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  previewGameDayPublication,
   resolveMatchClubId, buildGameDayMatch, buildGameDayRankingMatches,
   gameDayRankingId, GAME_DAY_RANKING_SOURCE, mirrorDecisionChanged,
 } from './gameDayRanking.js';
@@ -405,5 +406,50 @@ describe('espelhamento do Americano aprimorado', () => {
     expect(a.payload.side_a_ids).toEqual(b.payload.side_a_ids);
     expect(a.payload.score_a).toBe(b.payload.score_a);
     expect(a.payload.winner_side).toBe(b.payload.winner_side);
+  });
+});
+
+describe('previewGameDayPublication — o que entra e QUEM deixa de fora', () => {
+  const participants = [
+    { id: 'p1', user_id: 'u1', name: 'Ana' },
+    { id: 'p2', user_id: 'u2', name: 'Bia' },
+    { id: 'p3', user_id: 'u3', name: 'Caio' },
+    { id: 'p4', user_id: 'u4', name: 'Duda' },
+    { id: 'pg', user_id: null, name: 'Zé' },
+  ];
+  const slot = (id, name) => ({ id, name });
+  const jogo = (id, a, b, sa = 11, sb = 7) => ({ id, side_a: a, side_b: b, score_a: sa, score_b: sb });
+
+  it('separa o que entra do que fica fora por convidado, e conta os jogos de cada convidado', () => {
+    const games = [
+      jogo('g1', [slot('p1', 'Ana'), slot('p2', 'Bia')], [slot('p3', 'Caio'), slot('p4', 'Duda')]),
+      jogo('g2', [slot('p1', 'Ana'), slot('pg', 'Zé')], [slot('p3', 'Caio'), slot('p4', 'Duda')]),
+      jogo('g3', [slot('pg', 'Zé'), slot('p2', 'Bia')], [slot('p3', 'Caio'), slot('x9', 'Saiu')]),
+      jogo('g4', [slot('p1', 'Ana'), slot('p2', 'Bia')], [slot('p3', 'Caio'), slot('p4', 'Duda')], 5, 5),
+    ];
+    const r = previewGameDayPublication({ gameDay: { id: 'gd' }, participants, games });
+    expect(r.decididos).toBe(3);
+    expect(r.entram).toBe(1);
+    expect(r.foraConvidado).toBe(2);
+    expect(r.convidados).toEqual([
+      { id: 'pg', name: 'Zé', jogos: 2, vinculavel: true },
+      { id: null, name: 'Saiu', jogos: 1, vinculavel: false },
+    ]);
+  });
+
+  it('a prévia bate com a publicação de verdade (mesma conta)', () => {
+    const games = [
+      jogo('g1', [slot('p1', 'Ana'), slot('p2', 'Bia')], [slot('p3', 'Caio'), slot('p4', 'Duda')]),
+      jogo('g2', [slot('p1', 'Ana'), slot('pg', 'Zé')], [slot('p3', 'Caio'), slot('p4', 'Duda')]),
+    ];
+    const previa = previewGameDayPublication({ gameDay: { id: 'gd' }, participants, games });
+    const real = buildGameDayRankingMatches({ gameDay: { id: 'gd' }, participants, games, clubIdsByUid: new Map() });
+    expect(previa.entram).toBe(real.summary.published);
+  });
+
+  it('vinculado o convidado a uma conta, o jogo passa a entrar', () => {
+    const games = [jogo('g2', [slot('p1', 'Ana'), slot('pg', 'Zé')], [slot('p3', 'Caio'), slot('p4', 'Duda')])];
+    const vinculado = participants.map((p) => (p.id === 'pg' ? { ...p, user_id: 'u9' } : p));
+    expect(previewGameDayPublication({ gameDay: { id: 'gd' }, participants: vinculado, games }).entram).toBe(1);
   });
 });

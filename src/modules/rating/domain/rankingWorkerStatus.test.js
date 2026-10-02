@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeRankingWorker, formatarMomento, MOTIVO_LABEL } from './rankingWorkerStatus.js';
+import { describeRankingWorker, describeRankingExclusions, formatarMomento, MOTIVO_LABEL } from './rankingWorkerStatus.js';
 
 const ts = (iso) => ({ toMillis: () => Date.parse(iso) });
 
@@ -66,5 +66,30 @@ describe('formatarMomento', () => {
 
   it('sem momento, texto vazio', () => {
     expect(formatarMomento(0)).toBe('');
+  });
+});
+
+describe('describeRankingExclusions — o que ficou fora e por quê', () => {
+  it('sem relatório (servidor antigo) não afirma nada', () => {
+    expect(describeRankingExclusions(null)).toBeNull();
+    expect(describeRankingExclusions({ last_result: {} })).toBeNull();
+  });
+
+  it('traduz as contagens em linhas acionáveis, sem linha para zero', () => {
+    const r = describeRankingExclusions({
+      last_result: {
+        excluded: {
+          torneio: { lidas: 10, usadas: 4, por_motivo: { sem_conta: 3, torneio_fora: 3 }, torneio_fora: { rascunho: 2, privado: 1 } },
+          dia_de_jogo: { lidas: 5, usadas: 5, por_motivo: {} },
+          sem_placar: 1,
+          torneios: [{ id: 't1', nome: 'Aberto', motivo: 'sem_conta', partidas_fora: 3, inscricoes_sem_conta: 2 }],
+        },
+      },
+    });
+    expect(r.usadas).toBe(9);
+    expect(r.fora).toBe(6);
+    expect(r.linhas.map((l) => l.chave)).toEqual(['sem_conta', 'torneio_rascunho', 'torneio_privado']);
+    expect(r.torneios[0]).toMatchObject({ id: 't1', nome: 'Aberto', partidasFora: 3, texto: '2 inscrição(ões) sem conta' });
+    expect(r.semPlacar).toBe(1);
   });
 });

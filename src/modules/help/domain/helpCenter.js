@@ -626,6 +626,8 @@ const ATLETA = {
       blocks: [
         p('Os resultados que contam vêm de duas fontes, e elas têm gatilhos diferentes: em TORNEIO público, cada placar lançado já conta — não é preciso esperar o torneio encerrar; em DIA DE JOGO, contam quando quem organiza PUBLICA os resultados no ranking.'),
         p('Fica de fora o que não é resultado de verdade: torneio em rascunho, cancelado, privado ou arquivado. E como a conta é sempre refeita por inteiro, cancelar ou arquivar TIRA do ranking o que já tinha contado.'),
+        warn('Só contam partidas em que TODOS os atletas têm conta na plataforma. Se alguém foi inscrito ou inserido só pelo nome, a partida fica fora do ranking para TODOS da partida — inclusive para você. Quem organiza resolve: no dia de jogo, em "Resultados no ranking" → "Vincular a uma conta"; no torneio, no lápis da inscrição. Os jogos já lançados passam a contar sozinhos.'),
+        p('Em MEU DESEMPENHO aparecem TODOS os seus jogos, contem ou não no ranking — e, quando algum não conta, o motivo, com o dia de jogo para abrir.'),
         list(
           'RANKING NACIONAL — a classificação geral, pelo rating ELO.',
           'RATING 2.0–8.0 — no estilo DUPR, baseado no placar e não só em vitória/derrota. Uma derrota apertada contra alguém muito mais forte pode subir o seu rating.',

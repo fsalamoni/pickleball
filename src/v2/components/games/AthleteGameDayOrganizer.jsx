@@ -39,8 +39,9 @@ import {
   useGameDayGames, useAddGameDayGame, useUpdateGameDayGame, useDeleteGameDayGame,
   useAppendGameDayGames, useClearGameDayGames,
   useGameDayRankingMeta, usePublishGameDayRanking, useUnpublishGameDayRanking,
-  useSetPlayParticipantPartner,
+  useSetPlayParticipantPartner, useLinkGuestParticipant,
 } from '@/modules/games/hooks/useGameDays';
+import { previewGameDayPublication } from '@/modules/games/domain/gameDayRanking';
 
 /**
  * Organiza UM dia de jogo do atleta: participantes, jogos (sorteio/manual +
@@ -855,17 +856,28 @@ export function DailyRankingSection({ gameDay, participants }) {
 
 export function RankingSection({ gameDay, participants }) {
   const { data: meta } = useGameDayRankingMeta(gameDay.id);
-  const { data: games = [] } = useGameDayGames(gameDay.id);
+  const { data: games = [], isSuccess: jogosCarregados } = useGameDayGames(gameDay.id);
   const publish = usePublishGameDayRanking();
   const unpublish = useUnpublishGameDayRanking();
+  const [alvoVinculo, setAlvoVinculo] = useState(null);
   const publishedCount = meta?.publishedIds?.length || 0;
   const isPublished = !!gameDay.publish_to_ranking || publishedCount > 0;
   const decidedCount = games.filter((g) => g.score_a != null && g.score_b != null && Number(g.score_a) !== Number(g.score_b)).length;
+  // A MESMA conta da publicação: o que a tela promete é o que o espelho grava.
+  const previa = useMemo(
+    () => previewGameDayPublication({ gameDay, participants, games }),
+    [gameDay, participants, games],
+  );
 
   const handlePublish = async () => {
     try {
       const summary = await publish.mutateAsync(gameDay);
-      toast.success(`Publicado no ranking: ${summary.published} jogo(s). Convidados sem conta na plataforma são ignorados.`);
+      const entraram = (summary.published || 0) + (summary.updated || 0) + (summary.already_published || 0);
+      toast.success(
+        summary.skipped > 0
+          ? `No ranking: ${entraram} jogo(s). ${summary.skipped} ficaram de fora — têm atleta sem conta na plataforma.`
+          : `No ranking: ${entraram} jogo(s).`,
+      );
     } catch (err) {
       toast.error(err.message || 'Não foi possível publicar.');
     }
@@ -897,11 +909,23 @@ export function RankingSection({ gameDay, participants }) {
           sorteadas quanto as partidas avulsas contam igualmente. Cada jogo vai para o lugar certo:
           o <strong>simples</strong> entra no rating de simples; as <strong>duplas</strong>, no rating
           de duplas e no ranking de duplas. Partidas em que todos os atletas são do mesmo clube
-          também entram no ranking desse clube. Apenas convidados sem conta na plataforma são ignorados.
+          também entram no ranking desse clube. Depois de publicado, cada resultado novo ou
+          corrigido entra sozinho.
         </p>
         <p className="text-xs text-gray-400">
           {decidedCount} jogo(s) decidido(s){publishedCount > 0 ? ` · ${publishedCount} espelhado(s) no ranking` : ''}.
         </p>
+
+        {/* Só afirma o que fica de fora com os jogos na mão: sem eles, "0 fora"
+            seria um palpite (docs/27-FALHA-NAO-E-VAZIO.md). */}
+        {jogosCarregados && previa.foraConvidado + previa.foraOutro > 0 && (
+          <ForaDoRankingDoDia
+            previa={previa}
+            podeVincular
+            onVincular={(convidado) => setAlvoVinculo(convidado)}
+          />
+        )}
+
         <div className="flex flex-wrap gap-2">
           <V2Button onClick={handlePublish} disabled={publish.isPending || decidedCount === 0}>
             {publish.isPending ? 'Publicando…' : isPublished ? 'Atualizar publicação' : 'Publicar no ranking'}
@@ -913,6 +937,151 @@ export function RankingSection({ gameDay, participants }) {
           )}
         </div>
       </div>
+
+      <LinkGuestDialog
+        gameDay={gameDay}
+        participants={participants}
+        convidado={alvoVinculo}
+        onClose={() => setAlvoVinculo(null)}
+      />
     </V2CollapsibleCard>
+  );
+}
+
+/**
+ * Os jogos que NÃO vão para o ranking, e quem os deixa de fora. Sem isto a
+ * frase "convidados sem conta são ignorados" escondia que a PARTIDA inteira
+ * sai — inclusive para os três que têm conta.
+ */
+function ForaDoRankingDoDia({ previa, podeVincular, onVincular }) {
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3 text-sm text-gray-700">
+      <p className="font-semibold text-ink">
+        {previa.entram} de {previa.decididos} jogo(s) decidido(s) entram no ranking.
+      </p>
+      {previa.foraConvidado > 0 && (
+        <p className="mt-1 text-xs leading-5">
+          {previa.foraConvidado} jogo(s) ficam de fora porque têm atleta <strong>sem conta</strong> na
+          plataforma — e ficam de fora para <strong>todos</strong> da partida, não só para ele. Se a
+          pessoa tem conta, vincule e os jogos dela passam a contar.
+        </p>
+      )}
+      {previa.foraOutro > 0 && (
+        <p className="mt-1 text-xs leading-5">
+          {previa.foraOutro} jogo(s) ficam de fora por terem lados com número diferente de atletas.
+        </p>
+      )}
+      {previa.convidados.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {previa.convidados.map((c) => (
+            <li key={c.id || c.name} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2">
+              <span className="min-w-0 text-xs">
+                <strong className="text-ink">{c.name}</strong> · {c.jogos} jogo(s)
+                {!c.vinculavel && <span className="text-gray-500"> · já saiu do dia</span>}
+              </span>
+              {podeVincular && c.vinculavel && (
+                <V2Button size="sm" variant="subtle" onClick={() => onVincular(c)}>
+                  <Link2 aria-hidden="true" className="mr-1 h-3.5 w-3.5" /> Vincular a uma conta
+                </V2Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Escolhe a conta de um convidado — os jogos dele passam a ser dessa conta. */
+function LinkGuestDialog({ gameDay, participants, convidado, onClose }) {
+  const link = useLinkGuestParticipant(gameDay.id);
+  const { data: athletes = [], isLoading, isError, refetch } = useAthletes();
+  const [busca, setBusca] = useState('');
+  const [escolhido, setEscolhido] = useState(null);
+  const aberto = Boolean(convidado);
+
+  const noDia = useMemo(
+    () => new Set(participants.map((p) => p.user_id).filter(Boolean)),
+    [participants],
+  );
+  const pessoas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return athletes
+      .filter((a) => a.id && !noDia.has(a.id))
+      .map((a) => ({ user_id: a.id, name: a.platform_name || a.full_name || 'Atleta', photo_url: a.photo_url || '', city: a.city || '' }))
+      .filter((a) => !q || a.name.toLowerCase().includes(q))
+      .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
+      .slice(0, 50);
+  }, [athletes, noDia, busca]);
+
+  // Abre já buscando pelo nome digitado: quase sempre é a mesma pessoa.
+  React.useEffect(() => {
+    if (convidado) { setBusca(convidado.name || ''); setEscolhido(null); }
+  }, [convidado]);
+
+  const fechar = () => { setEscolhido(null); onClose(); };
+  const confirmar = async () => {
+    if (!convidado?.id || !escolhido) return;
+    try {
+      const r = await link.mutateAsync({ pid: convidado.id, athlete: escolhido });
+      toast.success(r?.synced
+        ? `${convidado.name} agora é ${escolhido.name}. Os jogos dele entraram no ranking.`
+        : `${convidado.name} agora é ${escolhido.name}. Os jogos passam a contar quando o dia for publicado.`);
+      fechar();
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível vincular.');
+    }
+  };
+
+  return (
+    <Dialog open={aberto} onOpenChange={(v) => !v && fechar()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Vincular {convidado?.name || 'convidado'} a uma conta</DialogTitle>
+          <DialogDescription>
+            Escolha quem é esta pessoa na plataforma. Os jogos que ela fez neste dia passam a ser
+            dela — no ranking, no rating e no perfil — e ela é avisada. Só vincule se tiver certeza
+            de que é a mesma pessoa.
+          </DialogDescription>
+        </DialogHeader>
+        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar atleta pelo nome…" />
+        <div className="max-h-[45vh] space-y-1.5 overflow-y-auto">
+          {isLoading ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : isError ? (
+            <V2ErrorState
+              inline
+              title="A lista de atletas não carregou"
+              description="Sem ela não dá para escolher a conta — tente de novo."
+              onRetry={() => refetch()}
+            />
+          ) : pessoas.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">
+              Nenhum atleta com esse nome fora deste dia. Confira a grafia ou busque só pelo primeiro nome.
+            </p>
+          ) : pessoas.map((p) => (
+            <button
+              key={p.user_id}
+              type="button"
+              onClick={() => setEscolhido(p)}
+              aria-pressed={escolhido?.user_id === p.user_id}
+              className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors ${
+                escolhido?.user_id === p.user_id ? 'border-ink bg-acid/15' : 'border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{p.name}</span>
+              {p.city && <span className="shrink-0 text-xs text-gray-400">{p.city}</span>}
+            </button>
+          ))}
+        </div>
+        <DialogFooter>
+          <V2Button variant="ghost" onClick={fechar}>Cancelar</V2Button>
+          <V2Button onClick={confirmar} disabled={!escolhido || link.isPending}>
+            {link.isPending ? 'Vinculando…' : escolhido ? `Vincular a ${escolhido.name}` : 'Escolha o atleta'}
+          </V2Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

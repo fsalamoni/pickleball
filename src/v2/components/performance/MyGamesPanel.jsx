@@ -100,7 +100,8 @@ export default function MyGamesPanel() {
       key: g.id,
       at: g.at,
       title: g.label,
-      to: '/dia-de-jogo',
+      to: g.gameDayId ? `/dia-de-jogo/${g.gameDayId}` : '/dia-de-jogo',
+      foraDoRanking: g.ranked === false,
       partner: g.partner || '',
       opponent: g.opponent,
       myScore: g.myScore,
@@ -206,7 +207,11 @@ export default function MyGamesPanel() {
                   <Link to={m.to} className="hover:underline">{m.title}</Link>
                 </div>
                 <MatchupLine partner={m.partner} opponent={m.opponent} />
-                <div className="mt-1 text-xs text-gray-500">{formatDateTime(m.at)}</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {formatDateTime(m.at)}
+                  {/* Conta aqui, mas não no ranking — o porquê está na aba Estatística. */}
+                  {m.foraDoRanking && <span className="ml-2 font-medium text-amber-700">· fora do ranking</span>}
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 {!m.walkover && (

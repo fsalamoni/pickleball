@@ -1,8 +1,9 @@
 import React from 'react';
-import { Medal, Check, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Medal, Check, AlertTriangle, Filter } from 'lucide-react';
 import { V2Surface } from '@/v2/ui/primitives';
 import { useRankingWorkerStatus } from '@/modules/rating/hooks/useRating';
-import { describeRankingWorker, formatarMomento } from '@/modules/rating/domain/rankingWorkerStatus';
+import { describeRankingWorker, describeRankingExclusions, formatarMomento } from '@/modules/rating/domain/rankingWorkerStatus';
 
 /**
  * RANKING E RATING SÃO AUTOMÁTICOS — o painel que explica por que não há mais
@@ -51,7 +52,9 @@ function EstadoDoServidor() {
     );
   }
   const estado = describeRankingWorker(data);
+  const fora = describeRankingExclusions(data);
   return (
+    <>
     <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 px-3 py-2 text-[11px] leading-4 text-gray-600">
       {estado.registrado ? (
         <p>
@@ -72,6 +75,58 @@ function EstadoDoServidor() {
           </span>
         </p>
       )}
+    </div>
+    {fora && <ForaDoRanking fora={fora} />}
+    </>
+  );
+}
+
+/**
+ * O que a última passada DEIXOU DE FORA, e por quê. É a resposta para "lancei
+ * os jogos e o atleta não aparece": quase sempre é um jogador sem conta na
+ * inscrição ou um torneio em rascunho/privado — e os dois têm conserto.
+ */
+function ForaDoRanking({ fora }) {
+  if (fora.fora === 0) {
+    return (
+      <p className="mt-2 text-[11px] leading-4 text-gray-500">
+        Todas as {fora.usadas} partidas decididas da última passada entraram no ranking.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-[11px] leading-4 text-gray-700">
+      <p className="flex items-center gap-1.5 font-semibold text-ink">
+        <Filter aria-hidden="true" className="h-3 w-3" />
+        {fora.usadas} partida(s) no ranking · {fora.fora} ficaram de fora
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {fora.linhas.map((l) => (
+          <li key={l.chave}><strong className="tabular-nums">{l.quantidade}</strong> {l.texto}</li>
+        ))}
+      </ul>
+      {fora.torneios.length > 0 && (
+        <div className="mt-2">
+          <p className="font-semibold text-ink">Onde estão:</p>
+          <ul className="mt-1 space-y-1">
+            {fora.torneios.map((t) => (
+              <li key={t.id || 'sem-torneio'}>
+                {t.id ? (
+                  <Link to={`/torneios/${t.id}/gerenciar`} className="font-semibold text-ink underline">
+                    {t.nome || 'Torneio sem nome visível'}
+                  </Link>
+                ) : 'Partidas sem torneio'}
+                {' — '}{t.partidasFora} partida(s), {t.texto}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="mt-2 text-gray-500">
+        Jogo de dia de jogo que não foi PUBLICADO não aparece aqui: ele nem chega ao servidor. Quem
+        organiza publica em “Resultados no ranking”, dentro do dia.
+        {fora.semPlacar > 0 ? ` ${fora.semPlacar} partida(s) sem placar (W.O.) contam no ranking nacional e no de duplas, mas não no 2.0–8.0, que mede pelo placar.` : ''}
+      </p>
     </div>
   );
 }

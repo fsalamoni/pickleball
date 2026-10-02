@@ -720,6 +720,82 @@ export async function updateRegistrationDetails(id, input, actor) {
   await createAuditLog({ action: 'registration_edited', actor, details: { registration_id: id } });
 }
 
+/**
+ * VINCULA um jogador SEM CONTA de uma inscrição à conta do atleta na
+ * plataforma (organizador do torneio).
+ *
+ * É o conserto de "lancei os jogos e o atleta não aparece no ranking": a
+ * partida com alguém sem conta fica fora do ranking para TODOS da partida, e
+ * quase sempre o jogador tem conta — o nome foi digitado em vez de escolhido.
+ * Gravando o uid, o gatilho de inscrição do servidor
+ * (`recomputeRankingOnTournamentRegistration`) recalcula os rankings sozinho, e
+ * todas as partidas da inscrição passam a contar.
+ *
+ * Travas: só preenche lado VAZIO (nunca troca a conta de quem já tem uma — isso
+ * seria transferir resultados de uma pessoa para outra) e a conta não pode já
+ * estar em outra inscrição da mesma modalidade. O mesmo poder que o
+ * organizador já tem ao inscrever escolhendo da lista. O atleta é avisado.
+ *
+ * @param {string} id inscrição
+ * @param {'a'|'b'} slot
+ * @param {{ user_id: string, name?: string, photo_url?: string }} athlete
+ * @param {object} actor
+ */
+export async function linkRegistrationPlayerToAccount(id, slot, athlete, actor) {
+  const uid = athlete?.user_id;
+  if (!id || !uid || (slot !== 'a' && slot !== 'b')) throw new Error('Escolha o atleta da plataforma.');
+  const reg = await getRegistration(id);
+  if (!reg) throw new Error('Inscrição não encontrada.');
+  const campo = `player_${slot}_user_id`;
+  if (reg[campo]) throw new Error('Este jogador já está ligado a uma conta.');
+  if (slot === 'b' && reg.format !== MODALITY_FORMAT.DOUBLES) throw new Error('Esta inscrição não tem jogador B.');
+  if (reg.player_a_user_id === uid || reg.player_b_user_id === uid) {
+    throw new Error('Este atleta já está nesta inscrição.');
+  }
+  const daModalidade = reg.modality_id ? await listRegistrations(reg.modality_id) : [];
+  const emOutra = daModalidade.find((r) => r.id !== id
+    && r.status !== REGISTRATION_STATUS.CANCELLED
+    && (r.player_a_user_id === uid || r.player_b_user_id === uid));
+  if (emOutra) {
+    throw new Error(`Este atleta já está inscrito nesta modalidade (${emOutra.label || 'outra inscrição'}).`);
+  }
+
+  const updates = {
+    [campo]: uid,
+    [`player_${slot}_provisional`]: false,
+    [`player_${slot}_photo`]: reg[`player_${slot}_photo`] || athlete.photo_url || null,
+    [`player_${slot}_linked_at`]: serverTimestamp(),
+    [`player_${slot}_linked_by`]: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  };
+  // `user_id` é o titular — o mesmo do jogador A na criação.
+  if (slot === 'a' && !reg.user_id) updates.user_id = uid;
+  const outroLadoProvisorio = slot === 'a' ? reg.player_b_provisional : reg.player_a_provisional;
+  updates.is_provisional = Boolean(outroLadoProvisorio);
+  await updateDoc(doc(db, COL, id), updates);
+
+  await createAuditLog({
+    action: 'registration_player_linked',
+    actor,
+    details: { registration_id: id, tournament_id: reg.tournament_id, slot, user_id: uid },
+  });
+  if (actor?.uid && uid !== actor.uid) {
+    try {
+      const nome = reg[`player_${slot}_name`] || 'jogador';
+      await notifyUsers([uid], {
+        title: 'Sua inscrição foi ligada à sua conta',
+        message: `Você estava inscrito como "${nome}" num torneio. Os resultados agora são seus e entram no ranking.`,
+        type: NOTIFICATION_TYPE.GENERIC,
+        link: reg.tournament_id ? `/torneios/${reg.tournament_id}` : '/torneios',
+        actor,
+      });
+    } catch (err) {
+      logger.warn('Aviso do vínculo de inscrição falhou:', err);
+    }
+  }
+  return { linked: true };
+}
+
 export async function confirmRegistrationPayment(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, payment_confirmed_at: serverTimestamp() }, actor);
 }

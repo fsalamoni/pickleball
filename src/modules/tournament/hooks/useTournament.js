@@ -36,6 +36,7 @@ import {
   listMyRegistrations,
   createRegistration,
   updateRegistrationDetails,
+  linkRegistrationPlayerToAccount,
   confirmRegistrationPayment,
   promoteFromWaitlist,
   cancelRegistration,
@@ -410,6 +411,21 @@ export function useConfirmRegistrationPayment(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Vincula um jogador sem conta da inscrição à conta do atleta (ver o serviço). */
+export function useLinkRegistrationPlayer(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, slot, athlete }) => linkRegistrationPlayerToAccount(id, slot, athlete, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+      qc.invalidateQueries({ queryKey: ['athlete-profile'] });
+      qc.invalidateQueries({ queryKey: ['head-to-head'] });
     },
   });
 }

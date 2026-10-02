@@ -20,7 +20,7 @@
 
 import {
   isGameDecided, winnerSideOf, inferKind,
-  buildParticipantResolver, resolveSideUidsFromParticipants,
+  buildParticipantResolver, resolveSideUidsFromParticipants, resolveSlotUid,
   sealParticipantUidIntoGames,
 } from '@/modules/clubs/domain/rankingPublishing.js';
 
@@ -238,4 +238,72 @@ export function buildGameDayRankingMatches({
     toRemove,
     summary: { published, updated, skipped, already_published: already, removed: toRemove.length },
   };
+}
+
+/**
+ * O que a publicação vai fazer, ANTES de publicar: quantos jogos decididos
+ * entram no ranking e quantos ficam de fora — e QUEM os deixa de fora.
+ *
+ * 🐞 A tela dizia só "Convidados sem conta na plataforma são ignorados". Só
+ * que não é o convidado que é ignorado: é a PARTIDA inteira — os outros três,
+ * que têm conta, também perdem aquele jogo no ranking. Com dois ou três
+ * convidados num Americano, metade do dia sumia do ranking sem ninguém
+ * entender por quê ("lancei os jogos e o atleta não aparece").
+ *
+ * Usa a MESMA conta da publicação (`buildGameDayMatch`), então o que a tela
+ * promete é o que o espelho grava. Pura.
+ *
+ * @param {{ gameDay: object, participants: Array, games: Array }} args
+ * @returns {{
+ *   decididos: number,
+ *   entram: number,
+ *   foraConvidado: number,
+ *   foraOutro: number,
+ *   convidados: Array<{ id: string|null, name: string, jogos: number, vinculavel: boolean }>,
+ * }}
+ */
+export function previewGameDayPublication({ gameDay, participants, games }) {
+  const resolver = buildParticipantResolver(participants);
+  const porConvidado = new Map();
+  let decididos = 0;
+  let entram = 0;
+  let foraConvidado = 0;
+  let foraOutro = 0;
+
+  (games || []).forEach((g) => {
+    if (!g?.id || !isGameDecided(g)) return;
+    decididos += 1;
+    const pronto = buildGameDayMatch({
+      gameDay: gameDay?.id ? gameDay : { id: 'previa' },
+      gameId: g.id,
+      game: g,
+      participants,
+      clubIdsByUid: null,
+      publishedBy: null,
+    });
+    if (pronto) { entram += 1; return; }
+
+    const semConta = [...(g.side_a || []), ...(g.side_b || [])]
+      .filter((slot) => !resolveSlotUid(slot, resolver));
+    if (semConta.length === 0) { foraOutro += 1; return; }
+    foraConvidado += 1;
+    semConta.forEach((slot) => {
+      const doc = slot?.id != null ? resolver.byId.get(String(slot.id)) : null;
+      const chave = doc ? `id:${doc.id}` : `nome:${String(slot?.name || '').trim().toLowerCase()}`;
+      const atual = porConvidado.get(chave) || {
+        id: doc ? doc.id : null,
+        name: (doc && doc.name) || slot?.name || 'Convidado',
+        jogos: 0,
+        // Só dá para vincular quem ainda está no dia (há um documento a
+        // atualizar); o convidado que já saiu do dia fica só registrado.
+        vinculavel: Boolean(doc),
+      };
+      atual.jogos += 1;
+      porConvidado.set(chave, atual);
+    });
+  });
+
+  const convidados = Array.from(porConvidado.values())
+    .sort((a, b) => b.jogos - a.jogos || a.name.localeCompare(b.name, 'pt-BR'));
+  return { decididos, entram, foraConvidado, foraOutro, convidados };
 }

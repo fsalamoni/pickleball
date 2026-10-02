@@ -86,7 +86,7 @@ export default function V2AthleteProfile() {
     );
   }
 
-  const { rating, history = [], stats, historicoFalhou } = data;
+  const { rating, history = [], gameDayGames = [], stats, historicoFalhou } = data;
   const location = [athlete.city, athlete.state].filter(Boolean).join(' / ');
   const clubs = clubNames(athlete);
   const formats = Object.entries(stats?.byFormat || {});
@@ -170,8 +170,8 @@ export default function V2AthleteProfile() {
         <V2ErrorState
           inline
           className="mt-8"
-          title="O histórico de torneios não carregou"
-          description="Os números abaixo ficam em branco até ele chegar."
+          title="O histórico de jogos não carregou por completo"
+          description="Os números abaixo ficam em branco até ele chegar — um total pela metade pareceria o total."
           onRetry={() => refetch()}
         />
       )}
@@ -241,6 +241,8 @@ export default function V2AthleteProfile() {
         <div className="mt-8"><HeadToHeadCard records={h2hData.h2h} /></div>
       )}
 
+      {gameDayGames.length > 0 && <RecentGameDayGames games={gameDayGames} />}
+
       {history.length > 0 && (
         <V2Surface className="mt-8">
           <h2 className="mb-4 font-display text-lg font-bold text-ink">Torneios recentes</h2>
@@ -259,6 +261,43 @@ export default function V2AthleteProfile() {
         </V2Surface>
       )}
     </div>
+  );
+}
+
+function formatGameDate(ms) {
+  if (!ms) return '';
+  return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+/**
+ * Os últimos jogos de dia de jogo publicados no ranking — os que o ranking
+ * conta. Sem eles, quem só joga em dia de jogo tinha um perfil sem nenhum
+ * jogo à vista.
+ */
+function RecentGameDayGames({ games }) {
+  const lista = games.slice(0, 8);
+  return (
+    <V2Surface className="mt-8">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-lg font-bold text-ink">Jogos recentes em dias de jogo</h2>
+        <span className="text-xs text-gray-400">{games.length} jogo(s) no ranking</span>
+      </div>
+      <div className="space-y-2">
+        {lista.map((g) => (
+          <div key={g.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-4">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">
+                {g.partner ? `com ${g.partner} ` : ''}<span className="font-normal text-gray-400">vs</span> {g.opponent}
+              </p>
+              <p className="truncate text-xs text-gray-500">{[g.label, formatGameDate(g.at)].filter(Boolean).join(' · ')}</p>
+            </div>
+            <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold tabular-nums ${g.won ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {g.won ? 'V' : 'D'} {g.myScore}–{g.oppScore}
+            </span>
+          </div>
+        ))}
+      </div>
+    </V2Surface>
   );
 }
 

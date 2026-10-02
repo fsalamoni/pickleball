@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mirrorGameToMyGame, sourceGameToMyGame, foldGameDayGamesIntoStats,
   gameDayMirrorId, MY_GAME_SOURCE,
+  OUT_OF_RANKING_REASON, summarizeRankingCoverage, gameDayGamesToH2HRecords,
 } from './myGames.js';
 
 describe('mirrorGameToMyGame', () => {
@@ -120,5 +121,73 @@ describe('foldGameDayGamesIntoStats', () => {
     expect(out.titles).toBe(1);
     expect(out.podiums).toBe(2);
     expect(out.played).toBe(1);
+  });
+});
+
+describe('cobertura do ranking (por que um jogo não conta)', () => {
+  const partById = new Map([
+    ['p1', { user_id: 'u1', name: 'Ana' }], ['p2', { user_id: 'u2', name: 'Bia' }],
+    ['p3', { user_id: 'u3', name: 'Caio' }], ['pg', { name: 'Convidado' }],
+  ]);
+  const jogo = {
+    id: 'g1', side_a: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Bia' }],
+    side_b: [{ id: 'p3', name: 'Caio' }, { id: 'pg', name: 'Convidado' }],
+    score_a: 11, score_b: 6,
+  };
+
+  it('dia NÃO publicado: o jogo conta no desempenho e diz por que não está no ranking', () => {
+    const g = sourceGameToMyGame('u1', 'gd1', 'Sábado', jogo, partById);
+    expect(g.ranked).toBe(false);
+    expect(g.outReason).toBe(OUT_OF_RANKING_REASON.NOT_PUBLISHED);
+  });
+
+  it('dia publicado com convidado sem conta: o motivo é o convidado', () => {
+    const g = sourceGameToMyGame('u1', 'gd1', 'Sábado', jogo, partById, { published: true });
+    expect(g.outReason).toBe(OUT_OF_RANKING_REASON.GUEST);
+  });
+
+  it('🐞 atleta que SAIU do dia depois de jogar (uid selado no slot) continua no próprio desempenho', () => {
+    const semEle = new Map([...partById].filter(([id]) => id !== 'p1'));
+    const selado = { ...jogo, side_a: [{ id: 'p1', name: 'Ana', user_id: 'u1' }, jogo.side_a[1]] };
+    const g = sourceGameToMyGame('u1', 'gd1', 'Sábado', selado, semEle);
+    expect(g).not.toBeNull();
+    expect(g.won).toBe(true);
+    expect(g.partner).toBe('Bia');
+  });
+
+  it('o espelho publicado é o que o ranking conta', () => {
+    const g = mirrorGameToMyGame('u1', {
+      id: 'm', side_a_ids: ['u1', 'u2'], side_b_ids: ['u3', 'u4'], score_a: 11, score_b: 3, winner_side: 'a',
+    }, new Map([['u3', 'Caio'], ['u4', 'Duda']]));
+    expect(g.ranked).toBe(true);
+    expect(g.opponents).toEqual(['Caio', 'Duda']);
+  });
+
+  it('summarizeRankingCoverage separa o que entra do que fica de fora, por motivo', () => {
+    const r = summarizeRankingCoverage([
+      { ranked: true }, { ranked: true },
+      { ranked: false, outReason: OUT_OF_RANKING_REASON.NOT_PUBLISHED },
+      { ranked: false, outReason: OUT_OF_RANKING_REASON.GUEST },
+      { ranked: false, outReason: OUT_OF_RANKING_REASON.GUEST },
+    ]);
+    expect(r).toEqual({
+      total: 5, ranked: 2, out: 3,
+      byReason: { [OUT_OF_RANKING_REASON.NOT_PUBLISHED]: 1, [OUT_OF_RANKING_REASON.GUEST]: 2 },
+    });
+    expect(summarizeRankingCoverage(undefined).total).toBe(0);
+  });
+
+  it('confronto direto é por PESSOA e ignora quem não tem nome', () => {
+    const recs = gameDayGamesToH2HRecords([
+      { opponents: ['Caio', 'Duda'], won: true, at: 1 },
+      { opponents: ['Caio', 'Atleta'], won: false, at: 2 },
+      { opponent: 'Eva', won: true, at: 3 },
+    ]);
+    expect(recs).toEqual([
+      { opponent: 'Caio', won: true, at: 1 },
+      { opponent: 'Duda', won: true, at: 1 },
+      { opponent: 'Caio', won: false, at: 2 },
+      { opponent: 'Eva', won: true, at: 3 },
+    ]);
   });
 });
