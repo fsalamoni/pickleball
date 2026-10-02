@@ -570,6 +570,23 @@ O workflow `.github/workflows/deploy-firebase.yml` faz deploy automático
 em todo push em main. **NÃO** faça `firebase deploy --only functions` local
 em produção (vai deployar com a sua config, não a do CI).
 
+**Runtime: Node.js 22** (`engines.node` em `functions/package.json`, e o
+mesmo valor no `package-lock.json`). A CLI publica em `nodejs<N>`, e o Google
+aposenta cada versão em data fixa:
+
+| Runtime | Descontinuado | Desligado (deploy recusado) |
+|---|---|---|
+| Node.js 20 | 2026-04-30 | **2026-10-31** |
+| Node.js 22 (atual) | 2027-04-30 | **2027-10-31** |
+
+Saímos do 20 em 2026-10-02. Depois do desligamento nenhum deploy passa — nem
+o da vigilância, que recria função apagada —, então a troca tem de vir antes.
+O teto é a CLI fixada nos workflows: a `firebase-tools@13` vai até o Node.js
+22. Para ir ao 24 é preciso subir a CLI junto (e conferir de novo o
+`--only` do Firestore, §4.3), num PR próprio. Os testes de `functions/` rodam
+no runtime de produção com `npx vitest run functions` num Node.js 22. Guarda em
+`src/core/guards/deployFunctions.test.js` ("runtime das Cloud Functions").
+
 ### 9.6 Emulators (dev local)
 
 ```bash

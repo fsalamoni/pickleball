@@ -52,7 +52,7 @@ Novos índices:
 ### 3. Cloud Functions ✅ (5/5 deployadas)
 
 **Region**: `southamerica-east1` (São Paulo)
-**Runtime**: Node.js 20 (Gen 2) — **deprecado em 2026-10-30**, atualizar para 22 antes
+**Runtime**: Node.js 22 (Gen 2) desde 2026-10-02 (o 20 é desligado em 2026-10-31; o 22 vale até 2027-10-31). Ver `docs/03-WORKFLOW.md` §9.5
 
 | Função | Tipo | Schedule | Status |
 |---|---|---|---|
@@ -175,12 +175,11 @@ deploy-functions-only.sh           (deploy só functions)
    - Próximo build do seu frontend vai incluir as 12 páginas V2
    - O PWA SW também precisa ser bumpado (sw-vN → vNN+1)
 
-5. **Atualizar Node.js das functions** (antes de outubro 2026):
-   - Editar `functions/package.json` → `engines.node: ">=22"`
+5. ~~**Atualizar Node.js das functions**~~ ✅ feito em 2026-10-02: `engines.node: "22"` (valor inteiro — a CLI publica em `nodejs<N>`)
 
 ## ⚠️ Warnings conhecidos (não bloqueantes)
 
-1. **Node.js 20 deprecation**: warning durante deploy, mas funciona. Atualizar para 22 antes de 2026-10-30.
+1. ~~**Node.js 20 deprecation**~~ ✅ resolvido em 2026-10-02 (Node.js 22). O próximo prazo é o desligamento do 22, em 2027-10-31.
 2. **Cloud Billing API**: necessário habilitado (já feito).
 3. **Eventarc Service Agent**: precisa de 2-3 min para propagar permissões na primeira vez.
 4. **GOOGLE_CLOUD_QUOTA_PROJECT warning**: informativo, não bloqueia.

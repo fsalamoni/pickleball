@@ -109,9 +109,7 @@ scripts/
    git push origin --delete feature/arena-management-v3
    ```
 
-5. **Atualizar Node.js das functions** (antes de outubro 2026):
-   - Editar `functions/package.json` → `"engines": { "node": "22" }`
-   - Re-deploy das functions
+5. ~~**Atualizar Node.js das functions**~~ ✅ feito em 2026-10-02 (`"engines": { "node": "22" }`, publicado pelo deploy)
 
 ## 🏁 Conclusão
 

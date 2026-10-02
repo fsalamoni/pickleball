@@ -89,7 +89,7 @@ Firestore (antonov-82411 / pickleball DB)
 ├── arena_networks          (sprint 9)
 └── arena_network_memberships (sprint 9)
 
-Cloud Functions (southamerica-east1, Node 20 Gen 2)
+Cloud Functions (southamerica-east1, Node 22 Gen 2)
 ├── recomputeRankingOnTournamentChange  (trigger, ranking)
 ├── expireStaleNotifications           (3h SP daily)
 ├── refreshLadderWeekly                (dom 23h SP)

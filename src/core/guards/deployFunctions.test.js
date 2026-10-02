@@ -90,3 +90,48 @@ describe('deploy das Cloud Functions', () => {
     expect(WORKFLOW).not.toMatch(/group: functions-watchdog/);
   });
 });
+
+/**
+ * O RUNTIME das funções. A CLI lê `engines.node` de functions/package.json e
+ * publica em `nodejs<N>`. O Google aposenta cada versão numa data fixa: o
+ * Node.js 20 foi descontinuado em 2026-04-30 e é DESLIGADO em 2026-10-31 —
+ * depois disso nenhum deploy passa, e a vigilância não conseguiria recriar uma
+ * função apagada. O Node.js 22 vale até 2027-10-31 (descontinuado em
+ * 2027-04-30). Ver docs/03-WORKFLOW.md §9.5.
+ *
+ * E o runtime não pode passar do que a CLI FIXADA nos workflows conhece: a
+ * firebase-tools 13 vai até o Node.js 22. Pedir 24 com ela recusa o deploy.
+ * Trocou a CLI de versão? Acrescente-a aqui com o runtime máximo dela.
+ */
+const PACOTE = JSON.parse(readFileSync('functions/package.json', 'utf8'));
+const LOCK = JSON.parse(readFileSync('functions/package-lock.json', 'utf8'));
+const RUNTIME_MAXIMO_DA_CLI = { 13: 22 };
+const RUNTIME_MINIMO = 22;
+
+const cliFixada = (texto) => [...texto.matchAll(/npm install -g firebase-tools@(\d+)/g)].map((m) => Number(m[1]));
+
+describe('runtime das Cloud Functions', () => {
+  const runtime = String(PACOTE.engines?.node ?? '');
+
+  it('⭐ é uma versão inteira (a CLI publica em "nodejs<N>")', () => {
+    expect(runtime).toMatch(/^\d+$/);
+  });
+
+  it('⭐ não é uma versão aposentada pelo Google (Node.js 20 desliga em 2026-10-31)', () => {
+    expect(Number(runtime)).toBeGreaterThanOrEqual(RUNTIME_MINIMO);
+  });
+
+  it('⭐ o lockfile diz o mesmo runtime que o package.json', () => {
+    expect(String(LOCK.packages?.['']?.engines?.node ?? '')).toBe(runtime);
+  });
+
+  it('⭐ o deploy e a vigilância usam a MESMA CLI, e ela conhece o runtime', () => {
+    const doDeploy = cliFixada(WORKFLOW);
+    const daVigilancia = cliFixada(VIGIA);
+    expect(doDeploy).toHaveLength(1);
+    expect(daVigilancia).toEqual(doDeploy);
+    const maximo = RUNTIME_MAXIMO_DA_CLI[doDeploy[0]];
+    expect(maximo, `firebase-tools@${doDeploy[0]} não está na tabela deste teste`).toBeTruthy();
+    expect(Number(runtime)).toBeLessThanOrEqual(maximo);
+  });
+});
