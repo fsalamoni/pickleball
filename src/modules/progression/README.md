@@ -13,7 +13,7 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
   `referralService`, `socialBondService`, `streakMetaService`,
   `seasonRankingService`, `hallOfFameService`, `goalService`
 - **Hooks**: `useProgression` (V1), `useUserProgressionV2`,
-  `useSyncProgressionV2`, `useUserMissionsV2`, `useStreakMetaV2`,
+  `useGamificationEngine` (o motor único; substituiu `useSyncProgressionV2` e `useUserMissionsV2`), `useStreakMetaV2`,
   `useKudoActions`, `useUserSocialBonds`, `useUserSeasonRanking`,
   `useUserReferralCode`, `useHallOfFame`, `useCelebrationListener`,
   `useGamificationTracker`
@@ -21,6 +21,10 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
   `MissionList`, `MissionCompleteToast`, `StreakShieldBadge`,
   `KudosButton`, `ReferralCard`, `SeasonBanner`, `RivalsList`,
   `CrewsPanel`, `MentorshipsPanel`
+
+> **Camada completa (hub, missões, revisão, desafios, recompensas, painéis de
+> professor/arena/clube, console do admin):** `docs/38-GAMIFICACAO-V2.md`. O XP
+> tem UMA conta só, no `useGamificationEngine`.
 
 ## Feature flag
 - `GAMIFICATION_V2` (`gamification_v2`) — master, **default OFF**.

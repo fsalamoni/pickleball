@@ -621,7 +621,7 @@ Curvas de progressão, níveis, metas e todo o sistema de **Gamificação V2**
   (`domain/xpTotal.js`), tudo derivado — recalcular não infla.
 - **Ranking sazonal**: Cloud Function `recomputeSeasonRankingDaily` (03h BRT)
   ranqueia por XP DA TEMPORADA (`xpTotal - baselineXp`), não por XP de vida.
-- **13 coleções** novas — detalhe em `docs/05-DATA-MODEL.md` § Gamificação V2.
+- **13 coleções** novas — detalhe em `docs/05-DATA-MODEL.md` § Gamificação V2. Desenvolvimento completo (hub, painéis de professor/arena/clube, console do admin, desafios, recompensas, Hall com privacidade): `docs/38-GAMIFICACAO-V2.md`.
 - **Vocabulário com fonte única**: `tiers.js` e `skillTrees.js` mandam; o
   schema Zod e o `firestore.rules` derivam. Guardado na CI por
   `domain/gamificationRulesSync.test.js`.
