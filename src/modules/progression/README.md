@@ -5,7 +5,9 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
 
 ## Status
 - **Domain**: `progression.js` (V1), `progressionV2.js`, `tiers.js`,
-  `skillTrees.js`, `streakProtection.js`, `missions.js`, `missionDay.js`,
+  `skillTrees.js`, `weekStreak.js` (a sequência), `streakProtection.js`
+  (só os marcos e a mensagem), `gamificationGuide.js` (o texto explicativo),
+  `onboardingFunnel.js`, `missions.js`, `missionDay.js`,
   `kudos.js`, `referrals.js`, `socialBonds.js`, `seasons.js`,
   `xpLedger.js`, `gamificationEvents.js`, schemas (`progressionV2Schema.js`,
   `gamificationV2Schema2.js`)
@@ -18,10 +20,21 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
   `useUserReferralCode`, `useHallOfFame`, `useCelebrationListener`,
   `useGamificationTracker`
 - **Components**: `TierBadge`, `SkillTreeBars`, `ProgressionCardV2`,
-  `MissionList`, `MissionCompleteToast`, `StreakShieldBadge`,
+  `MissionList`, `MissionCompleteToast`,
   `KudosButton`, `ReferralCard`, `SeasonBanner`, `RivalsList`,
   `CrewsPanel`, `MentorshipsPanel`
 
+> **A sequência tem UMA conta, em `domain/weekStreak.js`.** Hub, perfil, marcos,
+> recompensas e conquistas leem o mesmo número (`computeWeekStreak`). O recorde
+> (`best`) é o que as conquistas usam; a sequência de agora (`weeks`), o que a
+> tela mostra. Não reintroduza "dias de folga" nem "congelamentos": eram
+> decorativos (o motor calculava sem lê-los).
+>
+> **O que a gamificação diz sobre si mesma sai de `gamificationGuide.js`** —
+> glossário, "Como funciona" por aba e perguntas frequentes, com os números
+> lidos das constantes e da configuração. Texto que repete um número à mão
+> precisa de teste de paridade.
+>
 > **Camada completa (hub, missões, revisão, desafios, recompensas, painéis de
 > professor/arena/clube, console do admin):** `docs/38-GAMIFICACAO-V2.md`. O XP
 > tem UMA conta só, no `useGamificationEngine`.

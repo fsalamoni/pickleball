@@ -5,6 +5,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Input, V2Select, V2Skeleton, V2Surfa
 import { useOwnerGoals } from '@/modules/progression/hooks/useOwnerGoals';
 import { GOAL_METRICS, evaluateGoals, normalizeGoals } from '@/modules/progression/domain/supplyHealth';
 import { cn } from '@/core/lib/utils';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 /**
  * As metas do mês de um professor, uma arena ou um clube. O progresso é medido
@@ -39,7 +40,7 @@ export default function GoalsCard({ ownerType, ownerId, monthKey, actuals }) {
   return (
     <V2Surface data-testid="goals-card" data-dica="oferta-metas" className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" aria-hidden="true" /> Metas do mês</h2>
+        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" aria-hidden="true" /> Metas do mês <TermHint term="metas" /></h2>
         {!editando && <V2Button size="sm" variant="secondary" onClick={abrir}><Pencil className="mr-1 h-3.5 w-3.5" /> {g.goals.length ? 'Editar' : 'Definir metas'}</V2Button>}
       </div>
 

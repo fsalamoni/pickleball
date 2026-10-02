@@ -16,6 +16,7 @@ import {
   STREAK_META_VERSION,
 } from '@/modules/progression/domain/progressionV2Schema';
 
+import { canStartVacation, vacationPeriodsOf, withVacationEnded, withVacationStarted } from '@/modules/progression/domain/weekStreak';
 import { gamificationDb } from './firestoreDb.js';
 
 function db() { return gamificationDb(); }
@@ -84,25 +85,39 @@ export async function setStreakMeta(uid, payload) {
   return validation.data;
 }
 
-/** Ativa vacation mode (com data de início). */
+/**
+ * Começa as férias. A regra (uma de cada vez, uma a cada 90 dias) é do domínio
+ * e é conferida aqui, contra o documento lido AGORA — a tela só esconde o botão.
+ *
+ * @throws {Error} com mensagem para a pessoa quando não pode começar
+ */
 export async function enableVacation(uid) {
   const meta = await getOrCreateStreakMeta(uid);
+  const periodos = vacationPeriodsOf(meta);
+  const pode = canStartVacation(periodos);
+  if (!pode.ok) {
+    throw new Error(pode.reason === 'open'
+      ? 'Suas férias já estão em andamento.'
+      : 'Você já tirou férias há menos de 90 dias. Dá para começar outras depois disso.');
+  }
   const updated = {
     ...meta,
     vacationMode: true,
     vacationStartedAt: Date.now(),
+    vacations: withVacationStarted(periodos),
     updatedAt: Date.now(),
   };
   return setStreakMeta(uid, updated);
 }
 
-/** Desativa vacation mode. */
+/** Encerra as férias: o fim fica gravado para a sequência saber o que cobrir. */
 export async function disableVacation(uid) {
   const meta = await getOrCreateStreakMeta(uid);
   const updated = {
     ...meta,
     vacationMode: false,
     vacationStartedAt: null,
+    vacations: withVacationEnded(vacationPeriodsOf(meta)),
     updatedAt: Date.now(),
   };
   return setStreakMeta(uid, updated);

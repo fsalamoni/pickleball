@@ -20,6 +20,7 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { TermNote } from '@/v2/components/gamification/TermHint';
 
 const FAMILY_TABS = [
   { key: 'all', label: 'Todas' },
@@ -117,9 +118,10 @@ function V2AchievementsOn({ user }) {
           </V2Badge>
         }
       />
+      <TermNote term="conquistas" className="mb-5" />
 
       {/* Filtros */}
-      <V2Surface className="mb-6 space-y-4">
+      <V2Surface className="mb-6 space-y-4" data-dica="conquistas-filtros">
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Família</p>
           <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por família">
@@ -198,7 +200,7 @@ function V2AchievementsOn({ user }) {
           />
         </V2Surface>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-dica="conquistas-lista">
           {visibleItems.map((a) => {
             const isUnlocked = result.unlocked.some((u) => u.id === a.id);
             return (

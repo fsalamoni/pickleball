@@ -1,5 +1,13 @@
-# 🎮 Gamificação — pasta de referência
+# 🎮 Gamificação — pasta de referência (o DESENHO)
 
+> ⭐ **A gamificação completa já está no código.** O que existe hoje —
+> motor único de XP, hub, sequência honesta, missões, temporada, desafios,
+> recompensas, painéis de professor/arena/clube, console do admin, guia, dicas
+> e ajuda — está descrito em **[`docs/38-GAMIFICACAO-V2.md`](../../38-GAMIFICACAO-V2.md)**.
+> Esta pasta guarda o **estudo e o desenho de origem**: leia-a para entender
+> *por que* as coisas são como são, não para saber o que falta. Onde um número
+> ou uma tela daqui divergir do `38`, vale o `38` (e o código).
+>
 > **Você chegou aqui para retomar a gamificação? Comece por este arquivo.**
 > Tudo o que foi estudado, decidido, construído e deixado em aberto está nesta
 > pasta. Não é preciso procurar em mais lugar nenhum.

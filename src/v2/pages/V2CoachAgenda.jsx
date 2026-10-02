@@ -103,6 +103,7 @@ const SECAO_ENGAJAMENTO = {
   id: 'engajamento',
   label: 'Engajamento',
   icon: Trophy,
+  dica: 'professor-aba-engajamento',
   tabs: [{ value: 'engajamento', label: 'Saúde, desafios e recompensas', icon: Trophy }],
 };
 const SECAO_DIVULGACAO = {

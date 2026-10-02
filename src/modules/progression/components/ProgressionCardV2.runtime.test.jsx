@@ -87,8 +87,20 @@ describe('ProgressionCardV2', () => {
       matchDates: [now - 2 * 7 * 86400000, now - 3 * 7 * 86400000, now - 4 * 7 * 86400000],
       streakMeta: { weeks: 0, usedGraceThisMonth: true, graceMonth: currentMonth, frozenUntil: null, lastPlayAt: 0 },
     });
-    // grace USADO (mês atual) → mostra badge grace
-    expect(container.textContent).toMatch(/grace/);
+    // folga USADA (mês atual) → mostra o selo em português
+    expect(container.textContent).toMatch(/folga usada/);
+    expect(container.textContent).not.toMatch(/grace/);
+  });
+
+  it('com a sequência do motor, mostra o MESMO número do hub (e o estado)', async () => {
+    await render({
+      summary: { played: 0, wins: 0, podiums: 0, titles: 0, tournaments: 0 },
+      matchDates: [],
+      streak: { weeks: 6, status: 'em_risco', folgaUsedThisMonth: true },
+    });
+    expect(container.textContent).toMatch(/6 sem\./);
+    expect(container.textContent).toMatch(/em risco/);
+    expect(container.textContent).toMatch(/folga usada/);
   });
 
   it('modo férias mostra ícone ❄️ e label férias', async () => {

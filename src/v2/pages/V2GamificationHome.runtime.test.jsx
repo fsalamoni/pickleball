@@ -45,7 +45,9 @@ vi.mock('@/modules/progression/hooks/useGamificationEngine', async () => {
       config: normalizeGamificationConfig(null),
       isModuleOn: (id) => !mockModules.off.has(id),
       stats, history: [], gameDayGames: [], matchDates: [], dates: { tournamentDates: [], gameDayDates: [] },
-      streak: { weeks: 2 }, facts: null,
+      streak: { weeks: 2, best: 2, status: 'ativa', playedThisWeek: true, folgaUsedThisMonth: false, vacationOpen: false, vacationCovering: false, vacationEndsAt: null, msLeftInWeek: 3 * 86400000, nextStep: { weeks: 4, label: 'Constância' }, lastPlayAt: null },
+      streakMeta: { meta: null, isMutating: false, vacationError: null, enableVacation: () => {}, disableVacation: () => {} },
+      facts: null,
       xp: { total, breakdown: { activity: 3000, achievements: 0, missions: 20, onboarding: 0, grants: 0 }, level: levelFromXpV2(total), tier: tierFromXp(total), tierProgress: tierProgress(total) },
       skillTrees: buildSkillTrees({ tournament_attended: 8, tournament_podium: 1, tournament_title: 0, game_played: 142, game_won: 66 }, XP_WEIGHTS_V2).trees,
       achievements,
@@ -69,12 +71,10 @@ vi.mock('@/modules/progression/hooks/useScopedMissions', () => ({ useScopedMissi
 vi.mock('@/modules/progression/hooks/useGameRecords', () => ({ useGameRecords: () => ({ records: [], isLoading: false, isError: false, incomplete: [], refetch: () => {} }) }));
 vi.mock('@/modules/progression/hooks/usePeriodReview', () => ({ usePeriodReview: () => ({ review: null, isLoading: false, isError: false, refetch: () => {} }) }));
 vi.mock('@/modules/progression/hooks/useGamificationTracker', () => ({ useGamificationTracker: () => ({ track: () => {}, enabled: false, GAMIFICATION_EVENT: {} }) }));
-vi.mock('@/modules/progression/hooks/useStreakMetaV2', () => ({
-  useStreakMetaV2: () => ({
-    meta: { graceDaysRemaining: 2, freezesAvailable: 2, vacationMode: false, comebackBonus: 0, lastPlayAt: null },
-    isLoading: false, enableVacation: () => {}, disableVacation: () => {}, useFreeze: () => {}, addFreeze: () => {}, isMutating: false,
-  }),
-}));
+vi.mock('@/modules/progression/hooks/useGamificationGuide', async () => {
+  const { buildGamificationGuide } = await import('@/modules/progression/domain/gamificationGuide');
+  return { useGamificationGuide: () => ({ guide: buildGamificationGuide(null), isModuleOn: (id) => !mockModules.off.has(id) }) };
+});
 vi.mock('@/modules/progression/hooks/useKudoActions', () => ({
   useKudoActions: () => ({ index: { givenToday: 0 }, received: [], given: [], isLoading: false, give: () => {}, isGiving: false, giveError: null }),
 }));
@@ -191,10 +191,36 @@ describe('V2GamificationHome · flag ON · Jornada', () => {
     expect(code.textContent.replace(/\s/g, '')).toBe('AB2CD3EF');
   });
 
-  it('mostra 5 skill trees e o escudo da sequência', async () => {
+  it('mostra 5 skill trees e o cartão da sequência (com o estado e o recorde)', async () => {
     await render();
     expect(container.querySelectorAll('[data-tree]').length).toBe(5);
-    expect(container.querySelector('[data-testid="streak-grace"]')).toBeTruthy();
+    const card = container.querySelector('[data-testid="streak-card"]');
+    expect(card).toBeTruthy();
+    expect(card.querySelector('[data-testid="streak-weeks"]').textContent).toContain('2');
+    expect(card.querySelector('[data-testid="streak-status"]').textContent).toBe('Em dia');
+    // a conta antiga (dias de folga, congelamentos) saiu: eram contadores que nada lia
+    expect(container.querySelector('[data-testid="streak-freeze"]')).toBeNull();
+    expect(container.querySelector('[data-testid="use-freeze-btn"]')).toBeNull();
+  });
+
+  it('cada aba abre com o seu "Como funciona", com os números reais', async () => {
+    await render();
+    const jornada = container.querySelector('[data-testid="como-funciona-jornada"]');
+    expect(jornada).toBeTruthy();
+    expect(jornada.textContent).toContain('semanas seguidas');
+  });
+
+  it('na aba Missões o "Como funciona" fala das missões, com a contagem real', async () => {
+    await render('/gamification?aba=missoes');
+    expect(container.querySelector('[data-testid="como-funciona-missoes"]').textContent).toContain('3 por dia');
+    expect(container.querySelector('[data-testid="como-funciona-jornada"]')).toBeNull();
+  });
+
+  it('o guia completo e as preferências estão no cabeçalho, e não sobra texto técnico de telemetria', async () => {
+    await render();
+    expect(container.querySelector('a[href="/gamification/como-funciona"][aria-label="Como funciona a gamificação"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/gamification/configuracoes"]')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Firebase Analytics|Telemetria/);
   });
 
   it('atalhos: Hall da Fama e Vínculos', async () => {

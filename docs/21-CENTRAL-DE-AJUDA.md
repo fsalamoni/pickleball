@@ -15,13 +15,15 @@ garimpar o que não interessa.
 
 | Parte | Público | Artigos |
 |---|---|---|
-| **Começar aqui** | todos | 7 |
-| **Atleta** | quem joga | 17 |
-| **Arena** | quem tem quadra | 11 |
-| **Professor** | quem dá aula | 6 |
-| **Conta e privacidade** | todos | 6 |
+| **Começar aqui** | todos | 9 |
+| **Atleta** | quem joga | 29 |
+| **Arena** | quem tem quadra | 12 |
+| **Professor** | quem dá aula | 7 |
+| **Conta e privacidade** | todos | 7 |
 
-48 artigos no total (cinco deles atrás de flag — §4).
+64 artigos no total (19 atrás de flag — §4; 11 deles são a gamificação, atrás
+de `gamification_v2`: visão geral, XP/nível/tier, missões, sequência, competir,
+social, recompensas, privacidade, clube, arena e professor).
 
 ## 2. O momento em que esta tela é usada
 
@@ -140,7 +142,7 @@ src/v2/pages/V2Help.runtime.test.jsx        # 44 testes de runtime
 ```
 
 **Por que `helpLinkFor` mora sozinho.** Quem o chama é o LAYOUT, presente em
-toda tela; `helpCenter.js` carrega 48 artigos de texto. Importar do arquivo do
+toda tela; `helpCenter.js` carrega 64 artigos de texto. Importar do arquivo do
 conteúdo arrasta o manual inteiro para o chunk que todo mundo baixa — medido:
 **216 kB contra 184 kB** (63 kB contra 52 kB comprimidos) por uma função de
 três linhas. Rollup não consegue descartar o conteúdo: são objetos montados por
@@ -181,9 +183,16 @@ ligada. É o caso da tela inicial: "A sua tela inicial" (`personalized_home`,
 'home_cards']` — ensina que "Personalizar" abre o seletor). Os dois nunca
 aparecem juntos, porque ensinam coisas diferentes para o MESMO botão. Há teste
 travando isso.
-A gamificação segue fora da ajuda (§5) — o
-mecanismo permitiria escrevê-la agora, e isso é decisão para quando ela for
-ligada.
+A gamificação (Onda W2) usa exatamente esse mecanismo: os 11 artigos levam
+`flags: ['gamification_v2']`, aparecem na parte certa de cada pessoa (atleta,
+arena, professor) e somem juntos com a flag desligada — inclusive as quatro
+perguntas frequentes e as pistas de rota das telas (`/gamification`,
+`/gamification/como-funciona`, `/gamification/revisao`,
+`/gamification/configuracoes`, `/hall-da-fama`, `/vinculos`, `/conquistas`).
+Os números que mudam com a regra (férias: semanas e intervalo) têm teste de
+paridade com `weekStreak.js`; os demais ficam no guia
+`/gamification/como-funciona`, que os tira das constantes — o artigo aponta para
+ele em vez de copiar o valor.
 
 O conteúdo é **dado**, não JSX. Cada artigo é uma lista de **blocos tipados**:
 
@@ -209,10 +218,10 @@ Três testes que valem mais que os outros:
    elas. Um manual que manda a pessoa para uma página 404 é pior que manual
    nenhum.
 2. **⭐ A ajuda não documenta o que está atrás de flag desligada.** Artigo de
-   funcionalidade nova leva `flags` e some com ela desligada (§4). Gamificação
-   (`/conquistas`, `/hall-da-fama`, `/vinculos`) vive dentro de `<Gamified>` e
-   a flag `gamification_v2` está OFF: essas telas **não existem** para o
-   usuário. Quando a flag for ligada, escreva os artigos **e remova o teste**.
+   funcionalidade nova leva `flags` e some com ela desligada (§4). A
+   gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`, `/gamification…`)
+   vive dentro de `<Gamified>`: só os artigos com `flags: ['gamification_v2']`
+   podem citar essas rotas — o teste reprova qualquer outro que as cite.
 3. **⭐ Toda rota de origem existe de verdade em `V2App.jsx`**, e **toda pista
    e toda pergunta apontam para artigo que existe.** Pista para tela que não
    existe é código morto que sobrevive à remoção da tela.
@@ -222,7 +231,7 @@ Três testes que valem mais que os outros:
 5. **⭐ `helpLinkFor` e `helpForRoute` fecham o contrato**: o que um escreve o
    outro lê. Se um dos dois mudar de forma, quebra na hora. E **o layout
    importa de `helpLink`, não de `helpCenter`** — se isso inverter, o chunk de
-   toda tela volta a carregar os 48 artigos (§4).
+   toda tela volta a carregar os 64 artigos (§4).
 6. **⭐ `highlightParts` nunca perde nem inventa caractere** — remontar os
    pedaços devolve o texto original, com acento e caixa.
 7. **Estrutura**: todo artigo tem título, resumo, corpo e palavras-chave; ids

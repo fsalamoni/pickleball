@@ -5,6 +5,7 @@ import { CREW_MAX_MEMBERS } from '@/modules/progression/services/socialBondServi
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 const NOME_MAX = 40;
 
@@ -58,7 +59,7 @@ export default function CrewsPanel({
     <div className={cn('space-y-4', className)} data-testid="crews-panel">
       <V2Surface>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="font-display text-base font-bold text-ink">Minhas crews</h3>
+          <h3 className="flex items-center gap-1 font-display text-base font-bold text-ink">Minhas crews <TermHint term="crews" /></h3>
           {!criando && (
             <V2Button variant="secondary" size="sm" onClick={() => setCriando(true)} data-testid="crew-new-btn">
               <Plus className="h-4 w-4" aria-hidden="true" /> Criar crew

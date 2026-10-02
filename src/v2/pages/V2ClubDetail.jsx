@@ -121,7 +121,7 @@ export default function V2ClubDetail() {
     ...(clubRankingOn ? [{ value: 'ranking', label: 'Ranking', icon: Medal }] : []),
     { value: 'feed', label: 'Mural', icon: MessageSquare },
     { value: 'forums', label: 'Fóruns', icon: MessagesSquare },
-    ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: 'Atividade', icon: Trophy }] : []),
+    ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: 'Atividade', icon: Trophy, dica: 'clube-aba-atividade' }] : []),
     ...(isAdmin ? [{ value: 'admin', label: 'Administração', icon: Settings }] : []),
   ];
   const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn)
@@ -231,7 +231,7 @@ export default function V2ClubDetail() {
             {tabs.map((t) => {
               const Icon = t.icon;
               return (
-                <button key={t.value} onClick={() => setActiveTab(t.value)}
+                <button key={t.value} onClick={() => setActiveTab(t.value)} data-dica={t.dica}
                   className={cn('inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors',
                     safeTab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
                   <Icon className="h-4 w-4" /> {t.label}

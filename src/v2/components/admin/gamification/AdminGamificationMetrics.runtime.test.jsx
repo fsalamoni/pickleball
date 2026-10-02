@@ -37,4 +37,42 @@ describe('AdminGamificationMetrics', () => {
     expect(container.textContent).toContain('Não deu para carregar as métricas');
     expect(container.textContent).not.toContain('Ainda sem métricas');
   });
+
+  describe('o funil dos primeiros passos', () => {
+    const funil = { dismissed: 5, steps: { level: 20, photo: 10, profile: 8, ranking: 6, follow: 4, club: 3, watch: 5, tournament: 1, share: 2 } };
+
+    it('⭐ mostra cada etapa com a contagem e a porcentagem sobre quem abriu a gamificação', async () => {
+      s.metrics = [linha('2026-10-03', { prefsDocs: 25, onboarding: funil })];
+      await render();
+      const bloco = container.querySelector('[data-testid="onboarding-funnel"]');
+      expect(bloco).not.toBeNull();
+      expect(bloco.querySelectorAll('li[data-step]')).toHaveLength(9);
+      expect(bloco.querySelector('[data-step="level"]').textContent).toContain('Defina o seu nível');
+      expect(bloco.querySelector('[data-step="level"]').textContent).toContain('20 · 80%');
+      expect(bloco.textContent).toContain('as 25 pessoas que já abriram a gamificação');
+    });
+
+    it('aponta a etapa mais travada e quantos dispensaram o roteiro', async () => {
+      s.metrics = [linha('2026-10-03', { prefsDocs: 25, onboarding: funil })];
+      await render();
+      const t = container.querySelector('[data-testid="onboarding-funnel"]').textContent;
+      expect(t).toContain('Etapa que menos gente conclui: Inscreva-se num torneio (4%)');
+      expect(t).toContain('Dispensaram o roteiro: 5 (20%)');
+      expect(t).toContain('Nenhuma etapa é obrigatória');
+    });
+
+    it('⭐ retrato sem funil diz que ainda não mediu — não desenha zeros', async () => {
+      s.metrics = [linha('2026-10-03')];
+      await render();
+      expect(container.querySelector('[data-testid="onboarding-funnel"]')).toBeNull();
+      expect(container.querySelector('[data-testid="onboarding-funnel-vazio"]').textContent).toContain('ainda não foi medido');
+    });
+
+    it('as barras são decoração: o texto já diz o número (leitor de tela)', async () => {
+      s.metrics = [linha('2026-10-03', { onboarding: funil })];
+      await render();
+      const barras = container.querySelectorAll('[data-testid="onboarding-funnel"] [aria-hidden="true"]');
+      expect(barras.length).toBe(9);
+    });
+  });
 });

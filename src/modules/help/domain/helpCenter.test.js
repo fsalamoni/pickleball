@@ -601,3 +601,76 @@ describe('o Americano aprimorado em etapas na ajuda', () => {
     expect(texto).not.toMatch(/é como o torneio sabe quem apareceu, antes de sortear/);
   });
 });
+
+/* ======================================================= a gamificação === */
+
+describe('⭐ a ajuda da gamificação', () => {
+  const COM = { gamification_v2: true };
+  const gam = (flags) => helpCatalog(flags).sections
+    .flatMap((s) => s.articles.map((a) => ({ ...a, section: s.id })))
+    .filter((a) => a.id.startsWith('gamificacao-'));
+
+  it('os artigos só existem com a flag ligada — e todos têm a flag', () => {
+    expect(gam({})).toEqual([]);
+    const ligados = gam(COM).map((a) => a.id);
+    ['gamificacao-jornada', 'gamificacao-xp', 'gamificacao-missoes', 'gamificacao-sequencia', 'gamificacao-competir',
+      'gamificacao-social', 'gamificacao-recompensas', 'gamificacao-privacidade', 'gamificacao-clube',
+      'gamificacao-engajamento-arena', 'gamificacao-engajamento-professor'].forEach((id) => expect(ligados, id).toContain(id));
+    artigos.filter((a) => a.id.startsWith('gamificacao-')).forEach((a) => {
+      expect(a.flags, a.id).toContain('gamification_v2');
+    });
+  });
+
+  it('cobre as três pessoas que a gamificação atende: atleta, arena e professor', () => {
+    const secoes = new Set(gam(COM).map((a) => a.section));
+    expect(secoes.has(HELP_SECTION.ATHLETE)).toBe(true);
+    expect(secoes.has(HELP_SECTION.ARENA)).toBe(true);
+    expect(secoes.has(HELP_SECTION.COACH)).toBe(true);
+  });
+
+  it('⭐ os números das férias no texto são os da regra (não escritos à mão)', async () => {
+    const { STREAK_VACATION_COOLDOWN_DAYS, STREAK_VACATION_MAX_DAYS } = await import('../../progression/domain/weekStreak.js');
+    const art = getHelpArticle(HELP_SECTION.ATHLETE, 'gamificacao-sequencia');
+    const texto = art.blocks.map((b) => (b.items ? b.items.join(' ') : b.text || '')).join(' ');
+    expect(texto).toContain(`até ${STREAK_VACATION_MAX_DAYS / 7} semanas`);
+    expect(texto).toContain(`${STREAK_VACATION_COOLDOWN_DAYS} dias depois`);
+  });
+
+  it('as perguntas da gamificação somem com a flag desligada', () => {
+    const perguntas = (flags) => helpCatalog(flags).faq().map((f) => f.question);
+    expect(perguntas({})).not.toContain('Como o meu XP é calculado?');
+    expect(perguntas(COM)).toEqual(expect.arrayContaining([
+      'Como o meu XP é calculado?', 'Perdi a minha sequência. E agora?',
+      'Quem vê o meu nome no Hall da Fama?', 'Como peço uma recompensa?',
+    ]));
+  });
+
+  it('⭐ toda tela da gamificação tem a sua pista de ajuda, e o específico vem antes do genérico', () => {
+    const molde = (p) => HELP_ROUTE_HINTS.findIndex((h) => h.pattern === p);
+    ['/gamification/como-funciona', '/gamification/revisao', '/gamification/configuracoes', '/gamification', '/hall-da-fama', '/vinculos', '/conquistas']
+      .forEach((p) => expect(molde(p), p).toBeGreaterThan(-1));
+    expect(molde('/gamification/como-funciona')).toBeLessThan(molde('/gamification'));
+    expect(molde('/gamification/revisao')).toBeLessThan(molde('/gamification'));
+    expect(helpCatalog(COM).forRoute('/vinculos').articles.map((a) => a.id)).toContain('gamificacao-social');
+    expect(helpCatalog(COM).forRoute('/gamification/configuracoes').articles.map((a) => a.id)).toContain('gamificacao-privacidade');
+  });
+
+  it('sem a flag, a pista da gamificação não sugere artigo nenhum', () => {
+    expect(helpCatalog({}).forRoute('/gamification')).toBeNull();
+    expect(helpCatalog({}).forRoute('/hall-da-fama')).toBeNull();
+    expect(helpCatalog({}).forRoute('/vinculos')).toBeNull();
+  });
+
+  it('nenhum artigo da gamificação promete o que a regra não faz (XP não é moeda, antifarm não pune)', () => {
+    const texto = (id) => {
+      const a = artigos.find((x) => x.id === id);
+      return a.blocks.map((b) => (b.items ? b.items.join(' ') : b.text || '')).join(' ');
+    };
+    expect(texto('gamificacao-xp')).toMatch(/não é moeda|nada se compra/i);
+    expect(texto('gamificacao-recompensas')).toMatch(/não é moeda|não se compram/i);
+    expect(texto('gamificacao-jornada')).toMatch(/nunca punidos automaticamente/);
+    artigos.filter((a) => a.id.startsWith('gamificacao-')).forEach((a) => {
+      expect(texto(a.id), a.id).not.toMatch(/undefined|NaN|\[object/);
+    });
+  });
+});

@@ -171,7 +171,7 @@ const SECTIONS = Object.freeze([
 // A gamificação V2 (flag `gamification_v2`): cinco telas numa seção só, sob demanda.
 const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
 const SECAO_GAMIFICACAO = {
-  id: 'gamification', label: 'Gamificação', icon: Sparkles, tabs: [
+  id: 'gamification', label: 'Gamificação', icon: Sparkles, dica: 'admin-secao-gamificacao', tabs: [
     { id: 'gam-config', label: 'Configuração', icon: SlidersHorizontal },
     { id: 'gam-challenges', label: 'Desafios', icon: Trophy },
     { id: 'gam-rewards', label: 'Recompensas', icon: Gift },
@@ -331,6 +331,7 @@ function ConsoleTabs({ tab, setTab, activeSection, sections = SECTIONS }) {
                 key={section.id}
                 type="button"
                 onClick={() => setTab(section.tabs[0].id)}
+                data-dica={section.dica}
                 className={cn(
                   'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors',
                   active ? 'bg-ink text-white shadow-sm' : 'text-gray-500 hover:text-ink',

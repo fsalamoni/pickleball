@@ -22,6 +22,8 @@ const reset = () => Object.assign(s, {
   grants: { grants: [{ id: 'g1', uid: 'u1', kind: 'season', xp: 100 }], isLoading: false, isError: false },
   missionXp: { total: 60, docs: null, isLoading: false, isError: false },
   progression: { progression: null, isLoading: false },
+  streakMeta: { meta: null, isLoading: false },
+  matchDates: [],
   ach: { unlocked: [], unlockedIds: new Set(['career_first_title']), isLoading: false },
   setProgression: vi.fn(() => Promise.resolve()), syncAch: vi.fn(),
 });
@@ -29,7 +31,7 @@ reset();
 
 vi.mock('@/modules/performance/hooks/usePlayerStats', () => ({ usePlayerStats: () => s.stats }));
 vi.mock('@/modules/rating/hooks/useRating', () => ({ useNationalRanking: () => ({ data: [] }), useRatingHistory: () => ({ data: [] }) }));
-vi.mock('./useProgression', () => ({ usePlayerMatchDates: () => ({ data: [] }), PLAYER_RECORDS_KEY: (u) => ['rec', u] }));
+vi.mock('./useProgression', () => ({ usePlayerMatchDates: () => ({ data: s.matchDates }), PLAYER_RECORDS_KEY: (u) => ['rec', u] }));
 vi.mock('./useActivityFacts', () => ({ useActivityFacts: () => s.facts }));
 vi.mock('./useGamificationPrefs', () => ({ useGamificationPrefs: () => s.prefs }));
 vi.mock('./useGamificationConfig', async () => {
@@ -39,6 +41,7 @@ vi.mock('./useGamificationConfig', async () => {
 vi.mock('./useXpGrants', () => ({ useXpGrants: () => s.grants }));
 vi.mock('./useMissionXpTotal', () => ({ useMissionXpTotal: () => s.missionXp }));
 vi.mock('./useUserProgressionV2', () => ({ useUserProgressionV2: () => s.progression }));
+vi.mock('./useStreakMetaV2', () => ({ useStreakMetaV2: () => s.streakMeta }));
 vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({ useUserAchievementsV2: () => s.ach }));
 vi.mock('@/modules/achievements/hooks/useSyncAchievementsV2', () => ({ useSyncAchievementsV2: (...a) => s.syncAch(...a) }));
 vi.mock('@/modules/progression/services/progressionV2Service', () => ({ setUserProgressionV2: (...a) => s.setProgression(...a) }));
@@ -82,6 +85,45 @@ describe('useGamificationEngine · composição', () => {
   it('os marcos saem do tier, do nível, dos jogos e da sequência', async () => {
     await render();
     expect(engine.marks.some((m) => m.family === 'games')).toBe(true);
+  });
+});
+
+const SEMANA = 7 * 24 * 3600_000;
+const semanasAtras = (n) => Date.now() - n * SEMANA;
+
+describe('useGamificationEngine · sequência e trilhas', () => {
+  it('jogou nas últimas semanas: a sequência é a de agora, com o recorde e o estado', async () => {
+    s.matchDates = [0, 1, 2, 3].map(semanasAtras);
+    await render();
+    expect(engine.streak.weeks).toBeGreaterThanOrEqual(3);
+    expect(engine.streak.best).toBeGreaterThanOrEqual(engine.streak.weeks);
+    expect(['ativa', 'em_risco']).toContain(engine.streak.status);
+  });
+
+  it('🐞 quem parou há meses NÃO segue com a sequência antiga — mas a conquista de sequência é do RECORDE', async () => {
+    s.matchDates = [30, 31, 32, 33, 34].map(semanasAtras);
+    await render();
+    expect(engine.streak.weeks).toBe(0);
+    expect(engine.streak.status).toBe('quebrada');
+    expect(engine.streak.best).toBe(5);
+    const ids = engine.achievements.unlocked.map((a) => a.id);
+    expect(ids).toContain('career_streak_4');
+  });
+
+  it('as férias da pessoa entram na conta', async () => {
+    s.matchDates = [0, 6, 7].map(semanasAtras);
+    s.streakMeta = { meta: { vacations: [{ from: semanasAtras(5), to: semanasAtras(2) }] }, isLoading: false };
+    await render();
+    expect(engine.streak.weeks).toBe(3); // as semanas de férias ligam as duas pontas sem somar
+  });
+
+  it('as trilhas de Social, Arena, Aulas e Clube saem dos fatos (não ficam zeradas por construção)', async () => {
+    s.facts.facts.counts = { ...s.facts.facts.counts, follows: 3, bookingsPlayed: 2, lessonsCompleted: 1, clubsJoined: 1 };
+    await render();
+    expect(engine.skillTrees.social.xp).toBeGreaterThan(0);
+    expect(engine.skillTrees.arena.xp).toBeGreaterThan(0);
+    expect(engine.skillTrees.coach.xp).toBeGreaterThan(0);
+    expect(engine.skillTrees.club.xp).toBeGreaterThan(0);
   });
 });
 

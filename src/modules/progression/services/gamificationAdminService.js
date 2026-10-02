@@ -4,7 +4,7 @@
  * recalcular a progressão de alguém do zero.
  */
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, updateDoc, where, writeBatch,
+  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { createAuditLog } from '@/core/services/auditService';
 import { gamificationDb } from './firestoreDb.js';
@@ -94,7 +94,10 @@ export async function resetAthleteProgress(uid, actor, motivo = '') {
 
 /** Os retratos diários das métricas (os últimos `max`), do mais antigo ao mais novo. */
 export async function listMetrics(max = 60) {
-  const snap = await getDocs(query(collection(db(), 'gamification_metrics'), limit(max)));
+  // Os `max` retratos MAIS NOVOS: sem a ordem, o `limit` pegava os mais antigos
+  // (o id é o dia) e, passados `max` dias, o painel mostrava o retrato velho
+  // como se fosse o último. Um campo só, índice automático.
+  const snap = await getDocs(query(collection(db(), 'gamification_metrics'), orderBy('day', 'desc'), limit(max)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     .sort((a, b) => String(a.day).localeCompare(String(b.day)));
 }

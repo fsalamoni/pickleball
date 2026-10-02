@@ -24,6 +24,9 @@ import { missionDateKey } from './missionDay.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Quantas missões cada período sorteia. */
+export const MISSIONS_PER_SCOPE = Object.freeze({ daily: 3, weekly: 5, monthly: 8 });
+
 /**
  * Catálogo de missões "template" (não pré-feitas).
  * O gerador pega algumas e instancia.
@@ -358,7 +361,7 @@ export function missionWindow(scope, now = new Date()) {
 export function generateMissions({
   uid, scope, currentTier = null, now = new Date(), excludeIds = [], seed = null, modules = null,
 }) {
-  const counts = { daily: 3, weekly: 5, monthly: 8 };
+  const counts = MISSIONS_PER_SCOPE;
   const count = counts[scope] || 3;
 
   const pool = MISSION_TEMPLATES.filter((t) => {

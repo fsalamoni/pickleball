@@ -5,6 +5,7 @@ import { V2Surface } from '@/v2/ui/primitives';
 import { reviewHeadline, reviewHighlights } from '@/modules/progression/domain/periodReview';
 import { achievementName } from './achievementName';
 import { cn } from '@/core/lib/utils';
+import TermHint from './TermHint';
 
 /** O corpo da revisão (manchete + destaques). Reaproveitado no card e na página. */
 export function ReviewBody({ review, limit = null }) {
@@ -39,7 +40,7 @@ export default function PeriodReviewCard({ review }) {
     <V2Surface data-testid="period-review-card" data-dica="revisao-semana">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <CalendarDays className="h-5 w-5" aria-hidden="true" /> Sua semana em revisão
+          <CalendarDays className="h-5 w-5" aria-hidden="true" /> Sua semana em revisão <TermHint term="revisao" />
         </h2>
         <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{review.window.label}</span>
       </div>

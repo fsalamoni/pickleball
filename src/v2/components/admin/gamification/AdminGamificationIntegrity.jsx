@@ -7,6 +7,7 @@ import { useAdminFlags, useAdminModeration, useReportedLetters } from '@/modules
 import { usePeople } from '@/modules/progression/hooks/usePeople';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
 
 const TIPO = {
   xp_unverified: 'XP acima do que os jogos verificados sustentam',
@@ -39,7 +40,8 @@ function Sinais() {
   const decidir = (f, status) => flags.review.mutate({ id: f.id, status, note: '', actor }, { onSuccess: () => toast.success('Sinal atualizado.'), onError: (e) => toast.error(e?.message || 'Falhou.') });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-dica="admin-gam-sinais">
+      <TermNote term="admin-antifarm" />
       <V2SubTabs tabs={[{ value: 'open', label: `Abertos (${flags.flags.filter((f) => f.status === 'open').length})` }, { value: 'done', label: 'Revisados' }]} activeValue={filtro} onSelect={(t) => setFiltro(t.value)} ariaLabel="Estado dos sinais" />
       <p className="text-xs text-gray-500">O servidor <strong>marca</strong>, nunca pune: quem tem sinal de gravidade alta fica fora do placar público até você decidir.</p>
       {lista.length === 0 ? <V2EmptyState icon={ShieldAlert} title={filtro === 'open' ? 'Nenhum sinal aberto' : 'Nada revisado ainda'} description="A varredura roda uma vez por dia." /> : (
@@ -91,6 +93,7 @@ function Contas() {
 
   return (
     <div className="space-y-4">
+      <TermNote term="admin-moderacao" />
       <div className="rounded-2xl border border-gray-100 p-3">
         <p className="mb-2 text-sm font-bold text-ink">Moderar uma conta</p>
         <div className="flex flex-wrap items-center gap-2">
@@ -157,7 +160,7 @@ export default function AdminGamificationIntegrity() {
   const [aba, setAba] = useState('sinais');
   return (
     <V2Surface className="space-y-4" data-testid="admin-gamification-integrity">
-      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Integridade" />
+      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Integridade" dica="admin-gam-integridade-abas" />
       {aba === 'sinais' && <Sinais />}
       {aba === 'contas' && <Contas />}
       {aba === 'cartas' && <Cartas />}

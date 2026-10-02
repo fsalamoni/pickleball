@@ -611,12 +611,20 @@ Curvas de progressão, níveis, metas e todo o sistema de **Gamificação V2**
 - **V1**: hooks/domain/services próprios, sem página dedicada (reusado por
   `performance/` e `profile/`). Nada disso muda com a flag desligada.
 - **V2 (gated)**: tiers com nome (Calouro → Imortal), 5 trilhas paralelas
-  de XP, missões diárias, proteção de sequência (dias de folga,
-  congelamentos, férias), kudos, indicações, rivais/crews/mentorias e
+  de XP, missões diárias, sequência semanal (folga automática e férias), kudos, indicações, rivais/crews/mentorias e
   ranking mensal.
-- **Páginas V2**: `/gamification` (hub), `/hall-da-fama`, `/vinculos`
+- **Páginas V2**: `/gamification` (hub), `/gamification/como-funciona` (o guia
+  completo, por público, com busca — Onda W2), `/gamification/revisao`,
+  `/gamification/configuracoes`, `/conquistas`, `/hall-da-fama`, `/vinculos`
   (rivais, crews, mentorias). Bloco "Sua progressão" no `/perfil` via
   `ProfileProgressionSection`.
+- **Sequência**: uma conta só (`domain/weekStreak.js`): semanas de segunda a
+  domingo em Brasília, zera quando a pessoa para, folga automática de uma semana
+  por mês e férias declaradas (4 semanas, intervalo de 90 dias). Substituiu a
+  "proteção de sequência" decorativa.
+- **Texto explicativo**: `domain/gamificationGuide.js` é a fonte única do que a
+  plataforma diz sobre a gamificação (números lidos das constantes e da
+  configuração do admin); `TermHint`/`TermNote`/`HowItWorks` o levam às telas.
 - **XP**: atividade + bônus de conquista registrada + XP de missão concluída
   (`domain/xpTotal.js`), tudo derivado — recalcular não infla.
 - **Ranking sazonal**: Cloud Function `recomputeSeasonRankingDaily` (03h BRT)

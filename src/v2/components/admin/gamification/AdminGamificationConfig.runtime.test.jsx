@@ -99,4 +99,25 @@ describe('AdminGamificationConfig', () => {
     await render();
     expect(container.querySelector('[data-testid="admin-gamification-config"]')).toBeNull();
   });
+
+  it('⭐ os números vêm agrupados pela parte da gamificação (temporada, duelo, avaliações, integridade)', async () => {
+    await render();
+    const grupos = Array.from(container.querySelectorAll('[data-grupo]')).map((g) => g.getAttribute('data-grupo'));
+    expect(grupos).toEqual(['season', 'duels', 'reviews', 'antiFarm']);
+    expect(container.querySelector('[data-grupo="season"] [id="cfg-mintier"]')).not.toBeNull();
+    expect(container.querySelector('[data-grupo="duels"] [id="cfg-duels.maxLevelGap"]')).not.toBeNull();
+    expect(container.querySelector('[data-grupo="antiFarm"] [id="cfg-antiFarm.kudosRingMin"]')).not.toBeNull();
+    // todo campo editável continua existindo (nada se perdeu no agrupamento)
+    expect(container.querySelectorAll('input[id^="cfg-"][type="number"]').length).toBe(11);
+  });
+
+  it('⭐ módulo desligado: o grupo diz que o valor só vale quando ele for ligado — e o campo segue editável', async () => {
+    await render();
+    expect(container.textContent).not.toContain('módulo desligado — só vale quando você ligar');
+    await act(async () => { container.querySelector('#mod-duels').click(); });
+    const duelo = container.querySelector('[data-grupo="duels"]');
+    expect(duelo.textContent).toContain('módulo desligado — só vale quando você ligar');
+    expect(container.querySelector('[data-grupo="season"]').textContent).not.toContain('módulo desligado');
+    expect(duelo.querySelector('input[id="cfg-duels.winnerXp"]').disabled).toBe(false);
+  });
 });

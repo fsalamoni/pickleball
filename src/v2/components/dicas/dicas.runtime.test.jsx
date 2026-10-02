@@ -126,7 +126,9 @@ beforeEach(() => {
   window.sessionStorage.clear();
   auth.user = { uid: 'ana' };
   flags.guided_tips = true;
+  delete flags.gamification_v2;
   ctxDicas.gereArena = false;
+  ctxDicas.ehAdmin = false;
   // O jsdom não desenha: todo elemento "tem tamanho" e está à vista.
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => ({
     top: 120, left: 120, width: 90, height: 32, right: 210, bottom: 152, x: 120, y: 120, toJSON() {},
@@ -369,5 +371,56 @@ describe('⭐ o ponto não apareceu: o guia mostra o caminho', () => {
     expect(texto()).toContain('o formulário foi fechado');
     await clicar(botao('Abrir de novo'));
     expect(texto()).toContain('Os horários de cada quadra');
+  });
+});
+
+/* ================================================== a gamificação === */
+
+describe('⭐ as dicas da gamificação', () => {
+  const abrirPainel = async () => {
+    await clicar(botaoPorRotulo('Dicas (desligadas)'));
+    await ate(() => texto().includes('O que você quer fazer?'));
+  };
+
+  it('com a flag da gamificação desligada, a área não existe no painel', async () => {
+    await montar({ em: '/gamification' });
+    await abrirPainel();
+    expect(texto()).not.toContain('Entender o XP, o nível e o tier');
+  });
+
+  it('com a flag ligada, o painel mostra a área "Gamificação" e os guias do atleta (e nenhum de admin)', async () => {
+    flags.gamification_v2 = true;
+    await montar({ em: '/gamification' });
+    await abrirPainel();
+    expect(texto()).toContain('Gamificação');
+    expect(texto()).toContain('Entender o XP, o nível e o tier');
+    expect(texto()).toContain('Manter a sequência e tirar férias');
+    expect(texto()).not.toContain('(admin)');
+    expect(texto()).not.toContain('Engajar os atletas da sua arena');
+  });
+
+  it('o admin vê os guias do console; a arena, os da arena', async () => {
+    flags.gamification_v2 = true;
+    ctxDicas.ehAdmin = true;
+    ctxDicas.gereArena = true;
+    ctxDicas.minhaArena = 'a1';
+    await montar({ em: '/gamification' });
+    await abrirPainel();
+    expect(texto()).toContain('Configurar a gamificação (admin)');
+    expect(texto()).toContain('Engajar os atletas da sua arena');
+  });
+
+  it('a busca acha o guia pelo que a pessoa diria ("férias")', async () => {
+    flags.gamification_v2 = true;
+    await montar({ em: '/gamification' });
+    await abrirPainel();
+    const campo = document.body.querySelector('input[type="search"], input[aria-label*="fazer"], input');
+    await act(async () => {
+      const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      set.call(campo, 'ferias');
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await esperar();
+    expect(texto()).toContain('Manter a sequência e tirar férias');
   });
 });

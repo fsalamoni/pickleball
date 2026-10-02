@@ -4,12 +4,13 @@ import { V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface, V2Toggle } fro
 import { useGamificationPrefs } from '@/modules/progression/hooks/useGamificationPrefs';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import { getAchievementV2ById } from '@/modules/achievements/domain/achievementsV2';
+import TermHint from './TermHint';
 
-function Secao({ id, titulo, descricao, children }) {
+function Secao({ id, titulo, descricao, term, dica, children }) {
   return (
-    <V2Surface id={id} className="scroll-mt-6 space-y-4">
+    <V2Surface id={id} data-dica={dica} className="scroll-mt-6 space-y-4">
       <div>
-        <h2 className="font-display text-lg font-bold text-ink">{titulo}</h2>
+        <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">{titulo}{term && <TermHint term={term} />}</h2>
         {descricao && <p className="mt-0.5 text-sm text-gray-500">{descricao}</p>}
       </div>
       <div className="space-y-4">{children}</div>
@@ -43,7 +44,7 @@ export default function GamificationPreferences({ uid, isModuleOn = () => true }
 
   return (
     <div className="space-y-5" data-testid="gamification-preferences">
-      <Secao id="privacidade" titulo="Privacidade" descricao="Você decide o que os outros veem. A regra vale no servidor, não só na tela.">
+      <Secao id="privacidade" dica="prefs-privacidade" titulo="Privacidade" term="privacidade" descricao="Você decide o que os outros veem. A regra vale no servidor, não só na tela.">
         {isModuleOn('hall_of_fame') && (
           <V2Toggle
             id="pref-hall" checked={prefs.privacy.showInHallOfFame} onChange={set('privacy', 'showInHallOfFame')}
@@ -58,19 +59,19 @@ export default function GamificationPreferences({ uid, isModuleOn = () => true }
         />
       </Secao>
 
-      <Secao titulo="Interação com outros atletas" descricao="Tudo isto tem saída em um toque, sem explicação.">
+      <Secao dica="prefs-interacao" titulo="Interação com outros atletas" descricao="Tudo isto tem saída em um toque, sem explicação.">
         {isModuleOn('duels') && <V2Toggle id="pref-duels" checked={prefs.social.acceptDuels} onChange={set('social', 'acceptDuels')} label="Participar do duelo da semana" hint="O servidor só emparelha quem aceita." />}
         {isModuleOn('match_reviews') && <V2Toggle id="pref-reviews" checked={prefs.social.acceptReviews} onChange={set('social', 'acceptReviews')} label="Receber avaliações de quem jogou comigo" hint="Você vê só a média e os elogios; nunca quem deu qual nota." />}
         {isModuleOn('partner_letters') && <V2Toggle id="pref-letters" checked={prefs.social.acceptLetters} onChange={set('social', 'acceptLetters')} label="Receber cartas de parceiros" hint="Mensagens curtas de gratidão, anônimas por padrão. Você pode denunciar ou apagar." />}
       </Secao>
 
-      <Secao titulo="Avisos" descricao="Só o que você quer receber no sino.">
+      <Secao dica="prefs-avisos" titulo="Avisos" descricao="Só o que você quer receber no sino.">
         {isModuleOn('weekly_review') && <V2Toggle id="pref-weekly" checked={prefs.notifications.weeklyReview} onChange={set('notifications', 'weeklyReview')} label="Resumo da semana (segunda-feira)" />}
         {isModuleOn('duels') && <V2Toggle id="pref-nduels" checked={prefs.notifications.duels} onChange={set('notifications', 'duels')} label="Duelo da semana" hint="Quando você for emparelhado e quando o duelo acabar." />}
         {isModuleOn('challenges') && <V2Toggle id="pref-nchal" checked={prefs.notifications.challengeResults} onChange={set('notifications', 'challengeResults')} label="Resultado dos desafios" />}
       </Secao>
 
-      <Secao titulo="Como aparece para mim">
+      <Secao dica="prefs-aparencia" titulo="Como aparece para mim">
         {isModuleOn('celebrations') && <V2Toggle id="pref-cele" checked={prefs.display.celebrations} onChange={set('display', 'celebrations')} label="Comemorar marcos" hint="Aviso curto quando você sobe de tier, completa 100 jogos, emenda semanas…" />}
         <div>
           <label htmlFor="pref-title" className="mb-1 block text-sm font-semibold text-ink">Título ao lado do meu nome</label>

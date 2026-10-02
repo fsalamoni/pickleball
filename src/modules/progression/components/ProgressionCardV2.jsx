@@ -23,7 +23,9 @@ import SkillTreeBars from './SkillTreeBars.jsx';
  *  - `summary` (de `buildPlayerStats`) para compat com V1
  *  - `xpBySource` (opcional) — se passado, computa XP V2 multi-fonte
  *  - `matchDates` (ms[]) — para calcular streak com proteção
- *  - `streakMeta` (opcional) — meta persistido (grace, freeze)
+ *  - `streak` (opcional) — a sequência já calculada pelo motor (`weekStreak.js`):
+ *    é o MESMO número do hub. Sem ela, cai na conta antiga a partir de `matchDates`.
+ *  - `streakMeta` (opcional) — meta persistido (só usado na conta antiga)
  *  - `compact` (boolean) — esconde skill trees pra caber em sidebar
  *
  * **Regra**: 100% presentational. Não lê Firestore, não chama hooks.
@@ -36,6 +38,7 @@ export default function ProgressionCardV2({
   trees: treesProp = null,
   matchDates = [],
   streakMeta = null,
+  streak = null,
   compact = false,
   className,
 }) {
@@ -67,10 +70,17 @@ export default function ProgressionCardV2({
   }, [treesProp, xpBySource]);
 
   // Streak com proteção
-  const streakInfo = useMemo(
-    () => computeProtectedStreak(matchDates, { meta: streakMeta, now: new Date() }),
-    [matchDates, streakMeta],
-  );
+  const streakInfo = useMemo(() => {
+    if (streak) {
+      return {
+        weeks: streak.weeks || 0,
+        frozen: streak.status === 'ferias',
+        usedGrace: !!streak.folgaUsedThisMonth,
+        atRisk: streak.status === 'em_risco',
+      };
+    }
+    return computeProtectedStreak(matchDates, { meta: streakMeta, now: new Date() });
+  }, [streak, matchDates, streakMeta]);
 
   // Tier atual + próximo (tierProgress já devolve o tier corrente em `.current`)
   const tierProg = useMemo(() => tierProgress(xpTotal), [xpTotal]);
@@ -152,13 +162,18 @@ function StreakIndicator({ info }) {
         )}
         <span className="tabular-nums font-semibold">{weeks} sem.</span>
       </div>
+      {info.atRisk && (
+        <span title="Jogue até domingo para somar esta semana" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-700">
+          em risco
+        </span>
+      )}
       {usedGrace && (
-        <span title="Você usou o dia de folga deste mês" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
-          <Shield className="h-3 w-3" /> grace
+        <span title="Você usou a folga deste mês: uma semana sem jogar por mês não quebra a sequência" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
+          <Shield className="h-3 w-3" /> folga usada
         </span>
       )}
       {frozen && (
-        <span title="Modo férias ativo" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
+        <span title="Férias ativas: a sequência fica guardada" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
           <ShieldCheck className="h-3 w-3" /> férias
         </span>
       )}

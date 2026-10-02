@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import ProgressionCardV2 from '@/modules/progression/components/ProgressionCardV2';
-import { V2Badge } from '@/v2/ui/primitives';
 
 /**
  * Bloco "Sua progressão" do perfil (gamificação V2).
@@ -19,16 +18,15 @@ import { V2Badge } from '@/v2/ui/primitives';
 export default function ProfileProgressionSection({ uid }) {
   // O mesmo motor do hub: um número de XP só, e as gravações do dono (conquistas,
   // primeiros passos, progressão) saem de um lugar só — nunca de duas contas.
-  const { stats, matchDates, xp, skillTrees } = useGamificationEngine(uid, { enabled: !!uid, sync: true });
+  const { stats, matchDates, xp, skillTrees, streak } = useGamificationEngine(uid, { enabled: !!uid, sync: true });
 
   return (
     <section className="mt-8" data-testid="profile-progression-v2">
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-amber-500" aria-hidden="true" />
         <h2 className="font-display text-lg font-bold text-ink">Sua progressão</h2>
-        <V2Badge tone="amber">V2</V2Badge>
       </div>
-      <ProgressionCardV2 summary={stats} xpTotal={xp.total} trees={skillTrees} matchDates={matchDates} />
+      <ProgressionCardV2 summary={stats} xpTotal={xp.total} trees={skillTrees} matchDates={matchDates} streak={streak} />
       <div className="mt-3 text-center text-sm">
         <Link
           to="/gamification"

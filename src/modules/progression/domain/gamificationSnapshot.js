@@ -58,12 +58,62 @@ export function statsToXpSources(stats) {
 }
 
 /**
+ * As fontes das TRILHAS: o que a pessoa fez em cada área do jogo.
+ *
+ * Antes só os jogos e torneios alimentavam as trilhas, e todo jogo cai na
+ * trilha "Torneiro" — as outras quatro (Social, Arena, Aulas e Clube) ficavam
+ * zeradas para sempre, por construção. Agora elas saem dos FATOS (reservas
+ * jogadas, aulas dadas, clubes, kudos), com os mesmos pesos da tabela de XP.
+ *
+ * Trilha mede ATIVIDADE por área; ela não soma no XP total (que continua sendo
+ * composto por `computeTotalXpV2`). Fonte que não carregou NÃO é contada: nada
+ * de afirmar que a pessoa "não fez" o que não deu para verificar.
+ *
+ * @param {object} stats
+ * @param {object|null} facts `buildActivityFacts`
+ * @returns {Record<string, number>}
+ */
+export function skillTreeSources(stats, facts) {
+  const fontes = { ...statsToXpSources(stats) };
+  if (!facts) return fontes;
+  const c = facts.counts || {};
+  const sabe = (nome) => (typeof facts.known === 'function' ? facts.known(nome) : true);
+  const uma = (cond) => (cond ? 1 : 0);
+  if (sabe('following')) fontes.follow_first = uma(c.follows >= 1);
+  if (sabe('followers')) fontes.followed_by_10 = uma(c.followers >= 10);
+  if (sabe('kudosIndex')) {
+    fontes.kudos_given = c.kudosGiven || 0;
+    fontes.kudos_received = c.kudosReceived || 0;
+  }
+  if (sabe('bookings')) {
+    fontes.booking_first = uma(c.bookingsPlayed >= 1);
+    fontes.booking_attended = c.bookingsPlayed || 0;
+    fontes.arena_visited_3_different = uma(c.arenasVisited >= 3);
+    fontes.arena_visited_10_different = uma(c.arenasVisited >= 10);
+  }
+  if (sabe('arenaReviews')) fontes.arena_reviewed = c.arenaReviews || 0;
+  if (sabe('lessons')) {
+    fontes.lesson_first = uma(c.lessonsCompleted >= 1);
+    fontes.lesson_attended = c.lessonsCompleted || 0;
+  }
+  if (sabe('packageSales')) fontes.package_purchased = c.packages || 0;
+  if (sabe('clinicSignups')) fontes.clinic_attended = c.clinics || 0;
+  if (sabe('clubs')) {
+    fontes.club_joined = c.clubsJoined || 0;
+    fontes.club_created = c.clubsCreated || 0;
+  }
+  if (sabe('clubEventsCreated')) fontes.club_event_created = c.clubEventsCreated || 0;
+  if (sabe('gameDaysCreated')) fontes.game_day_organized = c.gameDaysCreated || 0;
+  return fontes;
+}
+
+/**
  * O que o documento materializado deve dizer, dado o XP já composto.
  *
  * @returns {{ xpTotal, level, tier, skillTrees, achievementsUnlocked, grantsXp, xpBreakdown }}
  */
-export function calcProgressionFields({ xpTotal, breakdown, stats, unlockedCount }) {
-  const { trees } = buildSkillTrees(statsToXpSources(stats), XP_WEIGHTS_V2);
+export function calcProgressionFields({ xpTotal, breakdown, stats, unlockedCount, facts = null }) {
+  const { trees } = buildSkillTrees(skillTreeSources(stats, facts), XP_WEIGHTS_V2);
   return {
     xpTotal,
     level: levelFromXpV2(xpTotal).level,
