@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { missionDateKey, missionDaySeed, PLATFORM_TIME_ZONE } from './missionDay.js';
+import {
+  missionDateKey, missionDaySeed, PLATFORM_TIME_ZONE,
+  platformWeekKey, scopeKey, missionDocId, dayStartMs,
+  scopeWindowBR, msUntilReset, formatTimeLeft, addDaysToDateKey,
+} from './missionDay.js';
 
 describe('missionDateKey', () => {
   it('usa o dia de Brasília, não o de UTC', () => {
@@ -55,5 +59,49 @@ describe('missionDaySeed', () => {
 
   it('é um inteiro', () => {
     expect(Number.isInteger(missionDaySeed(new Date('2026-09-03T12:00:00Z')))).toBe(true);
+  });
+});
+
+describe('semana e mês de Brasília', () => {
+  it('a semana começa na segunda (domingo ainda é da semana anterior)', () => {
+    expect(platformWeekKey(new Date('2026-10-02T15:00:00Z'))).toBe('2026-09-28'); // sexta
+    expect(platformWeekKey(new Date('2026-09-28T15:00:00Z'))).toBe('2026-09-28'); // segunda
+    expect(platformWeekKey(new Date('2026-10-04T15:00:00Z'))).toBe('2026-09-28'); // domingo
+    expect(platformWeekKey(new Date('2026-10-05T15:00:00Z'))).toBe('2026-10-05');
+  });
+
+  it('segunda 00:30 em Brasília (03:30Z) é a semana nova; domingo 23:30 (02:30Z de segunda) ainda é a antiga', () => {
+    expect(platformWeekKey(new Date('2026-10-05T03:30:00Z'))).toBe('2026-10-05');
+    expect(platformWeekKey(new Date('2026-10-05T02:30:00Z'))).toBe('2026-09-28');
+  });
+
+  it('as chaves de escopo e o id do documento não colidem', () => {
+    const d = new Date('2026-10-02T15:00:00Z');
+    expect(scopeKey('daily', d)).toBe('2026-10-02');
+    expect(scopeKey('weekly', d)).toBe('2026-09-28');
+    expect(scopeKey('monthly', d)).toBe('2026-10-01');
+    expect(missionDocId('u', 'daily', '2026-10-01')).toBe('u_2026-10-01');
+    expect(missionDocId('u', 'monthly', '2026-10-01')).toBe('u_m_2026-10-01');
+    expect(missionDocId('u', 'weekly', '2026-09-28')).toBe('u_w_2026-09-28');
+  });
+
+  it('o dia começa à meia-noite de Brasília', () => {
+    expect(new Date(dayStartMs('2026-10-02')).toISOString()).toBe('2026-10-02T03:00:00.000Z');
+  });
+
+  it('janela semanal tem 7 dias e a mensal acompanha o mês', () => {
+    const s = scopeWindowBR('weekly', new Date('2026-10-02T15:00:00Z'));
+    expect(s.endMs - s.startMs).toBe(7 * 24 * 3600_000);
+    const m = scopeWindowBR('monthly', new Date('2026-12-15T15:00:00Z'));
+    expect(new Date(m.endMs).toISOString()).toBe('2027-01-01T03:00:00.000Z');
+  });
+
+  it('o contador diz o que falta, sem número negativo', () => {
+    expect(formatTimeLeft(30 * 60_000)).toBe('faltam 30 min');
+    expect(formatTimeLeft(5 * 3600_000)).toBe('faltam 5 h');
+    expect(formatTimeLeft(2 * 24 * 3600_000 + 1000)).toBe('faltam 2 dias');
+    expect(formatTimeLeft(-5)).toBe('encerra agora');
+    expect(msUntilReset('daily', new Date('2026-10-02T14:30:00Z'))).toBe(12.5 * 3600_000); // 11h30 em Brasília
+    expect(addDaysToDateKey('2026-02-28', 1)).toBe('2026-03-01');
   });
 });

@@ -10,6 +10,7 @@
  * Aqui as três parcelas viram um total só:
  *
  *   XP = atividade  +  bônus de conquista  +  XP de missão
+ *        +  primeiros passos  +  XP concedido pelo servidor
  *
  * **Por que isso não abre farm**: nenhuma parcela é um contador que a UI
  * incrementa. Cada uma é DERIVADA de um fato que só existe uma vez:
@@ -21,6 +22,8 @@
 import { computeXpV2 } from './progressionV2.js';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2.js';
 import { MISSION_BONUS_XP } from './missions.js';
+import { onboardingXp } from './onboarding.js';
+import { sumGrants } from './xpGrants.js';
 
 /** Bônus de XP por id de conquista, indexado uma vez. */
 const BONUS_POR_CONQUISTA = ACHIEVEMENTS_V2.reduce((acc, a) => {
@@ -87,19 +90,31 @@ export function missionXp(missionDocs) {
  *   statsSources?: Record<string, number>,
  *   unlockedAchievementIds?: Iterable<string>,
  *   missionDocs?: Array<object>,
+ *   onboardingDone?: Record<string, number>,
+ *   grantDocs?: Array<object>,
+ *   uid?: string,
  * }} args
- * @returns {{ xpTotal: number, breakdown: { activity: number, achievements: number, missions: number } }}
+ * @returns {{ xpTotal: number, breakdown: { activity: number, achievements: number, missions: number, onboarding: number, grants: number } }}
  */
 export function computeTotalXpV2({
   statsSources = {},
   unlockedAchievementIds = null,
   missionDocs = null,
+  onboardingDone = null,
+  grantDocs = null,
+  uid = null,
 } = {}) {
   const activity = Math.max(0, computeXpV2(statsSources).xpTotal || 0);
   const achievements = achievementBonusXp(unlockedAchievementIds);
   const missions = missionXp(missionDocs);
+  // Primeiros passos: só o que está GRAVADO (não a detecção ao vivo) — o XP não
+  // regride se a pessoa tirar a foto de perfil depois.
+  const onboarding = onboardingXp(onboardingDone);
+  // Concedido pelo servidor (temporada, duelo, desafio): documentos que o
+  // cliente não consegue escrever.
+  const grants = sumGrants(grantDocs, uid || undefined).total;
   return {
-    xpTotal: activity + achievements + missions,
-    breakdown: { activity, achievements, missions },
+    xpTotal: activity + achievements + missions + onboarding + grants,
+    breakdown: { activity, achievements, missions, onboarding, grants },
   };
 }

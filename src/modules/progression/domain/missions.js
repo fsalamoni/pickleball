@@ -38,38 +38,48 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *  - `tier` (mín. do tier do user; null = qualquer um)
  */
 const MISSION_TEMPLATES = Object.freeze([
-  // ─── DIÁRIAS (curtas, alto peso) ─────────────────────────────────
-  { id: 'daily_play_1',      metric: 'game_played',     target: 1,  xpReward: 30,  weight: 10, tier: null },
-  { id: 'daily_play_3',      metric: 'game_played',     target: 3,  xpReward: 60,  weight: 8,  tier: null },
-  { id: 'daily_kudos_3',     metric: 'kudos_given',     target: 3,  xpReward: 20,  weight: 9,  tier: null },
-  { id: 'daily_visit_athlete', metric: 'discover_athlete', target: 1, xpReward: 20, weight: 8, tier: null },
-  { id: 'daily_chat',        metric: 'chat_message',    target: 1,  xpReward: 15,  weight: 9,  tier: null },
-  { id: 'daily_first_action', metric: 'daily_first_action', target: 1, xpReward: 20, weight: 10, tier: null },
-  { id: 'daily_share',       metric: 'share_card_generated', target: 1, xpReward: 10, weight: 6, tier: null },
+  // ─── DIÁRIAS ─────────────────────────────────────────────────────
+  // `category`: o gerador garante ao menos uma missão de JOGO e uma SOCIAL.
+  // `module`: o módulo do admin de que a missão depende (desligado = não sai).
+  { id: 'daily_play_1',      metric: 'game_played',       target: 1,  xpReward: 30,  weight: 10, tier: null, category: 'play' },
+  { id: 'daily_play_3',      metric: 'game_played',       target: 3,  xpReward: 60,  weight: 6,  tier: null, category: 'play' },
+  { id: 'daily_game_day_1',  metric: 'game_day_attended', target: 1,  xpReward: 30,  weight: 6,  tier: null, category: 'play' },
+  { id: 'daily_kudos_3',     metric: 'kudos_given',       target: 3,  xpReward: 20,  weight: 9,  tier: null, category: 'social' },
+  { id: 'daily_follow_2',    metric: 'follow_made',       target: 2,  xpReward: 20,  weight: 8,  tier: null, category: 'social' },
+  { id: 'daily_review_1',    metric: 'review_given',      target: 1,  xpReward: 25,  weight: 7,  tier: null, category: 'social', module: 'match_reviews' },
 
-  // ─── SEMANAIS (médias, xpReward maior) ──────────────────────────
-  { id: 'weekly_play_3',     metric: 'game_played',     target: 3,  xpReward: 100, weight: 10, tier: null },
-  { id: 'weekly_play_7',     metric: 'game_played',     target: 7,  xpReward: 200, weight: 8,  tier: null },
-  { id: 'weekly_tournament', metric: 'tournament_attended', target: 1, xpReward: 150, weight: 9, tier: null },
-  { id: 'weekly_publish_game_day', metric: 'game_day_attended', target: 2, xpReward: 100, weight: 8, tier: null },
-  { id: 'weekly_invite_1',   metric: 'referral_signed_up', target: 1, xpReward: 100, weight: 7, tier: null },
-  { id: 'weekly_arena_1',    metric: 'booking_attended', target: 1, xpReward: 80, weight: 8, tier: null },
-  { id: 'weekly_kudos_10',   metric: 'kudos_given',     target: 10, xpReward: 50,  weight: 9, tier: null },
-  { id: 'weekly_post_1',     metric: 'forum_post',      target: 1,  xpReward: 50,  weight: 7, tier: null },
-  { id: 'weekly_results_3',  metric: 'game_result_logged', target: 3, xpReward: 80, weight: 7, tier: null },
+  // ─── SEMANAIS ────────────────────────────────────────────────────
+  { id: 'weekly_play_3',      metric: 'game_played',       target: 3,  xpReward: 100, weight: 10, tier: null, category: 'play' },
+  { id: 'weekly_play_7',      metric: 'game_played',       target: 7,  xpReward: 200, weight: 6,  tier: 'Aprendiz', category: 'play' },
+  { id: 'weekly_tournament',  metric: 'tournament_attended', target: 1, xpReward: 150, weight: 7, tier: null, category: 'play' },
+  { id: 'weekly_game_days_2', metric: 'game_day_attended', target: 2,  xpReward: 100, weight: 8,  tier: null, category: 'play' },
+  { id: 'weekly_active_days_3', metric: 'active_days',     target: 3,  xpReward: 120, weight: 8,  tier: null, category: 'play' },
+  { id: 'weekly_kudos_10',    metric: 'kudos_given',       target: 10, xpReward: 50,  weight: 7,  tier: null, category: 'social' },
+  { id: 'weekly_follow_3',    metric: 'follow_made',       target: 3,  xpReward: 60,  weight: 7,  tier: null, category: 'social' },
+  { id: 'weekly_review_2',    metric: 'review_given',      target: 2,  xpReward: 60,  weight: 7,  tier: null, category: 'social', module: 'match_reviews' },
+  { id: 'weekly_letter_1',    metric: 'letter_sent',       target: 1,  xpReward: 50,  weight: 5,  tier: null, category: 'social', module: 'partner_letters' },
+  { id: 'weekly_booking_1',   metric: 'booking_attended',  target: 1,  xpReward: 80,  weight: 7,  tier: null, category: 'discover' },
+  { id: 'weekly_lesson_1',    metric: 'lesson_attended',   target: 1,  xpReward: 100, weight: 5,  tier: null, category: 'discover' },
 
-  // ─── MENSAIS (longas, xpReward alto) ────────────────────────────
-  { id: 'monthly_play_15',   metric: 'game_played',     target: 15, xpReward: 500, weight: 8, tier: null },
-  { id: 'monthly_play_30',   metric: 'game_played',     target: 30, xpReward: 1000, weight: 6, tier: 'Aprendiz' },
-  { id: 'monthly_tournaments_2', metric: 'tournament_attended', target: 2, xpReward: 300, weight: 8, tier: null },
-  { id: 'monthly_club_event', metric: 'club_event_rsvp', target: 1, xpReward: 200, weight: 7, tier: null },
-  { id: 'monthly_club_post',  metric: 'club_post',     target: 1,  xpReward: 100, weight: 7, tier: null },
-  { id: 'monthly_lesson_1',   metric: 'lesson_attended', target: 1, xpReward: 200, weight: 6, tier: null },
-  { id: 'monthly_arena_3',   metric: 'booking_attended', target: 3, xpReward: 250, weight: 7, tier: null },
-  { id: 'monthly_referral_3', metric: 'referral_signed_up', target: 3, xpReward: 500, weight: 5, tier: null },
-  { id: 'monthly_follow_5',  metric: 'follow_first',   target: 5,  xpReward: 100, weight: 7, tier: null },
-  { id: 'monthly_review_2',  metric: 'arena_reviewed', target: 2,  xpReward: 150, weight: 6, tier: null },
+  // ─── MENSAIS ─────────────────────────────────────────────────────
+  { id: 'monthly_play_15',    metric: 'game_played',       target: 15, xpReward: 500, weight: 8,  tier: null, category: 'play' },
+  { id: 'monthly_play_30',    metric: 'game_played',       target: 30, xpReward: 1000, weight: 6, tier: 'Aprendiz', category: 'play' },
+  { id: 'monthly_tournaments_2', metric: 'tournament_attended', target: 2, xpReward: 300, weight: 8, tier: null, category: 'play' },
+  { id: 'monthly_active_days_8', metric: 'active_days',    target: 8,  xpReward: 400, weight: 7,  tier: null, category: 'play' },
+  { id: 'monthly_kudos_20',   metric: 'kudos_given',       target: 20, xpReward: 150, weight: 6,  tier: null, category: 'social' },
+  { id: 'monthly_follow_5',   metric: 'follow_made',       target: 5,  xpReward: 100, weight: 7,  tier: null, category: 'social' },
+  { id: 'monthly_reviews_5',  metric: 'review_given',      target: 5,  xpReward: 150, weight: 6,  tier: null, category: 'social', module: 'match_reviews' },
+  { id: 'monthly_letters_2',  metric: 'letter_sent',       target: 2,  xpReward: 100, weight: 4,  tier: null, category: 'social', module: 'partner_letters' },
+  { id: 'monthly_referral_3', metric: 'referral_signed_up', target: 3, xpReward: 500, weight: 5,  tier: null, category: 'social' },
+  { id: 'monthly_arena_3',    metric: 'booking_attended',  target: 3,  xpReward: 250, weight: 7,  tier: null, category: 'discover' },
+  { id: 'monthly_lesson_1',   metric: 'lesson_attended',   target: 1,  xpReward: 200, weight: 6,  tier: null, category: 'discover' },
+  { id: 'monthly_review_arena_2', metric: 'arena_reviewed', target: 2, xpReward: 150, weight: 5,  tier: null, category: 'discover' },
+  { id: 'monthly_clinic_1',   metric: 'clinic_attended',   target: 1,  xpReward: 150, weight: 4,  tier: null, category: 'discover' },
+  { id: 'monthly_challenge_1', metric: 'challenge_joined', target: 1,  xpReward: 120, weight: 5,  tier: null, category: 'discover', module: 'challenges' },
 ]);
+
+/** O catálogo (somente leitura) — a Central do admin e os testes o consultam. */
+export const MISSION_CATALOG = MISSION_TEMPLATES;
 
 /**
  * Mapa de tiers (string → ordinal) para validar o tier mínimo.
@@ -112,7 +122,9 @@ function templateMatchesTier(template, currentTier) {
  * }} options
  * @returns {Array<object>} N templates selecionados
  */
-function pickTemplates({ count, pool, tier = null, seed = Date.now(), excludeIds = [] }) {
+function pickTemplates({
+  count, pool, tier = null, seed = Date.now(), excludeIds = [], required = [],
+}) {
   const eligible = pool.filter((t) => {
     if (excludeIds.includes(t.id)) return false;
     if (tier && !templateMatchesTier(t, tier)) return false;
@@ -130,24 +142,45 @@ function pickTemplates({ count, pool, tier = null, seed = Date.now(), excludeIds
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 
-  const selected = [];
   const remaining = [...eligible];
-
-  while (selected.length < count && remaining.length > 0) {
-    const totalWeight = remaining.reduce((s, t) => s + (t.weight || 1), 0);
+  const selected = [];
+  const sortearUm = (candidatos) => {
+    const totalWeight = candidatos.reduce((acc, t) => acc + (t.weight || 1), 0);
     let pick = rand() * totalWeight;
-    for (let i = 0; i < remaining.length; i += 1) {
-      pick -= (remaining[i].weight || 1);
-      if (pick <= 0) {
-        selected.push(remaining[i]);
-        remaining.splice(i, 1);
-        break;
-      }
+    for (const t of candidatos) {
+      pick -= (t.weight || 1);
+      if (pick <= 0) return t;
+    }
+    return candidatos[candidatos.length - 1];
+  };
+
+  // 1º: garante o equilíbrio — uma missão de cada categoria exigida (quando
+  // existe candidata). Sem isto o sorteio podia entregar três missões de
+  // "dar kudos" no mesmo dia, e ninguém joga para cumpri-las.
+  for (const [categoria, minimo] of required) {
+    for (let i = 0; i < minimo && selected.length < count; i += 1) {
+      const candidatos = remaining.filter((t) => t.category === categoria);
+      if (candidatos.length === 0) break;
+      const escolhida = sortearUm(candidatos);
+      selected.push(escolhida);
+      remaining.splice(remaining.indexOf(escolhida), 1);
     }
   }
-
+  // 2º: o resto, por peso.
+  while (selected.length < count && remaining.length > 0) {
+    const escolhida = sortearUm(remaining);
+    selected.push(escolhida);
+    remaining.splice(remaining.indexOf(escolhida), 1);
+  }
   return selected;
 }
+
+/** Quantas de cada categoria o escopo garante (ordem = prioridade). */
+const REQUIRED_BY_SCOPE = Object.freeze({
+  daily: [['play', 1], ['social', 1]],
+  weekly: [['play', 2], ['social', 1], ['discover', 1]],
+  monthly: [['play', 2], ['social', 2], ['discover', 2]],
+});
 
 /**
  * Constrói missões a partir de templates.
@@ -205,6 +238,42 @@ export function missionLabel({ metric, target = 1 } = {}) {
       description: plural
         ? `${n} amigos entram na plataforma pelo seu convite.`
         : 'Um amigo entra na plataforma pelo seu convite.',
+    },
+    active_days: {
+      title: `Jogue em ${n} dias diferentes`,
+      description: `Entre em quadra em ${n} dias diferentes — constância vale mais que maratona.`,
+    },
+    follow_made: {
+      title: plural ? `Siga ${n} atletas` : 'Siga 1 atleta',
+      description: 'Descubra atletas na lista e comece a seguir quem joga perto de você.',
+    },
+    booking_attended: {
+      title: plural ? `Jogue em ${n} reservas de quadra` : 'Jogue numa reserva de quadra',
+      description: 'Reserve uma quadra numa arena e vá jogar — reserva concluída conta.',
+    },
+    lesson_attended: {
+      title: plural ? `Faça ${n} aulas` : 'Faça uma aula',
+      description: 'Uma aula com um professor da plataforma, marcada como concluída.',
+    },
+    arena_reviewed: {
+      title: plural ? `Avalie ${n} arenas` : 'Avalie uma arena',
+      description: 'Conte como foi jogar numa arena — a avaliação ajuda quem vem depois.',
+    },
+    clinic_attended: {
+      title: plural ? `Participe de ${n} clínicas` : 'Participe de uma clínica',
+      description: 'Inscreva-se numa clínica ou workshop de um professor.',
+    },
+    review_given: {
+      title: plural ? `Avalie ${n} jogos` : 'Avalie um jogo',
+      description: 'Depois do jogo, avalie o companheiro e os adversários — é rápido.',
+    },
+    letter_sent: {
+      title: plural ? `Escreva ${n} cartas ao companheiro` : 'Escreva uma carta ao companheiro',
+      description: 'Uma frase para o parceiro de dupla depois do jogo. Anônima por padrão.',
+    },
+    challenge_joined: {
+      title: plural ? `Entre em ${n} desafios` : 'Entre num desafio',
+      description: 'Participe de um desafio da plataforma, de um clube ou de uma arena.',
     },
   };
   return textos[metric] || {
@@ -286,8 +355,10 @@ export function missionWindow(scope, now = new Date()) {
  * }} options
  * @returns {Array<object>}
  */
-export function generateMissions({ uid, scope, currentTier = null, now = new Date(), excludeIds = [], seed = null }) {
-  const counts = { daily: 3, weekly: 5, monthly: 10 };
+export function generateMissions({
+  uid, scope, currentTier = null, now = new Date(), excludeIds = [], seed = null, modules = null,
+}) {
+  const counts = { daily: 3, weekly: 5, monthly: 8 };
   const count = counts[scope] || 3;
 
   const pool = MISSION_TEMPLATES.filter((t) => {
@@ -299,6 +370,7 @@ export function generateMissions({ uid, scope, currentTier = null, now = new Dat
     // E, principalmente: só entra missão cuja métrica a plataforma sabe
     // MEDIR. Missão de métrica não medível ficaria parada em 0 para sempre
     // (ou dependeria do usuário marcar sozinho, que era o furo antigo).
+    if (t.module && modules && modules[t.module] === false) return false;
     return isMeasurableMetric(t.metric, scope);
   });
 
@@ -313,6 +385,7 @@ export function generateMissions({ uid, scope, currentTier = null, now = new Dat
     tier: currentTier,
     seed: effectiveSeed,
     excludeIds,
+    required: REQUIRED_BY_SCOPE[scope] || [],
   });
 
   return instantiateMissions(templates, {
