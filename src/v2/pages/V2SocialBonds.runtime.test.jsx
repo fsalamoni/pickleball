@@ -8,7 +8,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const flag = { value: true };
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => flag.value }));
-vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'eu' } }) }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'eu', displayName: 'Eu' } }) }));
 
 vi.mock('@/modules/rating/hooks/useHeadToHead', () => ({
   useHeadToHead: () => ({
@@ -28,6 +28,9 @@ const joinSpy = vi.fn();
 const leaveSpy = vi.fn();
 const lessonSpy = vi.fn();
 const endSpy = vi.fn();
+const respondSpy = vi.fn();
+const startSpy = vi.fn();
+const mentorias = { value: [{ pairKey: 'eu_a', mentorUid: 'eu', apprenticeUid: 'a', status: 'active', lessonsCompleted: 2 }] };
 
 vi.mock('@/modules/progression/hooks/useUserSocialBonds', () => ({
   useUserCrews: () => ({
@@ -42,14 +45,20 @@ vi.mock('@/modules/progression/hooks/useUserSocialBonds', () => ({
     create: createSpy, join: joinSpy, leave: leaveSpy,
     isCreating: false, isJoining: false, isLeaving: false,
   }),
-  useUserMentorships: () => ({
-    data: [{ pairKey: 'eu_a', mentorUid: 'eu', apprenticeUid: 'a', status: 'active', lessonsCompleted: 2 }],
-    isLoading: false,
-  }),
+  useUserMentorships: () => ({ data: mentorias.value, isLoading: false }),
   useMentorshipActions: () => ({
-    recordLesson: lessonSpy, end: endSpy, start: vi.fn(),
-    isRecording: false, isEnding: false, isStarting: false,
+    recordLesson: lessonSpy, end: endSpy, start: startSpy, respond: respondSpy,
+    isRecording: false, isEnding: false, isStarting: false, isResponding: false,
   }),
+}));
+vi.mock('@/modules/athletes/hooks/useAthletes', () => ({
+  useAthletes: () => ({ data: [
+    { id: 'z1', platform_name: 'Zeca Moraes', city: 'Recife', state: 'PE' },
+    { id: 'eu', platform_name: 'Eu Mesmo' },
+  ] }),
+}));
+vi.mock('@/modules/progression/hooks/usePeople', () => ({
+  usePeople: () => ({ people: new Map([['a', { name: 'Aline' }], ['p', { name: 'Paulo' }]]), isLoading: false }),
 }));
 
 import V2SocialBonds from './V2SocialBonds.jsx';
@@ -62,13 +71,14 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   flag.value = true;
-  [createSpy, joinSpy, leaveSpy, lessonSpy, endSpy].forEach((s) => s.mockClear());
+  [createSpy, joinSpy, leaveSpy, lessonSpy, endSpy, respondSpy, startSpy].forEach((s) => s.mockClear());
+  mentorias.value = [{ pairKey: 'eu_a', mentorUid: 'eu', apprenticeUid: 'a', status: 'active', lessonsCompleted: 2 }];
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 
-async function render() {
+async function render(url = '/vinculos') {
   await act(async () => {
-    root.render(<MemoryRouter><V2SocialBonds /></MemoryRouter>);
+    root.render(<MemoryRouter initialEntries={[url]}><V2SocialBonds /></MemoryRouter>);
   });
 }
 
@@ -145,5 +155,60 @@ describe('V2SocialBonds · flag ON', () => {
   it('tem volta para a gamificação', async () => {
     await render();
     expect(container.querySelector('a[href="/gamification"]')).toBeTruthy();
+  });
+});
+
+describe('V2SocialBonds · convite de mentoria (ninguém entra sem aceitar)', () => {
+  const convite = (over = {}) => ({ pairKey: 'p_eu', mentorUid: 'p', apprenticeUid: 'eu', status: 'pending', proposedBy: 'p', lessonsCompleted: 0, ...over });
+
+  it('o aviso do convite (?aba=mentorias) abre direto na aba certa', async () => {
+    await render('/vinculos?aba=mentorias');
+    expect(container.querySelector('[data-testid="mentorships-list"]')).toBeTruthy();
+  });
+
+  it('convite recebido: mostra quem convidou e o papel, e só aceita quem foi convidado', async () => {
+    mentorias.value = [convite()];
+    await render('/vinculos?aba=mentorias');
+    expect(container.textContent).toContain('Paulo convidou você para ser aprendiz');
+    await clicar('[data-testid="mentorship-accept-btn"]');
+    expect(respondSpy.mock.calls[0][0]).toEqual({ pairKey: 'p_eu', accept: true, actorUid: 'eu' });
+  });
+
+  it('recusar o convite', async () => {
+    mentorias.value = [convite()];
+    await render('/vinculos?aba=mentorias');
+    await clicar('[data-testid="mentorship-decline-btn"]');
+    expect(respondSpy.mock.calls[0][0]).toEqual({ pairKey: 'p_eu', accept: false, actorUid: 'eu' });
+  });
+
+  it('convite que EU fiz: aguardando, sem "aceitar" — só retirar', async () => {
+    mentorias.value = [convite({ pairKey: 'eu_a', mentorUid: 'eu', apprenticeUid: 'a', proposedBy: 'eu' })];
+    await render('/vinculos?aba=mentorias');
+    expect(container.textContent).toContain('Convite enviado a Aline');
+    expect(container.querySelector('[data-testid="mentorship-accept-btn"]')).toBeNull();
+    expect(container.textContent).toContain('Retirar');
+    expect(container.querySelector('[data-testid="mentorship-lesson-btn"]')).toBeNull();
+  });
+
+  it('o convite que espera a minha resposta entra na contagem da aba (é o que pede atenção)', async () => {
+    mentorias.value = [convite()];
+    await render();
+    expect(container.querySelector('[data-testid="bonds-tab-mentorias"]').textContent).toContain('1');
+  });
+
+  it('convidar: busca pelo nome, escolhe a pessoa e o papel, e o convite sai assinado por mim', async () => {
+    await render('/vinculos?aba=mentorias');
+    const campo = container.querySelector('input[aria-label="Buscar atleta pelo nome"]');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      setter.call(campo, 'zeca');
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const candidatos = container.querySelectorAll('[data-testid="mentorship-candidates"] button');
+    expect(candidatos.length).toBe(1); // eu mesmo não aparece
+    await act(async () => { candidatos[0].click(); });
+    await act(async () => { container.querySelector('[role="radio"][aria-checked="false"]').click(); }); // "Quero um mentor"
+    await clicar('[data-testid="mentorship-invite-send"]');
+    expect(startSpy.mock.calls[0][0]).toEqual({ mentorUid: 'z1', apprenticeUid: 'eu', proposedBy: 'eu', proposerName: 'Eu' });
   });
 });

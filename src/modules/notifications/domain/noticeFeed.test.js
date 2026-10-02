@@ -146,6 +146,17 @@ describe('noticeArea — de onde vem cada aviso', () => {
     expect(g('/arenas/A1#arena-planos')).toBe(NOTICE_AREA.ARENAS);
   });
 
+  it('⭐ os avisos da gamificação caem em Gamificação (o servidor os escreve com tipo `gamification` e link para o hub)', () => {
+    expect(noticeArea({ type: 'gamification', link: '/gamification?aba=duelo' })).toBe(NOTICE_AREA.GAMIFICACAO);
+    const g = (link) => noticeArea({ type: 'generic', link });
+    expect(g('/gamification')).toBe(NOTICE_AREA.GAMIFICACAO);
+    expect(g('/gamification/revisao')).toBe(NOTICE_AREA.GAMIFICACAO);
+    expect(g('/gamification?aba=recompensas')).toBe(NOTICE_AREA.GAMIFICACAO);
+    expect(g('/vinculos?aba=mentorias')).toBe(NOTICE_AREA.GAMIFICACAO);
+    expect(g('/conquistas')).toBe(NOTICE_AREA.GAMIFICACAO);
+    expect(g('/hall-da-fama')).toBe(NOTICE_AREA.GAMIFICACAO);
+  });
+
   it('a gestão da arena é Arenas, mesmo quando o assunto é aula ou dia de jogo', () => {
     expect(noticeAreaFromLink('/arenas/A1/gerir?aba=pedidos')).toBe(NOTICE_AREA.ARENAS);
     expect(noticeAreaFromLink('/arenas/A1/gerir/dia-de-jogo/g1')).toBe(NOTICE_AREA.ARENAS);

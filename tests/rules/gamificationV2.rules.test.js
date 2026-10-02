@@ -602,3 +602,68 @@ describe('⭐ privacidade do perfil público: a REGRA barra, não a tela', () =>
     await assertSucceeds(getDoc(doc(como(ANA), 'user_progression_v2', CRIS)));
   });
 });
+
+describe('⭐ mentoria: ninguém entra sem aceitar', () => {
+  const pk = `${ANA}_${BIA}`; // mentora Ana, aprendiz Bia
+  const mentoria = (over = {}) => ({
+    pairKey: pk, schemaVersion: 2, mentorUid: ANA, apprenticeUid: BIA, status: 'pending', proposedBy: ANA,
+    lessonsCompleted: 0, startedAt: AGORA, endedAt: null, updatedAt: AGORA, ...over,
+  });
+  const ref = (ctx) => doc(ctx, 'mentorships', pk);
+
+  it('o convite nasce pendente e assinado por quem convidou', async () => {
+    await assertSucceeds(setDoc(ref(como(ANA)), mentoria()));
+  });
+
+  it('criar já ATIVA (vínculo unilateral) é recusado — só o admin faz isso', async () => {
+    const { proposedBy: _p, ...semConvite } = mentoria({ status: 'active' });
+    await assertFails(setDoc(ref(como(ANA)), semConvite));
+    await assertFails(setDoc(ref(como(ANA)), mentoria({ status: 'active' })));
+    await assertSucceeds(setDoc(ref(como(ADMIN)), semConvite));
+  });
+
+  it('ninguém convida em nome de outra pessoa nem de um par alheio', async () => {
+    await assertFails(setDoc(ref(como(ANA)), mentoria({ proposedBy: BIA })));
+    await assertFails(setDoc(ref(como(CRIS)), mentoria()));
+  });
+
+  describe('com um convite em aberto', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => { await setDoc(ref(ctx.firestore()), mentoria()); });
+    });
+
+    it('quem foi convidado aceita; quem convidou NÃO aceita o próprio convite', async () => {
+      await assertFails(updateDoc(ref(como(ANA)), { status: 'active' }));
+      await assertSucceeds(updateDoc(ref(como(BIA)), { status: 'active' }));
+    });
+
+    it('qualquer lado encerra o convite (recusa ou retira)', async () => {
+      await assertSucceeds(updateDoc(ref(como(BIA)), { status: 'cancelled' }));
+    });
+
+    it('um terceiro não mexe, e ninguém troca quem convidou', async () => {
+      await assertFails(updateDoc(ref(como(CRIS)), { status: 'active' }));
+      await assertFails(updateDoc(ref(como(BIA)), { proposedBy: BIA, status: 'active' }));
+    });
+
+    it('lê só quem é do par (e o admin)', async () => {
+      await assertSucceeds(getDoc(ref(como(ANA))));
+      await assertSucceeds(getDoc(ref(como(BIA))));
+      await assertFails(getDoc(ref(como(CRIS))));
+    });
+  });
+
+  it('mentoria já ativa segue como era: os dois lados registram aula e encerram', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => { await setDoc(ref(ctx.firestore()), mentoria({ status: 'active' })); });
+    await assertSucceeds(updateDoc(ref(como(ANA)), { lessonsCompleted: 1 }));
+    await assertSucceeds(updateDoc(ref(como(BIA)), { status: 'completed', endedAt: AGORA }));
+  });
+
+  it('mentoria antiga (sem convite gravado) continua editável pelos dois', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const { proposedBy: _p, ...antiga } = mentoria({ status: 'active' });
+      await setDoc(ref(ctx.firestore()), antiga);
+    });
+    await assertSucceeds(updateDoc(ref(como(BIA)), { lessonsCompleted: 2 }));
+  });
+});

@@ -74,7 +74,7 @@ describe('MentorshipsPanel', () => {
 
   it('traduz todos os estados', async () => {
     for (const [status, rotulo] of [
-      ['active', 'Ativa'], ['paused', 'Pausada'],
+      ['pending', 'Convite'], ['active', 'Ativa'], ['paused', 'Pausada'],
       ['completed', 'Concluída'], ['cancelled', 'Cancelada'],
     ]) {
       await render({ mentorships: [{ ...comoMentor, status }] });

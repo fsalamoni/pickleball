@@ -2698,6 +2698,10 @@ service cloud.firestore {
     }
 
     // mentorships/{pairKey} — mentoria (os dois lados escrevem)
+    // Mentoria é um vínculo entre DUAS pessoas: ninguém entra em uma sem aceitar.
+    // O convite nasce `pending` com `proposedBy` (quem o fez) e só a OUTRA pessoa
+    // o torna `active`; quem convidou pode apenas retirá-lo. Mentoria já ativa
+    // segue como era. Criar direto como ativa (sem convite) é só do admin.
     match /mentorships/{pairKey} {
       allow read: if isAuthed() && (
         resource == null
@@ -2709,21 +2713,34 @@ service cloud.firestore {
         && request.resource.data.pairKey == pairKey
         && request.resource.data.schemaVersion == 2
         && request.resource.data.mentorUid != request.resource.data.apprenticeUid
-        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled']
+        && request.resource.data.status in ['pending', 'active', 'paused', 'completed', 'cancelled']
         && (
-          request.auth.uid == request.resource.data.mentorUid
-          || request.auth.uid == request.resource.data.apprenticeUid
+          (request.resource.data.status == 'pending'
+            && request.resource.data.get('proposedBy', '') == request.auth.uid
+            && (request.auth.uid == request.resource.data.mentorUid
+              || request.auth.uid == request.resource.data.apprenticeUid))
           || isPlatformAdmin()
         );
       allow update: if isAuthed()
         && request.resource.data.schemaVersion == 2
         && request.resource.data.mentorUid == resource.data.mentorUid
         && request.resource.data.apprenticeUid == resource.data.apprenticeUid
-        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled']
+        && request.resource.data.status in ['pending', 'active', 'paused', 'completed', 'cancelled']
+        && request.resource.data.get('proposedBy', '') == resource.data.get('proposedBy', '')
         && (
           request.auth.uid == resource.data.mentorUid
           || request.auth.uid == resource.data.apprenticeUid
           || isPlatformAdmin()
+        )
+        && (
+          isPlatformAdmin()
+          // Depois de respondido, vale o que sempre valeu.
+          || (resource.data.status != 'pending' && request.resource.data.status != 'pending')
+          // Convite em aberto: qualquer lado o encerra (recusa ou retira)...
+          || (resource.data.status == 'pending' && request.resource.data.status in ['pending', 'cancelled'])
+          // ...mas só quem NÃO convidou o aceita.
+          || (resource.data.status == 'pending' && request.resource.data.status == 'active'
+              && request.auth.uid != resource.data.get('proposedBy', ''))
         );
       allow delete: if isPlatformAdmin();
     }
