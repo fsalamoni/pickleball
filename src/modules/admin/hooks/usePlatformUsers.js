@@ -4,6 +4,9 @@ import {
 } from '../services/adminService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { previewAccountDeletion, deleteAccounts } from '../services/accountDeletionService';
+import {
+  listAccountLifecycleLogs, previewAccountMerge, mergeAccountHistory,
+} from '../services/accountMergeService';
 
 /**
  * Lista todos os usuários da plataforma (coleção `users`). Só o admin da
@@ -72,6 +75,37 @@ export function useDeleteAccounts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['platform-users-all'] });
       queryClient.invalidateQueries({ queryKey: ['athletes'] });
+    },
+  });
+}
+
+/** Auditoria de exclusões e unificações (só admin lê). */
+export function useAccountLifecycleLogs({ enabled = false } = {}) {
+  return useQuery({
+    queryKey: ['admin-account-lifecycle'],
+    queryFn: listAccountLifecycleLogs,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** Prévia da unificação (mutação: disparada pelo admin, nunca sozinha). */
+export function usePreviewAccountMerge() {
+  return useMutation({ mutationFn: ({ fromUid, intoUid }) => previewAccountMerge(fromUid, intoUid) });
+}
+
+/**
+ * Unifica. Invalida a auditoria (a linha passa a "unificada"), o ranking e o
+ * perfil — o histórico mudou de dono.
+ */
+export function useMergeAccountHistory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fromUid, intoUid, reason, confirm }) => mergeAccountHistory(fromUid, intoUid, { reason, confirm }),
+    onSuccess: () => {
+      ['admin-account-lifecycle', 'national-ranking', 'dupr-ranking', 'doubles-ranking', 'athlete-profile', 'head-to-head', 'ranking-worker-status']
+        .forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
+      queryClient.invalidateQueries({ queryKey: ['game-days', 'published-games'] });
     },
   });
 }

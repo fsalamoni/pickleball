@@ -962,3 +962,57 @@ exports.adminDeleteAccounts = onCall(
     return { mode: pedido.mode, results: resultados };
   },
 );
+
+// =====================================================================
+// UNIFICAR O HISTÓRICO de uma conta EXCLUÍDA numa conta que continua.
+//
+// O caso real: a pessoa tinha dois cadastros, um foi excluído, e os jogos dele
+// seguiram no ranking como "Atleta" (uma posição sem perfil). A conta excluída
+// era DELA — os números vão para a conta que ficou. Prévia para o admin,
+// execução só do dono, conflito bloqueia. Ver `functions/accountMerge.js`.
+// =====================================================================
+const accountMerge = require('./accountMerge');
+
+exports.adminMergeAccountHistory = onCall(
+  {
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async (req) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    if (!(await isPlatformAdminUser(req, db))) {
+      throw new HttpsError('permission-denied', 'Só o admin da plataforma unifica cadastros.');
+    }
+    const pedido = accountMerge.validateMergeRequest(req.data || {});
+    if (pedido.error) throw new HttpsError('invalid-argument', pedido.error);
+
+    const token = (req.auth && req.auth.token) || {};
+    if (pedido.mode === 'execute'
+      && !(accountDeletion.isOwnerEmail(token.email) && token.email_verified !== false)) {
+      throw new HttpsError('permission-denied', 'Só o dono da plataforma executa a unificação de cadastros.');
+    }
+    const ctx = { db, auth: getAuth() };
+    try {
+      if (pedido.mode === 'preview') {
+        const { report } = await accountMerge.analyzeMerge(ctx, pedido.fromUid, pedido.intoUid);
+        return { mode: 'preview', report };
+      }
+      const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '' };
+      const res = await accountMerge.executeMerge(ctx, {
+        fromUid: pedido.fromUid,
+        intoUid: pedido.intoUid,
+        reason: pedido.reason,
+        actor,
+        FieldValue: FieldValueDel,
+        requestRankingRecompute,
+        logger,
+      });
+      logger.info(`adminMergeAccountHistory: ${pedido.fromUid} → ${pedido.intoUid} (${res.status}) por ${actor.uid}`);
+      return { mode: 'execute', ...res };
+    } catch (err) {
+      logger.error('adminMergeAccountHistory falhou', err);
+      throw new HttpsError('internal', 'Falha inesperada na unificação. Rodar de novo é seguro: o que já foi transferido não é transferido duas vezes.');
+    }
+  },
+);

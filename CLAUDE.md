@@ -363,6 +363,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
 **"Lancei os jogos e o atleta não aparece no ranking / no perfil"** → ⭐ `docs/18-RANKINGS.md` §10. Três causas, nenhuma no motor: (1) 🐞 o perfil público contava SÓ torneio — agora soma os jogos de dia de jogo **publicados** (`listPublishedGameDayGamesFor`, leitura pública de `club_event_games`; hook `usePublishedGameDayGames`, mesma chave no confronto direto); (2) partida com alguém **sem conta** sai do ranking para TODOS da partida — a regra fica, mas agora é VISÍVEL e tem conserto: prévia na publicação do dia (`previewGameDayPublication`, mesma conta de `buildGameDayMatch`) + **Vincular a uma conta** (`linkGuestParticipantToAccount`), e no torneio o selo "sem conta · não pontua" (`registrationSlotsWithoutAccount`, com paridade contra `functions/ranking.js`) + escolher a conta no lápis da inscrição (`linkRegistrationPlayerToAccount`). Vínculo **só preenche lado vazio** — nunca troca a conta de quem já tem uma; (3) Meu desempenho diz POR QUE um jogo não conta (`rankingCoverageSummary`). O servidor grava o que deixou de fora por motivo em `ranking_worker.last_result.excluded` (só contagens e ids — o documento é público) e o painel admin mostra (`describeRankingExclusions`)
+**"No ranking aparece 'Atleta' sem perfil / a pessoa tinha DOIS cadastros e um foi excluído"** → ⭐ conta excluída não ocupa mais posição: o servidor a reconhece (sem perfil E sem `users/{uid}`, `contasExcluidas` em `functions/platformRankings.js`) e a tira do ranking individual — os jogos seguem valendo para os adversários. Para devolver os números à conta que ficou: **Painel admin → Comunidade → Cadastros → Contas excluídas → Unificar com outra conta** (lista pela Auditoria `admin_account_deleted`, sugestão por nome/e-mail, prévia do servidor, `UNIFICAR` + motivo, **só o dono executa**), função `adminMergeAccountHistory` (`functions/accountMerge.js`). Só histórico ESPORTIVO; só conta EXCLUÍDA vira origem (nunca junte duas vivas); conflito (as duas na mesma partida) bloqueia; auditoria com os caminhos. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` §Unificar
 **"O torneio que eu criei e em que me inscrevi não aparece como meu no início"** → 🐞 era isso: `my_role` é o PAPEL (organizar vence jogar), e a seção Torneios só olhava `my_role === 'player'`. Agora `listMyTournaments` calcula `is_player`/`my_registration_status` (nada gravado) e o início mostra **"Seus torneios"** (`myTournamentsForHome` em `home/domain/homeTournaments.js`): o que a pessoa joga e o que organiza, uma linha por torneio, com o papel no subtítulo. **Nunca** decida "inscrito" por `my_role` — use `jogoNoTorneio(t)`. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §1
 **"Esta inscrição de torneio joga? E o check-in?"** → `isActiveRegistration` (`tournament/domain/checkin.js`): confirmada OU com check-in feito, igual — sorteio, fases, vagas, contagens. O check-in é opcional e só diz que a pessoa chegou. **Nunca** compare `status === REGISTRATION_STATUS.CONFIRMED` à mão (guarda `src/core/guards/checkinNaoTrava.test.js`). O PRÓPRIO check-in só para quem CRIOU a inscrição (`selfCheckInState`) — 🐞 o botão aparecia ao jogador vinculado por outra pessoa e a regra recusava ("permissão negada", que parecia "você não está inscrito"). Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` §2
 **"2 turnos (ida e volta) num torneio"** → `stages[].round_robin_legs: 2`, no cartão da fase ("Turnos"). Vale em pontos corridos, grupos e Americano — 🐞 numa modalidade de VÁRIAS fases o sorteio (`buildPhaseDraw`) não repassava o turno, e o Americano o ignorava sempre. O returno é `withReturnLeg` (`domain/draw.js`): os mesmos jogos com os lados trocados, rodadas em seguida
@@ -562,7 +563,8 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-02 (ranking, rating e contagem de jogos: o
+> Última atualização: 2026-10-02 (conta excluída fora do ranking e a
+> unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
 > vinculável, e o servidor diz o que deixou de fora). Antes: 2026-10-01
 > (torneio: o meu torneio no início, check-in
@@ -577,6 +579,23 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Conta excluída e a unificação do histórico** (2026-10-02): *"o número
+>   20 do ranking está como 'Atleta' e o perfil não existe… era um usuário que
+>   tinha dois cadastros e um foi excluído… unificar os números no perfil
+>   remanescente"*. **(1) 🐞 A conta excluída voltava ao ranking**: a exclusão
+>   apaga o rating e deixa o uid nas partidas (é histórico dos adversários), e
+>   a passada seguinte recriava a linha sem perfil. Agora o servidor a tira do
+>   ranking nacional e do 2.0–8.0 (os jogos seguem valendo para os outros); no
+>   de duplas a parceria fica como "Atleta removido". **(2) Unificar**: em
+>   Cadastros → **Contas excluídas** (pela Auditoria, que guarda nome e e-mail
+>   de quem foi excluído), o admin escolhe a conta que fica — com sugestão por
+>   nome e e-mail —, vê a prévia do servidor lado a lado e o dono confirma: o
+>   histórico esportivo (jogos publicados, dias de jogo, eventos de clube,
+>   inscrições, torneios internos, validações) passa para a conta que ficou,
+>   com o nome de volta, e o ranking se refaz. Só conta excluída vira origem,
+>   conflito bloqueia, auditoria com os caminhos. **Banco: zero** coleção,
+>   índice ou regra; uma função nova; os dados só mudam quando o dono confirma.
 >
 > - **Ranking, rating e a contagem de jogos** (2026-10-02): *"lancei vários
 >   jogos e tem atletas que aparecem sem nenhum jogo. Atletas com vários jogos

@@ -20,6 +20,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/admin/hooks/usePlatformUsers', () => ({
   useAllPlatformUsers: () => ({ data: dados.users, isLoading: false }),
+  useAccountLifecycleLogs: () => ({ data: [], isLoading: false }),
   useUpdateUserRecordAsAdmin: () => ({ mutateAsync: salvar, isPending: false }),
 }));
 

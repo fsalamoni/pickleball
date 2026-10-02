@@ -24,6 +24,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/admin/hooks/usePlatformUsers', () => ({
   useAllPlatformUsers: () => ({ data: dados.users, isLoading: false }),
+  useAccountLifecycleLogs: () => ({ data: dados.logs || [], isLoading: false }),
+  usePreviewAccountMerge: () => ({ mutate: vi.fn(), reset: vi.fn(), data: null, isPending: false, isError: false }),
+  useMergeAccountHistory: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateUserRecordAsAdmin: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePreviewAccountDeletion: () => ({
     mutate: pedirPrevia,
@@ -207,5 +210,21 @@ describe('a exclusão', () => {
     await esperar();
     expect(document.body.textContent).toContain('Resultado da exclusão');
     expect(document.body.textContent).toContain('Excluída');
+  });
+});
+
+describe('contas excluídas (unificar o histórico)', () => {
+  it('⭐ lista quem foi excluído pela Auditoria e oferece unificar; a já unificada diz com quem', async () => {
+    dados.logs = [
+      { action: 'admin_account_deleted', user_id: 'velho', user_name: 'Leonardo S.', user_email: 'leo2@x.com', created_at_ms: 2 },
+      { action: 'admin_account_deleted', user_id: 'outro', user_name: 'Conta Teste', created_at_ms: 1 },
+      { action: 'admin_account_history_merged', user_id: REAL.uid, details: { from_uid: 'outro', into_uid: REAL.uid } },
+    ];
+    await render();
+    expect(container.textContent).toContain('Contas excluídas');
+    expect(container.textContent).toContain('Leonardo S.');
+    expect(botao('Unificar com outra conta', container)).toBeTruthy();
+    expect(container.textContent).toContain('Unificada em');
+    dados.logs = [];
   });
 });

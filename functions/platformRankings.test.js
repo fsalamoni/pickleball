@@ -335,3 +335,35 @@ describe('normalizeMatches — relatório do que ficou FORA (e por quê)', () =>
     ]);
   });
 });
+
+/* --------------------------------------- conta excluída no ranking ----- */
+
+describe('conta EXCLUÍDA não ocupa posição no ranking individual', () => {
+  const { contasExcluidas, semContasExcluidas } = require('../functions/platformRankings.js');
+
+  /** Firestore mínimo: só `collection('users').doc(uid)` + `getAll`. */
+  const bancoCom = (usuarios) => ({
+    collection: () => ({ doc: (id) => ({ id }) }),
+    getAll: async (...refs) => refs.map((r) => ({ exists: usuarios.includes(r.id) })),
+  });
+
+  it('é excluída só a conta SEM perfil e SEM cadastro — quem tem conta e não tem perfil fica', async () => {
+    const perfis = new Map([['u1', {}]]);
+    const fora = await contasExcluidas(bancoCom(['u2']), ['u1', 'u2', 'u3', 'u3'], perfis);
+    expect([...fora]).toEqual(['u3']);
+  });
+
+  it('não consulta nada quando todo mundo tem perfil', async () => {
+    let consultas = 0;
+    const banco = { collection: () => ({ doc: (id) => ({ id }) }), getAll: async () => { consultas += 1; return []; } };
+    await contasExcluidas(banco, ['u1'], new Map([['u1', {}]]));
+    expect(consultas).toBe(0);
+  });
+
+  it('tira a linha e RENUMERA sem buraco', () => {
+    const linhas = [{ uid: 'a', position: 1 }, { uid: 'x', position: 2 }, { uid: 'b', position: 3 }];
+    expect(semContasExcluidas(linhas, new Set(['x']), { renumerar: true }))
+      .toEqual([{ uid: 'a', position: 1 }, { uid: 'b', position: 2 }]);
+    expect(semContasExcluidas(linhas, new Set(['x']))).toHaveLength(2);
+  });
+});

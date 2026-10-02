@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import {
-  UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical,
+  UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical, GitMerge,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,8 +14,9 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
-  useAllPlatformUsers, useUpdateUserRecordAsAdmin,
+  useAllPlatformUsers, useUpdateUserRecordAsAdmin, useAccountLifecycleLogs,
 } from '@/modules/admin/hooks/usePlatformUsers';
+import { deletedAccountsFromAudit } from '@/modules/admin/domain/accountMerge';
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, userRecordStatus,
   diffAdminUserPatch, sanitizeAdminUserPatch, validateAdminEdit,
@@ -28,6 +29,8 @@ import { PLATFORM_OWNER_EMAILS } from '@/core/config/owners';
 
 // O diálogo de exclusão só baixa quando alguém vai excluir.
 const AdminAccountDeletionDialog = lazy(() => import('./AdminAccountDeletionDialog'));
+// Idem para a unificação de uma conta excluída.
+const AdminAccountMergeDialog = lazy(() => import('./AdminAccountMergeDialog'));
 
 const GRUPOS = [
   { id: 'identidade', label: 'Identidade' },
@@ -231,6 +234,8 @@ export default function AdminUserRecordsTab() {
         </div>
       </V2Surface>
 
+      <DeletedAccountsPanel users={users} enabled={isPlatformAdmin} />
+
       {alvo && (
         <RecordEditDialog user={alvo} onClose={() => setAlvo(null)} />
       )}
@@ -251,6 +256,77 @@ export default function AdminUserRecordsTab() {
 }
 
 /* --------------------------------------------------------------------------- */
+
+const formatarData = (ms) => (ms
+  ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(new Date(ms))
+  : '');
+
+/**
+ * As contas EXCLUÍDAS — e o caminho para devolver o histórico delas à conta
+ * que ficou.
+ *
+ * A exclusão tira a identidade, mas os jogos ficam (são também dos
+ * adversários). Quando a conta excluída era o SEGUNDO cadastro de alguém que
+ * continua aqui, esses jogos são dele: "Unificar" os devolve. A lista sai da
+ * Auditoria — é ela que guarda o nome e o e-mail de quem foi excluído.
+ */
+function DeletedAccountsPanel({ users, enabled }) {
+  const { data: logs = [], isLoading, isError, refetch } = useAccountLifecycleLogs({ enabled });
+  const [alvo, setAlvo] = useState(null);
+  const excluidas = useMemo(() => deletedAccountsFromAudit(logs), [logs]);
+  const nomePorUid = useMemo(() => new Map((users || []).map((u) => [u.uid, u.full_name || u.platform_name || u.email])), [users]);
+
+  if (!enabled) return null;
+  return (
+    <V2Surface>
+      <div className="flex items-center gap-2">
+        <GitMerge className="h-5 w-5 text-ink" />
+        <h2 className="font-display text-lg font-bold text-ink">Contas excluídas</h2>
+      </div>
+      <p className="mt-1 text-xs leading-5 text-gray-500">
+        A exclusão apaga a identidade, mas os jogos ficam no histórico como &ldquo;Atleta removido&rdquo; —
+        eles também são dos adversários. Se a conta excluída era o <strong>segundo cadastro</strong> de
+        alguém que continua aqui, <strong>Unificar</strong> devolve jogos, inscrições e resultados à conta
+        que ficou, e o ranking se refaz sozinho.
+      </p>
+      <div className="mt-3 space-y-2">
+        {isLoading ? (
+          <V2Skeleton lines={2} />
+        ) : isError ? (
+          <V2ErrorState
+            inline
+            title="A Auditoria não carregou"
+            description="Sem ela não dá para saber quem foi excluído."
+            onRetry={() => refetch()}
+          />
+        ) : excluidas.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">Nenhum cadastro foi excluído pelo painel.</p>
+        ) : excluidas.map((c) => (
+          <div key={c.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">{c.name}</p>
+              <p className="truncate text-[11px] text-gray-500">
+                {[c.email, c.deletedAtMs ? `excluída em ${formatarData(c.deletedAtMs)}` : null].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            {c.mergedInto ? (
+              <V2Badge tone="green">Unificada em {nomePorUid.get(c.mergedInto) || 'outra conta'}</V2Badge>
+            ) : (
+              <V2Button size="sm" variant="subtle" onClick={() => setAlvo(c)}>
+                <GitMerge className="h-3.5 w-3.5" /> Unificar com outra conta
+              </V2Button>
+            )}
+          </div>
+        ))}
+      </div>
+      {alvo && (
+        <Suspense fallback={null}>
+          <AdminAccountMergeDialog deleted={alvo} users={users} onClose={() => setAlvo(null)} />
+        </Suspense>
+      )}
+    </V2Surface>
+  );
+}
 
 function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
   const s = u._status;

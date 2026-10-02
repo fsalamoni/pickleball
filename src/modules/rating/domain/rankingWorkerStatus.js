@@ -17,6 +17,7 @@ export const MOTIVO_LABEL = Object.freeze({
   'tournament-registration': 'inscrição de torneio',
   'club-event-game': 'dia de jogo publicado',
   'recuperacao-agendada': 'recuperação agendada',
+  'unificacao-de-conta': 'unificação de cadastro',
 });
 
 /** Converte Timestamp do Firestore, `{ seconds }`, Date, número ou texto em ms. */

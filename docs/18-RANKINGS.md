@@ -449,3 +449,20 @@ idêntico com e sem relatório.
 opcionais: `game_days/{id}/participants/{pid}.linked_from_guest_at/linked_by`,
 `tournament_registrations/{id}.player_{a|b}_linked_at/_linked_by` e o
 `excluded` dentro de `last_result`.
+
+## 11. Conta excluída no ranking, e a unificação (2026-10-02)
+
+🐞 A exclusão de cadastro apaga o rating da pessoa e deixa o uid nas partidas
+(é também histórico dos adversários) — e a passada seguinte recriava a linha
+dela no ranking, como "Atleta", "Local não informado", ocupando uma posição.
+Agora `contasExcluidas` (`functions/platformRankings.js`) reconhece a conta
+excluída (sem perfil E sem `users/{uid}`, conferido só para quem está sem
+perfil) e `semContasExcluidas` a tira do ranking nacional e do 2.0–8.0,
+renumerando; os jogos seguem valendo para os adversários. No de duplas a
+parceria fica, com `removed: true` e o nome "Atleta removido". A contagem vai
+para `last_result.removedAccounts`.
+
+Quando a conta excluída era a segunda conta de quem continua, o admin
+**unifica** o histórico (Cadastros → Contas excluídas): ver
+`docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`.
+
