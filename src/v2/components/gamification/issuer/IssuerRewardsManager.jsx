@@ -38,7 +38,7 @@ function RewardForm({ issuer, initial, atual, onCancel, onSave, saving }) {
           <DialogTitle>{initial.title ? 'Editar recompensa' : 'Nova recompensa'}</DialogTitle>
           <DialogDescription>Quem se qualificar pede e recebe um código. Você confere e libera — nada é entregue sozinho.</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[60dvh] space-y-4 overflow-y-auto pr-1">
+        <div className="max-h-[60dvh] space-y-4 overflow-y-auto pr-1" data-dica="oferta-recompensa-form">
           <V2Field label="Nome" htmlFor="rw-title" required><V2Input id="rw-title" value={f.title} maxLength={80} placeholder="Ex.: 1 hora de quadra grátis" onChange={(e) => set({ title: e.target.value })} /></V2Field>
           <V2Field label="Tipo" htmlFor="rw-kind">
             <V2Select id="rw-kind" value={f.kind} onChange={(e) => set({ kind: e.target.value })}>
@@ -78,7 +78,7 @@ function RewardForm({ issuer, initial, atual, onCancel, onSave, saving }) {
         {erro && <p role="alert" className="text-sm text-red-600">{erro}</p>}
         <DialogFooter>
           <V2Button variant="ghost" onClick={onCancel}>Cancelar</V2Button>
-          <V2Button disabled={saving} onClick={salvar}>{saving ? 'Salvando…' : 'Salvar'}</V2Button>
+          <V2Button disabled={saving} onClick={salvar} data-dica="oferta-recompensa-salvar">{saving ? 'Salvando…' : 'Salvar'}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -180,9 +180,9 @@ export default function IssuerRewardsManager({ issuer, actor }) {
           <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Recompensas <TermHint term="oferecer-recompensas" /></h2>
           <p className="text-sm text-gray-500">Benefícios para quem joga e evolui — com critério claro e código para conferir.</p>
         </div>
-        <V2Button size="sm" onClick={() => setEditando({ form: emptyRewardForm() })}><Plus className="mr-1 h-4 w-4" /> Nova recompensa</V2Button>
+        <V2Button size="sm" data-dica="oferta-recompensa-nova" onClick={() => setEditando({ form: emptyRewardForm() })}><Plus className="mr-1 h-4 w-4" /> Nova recompensa</V2Button>
       </div>
-      <V2SubTabs tabs={tabs} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Recompensas e pedidos" />
+      <V2SubTabs tabs={tabs} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Recompensas e pedidos" dica="oferta-recompensa-abas" />
 
       {aba === 'pedidos' ? (
         <ClaimsQueue claims={r.claims} onDecide={decidir} deciding={r.decide.isPending} />

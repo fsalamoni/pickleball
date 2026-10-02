@@ -40,7 +40,7 @@ function Sinais() {
   const decidir = (f, status) => flags.review.mutate({ id: f.id, status, note: '', actor }, { onSuccess: () => toast.success('Sinal atualizado.'), onError: (e) => toast.error(e?.message || 'Falhou.') });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-dica="admin-gam-sinais">
       <TermNote term="admin-antifarm" />
       <V2SubTabs tabs={[{ value: 'open', label: `Abertos (${flags.flags.filter((f) => f.status === 'open').length})` }, { value: 'done', label: 'Revisados' }]} activeValue={filtro} onSelect={(t) => setFiltro(t.value)} ariaLabel="Estado dos sinais" />
       <p className="text-xs text-gray-500">O servidor <strong>marca</strong>, nunca pune: quem tem sinal de gravidade alta fica fora do placar público até você decidir.</p>
@@ -160,7 +160,7 @@ export default function AdminGamificationIntegrity() {
   const [aba, setAba] = useState('sinais');
   return (
     <V2Surface className="space-y-4" data-testid="admin-gamification-integrity">
-      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Integridade" />
+      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Integridade" dica="admin-gam-integridade-abas" />
       {aba === 'sinais' && <Sinais />}
       {aba === 'contas' && <Contas />}
       {aba === 'cartas' && <Cartas />}

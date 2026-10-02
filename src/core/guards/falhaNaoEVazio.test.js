@@ -500,6 +500,8 @@ describe('⭐ a varredura na plataforma inteira', () => {
       '"Ainda não tem conta?" é convite de cadastro, não afirmação sobre dado consultado'],
     ['src/v2/pages/V2NotFound.jsx',
       'a página 404 afirma que a ROTA não existe — é exatamente o que ela é'],
+    ['src/v2/pages/V2GamificationGuide.jsx',
+      '"nenhum termo" é busca em memória num guia estático (gamificationGuide.js); a configuração do admin que o ajusta cai nos padrões, nunca falha a página'],
     ['src/v2/pages/V2Achievements.jsx',
       'atrás de gamification_v2 (desligada); os hooks derivados não expõem erro — tratar ao retomar a gamificação (docs/FUTURO/GAMIFICACAO)'],
     ['src/v2/pages/V2PublicAchievements.jsx',

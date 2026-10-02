@@ -22,9 +22,9 @@ import {
 import { TermNote } from '@/v2/components/gamification/TermHint';
 
 const ABAS = [
-  { key: 'rivais', label: 'Rivais', icon: Swords },
-  { key: 'crews', label: 'Crews', icon: Users },
-  { key: 'mentorias', label: 'Mentorias', icon: GraduationCap },
+  { key: 'rivais', label: 'Rivais', icon: Swords, dica: 'vinculos-aba-rivais' },
+  { key: 'crews', label: 'Crews', icon: Users, dica: 'vinculos-aba-crews' },
+  { key: 'mentorias', label: 'Mentorias', icon: GraduationCap, dica: 'vinculos-aba-mentorias' },
 ];
 
 /**
@@ -119,7 +119,7 @@ function V2SocialBondsOn() {
         }
       />
 
-      <div className="mb-6 flex flex-wrap gap-1.5" role="tablist" aria-label="Tipo de vínculo">
+      <div className="mb-6 flex flex-wrap gap-1.5" role="tablist" aria-label="Tipo de vínculo" data-dica="vinculos-abas">
         {ABAS.map((t) => {
           const Icone = t.icon;
           const ativa = aba === t.key;
@@ -131,6 +131,7 @@ function V2SocialBondsOn() {
               aria-selected={ativa}
               onClick={() => setAba(t.key)}
               data-testid={`bonds-tab-${t.key}`}
+              data-dica={t.dica}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
                 ativa ? 'bg-ink text-white' : 'bg-paper text-gray-600 hover:bg-gray-100',
@@ -151,25 +152,27 @@ function V2SocialBondsOn() {
       <TermNote term={{ rivais: 'rivais', crews: 'crews', mentorias: 'mentoria' }[aba]} className="mb-5" />
 
       {aba === 'rivais' && (
-        <RivalsList rivals={rivais} isLoading={rivaisCarregando} />
+        <div data-dica="vinculos-rivais"><RivalsList rivals={rivais} isLoading={rivaisCarregando} /></div>
       )}
 
       {aba === 'crews' && (
-        <CrewsPanel
-          uid={uid}
-          myCrews={myCrews}
-          publicCrews={publicCrews}
-          isLoading={crewsCarregando}
-          isBusy={crewOcupado}
-          error={erroCrew}
-          onCreate={({ name }) => executar(create, { createdBy: uid, name })}
-          onJoin={(crewId) => executar(join, { crewId, uid })}
-          onLeave={(crewId) => executar(leave, { crewId, uid })}
-        />
+        <div data-dica="vinculos-crews">
+          <CrewsPanel
+            uid={uid}
+            myCrews={myCrews}
+            publicCrews={publicCrews}
+            isLoading={crewsCarregando}
+            isBusy={crewOcupado}
+            error={erroCrew}
+            onCreate={({ name }) => executar(create, { createdBy: uid, name })}
+            onJoin={(crewId) => executar(join, { crewId, uid })}
+            onLeave={(crewId) => executar(leave, { crewId, uid })}
+          />
+        </div>
       )}
 
       {aba === 'mentorias' && (
-        <div className="space-y-5">
+        <div className="space-y-5" data-dica="vinculos-mentorias">
           <MentorshipsPanel
             uid={uid}
             mentorships={mentorships}

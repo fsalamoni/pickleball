@@ -21,6 +21,7 @@ import {
 import { MAX_PONTOS_POR_TELA, PONTOS_DE_DICA, pontoPorId, pontosDaTela } from './pontosDeDica.js';
 import { TUTORIALS, TUTORIAL_ID } from './tutorials.js';
 import { moldeNavegavel } from './dicasRota.js';
+import { STREAK_VACATION_COOLDOWN_DAYS, STREAK_VACATION_MAX_DAYS } from '@/modules/progression/domain/weekStreak.js';
 
 const TUDO = {
   flags: {
@@ -252,5 +253,76 @@ describe('passoQueAbre — o formulário foi fechado no meio do guia', () => {
     expect(passoQueAbre(guiaPorId('entender-ranking'), 2)).toBe(-1);
     const g = guiaPorId('criar-dia-de-jogo');
     expect(passoQueAbre(g, g.steps.length - 1)).toBe(-1); // "depois" é na tela do dia criado
+  });
+});
+
+describe('⭐ a gamificação nas dicas', () => {
+  const COM_FLAG = { flags: { gamification_v2: true } };
+  const daGamificacao = (ctx) => guiasVisiveis(ctx).filter((g) => g.area === GUIA_AREA.GAMIFICACAO).map((g) => g.id);
+
+  it('sem a flag da gamificação, nenhum guia nem ponto aparece (a porta não abre)', () => {
+    expect(daGamificacao({ gereArena: true, ehProfessor: true, ehAdmin: true })).toEqual([]);
+    expect(pontosDaTela('/gamification', {})).toEqual([]);
+    expect(pontosDaTela('/hall-da-fama', {})).toEqual([]);
+  });
+
+  it('com a flag, o atleta vê os guias dele — e nenhum de quem oferece ou administra', () => {
+    const ids = daGamificacao(COM_FLAG);
+    ['gamificacao-entender', 'gamificacao-missoes', 'gamificacao-sequencia', 'gamificacao-revisao', 'gamificacao-competir',
+      'gamificacao-social', 'gamificacao-vinculos', 'gamificacao-recompensas', 'gamificacao-hall', 'gamificacao-conquistas',
+      'gamificacao-privacidade'].forEach((id) => expect(ids, id).toContain(id));
+    expect(ids.some((id) => /oferecer|recompensa-arena|admin/.test(id))).toBe(false);
+  });
+
+  it('⭐ papel: arena, professor e admin só veem o guia do papel que têm', () => {
+    expect(daGamificacao({ ...COM_FLAG, gereArena: true })).toEqual(expect.arrayContaining(['gamificacao-oferecer-arena', 'gamificacao-recompensa-arena']));
+    expect(daGamificacao({ ...COM_FLAG, gereArena: true })).not.toContain('gamificacao-oferecer-professor');
+    expect(daGamificacao({ ...COM_FLAG, ehProfessor: true })).toContain('gamificacao-oferecer-professor');
+    expect(daGamificacao(COM_FLAG).filter((id) => id.includes('admin'))).toEqual([]);
+    expect(daGamificacao({ ...COM_FLAG, ehAdmin: true })).toEqual(expect.arrayContaining([
+      'gamificacao-admin-configurar', 'gamificacao-admin-integridade', 'gamificacao-admin-metricas',
+    ]));
+  });
+
+  it('dicaVisivel: audience admin exige ehAdmin', () => {
+    expect(dicaVisivel({ audience: 'admin' }, {})).toBe(false);
+    expect(dicaVisivel({ audience: 'admin' }, { ehAdmin: true })).toBe(true);
+  });
+
+  it('a área da gamificação tem rótulo e ícone, e vem depois da comunidade', () => {
+    expect(GUIA_AREA_META[GUIA_AREA.GAMIFICACAO]).toEqual({ label: 'Gamificação', icon: 'Sparkles' });
+    const areas = guiasPorArea({ ...COM_FLAG }).map((a) => a.area);
+    expect(areas.indexOf(GUIA_AREA.GAMIFICACAO)).toBeGreaterThan(areas.indexOf(GUIA_AREA.COMUNIDADE));
+  });
+
+  it('⭐ os números das férias vêm das constantes da regra (não escritos à mão)', () => {
+    const texto = guiaPorId('gamificacao-sequencia').steps.map((p) => paragrafos(p).join(' ')).join(' ');
+    expect(texto).toContain(`${STREAK_VACATION_MAX_DAYS / 7} semanas`);
+    expect(texto).toContain(`${STREAK_VACATION_COOLDOWN_DAYS} dias`);
+  });
+
+  it('o guia da tela certa aparece em "Nesta tela"', () => {
+    expect(guiasDaTela('/hall-da-fama', COM_FLAG).map((g) => g.id)).toEqual(['gamificacao-hall']);
+    expect(guiasDaTela('/vinculos', COM_FLAG).map((g) => g.id)).toEqual(['gamificacao-vinculos']);
+    expect(guiasDaTela('/hall-da-fama', {}).map((g) => g.id)).toEqual([]);
+    expect(guiasDaTela('/gamification', COM_FLAG).map((g) => g.id)).toEqual(expect.arrayContaining(['gamificacao-entender', 'gamificacao-missoes']));
+  });
+
+  it('busca: "férias" e "privacidade" levam aos guias certos, e só com a flag', () => {
+    expect(buscarGuias('ferias', COM_FLAG).map((g) => g.id)).toContain('gamificacao-sequencia');
+    expect(buscarGuias('privacidade', COM_FLAG).map((g) => g.id)).toContain('gamificacao-privacidade');
+    expect(buscarGuias('ferias', {}).map((g) => g.id)).not.toContain('gamificacao-sequencia');
+  });
+
+  it('⭐ a primeira aba que um guia manda tocar existe no catálogo do hub', async () => {
+    const { HUB_TABS } = await import('@/v2/components/gamification/hubTabs.js');
+    const ancorasDoHub = new Set(HUB_TABS.map((t) => t.dica));
+    GUIAS.filter((g) => g.area === GUIA_AREA.GAMIFICACAO).forEach((g) => g.steps.forEach((p) => {
+      alvosDoPasso(p).filter((a) => a.startsWith('aba-')).forEach((a) => expect(ancorasDoHub.has(a), `${g.id}/${p.id} → ${a}`).toBe(true));
+    }));
+  });
+
+  it('o hub não passa do máximo de pontos de dica', () => {
+    expect(pontosDaTela('/gamification', COM_FLAG).length).toBeLessThanOrEqual(MAX_PONTOS_POR_TELA);
   });
 });

@@ -101,8 +101,8 @@ function HallOfFameOn() {
       <TermNote term={aba === 'temporada' ? 'temporada' : 'hall'} />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Placar" />
-        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+        <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Placar" dica="hall-abas" />
+        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500" data-dica="hall-estado">
           Estado
           <V2Select value={uf} onChange={(e) => setUf(e.target.value)} aria-label="Filtrar por estado" className="!py-1.5 !text-xs">
             <option value="">Brasil todo</option>
@@ -112,7 +112,7 @@ function HallOfFameOn() {
       </div>
 
       {user && (
-        <V2Surface className="!p-4" data-testid="hof-me">
+        <V2Surface className="!p-4" data-testid="hof-me" data-dica="hall-minha-posicao">
           {aba === 'temporada' ? (
             mySeason.season ? (
               <p className="text-sm text-gray-700">

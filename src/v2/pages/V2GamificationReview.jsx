@@ -48,8 +48,8 @@ function ReviewOn() {
       <V2PageIntro title="Sua revisão" subtitle="O que você fez no período, comparado com o anterior. Nada aqui é cobrança." />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <V2SubTabs tabs={KINDS} activeValue={kind} onSelect={(t) => trocar(t.value)} ariaLabel="Tipo de período" />
-        <div className="flex items-center gap-1">
+        <V2SubTabs tabs={KINDS} activeValue={kind} onSelect={(t) => trocar(t.value)} ariaLabel="Tipo de período" dica="revisao-tipo" />
+        <div className="flex items-center gap-1" data-dica="revisao-periodo">
           <V2Button variant="ghost" size="sm" onClick={() => setOffset((o) => o - 1)} aria-label="Período anterior">
             <ChevronLeft className="h-4 w-4" />
           </V2Button>
@@ -72,7 +72,7 @@ function ReviewOn() {
             <MiniStat label="Dias ativos" value={review.activeDays} />
             <MiniStat label="Missões" value={review.missionsDone} />
           </div>
-          <V2Surface>
+          <V2Surface data-dica="revisao-corpo">
             <ReviewBody review={review} />
             {review.nextAchievement && (
               <p className="mt-4 rounded-2xl bg-paper p-3 text-sm text-gray-600">

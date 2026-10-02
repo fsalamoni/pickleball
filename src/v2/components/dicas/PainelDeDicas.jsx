@@ -13,7 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Building2, CalendarCheck, Check, ChevronRight, Compass, GraduationCap, LifeBuoy, Lightbulb, PlayCircle, RotateCcw,
-  Settings, Swords, Trophy, Users,
+  Settings, Sparkles, Swords, Trophy, Users,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -29,7 +29,7 @@ import { useDicas } from './DicasContext';
 import InterruptorDicas from './InterruptorDicas';
 
 const ICONES = {
-  Building2, CalendarCheck, Compass, GraduationCap, Settings, Swords, Trophy, Users,
+  Building2, CalendarCheck, Compass, GraduationCap, Settings, Sparkles, Swords, Trophy, Users,
 };
 
 function LinhaGuia({ guia, feito, onIniciar }) {

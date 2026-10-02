@@ -59,7 +59,7 @@ export default function AdminGamificationConfig() {
 
   return (
     <div className="space-y-5" data-testid="admin-gamification-config">
-      <V2Surface className="space-y-4">
+      <V2Surface className="space-y-4" data-dica="admin-gam-modulos">
         <div>
           <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Módulos <TermHint term="admin-modulos" /></h2>
           <p className="text-sm text-gray-500">A flag <code>gamification_v2</code> é o interruptor geral; aqui você liga e desliga cada parte. Módulo desligado some das telas e o servidor para de rodar a parte dele.</p>
@@ -75,7 +75,7 @@ export default function AdminGamificationConfig() {
         ))}
       </V2Surface>
 
-      <V2Surface className="space-y-4">
+      <V2Surface className="space-y-4" data-dica="admin-gam-premios">
         <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Prêmios e limiares <TermHint term="admin-premios" /></h2>
         <V2Field label="Tier mínimo para aparecer no placar público" htmlFor="cfg-mintier" hint="Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.">
           <V2Select id="cfg-mintier" value={draft.season.publicMinTier} onChange={(e) => setDraft((d) => setIn(d, 'season.publicMinTier', e.target.value))}>
@@ -95,7 +95,7 @@ export default function AdminGamificationConfig() {
         </div>
       </V2Surface>
 
-      <V2Surface className="space-y-4">
+      <V2Surface className="space-y-4" data-dica="admin-gam-avisos">
         <h2 className="font-display text-lg font-bold text-ink">Avisos enviados pelo servidor</h2>
         {[['weeklyReview', 'Resumo da semana (segunda-feira)'], ['duels', 'Duelo da semana'], ['challengeResults', 'Resultado dos desafios']].map(([k, l]) => (
           <V2Toggle key={k} id={`notif-${k}`} checked={draft.notifications[k]} label={l}
@@ -108,7 +108,7 @@ export default function AdminGamificationConfig() {
         <p className="text-sm text-gray-600">{mudancas.length === 0 ? 'Nada alterado.' : `${mudancas.length} ${mudancas.length === 1 ? 'alteração' : 'alterações'} a salvar.`}</p>
         <div className="flex gap-2">
           <V2Button variant="ghost" size="sm" onClick={() => setDraft(normalizeGamificationConfig(DEFAULT_GAMIFICATION_CONFIG))}><RotateCcw className="mr-1 h-4 w-4" /> Padrões de fábrica</V2Button>
-          <V2Button size="sm" disabled={saving || mudancas.length === 0} onClick={salvar}><Save className="mr-1 h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}</V2Button>
+          <V2Button size="sm" disabled={saving || mudancas.length === 0} onClick={salvar} data-dica="admin-gam-salvar"><Save className="mr-1 h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}</V2Button>
         </div>
       </div>
     </div>

@@ -32,7 +32,7 @@ export default function AdminGamificationMetrics() {
   if (!ultimo) return <V2Surface><V2EmptyState icon={Activity} title="Ainda sem métricas" description="O retrato diário é gravado pelo servidor, uma vez por dia, depois que a gamificação é ligada." /></V2Surface>;
 
   return (
-    <div className="space-y-5" data-testid="admin-gamification-metrics">
+    <div className="space-y-5" data-testid="admin-gamification-metrics" data-dica="admin-gam-metricas">
       <TermNote term="admin-metricas" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <MiniStat label="Atletas com progressão" value={ultimo.athletes} hint={`Ativos em 30 dias: ${ultimo.active30}${taxaAtivos != null ? ` (${taxaAtivos}%)` : ''}`} />

@@ -32,6 +32,7 @@ export default function SeasonBanner({ className }) {
   return (
     <div
       data-testid="season-banner"
+      data-dica="temporada"
       className={`flex flex-wrap items-center gap-3 rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-amber-50 p-4 ${className || ''}`}
     >
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-purple-200 text-purple-800">

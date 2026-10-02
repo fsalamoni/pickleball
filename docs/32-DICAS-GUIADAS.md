@@ -19,7 +19,7 @@
 | Antes (tutoriais, Onda X) | Com as dicas guiadas |
 |---|---|
 | Um **modal** de leitura abria sozinho na primeira vez que a pessoa entrava na ferramenta — no meio do que ela tinha ido fazer | **Nada abre sozinho.** A dica aparece quando a pessoa pede |
-| Só quatro ferramentas tinham ajuda (torneio e três formatos de dia de jogo) | **27 guias** para tudo o que se faz na plataforma — reservar, criar dia de jogo, torneio, clube, a Central da arena, a agenda do professor, as configurações — e **40 pontos de dica** em 20 telas |
+| Só quatro ferramentas tinham ajuda (torneio e três formatos de dia de jogo) | **44 guias** para tudo o que se faz na plataforma — reservar, criar dia de jogo, torneio, clube, a Central da arena, a agenda do professor, as configurações **e a gamificação** (17 guias: do atleta, de quem oferece e do admin) — e **60 pontos de dica** em 29 telas |
 | O texto dizia "vá em Dia de jogo → Criar" e a pessoa procurava o botão sozinha | O guia **leva à tela**, **destaca o botão de verdade** com uma seta, e **avança sozinho** quando a pessoa faz o que ele pediu |
 | — | Um interruptor por pessoa: **Dicas na tela ligadas / desligadas** |
 
@@ -218,11 +218,47 @@ a pessoa liga as dicas, começa um guia ou abre o painel (`DicasCamada`, com
    (ou para a ação no cabeçalho dele), não para algo lá dentro.
 6. **O guia descreve a tela como ela é HOJE** — a mesma regra dos tutoriais.
    Mexeu numa tela com guia, passe por ele.
-7. **Guia de papel**: `audience: 'arena'` ou `'professor'` some para quem não é;
+7. **Guia de papel**: `audience: 'arena'`, `'professor'` ou `'admin'` some para
+   quem não é (`ctx.ehAdmin` vem de `isPlatformAdmin`, em `useContextoDasDicas`);
    `flags`/`flagsTodas`/`semFlags` seguem a mesma regra dos artigos da ajuda.
 8. **Só a camada e as telas preguiçosas importam o catálogo** (guarda
-   travando) — importá-lo de uma tela comum põe os 27 guias no pacote de todo
+   travando) — importá-lo de uma tela comum põe os 44 guias no pacote de todo
    mundo.
+
+### 8.1 A gamificação nas dicas (flag `gamification_v2`)
+
+Uma área própria no painel — **Gamificação** (ícone `Sparkles`), depois de
+Comunidade — com 17 guias, todos atrás da flag `gamification_v2`:
+
+| Para quem | Guias |
+|---|---|
+| Atleta | `gamificacao-entender` (XP, nível e tier + o guia completo), `-missoes` (primeiros passos e missões), `-sequencia` (semanas seguidas, folga e férias), `-revisao`, `-competir` (temporada, duelo, desafios), `-social` (avaliações, cartas, reputação), `-vinculos`, `-recompensas`, `-hall`, `-conquistas`, `-privacidade` |
+| Quem tem arena (`audience: 'arena'`) | `gamificacao-oferecer-arena` (saúde, metas, criar desafio), `gamificacao-recompensa-arena` |
+| Professor (`audience: 'professor'`) | `gamificacao-oferecer-professor` |
+| Admin da plataforma (`audience: 'admin'`) | `gamificacao-admin-configurar`, `-integridade`, `-metricas` |
+
+Os pontos de dica (20) ficam no hub, em Conquistas, Hall da Fama, Vínculos,
+Revisão, Preferências, no guia, na aba de engajamento da arena e do professor,
+na aba **Atividade** do clube (só quem administra a vê) e na seção Gamificação do
+console do admin.
+
+Regras que travam:
+
+- **Os números das férias vêm da regra** (`STREAK_VACATION_MAX_DAYS`,
+  `STREAK_VACATION_COOLDOWN_DAYS`, de `weekStreak.js`), não escritos à mão — há
+  teste. Os demais textos evitam número de propósito: quem quer o número lê o
+  guia da gamificação (`/gamification/como-funciona`), que o tira das constantes.
+- **Âncora é contrato**: `hub-tabs` (`aba-jornada`, `aba-missoes`…), `sequencia`,
+  `sequencia-ferias`, `oferta-desafio-novo`/`-form`/`-salvar` (e as de
+  recompensa), `prefs-*`, `hall-*`, `vinculos-*`, `revisao-*`, `admin-gam-*`.
+  Renomear não dá erro — o guia passa a dizer "Não encontrei este ponto"; o
+  guarda `dicas.test.js` reprova. O guarda lê `dica: '…'` e `data-dica="…"`
+  **literais**: âncora montada com template (`` `x-${k}` ``) ou ternário não é
+  vista — ponha o valor no objeto (`dica: 'vinculos-aba-crews'`).
+- **A aba some quando o módulo está desligado** (`hubTabs`): guia que manda
+  tocar numa aba desligada cai no "Não encontrei" com o botão "Levar-me até lá".
+  É o comportamento certo — a alternativa seria mostrar o guia de uma porta que
+  o admin fechou.
 
 ## 9. Testes
 
