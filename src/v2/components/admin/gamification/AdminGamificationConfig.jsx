@@ -10,6 +10,7 @@ import {
 } from '@/modules/progression/domain/gamificationConfig';
 import { TIER_NAMES } from '@/modules/progression/domain/tiers';
 import { V2Button, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle } from '@/v2/ui/primitives';
+import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
 
 const NUM = [
   { path: 'season.prizeTop1', label: 'Prêmio do 1º da temporada (XP)', hint: 'Concedido uma única vez, quando o mês fecha.' },
@@ -60,7 +61,7 @@ export default function AdminGamificationConfig() {
     <div className="space-y-5" data-testid="admin-gamification-config">
       <V2Surface className="space-y-4">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Módulos</h2>
+          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Módulos <TermHint term="admin-modulos" /></h2>
           <p className="text-sm text-gray-500">A flag <code>gamification_v2</code> é o interruptor geral; aqui você liga e desliga cada parte. Módulo desligado some das telas e o servidor para de rodar a parte dele.</p>
         </div>
         {GAMIFICATION_MODULE_GROUPS.map((g) => (
@@ -75,7 +76,7 @@ export default function AdminGamificationConfig() {
       </V2Surface>
 
       <V2Surface className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-ink">Prêmios e limiares</h2>
+        <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Prêmios e limiares <TermHint term="admin-premios" /></h2>
         <V2Field label="Tier mínimo para aparecer no placar público" htmlFor="cfg-mintier" hint="Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.">
           <V2Select id="cfg-mintier" value={draft.season.publicMinTier} onChange={(e) => setDraft((d) => setIn(d, 'season.publicMinTier', e.target.value))}>
             {TIER_NAMES.map((t) => <option key={t} value={t}>{t}</option>)}

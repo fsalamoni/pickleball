@@ -4,12 +4,13 @@ import { V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface, V2Toggle } fro
 import { useGamificationPrefs } from '@/modules/progression/hooks/useGamificationPrefs';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import { getAchievementV2ById } from '@/modules/achievements/domain/achievementsV2';
+import TermHint from './TermHint';
 
-function Secao({ id, titulo, descricao, children }) {
+function Secao({ id, titulo, descricao, term, children }) {
   return (
     <V2Surface id={id} className="scroll-mt-6 space-y-4">
       <div>
-        <h2 className="font-display text-lg font-bold text-ink">{titulo}</h2>
+        <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">{titulo}{term && <TermHint term={term} />}</h2>
         {descricao && <p className="mt-0.5 text-sm text-gray-500">{descricao}</p>}
       </div>
       <div className="space-y-4">{children}</div>
@@ -43,7 +44,7 @@ export default function GamificationPreferences({ uid, isModuleOn = () => true }
 
   return (
     <div className="space-y-5" data-testid="gamification-preferences">
-      <Secao id="privacidade" titulo="Privacidade" descricao="Você decide o que os outros veem. A regra vale no servidor, não só na tela.">
+      <Secao id="privacidade" titulo="Privacidade" term="privacidade" descricao="Você decide o que os outros veem. A regra vale no servidor, não só na tela.">
         {isModuleOn('hall_of_fame') && (
           <V2Toggle
             id="pref-hall" checked={prefs.privacy.showInHallOfFame} onChange={set('privacy', 'showInHallOfFame')}

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   GUIDE_AUDIENCE, GUIDE_AUDIENCE_META, TERM_GROUP, TERM_GROUP_META,
-  buildGamificationGuide, groupedTerms, streakRuleBullets, termsForAudience,
+  buildGamificationGuide, groupedTerms, normalizeText, searchTerms, streakRuleBullets, termsForAudience,
 } from './gamificationGuide.js';
 import { GAMIFICATION_MODULES, normalizeGamificationConfig } from './gamificationConfig.js';
 import { TIERS } from './tiers.js';
@@ -180,5 +180,31 @@ describe('o que o guia NÃO pode prometer', () => {
 
   it('a nota de saúde é privada', () => {
     expect(todo('saude')).toMatch(/Só você vê/);
+  });
+});
+
+describe('searchTerms — achar o termo sem saber o nome dele', () => {
+  const atleta = termsForAudience(guide, GUIDE_AUDIENCE.ATHLETE);
+
+  it('ignora acento e caixa', () => {
+    expect(normalizeText('Sequência ÁÉÍ')).toBe('sequencia aei');
+    expect(searchTerms(atleta, 'SEQUENCIA').map((t) => t.id)).toContain('sequencia');
+  });
+
+  it('o título pesa mais que o corpo: "tier" traz o Tier primeiro', () => {
+    expect(searchTerms(atleta, 'tier')[0].id).toBe('tier');
+  });
+
+  it('vários termos estreitam; busca vazia não filtra; sem resultado é lista vazia', () => {
+    expect(searchTerms(atleta, '')).toBe(atleta);
+    expect(searchTerms(atleta, 'x')).toBe(atleta); // uma letra só não é busca
+    const estreita = searchTerms(atleta, 'semanas folga');
+    expect(estreita.length).toBeGreaterThan(0);
+    expect(estreita.length).toBeLessThan(atleta.length);
+    expect(searchTerms(atleta, 'zzzzzzzz')).toEqual([]);
+  });
+
+  it('acha pelo que a pessoa diria ("parar de aparecer" → privacidade)', () => {
+    expect(searchTerms(atleta, 'placar publico').map((t) => t.id)).toContain('privacidade');
   });
 });

@@ -4,6 +4,7 @@ import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { useMyPrivateReputation, useReputation } from '@/modules/progression/hooks/useSocialGamification';
 import { REVIEW_ISSUES, REVIEW_TAGS } from '@/modules/progression/domain/matchReviews';
 import { StarsStatic } from './Stars';
+import TermHint from './TermHint';
 
 /**
  * A reputação da pessoa como parceira de jogo. O número só é público com
@@ -22,7 +23,7 @@ export default function ReputationCard({ uid, minForPublicScore = 5, self = true
   return (
     <V2Surface data-testid="reputation-card" data-dica="reputacao">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <ShieldCheck className="h-5 w-5" aria-hidden="true" /> Sua reputação em quadra
+        <ShieldCheck className="h-5 w-5" aria-hidden="true" /> Sua reputação em quadra <TermHint term="reputacao" />
       </h2>
       {r?.publicScore ? (
         <div className="flex flex-wrap items-center gap-3">

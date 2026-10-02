@@ -13,6 +13,7 @@ import {
 } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { cn } from '@/core/lib/utils';
+import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
 
 const TABS = [
   { value: 'temporada', label: 'Temporada', icon: Trophy },
@@ -97,6 +98,7 @@ function HallOfFameOn() {
           : `Os maiores atletas do PickleRush por XP acumulado (a partir do tier ${minTier}).`}
         action={<V2Badge tone="amber"><Trophy className="h-3.5 w-3.5" /> Top 50</V2Badge>}
       />
+      <TermNote term={aba === 'temporada' ? 'temporada' : 'hall'} />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Placar" />
@@ -144,7 +146,7 @@ function HallOfFameOn() {
 
       {podium.length > 0 && (
         <V2Surface>
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Crown className="h-5 w-5 text-amber-500" /> Pódio</h2>
+          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Crown className="h-5 w-5 text-amber-500" /> Pódio <TermHint term="hall" /></h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {podium.map((p) => <PodiumCard key={p.uid} row={p} me={p.uid === user?.uid} />)}
           </div>

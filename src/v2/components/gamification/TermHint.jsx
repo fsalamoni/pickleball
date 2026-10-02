@@ -1,9 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useInRouterContext } from 'react-router-dom';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronRight, CircleHelp } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
-import { useGamificationGuide } from '@/modules/progression/hooks/useGamificationGuide';
+import { buildGamificationGuide } from '@/modules/progression/domain/gamificationGuide';
+
+/** O guia com os padrões, montado uma vez: o balão só usa as frases curtas, que não trazem número de configuração. */
+let guiaPadrao = null;
+const guia = () => guiaPadrao || (guiaPadrao = buildGamificationGuide(null));
 
 /**
  * O "?" ao lado de um conceito: explica em uma frase e leva ao glossário.
@@ -12,15 +16,19 @@ import { useGamificationGuide } from '@/modules/progression/hooks/useGamificatio
  * e não existe no celular — que é onde a maioria das pessoas usa a plataforma.
  * Fecha com Esc ou tocando fora; o foco volta para o botão.
  *
- * O texto vem do guia (`gamificationGuide.js`), com os números da configuração
- * do admin — nunca escrito na tela.
+ * O texto vem do guia (`gamificationGuide.js`) — nunca escrito na tela. O balão
+ * mostra só a frase curta (sem número de configuração) e leva ao glossário, que
+ * tem o texto inteiro com os números que o admin ajustou. Não depende de
+ * consulta nem de configuração: dá para pôr em qualquer tela.
  *
  * @param {{ term: string, className?: string, side?: 'top'|'bottom'|'left'|'right', label?: string }} props
  */
 export default function TermHint({ term, className, side = 'bottom', label }) {
-  const { guide } = useGamificationGuide();
-  const t = guide.byId[term];
+  const dentroDoRoteador = useInRouterContext();
+  const t = guia().byId[term];
   if (!t) return null;
+  const destino = `/gamification/como-funciona?termo=${t.id}`;
+  const classe = 'mt-3 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline';
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
@@ -47,14 +55,36 @@ export default function TermHint({ term, className, side = 'bottom', label }) {
         >
           <p className="font-display text-sm font-bold text-ink">{t.title}</p>
           <p className="mt-1 text-xs leading-5 text-gray-600">{t.short}</p>
-          <Link
-            to={`/gamification/como-funciona?termo=${t.id}`}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline"
-          >
-            Entender melhor <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          {dentroDoRoteador
+            ? <Link to={destino} className={classe}>Entender melhor <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+            : <a href={destino} className={classe}>Entender melhor <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></a>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/**
+ * A mesma explicação, mas à vista (uma linha sob o título da tela), para os
+ * lugares em que o conceito é o assunto da página inteira: Vínculos, Conquistas,
+ * Hall da Fama. Sempre com o caminho para o texto completo.
+ *
+ * @param {{ term: string, className?: string }} props
+ */
+export function TermNote({ term, className }) {
+  const dentroDoRoteador = useInRouterContext();
+  const t = guia().byId[term];
+  if (!t) return null;
+  const destino = `/gamification/como-funciona?termo=${t.id}`;
+  const classe = 'ml-1 inline-flex items-center gap-0.5 font-bold text-ink hover:underline';
+  const mais = <>Saiba mais <ChevronRight className="h-3 w-3" aria-hidden="true" /></>;
+  return (
+    <p data-testid="term-note" data-term={t.id} className={cn('flex items-start gap-2 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-600', className)}>
+      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+      <span>
+        {t.short}
+        {dentroDoRoteador ? <Link to={destino} className={classe}>{mais}</Link> : <a href={destino} className={classe}>{mais}</a>}
+      </span>
+    </p>
   );
 }

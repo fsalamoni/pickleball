@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { useMyDuels } from '@/modules/progression/hooks/useChallenges';
 import { cn } from '@/core/lib/utils';
+import TermHint from './TermHint';
 
 /** Quantos jogos e vitórias a pessoa tem na janela do duelo (do que ela mesma sabe). */
 function minhaParcial(records, duel) {
@@ -74,7 +75,7 @@ export default function DuelCard({ uid, records }) {
   return (
     <V2Surface data-testid="duel-card" data-dica="duelo">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <Swords className="h-5 w-5" aria-hidden="true" /> Duelo da semana
+        <Swords className="h-5 w-5" aria-hidden="true" /> Duelo da semana <TermHint term="duelo" />
       </h2>
       {atual ? (
         <DuelBody
@@ -83,8 +84,8 @@ export default function DuelCard({ uid, records }) {
         />
       ) : (
         <p className="text-sm text-gray-600">
-          Toda segunda-feira o PickleRush emparelha você com alguém de nível parecido. Jogue ao menos uma partida na
-          semana para entrar no sorteio — e se não quiser duelos, desligue em Preferências.
+          Toda segunda-feira o PickleRush emparelha você com alguém de nível parecido. Entra no sorteio quem jogou nos
+          últimos 30 dias, já tem nível calculado (2.0–8.0) e aceita duelos — se não quiser, desligue em Preferências.
         </p>
       )}
     </V2Surface>

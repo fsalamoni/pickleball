@@ -11,6 +11,7 @@ import {
 import { challengeToForm, emptyChallengeForm, formToChallengeInput } from '@/modules/progression/domain/issuerForms';
 import { BR_UFS } from '@/core/domain/ufs';
 import { usePeople } from '@/modules/progression/hooks/usePeople';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 const TONE = { active: 'green', draft: 'neutral', finished: 'blue', cancelled: 'red' };
 
@@ -144,7 +145,7 @@ export default function IssuerChallengesManager({ issuer, actor }) {
     <V2Surface data-testid="issuer-challenges" data-dica="oferta-desafios" className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Desafios</h2>
+          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Desafios <TermHint term="oferecer-desafios" /></h2>
           <p className="text-sm text-gray-500">Competições com começo, fim e placar — o servidor mede e a pessoa só joga.</p>
         </div>
         <V2Button size="sm" onClick={() => setEditando({ form: emptyChallengeForm() })}><Plus className="mr-1 h-4 w-4" /> Novo desafio</V2Button>

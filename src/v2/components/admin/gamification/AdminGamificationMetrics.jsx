@@ -3,6 +3,7 @@ import { Activity } from 'lucide-react';
 import { useAdminMetrics } from '@/modules/progression/hooks/useGamificationAdmin';
 import MiniStat from '@/v2/components/gamification/MiniStat';
 import { V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
 
 /** Barras simples (sem biblioteca): o último valor de cada dia, normalizado. */
 function Spark({ dados, campo, label }) {
@@ -32,6 +33,7 @@ export default function AdminGamificationMetrics() {
 
   return (
     <div className="space-y-5" data-testid="admin-gamification-metrics">
+      <TermNote term="admin-metricas" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <MiniStat label="Atletas com progressão" value={ultimo.athletes} hint={`Ativos em 30 dias: ${ultimo.active30}${taxaAtivos != null ? ` (${taxaAtivos}%)` : ''}`} />
         <MiniStat label="Ativos em 7 dias" value={ultimo.active7} />

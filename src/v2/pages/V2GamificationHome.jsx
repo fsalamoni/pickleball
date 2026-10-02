@@ -235,7 +235,7 @@ function V2GamificationHomeOn() {
           {isModuleOn('weekly_review') && !review.isLoading && review.review && <PeriodReviewCard review={review.review} />}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Award className="h-5 w-5" /> Conquistas em destaque</h2>
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Award className="h-5 w-5" /> Conquistas em destaque <TermHint term="conquistas" /></h2>
               <Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">Ver todas <ChevronRight className="h-4 w-4" /></Link>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -253,7 +253,7 @@ function V2GamificationHomeOn() {
           <XpBreakdownCard uid={uid} xp={xp} />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <V2Surface>
-              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> Trilhas paralelas</h2>
+              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> Trilhas paralelas <TermHint term="trilhas" /></h2>
               <SkillTreeBars trees={engine.skillTrees} compact />
             </V2Surface>
             <div id="convite" className="scroll-mt-6">

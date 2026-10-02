@@ -20,6 +20,7 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { TermNote } from '@/v2/components/gamification/TermHint';
 
 const FAMILY_TABS = [
   { key: 'all', label: 'Todas' },
@@ -117,6 +118,7 @@ function V2AchievementsOn({ user }) {
           </V2Badge>
         }
       />
+      <TermNote term="conquistas" className="mb-5" />
 
       {/* Filtros */}
       <V2Surface className="mb-6 space-y-4">

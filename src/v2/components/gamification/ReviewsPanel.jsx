@@ -10,6 +10,7 @@ import {
 } from '@/modules/progression/domain/matchReviews';
 import { StarPicker } from './Stars';
 import { cn } from '@/core/lib/utils';
+import TermHint from './TermHint';
 
 const RELATION = { partner: 'Companheiro de dupla', opponent: 'Adversário' };
 
@@ -127,7 +128,7 @@ export default function ReviewsPanel({ uid, records, windowDays = 14, recordsLoa
     <V2Surface data-testid="reviews-panel" data-dica="avaliacoes">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <MessageSquareHeart className="h-5 w-5" aria-hidden="true" /> Avalie seus jogos
+          <MessageSquareHeart className="h-5 w-5" aria-hidden="true" /> Avalie seus jogos <TermHint term="avaliacoes" />
         </h2>
         {pend.length > 0 && <V2Badge tone="amber">{pend.length} {pend.length === 1 ? 'pendente' : 'pendentes'}</V2Badge>}
       </div>

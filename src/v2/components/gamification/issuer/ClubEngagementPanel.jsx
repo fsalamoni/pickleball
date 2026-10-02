@@ -7,6 +7,7 @@ import { clubMetrics, monthWindow } from '@/modules/progression/domain/supplyMet
 import { V2Surface, V2Badge } from '@/v2/ui/primitives';
 import MiniStat from '../MiniStat';
 import OwnerEngagementPanel from './OwnerEngagementPanel';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 function GoalRow({ g }) {
   return (
@@ -38,7 +39,7 @@ export default function ClubEngagementPanel({ club }) {
 
   const summary = (
     <V2Surface data-testid="club-activity" data-dica="clube-atividade" className="space-y-5">
-      <h2 className="font-display text-lg font-bold text-ink">Atividade do clube</h2>
+      <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Atividade do clube <TermHint term="atividade-clube" /></h2>
       {m.unknown.length > 0 && <p role="alert" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">Não deu para carregar: {m.unknown.join(', ')}. Os números dependentes ficaram de fora.</p>}
       {m.week && m.month ? (
         <>

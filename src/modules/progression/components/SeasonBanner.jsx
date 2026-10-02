@@ -7,6 +7,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { daysRemainingInMonth } from '@/modules/progression/domain/seasons';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 /**
  * SeasonBanner — banner da season atual.
@@ -39,6 +40,7 @@ export default function SeasonBanner({ className }) {
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-purple-700">
           <Sparkles className="h-3 w-3" aria-hidden="true" /> Temporada · {dias === 1 ? 'último dia' : `faltam ${dias} dias`}
+          <TermHint term="temporada" className="h-5 w-5" />
         </p>
         <p className="mt-0.5 text-sm font-bold text-ink capitalize">{currentMonth}</p>
         {season && (

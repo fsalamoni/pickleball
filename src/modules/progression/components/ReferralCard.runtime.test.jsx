@@ -39,7 +39,7 @@ describe('ReferralCard', () => {
 
   it('sem código, copiar e compartilhar ficam desabilitados', async () => {
     await render({ origin: 'https://picklerush.web.app' });
-    const botoes = [...container.querySelectorAll('button')];
+    const botoes = [...container.querySelectorAll('button:not([data-term])')]; // o "?" da explicação não depende de código
     expect(botoes.length).toBeGreaterThan(0);
     expect(botoes.every((b) => b.disabled)).toBe(true);
   });
@@ -65,24 +65,25 @@ describe('ReferralCard', () => {
     expect(onCopy).toHaveBeenCalledWith('ABC23456');
   });
 
-  it('mostra contagem de referrals ativos', async () => {
+  it('mostra quantos se cadastraram pelo código', async () => {
     await render({ code: 'ABC23456', origin: 'https://x.com', referralsCount: 3 });
-    expect(container.textContent).toContain('3 ativos');
+    expect(container.textContent).toContain('3 cadastrados');
   });
 
   it('mostra singular para 1 referral', async () => {
     await render({ code: 'ABC23456', origin: 'https://x.com', referralsCount: 1 });
-    expect(container.textContent).toContain('1 ativo');
+    expect(container.textContent).toContain('1 cadastrado');
+    expect(container.textContent).not.toContain('1 cadastrados');
   });
 
-  it('mostra 3 recompensas (cadastro, 5+ jogos, 1 torneio)', async () => {
+  it('🐞 diz o que o convite rende DE VERDADE (o passo do roteiro e a conquista) — não promete XP que nada credita', async () => {
     await render({ code: 'ABC23456', origin: 'https://x.com' });
-    expect(container.textContent).toContain('Cadastro');
-    expect(container.textContent).toContain('5+ jogos');
-    expect(container.textContent).toContain('1 torneio');
-    // +50, +200, +500
-    expect(container.textContent).toContain('+50');
-    expect(container.textContent).toContain('+200');
-    expect(container.textContent).toContain('+500');
+    const texto = container.querySelector('[data-testid="referral-benefits"]').textContent;
+    expect(texto).toContain('Convide um amigo');
+    expect(texto).toContain('50 XP');
+    expect(texto).toContain('Embaixador');
+    expect(texto).toContain('500 XP de bônus');
+    // a grade antiga prometia +50/+200/+500 de XP por cadastro, 5+ jogos e torneio; nada disso era creditado
+    expect(container.textContent).not.toMatch(/5\+ jogos|1 torneio|\+200|rende XP para vocês dois/);
   });
 });

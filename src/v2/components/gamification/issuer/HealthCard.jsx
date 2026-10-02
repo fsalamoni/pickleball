@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Lightbulb, TriangleAlert } from 'lucide-react';
 import { V2Badge, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 const BAR = { green: 'bg-green-500', blue: 'bg-blue-500', amber: 'bg-amber-400', red: 'bg-red-500', neutral: 'bg-gray-300' };
 
@@ -25,7 +26,7 @@ export default function HealthCard({ health, suggestions = [], unknown = [], tit
     <V2Surface data-testid="health-card" data-dica="oferta-saude" className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
+          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">{title} <TermHint term="saude" /></h2>
           <p className="text-xs text-gray-500">{CONF[health.confidence]} Medido em {health.measured} de {health.totalDimensions} dimensões.</p>
         </div>
         <div className="text-right">

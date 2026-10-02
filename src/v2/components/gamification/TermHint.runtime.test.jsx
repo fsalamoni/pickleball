@@ -8,16 +8,10 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 // O Radix mede o balão com ResizeObserver, que o jsdom não tem.
 globalThis.ResizeObserver = globalThis.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
 
-const cfg = { value: null };
-vi.mock('@/modules/progression/hooks/useGamificationConfig', async () => {
-  const { normalizeGamificationConfig } = await import('@/modules/progression/domain/gamificationConfig');
-  return { useGamificationConfig: () => ({ config: normalizeGamificationConfig(cfg.value), isModuleOn: () => true }) };
-});
-
-import TermHint from './TermHint.jsx';
+import TermHint, { TermNote } from './TermHint.jsx';
 
 let container; let root;
-beforeEach(() => { cfg.value = null; container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); });
+beforeEach(() => { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); });
 afterEach(() => { act(() => root.unmount()); container.remove(); document.body.innerHTML = ''; });
 const render = (ui) => act(async () => { root.render(<MemoryRouter>{ui}</MemoryRouter>); });
 
@@ -40,12 +34,11 @@ describe('TermHint', () => {
     expect(link.textContent).toContain('Entender melhor');
   });
 
-  it('o texto acompanha a configuração do admin', async () => {
-    cfg.value = { season: { prizeTop1: 2500 } };
-    await render(<TermHint term="temporada" />);
+  it('funciona fora de um roteador (um "?" nunca derruba a tela que o hospeda)', async () => {
+    await act(async () => { root.render(<TermHint term="temporada" />); });
     await act(async () => { container.querySelector('button[data-term="temporada"]').click(); });
-    // o resumo é curto e não traz número; o número mora no glossário — o balão só leva até lá
-    expect(document.querySelector('[data-testid="term-hint"]').textContent).toContain('Cada mês é uma temporada');
+    const link = document.querySelector('[data-testid="term-hint"] a');
+    expect(link.getAttribute('href')).toBe('/gamification/como-funciona?termo=temporada');
   });
 
   it('termo que não existe não desenha nada (nunca um "?" que não explica)', async () => {
@@ -59,5 +52,19 @@ describe('TermHint', () => {
     expect(document.querySelector('[data-testid="term-hint"]')).toBeTruthy();
     await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
     expect(document.querySelector('[data-testid="term-hint"]')).toBeNull();
+  });
+});
+
+describe('TermNote', () => {
+  it('mostra a explicação à vista, com o caminho para o texto completo', async () => {
+    await render(<TermNote term="conquistas" />);
+    const nota = container.querySelector('[data-testid="term-note"]');
+    expect(nota.textContent).toContain('Marcos reais da sua trajetória');
+    expect(nota.querySelector('a').getAttribute('href')).toBe('/gamification/como-funciona?termo=conquistas');
+  });
+
+  it('termo desconhecido não desenha nada', async () => {
+    await render(<TermNote term="nao-existe" />);
+    expect(container.querySelector('[data-testid="term-note"]')).toBeNull();
   });
 });

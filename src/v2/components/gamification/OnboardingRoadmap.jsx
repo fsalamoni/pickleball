@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Check, ChevronRight, Rocket, X } from 'lucide-react';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import TermHint from './TermHint';
 
 /**
  * Roteiro de "Primeiros passos". Nenhuma etapa é obrigatória — "Pular por
@@ -24,7 +25,7 @@ export default function OnboardingRoadmap({ state, onDismiss, compact = false })
             <Rocket className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="font-display text-lg font-bold text-ink">Primeiros passos</h2>
+            <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Primeiros passos <TermHint term="primeiros-passos" /></h2>
             <p className="text-xs text-gray-500">
               {doneCount} de {total} · ainda dá para ganhar <strong className="text-ink">{xpAvailable} XP</strong>
             </p>

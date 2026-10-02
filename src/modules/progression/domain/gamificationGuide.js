@@ -617,3 +617,31 @@ export function groupedTerms(guide, audience, isModuleOn = () => true) {
     .map((g) => ({ group: g, ...TERM_GROUP_META[g], terms: visiveis.filter((t) => t.group === g) }))
     .filter((x) => x.terms.length > 0);
 }
+
+/** Sem acento e sem caixa — quem busca "duelo" acha "Duelo da semana". */
+export function normalizeText(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Busca nos termos. Vários termos de busca ESTREITAM (todos precisam aparecer);
+ * o título pesa mais que o corpo, para "tier" trazer o Tier antes de quem só o
+ * cita. Busca vazia devolve a lista como veio.
+ *
+ * @param {Array<object>} terms
+ * @param {string} query
+ */
+export function searchTerms(terms, query) {
+  const palavras = normalizeText(query).split(/\s+/).filter((p) => p.length >= 2);
+  if (palavras.length === 0) return terms;
+  return terms
+    .map((t) => {
+      const titulo = normalizeText(`${t.title} ${t.id}`);
+      const todo = normalizeText([t.title, t.short, ...t.body, t.tip || ''].join(' '));
+      if (!palavras.every((p) => todo.includes(p))) return null;
+      return { t, peso: palavras.filter((p) => titulo.includes(p)).length };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.peso - a.peso)
+    .map((x) => x.t);
+}

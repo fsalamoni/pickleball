@@ -4,8 +4,14 @@ import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import {
   buildReferralUrl,
   buildReferralShareText,
-  REFERRAL_REWARDS,
 } from '../domain/referrals.js';
+import { ONBOARDING_STEPS } from '../domain/onboarding.js';
+import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2.js';
+import TermHint from '@/v2/components/gamification/TermHint';
+
+/** O que o convite rende de verdade — lido das fontes (roteiro e catálogo de conquistas), nunca escrito aqui. */
+const ONBOARDING_REFERRAL_XP = ONBOARDING_STEPS.find((p) => p.id === 'share')?.xp ?? 0;
+const CONQUISTA_CONVITES = ACHIEVEMENTS_V2.find((a) => a.id === 'social_5_referrals') || null;
 
 /**
  * ReferralCard — card visual de convite com código + URL + share.
@@ -79,14 +85,14 @@ export default function ReferralCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Share2 className="h-4 w-4" /> Convide amigos
+            <Share2 className="h-4 w-4" /> Convide amigos <TermHint term="convite" />
           </h3>
           <p className="mt-1 text-sm text-gray-600">
-            Cada amigo que entra pelo seu código rende XP para vocês dois.
+            Quem entra pelo seu código joga com você — e o convite conta como um dos primeiros passos.
           </p>
         </div>
         {referralsCount > 0 && (
-          <V2Badge tone="green">{referralsCount} ativo{referralsCount === 1 ? '' : 's'}</V2Badge>
+          <V2Badge tone="green">{referralsCount} {referralsCount === 1 ? 'cadastrado' : 'cadastrados'}</V2Badge>
         )}
       </div>
 
@@ -126,18 +132,15 @@ export default function ReferralCard({
         </V2Button>
       </div>
 
-      {/* Recompensas */}
-      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4">
-        {Object.values(REFERRAL_REWARDS).map((r, i) => (
-          <div key={i} className="rounded-2xl bg-paper p-2 text-center">
-            <p className="text-base font-bold text-amber-600 tabular-nums">+{r.referrerXp}</p>
-            <p className="mt-0.5 text-[10px] text-gray-500">
-              {i === 0 && 'Cadastro'}
-              {i === 1 && '5+ jogos'}
-              {i === 2 && '1 torneio'}
-            </p>
-          </div>
-        ))}
+      {/* O que o convite rende DE VERDADE: o passo do roteiro e a conquista de convites.
+          (Os valores de `REFERRAL_REWARDS` não são creditados por nada — prometê-los aqui
+          era uma recompensa decorativa.) */}
+      <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-xs leading-5 text-gray-600" data-testid="referral-benefits">
+        <p className="font-bold text-ink">O que o convite rende</p>
+        <p>• O passo «Convide um amigo» dos primeiros passos vale <strong className="text-ink">{ONBOARDING_REFERRAL_XP} XP</strong> — uma vez, ao compartilhar.</p>
+        {CONQUISTA_CONVITES && (
+          <p>• A conquista «{CONQUISTA_CONVITES.name}» ({CONQUISTA_CONVITES.description.replace(/\.$/, '').toLowerCase()}), com {CONQUISTA_CONVITES.xpBonus} XP de bônus.</p>
+        )}
       </div>
     </V2Surface>
   );

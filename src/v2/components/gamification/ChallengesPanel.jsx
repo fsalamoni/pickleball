@@ -12,6 +12,7 @@ import {
 } from '@/modules/progression/domain/challenges';
 import { usePeople, useClubNames } from '@/modules/progression/hooks/usePeople';
 import { cn } from '@/core/lib/utils';
+import TermHint from './TermHint';
 
 const dataBR = (ms) => new Date(Number(ms)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
@@ -132,7 +133,7 @@ export default function ChallengesPanel({ uid }) {
   return (
     <V2Surface data-testid="challenges-panel" data-dica="desafios" className="space-y-4">
       <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <Trophy className="h-5 w-5" aria-hidden="true" /> Desafios
+        <Trophy className="h-5 w-5" aria-hidden="true" /> Desafios <TermHint term="desafios" />
       </h2>
       <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Tipo de desafio" />
       {carregando ? <V2Skeleton lines={4} /> : falhou ? (

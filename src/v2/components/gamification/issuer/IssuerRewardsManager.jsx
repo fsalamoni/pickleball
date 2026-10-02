@@ -13,6 +13,7 @@ import { emptyRewardForm, formToRewardInput, rewardToForm } from '@/modules/prog
 import { TIER_NAMES } from '@/modules/progression/domain/tiers';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 import { achievementName } from '../achievementName';
+import TermHint from '@/v2/components/gamification/TermHint';
 
 const STATUS_TONE = { requested: 'amber', approved: 'green', redeemed: 'neutral', rejected: 'red', cancelled: 'neutral' };
 
@@ -176,7 +177,7 @@ export default function IssuerRewardsManager({ issuer, actor }) {
     <V2Surface data-testid="issuer-rewards" data-dica="oferta-recompensas" className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Recompensas</h2>
+          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Recompensas <TermHint term="oferecer-recompensas" /></h2>
           <p className="text-sm text-gray-500">Benefícios para quem joga e evolui — com critério claro e código para conferir.</p>
         </div>
         <V2Button size="sm" onClick={() => setEditando({ form: emptyRewardForm() })}><Plus className="mr-1 h-4 w-4" /> Nova recompensa</V2Button>

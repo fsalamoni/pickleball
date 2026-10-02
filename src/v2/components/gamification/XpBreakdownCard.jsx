@@ -4,6 +4,7 @@ import { V2Surface } from '@/v2/ui/primitives';
 import { useXpGrants } from '@/modules/progression/hooks/useXpGrants';
 import { XP_GRANT_KIND_LABEL } from '@/modules/progression/domain/xpGrants';
 import { cn } from '@/core/lib/utils';
+import { Link } from 'react-router-dom';
 
 const PARTES = [
   { key: 'activity', label: 'Jogos e torneios', hint: 'Partidas, vitórias, pódios e títulos.', color: 'bg-amber-400' },
@@ -55,7 +56,10 @@ export default function XpBreakdownCard({ uid, xp }) {
           </ul>
         </div>
       )}
-      <p className="mt-3 text-[11px] leading-4 text-gray-400">O total é sempre recalculado do zero a partir de fatos reais — ele nunca é um saldo que alguém soma.</p>
+      <p className="mt-3 text-[11px] leading-4 text-gray-400">
+        O total é sempre recalculado do zero a partir de fatos reais — ele nunca é um saldo que alguém soma.{' '}
+        <Link to="/gamification/como-funciona?termo=xp" className="font-bold text-ink hover:underline">Entender o XP</Link>
+      </p>
     </V2Surface>
   );
 }

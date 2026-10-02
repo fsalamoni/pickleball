@@ -19,6 +19,7 @@ import { usePeople } from '@/modules/progression/hooks/usePeople';
 import {
   V2Button, V2EmptyState, V2PageIntro, V2Surface,
 } from '@/v2/ui/primitives';
+import { TermNote } from '@/v2/components/gamification/TermHint';
 
 const ABAS = [
   { key: 'rivais', label: 'Rivais', icon: Swords },
@@ -146,6 +147,8 @@ function V2SocialBondsOn() {
           );
         })}
       </div>
+
+      <TermNote term={{ rivais: 'rivais', crews: 'crews', mentorias: 'mentoria' }[aba]} className="mb-5" />
 
       {aba === 'rivais' && (
         <RivalsList rivals={rivais} isLoading={rivaisCarregando} />

@@ -6,6 +6,7 @@ import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2
 import { useLetterActions, useReceivedLetters, useSentLetters } from '@/modules/progression/hooks/useSocialGamification';
 import { usePeople } from '@/modules/progression/hooks/usePeople';
 import { LETTER_MAX, LETTER_STARTERS, letterDocId, letterForRecipient, letterTargets } from '@/modules/progression/domain/partnerLetters';
+import TermHint from './TermHint';
 
 const quando = (ms) => new Date(Number(ms)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
@@ -105,7 +106,7 @@ export default function LettersPanel({ uid, fromName, records, windowDays = 30 }
     <V2Surface data-testid="letters-panel" data-dica="cartas" className="space-y-5">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Mail className="h-5 w-5" aria-hidden="true" /> Cartas dos parceiros
+          <Mail className="h-5 w-5" aria-hidden="true" /> Cartas dos parceiros <TermHint term="cartas" />
         </h2>
         {received.unread > 0 && <V2Badge tone="acid">{received.unread} {received.unread === 1 ? 'nova' : 'novas'}</V2Badge>}
       </div>

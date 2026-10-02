@@ -9,6 +9,7 @@ import {
   CLAIM_STATUS_LABEL, REWARD_ISSUER_LABEL, REWARD_KIND_META, describeEligibility, evaluateEligibility, rewardAvailability,
 } from '@/modules/progression/domain/rewards';
 import { achievementName } from './achievementName';
+import TermHint from './TermHint';
 
 const TABS = [
   { value: 'disponiveis', label: 'Disponíveis', icon: Gift },
@@ -102,7 +103,7 @@ export default function RewardsPanel({ uid, user, snapshot }) {
 
   return (
     <V2Surface data-testid="rewards-panel" data-dica="recompensas" className="space-y-4">
-      <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Gift className="h-5 w-5" aria-hidden="true" /> Recompensas</h2>
+      <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Gift className="h-5 w-5" aria-hidden="true" /> Recompensas <TermHint term="recompensas" /></h2>
       <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Recompensas" />
       {carregando ? <V2Skeleton lines={4} /> : falhou ? (
         <V2ErrorState inline title="Não deu para carregar as recompensas" onRetry={() => { rewards.refetch(); claims.refetch(); }} />

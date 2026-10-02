@@ -109,6 +109,14 @@ export const REFERRAL_STATUS = Object.freeze({
 
 /**
  * Recompensas por status de referral.
+ *
+ * ⚠️ NENHUM destes valores é creditado hoje: o XP total é composto por
+ * `computeTotalXpV2` (atividade, conquistas, missões, primeiros passos e
+ * concessões do servidor) e nada converte convite em XP. O convite rende o
+ * passo «Convide um amigo» do roteiro e a conquista «Embaixador». Não mostre
+ * estes números como promessa numa tela — o `ReferralCard` já travou isso.
+ * Creditar convite de verdade pede uma concessão do SERVIDOR (e antifarm
+ * próprio: convite é o primeiro lugar onde se forjam contas).
  */
 export const REFERRAL_REWARDS = Object.freeze({
   [REFERRAL_STATUS.SIGNED_UP]: {
