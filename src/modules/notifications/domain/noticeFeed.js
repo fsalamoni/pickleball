@@ -39,6 +39,7 @@ export const NOTICE_AREA = Object.freeze({
   AULAS: 'aulas',
   SOCIAL: 'social',
   PROMOCOES: 'promocoes',
+  GAMIFICACAO: 'gamificacao',
   CONTA: 'conta',
   OUTROS: 'outros',
 });
@@ -52,6 +53,7 @@ export const NOTICE_AREAS = Object.freeze([
   { id: NOTICE_AREA.AULAS, label: 'Aulas', curto: 'Aulas' },
   { id: NOTICE_AREA.SOCIAL, label: 'Mensagens e comunidade', curto: 'Mensagens' },
   { id: NOTICE_AREA.PROMOCOES, label: 'Promoções e campanhas', curto: 'Promoções' },
+  { id: NOTICE_AREA.GAMIFICACAO, label: 'Gamificação', curto: 'Gamificação' },
   { id: NOTICE_AREA.CONTA, label: 'Sua conta', curto: 'Conta' },
   { id: NOTICE_AREA.OUTROS, label: 'Outros avisos', curto: 'Outros' },
 ]);
@@ -82,6 +84,7 @@ const AREA_DO_TIPO = Object.freeze({
   profile_reminder: NOTICE_AREA.CONTA,
   leveling_reminder: NOTICE_AREA.CONTA,
   profile_admin_edit: NOTICE_AREA.CONTA,
+  gamification: NOTICE_AREA.GAMIFICACAO,
 });
 
 /** Primeiro segmento do caminho → área (o que não depende do resto). */
@@ -109,8 +112,10 @@ const AREA_DO_CAMINHO = Object.freeze({
   atletas: NOTICE_AREA.SOCIAL,
   novidades: NOTICE_AREA.SOCIAL,
   buscar: NOTICE_AREA.SOCIAL,
-  vinculos: NOTICE_AREA.SOCIAL,
-  conquistas: NOTICE_AREA.SOCIAL,
+  vinculos: NOTICE_AREA.GAMIFICACAO,
+  conquistas: NOTICE_AREA.GAMIFICACAO,
+  gamification: NOTICE_AREA.GAMIFICACAO,
+  'hall-da-fama': NOTICE_AREA.GAMIFICACAO,
   configuracoes: NOTICE_AREA.CONTA,
   nivelamento: NOTICE_AREA.CONTA,
   legal: NOTICE_AREA.CONTA,

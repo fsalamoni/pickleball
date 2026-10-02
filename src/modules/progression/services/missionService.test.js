@@ -169,7 +169,6 @@ describe('missões da semana e do mês', () => {
   it('o módulo desligado pelo admin tira as missões que dependem dele', async () => {
     for (let dia = 1; dia <= 20; dia += 1) {
       Object.keys(mockDocData).forEach((k) => delete mockDocData[k]);
-      // eslint-disable-next-line no-await-in-loop
       const m = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', new Date(Date.UTC(2026, 9, dia, 15)), { modules: { match_reviews: false, partner_letters: false } });
       expect(m.missions.some((x) => /review|letter/.test(x.id))).toBe(false);
     }
