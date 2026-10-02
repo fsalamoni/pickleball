@@ -39,6 +39,12 @@ export async function getPlayerH2HRecords(uid) {
       listRegistrations(modalityId),
     ]);
     const labelById = new Map(regs.map((r) => [r.id, regLabel(r)]));
+    const regPorId = new Map(regs.map((r) => [r.id, r]));
+    // As contas (uid) de cada inscrição — a avaliação pós-jogo precisa de QUEM.
+    const uidsDe = (ids) => ids.flatMap((id) => {
+      const r = regPorId.get(id);
+      return r ? [r.player_a_user_id, r.player_b_user_id].filter(Boolean) : [];
+    });
 
     matches.forEach((m) => {
       if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
@@ -51,7 +57,16 @@ export async function getPlayerH2HRecords(uid) {
       const oppIds = mySide === 'a' ? bIds : aIds;
       const opponent = oppIds.map((id) => labelById.get(id) || id).join(' / ').trim();
       if (!opponent) return;
-      records.push({ opponent, won: m.winner_side === mySide, at: toMillis(m.result_recorded_at) });
+      const meusUids = uidsDe((mySide === 'a' ? aIds : bIds));
+      records.push({
+        opponent,
+        won: m.winner_side === mySide,
+        at: toMillis(m.result_recorded_at),
+        // Aditivo: quem jogou, por conta, e a chave que o servidor confere.
+        matchKey: m.id ? `tm:${m.id}` : null,
+        partnerUids: meusUids.filter((u) => u !== uid),
+        opponentUids: uidsDe(oppIds),
+      });
     });
   }
   return records;

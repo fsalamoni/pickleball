@@ -76,6 +76,13 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
     // Um a um (confronto direto por PESSOA): no dia de jogo as duplas giram,
     // e "Caio / Duda" quase nunca se repete — "Caio" se repete sempre.
     opponents: oppUids.map(resolveName),
+    // Quem jogou, por conta (uid) — a avaliação pós-jogo e a carta ao
+    // companheiro precisam de QUEM, não do nome. Aditivo.
+    partnerUids: myUids.filter((id) => id && id !== uid),
+    opponentUids: oppUids.filter(Boolean),
+    // A chave do jogo publicado: é o id do espelho em `club_event_games`, o que
+    // o servidor confere ao agregar a reputação.
+    matchKey: m.id ? `gd:${m.id}` : null,
     myScore: mine === 'a' ? scoreA : scoreB,
     oppScore: mine === 'a' ? scoreB : scoreA,
     won: m.winner_side === mine,
@@ -141,6 +148,10 @@ export function sourceGameToMyGame(uid, gameDayId, gdTitle, game, partById, { pu
     gameDayId,
     partner,
     opponent: (oppSide || []).map((p) => p.name).join(' / ') || 'Adversário',
+    partnerUids: myUids.filter((id, i) => id && id !== uid && (mySide || [])[i]),
+    opponentUids: (mine === 'a' ? bU : aU).filter(Boolean),
+    // Só o jogo PUBLICADO tem espelho (e portanto como o servidor conferir).
+    matchKey: published ? `gd:${gameDayMirrorId(gameDayId, game.id)}` : null,
     myScore: mine === 'a' ? sa : sb,
     oppScore: mine === 'a' ? sb : sa,
     won: mine === 'a' ? sa > sb : sb > sa,

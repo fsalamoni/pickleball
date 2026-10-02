@@ -129,3 +129,68 @@ describe('missionService', () => {
     expect(res.bonusClaimed).toBe(true);
   });
 });
+
+import {
+  getOrCreateScopedMissions, syncScopedProgress, claimScopedBonus, getScopedMissions,
+} from './missionService';
+
+describe('missões da semana e do mês', () => {
+  const sexta = new Date('2026-10-02T15:00:00Z');
+
+  beforeEach(() => {
+    Object.keys(mockDocData).forEach((k) => delete mockDocData[k]);
+    mockSetDoc.mockClear();
+  });
+
+  it('cria as da semana com o id marcado pela segunda-feira, e não recria', async () => {
+    const doc1 = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', sexta);
+    expect(doc1.scope).toBe('weekly');
+    expect(doc1.date).toBe('2026-09-28');
+    expect(doc1.missions).toHaveLength(5);
+    expect(Object.keys(mockDocData)).toEqual(['user_missions/u1_w_2026-09-28']);
+    mockSetDoc.mockClear();
+    const doc2 = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', sexta);
+    expect(doc2.date).toBe('2026-09-28');
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('as do mês: chave do dia 1 e 8 missões', async () => {
+    const m = await getOrCreateScopedMissions('u1', 'monthly', 'Aprendiz', sexta);
+    expect(m.date).toBe('2026-10-01');
+    expect(m.missions).toHaveLength(8);
+    expect(Object.keys(mockDocData)).toEqual(['user_missions/u1_m_2026-10-01']);
+  });
+
+  it('o diário continua no id de sempre (compatível com o que já está no banco)', async () => {
+    await getOrCreateScopedMissions('u1', 'daily', 'Calouro', sexta);
+    expect(Object.keys(mockDocData)).toEqual(['user_missions/u1_2026-10-02']);
+  });
+
+  it('o módulo desligado pelo admin tira as missões que dependem dele', async () => {
+    for (let dia = 1; dia <= 20; dia += 1) {
+      Object.keys(mockDocData).forEach((k) => delete mockDocData[k]);
+      // eslint-disable-next-line no-await-in-loop
+      const m = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', new Date(Date.UTC(2026, 9, dia, 15)), { modules: { match_reviews: false, partner_letters: false } });
+      expect(m.missions.some((x) => /review|letter/.test(x.id))).toBe(false);
+    }
+  });
+
+  it('sincroniza progresso real e nunca regride', async () => {
+    const criado = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', sexta);
+    const primeira = criado.missions[0];
+    const subiu = await syncScopedProgress('u1', 'weekly', { [primeira.metric]: 2 }, sexta);
+    expect(subiu.missions[0].current).toBe(Math.min(2, primeira.target));
+    const regrediu = await syncScopedProgress('u1', 'weekly', { [primeira.metric]: 0 }, sexta);
+    expect(regrediu.missions[0].current).toBe(Math.min(2, primeira.target));
+  });
+
+  it('o bônus só é resgatado com TODAS as missões cumpridas', async () => {
+    const criado = await getOrCreateScopedMissions('u1', 'weekly', 'Aprendiz', sexta);
+    await expect(claimScopedBonus('u1', 'weekly', sexta)).rejects.toThrow(/Cumpra todas/);
+    const tudo = Object.fromEntries(criado.missions.map((m) => [m.metric, 999]));
+    await syncScopedProgress('u1', 'weekly', tudo, sexta);
+    const r = await claimScopedBonus('u1', 'weekly', sexta);
+    expect(r.bonusClaimed).toBe(true);
+    expect((await getScopedMissions('u1', 'weekly', sexta)).bonusClaimed).toBe(true);
+  });
+});

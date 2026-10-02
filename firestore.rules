@@ -2396,7 +2396,11 @@ service cloud.firestore {
         && request.resource.data.level <= 200
         && request.resource.data.tier in gamificationTierNames()
         && request.resource.data.skillTrees is list
-        && request.resource.data.skillTrees.size() == 5;
+        && request.resource.data.skillTrees.size() == 5
+        // Aditivo e opcional: o XP que o servidor concedeu (o prêmio de
+        // temporada não pode contar como XP do mês seguinte).
+        && request.resource.data.get('grantsXp', 0) is int
+        && request.resource.data.get('grantsXp', 0) >= 0;
     }
 
     // user_progression_v2/{uid} — snapshot materializado de XP/tier/level/skilltrees
@@ -2418,16 +2422,41 @@ service cloud.firestore {
 
     // user_missions/{uid}_{date} — missões geradas (docId = uid + "_" + YYYY-MM-DD)
     // Privado: só o dono e o admin.
+    // O id carrega o período (`{uid}_{dia}`, `{uid}_w_{segunda}`, `{uid}_m_{dia 1}`),
+    // então cada pessoa tem no máximo UM documento por dia, semana e mês — não dá
+    // para fabricar documentos de missão em série para inflar o XP. O XP que cada
+    // documento vale também tem teto por escopo (o legítimo fica bem abaixo).
+    function missionDocShapeOk(missionId) {
+      return request.resource.data.date is string
+        && request.resource.data.date.matches('^20[2-3][0-9]-[0-1][0-9]-[0-3][0-9]$')
+        && (
+          (request.resource.data.scope == 'daily'
+            && missionId == request.resource.data.uid + '_' + request.resource.data.date)
+          || (request.resource.data.scope == 'weekly'
+            && missionId == request.resource.data.uid + '_w_' + request.resource.data.date)
+          || (request.resource.data.scope == 'monthly'
+            && missionId == request.resource.data.uid + '_m_' + request.resource.data.date)
+        )
+        && request.resource.data.get('xpEarned', 0) is int
+        && request.resource.data.get('xpEarned', 0) >= 0
+        && request.resource.data.get('xpEarned', 0) <= (
+          request.resource.data.scope == 'daily' ? 600
+          : (request.resource.data.scope == 'weekly' ? 1500 : 5000)
+        );
+    }
     match /user_missions/{missionId} {
       allow read: if isAuthed() && (
         resource == null || request.auth.uid == resource.data.uid || isPlatformAdmin()
       );
       allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
         && request.resource.data.scope in ['daily', 'weekly', 'monthly']
-        && request.resource.data.missions is list;
+        && request.resource.data.missions is list
+        && missionDocShapeOk(missionId);
       allow update: if isAuthed() && resource.data.uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.scope == resource.data.scope;
+        && request.resource.data.scope == resource.data.scope
+        && request.resource.data.date == resource.data.date
+        && missionDocShapeOk(missionId);
       allow delete: if isPlatformAdmin();
     }
 

@@ -80,6 +80,11 @@ export function missionXp(missionDocs) {
   return total;
 }
 
+/** O XP que UM documento de missões vale (cumpridas + bônus resgatado). */
+export function missionDocXp(doc) {
+  return missionXp(doc ? [doc] : []);
+}
+
 /**
  * XP total do atleta, com a origem de cada parcela.
  *
@@ -90,6 +95,7 @@ export function missionXp(missionDocs) {
  *   statsSources?: Record<string, number>,
  *   unlockedAchievementIds?: Iterable<string>,
  *   missionDocs?: Array<object>,
+ *   missionXpTotal?: number|null,
  *   onboardingDone?: Record<string, number>,
  *   grantDocs?: Array<object>,
  *   uid?: string,
@@ -100,13 +106,17 @@ export function computeTotalXpV2({
   statsSources = {},
   unlockedAchievementIds = null,
   missionDocs = null,
+  missionXpTotal = null,
   onboardingDone = null,
   grantDocs = null,
   uid = null,
 } = {}) {
   const activity = Math.max(0, computeXpV2(statsSources).xpTotal || 0);
   const achievements = achievementBonusXp(unlockedAchievementIds);
-  const missions = missionXp(missionDocs);
+  // `missionXpTotal` (soma de toda a história, vinda da agregação do banco)
+  // vale mais que a lista de documentos recentes.
+  const missions = Number.isFinite(missionXpTotal) && missionXpTotal !== null
+    ? Math.max(0, Math.round(missionXpTotal)) : missionXp(missionDocs);
   // Primeiros passos: só o que está GRAVADO (não a detecção ao vivo) — o XP não
   // regride se a pessoa tirar a foto de perfil depois.
   const onboarding = onboardingXp(onboardingDone);

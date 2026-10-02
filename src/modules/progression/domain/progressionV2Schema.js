@@ -42,6 +42,18 @@ export const ProgressionV2Schema = z.object({
   // contadores (espelham achievementsV2 pra evitar join)
   achievementsUnlocked: z.number().int().min(0),
   achievementsTotal: z.number().int().min(0),
+  // De onde veio o XP (aditivo, opcional): a atividade e as outras parcelas, e
+  // quanto foi CONCEDIDO pelo servidor. O servidor usa `grantsXp` para que o
+  // prêmio de temporada não conte como XP do mês seguinte, e `xpBreakdown.activity`
+  // para conferir contra os jogos que ele mesmo enxerga (antifarm).
+  grantsXp: z.number().int().min(0).optional(),
+  xpBreakdown: z.object({
+    activity: z.number().int().min(0),
+    achievements: z.number().int().min(0),
+    missions: z.number().int().min(0),
+    onboarding: z.number().int().min(0),
+    grants: z.number().int().min(0),
+  }).optional(),
   // auditoria
   source: z.enum(['recomputed', 'incremental', 'seed']),
   updatedAt: z.number().int().min(0),
@@ -92,6 +104,11 @@ export const UserMissionSchema = z.object({
     seed: z.number().int(),
   })),
   bonusClaimed: z.boolean(),
+  // O XP que este documento vale (missões cumpridas + bônus resgatado). Existe
+  // para o total de missões ser UMA soma no servidor do banco (agregação) em vez
+  // de baixar a história inteira — antes só os últimos 120 dias entravam, e o XP
+  // de missão antigo ia sumindo do total com o tempo.
+  xpEarned: z.number().int().min(0).optional(),
   completedAt: z.number().int().min(0).nullable(),
   createdAt: z.number().int().min(0),
   updatedAt: z.number().int().min(0),

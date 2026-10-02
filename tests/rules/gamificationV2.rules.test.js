@@ -485,3 +485,68 @@ describe('notificação de gamificação', () => {
     }));
   });
 });
+
+describe('⭐ missões: um documento por período e XP com teto', () => {
+  const missao = (uid, scope, date, over = {}) => ({
+    uid, date, scope, missions: [], bonusClaimed: false, xpEarned: 0, completedAt: null, createdAt: 1, updatedAt: 1, ...over,
+  });
+
+  it('o id carrega o período: dia, semana (w) e mês (m)', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'daily', '2026-10-02')));
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_missions', `${ANA}_w_2026-09-28`), missao(ANA, 'weekly', '2026-09-28')));
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_missions', `${ANA}_m_2026-10-01`), missao(ANA, 'monthly', '2026-10-01')));
+  });
+
+  it('não dá para fabricar documentos em série (id fora do padrão do período)', async () => {
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_extra1`), missao(ANA, 'daily', '2026-10-02')));
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'weekly', '2026-10-02')));
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_w_2026-09-28`), missao(ANA, 'weekly', '2026-09-21')));
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'daily', '2026-10-02 ')));
+  });
+
+  it('o XP de um documento tem teto por escopo', async () => {
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'daily', '2026-10-02', { xpEarned: 99999 })));
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'daily', '2026-10-02', { xpEarned: 200 })));
+    await assertFails(updateDoc(doc(como(ANA), 'user_missions', `${ANA}_2026-10-02`), { xpEarned: 700 }));
+    await assertFails(setDoc(doc(como(ANA), 'user_missions', `${ANA}_w_2026-09-28`), missao(ANA, 'weekly', '2026-09-28', { xpEarned: 1600 })));
+    await assertSucceeds(setDoc(doc(como(ANA), 'user_missions', `${ANA}_m_2026-10-01`), missao(ANA, 'monthly', '2026-10-01', { xpEarned: 4500 })));
+  });
+
+  it('privadas: ninguém lê as de outra pessoa; o dono lista as próprias', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'user_missions', `${ANA}_2026-10-02`), missao(ANA, 'daily', '2026-10-02')));
+    await assertFails(getDoc(doc(como(BIA), 'user_missions', `${ANA}_2026-10-02`)));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'user_missions'), where('uid', '==', ANA))));
+  });
+});
+
+describe('⭐ consultas que a tela faz (a regra tem de conseguir prová-las)', () => {
+  it('desafios ativos: por status; sem filtro nenhum a regra recusa (rascunhos existem)', async () => {
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'gamification_challenges'), where('status', '==', 'active'))));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'gamification_challenges'), where('status', '==', 'finished'))));
+    await assertFails(getDocs(collection(como(ANA), 'gamification_challenges')));
+  });
+
+  it('a lista do emissor (rascunhos inclusos): pelos campos do emissor', async () => {
+    await assertSucceeds(getDocs(query(collection(como(GESTOR), 'gamification_challenges'),
+      where('issuerType', '==', 'arena'), where('issuerId', '==', 'arena_1'))));
+    await assertFails(getDocs(query(collection(como(ANA), 'gamification_challenges'),
+      where('issuerType', '==', 'arena'), where('issuerId', '==', 'arena_1'))));
+    await assertSucceeds(getDocs(query(collection(como(ADMIN), 'gamification_challenges'),
+      where('issuerType', '==', 'platform'), where('issuerId', '==', 'platform'))));
+  });
+
+  it('duelos: um por lado; cartas recebidas; registro de autoria', async () => {
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'duels'), where('uidA', '==', ANA))));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'duels'), where('uidB', '==', BIA))));
+    await assertFails(getDocs(query(collection(como(CRIS), 'duels'), where('uidA', '==', ANA))));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'partner_letters'), where('toUid', '==', BIA))));
+    await assertFails(getDocs(query(collection(como(CRIS), 'partner_letters'), where('toUid', '==', BIA))));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'partner_letter_authors'), where('fromUid', '==', ANA))));
+  });
+
+  it('o Hall e a temporada pública: leitura por quem está logado', async () => {
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'hall_of_fame'), where('state', '==', 'PR'))));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'season_rankings'), where('seasonId', '==', '2026-10'), where('public', '==', true))));
+    await assertFails(getDocs(query(collection(anonimo(), 'hall_of_fame'), where('state', '==', 'PR'))));
+  });
+});

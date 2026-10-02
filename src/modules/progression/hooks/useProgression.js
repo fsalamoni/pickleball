@@ -3,16 +3,22 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getPlayerH2HRecords } from '@/modules/rating/services/headToHeadService';
 import { createGoal, listGoals, deleteGoal } from '../services/goalService.js';
 
+/**
+ * Os registros de confronto de torneio do atleta (`{ opponent, won, at, ... }`).
+ * Uma consulta só, com chave própria: as datas (streak, missões), o confronto
+ * direto e a avaliação pós-jogo leem a MESMA — antes cada um varria as
+ * inscrições e os jogos de todas as modalidades por conta própria.
+ */
+export const PLAYER_RECORDS_KEY = (uid) => ['player-h2h-records', uid];
+
 /** Datas (ms) dos jogos do atleta — usadas para o streak de semanas ativas. */
 export function usePlayerMatchDates(uid, enabled = true) {
   return useQuery({
-    queryKey: ['player-match-dates', uid],
+    queryKey: PLAYER_RECORDS_KEY(uid),
     enabled: !!uid && enabled,
     staleTime: 60_000,
-    queryFn: async () => {
-      const records = await getPlayerH2HRecords(uid);
-      return records.map((r) => r.at).filter(Boolean);
-    },
+    queryFn: () => getPlayerH2HRecords(uid),
+    select: (records) => records.map((r) => r.at).filter(Boolean),
   });
 }
 
