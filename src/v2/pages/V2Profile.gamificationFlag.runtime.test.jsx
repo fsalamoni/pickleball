@@ -22,14 +22,12 @@ vi.mock('@/v2/components/rating/V2DuprRatingBadge', () => ({ default: () => null
 // Os códigos de indicação (Onda BY) têm teste próprio; aqui só a gamificação.
 vi.mock('@/v2/components/arenas/marketing/MyReferralCodes', () => ({ default: () => null }));
 
-const statsSpy = vi.fn(() => ({ stats: {}, isLoading: false }));
-const matchDatesSpy = vi.fn(() => ({ data: [] }));
-const syncSpy = vi.fn(() => ({ progression: null }));
-vi.mock('@/modules/performance/hooks/usePlayerStats', () => ({ usePlayerStats: (...a) => statsSpy(...a) }));
-vi.mock('@/modules/progression/hooks/useProgression', () => ({ usePlayerMatchDates: (...a) => matchDatesSpy(...a) }));
-vi.mock('@/modules/progression/hooks/useSyncProgressionV2', () => ({ useSyncProgressionV2: (...a) => syncSpy(...a) }));
-const achievementsSpy = vi.fn(() => ({ unlocked: [], unlockedIds: new Set() }));
-vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({ useUserAchievementsV2: (...a) => achievementsSpy(...a) }));
+// O motor do cliente (XP, conquistas, primeiros passos) é UM hook: com a flag
+// desligada ele não pode nem ser chamado — é ele que dispara as ~20 consultas.
+const engineSpy = vi.fn(() => ({
+  stats: {}, matchDates: [], xp: { total: 0 }, skillTrees: null,
+}));
+vi.mock('@/modules/progression/hooks/useGamificationEngine', () => ({ useGamificationEngine: (...a) => engineSpy(...a) }));
 
 import V2Profile from '@/v2/pages/V2Profile.jsx';
 
@@ -38,7 +36,7 @@ beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
-  statsSpy.mockClear(); matchDatesSpy.mockClear(); syncSpy.mockClear(); achievementsSpy.mockClear();
+  engineSpy.mockClear();
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 
@@ -58,10 +56,7 @@ describe('V2Profile · flag GAMIFICATION_V2 OFF', () => {
   it('não dispara NENHUMA consulta de gamificação', async () => {
     flag.value = false;
     await render();
-    expect(statsSpy).not.toHaveBeenCalled();
-    expect(matchDatesSpy).not.toHaveBeenCalled();
-    expect(syncSpy).not.toHaveBeenCalled();
-    expect(achievementsSpy).not.toHaveBeenCalled();
+    expect(engineSpy).not.toHaveBeenCalled();
   });
 
   it('o perfil em si continua funcionando', async () => {
@@ -76,7 +71,8 @@ describe('V2Profile · flag GAMIFICATION_V2 ON', () => {
     flag.value = true;
     await render();
     expect(container.querySelector('[data-testid="profile-progression-v2"]')).toBeTruthy();
-    expect(statsSpy).toHaveBeenCalled();
-    expect(syncSpy).toHaveBeenCalled();
+    expect(engineSpy).toHaveBeenCalled();
+    // o perfil também grava (conquistas, primeiros passos, progressão): é o dono olhando
+    expect(engineSpy.mock.calls[0][1]).toMatchObject({ sync: true });
   });
 });

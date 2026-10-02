@@ -9,7 +9,7 @@
 export function issuerLinks({ isAdmin = false, arenas = [], coach = null, clubs = [] } = {}) {
   const out = [];
   if (isAdmin) {
-    out.push({ key: 'admin', kind: 'admin', label: 'Plataforma', hint: 'Configuração, desafios, recompensas e moderação', to: '/admin/painel?tab=gamificacao' });
+    out.push({ key: 'admin', kind: 'admin', label: 'Plataforma', hint: 'Configuração, desafios, recompensas e moderação', to: '/admin/painel?tab=gam-config' });
   }
   (arenas || []).slice(0, 5).forEach((a) => {
     if (!a?.id) return;

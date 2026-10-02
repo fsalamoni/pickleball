@@ -8,16 +8,7 @@ import { useGamificationEngine } from '@/modules/progression/hooks/useGamificati
 import { useGamificationPrefs } from '@/modules/progression/hooks/useGamificationPrefs';
 import { useGamificationConfig } from '@/modules/progression/hooks/useGamificationConfig';
 import { stepForVisit } from '@/modules/progression/domain/onboarding';
-
-/** De quanto em quanto tempo a progressão é recalculada em segundo plano. */
-export const BACKGROUND_SYNC_MS = 12 * 3_600_000;
-const SYNC_PREF = 'gamificacao:sync';
-
-/** A sincronização de fundo está vencida? Pura em relação ao relógio recebido. */
-export function syncIsDue(lastMs, now = Date.now(), every = BACKGROUND_SYNC_MS) {
-  const last = Number(lastMs);
-  return !Number.isFinite(last) || last <= 0 || now - last >= every || last > now;
-}
+import { syncIsDue } from '@/modules/progression/domain/syncSchedule';
 
 /**
  * O motor em segundo plano: recalcula e grava a progressão (e as conquistas e os
