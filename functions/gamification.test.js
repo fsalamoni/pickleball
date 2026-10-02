@@ -172,6 +172,18 @@ describe('desafios', () => {
     expect(db.store.docs.size).toBe(n);
   });
 
+  it('XP de prêmio de desafio de arena, clube ou professor NUNCA é concedido (só o da plataforma)', async () => {
+    const db = createRichFakeDb({
+      ...LIGADA, ...jogos,
+      'gamification_challenges/d1': desafio({ issuerType: 'arena', issuerId: 'a1', endsAt: ms('2026-10-05T03:00:00Z'), prizes: [{ place: 1, label: 'Camiseta', xp: 2000 }] }),
+      'challenge_entries/d1_ana': entrada('ana'), 'athlete_profiles/ana': {},
+    });
+    await g.runChallengeStandings(db, { now: NOW, logger });
+    expect(db.dump('user_xp_grants')).toEqual({});
+    expect(db.dump('challenge_entries').d1_ana.prizeXp).toBe(0);
+    expect(db.dump('gamification_challenges').d1.status).toBe('finished'); // o resultado existe; o XP, não
+  });
+
   it('quem recusou o aviso de resultado não recebe, mas continua no placar', async () => {
     const db = createRichFakeDb({
       ...LIGADA, ...jogos,

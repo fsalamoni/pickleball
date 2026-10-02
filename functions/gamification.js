@@ -264,7 +264,7 @@ async function processarDesafio(db, def, { agora, jogosPorUid, cfg, logger }) {
       const prem = terminou && pos ? (def.prizes || []).find((p) => p.place === pos) : null;
       batch.update(db.collection('challenge_entries').doc(e.id), {
         value: e.value, eligible: e.eligible, position: pos,
-        finalized: terminou, prizeXp: prem && def.subject !== 'club' ? (prem.xp || 0) : 0,
+        finalized: terminou, prizeXp: prem && def.subject !== 'club' && def.issuerType === 'platform' ? (prem.xp || 0) : 0,
         updatedAt: Date.now(),
       });
     });
@@ -276,7 +276,10 @@ async function processarDesafio(db, def, { agora, jogosPorUid, cfg, logger }) {
     for (const e of ranqueadas) {
       const prem = (def.prizes || []).find((p) => p.place === e.position);
       if (!prem || def.subject === 'club') continue;
-      if (prem.xp > 0) {
+      // XP de prêmio só nasce de desafio da PLATAFORMA: a regra do banco não
+      // consegue olhar dentro da lista de prêmios, então quem garante é aqui —
+      // senão uma arena ou um clube prometeria XP a quem quisesse.
+      if (prem.xp > 0 && def.issuerType === 'platform') {
         // eslint-disable-next-line no-await-in-loop
         const novo = await conceder(db, { uid: e.subjectId, kind: 'challenge', ref: def.id, xp: prem.xp, label: `${def.title} — ${e.position}º lugar` });
         if (novo) premiados += 1;

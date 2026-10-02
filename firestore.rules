@@ -1355,7 +1355,7 @@ service cloud.firestore {
         'club_join_rejected', 'club_invite', 'club_invite_accepted',
         'club_event_published', 'tournament_open', 'tournament_announcement',
         'partner_invite', 'partner_response', 'profile_reminder',
-        'leveling_reminder', 'profile_admin_edit', 'generic',
+        'leveling_reminder', 'profile_admin_edit', 'gamification', 'generic',
       ];
     }
     function isInternalLink(l) {
@@ -2742,6 +2742,367 @@ service cloud.firestore {
     match /promo_settings/{issuerId} {
       allow read, write: if isPlatformAdmin()
         || (issuerId != 'platform' && isPromoIssuer('coach', issuerId));
+    }
+
+    // ======================================================================
+    // GAMIFICAÇÃO V2 — a camada completa (Onda DA)
+    //
+    // ADITIVO: coleções novas, nenhuma regra existente mudou (a lista de tipos
+    // de notificação ganhou 'gamification', só isso). Princípio de todas: o que
+    // define POSIÇÃO, PRÊMIO, REPUTAÇÃO ou XP CONCEDIDO é escrito só pelo
+    // servidor (Admin SDK ignora as regras) — o cliente só escreve o que é ato
+    // dele: preferências, entrar num desafio, avaliar, pedir uma recompensa.
+    // ======================================================================
+
+    // Quem pode ser o EMISSOR de um desafio, recompensa ou meta:
+    //  · plataforma  → só o admin;
+    //  · arena       → quem gere a arena;
+    //  · clube       → admin do clube;
+    //  · professor   → o próprio professor, que tem perfil de professor.
+    function isGamificationIssuer(type, id) {
+      return isAuthed() && (
+        (type == 'platform' && id == 'platform' && isPlatformAdmin())
+        || (type == 'arena' && isArenaManager(id))
+        || (type == 'club' && isClubAdmin(id))
+        || (type == 'coach' && id == request.auth.uid
+          && exists(/databases/$(database)/documents/coaches/$(request.auth.uid)))
+      );
+    }
+    function gamificationIssuerKept() {
+      return request.resource.data.issuerType == resource.data.issuerType
+        && request.resource.data.issuerId == resource.data.issuerId
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
+
+    // user_gamification_prefs/{uid} — o que a pessoa decide sobre a própria
+    // gamificação. PRIVADO: o servidor (que ignora as regras) o lê para
+    // respeitar a escolha — não aparecer no placar, não receber duelo etc.
+    match /user_gamification_prefs/{uid} {
+      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'schemaVersion', 'privacy', 'social', 'notifications',
+          'display', 'onboarding', 'celebrated'
+        ])
+        && request.resource.data.get('uid', uid) == uid
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.privacy is map
+        && request.resource.data.social is map
+        && request.resource.data.notifications is map
+        && request.resource.data.display is map
+        && request.resource.data.onboarding is map
+        && request.resource.data.onboarding.done is map
+        // Tetos que valem para o XP: o roteiro de primeiros passos tem 9
+        // etapas, e só ids conhecidos contam no cálculo.
+        && request.resource.data.onboarding.done.size() <= 24
+        && request.resource.data.celebrated is map
+        && request.resource.data.celebrated.size() <= 120;
+      allow delete: if isOwner(uid) || isPlatformAdmin();
+    }
+
+    // user_xp_grants/{uid}_{tipo}_{ref} — XP que o SERVIDOR concede (prêmio de
+    // temporada, duelo, desafio). Ninguém escreve pelo cliente, o admin
+    // inclusive: a conta fecha na regra, não na boa vontade de quem usa o app.
+    match /user_xp_grants/{grantId} {
+      allow read: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
+      allow write: if false;
+    }
+
+    // gamification_moderation/{uid} — decisão do admin sobre uma conta: tirar do
+    // placar (`excluded`) ou só ocultar do público (`hiddenFromPublic`).
+    match /gamification_moderation/{uid} {
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // gamification_flags/{id} — sinais de integridade que o SERVIDOR abre e o
+    // admin revisa. O admin só muda o veredito, nunca o sinal.
+    match /gamification_flags/{flagId} {
+      allow read: if isPlatformAdmin();
+      allow update: if isPlatformAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'reviewNote', 'reviewedBy', 'reviewedAt'])
+        && request.resource.data.status in ['open', 'reviewed', 'dismissed', 'actioned'];
+      allow create, delete: if false;
+    }
+
+    // gamification_metrics/{dia} e gamification_integrity/{uid} — o retrato
+    // diário do funil (admin lê) e a fotografia de XP da última passada (só o
+    // servidor). Sem escrita de cliente.
+    match /gamification_metrics/{day} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
+    match /gamification_integrity/{uid} {
+      allow read, write: if false;
+    }
+
+    // hall_of_fame/{uid} — o placar de todos os tempos, SÓ com quem aceitou
+    // aparecer (o servidor remove na hora quem deixa de aceitar).
+    match /hall_of_fame/{uid} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
+
+    // match_reviews/{jogo}__{autor}__{avaliado} — a avaliação pós-jogo. Quem
+    // LÊ é só o autor (e o admin): o avaliado nunca vê "quem deu quanto", só o
+    // agregado em `user_reputation`. Imutável: sem edição, e a única saída é
+    // retirar (apagar). Sem texto livre — estrelas, elogios e categorias.
+    match /match_reviews/{reviewId} {
+      allow read: if isAuthed() && (resource.data.fromUid == request.auth.uid || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly([
+          'fromUid', 'toUid', 'matchKey', 'rating', 'tags', 'issues', 'relation', 'createdAt'
+        ])
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.matchKey is string
+        && request.resource.data.matchKey.size() > 0
+        && request.resource.data.matchKey.size() <= 120
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.tags is list
+        && request.resource.data.tags.size() <= 4
+        && request.resource.data.issues is list
+        && request.resource.data.issues.size() <= 4
+        // 1–2 estrelas exigem motivo (a regra do estudo: nota baixa se justifica).
+        && (request.resource.data.rating > 2 || request.resource.data.issues.size() >= 1)
+        && request.resource.data.createdAt is number
+        // Uma por jogo e por par: o id carrega os dois lados.
+        && reviewId.matches('^.+__' + request.auth.uid + '__' + request.resource.data.toUid + '$');
+      allow update: if false;
+      allow delete: if isAuthed() && (resource.data.fromUid == request.auth.uid || isPlatformAdmin());
+    }
+
+    // user_reputation/{uid} (público) e user_reputation_private/{uid} (o
+    // avaliado e o admin) — agregados que só o servidor escreve.
+    match /user_reputation/{uid} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
+    match /user_reputation_private/{uid} {
+      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow write: if false;
+    }
+
+    // partner_letters/{jogo}__{autor}__{destinatário} — a carta ao companheiro.
+    // O documento que o DESTINATÁRIO lê não carrega o autor quando é anônima
+    // (`fromUid` nulo); a identidade vai para `partner_letter_authors`, legível
+    // só por quem escreveu e pelo admin (moderação). O destinatário só marca
+    // como lida ou denuncia — não edita o texto.
+    match /partner_letters/{letterId} {
+      allow read: if isAuthed() && (resource.data.toUid == request.auth.uid || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly([
+          'toUid', 'fromUid', 'fromName', 'text', 'showName', 'matchKey', 'createdAt', 'readAt', 'reported'
+        ])
+        && request.resource.data.toUid is string
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 3
+        && request.resource.data.text.size() <= 280
+        && request.resource.data.showName is bool
+        // Anônima: nenhum rastro do autor no documento do destinatário.
+        && (request.resource.data.showName == true
+            ? request.resource.data.fromUid == request.auth.uid
+            : (request.resource.data.fromUid == null && request.resource.data.get('fromName', null) == null))
+        && request.resource.data.get('reported', false) == false
+        && request.resource.data.get('readAt', null) == null
+        && letterId.matches('^.+__' + request.auth.uid + '__' + request.resource.data.toUid + '$')
+        // E o autor tem de estar registrado, no MESMO lote — sem ele a
+        // moderação não teria como chegar a quem escreveu.
+        && getAfter(/databases/$(database)/documents/partner_letter_authors/$(letterId)).data.fromUid == request.auth.uid;
+      allow update: if isOwner(resource.data.toUid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt', 'reported']);
+      allow delete: if isOwner(resource.data.toUid) || isPlatformAdmin();
+    }
+    match /partner_letter_authors/{letterId} {
+      allow read: if isAuthed() && (resource.data.fromUid == request.auth.uid || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly(['fromUid', 'toUid', 'matchKey', 'createdAt'])
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid != request.auth.uid
+        && letterId.matches('^.+__' + request.auth.uid + '__' + request.resource.data.toUid + '$');
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    // gamification_challenges/{id} — desafios e eventos. O EMISSOR cria e edita
+    // o que é dele; ninguém muda de dono; só o servidor encerra (`finished`).
+    // Rascunho só o emissor vê. O XP de prêmio de um desafio que não é da
+    // plataforma NÃO é concedido — a regra não olha dentro da lista de prêmios,
+    // então quem garante é a função que fecha o desafio.
+    match /gamification_challenges/{challengeId} {
+      allow read: if isAuthed() && (
+        resource.data.status != 'draft'
+        || isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+        || isPlatformAdmin()
+      );
+      allow create: if isGamificationIssuer(request.resource.data.issuerType, request.resource.data.issuerId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status in ['draft', 'active']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 4
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.metric is string
+        && request.resource.data.subject in ['athlete', 'club']
+        && request.resource.data.startsAt is number
+        && request.resource.data.endsAt is number
+        && request.resource.data.endsAt > request.resource.data.startsAt
+        // 92 dias, no máximo.
+        && request.resource.data.endsAt - request.resource.data.startsAt <= 92 * 86400000
+        && request.resource.data.prizes is list
+        && request.resource.data.prizes.size() <= 5
+        // Desafio entre clubes é só da plataforma.
+        && (request.resource.data.subject == 'athlete' || request.resource.data.issuerType == 'platform');
+      allow update: if (isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+          && gamificationIssuerKept()
+          && resource.data.status in ['draft', 'active']
+          && request.resource.data.status in ['draft', 'active', 'cancelled']
+          && request.resource.data.endsAt - request.resource.data.startsAt <= 92 * 86400000)
+        || isPlatformAdmin();
+      allow delete: if (isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+          && resource.data.status in ['draft', 'cancelled'])
+        || isPlatformAdmin();
+    }
+
+    // challenge_entries/{desafio}_{atleta} ou {desafio}_club_{clube} — quem
+    // ENTROU. Entrar é ato do cliente (opt-in) e nasce zerado; valor, posição,
+    // elegibilidade e prêmio são do servidor — sem `update` de cliente.
+    match /challenge_entries/{entryId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly([
+          'challengeId', 'subjectType', 'subjectId', 'uid', 'joinedAt',
+          'value', 'position', 'finalized', 'prizeXp'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.value == 0
+        && request.resource.data.position == null
+        && request.resource.data.finalized == false
+        && request.resource.data.prizeXp == 0
+        && exists(/databases/$(database)/documents/gamification_challenges/$(request.resource.data.challengeId))
+        && get(/databases/$(database)/documents/gamification_challenges/$(request.resource.data.challengeId)).data.status == 'active'
+        && request.time.toMillis() < get(/databases/$(database)/documents/gamification_challenges/$(request.resource.data.challengeId)).data.endsAt
+        && (
+          // Atleta: só entra a si mesmo.
+          (request.resource.data.subjectType == 'athlete'
+            && request.resource.data.subjectId == request.auth.uid
+            && entryId == request.resource.data.challengeId + '_' + request.auth.uid
+            && get(/databases/$(database)/documents/gamification_challenges/$(request.resource.data.challengeId)).data.subject == 'athlete')
+          // Clube: quem administra o clube.
+          || (request.resource.data.subjectType == 'club'
+            && isClubAdmin(request.resource.data.subjectId)
+            && entryId == request.resource.data.challengeId + '_club_' + request.resource.data.subjectId
+            && get(/databases/$(database)/documents/gamification_challenges/$(request.resource.data.challengeId)).data.subject == 'club')
+        );
+      allow update: if false;
+      // Sair: o dono da entrada (ou o admin do clube), enquanto não fechou.
+      allow delete: if isAuthed() && resource.data.finalized != true && (
+          resource.data.uid == request.auth.uid
+          || (resource.data.subjectType == 'club' && isClubAdmin(resource.data.subjectId))
+        ) || isPlatformAdmin();
+    }
+
+    // duels/{semana}_{uidA}_{uidB} — o duelo da semana. O SERVIDOR emparelha e
+    // fecha; os dois lados só leem e podem RECUSAR (active → declined).
+    match /duels/{duelId} {
+      allow read: if isAuthed() && (
+        resource.data.uidA == request.auth.uid
+        || resource.data.uidB == request.auth.uid
+        || isPlatformAdmin()
+      );
+      allow create, delete: if false;
+      allow update: if isAuthed()
+        && (resource.data.uidA == request.auth.uid || resource.data.uidB == request.auth.uid)
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'declined'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'declinedBy', 'declinedAt'])
+        && request.resource.data.declinedBy == request.auth.uid;
+    }
+
+    // gamification_rewards/{id} — recompensas reais, liberadas por marcos. O
+    // EMISSOR cria e gere. `approvedCount` só sobe, de 1 em 1 (o emissor
+    // aprova um pedido por vez).
+    match /gamification_rewards/{rewardId} {
+      allow read: if isAuthed();
+      allow create: if isGamificationIssuer(request.resource.data.issuerType, request.resource.data.issuerId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 4
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.status in ['active', 'paused']
+        && request.resource.data.approvedCount == 0;
+      allow update: if (isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+          && gamificationIssuerKept()
+          && request.resource.data.status in ['active', 'paused', 'ended']
+          && request.resource.data.approvedCount >= resource.data.approvedCount
+          && request.resource.data.approvedCount <= resource.data.approvedCount + 1)
+        || isPlatformAdmin();
+      allow delete: if isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+        || isPlatformAdmin();
+    }
+
+    // reward_claims/{recompensa}_{atleta} — o PEDIDO. A pessoa pede (com um
+    // código) e pode cancelar; o emissor aprova, recusa e marca como usada.
+    // Nada é entregue sozinho: quem entrega confirma.
+    function rewardClaimIssuerKept() {
+      return request.resource.data.uid == resource.data.uid
+        && request.resource.data.rewardId == resource.data.rewardId
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.issuerType == resource.data.issuerType
+        && request.resource.data.issuerId == resource.data.issuerId;
+    }
+    match /reward_claims/{claimId} {
+      allow read: if isAuthed() && (
+        resource.data.uid == request.auth.uid
+        || isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'requested'
+        && claimId == request.resource.data.rewardId + '_' + request.auth.uid
+        && request.resource.data.code is string
+        && request.resource.data.code.size() >= 6
+        && request.resource.data.code.size() <= 20
+        && exists(/databases/$(database)/documents/gamification_rewards/$(request.resource.data.rewardId))
+        && get(/databases/$(database)/documents/gamification_rewards/$(request.resource.data.rewardId)).data.status == 'active'
+        // O pedido aponta para o emissor REAL da recompensa — senão o pedido
+        // iria para a fila de outra pessoa.
+        && get(/databases/$(database)/documents/gamification_rewards/$(request.resource.data.rewardId)).data.issuerType == request.resource.data.issuerType
+        && get(/databases/$(database)/documents/gamification_rewards/$(request.resource.data.rewardId)).data.issuerId == request.resource.data.issuerId;
+      // A pessoa só cancela o próprio pedido; o emissor decide os demais passos.
+      allow update: if isAuthed() && rewardClaimIssuerKept() && (
+        (resource.data.uid == request.auth.uid
+          && resource.data.status in ['requested', 'approved']
+          && request.resource.data.status == 'cancelled')
+        || (isGamificationIssuer(resource.data.issuerType, resource.data.issuerId)
+          && ((resource.data.status == 'requested' && request.resource.data.status in ['approved', 'rejected'])
+            || (resource.data.status == 'approved' && request.resource.data.status in ['redeemed', 'rejected'])))
+      );
+      allow delete: if isPlatformAdmin();
+    }
+
+    // gamification_goals/{tipo}_{dono}_{mês} — as metas do mês de um professor,
+    // arena ou clube. Só o próprio dono lê e escreve (é o painel dele).
+    function isGoalsOwner(ownerType, ownerId) {
+      return isAuthed() && (
+        (ownerType == 'coach' && ownerId == request.auth.uid)
+        || (ownerType == 'arena' && isArenaManager(ownerId))
+        || (ownerType == 'club' && isClubAdmin(ownerId))
+      );
+    }
+    match /gamification_goals/{goalsId} {
+      allow read: if isGoalsOwner(resource.data.ownerType, resource.data.ownerId) || isPlatformAdmin();
+      allow create, update: if isGoalsOwner(request.resource.data.ownerType, request.resource.data.ownerId)
+        && request.resource.data.keys().hasOnly(['ownerType', 'ownerId', 'month', 'goals', 'updatedAt'])
+        && request.resource.data.ownerType in ['coach', 'arena', 'club']
+        && goalsId == request.resource.data.ownerType + '_' + request.resource.data.ownerId + '_' + request.resource.data.month
+        && request.resource.data.goals is list
+        && request.resource.data.goals.size() <= 6;
+      allow delete: if isGoalsOwner(resource.data.ownerType, resource.data.ownerId) || isPlatformAdmin();
     }
   }
 }
