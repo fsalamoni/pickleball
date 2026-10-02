@@ -2,7 +2,7 @@
   "name": "pickleball-functions",
   "description": "Cloud Functions da plataforma (recálculo automático do ranking).",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {

@@ -563,7 +563,8 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-02 (conta excluída fora do ranking e a
+> Última atualização: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
 > vinculável, e o servidor diz o que deixou de fora). Antes: 2026-10-01
@@ -2607,6 +2608,14 @@ Quando você for commitar, atualize esta seção se os números mudarem.
   🐞 Foi o que segurou os deploys dos PRs #175–#178 (site parado no #174 e
   regras de segurança novas nunca publicadas). Guarda em
   `src/core/guards/deployFirebaseWorkflow.test.js`; ver `docs/03-WORKFLOW.md` §4.3
+- **O runtime das Cloud Functions tem prazo.** `engines.node` em
+  `functions/package.json` (e no lockfile) decide o `nodejs<N>` do deploy. O
+  Node.js 20 é DESLIGADO em 2026-10-31 — depois disso nenhum deploy passa, nem
+  o da vigilância que recria função apagada. Saímos dele em 2026-10-02 para o
+  **Node.js 22** (vale até 2027-10-31). O teto é a CLI dos workflows:
+  `firebase-tools@13` vai até o 22; o 24 exige subir a CLI junto, num PR
+  próprio. Guarda em `src/core/guards/deployFunctions.test.js`; ver
+  `docs/03-WORKFLOW.md` §9.5
 - **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
   precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
   rodapé (campos + botão salvar) fica fora da viewport e inacessível.
