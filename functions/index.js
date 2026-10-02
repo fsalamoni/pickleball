@@ -895,6 +895,82 @@ exports.recomputeSeasonRankingDaily = onSchedule(
 );
 
 // =====================================================================
+// (7b) GAMIFICAÇÃO V2 — as tarefas que o navegador não pode decidir.
+//
+// Placar e prêmio dos desafios, duelo da semana, reputação das avaliações,
+// sinais de integridade para o admin e o resumo da semana. Todas leem a flag
+// mestra `gamification_v2` e os módulos ligados no painel do admin: com a
+// flag desligada nada roda; com um módulo desligado, só ele para. Todas são
+// idempotentes (prêmio e aviso têm id fixo) e nunca relançam o erro — é
+// gamificação, não pode virar alerta de incidente; o próximo ciclo refaz.
+// Lógica em `functions/gamification.js` (testada com um Firestore falso).
+// =====================================================================
+const gamification = require('./gamification');
+
+/** Executa uma tarefa de gamificação sem deixar o erro virar incidente. */
+async function rodarGamificacao(nome, tarefa) {
+  const db = getFirestore(getApp(), DATABASE_ID);
+  try {
+    return await tarefa(db);
+  } catch (err) {
+    logger.error(`${nome} falhou.`, err);
+    return { error: String(err && err.message) };
+  }
+}
+
+// O placar dos desafios (e o fechamento dos que terminaram), a cada 3 horas.
+exports.gamificationChallengeStandings = onSchedule(
+  {
+    schedule: 'every 3 hours',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '512MiB',
+  },
+  async () => rodarGamificacao('gamificationChallengeStandings', (db) => gamification.runChallengeStandings(db, { logger })),
+);
+
+// Segunda de manhã: fecha os duelos da semana que passou e emparelha os novos.
+exports.gamificationWeeklyDuels = onSchedule(
+  {
+    schedule: '30 5 * * 1',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '512MiB',
+  },
+  async () => rodarGamificacao('gamificationWeeklyDuels', (db) => gamification.runWeeklyDuels(db, { logger })),
+);
+
+// Segunda às 8h: "Sua semana em revisão" (só para quem jogou, e só se quiser).
+exports.gamificationWeeklyDigest = onSchedule(
+  {
+    schedule: '0 8 * * 1',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 300,
+    memory: '512MiB',
+  },
+  async () => rodarGamificacao('gamificationWeeklyDigest', (db) => gamification.runWeeklyDigest(db, { logger })),
+);
+
+// Todo dia às 4h: reputação, sinais de integridade e o retrato das métricas.
+exports.gamificationDailyUpkeep = onSchedule(
+  {
+    schedule: '0 4 * * *',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async () => rodarGamificacao('gamificationDailyUpkeep', async (db) => ({
+    reputation: await gamification.runReputation(db, { logger }),
+    integrity: await gamification.runIntegrity(db, { logger }),
+    metrics: await gamification.runMetricsSnapshot(db, { logger }),
+  })),
+);
+
+// =====================================================================
 // (8) Admin: EXCLUIR CADASTRO. Callable.
 //
 // Prévia (só lê) e execução (refaz a análise aqui dentro e apaga). Motivo
