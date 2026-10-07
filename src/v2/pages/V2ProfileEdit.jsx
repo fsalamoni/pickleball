@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Printer, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete, parseDuprRating,
+  birthDateToBrtDate, validateRequiredProfile, normalizeFullName, isRequiredProfileComplete, parseDuprRating,
 } from '@/core/lib/profileValidation';
 import { cn } from '@/core/lib/utils';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -145,7 +145,7 @@ export default function V2ProfileEdit() {
     setBusy(true);
     try {
       await updateUserProfile({
-        platform_name: platformName.trim(),
+        platform_name: normalizeFullName(platformName),
         birth_date: birthDate,
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(birthDate)),
         phone: phone.trim(),
@@ -251,7 +251,7 @@ export default function V2ProfileEdit() {
           hourly_rate: coachPrice,
           regions: coachRegions,
           modalities: coachModalities,
-          display_name: platformName,
+          display_name: normalizeFullName(platformName),
         },
       });
       if (isCoach) await coachConsent.recordAfterSuccess();
@@ -336,7 +336,7 @@ export default function V2ProfileEdit() {
           </div>
 
           <form onSubmit={onSaveIdentity} className="mt-6 space-y-4">
-            <V2Field label="Nome de exibição" required error={errors.platformName} hint="Esse é o nome que aparece nos rankings.">
+            <V2Field label="Nome completo" required error={errors.platformName} hint="Esse é o nome que aparece nos rankings.">
               <V2Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} maxLength={60} />
             </V2Field>
             <div className="grid gap-4 sm:grid-cols-2">

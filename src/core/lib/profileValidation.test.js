@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  validateRequiredProfile, isRequiredProfileComplete,
+  validateRequiredProfile, isRequiredProfileComplete, normalizeFullName, isFullName,
   missingRegistrationFields, isRegistrationComplete,
   hasDeclaredLevel, parseDuprRating, REGISTRATION_FIELD_LABELS,
 } from './profileValidation.js';
 
 const fullProfile = {
-  platform_name: 'Ana',
+  platform_name: 'Ana Souza',
   birth_date: '1990-05-10',
   phone: '(11) 99999-9999',
   pickleball_experience: '1_2_anos',
@@ -21,7 +21,7 @@ describe('validateRequiredProfile (essenciais)', () => {
   it('exige nome, nascimento, telefone e experiência', () => {
     expect(validateRequiredProfile({}).isValid).toBe(false);
     expect(validateRequiredProfile({
-      platformName: 'Ana', birthDate: '1990-05-10', phone: '11999999999', pickleballExperience: 'x',
+      platformName: 'Ana Souza', birthDate: '1990-05-10', phone: '11999999999', pickleballExperience: 'x',
     }).isValid).toBe(true);
   });
 });
@@ -48,7 +48,7 @@ describe('isRegistrationComplete / missingRegistrationFields', () => {
 
   it('essenciais completos mas cadastro incompleto: isRequiredProfileComplete true, isRegistrationComplete false', () => {
     const essentialsOnly = {
-      platform_name: 'Ana', birth_date: '1990-05-10', phone: '11999999999', pickleball_experience: 'x',
+      platform_name: 'Ana Souza', birth_date: '1990-05-10', phone: '11999999999', pickleball_experience: 'x',
     };
     expect(isRequiredProfileComplete(essentialsOnly)).toBe(true);
     expect(isRegistrationComplete(essentialsOnly)).toBe(false);
@@ -102,5 +102,19 @@ describe('cadastro essencial (flag essential_profile)', () => {
     expect(parseDuprRating('')).toBeNull();
     expect(parseDuprRating('abc')).toBeNull();
     expect(parseDuprRating('12')).toBe(8);
+  });
+});
+
+describe('nome completo', () => {
+  it('normaliza iniciais e mantém partículas minúsculas', () => {
+    expect(normalizeFullName('  maRIA  da   SILVA-souza ')).toBe('Maria da Silva-Souza');
+    expect(normalizeFullName("JOÃO d'ávila e OLIVEIRA")).toBe("João D'Ávila e Oliveira");
+    expect(normalizeFullName('DE souza')).toBe('De Souza');
+  });
+  it('exige ao menos dois nomes', () => {
+    expect(isFullName('Maria')).toBe(false);
+    expect(isFullName('Maria Silva')).toBe(true);
+    const r = validateRequiredProfile({ platformName: 'Maria', birthDate: '1990-01-01', phone: '11999999999', pickleballExperience: 'x' });
+    expect(r.errors.platformName).toMatch(/dois nomes/);
   });
 });

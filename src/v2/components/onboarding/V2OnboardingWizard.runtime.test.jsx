@@ -25,7 +25,7 @@ const { default: V2OnboardingWizard } = await import('./V2OnboardingWizard.jsx')
 
 const COMPLETO_ANTIGO = {
   uid: 'u1',
-  platform_name: 'Ana',
+  platform_name: 'Ana Souza',
   birth_date: '1990-05-10',
   phone: '(51) 99999-9999',
   pickleball_experience: '1_2_anos',

@@ -23,12 +23,36 @@ export function birthDateToBrtDate(birthDateValue) {
   return Number.isNaN(birthDate.getTime()) ? null : birthDate;
 }
 
+const PARTICULAS = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
+
+/**
+ * Nome com a inicial de cada palavra em maiúscula e o resto em minúscula.
+ * Partículas (da, de, do, das, dos, e) ficam minúsculas, exceto na primeira
+ * posição. Também junta espaços repetidos; hífen e apóstrofo reiniciam a inicial.
+ */
+export function normalizeFullName(raw) {
+  return String(raw ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, i) => {
+      const lower = w.toLocaleLowerCase('pt-BR');
+      if (i > 0 && PARTICULAS.has(lower)) return lower;
+      return lower.replace(/(^|[-'’])(\p{L})/gu, (_, sep, c) => sep + c.toLocaleUpperCase('pt-BR'));
+    })
+    .join(' ');
+}
+
+/** Nome completo = ao menos duas palavras. */
+export const isFullName = (raw) => String(raw ?? '').trim().split(/\s+/).filter(Boolean).length >= 2;
+
 export function validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience }) {
   const errors = {};
   const trimmedName = String(platformName || '').trim();
   const trimmedPhone = String(phone || '').trim();
 
-  if (!trimmedName) errors.platformName = 'Informe seu nome de exibição.';
+  if (!trimmedName) errors.platformName = 'Informe seu nome completo.';
+  else if (!isFullName(trimmedName)) errors.platformName = 'Informe nome e sobrenome (ao menos dois nomes).';
   if (!birthDate) errors.birthDate = 'Informe sua data de nascimento.';
   if (!trimmedPhone) errors.phone = 'Informe seu telefone.';
   if (!pickleballExperience) errors.pickleballExperience = 'Informe seu tempo de experiência no pickleball.';
@@ -78,7 +102,7 @@ export function hasDeclaredLevel(profile) {
 
 /** Como cada campo do cadastro se chama na tela (e no painel do admin). */
 export const REGISTRATION_FIELD_LABELS = Object.freeze({
-  platform_name: 'Nome de exibição',
+  platform_name: 'Nome completo',
   birth_date: 'Data de nascimento',
   phone: 'Telefone',
   pickleball_experience: 'Tempo de experiência',
