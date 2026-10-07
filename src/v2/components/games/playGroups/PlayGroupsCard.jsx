@@ -467,7 +467,7 @@ export default function PlayGroupsCard({
 
             {!podeConfigurar && (
               <p className="text-[11px] leading-5 text-gray-400">
-                Só quem criou o dia cria, edita e pausa os grupos. Você move as pessoas entre eles.
+                Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos. Você move as pessoas entre eles.
               </p>
             )}
           </>

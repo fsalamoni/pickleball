@@ -81,7 +81,10 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // AthletePlayParticipant, que só cuida da própria participação.
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar, podeConfigurar } = useGameDayRoles(gameDay, participants);
+  // `podeEditarGrupos`: criador, arena, clube E o administrador nomeado. É a única
+  // configuração do dia que o nomeado divide com o criador (os grupos são parte
+  // de conduzir o dia, não de defini-lo).
+  const { podeGerenciar, podeEditarGrupos } = useGameDayRoles(gameDay, participants);
   // ⚠️ Comando sobre estado DESCONHECIDO não é renderizado — a mesma regra do
   // dia de jogo para comando sem atribuição. Com a lista incompleta, sortear
   // ou substituir agiria sobre quem a tela não viu.
@@ -147,7 +150,7 @@ export default function AthletePlayOrganizer({ gameDay }) {
         participants={grupos.participants}
         view={view}
         grupos={grupos}
-        podeConfigurar={podeConfigurar && !falhouEstado}
+        podeConfigurar={podeEditarGrupos && !falhouEstado}
         canManage={canManage}
         courts={courtsDoDia}
         slots={vagasDaProxima}

@@ -302,13 +302,13 @@ describe('cartão Grupos', () => {
     expect(mut.distribuir).toHaveBeenCalledWith([{ pid: 'n3', groupId: 'a' }]);
   });
 
-  it('quem só conduz o dia move gente, mas não edita os grupos', async () => {
+  it('quem só conduz o dia (participante de um dia aberto) move gente, mas não edita os grupos', async () => {
     await renderCard({ participants: quatro('a', 3), podeConfigurar: false });
     expect(porRotulo('Editar o grupo Alfa')).toBeNull();
     expect(porRotulo('Pausar o grupo Alfa')).toBeNull();
     expect(botao('Novo grupo')).toBeUndefined();
     expect(botao('Distribuir por nível')).toBeTruthy();
-    expect(container.textContent).toContain('Só quem criou o dia cria, edita e pausa os grupos');
+    expect(container.textContent).toContain('Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos');
   });
 
   it('avisa quadra que nenhum grupo pode usar', async () => {

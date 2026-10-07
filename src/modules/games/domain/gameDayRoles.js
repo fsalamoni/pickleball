@@ -180,6 +180,31 @@ export function canConfigureGameDay(gameDay, uid, { arenaManager = false, clubMa
 }
 
 /**
+ * Pode EDITAR OS GRUPOS do Play (criar, editar, pausar, reordenar, remover e a
+ * política)?
+ *
+ * É a única configuração que o administrador NOMEADO compartilha com o
+ * criador: os grupos fazem parte de conduzir o dia (quem joga com quem), não de
+ * defini-lo. O resto de `canConfigureGameDay` — formato, quadras, quem organiza,
+ * nomear administradores, arquivar — continua só do criador, da arena e do
+ * clube. Num dia ABERTO o participante opera as partidas, mas não edita os
+ * grupos: só quem foi nomeado.
+ *
+ * Só vale no Play. `format` é comparado ao valor literal (contrato de banco,
+ * `GAME_DAY_FORMAT.PLAY`) porque este arquivo não importa nada de propósito — é
+ * o que o mantém fora de ciclos.
+ *
+ * @param {object} gameDay
+ * @param {string} uid
+ * @param {{ arenaManager?: boolean, clubManager?: boolean }} [options]
+ */
+export function canEditPlayGroups(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
+  if (!uid || !gameDay) return false;
+  if (canConfigureGameDay(gameDay, uid, { arenaManager, clubManager })) return true;
+  return gameDay.format === 'play' && gameDayAdminUids(gameDay).includes(uid);
+}
+
+/**
  * Pode GERENCIAR as partidas e os participantes?
  *
  * @param {object} gameDay

@@ -350,7 +350,7 @@ const GUIAS_BASE = [
           'Os grupos dividem a fila do dia: cada um tem a sua fila, e as partidas saem DENTRO do grupo — iniciantes jogam com iniciantes, mistas com mistas.',
           'Quem está sem grupo continua numa fila só dele, como o Play sempre foi.',
         ],
-        tip: 'Só quem criou o dia monta e edita os grupos. Quem conduz as partidas move as pessoas entre eles.',
+        tip: 'Quem criou o dia e os administradores nomeados montam e editam os grupos. Quem só conduz as partidas move as pessoas entre eles.',
       },
       {
         id: 'novo',

@@ -57,7 +57,7 @@ com quem está sem grupo (`fill`), quando faltar gente.
 essas. Além disso, quem organiza pode **escolher o grupo de uma partida** na
 hora, por quadra, sem mudar a configuração.
 
-## 4. Modelo de dados — ZERO coleção, ZERO índice, ZERO regra
+## 4. Modelo de dados — zero coleção, zero índice e UMA cláusula estreita de regra
 
 Só campos **opcionais** em documentos que já existem. Ausentes, o dia se
 comporta como sempre.
@@ -82,12 +82,29 @@ play_groups_policy: 'queue' | 'rotate' | 'priority'
 `game_days/{id}/games/{gid}`: `group_id`, `group_name`, `group_color` (cópias,
 para o telão e a lista sobreviverem à remoção do grupo).
 
-**Por que não há regra nova.** `game_days` deixa o criador (e, na arena e no
-clube, quem gere o dono) gravar qualquer campo; `participants` e `games` não têm
-lista fechada de campos para quem opera o dia. Isso é conferido no
-`firestore.rules`, não presumido. Configurar os grupos é *configurar* (criador,
-gestor da arena, administrador do clube — `canConfigureGameDay`); colocar cada
-pessoa num grupo é *operar* (`canManageGameDay`).
+**Regras do Firestore — lidas, não presumidas.** `game_days` deixa o criador (e,
+na arena e no clube, quem gere o dono) gravar qualquer campo; `participants` e
+`games` não têm lista fechada de campos para quem opera o dia. Isso cobria tudo
+menos UM caso, pedido depois: o **administrador nomeado** (`admin_uids`) editar
+os grupos como o criador. A regra de `game_days` só deixava o nomeado mexer na
+lista de membros, então foi acrescentada **uma cláusula** — estreita de
+propósito:
+
+- só quem está em `admin_uids` (o participante de um dia aberto opera as
+  partidas, mas não edita os grupos);
+- só no formato Play;
+- só as chaves `play_groups`, `play_groups_policy` e `updated_at` (nada de
+  `created_by`, `admin_uids`, `manage_mode`, `title`, `status`, formato…);
+- com a lista conferida (`is list`, até 10) e a política dentro das três
+  conhecidas, para o nomeado nunca gravar lixo — o criador segue livre.
+
+Sem `admin_uids`, ou fora do Play, a cláusula é sempre falsa: nenhum dia já
+existente muda. 26 casos no emulador em `tests/rules/playGroups.rules.test.js`.
+Em código, a pergunta é `canEditPlayGroups` (`gameDayRoles.js`) — criador, arena,
+clube **e o nomeado** — e o resto da configuração (formato, quadras, quem
+organiza, nomear administradores, arquivar) continua só em
+`canConfigureGameDay`. Colocar cada pessoa num grupo é *operar*
+(`canManageGameDay`).
 
 **Por que o array mora no dia** (e não numa subcoleção): são ≤ 10 itens
 pequenos, lidos junto do dia por todas as telas, inclusive o telão. Uma
@@ -262,11 +279,12 @@ Quem precisa delas é um componente-filho (`ParticipantGroupSelect`, `MeuGrupo`,
 ## 11. Limites conhecidos (por desenho, não por esquecimento)
 
 - **Só o Play.** Os outros formatos não têm fila de espera (§7).
-- **Quem configura é quem pode escrever o dia.** Criar, editar, pausar e
-  reordenar grupos grava `game_days`, e a regra só deixa isso ao criador, ao
-  gestor da arena e ao administrador do clube. O administrador **nomeado** do
-  dia opera (move gente, sorteia) mas não edita os grupos — e a tela diz isso
-  em vez de oferecer um botão que o Firestore recusaria.
+- **Quem edita os grupos.** Criar, editar, pausar, reordenar e remover grupos
+  (e a política) é do criador, da arena, do clube e do **administrador
+  nomeado** (`canEditPlayGroups`) — o nomeado divide só isso com o criador. O
+  participante de um dia de gestão ABERTA opera as partidas (move gente,
+  sorteia), mas não edita os grupos, e a tela diz isso em vez de oferecer um
+  botão que o Firestore recusaria.
 - **A escolha de grupo por quadra é do painel**, não do telão: o telão sorteia
   pela política configurada.
 - **Convidado sem conta e sem nível** entra "sem grupo" (nível desconhecido não
@@ -284,8 +302,9 @@ Quem precisa delas é um componente-filho (`ParticipantGroupSelect`, `MeuGrupo`,
 
 - Regras do `firestore.rules` **lidas**, não presumidas: `game_days` aceita
   qualquer campo do criador/gestor; `participants` e `games` não têm lista
-  fechada de campos. `git diff` de `firestore.rules`, `firestore.indexes.json`,
-  `storage.rules` e `firebase.json` vazio — o guarda confere os dois primeiros.
+  fechada de campos. A única mudança de regra é a cláusula do administrador
+  nomeado (§4), provada no emulador; `firestore.indexes.json`, `storage.rules`,
+  `firebase.json` e `functions` sem diferença — o guarda confere.
 - Propriedade: grupos ativos com **ninguém atribuído** produzem as mesmas
   partidas que o Play sem grupos (200 cenários).
 - Testes de mutação nos três níveis (motor, serviço, tela e telão): cada

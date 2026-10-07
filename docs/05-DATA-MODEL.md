@@ -553,8 +553,9 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 #### Campos dos GRUPOS DO PLAY (**opcionais, aditivos** — flag `play_groups`)
 
 Só no formato Play. **Ausentes, o Play segue uma fila única**, e com a flag
-desligada os grupos gravados são ignorados em toda a plataforma. Zero coleção,
-zero índice, zero regra nova (guarda em `src/core/guards/playGrupos.test.js`).
+desligada os grupos gravados são ignorados em toda a plataforma. Zero coleção e
+zero índice; uma única cláusula de regra, para o administrador nomeado (abaixo).
+Guarda em `src/core/guards/playGrupos.test.js`.
 - `play_groups[]` (até 10) — `{ id, name, color, level_min, level_max,
   gender: 'any'|'male'|'female', formation: 'free'|'mixed'|'same_sex',
   max_level_gap, strict, courts[], fill, paused, join: 'open'|'closed' }`.
@@ -562,9 +563,12 @@ zero índice, zero regra nova (guarda em `src/core/guards/playGrupos.test.js`).
   `normalizePlayGroupsConfig` preenche o padrão de cada campo na leitura.
 - `play_groups_policy: 'queue'|'rotate'|'priority'` — quem ocupa a quadra
   quando mais de um grupo tem partida pronta (ausente ⇒ `queue`).
-- Quem grava: o criador, o gestor da arena e o administrador do clube — a
-  regra de `game_days` já só deixa esses escreverem campos de configuração.
-  `play_group_id` de um participante é operação de quem conduz o dia.
+- Quem grava: o criador, o gestor da arena, o administrador do clube **e o
+  administrador nomeado** (`admin_uids`). Para o nomeado, `firestore.rules`
+  tem uma cláusula estreita em `game_days`: só no Play, só as chaves
+  `play_groups`, `play_groups_policy` e `updated_at`, lista de até 10 e política
+  entre `queue`/`rotate`/`priority`. `play_group_id` de um participante é
+  operação de quem conduz o dia.
 - Detalhes, motor e experiência: `docs/39-PLAY-GRUPOS.md`.
 
 #### Campos do DIA DE JOGO DA ARENA (**opcionais, aditivos** — flag `arena_game_day`)

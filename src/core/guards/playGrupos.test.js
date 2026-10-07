@@ -12,10 +12,12 @@
  *  2. **A flag é o interruptor geral.** Os grupos gravados no dia só valem
  *     lidos por `usePlayGroups`/`isPlayGroupsActive`. Uma tela que leia
  *     `gameDay.play_groups` direto ignoraria a flag desligada.
- *  3. **Aditivo.** Nenhuma regra, índice ou coleção nova: os grupos moram em
- *     campos opcionais de documentos que já existem. Se alguém acrescentar uma
- *     regra "só para os grupos", o banco passou a ser afetado e a decisão
- *     precisa ser consciente — não um efeito colateral.
+ *  3. **Aditivo.** Nenhuma coleção ou índice novo: os grupos moram em campos
+ *     opcionais de documentos que já existem. A ÚNICA regra é uma cláusula
+ *     estreita para o administrador nomeado editar os grupos; se ela alargar
+ *     (outras chaves, outros formatos, o participante), ou se aparecer regra
+ *     nova "para os grupos", o banco passou a ser afetado e a decisão precisa
+ *     ser consciente — não um efeito colateral.
  *
  * Mesmo estilo de `diaDeJogoUniforme.test.js`: lê o código-fonte.
  */
@@ -123,11 +125,48 @@ describe('⭐ nenhuma leitura de grupos engole a falha', () => {
   });
 });
 
-describe('⭐ zero banco: nenhuma regra, índice ou coleção para os grupos', () => {
-  it('`firestore.rules` e `storage.rules` não conhecem os grupos', () => {
-    ['firestore.rules', 'storage.rules'].forEach((c) => {
-      expect(ler(c), c).not.toMatch(/play_group/);
-    });
+describe('⭐ banco: só campos opcionais e UMA cláusula estreita de regra', () => {
+  it('`storage.rules` não conhece os grupos', () => {
+    expect(ler('storage.rules')).not.toMatch(/play_group/);
+  });
+
+  it('⭐ no `firestore.rules` os grupos aparecem numa cláusula só: a do administrador nomeado, estreita', () => {
+    const regras = ler('firestore.rules');
+    // `play_group_id` (participante) e `group_*` (partida) não têm regra nenhuma:
+    // `participants` e `games` não têm lista fechada de campos.
+    expect(regras).not.toMatch(/play_group_id/);
+    // Todas as menções a `play_groups` moram dentro da MESMA cláusula (do seu
+    // comentário até o `allow delete` que vem logo depois)…
+    const ini = regras.indexOf('GRUPOS DO PLAY (flag');
+    const fim = regras.indexOf('allow delete', ini);
+    expect(ini, 'o comentário da cláusula sumiu').toBeGreaterThan(-1);
+    expect(fim).toBeGreaterThan(ini);
+    const clausula = regras.slice(ini, fim);
+    expect(regras.match(/play_groups/g).length).toBe(clausula.match(/play_groups/g).length);
+    expect(regras).toContain("hasOnly(['play_groups', 'play_groups_policy', 'updated_at'])");
+    // …e ela é estreita: só nomeado, só Play, dono intocado, grupos conferidos.
+    expect(clausula).toContain("resource.data.format == 'play'");
+    expect(clausula).toContain('request.auth.uid in resource.data.admin_uids');
+    expect(clausula).toContain('request.resource.data.created_by == resource.data.created_by');
+    expect(clausula).toContain('size() <= 10');
+    expect(clausula).toContain("['queue', 'rotate', 'priority']");
+    // Nada de abrir para quem só participa: a cláusula não consulta a gestão aberta.
+    expect(clausula).not.toMatch(/canManageGameDayOf|gameDayOpenToParticipants|member_uids/);
+  });
+
+  it('⭐ a flag aparece no painel admin, no grupo "Dia de jogo", com rótulo e explicação', async () => {
+    const { FLAG_GROUPS } = await import('@/core/featureFlagGroups');
+    const { FEATURE_FLAG, FEATURE_FLAG_META } = await import('@/core/featureFlags');
+    const grupo = FLAG_GROUPS.find((g) => g.keys.includes(FEATURE_FLAG.PLAY_GROUPS));
+    expect(grupo?.label).toBe('Dia de jogo');
+    expect(FEATURE_FLAG_META[FEATURE_FLAG.PLAY_GROUPS].label.length).toBeGreaterThan(5);
+    expect(FEATURE_FLAG_META[FEATURE_FLAG.PLAY_GROUPS].description.length).toBeGreaterThan(40);
+  });
+
+  it('⭐ o cartão recebe a permissão de editar os grupos (`podeEditarGrupos`), não a de configurar o dia', () => {
+    const src = semComentarios(ler('src/v2/components/games/AthletePlayOrganizer.jsx'));
+    expect(src).toMatch(/podeConfigurar=\{podeEditarGrupos/);
+    expect(src).not.toMatch(/podeConfigurar=\{podeConfigurar/);
   });
 
   it('`firestore.indexes.json` não ganhou índice por causa dos grupos', () => {

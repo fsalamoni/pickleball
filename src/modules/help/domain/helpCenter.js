@@ -733,7 +733,7 @@ const ATLETA = {
           'NO TELÃO — a partida em quadra mostra o selo do grupo, a previsão diz de que grupo é cada quadra e a fila se divide por grupo.',
         ),
         link('/dia-de-jogo', 'Abrir um dia de jogo'),
-        tip('Quem cria o dia monta e edita os grupos; quem conduz as partidas (inclusive administradores nomeados) move as pessoas entre eles.'),
+        tip('Quem cria o dia e os administradores nomeados montam e editam os grupos; quem só conduz as partidas (num dia de gestão aberta) move as pessoas entre eles.'),
         warn('Com a funcionalidade desligada pela plataforma, os grupos gravados no dia são ignorados e o Play volta a ter uma fila só — nada se perde: ligando de novo, eles voltam.'),
       ],
     },
