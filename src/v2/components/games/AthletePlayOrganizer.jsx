@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
-  ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal, Shuffle,
+  ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal, Shuffle, UsersRound,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -29,8 +29,17 @@ import {
   eligibleSwapReplacements,
 } from '@/modules/games/domain/gamePlay';
 import {
-  buildPlayHistory, forecastPlayMatchesBalanced, applyPlayEntryOrder,
+  buildPlayHistory, forecastPlayMatchesBalanced, forecastPlayByCourtBalanced, applyPlayEntryOrder,
 } from '@/modules/games/domain/playRotation.js';
+import {
+  NO_GROUP, groupIdOf, profileMismatch, linkedPartnerInOtherGroup, PLAY_GROUP_LEVEL_STEPS,
+} from '@/modules/games/domain/playGroups';
+import { buildGroupedPlayView, makeGroupsDrawer, courtHasMatch } from '@/modules/games/domain/playGroupsDraw';
+import { usePlayGroupsContext } from '@/modules/games/hooks/usePlayGroups';
+import { PlayGroupBadge, PlayGroupBadgeById, NoGroupBadge } from '@/v2/components/games/playGroups/PlayGroupBadge';
+import GroupSelect from '@/v2/components/games/playGroups/GroupSelect';
+import { useSetPlayParticipantGroup } from '@/modules/games/hooks/usePlayGroupMutations';
+import PlayGroupsCard from '@/v2/components/games/playGroups/PlayGroupsCard';
 import {
   GAME_KIND, courtKindsFromGames, fillableCourts, gameKindOf, hasSinglesCourt,
   kindOfCourt, sideSizeForKind, slotsForKind,
@@ -72,7 +81,10 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // AthletePlayParticipant, que só cuida da própria participação.
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar } = useGameDayRoles(gameDay, participants);
+  // `podeEditarGrupos`: criador, arena, clube E o administrador nomeado. É a única
+  // configuração do dia que o nomeado divide com o criador (os grupos são parte
+  // de conduzir o dia, não de defini-lo).
+  const { podeGerenciar, podeEditarGrupos } = useGameDayRoles(gameDay, participants);
   // ⚠️ Comando sobre estado DESCONHECIDO não é renderizado — a mesma regra do
   // dia de jogo para comando sem atribuição. Com a lista incompleta, sortear
   // ou substituir agiria sobre quem a tela não viu.
@@ -84,7 +96,19 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // colocar outros em quadra cria falsa expectativa.
   const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
   const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
+  // GRUPOS (flag `play_groups`): com grupos ativos, a fila deixa de ser uma só.
+  // Os participantes chegam com o nível resolvido e a visão sai de
+  // `buildGroupedPlayView` — o mesmo lugar que o telão usa. Sem grupos, o
+  // contexto devolve os participantes INTACTOS e tudo segue o caminho de sempre.
+  const grupos = usePlayGroupsContext({ gameDay, participants, games });
   const view = useMemo(() => {
+    if (grupos.ativo) {
+      return buildGroupedPlayView({
+        participants: grupos.participants, games, courts: courtsDoDia, drawer: grupos.drawer,
+        history: rodizioEquilibrado ? buildPlayHistory(games) : null,
+        courtKinds: courtKindsFromGames(games, courtsDoDia),
+      });
+    }
     const bruto = computePlayOrder({ participants, games });
     if (!rodizioEquilibrado) return bruto;
     return applyPlayEntryOrder(bruto, {
@@ -92,7 +116,15 @@ export default function AthletePlayOrganizer({ gameDay }) {
       // Quadra de simples leva 2, não 4: a ordem de entrada muda com isso.
       courtKinds: courtKindsFromGames(games, courtsDoDia),
     });
-  }, [participants, games, rodizioEquilibrado, courtsDoDia]);
+  }, [participants, games, rodizioEquilibrado, courtsDoDia, grupos.ativo, grupos.participants, grupos.drawer]);
+
+  // O que o cartão de grupos precisa saber para explicar "por que não joga":
+  // quantos entram na próxima partida e quais quadras estão livres agora.
+  const livres = useMemo(() => freePlayCourts({ courts: courtsDoDia, games }), [courtsDoDia, games]);
+  const vagasDaProxima = useMemo(
+    () => slotsForKind(kindOfCourt(courtKindsFromGames(games, courtsDoDia), livres[0] ?? 1)),
+    [games, courtsDoDia, livres],
+  );
 
   return (
     <div className="space-y-4">
@@ -110,44 +142,120 @@ export default function AthletePlayOrganizer({ gameDay }) {
           onRetry={recarregarEstado}
         />
       )}
+      {/* Os grupos vêm ANTES dos participantes: é onde se decide quem joga com
+          quem, e o cartão responde "por que o grupo B não joga?" sem ninguém
+          ter de adivinhar. Só existe com a flag ligada. */}
+      <PlayGroupsCard
+        gameDay={gameDay}
+        participants={grupos.participants}
+        view={view}
+        grupos={grupos}
+        podeConfigurar={podeEditarGrupos && !falhouEstado}
+        canManage={canManage}
+        courts={courtsDoDia}
+        slots={vagasDaProxima}
+        freeCourts={livres}
+      />
       <PlayParticipantsSection
         gameDay={gameDay}
-        participants={participants}
+        participants={grupos.participants}
         view={view}
         isLoading={isLoading}
         isOwner={canManage}
         canManage={canManage}
         me={user}
+        grupos={grupos}
       />
       <PlayCourtsSection
         gameDay={gameDay}
-        participants={participants}
+        participants={grupos.participants}
         games={games}
         view={view}
         canManage={canManage}
+        grupos={grupos}
       />
-      <PlayOrderSection view={view} />
+      <PlayOrderSection view={view} grupos={grupos} />
     </div>
   );
 }
 
 /* ------------------------------ Participantes ---------------------------- */
 
+/**
+ * O seletor de grupo de UMA pessoa, com a mutação. É um componente à parte, e só
+ * é montado com os grupos ativos, por uma razão de dependência: a seção de
+ * participantes é compartilhada (o Americano aprimorado a usa) e não pode
+ * depender dos hooks de grupos em dias que não os têm.
+ */
+function ParticipantGroupSelect({ gameDayId, participant: p, config }) {
+  const setGroup = useSetPlayParticipantGroup(gameDayId);
+  const mover = async (groupId) => {
+    try {
+      const r = await setGroup.mutateAsync({ pid: p.id, groupId });
+      const alvo = groupId ? config.groups.find((g) => g.id === groupId)?.name : null;
+      if (r.moved.length > 1) {
+        toast.success(`${p.name} e a dupla vinculada foram juntos${alvo ? ` para o grupo ${alvo}` : ' para quem está sem grupo'}.`);
+      } else {
+        toast.success(alvo ? `${p.name} agora é do grupo ${alvo}.` : `${p.name} ficou sem grupo.`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível mudar o grupo.');
+    }
+  };
+  return (
+    <GroupSelect
+      value={groupIdOf(p, config)}
+      groups={config.groups}
+      label={`Grupo de ${p.name}`}
+      disabled={setGroup.isPending}
+      onChange={mover}
+    />
+  );
+}
+
+/**
+ * O aviso discreto de uma pessoa que não bate com o grupo em que está: nível ou
+ * sexo fora do perfil, ou a dupla vinculada em outro grupo. É só um aviso — quem
+ * organiza põe quem quiser onde quiser.
+ */
+function avisoDeGrupo(p, participants, config) {
+  const g = (config?.groups || []).find((x) => x.id === groupIdOf(p, config)) || null;
+  const fora = profileMismatch(p, g);
+  if (fora === 'nivel') return 'nível fora do grupo';
+  if (fora === 'sexo') return 'sexo diferente do grupo';
+  if (linkedPartnerInOtherGroup(p, participants, config)) return 'dupla em outro grupo';
+  return null;
+}
+
 export function statusBadge(p) {
   if (p.status === PLAY_STATUS.IN_COURT) return <V2Badge tone="acid">Em quadra</V2Badge>;
   if (p.status === PLAY_STATUS.UNAVAILABLE) {
     return <V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>;
   }
-  return <V2Badge tone="green">#{p.orderNo} · aguardando</V2Badge>;
+  // Com grupos, o número é a posição NA FILA DO GRUPO (`groupNo`); sem eles,
+  // a ordem de sempre.
+  return <V2Badge tone="green">#{p.groupNo ?? p.orderNo} · aguardando</V2Badge>;
 }
 
-export function PlayParticipantsSection({ gameDay, participants, view, isLoading, isOwner, canManage, me }) {
-  const addParticipant = useAddGameDayParticipant(gameDay.id);
+/** O controle de seleção compacto dos formulários do Play (nativo, como `GroupSelect`). */
+const SELECT_COMPACTO = 'rounded-full border border-gray-200 bg-paper-pure px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink focus:outline-none focus:ring-4 focus:ring-gray-100';
+
+export function PlayParticipantsSection({
+  gameDay, participants, view, isLoading, isOwner, canManage, me, grupos = null,
+}) {
+  const addParticipant = useAddGameDayParticipant(gameDay.id, { gameDay });
   const removeParticipant = useRemoveGameDayParticipant(gameDay.id);
   const setSkip = useSetPlayParticipantSkip(gameDay.id);
   const setPartner = useSetPlayParticipantPartner(gameDay.id);
   const { data: athletes = [] } = useAthletes();
+  // GRUPOS (flag `play_groups`) — `grupos` só vem do organizador do Play; no
+  // Americano aprimorado, que compartilha esta seção, fica `null` e nada muda.
+  const comGrupos = !!grupos?.ativo;
+  const configGrupos = grupos?.config;
   const [guestName, setGuestName] = useState('');
+  const [guestLevel, setGuestLevel] = useState('');
+  const [guestGender, setGuestGender] = useState('');
+  const [guestGroup, setGuestGroup] = useState(undefined); // undefined = automático
   const [pickerOpen, setPickerOpen] = useState(false);
   const [skipFor, setSkipFor] = useState(null); // participant p
   const [partnerFor, setPartnerFor] = useState(null); // participant p
@@ -196,12 +304,22 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
     if (!name) return;
     if (addedNames.has(name.toLowerCase())) { toast.error('Já existe um participante com esse nome.'); return; }
     try {
-      await addParticipant.mutateAsync({ name, source: GD_PARTICIPANT_SOURCE.GUEST });
+      // Nível e sexo do convidado só são pedidos com a flag de grupos ligada:
+      // sem conta, é a única forma de o sorteio saber em que grupo ele cabe.
+      await addParticipant.mutateAsync({
+        name,
+        source: GD_PARTICIPANT_SOURCE.GUEST,
+        ...(guestLevel !== '' ? { play_level: Number(guestLevel) } : {}),
+        ...(guestGender ? { play_gender: guestGender } : {}),
+        ...(guestGroup !== undefined ? { play_group_id: guestGroup } : {}),
+      });
       setGuestName('');
     } catch (err) {
       toast.error(err.message || 'Não foi possível inserir.');
     }
   };
+
+
 
   const handleRemove = async (id) => {
     try { await removeParticipant.mutateAsync(id); } catch (err) { toast.error(err.message || 'Não foi possível remover.'); }
@@ -252,6 +370,11 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
                       {statusBadge(st)}
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-400">
+                      {/* Quem não pode mexer vê o grupo como selo; quem pode vê o
+                          seletor, ao lado das ações. */}
+                      {comGrupos && !editable && (
+                        <PlayGroupBadgeById groupId={groupIdOf(p, configGrupos)} config={configGrupos} mostrarSemGrupo size="xs" />
+                      )}
                       <span>{GD_PARTICIPANT_SOURCE_LABELS[p.source] || 'Atleta'}</span>
                       {p.play_level && <span>· Nível {p.play_level}</span>}
                       {genderLabel(p.play_gender) && <span>· {genderLabel(p.play_gender)}</span>}
@@ -260,11 +383,17 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
                           · <Link2 className="h-3 w-3" /> dupla com {partnerName}
                         </span>
                       )}
+                      {comGrupos && editable && avisoDeGrupo(p, participants, configGrupos) && (
+                        <span className="text-amber-600">· {avisoDeGrupo(p, participants, configGrupos)}</span>
+                      )}
                     </div>
                   </div>
 
                   {editable && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
+                      {comGrupos && (
+                        <ParticipantGroupSelect gameDayId={gameDay.id} participant={p} config={configGrupos} />
+                      )}
                       {st.status === PLAY_STATUS.UNAVAILABLE ? (
                         <V2Button size="sm" variant="ghost" onClick={() => setSkip.mutate({ pid: p.id, count: 0 })} title="Voltar a jogar">
                           <PlayCircle className="mr-1 h-3.5 w-3.5" /> Voltar
@@ -296,32 +425,84 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
 
         {canManage && (
           <>
-            <form onSubmit={handleAddGuest} className="flex gap-2">
-              <Input
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Adicionar convidado pelo nome (fora da plataforma)"
-                maxLength={60}
-                disabled={atLimit}
-              />
-              {/* Botão só com ícone: sem nome acessível, o leitor de tela
-                  anuncia "botão" e nada mais. */}
-              <V2Button
-                type="submit"
-                tone="neutral"
-                disabled={!guestName.trim() || atLimit}
-                aria-label="Incluir convidado"
-                title="Incluir convidado"
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-              </V2Button>
+            <form onSubmit={handleAddGuest} className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Adicionar convidado pelo nome (fora da plataforma)"
+                  maxLength={60}
+                  disabled={atLimit}
+                />
+                {/* Botão só com ícone: sem nome acessível, o leitor de tela
+                    anuncia "botão" e nada mais. */}
+                <V2Button
+                  type="submit"
+                  tone="neutral"
+                  disabled={!guestName.trim() || atLimit}
+                  aria-label="Incluir convidado"
+                  title="Incluir convidado"
+                >
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                </V2Button>
+              </div>
+              {/* GRUPOS: o convidado não tem conta, então o nível e o sexo que
+                  quem organiza informa aqui são o que leva o sorteio a achar o
+                  grupo dele e a formar as duplas. */}
+              {grupos?.configuravel && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      aria-label="Nível do convidado"
+                      value={guestLevel}
+                      onChange={(e) => setGuestLevel(e.target.value)}
+                      className={SELECT_COMPACTO}
+                      disabled={atLimit}
+                    >
+                      <option value="">Nível não informado</option>
+                      {PLAY_GROUP_LEVEL_STEPS.map((n) => <option key={n} value={n}>Nível {n.toFixed(1)}</option>)}
+                    </select>
+                    <select
+                      aria-label="Sexo do convidado"
+                      value={guestGender}
+                      onChange={(e) => setGuestGender(e.target.value)}
+                      className={SELECT_COMPACTO}
+                      disabled={atLimit}
+                    >
+                      <option value="">Sexo não informado</option>
+                      <option value="male">Masculino</option>
+                      <option value="female">Feminino</option>
+                    </select>
+                    {comGrupos && (
+                      <GroupSelect
+                        value={guestGroup}
+                        groups={configGrupos.groups}
+                        label="Grupo do convidado"
+                        autoLabel="Grupo automático (pelo nível)"
+                        onChange={setGuestGroup}
+                        disabled={atLimit}
+                      />
+                    )}
+                  </div>
+                  <p className="text-[11px] leading-5 text-gray-400">
+                    O nível e o sexo ajudam o sorteio a achar o grupo e a formar as duplas. Sem eles, o convidado
+                    entra sem grupo — e você move depois.
+                  </p>
+                </>
+              )}
             </form>
             {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}
           </>
         )}
       </div>
 
-      <AddAthletesDialog open={pickerOpen} onClose={() => setPickerOpen(false)} pool={platformPool} onAdd={handleAdd} />
+      <AddAthletesDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        pool={platformPool}
+        onAdd={handleAdd}
+        groups={comGrupos ? configGrupos.groups : null}
+      />
       <SkipDialog
         participant={skipFor}
         onClose={() => setSkipFor(null)}
@@ -338,8 +519,11 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
   );
 }
 
-function AddAthletesDialog({ open, onClose, pool, onAdd }) {
+function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
   const [search, setSearch] = useState('');
+  // Com grupos: o grupo em que cada atleta inserido NESTA conversa vai cair.
+  // `undefined` é o automático (pelo nível dele); `null`, sem grupo.
+  const [grupoDoLote, setGrupoDoLote] = useState(undefined);
   const q = search.trim().toLowerCase();
   const people = pool.filter((p) => !q || p.name.toLowerCase().includes(q));
 
@@ -351,6 +535,18 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
           <DialogDescription>Convide qualquer atleta da plataforma para o Play.</DialogDescription>
         </DialogHeader>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+        {groups && (
+          <label className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+            Colocar no grupo:
+            <GroupSelect
+              value={grupoDoLote}
+              groups={groups}
+              label="Grupo dos atletas inseridos"
+              autoLabel="Automático (pelo nível)"
+              onChange={setGrupoDoLote}
+            />
+          </label>
+        )}
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {people.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta disponível.</p>
@@ -360,7 +556,7 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
               </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onAdd(p)}>
+              <V2Button size="sm" variant="ghost" onClick={() => onAdd(grupoDoLote !== undefined ? { ...p, play_group_id: grupoDoLote } : p)}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Inserir
               </V2Button>
             </div>
@@ -443,7 +639,10 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
       .map((p) => (typeof p === 'string' ? p : p?.id)).filter(Boolean);
     const swappedOutIds = Array.isArray(game?.swapped_out_ids)
       ? game.swapped_out_ids.filter(Boolean) : [];
-    return eligibleSwapReplacements(order || [], { inGameIds, swappedOutIds });
+    // Partida de um grupo: quem é do mesmo grupo vem primeiro (preferência, nunca barreira).
+    return eligibleSwapReplacements(order || [], {
+      inGameIds, swappedOutIds, preferGroupId: game?.group_id || null,
+    });
   }, [target, game, order]);
 
   if (!target) return null;
@@ -518,13 +717,16 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
               ) : filtrados.map((p) => (
                 <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    {p.orderNo ? (
+                    {(p.groupNo ?? p.orderNo) ? (
                       <span className="w-6 shrink-0 text-center text-[11px] font-bold text-gray-400 tabular-nums">
-                        #{p.orderNo}
+                        #{p.groupNo ?? p.orderNo}
                       </span>
                     ) : <span className="w-6 shrink-0" />}
                     <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                     <span className="truncate text-sm font-medium text-ink">{p.name}</span>
+                    {game?.group_id && p.group_id === game.group_id && (
+                      <span className="shrink-0 text-[11px] font-semibold text-emerald-700">do grupo</span>
+                    )}
                   </div>
                   <V2Button size="sm" variant="ghost" onClick={() => confirmar(p.id)}>
                     <ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Entra
@@ -615,7 +817,7 @@ function formatPlayTime(ms) {
   return new Date(n).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
+export function PlayCourtsSection({ gameDay, participants, games, view, canManage, grupos = null }) {
   const createNext = useCreateNextPlayGame(gameDay.id);
   const createRound = useCreatePlayRound(gameDay.id);
   const finishGame = useFinishPlayGame(gameDay.id);
@@ -649,9 +851,24 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const comSimples = hasSinglesCourt(tiposDasQuadras);
   const vagasDa = (court) => slotsForKind(kindOfCourt(tiposDasQuadras, court));
 
+  // GRUPOS: o grupo escolhido à mão para a próxima partida de cada quadra livre.
+  // Fica só nesta tela até virar jogo (como o tipo da quadra): ausente = a
+  // quadra decide sozinha pela política do dia.
+  const comGrupos = !!grupos?.ativo;
+  const configGrupos = grupos?.config;
+  const [escolhaGrupo, setEscolhaGrupo] = useState({}); // quadra → NO_GROUP | id de grupo
+  const definirGrupo = (court, g) => setEscolhaGrupo((atual) => {
+    const novo = { ...atual };
+    if (g === undefined) delete novo[court]; else novo[court] = g === null ? NO_GROUP : g;
+    return novo;
+  });
+  const valorGrupo = (court) => {
+    const e = escolhaGrupo[court];
+    return e === undefined ? undefined : (e === NO_GROUP ? null : e);
+  };
+
   const free = freePlayCourts({ courts, games });
   const availableCount = view.order.length;
-  const canCreateNext = free.length > 0 && availableCount >= vagasDa(free[0]);
   /**
    * Sortear a RODADA só vale a pena com pelo menos duas quadras livres e gente
    * para encher as duas — é aí que a fila tem os dois grupos na mesa e o
@@ -659,7 +876,6 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
    * apenas o "criar próximo jogo" com outro nome.
    */
   const quadrasDaRodada = fillableCourts(free, tiposDasQuadras, availableCount);
-  const podeSortearRodada = quadrasDaRodada >= 2;
   // Rodízio equilibrado (flag `play_smart_rotation`): a previsão do painel usa
   // a mesma simulação da criação, para não anunciar um grupo e entrar outro.
   // `games` é obrigatório: é dele que sai quais quadras estão ocupadas e quem
@@ -667,16 +883,50 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   // SIMPLES, a previsão passa a ser por quadra mesmo sem o rodízio — é a única
   // que sabe que ali entram dois, não quatro.
   const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
-  const forecast = useMemo(
-    () => (rodizioEquilibrado || comSimples
-      ? forecastPlayMatchesBalanced(view.order, {
-        courts, games,
-        history: rodizioEquilibrado ? buildPlayHistory(games) : null,
-        courtKinds: tiposDasQuadras,
-      })
-      : forecastPlayMatches(view.order, { courts })),
-    [view.order, courts, games, rodizioEquilibrado, comSimples, tiposDasQuadras],
+  const historicoDoRodizio = useMemo(
+    () => (rodizioEquilibrado ? buildPlayHistory(games) : null),
+    [rodizioEquilibrado, games],
   );
+  // O sorteador com as escolhas desta tela: é o MESMO objeto que o serviço usa,
+  // alimentado pelos mesmos participantes — por isso o que a previsão anuncia é
+  // o que é criado.
+  const sorteador = useMemo(
+    () => (comGrupos
+      ? makeGroupsDrawer(configGrupos, { games, participants, courtGroups: escolhaGrupo })
+      : null),
+    [comGrupos, configGrupos, games, participants, escolhaGrupo],
+  );
+  const forecast = useMemo(
+    () => {
+      // Com grupos a previsão é POR QUADRA: cada quadra tem o seu grupo.
+      if (comGrupos) {
+        return forecastPlayByCourtBalanced(view.order, {
+          courts, games, history: historicoDoRodizio, courtKinds: tiposDasQuadras, groups: sorteador,
+        });
+      }
+      return rodizioEquilibrado || comSimples
+        ? forecastPlayMatchesBalanced(view.order, {
+          courts, games,
+          history: historicoDoRodizio,
+          courtKinds: tiposDasQuadras,
+        })
+        : forecastPlayMatches(view.order, { courts });
+    },
+    [view.order, courts, games, rodizioEquilibrado, comSimples, tiposDasQuadras, comGrupos, sorteador, historicoDoRodizio],
+  );
+
+  // "Criar jogo" numa quadra: sem grupos, basta haver gente na fila; COM grupos
+  // pode haver oito esperando e nenhuma partida — então pergunta ao sorteador,
+  // que responde pela mesma conta do serviço.
+  const podeCriarNa = (court) => (comGrupos
+    ? courtHasMatch(sorteador, {
+      order: view.order, court, kind: kindOfCourt(tiposDasQuadras, court), history: historicoDoRodizio,
+    })
+    : availableCount >= vagasDa(court));
+  const canCreateNext = free.length > 0 && podeCriarNa(free[0]);
+  const podeSortearRodada = comGrupos
+    ? forecast.filter((b) => b.free && b.full).length >= 2
+    : quadrasDaRodada >= 2;
 
   const courtRows = useMemo(
     () => Array.from({ length: courts }, (_, i) => i + 1).map((court) => ({ court, game: gameByCourt.get(court) || null })),
@@ -687,13 +937,17 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
     setBusy(true);
     try {
       const alvo = court ?? free[0];
+      const grupoDaQuadra = comGrupos ? escolhaGrupo[alvo] : undefined;
       const res = await createNext.mutateAsync({
         ...(court != null ? { court } : {}),
         ...pedidoDoTipo(alvo),
+        ...(grupoDaQuadra !== undefined ? { groupId: grupoDaQuadra } : {}),
       });
+      const doGrupo = res.groupId ? configGrupos.groups.find((g) => g.id === res.groupId)?.name : null;
+      const sufixo = doGrupo ? ` (grupo ${doGrupo})` : '';
       toast.success(res.kind === GAME_KIND.SINGLES
-        ? `Jogo simples criado na quadra ${res.court}.`
-        : `Jogo criado na quadra ${res.court}.`);
+        ? `Jogo simples criado na quadra ${res.court}${sufixo}.`
+        : `Jogo criado na quadra ${res.court}${sufixo}.`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível criar o jogo.');
     } finally { setBusy(false); }
@@ -727,7 +981,10 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const handleCreateRound = async () => {
     setBusy(true);
     try {
-      const res = await createRound.mutateAsync({ courtKinds: tiposDasQuadras });
+      const res = await createRound.mutateAsync({
+        courtKinds: tiposDasQuadras,
+        ...(comGrupos ? { courtGroups: escolhaGrupo } : {}),
+      });
       const n = res?.created?.length || 0;
       toast.success(n === 1
         ? `Jogo criado na quadra ${res.courts[0]}.`
@@ -782,7 +1039,17 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
             para <strong>Simples</strong>. Duplas pedem ao menos 4.
           </p>
         )}
-        {canManage && participants.length >= 2 && !canCreateNext && free.length > 0 && (
+        {/* COM grupos, "aguardando jogadores" seria mentira: pode haver gente de
+            sobra e nenhuma partida (falta uma mulher para a dupla mista, a quadra
+            é de outro grupo…). Quem diz o porquê é o cartão Grupos. */}
+        {canManage && comGrupos && participants.length >= 2 && !canCreateNext && free.length > 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
+            <UsersRound aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
+            Nenhum grupo tem partida pronta para a quadra {free[0]} agora. O cartão <strong>Grupos</strong>, acima,
+            diz o que falta em cada um.
+          </p>
+        )}
+        {canManage && !comGrupos && participants.length >= 2 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">
             Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo {vagasDa(free[0])} para
             {' '}{kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.SINGLES ? 'um jogo simples' : 'um jogo de duplas'}).
@@ -805,7 +1072,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
             de uma quadra e ainda não dá para sortear a rodada — que é
             exatamente o momento em que a pessoa está prestes a encerrar uma
             quadra e recolocar os mesmos quatro nela. */}
-        {canManage && courts > 1 && !podeSortearRodada && openGames.length > 0 && (
+        {canManage && !comGrupos && courts > 1 && !podeSortearRodada && openGames.length > 0 && (
           <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
             <Shuffle aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
             Para <strong>misturar os grupos entre as quadras</strong>, encerre as partidas sem sortear
@@ -837,7 +1104,10 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
                   canManage={canManage}
                   kind={kindOfCourt(tiposDasQuadras, court)}
                   onKind={(k) => definirTipo(court, k)}
-                  canCreate={availableCount >= vagasDa(court) && !busy}
+                  canCreate={podeCriarNa(court) && !busy}
+                  groups={comGrupos ? configGrupos.groups : null}
+                  grupoEscolhido={valorGrupo(court)}
+                  onGrupo={(g) => definirGrupo(court, g)}
                   onCreate={() => handleCreateNext(court)}
                   onFinish={() => setFinishTarget({ gid: game.id, court })}
                   onCancel={() => setCancelTarget(game.id)}
@@ -849,7 +1119,9 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         </div>
 
         {/* Previsão dos próximos participantes. */}
-        <PlayForecastTable forecast={forecast} availableCount={availableCount} />
+        {comGrupos
+          ? <PlayForecastByCourt forecast={forecast} />
+          : <PlayForecastTable forecast={forecast} availableCount={availableCount} />}
 
         {finishedGames.length > 0 && (
           <FinishedGamesList games={finishedGames} />
@@ -937,6 +1209,7 @@ function SideCell({ side, align, canManage, onPlayer }) {
 
 function CourtRow({
   court, game, canManage, kind, onKind, canCreate, onCreate, onFinish, onCancel, onPlayer,
+  groups = null, grupoEscolhido, onGrupo,
 }) {
   const busy = !!game;
   return (
@@ -957,6 +1230,19 @@ function CourtRow({
             />
           ) : (
             <GameKindBadge kind={game ? gameKindOf(game) : kind} />
+          )}
+          {/* O grupo da partida em quadra. */}
+          {game?.group_name && <PlayGroupBadge name={game.group_name} color={game.group_color} size="xs" />}
+          {/* Na quadra LIVRE, quem organiza pode escolher de que grupo sai a
+              próxima partida — por cima da política, só desta vez. */}
+          {canManage && groups && !game && (
+            <GroupSelect
+              value={grupoEscolhido}
+              groups={groups}
+              autoLabel="Grupo automático"
+              label={`Grupo da próxima partida da quadra ${court}`}
+              onChange={onGrupo}
+            />
           )}
         </div>
       </td>
@@ -997,6 +1283,51 @@ function CourtRow({
         )}
       </td>
     </tr>
+  );
+}
+
+/**
+ * A previsão COM grupos: uma linha por quadra, com o grupo que entraria nela. Sem
+ * partida pronta a linha diz isso em vez de listar gente solta — o porquê de
+ * cada grupo está no cartão Grupos.
+ */
+function PlayForecastByCourt({ forecast }) {
+  return (
+    <div className="space-y-2 rounded-xl border border-gray-100 bg-paper p-3">
+      <div className="flex items-center gap-2">
+        <ListOrdered className="h-4 w-4 text-gray-400" />
+        <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        Quem entra em cada quadra, dentro do grupo que a política escolheria. Só indica quem entra — as duplas
+        saem na hora de criar. A previsão de uma quadra ocupada depende de qual partida terminar primeiro.
+      </p>
+      <ul className="space-y-1.5">
+        {forecast.map((b) => (
+          <li key={b.court} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-gray-100 bg-white p-2.5">
+            <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-gray-600">
+              Quadra {b.court}
+            </span>
+            <span className="text-[11px] text-gray-400">{b.free ? 'livre agora' : 'quando liberar'}</span>
+            <GameKindBadge kind={b.kind} />
+            {b.group && <PlayGroupBadge name={b.group.name} color={b.group.color} size="xs" />}
+            {b.full ? (
+              <span className="flex w-full flex-wrap items-center gap-1.5">
+                {b.players.map((p) => (
+                  <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white py-0.5 pl-0.5 pr-2 text-xs">
+                    <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
+                    <span className="font-medium text-ink">{p.name || 'Jogador'}</span>
+                    {p.partner_id && <Link2 className="h-3 w-3 text-blue-500" />}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="w-full text-xs text-gray-400">Nenhum grupo tem partida pronta para esta quadra.</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -1190,9 +1521,10 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
 
 /* -------------------------- Ordem de participação -------------------------- */
 
-export function PlayOrderSection({ view }) {
+export function PlayOrderSection({ view, grupos = null }) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
+  const comGrupos = !!grupos?.ativo;
 
   return (
     <V2CollapsibleCard
@@ -1209,10 +1541,13 @@ export function PlayOrderSection({ view }) {
         <p className="text-xs text-gray-500">
           Atualizada em tempo real. Só quem está disponível recebe número na ordem; quem está em quadra ou
           pausado aparece sem número.
+          {comGrupos && ' Cada grupo tem a sua fila: o número é a posição dentro do grupo.'}
         </p>
 
         {total === 0 ? (
           <EmptyState icon={ListOrdered} title="Ninguém ainda" description="Insira participantes para montar a ordem." />
+        ) : comGrupos ? (
+          <OrdemPorGrupo view={view} config={grupos.config} />
         ) : (
           <div className="space-y-1.5">
             {order.map((p) => (
@@ -1228,6 +1563,46 @@ export function PlayOrderSection({ view }) {
         )}
       </div>
     </V2CollapsibleCard>
+  );
+}
+
+/** A ordem COM grupos: uma fila por grupo, cada uma com a sua numeração. */
+function OrdemPorGrupo({ view, config }) {
+  const secoes = [...config.groups.map((g) => ({ id: g.id, g })), { id: null, g: null }];
+  const doGrupo = (lista, id) => lista.filter((p) => (p.group_id ?? null) === id);
+  return (
+    <div className="space-y-4">
+      {secoes.map(({ id, g }) => {
+        const fila = doGrupo(view.order, id);
+        const jogando = doGrupo(view.inCourt, id);
+        const pausados = doGrupo(view.unavailable, id);
+        if (id === null && fila.length + jogando.length + pausados.length === 0) return null;
+        return (
+          <section key={id ?? 'sem-grupo'} aria-label={g ? `Fila do grupo ${g.name}` : 'Fila de quem está sem grupo'} className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {g ? <PlayGroupBadge name={g.name} color={g.color} /> : <NoGroupBadge />}
+              <span className="text-xs text-gray-400">
+                {fila.length} aguardando{jogando.length > 0 ? ` · ${jogando.length} em quadra` : ''}
+                {pausados.length > 0 ? ` · ${pausados.length} pausado(s)` : ''}
+                {g?.paused ? ' · grupo em pausa' : ''}
+              </span>
+            </div>
+            {fila.length === 0 && jogando.length + pausados.length === 0 && (
+              <p className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400">Ninguém neste grupo ainda.</p>
+            )}
+            {fila.map((p) => (
+              <OrderRow key={p.id} p={p} badge={<V2Badge tone="green">#{p.groupNo}</V2Badge>} />
+            ))}
+            {jogando.map((p) => (
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">Em quadra</V2Badge>} />
+            ))}
+            {pausados.map((p) => (
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>} />
+            ))}
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

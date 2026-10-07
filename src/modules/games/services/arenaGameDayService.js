@@ -359,7 +359,7 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
     play_level: profile?.level || profile?.leveling_level || null,
     play_gender: playGenderOf(profile),
     arena_court_id: courtId || null,
-  }, user);
+  }, user, { gameDay: atual });
 
   if (atual.created_by && atual.created_by !== user.uid) {
     notifyUsers([atual.created_by], {

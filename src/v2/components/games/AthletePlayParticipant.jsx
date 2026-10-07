@@ -10,10 +10,20 @@ import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { computePlayOrder, PLAY_STATUS } from '@/modules/games/domain/gamePlay';
+import { buildPlayHistory } from '@/modules/games/domain/playRotation';
+import { courtKindsFromGames } from '@/modules/games/domain/gameKind';
+import { groupIdOf } from '@/modules/games/domain/playGroups';
+import { buildGroupedPlayView } from '@/modules/games/domain/playGroupsDraw';
+import { usePlayGroupsContext } from '@/modules/games/hooks/usePlayGroups';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   useGameDayParticipants, useGameDayGames, useJoinPublicGameDay, useLeaveGameDay,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
+import { useSetPlayParticipantGroup } from '@/modules/games/hooks/usePlayGroupMutations';
+import { PlayGroupBadgeById } from '@/v2/components/games/playGroups/PlayGroupBadge';
+import GroupSelect from '@/v2/components/games/playGroups/GroupSelect';
 import {
   statusBadge, SkipDialog, PartnerDialog, PlayCourtsSection, PlayOrderSection,
 } from '@/v2/components/games/AthletePlayOrganizer';
@@ -30,7 +40,21 @@ export default function AthletePlayParticipant({ gameDay }) {
   const { data: participants = [] } = useGameDayParticipants(gameDay.id);
   const { data: games = [] } = useGameDayGames(gameDay.id);
 
-  const view = useMemo(() => computePlayOrder({ participants, games }), [participants, games]);
+  // GRUPOS (flag `play_groups`): a mesma visão do organizador, pelo mesmo lugar
+  // — quem joga lê a posição que o organizador lê.
+  const grupos = usePlayGroupsContext({ gameDay, participants, games });
+  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
+  const view = useMemo(() => {
+    if (grupos.ativo) {
+      return buildGroupedPlayView({
+        participants: grupos.participants, games, courts: courtsDoDia, drawer: grupos.drawer,
+        history: rodizioEquilibrado ? buildPlayHistory(games) : null,
+        courtKinds: courtKindsFromGames(games, courtsDoDia),
+      });
+    }
+    return computePlayOrder({ participants, games });
+  }, [participants, games, grupos.ativo, grupos.participants, grupos.drawer, rodizioEquilibrado, courtsDoDia]);
   const me = useMemo(
     () => participants.find((p) => p.user_id && p.user_id === user?.uid) || null,
     [participants, user?.uid],
@@ -38,20 +62,60 @@ export default function AthletePlayParticipant({ gameDay }) {
 
   return (
     <div className="space-y-5">
-      <MyParticipationCard gameDay={gameDay} participants={participants} view={view} me={me} />
+      <MyParticipationCard gameDay={gameDay} participants={participants} view={view} me={me} grupos={grupos} />
       <PlayCourtsSection
         gameDay={gameDay}
-        participants={participants}
+        participants={grupos.participants}
         games={games}
         view={view}
         canManage={false}
+        grupos={grupos}
       />
-      <PlayOrderSection view={view} />
+      <PlayOrderSection view={view} grupos={grupos} />
     </div>
   );
 }
 
-function MyParticipationCard({ gameDay, participants, view, me }) {
+/**
+ * "Seu grupo", com a troca por conta própria quando algum grupo é aberto. É um
+ * componente à parte, montado só com os grupos ativos: a visão do jogador é
+ * usada em todo Play e não depende dos hooks de grupos onde eles não existem.
+ * O seletor lista os grupos abertos e o atual (mesmo fechado, para aparecer).
+ */
+function MeuGrupo({ gameDayId, me, config }) {
+  const setGroup = useSetPlayParticipantGroup(gameDayId);
+  const meuGrupoId = groupIdOf(me, config);
+  const escolhiveis = config.groups.filter((g) => g.join === 'open' || g.id === meuGrupoId);
+  const podeTrocar = config.groups.some((g) => g.join === 'open');
+  const trocar = async (groupId) => {
+    try {
+      const r = await setGroup.mutateAsync({ pid: me.id, groupId, self: true });
+      const nome = groupId ? config.groups.find((g) => g.id === groupId)?.name : null;
+      toast.success(r.moved.length > 1
+        ? `Você e a sua dupla foram para ${nome ? `o grupo ${nome}` : 'a fila de quem está sem grupo'}.`
+        : (nome ? `Você agora é do grupo ${nome}.` : 'Você ficou sem grupo.'));
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível trocar de grupo.');
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+      <span>Seu grupo:</span>
+      <PlayGroupBadgeById groupId={meuGrupoId} config={config} mostrarSemGrupo />
+      {podeTrocar && (
+        <GroupSelect
+          value={meuGrupoId}
+          groups={escolhiveis}
+          label="Trocar de grupo"
+          disabled={setGroup.isPending}
+          onChange={trocar}
+        />
+      )}
+    </div>
+  );
+}
+
+function MyParticipationCard({ gameDay, participants, view, me, grupos = null }) {
   const join = useJoinPublicGameDay();
   // Sair é o mesmo em toda origem (`leaveGameDay`): no dia de ARENA de um jogo
   // aberto também libera a vaga da vitrine e chama a fila.
@@ -96,8 +160,14 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
     if (myView.status === PLAY_STATUS.UNAVAILABLE) {
       return `Você está pausado pelas próximas ${Number(me.skip_remaining) || 0} partida(s).`;
     }
-    return `Você está na fila, na posição #${myView.orderNo}. Fique por perto para entrar em quadra.`;
+    // Com grupos, a posição é a da fila DO GRUPO — a que o telão mostra.
+    const onde = grupos?.ativo && myView.group_id
+      ? ` do grupo ${grupos.config.groups.find((g) => g.id === myView.group_id)?.name}`
+      : '';
+    return `Você está na fila${onde}, na posição #${myView.groupNo ?? myView.orderNo}. Fique por perto para entrar em quadra.`;
   };
+
+
 
   return (
     <V2CollapsibleCard
@@ -138,6 +208,7 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
                 <Link2 className="h-4 w-4" /> Você joga em dupla com {partnerName}.
               </p>
             )}
+            {grupos?.ativo && <MeuGrupo gameDayId={gameDay.id} me={me} config={grupos.config} />}
 
             <div className="flex flex-wrap gap-2">
               {myView.status === PLAY_STATUS.UNAVAILABLE ? (

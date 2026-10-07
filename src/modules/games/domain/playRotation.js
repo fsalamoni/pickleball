@@ -164,13 +164,13 @@ function mutualPartnerOf(p, byId) {
  * parceiro também está disponível. Quem tem parceiro indisponível aguarda —
  * exatamente como em `buildPlayNextMatch`.
  */
-function isEligible(p, byId) {
+export function isEligible(p, byId) {
   if (!p?.partner_id) return true;
   return mutualPartnerOf(p, byId) != null;
 }
 
 /** A combinação respeita as duplas fixas? (parceiro dentro, ou ninguém dentro) */
-function comboRespeitaDuplas(combo, byId) {
+export function comboRespeitaDuplas(combo, byId) {
   const dentro = new Set(combo.map((p) => p.id));
   return combo.every((p) => {
     if (!p.partner_id) return true;
@@ -183,7 +183,7 @@ function comboRespeitaDuplas(combo, byId) {
 /* ------------------------------ escolha do grupo --------------------------- */
 
 /** Combinações de `k` índices em `n`, todas contendo `forced`. */
-function combinacoes(n, k, forced) {
+export function combinacoes(n, k, forced) {
   const out = [];
   const rest = [];
   for (let i = 0; i < n; i += 1) if (i !== forced) rest.push(i);
@@ -319,12 +319,20 @@ function jogosAbertosPorQuadra(games = []) {
  * poucos jogadores) e de efeito pequeno. A escolha de QUEM entra na próxima
  * partida — a que importa — não é afetada.
  *
+ * GRUPOS (flag `play_groups`): `groups` é o SORTEADOR de `makeGroupsDrawer`
+ * (`playGroupsDraw.js`) — o mesmo objeto que o serviço usa para criar a
+ * partida, e é por isso que previsão e criação nunca divergem. É recebido, e
+ * não importado, para este arquivo não depender do sorteio dos grupos (que
+ * depende dele). Ausente, nada muda: o caminho é bit a bit o de antes. Com
+ * grupos, cada bloco ganha `group` (`{ id, name, color }` ou null) e uma quadra
+ * que nenhum grupo preenche NÃO interrompe a previsão das demais.
+ *
  * @returns {{ blocks: Array, entryOrder: Array }}
  */
 export function simulatePlaySequence(availableOrdered, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
   const total = Math.max(1, Math.floor(courts) || 1);
   const livres = freePlayCourts({ courts: total, games });
@@ -342,28 +350,51 @@ export function simulatePlaySequence(availableOrdered, {
   // entram 2, e a fila é lida SEM os vínculos de dupla (no simples cada um
   // joga por si; com o vínculo, "entram juntos" poria a dupla um contra o
   // outro).
+  // De quem é a vez no revezamento: começa pela última partida do dia e anda a
+  // cada partida desta mesma simulação.
+  let ultimoGrupo = groups ? groups.lastGroupId : undefined;
+
   const escolher = (court, free, conditional) => {
     const kind = courtKinds ? kindOfCourt(courtKinds, court) : GAME_KIND.DOUBLES;
     const vagas = courtKinds ? slotsForKind(kind) : slots;
     const fila = kind === GAME_KIND.SINGLES ? withoutPartnerLinks(pool) : pool;
-    const ids = hist
-      ? buildPlayNextMatchBalanced(fila, { slots: vagas, history: hist, windowExtra, weights })
-      : buildPlayNextMatch(fila, { slots: vagas });
+    let ids;
+    let groupId = null;
+    if (groups) {
+      const r = groups.pick({
+        pool: fila, court, slots: vagas, history: hist, weights, windowExtra, lastGroupId: ultimoGrupo,
+      });
+      ids = r ? r.ids : null;
+      groupId = r ? r.groupId : null;
+    } else {
+      ids = hist
+        ? buildPlayNextMatchBalanced(fila, { slots: vagas, history: hist, windowExtra, weights })
+        : buildPlayNextMatch(fila, { slots: vagas });
+    }
     if (!ids) {
-      const players = pool.slice(0, vagas);
+      // Com grupos, "a fila acabou" não é o motivo (um grupo pode faltar gente
+      // enquanto outro tem de sobra): o bloco fica vazio e a tela explica o porquê.
+      const players = groups ? [] : pool.slice(0, vagas);
       blocks.push({
         court, free, conditional, players, kind, slots: vagas,
         waiting: Math.max(0, vagas - players.length), full: false,
+        ...(groups ? { group: null } : {}),
       });
       return false;
     }
     const escolhidos = new Set(ids);
     const players = ids.map((id) => pool.find((p) => p.id === id)).filter(Boolean);
-    blocks.push({ court, free, conditional, players, kind, slots: vagas, waiting: 0, full: true });
+    blocks.push({
+      court, free, conditional, players, kind, slots: vagas, waiting: 0, full: true,
+      ...(groups ? { group: groups.meta(groupId) } : {}),
+    });
     players.forEach((p) => entryOrder.push(p));
     pool = pool.filter((p) => !escolhidos.has(p.id));
+    if (groups) ultimoGrupo = groupId;
     if (hist) {
-      const { side_a, side_b } = assignPlaySides(players, { kind, rng: () => 0.5 });
+      const { side_a, side_b } = assignPlaySides(players, {
+        kind, rng: () => 0.5, ...(groups ? { pairing: groups.pairingOf(groupId) } : {}),
+      });
       registrarJogoNoHistorico(hist, side_a, side_b);
     }
     return true;
@@ -371,7 +402,12 @@ export function simulatePlaySequence(availableOrdered, {
 
   // 1) Quadras livres: entram agora.
   for (const court of livres) {
-    if (!escolher(court, true, false)) return { blocks, entryOrder: concluirOrdem(entryOrder, pool) };
+    if (!escolher(court, true, false)) {
+      // Sem grupos, não fechar uma partida é a fila acabar: não há o que prever
+      // adiante. Com grupos, a próxima quadra pode ser de outro grupo.
+      if (groups) continue;
+      return { blocks, entryOrder: concluirOrdem(entryOrder, pool) };
+    }
   }
 
   // 2) Quadras ocupadas: ao terminar, os 4 voltam ao FIM da fila e disputam.
@@ -379,11 +415,17 @@ export function simulatePlaySequence(availableOrdered, {
     const voltando = [...(jogo.side_a || []), ...(jogo.side_b || [])]
       .map((x) => (typeof x === 'string' ? x : x?.id))
       .filter(Boolean)
-      .map((id) => porId.get(id) || { id, available_since: Number.MAX_SAFE_INTEGER })
+      // Com grupos, quem volta precisa voltar para o SEU grupo — o sorteador
+      // guarda os participantes para isso. Sem eles, cai no que sempre caiu.
+      .map((id) => porId.get(id) || groups?.participant?.(id)
+        || { id, available_since: Number.MAX_SAFE_INTEGER })
       .filter(Boolean);
     // Voltam para o fim: acabaram de jogar.
     pool = [...pool, ...voltando.filter((p) => !pool.some((q) => q.id === p.id))];
-    if (!escolher(Number(jogo.court), false, true)) break;
+    if (!escolher(Number(jogo.court), false, true)) {
+      if (groups) continue;
+      break;
+    }
   }
 
   return { blocks, entryOrder: concluirOrdem(entryOrder, pool) };
@@ -426,17 +468,23 @@ function concluirOrdem(entryOrder, resto) {
 export function drawPlayRoundForFreeCourts(availableOrdered, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
   const { blocks } = simulatePlaySequence(availableOrdered, {
-    courts, games, slots, history, windowExtra, weights, courtKinds,
+    courts, games, slots, history, windowExtra, weights, courtKinds, groups,
   });
   return blocks
     // `free` exclui as quadras ocupadas (aquelas são previsão CONDICIONAL —
     // dependem de qual partida termina primeiro, e não se cria jogo nelas).
     // `full` exclui o bloco parcial de quando a fila não fecha a partida.
     .filter((b) => b.free && b.full)
-    .map((b) => ({ court: b.court, kind: b.kind, ids: b.players.map((p) => p.id) }));
+    .map((b) => ({
+      court: b.court,
+      kind: b.kind,
+      ids: b.players.map((p) => p.id),
+      // Com grupos, a partida de cada quadra diz de qual grupo é (null = sem grupo).
+      ...(groups ? { groupId: b.group?.id ?? null } : {}),
+    }));
 }
 
 /**
@@ -453,10 +501,12 @@ export function drawPlayRoundForFreeCourts(availableOrdered, {
 export function buildPlayEntryOrder(availableOrdered, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
   const disponiveis = availableOrdered || [];
-  if (!history) {
+  // Com grupos a fila deixa de ser uma só, e a ordem de entrada é a que a
+  // simulação produz mesmo sem o rodízio equilibrado.
+  if (!history && !groups) {
     return disponiveis.map((p, i) => ({ ...p, orderNo: i + 1 }));
   }
   // A simulação também posiciona quem está EM QUADRA (eles voltam para a fila
@@ -465,7 +515,7 @@ export function buildPlayEntryOrder(availableOrdered, {
   // para o conjunto original e renumera.
   const idsDisponiveis = new Set(disponiveis.map((p) => p.id));
   const { entryOrder } = simulatePlaySequence(disponiveis, {
-    courts, games, slots, history, windowExtra, weights, courtKinds,
+    courts, games, slots, history, windowExtra, weights, courtKinds, groups,
   });
   const vistos = new Set();
   const ordenados = [];
@@ -495,11 +545,11 @@ export function buildPlayEntryOrder(availableOrdered, {
 export function applyPlayEntryOrder(view, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
-  if (!view || !history) return view;
+  if (!view || (!history && !groups)) return view;
   const order = buildPlayEntryOrder(view.order, {
-    courts, games, slots, history, windowExtra, weights, courtKinds,
+    courts, games, slots, history, windowExtra, weights, courtKinds, groups,
   });
   const noPorId = new Map(order.map((p) => [p.id, p.orderNo]));
   return {
@@ -518,10 +568,10 @@ export function applyPlayEntryOrder(view, {
 export function forecastPlayMatchesBalanced(availableOrdered, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
   return simulatePlaySequence(availableOrdered, {
-    courts, games, slots, history, windowExtra, weights, courtKinds,
+    courts, games, slots, history, windowExtra, weights, courtKinds, groups,
   }).blocks;
 }
 
@@ -531,11 +581,11 @@ export function forecastPlayMatchesBalanced(availableOrdered, {
 export function forecastPlayByCourtBalanced(availableOrdered, {
   courts = 1, games = [], slots = PLAY_SLOTS, history = null,
   windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
-  courtKinds = null,
+  courtKinds = null, groups = null,
 } = {}) {
   const total = Math.max(1, Math.floor(courts) || 1);
   const { blocks } = simulatePlaySequence(availableOrdered, {
-    courts: total, games, slots, history, windowExtra, weights, courtKinds,
+    courts: total, games, slots, history, windowExtra, weights, courtKinds, groups,
   });
   const porQuadra = new Map(blocks.map((b) => [b.court, b]));
   const livresSet = new Set(freePlayCourts({ courts: total, games }));
@@ -546,6 +596,7 @@ export function forecastPlayByCourtBalanced(availableOrdered, {
     return {
       court, free: livresSet.has(court), conditional: !livresSet.has(court),
       players: [], kind, slots: vagas, waiting: vagas, full: false,
+      ...(groups ? { group: null } : {}),
     };
   });
 }

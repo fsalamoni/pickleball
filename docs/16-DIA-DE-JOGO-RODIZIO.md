@@ -2,6 +2,8 @@
 
 > Flag `play_smart_rotation` — **padrão DESLIGADA**. Desligada, nada muda.
 > Código: `src/modules/games/domain/playRotation.js` (puro, 31 testes).
+> Ver também: **grupos dentro do Play** (`docs/39-PLAY-GRUPOS.md`) — cada grupo
+> usa este mesmo seletor (FIFO ou rodízio) dentro da sua fila.
 
 ## 1. O problema
 

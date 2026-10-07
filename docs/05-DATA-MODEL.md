@@ -550,6 +550,27 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   do dia de jogo. Quem entra aqui também entra em `member_uids` (para enxergar o
   dia de jogo se ele for privado). Sair de admin **não** remove de `member_uids`.
 
+#### Campos dos GRUPOS DO PLAY (**opcionais, aditivos** — flag `play_groups`)
+
+Só no formato Play. **Ausentes, o Play segue uma fila única**, e com a flag
+desligada os grupos gravados são ignorados em toda a plataforma. Zero coleção e
+zero índice; uma única cláusula de regra, para o administrador nomeado (abaixo).
+Guarda em `src/core/guards/playGrupos.test.js`.
+- `play_groups[]` (até 10) — `{ id, name, color, level_min, level_max,
+  gender: 'any'|'male'|'female', formation: 'free'|'mixed'|'same_sex',
+  max_level_gap, strict, courts[], fill, paused, join: 'open'|'closed' }`.
+  O `id` é estável (os participantes o referenciam): nunca renomeie.
+  `normalizePlayGroupsConfig` preenche o padrão de cada campo na leitura.
+- `play_groups_policy: 'queue'|'rotate'|'priority'` — quem ocupa a quadra
+  quando mais de um grupo tem partida pronta (ausente ⇒ `queue`).
+- Quem grava: o criador, o gestor da arena, o administrador do clube **e o
+  administrador nomeado** (`admin_uids`). Para o nomeado, `firestore.rules`
+  tem uma cláusula estreita em `game_days`: só no Play, só as chaves
+  `play_groups`, `play_groups_policy` e `updated_at`, lista de até 10 e política
+  entre `queue`/`rotate`/`priority`. `play_group_id` de um participante é
+  operação de quem conduz o dia.
+- Detalhes, motor e experiência: `docs/39-PLAY-GRUPOS.md`.
+
 #### Campos do DIA DE JOGO DA ARENA (**opcionais, aditivos** — flag `arena_game_day`)
 
 Presentes só quando a arena é a dona. **Ausente `arena_id`, nada disso vale** e o
@@ -616,9 +637,13 @@ quem não é o criador só passa se mexer em `member_uids`, `invited_uids` e
 
 Subcoleções:
 - `game_days/{id}/participants/{pid}` — `user_id?`, `name`, `photo_url?`,
-  `source: 'owner'|'invited'|'joined'|'guest'`
+  `source: 'owner'|'invited'|'joined'|'guest'`; `play_level?`/`play_gender?`
+  (nível e sexo do convidado avulso, usados pelo Play); `play_group_id?`
+  (grupo do Play, **opcional** — id que não existe mais vale "sem grupo")
 - `game_days/{id}/games/{gid}` — `round`, `court`, `kind`, `side_a`/`side_b`
-  (`[{id,name}]`), `score_a`/`score_b`, `order`
+  (`[{id,name}]`), `score_a`/`score_b`, `order`; `group_id?`/`group_name?`/
+  `group_color?` (cópia do grupo do Play em que a partida foi sorteada — o
+  telão e a lista sobrevivem à remoção do grupo)
   - **`kind` (2026-09-26, Onda CF):** `'doubles'` (padrão, 2 × 2) ou
     `'singles'` (1 × 1). O campo sempre existiu; passou a receber `singles`
     também no Play, no Americano aprimorado e no sorteio do Americano (o

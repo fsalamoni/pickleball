@@ -63,6 +63,19 @@ export const PLAY_DEFAULT_LEVEL = 3.0;
  *   5. Padrão `PLAY_DEFAULT_LEVEL` para convidado avulso sem nenhum dado.
  */
 export function playLevelValue(participant) {
+  return playLevelOrNull(participant) ?? PLAY_DEFAULT_LEVEL;
+}
+
+/**
+ * O mesmo nível de `playLevelValue`, mas `null` quando NADA se sabe — em vez do
+ * padrão 3.0. Quem decide uma REGRA com o nível (faixa de um grupo, diferença
+ * máxima numa partida) precisa distinguir "é 3.0" de "não sei": inventar 3.0
+ * jogaria todo convidado avulso no meio da tabela. Equilibrar duplas, que só
+ * compara, segue usando `playLevelValue`.
+ *
+ * @returns {number|null}
+ */
+export function playLevelOrNull(participant) {
   const resolvido = participant?.level_value;
   if (typeof resolvido === 'number' && Number.isFinite(resolvido)) return resolvido;
 
@@ -77,7 +90,7 @@ export function playLevelValue(participant) {
       if (Number.isFinite(n)) return n;
     }
   }
-  return PLAY_DEFAULT_LEVEL;
+  return null;
 }
 
 /** Ids dos participantes que estão em jogos ABERTOS (em quadra). */
@@ -263,10 +276,12 @@ export function pickSwapReplacement(availableOrdered, ctx = {}) {
  * há dupla esperando para ser desfeita.
  *
  * @param {Array} availableOrdered  disponíveis, em ordem de participação
- * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
+ * @param {{ inGameIds?: string[], swappedOutIds?: string[], preferGroupId?: string|null }} [ctx]
  * @returns {Array} elegíveis, na ordem de participação, com as duplas por último
  */
-export function eligibleSwapReplacements(availableOrdered, { inGameIds = [], swappedOutIds = [] } = {}) {
+export function eligibleSwapReplacements(availableOrdered, {
+  inGameIds = [], swappedOutIds = [], preferGroupId = null,
+} = {}) {
   const exclude = new Set([...inGameIds, ...swappedOutIds]);
   const livres = (availableOrdered || []).filter((p) => p && !exclude.has(p.id));
   const porId = new Map(livres.map((p) => [p.id, p]));
@@ -274,9 +289,18 @@ export function eligibleSwapReplacements(availableOrdered, { inGameIds = [], swa
     const parceiro = p?.partner_id ? porId.get(p.partner_id) : null;
     return !!parceiro && parceiro.partner_id === p.id;
   };
+  // GRUPOS: numa partida de um grupo, quem entra no lugar preferencialmente é
+  // do mesmo grupo — senão a partida deixa de ser dele. É preferência, nunca
+  // barreira: sem ninguém do grupo esperando, oferece os demais. Dentro de cada
+  // faixa a ordem de espera se mantém, e "duplas por último" segue valendo
+  // por cima (tirar quem tem dupla esperando desfaz um vínculo).
+  const doGrupo = (p) => preferGroupId != null && p.play_group_id === preferGroupId;
+  const arrumar = (lista) => (preferGroupId == null
+    ? lista
+    : [...lista.filter(doGrupo), ...lista.filter((p) => !doGrupo(p))]);
   return [
-    ...livres.filter((p) => !temDuplaNaFila(p)),
-    ...livres.filter(temDuplaNaFila),
+    ...arrumar(livres.filter((p) => !temDuplaNaFila(p))),
+    ...arrumar(livres.filter(temDuplaNaFila)),
   ];
 }
 
@@ -350,12 +374,18 @@ function isMixedPair(a, b) {
  * exatamente o de antes, e o comportamento não muda em nada. Recebemos uma
  * função (e não o histórico) para manter este módulo sem dependências.
  *
+ * `pairing` (aditivo, padrão `'default'` = o comportamento de sempre) é a
+ * formação do GRUPO: `'mixed'` mantém a preferência por duplas mistas;
+ * `'same_sex'` a INVERTE — cada dupla com o mesmo sexo (numa partida de quatro
+ * do mesmo sexo todas as divisões empatam e o nível decide, como sempre).
+ *
  * @param {Array} four  4 participantes
  * @param {{ rng?: () => number,
- *           partnerRepeatCount?: (idA: string, idB: string) => number }} [opts]
+ *           partnerRepeatCount?: (idA: string, idB: string) => number,
+ *           pairing?: 'default'|'mixed'|'same_sex' }} [opts]
  * @returns {{ side_a: [string,string], side_b: [string,string] }}
  */
-export function assignPlayTeams(four, { rng = Math.random, partnerRepeatCount = null } = {}) {
+export function assignPlayTeams(four, { rng = Math.random, partnerRepeatCount = null, pairing = 'default' } = {}) {
   const players = (four || []).slice(0, PLAY_SLOTS);
   if (players.length !== PLAY_SLOTS) {
     return { side_a: [], side_b: [] };
@@ -391,8 +421,13 @@ export function assignPlayTeams(four, { rng = Math.random, partnerRepeatCount = 
     const sumA = lvl(teamA[0]) + lvl(teamA[1]);
     const sumB = lvl(teamB[0]) + lvl(teamB[1]);
     const levelDiff = Math.abs(sumA - sumB);
-    const mixedPenalty = (isMixedPair(players[teamA[0]], players[teamA[1]]) ? 0 : 1)
-      + (isMixedPair(players[teamB[0]], players[teamB[1]]) ? 0 : 1);
+    const mistaA = isMixedPair(players[teamA[0]], players[teamA[1]]);
+    const mistaB = isMixedPair(players[teamB[0]], players[teamB[1]]);
+    // Padrão e "mixed": cada dupla que NÃO é mista custa. "same_sex": é a dupla
+    // mista que custa — a formação do grupo pede duplas do mesmo sexo.
+    const mixedPenalty = pairing === 'same_sex'
+      ? (mistaA ? 1 : 0) + (mistaB ? 1 : 0)
+      : (mistaA ? 0 : 1) + (mistaB ? 0 : 1);
     const repeticao = partnerRepeatCount
       ? (partnerRepeatCount(players[teamA[0]].id, players[teamA[1]].id)
         + partnerRepeatCount(players[teamB[0]].id, players[teamB[1]].id))

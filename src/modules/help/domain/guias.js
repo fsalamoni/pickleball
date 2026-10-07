@@ -33,6 +33,12 @@
  *
  * ## Quem vê cada guia
  *
+ * `flagObrigatoria` (com `formatos`): num dia de jogo o guia do FORMATO vale
+ * mesmo com a flag dele desligada — flag tira a opção de ESCOLHER, não a de
+ * conduzir o que está gravado. Já a flag de uma FUNCIONALIDADE (os grupos do
+ * Play) tem de valer sempre: ensinar um cartão que não existe manda a pessoa
+ * procurar o que não está lá.
+ *
  * `flags` (basta uma ligada), `flagsTodas` (todas) e `semFlags` (nenhuma) —
  * a mesma regra dos artigos da central de ajuda — e `audience`: 'arena' (quem
  * gere arena), 'professor' (quem tem perfil de professor) ou 'admin' (quem
@@ -316,6 +322,85 @@ const GUIAS_BASE = [
         title: 'Agora, os participantes',
         body: 'Inclua os atletas em "Inserir atletas". Com gente no dia, os botões de sortear e de criar partidas passam a funcionar.',
         tip: 'O "Como funciona" desta tela abre o guia completo do formato que você escolheu.',
+      },
+    ],
+  },
+  {
+    id: 'play-grupos',
+    area: GUIA_AREA.JOGAR,
+    // A flag aqui gateia a FUNCIONALIDADE, não só a escolha de um formato:
+    // `flagObrigatoria` faz o guia respeitá-la mesmo num dia de Play que já
+    // existe (ver `guiasDaTela`).
+    flags: ['play_groups'],
+    flagObrigatoria: true,
+    formatos: [GAME_DAY_FORMAT.PLAY],
+    title: 'Dividir o Play em grupos',
+    summary: 'Por nível ou por tipo de dupla: cada grupo com a sua fila e as suas regras.',
+    keywords: ['grupos', 'play', 'nível', 'turma', 'mista', 'fila', 'dividir', 'convidado'],
+    screens: ['/dia-de-jogo/*'],
+    steps: [
+      {
+        id: 'o-que-sao',
+        route: '/dia-de-jogo/*',
+        goTo: '/dia-de-jogo',
+        awayText: 'Abra um dia de jogo no formato Play (Jogar → Dia de jogo).',
+        target: 'dia-de-jogo-grupos',
+        title: 'Grupos dentro do Play',
+        body: [
+          'Os grupos dividem a fila do dia: cada um tem a sua fila, e as partidas saem DENTRO do grupo — iniciantes jogam com iniciantes, mistas com mistas.',
+          'Quem está sem grupo continua numa fila só dele, como o Play sempre foi.',
+        ],
+        tip: 'Quem criou o dia e os administradores nomeados montam e editam os grupos. Quem só conduz as partidas move as pessoas entre eles.',
+      },
+      {
+        id: 'novo',
+        route: '/dia-de-jogo/*',
+        target: ['dia-de-jogo-grupos-novo', 'dia-de-jogo-grupos'],
+        title: 'Criar um grupo',
+        body: [
+          'Com o cartão vazio, escolha um modelo (por nível, por tipo de dupla ou em branco). Depois, "Novo grupo" acrescenta quantos quiser.',
+          'Cada grupo tem nome, faixa de nível, o tipo de dupla (livre, mista ou do mesmo sexo), a diferença máxima de nível dentro da partida e as quadras em que joga.',
+        ],
+        tip: '"Exigir" faz o grupo esperar até haver uma partida que cumpra as regras; sem isso, ele tenta cumprir e, se não der, joga assim mesmo.',
+      },
+      {
+        id: 'distribuir',
+        route: '/dia-de-jogo/*',
+        target: ['dia-de-jogo-grupos-distribuir', 'dia-de-jogo-grupos'],
+        title: 'Distribuir por nível',
+        body: 'Coloca cada pessoa no grupo que combina com o nível dela. Você vê a prévia antes de aplicar — e nada muda até confirmar.',
+        tip: 'Quem não tem nível conhecido não é barrado de nenhum grupo: vale o que você escolher.',
+      },
+      {
+        id: 'convidados',
+        route: '/dia-de-jogo/*',
+        target: ['dia-de-jogo-inserir-atletas', 'dia-de-jogo-participantes'],
+        title: 'Convidado avulso: nível e sexo',
+        body: 'Ao inserir alguém que não tem conta, informe o nível e o sexo dessa pessoa. É o que a coloca no grupo certo — sem isso, ela entra sem grupo.',
+      },
+      {
+        id: 'quadras',
+        route: '/dia-de-jogo/*',
+        target: 'dia-de-jogo-quadras',
+        title: 'O grupo de cada quadra',
+        body: [
+          'Numa quadra livre você deixa o sorteio escolher o grupo ("Automático") ou manda um grupo específico para ela.',
+          'No cartão Grupos, a política decide quem ocupa a quadra quando há mais de um grupo pronto: por tempo de espera, revezando ou por prioridade.',
+        ],
+      },
+      {
+        id: 'fila',
+        route: '/dia-de-jogo/*',
+        target: ['dia-de-jogo-ordem', 'dia-de-jogo-grupos'],
+        title: 'A fila de cada grupo',
+        body: 'O número é a posição DENTRO do grupo. Um grupo sem partida pronta diz o porquê no próprio cartão — falta gente, falta alguém do sexo da formação, o nível não combina.',
+      },
+      {
+        id: 'telao',
+        route: '/dia-de-jogo/*',
+        target: 'dia-de-jogo-telao',
+        title: 'No telão',
+        body: 'A partida em quadra mostra o selo do grupo, a previsão diz de que grupo é cada quadra e a fila se divide por grupo.',
       },
     ],
   },
@@ -1896,7 +1981,9 @@ export function guiasDaTela(caminho, ctx = {}) {
       // No dia de jogo, o guia é o do FORMATO do dia. E o formato que o dia
       // já tem vale mesmo com a flag dele desligada: flag tira a opção de
       // escolher daqui para frente, nunca a de conduzir o que está gravado.
-      if (formato) return g.formatos.includes(formato);
+      if (formato) {
+        return g.formatos.includes(formato) && (!g.flagObrigatoria || dicaVisivel(g, ctx));
+      }
       return dicaVisivel(g, ctx);
     });
   return [...daTela.filter((g) => g.tutorial), ...daTela.filter((g) => !g.tutorial)];

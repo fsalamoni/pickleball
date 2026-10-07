@@ -605,6 +605,33 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['member_uids', 'invited_uids', 'updated_at'])
         )
+        // GRUPOS DO PLAY (flag `play_groups`): o administrador NOMEADO edita os
+        // grupos como o criador — é a única configuração do dia que ele divide
+        // com o criador, porque os grupos são parte de conduzir o dia (quem
+        // joga com quem), não de defini-lo. A condição é ESTREITA de propósito:
+        //  · só quem está em `admin_uids` (o participante de um dia aberto
+        //    opera, mas não edita os grupos);
+        //  · só no formato Play;
+        //  · só as duas chaves dos grupos (e `updated_at`) — nada de `created_by`,
+        //    `admin_uids`, `manage_mode`, `title` ou `status`;
+        //  · com o tamanho e a política conferidos, para um nomeado nunca gravar
+        //    lixo no documento (o criador continua livre, como sempre foi).
+        // Sem `admin_uids`, ou fora do Play, a condição é sempre falsa e nenhum
+        // dia de jogo já existente muda de comportamento.
+        || (
+          resource.data.format == 'play'
+          && 'admin_uids' in resource.data
+          && resource.data.admin_uids is list
+          && (request.auth.uid in resource.data.admin_uids)
+          && request.resource.data.created_by == resource.data.created_by
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['play_groups', 'play_groups_policy', 'updated_at'])
+          && (!('play_groups' in request.resource.data)
+              || (request.resource.data.play_groups is list
+                  && request.resource.data.play_groups.size() <= 10))
+          && (!('play_groups_policy' in request.resource.data)
+              || request.resource.data.play_groups_policy in ['queue', 'rotate', 'priority'])
+        )
       );
       allow delete: if isAuthed() && (
         resource.data.created_by == request.auth.uid

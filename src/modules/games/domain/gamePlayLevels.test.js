@@ -7,7 +7,7 @@
  * 1.0, um número de outra escala. Estes testes fixam o comportamento novo.
  */
 import { describe, it, expect } from 'vitest';
-import { playLevelValue, assignPlayTeams, PLAY_DEFAULT_LEVEL } from './gamePlay.js';
+import { playLevelValue, playLevelOrNull, assignPlayTeams, PLAY_DEFAULT_LEVEL } from './gamePlay.js';
 import { UNIFIED_MIN, UNIFIED_MAX } from '@/modules/rating/domain/unifiedLevel.js';
 
 describe('playLevelValue na régua unificada', () => {
@@ -107,5 +107,24 @@ describe('assignPlayTeams usando o nível unificado', () => {
     };
     expect(misto(side_a)).toBe(true);
     expect(misto(side_b)).toBe(true);
+  });
+});
+
+describe('playLevelOrNull — nível DESCONHECIDO não é 3.0', () => {
+  it('devolve o mesmo número que playLevelValue quando há dado', () => {
+    expect(playLevelOrNull({ level_value: 4.7 })).toBe(4.7);
+    expect(playLevelOrNull({ play_level: 3.5 })).toBe(3.5);
+    expect(playLevelOrNull({ play_level: '2.5' })).toBe(2.5);
+    expect(playLevelOrNull({ play_level: 'avancado' }))
+      .toBe(playLevelValue({ play_level: 'avancado' }));
+  });
+
+  it('devolve null — e não o padrão — quando não há nada', () => {
+    expect(playLevelOrNull({})).toBeNull();
+    expect(playLevelOrNull({ play_level: null })).toBeNull();
+    expect(playLevelOrNull({ play_level: 'texto sem número' })).toBeNull();
+    expect(playLevelOrNull(null)).toBeNull();
+    // enquanto playLevelValue segue devolvendo o padrão, como sempre
+    expect(playLevelValue({})).toBe(PLAY_DEFAULT_LEVEL);
   });
 });

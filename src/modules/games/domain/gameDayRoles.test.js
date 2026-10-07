@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   GAME_DAY_MANAGE_MODE, gameDayManageMode, isGameDayOpenToParticipants,
   gameDayAdminUids, isGameDayCreator, isGameDayAdmin, isGameDayParticipant,
-  canConfigureGameDay, canManageGameDay, gameDayAdminList,
+  canConfigureGameDay, canEditPlayGroups, canManageGameDay, gameDayAdminList,
 } from './gameDayRoles.js';
 
 const DONO = 'uid-dono';
@@ -298,5 +298,41 @@ describe('dia de jogo de CLUBE (Onda AS)', () => {
     const daArenaEClube = { id: 'gd3', created_by: 'x', arena_id: 'a1' };
     expect(isGameDayAdmin(daArenaEClube, 'alguem', { clubManager: true })).toBe(false);
     expect(isGameDayAdmin(doClube, 'alguem', { arenaManager: true })).toBe(false);
+  });
+});
+
+describe('canEditPlayGroups — quem edita os GRUPOS do Play', () => {
+  const play = (extra = {}) => dia({ format: 'play', admin_uids: [ADMIN], ...extra });
+
+  it('⭐ o administrador nomeado edita os grupos — o mesmo poder do criador', () => {
+    expect(canEditPlayGroups(play(), DONO)).toBe(true);
+    expect(canEditPlayGroups(play(), ADMIN)).toBe(true);
+  });
+
+  it('⭐ mas continua sem configurar o resto do dia: formato, quadras e quem organiza são do criador', () => {
+    expect(canConfigureGameDay(play(), ADMIN)).toBe(false);
+  });
+
+  it('⭐ o participante de um dia ABERTO opera, mas não edita os grupos — só nomeado', () => {
+    const aberto = play({ manage_mode: GAME_DAY_MANAGE_MODE.PARTICIPANTS });
+    expect(canManageGameDay(aberto, JOGA, { participants: participantes })).toBe(true);
+    expect(canEditPlayGroups(aberto, JOGA)).toBe(false);
+  });
+
+  it('estranho e quem não está logado não editam', () => {
+    expect(canEditPlayGroups(play(), ESTRANHO)).toBe(false);
+    expect(canEditPlayGroups(play(), null)).toBe(false);
+    expect(canEditPlayGroups(null, ADMIN)).toBe(false);
+  });
+
+  it('só no Play: o nomeado de um Americano não ganha nada novo', () => {
+    expect(canEditPlayGroups(play({ format: 'americano' }), ADMIN)).toBe(false);
+    expect(canEditPlayGroups(play({ format: undefined }), ADMIN)).toBe(false);
+  });
+
+  it('arena e clube seguem como donos do dia, nomeado ou não', () => {
+    expect(canEditPlayGroups(play({ arena_id: 'a1' }), 'gestor', { arenaManager: true })).toBe(true);
+    expect(canEditPlayGroups(play({ club_id: 'c1' }), 'adm-clube', { clubManager: true })).toBe(true);
+    expect(canEditPlayGroups(play({ arena_id: 'a1' }), ESTRANHO, { arenaManager: false })).toBe(false);
   });
 });

@@ -51,7 +51,7 @@ import { GD_PARTICIPANT_SOURCE } from '@/modules/games/domain/gameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import {
   getGameDay, listGameDayParticipants, listGameDayGames, buildGameDayParticipant,
-  sealParticipantBeforeRemoval,
+  sealParticipantBeforeRemoval, resolveEntryGroup,
 } from '@/modules/games/services/gameDayService.js';
 import {
   buildArenaGameDayPayload, syncArenaGameDayBlocks, archiveArenaGameDay,
@@ -621,13 +621,21 @@ async function entrarNoJogoLigado(slot, user, profile) {
   const jaNoDia = participants.some((p) => p.user_id === user.uid);
   if (!jaNoDia) {
     const pid = doc(collection(db, COL_GAME_DAYS, gdId, 'participants')).id;
-    batch.set(doc(db, COL_GAME_DAYS, gdId, 'participants', pid), buildGameDayParticipant(pid, {
+    const entrada = {
       user_id: user.uid,
       name: displayName(user, profile),
       photo_url: profile?.photo_url || user?.photoURL || null,
       source: GD_PARTICIPANT_SOURCE.JOINED,
       play_level: profile?.level || profile?.leveling_level || null,
       play_gender: playGenderOf(profile),
+    };
+    // Dia em Play com grupos (flag `play_groups`): quem entra pelo jogo aberto
+    // cai no grupo do seu nível, como em qualquer outra porta de entrada. Sem
+    // grupos, ou sem grupo que combine, o participante é gravado como sempre.
+    const grupo = await resolveEntryGroup(gameDay, { ...entrada, id: pid });
+    batch.set(doc(db, COL_GAME_DAYS, gdId, 'participants', pid), buildGameDayParticipant(pid, {
+      ...entrada,
+      ...(grupo ? { play_group_id: grupo } : {}),
     }));
     batch.update(doc(db, COL_GAME_DAYS, gdId), {
       member_uids: arrayUnion(user.uid),

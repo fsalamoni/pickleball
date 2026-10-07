@@ -430,6 +430,13 @@ dias de jogo dos CLUBES de que a pessoa é membro entram nas listas; e um botão
 só de entrar e sair (`PlayItemAction`) em cada jogo, pelo caminho da origem.
 Zero banco.
 
+**Grupos dentro do Play (2026-10-07)** — flag `play_groups` (default OFF; ver
+`docs/39-PLAY-GRUPOS.md`): a fila do Play se divide em grupos por nível ou tipo
+de dupla (mista / mesmo sexo), com política entre grupos, nível e sexo para o
+convidado avulso, "por que este grupo não joga" e o selo do grupo no painel, na
+visão do jogador e no telão. Um sorteador só (`makeGroupsDrawer`) serve à
+previsão e à criação. Zero coleção, índice ou regra.
+
 Padrão de uso:
 
 ```jsx
