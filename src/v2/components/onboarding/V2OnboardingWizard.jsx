@@ -14,7 +14,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
-  birthDateToBrtDate, missingRegistrationFields, parseDuprRating, validateRequiredProfile,
+  birthDateToBrtDate, missingRegistrationFields, parseDuprRating, validateRequiredProfile, normalizeFullName,
 } from '@/core/lib/profileValidation';
 import { BR_UFS, isBrazilUF } from '@/core/domain/ufs';
 import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
@@ -156,7 +156,7 @@ export default function V2OnboardingWizard() {
     setBusy(true);
     try {
       await updateUserProfile({
-        platform_name: form.platformName.trim(),
+        platform_name: normalizeFullName(form.platformName),
         birth_date: form.birthDate,
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(form.birthDate)),
         phone: form.phone.trim(),
@@ -345,7 +345,7 @@ export default function V2OnboardingWizard() {
 
         {passo === 'pessoal' && (
           <div className="space-y-3">
-            <V2Field label="Nome de exibição" htmlFor="onb_name" error={errors.platformName} required>
+            <V2Field label="Nome completo" htmlFor="onb_name" error={errors.platformName} required>
               <V2Input id="onb_name" value={form.platformName} maxLength={60} onChange={(e) => set('platformName', e.target.value)} />
             </V2Field>
             <div className="grid gap-3 sm:grid-cols-2">
