@@ -40,6 +40,10 @@ import {
 import { isPublicGameDay } from './gameDay.js';
 import { isArenaGameDay } from './arenaGameDay.js';
 import { isClubGameDay } from './clubGameDay.js';
+import { GROUP_POLICY_LABELS, GROUP_POLICY_HINTS } from './playGroups.js';
+
+/** Quantos nomes de grupo cabem na linha antes de virar "+N". */
+const NOMES_DE_GRUPO_NA_LINHA = 4;
 
 /**
  * O formato respeita DUPLA VINCULADA?
@@ -75,7 +79,11 @@ export function formatRhythm(format) {
  * Traduz o dia de jogo nas linhas que a tela mostra.
  *
  * @param {object} gameDay
- * @param {{ podeGerenciar?: boolean, participantCount?: number }} [ctx]
+ * @param {{ podeGerenciar?: boolean, participantCount?: number,
+ *           playGroups?: {groups: Array, policy: string}|null }} [ctx]
+ *   `playGroups` só vem quando os grupos valem NESTE dia (flag ligada, Play e ao
+ *   menos um grupo): quem decide é a tela, com `isPlayGroupsActive`. Sem ele a
+ *   linha de grupos não existe — dia sem grupo e flag desligada são o mesmo.
  * @returns {{ rows: Array<{key:string,label:string,value:string,help:string}> }}
  */
 export function describeGameDayRules(gameDay, ctx = {}) {
@@ -118,13 +126,15 @@ export function describeGameDayRules(gameDay, ctx = {}) {
 
   // ---------------------------------------------------------- dupla fixa
   const honra = formatHonorsFixedPairs(format);
+  const grupos = isPlayFormat(format) && ctx.playGroups?.groups?.length > 0 ? ctx.playGroups : null;
   add(
     'duplas',
     'Dupla vinculada',
     honra ? 'Vale neste formato' : 'Não vale neste formato',
     honra
       ? 'Dá para prender duas pessoas para jogarem sempre juntas — e nunca uma contra a outra. As demais regras do sorteio continuam valendo para o resto.'
-      : 'Aqui as duplas saem da classificação da rodada e do resultado da anterior — é o que define o formato. Prender uma dupla deixaria de ser este jogo.',
+        + (grupos ? ' Com grupos, a dupla só vale se os dois estão no mesmo grupo.' : '')
+      :'Aqui as duplas saem da classificação da rodada e do resultado da anterior — é o que define o formato. Prender uma dupla deixaria de ser este jogo.',
   );
 
   // ------------------------------------------------------------ quadras
@@ -137,6 +147,19 @@ export function describeGameDayRules(gameDay, ctx = {}) {
       quadras > 1
         ? 'Com mais de uma quadra livre dá para sortear a RODADA inteira de uma vez, em vez de partida a partida — é o que mistura a fila quando o grupo é pequeno.'
         : 'Com uma quadra só, as partidas saem uma a uma, na ordem da fila.',
+    );
+  }
+
+  // ------------------------------------------------------------- grupos
+  if (grupos) {
+    const nomes = grupos.groups.map((g) => g.name);
+    const resto = nomes.length - NOMES_DE_GRUPO_NA_LINHA;
+    const politica = GROUP_POLICY_LABELS[grupos.policy] ? grupos.policy : 'queue';
+    add(
+      'grupos',
+      'Grupos',
+      nomes.slice(0, NOMES_DE_GRUPO_NA_LINHA).join(', ') + (resto > 0 ? ` +${resto}` : ''),
+      `Cada grupo tem a sua fila, e as partidas saem dentro dele. ${GROUP_POLICY_LABELS[politica]}: ${GROUP_POLICY_HINTS[politica]}`,
     );
   }
 

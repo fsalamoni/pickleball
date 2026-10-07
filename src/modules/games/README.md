@@ -75,6 +75,31 @@ o que `pickSwapReplacement` escolheria sozinho. Também: `setPlayParticipantSkip
 ranking do dia nem publicação no ranking. Regras: `game_days` com `format == 'play'`
 permitem que qualquer MEMBRO opere a fila (aditivo em `firestore.rules`).
 
+#### Grupos dentro do Play — flag `play_groups` (default OFF)
+Divide a fila do Play em **grupos** (por nível, por tipo de dupla — mista ou do
+mesmo sexo —, ou turmas livres): cada um com a sua fila, e as partidas saem
+DENTRO do grupo. Desligada a flag (ou sem grupo no dia), o Play é o de sempre.
+Doc completo: `docs/39-PLAY-GRUPOS.md`.
+- `domain/playGroups.js` — modelo (config, validação, `levelInRange`,
+  `fitsFormation`, `suggestPlayGroupAssignments`, modelos de criação,
+  `groupsConfigWarnings`, `describeGroupRules`);
+- `domain/playGroupsDraw.js` — `pickGroupedMatch` (cada grupo propõe, a política
+  escolhe), `makeGroupsDrawer` (o sorteador que previsão e serviço compartilham),
+  `explainGroups` (o "por que não joga" em português), `buildGroupedPlayView`,
+  `courtHasMatch`;
+- `playRotation.js` aceita `groups` (o sorteador) na previsão, na ordem de
+  entrada e na rodada — **injetado**, para não criar ciclo de importação;
+- serviço: `setPlayGroups`, `setPlayParticipantGroup`, `assignPlayGroups`,
+  `resolveEntryGroup` (quem chega cai no grupo do nível) e `createNextPlayGame`
+  com grupos (nível buscado ANTES de escolher);
+- hooks: `usePlayGroups` (leitura/sorteador) e `usePlayGroupMutations`
+  (gravação — **fora** de `useGameDays.js` de propósito);
+- UI: `v2/components/games/playGroups/` + `AthletePlayOrganizer`,
+  `AthletePlayParticipant` e o telão.
+⚠️ Nenhuma tela chama `pickGroupedMatch`; nenhuma lê `gameDay.play_groups` por
+fora de `usePlayGroups` (a flag valeria só em parte). Guarda de fonte:
+`src/core/guards/playGrupos.test.js`.
+
 ### Formato "Americano aprimorado" (`americano_live`) — flag `gameday_americano_live`
 O Americano organizado como o Play: as partidas nascem **uma a uma, quadra por
 quadra**, mas **com placar**, ranking do dia e publicação no ranking da

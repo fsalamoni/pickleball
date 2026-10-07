@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { describeGameDayRules, formatHonorsFixedPairs, formatRhythm } from './gameDayRules.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
+import { normalizePlayGroupsConfig } from './playGroups.js';
 
 const dia = (over = {}) => ({
   id: 'g1', title: 'Rachão', format: GAME_DAY_FORMAT.AMERICANO, visibility: 'private', ...over,
@@ -126,5 +127,51 @@ describe('describeGameDayRules — o dia diz o que ele é', () => {
   it('dia de jogo ausente não quebra', () => {
     expect(describeGameDayRules(null).rows).toEqual([]);
     expect(describeGameDayRules(undefined).rows).toEqual([]);
+  });
+});
+
+describe('describeGameDayRules — os grupos do Play (flag play_groups)', () => {
+  const play = (over = {}) => dia({ format: GAME_DAY_FORMAT.PLAY, play_courts: 2, ...over });
+  const comGrupos = (policy = 'queue') => normalizePlayGroupsConfig({
+    play_groups: [{ id: 'a', name: 'Iniciantes' }, { id: 'b', name: 'Avançados' }],
+    play_groups_policy: policy,
+  });
+
+  it('⭐ sem o contexto de grupos, a linha NÃO existe — flag desligada e dia sem grupo são iguais', () => {
+    expect(chaves(play())).not.toContain('grupos');
+    expect(chaves(play(), { playGroups: null })).not.toContain('grupos');
+    expect(chaves(play(), { playGroups: { groups: [], policy: 'queue' } })).not.toContain('grupos');
+  });
+
+  it('com grupos, lista os nomes e diz a política', () => {
+    const l = linha(play(), 'grupos', { playGroups: comGrupos('rotate') });
+    expect(l.label).toBe('Grupos');
+    expect(l.value).toBe('Iniciantes, Avançados');
+    expect(l.help).toMatch(/fila/);
+    expect(l.help).toMatch(/Revezar os grupos/);
+  });
+
+  it('muitos grupos viram "+N" em vez de um parágrafo', () => {
+    const cfg = normalizePlayGroupsConfig({
+      play_groups: ['A', 'B', 'C', 'D', 'E', 'F'].map((n) => ({ id: n.toLowerCase(), name: `Grupo ${n}` })),
+    });
+    const l = linha(play(), 'grupos', { playGroups: cfg });
+    expect(l.value).toBe('Grupo A, Grupo B, Grupo C, Grupo D +2');
+  });
+
+  it('⭐ a dupla vinculada avisa que só vale dentro do grupo', () => {
+    const sem = linha(play(), 'duplas');
+    const com = linha(play(), 'duplas', { playGroups: comGrupos() });
+    expect(sem.help).not.toMatch(/mesmo grupo/);
+    expect(com.help).toMatch(/mesmo grupo/);
+  });
+
+  it('só o Play tem grupos — outro formato ignora o contexto', () => {
+    expect(chaves(dia({ format: GAME_DAY_FORMAT.AMERICANO_LIVE }), { playGroups: comGrupos() })).not.toContain('grupos');
+  });
+
+  it('a linha de grupos vem logo depois das quadras', () => {
+    const ks = chaves(play(), { playGroups: comGrupos() });
+    expect(ks.indexOf('grupos')).toBe(ks.indexOf('quadras') + 1);
   });
 });

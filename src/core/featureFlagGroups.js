@@ -75,6 +75,7 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Dia de jogo',
     keys: [
       FEATURE_FLAG.PLAY_SMART_ROTATION,
+      FEATURE_FLAG.PLAY_GROUPS,
       // Os formatos opcionais do dia de jogo ficam juntos, no grupo em que o
       // admin procura por eles.
       FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE,

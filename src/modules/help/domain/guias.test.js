@@ -326,3 +326,30 @@ describe('⭐ a gamificação nas dicas', () => {
     expect(pontosDaTela('/gamification', COM_FLAG).length).toBeLessThanOrEqual(MAX_PONTOS_POR_TELA);
   });
 });
+
+describe('⭐ o guia dos grupos do Play (flag play_groups)', () => {
+  const ids = (caminho, ctx) => guiasDaTela(caminho, ctx).map((g) => g.id);
+
+  it('só aparece com a flag ligada — na busca, nas áreas e em "Nesta tela"', () => {
+    expect(guiasVisiveis({}).map((g) => g.id)).not.toContain('play-grupos');
+    expect(guiasVisiveis({ flags: { play_groups: true } }).map((g) => g.id)).toContain('play-grupos');
+    expect(buscarGuias('grupos', {}).map((g) => g.id)).not.toContain('play-grupos');
+    expect(buscarGuias('grupos', { flags: { play_groups: true } }).map((g) => g.id)).toContain('play-grupos');
+  });
+
+  it('⭐ num dia de Play que já existe, a flag desligada ainda esconde o guia (diferente do guia do formato)', () => {
+    // O guia do FORMATO vale mesmo com a flag do formato desligada; o dos
+    // grupos ensina um cartão que, sem a flag, não existe.
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'play', flags: {} })).not.toContain('play-grupos');
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'play', flags: { play_groups: true } })).toContain('play-grupos');
+  });
+
+  it('só no Play: num Americano com a flag ligada, não aparece', () => {
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'americano', flags: { play_groups: true } })).not.toContain('play-grupos');
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'americano_live', flags: { play_groups: true } })).not.toContain('play-grupos');
+  });
+
+  it('o guia do formato continua valendo com a flag dele desligada (a regra de antes)', () => {
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'americano_live', flags: {} })).toContain('tutorial:dia-de-jogo-americano-aprimorado');
+  });
+});

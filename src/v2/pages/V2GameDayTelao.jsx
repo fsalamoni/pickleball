@@ -84,6 +84,9 @@ import {
   GAME_DAY_FORMAT_LABELS, isAmericanoLiveFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { forecastAmericanoLiveMatches } from '@/modules/games/domain/americanoLive';
+import { buildGroupedPlayView, courtHasMatch } from '@/modules/games/domain/playGroupsDraw';
+import { usePlayGroupsContext } from '@/modules/games/hooks/usePlayGroups';
+import { PlayGroupBadge, NoGroupBadge } from '@/v2/components/games/playGroups/PlayGroupBadge';
 import { telaoConnectionState } from '@/modules/games/domain/telaoConnection';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useRelogio } from '@/core/lib/useRelogio';
@@ -213,7 +216,7 @@ function Vazio({ children }) {
  *   `score_a` vir nulo — um dado ruim virando "0 × 0" numa tela que a sala
  *   inteira está olhando seria pior do que um erro discreto.
  */
-function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null }) {
+function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null, grupo = null }) {
   const venc = comPlacar ? winnerSide(jogo) : null;
   const placar = comPlacar ? scoreText(jogo) : null;
   return (
@@ -224,6 +227,7 @@ function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null }
             {jogo.court != null ? `QUADRA ${jogo.court}` : 'EM JOGO'}
           </span>
           <GameKindBadge kind={gameKindOf(jogo)} variant="dark" />
+          {grupo && <PlayGroupBadge name={grupo.name} color={grupo.color} variant="dark" />}
         </span>
         {placar && <span className="font-display text-3xl font-black text-acid">{placar}</span>}
       </div>
@@ -338,15 +342,53 @@ const POR_JOGO = 4;
  * item da lista: os nomes de quem está jogando já estão, em letra grande, nos
  * cards de quadra ao lado — repeti-los aqui só empurraria a fila para baixo.
  */
-function OrdemDeParticipacao({ view, onAtleta = null, porJogo = POR_JOGO }) {
+function OrdemDeParticipacao({
+  view, onAtleta = null, porJogo = POR_JOGO, grupos = null, proximosIds = null,
+}) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
   if (total === 0) return <Vazio>Ninguém na ordem ainda.</Vazio>;
 
   // Só faz sentido anunciar "entra a seguir" quando há gente suficiente para
   // formar uma partida; com 3 na fila, ninguém entra. Numa quadra de SIMPLES
-  // a partida é de dois (Onda CF).
+  // a partida é de dois (Onda CF). COM grupos 4 na fila não quer dizer partida
+  // (cada grupo tem a sua fila e as suas regras): quem entra a seguir é quem a
+  // PREVISÃO põe em quadra, não os quatro primeiros da lista.
   const proximos = order.length >= porJogo ? porJogo : 0;
+  const entraAseguir = (p, i) => (proximosIds ? proximosIds.has(p.id) : i < proximos);
+
+  const linha = (p, destacado, numero) => {
+    const classe = `flex w-full items-center gap-3 rounded-2xl border px-4 py-2.5 text-left ${
+      destacado ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
+    } ${onAtleta ? 'transition-colors hover:border-white/40' : ''}`;
+    const corpo = (
+      <>
+        <span className={`w-8 shrink-0 text-center font-display text-xl font-black ${destacado ? 'text-acid' : 'text-white/40'}`}>
+          {numero}
+        </span>
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-lg font-semibold text-white">{p.name}</span>
+          {p.partner_id && <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-300" />}
+        </span>
+        {destacado && <span className="shrink-0 text-xs font-bold uppercase text-acid">entra a seguir</span>}
+      </>
+    );
+    return onAtleta
+      ? (
+        <button key={p.id} type="button" onClick={() => onAtleta(p)} className={classe} title={`Ações de ${p.name}`}>
+          {corpo}
+        </button>
+      )
+      : <div key={p.id} className={classe}>{corpo}</div>;
+  };
+
+  // COM grupos a fila se parte em uma por grupo, cada uma com a sua numeração —
+  // o "#2" de um grupo não compete com o "#2" de outro.
+  const secoes = grupos
+    ? [...grupos.groups.map((g) => ({ id: g.id, g })), { id: null, g: null }]
+      .map((sec) => ({ ...sec, fila: order.filter((p) => (p.group_id ?? null) === sec.id) }))
+      .filter((sec) => sec.g || sec.fila.length > 0)
+    : null;
 
   return (
     <div className="space-y-1.5">
@@ -355,30 +397,28 @@ function OrdemDeParticipacao({ view, onAtleta = null, porJogo = POR_JOGO }) {
           Ninguém aguardando no momento.
         </p>
       )}
-      {order.map((p, i) => {
-        const classe = `flex w-full items-center gap-3 rounded-2xl border px-4 py-2.5 text-left ${
-          i < proximos ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
-        } ${onAtleta ? 'transition-colors hover:border-white/40' : ''}`;
-        const corpo = (
-          <>
-            <span className={`w-8 shrink-0 text-center font-display text-xl font-black ${i < proximos ? 'text-acid' : 'text-white/40'}`}>
-              {p.orderNo}
-            </span>
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="truncate text-lg font-semibold text-white">{p.name}</span>
-              {p.partner_id && <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-300" />}
-            </span>
-            {i < proximos && <span className="shrink-0 text-xs font-bold uppercase text-acid">entra a seguir</span>}
-          </>
-        );
-        return onAtleta
-          ? (
-            <button key={p.id} type="button" onClick={() => onAtleta(p)} className={classe} title={`Ações de ${p.name}`}>
-              {corpo}
-            </button>
-          )
-          : <div key={p.id} className={classe}>{corpo}</div>;
-      })}
+      {secoes
+        ? secoes.map(({ id, g, fila }) => (
+          <section
+            key={id ?? 'sem-grupo'}
+            aria-label={g ? `Fila do grupo ${g.name}` : 'Fila de quem está sem grupo'}
+            className="space-y-1.5 pb-2"
+          >
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {g ? <PlayGroupBadge name={g.name} color={g.color} variant="dark" /> : <NoGroupBadge variant="dark" />}
+              <span className="text-xs font-semibold uppercase tracking-wide text-white/40">
+                {g?.paused ? 'grupo em pausa' : `${fila.length} aguardando`}
+              </span>
+            </div>
+            {fila.length === 0 && !g?.paused && (
+              <p className="rounded-2xl border border-dashed border-white/10 px-4 py-2 text-sm text-white/30">
+                Ninguém aguardando neste grupo.
+              </p>
+            )}
+            {fila.map((p) => linha(p, entraAseguir(p, order.indexOf(p)), p.groupNo ?? p.orderNo))}
+          </section>
+        ))
+        : order.map((p, i) => linha(p, entraAseguir(p, i), p.orderNo))}
 
       {inCourt.length > 0 && (
         <p className="pt-1 text-sm leading-relaxed text-white/40">
@@ -419,14 +459,21 @@ function OrdemDeParticipacao({ view, onAtleta = null, porJogo = POR_JOGO }) {
  * nível e sexo. A tela diz isso com todas as letras — prometer uma dupla que
  * pode mudar seria pior do que não mostrar nada.
  */
-function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
+function ProximaPorQuadra({
+  entradas, disponiveis, acoesPorQuadra = null, comGrupos = false,
+}) {
   const comGente = entradas.filter((e) => e.players.length > 0);
   if (comGente.length === 0) {
+    // COM grupos "faltam jogadores" seria meia verdade: pode haver gente de
+    // sobra e nenhum grupo com partida pronta (regra de formação, de nível).
+    // O porquê de cada grupo está no painel de quem organiza.
     return (
       <Vazio>
         {disponiveis === 0
           ? 'Ninguém aguardando no momento.'
-          : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
+          : comGrupos
+            ? `Nenhum grupo tem partida pronta ainda (${disponiveis} na fila).`
+            : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
       </Vazio>
     );
   }
@@ -459,10 +506,13 @@ function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
                 {e.free ? 'livre agora' : 'quando liberar'}
               </span>
               <GameKindBadge kind={e.kind} variant="dark" />
+              {e.group && <PlayGroupBadge name={e.group.name} color={e.group.color} variant="dark" />}
             </div>
 
             {e.players.length === 0 ? (
-              <div className="text-lg font-semibold text-white/30">A fila acaba antes desta quadra</div>
+              <div className="text-lg font-semibold text-white/30">
+                {comGrupos ? 'Nenhum grupo tem partida pronta para esta quadra' : 'A fila acaba antes desta quadra'}
+              </div>
             ) : (
               <div className="text-lg font-semibold leading-snug text-white">
                 {e.players.map((p) => p.name).join(' · ')}
@@ -701,21 +751,34 @@ export default function V2GameDayTelao() {
   // `playView` de propósito: o useMemo dele lê esta constante durante a
   // renderização — declarar depois dá ReferenceError (zona morta temporal).
   const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  // GRUPOS do Play (flag `play_groups`). É o MESMO hook do painel de quem
+  // organiza: participantes com o nível resolvido e o sorteador que a previsão
+  // e o serviço compartilham. Sem grupos devolve os participantes intactos e
+  // `drawer: null` — o telão de sempre.
+  const grupos = usePlayGroupsContext({ gameDay, participants, games });
+  const comGrupos = board.isPlay && grupos.ativo;
 
   const playView = useMemo(
     () => {
       if (!board.isPlay) return null;
+      const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
+      if (comGrupos) {
+        return buildGroupedPlayView({
+          participants: grupos.participants, games, courts: courtsDoDia, drawer: grupos.drawer,
+          history: rodizioEquilibrado ? buildPlayHistory(games) : null,
+          courtKinds: courtKindsFromGames(games, courtsDoDia),
+        });
+      }
       const bruto = computePlayOrder({ participants, games });
       if (!rodizioEquilibrado) return bruto;
       // A ordem exibida no telão passa a ser a ordem REAL de entrada — é ela
       // que alimenta a numeração e o destaque "entra a seguir".
-      const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
       return applyPlayEntryOrder(bruto, {
         courts: courtsDoDia, games, history: buildPlayHistory(games),
         courtKinds: courtKindsFromGames(games, courtsDoDia),
       });
     },
-    [board.isPlay, participants, games, rodizioEquilibrado, gameDay?.play_courts],
+    [board.isPlay, participants, games, rodizioEquilibrado, gameDay?.play_courts, comGrupos, grupos.participants, grupos.drawer],
   );
   // Ranking do dia só existe onde há placar. O Play não grava resultado, então
   // nem calculamos: a lista viria vazia de qualquer jeito. O Americano
@@ -753,15 +816,42 @@ export default function V2GameDayTelao() {
   // sempre a por quadra (é a única que sabe que ali entram dois).
   const proximasPlay = useMemo(() => {
     if (!playView) return [];
-    if (!rodizioEquilibrado && !comSimples) {
+    if (!comGrupos && !rodizioEquilibrado && !comSimples) {
       return forecastPlayByCourt(playView.order, { courts: quadras, games });
     }
     return forecastPlayByCourtBalanced(playView.order, {
       courts: quadras, games,
       history: rodizioEquilibrado ? buildPlayHistory(games) : null,
       courtKinds: tiposDasQuadras,
+      ...(comGrupos ? { groups: grupos.drawer } : {}),
     });
-  }, [playView, quadras, games, rodizioEquilibrado, comSimples, tiposDasQuadras]);
+  }, [playView, quadras, games, rodizioEquilibrado, comSimples, tiposDasQuadras, comGrupos, grupos.drawer]);
+
+  // Quem entra a seguir COM grupos: quem a previsão põe nas quadras livres (ou,
+  // com todas ocupadas, na primeira partida pronta). Sem grupos o telão
+  // destaca os primeiros da fila, como sempre.
+  const proximosIds = useMemo(() => {
+    if (!comGrupos) return null;
+    const prontas = proximasPlay.filter((e) => e.full);
+    const agora = prontas.filter((e) => e.free);
+    const alvo = agora.length > 0 ? agora : prontas.slice(0, 1);
+    return new Set(alvo.flatMap((e) => e.players.map((p) => p.id)));
+  }, [comGrupos, proximasPlay]);
+
+  // "Criar jogo" numa quadra livre. Sem grupos basta haver gente na fila; COM
+  // grupos pode haver oito esperando e nenhuma partida pronta — pergunta ao
+  // sorteador, que responde pela mesma conta do serviço.
+  const historicoDoRodizio = useMemo(
+    () => (rodizioEquilibrado ? buildPlayHistory(games) : null),
+    [rodizioEquilibrado, games],
+  );
+  const podeCriarNa = (court) => {
+    const tipo = kindOfCourt(tiposDasQuadras, court);
+    if (!comGrupos) return disponiveis >= slotsForKind(tipo);
+    return courtHasMatch(grupos.drawer, {
+      order: playView ? playView.order : [], court, kind: tipo, history: historicoDoRodizio,
+    });
+  };
 
   // Previsão do Americano aprimorado: já com as duplas, porque neste formato o
   // sorteio decide os quatro E o pareamento na mesma conta.
@@ -782,9 +872,12 @@ export default function V2GameDayTelao() {
    */
   const podeSortearRodada = useMemo(() => {
     if (!board.isPlay) return false;
+    // COM grupos, "fila para encher duas quadras" não basta: cada quadra
+    // precisa de um grupo com partida pronta — e a previsão já sabe disso.
+    if (comGrupos) return proximasPlay.filter((e) => e.free && e.full).length >= 2;
     const livres = freePlayCourts({ courts: quadras, games });
     return fillableCourts(livres, tiposDasQuadras, disponiveis) >= 2;
-  }, [board.isPlay, quadras, games, disponiveis, tiposDasQuadras]);
+  }, [board.isPlay, quadras, games, disponiveis, tiposDasQuadras, comGrupos, proximasPlay]);
 
   // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
   const quadrasDoPlay = useMemo(() => {
@@ -1055,6 +1148,7 @@ export default function V2GameDayTelao() {
                     // o organizador lança o resultado.
                     jogo={jogo}
                     comPlacar={false}
+                    grupo={comGrupos && jogo.group_name ? { name: jogo.group_name, color: jogo.group_color } : null}
                     onJogador={podeGerir ? (pl) => setAlvoSubstituir({ gid: jogo.id, player: pl, game: jogo }) : null}
                     acoes={podeGerir && (
                       <>
@@ -1091,9 +1185,11 @@ export default function V2GameDayTelao() {
                       <BotaoTelao
                         tone="acid"
                         onClick={() => (ehAoVivo ? gerarAoVivo(court) : criarJogoNaQuadra(court))}
-                        disabled={ocupado || disponiveis < slotsForKind(kindOfCourt(tiposDasQuadras, court))}
-                        title={disponiveis < slotsForKind(kindOfCourt(tiposDasQuadras, court))
-                          ? `Mínimo de ${slotsForKind(kindOfCourt(tiposDasQuadras, court))} disponíveis na fila`
+                        disabled={ocupado || !podeCriarNa(court)}
+                        title={!podeCriarNa(court)
+                          ? (comGrupos
+                            ? 'Nenhum grupo tem partida pronta para esta quadra'
+                            : `Mínimo de ${slotsForKind(kindOfCourt(tiposDasQuadras, court))} disponíveis na fila`)
                           : undefined}
                       >
                         <PlayCircle className="h-4 w-4" />
@@ -1126,7 +1222,7 @@ export default function V2GameDayTelao() {
             {ehAoVivo ? (
               <ProximaAoVivo entradas={previsaoAoVivo} disponiveis={disponiveis} />
             ) : board.isPlay ? (
-              <ProximaPorQuadra entradas={proximasPlay} disponiveis={disponiveis} />
+              <ProximaPorQuadra entradas={proximasPlay} disponiveis={disponiveis} comGrupos={comGrupos} />
             ) : board.upcoming.length === 0 ? (
               <Vazio>Sem jogos programados adiante.</Vazio>
             ) : (
@@ -1159,6 +1255,8 @@ export default function V2GameDayTelao() {
                       view={playView}
                       onAtleta={podeGerir ? setAtletaAberto : null}
                       porJogo={vagasDaProxima}
+                      grupos={comGrupos ? grupos.config : null}
+                      proximosIds={proximosIds}
                     />
                   )
                   : null}

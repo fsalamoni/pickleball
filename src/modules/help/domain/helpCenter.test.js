@@ -546,12 +546,14 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
       my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
+      play_groups: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
       guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
+      play_groups: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
@@ -672,5 +674,34 @@ describe('⭐ a ajuda da gamificação', () => {
     artigos.filter((a) => a.id.startsWith('gamificacao-')).forEach((a) => {
       expect(texto(a.id), a.id).not.toMatch(/undefined|NaN|\[object/);
     });
+  });
+});
+
+describe('os grupos do Play na ajuda', () => {
+  it('⭐ o artigo só existe com a flag — busca, link direto e "Ajuda para esta tela"', () => {
+    const desligado = helpCatalog({});
+    expect(desligado.all().map((a) => a.id)).not.toContain('play-grupos');
+    expect(desligado.getArticle(HELP_SECTION.ATHLETE, 'play-grupos')).toBeNull();
+    expect(desligado.search('dividir o play em grupos').map((a) => a.id)).not.toContain('play-grupos');
+    expect(desligado.forRoute('/dia-de-jogo/abc').articles.map((a) => a.id)).not.toContain('play-grupos');
+
+    const ligado = helpCatalog({ play_groups: true });
+    expect(ligado.getArticle(HELP_SECTION.ATHLETE, 'play-grupos')).not.toBeNull();
+    expect(ligado.search('grupos nível convidado').map((a) => a.id)).toContain('play-grupos');
+    expect(ligado.forRoute('/dia-de-jogo/abc').articles.map((a) => a.id)).toContain('play-grupos');
+  });
+
+  it('⭐ o que o artigo afirma bate com o que o domínio permite', async () => {
+    const { PLAY_GROUP_LIMITS, GROUP_POLICY_LABELS } = await import('@/modules/games/domain/playGroups.js');
+    const artigo = allHelpArticles().find((a) => a.id === 'play-grupos');
+    const texto = JSON.stringify(artigo.blocks);
+    // As três políticas existem com estes nomes de tela.
+    expect(Object.values(GROUP_POLICY_LABELS)).toHaveLength(3);
+    expect(texto).toMatch(/tempo de espera/);
+    expect(texto).toMatch(/revezando/);
+    expect(texto).toMatch(/prioridade/);
+    // A régua dita é a da plataforma.
+    expect(texto).toMatch(/2\.0 a 8\.0/);
+    expect(PLAY_GROUP_LIMITS.MAX_GROUPS).toBeGreaterThan(1);
   });
 });

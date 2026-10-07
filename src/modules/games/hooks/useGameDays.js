@@ -175,11 +175,13 @@ export function useGameDayParticipants(gdId) {
   });
 }
 
-export function useAddGameDayParticipant(gdId) {
+export function useAddGameDayParticipant(gdId, { gameDay = null } = {}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (entry) => addGameDayParticipant(gdId, entry, user),
+    // `gameDay` liga o grupo automático de quem chega (flag `play_groups`); sem
+    // ele, ou num dia sem grupos, nada é lido a mais.
+    mutationFn: (entry) => addGameDayParticipant(gdId, entry, user, { gameDay }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['game-days', gdId, 'participants'] });
       qc.invalidateQueries({ queryKey: ['game-days'] });
@@ -368,7 +370,11 @@ export function useCreatePlayRound(gdId) {
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
     // `courtKinds` (Onda CF): o tipo que a tela mostra em cada quadra.
-    mutationFn: (opts = {}) => createPlayRoundForFreeCourts(gdId, user, { courtKinds: opts?.courtKinds || null }),
+    // `courtGroups` (flag `play_groups`): o grupo escolhido à mão por quadra.
+    mutationFn: (opts = {}) => createPlayRoundForFreeCourts(gdId, user, {
+      courtKinds: opts?.courtKinds || null,
+      courtGroups: opts?.courtGroups || null,
+    }),
     onSuccess: invalidate,
   });
 }

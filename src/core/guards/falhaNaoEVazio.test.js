@@ -116,6 +116,8 @@ describe('⭐ a varredura: ninguém no escopo afirma vazio sem tratar falha', ()
       'fotos: mesmo caso do TournamentGallery'],
     ['src/v2/components/tournament/TeamConfrontationDialogs.jsx',
       'recebe a escalação por props — quem consulta (e trata a falha) é a tela de cima'],
+    ['src/v2/components/games/playGroups/PlayGroupsCard.jsx',
+      'o dia (e os grupos gravados nele) chega por props — a frase "nenhum grupo" é sobre a configuração do próprio dia, que já carregou; participantes e partidas também vêm de cima, onde a falha esconde os comandos e mostra o erro'],
     ['src/v2/pages/V2JoinTournament.jsx',
       'toast após o envio de um código: a pessoa acabou de agir e o erro real tem catch próprio'],
   ]);
@@ -478,6 +480,8 @@ describe('⭐ a varredura na plataforma inteira', () => {
   const ISENTOS_NA_PLATAFORMA = new Map([
     ['src/v2/components/arenas/V2ArenaEditors.jsx',
       'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
+    ['src/v2/components/games/playGroups/PlayGroupsCard.jsx',
+      'o dia (e os grupos gravados nele) chega por props — a frase "nenhum grupo" é sobre a configuração do próprio dia, que já carregou; participantes e partidas também vêm de cima, onde a falha esconde os comandos e mostra o erro'],
     ['src/v2/components/dicas/GuiaEmAndamento.jsx',
       'o texto fala do ALVO do guia na tela (catálogo estático); o único dado vem do DOM, não de consulta'],
     ['src/v2/components/dicas/PainelDeDicas.jsx',

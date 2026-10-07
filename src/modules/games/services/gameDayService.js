@@ -43,6 +43,11 @@ import {
   buildPlayHistory, buildPlayNextMatchBalanced, makePartnerRepeatCounter,
   drawPlayRoundForFreeCourts,
 } from '../domain/playRotation.js';
+import {
+  normalizePlayGroupsConfig, validatePlayGroups, isPlayGroupsActive, groupById, groupForEntry,
+  groupSnapshot, withLevels, NO_GROUP,
+} from '../domain/playGroups.js';
+import { makeGroupsDrawer, explainGroups, describeNoMatch } from '../domain/playGroupsDraw.js';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getPlatformSettings } from '@/core/services/platformSettingsService';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
@@ -335,7 +340,7 @@ export async function joinPublicGameDay(gameDay, user, profile) {
     source: GD_PARTICIPANT_SOURCE.JOINED,
     play_level: profile?.level || profile?.leveling_level || null,
     play_gender: playGenderOf(profile),
-  }, user);
+  }, user, { gameDay: atual });
 
   // No dia do clube, a presença de cada membro não vira aviso: quem agendou
   // uma data semanal receberia um por pessoa, toda semana (a lista está no dia).
@@ -394,13 +399,71 @@ export function buildGameDayParticipant(pid, entry = {}) {
     // Quadra escolhida no dia de jogo de ARENA com inscrição por quadra.
     // Aditivo e inerte em todos os outros casos: `null` quando não se aplica.
     arena_court_id: entry.arena_court_id ?? null,
+    // GRUPO do Play (flag `play_groups`). Só entra no documento quando alguém o
+    // informou: num dia sem grupos o participante é gravado exatamente como
+    // sempre foi, sem um campo a mais.
+    ...(entry.play_group_id !== undefined ? { play_group_id: entry.play_group_id ?? null } : {}),
   };
 }
 
-export async function addGameDayParticipant(gdId, entry, actor) {
+/**
+ * As flags da plataforma, lidas do servidor. Best-effort por princípio: uma
+ * falha devolve tudo desligado, e a operação segue como seguia antes das flags.
+ */
+async function lerFlags() {
+  return getPlatformSettings().then((cfg) => cfg?.feature_flags || {}).catch(() => ({}));
+}
+
+/**
+ * O GRUPO de quem está chegando ao dia de jogo: o grupo ABERTO que combina com o
+ * nível e o sexo dele. `null` quando o dia não tem grupos, a flag está
+ * desligada, o formato não é Play ou nada combina — nunca inventa um grupo.
+ *
+ * Usa o nível unificado de quem tem conta (DUPR → rating → ELO → declarado) e
+ * o nível informado para o convidado avulso. Best-effort: qualquer falha vira
+ * `null`, e quem chega entra como sempre entrou.
+ *
+ * @param {object} gameDay o dia (já lido por quem chama)
+ * @param {object} entry `{ id, user_id?, play_level?, play_gender? }`
+ * @returns {Promise<string|null>}
+ */
+export async function resolveEntryGroup(gameDay, entry) {
+  try {
+    // Primeiro a pergunta PURA (o dia é Play e tem grupos?) — só então a flag,
+    // que custa uma leitura. Dia sem grupos nunca paga essa leitura.
+    if (!isPlayGroupsActive(gameDay, true)) return null;
+    const flags = await lerFlags();
+    if (flags[FEATURE_FLAG.PLAY_GROUPS] !== true) return null;
+    const niveis = await fetchUnifiedLevelsByParticipant([entry]).catch(() => ({}));
+    return groupForEntry(normalizePlayGroupsConfig(gameDay), withLevels([entry], niveis)[0]);
+  } catch (err) {
+    logger.warn('resolveEntryGroup falhou — entra sem grupo:', err);
+    return null;
+  }
+}
+
+/**
+ * @param {string} gdId
+ * @param {object} entry
+ * @param {object} actor
+ * @param {{ gameDay?: object|null }} [opts] o dia, quando quem chama já o tem em
+ *   mãos. É o que liga o GRUPO AUTOMÁTICO (flag `play_groups`): quem chega cai
+ *   no grupo do seu nível. Sem o dia, ou com um dia sem grupos, não se lê nada
+ *   a mais — inserir 20 atletas não pode custar 40 leituras só porque a
+ *   funcionalidade existe.
+ */
+export async function addGameDayParticipant(gdId, entry, actor, { gameDay = null } = {}) {
   if (!gdId) throw new Error('Dia de jogo inválido.');
   const pid = doc(collection(db, COL, gdId, SUB_PARTICIPANTS)).id;
-  const participante = buildGameDayParticipant(pid, entry);
+  // Quem chega cai no grupo do seu nível — a menos que quem inseriu já tenha
+  // dito (inclusive "sem grupo", que é `null`). A pergunta "o dia tem grupos?"
+  // é pura e sai do dia em mãos; só então a flag é consultada.
+  let entrada = entry;
+  if (entry.play_group_id === undefined && gameDay) {
+    const grupoAuto = await resolveEntryGroup(gameDay, { ...entry, id: pid });
+    if (grupoAuto) entrada = { ...entry, play_group_id: grupoAuto };
+  }
+  const participante = buildGameDayParticipant(pid, entrada);
   const { source } = participante;
   await setDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), participante);
   if (entry.user_id) {
@@ -826,7 +889,7 @@ function playSideEntries(ids, byId) {
 
 /** Grava (no batch) um jogo aberto do Play numa quadra e devolve o id. */
 function writePlayGame(batch, gdId, {
-  court, side_a, side_b, order, format = 'play', kind = GAME_KIND.DOUBLES,
+  court, side_a, side_b, order, format = 'play', kind = GAME_KIND.DOUBLES, group = null,
 }) {
   const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
   batch.set(doc(db, COL, gdId, SUB_GAMES, gid), {
@@ -846,6 +909,10 @@ function writePlayGame(batch, gdId, {
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
     updated_at: serverTimestamp(),
+    // O grupo da partida (flag `play_groups`): uma cópia de id, nome e cor, para
+    // o telão e as listas lerem sem depender da configuração do dia — que pode
+    // mudar. Sem grupos o documento é o de sempre, sem estes campos.
+    ...(group ? groupSnapshot(group) : {}),
   });
   return gid;
 }
@@ -894,13 +961,16 @@ function faltaGente(kind, partida = 'o próximo jogo') {
  * empatados via `available_tie`), formando duplas equilibradas por nível/sexo.
  * @param {string} gdId
  * @param {object} actor
- * @param {{ court?: number|null }} [opts]  quadra alvo (padrão: menor livre)
- * @returns {{ gameId: string, court: number }}
+ * @param {{ court?: number|null, kind?: string|null, groupId?: string|null }} [opts]
+ *   quadra alvo (padrão: menor livre); tipo (duplas/simples); e, com a flag
+ *   `play_groups`, o grupo escolhido à mão para esta partida (`NO_GROUP` para
+ *   quem está sem grupo) — vale por cima da política e das quadras do grupo
+ * @returns {{ gameId: string, court: number, kind: string, groupId?: string|null }}
  */
-export async function createNextPlayGame(gdId, actor, { court = null, kind = null } = {}) {
+export async function createNextPlayGame(gdId, actor, { court = null, kind = null, groupId = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
-  const [participants, games] = await Promise.all([
+  const [participantsBrutos, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
   const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
@@ -908,42 +978,72 @@ export async function createNextPlayGame(gdId, actor, { court = null, kind = nul
   const tipo = kindForCourt(kind, games, targetCourt, gd.play_courts || 1);
   const vagas = slotsForKind(tipo);
 
-  const { order: filaCompleta } = computePlayOrder({ participants, games });
-  // No simples a dupla vinculada não vale: a fila é lida sem os vínculos.
-  const order = tipo === GAME_KIND.SINGLES ? withoutPartnerLinks(filaCompleta) : filaCompleta;
-
-  // RODÍZIO EQUILIBRADO (flag `play_smart_rotation`, padrão DESLIGADA).
-  // Ligada, varia os grupos e as duplas sem furar a ordem de participação —
-  // o primeiro elegível da fila entra sempre. Desligada, o caminho é
-  // exatamente o de antes. A leitura da flag é best-effort: qualquer falha
-  // devolve os padrões (tudo desligado) e a criação segue como hoje.
-  const flags = await getPlatformSettings()
-    .then((cfg) => cfg?.feature_flags || {})
-    .catch(() => ({}));
+  // RODÍZIO EQUILIBRADO (flag `play_smart_rotation`, padrão DESLIGADA) e GRUPOS
+  // (flag `play_groups`, padrão DESLIGADA). A leitura das flags é best-effort:
+  // qualquer falha devolve os padrões (tudo desligado) e a criação segue como
+  // sempre seguiu.
+  const flags = await lerFlags();
   const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
+  const grupos = isPlayGroupsActive(gd, flags[FEATURE_FLAG.PLAY_GROUPS] === true)
+    ? normalizePlayGroupsConfig(gd)
+    : null;
 
-  const ids = rodizioEquilibrado
-    ? buildPlayNextMatchBalanced(order, { slots: vagas, history: historico })
-    : buildPlayNextMatch(order, { slots: vagas });
-  if (!ids) throw new Error(faltaGente(tipo));
-
-  const byId = new Map(participants.map((p) => [p.id, p]));
   // Nível na régua unificada (DUPR informado → rating 2.0–8.0 da plataforma →
   // ELO → nível do formulário). Só em memória: nada é gravado no participante.
   // Best-effort — sem os níveis, o `playLevelValue` volta ao nível do
   // formulário e a formação de duplas acontece do mesmo jeito.
-  const nivelPorParticipante = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+  // Com GRUPOS o nível decide QUEM entra (diferença máxima na partida), não só
+  // as duplas, então é buscado ANTES de escolher; sem grupos, só depois — como
+  // sempre foi, e sem uma leitura a mais quando a criação nem sai.
+  const nivelPorParticipante = grupos
+    ? await fetchUnifiedLevelsByParticipant(participantsBrutos).catch(() => ({}))
+    : null;
+  const participants = grupos ? withLevels(participantsBrutos, nivelPorParticipante) : participantsBrutos;
+
+  const view = computePlayOrder({ participants, games });
+  const filaCompleta = view.order;
+  // No simples a dupla vinculada não vale: a fila é lida sem os vínculos.
+  const order = tipo === GAME_KIND.SINGLES ? withoutPartnerLinks(filaCompleta) : filaCompleta;
+
+  let ids;
+  let grupoEscolhido = null;
+  let sorteador = null;
+  if (grupos) {
+    // O MESMO sorteador da previsão: o que a tela anuncia é o que se cria.
+    sorteador = makeGroupsDrawer(grupos, {
+      games, participants, courtGroups: groupId ? { [targetCourt]: groupId } : {},
+    });
+    const r = sorteador.pick({
+      pool: order, court: targetCourt, slots: vagas, history: historico,
+      lastGroupId: sorteador.lastGroupId,
+    });
+    if (!r) throw new Error(mensagemSemPartida({ view, grupos, vagas, court: targetCourt, groupId, historico }));
+    ids = r.ids;
+    grupoEscolhido = r.groupId;
+  } else {
+    ids = rodizioEquilibrado
+      ? buildPlayNextMatchBalanced(order, { slots: vagas, history: historico })
+      : buildPlayNextMatch(order, { slots: vagas });
+    if (!ids) throw new Error(faltaGente(tipo));
+  }
+
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const nivelDepois = grupos
+    ? nivelPorParticipante
+    : await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
   const escolhidos = ids
     .map((id) => byId.get(id))
     .filter(Boolean)
-    .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
-      ? { ...p, level_value: nivelPorParticipante[p.id] }
+    .map((p) => (Number.isFinite(nivelDepois[p.id])
+      ? { ...p, level_value: nivelDepois[p.id] }
       : p));
   const { side_a, side_b } = assignPlaySides(escolhidos, {
     kind: tipo,
     partnerRepeatCount: makePartnerRepeatCounter(historico),
+    ...(sorteador ? { pairing: sorteador.pairingOf(grupoEscolhido) } : {}),
   });
+  const grupoDaPartida = grupos ? groupById(grupos, grupoEscolhido) : null;
 
   const batch = writeBatch(db);
   const gid = writePlayGame(batch, gdId, {
@@ -952,15 +1052,39 @@ export async function createNextPlayGame(gdId, actor, { court = null, kind = nul
     side_b: playSideEntries(side_b, byId),
     order: Date.now(),
     kind: tipo,
+    group: grupoDaPartida,
   });
   const chosen = new Set(ids);
   applySkipDecrement(batch, gdId, participants.filter((p) => !chosen.has(p.id)));
   await batch.commit();
   await createAuditLog({
     action: 'game_day_play_game_created', actor,
-    details: { game_day_id: gdId, court: targetCourt, game_id: gid, kind: tipo },
+    details: {
+      game_day_id: gdId, court: targetCourt, game_id: gid, kind: tipo,
+      ...(grupos ? { group_id: grupoEscolhido } : {}),
+    },
   });
-  return { gameId: gid, court: targetCourt, kind: tipo };
+  return {
+    gameId: gid, court: targetCourt, kind: tipo,
+    ...(grupos ? { groupId: grupoEscolhido } : {}),
+  };
+}
+
+/**
+ * Por que NENHUMA partida saiu, em linguagem de quadra. O genérico "não há
+ * jogadores suficientes" esconde o que importa com grupos: o grupo B tem gente,
+ * mas falta uma mulher para a dupla mista que ele exige.
+ */
+function mensagemSemPartida({ view, grupos, vagas, court, groupId, historico }) {
+  const explicacoes = explainGroups({
+    view, config: grupos, slots: vagas, freeCourts: court != null ? [court] : null, history: historico,
+  });
+  if (groupId) {
+    const alvo = groupId === NO_GROUP ? null : groupId;
+    const e = explicacoes.find((x) => x.id === alvo);
+    if (e) return `${e.name}: ${e.reason}`;
+  }
+  return describeNoMatch(explicacoes);
 }
 
 /**
@@ -984,10 +1108,10 @@ export async function createNextPlayGame(gdId, actor, { court = null, kind = nul
  *
  * @returns {{ created: Array<{gameId:string, court:number}>, courts:number[] }}
  */
-export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = null } = {}) {
+export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = null, courtGroups = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
-  const [participants, games] = await Promise.all([
+  const [participantsBrutos, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
 
@@ -995,29 +1119,47 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
   const livres = freePlayCourts({ courts: totalCourts, games });
   if (livres.length === 0) throw new Error('Todas as quadras já estão em jogo.');
 
-  const { order } = computePlayOrder({ participants, games });
-
-  // Mesma leitura de flag de `createNextPlayGame`: ligada, o rodízio
-  // equilibrado varia grupos e duplas sem furar a ordem; desligada, a escolha
-  // é a de sempre. Best-effort — falha devolve os padrões.
-  const flags = await getPlatformSettings()
-    .then((cfg) => cfg?.feature_flags || {})
-    .catch(() => ({}));
+  // Mesma leitura de flags de `createNextPlayGame`: ligadas, o rodízio
+  // equilibrado varia grupos e duplas sem furar a ordem, e os GRUPOS sorteiam
+  // dentro de cada grupo; desligadas, a escolha é a de sempre. Best-effort.
+  const flags = await lerFlags();
   const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
+  const grupos = isPlayGroupsActive(gd, flags[FEATURE_FLAG.PLAY_GROUPS] === true)
+    ? normalizePlayGroupsConfig(gd)
+    : null;
+
+  // Com grupos o nível decide quem entra, então é buscado ANTES de escolher;
+  // sem grupos, só depois — como sempre foi, e sem uma leitura a mais quando a
+  // rodada nem sai.
+  const nivelAntes = grupos
+    ? await fetchUnifiedLevelsByParticipant(participantsBrutos).catch(() => ({}))
+    : null;
+  const participants = grupos ? withLevels(participantsBrutos, nivelAntes) : participantsBrutos;
+  const view = computePlayOrder({ participants, games });
+  const { order } = view;
 
   // O tipo de cada quadra: o que a tela escolheu agora por cima do que cada
   // quadra já era (o último jogo dela). É a MESMA conta da previsão da tela.
   const tipos = mergeCourtKinds(courtKindsFromGames(games, totalCourts), courtKinds);
+  const sorteador = grupos
+    ? makeGroupsDrawer(grupos, { games, participants, courtGroups: courtGroups || {} })
+    : null;
   const rodada = drawPlayRoundForFreeCourts(order, {
     courts: totalCourts, games, slots: PLAY_SLOTS, history: historico, courtKinds: tipos,
+    ...(sorteador ? { groups: sorteador } : {}),
   });
   if (rodada.length === 0) {
-    throw new Error(faltaGente(tipoMaisBarato(livres, tipos), 'uma partida'));
+    throw new Error(grupos
+      ? mensagemSemPartida({
+        view, grupos, vagas: slotsForKind(tipoMaisBarato(livres, tipos)), court: null, groupId: null, historico,
+      })
+      : faltaGente(tipoMaisBarato(livres, tipos), 'uma partida'));
   }
 
   const byId = new Map(participants.map((p) => [p.id, p]));
-  const nivelPorParticipante = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+  const nivelPorParticipante = nivelAntes
+    ?? await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
   const contarParceria = makePartnerRepeatCounter(historico);
 
   const batch = writeBatch(db);
@@ -1025,14 +1167,17 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
   const created = [];
   const escolhidos = new Set();
 
-  rodada.forEach(({ court, ids, kind }, i) => {
+  rodada.forEach(({ court, ids, kind, groupId }, i) => {
     const escolhidos4 = ids
       .map((id) => byId.get(id))
       .filter(Boolean)
       .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
         ? { ...p, level_value: nivelPorParticipante[p.id] }
         : p));
-    const { side_a, side_b } = assignPlaySides(escolhidos4, { kind, partnerRepeatCount: contarParceria });
+    const { side_a, side_b } = assignPlaySides(escolhidos4, {
+      kind, partnerRepeatCount: contarParceria,
+      ...(sorteador ? { pairing: sorteador.pairingOf(groupId) } : {}),
+    });
     const gid = writePlayGame(batch, gdId, {
       court,
       side_a: playSideEntries(side_a, byId),
@@ -1040,8 +1185,9 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
       // `order` distinto por quadra mantém a sequência legível na lista.
       order: agora + i,
       kind,
+      group: grupos ? groupById(grupos, groupId) : null,
     });
-    created.push({ gameId: gid, court });
+    created.push({ gameId: gid, court, ...(grupos ? { groupId } : {}) });
     ids.forEach((id) => escolhidos.add(id));
   });
 
@@ -1049,7 +1195,10 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
   await batch.commit();
   await createAuditLog({
     action: 'game_day_play_round_created', actor,
-    details: { game_day_id: gdId, courts: created.map((c) => c.court), games: created.length },
+    details: {
+      game_day_id: gdId, courts: created.map((c) => c.court), games: created.length,
+      ...(grupos ? { groups: created.map((c) => c.groupId ?? null) } : {}),
+    },
   });
   return { created, courts: created.map((c) => c.court) };
 }
@@ -1069,6 +1218,23 @@ function manualGameKind(sideAIds = [], sideBIds = []) {
   throw new Error('Escolha 1 jogador de cada lado (simples) ou 2 de cada lado (duplas).');
 }
 
+/**
+ * O grupo de uma partida montada à mão: o grupo EM COMUM dos jogadores, quando
+ * os quatro (ou os dois) são do mesmo — e nenhum quando se misturam. É o que
+ * mantém o revezamento sabendo de quem foi a última partida. Só olha o dia
+ * quando alguém tem grupo (a maioria dos dias nem lê), e respeita a flag:
+ * desligada, a partida é gravada como sempre foi.
+ */
+async function grupoComumDosJogadores(gdId, ids, byId) {
+  const doGrupo = ids.map((id) => byId.get(id)?.play_group_id).filter(Boolean);
+  if (doGrupo.length === 0 || new Set(doGrupo).size !== 1 || doGrupo.length !== ids.length) return null;
+  const flags = await lerFlags();
+  if (flags[FEATURE_FLAG.PLAY_GROUPS] !== true) return null;
+  const gd = await getGameDay(gdId).catch(() => null);
+  if (!isPlayGroupsActive(gd, true)) return null;
+  return groupById(normalizePlayGroupsConfig(gd), doGrupo[0]);
+}
+
 /** Criação MANUAL de um jogo do Play (jogadores escolhidos à mão). */
 export async function createManualPlayGame(gdId, { court = null, sideAIds = [], sideBIds = [] }, actor) {
   const tipo = manualGameKind(sideAIds, sideBIds);
@@ -1081,6 +1247,7 @@ export async function createManualPlayGame(gdId, { court = null, sideAIds = [], 
     side_b: playSideEntries(sideBIds, byId),
     order: Date.now(),
     kind: tipo,
+    group: await grupoComumDosJogadores(gdId, [...sideAIds, ...sideBIds], byId),
   });
   await batch.commit();
   await createAuditLog({ action: 'game_day_play_game_manual', actor, details: { game_day_id: gdId, game_id: gid, court } });
@@ -1205,6 +1372,10 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
 
   const { order } = computePlayOrder({ participants, games });
   const escolhido = opts?.replacementId || null;
+  // Partida de um GRUPO: quem entra no lugar, preferencialmente, é do mesmo
+  // grupo (a partida carrega o `group_id`; sem ele, nada muda). Só preferência:
+  // sem ninguém do grupo esperando, entra o próximo da ordem.
+  const preferGroupId = game.group_id || null;
   let repl;
   if (escolhido) {
     if (escolhido === absentId) throw new Error('Escolha outro jogador para entrar.');
@@ -1213,7 +1384,7 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
     }
     repl = order.find((p) => p.id === escolhido);
   } else {
-    repl = pickSwapReplacement(order, { inGameIds, swappedOutIds });
+    repl = pickSwapReplacement(order, { inGameIds, swappedOutIds, preferGroupId });
   }
   if (!repl) throw new Error('Não há substituto disponível na ordem de participação.');
 
@@ -1291,6 +1462,130 @@ export async function setPlayParticipantPartner(gdId, pid, partnerId, actor) {
     action: 'game_day_play_partner_set', actor,
     details: { game_day_id: gdId, participant_id: pid, partner_id: partnerId || null },
   });
+}
+
+/* --------------------------- Grupos do Play ------------------------------ */
+
+/**
+ * CONFIGURA os grupos do dia (flag `play_groups`): a lista e a política.
+ *
+ * É configuração, então a regra do Firestore só deixa quem configura o dia —
+ * criador, gestor da arena ou administrador do clube. O administrador NOMEADO
+ * opera o dia (move gente entre grupos), mas não redefine os grupos.
+ *
+ * Lista vazia desliga os grupos do dia. Quem estava num grupo removido tem o
+ * campo limpo — higiene: a leitura já trata grupo que não existe como "sem
+ * grupo", então um dia nunca fica errado por causa de uma limpeza que falhou.
+ *
+ * @param {string} gdId
+ * @param {{ groups: object[], policy?: string }} config
+ * @param {object} actor
+ * @returns {Promise<{ play_groups: object[], play_groups_policy: string }>}
+ */
+export async function setPlayGroups(gdId, { groups = [], policy } = {}, actor) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const { valid, errors, value } = validatePlayGroups({ groups, policy });
+  if (!valid) throw new Error(errors[0]);
+
+  const antes = normalizePlayGroupsConfig(gd).groups;
+  await updateDoc(doc(db, COL, gdId), { ...value, updated_at: serverTimestamp() });
+
+  const ficam = new Set(value.play_groups.map((g) => g.id));
+  const removidos = new Set(antes.filter((g) => !ficam.has(g.id)).map((g) => g.id));
+  if (removidos.size > 0) {
+    try {
+      const participants = await listGameDayParticipants(gdId);
+      const afetados = participants.filter((p) => removidos.has(p.play_group_id));
+      if (afetados.length > 0) {
+        const batch = writeBatch(db);
+        afetados.forEach((p) => batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, p.id), {
+          play_group_id: null, updated_at: serverTimestamp(),
+        }));
+        await batch.commit();
+      }
+    } catch (err) {
+      logger.warn('setPlayGroups: limpeza de grupos removidos falhou (não crítico):', err);
+    }
+  }
+  await createAuditLog({
+    action: 'game_day_play_groups_set', actor,
+    details: {
+      game_day_id: gdId, groups: value.play_groups.length, policy: value.play_groups_policy,
+      removed: removidos.size,
+    },
+  });
+  return value;
+}
+
+/**
+ * Muda o grupo de UM participante — e leva junto a dupla vinculada. O vínculo
+ * só vale dentro do grupo: mover um sem o outro desfaria, em silêncio, o que
+ * alguém pediu. Devolve quem mudou, para a tela poder dizer.
+ *
+ * `groupId: null` tira do grupo. `self: true` é a própria pessoa mudando de
+ * grupo: aí só vale grupo ABERTO — o fechado é a organização que preenche.
+ *
+ * @returns {Promise<{ moved: string[] }>}
+ */
+export async function setPlayParticipantGroup(gdId, pid, groupId, actor, { self = false } = {}) {
+  const [gd, participants] = await Promise.all([getGameDay(gdId), listGameDayParticipants(gdId)]);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const p = participants.find((x) => x.id === pid);
+  if (!p) throw new Error('Participante não encontrado — ele pode ter saído do dia.');
+
+  const alvo = groupId || null;
+  if (alvo) {
+    const g = groupById(normalizePlayGroupsConfig(gd), alvo);
+    if (!g) throw new Error('Esse grupo não existe mais.');
+    if (self && g.join !== 'open') {
+      throw new Error('Este grupo é só a organização que preenche — peça a quem organiza o dia.');
+    }
+  }
+
+  const par = p.partner_id
+    ? participants.find((x) => x.id === p.partner_id && x.partner_id === p.id)
+    : null;
+  const batch = writeBatch(db);
+  const moved = [p.id, ...(par ? [par.id] : [])];
+  moved.forEach((id) => batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, id), {
+    play_group_id: alvo, updated_at: serverTimestamp(),
+  }));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_group_set', actor,
+    details: { game_day_id: gdId, participant_ids: moved, group_id: alvo, self },
+  });
+  return { moved };
+}
+
+/**
+ * Aplica de uma vez uma DISTRIBUIÇÃO (a prévia de "Distribuir por nível"):
+ * `[{ pid, groupId }]`. Tudo ou nada — um grupo que não existe derruba a
+ * operação inteira antes de escrever. Num lote só (o dia tem no máximo
+ * `MAX_PARTICIPANTS`, bem abaixo do limite do lote).
+ *
+ * @returns {Promise<{ updated: number }>}
+ */
+export async function assignPlayGroups(gdId, assignments = [], actor) {
+  const lista = (assignments || []).filter((a) => a?.pid);
+  if (lista.length === 0) return { updated: 0 };
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const config = normalizePlayGroupsConfig(gd);
+  if (lista.some((a) => a.groupId && !groupById(config, a.groupId))) {
+    throw new Error('Um dos grupos não existe mais — confira a distribuição e tente de novo.');
+  }
+  const batch = writeBatch(db);
+  lista.forEach((a) => batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, a.pid), {
+    play_group_id: a.groupId || null, updated_at: serverTimestamp(),
+  }));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_groups_assigned', actor,
+    details: { game_day_id: gdId, participants: lista.length },
+  });
+  return { updated: lista.length };
 }
 
 /* ------------------------------- Ranking -------------------------------- */

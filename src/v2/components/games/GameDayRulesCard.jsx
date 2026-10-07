@@ -3,6 +3,9 @@ import { Info, ChevronDown, ChevronRight } from 'lucide-react';
 
 import { V2Badge } from '@/v2/ui/primitives';
 import { describeGameDayRules } from '@/modules/games/domain/gameDayRules';
+import { isPlayGroupsActive, normalizePlayGroupsConfig } from '@/modules/games/domain/playGroups';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
 
 /**
@@ -31,9 +34,17 @@ export default function GameDayRulesCard({ gameDay, podeGerenciar = false }) {
   // Já está no cache: as três origens carregam os participantes para decidir
   // permissões. Aqui só serve para dizer quantas vagas sobraram.
   const { data: participants = [] } = useGameDayParticipants(gameDay?.id);
+  // Os grupos do Play só entram no resumo com a flag ligada: desligada, os
+  // grupos gravados no dia são ignorados em toda a plataforma, inclusive aqui.
+  // Só a flag e o domínio — nada que puxe o sorteio para o pacote do resumo.
+  const flagGrupos = useFeatureFlag(FEATURE_FLAG.PLAY_GROUPS);
   const { rows } = useMemo(
-    () => describeGameDayRules(gameDay, { podeGerenciar, participantCount: participants.length }),
-    [gameDay, podeGerenciar, participants.length],
+    () => describeGameDayRules(gameDay, {
+      podeGerenciar,
+      participantCount: participants.length,
+      playGroups: isPlayGroupsActive(gameDay, flagGrupos) ? normalizePlayGroupsConfig(gameDay) : null,
+    }),
+    [gameDay, podeGerenciar, participants.length, flagGrupos],
   );
   if (rows.length === 0) return null;
 

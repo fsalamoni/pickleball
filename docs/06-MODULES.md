@@ -509,6 +509,13 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
 - **V1 (legado)**: `OpenGames`.
 - Coleções: `games`, `open_games`, `participants`, `game_days` (+ subcoleções
   `participants`/`games`). Gera notificações para quem confirmou presença.
+- **Grupos dentro do Play** (flag `play_groups`, 2026-10-07): o Play ganha uma
+  fila por grupo (por nível, por tipo de dupla — mista ou do mesmo sexo — ou
+  turmas livres), política entre grupos, nível e sexo do convidado avulso,
+  telão e ajuda. Domínio em `games/domain/playGroups.js` + `playGroupsDraw.js`,
+  UI em `v2/components/games/playGroups/`. Campos opcionais em `game_days`,
+  `participants` e `games` — zero coleção, índice ou regra. Ver
+  `docs/39-PLAY-GRUPOS.md`.
 - **Dia de jogo do atleta** (flag `athlete_game_day`): qualquer atleta cria seu
   próprio dia de jogo (público ou privado por convite), insere/convida qualquer
   atleta da plataforma e organiza os jogos (reaproveita `gameDayDraw`/

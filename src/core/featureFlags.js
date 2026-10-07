@@ -141,6 +141,24 @@ export const FEATURE_FLAG = Object.freeze({
   PLAY_SMART_ROTATION: 'play_smart_rotation',
 
   /**
+   * Dia de jogo (Play) — GRUPOS dentro do Play.
+   *
+   * Hoje o Play tem uma fila só: quem espera há mais tempo entra, e o nível só
+   * entra na conta DEPOIS de escolhidos os quatro. Ligada, quem organiza cria
+   * grupos (por nível, por tipo de dupla ou livres), coloca cada pessoa no seu
+   * e o sorteio acontece DENTRO de cada grupo — com formação mista ou de mesmo
+   * sexo, diferença máxima de nível, quadras próprias e uma política para
+   * quando os grupos disputam as quadras (fila, revezamento ou prioridade).
+   * O convidado avulso ganha nível e sexo na entrada e cai no grupo certo.
+   *
+   * Aditiva e sem impacto no banco: só campos OPCIONAIS (`play_groups` no dia,
+   * `play_group_id` no participante, `group_id` na partida) — nenhuma coleção,
+   * índice ou regra nova. Desligada, os grupos gravados são IGNORADOS e o Play
+   * segue uma fila única, exatamente como antes. Ver `docs/39-PLAY-GRUPOS.md`.
+   */
+  PLAY_GROUPS: 'play_groups',
+
+  /**
    * Dia de jogo — AMERICANO APRIMORADO.
    *
    * Formato novo (`americano_live`) que mescla os dois modelos existentes: a
@@ -551,6 +569,19 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'a ordem de participação: o primeiro da fila entra sempre e a escolha '
       + 'fica dentro de uma janela curta. Evita que os mesmos quartetos se '
       + 'repitam rodada após rodada. Desligada, nada muda.',
+  },
+  [FEATURE_FLAG.PLAY_GROUPS]: {
+    label: 'Dia de jogo (Play) — grupos',
+    description:
+      'Deixa quem organiza um Play criar GRUPOS — por nível, por tipo de dupla '
+      + '(mistas, masculinas, femininas) ou livres — e sortear as partidas dentro '
+      + 'de cada um. Cada grupo tem faixa de nível, formação das duplas, '
+      + 'diferença máxima de nível e quadras próprias; uma política decide quem '
+      + 'entra quando os grupos disputam as quadras. O convidado avulso informa '
+      + 'nível e sexo e cai no grupo certo, e há uma distribuição automática por '
+      + 'nível com prévia. Tudo vale no painel, no telão e na visão do jogador. '
+      + 'Só campos opcionais no banco. Desligada, os grupos gravados são '
+      + 'ignorados e o Play segue com a fila única de sempre.',
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: 'DUPR oficial (fase 2 — reservado)',

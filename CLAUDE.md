@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **32 feature flags ativas** (o resto virou código permanente), **491 arquivos de teste** (7.573 casos, mais 550 no emulador de regras), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio), **Gamificação V2 completa** (atrás de `gamification_v2`: XP, missões, sequência honesta, temporada, desafios, recompensas, painéis de professor/arena/clube/admin, com guia, dicas e ajuda). PWA `sw-v7`. Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **33 feature flags ativas** (o resto virou código permanente), **491 arquivos de teste** (7.573 casos, mais 550 no emulador de regras), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio), **Gamificação V2 completa** (atrás de `gamification_v2`: XP, missões, sequência honesta, temporada, desafios, recompensas, painéis de professor/arena/clube/admin, com guia, dicas e ajuda), **Grupos dentro do Play** (atrás de `play_groups`: fila por grupo, por nível ou tipo de dupla, nível e sexo do convidado avulso). PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -145,6 +145,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │                                     motor único de XP, sequência honesta, hub,
 │   │                                     guia /gamification/como-funciona, painéis de
 │   │                                     professor/arena/clube e console do admin
+│   ├── 39-PLAY-GRUPOS.md           👥 ⭐ grupos dentro do Play (flag play_groups): fila
+│   │                                     por grupo, por nível ou tipo de dupla (mista /
+│   │                                     mesmo sexo), nível e sexo do convidado avulso,
+│   │                                     política entre grupos, telão e ajuda
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -221,6 +225,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está a FEATURE que não existe mas devia?"** → `docs/09-UX-ANALYSIS/15-backlog-remanescente.md`
 **"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
 **"Onde está a GAMIFICAÇÃO?"** → ⭐ `docs/38-GAMIFICACAO-V2.md` (flag `gamification_v2`, default OFF; é o que está no código). O desenho de origem fica em `docs/FUTURO/GAMIFICACAO/README.md`
+**"Quero dividir o Play em grupos (por nível, por tipo de dupla). Onde mexo?"** → ⭐ flag `play_groups` (default OFF) + `docs/39-PLAY-GRUPOS.md`. **Zero coleção, índice ou regra**: `game_days.play_groups[]` + `play_groups_policy`, `participants.play_group_id`, `games.group_id|group_name|group_color` — tudo opcional; `play_group_id` que não existe mais vale "sem grupo". Domínio em `modules/games/domain/playGroups.js` (modelo, nível, formação, distribuição) e `playGroupsDraw.js` (a escolha da partida). Cinco coisas que NÃO podem regredir: (1) **previsão = criação** — o telão/painel anuncia e o serviço cria pelo MESMO sorteador (`makeGroupsDrawer`), injetado em `simulatePlaySequence` (importar `playGroupsDraw` dali daria ciclo); **nenhuma tela chama `pickGroupedMatch`**; (2) **a flag é o interruptor geral** — leia grupos só por `usePlayGroups`/`usePlayGroupsContext` (ou `isPlayGroupsActive`), **nunca** `gameDay.play_groups` numa tela: flag desligada ⇒ grupos gravados ignorados e Play de uma fila só (há teste de propriedade: grupos sem ninguém atribuído = mesmas partidas de antes); (3) o nível é buscado ANTES de escolher (a regra decide QUEM entra, não só as duplas) pela régua única 2.0–8.0 — **nível desconhecido não barra ninguém**, sexo desconhecido não preenche vaga de mista/mesmo sexo; (4) as mutações dos grupos moram em `usePlayGroupMutations.js`, **fora** de `useGameDays.js` (seções compartilhadas servem ao Americano aprimorado e não podem depender dos grupos); (5) dupla vinculada só vale DENTRO do grupo. Quem configura (criar/editar/pausar grupo) é quem pode escrever `game_days` — criador, gestor da arena, admin do clube; o administrador NOMEADO opera (move gente, sorteia) e a tela diz que não edita. Guia, artigo e pista de ajuda saem atrás da flag (`flagObrigatoria` no guia: flag de FUNCIONALIDADE vale mesmo em dia já gravado). Guarda de fonte: `src/core/guards/playGrupos.test.js`
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
@@ -431,6 +436,7 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Ver o que ainda falta fazer | `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` | Lista consolidada, com status ✅/🟡/⏳ |
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
 | Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
+| Mexer nos grupos do Play | `docs/39-PLAY-GRUPOS.md` | Flag `play_groups`; o sorteador é UM (`makeGroupsDrawer`); ler grupos só por `usePlayGroups`; mutações em `usePlayGroupMutations`; guia/artigo/pista com `flags: ['play_groups']` |
 | Mexer na gamificação | `docs/38-GAMIFICACAO-V2.md` | Um motor de XP só (`useGamificationEngine`); sequência só em `weekStreak.js`; texto explicativo só em `gamificationGuide.js`. O desenho original está em `docs/FUTURO/GAMIFICACAO/` |
 | Mostrar/esconder um comando de dia de jogo | `docs/15-DIA-DE-JOGO-PERMISSOES.md` | `canManageGameDay(gd, uid, { participants })` para operar partidas; `canConfigureGameDay(gd, uid)` para configurar. Comando sem atribuição **não é renderizado** (nunca só desabilitado) |
 | Tornar uma seção colapsável | `docs/14-DIA-DE-JOGO-TELAO.md` §1 | `<V2CollapsibleCard sectionId="..." summary="...">`; id ESTÁVEL (mudar apaga a preferência de todo mundo) e ações SEMPRE em `actions`, nunca dentro do corpo do cabeçalho |
@@ -569,7 +575,7 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
+> Última atualização: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
 > unificação do histórico na conta que ficou). Antes: 2026-10-02 (ranking, rating e contagem de jogos: o
 > perfil conta os dias de jogo, o convidado sem conta ficou visível e
@@ -586,6 +592,33 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Grupos dentro do Play** (2026-10-07): *"direcionar o play para criar
+>   partidas com pessoas de níveis semelhantes… grupos dentro do play, o sorteio
+>   dentro desses grupos, observando uma ordem de participação… formação mista
+>   ou de mesmo sexo… um parâmetro de nível para os convidados avulsos"*. Flag
+>   `play_groups` (default OFF; desligada, o Play é a fila única de sempre).
+>   **(1)** Um cartão **Grupos** no organizador do Play: três modelos (por
+>   nível, por tipo de dupla, em branco), edição inline (faixa de nível, mista /
+>   mesmo sexo, diferença máxima de nível, **exigir × preferir**, quadras do
+>   grupo, completar com quem está sem grupo, entrada só pela organização,
+>   pausa), **política** entre grupos (por tempo de espera, revezar, prioridade)
+>   e **distribuir por nível** com prévia — sugestão, nunca imposição.
+>   **(2)** O sorteio sai de **cada grupo** com o mesmo seletor de sempre (FIFO
+>   ou rodízio equilibrado) e a política escolhe quem ocupa a quadra; com regra
+>   exigida, vale o primeiro da fila que **consegue** formar partida. Cada grupo
+>   que não joga diz **por quê** ("faltam 2 mulheres para duplas mistas").
+>   **(3)** O convidado avulso ganha **nível e sexo** na entrada — é o que o
+>   coloca no grupo certo (antes: nível 3.0 inventado) — e quem chega cai no
+>   grupo do seu nível, também pelo jogo aberto e pelo convite público.
+>   **(4)** Painel, jogador e **telão** mostram o grupo: selo em cada partida,
+>   fila por grupo com numeração própria, "entra a seguir" pela previsão e o
+>   aviso honesto quando nenhum grupo tem partida pronta. O jogador vê o seu
+>   grupo e troca entre os abertos. **(5)** Resumo do dia, guia de dicas e
+>   artigo da Central de Ajuda, todos atrás da flag. **Previsão = criação**:
+>   um sorteador só (`makeGroupsDrawer`), injetado na previsão. **Banco: zero**
+>   — campos opcionais em `game_days`, `participants` e `games`; nenhuma
+>   coleção, índice ou regra (o guarda confere). Ver `docs/39-PLAY-GRUPOS.md`.
 >
 > - **Gamificação V2 — a sequência honesta e a camada que explica** (2026-10-02):
 >   *"desenvolver por completo… inclusive com os textos explicativos, as dicas e
@@ -2598,7 +2631,7 @@ chore(deps): bump firebase to 12.x
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **34 em `firestore.indexes.json`** (+`tournament_matches[modality_id, stage_index, round]`, importado do painel; +`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **32 default OFF** (+`tournament_americano_etapas` — o Americano aprimorado em etapas; +`notifications_center` — a central de notificações; +`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **33 default OFF** (+`play_groups` — os grupos dentro do Play; +`tournament_americano_etapas` — o Americano aprimorado em etapas; +`notifications_center` — a central de notificações; +`my_region` — a Minha região: cidade + raio, estado, outro lugar ou todo lugar; +`essential_profile` — categoria e nível obrigatórios no cadastro; +`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
