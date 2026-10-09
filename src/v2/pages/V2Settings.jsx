@@ -51,8 +51,8 @@ export default function V2Settings() {
   // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();
   const { user, userProfile, updateUserProfile } = useAuth();
-  const { data: registrations = [] } = useMyRegistrations();
-  const { data: bookings = [] } = useMyBookings();
+  const inscricoes = useMyRegistrations();
+  const reservas = useMyBookings();
   const [busy, setBusy] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
 
@@ -73,14 +73,27 @@ export default function V2Settings() {
     }
   }
 
-  function exportData() {
+  async function exportData() {
     setBusy(true);
     try {
+      // O treino e as metas são lidos só agora (e o código, baixado só agora):
+      // ninguém paga por isso ao abrir as configurações.
+      const { collectTrainingExport } = await import('@/modules/training/services/trainingExportService');
+      const extra = await collectTrainingExport(user?.uid);
+      // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
+      const incomplete = [
+        ...(inscricoes.isSuccess ? [] : ['Inscrições em torneio']),
+        ...(reservas.isSuccess ? [] : ['Reservas de quadra']),
+        ...extra.incomplete,
+      ];
       const pkg = buildDataExport({
         uid: user?.uid,
         profile: userProfile || {},
-        registrations,
-        bookings,
+        registrations: inscricoes.data || [],
+        bookings: reservas.data || [],
+        goals: extra.goals,
+        training: extra.training,
+        incomplete,
       });
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -91,7 +104,11 @@ export default function V2Settings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Seus dados foram exportados.');
+      if (incomplete.length > 0) {
+        toast.warning(`Exportado, mas ficou de fora: ${incomplete.join(', ')}. Tente de novo mais tarde para ter tudo.`);
+      } else {
+        toast.success('Seus dados foram exportados.');
+      }
     } catch (err) {
       toast.error('Não foi possível exportar os dados.');
     } finally {
@@ -182,7 +199,7 @@ export default function V2Settings() {
             <h2 className="font-display text-lg font-bold text-ink">Privacidade e dados (LGPD)</h2>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.
+            Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios e dúvidas) em formato JSON.
           </p>
           <div className="mt-3">
             <V2Button size="sm" onClick={exportData} disabled={busy}>

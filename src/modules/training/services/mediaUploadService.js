@@ -22,11 +22,16 @@ import {
 
 const MAX_SIDE = 1600;
 
+/** Os caminhos dos arquivos da pasta de treino da pessoa (`treino/{uid}/…`). */
+export async function listMyUploadPaths(uid) {
+  if (!storage || !uid) return [];
+  const res = await listAll(ref(storage, `treino/${uid}`));
+  return res.items.map((i) => i.fullPath);
+}
+
 /** Quantos arquivos a pessoa já tem na pasta de treino (para a cota). */
 export async function countMyUploads(uid) {
-  if (!storage || !uid) return 0;
-  const res = await listAll(ref(storage, `treino/${uid}`));
-  return res.items.length;
+  return (await listMyUploadPaths(uid)).length;
 }
 
 /** Quanto esperar o navegador ler a duração do vídeo antes de desistir. */

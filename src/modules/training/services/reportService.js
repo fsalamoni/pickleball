@@ -4,7 +4,7 @@
  */
 
 import {
-  addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc,
+  addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
@@ -36,6 +36,13 @@ export async function createReport(item, { reason, text = '' }, { identity }) {
   });
   await createAuditLog({ action: 'training_report_created', actor: identity.actor, details: { report_id: ref.id, item_id: item.id, reason } });
   return ref.id;
+}
+
+/** As denúncias que a pessoa fez (pelo campo que a regra confere). Usado na exportação de dados. */
+export async function listMyReports(uid) {
+  if (!uid) return [];
+  return (await getDocs(query(collection(db, TRAINING_REPORTS), where('reporter_uid', '==', uid))))
+    .docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 /** Fila do admin. ponytail: lê a coleção inteira; filtrar por status no servidor se crescer. */
