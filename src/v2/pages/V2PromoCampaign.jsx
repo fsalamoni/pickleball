@@ -84,7 +84,9 @@ export default function V2PromoCampaign() {
   }
 
   const estado = campaignBannerState(campanha, { today });
-  const valendo = estado === BANNER_STATE.LIVE || estado === BANNER_STATE.NONE;
+  // Cancelada (a conta do professor foi excluída): mesmo sem banner, não vale.
+  const cancelada = campanha.status === 'cancelled';
+  const valendo = !cancelada && (estado === BANNER_STATE.LIVE || estado === BANNER_STATE.NONE);
   const destino = campanha.destination || {};
   const vaiParaOutroLugar = destino.type && destino.type !== PROMO_DESTINATION.DETAILS;
   const ctx = { issuerType: campanha.issuer_type, issuerId: campanha.issuer_id, campaignId: campanha.id };
@@ -92,6 +94,7 @@ export default function V2PromoCampaign() {
   const ctaDestino = promoDestinationCta(destino, campanha.banner?.design);
   const dono = issuerDisplayName(campanha);
   const ehProfessor = campanha.issuer_type === PROMO_ISSUER.COACH;
+  const linkProfessor = ehProfessor && !cancelada;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -110,7 +113,7 @@ export default function V2PromoCampaign() {
         </div>
         <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
           {ehProfessor ? <GraduationCap className="h-4 w-4" aria-hidden /> : <Tag className="h-4 w-4" aria-hidden />}
-          {ehProfessor
+          {linkProfessor
             ? <Link to={`/coaches/${campanha.issuer_id}`} className="font-semibold text-ink hover:underline">{dono}</Link>
             : dono}
         </p>
@@ -135,7 +138,7 @@ export default function V2PromoCampaign() {
               <Link to={linkDestino}>{ctaDestino} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
             </V2Button>
           )}
-          {ehProfessor && destino.type !== PROMO_DESTINATION.PROFILE && (
+          {linkProfessor && destino.type !== PROMO_DESTINATION.PROFILE && (
             <V2Button asChild variant={valendo && vaiParaOutroLugar ? 'secondary' : 'primary'}>
               <Link to={`/coaches/${campanha.issuer_id}`}><GraduationCap className="h-4 w-4" aria-hidden /> Conhecer o professor</Link>
             </V2Button>

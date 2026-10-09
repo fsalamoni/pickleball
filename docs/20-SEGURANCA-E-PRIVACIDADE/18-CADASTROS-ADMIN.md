@@ -144,7 +144,7 @@ Segue a tabela aprovada em `09-DIREITOS-DO-TITULAR.md` §4:
 
 | Destino | O quê |
 |---|---|
-| **Apagado** | `users`, `athlete_profiles`, conta de login, fotos (`uploads/{uid}/`), tokens de push, notificações, favoritos, seguidores, metas, gamificação pessoal, ratings materializados, vínculos (clube, crew, gestão de arena, admin de torneio/circuito), pedidos e convites, filas de espera, associação a arena, respostas de NPS, parcerias de professor |
+| **Apagado** | `users`, `athlete_profiles`, conta de login, fotos (`uploads/{uid}/`, menos a arte de cupons e campanhas que ficam), tokens de push, notificações, favoritos, seguidores, metas, gamificação pessoal, ratings materializados, vínculos (clube, crew, gestão de arena, admin de torneio/circuito), pedidos e convites, filas de espera, associação a arena, respostas de NPS, parcerias de professor |
 | **Pseudonimizado** (uid fica, nome sai) | inscrições e partidas, dias de jogo, conversas, fórum, avaliações — apagar reescreveria resultado e rating de outras pessoas |
 | **Retido, sem o nome** | reservas, vendas, pagamentos, carteira, mensalidade (obrigação do parceiro) |
 | **Retido como está** | `audit_logs` e `legal_consents` — prova de que a exclusão foi feita direito |

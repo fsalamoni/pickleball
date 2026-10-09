@@ -688,4 +688,22 @@ describe('⭐ vínculo: enquanto for professor do aluno', () => {
   it('vínculo sem histórico de fim segue como antes: o professor remove', async () => {
     await assertSucceeds(deleteDoc(doc(como(PROF), 'coach_students', vinc(BIA))));
   });
+
+  it('⭐ o vínculo entre os dois, por consulta: quem não tem vínculo recebe "nenhum", não recusa', async () => {
+    const entre = (uid, aluno) => getDocs(query(collection(como(uid), 'coach_students'),
+      where('coach_id', '==', PROF), where('student_id', '==', aluno)));
+    await assertSucceeds(entre(ANA, ANA));
+    await assertSucceeds(entre(PROF, ANA));
+    await assertSucceeds(entre(DUDA, DUDA));
+    await assertSucceeds(entre(PROF, DUDA));
+    await assertFails(entre(DUDA, ANA));
+  });
+
+  it('⭐ a conta da aluna foi excluída: o professor tira a ficha encerrada', async () => {
+    await fimGravado(ANA);
+    await assertFails(deleteDoc(doc(como(PROF), 'coach_students', vinc(ANA))));
+    await testEnv.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'users', ANA)));
+    await assertFails(deleteDoc(doc(como(DUDA), 'coach_students', vinc(ANA))));
+    await assertSucceeds(deleteDoc(doc(como(PROF), 'coach_students', vinc(ANA))));
+  });
 });

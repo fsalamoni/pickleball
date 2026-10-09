@@ -255,6 +255,20 @@ describe('página da campanha', () => {
     expect(texto()).toContain('Conhecer o professor');
     expect(texto()).not.toContain('Marcar aula');
   });
+
+  it('cancelada (conta do professor excluída), mesmo sem banner: não vale e não leva ao perfil', async () => {
+    estado.campanha = {
+      id: 'c1', name: 'Turma nova', issuer_type: 'coach', issuer_id: 'prof', issuer_name: 'Prof. Ana',
+      message: 'Vagas abertas', status: 'cancelled', banner_active: false, destination: { type: 'book_lesson' },
+    };
+    await tela();
+    expect(texto()).toContain('Prof. Ana');
+    expect(texto()).toContain('Encerrada');
+    expect(texto()).toContain('não está mais no ar');
+    expect(texto()).not.toContain('Conhecer o professor');
+    expect(texto()).not.toContain('Marcar aula');
+    expect(document.querySelector('a[href="/coaches/prof"]')).toBeNull();
+  });
 });
 
 describe('perfil do professor', () => {

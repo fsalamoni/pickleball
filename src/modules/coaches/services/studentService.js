@@ -42,11 +42,21 @@ export async function listStudentCoaches(studentId) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/**
+ * O vínculo entre os dois, ou `null`. Por CONSULTA, não por id: a regra de
+ * leitura olha `resource.data`, e o `get` de um vínculo que não existe (o
+ * professor o removeu, uma das contas foi excluída) seria recusado em vez de
+ * responder "não há vínculo".
+ */
 export async function getStudent(coachId, studentId) {
-  const id = studentDocId(coachId, studentId);
-  const snap = await getDoc(doc(db, COACH_STUDENT_COLLECTION, id));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  if (!coachId || !studentId) return null;
+  const snap = await getDocs(query(
+    collection(db, COACH_STUDENT_COLLECTION),
+    where('coach_id', '==', coachId),
+    where('student_id', '==', studentId),
+  ));
+  const d = snap.docs[0];
+  return d ? { id: d.id, ...d.data() } : null;
 }
 
 /**

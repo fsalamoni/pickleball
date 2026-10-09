@@ -168,12 +168,17 @@ dono, 2026-10-09). Qualquer um dos dois encerra: status `ended`, com
 professor em *Alunos → Encerrar vínculo*). Com o fim, fecha tudo o que o
 vínculo abria (só alunos, envios, diário compartilhado, dúvida nova) e a
 conversa de uma dúvida fica só para consulta — a regra das mensagens também
-exige vínculo ativo. Com `ended_at` no documento, o professor só **convida de
+exige vínculo ativo; ela ainda pode ser **encerrada** (não fica presa
+"esperando resposta"), mas não reaberta. A tela pergunta pelo vínculo por
+CONSULTA (`getStudent`), não por id: o `get` de um vínculo apagado seria
+recusado em vez de dizer "não há vínculo". Com `ended_at` no documento, o professor só **convida de
 novo** (`ended → invited`) ou desiste: não ativa, não pausa e não apaga (apagar
 e recriar como ativo desfaria a saída do aluno). Quem reativa é o **aluno**, ao
 aceitar o convite, e aí o `ended_at` sai. O botão de encerrar e reconvidar e o
 bloco "Meus professores" saem atrás de `training_center` ou `user_hub`. A
-exclusão da conta do aluno encerra o vínculo (`ended_reason: 'conta_excluida'`).
+exclusão da conta do aluno encerra o vínculo (`ended_reason: 'conta_excluida'`)
+e aí o professor pode tirar a ficha da lista — a regra confere que
+`users/{aluno}` não existe mais.
 Vínculo sem `ended_at` segue exatamente como antes (o professor adiciona do
 histórico de aulas como ativo, pausa, reativa e remove).
 
@@ -241,12 +246,12 @@ Biblioteca inicial).
   | Treinos que ela ENVIOU ou indicou | **ficam** na caixa de quem recebeu |
   | Planos, rotina, treinos que ela recebeu, acesso a itens alheios (`shared_uids`) | apagados / o uid sai da lista |
   | Conteúdo, pacotes e produtos do professor | **ficam guardados** (só aparecem no perfil dele, que sai) |
-  | Cupons e campanhas do professor | **ficam, fora do ar** (`active` / `banner_active` = falso): seguiriam no carrossel do início oferecendo aula de quem não existe mais |
+  | Cupons e campanhas do professor | **ficam, fora do ar** (`active` / `banner_active` = falso; a campanha também `status: 'cancelled'`, para a página dela não dizer que vale): seguiriam no carrossel do início oferecendo aula de quem não existe mais. A **arte enviada** (em `uploads/{uid}/`) fica, como a das campanhas de arena e dos cupons e campanhas da plataforma que a pessoa criou |
   | `promo_settings` (modelos e custo interno dos vales) | apagado |
   | Ficha de aluno na lista dela, como professora | apagada (ela deixou de ser professora dele) |
-  | Ficha dela na lista de um professor, como ALUNA | o vínculo **encerra** (`ended_reason: 'conta_excluida'`) e o nome sai |
+  | Ficha dela na lista de um professor, como ALUNA | o vínculo **encerra** (`ended_reason: 'conta_excluida'`) e o nome sai; o professor pode removê-la |
   | Denúncias (feitas ou sobre o conteúdo dela), aulas dadas e pacotes vendidos | **retidos como estão** (só o uid; registro de moderação e financeiro) |
-  | Storage `treino/{uid}/` | apagado — menos a mídia dos itens que ficam (os dela e os da **plataforma** que ela, como admin, enviou) |
+  | Storage `treino/{uid}/` e `uploads/{uid}/` | apagados — menos a mídia dos itens que ficam (os dela e os da **plataforma** que ela, como admin, enviou) e a arte dos cupons e campanhas que ficam. Se a consulta do que fica bater no limite (400), a pasta fica **inteira** e a exclusão sai parcial: nunca se apaga arquivo de conteúdo que fica |
 
   O guarda `src/core/guards/exclusaoCobreColecoes.test.js` lê o
   `firestore.rules` e reprova coleção `training_*` (e `coach_content`,

@@ -346,7 +346,8 @@ function buildReport(f) {
       pseudonimizar: soma(pseudonyms),
       reter: soma(retained),
     },
-    truncated: [...deletes, ...pseudonyms].some((x) => x.truncated),
+    // Antes do filtro: a linha que bateu no limite pode ter vindo zerada.
+    truncated: [...(f.deletes || []), ...(f.pseudonyms || [])].some((x) => x.truncated),
   };
 }
 
@@ -729,10 +730,19 @@ function caminhoDaMidia(m) {
   try { return decodeURIComponent(achado[1]); } catch (_) { return null; }
 }
 
+/**
+ * O arquivo fica? `mantidos` guarda caminhos e, quando não deu para saber
+ * tudo o que fica (consulta no limite), a PASTA inteira (termina em `/`).
+ */
+function fica(mantidos, caminho) {
+  if (!mantidos) return false;
+  return mantidos.has(caminho) || [...mantidos].some((c) => c.endsWith('/') && caminho.startsWith(c));
+}
+
 /** A mídia aponta para um arquivo de `treino/{uid}/` que vai ser apagado. */
 function midiaQueSome(m, uid, mantidos) {
   const caminho = caminhoDaMidia(m);
-  return Boolean(caminho) && caminho.startsWith(`treino/${uid}/`) && !(mantidos && mantidos.has(caminho));
+  return Boolean(caminho) && caminho.startsWith(`treino/${uid}/`) && !fica(mantidos, caminho);
 }
 
 /** `{ media }` sem as mídias que vão sumir, ou nada se nenhuma some. */
@@ -858,6 +868,13 @@ const foraDoAr = (campo) => (d, uid) => (
   d && d.issuer_id === uid && d[campo] !== false ? { [campo]: false } : null
 );
 
+/** A campanha sai do ar também na página dela (a sem banner seguiria "valendo"). */
+function patchCoachCampaign(d, uid) {
+  if (!d || d.issuer_id !== uid) return null;
+  if (d.status === 'cancelled' && d.banner_active === false) return null;
+  return { status: 'cancelled', banner_active: false };
+}
+
 /**
  * A ficha de aluno de um professor, quando o ALUNO é excluído: o nome sai e o
  * vínculo encerra — o professor deixou de ser professor dele. Fica na lista
@@ -866,9 +883,10 @@ const foraDoAr = (campo) => (d, uid) => (
 function patchCoachStudentLink(d, uid) {
   if (!d || d.student_id !== uid) return null;
   const patch = campos('student_id', ['student_name'], ['student_email'])(d, uid) || {};
-  if (d.status !== 'ended') {
-    Object.assign(patch, { status: 'ended', ended_at: new Date(), ended_by: uid, ended_reason: 'conta_excluida' });
-  }
+  if (d.status !== 'ended') Object.assign(patch, { status: 'ended', ended_at: new Date(), ended_by: uid });
+  // Mesmo já encerrado: é o motivo que tira o "Convidar de novo" e deixa o
+  // professor remover a ficha. Quem encerrou e quando ficam.
+  if (d.ended_reason !== 'conta_excluida') patch.ended_reason = 'conta_excluida';
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
@@ -912,8 +930,8 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Acesso a itens de treino de outras pessoas', col: 'training_items', wheres: [['shared_uids', 'array-contains']], patch: patchSharedUids },
   { label: 'Diários de alunos que acompanhava (os comentários ficam)', bucket: 'retained', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
   { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
-  { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active') },
-  { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: foraDoAr('banner_active') },
+  { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
+  { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: patchCoachCampaign, countAll: true },
   // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
   { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
   { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
@@ -954,7 +972,9 @@ async function coletarTrocas(db, uid, spec, extra = {}) {
   }
   const itens = [];
   let truncated = false;
+  let vistos = 0;
   const aplicar = (d) => {
+    vistos += 1;
     const patch = spec.patch(d.data() || {}, uid);
     if (patch) itens.push({ ref: d.ref, patch });
   };
@@ -977,7 +997,11 @@ async function coletarTrocas(db, uid, spec, extra = {}) {
     truncated = r.truncated;
     r.docs.forEach(aplicar);
   }
-  return { label: spec.label, bucket: spec.bucket || 'pseudonym', itens, deletes: [], truncated };
+  // `countAll`: a linha conta o que FICA, mude ou não (o cupom já desligado também fica).
+  return {
+    label: spec.label, bucket: spec.bucket || 'pseudonym', itens, deletes: [], truncated,
+    count: spec.countAll ? vistos : undefined,
+  };
 }
 
 /** A conta de login existe? `null` quando não deu para saber. */
@@ -998,24 +1022,59 @@ async function contaDeLoginExiste(auth, uid) {
  */
 const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`]);
 
+/** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
+function linksEm(valor, acc = []) {
+  if (typeof valor === 'string') acc.push(valor);
+  else if (Array.isArray(valor)) valor.forEach((v) => linksEm(v, acc));
+  else if (valor && typeof valor === 'object') Object.values(valor).forEach((v) => linksEm(v, acc));
+  return acc;
+}
+
+/** Cupons e campanhas que FICAM com a arte enviada pela pessoa (em `uploads/{uid}/`). */
+const ARTE_QUE_FICA = Object.freeze([
+  { col: 'promo_coupons', wheres: [['issuer_id', '=='], ['created_by', '==']] },
+  { col: 'promo_campaigns', wheres: [['issuer_id', '=='], ['created_by', '==']] },
+  { col: 'arena_campaigns', wheres: [['created_by', '==']] },
+]);
+
 /**
- * Arquivos de `treino/{uid}/` que FICAM: a mídia dos itens que ficam — os da
- * própria pessoa que outras pessoas veem e os da PLATAFORMA que ela, como
- * admin, enviou para a biblioteca. Apagar a pasta inteira
- * quebraria as fotos e vídeos deles.
+ * Arquivos que FICAM nas pastas da pessoa: a mídia dos itens de treino que
+ * ficam — os dela que outras pessoas veem e os da PLATAFORMA que ela, como
+ * admin, enviou — e a arte dos cupons e campanhas que ficam. Apagar a pasta
+ * inteira quebraria as imagens deles.
+ * Consulta no limite ⇒ não dá para saber tudo o que fica, e a PASTA inteira
+ * fica (`treino/{uid}/` ou `uploads/{uid}/`); a exclusão sai parcial.
+ * ponytail: com mais de QUERY_LIMIT itens que ficam a pasta nunca é apagada;
+ * paginar as consultas se isso acontecer.
  */
 async function coletarMantidos(db, uid) {
-  const r = await consultarUniao(db, 'training_items', [['created_by', '=='], ['author_uid', '==']], uid);
   const mantidos = new Set();
+  let incompleto = false;
+  const treino = `treino/${uid}/`;
+  const uploads = `uploads/${uid}/`;
+  const r = await consultarUniao(db, 'training_items', [['created_by', '=='], ['author_uid', '==']], uid);
+  if (r.truncated) { mantidos.add(treino); incompleto = true; }
   r.docs.forEach((d) => {
     const it = d.data() || {};
     if ((it.author_uid === uid && !trainingItemStays(it)) || !Array.isArray(it.media)) return;
     it.media.forEach((m) => {
       const caminho = caminhoDaMidia(m);
-      if (caminho && caminho.startsWith(`treino/${uid}/`)) mantidos.add(caminho);
+      if (caminho && caminho.startsWith(treino)) mantidos.add(caminho);
     });
   });
-  return mantidos;
+  for (const { col, wheres } of ARTE_QUE_FICA) {
+    // eslint-disable-next-line no-await-in-loop
+    const a = await consultarUniao(db, col, wheres, uid);
+    if (a.truncated) { mantidos.add(uploads); incompleto = true; }
+    a.docs.forEach((d) => {
+      const doc = d.data() || {};
+      linksEm([doc.art, doc.banner]).forEach((url) => {
+        const caminho = caminhoDaMidia({ url });
+        if (caminho && caminho.startsWith(uploads)) mantidos.add(caminho);
+      });
+    });
+  }
+  return { mantidos, incompleto };
 }
 
 /** Quantos arquivos a pessoa tem no Storage, somando as pastas dela (sem os que ficam). */
@@ -1026,7 +1085,7 @@ async function contarArquivos(bucket, uid, mantidos = new Set()) {
     try {
       // eslint-disable-next-line no-await-in-loop
       const [files] = await bucket.getFiles({ prefix: prefixo(uid), maxResults: 1000 });
-      total += files.filter((f) => !mantidos.has(f.name)).length;
+      total += files.filter((f) => !fica(mantidos, f.name)).length;
     } catch (_) {
       // pasta que não deu para ler conta zero; a execução tenta apagar mesmo assim
     }
@@ -1051,7 +1110,7 @@ async function apagarArquivos(bucket, uid, mantidos) {
         // eslint-disable-next-line no-await-in-loop
         const [files] = await bucket.getFiles({ prefix });
         // eslint-disable-next-line no-await-in-loop
-        await Promise.all(files.filter((f) => !mantidos.has(f.name)).map((f) => f.delete()));
+        await Promise.all(files.filter((f) => !fica(mantidos, f.name)).map((f) => f.delete()));
       }
     } catch (_) {
       erro = true;
@@ -1101,7 +1160,7 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const userSnap = await db.collection('users').doc(uid).get();
   const user = userSnap.exists ? userSnap.data() : null;
 
-  const mantidos = await coletarMantidos(db, uid);
+  const { mantidos, incompleto } = await coletarMantidos(db, uid);
   const [authExists, storageFiles, blockers] = await Promise.all([
     auth ? contaDeLoginExiste(auth, uid) : Promise.resolve(null),
     contarArquivos(bucket, uid, mantidos),
@@ -1167,16 +1226,18 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const deletes = somarPorRotulo([
     ...porId.map((x) => ({ label: x.spec.label, count: x.exists ? 1 : 0 })),
     ...porConsulta.map((x) => ({ label: x.spec.label, count: x.refs.length, truncated: x.truncated })),
-    ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length })),
-    ...(storageFiles > 0 ? [{ label: 'Fotos e arquivos enviados', count: storageFiles }] : []),
+    ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length, truncated: t.truncated })),
+    // Lista do que fica incompleta: a pasta fica e a exclusão sai parcial.
+    ...(storageFiles > 0 || incompleto ? [{ label: 'Fotos e arquivos enviados', count: storageFiles, truncated: incompleto }] : []),
   ]);
+  const arquivosQueFicam = [...mantidos].filter((c) => !c.endsWith('/')).length;
   // `count` quando o coletor conta o que FICA (nem tudo o que fica muda).
   const linha = (t) => ({ label: t.label, count: t.count ?? t.itens.length, truncated: t.truncated });
   const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained').map(linha));
   const retained = somarPorRotulo([
     ...trocas.filter((t) => t.bucket === 'retained').map(linha),
     ...retidos,
-    ...(mantidos.size > 0 ? [{ label: 'Fotos e vídeos dos itens de treino que ficam', count: mantidos.size }] : []),
+    ...(arquivosQueFicam > 0 ? [{ label: 'Fotos, vídeos e artes do conteúdo que fica', count: arquivosQueFicam }] : []),
   ]);
 
   const report = buildReport({
@@ -1343,6 +1404,8 @@ module.exports = {
   patchDerivedFrom,
   patchSharedUids,
   patchCoachStudentLink,
+  patchCoachCampaign,
+  fica,
   consolidarOps,
   analyzeAccount,
   executeAccountDeletion,

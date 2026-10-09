@@ -80,6 +80,8 @@ describe('canCoachRemoveStudent / isLinkEndedHistory', () => {
     expect(canCoachRemoveStudent({ status: 'ended', ended_at: 1 })).toBe(false);
     expect(canCoachRemoveStudent({ status: 'invited', ended_at: 1 })).toBe(false);
     expect(canCoachRemoveStudent({ status: 'ended' })).toBe(false);
+    // A conta do aluno foi excluída: a ficha pode sair (a regra confere).
+    expect(canCoachRemoveStudent({ status: 'ended', ended_at: 1, ended_reason: 'conta_excluida' })).toBe(true);
     expect(isLinkEndedHistory({ status: 'invited' })).toBe(false);
   });
 });

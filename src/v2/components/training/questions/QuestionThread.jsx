@@ -122,11 +122,13 @@ export default function QuestionThread({ question, identity, onVoltar }) {
         )}
 
         <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-          {semVinculo ? null : encerrada ? (
+          {/* Sem vínculo dá para ENCERRAR (a dúvida não fica presa esperando
+              resposta), não para reabrir. */}
+          {encerrada ? (semVinculo ? null : (
             <V2Button size="sm" variant="ghost" onClick={() => encerrar(false)} disabled={acoes.close.isPending}>
               <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reabrir
             </V2Button>
-          ) : (
+          )) : (
             <V2Button size="sm" variant="ghost" onClick={() => encerrar(true)} disabled={acoes.close.isPending}>
               <Lock className="h-4 w-4" aria-hidden="true" /> Encerrar a conversa
             </V2Button>

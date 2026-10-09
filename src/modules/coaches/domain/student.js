@@ -83,7 +83,8 @@ export function canSetStudentStatus(link, to, role) {
 
 /** O professor pode apagar a ficha? Encerrada (ou convite depois do fim) fica. */
 export function canCoachRemoveStudent(link) {
-  return !isLinkEndedHistory(link);
+  // Conta do aluno excluída: a regra confere que `users/{aluno}` não existe.
+  return link?.ended_reason === 'conta_excluida' || !isLinkEndedHistory(link);
 }
 
 /** Normaliza a lista de tags. */

@@ -124,8 +124,17 @@ describe('Dúvidas', () => {
     await render(<QuestionsTab identity={{ ...base, activeCoachIds: [] }} params={p('q=q9')} irPara={vi.fn()} />);
     expect(texto()).toContain('fica aqui para consulta');
     expect(document.getElementById('resposta-q9')).toBeNull();
-    expect(texto()).not.toContain('Encerrar a conversa');
+    // Encerrar continua: a dúvida não fica presa esperando resposta.
+    expect(texto()).toContain('Encerrar a conversa');
     expect(texto()).toContain('Apagar');
+  });
+
+  it('vínculo encerrado e conversa encerrada: não reabre', async () => {
+    est.minhas = ok([{ id: 'q9', subject: 'Sobre o saque', status: 'encerrada', coach_uid: 'prof', coach_name: 'Professor Beto', asker_uid: 'eu' }]);
+    est.vinculo = ok(null);
+    await render(<QuestionsTab identity={{ ...base, activeCoachIds: [] }} params={p('q=q9')} irPara={vi.fn()} />);
+    expect(texto()).toContain('fica aqui para consulta');
+    expect(texto()).not.toContain('Reabrir');
   });
 
   it('o vínculo ainda carregando (ou falhando) não fecha a conversa', async () => {

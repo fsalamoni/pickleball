@@ -2253,6 +2253,10 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         (request.auth.uid == resource.data.coach_id && !('ended_at' in resource.data)
           && resource.data.get('status', '') != 'ended')
+        // A conta do aluno foi excluída (`users/{uid}` sai por último): a ficha
+        // encerrada não guarda mais a história de ninguém, e o professor a tira.
+        || (request.auth.uid == resource.data.coach_id
+          && !exists(/databases/$(database)/documents/users/$(resource.data.student_id)))
         || isPlatformAdmin()
       );
     }
