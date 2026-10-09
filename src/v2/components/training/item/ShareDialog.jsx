@@ -122,7 +122,7 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
             )}
             {roster.isSuccess && ativos.length === 0 && (
               <p className="rounded-2xl bg-gray-50 p-3 text-sm text-gray-600">
-                Você não tem alunos ativos agora. Quem está convidado ou pausado não recebe — use "Indicar a alguém".
+                Você não tem alunos ativos agora. Quem está convidado ou pausado não recebe — use “Indicar a alguém”.
               </p>
             )}
             {roster.isSuccess && ativos.length > 0 && (

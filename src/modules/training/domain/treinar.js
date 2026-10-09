@@ -199,3 +199,20 @@ export function masteryGroups(mastery = {}, byId = {}) {
   for (const k of Object.keys(out)) out[k].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
   return out;
 }
+
+/**
+ * O dia do plano em que um item novo entra por padrão: o próximo dia do plano
+ * a partir de hoje (hoje inclusive). Fora do plano, o primeiro dia dele.
+ * @returns {{ week: number, day: number, date: string }|null}
+ */
+export function nextPlanSlot(plan, today) {
+  if (!plan?.days?.length || !plan.weeks) return null;
+  for (let week = 1; week <= plan.weeks; week += 1) {
+    for (const day of WEEK_ORDER.filter((d) => plan.days.includes(d))) {
+      const date = slotDate(plan, { week, day });
+      if (date >= today) return { week, day, date };
+    }
+  }
+  const day = WEEK_ORDER.find((d) => plan.days.includes(d));
+  return { week: 1, day, date: slotDate(plan, { week: 1, day }) };
+}
