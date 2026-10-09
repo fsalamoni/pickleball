@@ -144,10 +144,23 @@ Segue a tabela aprovada em `09-DIREITOS-DO-TITULAR.md` §4:
 
 | Destino | O quê |
 |---|---|
-| **Apagado** | `users`, `athlete_profiles`, conta de login, fotos (`uploads/{uid}/`), tokens de push, notificações, favoritos, seguidores, metas, gamificação pessoal, ratings materializados, vínculos (clube, crew, gestão de arena, admin de torneio/circuito), pedidos e convites, filas de espera, associação a arena, respostas de NPS, parcerias de professor |
+| **Apagado** | `users`, `athlete_profiles`, conta de login, fotos (`uploads/{uid}/`, menos a arte de cupons e campanhas que ficam), tokens de push, notificações, favoritos, seguidores, metas, gamificação pessoal, ratings materializados, vínculos (clube, crew, gestão de arena, admin de torneio/circuito), pedidos e convites, filas de espera, associação a arena, respostas de NPS, parcerias de professor |
 | **Pseudonimizado** (uid fica, nome sai) | inscrições e partidas, dias de jogo, conversas, fórum, avaliações — apagar reescreveria resultado e rating de outras pessoas |
 | **Retido, sem o nome** | reservas, vendas, pagamentos, carteira, mensalidade (obrigação do parceiro) |
 | **Retido como está** | `audit_logs` e `legal_consents` — prova de que a exclusão foi feita direito |
+
+**Centro de Treino** (2026-10-09, flag `training_center`): o diário, os planos,
+a rotina, as dúvidas que a pessoa fez, os treinos que recebeu e o item
+**privado que ninguém mais recebeu** são **apagados**, com os arquivos dele.
+**O conteúdo criado fica, com a autoria** (decisão do dono: *"o conteúdo
+criado não deve ser excluído e deve permanecer indicando a autoria"*): item
+público, só para alunos ou compartilhado, com as fotos e vídeos; treinos que
+enviou; respostas a dúvidas e comentários em diários de alunos; conteúdo,
+pacotes e loja do professor. Cupons e campanhas do professor ficam **fora do
+ar**. Excluir o ALUNO encerra o vínculo com o professor. Denúncias **ficam**
+(só o uid). Tabela completa em
+`docs/40-CENTRO-DE-TREINO.md` §9; o guarda `exclusaoCobreColecoes.test.js`
+reprova coleção `training_*` nova que fique fora da exclusão.
 
 ### O que IMPEDE (e o que fazer)
 

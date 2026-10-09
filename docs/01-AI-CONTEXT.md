@@ -156,6 +156,7 @@ navegação nova.
 | `/torneios/:id/telao` | público (Telão) | TV mode fullscreen |
 | `/inicio` | autenticado (V2) | Dashboard |
 | `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
+| `/treino` `/treino/novo` `/treino/item/:id` `/treino/item/:id/editar` `/treino/planos/:id` | autenticado (V2), flag `training_center` | Centro de Treino (desligada ⇒ volta ao início) |
 | `/configuracoes` | autenticado (V2) | Settings (privacidade, notificações, exportar dados) |
 | `/notificacoes` | autenticado (V2) | Central de notificações — todos os avisos, por dia, com filtros (flag `notifications_center`) |
 | `/404` | autenticado (V2) | NotFound (page_titles + not_found_page) |
@@ -290,6 +291,11 @@ Detalhe de campos em `docs/05-DATA-MODEL.md`.
 - **Social**: `follows` · `player_goals` (metas).
 - **Rating**: `player_ratings` · `rating_history` ·
   `club_internal_ratings` (e `_ext`/`_doubles`/`_doubles_ext` — Wave C.3).
+- **Treino** (flag `training_center`): `training_items` · `training_shares` ·
+  `training_sessions` (+ `comments`) · `training_plans` · `training_meta` ·
+  `training_questions` (+ `messages`) · `training_reports` ·
+  `platform_settings/training` · Storage `treino/{uid}/`. Ver
+  `docs/40-CENTRO-DE-TREINO.md`.
 - **Transversal**: `notifications` (com `preferences` por categoria) ·
   `audit_logs` · `platform_settings`.
 
@@ -547,3 +553,7 @@ usuário" (apenas para `platform_admin`). Quando ativo:
   e a ordem, sem tocar o banco (Onda CI).
 - `docs/32-DICAS-GUIADAS.md` — as dicas sob pedido: guias com seta sobre a tela
   de verdade, pontos de dica, tutoriais como guias (Onda CJ).
+- `docs/40-CENTRO-DE-TREINO.md` — o Centro de Treino: biblioteca de todos os
+  autores, criar, indicar, enviar a alunos, hoje, planos, diário, evolução,
+  dúvidas e o admin (flag `training_center`).
+- `docs/41-MINHA-AREA.md` — o `/perfil` como central do usuário (flag `user_hub`).

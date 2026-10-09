@@ -36,6 +36,7 @@ export function useStudent(coachId, studentId) {
 function invalidate(qc, { coachId, studentId } = {}) {
   qc.invalidateQueries({ queryKey: ['coach-students', 'coach', coachId] });
   if (studentId) qc.invalidateQueries({ queryKey: ['coach-students', 'student', studentId] });
+  if (coachId && studentId) qc.invalidateQueries({ queryKey: ['coach-students', 'detail', coachId, studentId] });
 }
 
 export function useUpsertStudent() {

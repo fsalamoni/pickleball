@@ -51,6 +51,29 @@ service firebase.storage {
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
 
+    // Centro de Treino (flag `training_center`): imagens e vídeos dos itens de
+    // treino. ADITIVO — pasta nova, nada antigo muda.
+    //  - `get` para qualquer conta logada (o item pode ser público); `list`
+    //    SÓ do dono, para ninguém enumerar a pasta de outra pessoa e achar a
+    //    mídia de um item privado;
+    //  - envio só do dono, com TIPO e TAMANHO conferidos aqui: imagem
+    //    WebP/JPEG/PNG < 3 MB (o navegador comprime antes), vídeo
+    //    MP4/WebM/MOV < 60 MB. A configuração do admin só pode baixar esses
+    //    tetos (conferido no cliente);
+    //  - sem sobrescrever (`resource == null`; no Storage gravar por cima de
+    //    um arquivo conta como `create`): arquivo novo é arquivo novo.
+    match /treino/{uid}/{fileName} {
+      allow get: if isAuthed();
+      allow list: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null && (
+        (request.resource.contentType.matches('image/(webp|jpeg|png)')
+          && request.resource.size < 3 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/(mp4|webm|quicktime)')
+          && request.resource.size < 60 * 1024 * 1024)
+      );
+      allow delete: if isAuthed() && request.auth.uid == uid;
+    }
+
     // Bloqueia qualquer outro caminho por padrão.
     match /{allPaths=**} {
       allow read, write: if false;

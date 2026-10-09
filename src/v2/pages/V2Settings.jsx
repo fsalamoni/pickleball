@@ -42,6 +42,7 @@ export default function V2Settings() {
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
   const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
   const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
@@ -50,8 +51,8 @@ export default function V2Settings() {
   // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();
   const { user, userProfile, updateUserProfile } = useAuth();
-  const { data: registrations = [] } = useMyRegistrations();
-  const { data: bookings = [] } = useMyBookings();
+  const inscricoes = useMyRegistrations();
+  const reservas = useMyBookings();
   const [busy, setBusy] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
 
@@ -72,14 +73,36 @@ export default function V2Settings() {
     }
   }
 
-  function exportData() {
+  async function exportData() {
     setBusy(true);
     try {
+      // O treino e as metas são lidos só agora (e o código, baixado só agora):
+      // ninguém paga por isso ao abrir as configurações. Com a flag desligada,
+      // a exportação é a de sempre. Se o pedaço de código não baixar (aba
+      // antiga depois de um deploy), o resto sai e o treino vai como faltando.
+      let extra = { incomplete: [] };
+      if (treinoOn) {
+        try {
+          const { collectTrainingExport } = await import('@/modules/training/services/trainingExportService');
+          extra = await collectTrainingExport(user?.uid);
+        } catch (_) {
+          extra = { incomplete: ['Centro de Treino e metas'] };
+        }
+      }
+      // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
+      const incomplete = [
+        ...(inscricoes.isSuccess ? [] : ['Inscrições em torneio']),
+        ...(reservas.isSuccess ? [] : ['Reservas de quadra']),
+        ...extra.incomplete,
+      ];
       const pkg = buildDataExport({
         uid: user?.uid,
         profile: userProfile || {},
-        registrations,
-        bookings,
+        registrations: inscricoes.data || [],
+        bookings: reservas.data || [],
+        goals: extra.goals,
+        training: extra.training,
+        incomplete,
       });
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -90,7 +113,11 @@ export default function V2Settings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Seus dados foram exportados.');
+      if (incomplete.length > 0) {
+        toast.warning(`Exportado, mas ficou de fora: ${incomplete.join(', ')}. Tente de novo mais tarde para ter tudo.`);
+      } else {
+        toast.success('Seus dados foram exportados.');
+      }
     } catch (err) {
       toast.error('Não foi possível exportar os dados.');
     } finally {
@@ -145,7 +172,7 @@ export default function V2Settings() {
                 {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
               </p>
               <div className="mt-4 space-y-3">
-                {NOTIFICATION_CATEGORIES.map((cat) => (
+                {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
                   <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
                     <V2Toggle
                       id={`notif-${cat.id}`}
@@ -181,7 +208,9 @@ export default function V2Settings() {
             <h2 className="font-display text-lg font-bold text-ink">Privacidade e dados (LGPD)</h2>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.
+            {treinoOn
+              ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios e dúvidas) em formato JSON.'
+              : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
           </p>
           <div className="mt-3">
             <V2Button size="sm" onClick={exportData} disabled={busy}>

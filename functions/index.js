@@ -35,6 +35,7 @@ const {
 const { recuperarSeFaltou } = require('./rankingCatchUp');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
+const notificationPrefs = require('./notificationPrefs');
 
 if (!getApps().length) initializeApp();
 
@@ -342,6 +343,20 @@ exports.pushOnNotificationCreate = onDocumentCreated(
     const tokens = docs.map((d) => d.data() && d.data().token).filter(Boolean);
     if (tokens.length === 0) return;
 
+    // A categoria que a pessoa silenciou nas Configurações não vira push — o
+    // sino já obedecia, o celular não. Sem conseguir ler as preferências, o
+    // aviso segue (como antes): perder um aviso é pior que um a mais.
+    try {
+      const userSnap = await db.collection('users').doc(String(n.user_id)).get();
+      const prefs = userSnap.exists ? userSnap.data().notification_prefs : null;
+      if (notificationPrefs.isNotificationMuted(prefs, n.type)) {
+        logger.info('pushOnNotificationCreate: categoria silenciada, sem push.', { user: n.user_id, type: n.type });
+        return;
+      }
+    } catch (err) {
+      logger.warn('pushOnNotificationCreate: preferências ilegíveis; envia assim mesmo.', err);
+    }
+
     const rawLink = n.link ? String(n.link) : '/';
     const link = rawLink.startsWith('http')
       ? rawLink
@@ -356,7 +371,7 @@ exports.pushOnNotificationCreate = onDocumentCreated(
         fcmOptions: { link },
         notification: { icon: '/pwa-192.png', badge: '/pwa-192.png' },
       },
-      data: { link, type: String(n.type || 'generic') },
+      data: { link, type: String(n.type || 'generic'), area: notificationPrefs.noticeArea(n) },
       tokens,
     };
 

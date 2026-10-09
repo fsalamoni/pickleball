@@ -4,12 +4,12 @@
  * e painel.
  */
 import {
-  Trophy, ClipboardList, Users, Handshake, Dices, GraduationCap,
+  Trophy, ClipboardList, Users, Handshake, Dices, Dumbbell, GraduationCap,
   Building2, CalendarCheck, Zap, Medal, Sparkles,
 } from 'lucide-react';
 
 const ICONS = {
-  Trophy, ClipboardList, Users, Handshake, Dices, GraduationCap,
+  Trophy, ClipboardList, Users, Handshake, Dices, Dumbbell, GraduationCap,
   Building2, CalendarCheck, Zap, Medal, Sparkles,
 };
 

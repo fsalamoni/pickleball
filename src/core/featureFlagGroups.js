@@ -61,6 +61,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.MY_REGION, FEATURE_FLAG.ESSENTIAL_PROFILE, FEATURE_FLAG.DUPR_OFFICIAL_SYNC, FEATURE_FLAG.DUPR_MATCH_EXPORT],
   },
   {
+    id: 'training',
+    label: 'Treino e Minha área',
+    keys: [FEATURE_FLAG.TRAINING_CENTER, FEATURE_FLAG.USER_HUB],
+  },
+  {
     id: 'gamification',
     label: 'Gamificação V2',
     keys: [FEATURE_FLAG.GAMIFICATION_V2],

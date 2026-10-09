@@ -62,6 +62,9 @@ import {
   Gift,
   ShieldAlert,
   BarChart3,
+  Dumbbell,
+  ClipboardCheck,
+  BookOpenCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -180,8 +183,27 @@ const SECAO_GAMIFICACAO = {
   ],
 };
 
-function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false, gamificationOn = false) {
+// O Centro de Treino (flag `training_center`): conteúdo, revisão, denúncias,
+// biblioteca inicial e configuração, numa seção só, sob demanda.
+const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
+const SECAO_TREINO = {
+  id: 'training', label: 'Treino', icon: Dumbbell, dica: 'admin-secao-treino', tabs: [
+    { id: 'treino-conteudo', label: 'Conteúdo', icon: Dumbbell },
+    { id: 'treino-revisao', label: 'Revisão', icon: ClipboardCheck },
+    { id: 'treino-denuncias', label: 'Denúncias', icon: Flag },
+    { id: 'treino-biblioteca', label: 'Biblioteca inicial', icon: BookOpenCheck },
+    { id: 'treino-config', label: 'Configurações', icon: SlidersHorizontal },
+  ],
+};
+
+function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false, gamificationOn = false, trainingOn = false) {
   let out = SECTIONS;
+  // O treino é conteúdo da comunidade: vem logo depois de Comunidade e some
+  // junto com a flag.
+  if (trainingOn) {
+    const idx = out.findIndex((section) => section.id === 'community');
+    out = [...out.slice(0, idx + 1), SECAO_TREINO, ...out.slice(idx + 1)];
+  }
   // A seção da gamificação vem logo depois de Funcionalidades (é onde se decide
   // o que existe) e some junto com a flag mestra.
   if (gamificationOn) {
@@ -242,13 +264,14 @@ export default function V2AdminConsole() {
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
   const sections = useMemo(
-    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn),
-    [duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn],
+    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn, trainingOn),
+    [duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn, trainingOn],
   );
   const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
@@ -303,6 +326,11 @@ export default function V2AdminConsole() {
         {tab.startsWith('gam-') && gamificationOn && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminGamificationPanel tab={tab} />
+          </Suspense>
+        )}
+        {tab.startsWith('treino-') && trainingOn && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminTrainingPanel tab={tab} onTab={setTab} />
           </Suspense>
         )}
         {tab === 'promo' && platformMarketingOn && (

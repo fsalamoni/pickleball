@@ -82,3 +82,24 @@ describe('homeSectionsFor', () => {
     expect(homeSectionsFor([]).map((s) => s.id)).toEqual([HOME_SECTION.AGENDA]);
   });
 });
+
+describe('"Organizar meu treino" com o Centro de Treino', () => {
+  it('desligado: exatamente como antes (só a frente de jogar)', () => {
+    expect(focos(resolveHomeFoci({ interests: ['personal_training'] }))).toEqual([HOME_FOCUS.JOGAR]);
+  });
+
+  it('ligado: traz o treino sem tirar a frente de jogar', () => {
+    const r = resolveHomeFoci({ interests: ['personal_training'], treino: true });
+    expect(focos(r)).toEqual([HOME_FOCUS.JOGAR, HOME_FOCUS.TREINAR]);
+    expect(r.find((f) => f.focus === HOME_FOCUS.TREINAR).reason).toBe(FOCUS_REASON.INTERESSE);
+  });
+
+  it('ligado, sem o interesse: nada de treino', () => {
+    expect(hasFocus(resolveHomeFoci({ interests: ['ranking'], treino: true }), HOME_FOCUS.TREINAR)).toBe(false);
+  });
+
+  it('a frente do treino não cria seção (a tela de sempre segue igual)', () => {
+    const r = resolveHomeFoci({ interests: ['personal_training'], treino: true });
+    expect(homeSectionsFor(r).map((s) => s.id)).toEqual([HOME_SECTION.AGENDA, HOME_SECTION.JOGAR]);
+  });
+});

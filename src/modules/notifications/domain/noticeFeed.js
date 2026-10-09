@@ -37,6 +37,7 @@ export const NOTICE_AREA = Object.freeze({
   ARENAS: 'arenas',
   CLUBES: 'clubes',
   AULAS: 'aulas',
+  TREINO: 'treino',
   SOCIAL: 'social',
   PROMOCOES: 'promocoes',
   GAMIFICACAO: 'gamificacao',
@@ -51,6 +52,7 @@ export const NOTICE_AREAS = Object.freeze([
   { id: NOTICE_AREA.ARENAS, label: 'Arenas e reservas', curto: 'Arenas' },
   { id: NOTICE_AREA.CLUBES, label: 'Clubes', curto: 'Clubes' },
   { id: NOTICE_AREA.AULAS, label: 'Aulas', curto: 'Aulas' },
+  { id: NOTICE_AREA.TREINO, label: 'Treino', curto: 'Treino' },
   { id: NOTICE_AREA.SOCIAL, label: 'Mensagens e comunidade', curto: 'Mensagens' },
   { id: NOTICE_AREA.PROMOCOES, label: 'Promoções e campanhas', curto: 'Promoções' },
   { id: NOTICE_AREA.GAMIFICACAO, label: 'Gamificação', curto: 'Gamificação' },
@@ -85,6 +87,11 @@ const AREA_DO_TIPO = Object.freeze({
   leveling_reminder: NOTICE_AREA.CONTA,
   profile_admin_edit: NOTICE_AREA.CONTA,
   gamification: NOTICE_AREA.GAMIFICACAO,
+  training_share: NOTICE_AREA.TREINO,
+  training_review: NOTICE_AREA.TREINO,
+  training_comment: NOTICE_AREA.TREINO,
+  training_question: NOTICE_AREA.TREINO,
+  training_answer: NOTICE_AREA.TREINO,
 });
 
 /** Primeiro segmento do caminho → área (o que não depende do resto). */
@@ -107,6 +114,7 @@ const AREA_DO_CAMINHO = Object.freeze({
   aulas: NOTICE_AREA.AULAS,
   'minhas-aulas': NOTICE_AREA.AULAS,
   coaches: NOTICE_AREA.AULAS,
+  treino: NOTICE_AREA.TREINO,
   chat: NOTICE_AREA.SOCIAL,
   atleta: NOTICE_AREA.SOCIAL,
   atletas: NOTICE_AREA.SOCIAL,

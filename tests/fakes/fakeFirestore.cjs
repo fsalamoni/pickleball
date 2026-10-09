@@ -51,8 +51,10 @@ class FakeQuery {
     const docs = [...this.store.docs.entries()]
       .filter(([path]) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
       .filter(([, data]) => this.filters.every(([f, op, v]) => {
-        if (op === '==') return data[f] === v;
-        if (op === 'array-contains') return Array.isArray(data[f]) && data[f].includes(v);
+        // `a.b` lê o campo `b` do mapa `a`, como no Firestore.
+        const valor = String(f).split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), data);
+        if (op === '==') return valor === v;
+        if (op === 'array-contains') return Array.isArray(valor) && valor.includes(v);
         throw new Error(`operador não suportado no falso: ${op}`);
       }))
       .slice(0, this.lim)
@@ -133,7 +135,12 @@ function createFakeBucket(files = []) {
   let arquivos = [...files];
   return {
     get arquivos() { return arquivos; },
-    async getFiles({ prefix }) { return [arquivos.filter((f) => f.startsWith(prefix)).map((name) => ({ name }))]; },
+    async getFiles({ prefix }) {
+      return [arquivos.filter((f) => f.startsWith(prefix)).map((name) => ({
+        name,
+        async delete() { arquivos = arquivos.filter((f) => f !== name); },
+      }))];
+    },
     async deleteFiles({ prefix }) { arquivos = arquivos.filter((f) => !f.startsWith(prefix)); },
   };
 }

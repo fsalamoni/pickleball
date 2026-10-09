@@ -24,9 +24,9 @@
  *
  * | Destino | O quê |
  * |---|---|
- * | **Apagado** | identidade (`users`, `athlete_profiles`), conta de login, fotos, tokens, notificações, favoritos, seguidores, vínculos (clube, arena, torneio, circuito), pedidos e convites, filas, gamificação pessoal, ratings materializados |
+ * | **Apagado** | identidade (`users`, `athlete_profiles`), conta de login, fotos, tokens, notificações, favoritos, seguidores, vínculos (clube, arena, torneio, circuito), pedidos e convites, filas, gamificação pessoal, ratings materializados; do treino: itens PRIVADOS não compartilhados (e os arquivos deles), diário, planos, rotina, treinos recebidos, dúvidas que fez; configurações de divulgação do professor |
  * | **Pseudonimizado** | histórico esportivo e o que é de outras pessoas: inscrições, partidas, dias de jogo, conversas, fórum, avaliações. O uid fica; nome e foto viram "Atleta removido" / "Usuário removido" |
- * | **Retido** | auditoria, consentimentos, reservas e pagamentos (obrigação do parceiro) — com o nome minimizado |
+ * | **Retido** | auditoria, consentimentos, reservas e pagamentos (obrigação do parceiro) — com o nome minimizado; denúncias de conteúdo; aulas e pacotes vendidos como professor; **o conteúdo que a pessoa criou, com a autoria** (decisão do dono, 2026-10-09): itens de treino que outras pessoas veem (públicos, só para alunos, compartilhados) com as fotos e vídeos, treinos que enviou, respostas a dúvidas e comentários em diários de alunos, conteúdo, pacotes e loja do professor; cupons e campanhas do professor ficam, fora do ar |
  * | **Impede a exclusão** | ser dono de arena, rede, clube (único admin), organizador de torneio em andamento, criador de dia de jogo ativo, ter saldo em carteira |
  *
  * ## As travas
@@ -119,6 +119,9 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'user_kudos_index', label: 'Índice de kudos' },
   { col: 'coaches', label: 'Perfil de professor' },
   { col: 'coach_availability', label: 'Disponibilidade de professor' },
+  { col: 'training_meta', label: 'Rotina e preferências do treino' },
+  // Modelos de banner/cupom e custo interno dos vales do professor (id = uid).
+  { col: 'promo_settings', label: 'Configurações de divulgação (professor)' },
 ]);
 
 /**
@@ -167,6 +170,37 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'user_rivals', field: 'userB', label: 'Rivalidades (gamificação)' },
   { col: 'mentorships', field: 'mentorUid', label: 'Mentorias (gamificação)' },
   { col: 'mentorships', field: 'apprenticeUid', label: 'Mentorias (gamificação)' },
+  // Centro de Treino: o plano e os envios são só da pessoa (o envio é uma
+  // mensagem entre duas pessoas — some dos dois lados, como a notificação).
+  { col: 'training_plans', field: 'uid', label: 'Planos de treino' },
+  // A caixa de entrada da pessoa. O que ela ENVIOU fica (RETAINED_AS_IS).
+  { col: 'training_shares', field: 'to_uid', label: 'Treinos recebidos' },
+]);
+
+/**
+ * RETIDO sem mudança: só contado, para a prévia dizer que fica. Nenhum destes
+ * guarda nome nem contato da pessoa — só o uid, que é o que mantém o registro
+ * de pé.
+ */
+const RETAINED_AS_IS = Object.freeze([
+  // Moderação: a denúncia é sobre o conteúdo de OUTRA pessoa, e o admin
+  // precisa dela para decidir; a que é sobre o conteúdo da conta conta a
+  // história do que foi moderado. Como a auditoria, fica.
+  { col: 'training_reports', field: 'reporter_uid', label: 'Denúncias de conteúdo que fez' },
+  { col: 'training_reports', field: 'item_author_uid', label: 'Denúncias sobre o conteúdo da conta' },
+  // O lado PROFESSOR das aulas e vendas (o do aluno está em PSEUDO_SPECS):
+  // nenhum dos dois documentos guarda o nome do professor.
+  { col: 'coach_lessons', field: 'coach_id', label: 'Aulas particulares dadas (como professor)' },
+  { col: 'coach_package_sales', field: 'coach_id', label: 'Pacotes de aula vendidos (como professor)' },
+  // O CONTEÚDO que a pessoa criou fica, com a autoria (decisão do dono,
+  // 2026-10-09). O envio leva o nome de quem enviou; a dúvida, as respostas
+  // do professor com o nome. Conteúdo, pacotes e loja do professor só
+  // aparecem no perfil dele, que sai: ficam guardados, sem vitrine.
+  { col: 'training_shares', field: 'from_uid', label: 'Treinos que enviou ou indicou (ficam com quem recebeu)' },
+  { col: 'training_questions', field: 'coach_uid', label: 'Dúvidas de alunos que respondeu (ficam, com as respostas)' },
+  { col: 'coach_content', field: 'coach_id', label: 'Conteúdo publicado como professor' },
+  { col: 'coach_packages', field: 'coach_id', label: 'Pacotes de aula oferecidos' },
+  { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -312,7 +346,8 @@ function buildReport(f) {
       pseudonimizar: soma(pseudonyms),
       reter: soma(retained),
     },
-    truncated: [...deletes, ...pseudonyms].some((x) => x.truncated),
+    // Antes do filtro: a linha que bateu no limite pode ter vindo zerada.
+    truncated: [...(f.deletes || []), ...(f.pseudonyms || [])].some((x) => x.truncated),
   };
 }
 
@@ -667,6 +702,194 @@ async function coletarLadders(db, uid) {
   return { itens, deletes: [], truncated: false };
 }
 
+/* ---------------------------------------------- Centro de Treino ------ */
+
+/**
+ * O item de treino que a pessoa criou PARA OUTRAS: público (em qualquer etapa
+ * da revisão), só para alunos ou compartilhado com alguém. Ele fica, com o
+ * nome de quem criou (decisão do dono, 2026-10-09: "o conteúdo criado não
+ * deve ser excluído e deve permanecer indicando a autoria"). Só o privado que
+ * ninguém mais recebeu é apagado — esse é só dela.
+ */
+function trainingItemStays(it) {
+  if (!it) return false;
+  return it.visibility !== 'privado' || (Array.isArray(it.shared_uids) && it.shared_uids.length > 0);
+}
+
+/**
+ * O caminho no Storage de uma mídia ENVIADA: o `path` gravado ou, na cópia
+ * (que guarda só o link — `copy.js` zera o caminho), o que o link de
+ * download carrega em `/o/<caminho codificado>`. Link de fora ⇒ `null`.
+ */
+function caminhoDaMidia(m) {
+  if (!m) return null;
+  if (typeof m.path === 'string' && m.path) return m.path;
+  if (typeof m.url !== 'string') return null;
+  const achado = /\/o\/([^?#]+)/.exec(m.url);
+  if (!achado) return null;
+  try { return decodeURIComponent(achado[1]); } catch (_) { return null; }
+}
+
+/**
+ * O arquivo fica? `mantidos` guarda caminhos e, quando não deu para saber
+ * tudo o que fica (consulta no limite), a PASTA inteira (termina em `/`).
+ */
+function fica(mantidos, caminho) {
+  if (!mantidos) return false;
+  return mantidos.has(caminho) || [...mantidos].some((c) => c.endsWith('/') && caminho.startsWith(c));
+}
+
+/** A mídia aponta para um arquivo de `treino/{uid}/` que vai ser apagado. */
+function midiaQueSome(m, uid, mantidos) {
+  const caminho = caminhoDaMidia(m);
+  return Boolean(caminho) && caminho.startsWith(`treino/${uid}/`) && !fica(mantidos, caminho);
+}
+
+/** `{ media }` sem as mídias que vão sumir, ou nada se nenhuma some. */
+function semMidiaQueSome(it, uid, mantidos) {
+  if (!it || !Array.isArray(it.media)) return {};
+  const media = it.media.filter((m) => !midiaQueSome(m, uid, mantidos));
+  return media.length !== it.media.length ? { media } : {};
+}
+
+/**
+ * Item que fica: o nome de autor fica, as fotos e vídeos dele também (os
+ * arquivos entram em `coletarMantidos`). Só a FOTO de perfil sai — ela mora
+ * em `uploads/{uid}/`, que é apagada, e viraria uma imagem quebrada.
+ */
+function patchTrainingItemAuthor(it, uid) {
+  if (!it || it.author_uid !== uid || !it.author_photo) return null;
+  return { author_photo: null };
+}
+
+/**
+ * A cópia de OUTRA pessoa guarda o nome do original em "copiado de" (fica: é
+ * a autoria) e o LINK das mídias enviadas pelo original. As do item que é
+ * apagado somem com a pasta; as do item que fica, não.
+ * ponytail: a cópia de uma cópia não é achada (nada indexa a cadeia); ali a
+ * ficha mostra "não foi possível carregar" no lugar da mídia.
+ */
+function patchDerivedFrom(it, uid, mantidos) {
+  const patch = semMidiaQueSome(it, uid, mantidos);
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Tira o uid da lista de quem pode ler o item de outra pessoa. */
+function patchSharedUids(it, uid) {
+  if (!it || !Array.isArray(it.shared_uids) || !it.shared_uids.includes(uid)) return null;
+  return { shared_uids: it.shared_uids.filter((u) => u !== uid) };
+}
+
+/**
+ * Itens de treino que a pessoa criou: os que outras pessoas veem ficam, com a
+ * autoria; os privados não compartilhados são apagados. Nas cópias de outras
+ * pessoas saem só os links das mídias que somem.
+ * ponytail: uma consulta de cópias por item (nada indexa "cópias de um
+ * autor"); a conta tem no máximo QUERY_LIMIT itens.
+ */
+async function coletarItensDeTreino(db, uid, { mantidos } = {}) {
+  const r = await consultar(db, 'training_items', 'author_uid', '==', uid);
+  const itens = [];
+  const deletes = [];
+  let count = 0;
+  let truncated = r.truncated;
+  for (const d of r.docs) {
+    const it = d.data();
+    if (trainingItemStays(it)) {
+      count += 1;
+      const p = patchTrainingItemAuthor(it, uid);
+      if (p) itens.push({ ref: d.ref, patch: p });
+    } else {
+      deletes.push(d.ref);
+    }
+    // eslint-disable-next-line no-await-in-loop
+    const copias = await consultar(db, 'training_items', 'derived_from.id', '==', d.id);
+    truncated = truncated || copias.truncated;
+    copias.docs.forEach((c) => {
+      const pc = patchDerivedFrom(c.data(), uid, mantidos);
+      if (pc) itens.push({ ref: c.ref, patch: pc });
+    });
+  }
+  return { itens, deletes, truncated, count };
+}
+
+/**
+ * Diário de treino. O da pessoa é apagado COM os comentários (subcoleção não
+ * some com o pai). No diário de um aluno que ela, professora, acompanhava:
+ * o compartilhamento é desfeito; a sessão é do aluno e os comentários DELA
+ * ficam, com o nome (o que ela escreveu para o aluno é conteúdo criado).
+ */
+async function coletarDiario(db, uid) {
+  const itens = [];
+  const deletes = [];
+  const minhas = await consultar(db, 'training_sessions', 'uid', '==', uid);
+  let truncated = minhas.truncated;
+  for (const d of minhas.docs) {
+    // eslint-disable-next-line no-await-in-loop
+    const coms = await d.ref.collection('comments').limit(QUERY_LIMIT + 1).get();
+    if (coms.size > QUERY_LIMIT) truncated = true;
+    coms.docs.slice(0, QUERY_LIMIT).forEach((c) => deletes.push(c.ref));
+    deletes.push(d.ref);
+  }
+  const deAlunos = await consultar(db, 'training_sessions', 'shared_coach_id', '==', uid);
+  truncated = truncated || deAlunos.truncated;
+  for (const d of deAlunos.docs) {
+    if (d.data().uid === uid) continue;
+    itens.push({ ref: d.ref, patch: { shared_coach_id: null } });
+  }
+  return { itens, deletes, truncated };
+}
+
+/**
+ * Dúvidas que a pessoa FEZ: são dela e somem com as mensagens. As que ela
+ * respondeu como professora ficam como estão (RETAINED_AS_IS): as respostas
+ * são conteúdo criado, com o nome.
+ */
+async function coletarDuvidas(db, uid) {
+  const deletes = [];
+  const minhas = await consultar(db, 'training_questions', 'asker_uid', '==', uid);
+  let truncated = minhas.truncated;
+  for (const d of minhas.docs) {
+    // eslint-disable-next-line no-await-in-loop
+    const msgs = await d.ref.collection('messages').limit(QUERY_LIMIT + 1).get();
+    if (msgs.size > QUERY_LIMIT) truncated = true;
+    msgs.docs.slice(0, QUERY_LIMIT).forEach((m) => deletes.push(m.ref));
+    deletes.push(d.ref);
+  }
+  return { itens: [], deletes, truncated };
+}
+
+/**
+ * Cupom e campanha do PROFESSOR ficam (são conteúdo criado), mas saem do ar:
+ * seguiriam no carrossel do início oferecendo aula de quem não existe mais.
+ * O emissor da plataforma é 'platform', que nunca é um uid.
+ */
+const foraDoAr = (campo) => (d, uid) => (
+  d && d.issuer_id === uid && d[campo] !== false ? { [campo]: false } : null
+);
+
+/** A campanha sai do ar também na página dela (a sem banner seguiria "valendo"). */
+function patchCoachCampaign(d, uid) {
+  if (!d || d.issuer_id !== uid) return null;
+  if (d.status === 'cancelled' && d.banner_active === false) return null;
+  return { status: 'cancelled', banner_active: false };
+}
+
+/**
+ * A ficha de aluno de um professor, quando o ALUNO é excluído: o nome sai e o
+ * vínculo encerra — o professor deixou de ser professor dele. Fica na lista
+ * do professor como histórico ("A conta do aluno foi excluída"), sem convite.
+ */
+function patchCoachStudentLink(d, uid) {
+  if (!d || d.student_id !== uid) return null;
+  const patch = campos('student_id', ['student_name'], ['student_email'])(d, uid) || {};
+  if (d.status !== 'ended') Object.assign(patch, { status: 'ended', ended_at: new Date(), ended_by: uid });
+  // Mesmo já encerrado: é o motivo que tira o "Convidar de novo" e deixa o
+  // professor remover a ficha. Quem encerrou e quando ficam.
+  if (d.ended_reason !== 'conta_excluida') patch.ended_reason = 'conta_excluida';
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
 /**
  * O que é PSEUDONIMIZADO (o uid fica, o nome sai) ou RETIDO com o nome
  * minimizado. Cada campo abaixo foi conferido no código que ESCREVE a
@@ -700,7 +923,15 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Fórum de clube', collect: coletarForum, deleteLabel: 'Votos em enquete de fórum' },
   { label: 'Publicações em clube', col: 'club_posts', wheres: [['author_id', '==']], patch: campos('author_id', ['author_name'], ['author_photo'], REMOVED_USER) },
   { label: 'Avaliações de arena', col: 'arena_reviews', wheres: [['user_id', '==']], patch: campos('user_id', ['user_name'], ['user_photo'], REMOVED_USER) },
-  { label: 'Fichas de aluno de professores', col: 'coach_students', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name'], ['student_email']) },
+  { label: 'Fichas de aluno de professores (vínculo encerrado)', col: 'coach_students', wheres: [['student_id', '==']], patch: patchCoachStudentLink },
+  // Centro de Treino. `cols` diz o que um coletor com passos toca — é o que o
+  // guarda `exclusaoCobreColecoes` confere contra o `firestore.rules`.
+  { label: 'Itens de treino que criou (ficam, com a autoria)', bucket: 'retained', collect: coletarItensDeTreino, deleteLabel: 'Itens de treino privados, não compartilhados', cols: ['training_items'] },
+  { label: 'Acesso a itens de treino de outras pessoas', col: 'training_items', wheres: [['shared_uids', 'array-contains']], patch: patchSharedUids },
+  { label: 'Diários de alunos que acompanhava (os comentários ficam)', bucket: 'retained', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
+  { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
+  { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
+  { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: patchCoachCampaign, countAll: true },
   // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
   { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
   { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
@@ -731,17 +962,19 @@ async function consultarUniao(db, col, wheres, uid) {
 }
 
 /** Coleta as trocas de UMA especificação de pseudonimização. */
-async function coletarTrocas(db, uid, spec) {
+async function coletarTrocas(db, uid, spec, extra = {}) {
   if (typeof spec.collect === 'function') {
-    const r = await spec.collect(db, uid);
+    const r = await spec.collect(db, uid, extra);
     return {
-      label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [],
+      label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [], count: r.count,
       deletes: r.deletes || [], deleteLabel: spec.deleteLabel || spec.label, truncated: Boolean(r.truncated),
     };
   }
   const itens = [];
   let truncated = false;
+  let vistos = 0;
   const aplicar = (d) => {
+    vistos += 1;
     const patch = spec.patch(d.data() || {}, uid);
     if (patch) itens.push({ ref: d.ref, patch });
   };
@@ -764,7 +997,11 @@ async function coletarTrocas(db, uid, spec) {
     truncated = r.truncated;
     r.docs.forEach(aplicar);
   }
-  return { label: spec.label, bucket: spec.bucket || 'pseudonym', itens, deletes: [], truncated };
+  // `countAll`: a linha conta o que FICA, mude ou não (o cupom já desligado também fica).
+  return {
+    label: spec.label, bucket: spec.bucket || 'pseudonym', itens, deletes: [], truncated,
+    count: spec.countAll ? vistos : undefined,
+  };
 }
 
 /** A conta de login existe? `null` quando não deu para saber. */
@@ -778,15 +1015,108 @@ async function contaDeLoginExiste(auth, uid) {
   }
 }
 
-/** Quantos arquivos a pessoa tem no Storage (`uploads/{uid}/…`). */
-async function contarArquivos(bucket, uid) {
-  if (!bucket) return 0;
-  try {
-    const [files] = await bucket.getFiles({ prefix: `uploads/${uid}/`, maxResults: 1000 });
-    return files.length;
-  } catch (_) {
-    return 0;
+/**
+ * As pastas da pessoa no Storage: as fotos e anexos (`uploads/`) e as fotos e
+ * vídeos do treino (`treino/`, fora de `uploads/` porque tem regra própria de
+ * tipo e tamanho).
+ */
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`]);
+
+/** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
+function linksEm(valor, acc = []) {
+  if (typeof valor === 'string') acc.push(valor);
+  else if (Array.isArray(valor)) valor.forEach((v) => linksEm(v, acc));
+  else if (valor && typeof valor === 'object') Object.values(valor).forEach((v) => linksEm(v, acc));
+  return acc;
+}
+
+/** Cupons e campanhas que FICAM com a arte enviada pela pessoa (em `uploads/{uid}/`). */
+const ARTE_QUE_FICA = Object.freeze([
+  { col: 'promo_coupons', wheres: [['issuer_id', '=='], ['created_by', '==']] },
+  { col: 'promo_campaigns', wheres: [['issuer_id', '=='], ['created_by', '==']] },
+  { col: 'arena_campaigns', wheres: [['created_by', '==']] },
+]);
+
+/**
+ * Arquivos que FICAM nas pastas da pessoa: a mídia dos itens de treino que
+ * ficam — os dela que outras pessoas veem e os da PLATAFORMA que ela, como
+ * admin, enviou — e a arte dos cupons e campanhas que ficam. Apagar a pasta
+ * inteira quebraria as imagens deles.
+ * Consulta no limite ⇒ não dá para saber tudo o que fica, e a PASTA inteira
+ * fica (`treino/{uid}/` ou `uploads/{uid}/`); a exclusão sai parcial.
+ * ponytail: com mais de QUERY_LIMIT itens que ficam a pasta nunca é apagada;
+ * paginar as consultas se isso acontecer.
+ */
+async function coletarMantidos(db, uid) {
+  const mantidos = new Set();
+  let incompleto = false;
+  const treino = `treino/${uid}/`;
+  const uploads = `uploads/${uid}/`;
+  const r = await consultarUniao(db, 'training_items', [['created_by', '=='], ['author_uid', '==']], uid);
+  if (r.truncated) { mantidos.add(treino); incompleto = true; }
+  r.docs.forEach((d) => {
+    const it = d.data() || {};
+    if ((it.author_uid === uid && !trainingItemStays(it)) || !Array.isArray(it.media)) return;
+    it.media.forEach((m) => {
+      const caminho = caminhoDaMidia(m);
+      if (caminho && caminho.startsWith(treino)) mantidos.add(caminho);
+    });
+  });
+  for (const { col, wheres } of ARTE_QUE_FICA) {
+    // eslint-disable-next-line no-await-in-loop
+    const a = await consultarUniao(db, col, wheres, uid);
+    if (a.truncated) { mantidos.add(uploads); incompleto = true; }
+    a.docs.forEach((d) => {
+      const doc = d.data() || {};
+      linksEm([doc.art, doc.banner]).forEach((url) => {
+        const caminho = caminhoDaMidia({ url });
+        if (caminho && caminho.startsWith(uploads)) mantidos.add(caminho);
+      });
+    });
   }
+  return { mantidos, incompleto };
+}
+
+/** Quantos arquivos a pessoa tem no Storage, somando as pastas dela (sem os que ficam). */
+async function contarArquivos(bucket, uid, mantidos = new Set()) {
+  if (!bucket) return 0;
+  let total = 0;
+  for (const prefixo of STORAGE_PREFIXES) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const [files] = await bucket.getFiles({ prefix: prefixo(uid), maxResults: 1000 });
+      total += files.filter((f) => !fica(mantidos, f.name)).length;
+    } catch (_) {
+      // pasta que não deu para ler conta zero; a execução tenta apagar mesmo assim
+    }
+  }
+  return total;
+}
+
+/**
+ * Apaga as pastas da pessoa, menos os arquivos que ficam. Sem nada a manter,
+ * a pasta sai de uma vez; com algo, arquivo por arquivo.
+ */
+async function apagarArquivos(bucket, uid, mantidos) {
+  let erro = false;
+  for (const prefixo of STORAGE_PREFIXES) {
+    try {
+      const prefix = prefixo(uid);
+      const guarda = [...mantidos].some((c) => c.startsWith(prefix));
+      if (!guarda) {
+        // eslint-disable-next-line no-await-in-loop
+        await bucket.deleteFiles({ prefix });
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        const [files] = await bucket.getFiles({ prefix });
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all(files.filter((f) => !fica(mantidos, f.name)).map((f) => f.delete()));
+      }
+    } catch (_) {
+      erro = true;
+    }
+  }
+  return erro;
 }
 
 /** Busca o que pode IMPEDIR a exclusão. */
@@ -830,9 +1160,10 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const userSnap = await db.collection('users').doc(uid).get();
   const user = userSnap.exists ? userSnap.data() : null;
 
+  const { mantidos, incompleto } = await coletarMantidos(db, uid);
   const [authExists, storageFiles, blockers] = await Promise.all([
     auth ? contaDeLoginExiste(auth, uid) : Promise.resolve(null),
-    contarArquivos(bucket, uid),
+    contarArquivos(bucket, uid, mantidos),
     buscarImpedimentos(db, uid, hojeISO),
   ]);
 
@@ -864,11 +1195,19 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
     porConsulta.push({ spec, refs: r.docs.map((d) => d.ref), truncated: r.truncated, contadores });
   }
 
+  // Retido sem mudança: só contado
+  const retidos = [];
+  for (const spec of RETAINED_AS_IS) {
+    // eslint-disable-next-line no-await-in-loop
+    const r = await consultar(db, spec.col, spec.field, '==', uid);
+    retidos.push({ label: spec.label, count: r.docs.length, truncated: r.truncated });
+  }
+
   // Pseudonimizar / reter
   const trocas = [];
   for (const spec of (ctx.pseudoSpecs || PSEUDO_SPECS)) {
     // eslint-disable-next-line no-await-in-loop
-    trocas.push(await coletarTrocas(db, uid, spec));
+    trocas.push(await coletarTrocas(db, uid, spec, { mantidos }));
   }
 
   // Por rótulo: duas especificações com o mesmo rótulo (seguidores e
@@ -887,19 +1226,25 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const deletes = somarPorRotulo([
     ...porId.map((x) => ({ label: x.spec.label, count: x.exists ? 1 : 0 })),
     ...porConsulta.map((x) => ({ label: x.spec.label, count: x.refs.length, truncated: x.truncated })),
-    ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length })),
-    ...(storageFiles > 0 ? [{ label: 'Fotos e arquivos enviados', count: storageFiles }] : []),
+    ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length, truncated: t.truncated })),
+    // Lista do que fica incompleta: a pasta fica e a exclusão sai parcial.
+    ...(storageFiles > 0 || incompleto ? [{ label: 'Fotos e arquivos enviados', count: storageFiles, truncated: incompleto }] : []),
   ]);
-  const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained')
-    .map((t) => ({ label: t.label, count: t.itens.length, truncated: t.truncated })));
-  const retained = somarPorRotulo(trocas.filter((t) => t.bucket === 'retained')
-    .map((t) => ({ label: t.label, count: t.itens.length, truncated: t.truncated })));
+  const arquivosQueFicam = [...mantidos].filter((c) => !c.endsWith('/')).length;
+  // `count` quando o coletor conta o que FICA (nem tudo o que fica muda).
+  const linha = (t) => ({ label: t.label, count: t.count ?? t.itens.length, truncated: t.truncated });
+  const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained').map(linha));
+  const retained = somarPorRotulo([
+    ...trocas.filter((t) => t.bucket === 'retained').map(linha),
+    ...retidos,
+    ...(arquivosQueFicam > 0 ? [{ label: 'Fotos, vídeos e artes do conteúdo que fica', count: arquivosQueFicam }] : []),
+  ]);
 
   const report = buildReport({
     uid, user, actorUid, deletes, pseudonyms, retained, blockers,
     authExists: authExists !== false, storageFiles,
   });
-  return { report, plan: { user, authExists, porId, porConsulta, trocas } };
+  return { report, plan: { user, authExists, porId, porConsulta, trocas, mantidos } };
 }
 
 /**
@@ -969,14 +1314,9 @@ async function executeAccountDeletion(ctx, uid, { actor, reason, hojeISO, FieldV
   }
 
   // 2. arquivos
-  let storageError = false;
-  if (bucket && report.storageFiles > 0) {
-    try {
-      await bucket.deleteFiles({ prefix: `uploads/${uid}/` });
-    } catch (_) {
-      storageError = true;
-    }
-  }
+  // Mesmo com a contagem em zero: a listagem pode ter falhado na prévia, e
+  // apagar uma pasta vazia não custa nada.
+  const storageError = bucket ? await apagarArquivos(bucket, uid, plan.mantidos) : false;
 
   // 3 e 4. um lote só de operações, na ordem certa
   const ops = [];
@@ -1040,6 +1380,8 @@ module.exports = {
   REMOVED_MESSAGE,
   DELETE_BY_ID,
   DELETE_BY_QUERY,
+  RETAINED_AS_IS,
+  STORAGE_PREFIXES,
   TOURNAMENT_LIVE,
   evaluateBlockers,
   isOwnerEmail,
@@ -1057,6 +1399,13 @@ module.exports = {
   patchBooking,
   patchInternalTournament,
   patchPairRanking,
+  trainingItemStays,
+  patchTrainingItemAuthor,
+  patchDerivedFrom,
+  patchSharedUids,
+  patchCoachStudentLink,
+  patchCoachCampaign,
+  fica,
   consolidarOps,
   analyzeAccount,
   executeAccountDeletion,

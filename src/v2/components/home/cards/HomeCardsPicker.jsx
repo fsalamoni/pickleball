@@ -17,7 +17,7 @@
  */
 import React, { useId, useMemo, useState } from 'react';
 import {
-  Building2, CalendarCheck, CalendarDays, ChevronDown, ChevronUp, ClipboardList, GraduationCap, Handshake,
+  Building2, CalendarCheck, CalendarDays, ChevronDown, ChevronUp, ClipboardList, Dumbbell, GraduationCap, Handshake,
   LayoutGrid, Medal, Megaphone, Plus, RotateCcw, Sparkles, Swords, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
@@ -28,7 +28,7 @@ import {
 import { useHomeCards, useHomeCardsContext } from '@/modules/home/hooks/useHomeCards';
 
 const ICONES = {
-  Building2, CalendarCheck, CalendarDays, ClipboardList, GraduationCap, Handshake, Medal, Megaphone, Swords,
+  Building2, CalendarCheck, CalendarDays, ClipboardList, Dumbbell, GraduationCap, Handshake, Medal, Megaphone, Swords,
   TrendingUp, Trophy, Users, Zap,
 };
 

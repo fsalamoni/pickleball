@@ -31,10 +31,12 @@ export function useHomeCardsContext() {
   const plataforma = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const professores = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
   const evolucao = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
+  const treino = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   return useMemo(() => ({
     promocoes: arenas || plataforma || professores,
     evolucao,
-  }), [arenas, plataforma, professores, evolucao]);
+    treino,
+  }), [arenas, plataforma, professores, evolucao, treino]);
 }
 
 /**

@@ -10,7 +10,9 @@ import { Link, Navigate } from 'react-router-dom';
 import { Trophy, Settings2, Eye, Plus } from 'lucide-react';
 import { useMyManagedTournaments } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function whenText(t) {
   const raw = t?.starts_at || t?.start_date || t?.created_at;
@@ -21,7 +23,10 @@ function whenText(t) {
 
 export default function V2MyTournamentsAdmin() {
   const consoleOn = true;
-  const { data: tournaments = [], isLoading } = useMyManagedTournaments({ includeArchived: true });
+  // Minha área (flag `user_hub`): os torneios em que JOGO estão lá; aqui fica
+  // o que eu organizo, e o título diz isso.
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const { data: tournaments = [], isLoading, isError, isSuccess, refetch } = useMyManagedTournaments({ includeArchived: true });
 
   if (!consoleOn) return <Navigate to="/perfil" replace />;
 
@@ -29,7 +34,7 @@ export default function V2MyTournamentsAdmin() {
     <div className="mx-auto max-w-[900px] space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink">Meus torneios</h1>
+          <h1 className="font-display text-2xl font-bold text-ink">{userHubOn ? 'Torneios que organizo' : 'Meus torneios'}</h1>
           <p className="mt-1 text-sm text-gray-500">Gerencie os torneios que você criou.</p>
         </div>
         <V2Button asChild size="sm">
@@ -39,7 +44,15 @@ export default function V2MyTournamentsAdmin() {
 
       {isLoading ? (
         <V2Skeleton className="h-40 rounded-2xl" />
-      ) : tournaments.length === 0 ? (
+      ) : isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os seus torneios"
+            description="Os torneios que você organiza continuam lá — tente de novo."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
+      ) : isSuccess && tournaments.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={Trophy}

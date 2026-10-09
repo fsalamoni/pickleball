@@ -88,7 +88,7 @@ function RelatorioDaConta({ report }) {
           {r.retained.length > 0 && (
             <div>
               <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                <Clock className="h-3 w-3" /> Fica guardado, sem o nome
+                <Clock className="h-3 w-3" /> Fica guardado
               </p>
               <Linhas itens={r.retained} />
             </div>
@@ -152,7 +152,9 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
           <DialogDescription>
             A conta de login e os dados pessoais somem. O histórico esportivo fica, com o nome trocado
             por &ldquo;Atleta removido&rdquo; — apagá-lo reescreveria o resultado e o rating de outras
-            pessoas. Reservas e pagamentos ficam guardados, sem o nome. A Auditoria registra tudo.
+            pessoas. Reservas e pagamentos ficam guardados, sem o nome. O conteúdo que a pessoa criou
+            para outras (treinos, respostas a alunos, conteúdo de professor) fica, com o nome dela. A
+            Auditoria registra tudo.
           </DialogDescription>
         </DialogHeader>
 

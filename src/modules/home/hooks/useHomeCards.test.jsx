@@ -92,9 +92,9 @@ describe('flags', () => {
 
   it('o contexto diz o que cada card pode oferecer', () => {
     montar(<Flags />);
-    expect(vistos.ctx).toEqual({ promocoes: false, evolucao: false });
-    estado.flags = { coach_marketing: true, action_home: true };
+    expect(vistos.ctx).toEqual({ promocoes: false, evolucao: false, treino: false });
+    estado.flags = { coach_marketing: true, action_home: true, training_center: true };
     montar(<Flags />);
-    expect(vistos.ctx).toEqual({ promocoes: true, evolucao: true });
+    expect(vistos.ctx).toEqual({ promocoes: true, evolucao: true, treino: true });
   });
 });

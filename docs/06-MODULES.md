@@ -794,6 +794,19 @@ Brasil/estado/cidade; "só para os meus alunos"). Coleções `promo_coupons`,
 `promo_campaigns`, `promo_settings`. Ver `src/modules/promo/README.md` e
 `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2.
 
+## training/ — Centro de Treino (NOVO, flag `training_center`)
+
+Biblioteca de drills e treinos de TODOS os autores (Equipe PickleRush,
+professores, atletas), com autoria visível e visibilidade pública (com revisão
+para atleta), privada ou só para os alunos; indicar a outro atleta; enviar a
+aluno com prazo (só professor); treino de hoje, planos, diário, evolução e
+dúvidas privadas com o professor. Editor no modelo da pesquisa (certo × errado,
+dicas curtas, erros + correção, fases do movimento, variações, meta, segurança,
+diagrama da quadra, mídia por link ou envio), "Criar com IA" com validação
+local. Admin: Painel → Treino. Telas `V2Training` (`/treino`, abas por `?aba=`),
+`V2TrainingItem`, `V2TrainingEditor`, `V2TrainingPlan`. Ver
+`src/modules/training/README.md` e `docs/40-CENTRO-DE-TREINO.md`.
+
 ## arenas/ — Mercado (NOVO Onda J)
 
 Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).
@@ -909,6 +922,7 @@ por `athletes/`, `auth/`, `coaches/`, `arenas/`, etc.).
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | `V2Ranking` · `V2DoublesRanking` · `V2FindPlayers` · `V2OpenGames` · `V2Partners` |
 | `/meu-desempenho` `/perfil*` `/configuracoes` | `V2Performance` · `V2AthleteAgenda` · `V2Profile` · `V2ProfileEdit` · `V2Settings` |
 | `/buscar` | `V2Search` (busca global, Onda 10) |
+| `/treino` `/treino/novo` `/treino/item/:itemId` `/treino/item/:itemId/editar` `/treino/planos/:planId` | `V2Training` · `V2TrainingEditor` · `V2TrainingItem` · `V2TrainingPlan` (Centro de Treino — flag `training_center`) |
 | `/promocoes` `/campanhas/:campaignId` | `V2Promotions` · `V2PromoCampaign` (divulgação da plataforma e dos professores, Onda CG — flags `platform_marketing`/`coach_marketing`) |
 | `/404` | `V2NotFound` (Onda 1) |
 | `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | `V2Rules` · `V2Leveling` · `V2History` · `V2Conduct` · `V2Privacy` |

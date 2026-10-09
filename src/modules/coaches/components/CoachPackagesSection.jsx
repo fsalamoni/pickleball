@@ -191,7 +191,10 @@ export default function CoachPackagesSection({ coachId }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showSell, setShowSell] = useState(false);
 
-  const activeStudents = useMemo(() => students.filter((s) => s.status !== STUDENT_STATUS.PAUSED), [students]);
+  const activeStudents = useMemo(
+    () => students.filter((s) => s.status !== STUDENT_STATUS.PAUSED && s.status !== STUDENT_STATUS.ENDED),
+    [students],
+  );
   const finance = useMemo(() => formatRevenue(revenueSummary(sales)), [sales]);
 
   const handleDelete = async (pkg) => {

@@ -64,6 +64,13 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | `user_progression_v2` / `user_achievements_v2` | progresso | 🔓 | execução de contrato | conta ativa | ✅ |
 | `tournament_photos` | **imagem de pessoas** | 🌍 | ⚠ **base indefinida** | permanente | **P2-10** ⚠ |
 | Storage `uploads/{uid}/**` | fotos, anexos, comprovantes | 🔓 ⚠ | execução de contrato | conta ativa | **P1-05** ⚠ |
+| `training_items` (Centro de Treino, flag `training_center`) | autoria (uid, nome, foto), conteúdo, mídia | 🔒 privado · 👥 alunos/indicados · 🔓 público aprovado | execução de contrato | conta ativa; na exclusão, o que outras pessoas veem fica com a autoria (decisão do dono, 2026-10-09) e o privado não compartilhado é apagado | ✅ `docs/40` §9 |
+| `training_sessions` + `comments` | o diário de treino (**sem campo de saúde**, aviso na tela) | 🔒 + o professor com quem foi compartilhada (vínculo ativo) | execução de contrato | conta ativa | ✅ |
+| `training_plans` / `training_meta` | planos, rotina, autoavaliação | 🔒 | execução de contrato | conta ativa | ✅ |
+| `training_shares` | quem mandou o quê a quem, com recado | 👥 os dois | execução de contrato | conta ativa (dos dois lados) | ✅ |
+| `training_questions` + `messages` | conversa privada aluno ↔ professor | 👥 os dois | execução de contrato | conta ativa | ✅ |
+| `training_reports` | denúncia: quem denunciou, o motivo | 🔒 denunciante + 🛡 | legítimo interesse (moderação) | retida na exclusão (só o uid) | ✅ |
+| Storage `treino/{uid}/**` | fotos e vídeos de treino (≤ 60 s) | segue o item | execução de contrato | conta ativa; menor de 18 não envia | ✅ |
 
 ## 3. Fluxos de dado para fora
 
@@ -73,6 +80,7 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | **DUPR** (exportação CSV — flag OFF) | nome, e-mail, resultados | consentimento | ⚠ documentar antes de ligar a flag |
 | **Google Analytics / Performance** | uso (env `false` hoje ✅) | consentimento | desligado — se ligar, exige banner de cookies funcional |
 | **Parceiros/afiliados** (`affiliate_links`) | nenhum dado pessoal | — | ✅ só link |
+| **YouTube / Vimeo** (vídeo por link no Treino) | o IP de quem toca no vídeo | consentimento (o toque) | ✅ fachada: o player (`youtube-nocookie.com`, `player.vimeo.com`) só carrega quando a pessoa toca |
 | **Arenas e professores** | dado do aluno/cliente | execução de contrato | ⚠ são **controladores independentes** ou operadores? Definir e contratualizar (`07-DOCUMENTOS-LEGAIS.md` §3) |
 
 ## 4. O que precisa ser decidido

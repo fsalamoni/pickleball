@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Building2, CalendarCheck, Check, ChevronRight, Compass, GraduationCap, LifeBuoy, Lightbulb, PlayCircle, RotateCcw,
+  Building2, CalendarCheck, Check, ChevronRight, Compass, Dumbbell, GraduationCap, LifeBuoy, Lightbulb, PlayCircle, RotateCcw,
   Settings, Sparkles, Swords, Trophy, Users,
 } from 'lucide-react';
 import {
@@ -29,7 +29,7 @@ import { useDicas } from './DicasContext';
 import InterruptorDicas from './InterruptorDicas';
 
 const ICONES = {
-  Building2, CalendarCheck, Compass, GraduationCap, Settings, Sparkles, Swords, Trophy, Users,
+  Building2, CalendarCheck, Compass, Dumbbell, GraduationCap, Settings, Sparkles, Swords, Trophy, Users,
 };
 
 function LinhaGuia({ guia, feito, onIniciar }) {

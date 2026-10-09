@@ -93,6 +93,11 @@ const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
 const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
 const V2Notifications = lazy(() => import('@/v2/pages/V2Notifications'));
+// Centro de Treino (flag `training_center`): cada tela se fecha sozinha com a flag desligada.
+const V2Training = lazy(() => import('@/v2/pages/V2Training'));
+const V2TrainingItem = lazy(() => import('@/v2/pages/V2TrainingItem'));
+const V2TrainingEditor = lazy(() => import('@/v2/pages/V2TrainingEditor'));
+const V2TrainingPlan = lazy(() => import('@/v2/pages/V2TrainingPlan'));
 const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
 // Conteúdo de referência — nativo v2.
@@ -240,12 +245,17 @@ export default function V2App() {
           <Route path="gamification/como-funciona" element={<Gamified><V2GamificationGuide /></Gamified>} />
           <Route path="hall-da-fama" element={<Gamified><V2HallOfFame /></Gamified>} />
           <Route path="vinculos" element={<Gamified><V2SocialBonds /></Gamified>} />
-          <Route path="perfil" element={<V2Profile />} />
+          <Route path="perfil" element={<Isolada nome="perfil"><V2Profile /></Isolada>} />
           <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
           <Route path="configuracoes" element={<V2Settings />} />
           {/* Central de notificações (flag notifications_center): todos os avisos, os novos e os antigos. */}
           <Route path="notificacoes" element={<Isolada nome="notificacoes"><V2Notifications /></Isolada>} />
+          <Route path="treino" element={<Isolada nome="treino"><V2Training /></Isolada>} />
+          <Route path="treino/novo" element={<Isolada nome="treino"><V2TrainingEditor /></Isolada>} />
+          <Route path="treino/item/:itemId" element={<Isolada nome="treino"><V2TrainingItem /></Isolada>} />
+          <Route path="treino/item/:itemId/editar" element={<Isolada nome="treino"><V2TrainingEditor /></Isolada>} />
+          <Route path="treino/planos/:planId" element={<Isolada nome="treino"><V2TrainingPlan /></Isolada>} />
 
           {/* Conteúdo do esporte */}
           <Route path="ajuda" element={<V2Help />} />

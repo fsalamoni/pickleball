@@ -19,7 +19,7 @@ import {
 } from './homeCards.js';
 import { FOCUS_REASON, HOME_FOCUS, HOME_SECTION, resolveHomeFoci } from './homeProfile.js';
 
-const TUDO = { promocoes: true, evolucao: true };
+const TUDO = { promocoes: true, evolucao: true, treino: true };
 
 describe('⭐ o padrão', () => {
   it('são três cards: Dias de jogo, Horários da arena e Ranking — nessa ordem', () => {
@@ -110,6 +110,13 @@ describe('o que depende de outra funcionalidade', () => {
     expect(homeCardAvailable('inventado', TUDO)).toBe(false);
   });
 
+  it('⭐ o treino só existe com o Centro de Treino ligado, e nunca no padrão', () => {
+    expect(homeCardAvailable(HOME_CARD.TREINO, {})).toBe(false);
+    expect(homeCardAvailable(HOME_CARD.TREINO, { treino: true })).toBe(true);
+    expect(DEFAULT_HOME_CARDS).not.toContain(HOME_CARD.TREINO);
+    expect(homeCardsOfGroup(HOME_CARD_GROUP.ROTINA, {})).not.toContain(HOME_CARD.TREINO);
+  });
+
   it('⭐ fica de fora da tela, mas não é esquecido na escolha', () => {
     const escolha = ['jogar', 'destaques', 'ranking'];
     expect(visibleHomeCards(escolha, {})).toEqual(['jogar', 'ranking']);
@@ -134,6 +141,14 @@ describe('sugestões', () => {
   it('o "começo comum" de quem não disse nada não sugere nada', () => {
     const foci = resolveHomeFoci({ interests: [], sinais: {} });
     expect(suggestedHomeCards(foci, [], TUDO)).toEqual([]);
+  });
+
+  it('⭐ "Organizar meu treino" sugere o card do treino — só com o Centro de Treino ligado', () => {
+    const ligado = resolveHomeFoci({ interests: ['personal_training'], treino: true });
+    expect(suggestedHomeCards(ligado, DEFAULT_HOME_CARDS, TUDO).map((x) => x.id)).toContain(HOME_CARD.TREINO);
+    const desligado = resolveHomeFoci({ interests: ['personal_training'] });
+    expect(suggestedHomeCards(desligado, DEFAULT_HOME_CARDS, TUDO).map((x) => x.id)).not.toContain(HOME_CARD.TREINO);
+    expect(suggestedHomeCards(ligado, DEFAULT_HOME_CARDS, { promocoes: true }).map((x) => x.id)).not.toContain(HOME_CARD.TREINO);
   });
 
   it('atividade em andamento sugere (tem clube → Seus clubes)', () => {

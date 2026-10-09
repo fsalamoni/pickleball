@@ -10,6 +10,9 @@ import {
   studentStatusLabel,
   studentStatusTone,
   sortStudents,
+  canSetStudentStatus,
+  canCoachRemoveStudent,
+  isLinkEndedHistory,
 } from './student.js';
 
 describe('studentDocId', () => {
@@ -29,6 +32,57 @@ describe('canTransitionStudent', () => {
   });
   it('não volta para convidado', () => {
     expect(canTransitionStudent(STUDENT_STATUS.ACTIVE, STUDENT_STATUS.INVITED)).toBe(false);
+  });
+  it('qualquer vínculo aberto encerra; encerrado só volta por convite', () => {
+    for (const from of [STUDENT_STATUS.INVITED, STUDENT_STATUS.ACTIVE, STUDENT_STATUS.PAUSED]) {
+      expect(canTransitionStudent(from, STUDENT_STATUS.ENDED)).toBe(true);
+    }
+    expect(canTransitionStudent(STUDENT_STATUS.ENDED, STUDENT_STATUS.INVITED)).toBe(true);
+    expect(canTransitionStudent(STUDENT_STATUS.ENDED, STUDENT_STATUS.ACTIVE)).toBe(false);
+    expect(canTransitionStudent(STUDENT_STATUS.ENDED, STUDENT_STATUS.PAUSED)).toBe(false);
+  });
+});
+
+describe('canSetStudentStatus (enquanto for professor do aluno)', () => {
+  const link = (status, extra = {}) => ({ status, ...extra });
+  it('o aluno aceita o convite e encerra; não pausa nem reativa', () => {
+    expect(canSetStudentStatus(link('invited'), 'active', 'aluno')).toBe(true);
+    expect(canSetStudentStatus(link('invited'), 'ended', 'aluno')).toBe(true);
+    expect(canSetStudentStatus(link('active'), 'ended', 'aluno')).toBe(true);
+    expect(canSetStudentStatus(link('paused'), 'ended', 'aluno')).toBe(true);
+    expect(canSetStudentStatus(link('active'), 'paused', 'aluno')).toBe(false);
+    expect(canSetStudentStatus(link('paused'), 'active', 'aluno')).toBe(false);
+    expect(canSetStudentStatus(link('ended'), 'invited', 'aluno')).toBe(false);
+  });
+  it('o professor faz tudo num vínculo sem histórico de fim', () => {
+    expect(canSetStudentStatus(link('active'), 'paused', 'professor')).toBe(true);
+    expect(canSetStudentStatus(link('paused'), 'active', 'professor')).toBe(true);
+    expect(canSetStudentStatus(link('invited'), 'active', 'professor')).toBe(true);
+    expect(canSetStudentStatus(link('active'), 'ended', 'professor')).toBe(true);
+  });
+  it('depois do fim, o professor só convida de novo (ou desiste) — quem reativa é o aluno', () => {
+    const fim = { ended_at: 123 };
+    expect(canSetStudentStatus(link('ended', fim), 'invited', 'professor')).toBe(true);
+    expect(canSetStudentStatus(link('ended', fim), 'active', 'professor')).toBe(false);
+    expect(canSetStudentStatus(link('invited', fim), 'active', 'professor')).toBe(false);
+    expect(canSetStudentStatus(link('invited', fim), 'paused', 'professor')).toBe(false);
+    expect(canSetStudentStatus(link('invited', fim), 'ended', 'professor')).toBe(true);
+    expect(canSetStudentStatus(link('invited', fim), 'active', 'aluno')).toBe(true);
+  });
+  it('papel desconhecido não muda nada', () => {
+    expect(canSetStudentStatus(link('active'), 'ended', 'outro')).toBe(false);
+  });
+});
+
+describe('canCoachRemoveStudent / isLinkEndedHistory', () => {
+  it('a ficha encerrada (ou reconvidada) fica; a aberta pode sair', () => {
+    expect(canCoachRemoveStudent({ status: 'active' })).toBe(true);
+    expect(canCoachRemoveStudent({ status: 'ended', ended_at: 1 })).toBe(false);
+    expect(canCoachRemoveStudent({ status: 'invited', ended_at: 1 })).toBe(false);
+    expect(canCoachRemoveStudent({ status: 'ended' })).toBe(false);
+    // A conta do aluno foi excluída: a ficha pode sair (a regra confere).
+    expect(canCoachRemoveStudent({ status: 'ended', ended_at: 1, ended_reason: 'conta_excluida' })).toBe(true);
+    expect(isLinkEndedHistory({ status: 'invited' })).toBe(false);
   });
 });
 
@@ -86,9 +140,9 @@ describe('filterStudents', () => {
 describe('rosterSummary', () => {
   it('conta por status', () => {
     const s = rosterSummary([
-      { status: 'active' }, { status: 'active' }, { status: 'invited' }, { status: 'paused' },
+      { status: 'active' }, { status: 'active' }, { status: 'invited' }, { status: 'paused' }, { status: 'ended' },
     ]);
-    expect(s).toEqual({ total: 4, active: 2, invited: 1, paused: 1 });
+    expect(s).toEqual({ total: 5, active: 2, invited: 1, paused: 1, ended: 1 });
   });
 });
 
@@ -97,6 +151,7 @@ describe('labels/tones', () => {
     expect(studentStatusLabel('active')).toBe('Ativo');
     expect(studentStatusTone('active')).toBe('green');
     expect(studentStatusTone('invited')).toBe('amber');
+    expect(studentStatusLabel('ended')).toBe('Encerrado');
   });
 });
 
@@ -107,7 +162,8 @@ describe('sortStudents', () => {
       { student_name: 'Bruno', status: 'paused' },
       { student_name: 'Ana', status: 'active' },
       { student_name: 'Carla', status: 'invited' },
+      { student_name: 'Abel', status: 'ended' },
     ]);
-    expect(sorted.map((s) => s.student_name)).toEqual(['Ana', 'Zeca', 'Carla', 'Bruno']);
+    expect(sorted.map((s) => s.student_name)).toEqual(['Ana', 'Zeca', 'Carla', 'Bruno', 'Abel']);
   });
 });

@@ -54,6 +54,7 @@ function reset() {
     consultasRanking: 0,
     updateUserProfile: vi.fn(() => Promise.resolve()),
     todasArenas: null,
+    consultasTreino: 0,
     jogar: { itens: [], convites: [], carregando: false, isError: false, falhas: { dias: false, convites: false, vagas: false }, recarregar: { dias: vi.fn(), convites: vi.fn(), vagas: vi.fn() } },
   });
 }
@@ -147,6 +148,19 @@ vi.mock('@/v2/components/arenas/openMatch/HomeWaitlistCalls', () => ({
 }));
 vi.mock('@/v2/components/arenas/marketing/HomePromoBanners', () => ({
   default: ({ className }) => <section data-extra-inicio="destaques" className={className} />,
+}));
+
+vi.mock('@/modules/training/hooks/useTrainingIdentity', () => ({ useTrainingIdentity: () => ({ uid: 'u1', activeCoachIds: [] }) }));
+vi.mock('@/modules/training/hooks/useTodaySession', () => ({
+  useTodaySession: () => {
+    estado.consultasTreino += 1;
+    const q = { isSuccess: true, isError: false, data: [], refetch: vi.fn() };
+    return {
+      sessao: { source: 'recomendacao', title: 'Treino sugerido', note: 'Sugestão a partir da sua rotina.', itemIds: [] },
+      items: [], minutos: 45, routine: { days: [6] }, visiveis: { incompleto: false, refetch: vi.fn() },
+      planos: q, inbox: q, meta: q, isLoading: false,
+    };
+  },
 }));
 
 const { default: V2PersonalHome } = await import('./V2PersonalHome.jsx');
@@ -407,6 +421,24 @@ describe('⭐ início sob medida', () => {
     estado.flags = { ...SOB_MEDIDA, arena_modules: true, action_home: true };
     await render();
     expect(ordem()).toEqual(['destaques', 'evolucao', 'ranking']);
+  });
+
+  it('⭐ o card do treino só existe com o Centro de Treino ligado — desligado, nem consulta', async () => {
+    escolher(['jogar', 'treino']);
+    await render();
+    expect(ordem()).toEqual(['jogar']);
+    expect(estado.consultasTreino).toBe(0);
+    act(() => root.unmount());
+    root = createRoot(container);
+    estado.flags = { ...SOB_MEDIDA, training_center: true };
+    await render();
+    // O card chega por import dinâmico.
+    for (let i = 0; i < 20 && !container.querySelector('[data-secao-inicio="treino"]'); i += 1) {
+      await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
+    }
+    expect(ordem()).toEqual(['jogar', 'treino']);
+    expect(texto()).toContain('Treino sugerido');
+    expect(container.querySelector('[data-secao-inicio="treino"]').className).not.toContain('xl:col-span-2');
   });
 
   it('⭐ o que tem prazo aparece com qualquer escolha (mesmo sem card nenhum)', async () => {

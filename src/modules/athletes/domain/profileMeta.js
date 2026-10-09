@@ -63,6 +63,22 @@ export const PLATFORM_INTEREST_META = [
   { value: PLATFORM_INTEREST.RANKING, label: 'Acompanhar ranking e evolução', icon: 'Medal', route: '/ranking', hint: 'Rating e desempenho' },
 ];
 
+/** "Organizar meu treino" com o Centro de Treino ligado: leva ao `/treino`. */
+const PERSONAL_TRAINING_COM_TREINO = Object.freeze({ icon: 'Dumbbell', route: '/treino', hint: 'Treino do dia, rotina e biblioteca' });
+
+/**
+ * Os interesses como a tela os mostra. Com `treino` (flag `training_center`),
+ * "Organizar meu treino" passa a levar ao Centro de Treino; sem ela, a lista
+ * é exatamente a de sempre (o valor gravado no perfil não muda).
+ * @param {{ treino?: boolean }} [opcoes]
+ */
+export function platformInterestMeta({ treino = false } = {}) {
+  if (!treino) return PLATFORM_INTEREST_META;
+  return PLATFORM_INTEREST_META.map((m) => (
+    m.value === PLATFORM_INTEREST.PERSONAL_TRAINING ? { ...m, ...PERSONAL_TRAINING_COM_TREINO } : m
+  ));
+}
+
 const INTEREST_META_BY_VALUE = Object.freeze(
   Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m])),
 );
