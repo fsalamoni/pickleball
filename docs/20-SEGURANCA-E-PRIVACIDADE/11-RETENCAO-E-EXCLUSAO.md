@@ -24,6 +24,9 @@
 | `push_tokens` | 90 dias sem uso | excluído | reduz superfície |
 | Fotos de torneio | permanente ou até pedido de remoção | removida | direito de imagem prevalece |
 | Uploads pessoais | conta ativa | excluídos | |
+| Centro de Treino (diário, planos, dúvidas, conteúdo privado, `treino/{uid}/`) | conta ativa | excluídos na exclusão de conta (✅ implementado) | execução de contrato |
+| Centro de Treino: item público aprovado | enquanto estiver publicado | autor anonimizado ao excluir conta (✅) | acervo coletivo |
+| `training_reports` (denúncias) | permanente (só o uid) | — | registro de moderação |
 | Exports de dados do titular | 24h (signed URL) + 7 dias no bucket | excluído | minimização |
 | Backups | 30 dias diários / 12 mensais | rotacionados | recuperação |
 | `data_subject_requests` | 5 anos | excluído | prova de atendimento |

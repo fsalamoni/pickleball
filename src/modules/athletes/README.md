@@ -6,6 +6,8 @@ Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
 - **Páginas V2**: `V2Athletes`, `V2AthleteProfile`
 - **Services**: `athleteService` (syncAthleteProfile, listAthletes, getAthlete, removeAthleteProfile)
 - **Domain**: `publicProfile.js` (puro, testado)
+- **Minha área** (flag `user_hub`): `domain/userArea.js` (`userAreaPending`, `userAreaSections`) + telas em `src/v2/components/userArea/`. Ver `docs/41-MINHA-AREA.md`
+- **Exportação** ("Baixar meus dados"): `domain/dataExport.js`; com `training_center`, leva o Centro de Treino
 - **Tests**: ~30
 
 ## Schema

@@ -106,7 +106,7 @@ function ResumoSecao({ ctx }) {
             { to: '/meu-desempenho', label: 'Meu desempenho', descricao: 'Todos os seus jogos e o seu rating', icon: BarChart3 },
             { to: '/minhas-reservas', label: 'Minhas reservas', descricao: 'Quadras, jogos abertos e compras', icon: CalendarDays },
             { to: '/dia-de-jogo', label: 'Dia de jogo', descricao: 'Os seus dias e os com vaga', icon: Swords },
-            { to: '/perfil/torneios', label: 'Meus torneios', descricao: 'Os que você joga e organiza', icon: Trophy },
+            { to: '/perfil/torneios', label: 'Torneios que organizo', descricao: 'Os que você criou ou ajuda a organizar', icon: Trophy },
             ctx.isCoach && { to: '/aulas', label: 'Painel do professor', descricao: 'Agenda, alunos e pacotes', icon: GraduationCap },
             ...arenas.slice(0, 3).map((a) => ({ to: `/arenas/${a.id}/gerir`, label: a.name || 'Minha arena', descricao: 'Central da arena', icon: Building2 })),
             isPlatformAdmin && { to: '/admin/painel', label: 'Painel admin', descricao: 'A plataforma inteira', icon: LayoutDashboard },

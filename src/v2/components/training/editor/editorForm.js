@@ -150,12 +150,14 @@ export const EDITOR_SECTIONS = Object.freeze([
   },
   {
     id: 'diagramas',
+    dica: 'treino-editor-diagrama',
     titulo: 'Diagramas da quadra',
     porque: 'Um desenho mostra posição e trajetória melhor que um parágrafo. Use "Certo" e "Errado" para comparar lado a lado.',
     campos: ['diagrams'],
   },
   {
     id: 'midia',
+    dica: 'treino-editor-midia',
     titulo: 'Fotos e vídeos',
     porque: 'Um vídeo curto ou uma foto mostram o que o texto não alcança. Diga na legenda o que observar.',
     campos: ['media'],

@@ -307,7 +307,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
       let id = item?.id;
       let mensagem;
       if (item) {
-        const { review } = await atualizar.mutateAsync({ item, input: form });
+        const { review } = await atualizar.mutateAsync({ item, input: form, aiAssisted: comIa });
         mensagem = review === REVIEW.PENDENTE ? 'Salvo. A equipe revisa antes de publicar; enquanto isso, só você vê.' : 'Alterações salvas.';
       } else {
         id = await criar.mutateAsync({ input: form, source: source || null, aiAssisted: comIa, asPlatform: !!asPlatform });

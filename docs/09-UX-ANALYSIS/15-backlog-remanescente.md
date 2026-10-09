@@ -86,7 +86,7 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
 - ⏳ **ONB-05** página `/configuracoes` unificada (privacidade, notificações,
   tema, conta, dados).
 - ⏳ **ONB-06** preferências de notificação por canal e tipo.
-- ⏳ **ONB-10** LGPD: exportar dados e excluir conta; consentimento versionado.
+- 🟡 **ONB-10** LGPD: "Baixar meus dados" existe (com o treino); excluir conta é pelo admin, a pedido; consentimento versionado.
 - ⏳ **ONB-08** múltiplos logins (e-mail/senha, Apple) — hoje só Google.
 - ⏳ **ONB-11 / QW-19** máscara/normalização de telefone; verificação por WhatsApp.
 - ⏳ edição de perfil com dirty-state/autosave.
@@ -298,6 +298,21 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   🐞 a tabela da tela usa a ordem de desempate da fase; o **Americano
   aprimorado em etapas** (flag `tournament_americano_etapas`). Zero coleção,
   índice ou regra. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+- ✅ **TRV-34** **Centro de Treino** (flag `training_center`): treinos e drills
+  com autoria e visibilidade (pública com revisão do admin, privada, só para
+  alunos), planos, diário, evolução, biblioteca de ~80 itens, dúvidas privadas
+  ao professor, remessa para alunos, painel do admin; exportação e exclusão de
+  conta cobrem o treino (guarda) e a categoria silenciada não vira push. Sete
+  coleções `training_*`, zero índice. Ver `docs/40-CENTRO-DE-TREINO.md`.
+- ✅ **TRV-35** **Minha área** (flag `user_hub`): o perfil vira a central da
+  pessoa, com "Precisa de você" e as seções por papel. Zero banco. Ver
+  `docs/41-MINHA-AREA.md`.
+- ⏳ **TRV-36** (sugestão, do Treino) excluir a própria conta pela Minha área
+  (hoje é pedido ao encarregado, executado pelo admin); validar e limpar no
+  SERVIDOR o envio de mídia (hoje o Storage limita tamanho e tipo, e a duração
+  do vídeo é conferida no navegador); o comentário do professor no diário de
+  um aluno entrar na exportação do professor; avisar quem denunciou quando a
+  denúncia é resolvida. Ver `docs/40-CENTRO-DE-TREINO.md` §11.
 - ⏳ **TRV-33** (sugestão) deixar o JOGADOR vinculado por outra pessoa fazer o
   próprio check-in: pediria uma regra nova em `tournament_registrations` que
   aceite só `status` confirmada → check-in + `checked_in_at`/`checked_in_by`.

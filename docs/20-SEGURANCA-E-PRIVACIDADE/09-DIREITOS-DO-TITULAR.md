@@ -89,6 +89,13 @@ Cloud Function `exportMyData` (`onCall`, só o próprio titular):
 5. Registra em `audit_logs`.
 6. Limite: 1 exportação por 24h (evita usar a Function como DoS).
 
+> **O que existe hoje** (2026-10-09): "Baixar meus dados" nas Configurações
+> monta o arquivo no navegador. Com `training_center`, ele leva também o
+> Centro de Treino (itens, diário com comentários, planos, rotina, envios,
+> dúvidas e mensagens, denúncias feitas, a lista de arquivos em `treino/` e as
+> metas); parte que falha vai escrita como incompleta, nunca some calada. Ver
+> `docs/40-CENTRO-DE-TREINO.md` §9.
+
 ⚠ **Cuidado**: a exportação inclui conversas, que contêm mensagens de
 **outras pessoas**. Exportar só as mensagens do próprio titular e, nas
 recebidas, o conteúdo (ele já o viu) sem o dado de contato do remetente.
@@ -114,6 +121,8 @@ exclusivo do controlador (anonimizado).
 | Reservas e pagamentos | **retidos 5 anos**, com dado pessoal minimizado | obrigação fiscal do parceiro / exercício de direito |
 | `audit_logs`, `admin_access_logs` | **retidos**, sem anonimizar | prova; é o único registro de que a exclusão foi feita corretamente |
 | `legal_consents` | **retidos 5 anos** | prova do consentimento e da revogação |
+| Centro de Treino: diário, planos, dúvidas feitas, conteúdo privado, `treino/{uid}/` | **excluídos** | dado da pessoa, sem interesse de terceiros |
+| Centro de Treino: item **público aprovado**, dúvida respondida a um aluno | autor vira **"Usuário removido"** | é do acervo/conversa de outras pessoas, como o fórum |
 
 **Isso precisa estar escrito na Política de Privacidade e ser mostrado na
 tela de confirmação, antes de excluir.** Surpreender o usuário depois é

@@ -43,3 +43,8 @@ As telas vivem em `src/v2/pages/V2Training*.jsx`,
 6. **zero índice composto**: consultas só por igualdade/`array-contains`,
    ordenação em memória;
 7. a semente nunca entra no pacote principal.
+8. **coleção nova `training_*` entra na exclusão de conta**
+   (`functions/accountDeletion.js`) **e na exportação**
+   (`services/trainingExportService.js`) — o guarda
+   `src/core/guards/exclusaoCobreColecoes.test.js` lê o `firestore.rules` e
+   reprova a que ficou de fora.

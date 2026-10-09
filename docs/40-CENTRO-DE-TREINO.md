@@ -185,10 +185,39 @@ Biblioteca inicial).
 ## 9. Privacidade
 
 - Diário sem campo de saúde, com aviso na tela (`SESSION_HEALTH_HINT`).
-- Exportação de dados ("Baixar meus dados") inclui as coleções do treino.
-- Exclusão de conta (`functions/accountDeletion.js`) cobre as coleções do
-  treino e a pasta `treino/{uid}/` do Storage (ver
-  `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`).
+- **Exportação** ("Baixar meus dados", `collectTrainingExport` +
+  `buildDataExport`): itens que a pessoa criou, diário com os comentários,
+  planos, rotina e preferências (`training_meta`), envios nos dois sentidos,
+  dúvidas (feitas e, para professor, recebidas) com as mensagens, denúncias que
+  ela fez, a lista de arquivos em `treino/{uid}/` e as metas
+  (`player_goals`). Cada parte falha sozinha: o que não veio vai escrito em
+  `incomplete` e no aviso da tela — o arquivo nunca sai "completo" com um
+  buraco calado. Fica de fora, de propósito, o comentário que um PROFESSOR fez
+  no diário de um aluno (mora no diário de outra pessoa, e a consulta não é
+  provável pela regra).
+- **Exclusão de conta** (`functions/accountDeletion.js`, ver
+  `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` §Excluir):
+
+  | O que | Destino |
+  |---|---|
+  | Item privado ou só para alunos | apagado |
+  | Item **público aprovado** | fica na Biblioteca como **"Usuário removido"** (sem foto; a mídia enviada sai do item), como o fórum e os posts de clube; a cópia que outra pessoa fez perde o nome no crédito |
+  | Diário (dela) e comentários | apagados |
+  | Diário de ALUNO que ela acompanhava | fica com o aluno; sai o vínculo (`shared_coach_id`) e os comentários dela |
+  | Dúvidas que ela fez + mensagens | apagadas |
+  | Dúvidas que respondeu como professor | ficam com o aluno; o nome e as mensagens dela viram "Usuário removido" / mensagem removida |
+  | Planos, rotina, envios (dos dois lados), acesso a itens alheios (`shared_uids`) | apagados / o uid sai da lista |
+  | Conteúdo, pacotes, produtos, cupons e campanhas do professor; `promo_settings` | apagados |
+  | Denúncias (feitas ou sobre o conteúdo dela), aulas dadas e pacotes vendidos | **retidos como estão** (só o uid; registro de moderação e financeiro) |
+  | Storage `treino/{uid}/` | apagado |
+
+  O guarda `src/core/guards/exclusaoCobreColecoes.test.js` lê o
+  `firestore.rules` e reprova coleção `training_*` (e `coach_content`,
+  `coach_packages`, `coach_products`) que não esteja na exclusão, ou do treino
+  que não esteja na exportação.
+- **Push**: a categoria "Treino" silenciada nas Configurações também não chega
+  no celular (`functions/notificationPrefs.js`, com teste de paridade contra o
+  cliente).
 - O treino registrado pelo próprio atleta **não dá XP** (seria fácil de
   inflar).
 
@@ -202,7 +231,10 @@ Biblioteca inicial).
 4. **Compartilhamento em lotes de 4** (`SHARE_BATCH`): cada indicação faz
    leituras de regra, e um lote do Firestore tem teto de 20 leituras de regra.
 5. **A semente nunca entra no pacote principal** (import dinâmico).
-6. **Âncoras de dica** (`data-dica="treino-…"`) são contrato do guia de dicas.
+6. **Âncoras de dica** (`data-dica="treino-…"`) são contrato dos guias
+   `treino-*` e dos pontos `treino:*` (guarda `dicas.test.js`).
+7. **Coleção nova do treino entra na exclusão e na exportação** (guarda
+   `exclusaoCobreColecoes.test.js`).
 
 ## 11. Fica para depois
 
@@ -211,3 +243,7 @@ Biblioteca inicial).
 - XP do treino confirmado pelo professor, pelo servidor.
 - Apagar do Storage o arquivo de um item que o ADMIN excluiu (o autor que
   remove a mídia já apaga).
+- Exclusão de conta: o comentário que o professor deixou numa sessão que o
+  aluno DEPOIS deixou de compartilhar não é achado (pediria índice de grupo de
+  coleções); e professor com aula futura marcada não bloqueia a exclusão.
+- Exportação: os comentários do professor no diário dos alunos.

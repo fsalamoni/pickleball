@@ -82,7 +82,7 @@ export function useCreateTrainingItem(identity, settings) {
 export function useUpdateTrainingItem(identity, settings) {
   const inv = useInvalidateItems();
   return useMutation({
-    mutationFn: ({ item, input }) => updateItem(item, input, { identity, settings }),
+    mutationFn: ({ item, input, aiAssisted }) => updateItem(item, input, { identity, settings, aiAssisted }),
     onSuccess: inv,
   });
 }

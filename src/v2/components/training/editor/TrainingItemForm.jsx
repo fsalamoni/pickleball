@@ -23,8 +23,6 @@ import {
 } from './editorForm';
 
 const NIVEIS = levelOptions();
-const DICAS_DE_SECAO = { diagramas: 'treino-editor-diagrama', midia: 'treino-editor-midia' };
-
 const numOuNulo = (v) => (v === '' ? null : Number(v));
 
 /** Liga o campo ao seu erro (leitor de tela anuncia o erro junto do campo). */
@@ -391,7 +389,7 @@ export default function TrainingItemForm({
           titulo={s.titulo}
           porque={s.porque}
           feito={secaoPreenchida(s, form)}
-          dica={DICAS_DE_SECAO[s.id]}
+          dica={s.dica}
         >
           {conteudo[s.id]?.()}
         </EditorSection>

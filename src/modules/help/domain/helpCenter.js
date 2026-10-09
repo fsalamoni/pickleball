@@ -144,6 +144,27 @@ const COMECAR = {
       ],
     },
     {
+      id: 'minha-area',
+      flags: ['user_hub'],
+      title: 'Minha área: tudo o que é seu, num lugar só',
+      summary: 'O que precisa de você agora e as seções do seu perfil.',
+      keywords: [
+        'minha área', 'perfil', 'meu perfil', 'precisa de você', 'pendências', 'central',
+        'meus dados', 'minhas coisas', 'gerencio', 'resumo',
+      ],
+      guias: ['minha-area'],
+      blocks: [
+        p('O Perfil virou a MINHA ÁREA: a sua central na plataforma. No topo, o seu cartão (foto, nível, cidade) e "Editar perfil".'),
+        p('Logo abaixo, a faixa PRECISA DE VOCÊ junta o que espera uma resposta sua — cada linha leva ao lugar que resolve. Sem nada pendente, ela não aparece. Se uma parte não carregou, a faixa diz qual, em vez de afirmar que está tudo em dia.'),
+        list(
+          'VOCÊ — resumo, perfil, jogo (rating e desempenho), agenda, torneios, clubes e conta. Com o Treino ligado, também o treino.',
+          'GERENCIO — aparece só para quem dá aula, gere uma arena ou administra a plataforma: os atalhos do que você cuida.',
+        ),
+        p('Uma seção só carrega quando você a abre — a Minha área abre rápido mesmo para quem tem muita coisa.'),
+        link('/perfil', 'Abrir a Minha área'),
+      ],
+    },
+    {
       id: 'dicas',
       flags: ['guided_tips'],
       title: 'Dicas: a plataforma mostra na tela, quando você pedir',
@@ -930,6 +951,7 @@ const ATLETA = {
         'carga', 'rotina', 'modo quadra', 'semana', 'organizar meu treino',
       ],
       flags: ['training_center'],
+      guias: ['treino-hoje', 'treino-plano', 'treino-evolucao'],
       blocks: [
         p('O Treino reúne, num lugar só, o que você vai treinar, o que já treinou e como está evoluindo. Ele fica na Minha área e no card "Treino" do início (se você o escolher).'),
         list(
@@ -957,6 +979,7 @@ const ATLETA = {
         'indicar', 'compartilhar', 'copiar', 'adaptar', 'favorito', 'recebidos', 'autor',
       ],
       flags: ['training_center'],
+      guias: ['treino-biblioteca'],
       blocks: [
         p('A Biblioteca mostra tudo o que você pode ver: o conteúdo da Equipe PickleRush, o que os professores publicaram, o que a comunidade publicou e o que o SEU professor deixou só para os alunos dele. Cada item diz quem o criou — e leva o selo "IA" quando foi feito com ajuda de inteligência artificial.'),
         list(
@@ -982,6 +1005,7 @@ const ATLETA = {
         'vídeo', 'imagem', 'foto', 'upload', 'enviar vídeo', 'youtube', 'ia', 'inteligência artificial',
       ],
       flags: ['training_center'],
+      guias: ['treino-criar'],
       blocks: [
         p('Qualquer pessoa cria. O formulário segue o modelo que os cursos de treinador usam, e só mostra as partes que valem para o tipo escolhido. Um medidor mostra o que ainda falta — ele orienta, não impede salvar.'),
         list(
@@ -1388,6 +1412,7 @@ const PROFESSOR = {
         'confirmar', 'diário', 'só alunos',
       ],
       flags: ['training_center'],
+      guias: ['treino-alunos', 'treino-duvidas'],
       blocks: [
         p('No Treino, o professor tem o que o atleta tem e mais três coisas: publicar só para os alunos, ENVIAR um item a um aluno (com prazo) e a aba "Alunos".'),
         list(
@@ -1437,6 +1462,9 @@ const CONTA = {
           'Data de nascimento serve para faixa etária em torneios; não vira informação pública.',
         ),
         link('/perfil/editar', 'Revisar minha privacidade'),
+        p('Em Configurações, "Baixar meus dados" gera um arquivo com o que a plataforma guarda sobre você: perfil, inscrições, reservas, metas e o seu treino (itens, diário, planos, envios e dúvidas). Se uma parte não carregar, o aviso diz qual ficou de fora — tente de novo depois para ter tudo.'),
+        p('Para excluir a conta, peça pelo e-mail do encarregado, que está na Política de Privacidade. A equipe executa e o seu login, perfil, diário, planos e conteúdo privado são apagados; o seu histórico de jogos fica nos resultados das outras pessoas como "Atleta removido", e o conteúdo público aprovado que você publicou no Treino fica na Biblioteca sem o seu nome.'),
+        link('/legal', 'Política de Privacidade e o contato'),
         tip('Trocar de ideia é normal: essas opções podem ser mudadas quantas vezes você quiser, e valem imediatamente.'),
       ],
     },
@@ -1454,7 +1482,7 @@ const CONTA = {
           '"Marcar todas como lidas" zera o número de uma vez.',
           'A engrenagem no rodapé do sino leva às preferências.',
         ),
-        p('Em Configurações você escolhe quais categorias quer ver: uma categoria silenciada some do sino e não conta no número. Se a plataforma estiver instalada como aplicativo no celular, também pode receber notificações push.'),
+        p('Em Configurações você escolhe quais categorias quer ver: uma categoria silenciada some do sino, não conta no número e não chega como notificação no celular. Se a plataforma estiver instalada como aplicativo no celular, também pode receber notificações push.'),
         link('/configuracoes#notificacoes', 'Ajustar minhas notificações'),
       ],
     },
@@ -1791,7 +1819,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/perfil/editar', label: 'editar seu perfil',
     refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade'], [HELP_SECTION.COACH, 'virar-professor']] },
   { pattern: '/perfil', label: 'seu perfil',
-    refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+    refs: [[HELP_SECTION.START, 'minha-area'], [HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/notificacoes', label: 'as notificações',
     refs: [[HELP_SECTION.ACCOUNT, 'central-de-notificacoes'], [HELP_SECTION.ACCOUNT, 'notificacoes']] },
   { pattern: '/configuracoes', label: 'configurações',

@@ -227,7 +227,7 @@ export async function createItem(input, { identity, settings, asPlatform = false
  *
  * @returns {Promise<{ review: string }>}
  */
-export async function updateItem(item, input, { identity, settings }) {
+export async function updateItem(item, input, { identity, settings, aiAssisted = false }) {
   if (!canEditItem(item, { uid: identity?.uid, isAdmin: identity?.isAdmin })) throw new TrainingItemError('Você não pode editar este item.');
   if (item.legacy) throw new TrainingItemError('Este conteúdo antigo é editado na área do professor.');
   const { valid, errors, value } = normalizeItemInput(input);
@@ -255,6 +255,8 @@ export async function updateItem(item, input, { identity, settings }) {
     patch.author_name = str(identity.name, 80) || item.author_name || 'Atleta';
     patch.author_photo = identity.photo || null;
   }
+  // Usou a IA ao editar: o selo "IA" entra. Nunca sai — o texto ainda veio dela.
+  if (aiAssisted) patch.ai_assisted = true;
   // Item da semente editado pelo admin: a próxima atualização da semente não o sobrescreve.
   if (identity.isAdmin && item.seed_slug) patch.seed_customized = true;
   await updateDoc(doc(db, TRAINING_ITEMS, item.id), patch);
