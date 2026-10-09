@@ -143,17 +143,21 @@ const list = (arr) => arr.join(', ');
 /**
  * O pedido completo para colar na IA.
  * @param {{ kind?: string, skills?: string[], level?: number|null, players?: number|null,
- *   minutes?: number|null, place?: string, equipment?: string[], notes?: string }} p
+ *   minutes?: number|null, place?: string, equipment?: string[], notes?: string, count?: number }} p
  */
-export function buildAiPrompt({ kind = ITEM_KIND.DRILL, skills = [], level = null, players = null, minutes = null, place = '', equipment = [], notes = '' } = {}) {
+export function buildAiPrompt({ kind = ITEM_KIND.DRILL, skills = [], level = null, players = null, minutes = null, place = '', equipment = [], notes = '', count = 1 } = {}) {
   const k = ITEM_KINDS.includes(kind) ? kind : ITEM_KIND.DRILL;
+  // Lote (painel do admin): N itens diferentes numa lista `{ "items": [...] }`, que `parseItemsJson` lê.
+  const n = Math.min(MAX_IMPORT_ITEMS, Math.max(1, Math.round(Number(count) || 1)));
   const fmt = (n) => (Number.isFinite(n) ? String(n).replace('.', ',') : 'a definir');
   const habilidades = skills.length ? skills.map((s) => SKILLS[s] || s).join(', ') : 'a definir';
   return [
     'Você escreve conteúdo de treino de pickleball para uma plataforma brasileira.',
     'Escreva em português do Brasil, linguagem de quadra, frases curtas, sem jargão em inglês solto (se usar, traduza entre parênteses na primeira vez).',
     '',
-    `Gere UM item do tipo "${k}" (${ITEM_KIND_LABELS[k]}) e responda SÓ com o JSON, no formato do modelo abaixo. Regras:`,
+    n > 1
+      ? `Gere ${n} itens DIFERENTES do tipo "${k}" (${ITEM_KIND_LABELS[k]}) — variando o foco e a dificuldade, sem repetir exercício — e responda SÓ com o JSON { "items": [ ... ] }, cada item no formato do modelo abaixo. Regras para cada item:`
+      : `Gere UM item do tipo "${k}" (${ITEM_KIND_LABELS[k]}) e responda SÓ com o JSON, no formato do modelo abaixo. Regras:`,
     '',
     'CONTEÚDO',
     '- "title": até 60 caracteres, diz o que se faz.',
@@ -184,7 +188,7 @@ export function buildAiPrompt({ kind = ITEM_KIND.DRILL, skills = [], level = nul
     '',
     'ANTES DE RESPONDER, confira: o objetivo é observável? Os passos cabem em "duration_min" com o número de jogadores? Cada dica tem até 8 palavras e aponta para fora do corpo? Cada variação diz a alavanca? Todo "errado" tem o seu "certo"?',
     '',
-    'MODELO (preencha e devolva só o JSON):',
+    n > 1 ? 'MODELO DE CADA ITEM (devolva só o JSON com a lista):' : 'MODELO (preencha e devolva só o JSON):',
     JSON.stringify(itemJsonTemplate(k), null, 2),
     '',
     'EXEMPLO DE UM ITEM BEM FEITO:',

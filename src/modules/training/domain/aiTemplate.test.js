@@ -23,6 +23,16 @@ describe('aiTemplate', () => {
     expect(p).not.toMatch(/\n\n\n/);
   });
 
+  it('em lote pede N itens diferentes numa lista que a importação lê', () => {
+    const um = buildAiPrompt({ kind: 'drill' });
+    expect(um).toMatch(/Gere UM item/);
+    const lote = buildAiPrompt({ kind: 'drill', count: 8 });
+    expect(lote).toMatch(/Gere 8 itens DIFERENTES/);
+    expect(lote).toMatch(/\{ "items": \[ \.\.\. \] \}/);
+    expect(buildAiPrompt({ count: 999 })).toMatch(/Gere 100 itens/);
+    expect(buildAiPrompt({ count: 'x' })).toMatch(/Gere UM item/);
+  });
+
   it('o modelo de cada tipo só traz os campos do tipo', () => {
     expect(itemJsonTemplate('estudo')).toHaveProperty('rules_edition');
     expect(itemJsonTemplate('estudo')).not.toHaveProperty('steps');

@@ -56,6 +56,8 @@ export async function resolveReport(report, status, resolution, { identity }) {
   await createAuditLog({ action: 'training_report_resolved', actor: identity.actor, details: { report_id: report.id, item_id: report.item_id, status } });
 }
 
-export async function deleteReport(report) {
+/** Apaga a denúncia (só o admin; a regra confere) — e fica na auditoria. */
+export async function deleteReport(report, { identity } = {}) {
   await deleteDoc(doc(db, TRAINING_REPORTS, report.id));
+  await createAuditLog({ action: 'training_report_deleted', actor: identity?.actor, details: { report_id: report.id, item_id: report.item_id, reason: report.reason } });
 }

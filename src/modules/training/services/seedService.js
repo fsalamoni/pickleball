@@ -100,18 +100,18 @@ export async function installSeed({ identity, settings, restoreRemoved = false, 
  * ou do próprio admin.
  * @returns {Promise<{ created: number, failed: Array<{ title: string, error: string }> }>}
  */
-export async function importItems(values = [], { identity, settings, asPlatform = true, visibility = 'publico' }) {
+export async function importItems(values = [], { identity, settings, asPlatform = true, visibility = 'publico', aiAssisted = false }) {
   if (!identity?.isAdmin) throw new Error('Só a equipe da plataforma importa em lote.');
   let created = 0;
   const failed = [];
   for (const v of values) {
     try {
-      await createItem({ ...v, visibility }, { identity, settings, asPlatform, silent: true });
+      await createItem({ ...v, visibility }, { identity, settings, asPlatform, aiAssisted, silent: true });
       created += 1;
     } catch (err) {
       failed.push({ title: v.title || '(sem título)', error: err?.message || 'erro' });
     }
   }
-  await createAuditLog({ action: 'training_items_imported', actor: identity.actor, details: { created, failed: failed.length } });
+  await createAuditLog({ action: 'training_items_imported', actor: identity.actor, details: { created, failed: failed.length, visibility, ai_assisted: !!aiAssisted } });
   return { created, failed };
 }

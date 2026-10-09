@@ -290,9 +290,11 @@ export async function deleteItem(item, { identity }) {
   ];
   // Item da semente apagado de propósito: a atualização da semente não o recria.
   if (item.seed_slug) limpezas.push(markSeed({ seed_removed: arrayUnion(item.seed_slug) }));
-  if (isOwn) {
-    for (const m of item.media || []) {
-      if (m?.source === 'upload' && m.path) limpezas.push(deleteTrainingMedia(m.path));
+  // Só quem enviou apaga o arquivo (regra do Storage): o próprio item, ou o da
+  // plataforma que este admin montou. Arquivo de outra pessoa fica no armazenamento.
+  for (const m of item.media || []) {
+    if (m?.source === 'upload' && m.path && String(m.path).startsWith(`treino/${identity.uid}/`)) {
+      limpezas.push(deleteTrainingMedia(m.path));
     }
   }
   await Promise.allSettled(limpezas);

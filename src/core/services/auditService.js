@@ -106,6 +106,7 @@ export const AUDIT_ACTION_LABELS = {
   training_item_featured: 'Destaque de treino/drill alterado (admin)',
   training_report_created: 'Treino/drill denunciado',
   training_report_resolved: 'Denúncia de treino/drill resolvida (admin)',
+  training_report_deleted: 'Denúncia de treino/drill apagada (admin)',
   training_settings_updated: 'Configurações do Centro de Treino alteradas (admin)',
   training_seed_installed: 'Biblioteca inicial do treino instalada/atualizada (admin)',
   training_items_imported: 'Treinos/drills importados em lote (admin)',

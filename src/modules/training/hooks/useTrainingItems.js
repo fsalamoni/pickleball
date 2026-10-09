@@ -92,9 +92,14 @@ export function useDeleteTrainingItem(identity) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (item) => deleteItem(item, { identity }),
-    onSuccess: () => {
+    onSuccess: (_, item) => {
       qc.invalidateQueries({ queryKey: trainingKeys.items });
       qc.invalidateQueries({ queryKey: trainingKeys.shares });
+      // Item da biblioteca inicial: o `seed_removed` mudou (a prévia da instalação também).
+      if (item?.seed_slug) {
+        qc.invalidateQueries({ queryKey: trainingKeys.settings });
+        qc.invalidateQueries({ queryKey: trainingKeys.seedPlan });
+      }
     },
   });
 }

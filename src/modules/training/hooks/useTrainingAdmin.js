@@ -31,9 +31,12 @@ export function useTrainingAdminActions(identity, settings) {
       mutationFn: ({ report, status, resolution }) => resolveReport(report, status, resolution, { identity }),
       onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.reports }),
     }),
-    deleteReport: useMutation({ mutationFn: deleteReport, onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.reports }) }),
+    deleteReport: useMutation({ mutationFn: (report) => deleteReport(report, { identity }), onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.reports }) }),
     installSeed: useMutation({ mutationFn: (opts = {}) => installSeed({ identity, settings, ...opts }), onSuccess: invAll }),
-    importItems: useMutation({ mutationFn: ({ values, asPlatform, visibility }) => importItems(values, { identity, settings, asPlatform, visibility }), onSuccess: invItems }),
+    importItems: useMutation({
+      mutationFn: ({ values, asPlatform, visibility, aiAssisted }) => importItems(values, { identity, settings, asPlatform, visibility, aiAssisted }),
+      onSuccess: invItems,
+    }),
   };
 }
 
