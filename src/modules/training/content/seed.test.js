@@ -75,22 +75,24 @@ describe('biblioteca inicial (semente)', () => {
     }
   });
 
+  // Versão 2 acrescentou os drills avaliados do pacote "100 drills"
+  // (docs/40-CENTRO-DE-TREINO.md §8.1): os limites acompanham.
   it('quantidades por tipo e destaques', () => {
     const n = (k) => porTipo(k).length;
-    expect(n('drill')).toBeGreaterThanOrEqual(26);
-    expect(n('drill')).toBeLessThanOrEqual(34);
+    expect(n('drill')).toBeGreaterThanOrEqual(65);
+    expect(n('drill')).toBeLessThanOrEqual(80);
     expect(n('fisico')).toBeGreaterThanOrEqual(12);
-    expect(n('fisico')).toBeLessThanOrEqual(18);
+    expect(n('fisico')).toBeLessThanOrEqual(22);
     expect(n('jogada')).toBeGreaterThanOrEqual(8);
     expect(n('jogada')).toBeLessThanOrEqual(12);
     expect(n('fundamento')).toBeGreaterThanOrEqual(8);
     expect(n('fundamento')).toBeLessThanOrEqual(12);
     expect(n('treino')).toBeGreaterThanOrEqual(6);
-    expect(n('treino')).toBeLessThanOrEqual(10);
+    expect(n('treino')).toBeLessThanOrEqual(12);
     expect(n('estudo')).toBeGreaterThanOrEqual(5);
     expect(n('estudo')).toBeLessThanOrEqual(9);
-    expect(SEED_ITEMS.length).toBeGreaterThanOrEqual(70);
-    expect(SEED_ITEMS.length).toBeLessThanOrEqual(90);
+    expect(SEED_ITEMS.length).toBeGreaterThanOrEqual(115);
+    expect(SEED_ITEMS.length).toBeLessThanOrEqual(140);
     const destaques = SEED_ITEMS.filter((i) => i.featured).length;
     expect(destaques).toBeGreaterThanOrEqual(6);
     expect(destaques).toBeLessThanOrEqual(10);

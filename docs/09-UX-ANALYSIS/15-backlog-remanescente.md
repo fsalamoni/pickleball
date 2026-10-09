@@ -300,7 +300,7 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   índice ou regra. Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
 - ✅ **TRV-34** **Centro de Treino** (flag `training_center`): treinos e drills
   com autoria e visibilidade (pública com revisão do admin, privada, só para
-  alunos), planos, diário, evolução, biblioteca de ~80 itens, dúvidas privadas
+  alunos), planos, diário, evolução, biblioteca de 127 itens, dúvidas privadas
   ao professor, remessa para alunos, painel do admin; exportação e exclusão de
   conta cobrem o treino (guarda) e a categoria silenciada não vira push. Sete
   coleções `training_*`, zero índice. Ver `docs/40-CENTRO-DE-TREINO.md`.
