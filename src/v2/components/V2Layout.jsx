@@ -123,9 +123,11 @@ function jogarHubTo({ gameDayOn, openGamesOn }) {
   return openGamesOn ? '/procura-jogo' : '/encontrar-jogadores';
 }
 
-function resolvePageTitle(pathname) {
+function resolvePageTitle(pathname, { userHubOn = false } = {}) {
   if (pathname === '/') return 'Visão Geral';
   const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
+  // Minha área (flag `user_hub`): o `/perfil` é a central da pessoa.
+  if (match && userHubOn && match[0] === '/perfil') return 'Minha área';
   return match ? match[1] : null;
 }
 
@@ -158,6 +160,8 @@ function useV2Nav() {
   const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
   // Centro de Treino (flag `training_center`): entra no hub do perfil.
   const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  // Minha área (flag `user_hub`): o perfil vira a central da pessoa — só o nome muda aqui.
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
 
   const sections = useMemo(() => [
     {
@@ -202,9 +206,9 @@ function useV2Nav() {
         arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
         isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
         coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
-        { to: '/perfil', label: 'Meu Perfil', icon: User },
+        { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu Perfil', icon: User },
         trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
-        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: 'Meus torneios', icon: Trophy },
+        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: userHubOn ? 'Torneios que organizo' : 'Meus torneios', icon: Trophy },
         settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
       ].filter(Boolean),
     },
@@ -224,7 +228,7 @@ function useV2Nav() {
         { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -294,13 +298,13 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'perfil', dica: 'menu-perfil', label: 'Perfil', icon: User, to: '/perfil',
+        id: 'perfil', dica: 'menu-perfil', label: userHubOn ? 'Minha área' : 'Perfil', icon: User, to: '/perfil',
         children: [
-          { to: '/perfil', label: 'Meu perfil', icon: User },
+          { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu perfil', icon: User },
           trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: 'Conquistas', icon: Award },
-          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: 'Meus torneios', icon: Trophy },
+          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: userHubOn ? 'Torneios que organizo' : 'Meus torneios', icon: Trophy },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
       }),
@@ -314,7 +318,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn]);
 
   return { sections, hubs };
 }
@@ -389,7 +393,7 @@ const BOTTOM_NAV_ITEMS = [
   { to: '/perfil', label: 'Perfil', icon: User },
 ];
 
-function MobileBottomNav({ pathname }) {
+function MobileBottomNav({ pathname, userHubOn = false }) {
   return (
     <nav
       aria-label="Navegação principal"
@@ -414,7 +418,7 @@ function MobileBottomNav({ pathname }) {
               <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
                 <Icon className={cn('h-5 w-5', active && 'text-acid')} />
               </span>
-              {item.label}
+              {userHubOn && item.to === '/perfil' ? 'Minha área' : item.label}
             </Link>
           );
         })}
@@ -425,6 +429,7 @@ function MobileBottomNav({ pathname }) {
 
 function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
   const location = useLocation();
   const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
   const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
@@ -448,7 +453,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
-          <User className="mr-2 h-4 w-4" /> Meu perfil
+          <User className="mr-2 h-4 w-4" /> {userHubOn ? 'Minha área' : 'Meu perfil'}
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
           <Pencil className="mr-2 h-4 w-4" /> Editar perfil
@@ -557,6 +562,7 @@ export default function V2Layout({ children }) {
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
   const { sections, hubs } = useV2Nav();
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -614,9 +620,9 @@ export default function V2Layout({ children }) {
   const globalSearchOn = true;
   useEffect(() => {
     if (!pageTitlesOn) return;
-    const title = resolvePageTitle(location.pathname);
+    const title = resolvePageTitle(location.pathname, { userHubOn });
     document.title = title ? `${title} · ${BRAND}` : BRAND;
-  }, [pageTitlesOn, location.pathname]);
+  }, [pageTitlesOn, location.pathname, userHubOn]);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -846,7 +852,7 @@ export default function V2Layout({ children }) {
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>
         )}
-        {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
+        {bottomNavOn && <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} />}
       </div>
 
       <div
