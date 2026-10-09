@@ -145,7 +145,7 @@ export function coachMetrics({ lessons, students, packages, clinics, contents, v
     actuals.lessons = contar(dadas, (l) => entre(quandoAula(l), mes.startMs, mes.endMs));
   }
   if (alunos) {
-    const ativos = alunos.filter((s) => s?.status !== 'paused');
+    const ativos = alunos.filter((s) => s?.status !== 'paused' && s?.status !== 'ended');
     health.totalStudents = ativos.length;
     health.newStudents30 = contar(ativos, (s) => entre(criadoEm(s), agora - 30 * DIA, agora + DIA));
     actuals.new_students = contar(ativos, (s) => entre(criadoEm(s), mes.startMs, mes.endMs));

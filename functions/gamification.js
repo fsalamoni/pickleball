@@ -202,7 +202,9 @@ async function processarDesafio(db, def, { agora, jogosPorUid, cfg, logger }) {
       .forEach((m) => ctx.membrosDoClube.add(m.user_id));
   }
   if (def.issuerType === 'coach') {
+    // Vínculo encerrado não conta como aluno do professor (o sem status, antigo, conta).
     (await lerColecao(db, 'coach_students', (q) => q.where('coach_id', '==', def.issuerId)))
+      .filter((s) => s.status !== 'ended')
       .forEach((s) => ctx.alunosDoProfessor.add(s.student_id));
   }
 

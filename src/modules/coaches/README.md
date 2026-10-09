@@ -97,7 +97,11 @@ mantém a ordem por data. Zero banco.
 ### `coach_students/{coachId_studentId}` (Fase B, id determinista)
 - `coach_id`, `student_id`, `student_name` (desnormalizado)
 - `leveling_level`, `goals`, `notes`
-- `status` ('active'|'paused'|'ended')
+- `status` ('invited'|'active'|'paused'|'ended') + `ended_at`, `ended_by`,
+  `ended_reason`. O vínculo vale enquanto o professor for professor do aluno:
+  qualquer um encerra; encerrado, só o aluno reativa (aceitando um novo
+  convite) e o professor não apaga. Ver `domain/student.js`
+  (`canSetStudentStatus`) e `docs/40-CENTRO-DE-TREINO.md`.
 
 ### `coach_packages/{packageId}` (Fase C)
 - `coach_id`, `name`, `description`, `lesson_count`, `price`

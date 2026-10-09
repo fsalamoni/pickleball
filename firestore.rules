@@ -2220,17 +2220,40 @@ service cloud.firestore {
       // privadas do professor (`private_notes`) e as próprias tags. O único
       // caminho do cliente do aluno (`setStudentStatus`) já gravava só isso.
       // O professor (e o admin) não troca de quem é o vínculo: os dois ids ficam.
+      //
+      // 🔒 O vínculo vale ENQUANTO o professor for professor do aluno (decisão
+      // do dono, 2026-10-09). Qualquer um dos dois encerra (`ended`, gravando
+      // `ended_at`). Com `ended_at` no documento — encerrado, ou o novo convite
+      // ainda sem resposta — o professor só convida de novo ou encerra: não
+      // ativa, não pausa, não tira o `ended_at` e não apaga (apagar e criar de
+      // novo como ativo desfaria a saída do aluno). Quem reativa é o ALUNO, ao
+      // aceitar o convite, e é aí que o `ended_at` sai. Vínculo sem `ended_at`
+      // segue exatamente como antes.
       allow update: if isAuthed() && (
         ((request.auth.uid == resource.data.coach_id || isPlatformAdmin())
           && request.resource.data.coach_id == resource.data.coach_id
-          && request.resource.data.student_id == resource.data.student_id) ||
+          && request.resource.data.student_id == resource.data.student_id
+          && (request.resource.data.get('status', '') != 'ended' || 'ended_at' in request.resource.data)
+          && (!('ended_at' in resource.data)
+            || (request.resource.data.get('status', '') in ['ended', 'invited'] && 'ended_at' in request.resource.data))) ||
         (request.auth.uid == resource.data.student_id
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])
-          && resource.data.status == 'invited'
-          && request.resource.data.status == 'active')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at', 'ended_at', 'ended_by'])
+          && (
+            // aceitar o convite (o histórico de fim, se houver, sai junto)
+            (resource.data.status == 'invited'
+              && request.resource.data.status == 'active'
+              && !('ended_at' in request.resource.data)
+              && !('ended_by' in request.resource.data))
+            // encerrar o vínculo, ou recusar o convite
+            || (resource.data.status in ['invited', 'active', 'paused']
+              && request.resource.data.status == 'ended'
+              && request.resource.data.get('ended_at', null) == request.time
+              && request.resource.data.get('ended_by', '') == request.auth.uid)))
       );
       allow delete: if isAuthed() && (
-        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+        (request.auth.uid == resource.data.coach_id && !('ended_at' in resource.data)
+          && resource.data.get('status', '') != 'ended')
+        || isPlatformAdmin()
       );
     }
     // coach_level_validations/{coachId_studentId} — nível validado por professor
@@ -3561,7 +3584,12 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if trainingQuestionParty(questionId) || isPlatformAdmin();
+        // Escrever só enquanto o vínculo estiver ativo: encerrado (ou pausado),
+        // a conversa fica para consulta, sem mensagem nova.
         allow create: if trainingQuestionParty(questionId)
+          && hasActiveStudent(
+            get(/databases/$(database)/documents/training_questions/$(questionId)).data.coach_uid,
+            get(/databases/$(database)/documents/training_questions/$(questionId)).data.asker_uid)
           && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'created_at'])
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.text is string

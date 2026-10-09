@@ -439,7 +439,10 @@ Aulas marcadas (avulsas ou recorrentes).
 Vínculo professor ↔ aluno. Id determinista.
 - `coach_id`, `student_id`, `student_name` (desnormalizado),
   `student_photo`, `leveling_level`, `goals`, `notes` (max 500).
-- `status` ('active'|'paused'|'ended'), `started_at`, `ended_at`.
+- `status` ('invited'|'active'|'paused'|'ended'), `started_at`, `ended_at`,
+  `ended_by` (quem encerrou), `ended_reason` (`'conta_excluida'` quando a
+  conta do aluno foi excluída). Com `ended_at`, o professor só convida de novo
+  (`ended → invited`); quem reativa é o aluno, e o `ended_at` sai no aceite.
 
 ### `coach_packages/{packageId}` (Fase C)
 Pacotes de aulas (5 aulas / mês, etc).
@@ -1285,9 +1288,11 @@ Imagem webp/jpeg/png < 3 MB, vídeo mp4/webm/mov < 60 MB; só o dono cria e
 apaga; conta logada lê.
 
 ### Correções em regras existentes (F0)
-`coach_students`: o id tem de ser `{coach_id}_{student_id}` e o aluno só aceita
-o convite (`invited → active`). `coach_content`: "só alunos" exige vínculo
-ATIVO. Nenhum campo novo.
+`coach_students`: o id tem de ser `{coach_id}_{student_id}`; o aluno só aceita
+o convite (`invited → active`) ou encerra o vínculo (`→ ended`); com `ended_at`
+o professor só convida de novo e não apaga. As mensagens de uma dúvida exigem
+vínculo ativo. `coach_content`: "só alunos" exige vínculo
+ATIVO. Campos novos, opcionais: `coach_students.ended_by` e `ended_reason`.
 
 ## Relacionamentos (resumo)
 

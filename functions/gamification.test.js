@@ -208,13 +208,14 @@ describe('desafios', () => {
       'athlete_profiles/ana': { state: 'PR' }, 'athlete_profiles/bia': { state: 'SP' },
       'club_members/m1': { club_id: 'c1', user_id: 'ana' },
       'coach_students/s1': { coach_id: 'prof', student_id: 'bia' },
+      'coach_students/s2': { coach_id: 'prof', student_id: 'ana', status: 'ended' },
     });
     await g.runChallengeStandings(db, { now: NOW, logger });
     const e = db.dump('challenge_entries');
     expect(e.d1_ana.eligible).toBe(true);
     expect(e.d1_bia.eligible).toBe(false);
-    expect(e.d2_ana.eligible).toBe(false);
-    expect(e.d2_bia.eligible).toBe(true);
+    expect(e.d2_ana.eligible).toBe(false); // vínculo encerrado não é aluno
+    expect(e.d2_bia.eligible).toBe(true); // vínculo antigo, sem status, é
     expect(e.d3_ana.eligible).toBe(false);
     expect(e.d3_bia.eligible).toBe(true);
     expect(e.d1_bia.position).toBeNull(); // inelegível não ocupa posição

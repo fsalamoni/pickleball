@@ -38,7 +38,7 @@ vi.mock('@/modules/training/hooks/useTrainingItems', () => ({
 vi.mock('@/modules/progression/hooks/usePeople', () => ({
   usePeople: () => ({ people: new Map([['prof', { name: 'Professor Beto', known: true }]]) }),
 }));
-vi.mock('@/modules/coaches/hooks/useStudents', () => ({ useCoachStudents: () => est.alunos }));
+vi.mock('@/modules/coaches/hooks/useStudents', () => ({ useCoachStudents: () => est.alunos, useStudent: () => est.vinculo }));
 vi.mock('@/modules/training/hooks/useTrainingSessions', () => ({
   useStudentTrainingSessions: () => est.sessoesAlunos,
   useSessionActions: () => ({ confirm: mut(), comment: mut(), deleteComment: mut() }),
@@ -57,6 +57,7 @@ beforeEach(() => {
   est.alunos = ok([]);
   est.sessoesAlunos = ok({ items: [], incompleto: false });
   est.enviados = ok([]);
+  est.vinculo = ok({ status: 'active' });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -114,6 +115,24 @@ describe('Dúvidas', () => {
     await render(<QuestionsTab identity={{ ...base, activeCoachIds: ['prof'] }} params={p('q=q9')} irPara={vi.fn()} />);
     expect(texto()).toContain('Sobre o saque');
     expect(texto()).toContain('Com Professor Beto');
+    expect(document.getElementById('resposta-q9')).not.toBeNull();
+  });
+
+  it('vínculo encerrado: a conversa fica para consulta, sem campo para escrever', async () => {
+    est.minhas = ok([{ id: 'q9', subject: 'Sobre o saque', status: 'aberta', coach_uid: 'prof', coach_name: 'Professor Beto', asker_uid: 'eu' }]);
+    est.vinculo = ok({ status: 'ended' });
+    await render(<QuestionsTab identity={{ ...base, activeCoachIds: [] }} params={p('q=q9')} irPara={vi.fn()} />);
+    expect(texto()).toContain('fica aqui para consulta');
+    expect(document.getElementById('resposta-q9')).toBeNull();
+    expect(texto()).not.toContain('Encerrar a conversa');
+    expect(texto()).toContain('Apagar');
+  });
+
+  it('o vínculo ainda carregando (ou falhando) não fecha a conversa', async () => {
+    est.minhas = ok([{ id: 'q9', subject: 'Sobre o saque', status: 'aberta', coach_uid: 'prof', coach_name: 'Professor Beto', asker_uid: 'eu' }]);
+    est.vinculo = falha();
+    await render(<QuestionsTab identity={{ ...base, activeCoachIds: ['prof'] }} params={p('q=q9')} irPara={vi.fn()} />);
+    expect(document.getElementById('resposta-q9')).not.toBeNull();
   });
 });
 

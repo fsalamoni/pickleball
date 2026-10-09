@@ -1,7 +1,9 @@
 /**
  * CoachStudentsSection — roster de alunos do professor (Fase B).
  * Lista alunos, permite adicionar a partir do histórico de aulas, editar a
- * ficha (nível, tags, notas privadas) e mudar status.
+ * ficha (nível, tags, notas privadas) e mudar status. Com o Centro de Treino ou
+ * a Minha área ligados, o professor também ENCERRA o vínculo e, depois do fim,
+ * convida de novo (quem reativa é o aluno). A ficha encerrada fica no roster.
  *
  * Usada dentro de V2CoachAgenda. Requer flag coach_lessons (a página já é
  * gated).
@@ -13,7 +15,7 @@ import { Users, UserPlus, Pencil, Trash2, Check, ShieldCheck, TrendingUp } from 
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   filterStudents, sortStudents, rosterSummary, studentStatusLabel,
-  studentStatusTone, studentDocId, STUDENT_STATUS,
+  studentStatusTone, studentDocId, STUDENT_STATUS, canCoachRemoveStudent, isLinkEndedHistory,
 } from '../domain/student.js';
 import { LESSON_STATUS, lessonSlots } from '../domain/lesson.js';
 import { VALIDATION_LEVEL_OPTIONS, latestValidation } from '../domain/validation.js';
@@ -141,8 +143,18 @@ function ValidationEditor({ coachId, coachName, student, current, onDone }) {
   );
 }
 
-function StudentCard({ coachId, coachName, student, completedCount, validation, rating, levelingOn, onStatus, onRemove, isPending }) {
+/** De onde veio o fim do vínculo, na voz do professor. */
+function endedLine(student, coachId) {
+  if (student.ended_reason === 'conta_excluida') return 'A conta do aluno foi excluída.';
+  if (student.ended_by === coachId) return 'Você encerrou o vínculo.';
+  if (student.ended_by === student.student_id) return 'O aluno encerrou o vínculo.';
+  return 'Vínculo encerrado.';
+}
+
+function StudentCard({ coachId, coachName, student, completedCount, validation, rating, levelingOn, vinculoOn, onStatus, onRemove, isPending }) {
   const [editing, setEditing] = useState(false);
+  const reconvite = student.status === STUDENT_STATUS.INVITED && isLinkEndedHistory(student);
+  const nome = student.student_name || 'O aluno';
   const [validating, setValidating] = useState(false);
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -191,17 +203,19 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
           <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar ficha">
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <ConfirmDialog
-            title="Remover aluno?"
-            description={`${student.student_name || 'O aluno'} será removido do seu roster. As aulas não são afetadas.`}
-            confirmLabel="Remover"
-            onConfirm={() => onRemove(student)}
-            trigger={(
-              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Remover aluno">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          />
+          {canCoachRemoveStudent(student) && (
+            <ConfirmDialog
+              title="Remover aluno?"
+              description={`${student.student_name || 'O aluno'} será removido do seu roster. As aulas não são afetadas.`}
+              confirmLabel="Remover"
+              onConfirm={() => onRemove(student)}
+              trigger={(
+                <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Remover aluno">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            />
+          )}
         </div>
       </div>
 
@@ -209,9 +223,14 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
         <p className="mt-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">{student.private_notes}</p>
       )}
 
-      <div className="mt-2 flex flex-wrap justify-end gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
         {student.status === STUDENT_STATUS.INVITED && (
-          <span className="text-xs text-amber-600">Aguardando o aluno aceitar o convite.</span>
+          <span className="text-xs text-amber-600">
+            {reconvite ? 'Convite enviado de novo. Esperando o aluno aceitar.' : 'Aguardando o aluno aceitar o convite.'}
+          </span>
+        )}
+        {student.status === STUDENT_STATUS.ENDED && (
+          <span className="text-xs text-gray-500">{endedLine(student, coachId)}</span>
         )}
         {student.status === STUDENT_STATUS.ACTIVE && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.PAUSED)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50">
@@ -221,6 +240,29 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
         {student.status === STUDENT_STATUS.PAUSED && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.ACTIVE)} className="rounded-full border border-ink bg-ink px-3 py-1 text-xs font-bold text-white hover:bg-ink/90 disabled:opacity-50">
             <Check className="mr-1 inline h-3 w-3" /> Reativar
+          </button>
+        )}
+        {vinculoOn && (student.status === STUDENT_STATUS.ACTIVE || student.status === STUDENT_STATUS.PAUSED) && (
+          <ConfirmDialog
+            title="Encerrar o vínculo de aluno?"
+            description={`${nome} deixa de ser seu aluno: você não vê mais o diário dele, não envia treinos e ele perde o conteúdo só para alunos. A ficha fica no seu histórico, e o vínculo só volta se ele aceitar um novo convite. Aulas e pacotes não mudam.`}
+            confirmLabel="Encerrar vínculo"
+            onConfirm={() => onStatus(student, STUDENT_STATUS.ENDED)}
+            trigger={(
+              <button type="button" disabled={isPending} className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
+                Encerrar vínculo
+              </button>
+            )}
+          />
+        )}
+        {vinculoOn && reconvite && (
+          <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.ENDED)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50">
+            Cancelar convite
+          </button>
+        )}
+        {vinculoOn && student.status === STUDENT_STATUS.ENDED && student.ended_reason !== 'conta_excluida' && (
+          <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.INVITED)} className="rounded-full border border-ink px-3 py-1 text-xs font-bold text-ink hover:bg-white disabled:opacity-50">
+            <UserPlus className="mr-1 inline h-3 w-3" /> Convidar de novo
           </button>
         )}
       </div>
@@ -243,6 +285,10 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
   const { user } = useAuth();
   const levelingOn = true;
   const progressOn = useFeatureFlag(FEATURE_FLAG.COACH_STUDENT_PROGRESS);
+  // Encerrar e reconvidar chegam com as funcionalidades novas do vínculo.
+  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const vinculoOn = trainingOn || userHubOn;
   const {
     data: students = [], isLoading, isError: alunosFalharam, refetch: recarregarAlunos,
   } = useCoachStudents(coachId);
@@ -303,9 +349,13 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
   };
 
   const handleStatus = async (student, next) => {
+    const feito = {
+      [STUDENT_STATUS.ENDED]: student.status === STUDENT_STATUS.INVITED ? 'Convite cancelado.' : 'Vínculo encerrado.',
+      [STUDENT_STATUS.INVITED]: 'Convite enviado. O vínculo volta quando o aluno aceitar.',
+    };
     try {
       await setStatus.mutateAsync({ student, nextStatus: next });
-      toast.success('Status atualizado.');
+      toast.success(feito[next] || 'Status atualizado.');
     } catch (err) {
       toast.error(err?.message || 'Não foi possível atualizar.');
     }
@@ -331,6 +381,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
           {summary.total > 0 && (
             <span className="text-xs text-gray-500">
               {summary.active} ativo(s) · {summary.invited} convidado(s) · {summary.paused} pausado(s)
+              {summary.ended > 0 ? ` · ${summary.ended} encerrado(s)` : ''}
             </span>
           )}
         </div>
@@ -384,6 +435,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
               validation={validationByStudent.get(s.student_id)}
               rating={ratingByUid.get(s.student_id)}
               levelingOn={levelingOn}
+              vinculoOn={vinculoOn}
               onStatus={handleStatus}
               onRemove={handleRemove}
               isPending={setStatus.isPending || remove.isPending}

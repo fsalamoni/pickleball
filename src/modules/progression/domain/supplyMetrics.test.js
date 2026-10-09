@@ -89,7 +89,7 @@ describe('coachMetrics', () => {
   it('aulas dadas em 30 dias, alunos ativos e pedidos sem resposta', () => {
     const r = coachMetrics({
       lessons: [aula(), aula({ student_id: 's2', slots: [{ date: dia(10) }] }), aula({ slots: [{ date: dia(40) }] }), aula({ status: 'requested', created_at_ms: NOW.getTime() - 3 * 86_400_000 })],
-      students: [{ status: 'active', created_at_ms: NOW.getTime() - 5 * 86_400_000 }, { status: 'active', created_at_ms: NOW.getTime() - 100 * 86_400_000 }, { status: 'paused' }],
+      students: [{ status: 'active', created_at_ms: NOW.getTime() - 5 * 86_400_000 }, { status: 'active', created_at_ms: NOW.getTime() - 100 * 86_400_000 }, { status: 'paused' }, { status: 'ended' }],
       packages: [{ active: true }, { active: false }], clinics: [], contents: [{ status: 'draft' }, {}], validations: [{ student_id: 'a', created_at_ms: NOW.getTime() - 86_400_000 }],
       now: NOW,
     });
@@ -97,7 +97,7 @@ describe('coachMetrics', () => {
     expect(r.health.lessonsPrev30).toBe(1);
     expect(r.health.activeStudents30).toBe(2);
     expect(r.health.pendingOver24h).toBe(1);
-    expect(r.health.totalStudents).toBe(2); // pausado não conta
+    expect(r.health.totalStudents).toBe(2); // pausado e encerrado não contam
     expect(r.health.newStudents30).toBe(1);
     expect(r.health.offers).toBe(2);
     expect(r.health.validatedStudents).toBe(1);

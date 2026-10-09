@@ -162,6 +162,21 @@ decidir acesso pelo vínculo professor–aluno:
 - `coach_content`: o "só alunos" exige vínculo **ativo** (antes bastava existir,
   e o convidado que nunca aceitou lia).
 
+**O vínculo vale enquanto o professor for professor do aluno** (decisão do
+dono, 2026-10-09). Qualquer um dos dois encerra: status `ended`, com
+`ended_at` e `ended_by` (o aluno em *Minhas aulas → Meus professores*; o
+professor em *Alunos → Encerrar vínculo*). Com o fim, fecha tudo o que o
+vínculo abria (só alunos, envios, diário compartilhado, dúvida nova) e a
+conversa de uma dúvida fica só para consulta — a regra das mensagens também
+exige vínculo ativo. Com `ended_at` no documento, o professor só **convida de
+novo** (`ended → invited`) ou desiste: não ativa, não pausa e não apaga (apagar
+e recriar como ativo desfaria a saída do aluno). Quem reativa é o **aluno**, ao
+aceitar o convite, e aí o `ended_at` sai. O botão de encerrar e reconvidar e o
+bloco "Meus professores" saem atrás de `training_center` ou `user_hub`. A
+exclusão da conta do aluno encerra o vínculo (`ended_reason: 'conta_excluida'`).
+Vínculo sem `ended_at` segue exatamente como antes (o professor adiciona do
+histórico de aulas como ativo, pausa, reativa e remove).
+
 ## 6. Mídia
 
 - **Por link**: YouTube e Vimeo (`parseVideoUrl`, com início/fim) e imagem

@@ -1,7 +1,8 @@
 /**
  * Uma dúvida aberta: a conversa (com rolagem própria), responder, encerrar ou
  * reabrir e — para quem perguntou — apagar. O texto vem do banco e é sempre
- * mostrado como TEXTO (nada de HTML).
+ * mostrado como TEXTO (nada de HTML). Sem vínculo ATIVO entre os dois, a
+ * conversa fica só para consulta (a regra recusa mensagem nova).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,6 +10,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, BookOpen, Lock, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useQuestionActions, useQuestionMessages } from '@/modules/training/hooks/useTrainingQuestions';
+import { useStudent } from '@/modules/coaches/hooks/useStudents';
+import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
 import { MESSAGE_MAX, QUESTION_STATUS, QUESTION_STATUS_LABELS } from '@/modules/training/domain/question';
 import {
   V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2Textarea,
@@ -24,6 +27,10 @@ export default function QuestionThread({ question, identity, onVoltar }) {
   const logRef = useRef(null);
   const encerrada = question.status === QUESTION_STATUS.ENCERRADA;
   const professor = souProfessorDa(question, identity.uid);
+  // Só AFIRMA que o vínculo acabou com a resposta em mãos; carregando ou com
+  // falha, deixa escrever (a regra decide).
+  const vinculo = useStudent(question.coach_uid, question.asker_uid);
+  const semVinculo = vinculo.isSuccess && vinculo.data?.status !== STUDENT_STATUS.ACTIVE;
 
   // Rola só a caixa da conversa (nunca `scrollIntoView`, que desloca o app inteiro).
   useEffect(() => {
@@ -86,7 +93,14 @@ export default function QuestionThread({ question, identity, onVoltar }) {
           })}
         </div>
 
-        {encerrada ? (
+        {semVinculo ? (
+          <p className="flex items-center gap-2 text-sm text-gray-500">
+            <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {professor
+              ? 'Esta pessoa não é mais seu aluno ativo. A conversa fica aqui para consulta.'
+              : 'O vínculo de aluno com este professor não está ativo. A conversa fica aqui para consulta.'}
+          </p>
+        ) : encerrada ? (
           <p className="flex items-center gap-2 text-sm text-gray-500"><Lock className="h-4 w-4" aria-hidden="true" /> Conversa encerrada. Reabra para escrever de novo.</p>
         ) : (
           <form onSubmit={enviar} className="space-y-2">
@@ -108,7 +122,7 @@ export default function QuestionThread({ question, identity, onVoltar }) {
         )}
 
         <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-          {encerrada ? (
+          {semVinculo ? null : encerrada ? (
             <V2Button size="sm" variant="ghost" onClick={() => encerrar(false)} disabled={acoes.close.isPending}>
               <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reabrir
             </V2Button>

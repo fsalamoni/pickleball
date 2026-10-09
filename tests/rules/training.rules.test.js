@@ -15,6 +15,8 @@
  *  7. as CONSULTAS que as telas fazem passam (e a sem filtro do dono não);
  *  8. F0: o aluno só aceita o convite em coach_students; coach_content "só
  *     alunos" exige vínculo ativo.
+ *  9. ⭐ o vínculo vale enquanto o professor for professor do aluno: qualquer
+ *     um encerra, e o encerrado só volta pelo aceite do aluno.
  */
 import { readFileSync } from 'node:fs';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
@@ -22,7 +24,8 @@ import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch,
+  addDoc, collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where,
+  writeBatch,
 } from 'firebase/firestore';
 
 const ADMIN = 'admin_uid';
@@ -602,5 +605,87 @@ describe('🔒 F0 — correções de regras antigas', () => {
     await assertSucceeds(getDoc(doc(como(ANA), 'coach_content', 'cc_alunos')));
     await assertFails(getDoc(doc(como(BIA), 'coach_content', 'cc_alunos')));
     await assertFails(getDoc(doc(como(CAIO), 'coach_content', 'cc_alunos')));
+  });
+});
+
+describe('⭐ vínculo: enquanto for professor do aluno', () => {
+  const vinc = (aluno) => `${PROF}_${aluno}`;
+  const encerrar = (uid) => ({ status: 'ended', updated_at: serverTimestamp(), ended_at: serverTimestamp(), ended_by: uid });
+  const fimGravado = (aluno, status = 'ended') => testEnv.withSecurityRulesDisabled((ctx) => updateDoc(
+    doc(ctx.firestore(), 'coach_students', vinc(aluno)), { status, ended_at: new Date(), ended_by: aluno },
+  ));
+
+  it('⭐ a aluna encerra — e tudo o que o vínculo abria fecha junto', async () => {
+    await assertSucceeds(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), encerrar(ANA)));
+    await assertFails(getDoc(doc(como(ANA), 'coach_content', 'cc_alunos')));
+    await assertFails(getDoc(doc(como(ANA), 'training_items', 'alunos_prof')));
+    await assertFails(getDoc(doc(como(PROF), 'training_sessions', 's_ana')));
+    await assertFails(setDoc(doc(como(ANA), 'training_questions', 'nova'),
+      { asker_uid: ANA, coach_uid: PROF, subject: 'Saque', status: 'aberta', last_from: 'aluno' }));
+    await assertFails(setDoc(doc(como(PROF), 'training_shares', 'novo'), {
+      from_uid: PROF, from_name: 'Rui', from_role: 'professor', to_uid: ANA, item_id: 'priv_prof', item_title: 'x',
+      item_kind: 'drill', kind: 'aluno', note: '', due_date: null, read_at: null, done_at: null, done_note: '',
+    }));
+  });
+
+  it('⭐ a dúvida fica para consulta, sem mensagem nova', async () => {
+    const m = (uid) => ({ uid, name: 'x', text: 'Oi', created_at: new Date() });
+    await fimGravado(ANA);
+    await assertSucceeds(getDoc(doc(como(ANA), 'training_questions', 'q_ana')));
+    await assertSucceeds(getDocs(collection(como(PROF), 'training_questions', 'q_ana', 'messages')));
+    await assertFails(setDoc(doc(como(ANA), 'training_questions', 'q_ana', 'messages', 'x1'), m(ANA)));
+    await assertFails(setDoc(doc(como(PROF), 'training_questions', 'q_ana', 'messages', 'x2'), m(PROF)));
+  });
+
+  it('a pausada e o convidado também encerram (recusar o convite)', async () => {
+    await assertSucceeds(updateDoc(doc(como(BIA), 'coach_students', vinc(BIA)), encerrar(BIA)));
+    await assertSucceeds(updateDoc(doc(como(CAIO), 'coach_students', vinc(CAIO)), encerrar(CAIO)));
+  });
+
+  it('🔴 o aluno não encerra mexendo em outra coisa, nem em nome do professor, nem reativa', async () => {
+    await assertFails(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), { ...encerrar(ANA), private_notes: '' }));
+    await assertFails(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), encerrar(PROF)));
+    await assertFails(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), { ...encerrar(ANA), ended_at: new Date(0) }));
+    await assertFails(updateDoc(doc(como(DUDA), 'coach_students', vinc(ANA)), encerrar(DUDA)));
+    await fimGravado(ANA);
+    await assertFails(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), { status: 'active', updated_at: new Date() }));
+  });
+
+  it('o professor encerra (com a data) e segue anotando na ficha encerrada', async () => {
+    await assertFails(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'ended' }));
+    await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), encerrar(PROF)));
+    await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { private_notes: 'parou em out/26' }));
+  });
+
+  it('🔴 encerrado: o professor não reativa, não pausa, não tira a data e não apaga', async () => {
+    await fimGravado(ANA);
+    await assertFails(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'active' }));
+    await assertFails(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'paused' }));
+    await assertFails(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'invited', ended_at: deleteField() }));
+    await assertFails(deleteDoc(doc(como(PROF), 'coach_students', vinc(ANA))));
+    await assertSucceeds(deleteDoc(doc(como(ADMIN), 'coach_students', vinc(ANA))));
+  });
+
+  it('⭐ o professor convida de novo; só a aluna reativa, e o histórico de fim sai no aceite', async () => {
+    await fimGravado(ANA);
+    await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'invited', updated_at: new Date() }));
+    await assertFails(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'active' }));
+    await assertFails(deleteDoc(doc(como(PROF), 'coach_students', vinc(ANA))));
+    await assertFails(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), { status: 'active', updated_at: new Date() }));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)),
+      { status: 'active', updated_at: new Date(), ended_at: deleteField(), ended_by: deleteField() }));
+    await assertSucceeds(getDoc(doc(como(ANA), 'coach_content', 'cc_alunos')));
+    // De volta ao normal: o professor pausa e reativa como antes.
+    await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'paused' }));
+    await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', vinc(ANA)), { status: 'active' }));
+  });
+
+  it('a aluna recusa o novo convite', async () => {
+    await fimGravado(ANA, 'invited');
+    await assertSucceeds(updateDoc(doc(como(ANA), 'coach_students', vinc(ANA)), encerrar(ANA)));
+  });
+
+  it('vínculo sem histórico de fim segue como antes: o professor remove', async () => {
+    await assertSucceeds(deleteDoc(doc(como(PROF), 'coach_students', vinc(BIA))));
   });
 });

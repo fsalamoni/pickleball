@@ -23,6 +23,9 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
+import MyCoachLinks from '@/v2/components/coach/MyCoachLinks';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -104,6 +107,9 @@ function V2StudentLessonsContent() {
   const { data: lessons = [], isLoading, isError, refetch } = useStudentLessons(user?.uid);
   const { data: sales = [] } = useStudentSales(user?.uid);
   const respond = useRespondLesson();
+  // Aceitar, recusar e deixar de ser aluno chegam com o Centro de Treino ou a Minha área.
+  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
 
@@ -126,6 +132,8 @@ function V2StudentLessonsContent() {
       </div>
 
       <PackageBalance sales={sales} />
+
+      {(trainingOn || userHubOn) && <MyCoachLinks />}
 
       {/* As aulas da agenda das ARENAS (módulo de aulas). Antes só apareciam
           dentro da página de cada arena. Some sozinho sem matrícula. */}
