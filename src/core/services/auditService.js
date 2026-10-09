@@ -93,6 +93,22 @@ export const AUDIT_ACTION_LABELS = {
   gamification_flag_reviewed: 'Sinal de integridade revisado (admin)',
   gamification_account_moderated: 'Conta moderada no placar da gamificação (admin)',
   gamification_progress_reset: 'Progressão da gamificação recalculada do zero (admin)',
+  // Centro de Treino (flag training_center).
+  training_item_created: 'Treino/drill criado',
+  training_item_updated: 'Treino/drill editado',
+  training_item_deleted: 'Treino/drill excluído',
+  training_item_shared: 'Treino/drill indicado a outro atleta',
+  training_item_sent_students: 'Treino/drill enviado aos alunos',
+  training_item_approved: 'Treino/drill aprovado para a biblioteca (admin)',
+  training_item_rejected: 'Treino/drill não aprovado (admin)',
+  training_item_hidden: 'Treino/drill ocultado (admin)',
+  training_item_unhidden: 'Treino/drill voltou a aparecer (admin)',
+  training_item_featured: 'Destaque de treino/drill alterado (admin)',
+  training_report_created: 'Treino/drill denunciado',
+  training_report_resolved: 'Denúncia de treino/drill resolvida (admin)',
+  training_settings_updated: 'Configurações do Centro de Treino alteradas (admin)',
+  training_seed_installed: 'Biblioteca inicial do treino instalada/atualizada (admin)',
+  training_items_imported: 'Treinos/drills importados em lote (admin)',
 };
 
 export async function createAuditLog({

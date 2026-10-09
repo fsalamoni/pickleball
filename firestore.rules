@@ -1383,6 +1383,9 @@ service cloud.firestore {
         'club_event_published', 'tournament_open', 'tournament_announcement',
         'partner_invite', 'partner_response', 'profile_reminder',
         'leveling_reminder', 'profile_admin_edit', 'gamification', 'generic',
+        // Centro de Treino (flag training_center).
+        'training_share', 'training_review', 'training_comment',
+        'training_question', 'training_answer',
       ];
     }
     function isInternalLink(l) {
@@ -2203,13 +2206,28 @@ service cloud.firestore {
         request.auth.uid == resource.data.student_id ||
         isPlatformAdmin()
       );
-      allow create: if isAuthed() && (
-        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
-      );
+      // 🔒 F0 (2026-10-08): o id do vínculo É `{coach_id}_{student_id}` — é por
+      // esse caminho que as regras decidem "aluno ativo" (conteúdo "só alunos",
+      // treinos, envios do professor). Sem conferir o id, qualquer conta gravava
+      // `{PROFESSOR}_{EU}` com `coach_id: EU` e lia o "só alunos" de outro
+      // professor. Todo cliente já grava por `studentDocId(coach, aluno)`.
+      allow create: if isAuthed()
+        && linkId == request.resource.data.coach_id + '_' + request.resource.data.student_id
+        && (request.auth.uid == request.resource.data.coach_id || isPlatformAdmin());
+      // 🔒 F0 (2026-10-08): o ALUNO só aceita o convite — muda `status` de
+      // `invited` para `active` (e `updated_at`), nada mais. Antes a regra
+      // deixava o aluno reescrever o documento inteiro, inclusive as notas
+      // privadas do professor (`private_notes`) e as próprias tags. O único
+      // caminho do cliente do aluno (`setStudentStatus`) já gravava só isso.
+      // O professor (e o admin) não troca de quem é o vínculo: os dois ids ficam.
       allow update: if isAuthed() && (
-        request.auth.uid == resource.data.coach_id ||
-        request.auth.uid == resource.data.student_id ||
-        isPlatformAdmin()
+        ((request.auth.uid == resource.data.coach_id || isPlatformAdmin())
+          && request.resource.data.coach_id == resource.data.coach_id
+          && request.resource.data.student_id == resource.data.student_id) ||
+        (request.auth.uid == resource.data.student_id
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])
+          && resource.data.status == 'invited'
+          && request.resource.data.status == 'active')
       );
       allow delete: if isAuthed() && (
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
@@ -2277,13 +2295,16 @@ service cloud.firestore {
       );
     }
     // coach_content/{id} — biblioteca de conteúdo do professor. Lê: público, o
-    // professor, e alunos vinculados (existe coach_students/{coachId_uid}).
-    // Escreve: o professor/admin.
+    // professor, e alunos com vínculo ATIVO (coach_students/{coachId_uid} com
+    // status `active`). Escreve: o professor/admin.
+    // 🔒 F0 (2026-10-08): antes bastava o vínculo EXISTIR — o convidado que
+    // nunca aceitou e o aluno pausado liam o "só alunos". A tela
+    // (V2CoachProfile) já exigia vínculo ativo; agora a regra também.
     match /coach_content/{contentId} {
       allow read: if resource.data.visibility == 'public' || (isAuthed() && (
         request.auth.uid == resource.data.coach_id ||
         isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/coach_students/$(resource.data.coach_id + '_' + request.auth.uid))
+        isActiveStudentOf(resource.data.coach_id)
       ));
       allow create: if isAuthed() && (
         request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
@@ -3187,6 +3208,365 @@ service cloud.firestore {
         && request.resource.data.goals is list
         && request.resource.data.goals.size() <= 6;
       allow delete: if isGoalsOwner(resource.data.ownerType, resource.data.ownerId) || isPlatformAdmin();
+    }
+
+    // ==== Centro de Treino (flag `training_center`) ========================
+    // Biblioteca de treinos e drills de TODOS os autores (plataforma,
+    // professores e atletas), compartilhamento, diário, planos, dúvidas e
+    // denúncias. TUDO ADITIVO: coleções novas, nenhuma regra antiga mudou
+    // (a não ser as duas correções F0 acima, em coach_students e coach_content).
+    // Ver `docs/40-CENTRO-DE-TREINO.md` e `tests/rules/training.rules.test.js`.
+
+    // Configuração do módulo: `platform_settings/training` (o admin escreve
+    // pela regra de platform_settings). Campo ausente vale o padrão — os
+    // mesmos padrões de `training/domain/settings.js`.
+    function trainingSetting(key, dflt) {
+      return exists(/databases/$(database)/documents/platform_settings/training)
+        ? get(/databases/$(database)/documents/platform_settings/training).data.get(key, dflt)
+        : dflt;
+    }
+    function isCoachUser(uid) {
+      return exists(/databases/$(database)/documents/coaches/$(uid));
+    }
+    // Vínculo ATIVO professor→aluno (`coach_students/{coach}_{aluno}`).
+    // Confere também os CAMPOS do vínculo (defesa em profundidade): um
+    // documento gravado com id forjado antes da correção da F0 não abre nada.
+    function hasActiveStudent(coachUid, studentUid) {
+      return exists(/databases/$(database)/documents/coach_students/$(coachUid + '_' + studentUid))
+        && get(/databases/$(database)/documents/coach_students/$(coachUid + '_' + studentUid)).data.status == 'active'
+        && get(/databases/$(database)/documents/coach_students/$(coachUid + '_' + studentUid)).data.coach_id == coachUid
+        && get(/databases/$(database)/documents/coach_students/$(coachUid + '_' + studentUid)).data.student_id == studentUid;
+    }
+    function isActiveStudentOf(coachUid) {
+      return isAuthed() && hasActiveStudent(coachUid, request.auth.uid);
+    }
+    // O item público deste papel entra na biblioteca sem passar pela fila?
+    // Padrão: professor sim, atleta não (a equipe revisa).
+    function trainingAutoApproved(role) {
+      return isPlatformAdmin()
+        || (role == 'professor' && trainingSetting('public_review_professor', false) == false)
+        || (role == 'atleta' && trainingSetting('public_review_atleta', true) == false);
+    }
+    // Forma mínima do item (tamanhos). O domínio normaliza o resto; aqui só
+    // o que, se faltasse, abriria espaço para abuso (documento gigante,
+    // campo de moderação com tipo errado).
+    function trainingItemShapeOk(d) {
+      return d.kind in ['drill', 'treino', 'fundamento', 'jogada', 'fisico', 'estudo']
+        && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
+        && d.summary is string && d.summary.size() <= 280
+        && d.visibility in ['publico', 'privado', 'alunos']
+        && d.review in ['nao_se_aplica', 'pendente', 'aprovado', 'recusado']
+        && d.hidden is bool && d.featured is bool
+        && d.shared_uids is list && d.shared_uids.size() <= 50
+        && d.get('steps', []) is list && d.get('steps', []).size() <= 15
+        && d.get('media', []) is list && d.get('media', []).size() <= 8
+        && d.get('diagrams', []) is list && d.get('diagrams', []).size() <= 4
+        && d.get('blocks', []) is list && d.get('blocks', []).size() <= 12
+        && (d.visibility != 'alunos' || d.author_role == 'professor');
+    }
+    // Autoria coerente: a plataforma só pelo admin; professor só com perfil
+    // de professor; ninguém cria em nome de outra pessoa.
+    function trainingAuthorOk(d) {
+      return d.created_by == request.auth.uid && (
+        (d.author_uid == 'plataforma' && d.author_role == 'plataforma' && isPlatformAdmin())
+        || (d.author_uid == request.auth.uid && (
+          d.author_role == 'atleta'
+          || (d.author_role == 'professor' && isCoachUser(request.auth.uid))))
+      );
+    }
+    // Revisão coerente com a visibilidade e a política: não público ⇒ não se
+    // aplica; público ⇒ pendente, ou aprovado só se o papel publica direto.
+    function trainingReviewOk(d) {
+      return (d.visibility != 'publico' && d.review == 'nao_se_aplica')
+        || (d.visibility == 'publico' && (
+          d.review == 'pendente'
+          || (d.review == 'aprovado' && trainingAutoApproved(d.author_role))));
+    }
+    // Atleta publicando: o admin pode desligar a publicação pública de atletas.
+    function trainingPublicAllowed(d) {
+      return d.visibility != 'publico' || d.author_role != 'atleta'
+        || trainingSetting('allow_public_athlete', true) == true;
+    }
+    // "Copiar e adaptar": a cópia guarda de onde veio (`derived_from`). O
+    // `locked` é CONFERIDO aqui contra o original — não vem do formulário: se
+    // o original não está aberto a quem copia (não é dele nem está na
+    // biblioteca pública), a cópia nunca vira pública. É o que impede a
+    // "lavagem" do treino que um professor mandou só aos alunos dele.
+    function trainingOpenToCopy(sourceId) {
+      let s = get(/databases/$(database)/documents/training_items/$(sourceId)).data;
+      // O próprio item só está "aberto" se não for, ele mesmo, uma cópia
+      // travada — senão copiar a cópia destravaria o conteúdo.
+      return (s.author_uid == request.auth.uid
+          && (s.get('derived_from', null) == null || s.derived_from.get('locked', false) == false))
+        || (s.visibility == 'publico' && s.review == 'aprovado' && s.hidden == false);
+    }
+    function trainingDerivedOk(d) {
+      return d.get('derived_from', null) == null || (
+        d.derived_from is map && d.derived_from.id is string
+        && exists(/databases/$(database)/documents/training_items/$(d.derived_from.id))
+        && d.derived_from.get('locked', false) == !trainingOpenToCopy(d.derived_from.id));
+    }
+    function trainingLockOk(d) {
+      return d.get('derived_from', null) == null
+        || d.derived_from.get('locked', false) == false
+        || d.visibility != 'publico';
+    }
+    match /training_items/{itemId} {
+      allow read: if isAuthed() && (
+        resource.data.author_uid == request.auth.uid
+        || (resource.data.visibility == 'publico' && resource.data.review == 'aprovado' && resource.data.hidden == false)
+        || (resource.data.hidden == false && request.auth.uid in resource.data.shared_uids)
+        || (resource.data.visibility == 'alunos' && resource.data.hidden == false && isActiveStudentOf(resource.data.author_uid))
+        || isPlatformAdmin()
+      );
+      // O admin pode criar já destacado/aprovado; os demais nascem sem
+      // moderação (oculto=false, destaque=false, sem nota de revisão).
+      allow create: if isAuthed()
+        && trainingItemShapeOk(request.resource.data)
+        && trainingAuthorOk(request.resource.data)
+        && (isPlatformAdmin() || (
+          trainingReviewOk(request.resource.data)
+          && trainingPublicAllowed(request.resource.data)
+          && trainingDerivedOk(request.resource.data)
+          && trainingLockOk(request.resource.data)
+          && request.resource.data.hidden == false
+          && request.resource.data.featured == false
+          && !('review_note' in request.resource.data)
+          && !('reviewed_by' in request.resource.data)
+          && !('hidden_reason' in request.resource.data)));
+      allow update: if isAuthed() && (
+        // Admin: edita, oculta, destaca, aprova — mas não troca o autor.
+        (isPlatformAdmin()
+          && request.resource.data.author_uid == resource.data.author_uid
+          && request.resource.data.author_role == resource.data.author_role
+          && request.resource.data.created_by == resource.data.created_by
+          && trainingItemShapeOk(request.resource.data))
+        // Autor: não mexe em autoria nem em moderação.
+        || (resource.data.author_uid == request.auth.uid
+          && request.resource.data.author_uid == resource.data.author_uid
+          && request.resource.data.author_role == resource.data.author_role
+          && request.resource.data.created_by == resource.data.created_by
+          && request.resource.data.get('created_at', null) == resource.data.get('created_at', null)
+          && request.resource.data.get('derived_from', null) == resource.data.get('derived_from', null)
+          && request.resource.data.hidden == resource.data.hidden
+          && request.resource.data.featured == resource.data.featured
+          && request.resource.data.get('hidden_reason', '') == resource.data.get('hidden_reason', '')
+          && request.resource.data.get('review_note', '') == resource.data.get('review_note', '')
+          && request.resource.data.get('reviewed_by', null) == resource.data.get('reviewed_by', null)
+          && request.resource.data.get('reviewed_at', null) == resource.data.get('reviewed_at', null)
+          && (
+            // Só compartilhamento: não é edição do conteúdo, a revisão fica.
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shared_uids', 'updated_at'])
+              && request.resource.data.shared_uids is list
+              && request.resource.data.shared_uids.size() <= 50)
+            // Edição: forma, revisão pela política e — se virou público agora —
+            // a permissão de publicar.
+            || (trainingItemShapeOk(request.resource.data)
+              && trainingReviewOk(request.resource.data)
+              && trainingLockOk(request.resource.data)
+              && (resource.data.visibility == 'publico' || trainingPublicAllowed(request.resource.data)))
+          ))
+      );
+      allow delete: if isAuthed() && (resource.data.author_uid == request.auth.uid || isPlatformAdmin());
+    }
+
+    // Compartilhar/indicar. `indicacao`: qualquer pessoa, do próprio item ou
+    // de um item público da biblioteca. `aluno`: SÓ o professor, para aluno
+    // com vínculo ATIVO. O destinatário marca lido/feito; ninguém reescreve.
+    function trainingShareItemOk(itemId) {
+      return exists(/databases/$(database)/documents/training_items/$(itemId))
+        && (get(/databases/$(database)/documents/training_items/$(itemId)).data.author_uid == request.auth.uid
+          || (get(/databases/$(database)/documents/training_items/$(itemId)).data.visibility == 'publico'
+            && get(/databases/$(database)/documents/training_items/$(itemId)).data.review == 'aprovado'
+            && get(/databases/$(database)/documents/training_items/$(itemId)).data.hidden == false));
+    }
+    match /training_shares/{shareId} {
+      allow read: if isAuthed() && (
+        resource.data.from_uid == request.auth.uid
+        || resource.data.to_uid == request.auth.uid
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly(['from_uid', 'from_name', 'from_role', 'to_uid', 'item_id',
+          'item_title', 'item_kind', 'kind', 'note', 'due_date', 'created_at', 'read_at', 'done_at', 'done_note'])
+        && request.resource.data.from_uid == request.auth.uid
+        && request.resource.data.to_uid is string
+        && request.resource.data.to_uid != request.auth.uid
+        && request.resource.data.item_id is string
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.get('read_at', null) == null
+        && request.resource.data.get('done_at', null) == null
+        && trainingSetting('allow_sharing', true) == true
+        && trainingShareItemOk(request.resource.data.item_id)
+        && (
+          (request.resource.data.kind == 'indicacao'
+            && request.resource.data.from_role in ['atleta', 'professor']
+            && request.resource.data.get('due_date', null) == null)
+          || (request.resource.data.kind == 'aluno'
+            && request.resource.data.from_role == 'professor'
+            && isCoachUser(request.auth.uid)
+            && hasActiveStudent(request.auth.uid, request.resource.data.to_uid))
+        );
+      allow update: if isAuthed()
+        && resource.data.to_uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read_at', 'done_at', 'done_note'])
+        && request.resource.data.get('done_note', '') is string
+        && request.resource.data.get('done_note', '').size() <= 300;
+      allow delete: if isAuthed() && (
+        resource.data.from_uid == request.auth.uid
+        || resource.data.to_uid == request.auth.uid
+        || isPlatformAdmin()
+      );
+    }
+
+    // Diário. Só o dono escreve. O professor lê (e comenta, e confirma) a
+    // sessão que o aluno COMPARTILHOU com ele — e só enquanto o vínculo está
+    // ativo. Nenhum campo de saúde existe aqui (ver o domínio).
+    function trainingSessionShapeOk(d) {
+      return d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.duration_min is int && d.duration_min >= 0 && d.duration_min <= 600
+        && (d.get('rpe', null) == null || (d.rpe is int && d.rpe >= 0 && d.rpe <= 10))
+        && d.get('notes', '') is string && d.get('notes', '').size() <= 2000
+        && d.get('title', '') is string && d.get('title', '').size() <= 120
+        && d.get('item_ids', []) is list && d.get('item_ids', []).size() <= 12
+        && d.get('skills', []) is list && d.get('skills', []).size() <= 6;
+    }
+    function trainingSessionReadable(sid) {
+      return isAuthed() && exists(/databases/$(database)/documents/training_sessions/$(sid)) && (
+        get(/databases/$(database)/documents/training_sessions/$(sid)).data.uid == request.auth.uid
+        || isPlatformAdmin()
+        || (get(/databases/$(database)/documents/training_sessions/$(sid)).data.get('shared_coach_id', null) == request.auth.uid
+          && hasActiveStudent(request.auth.uid, get(/databases/$(database)/documents/training_sessions/$(sid)).data.uid))
+      );
+    }
+    match /training_sessions/{sessionId} {
+      allow read: if isAuthed() && (
+        resource.data.uid == request.auth.uid
+        || (resource.data.get('shared_coach_id', null) == request.auth.uid
+          && hasActiveStudent(request.auth.uid, resource.data.uid))
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.uid == request.auth.uid
+        && trainingSessionShapeOk(request.resource.data)
+        && request.resource.data.get('coach_confirmed_at', null) == null
+        && (request.resource.data.get('shared_coach_id', null) == null
+          || hasActiveStudent(request.resource.data.shared_coach_id, request.auth.uid));
+      allow update: if isAuthed() && (
+        (resource.data.uid == request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && trainingSessionShapeOk(request.resource.data)
+          && request.resource.data.get('coach_confirmed_at', null) == resource.data.get('coach_confirmed_at', null)
+          && (request.resource.data.get('shared_coach_id', null) == null
+            || request.resource.data.get('shared_coach_id', null) == resource.data.get('shared_coach_id', null)
+            || hasActiveStudent(request.resource.data.shared_coach_id, request.auth.uid)))
+        || (resource.data.get('shared_coach_id', null) == request.auth.uid
+          && hasActiveStudent(request.auth.uid, resource.data.uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coach_confirmed_at', 'updated_at']))
+      );
+      allow delete: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
+
+      match /comments/{commentId} {
+        allow read: if trainingSessionReadable(sessionId);
+        allow create: if trainingSessionReadable(sessionId)
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'created_at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 1000;
+        allow delete: if isAuthed() && (
+          resource.data.uid == request.auth.uid
+          || get(/databases/$(database)/documents/training_sessions/$(sessionId)).data.uid == request.auth.uid
+          || isPlatformAdmin()
+        );
+      }
+    }
+
+    // Planos: do atleta, só ele lê e escreve.
+    match /training_plans/{planId} {
+      allow read: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.title is string && request.resource.data.title.size() <= 120
+        && request.resource.data.weeks is int && request.resource.data.weeks >= 1 && request.resource.data.weeks <= 16
+        && request.resource.data.slots is list && request.resource.data.slots.size() <= 112
+        && request.resource.data.days is list && request.resource.data.days.size() <= 7;
+      allow update: if isAuthed()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.title is string && request.resource.data.title.size() <= 120
+        && request.resource.data.weeks is int && request.resource.data.weeks >= 1 && request.resource.data.weeks <= 16
+        && request.resource.data.slots is list && request.resource.data.slots.size() <= 112
+        && request.resource.data.days is list && request.resource.data.days.size() <= 7;
+      allow delete: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
+    }
+
+    // Preferências e progresso do treino de cada pessoa (id = uid).
+    match /training_meta/{uid} {
+      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['favorites', 'routine', 'onboarding_done', 'mastery',
+          'assessments', 'focus_hint', 'updated_at'])
+        && request.resource.data.get('favorites', []) is list
+        && request.resource.data.get('favorites', []).size() <= 300
+        && request.resource.data.get('assessments', []) is list
+        && request.resource.data.get('assessments', []).size() <= 24
+        && request.resource.data.get('mastery', {}) is map
+        && request.resource.data.get('mastery', {}).size() <= 300;
+      allow delete: if isOwner(uid) || isPlatformAdmin();
+    }
+
+    // Dúvidas: privadas entre quem pergunta e o professor (vínculo ATIVO para
+    // abrir). As mensagens só são acrescentadas — ninguém reescreve.
+    function trainingQuestionParty(qid) {
+      return isAuthed() && exists(/databases/$(database)/documents/training_questions/$(qid)) && (
+        get(/databases/$(database)/documents/training_questions/$(qid)).data.asker_uid == request.auth.uid
+        || get(/databases/$(database)/documents/training_questions/$(qid)).data.coach_uid == request.auth.uid
+      );
+    }
+    match /training_questions/{questionId} {
+      allow read: if isAuthed() && (
+        resource.data.asker_uid == request.auth.uid
+        || resource.data.coach_uid == request.auth.uid
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.asker_uid == request.auth.uid
+        && request.resource.data.coach_uid is string
+        && request.resource.data.coach_uid != request.auth.uid
+        && hasActiveStudent(request.resource.data.coach_uid, request.auth.uid)
+        && request.resource.data.status == 'aberta'
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() >= 1 && request.resource.data.subject.size() <= 120;
+      allow update: if isAuthed()
+        && (resource.data.asker_uid == request.auth.uid || resource.data.coach_uid == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'last_from', 'updated_at'])
+        && request.resource.data.status in ['aberta', 'respondida', 'encerrada'];
+      allow delete: if isAuthed() && (resource.data.asker_uid == request.auth.uid || isPlatformAdmin());
+
+      match /messages/{messageId} {
+        allow read: if trainingQuestionParty(questionId) || isPlatformAdmin();
+        allow create: if trainingQuestionParty(questionId)
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'created_at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 2000;
+        allow delete: if isPlatformAdmin();
+      }
+    }
+
+    // Denúncias de conteúdo: qualquer conta denuncia; só quem denunciou e o
+    // admin leem; só o admin resolve.
+    match /training_reports/{reportId} {
+      allow read: if isAuthed() && (resource.data.reporter_uid == request.auth.uid || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.reporter_uid == request.auth.uid
+        && request.resource.data.status == 'aberta'
+        && request.resource.data.item_id is string
+        && request.resource.data.reason in ['impreciso', 'perigoso', 'ofensivo', 'spam', 'direitos', 'outro']
+        && request.resource.data.get('text', '') is string
+        && request.resource.data.get('text', '').size() <= 500
+        && !('resolved_by' in request.resource.data);
+      allow update, delete: if isPlatformAdmin();
     }
   }
 }

@@ -42,6 +42,7 @@ export default function V2Settings() {
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
   const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
   const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
@@ -145,7 +146,7 @@ export default function V2Settings() {
                 {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
               </p>
               <div className="mt-4 space-y-3">
-                {NOTIFICATION_CATEGORIES.map((cat) => (
+                {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
                   <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
                     <V2Toggle
                       id={`notif-${cat.id}`}

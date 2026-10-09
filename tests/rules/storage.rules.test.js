@@ -15,7 +15,7 @@ import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
-import { ref, uploadBytes, getBytes, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getBytes, deleteObject, listAll } from 'firebase/storage';
 
 const DONO = 'dono_uid';
 const OUTRO = 'outro_uid';
@@ -105,5 +105,44 @@ describe('⭐ NÃO PODE TER MUDADO — uploads existentes', () => {
   });
   it('17. 🔴 caminho fora de uploads/ segue bloqueado', async () => {
     await assertFails(uploadBytes(ref(asDono(), 'outro-lugar/x.jpg'), bytes()));
+  });
+});
+
+describe('treino/ — mídia do Centro de Treino', () => {
+  const img = { contentType: 'image/webp' };
+  const vid = { contentType: 'video/mp4' };
+  const semente = () => env.withSecurityRulesDisabled((ctx) =>
+    uploadBytes(ref(ctx.storage(), 'treino/dono_uid/1-a.webp'), bytes(), img));
+
+  it('18. o dono envia imagem e vídeo pequenos', async () => {
+    await assertSucceeds(uploadBytes(ref(asDono(), 'treino/dono_uid/2-b.webp'), bytes(), img));
+    await assertSucceeds(uploadBytes(ref(asDono(), 'treino/dono_uid/3-c.mp4'), bytes(), vid));
+  });
+  it('19. 🔴 imagem acima de 3 MB é recusada', async () => {
+    const grande = new Uint8Array(3 * 1024 * 1024 + 1);
+    await assertFails(uploadBytes(ref(asDono(), 'treino/dono_uid/4-d.jpg'), grande, { contentType: 'image/jpeg' }));
+  });
+  it('20. 🔴 tipo fora da lista é recusado', async () => {
+    await assertFails(uploadBytes(ref(asDono(), 'treino/dono_uid/5-e.pdf'), bytes(), { contentType: 'application/pdf' }));
+    await assertFails(uploadBytes(ref(asDono(), 'treino/dono_uid/6-f.svg'), bytes(), { contentType: 'image/svg+xml' }));
+  });
+  it('21. 🔴 ninguém envia na pasta de outra pessoa', async () => {
+    await assertFails(uploadBytes(ref(asOutro(), 'treino/dono_uid/7-g.webp'), bytes(), img));
+  });
+  it('22. conta logada lê; anônimo não', async () => {
+    await semente();
+    await assertSucceeds(getBytes(ref(asOutro(), 'treino/dono_uid/1-a.webp')));
+    await assertFails(getBytes(ref(asAnon(), 'treino/dono_uid/1-a.webp')));
+  });
+  it('23. 🔴 só o dono lista a pasta', async () => {
+    await semente();
+    await assertSucceeds(listAll(ref(asDono(), 'treino/dono_uid')));
+    await assertFails(listAll(ref(asOutro(), 'treino/dono_uid')));
+  });
+  it('24. 🔴 só o dono apaga; ninguém sobrescreve', async () => {
+    await semente();
+    await assertFails(deleteObject(ref(asOutro(), 'treino/dono_uid/1-a.webp')));
+    await assertFails(uploadBytes(ref(asDono(), 'treino/dono_uid/1-a.webp'), bytes(), img));
+    await assertSucceeds(deleteObject(ref(asDono(), 'treino/dono_uid/1-a.webp')));
   });
 });

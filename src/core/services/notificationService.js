@@ -44,6 +44,13 @@ export const NOTIFICATION_TYPE = Object.freeze({
   // Gamificação: pedido de recompensa, decisão do emissor, resultado de
   // desafio. A categoria é silenciável pela pessoa (central de notificações).
   GAMIFICATION: 'gamification',
+  // Centro de Treino: indicação/envio recebido, decisão da revisão,
+  // comentário do professor no diário, dúvida e resposta.
+  TRAINING_SHARE: 'training_share',
+  TRAINING_REVIEW: 'training_review',
+  TRAINING_COMMENT: 'training_comment',
+  TRAINING_QUESTION: 'training_question',
+  TRAINING_ANSWER: 'training_answer',
   GENERIC: 'generic',
 });
 

@@ -41,6 +41,12 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     types: ['partner_invite', 'partner_response'],
   },
   {
+    id: 'training',
+    label: 'Treino',
+    description: 'Treinos indicados e enviados pelo professor, revisão do que você publicou, comentários e dúvidas.',
+    types: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
+  },
+  {
     id: 'gamification',
     label: 'Gamificação',
     description: 'Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.',

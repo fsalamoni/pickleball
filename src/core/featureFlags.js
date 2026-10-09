@@ -392,6 +392,26 @@ export const FEATURE_FLAG = Object.freeze({
    * teve, e a fase ganha só `etapa_count` dentro de `stages[]`.
    */
   TOURNAMENT_AMERICANO_ETAPAS: 'tournament_americano_etapas',
+
+  /**
+   * MINHA ÁREA — o `/perfil` vira a central de cada pessoa: um resumo no
+   * topo e seções pelo que ela FAZ (perfil, treino, jogos, agenda, torneios,
+   * clubes, aulas, arena, conta). Desligada, o `/perfil` segue como está.
+   * Zero banco: só lê o que as telas de hoje já leem. Ver docs/41-MINHA-AREA.md.
+   */
+  USER_HUB: 'user_hub',
+
+  /**
+   * CENTRO DE TREINO — `/treino`: biblioteca de drills e treinos da
+   * plataforma, dos professores e da comunidade; criar com o modelo padrão
+   * (passo a passo, certo × errado, diagrama de quadra, fotos e vídeos);
+   * indicar a outros atletas e — só professor — enviar aos alunos; o treino
+   * de hoje, planos, diário e evolução; dúvidas ao professor; e a seção
+   * Treino do painel admin (conteúdo, revisão, denúncias, ajustes).
+   * Coleções novas `training_*` e a pasta `treino/` do Storage (regras
+   * aditivas). Desligada, nada disso aparece. Ver docs/40-CENTRO-DE-TREINO.md.
+   */
+  TRAINING_CENTER: 'training_center',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -516,6 +536,28 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'campeão é quem foi melhor no total. O organizador escolhe quantas '
       + 'etapas. Desligada, o formato some do editor daqui para frente; as '
       + 'modalidades já criadas nele seguem funcionando.',
+  },
+  [FEATURE_FLAG.USER_HUB]: {
+    label: 'Minha área (o perfil como central)',
+    description:
+      'O Perfil vira "Minha área": um resumo da pessoa no topo e as seções '
+      + 'pelo que ela faz na plataforma — perfil e nível, treino, jogos, '
+      + 'agenda, torneios, clubes, aulas, arena, conta e privacidade —, cada '
+      + 'uma levando à tela que resolve. Só leitura; nada novo no banco. '
+      + 'Desligada, o Perfil segue como está.',
+  },
+  [FEATURE_FLAG.TRAINING_CENTER]: {
+    label: 'Centro de Treino',
+    description:
+      'Publica /treino: a biblioteca de drills e treinos (da PickleRush, dos '
+      + 'professores e da comunidade), o modelo padrão para criar (objetivo, '
+      + 'passo a passo, certo × errado, erros e correções, diagrama de quadra, '
+      + 'fotos e vídeos por link ou envio), indicar a outros atletas e — só '
+      + 'professor — enviar aos alunos com prazo; o treino de hoje, planos, '
+      + 'diário e evolução; dúvidas ao professor. No painel admin, a seção '
+      + 'Treino controla todo o conteúdo (editar, ocultar, destacar, excluir), '
+      + 'a revisão do que é publicado, as denúncias, a biblioteca inicial e os '
+      + 'limites de envio. Desligada, nada disso aparece.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',
