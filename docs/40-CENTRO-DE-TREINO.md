@@ -207,11 +207,28 @@ para `audit_logs`.
 
 ## 8. Biblioteca inicial
 
-`src/modules/training/content/seed.js` — cerca de 80 itens da "Equipe
+`src/modules/training/content/seed.js` — 127 itens da "Equipe
 PickleRush" (drills, físicos, jogadas, fundamentos, treinos e estudos), escritos
 no modelo do §4. **Só import dinâmico** (guarda de fonte): ela não entra no
 pacote de quem só abre o app. Instalar é ato do admin (Painel → Treino →
 Biblioteca inicial).
+
+### 8.1 Versão 2 — os "100 drills" avaliados (2026-10-09)
+
+O dono enviou um pacote de 100 drills (PDF + HTML, escrito com ajuda de IA) e
+pediu a avaliação individual de cada um, com pesquisa, e a importação dos
+adequados. Resultado, drill a drill, em
+[`docs/40a-AVALIACAO-100-DRILLS.md`](40a-AVALIACAO-100-DRILLS.md): **45
+importados, todos com correção** (regra de saque, poach, Erne/ATP, golpes
+descritos ao contrário, segurança), **47 já existiam** e **8 rejeitados**; das
+sessões da fonte, **2 viraram treino**. As imagens do pacote (posturas geradas
+por IA) não entraram.
+
+Os itens novos moram em `content/seed/importados-nivel1.js` … `nivel5.js` e
+`treinos-importados.js`, com `version: 1` cada; `SEED_VERSION` foi a 2. Como
+instalar é idempotente por slug, o admin clica em **Instalar/atualizar** e só
+os 47 novos são criados — nada dos 80 de antes é regravado, e o que o admin
+editou ou apagou continua como ele deixou.
 
 ## 9. Privacidade
 
