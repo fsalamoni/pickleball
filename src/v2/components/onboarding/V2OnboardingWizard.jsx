@@ -21,7 +21,7 @@ import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/consta
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import {
-  COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, sanitizeInterests,
+  COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, platformInterestMeta, sanitizeInterests,
 } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
@@ -77,6 +77,7 @@ function passosPara(faltando, essencial) {
 export default function V2OnboardingWizard() {
   const { userProfile, updateUserProfile } = useAuth();
   const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const navigate = useNavigate();
   const [passos, setPassos] = useState(PASSOS);
   const [indice, setIndice] = useState(0);
@@ -456,7 +457,7 @@ export default function V2OnboardingWizard() {
         {passo === 'interesses' && (
           <div className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-2">
-              {PLATFORM_INTEREST_META.map(({ value, label, icon }) => {
+              {platformInterestMeta({ treino: treinoOn }).map(({ value, label, icon }) => {
                 const Icon = interestIcon(icon);
                 const active = interests.includes(value);
                 return (

@@ -15,7 +15,9 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { PLATFORM_INTEREST_META, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
+import { platformInterestMeta, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -25,6 +27,7 @@ import { cn } from '@/core/lib/utils';
 
 export default function PersonalizeHomeDialog({ open, onOpenChange }) {
   const { userProfile, updateUserProfile } = useAuth();
+  const interesses = platformInterestMeta({ treino: useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER) });
   const [escolhidos, setEscolhidos] = useState(() => sanitizeInterests(userProfile?.interests));
   const [salvando, setSalvando] = useState(false);
 
@@ -65,7 +68,7 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Interesses">
-          {PLATFORM_INTEREST_META.map(({ value, label, hint, icon }) => {
+          {interesses.map(({ value, label, hint, icon }) => {
             const Icon = interestIcon(icon);
             const ativo = escolhidos.includes(value);
             return (

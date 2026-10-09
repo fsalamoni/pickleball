@@ -44,7 +44,11 @@ describe('⭐ o mapa das cidades é baixado só quando usado', () => {
 
 describe('a localização do aparelho', () => {
   const firebase = JSON.parse(readFileSync('firebase.json', 'utf8'));
-  const politicas = JSON.stringify(firebase).match(/accelerometer=[^"]*/g) || [];
+  // Lida do cabeçalho em si: a política tem origens entre aspas (o vídeo da
+  // ficha de treino), e um recorte do JSON em texto pararia na primeira aspa.
+  const politicas = [firebase.hosting].flat()
+    .flatMap((s) => s.headers || []).flatMap((h) => h.headers || [])
+    .filter((h) => h.key === 'Permissions-Policy').map((h) => h.value);
 
   it('é permitida só ao próprio site; microfone e pagamento seguem fechados', () => {
     expect(politicas.length).toBeGreaterThan(0);

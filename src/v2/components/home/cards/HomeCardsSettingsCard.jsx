@@ -27,8 +27,9 @@ function Conteudo() {
   const ctx = useHomeCardsContext();
   const foci = useMemo(() => resolveHomeFoci({
     interests: userProfile?.interests,
+    treino: ctx.treino,
     sinais: { arenasGeridas: arenas.length, ehProfessor },
-  }), [userProfile?.interests, arenas.length, ehProfessor]);
+  }), [userProfile?.interests, ctx.treino, arenas.length, ehProfessor]);
 
   return (
     <V2Surface id="pagina-inicial" className="scroll-mt-6">

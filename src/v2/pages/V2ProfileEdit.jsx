@@ -24,7 +24,7 @@ import V2ParticipationHistoryCard from '@/v2/components/tournament/V2Participati
 import { useCoach, useSyncCoachFromProfile } from '@/modules/coaches/hooks/useCoaches';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import {
-  COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, sanitizeInterests,
+  COURT_SIDE_OPTIONS, platformInterestMeta, sanitizeInterests,
 } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
@@ -75,6 +75,7 @@ export default function V2ProfileEdit() {
   const [communityErrors, setCommunityErrors] = useState({});
   const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
   const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const [coachBusy, setCoachBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
   const [formMode, setFormMode] = useState(null);
@@ -444,7 +445,7 @@ export default function V2ProfileEdit() {
         <V2Surface collapsible collapseId="perfil-interesses" data-dica="perfil-interesses" eyebrow="Interesses" title="Meus interesses na plataforma"
           description="O que você quer fazer por aqui. Usamos isso para destacar o que importa para você no painel.">
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            {PLATFORM_INTEREST_META.map(({ value, label, hint, icon }) => {
+            {platformInterestMeta({ treino: treinoOn }).map(({ value, label, hint, icon }) => {
               const Icon = interestIcon(icon);
               const active = interests.includes(value);
               return (

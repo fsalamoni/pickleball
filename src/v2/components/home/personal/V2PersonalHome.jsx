@@ -75,9 +75,13 @@ import HomeLessonsSection from './HomeLessonsSection';
 import HomeClubsSection from './HomeClubsSection';
 import HomeCommunitySection from './HomeCommunitySection';
 import HomeCardsEmpty from '../cards/HomeCardsEmpty';
+import { V2Skeleton } from '@/v2/ui/primitives';
 
 // O seletor dos cards só baixa quando a pessoa abre "Personalizar".
 const HomeCardsDialog = lazy(() => import('../cards/HomeCardsDialog'));
+
+// Sob demanda: só quem escolheu o card do treino baixa o treino.
+const HomeTrainingCard = lazy(() => import('./HomeTrainingCard'));
 
 // Sob demanda: só com alguma fonte de promoção ligada (arena, plataforma ou professores).
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
@@ -94,6 +98,7 @@ export default function V2PersonalHome() {
   const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
 
   // Papéis reais — todos já em cache pela barra lateral (arena, professor).
   const { arenas, pendingByArena, totalPendingBookings } = useMyArenaSummary();
@@ -114,6 +119,7 @@ export default function V2PersonalHome() {
 
   const foci = useMemo(() => resolveHomeFoci({
     interests: userProfile?.interests,
+    treino: treinoOn,
     sinais: {
       arenasGeridas: arenas.length,
       ehProfessor,
@@ -122,7 +128,7 @@ export default function V2PersonalHome() {
       temClubes,
       ...agenda.sinais,
     },
-  }), [userProfile?.interests, arenas.length, ehProfessor, organizando, competindo, temClubes, agenda.sinais]);
+  }), [userProfile?.interests, treinoOn, arenas.length, ehProfessor, organizando, competindo, temClubes, agenda.sinais]);
 
   const secoes = useMemo(() => homeSectionsFor(foci), [foci]);
   const atalhos = useMemo(() => homeShortcuts(foci, {
@@ -196,8 +202,8 @@ export default function V2PersonalHome() {
     }
   };
 
-  // Um card que não é seção (atalhos, destaques, evolução): ocupa a linha
-  // inteira da grade, na posição que a pessoa escolheu.
+  // Um card que não é seção (atalhos, destaques, evolução, treino), na posição
+  // que a pessoa escolheu. O treino ocupa meia linha, como as seções.
   const renderCardExtra = (id) => {
     switch (id) {
       case HOME_CARD.ATALHOS:
@@ -214,6 +220,12 @@ export default function V2PersonalHome() {
       case HOME_CARD.EVOLUCAO:
         return (
           <EvolutionStrip uid={uid} className="min-w-0 xl:col-span-2" />
+        );
+      case HOME_CARD.TREINO:
+        return (
+          <Suspense fallback={<V2Skeleton className="h-56 rounded-4xl" />}>
+            <HomeTrainingCard />
+          </Suspense>
         );
       default:
         return null;

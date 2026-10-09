@@ -88,3 +88,9 @@ describe('frasePrincipal', () => {
       .toBe('Hoje você tem um compromisso — o primeiro às 10:00. Um item pede a sua ação.');
   });
 });
+
+describe('o atalho do treino', () => {
+  it('a frente do treino leva ao Centro de Treino', () => {
+    expect(homeShortcuts(f(HOME_FOCUS.TREINAR))[0]).toMatchObject({ id: 'treino', to: '/treino', label: 'Treino de hoje' });
+  });
+});

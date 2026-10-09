@@ -64,6 +64,9 @@ export function homeShortcuts(foci = [], ctx = {}) {
       { id: 'dia-de-jogo:criar', label: 'Criar dia de jogo', hint: 'Monte a rodada', to: '/dia-de-jogo?criar=1', icon: 'Dices' },
       { id: 'jogadores', label: 'Encontrar jogadores', hint: 'Do seu nível', to: '/encontrar-jogadores', icon: 'Users' },
     ],
+    [HOME_FOCUS.TREINAR]: [
+      { id: 'treino', label: 'Treino de hoje', hint: 'Rotina, biblioteca e diário', to: '/treino', icon: 'Dumbbell' },
+    ],
     [HOME_FOCUS.RESERVAR]: [
       { id: 'reservar', label: 'Reservar quadra', hint: 'Horários livres', to: '/arenas', icon: 'CalendarCheck' },
       { id: 'reservas', label: 'Minhas reservas', hint: 'Pedidos e confirmadas', to: '/minhas-reservas', icon: 'CalendarClock' },

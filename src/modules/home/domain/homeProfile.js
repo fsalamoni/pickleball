@@ -31,6 +31,7 @@ export const HOME_FOCUS = Object.freeze({
   ORGANIZAR: 'organizar',     // organizar torneios
   COMPETIR: 'competir',       // participar de torneios
   JOGAR: 'jogar',             // dias de jogo, procurar jogo, treino
+  TREINAR: 'treinar',         // Centro de Treino (só com a flag `training_center`)
   RESERVAR: 'reservar',       // reservar quadras
   APRENDER: 'aprender',       // professores e aulas
   CLUBES: 'clubes',           // clubes
@@ -47,6 +48,7 @@ export const HOME_FOCUS_LABEL = Object.freeze({
   [HOME_FOCUS.ORGANIZAR]: 'Organizar torneios',
   [HOME_FOCUS.COMPETIR]: 'Torneios',
   [HOME_FOCUS.JOGAR]: 'Dias de jogo',
+  [HOME_FOCUS.TREINAR]: 'Treino',
   [HOME_FOCUS.RESERVAR]: 'Reservar quadras',
   [HOME_FOCUS.APRENDER]: 'Aulas e professores',
   [HOME_FOCUS.CLUBES]: 'Clubes',
@@ -105,10 +107,13 @@ export const DEFAULT_FOCI = Object.freeze([
 /**
  * As frentes da tela inicial, da mais importante para a menos.
  *
- * @param {{ interests?: string[], sinais?: HomeSignals }} input
+ * Com o Centro de Treino ligado (`treino`), o interesse "Organizar meu treino"
+ * traz também a frente do treino — sem tirar a de jogar, que ele sempre trouxe.
+ *
+ * @param {{ interests?: string[], sinais?: HomeSignals, treino?: boolean }} input
  * @returns {Array<{ focus: string, reason: string, weight: number }>}
  */
-export function resolveHomeFoci({ interests, sinais = {} } = {}) {
+export function resolveHomeFoci({ interests, sinais = {}, treino = false } = {}) {
   const melhor = new Map();
   const marcar = (focus, reason) => {
     const atual = melhor.get(focus);
@@ -123,6 +128,7 @@ export function resolveHomeFoci({ interests, sinais = {} } = {}) {
   // 2) Interesse declarado.
   const escolhidos = sanitizeInterests(interests);
   escolhidos.forEach((i) => (FOCO_POR_INTERESSE[i] || []).forEach((f) => marcar(f, FOCUS_REASON.INTERESSE)));
+  if (treino && escolhidos.includes(PLATFORM_INTEREST.PERSONAL_TRAINING)) marcar(HOME_FOCUS.TREINAR, FOCUS_REASON.INTERESSE);
 
   // 3) Atividade em andamento.
   if (sinais.temTorneios) marcar(HOME_FOCUS.COMPETIR, FOCUS_REASON.ATIVIDADE);

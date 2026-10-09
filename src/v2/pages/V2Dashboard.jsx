@@ -17,7 +17,7 @@ import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hoo
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
-import { PLATFORM_INTEREST_META, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
+import { platformInterestMeta, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import { V2ErrorState, V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -36,7 +36,6 @@ const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/Hom
 // flag desligada ninguém baixa o pedaço dela.
 const V2PersonalHome = lazy(() => import('@/v2/components/home/personal/V2PersonalHome'));
 
-const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
 // Ações rápidas padrão (quando o usuário não escolheu interesses).
 const DEFAULT_QUICK_ACTIONS = ['play_tournaments', 'random_partners', 'book_courts', 'ranking'];
 
@@ -121,6 +120,7 @@ function DashboardClassico() {
   // Divulgação da plataforma e dos professores (Onda CG): cada uma com a sua flag.
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
+  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
   const {
     data: myTournaments = [], isLoading: loadingMine, isError: mineFailed, refetch: refetchMine,
   } = useMyTournaments();
@@ -168,16 +168,17 @@ function DashboardClassico() {
   const quickActions = useMemo(() => {
     const chosen = sanitizeInterests(userProfile?.interests);
     const keys = chosen.length > 0 ? chosen : DEFAULT_QUICK_ACTIONS;
+    const porValor = Object.fromEntries(platformInterestMeta({ treino: treinoOn }).map((m) => [m.value, m]));
     const seenRoutes = new Set();
     const out = [];
     keys.forEach((k) => {
-      const meta = INTEREST_BY_VALUE[k];
+      const meta = porValor[k];
       if (!meta || seenRoutes.has(meta.route)) return;
       seenRoutes.add(meta.route);
       out.push(meta);
     });
     return out.slice(0, 6);
-  }, [userProfile?.interests]);
+  }, [userProfile?.interests, treinoOn]);
 
   const managedCount = useMemo(
     () => myTournaments.filter((t) => t.my_role === 'owner' || t.my_role === 'admin').length,

@@ -9,12 +9,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, GraduationCap, Handshake,
+  Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, Dumbbell, GraduationCap, Handshake,
   LayoutDashboard, Medal, Megaphone, Sparkles, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react';
 
 const ICONES = {
-  Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, GraduationCap, Handshake,
+  Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, Dumbbell, GraduationCap, Handshake,
   LayoutDashboard, Medal, Megaphone, TrendingUp, Trophy, Users, Zap,
 };
 

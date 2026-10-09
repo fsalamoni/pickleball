@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   COURT_SIDE, courtSideLabel, normalizeCourtSide,
-  PLATFORM_INTEREST, PLATFORM_INTEREST_META, interestLabel, interestMeta, sanitizeInterests, playGenderOf,
+  PLATFORM_INTEREST, PLATFORM_INTEREST_META, platformInterestMeta, interestLabel, interestMeta, sanitizeInterests, playGenderOf,
 } from './profileMeta.js';
 
 describe('court side', () => {
@@ -54,5 +54,23 @@ describe('playGenderOf — em que lado das duplas mistas a pessoa entra', () => 
     expect(playGenderOf({ gender: 'other' })).toBeNull();
     expect(playGenderOf({ gender: 'prefer_not_to_say' })).toBeNull();
     expect(playGenderOf(null)).toBeNull();
+  });
+});
+
+describe('platformInterestMeta — "Organizar meu treino" com o Centro de Treino', () => {
+  const treino = (lista) => lista.find((m) => m.value === PLATFORM_INTEREST.PERSONAL_TRAINING);
+
+  it('desligado: a lista de sempre, o mesmo objeto', () => {
+    expect(platformInterestMeta()).toBe(PLATFORM_INTEREST_META);
+    expect(treino(platformInterestMeta({ treino: false }))).toMatchObject({ route: '/dia-de-jogo' });
+  });
+
+  it('ligado: leva ao /treino, com o mesmo rótulo e a mesma ordem', () => {
+    const lista = platformInterestMeta({ treino: true });
+    expect(treino(lista)).toMatchObject({ route: '/treino', label: 'Organizar meu treino', icon: 'Dumbbell' });
+    expect(treino(lista).hint).not.toMatch(/dias de jogo/i);
+    expect(lista.map((m) => m.value)).toEqual(PLATFORM_INTEREST_META.map((m) => m.value));
+    // O catálogo de sempre não é alterado.
+    expect(treino(PLATFORM_INTEREST_META).route).toBe('/dia-de-jogo');
   });
 });

@@ -7,22 +7,18 @@
  * diz que não carregou em vez de sugerir outra coisa; as outras fontes que
  * falham viram aviso do que ficou de fora.
  */
-import React, { Suspense, lazy, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarDays, GraduationCap, Library, NotebookPen, Play, RefreshCw, Settings2, Sparkles, Sun,
 } from 'lucide-react';
-import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingItems';
-import { useMyTrainingPlans } from '@/modules/training/hooks/useTrainingPlans';
-import { useTrainingInbox } from '@/modules/training/hooks/useTrainingShares';
-import { useTrainingMeta } from '@/modules/training/hooks/useTrainingMeta';
 import { useMyTrainingSessions } from '@/modules/training/hooks/useTrainingSessions';
-import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
-import { TODAY_SOURCE, todaySession } from '@/modules/training/domain/today';
-import { PLAN_STATUS, plannedByDate } from '@/modules/training/domain/plan';
+import { useTodaySession } from '@/modules/training/hooks/useTodaySession';
+import { TODAY_SOURCE } from '@/modules/training/domain/today';
+import { plannedByDate } from '@/modules/training/domain/plan';
 import { weekSummary } from '@/modules/training/domain/session';
-import { todayLocal, weekKeyOf, WEEKDAY_SHORT } from '@/modules/training/domain/dates';
-import { courtBlocks, minutesFromSeconds, pickItems, totalMinutes } from '@/modules/training/domain/treinar';
+import { weekKeyOf, WEEKDAY_SHORT } from '@/modules/training/domain/dates';
+import { courtBlocks, minutesFromSeconds } from '@/modules/training/domain/treinar';
 import { PLACE_LABELS, SKILL_AREA_LABELS } from '@/modules/training/domain/taxonomy';
 import {
   V2Button, V2ErrorState, V2Skeleton, V2Surface,
@@ -51,38 +47,18 @@ function ResumoRotina({ routine }) {
 }
 
 export default function TodayTab({ identity, irPara }) {
-  const hoje = todayLocal();
-  const visiveis = useVisibleTrainingItems(identity);
-  const planos = useMyTrainingPlans(identity.uid);
-  const inbox = useTrainingInbox(identity.uid);
-  const meta = useTrainingMeta(identity.uid);
   const sessoes = useMyTrainingSessions(identity.uid);
-  const { level } = useMyUnifiedLevel();
   const [variacao, setVariacao] = useState(0);
   const [forcar, setForcar] = useState(false);
   const [editRotina, setEditRotina] = useState(false);
   const [quadra, setQuadra] = useState(false);
   const [registro, setRegistro] = useState(null);
 
-  const ativo = useMemo(() => (planos.data || []).find((p) => p.status === PLAN_STATUS.ATIVO) || null, [planos.data]);
-  const routine = meta.data?.routine || null;
+  const {
+    hoje, sessao, items, missingIds, minutos, ativo, routine, visiveis, planos, inbox, meta, isLoading,
+  } = useTodaySession(identity, { variacao, forcar });
 
-  const sessao = useMemo(() => todaySession({
-    today: hoje,
-    // A semente muda com "Outra sugestão"; o resto da conta é o mesmo.
-    uid: variacao ? `${identity.uid}:${variacao}` : identity.uid,
-    plan: ativo,
-    inbox: inbox.data || [],
-    items: visiveis.items,
-    routine,
-    level,
-    force: forcar,
-  }), [hoje, identity.uid, variacao, ativo, inbox.data, visiveis.items, routine, level, forcar]);
-
-  const { items, missingIds } = pickItems(sessao.itemIds, visiveis.byId);
-  const minutos = totalMinutes(sessao.minutes, items);
-
-  if (planos.isPending || meta.isPending || visiveis.isLoading) return <V2Skeleton className="h-72 rounded-4xl" />;
+  if (isLoading) return <V2Skeleton className="h-72 rounded-4xl" />;
   if (planos.isError) {
     return (
       <V2Surface>
