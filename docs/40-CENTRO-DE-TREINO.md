@@ -71,7 +71,7 @@ inferior, de propósito: ela já tem cinco destinos.
 | Ação | Atleta | Professor (`coaches/{uid}`) | Admin da plataforma |
 |---|---|---|---|
 | Criar item privado ("Só eu") | sim | sim | sim |
-| Publicar na biblioteca | sim, **passa por revisão** (padrão) | sim, **publica direto** (padrão) | sim, como "Equipe PickleRush" |
+| Publicar na biblioteca | sim, **passa por revisão** (padrão) | sim, **passa por revisão até o admin verificar o professor**; verificado, publica direto (padrão) | sim, como "Equipe PickleRush" |
 | Criar "Só meus alunos" | — | sim (vínculo **ativo**) | — |
 | Indicar a outro atleta (`indicacao`) | o próprio item ou item público aprovado | idem | idem |
 | Enviar para aluno, com prazo (`aluno`) | — | **só** para aluno com vínculo ativo | — |
@@ -80,9 +80,20 @@ inferior, de propósito: ela já tem cinco destinos.
 | Perguntar | ao próprio professor ativo | responde aos alunos | lê |
 
 A revisão é configurável (`platform_settings/training`): `public_review_atleta`
-(padrão ligada), `public_review_professor` (padrão desligada) e
+(padrão ligada), `public_review_professor` (padrão **ligada**) e
 `allow_public_athlete` (o admin pode fechar a publicação de atletas). Cada
 pessoa tem no máximo `max_pending_per_user` itens esperando revisão.
+
+**Professor verificado** (decisão do dono, 2026-10-09). Qualquer conta pode
+criar o próprio `coaches/{uid}` ("Sou professor"), então o professor também
+passa pela fila até a equipe verificá-lo. Na Revisão, **"Aprovar e verificar o
+professor"** publica o item e põe a pessoa em `verified_professors` (lista no
+mesmo documento, que só o admin escreve); daí em diante o público dela entra
+direto. A lista aparece em Configurações → "Professores verificados", com
+"Remover" (o que já foi aprovado continua; a próxima edição volta à fila).
+**A regra confere** (`trainingAutoApproved`): professor fora da lista gravando
+`aprovado` é recusado. A lista fica fora de `settingsPatch`: o "Salvar" e os
+"Padrões de fábrica" das configurações não a tocam.
 
 **Copiar e adaptar** dá crédito (`derived_from`) e tem uma trava conferida
 **pela regra**, não pelo formulário: a cópia de algo que não estava aberto a

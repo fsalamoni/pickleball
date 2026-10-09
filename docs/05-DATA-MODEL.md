@@ -1273,7 +1273,7 @@ Abrir exige vínculo ATIVO. Mensagens só se acrescentam.
 `resolution`. Qualquer conta cria; só o admin resolve.
 
 ### `platform_settings/training` (documento novo, regra que já existia)
-`public_review_atleta`, `public_review_professor`, `allow_public_athlete`,
+`public_review_atleta`, `public_review_professor` (padrão ligada), `verified_professors[]` (professores que o admin verificou: publicam sem fila), `allow_public_athlete`,
 `allow_uploads`, `allow_video_upload`, `max_image_mb`, `max_video_mb`,
 `max_video_seconds`, `max_uploads_per_user`, `allow_sharing`,
 `max_pending_per_user`, `seed_installed_version`, `seed_installed_at`,

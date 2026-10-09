@@ -313,10 +313,10 @@ export function orphanUploads({ before = [], sessionPaths = [], after = [], uid 
  * O que acontece ao salvar com esta visibilidade — dito ANTES. Menor de 18
  * anos publica sempre via revisão (trava do serviço que a regra não vê).
  */
-export function saveNotice({ visibility, role, settings = {}, isAdmin = false, wasApproved = false, ageYears = null }) {
+export function saveNotice({ visibility, role, settings = {}, isAdmin = false, uid = null, wasApproved = false, ageYears = null }) {
   if (visibility === VISIBILITY.PUBLICO && !isAdmin && role !== AUTHOR_ROLE.PLATAFORMA
-    && Number.isFinite(ageYears) && ageYears < 18 && isAutoApproved(role, settings)) {
+    && Number.isFinite(ageYears) && ageYears < 18 && isAutoApproved(role, settings, { uid })) {
     return 'A equipe revisa antes de publicar. Enquanto isso, só você vê.';
   }
-  return publishNotice({ visibility, role, settings, isAdmin, wasApproved });
+  return publishNotice({ visibility, role, settings, isAdmin, uid, wasApproved });
 }

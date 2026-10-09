@@ -139,7 +139,7 @@ function decideReview({ visibility, role, settings, identity, previousReview = n
   if (identity.isAdmin) {
     return reviewFor({ visibility, role, settings, isAdmin: true, adminReview: adminKeeps ? previousReview : null });
   }
-  const review = reviewFor({ visibility, role, settings, previousReview });
+  const review = reviewFor({ visibility, role, settings, uid: identity.uid, previousReview });
   if (review === REVIEW.APROVADO && isMinor(identity.ageYears)) return REVIEW.PENDENTE;
   return review;
 }

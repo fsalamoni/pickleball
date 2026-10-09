@@ -148,7 +148,9 @@ describe('depois de salvar', () => {
     const settings = normalizeTrainingSettings(null);
     expect(saveNotice({ visibility: 'privado', role: 'atleta', settings })).toBe('');
     expect(saveNotice({ visibility: 'publico', role: 'atleta', settings })).toMatch(/revisa/);
-    expect(saveNotice({ visibility: 'publico', role: 'professor', settings })).toMatch(/publicado/);
-    expect(saveNotice({ visibility: 'publico', role: 'professor', settings, ageYears: 16 })).toMatch(/revisa/);
+    expect(saveNotice({ visibility: 'publico', role: 'professor', settings })).toMatch(/revisa/);
+    const verificado = { ...settings, verified_professors: ['p1'] };
+    expect(saveNotice({ visibility: 'publico', role: 'professor', settings: verificado, uid: 'p1' })).toMatch(/publicado/);
+    expect(saveNotice({ visibility: 'publico', role: 'professor', settings: verificado, uid: 'p1', ageYears: 16 })).toMatch(/revisa/);
   });
 });

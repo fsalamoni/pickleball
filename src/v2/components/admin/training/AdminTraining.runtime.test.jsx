@@ -11,7 +11,11 @@ const mut = () => ({ mutate: vi.fn(), isPending: false });
 const acoes = { review: mut(), hide: mut(), feature: mut(), resolveReport: mut(), deleteReport: mut(), installSeed: mut(), importItems: mut() };
 vi.mock('@/modules/training/hooks/useTrainingAdmin', () => ({ useTrainingAdminActions: () => acoes }));
 const salvar = mut();
-vi.mock('@/modules/training/hooks/useTrainingSettings', () => ({ useSaveTrainingSettings: () => salvar }));
+const verificar = mut();
+vi.mock('@/modules/training/hooks/useTrainingSettings', () => ({ useSaveTrainingSettings: () => salvar, useSetProfessorVerified: () => verificar }));
+vi.mock('@/modules/coaches/hooks/useCoaches', () => ({
+  useCoach: (uid) => ({ isPending: false, isError: false, data: uid === 'p1' ? { display_name: 'Prof. Rui' } : null }),
+}));
 
 import { normalizeTrainingSettings } from '@/modules/training/domain/settings';
 import AdminTrainingReview from './AdminTrainingReview.jsx';
@@ -22,6 +26,7 @@ beforeEach(() => {
   container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
   Object.values(acoes).forEach((m) => m.mutate.mockReset());
   salvar.mutate.mockReset();
+  verificar.mutate.mockReset();
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 const render = (el) => act(async () => { root.render(<MemoryRouter>{el}</MemoryRouter>); });
@@ -40,6 +45,27 @@ describe('Treino → Revisão', () => {
     expect(confirmar.disabled).toBe(true);
     await act(async () => { confirmar.click(); });
     expect(acoes.review.mutate).not.toHaveBeenCalled();
+  });
+
+  it('professor não verificado: "Aprovar e verificar" publica e depois verifica', async () => {
+    const doProf = { ...item, id: 'i2', author_role: 'professor', author_uid: 'p1', author_name: 'Rui' };
+    await render(<AdminTrainingReview identity={identity} settingsQ={{ settings: normalizeTrainingSettings(null) }} itens={ok([item, doProf])} />);
+    const botoes = Array.from(container.querySelectorAll('button')).filter((b) => b.textContent.includes('Aprovar e verificar o professor'));
+    expect(botoes).toHaveLength(1); // o atleta não tem
+    await act(async () => { botoes[0].click(); });
+    const [args, opts] = acoes.review.mutate.mock.calls[0];
+    expect(args).toMatchObject({ item: doProf, decision: 'aprovado' });
+    expect(verificar.mutate).not.toHaveBeenCalled();
+    await act(async () => { opts.onSuccess(); });
+    expect(verificar.mutate.mock.calls[0][0]).toEqual({ uid: 'p1', verified: true, name: 'Rui' });
+  });
+
+  it('professor já verificado (ou revisão de professor desligada): sem o botão de verificar', async () => {
+    const doProf = { ...item, id: 'i2', author_role: 'professor', author_uid: 'p1', author_name: 'Rui' };
+    await render(<AdminTrainingReview identity={identity} settingsQ={{ settings: normalizeTrainingSettings({ verified_professors: ['p1'] }) }} itens={ok([doProf])} />);
+    expect(container.textContent).not.toContain('Aprovar e verificar o professor');
+    await render(<AdminTrainingReview identity={identity} settingsQ={{ settings: normalizeTrainingSettings({ public_review_professor: false }) }} itens={ok([doProf])} />);
+    expect(container.textContent).not.toContain('Aprovar e verificar o professor');
   });
 
   it('a leitura falhando não vira "fila vazia"', async () => {
@@ -67,6 +93,16 @@ describe('Treino → Configurações', () => {
     const [{ input, current }] = salvar.mutate.mock.calls[0];
     expect(input.allow_sharing).toBe(false);
     expect(current).toBe(atual);
+  });
+
+  it('lista os professores verificados e tira a verificação sem passar pelo "Salvar"', async () => {
+    await render(<AdminTrainingSettings identity={identity} settingsQ={ok(normalizeTrainingSettings({ verified_professors: ['p1'] }))} />);
+    expect(container.textContent).toContain('Professores verificados (1)');
+    expect(container.textContent).toContain('Prof. Rui');
+    await act(async () => { botao('Remover', container).click(); });
+    expect(verificar.mutate.mock.calls[0][0]).toEqual({ uid: 'p1', verified: false, name: 'Prof. Rui' });
+    expect(salvar.mutate).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Nada alterado');
   });
 
   it('mostra os tetos do armazenamento', async () => {

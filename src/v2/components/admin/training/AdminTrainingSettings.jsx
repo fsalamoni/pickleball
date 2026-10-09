@@ -8,8 +8,9 @@
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RotateCcw, Save } from 'lucide-react';
-import { useSaveTrainingSettings } from '@/modules/training/hooks/useTrainingSettings';
+import { BadgeCheck, RotateCcw, Save } from 'lucide-react';
+import { useSaveTrainingSettings, useSetProfessorVerified } from '@/modules/training/hooks/useTrainingSettings';
+import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { DEFAULT_TRAINING_SETTINGS, settingsPatch } from '@/modules/training/domain/settings';
 import { HARD_LIMITS } from '@/modules/training/domain/media';
 import { cn } from '@/core/lib/utils';
@@ -24,7 +25,7 @@ export const GRUPOS_DE_CONFIG = Object.freeze([
     titulo: 'Publicação na biblioteca',
     campos: [
       { key: 'public_review_atleta', label: 'Revisar o que atletas publicam', hint: 'Ligado: o item público de um atleta só entra na biblioteca depois que a equipe aprova na aba Revisão. Desligado: entra na hora.' },
-      { key: 'public_review_professor', label: 'Revisar o que professores publicam', hint: 'Ligado: professores também passam pela fila de revisão. Desligado: o item público do professor entra na hora.' },
+      { key: 'public_review_professor', label: 'Revisar o que professores publicam', hint: 'Ligado (padrão): professor ainda não verificado passa pela fila; o verificado (lista abaixo) publica direto. Desligado: todo professor publica na hora — e qualquer conta pode se declarar professor.' },
       { key: 'allow_public_athlete', label: 'Atletas podem publicar na biblioteca', hint: 'Desligado: atletas só criam itens “Só eu” e compartilham com quem escolherem. Os já publicados continuam na biblioteca.' },
       { key: 'max_pending_per_user', min: 1, max: 50, step: 1, unidade: 'itens', label: 'Itens em revisão ao mesmo tempo, por pessoa', hint: 'Protege a fila: passando disso, a pessoa espera a equipe revisar antes de mandar outro.' },
     ],
@@ -59,6 +60,53 @@ export function settingsChanges(form, atual) {
   return Object.keys(a).filter((k) => a[k] !== b[k]);
 }
 
+function ProfessorVerificado({ uid, remover }) {
+  const coach = useCoach(uid);
+  const nome = coach.data?.display_name || coach.data?.name || '';
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
+      <span className="flex min-w-0 items-center gap-2 text-sm text-ink">
+        <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+        <span className="truncate font-semibold">
+          {nome || (coach.isPending ? 'Carregando…' : coach.isError ? 'Professor (o nome não carregou)' : 'Conta sem perfil de professor')}
+        </span>
+      </span>
+      <V2Button size="sm" variant="ghost" disabled={remover.isPending} onClick={() => remover.mutate({ uid, verified: false, name: nome }, {
+        onSuccess: () => toast.success('Verificação retirada. O próximo item público dessa pessoa passa pela revisão.'),
+        onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível salvar agora.')),
+      })}
+      >
+        Remover
+      </V2Button>
+    </li>
+  );
+}
+
+/**
+ * Quem publica sem fila. Fica fora do formulário: muda na hora, um por vez,
+ * e o "Salvar"/"Padrões de fábrica" de cima não toca a lista.
+ */
+function ProfessoresVerificados({ lista, identity }) {
+  const remover = useSetProfessorVerified(identity);
+  return (
+    <V2Surface className="space-y-3" aria-label="Professores verificados">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">Professores verificados ({lista.length})</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          O item público deles entra na biblioteca sem passar pela fila. Para verificar alguém, use “Aprovar e verificar o professor” na aba Revisão. Remover não tira da biblioteca o que já foi aprovado.
+        </p>
+      </div>
+      {lista.length ? (
+        <ul className="space-y-2">
+          {lista.map((uid) => <ProfessorVerificado key={uid} uid={uid} remover={remover} />)}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500">Nenhum professor verificado ainda.</p>
+      )}
+    </V2Surface>
+  );
+}
+
 function Formulario({ atual, identity }) {
   const salvar = useSaveTrainingSettings(identity);
   const [form, setForm] = useState(() => paraFormulario(atual));
@@ -71,39 +119,42 @@ function Formulario({ atual, identity }) {
 
   return (
     <div className="space-y-4 pb-24" data-dica="admin-treino-config">
-      {GRUPOS_DE_CONFIG.map((g) => (
-        <V2Surface key={g.titulo} className="space-y-5">
-          <h2 className="font-display text-lg font-bold text-ink">{g.titulo}</h2>
-          {g.campos.map((c) => {
-            const id = `treino-cfg-${c.key}`;
-            const mudou = mudancas.includes(c.key);
-            if (c.max === undefined) {
+      {GRUPOS_DE_CONFIG.map((g, i) => (
+        <React.Fragment key={g.titulo}>
+          <V2Surface className="space-y-5">
+            <h2 className="font-display text-lg font-bold text-ink">{g.titulo}</h2>
+            {g.campos.map((c) => {
+              const id = `treino-cfg-${c.key}`;
+              const mudou = mudancas.includes(c.key);
+              if (c.max === undefined) {
+                return (
+                  <div key={c.key} className={cn('rounded-2xl', mudou && 'bg-acid/20 p-2 -m-2')}>
+                    <V2Toggle id={id} checked={!!form[c.key]} onChange={(v) => set(c.key, v)} label={c.label} hint={c.hint} />
+                  </div>
+                );
+              }
               return (
-                <div key={c.key} className={cn('rounded-2xl', mudou && 'bg-acid/20 p-2 -m-2')}>
-                  <V2Toggle id={id} checked={!!form[c.key]} onChange={(v) => set(c.key, v)} label={c.label} hint={c.hint} />
-                </div>
+                <V2Field key={c.key} label={c.label} htmlFor={id} hint={`${c.hint} Entre ${fmt(c.min)} e ${fmt(c.max)} ${c.unidade}; padrão ${fmt(DEFAULT_TRAINING_SETTINGS[c.key])}.`}>
+                  <div className="flex items-center gap-2">
+                    <V2Input
+                      id={id}
+                      type="number"
+                      inputMode="decimal"
+                      min={c.min}
+                      max={c.max}
+                      step={c.step}
+                      value={form[c.key]}
+                      onChange={(e) => set(c.key, e.target.value)}
+                      className={cn('max-w-[10rem]', mudou && 'border-ink')}
+                    />
+                    <span className="text-sm text-gray-500">{c.unidade}</span>
+                  </div>
+                </V2Field>
               );
-            }
-            return (
-              <V2Field key={c.key} label={c.label} htmlFor={id} hint={`${c.hint} Entre ${fmt(c.min)} e ${fmt(c.max)} ${c.unidade}; padrão ${fmt(DEFAULT_TRAINING_SETTINGS[c.key])}.`}>
-                <div className="flex items-center gap-2">
-                  <V2Input
-                    id={id}
-                    type="number"
-                    inputMode="decimal"
-                    min={c.min}
-                    max={c.max}
-                    step={c.step}
-                    value={form[c.key]}
-                    onChange={(e) => set(c.key, e.target.value)}
-                    className={cn('max-w-[10rem]', mudou && 'border-ink')}
-                  />
-                  <span className="text-sm text-gray-500">{c.unidade}</span>
-                </div>
-              </V2Field>
-            );
-          })}
-        </V2Surface>
+            })}
+          </V2Surface>
+          {i === 0 && <ProfessoresVerificados lista={atual.verified_professors || []} identity={identity} />}
+        </React.Fragment>
       ))}
       <p className="text-xs text-gray-500">
         O armazenamento recusa imagem acima de {HARD_LIMITS.imageMb} MB e vídeo acima de {HARD_LIMITS.videoMb} MB, seja qual for a configuração; aqui só dá para baixar esses tetos. Valor fora da faixa é ajustado ao salvar.

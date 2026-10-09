@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  VISIBILITY, REVIEW, AUTHOR_ROLE, PLATFORM_AUTHOR, visibilityOptionsFor, authorRoleFor, isAutoApproved,
+  VISIBILITY, REVIEW, AUTHOR_ROLE, PLATFORM_AUTHOR, visibilityOptionsFor, authorRoleFor, isAutoApproved, isVerifiedProfessor,
   reviewFor, publishNotice, isPubliclyListed, canSeeItem, canEditItem, isAuthor, authorBadge, itemStatusLabel,
 } from './visibility.js';
 
@@ -8,15 +8,28 @@ const { PUBLICO, PRIVADO, ALUNOS } = VISIBILITY;
 const { PROFESSOR, ATLETA, PLATAFORMA } = AUTHOR_ROLE;
 
 describe('isAutoApproved (espelho de trainingAutoApproved na regra)', () => {
-  it('padrões: professor publica direto, atleta passa por revisão', () => {
-    expect(isAutoApproved(PROFESSOR)).toBe(true);
+  it('padrões: professor e atleta passam por revisão', () => {
+    expect(isAutoApproved(PROFESSOR)).toBe(false);
+    expect(isAutoApproved(PROFESSOR, {}, { uid: 'p1' })).toBe(false);
     expect(isAutoApproved(ATLETA)).toBe(false);
   });
 
-  it('as configurações invertem os padrões', () => {
+  it('as configurações desligam a revisão de cada papel', () => {
+    expect(isAutoApproved(PROFESSOR, { public_review_professor: false })).toBe(true);
     expect(isAutoApproved(PROFESSOR, { public_review_professor: true })).toBe(false);
     expect(isAutoApproved(ATLETA, { public_review_atleta: false })).toBe(true);
     expect(isAutoApproved(ATLETA, { public_review_atleta: true })).toBe(false);
+  });
+
+  it('professor verificado pelo admin publica direto; a lista não vale para atleta', () => {
+    const s = { public_review_professor: true, verified_professors: ['p1'] };
+    expect(isAutoApproved(PROFESSOR, s, { uid: 'p1' })).toBe(true);
+    expect(isAutoApproved(PROFESSOR, s, { uid: 'p2' })).toBe(false);
+    expect(isAutoApproved(PROFESSOR, s)).toBe(false);
+    expect(isAutoApproved(ATLETA, s, { uid: 'p1' })).toBe(false);
+    expect(isVerifiedProfessor('p1', s)).toBe(true);
+    expect(isVerifiedProfessor('p1', { verified_professors: 'p1' })).toBe(false);
+    expect(isVerifiedProfessor(null, s)).toBe(false);
   });
 
   it('admin e plataforma sempre publicam direto', () => {
@@ -34,9 +47,12 @@ describe('reviewFor', () => {
       .toBe(REVIEW.NAO_SE_APLICA);
   });
 
-  it('público: professor aprovado direto, atleta pendente', () => {
-    expect(reviewFor({ visibility: PUBLICO, role: PROFESSOR })).toBe(REVIEW.APROVADO);
+  it('público: professor não verificado e atleta pendentes; verificado aprovado direto', () => {
+    expect(reviewFor({ visibility: PUBLICO, role: PROFESSOR })).toBe(REVIEW.PENDENTE);
     expect(reviewFor({ visibility: PUBLICO, role: ATLETA })).toBe(REVIEW.PENDENTE);
+    const settings = { verified_professors: ['p1'] };
+    expect(reviewFor({ visibility: PUBLICO, role: PROFESSOR, settings, uid: 'p1' })).toBe(REVIEW.APROVADO);
+    expect(reviewFor({ visibility: PUBLICO, role: PROFESSOR, settings, uid: 'p2' })).toBe(REVIEW.PENDENTE);
   });
 
   it('item aprovado em que só o compartilhamento mudou continua aprovado', () => {
@@ -153,7 +169,9 @@ describe('publishNotice', () => {
   });
 
   it('publicado direto, revisão nova ou revisão de nova versão', () => {
-    expect(publishNotice({ visibility: PUBLICO, role: PROFESSOR })).toMatch(/assim que você salvar/);
+    expect(publishNotice({ visibility: PUBLICO, role: PROFESSOR })).toMatch(/revisa antes de publicar/);
+    expect(publishNotice({ visibility: PUBLICO, role: PROFESSOR, settings: { verified_professors: ['p1'] }, uid: 'p1' }))
+      .toMatch(/assim que você salvar/);
     expect(publishNotice({ visibility: PUBLICO, role: ATLETA })).toMatch(/revisa antes de publicar/);
     expect(publishNotice({ visibility: PUBLICO, role: ATLETA, wasApproved: true })).toMatch(/nova versão/);
     expect(publishNotice({ visibility: PUBLICO, role: ATLETA, isAdmin: true })).toMatch(/assim que você salvar/);

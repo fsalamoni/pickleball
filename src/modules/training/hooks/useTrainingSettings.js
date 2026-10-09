@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getTrainingSettings, saveTrainingSettings } from '../services/settingsService';
+import { getTrainingSettings, saveTrainingSettings, setProfessorVerified } from '../services/settingsService';
 import { normalizeTrainingSettings } from '../domain/settings';
 import { trainingKeys } from './trainingKeys';
 
@@ -16,6 +16,15 @@ export function useSaveTrainingSettings(identity) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ input, current }) => saveTrainingSettings(input, current, { identity }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.settings }),
+  });
+}
+
+/** `mutate({ uid, verified, name })` — só o admin. */
+export function useSetProfessorVerified(identity) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uid, verified, name }) => setProfessorVerified(uid, verified, { identity, name }),
     onSuccess: () => qc.invalidateQueries({ queryKey: trainingKeys.settings }),
   });
 }

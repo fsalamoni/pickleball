@@ -5,7 +5,7 @@
  * qualquer consulta mal filtrada (lição da Onda CB). Prova que:
  *
  *  1. ⭐ item público só entra na biblioteca pela política de revisão
- *     (atleta → fila; professor → direto; admin decide);
+ *     (atleta e professor → fila; professor VERIFICADO → direto; admin decide);
  *  2. ⭐ privado só o autor (e quem recebeu); "meus alunos" só aluno ATIVO;
  *  3. ⭐ ninguém cria em nome de outro, nem como professor sem perfil, nem
  *     como plataforma; o autor não mexe em moderação (oculto, destaque, nota);
@@ -104,18 +104,56 @@ describe('⭐ criar itens: autoria e política de revisão', () => {
     await assertSucceeds(setDoc(doc(como(ANA), 'training_items', 'n2'), item()));
   });
 
-  it('professor publica direto e cria "meus alunos"', async () => {
+  it('🔴 professor NÃO verificado: o público vai para a fila (padrão); "meus alunos" segue', async () => {
     const db = como(PROF);
     const p = { author_uid: PROF, author_role: 'professor', created_by: PROF };
-    await assertSucceeds(setDoc(doc(db, 'training_items', 'p1'), item({ ...p, visibility: 'publico', review: 'aprovado' })));
+    await assertFails(setDoc(doc(db, 'training_items', 'p1'), item({ ...p, visibility: 'publico', review: 'aprovado' })));
+    await assertSucceeds(setDoc(doc(db, 'training_items', 'p1b'), item({ ...p, visibility: 'publico', review: 'pendente' })));
     await assertSucceeds(setDoc(doc(db, 'training_items', 'p2'), item({ ...p, visibility: 'alunos' })));
   });
 
-  it('com a revisão de professor ligada, o público do professor vai para a fila', async () => {
-    await setTraining({ public_review_professor: true });
+  it('com a revisão de professor DESLIGADA pelo admin, o professor publica direto', async () => {
+    await setTraining({ public_review_professor: false });
+    const p = { author_uid: PROF, author_role: 'professor', created_by: PROF, visibility: 'publico' };
+    await assertSucceeds(setDoc(doc(como(PROF), 'training_items', 'p1'), item({ ...p, review: 'aprovado' })));
+  });
+
+  it('professor VERIFICADO pelo admin publica direto — e editar continua publicado', async () => {
+    await setTraining({ verified_professors: [PROF] });
+    const p = { author_uid: PROF, author_role: 'professor', created_by: PROF, visibility: 'publico' };
+    await assertSucceeds(setDoc(doc(como(PROF), 'training_items', 'p1'), item({ ...p, review: 'aprovado' })));
+    await assertSucceeds(updateDoc(doc(como(PROF), 'training_items', 'p1'), { title: 'Dink cruzado v2', review: 'aprovado' }));
+  });
+
+  it('🔴 quem se declara professor sozinho (coaches/{uid}) não pula a fila', async () => {
+    const db = como(DUDA);
+    await assertSucceeds(setDoc(doc(db, 'coaches', DUDA), { uid: DUDA, name: 'Duda' }));
+    const p = { author_uid: DUDA, author_role: 'professor', created_by: DUDA, author_name: 'Duda', visibility: 'publico' };
+    await assertFails(setDoc(doc(db, 'training_items', 'd1'), item({ ...p, review: 'aprovado' })));
+    await assertSucceeds(setDoc(doc(db, 'training_items', 'd2'), item({ ...p, review: 'pendente' })));
+  });
+
+  it('🔴 a lista de verificados vale só para o papel professor, e só o admin a escreve', async () => {
+    await setTraining({ verified_professors: [ANA] });
+    await assertFails(setDoc(doc(como(ANA), 'training_items', 'a1'), item({ visibility: 'publico', review: 'aprovado' })));
+    await assertFails(setDoc(doc(como(ANA), 'training_items', 'a2'), item({ author_role: 'professor', visibility: 'publico', review: 'aprovado' })));
+    await assertFails(setDoc(doc(como(PROF), 'platform_settings', 'training'), { verified_professors: [PROF] }, { merge: true }));
+    await assertSucceeds(setDoc(doc(como(ADMIN), 'platform_settings', 'training'), { verified_professors: [PROF] }, { merge: true }));
+  });
+
+  it('🔴 professor que saiu da lista: editar o público aprovado volta para a fila; compartilhar não', async () => {
+    await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'training_items', 'prof_pub'),
+      item({ author_uid: PROF, author_role: 'professor', created_by: PROF, author_name: 'Rui', visibility: 'publico', review: 'aprovado' })));
+    const ref = doc(como(PROF), 'training_items', 'prof_pub');
+    await assertFails(updateDoc(ref, { title: 'Outro título', review: 'aprovado' }));
+    await assertSucceeds(updateDoc(ref, { shared_uids: [ANA] }));
+    await assertSucceeds(updateDoc(ref, { title: 'Outro título', review: 'pendente' }));
+  });
+
+  it('🔴 lista gravada com tipo errado fecha (não abre) a publicação direta', async () => {
+    await setTraining({ verified_professors: PROF });
     const p = { author_uid: PROF, author_role: 'professor', created_by: PROF, visibility: 'publico' };
     await assertFails(setDoc(doc(como(PROF), 'training_items', 'p1'), item({ ...p, review: 'aprovado' })));
-    await assertSucceeds(setDoc(doc(como(PROF), 'training_items', 'p2'), item({ ...p, review: 'pendente' })));
   });
 
   it('🔴 atleta não cria "meus alunos", nem se diz professor, nem plataforma', async () => {

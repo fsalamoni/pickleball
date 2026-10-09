@@ -1017,7 +1017,7 @@ const ATLETA = {
         ),
         list(
           'SÓ EU — fica só para você.',
-          'PÚBLICO — vai para a Biblioteca de todos. O de atleta passa antes pela revisão da equipe; o de professor entra direto.',
+          'PÚBLICO — vai para a Biblioteca de todos depois da revisão da equipe. O professor que a equipe já verificou publica direto.',
           'MEUS ALUNOS — só para professor: os alunos com vínculo ativo veem.',
         ),
         steps(
@@ -1423,7 +1423,7 @@ const PROFESSOR = {
         ),
         p('Indicar um item a outros atletas é de todo mundo; ENVIAR para aluno é só do professor, e só para quem é aluno dele.'),
         link('/treino?aba=alunos', 'Abrir os meus alunos no Treino'),
-        tip('Seu conteúdo público entra direto na Biblioteca, com o seu nome. Se precisar corrigir, edite: a ficha atualiza para todo mundo.'),
+        tip('Seu conteúdo público passa pela revisão da equipe até o seu perfil de professor ser verificado; depois entra direto na Biblioteca, sempre com o seu nome.'),
       ],
     },
     {

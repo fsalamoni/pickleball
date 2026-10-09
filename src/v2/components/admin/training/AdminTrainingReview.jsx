@@ -3,14 +3,19 @@
  * há mais tempo primeiro). Cada um com a ficha resumida e o checklist de
  * qualidade; aprovar publica, recusar exige a nota (o autor lê e pode editar
  * e reenviar). O serviço avisa o autor e audita.
+ *
+ * Professor ainda não verificado também passa pela fila: "Aprovar e verificar
+ * o professor" publica o item e põe a pessoa em `verified_professors` — o que
+ * ela publicar depois entra direto.
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CheckCircle2, CircleDashed, ClipboardCheck, ExternalLink } from 'lucide-react';
 import { useTrainingAdminActions } from '@/modules/training/hooks/useTrainingAdmin';
+import { useSetProfessorVerified } from '@/modules/training/hooks/useTrainingSettings';
 import { itemQuality } from '@/modules/training/domain/trainingItem';
-import { REVIEW } from '@/modules/training/domain/visibility';
+import { AUTHOR_ROLE, REVIEW, isVerifiedProfessor } from '@/modules/training/domain/visibility';
 import { podeAfirmarVazio } from '@/core/lib/queryState';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
@@ -21,8 +26,10 @@ import { quandoFoi } from '@/v2/components/training/questions/questionsView';
 import { ITEM_KIND_LABELS } from '@/modules/training/domain/taxonomy';
 import { reviewQueue } from './adminTrainingView';
 
-function NaFila({ item, acoes }) {
+function NaFila({ item, acoes, verificar, settings }) {
   const [recusando, setRecusando] = useState(false);
+  const podeVerificar = item.author_role === AUTHOR_ROLE.PROFESSOR && !!item.author_uid
+    && settings?.public_review_professor !== false && !isVerifiedProfessor(item.author_uid, settings);
   const q = itemQuality(item);
   const falhou = (err) => toast.error(mensagemDeErro(err, 'Não foi possível salvar agora.'));
   const enviado = quandoFoi(item.updated_at || item.created_at);
@@ -68,6 +75,22 @@ function NaFila({ item, acoes }) {
           >
             Aprovar e publicar
           </V2Button>
+          {podeVerificar && (
+            <V2Button
+              size="sm"
+              variant="secondary"
+              disabled={acoes.review.isPending || verificar.isPending}
+              onClick={() => acoes.review.mutate({ item, decision: REVIEW.APROVADO, note: '' }, {
+                onSuccess: () => verificar.mutate({ uid: item.author_uid, verified: true, name: item.author_name }, {
+                  onSuccess: () => toast.success('Publicado, e o professor foi verificado: o que ele publicar daqui em diante entra direto.'),
+                  onError: (err) => toast.error(mensagemDeErro(err, 'O item foi publicado, mas o professor não foi verificado. Tente de novo.')),
+                }),
+                onError: falhou,
+              })}
+            >
+              Aprovar e verificar o professor
+            </V2Button>
+          )}
           <V2Button size="sm" variant="secondary" onClick={() => setRecusando(true)}>Recusar</V2Button>
         </div>
       </V2Surface>
@@ -91,6 +114,7 @@ function NaFila({ item, acoes }) {
 
 export default function AdminTrainingReview({ identity, settingsQ, itens }) {
   const acoes = useTrainingAdminActions(identity, settingsQ.settings);
+  const verificar = useSetProfessorVerified(identity);
   const fila = useMemo(() => reviewQueue(itens.data || []), [itens.data]);
 
   if (itens.isPending) return <V2Skeleton className="h-64 rounded-4xl" />;
@@ -103,7 +127,7 @@ export default function AdminTrainingReview({ identity, settingsQ, itens }) {
         <V2Badge tone={fila.length ? 'amber' : 'green'}>{fila.length === 1 ? '1 item' : `${fila.length} itens`}</V2Badge>
       </div>
       <p className="max-w-2xl text-sm text-gray-500">
-        Itens públicos que ainda não estão na biblioteca. Quem decide o que passa pela fila são as Configurações (atletas, professores).
+        Itens públicos que ainda não estão na biblioteca. Quem decide o que passa pela fila são as Configurações (atletas, professores). Professor que a equipe verificou publica direto.
       </p>
       {podeAfirmarVazio(itens) && !fila.length ? (
         <V2Surface>
@@ -111,7 +135,7 @@ export default function AdminTrainingReview({ identity, settingsQ, itens }) {
         </V2Surface>
       ) : (
         <ul className="space-y-3">
-          {fila.map((item) => <NaFila key={item.id} item={item} acoes={acoes} />)}
+          {fila.map((item) => <NaFila key={item.id} item={item} acoes={acoes} verificar={verificar} settings={settingsQ.settings} />)}
         </ul>
       )}
     </section>

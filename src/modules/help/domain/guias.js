@@ -1182,7 +1182,7 @@ const GUIAS_BASE = [
         route: '/treino/novo',
         target: 'treino-editor-visibilidade',
         title: 'Quem vê',
-        body: 'Só eu, público (o de atleta passa pela revisão da equipe) ou, para professor, só os seus alunos.',
+        body: 'Só eu, público (passa pela revisão da equipe; o professor verificado publica direto) ou, para professor, só os seus alunos.',
       },
       {
         id: 'salvar',
@@ -1336,7 +1336,7 @@ const GUIAS_BASE = [
         goTo: '/admin/painel?tab=treino-revisao',
         target: ['admin-treino-revisao', 'admin-secao-treino'],
         title: 'Revisão',
-        body: 'O conteúdo público que passa por revisão espera aqui. "Aprovar e publicar" põe na Biblioteca; "Recusar" devolve ao autor com uma nota.',
+        body: 'O conteúdo público que passa por revisão espera aqui. "Aprovar e publicar" põe na Biblioteca; "Aprovar e verificar o professor" também faz o próximo conteúdo dele entrar direto; "Recusar" devolve ao autor com uma nota.',
       },
       {
         id: 'denuncias',

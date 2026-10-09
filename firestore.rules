@@ -3241,10 +3241,16 @@ service cloud.firestore {
       return isAuthed() && hasActiveStudent(coachUid, request.auth.uid);
     }
     // O item público deste papel entra na biblioteca sem passar pela fila?
-    // Padrão: professor sim, atleta não (a equipe revisa).
+    // Padrão: os dois passam pela revisão. Qualquer conta pode se declarar
+    // professor (`coaches/{uid}`), então o professor só publica direto quando
+    // o admin o VERIFICOU (`verified_professors`, que só o admin escreve) ou
+    // quando o admin desliga a revisão de professores. `request.auth.uid` é
+    // sempre o autor aqui: `trainingAuthorOk` amarra o papel 'professor' à
+    // própria conta, e o autor não muda na edição.
     function trainingAutoApproved(role) {
       return isPlatformAdmin()
-        || (role == 'professor' && trainingSetting('public_review_professor', false) == false)
+        || (role == 'professor' && (trainingSetting('public_review_professor', true) == false
+          || request.auth.uid in trainingSetting('verified_professors', [])))
         || (role == 'atleta' && trainingSetting('public_review_atleta', true) == false);
     }
     // Forma mínima do item (tamanhos). O domínio normaliza o resto; aqui só

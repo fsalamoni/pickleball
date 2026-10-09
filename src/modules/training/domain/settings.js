@@ -10,7 +10,9 @@ export const TRAINING_SETTINGS_DOC = 'training';
 
 export const DEFAULT_TRAINING_SETTINGS = Object.freeze({
   public_review_atleta: true,
-  public_review_professor: false,
+  // Qualquer conta pode se declarar professor; até o admin verificar a
+  // pessoa (`verified_professors`), o público dela passa pela revisão.
+  public_review_professor: true,
   allow_public_athlete: true,
   allow_uploads: true,
   allow_video_upload: true,
@@ -51,6 +53,12 @@ export function normalizeTrainingSettings(raw) {
     seed_installed_at: r.seed_installed_at ?? null,
     // Itens da semente que o admin apagou de propósito: a atualização não os recria.
     seed_removed: Array.isArray(r.seed_removed) ? r.seed_removed.filter((x) => typeof x === 'string') : [],
+    // Professores que o admin verificou: o público deles entra sem fila. Fora
+    // de DEFAULT_TRAINING_SETTINGS de propósito — o "salvar" e o "restaurar
+    // padrões" das configurações não tocam a lista; só `setProfessorVerified`.
+    verified_professors: Array.isArray(r.verified_professors)
+      ? r.verified_professors.filter((x) => typeof x === 'string')
+      : [],
   };
 }
 

@@ -9,9 +9,16 @@ describe('normalizeTrainingSettings', () => {
     expect(normalizeTrainingSettings('lixo')).toMatchObject(DEFAULT_TRAINING_SETTINGS);
   });
 
-  it('padrões batem com os da regra: atleta revisado, professor não', () => {
+  it('padrões batem com os da regra: atleta e professor revisados', () => {
     expect(DEFAULT_TRAINING_SETTINGS.public_review_atleta).toBe(true);
-    expect(DEFAULT_TRAINING_SETTINGS.public_review_professor).toBe(false);
+    expect(DEFAULT_TRAINING_SETTINGS.public_review_professor).toBe(true);
+  });
+
+  it('professores verificados: só textos, e fora do que o "Salvar" grava', () => {
+    expect(normalizeTrainingSettings(null).verified_professors).toEqual([]);
+    expect(normalizeTrainingSettings({ verified_professors: ['a', 3, null, 'b'] }).verified_professors).toEqual(['a', 'b']);
+    expect(normalizeTrainingSettings({ verified_professors: 'a' }).verified_professors).toEqual([]);
+    expect(settingsPatch({ verified_professors: ['a'] })).not.toHaveProperty('verified_professors');
   });
 
   it('booleano só se for booleano', () => {

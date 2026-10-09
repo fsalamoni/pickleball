@@ -252,6 +252,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
     role,
     settings,
     isAdmin: identity.isAdmin,
+    uid: identity.uid,
     wasApproved: item?.review === REVIEW.APROVADO,
     ageYears: identity.ageYears,
   });

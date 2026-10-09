@@ -108,6 +108,8 @@ export const AUDIT_ACTION_LABELS = {
   training_report_resolved: 'Denúncia de treino/drill resolvida (admin)',
   training_report_deleted: 'Denúncia de treino/drill apagada (admin)',
   training_settings_updated: 'Configurações do Centro de Treino alteradas (admin)',
+  training_professor_verified: 'Professor verificado no Centro de Treino: publica sem fila (admin)',
+  training_professor_unverified: 'Professor deixou de ser verificado no Centro de Treino (admin)',
   training_seed_installed: 'Biblioteca inicial do treino instalada/atualizada (admin)',
   training_items_imported: 'Treinos/drills importados em lote (admin)',
 };

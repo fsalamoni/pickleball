@@ -70,12 +70,21 @@ export function authorRoleFor({ asPlatform = false, isAdmin = false, isCoach = f
 
 /**
  * O item público deste papel é publicado direto (sem fila)?
- * Padrões iguais aos da regra: atleta passa por revisão, professor não.
+ * Padrões iguais aos da regra: atleta e professor passam por revisão; o
+ * professor que o admin VERIFICOU (`verified_professors`) publica direto.
+ * O admin pode desligar a revisão de cada papel.
  */
-export function isAutoApproved(role, settings = {}, { isAdmin = false } = {}) {
+export function isAutoApproved(role, settings = {}, { isAdmin = false, uid = null } = {}) {
   if (isAdmin || role === AUTHOR_ROLE.PLATAFORMA) return true;
-  if (role === AUTHOR_ROLE.PROFESSOR) return settings.public_review_professor !== true;
+  if (role === AUTHOR_ROLE.PROFESSOR) {
+    return settings.public_review_professor === false || isVerifiedProfessor(uid, settings);
+  }
   return settings.public_review_atleta === false;
+}
+
+/** O admin verificou este professor (o público dele entra sem fila)? */
+export function isVerifiedProfessor(uid, settings = {}) {
+  return Boolean(uid) && Array.isArray(settings.verified_professors) && settings.verified_professors.includes(uid);
 }
 
 /**
@@ -87,24 +96,24 @@ export function isAutoApproved(role, settings = {}, { isAdmin = false } = {}) {
  *   (compartilhar não é editar o conteúdo).
  * - Senão ⇒ `pendente` (inclui editar um item aprovado: volta para a fila).
  *
- * @param {{ visibility: string, role: string, settings?: object, isAdmin?: boolean,
+ * @param {{ visibility: string, role: string, settings?: object, isAdmin?: boolean, uid?: string,
  *   previousReview?: string, onlySharingChanged?: boolean, adminReview?: string }} p
  */
 export function reviewFor({
-  visibility, role, settings = {}, isAdmin = false,
+  visibility, role, settings = {}, isAdmin = false, uid = null,
   previousReview = null, onlySharingChanged = false, adminReview = null,
 }) {
   if (visibility !== VISIBILITY.PUBLICO) return REVIEW.NAO_SE_APLICA;
   if (isAdmin && adminReview && Object.values(REVIEW).includes(adminReview)) return adminReview;
-  if (isAutoApproved(role, settings, { isAdmin })) return REVIEW.APROVADO;
+  if (isAutoApproved(role, settings, { isAdmin, uid })) return REVIEW.APROVADO;
   if (previousReview === REVIEW.APROVADO && onlySharingChanged) return REVIEW.APROVADO;
   return REVIEW.PENDENTE;
 }
 
 /** O que dizer ao autor antes de salvar um item público. */
-export function publishNotice({ visibility, role, settings = {}, isAdmin = false, wasApproved = false }) {
+export function publishNotice({ visibility, role, settings = {}, isAdmin = false, uid = null, wasApproved = false }) {
   if (visibility !== VISIBILITY.PUBLICO) return '';
-  if (isAutoApproved(role, settings, { isAdmin })) return 'Será publicado na biblioteca assim que você salvar.';
+  if (isAutoApproved(role, settings, { isAdmin, uid })) return 'Será publicado na biblioteca assim que você salvar.';
   return wasApproved
     ? 'Ao salvar, a nova versão passa por revisão da equipe antes de voltar à biblioteca.'
     : 'A equipe revisa antes de publicar. Enquanto isso, só você vê.';
