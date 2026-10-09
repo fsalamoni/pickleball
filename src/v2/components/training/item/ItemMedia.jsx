@@ -99,6 +99,32 @@ function ImageTile({ media }) {
   );
 }
 
+/** Vídeo enviado. O arquivo pode ter sumido (o autor apagou a mídia ou a conta). */
+function UploadedVideo({ src, caption }) {
+  const [falhou, setFalhou] = useState(false);
+  if (falhou) {
+    return (
+      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 text-sm text-gray-500">
+        <ImageOff className="h-5 w-5" aria-hidden="true" />
+        Não foi possível carregar o vídeo.
+      </div>
+    );
+  }
+  return (
+    <div className="tema-claro">
+      <video
+        controls
+        preload="none"
+        playsInline
+        src={src}
+        onError={() => setFalhou(true)}
+        aria-label={caption ? `Vídeo: ${caption}` : 'Vídeo do item'}
+        className="block aspect-video w-full rounded-2xl bg-ink"
+      />
+    </div>
+  );
+}
+
 /** Uma mídia com legenda e o rótulo certo/errado. */
 export function MediaTile({ media, className }) {
   let corpo = null;
@@ -113,18 +139,7 @@ export function MediaTile({ media, className }) {
       corpo = <VideoFacade video={video} caption={media.caption} />;
     } else {
       const frag = video.start || video.end ? `#t=${video.start || 0}${video.end ? `,${video.end}` : ''}` : '';
-      corpo = (
-        <div className="tema-claro">
-          <video
-            controls
-            preload="none"
-            playsInline
-            src={`${video.url}${frag}`}
-            aria-label={media.caption ? `Vídeo: ${media.caption}` : 'Vídeo do item'}
-            className="block aspect-video w-full rounded-2xl bg-ink"
-          />
-        </div>
-      );
+      corpo = <UploadedVideo src={`${video.url}${frag}`} caption={media.caption} />;
     }
   }
   return (

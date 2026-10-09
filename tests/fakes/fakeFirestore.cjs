@@ -135,7 +135,12 @@ function createFakeBucket(files = []) {
   let arquivos = [...files];
   return {
     get arquivos() { return arquivos; },
-    async getFiles({ prefix }) { return [arquivos.filter((f) => f.startsWith(prefix)).map((name) => ({ name }))]; },
+    async getFiles({ prefix }) {
+      return [arquivos.filter((f) => f.startsWith(prefix)).map((name) => ({
+        name,
+        async delete() { arquivos = arquivos.filter((f) => f !== name); },
+      }))];
+    },
     async deleteFiles({ prefix }) { arquivos = arquivos.filter((f) => !f.startsWith(prefix)); },
   };
 }

@@ -59,6 +59,7 @@ describe('buildDataExport — treino, metas e o que ficou de fora', () => {
     expect(out.training.sessions[0].comments[0].created_at).toBe('2026-10-01T12:00:00.000Z');
     expect(out.training.meta.updated_at).toBe('2026-10-01T12:00:00.000Z');
     expect(out.training.media_paths).toEqual(['treino/u1/a.webp']);
+    expect(out.training.not_included[0]).toMatch(/diário dos seus alunos/);
     expect(out.training.counts).toEqual({
       items: 1, sessions: 1, plans: 1, shares_sent: 1, shares_received: 2, questions: 1, reports: 1, media: 1,
     });

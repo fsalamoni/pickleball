@@ -129,12 +129,12 @@ Toda consulta é por igualdade ou `array-contains`, com ordenação em memória
 
 | Coleção | O que guarda | Quem lê | Quem escreve |
 |---|---|---|---|
-| `training_items/{id}` | O item (autoria, visibilidade, revisão, conteúdo). Semente: `pickle_<slug>` | autor; público aprovado não oculto; quem está em `shared_uids`; aluno ativo do autor ("só alunos"); admin | autor (sem tocar autoria/moderação); admin |
-| `training_shares/{id}` | Indicação ou envio de professor (com prazo), lido/feito | quem mandou, quem recebeu, admin | quem manda (cria); quem recebe (só lido/feito) |
+| `training_items/{id}` | O item (autoria, visibilidade, revisão, conteúdo). Semente: `pickle_<slug>` (id reservado: só o admin cria) | autor; público aprovado não oculto; quem está em `shared_uids`; aluno ativo do autor ("só alunos"); admin | autor (sem tocar autoria/moderação); admin |
+| `training_shares/{id}` | Indicação ou envio de professor (com prazo), lido/feito | quem mandou, quem recebeu, admin | quem manda (cria; "como professor" só com `coaches/{uid}`); quem recebe (só lido/feito) |
 | `training_sessions/{id}` + `comments/` | O diário. **Nenhum campo de saúde** (o texto avisa) | dono; o professor com quem a sessão foi compartilhada, enquanto o vínculo estiver ativo; admin | dono; o professor só confirma e comenta |
 | `training_plans/{id}` | Plano de semanas | dono, admin | dono |
 | `training_meta/{uid}` | Favoritos, rotina, domínio por item, autoavaliações | dono, admin | dono |
-| `training_questions/{id}` + `messages/` | Dúvida privada aluno ↔ professor | os dois, admin | quem pergunta abre (vínculo ativo); mensagens só se acrescentam |
+| `training_questions/{id}` + `messages/` | Dúvida privada aluno ↔ professor | os dois, admin | quem pergunta abre (vínculo ativo) e apaga a conversa inteira; mensagens só se acrescentam |
 | `training_reports/{id}` | Denúncia de conteúdo | quem denunciou, admin | qualquer conta cria; admin resolve |
 
 E um documento: `platform_settings/training` (regra de `platform_settings`, que
@@ -192,9 +192,10 @@ Biblioteca inicial).
   ela fez, a lista de arquivos em `treino/{uid}/` e as metas
   (`player_goals`). Cada parte falha sozinha: o que não veio vai escrito em
   `incomplete` e no aviso da tela — o arquivo nunca sai "completo" com um
-  buraco calado. Fica de fora, de propósito, o comentário que um PROFESSOR fez
-  no diário de um aluno (mora no diário de outra pessoa, e a consulta não é
-  provável pela regra).
+  buraco calado. Fica de fora, de propósito e escrito no arquivo
+  (`training.not_included`), o comentário que um PROFESSOR fez no diário de um
+  aluno (mora no diário de outra pessoa, e a consulta não é provável pela
+  regra). Com a flag desligada, a exportação é exatamente a de antes.
 - **Exclusão de conta** (`functions/accountDeletion.js`, ver
   `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` §Excluir):
 
@@ -209,7 +210,8 @@ Biblioteca inicial).
   | Planos, rotina, envios (dos dois lados), acesso a itens alheios (`shared_uids`) | apagados / o uid sai da lista |
   | Conteúdo, pacotes, produtos, cupons e campanhas do professor; `promo_settings` | apagados |
   | Denúncias (feitas ou sobre o conteúdo dela), aulas dadas e pacotes vendidos | **retidos como estão** (só o uid; registro de moderação e financeiro) |
-  | Storage `treino/{uid}/` | apagado |
+  | Storage `treino/{uid}/` | apagado — menos a mídia que a pessoa, como admin, enviou para itens da **plataforma** (o item é da plataforma e fica inteiro) |
+  | Cópia que outra pessoa fez de um item dela | perde o link das mídias enviadas que vão sumir (o vídeo de fora fica); na cópia de uma cópia, que não é achada, a ficha diz "Não foi possível carregar" |
 
   O guarda `src/core/guards/exclusaoCobreColecoes.test.js` lê o
   `firestore.rules` e reprova coleção `training_*` (e `coach_content`,

@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import ProfileProgressionSection from '@/v2/components/profile/ProfileProgressionSection';
 import { V2Skeleton } from '@/v2/ui/primitives';
@@ -18,9 +18,13 @@ const UserArea = lazy(() => import('@/v2/components/userArea/UserArea'));
  */
 export default function V2Profile() {
   const hubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const { isLoading } = useFeatureFlags();
+  const esqueleto = <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+  // Sem esperar as flags, quem tem a Minha área via o perfil antigo piscar antes.
+  if (isLoading) return esqueleto;
   if (hubOn) {
     return (
-      <Suspense fallback={<div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>}>
+      <Suspense fallback={esqueleto}>
         <UserArea />
       </Suspense>
     );

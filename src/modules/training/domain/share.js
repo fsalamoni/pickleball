@@ -40,6 +40,11 @@ export function needsSharedAccess(item = {}, { kind } = {}) {
 export function canShareItem(item = {}, { uid } = {}) {
   if (!uid) return { ok: false, reason: 'Entre na sua conta.' };
   if (item.legacy) return { ok: false, reason: 'Este conteúdo antigo não pode ser compartilhado por aqui.' };
+  // A cópia travada (de um conteúdo que não estava aberto a quem copiou) fica
+  // com quem copiou — a regra recusa indicar ou enviar.
+  if (item.author_uid === uid && item.derived_from?.locked) {
+    return { ok: false, reason: 'Esta cópia é de um conteúdo exclusivo e fica só com você.' };
+  }
   if (item.author_uid === uid) return { ok: true, reason: '' };
   if (isPubliclyListed(item)) return { ok: true, reason: '' };
   return { ok: false, reason: 'Só dá para indicar os seus itens ou os públicos da biblioteca.' };

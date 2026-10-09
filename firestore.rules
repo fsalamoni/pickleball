@@ -3306,10 +3306,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/training_items/$(d.derived_from.id))
         && d.derived_from.get('locked', false) == !trainingOpenToCopy(d.derived_from.id));
     }
+    function trainingUnlocked(d) {
+      return d.get('derived_from', null) == null || d.derived_from.get('locked', false) == false;
+    }
     function trainingLockOk(d) {
       return d.get('derived_from', null) == null
         || d.derived_from.get('locked', false) == false
-        || d.visibility != 'publico';
+        || (d.visibility != 'publico' && d.shared_uids.size() == 0);
     }
     match /training_items/{itemId} {
       allow read: if isAuthed() && (
@@ -3321,11 +3324,13 @@ service cloud.firestore {
       );
       // O admin pode criar já destacado/aprovado; os demais nascem sem
       // moderação (oculto=false, destaque=false, sem nota de revisão).
+      // `pickle_*` é o id fixo das sementes da plataforma: ninguém mais o ocupa.
       allow create: if isAuthed()
         && trainingItemShapeOk(request.resource.data)
         && trainingAuthorOk(request.resource.data)
         && (isPlatformAdmin() || (
-          trainingReviewOk(request.resource.data)
+          !itemId.matches('pickle_.*')
+          && trainingReviewOk(request.resource.data)
           && trainingPublicAllowed(request.resource.data)
           && trainingDerivedOk(request.resource.data)
           && trainingLockOk(request.resource.data)
@@ -3358,7 +3363,8 @@ service cloud.firestore {
             // Só compartilhamento: não é edição do conteúdo, a revisão fica.
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shared_uids', 'updated_at'])
               && request.resource.data.shared_uids is list
-              && request.resource.data.shared_uids.size() <= 50)
+              && request.resource.data.shared_uids.size() <= 50
+              && trainingLockOk(request.resource.data))
             // Edição: forma, revisão pela política e — se virou público agora —
             // a permissão de publicar.
             || (trainingItemShapeOk(request.resource.data)
@@ -3373,9 +3379,12 @@ service cloud.firestore {
     // Compartilhar/indicar. `indicacao`: qualquer pessoa, do próprio item ou
     // de um item público da biblioteca. `aluno`: SÓ o professor, para aluno
     // com vínculo ATIVO. O destinatário marca lido/feito; ninguém reescreve.
+    // A cópia TRAVADA (de algo que não estava aberto a quem copiou) não é
+    // indicada nem enviada: seria entregar o conteúdo exclusivo a terceiros.
     function trainingShareItemOk(itemId) {
       return exists(/databases/$(database)/documents/training_items/$(itemId))
-        && (get(/databases/$(database)/documents/training_items/$(itemId)).data.author_uid == request.auth.uid
+        && ((get(/databases/$(database)/documents/training_items/$(itemId)).data.author_uid == request.auth.uid
+            && trainingUnlocked(get(/databases/$(database)/documents/training_items/$(itemId)).data))
           || (get(/databases/$(database)/documents/training_items/$(itemId)).data.visibility == 'publico'
             && get(/databases/$(database)/documents/training_items/$(itemId)).data.review == 'aprovado'
             && get(/databases/$(database)/documents/training_items/$(itemId)).data.hidden == false));
@@ -3400,7 +3409,8 @@ service cloud.firestore {
         && trainingShareItemOk(request.resource.data.item_id)
         && (
           (request.resource.data.kind == 'indicacao'
-            && request.resource.data.from_role in ['atleta', 'professor']
+            && (request.resource.data.from_role == 'atleta'
+              || (request.resource.data.from_role == 'professor' && isCoachUser(request.auth.uid)))
             && request.resource.data.get('due_date', null) == null)
           || (request.resource.data.kind == 'aluno'
             && request.resource.data.from_role == 'professor'
@@ -3550,7 +3560,10 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 2000;
-        allow delete: if isPlatformAdmin();
+        // Quem perguntou apaga a conversa inteira (mensagens antes da dúvida).
+        allow delete: if isPlatformAdmin()
+          || (isAuthed() && exists(/databases/$(database)/documents/training_questions/$(questionId))
+            && get(/databases/$(database)/documents/training_questions/$(questionId)).data.asker_uid == request.auth.uid);
       }
     }
 

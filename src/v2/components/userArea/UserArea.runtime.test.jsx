@@ -28,7 +28,10 @@ function reset() {
   });
 }
 
-vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: (k) => Boolean(estado.flags[k]) }));
+vi.mock('@/core/lib/FeatureFlagsContext', () => ({
+  useFeatureFlag: (k) => Boolean(estado.flags[k]),
+  useFeatureFlags: () => ({ flags: estado.flags, isLoading: false }),
+}));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({
     user: { uid: 'u1' },

@@ -145,6 +145,11 @@ describe('⭐ criar itens: autoria e política de revisão', () => {
     await assertFails(setDoc(doc(db, 'training_items', 'd'), item({ kind: 'qualquer' })));
   });
 
+  it('🔴 o id fixo das sementes (pickle_*) é só da plataforma', async () => {
+    await assertFails(setDoc(doc(como(ANA), 'training_items', 'pickle_dink'), item()));
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_items', 'meu_dink'), item()));
+  });
+
   it('o admin cria conteúdo da plataforma, já destacado', async () => {
     await assertSucceeds(setDoc(doc(como(ADMIN), 'training_items', 'pickle_x'), item({
       author_uid: 'plataforma', author_role: 'plataforma', created_by: ADMIN, visibility: 'publico', review: 'aprovado', featured: true,
@@ -180,6 +185,22 @@ describe('⭐ copiar e adaptar', () => {
       copia({ visibility: 'publico', review: 'pendente', derived_from: { id: 'c5', title: 'x', author_name: 'Ana', locked: false } })));
     await assertSucceeds(setDoc(doc(db, 'training_items', 'c7'),
       copia({ derived_from: { id: 'c5', title: 'x', author_name: 'Ana', locked: true } })));
+  });
+
+  it('🔴 a cópia trancada fica com quem copiou: não nasce compartilhada, não ganha leitores, não é indicada', async () => {
+    const db = como(ANA);
+    const trancada = { derived_from: { id: 'alunos_prof', title: 'x', author_name: 'Rui', locked: true } };
+    await assertFails(setDoc(doc(db, 'training_items', 'c8'), copia({ ...trancada, shared_uids: [DUDA] })));
+    await assertSucceeds(setDoc(doc(db, 'training_items', 'c9'), copia(trancada)));
+    await assertFails(updateDoc(doc(db, 'training_items', 'c9'), { shared_uids: [DUDA] }));
+    await assertFails(addDoc(collection(db, 'training_shares'), {
+      from_uid: ANA, from_name: 'Ana', from_role: 'atleta', to_uid: DUDA, item_id: 'c9', item_title: 'x', item_kind: 'drill',
+      kind: 'indicacao', note: '', due_date: null, read_at: null, done_at: null, done_note: '',
+    }));
+    // a cópia DESTRAVADA segue indicável
+    await assertSucceeds(setDoc(doc(db, 'training_items', 'c10'),
+      copia({ derived_from: { id: 'pub_ok', title: 'x', author_name: 'Duda', locked: false } })));
+    await assertSucceeds(updateDoc(doc(db, 'training_items', 'c10'), { shared_uids: [DUDA] }));
   });
 });
 
@@ -323,6 +344,11 @@ describe('⭐ compartilhar e enviar para alunos', () => {
     await assertSucceeds(b.commit());
   });
 
+  it('🔴 só quem tem perfil de professor indica "como professor"', async () => {
+    await assertFails(addDoc(collection(como(ANA), 'training_shares'), share({ from_role: 'professor' })));
+    await assertSucceeds(addDoc(collection(como(PROF), 'training_shares'), share({ from_uid: PROF, from_role: 'professor' })));
+  });
+
   it('🔴 não indica o privado de outra pessoa, nem para si mesmo', async () => {
     await assertFails(addDoc(collection(como(ANA), 'training_shares'), share({ item_id: 'priv_duda' })));
     await assertFails(addDoc(collection(como(ANA), 'training_shares'), share({ item_id: 'priv_comp' })));
@@ -461,6 +487,19 @@ describe('dúvidas', () => {
     await assertFails(updateDoc(doc(como(PROF), 'training_questions', 'q_ana', 'messages', 'm1'), { text: 'mudei' }));
     await assertFails(getDoc(doc(como(DUDA), 'training_questions', 'q_ana')));
     await assertSucceeds(getDocs(query(collection(como(PROF), 'training_questions'), where('coach_uid', '==', PROF))));
+  });
+
+  it('quem perguntou apaga a conversa inteira; o professor e estranhos não', async () => {
+    const m = { uid: PROF, name: 'x', text: 'Resposta', created_at: new Date() };
+    await testEnv.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'training_questions', 'q_ana', 'messages', 'mp'), m));
+    await assertFails(deleteDoc(doc(como(PROF), 'training_questions', 'q_ana', 'messages', 'mp')));
+    await assertFails(deleteDoc(doc(como(DUDA), 'training_questions', 'q_ana', 'messages', 'mp')));
+    await assertFails(deleteDoc(doc(como(PROF), 'training_questions', 'q_ana')));
+    const db = como(ANA);
+    const b = writeBatch(db);
+    b.delete(doc(db, 'training_questions', 'q_ana', 'messages', 'mp'));
+    await assertSucceeds(b.commit());
+    await assertSucceeds(deleteDoc(doc(db, 'training_questions', 'q_ana')));
   });
 });
 

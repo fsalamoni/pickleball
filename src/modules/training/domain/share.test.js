@@ -21,6 +21,12 @@ describe('canShareItem', () => {
   it('o privado que recebi de outra pessoa, não', () => {
     expect(canShareItem({ ...privado, shared_uids: ['eu'] }, { uid: 'eu' }).ok).toBe(false);
   });
+  it('a própria cópia TRAVADA não (fica com quem copiou); a destravada sim', () => {
+    const r = canShareItem({ ...privado, derived_from: { id: 'x', locked: true } }, { uid: 'autor' });
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/exclusivo/);
+    expect(canShareItem({ ...privado, derived_from: { id: 'x', locked: false } }, { uid: 'autor' }).ok).toBe(true);
+  });
   it('conteúdo antigo (legacy) não, nem do próprio professor', () => {
     expect(canShareItem({ ...publico, legacy: true, author_uid: 'eu' }, { uid: 'eu' }).ok).toBe(false);
   });

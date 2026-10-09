@@ -8,7 +8,7 @@
  */
 
 import {
-  addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where,
+  addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
@@ -101,7 +101,17 @@ export async function setQuestionClosed(question, closed) {
   });
 }
 
-/** Quem perguntou apaga a conversa. */
+/**
+ * Quem perguntou apaga a conversa: as mensagens primeiro (a regra delas lê a
+ * dúvida, que ainda precisa existir) e a dúvida por último — sem deixar
+ * mensagens órfãs no banco.
+ */
 export async function deleteQuestion(question) {
+  const msgs = await getDocs(collection(db, TRAINING_QUESTIONS, question.id, 'messages'));
+  for (let i = 0; i < msgs.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    msgs.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
   await deleteDoc(doc(db, TRAINING_QUESTIONS, question.id));
 }

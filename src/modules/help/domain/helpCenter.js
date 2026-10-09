@@ -618,7 +618,7 @@ const ATLETA = {
         p('Arenas com o marketing ligado podem ter vantagens para quem joga lá. Tudo aparece na própria página da arena:'),
         list(
           'PROMOÇÕES — descontos e vales que a arena divulgou, cada um num tíquete com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). TOQUE NO CÓDIGO para copiar. O desconto aparece no pedido de reserva com um toque para aplicar (ou cole o código); o VALE (uma bebida, uma aula, um brinde) você mostra na recepção.',
-          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação".',
+          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação" (com a Minha área, na seção Conta).',
           'PONTOS — para quem é membro da arena, cada reserva concluída soma pontos, que a recepção troca por crédito. Seus pontos ficam em "Você nesta arena".',
           'PESQUISA — depois de jogar, a arena pode perguntar de 0 a 10 o quanto você a recomendaria. A nota vai no toque; o comentário é opcional.',
         ),
@@ -1462,10 +1462,22 @@ const CONTA = {
           'Data de nascimento serve para faixa etária em torneios; não vira informação pública.',
         ),
         link('/perfil/editar', 'Revisar minha privacidade'),
-        p('Em Configurações, "Baixar meus dados" gera um arquivo com o que a plataforma guarda sobre você: perfil, inscrições, reservas, metas e o seu treino (itens, diário, planos, envios e dúvidas). Se uma parte não carregar, o aviso diz qual ficou de fora — tente de novo depois para ter tudo.'),
-        p('Para excluir a conta, peça pelo e-mail do encarregado, que está na Política de Privacidade. A equipe executa e o seu login, perfil, diário, planos e conteúdo privado são apagados; o seu histórico de jogos fica nos resultados das outras pessoas como "Atleta removido", e o conteúdo público aprovado que você publicou no Treino fica na Biblioteca sem o seu nome.'),
+        p('Em Configurações, "Baixar meus dados" gera um arquivo com o que a plataforma guarda sobre você: perfil, inscrições e reservas. Se uma parte não carregar, o aviso diz qual ficou de fora — tente de novo depois para ter tudo.'),
+        p('Para excluir a conta, peça pelo e-mail do encarregado, que está na Política de Privacidade. A equipe executa: o seu login, perfil e conteúdo privado são apagados, e o seu histórico de jogos fica nos resultados das outras pessoas como "Atleta removido".'),
         link('/legal', 'Política de Privacidade e o contato'),
         tip('Trocar de ideia é normal: essas opções podem ser mudadas quantas vezes você quiser, e valem imediatamente.'),
+      ],
+    },
+    {
+      id: 'treino-dados',
+      flags: ['training_center'],
+      title: 'O seu treino: baixar e excluir',
+      summary: 'O que do Treino vai no arquivo dos seus dados, e o que acontece se você excluir a conta.',
+      keywords: ['treino', 'diário', 'dados', 'exportar', 'baixar', 'excluir', 'lgpd', 'biblioteca'],
+      blocks: [
+        p('"Baixar meus dados", em Configurações, também leva as suas metas e o seu treino: itens que você criou, diário, planos, envios e dúvidas. Os comentários que você fez, como professor, no diário dos seus alunos ficam no diário de cada aluno.'),
+        p('Se a conta for excluída, o diário, os planos e o conteúdo privado do Treino são apagados. O conteúdo público aprovado que você publicou fica na Biblioteca sem o seu nome.'),
+        link('/configuracoes', 'Abrir as Configurações'),
       ],
     },
     {

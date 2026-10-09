@@ -245,7 +245,7 @@ export default function V2App() {
           <Route path="gamification/como-funciona" element={<Gamified><V2GamificationGuide /></Gamified>} />
           <Route path="hall-da-fama" element={<Gamified><V2HallOfFame /></Gamified>} />
           <Route path="vinculos" element={<Gamified><V2SocialBonds /></Gamified>} />
-          <Route path="perfil" element={<V2Profile />} />
+          <Route path="perfil" element={<Isolada nome="perfil"><V2Profile /></Isolada>} />
           <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
           <Route path="configuracoes" element={<V2Settings />} />

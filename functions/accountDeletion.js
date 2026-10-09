@@ -714,29 +714,59 @@ function trainingItemStays(it) {
 }
 
 /**
+ * O caminho no Storage de uma mídia ENVIADA: o `path` gravado ou, na cópia
+ * (que guarda só o link — `copy.js` zera o caminho), o que o link de
+ * download carrega em `/o/<caminho codificado>`. Link de fora ⇒ `null`.
+ */
+function caminhoDaMidia(m) {
+  if (!m) return null;
+  if (typeof m.path === 'string' && m.path) return m.path;
+  if (typeof m.url !== 'string') return null;
+  const achado = /\/o\/([^?#]+)/.exec(m.url);
+  if (!achado) return null;
+  try { return decodeURIComponent(achado[1]); } catch (_) { return null; }
+}
+
+/** A mídia aponta para um arquivo de `treino/{uid}/` que vai ser apagado. */
+function midiaQueSome(m, uid, mantidos) {
+  const caminho = caminhoDaMidia(m);
+  return Boolean(caminho) && caminho.startsWith(`treino/${uid}/`) && !(mantidos && mantidos.has(caminho));
+}
+
+/** `{ media }` sem as mídias que vão sumir, ou nada se nenhuma some. */
+function semMidiaQueSome(it, uid, mantidos) {
+  if (!it || !Array.isArray(it.media)) return {};
+  const media = it.media.filter((m) => !midiaQueSome(m, uid, mantidos));
+  return media.length !== it.media.length ? { media } : {};
+}
+
+/**
  * Item público que fica: autoria vira "Usuário removido" (o uid fica, como em
  * todo o histórico) e saem as mídias ENVIADAS por ela — os arquivos de
  * `treino/{uid}/` são apagados junto, e um item apontando para eles
  * mostraria uma imagem quebrada. Vídeo por link (YouTube/Vimeo) fica.
  */
-function patchTrainingItemAuthor(it, uid) {
+function patchTrainingItemAuthor(it, uid, mantidos) {
   if (!it || it.author_uid !== uid) return null;
-  const patch = {};
+  const patch = { ...semMidiaQueSome(it, uid, mantidos) };
   if ('author_name' in it && it.author_name !== REMOVED_USER) patch.author_name = REMOVED_USER;
   if (it.author_photo) patch.author_photo = null;
-  if (Array.isArray(it.media)) {
-    const pasta = `treino/${uid}/`;
-    const media = it.media.filter((m) => !(m && typeof m.path === 'string' && m.path.startsWith(pasta)));
-    if (media.length !== it.media.length) patch.media = media;
-  }
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
-/** A cópia de OUTRA pessoa guarda o nome do original em "copiado de". */
-function patchDerivedFrom(it) {
+/**
+ * A cópia de OUTRA pessoa guarda o nome do original em "copiado de" — e o
+ * LINK das mídias enviadas pelo original, que somem com a pasta dele.
+ * ponytail: a cópia de uma cópia não é achada (nada indexa a cadeia); ali a
+ * ficha mostra "não foi possível carregar" no lugar da mídia.
+ */
+function patchDerivedFrom(it, uid, mantidos) {
   const df = it && it.derived_from;
-  if (!df || typeof df !== 'object' || df.author_name === REMOVED_USER) return null;
-  return { derived_from: { ...df, author_name: REMOVED_USER } };
+  const patch = { ...semMidiaQueSome(it, uid, mantidos) };
+  if (df && typeof df === 'object' && df.author_name !== REMOVED_USER) {
+    patch.derived_from = { ...df, author_name: REMOVED_USER };
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
 }
 
 /** Tira o uid da lista de quem pode ler o item de outra pessoa. */
@@ -760,7 +790,7 @@ function patchTrainingMessage(m, uid) {
  * ponytail: uma consulta de cópias por item (nada indexa "cópias de um
  * autor"); a conta tem no máximo QUERY_LIMIT itens.
  */
-async function coletarItensDeTreino(db, uid) {
+async function coletarItensDeTreino(db, uid, { mantidos } = {}) {
   const r = await consultar(db, 'training_items', 'author_uid', '==', uid);
   const itens = [];
   const deletes = [];
@@ -768,7 +798,7 @@ async function coletarItensDeTreino(db, uid) {
   for (const d of r.docs) {
     const it = d.data();
     if (trainingItemStays(it)) {
-      const p = patchTrainingItemAuthor(it, uid);
+      const p = patchTrainingItemAuthor(it, uid, mantidos);
       if (p) itens.push({ ref: d.ref, patch: p });
     } else {
       deletes.push(d.ref);
@@ -777,7 +807,7 @@ async function coletarItensDeTreino(db, uid) {
     const copias = await consultar(db, 'training_items', 'derived_from.id', '==', d.id);
     truncated = truncated || copias.truncated;
     copias.docs.forEach((c) => {
-      const pc = patchDerivedFrom(c.data());
+      const pc = patchDerivedFrom(c.data(), uid, mantidos);
       if (pc) itens.push({ ref: c.ref, patch: pc });
     });
   }
@@ -916,9 +946,9 @@ async function consultarUniao(db, col, wheres, uid) {
 }
 
 /** Coleta as trocas de UMA especificação de pseudonimização. */
-async function coletarTrocas(db, uid, spec) {
+async function coletarTrocas(db, uid, spec, extra = {}) {
   if (typeof spec.collect === 'function') {
-    const r = await spec.collect(db, uid);
+    const r = await spec.collect(db, uid, extra);
     return {
       label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [],
       deletes: r.deletes || [], deleteLabel: spec.deleteLabel || spec.label, truncated: Boolean(r.truncated),
@@ -970,20 +1000,66 @@ async function contaDeLoginExiste(auth, uid) {
  */
 const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`]);
 
-/** Quantos arquivos a pessoa tem no Storage, somando as pastas dela. */
-async function contarArquivos(bucket, uid) {
+/**
+ * Arquivos de `treino/{uid}/` que FICAM: a mídia que a pessoa, como admin,
+ * enviou para itens da PLATAFORMA (autor "plataforma", `created_by` = ela). O
+ * item é da plataforma e segue na biblioteca de todo mundo; apagar a pasta
+ * inteira quebraria as fotos e vídeos dele.
+ */
+async function coletarMantidos(db, uid) {
+  const r = await consultar(db, 'training_items', 'created_by', '==', uid);
+  const mantidos = new Set();
+  r.docs.forEach((d) => {
+    const it = d.data() || {};
+    if (it.author_uid === uid || !Array.isArray(it.media)) return;
+    it.media.forEach((m) => {
+      const caminho = caminhoDaMidia(m);
+      if (caminho && caminho.startsWith(`treino/${uid}/`)) mantidos.add(caminho);
+    });
+  });
+  return mantidos;
+}
+
+/** Quantos arquivos a pessoa tem no Storage, somando as pastas dela (sem os que ficam). */
+async function contarArquivos(bucket, uid, mantidos = new Set()) {
   if (!bucket) return 0;
   let total = 0;
   for (const prefixo of STORAGE_PREFIXES) {
     try {
       // eslint-disable-next-line no-await-in-loop
       const [files] = await bucket.getFiles({ prefix: prefixo(uid), maxResults: 1000 });
-      total += files.length;
+      total += files.filter((f) => !mantidos.has(f.name)).length;
     } catch (_) {
       // pasta que não deu para ler conta zero; a execução tenta apagar mesmo assim
     }
   }
   return total;
+}
+
+/**
+ * Apaga as pastas da pessoa, menos os arquivos que ficam. Sem nada a manter,
+ * a pasta sai de uma vez; com algo, arquivo por arquivo.
+ */
+async function apagarArquivos(bucket, uid, mantidos) {
+  let erro = false;
+  for (const prefixo of STORAGE_PREFIXES) {
+    try {
+      const prefix = prefixo(uid);
+      const guarda = [...mantidos].some((c) => c.startsWith(prefix));
+      if (!guarda) {
+        // eslint-disable-next-line no-await-in-loop
+        await bucket.deleteFiles({ prefix });
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        const [files] = await bucket.getFiles({ prefix });
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all(files.filter((f) => !mantidos.has(f.name)).map((f) => f.delete()));
+      }
+    } catch (_) {
+      erro = true;
+    }
+  }
+  return erro;
 }
 
 /** Busca o que pode IMPEDIR a exclusão. */
@@ -1027,9 +1103,10 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const userSnap = await db.collection('users').doc(uid).get();
   const user = userSnap.exists ? userSnap.data() : null;
 
+  const mantidos = await coletarMantidos(db, uid);
   const [authExists, storageFiles, blockers] = await Promise.all([
     auth ? contaDeLoginExiste(auth, uid) : Promise.resolve(null),
-    contarArquivos(bucket, uid),
+    contarArquivos(bucket, uid, mantidos),
     buscarImpedimentos(db, uid, hojeISO),
   ]);
 
@@ -1073,7 +1150,7 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const trocas = [];
   for (const spec of (ctx.pseudoSpecs || PSEUDO_SPECS)) {
     // eslint-disable-next-line no-await-in-loop
-    trocas.push(await coletarTrocas(db, uid, spec));
+    trocas.push(await coletarTrocas(db, uid, spec, { mantidos }));
   }
 
   // Por rótulo: duas especificações com o mesmo rótulo (seguidores e
@@ -1101,13 +1178,14 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
     ...trocas.filter((t) => t.bucket === 'retained')
       .map((t) => ({ label: t.label, count: t.itens.length, truncated: t.truncated })),
     ...retidos,
+    ...(mantidos.size > 0 ? [{ label: 'Fotos e vídeos de itens da biblioteca da plataforma', count: mantidos.size }] : []),
   ]);
 
   const report = buildReport({
     uid, user, actorUid, deletes, pseudonyms, retained, blockers,
     authExists: authExists !== false, storageFiles,
   });
-  return { report, plan: { user, authExists, porId, porConsulta, trocas } };
+  return { report, plan: { user, authExists, porId, porConsulta, trocas, mantidos } };
 }
 
 /**
@@ -1177,17 +1255,9 @@ async function executeAccountDeletion(ctx, uid, { actor, reason, hojeISO, FieldV
   }
 
   // 2. arquivos
-  let storageError = false;
-  if (bucket && report.storageFiles > 0) {
-    for (const prefixo of STORAGE_PREFIXES) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await bucket.deleteFiles({ prefix: prefixo(uid) });
-      } catch (_) {
-        storageError = true;
-      }
-    }
-  }
+  // Mesmo com a contagem em zero: a listagem pode ter falhado na prévia, e
+  // apagar uma pasta vazia não custa nada.
+  const storageError = bucket ? await apagarArquivos(bucket, uid, plan.mantidos) : false;
 
   // 3 e 4. um lote só de operações, na ordem certa
   const ops = [];

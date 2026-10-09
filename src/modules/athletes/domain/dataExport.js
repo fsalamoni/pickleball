@@ -49,6 +49,8 @@ function trainingBlock(t = {}) {
     questions: lista(t.questions),
     reports: lista(t.reports),
     media_paths: (Array.isArray(t.media_paths) ? t.media_paths : []).filter((p) => typeof p === 'string'),
+    // Dito no arquivo, para ninguém concluir que ele está completo.
+    not_included: ['Os comentários que você fez, como professor, no diário dos seus alunos (ficam no diário de cada aluno).'],
   };
   bloco.counts = {
     items: bloco.items.length,

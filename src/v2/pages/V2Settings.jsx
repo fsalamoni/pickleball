@@ -77,9 +77,18 @@ export default function V2Settings() {
     setBusy(true);
     try {
       // O treino e as metas são lidos só agora (e o código, baixado só agora):
-      // ninguém paga por isso ao abrir as configurações.
-      const { collectTrainingExport } = await import('@/modules/training/services/trainingExportService');
-      const extra = await collectTrainingExport(user?.uid);
+      // ninguém paga por isso ao abrir as configurações. Com a flag desligada,
+      // a exportação é a de sempre. Se o pedaço de código não baixar (aba
+      // antiga depois de um deploy), o resto sai e o treino vai como faltando.
+      let extra = { incomplete: [] };
+      if (treinoOn) {
+        try {
+          const { collectTrainingExport } = await import('@/modules/training/services/trainingExportService');
+          extra = await collectTrainingExport(user?.uid);
+        } catch (_) {
+          extra = { incomplete: ['Centro de Treino e metas'] };
+        }
+      }
       // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
       const incomplete = [
         ...(inscricoes.isSuccess ? [] : ['Inscrições em torneio']),
@@ -199,7 +208,9 @@ export default function V2Settings() {
             <h2 className="font-display text-lg font-bold text-ink">Privacidade e dados (LGPD)</h2>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios e dúvidas) em formato JSON.
+            {treinoOn
+              ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios e dúvidas) em formato JSON.'
+              : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
           </p>
           <div className="mt-3">
             <V2Button size="sm" onClick={exportData} disabled={busy}>

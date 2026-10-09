@@ -12,7 +12,10 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const flag = { value: false };
 // A Minha área (`user_hub`) tem teste próprio: aqui o perfil de sempre.
-vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: (k) => (k === 'user_hub' ? false : flag.value) }));
+vi.mock('@/core/lib/FeatureFlagsContext', () => ({
+  useFeatureFlag: (k) => (k === 'user_hub' ? false : flag.value),
+  useFeatureFlags: () => ({ isLoading: false }),
+}));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ user: { uid: 'u1' }, userProfile: { platform_name: 'Ana' } }),
 }));

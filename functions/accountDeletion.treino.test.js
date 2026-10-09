@@ -252,3 +252,70 @@ describe('as trocas, puras', () => {
     expect(p).toBeNull();
   });
 });
+
+describe('mídia enviada que outras pessoas usam', () => {
+  const link = (caminho) => `https://firebasestorage.googleapis.com/v0/b/bkt/o/${encodeURIComponent(caminho)}?alt=media&token=t`;
+
+  function cenarioMidia() {
+    const db = createFakeDb({
+      'users/prof': { uid: 'prof', full_name: 'Prof Ana' },
+      'training_items/i_pub': {
+        author_uid: 'prof', created_by: 'prof', author_name: 'Prof Ana', visibility: 'publico', review: 'aprovado',
+        media: [{ source: 'upload', type: 'image', path: 'treino/prof/a.webp', url: link('treino/prof/a.webp') }],
+      },
+      // a cópia guarda só o link (sem `path`)
+      'training_items/i_copia': {
+        author_uid: 'aluno', created_by: 'aluno', author_name: 'Aluno Bia', visibility: 'privado', review: 'nao_se_aplica',
+        derived_from: { id: 'i_pub', title: 'Dinks', author_name: 'Prof Ana', locked: false },
+        media: [
+          { source: 'upload', type: 'image', path: null, url: link('treino/prof/a.webp') },
+          { source: 'url', type: 'video', url: 'https://youtu.be/abc' },
+        ],
+      },
+      // item da PLATAFORMA que ela montou quando era admin
+      'training_items/i_plat': {
+        author_uid: 'plataforma', created_by: 'prof', author_name: 'Equipe PickleRush', visibility: 'publico', review: 'aprovado',
+        media: [{ source: 'upload', type: 'video', path: 'treino/prof/plat.mp4', url: link('treino/prof/plat.mp4') }],
+      },
+    });
+    const auth = createFakeAuth(['prof'], { log: db.store.log });
+    const bucket = createFakeBucket(['treino/prof/a.webp', 'treino/prof/plat.mp4', 'treino/prof/solto.webp']);
+    return { db, bucket, ctx: { db, auth, bucket } };
+  }
+
+  it('⭐ a cópia de outra pessoa perde o link do arquivo que vai sumir (e mantém o vídeo de fora)', async () => {
+    const { db, ctx } = cenarioMidia();
+    await executar(ctx);
+    expect(db.store.docs.get('training_items/i_copia').media).toEqual([{ source: 'url', type: 'video', url: 'https://youtu.be/abc' }]);
+    expect(db.store.docs.get('training_items/i_pub').media).toEqual([]);
+  });
+
+  it('⭐ o arquivo do item da PLATAFORMA fica no Storage e o item não é tocado', async () => {
+    const { db, bucket, ctx } = cenarioMidia();
+    const antes = db.store.docs.get('training_items/i_plat');
+    const { report } = await analyzeAccount(ctx, 'prof', { actorUid: 'admin', hojeISO: HOJE });
+    expect(linha(report.deletes, 'Fotos e arquivos enviados')).toBe(2);
+    expect(linha(report.retained, 'Fotos e vídeos de itens da biblioteca da plataforma')).toBe(1);
+    await executar(ctx);
+    expect(bucket.arquivos).toEqual(['treino/prof/plat.mp4']);
+    expect(db.store.docs.get('training_items/i_plat')).toEqual(antes);
+  });
+
+  it('a pasta é apagada mesmo quando a prévia não conseguiu listá-la', async () => {
+    const { bucket, ctx } = cenarioMidia();
+    const getFiles = bucket.getFiles.bind(bucket);
+    let primeira = true;
+    bucket.getFiles = async (o) => {
+      if (primeira && o.prefix.startsWith('treino/')) { primeira = false; throw new Error('falhou'); }
+      return getFiles(o);
+    };
+    await executar(ctx);
+    expect(bucket.arquivos).toEqual(['treino/prof/plat.mp4']);
+  });
+
+  it('a cópia de uma pasta de nome parecido não perde nada', () => {
+    expect(patchDerivedFrom({
+      derived_from: { author_name: REMOVED_USER }, media: [{ url: link('treino/professora/x.webp') }],
+    }, 'prof')).toBeNull();
+  });
+});
