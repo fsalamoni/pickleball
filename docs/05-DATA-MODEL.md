@@ -1214,6 +1214,81 @@ Ausente = aula sem cupom (todas as antigas).
 
 **Índices**: nenhum. Todas as consultas são só de igualdades.
 
+## Centro de Treino (flag `training_center`, default OFF)
+
+Sete coleções NOVAS e um documento de configuração. Tudo aditivo; **zero
+índice composto** (todas as consultas são por igualdade ou `array-contains`,
+ordenação em memória). Detalhes, quem lê e quem escreve: `docs/40-CENTRO-DE-TREINO.md` §5.
+
+### `training_items/{id}` (NOVO)
+O drill, treino, fundamento, jogada, exercício físico ou estudo, de QUALQUER
+autor. Autoria (imutável): `author_uid` (uid, ou `'plataforma'`),
+`author_role` (`plataforma|professor|atleta`), `created_by`, mais a cópia
+`author_name`/`author_photo`. Acesso: `visibility` (`publico|privado|alunos` —
+`alunos` só professor), `review` (`nao_se_aplica|pendente|aprovado|recusado`),
+`hidden`, `featured`, `shared_uids[]` (≤ 50, quem recebeu por indicação),
+`derived_from` (`{ id, title, author_name, locked }` — a regra confere o
+`locked`), `ai_assisted`. Moderação só do admin: `review_note`, `reviewed_by`,
+`reviewed_at`, `hidden_reason`. Conteúdo (o modelo da pesquisa): `kind`,
+`title`, `summary`, `objective`, `skills[]`, `level_min`/`level_max` (2.0–8.0),
+`players_*`, `roles[]`, `duration_min`, `intensity`, `place[]`, `equipment[]`,
+`setup`, `steps[]`, `cues[]`, `positioning[]` (`certo|errado`),
+`common_errors[]`, `variations`, `success_criteria`, `metric`, `safety`,
+`motor` (fases + capacidades), `blocks[]` (treino), `sets`/`reps`/`rest_sec`/
+`tempo` (físico), `study_type`/`rules_edition`/`rules_section`/`questions[]`/
+`link` (estudo), `when_to_use`, `diagrams[]` (≤ 4), `media[]` (≤ 8, com `path`
+quando enviado ao Storage). A semente usa ids `pickle_<slug>`.
+
+### `training_shares/{id}` (NOVO)
+`from_uid`, `from_name`, `from_role`, `to_uid`, `item_id`, `item_title`,
+`item_kind`, `kind` (`indicacao` — qualquer um; `aluno` — só professor, para
+aluno ATIVO), `note`, `due_date` (só `aluno`), `created_at`, `read_at`,
+`done_at`, `done_note`. Quem recebe só mexe em lido/feito.
+
+### `training_sessions/{id}` + `comments/{cid}` (NOVO)
+O diário: `uid`, `date`, `week_key`, `title`, `kind`, `status`
+(`feito|parcial|livre`), `item_ids[]`, `plan_id`, `duration_min`, `rpe`,
+`notes`, `skills[]`, `shared_coach_id`, `coach_confirmed_at`. **Nenhum campo
+de saúde.** Comentários: `uid`, `name`, `text`, `created_at`.
+
+### `training_plans/{id}` (NOVO)
+`uid`, `title`, `goal`, `focus[]`, `start_date`, `weeks` (1–16), `days[]`,
+`minutes`, `slots[]` (≤ 112), `status` (`ativo|pausado|concluido`), `source`,
+`coach_id`, `coach_name`. Só o dono.
+
+### `training_meta/{uid}` (NOVO)
+`favorites[]` (≤ 300), `routine`, `onboarding_done`, `mastery` (`{ itemId:
+aprendendo|consistente|dominado }`, ≤ 300), `assessments[]` (≤ 24),
+`focus_hint`, `updated_at`. Só o dono.
+
+### `training_questions/{id}` + `messages/{mid}` (NOVO)
+Dúvida privada aluno ↔ professor: `asker_uid`, `asker_name`, `coach_uid`,
+`coach_name`, `subject`, `item_id`, `item_title`, `status`
+(`aberta|respondida|encerrada`), `last_from`, `created_at`, `updated_at`.
+Abrir exige vínculo ATIVO. Mensagens só se acrescentam.
+
+### `training_reports/{id}` (NOVO)
+`reporter_uid`, `item_id`, `item_title`, `item_author_uid`, `reason`, `text`,
+`status` (`aberta|resolvida|descartada`), `resolved_by`, `resolved_at`,
+`resolution`. Qualquer conta cria; só o admin resolve.
+
+### `platform_settings/training` (documento novo, regra que já existia)
+`public_review_atleta`, `public_review_professor`, `allow_public_athlete`,
+`allow_uploads`, `allow_video_upload`, `max_image_mb`, `max_video_mb`,
+`max_video_seconds`, `max_uploads_per_user`, `allow_sharing`,
+`max_pending_per_user`, `seed_installed_version`, `seed_installed_at`,
+`seed_removed[]`. Campo ausente vale o padrão de `training/domain/settings.js`
+(o mesmo da regra).
+
+### Storage: `treino/{uid}/{arquivo}` (NOVO)
+Imagem webp/jpeg/png < 3 MB, vídeo mp4/webm/mov < 60 MB; só o dono cria e
+apaga; conta logada lê.
+
+### Correções em regras existentes (F0)
+`coach_students`: o id tem de ser `{coach_id}_{student_id}` e o aluno só aceita
+o convite (`invited → active`). `coach_content`: "só alunos" exige vínculo
+ATIVO. Nenhum campo novo.
+
 ## Relacionamentos (resumo)
 
 ```

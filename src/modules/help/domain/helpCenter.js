@@ -921,6 +921,91 @@ const ATLETA = {
         warn('Pedir reserva não é o mesmo que ter reserva: só vale depois que a arena confirma.'),
       ],
     },
+    {
+      id: 'treino',
+      title: 'Organizar o meu treino',
+      summary: 'O treino de hoje, planos de semanas, o diário e a evolução.',
+      keywords: [
+        'treino', 'treinar', 'drill', 'plano', 'planejar', 'diário', 'registrar', 'evolução',
+        'carga', 'rotina', 'modo quadra', 'semana', 'organizar meu treino',
+      ],
+      flags: ['training_center'],
+      blocks: [
+        p('O Treino reúne, num lugar só, o que você vai treinar, o que já treinou e como está evoluindo. Ele fica na Minha área e no card "Treino" do início (se você o escolher).'),
+        list(
+          'HOJE — o treino do dia: o do seu plano ativo; se não houver, o que o seu professor mandou com prazo; senão, uma sugestão pelo seu foco e pelo seu nível. "Modo quadra" deixa a tela acesa e conta o tempo de cada bloco.',
+          'PLANOS — de 1 a 16 semanas, nos dias e no tempo que você tem. O assistente monta e você ajusta dia a dia. O plano ativo vira o "Hoje".',
+          'DIÁRIO — o que você fez, semana a semana, com o planejado ao lado. O que ficou para depois não é falha: a semana segue.',
+          'EVOLUÇÃO — minutos e carga por semana (o esforço que você deu, de 0 a 10, vezes os minutos), quanto variou, em que áreas você treinou, uma autoavaliação a cada 4 semanas e o que você já domina.',
+        ),
+        steps(
+          'Abra o Treino e responda às três perguntas da rotina (dias, tempo, onde treina).',
+          'Em Hoje, toque em "Começar" — ou escolha um drill na Biblioteca e "Pôr no meu treino".',
+          'Ao terminar, registre: o que fez, quanto tempo e o esforço. Leva três toques.',
+        ),
+        p('Você pode compartilhar uma sessão do diário com o seu professor: ele vê, comenta e confirma. Só quem você escolheu vê; o resto do diário é só seu.'),
+        link('/treino', 'Abrir o Treino'),
+        warn('Não registre informações de saúde (dor, lesão, remédio) no diário. Para isso, procure um profissional de saúde.'),
+      ],
+    },
+    {
+      id: 'treino-biblioteca',
+      title: 'Achar, salvar e indicar drills e treinos',
+      summary: 'A biblioteca, quem criou cada item, copiar e adaptar, indicar a outro atleta.',
+      keywords: [
+        'biblioteca', 'drill', 'exercício', 'jogada', 'fundamento', 'físico', 'estudo', 'regra',
+        'indicar', 'compartilhar', 'copiar', 'adaptar', 'favorito', 'recebidos', 'autor',
+      ],
+      flags: ['training_center'],
+      blocks: [
+        p('A Biblioteca mostra tudo o que você pode ver: o conteúdo da Equipe PickleRush, o que os professores publicaram, o que a comunidade publicou e o que o SEU professor deixou só para os alunos dele. Cada item diz quem o criou — e leva o selo "IA" quando foi feito com ajuda de inteligência artificial.'),
+        list(
+          'TIPOS — drill (exercício de quadra), treino (uma sessão em blocos), fundamento (golpe), jogada (tática), exercício físico e estudo (regra, vídeo, leitura).',
+          'FILTROS — por tipo, habilidade, nível (2.0 a 8.0), local e origem. "Do meu nível" usa o seu nível na plataforma; quem não tem nível vê tudo.',
+          'A FICHA — o diagrama da quadra, o objetivo, a montagem, o passo a passo, dicas curtas, o CERTO ao lado do ERRADO, erros comuns com a correção, as fases do movimento, como deixar mais fácil ou mais difícil, a meta e a segurança.',
+        ),
+        steps(
+          'Abra um item e toque em "Indicar" para mandá-lo a outros atletas, com um recado.',
+          'O que mandarem para você aparece em "Recebidos"; marque como feito quando fizer.',
+          'Gostou mas quer mudar? "Copiar e adaptar" cria uma cópia sua, com crédito a quem fez o original.',
+        ),
+        tip('Achou algo errado ou perigoso num item? Use "Denunciar" na ficha: a equipe da plataforma revisa.'),
+        link('/treino?aba=biblioteca', 'Abrir a Biblioteca'),
+      ],
+    },
+    {
+      id: 'treino-criar',
+      title: 'Criar um drill ou um treino',
+      summary: 'O modelo, o certo e o errado, o diagrama, as imagens e vídeos — e quem vê.',
+      keywords: [
+        'criar', 'drill', 'treino', 'publicar', 'privado', 'público', 'revisão', 'diagrama',
+        'vídeo', 'imagem', 'foto', 'upload', 'enviar vídeo', 'youtube', 'ia', 'inteligência artificial',
+      ],
+      flags: ['training_center'],
+      blocks: [
+        p('Qualquer pessoa cria. O formulário segue o modelo que os cursos de treinador usam, e só mostra as partes que valem para o tipo escolhido. Um medidor mostra o que ainda falta — ele orienta, não impede salvar.'),
+        list(
+          'DICAS CURTAS — uma ideia por dica, apontando para FORA do corpo: "mire no pé do adversário" ensina mais que "dobre o joelho".',
+          'CERTO × ERRADO — o errado só ajuda AO LADO do certo. Escreva os dois.',
+          'ERROS COMUNS — sempre com a correção.',
+          'DIAGRAMA — toque na quadra para pôr jogadores, bola, cones, alvos e setas; arraste para mover (ou use os botões de seta).',
+          'MÍDIA — imagem ou vídeo por link (YouTube, Vimeo) ou enviando o arquivo: vídeo de até 60 segundos e 60 MB, imagem de até 3 MB.',
+        ),
+        list(
+          'SÓ EU — fica só para você.',
+          'PÚBLICO — vai para a Biblioteca de todos. O de atleta passa antes pela revisão da equipe; o de professor entra direto.',
+          'MEUS ALUNOS — só para professor: os alunos com vínculo ativo veem.',
+        ),
+        steps(
+          'Toque em "Criar" no Treino e escolha o tipo.',
+          'Preencha o que fizer sentido; a prévia mostra como a ficha vai ficar.',
+          'Escolha quem vê e salve. O rascunho fica guardado no aparelho enquanto você escreve.',
+        ),
+        p('"Criar com IA" monta um pedido para você copiar e colar na IA que preferir; a resposta dela, colada de volta, preenche o formulário. Revise tudo antes de publicar: a IA erra.'),
+        warn('Quem tem menos de 18 anos não envia arquivos — o link de um vídeo continua valendo. E publique só imagem e vídeo que você tem direito de usar.'),
+        link('/treino/novo', 'Criar agora'),
+      ],
+    },
   ],
 };
 
@@ -1295,6 +1380,28 @@ const PROFESSOR = {
       ],
     },
     {
+      id: 'treino-professor',
+      title: 'Treinos para os seus alunos',
+      summary: 'Conteúdo só para os alunos, envio com prazo, sessões e dúvidas.',
+      keywords: [
+        'treino', 'drill', 'aluno', 'alunos', 'enviar', 'prazo', 'tarefa', 'dúvida', 'pergunta',
+        'confirmar', 'diário', 'só alunos',
+      ],
+      flags: ['training_center'],
+      blocks: [
+        p('No Treino, o professor tem o que o atleta tem e mais três coisas: publicar só para os alunos, ENVIAR um item a um aluno (com prazo) e a aba "Alunos".'),
+        list(
+          'SÓ MEUS ALUNOS — ao criar, escolha "Meus alunos": quem tem vínculo ativo com você vê na Biblioteca; mais ninguém.',
+          'ENVIAR — na ficha de qualquer item seu ou da Biblioteca, "Enviar para alunos". Só aparecem os alunos com vínculo ativo, e o envio chega com o prazo que você der.',
+          'ALUNOS — o que cada um recebeu e fez, as sessões que eles compartilharam com você (para confirmar e comentar) e as dúvidas.',
+          'DÚVIDAS — perguntas privadas, só entre você e o aluno.',
+        ),
+        p('Indicar um item a outros atletas é de todo mundo; ENVIAR para aluno é só do professor, e só para quem é aluno dele.'),
+        link('/treino?aba=alunos', 'Abrir os meus alunos no Treino'),
+        tip('Seu conteúdo público entra direto na Biblioteca, com o seu nome. Se precisar corrigir, edite: a ficha atualiza para todo mundo.'),
+      ],
+    },
+    {
       id: 'parcerias',
       title: 'Parcerias com arenas e clubes',
       summary: 'Onde você dá aula.',
@@ -1547,6 +1654,17 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
   { pattern: '/torneios', label: 'torneios',
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+  // --- treino --------------------------------------------------------------
+  { pattern: '/treino/novo', label: 'criar um drill ou treino',
+    refs: [[HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+  { pattern: '/treino/item/*/editar', label: 'editar o item',
+    refs: [[HELP_SECTION.ATHLETE, 'treino-criar']] },
+  { pattern: '/treino/item/*', label: 'este item do treino',
+    refs: [[HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+  { pattern: '/treino/planos/*', label: 'este plano',
+    refs: [[HELP_SECTION.ATHLETE, 'treino']] },
+  { pattern: '/treino', label: 'o treino',
+    refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
   { pattern: '/circuits', label: 'circuitos',
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: 'seus jogos',
@@ -1744,6 +1862,9 @@ export const HELP_FAQ = Object.freeze([
   { q: 'Perdi a minha sequência. E agora?', section: HELP_SECTION.ATHLETE, article: 'gamificacao-sequencia' },
   { q: 'Quem vê o meu nome no Hall da Fama?', section: HELP_SECTION.ATHLETE, article: 'gamificacao-privacidade' },
   { q: 'Como peço uma recompensa?', section: HELP_SECTION.ATHLETE, article: 'gamificacao-recompensas' },
+  // Treino: com a flag desligada, as perguntas somem junto com os artigos.
+  { q: 'Como organizo o meu treino?', section: HELP_SECTION.ATHLETE, article: 'treino' },
+  { q: 'Como crio um drill e escolho quem vê?', section: HELP_SECTION.ATHLETE, article: 'treino-criar' },
   // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
   { q: 'Como a plataforma me mostra onde tocar?', section: HELP_SECTION.START, article: 'dicas' },
 ]);

@@ -134,8 +134,9 @@ describe('links internos', () => {
     const quebrados = [];
     artigos.forEach((a) => {
       a.blocks.filter((b) => b.type === 'link').forEach((b) => {
-        // A âncora (`#minha-regiao`) é da página; a ROTA é o que precisa existir.
-        if (!rotas.has(b.to.split('#')[0])) quebrados.push(`${a.sectionId}/${a.id} → ${b.to}`);
+        // A âncora (`#minha-regiao`) e a consulta (`?aba=`) são da página; a
+        // ROTA é o que precisa existir.
+        if (!rotas.has(b.to.split(/[?#]/)[0])) quebrados.push(`${a.sectionId}/${a.id} → ${b.to}`);
       });
     });
     expect(quebrados).toEqual([]);
@@ -546,14 +547,14 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
       my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true,
+      play_groups: true, training_center: true, user_hub: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
       guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true,
+      play_groups: true, training_center: true, user_hub: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
