@@ -121,8 +121,8 @@ exclusivo do controlador (anonimizado).
 | Reservas e pagamentos | **retidos 5 anos**, com dado pessoal minimizado | obrigação fiscal do parceiro / exercício de direito |
 | `audit_logs`, `admin_access_logs` | **retidos**, sem anonimizar | prova; é o único registro de que a exclusão foi feita corretamente |
 | `legal_consents` | **retidos 5 anos** | prova do consentimento e da revogação |
-| Centro de Treino: diário, planos, dúvidas feitas, conteúdo privado, `treino/{uid}/` | **excluídos** | dado da pessoa, sem interesse de terceiros |
-| Centro de Treino: item **público aprovado**, dúvida respondida a um aluno | autor vira **"Usuário removido"** | é do acervo/conversa de outras pessoas, como o fórum |
+| Centro de Treino: diário, planos, dúvidas feitas, item privado não compartilhado (e os arquivos dele) | **excluídos** | dado da pessoa, sem interesse de terceiros |
+| Centro de Treino: o que criou para outras pessoas (item público, só para alunos ou compartilhado, envios, respostas e comentários a alunos); conteúdo do professor | **fica, com o nome de quem criou**; cupons e campanhas do professor ficam fora do ar | decisão do dono (2026-10-09): *"o conteúdo criado não deve ser excluído e deve permanecer indicando a autoria"* |
 
 **Isso precisa estar escrito na Política de Privacidade e ser mostrado na
 tela de confirmação, antes de excluir.** Surpreender o usuário depois é

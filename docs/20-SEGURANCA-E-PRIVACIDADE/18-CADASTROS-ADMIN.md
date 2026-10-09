@@ -150,11 +150,15 @@ Segue a tabela aprovada em `09-DIREITOS-DO-TITULAR.md` §4:
 | **Retido como está** | `audit_logs` e `legal_consents` — prova de que a exclusão foi feita direito |
 
 **Centro de Treino** (2026-10-09, flag `training_center`): o diário, os planos,
-a rotina, as dúvidas que a pessoa fez, os envios e o conteúdo **privado** ou
-só para alunos são **apagados**, com `treino/{uid}/` no Storage; o item
-**público aprovado** fica na Biblioteca como **"Usuário removido"** (como o
-fórum); a dúvida que ela respondeu como professor fica com o aluno, com as
-mensagens dela removidas; denúncias **ficam** (só o uid). Tabela completa em
+a rotina, as dúvidas que a pessoa fez, os treinos que recebeu e o item
+**privado que ninguém mais recebeu** são **apagados**, com os arquivos dele.
+**O conteúdo criado fica, com a autoria** (decisão do dono: *"o conteúdo
+criado não deve ser excluído e deve permanecer indicando a autoria"*): item
+público, só para alunos ou compartilhado, com as fotos e vídeos; treinos que
+enviou; respostas a dúvidas e comentários em diários de alunos; conteúdo,
+pacotes e loja do professor. Cupons e campanhas do professor ficam **fora do
+ar**. Excluir o ALUNO encerra o vínculo com o professor. Denúncias **ficam**
+(só o uid). Tabela completa em
 `docs/40-CENTRO-DE-TREINO.md` §9; o guarda `exclusaoCobreColecoes.test.js`
 reprova coleção `training_*` nova que fique fora da exclusão.
 

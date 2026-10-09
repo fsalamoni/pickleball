@@ -1478,7 +1478,7 @@ const CONTA = {
       keywords: ['treino', 'diário', 'dados', 'exportar', 'baixar', 'excluir', 'lgpd', 'biblioteca'],
       blocks: [
         p('"Baixar meus dados", em Configurações, também leva as suas metas e o seu treino: itens que você criou, diário, planos, envios e dúvidas. Os comentários que você fez, como professor, no diário dos seus alunos ficam no diário de cada aluno.'),
-        p('Se a conta for excluída, o diário, os planos e o conteúdo privado do Treino são apagados. O conteúdo público aprovado que você publicou fica na Biblioteca sem o seu nome.'),
+        p('Se a conta for excluída, o diário, os planos, as dúvidas que você fez e o conteúdo privado que ninguém mais recebeu são apagados. O que você criou para outras pessoas (itens publicados, só para alunos ou compartilhados, treinos enviados, respostas e comentários a alunos) fica, com o seu nome como autor.'),
         link('/configuracoes', 'Abrir as Configurações'),
       ],
     },

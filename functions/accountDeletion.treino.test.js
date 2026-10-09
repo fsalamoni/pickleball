@@ -3,22 +3,27 @@
  * especificações REAIS, contra o Firestore falso.
  *
  * O que estes testes protegem:
- *  1. o que é só da pessoa some (itens privados e só para alunos, diário com
- *     os comentários, planos, rotina, envios dos dois lados, dúvidas que fez
- *     com as mensagens, fotos e vídeos de `treino/{uid}/`, a oferta do
- *     professor e as configurações de divulgação);
- *  2. o item PÚBLICO aprovado fica, sem o nome e sem as mídias enviadas;
+ *  1. o que é só da pessoa some (itens PRIVADOS não compartilhados, diário com
+ *     os comentários, planos, rotina, treinos recebidos, dúvidas que fez com
+ *     as mensagens, os arquivos desses itens e as configurações de
+ *     divulgação);
+ *  2. ⭐ o CONTEÚDO que ela criou fica, com a autoria (decisão do dono,
+ *     2026-10-09): itens que outras pessoas veem, com as fotos e vídeos;
+ *     treinos que enviou; respostas a dúvidas; comentários em diários de
+ *     alunos; conteúdo, pacotes e loja do professor; cupons e campanhas,
+ *     fora do ar;
  *  3. ⭐ NENHUM documento de outra pessoa é apagado — a lista do que some é
  *     conferida inteira, não por amostra;
- *  4. denúncias, aulas dadas e pacotes vendidos ficam como estão.
+ *  4. denúncias, aulas dadas e pacotes vendidos ficam como estão;
+ *  5. excluir o ALUNO encerra o vínculo com o professor.
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const {
-  analyzeAccount, executeAccountDeletion, REMOVED_USER, REMOVED_MESSAGE,
-  trainingItemStays, patchTrainingItemAuthor, patchDerivedFrom, patchSharedUids, patchTrainingMessage,
+  analyzeAccount, executeAccountDeletion,
+  REMOVED_ATHLETE, trainingItemStays, patchTrainingItemAuthor, patchDerivedFrom, patchSharedUids, patchCoachStudentLink,
 } = require('../functions/accountDeletion.js');
 const {
   createFakeDb, createFakeAuth, createFakeBucket, FakeFieldValue,
@@ -33,6 +38,7 @@ function cenario() {
     'users/aluno': { uid: 'aluno', full_name: 'Aluno Bia' },
     // itens
     'training_items/i_priv': { author_uid: 'prof', author_name: 'Prof Ana', visibility: 'privado', review: 'nao_se_aplica' },
+    'training_items/i_comp': { author_uid: 'prof', author_name: 'Prof Ana', visibility: 'privado', review: 'nao_se_aplica', shared_uids: ['aluno'] },
     'training_items/i_alunos': { author_uid: 'prof', author_name: 'Prof Ana', visibility: 'alunos', review: 'nao_se_aplica' },
     'training_items/i_pend': { author_uid: 'prof', author_name: 'Prof Ana', visibility: 'publico', review: 'pendente' },
     'training_items/i_pub': {
@@ -89,7 +95,9 @@ function cenario() {
     'promo_settings/platform': { coupon_costs: { b: 1 } },
     'promo_coupons/cp1': { issuer_type: 'coach', issuer_id: 'prof', code: 'ANA10' },
     'promo_coupons/cp2': { issuer_type: 'platform', issuer_id: 'platform', code: 'PR10' },
-    'promo_campaigns/cm1': { issuer_type: 'coach', issuer_id: 'prof', title: 'Aulas' },
+    'promo_campaigns/cm1': { issuer_type: 'coach', issuer_id: 'prof', title: 'Aulas', banner_active: true },
+    // a ficha do aluno na lista da professora
+    'coach_students/prof_aluno': { coach_id: 'prof', student_id: 'aluno', student_name: 'Aluno Bia', status: 'active' },
   });
   const auth = createFakeAuth(['prof', 'aluno'], { log: db.store.log });
   const bucket = createFakeBucket(['treino/prof/a.webp', 'treino/prof/b.mp4', 'uploads/prof/x.jpg', 'treino/aluno/c.webp', 'treino/professora/d.webp']);
@@ -107,24 +115,28 @@ describe('a prévia do servidor mostra o treino e o lado professor', () => {
     const antes = new Map(db.store.docs);
     const { report } = await analyzeAccount(ctx, 'prof', { actorUid: 'admin', hojeISO: HOJE });
     expect(report.canDelete).toBe(true);
-    expect(linha(report.deletes, 'Itens de treino privados e só para alunos')).toBe(3);
-    expect(linha(report.deletes, 'Diário de treino e comentários')).toBe(4); // s_prof + c1 + c2 + c3
-    expect(linha(report.deletes, 'Dúvidas de treino e mensagens')).toBe(3);
+    expect(linha(report.deletes, 'Itens de treino privados, não compartilhados')).toBe(1);
+    expect(linha(report.deletes, 'Diário de treino e comentários')).toBe(3); // s_prof + c1 + c2
+    expect(linha(report.deletes, 'Dúvidas de treino que fez e mensagens')).toBe(3);
     expect(linha(report.deletes, 'Planos de treino')).toBe(1);
     expect(linha(report.deletes, 'Rotina e preferências do treino')).toBe(1);
-    expect(linha(report.deletes, 'Treinos enviados e recebidos')).toBe(2);
-    expect(linha(report.deletes, 'Conteúdo publicado como professor')).toBe(1);
-    expect(linha(report.deletes, 'Pacotes de aula oferecidos')).toBe(1);
-    expect(linha(report.deletes, 'Produtos da loja do professor')).toBe(1);
+    expect(linha(report.deletes, 'Treinos recebidos')).toBe(1);
     expect(linha(report.deletes, 'Configurações de divulgação (professor)')).toBe(1);
-    expect(linha(report.deletes, 'Cupons do professor')).toBe(1);
-    expect(linha(report.deletes, 'Campanhas do professor')).toBe(1);
-    expect(linha(report.deletes, 'Fotos e arquivos enviados')).toBe(3); // treino/prof (2) + uploads/prof (1)
-    // i_pub (autoria) + i_copia ("copiado de")
-    expect(linha(report.pseudonyms, 'Itens de treino públicos (autoria removida)')).toBe(2);
+    expect(linha(report.deletes, 'Lista de alunos (como professor)')).toBe(1);
+    expect(linha(report.deletes, 'Fotos e arquivos enviados')).toBe(2); // treino/prof/b.mp4 + uploads/prof
     expect(linha(report.pseudonyms, 'Acesso a itens de treino de outras pessoas')).toBe(1);
-    expect(linha(report.pseudonyms, 'Diários de alunos que acompanhava')).toBe(1);
-    expect(linha(report.pseudonyms, 'Dúvidas que respondeu como professor')).toBe(2); // q2 + m4
+    // o conteúdo criado fica, com a autoria
+    expect(linha(report.retained, 'Itens de treino que criou (ficam, com a autoria)')).toBe(4); // i_comp, i_alunos, i_pend, i_pub
+    expect(linha(report.retained, 'Fotos e vídeos dos itens de treino que ficam')).toBe(1);
+    expect(linha(report.retained, 'Treinos que enviou ou indicou (ficam com quem recebeu)')).toBe(1);
+    expect(linha(report.retained, 'Dúvidas de alunos que respondeu (ficam, com as respostas)')).toBe(1);
+    expect(linha(report.retained, 'Diários de alunos que acompanhava (os comentários ficam)')).toBe(1);
+    expect(linha(report.retained, 'Conteúdo publicado como professor')).toBe(1);
+    expect(linha(report.retained, 'Pacotes de aula oferecidos')).toBe(1);
+    expect(linha(report.retained, 'Produtos da loja do professor')).toBe(1);
+    expect(linha(report.retained, 'Cupons do professor (ficam, fora do ar)')).toBe(1);
+    expect(linha(report.retained, 'Campanhas do professor (ficam, fora do ar)')).toBe(1);
+    expect(report.deletes.map((d) => d.label)).not.toContain('Conteúdo publicado como professor');
     expect(linha(report.retained, 'Denúncias de conteúdo que fez')).toBe(1);
     expect(linha(report.retained, 'Denúncias sobre o conteúdo da conta')).toBe(1);
     expect(linha(report.retained, 'Aulas particulares dadas (como professor)')).toBe(1);
@@ -142,66 +154,71 @@ describe('a execução', () => {
     expect(r.status).toBe('deleted');
     const sumiram = [...antes].filter((p) => !db.store.docs.has(p)).sort();
     expect(sumiram).toEqual([
-      'coach_content/cc1',
-      'coach_packages/pk1',
-      'coach_products/pr1',
-      'promo_campaigns/cm1',
-      'promo_coupons/cp1',
+      'coach_students/prof_aluno',
       'promo_settings/prof',
-      'training_items/i_alunos',
-      'training_items/i_pend',
       'training_items/i_priv',
       'training_meta/prof',
       'training_plans/p1',
       'training_questions/q1',
       'training_questions/q1/messages/m1',
       'training_questions/q1/messages/m2',
-      'training_sessions/s_aluno/comments/c3',
       'training_sessions/s_prof',
       'training_sessions/s_prof/comments/c1',
       'training_sessions/s_prof/comments/c2',
-      'training_shares/e1',
       'training_shares/e2',
       'users/prof',
     ]);
   });
 
-  it('⭐ o item público aprovado fica: sem nome, sem foto, sem a mídia enviada (o link fica)', async () => {
+  it('⭐ o item que criou fica com o nome e as mídias; só a foto de perfil sai', async () => {
     const { db, ctx } = cenario();
+    const antes = ['i_comp', 'i_alunos', 'i_pend'].map((id) => [id, db.store.docs.get(`training_items/${id}`)]);
     await executar(ctx);
     const it = db.store.docs.get('training_items/i_pub');
     expect(it.author_uid).toBe('prof');
-    expect(it.author_name).toBe(REMOVED_USER);
+    expect(it.author_name).toBe('Prof Ana');
     expect(it.author_photo).toBeNull();
-    expect(it.media).toEqual([{ source: 'url', type: 'video', url: 'https://youtu.be/abc' }]);
+    expect(it.media).toHaveLength(2);
+    antes.forEach(([id, d]) => expect(db.store.docs.get(`training_items/${id}`)).toEqual(d));
   });
 
-  it('a cópia de outra pessoa perde o nome no "copiado de" e o acesso da conta excluída', async () => {
+  it('a cópia de outra pessoa guarda o "copiado de" com o nome; sai só o acesso da conta excluída', async () => {
     const { db, ctx } = cenario();
     await executar(ctx);
     const c = db.store.docs.get('training_items/i_copia');
-    expect(c.derived_from).toEqual({ id: 'i_pub', title: 'Dinks', author_name: REMOVED_USER, locked: false });
+    expect(c.derived_from).toEqual({ id: 'i_pub', title: 'Dinks', author_name: 'Prof Ana', locked: false });
     expect(c.shared_uids).toEqual(['outro']);
     expect(c.author_name).toBe('Aluno Bia');
     expect(db.store.docs.get('training_items/i_outro').shared_uids).toEqual(['x']);
   });
 
-  it('o diário do aluno fica, sem o compartilhamento e sem os comentários dela', async () => {
+  it('o diário do aluno fica, sem o compartilhamento; os comentários dela ficam, com o nome', async () => {
     const { db, ctx } = cenario();
     await executar(ctx);
     expect(db.store.docs.get('training_sessions/s_aluno')).toEqual({
       uid: 'aluno', date: '2026-10-02', shared_coach_id: null, coach_confirmed_at: 'ontem',
     });
+    expect(db.store.docs.get('training_sessions/s_aluno/comments/c3')).toEqual({ uid: 'prof', name: 'Prof Ana', text: 'Boa!' });
     expect(db.store.docs.get('training_sessions/s_aluno/comments/c4').text).toBe('Valeu');
     expect(db.store.docs.has('training_sessions/s_outro')).toBe(true);
   });
 
-  it('a dúvida que respondeu fica para o aluno, com o nome e o texto dela trocados', async () => {
+  it('a dúvida que respondeu fica como está, com as respostas e o nome', async () => {
     const { db, ctx } = cenario();
+    const antes = ['training_questions/q2', 'training_questions/q2/messages/m3', 'training_questions/q2/messages/m4']
+      .map((p) => [p, db.store.docs.get(p)]);
     await executar(ctx);
-    expect(db.store.docs.get('training_questions/q2').coach_name).toBe(REMOVED_USER);
-    expect(db.store.docs.get('training_questions/q2/messages/m4')).toEqual({ uid: 'prof', name: REMOVED_USER, text: REMOVED_MESSAGE });
-    expect(db.store.docs.get('training_questions/q2/messages/m3').text).toBe('Dúvida');
+    antes.forEach(([p, d]) => expect(db.store.docs.get(p)).toEqual(d));
+  });
+
+  it('⭐ o conteúdo do professor fica; cupom e campanha ficam fora do ar', async () => {
+    const { db, ctx } = cenario();
+    const intactos = ['training_shares/e1', 'coach_content/cc1', 'coach_packages/pk1', 'coach_products/pr1', 'promo_coupons/cp2']
+      .map((p) => [p, db.store.docs.get(p)]);
+    await executar(ctx);
+    intactos.forEach(([p, d]) => expect(db.store.docs.get(p)).toEqual(d));
+    expect(db.store.docs.get('promo_coupons/cp1')).toMatchObject({ code: 'ANA10', active: false });
+    expect(db.store.docs.get('promo_campaigns/cm1')).toMatchObject({ title: 'Aulas', banner_active: false });
   });
 
   it('denúncias, aulas dadas e pacotes vendidos ficam intactos', async () => {
@@ -212,10 +229,23 @@ describe('a execução', () => {
     antes.forEach(([p, d]) => expect(db.store.docs.get(p)).toEqual(d));
   });
 
-  it('⭐ Storage: as duas pastas DELA somem; a de outra pessoa — mesmo com nome parecido — fica', async () => {
+  it('⭐ Storage: as pastas DELA somem, menos a mídia do item que fica; a de outra pessoa fica', async () => {
     const { bucket, ctx } = cenario();
     await executar(ctx);
-    expect(bucket.arquivos).toEqual(['treino/aluno/c.webp', 'treino/professora/d.webp']);
+    expect(bucket.arquivos).toEqual(['treino/prof/a.webp', 'treino/aluno/c.webp', 'treino/professora/d.webp']);
+  });
+
+  it('⭐ excluir o ALUNO encerra o vínculo: o professor deixa de ser professor dele', async () => {
+    const { db, ctx } = cenario();
+    await executeAccountDeletion(ctx, 'aluno', {
+      actor: ADMIN, reason: 'pedido do titular', hojeISO: HOJE, FieldValue: FakeFieldValue,
+    });
+    const v = db.store.docs.get('coach_students/prof_aluno');
+    expect(v).toMatchObject({
+      coach_id: 'prof', student_id: 'aluno', student_name: REMOVED_ATHLETE,
+      status: 'ended', ended_by: 'aluno', ended_reason: 'conta_excluida',
+    });
+    expect(v.ended_at).toBeInstanceOf(Date);
   });
 
   it('rodar de novo é seguro', async () => {
@@ -228,28 +258,34 @@ describe('a execução', () => {
 });
 
 describe('as trocas, puras', () => {
-  it('só público APROVADO fica', () => {
+  it('fica o que outras pessoas veem; só o privado não compartilhado sai', () => {
     expect(trainingItemStays({ visibility: 'publico', review: 'aprovado' })).toBe(true);
-    expect(trainingItemStays({ visibility: 'publico', review: 'pendente' })).toBe(false);
-    expect(trainingItemStays({ visibility: 'publico', review: 'recusado' })).toBe(false);
-    expect(trainingItemStays({ visibility: 'alunos', review: 'nao_se_aplica' })).toBe(false);
+    expect(trainingItemStays({ visibility: 'publico', review: 'pendente' })).toBe(true);
+    expect(trainingItemStays({ visibility: 'publico', review: 'recusado' })).toBe(true);
+    expect(trainingItemStays({ visibility: 'alunos', review: 'nao_se_aplica' })).toBe(true);
+    expect(trainingItemStays({ visibility: 'privado', shared_uids: ['x'] })).toBe(true);
+    expect(trainingItemStays({ visibility: 'privado', shared_uids: [] })).toBe(false);
+    expect(trainingItemStays({ visibility: 'privado' })).toBe(false);
     expect(trainingItemStays(null)).toBe(false);
   });
 
-  it('não mexe no item de outra autoria nem repete troca já feita', () => {
-    expect(patchTrainingItemAuthor({ author_uid: 'outro', author_name: 'X' }, 'prof')).toBeNull();
-    expect(patchTrainingItemAuthor({ author_uid: 'prof', author_name: REMOVED_USER, author_photo: null }, 'prof')).toBeNull();
-    expect(patchDerivedFrom({ derived_from: { author_name: REMOVED_USER } })).toBeNull();
+  it('o nome de autor nunca muda; só a foto de perfil sai', () => {
+    expect(patchTrainingItemAuthor({ author_uid: 'outro', author_name: 'X', author_photo: 'f' }, 'prof')).toBeNull();
+    expect(patchTrainingItemAuthor({ author_uid: 'prof', author_name: 'Prof Ana', author_photo: null }, 'prof')).toBeNull();
+    expect(patchTrainingItemAuthor({ author_uid: 'prof', author_name: 'Prof Ana', author_photo: 'f', media: [{ path: 'treino/prof/a.webp' }] }, 'prof'))
+      .toEqual({ author_photo: null });
+    expect(patchDerivedFrom({ derived_from: { author_name: 'Prof Ana' } }, 'prof')).toBeNull();
     expect(patchDerivedFrom({})).toBeNull();
     expect(patchSharedUids({ shared_uids: ['a'] }, 'prof')).toBeNull();
-    expect(patchTrainingMessage({ uid: 'outro', text: 'x' }, 'prof')).toBeNull();
   });
 
-  it('a mídia de OUTRA pasta (mesmo prefixo de nome) não é tirada do item', () => {
-    const p = patchTrainingItemAuthor({
-      author_uid: 'prof', author_name: REMOVED_USER, media: [{ path: 'treino/professora/x.webp' }],
-    }, 'prof');
-    expect(p).toBeNull();
+  it('a ficha do aluno excluído: nome sai e o vínculo encerra (uma vez só)', () => {
+    const p = patchCoachStudentLink({ student_id: 'aluno', student_name: 'Bia', student_email: 'b@x', status: 'paused' }, 'aluno');
+    expect(p).toMatchObject({ student_name: REMOVED_ATHLETE, student_email: null, status: 'ended', ended_by: 'aluno', ended_reason: 'conta_excluida' });
+    // já encerrado: o fim de antes vale (quem encerrou e quando)
+    expect(patchCoachStudentLink({ student_id: 'aluno', student_name: 'Bia', status: 'ended', ended_by: 'prof' }, 'aluno'))
+      .toEqual({ student_name: REMOVED_ATHLETE });
+    expect(patchCoachStudentLink({ student_id: 'outro', status: 'active' }, 'aluno')).toBeNull();
   });
 });
 
@@ -263,12 +299,26 @@ describe('mídia enviada que outras pessoas usam', () => {
         author_uid: 'prof', created_by: 'prof', author_name: 'Prof Ana', visibility: 'publico', review: 'aprovado',
         media: [{ source: 'upload', type: 'image', path: 'treino/prof/a.webp', url: link('treino/prof/a.webp') }],
       },
+      // privado, não compartilhado: sai com o arquivo
+      'training_items/i_priv': {
+        author_uid: 'prof', created_by: 'prof', author_name: 'Prof Ana', visibility: 'privado', review: 'nao_se_aplica',
+        media: [{ source: 'upload', type: 'image', path: 'treino/prof/p.webp', url: link('treino/prof/p.webp') }],
+      },
       // a cópia guarda só o link (sem `path`)
       'training_items/i_copia': {
         author_uid: 'aluno', created_by: 'aluno', author_name: 'Aluno Bia', visibility: 'privado', review: 'nao_se_aplica',
         derived_from: { id: 'i_pub', title: 'Dinks', author_name: 'Prof Ana', locked: false },
         media: [
           { source: 'upload', type: 'image', path: null, url: link('treino/prof/a.webp') },
+          { source: 'url', type: 'video', url: 'https://youtu.be/abc' },
+        ],
+      },
+      // cópia de um item que ficou privado depois de copiado
+      'training_items/i_copia2': {
+        author_uid: 'aluno', created_by: 'aluno', author_name: 'Aluno Bia', visibility: 'privado', review: 'nao_se_aplica',
+        derived_from: { id: 'i_priv', title: 'Saque', author_name: 'Prof Ana', locked: false },
+        media: [
+          { source: 'upload', type: 'image', path: null, url: link('treino/prof/p.webp') },
           { source: 'url', type: 'video', url: 'https://youtu.be/abc' },
         ],
       },
@@ -279,25 +329,36 @@ describe('mídia enviada que outras pessoas usam', () => {
       },
     });
     const auth = createFakeAuth(['prof'], { log: db.store.log });
-    const bucket = createFakeBucket(['treino/prof/a.webp', 'treino/prof/plat.mp4', 'treino/prof/solto.webp']);
+    const bucket = createFakeBucket(['treino/prof/a.webp', 'treino/prof/p.webp', 'treino/prof/plat.mp4', 'treino/prof/solto.webp']);
     return { db, bucket, ctx: { db, auth, bucket } };
   }
 
-  it('⭐ a cópia de outra pessoa perde o link do arquivo que vai sumir (e mantém o vídeo de fora)', async () => {
+  it('⭐ a mídia do item que fica, fica — no item, na cópia e no Storage', async () => {
+    const { db, bucket, ctx } = cenarioMidia();
+    const pub = db.store.docs.get('training_items/i_pub');
+    const copia = db.store.docs.get('training_items/i_copia');
+    await executar(ctx);
+    expect(db.store.docs.get('training_items/i_pub')).toEqual(pub);
+    expect(db.store.docs.get('training_items/i_copia')).toEqual(copia);
+    expect(bucket.arquivos).toContain('treino/prof/a.webp');
+  });
+
+  it('⭐ a cópia do item que sai perde o link do arquivo que vai sumir (e mantém o vídeo de fora)', async () => {
     const { db, ctx } = cenarioMidia();
     await executar(ctx);
-    expect(db.store.docs.get('training_items/i_copia').media).toEqual([{ source: 'url', type: 'video', url: 'https://youtu.be/abc' }]);
-    expect(db.store.docs.get('training_items/i_pub').media).toEqual([]);
+    expect(db.store.docs.get('training_items/i_copia2').media).toEqual([{ source: 'url', type: 'video', url: 'https://youtu.be/abc' }]);
+    expect(db.store.docs.get('training_items/i_copia2').derived_from.author_name).toBe('Prof Ana');
+    expect(db.store.docs.has('training_items/i_priv')).toBe(false);
   });
 
   it('⭐ o arquivo do item da PLATAFORMA fica no Storage e o item não é tocado', async () => {
     const { db, bucket, ctx } = cenarioMidia();
     const antes = db.store.docs.get('training_items/i_plat');
     const { report } = await analyzeAccount(ctx, 'prof', { actorUid: 'admin', hojeISO: HOJE });
-    expect(linha(report.deletes, 'Fotos e arquivos enviados')).toBe(2);
-    expect(linha(report.retained, 'Fotos e vídeos de itens da biblioteca da plataforma')).toBe(1);
+    expect(linha(report.deletes, 'Fotos e arquivos enviados')).toBe(2); // p.webp + solto.webp
+    expect(linha(report.retained, 'Fotos e vídeos dos itens de treino que ficam')).toBe(2); // a.webp + plat.mp4
     await executar(ctx);
-    expect(bucket.arquivos).toEqual(['treino/prof/plat.mp4']);
+    expect(bucket.arquivos).toEqual(['treino/prof/a.webp', 'treino/prof/plat.mp4']);
     expect(db.store.docs.get('training_items/i_plat')).toEqual(antes);
   });
 
@@ -310,12 +371,12 @@ describe('mídia enviada que outras pessoas usam', () => {
       return getFiles(o);
     };
     await executar(ctx);
-    expect(bucket.arquivos).toEqual(['treino/prof/plat.mp4']);
+    expect(bucket.arquivos).toEqual(['treino/prof/a.webp', 'treino/prof/plat.mp4']);
   });
 
   it('a cópia de uma pasta de nome parecido não perde nada', () => {
     expect(patchDerivedFrom({
-      derived_from: { author_name: REMOVED_USER }, media: [{ url: link('treino/professora/x.webp') }],
+      derived_from: { author_name: 'Prof Ana' }, media: [{ url: link('treino/professora/x.webp') }],
     }, 'prof')).toBeNull();
   });
 });

@@ -64,7 +64,7 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | `user_progression_v2` / `user_achievements_v2` | progresso | 🔓 | execução de contrato | conta ativa | ✅ |
 | `tournament_photos` | **imagem de pessoas** | 🌍 | ⚠ **base indefinida** | permanente | **P2-10** ⚠ |
 | Storage `uploads/{uid}/**` | fotos, anexos, comprovantes | 🔓 ⚠ | execução de contrato | conta ativa | **P1-05** ⚠ |
-| `training_items` (Centro de Treino, flag `training_center`) | autoria (uid, nome, foto), conteúdo, mídia | 🔒 privado · 👥 alunos/indicados · 🔓 público aprovado | execução de contrato | conta ativa; público aprovado fica pseudonimizado na exclusão | ✅ `docs/40` §9 |
+| `training_items` (Centro de Treino, flag `training_center`) | autoria (uid, nome, foto), conteúdo, mídia | 🔒 privado · 👥 alunos/indicados · 🔓 público aprovado | execução de contrato | conta ativa; na exclusão, o que outras pessoas veem fica com a autoria (decisão do dono, 2026-10-09) e o privado não compartilhado é apagado | ✅ `docs/40` §9 |
 | `training_sessions` + `comments` | o diário de treino (**sem campo de saúde**, aviso na tela) | 🔒 + o professor com quem foi compartilhada (vínculo ativo) | execução de contrato | conta ativa | ✅ |
 | `training_plans` / `training_meta` | planos, rotina, autoavaliação | 🔒 | execução de contrato | conta ativa | ✅ |
 | `training_shares` | quem mandou o quê a quem, com recado | 👥 os dois | execução de contrato | conta ativa (dos dois lados) | ✅ |

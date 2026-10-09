@@ -616,7 +616,7 @@ chore(deps): bump firebase to 12.x
 >   biblioteca e configurações no Painel admin → Treino. Card no início,
 >   o interesse "Organizar meu treino" levando ao /treino, guias de dica, pontos e artigos de ajuda — tudo atrás
 >   da flag. **Exportação** ("Baixar meus dados") e **exclusão de conta** cobrem
->   o treino (o público aprovado fica como "Usuário removido"), com guarda; e a
+>   o treino (o conteúdo criado para outras pessoas fica, com a autoria), com guarda; e a
 >   categoria "Treino" silenciada também não vira **push** (antes o celular
 >   ignorava qualquer categoria silenciada). **Banco**: sete coleções
 >   `training_*`, regras aditivas provadas no emulador, `treino/{uid}/` no

@@ -225,19 +225,28 @@ Biblioteca inicial).
 - **Exclusão de conta** (`functions/accountDeletion.js`, ver
   `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` §Excluir):
 
+  **O conteúdo criado fica, com a autoria** (decisão do dono, 2026-10-09:
+  *"o conteúdo criado não deve ser excluído e deve permanecer indicando a
+  autoria do conteúdo"*). Sai o que é só da pessoa.
+
   | O que | Destino |
   |---|---|
-  | Item privado ou só para alunos | apagado |
-  | Item **público aprovado** | fica na Biblioteca como **"Usuário removido"** (sem foto; a mídia enviada sai do item), como o fórum e os posts de clube; a cópia que outra pessoa fez perde o nome no crédito |
+  | Item **privado que ninguém mais recebeu** | apagado, com os arquivos |
+  | Item público (aprovado, em revisão ou recusado), só para alunos ou compartilhado | **fica, com o nome de quem criou** e as fotos e vídeos; sai só a foto de perfil (mora em `uploads/{uid}/`, que é apagada). O "só para alunos" deixa de ter quem o leia (o vínculo acaba), mas fica guardado |
+  | Cópia que outra pessoa fez de um item dela | o "copiado de" fica com o nome; perde só o link das mídias do item que foi apagado (o vídeo de fora fica); na cópia de uma cópia, que não é achada, a ficha diz "Não foi possível carregar" |
   | Diário (dela) e comentários | apagados |
-  | Diário de ALUNO que ela acompanhava | fica com o aluno; sai o vínculo (`shared_coach_id`) e os comentários dela |
+  | Diário de ALUNO que ela acompanhava | fica com o aluno; sai o compartilhamento (`shared_coach_id`); **os comentários dela ficam**, com o nome |
   | Dúvidas que ela fez + mensagens | apagadas |
-  | Dúvidas que respondeu como professor | ficam com o aluno; o nome e as mensagens dela viram "Usuário removido" / mensagem removida |
-  | Planos, rotina, envios (dos dois lados), acesso a itens alheios (`shared_uids`) | apagados / o uid sai da lista |
-  | Conteúdo, pacotes, produtos, cupons e campanhas do professor; `promo_settings` | apagados |
+  | Dúvidas que respondeu como professor | **ficam como estão**, com as respostas e o nome (a conversa vira só leitura: sem vínculo ativo) |
+  | Treinos que ela ENVIOU ou indicou | **ficam** na caixa de quem recebeu |
+  | Planos, rotina, treinos que ela recebeu, acesso a itens alheios (`shared_uids`) | apagados / o uid sai da lista |
+  | Conteúdo, pacotes e produtos do professor | **ficam guardados** (só aparecem no perfil dele, que sai) |
+  | Cupons e campanhas do professor | **ficam, fora do ar** (`active` / `banner_active` = falso): seguiriam no carrossel do início oferecendo aula de quem não existe mais |
+  | `promo_settings` (modelos e custo interno dos vales) | apagado |
+  | Ficha de aluno na lista dela, como professora | apagada (ela deixou de ser professora dele) |
+  | Ficha dela na lista de um professor, como ALUNA | o vínculo **encerra** (`ended_reason: 'conta_excluida'`) e o nome sai |
   | Denúncias (feitas ou sobre o conteúdo dela), aulas dadas e pacotes vendidos | **retidos como estão** (só o uid; registro de moderação e financeiro) |
-  | Storage `treino/{uid}/` | apagado — menos a mídia que a pessoa, como admin, enviou para itens da **plataforma** (o item é da plataforma e fica inteiro) |
-  | Cópia que outra pessoa fez de um item dela | perde o link das mídias enviadas que vão sumir (o vídeo de fora fica); na cópia de uma cópia, que não é achada, a ficha diz "Não foi possível carregar" |
+  | Storage `treino/{uid}/` | apagado — menos a mídia dos itens que ficam (os dela e os da **plataforma** que ela, como admin, enviou) |
 
   O guarda `src/core/guards/exclusaoCobreColecoes.test.js` lê o
   `firestore.rules` e reprova coleção `training_*` (e `coach_content`,
@@ -271,7 +280,6 @@ Biblioteca inicial).
 - XP do treino confirmado pelo professor, pelo servidor.
 - Apagar do Storage o arquivo de um item que o ADMIN excluiu (o autor que
   remove a mídia já apaga).
-- Exclusão de conta: o comentário que o professor deixou numa sessão que o
-  aluno DEPOIS deixou de compartilhar não é achado (pediria índice de grupo de
-  coleções); e professor com aula futura marcada não bloqueia a exclusão.
+- Exclusão de conta: professor com aula futura marcada não bloqueia a
+  exclusão.
 - Exportação: os comentários do professor no diário dos alunos.

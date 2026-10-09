@@ -24,9 +24,9 @@
  *
  * | Destino | O quê |
  * |---|---|
- * | **Apagado** | identidade (`users`, `athlete_profiles`), conta de login, fotos, tokens, notificações, favoritos, seguidores, vínculos (clube, arena, torneio, circuito), pedidos e convites, filas, gamificação pessoal, ratings materializados; do treino: itens privados e só para alunos, diário, planos, rotina, envios, dúvidas que fez, fotos e vídeos (`treino/{uid}/`); do professor: conteúdo, pacotes oferecidos, loja, cupons, campanhas e configurações de divulgação |
- * | **Pseudonimizado** | histórico esportivo e o que é de outras pessoas: inscrições, partidas, dias de jogo, conversas, fórum, avaliações; itens de treino PÚBLICOS aprovados e as dúvidas que respondeu como professor. O uid fica; nome e foto viram "Atleta removido" / "Usuário removido" |
- * | **Retido** | auditoria, consentimentos, reservas e pagamentos (obrigação do parceiro) — com o nome minimizado; denúncias de conteúdo; aulas e pacotes vendidos como professor |
+ * | **Apagado** | identidade (`users`, `athlete_profiles`), conta de login, fotos, tokens, notificações, favoritos, seguidores, vínculos (clube, arena, torneio, circuito), pedidos e convites, filas, gamificação pessoal, ratings materializados; do treino: itens PRIVADOS não compartilhados (e os arquivos deles), diário, planos, rotina, treinos recebidos, dúvidas que fez; configurações de divulgação do professor |
+ * | **Pseudonimizado** | histórico esportivo e o que é de outras pessoas: inscrições, partidas, dias de jogo, conversas, fórum, avaliações. O uid fica; nome e foto viram "Atleta removido" / "Usuário removido" |
+ * | **Retido** | auditoria, consentimentos, reservas e pagamentos (obrigação do parceiro) — com o nome minimizado; denúncias de conteúdo; aulas e pacotes vendidos como professor; **o conteúdo que a pessoa criou, com a autoria** (decisão do dono, 2026-10-09): itens de treino que outras pessoas veem (públicos, só para alunos, compartilhados) com as fotos e vídeos, treinos que enviou, respostas a dúvidas e comentários em diários de alunos, conteúdo, pacotes e loja do professor; cupons e campanhas do professor ficam, fora do ar |
  * | **Impede a exclusão** | ser dono de arena, rede, clube (único admin), organizador de torneio em andamento, criador de dia de jogo ativo, ter saldo em carteira |
  *
  * ## As travas
@@ -173,18 +173,8 @@ const DELETE_BY_QUERY = Object.freeze([
   // Centro de Treino: o plano e os envios são só da pessoa (o envio é uma
   // mensagem entre duas pessoas — some dos dois lados, como a notificação).
   { col: 'training_plans', field: 'uid', label: 'Planos de treino' },
-  { col: 'training_shares', field: 'from_uid', label: 'Treinos enviados e recebidos' },
-  { col: 'training_shares', field: 'to_uid', label: 'Treinos enviados e recebidos' },
-  // O que o PROFESSOR oferece: sem ele, a oferta não tem quem a cumpra. As
-  // vendas e as aulas já dadas ficam (RETAINED_AS_IS) — são do aluno também.
-  { col: 'coach_content', field: 'coach_id', label: 'Conteúdo publicado como professor' },
-  { col: 'coach_packages', field: 'coach_id', label: 'Pacotes de aula oferecidos' },
-  { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
-  // Cupons e campanhas do professor: seguiriam no carrossel do início
-  // oferecendo aula de quem não existe mais. (O emissor da plataforma é
-  // 'platform', que nunca é um uid.)
-  { col: 'promo_coupons', field: 'issuer_id', label: 'Cupons do professor' },
-  { col: 'promo_campaigns', field: 'issuer_id', label: 'Campanhas do professor' },
+  // A caixa de entrada da pessoa. O que ela ENVIOU fica (RETAINED_AS_IS).
+  { col: 'training_shares', field: 'to_uid', label: 'Treinos recebidos' },
 ]);
 
 /**
@@ -202,6 +192,15 @@ const RETAINED_AS_IS = Object.freeze([
   // nenhum dos dois documentos guarda o nome do professor.
   { col: 'coach_lessons', field: 'coach_id', label: 'Aulas particulares dadas (como professor)' },
   { col: 'coach_package_sales', field: 'coach_id', label: 'Pacotes de aula vendidos (como professor)' },
+  // O CONTEÚDO que a pessoa criou fica, com a autoria (decisão do dono,
+  // 2026-10-09). O envio leva o nome de quem enviou; a dúvida, as respostas
+  // do professor com o nome. Conteúdo, pacotes e loja do professor só
+  // aparecem no perfil dele, que sai: ficam guardados, sem vitrine.
+  { col: 'training_shares', field: 'from_uid', label: 'Treinos que enviou ou indicou (ficam com quem recebeu)' },
+  { col: 'training_questions', field: 'coach_uid', label: 'Dúvidas de alunos que respondeu (ficam, com as respostas)' },
+  { col: 'coach_content', field: 'coach_id', label: 'Conteúdo publicado como professor' },
+  { col: 'coach_packages', field: 'coach_id', label: 'Pacotes de aula oferecidos' },
+  { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -705,12 +704,15 @@ async function coletarLadders(db, uid) {
 /* ---------------------------------------------- Centro de Treino ------ */
 
 /**
- * O item de treino que OUTRAS pessoas usam: público e aprovado. Ele fica, sem
- * o nome (como o post do fórum); o resto — privado, só para alunos, público
- * ainda em revisão ou recusado — é só da pessoa e é apagado.
+ * O item de treino que a pessoa criou PARA OUTRAS: público (em qualquer etapa
+ * da revisão), só para alunos ou compartilhado com alguém. Ele fica, com o
+ * nome de quem criou (decisão do dono, 2026-10-09: "o conteúdo criado não
+ * deve ser excluído e deve permanecer indicando a autoria"). Só o privado que
+ * ninguém mais recebeu é apagado — esse é só dela.
  */
 function trainingItemStays(it) {
-  return Boolean(it) && it.visibility === 'publico' && it.review === 'aprovado';
+  if (!it) return false;
+  return it.visibility !== 'privado' || (Array.isArray(it.shared_uids) && it.shared_uids.length > 0);
 }
 
 /**
@@ -741,31 +743,24 @@ function semMidiaQueSome(it, uid, mantidos) {
 }
 
 /**
- * Item público que fica: autoria vira "Usuário removido" (o uid fica, como em
- * todo o histórico) e saem as mídias ENVIADAS por ela — os arquivos de
- * `treino/{uid}/` são apagados junto, e um item apontando para eles
- * mostraria uma imagem quebrada. Vídeo por link (YouTube/Vimeo) fica.
+ * Item que fica: o nome de autor fica, as fotos e vídeos dele também (os
+ * arquivos entram em `coletarMantidos`). Só a FOTO de perfil sai — ela mora
+ * em `uploads/{uid}/`, que é apagada, e viraria uma imagem quebrada.
  */
-function patchTrainingItemAuthor(it, uid, mantidos) {
-  if (!it || it.author_uid !== uid) return null;
-  const patch = { ...semMidiaQueSome(it, uid, mantidos) };
-  if ('author_name' in it && it.author_name !== REMOVED_USER) patch.author_name = REMOVED_USER;
-  if (it.author_photo) patch.author_photo = null;
-  return Object.keys(patch).length > 0 ? patch : null;
+function patchTrainingItemAuthor(it, uid) {
+  if (!it || it.author_uid !== uid || !it.author_photo) return null;
+  return { author_photo: null };
 }
 
 /**
- * A cópia de OUTRA pessoa guarda o nome do original em "copiado de" — e o
- * LINK das mídias enviadas pelo original, que somem com a pasta dele.
+ * A cópia de OUTRA pessoa guarda o nome do original em "copiado de" (fica: é
+ * a autoria) e o LINK das mídias enviadas pelo original. As do item que é
+ * apagado somem com a pasta; as do item que fica, não.
  * ponytail: a cópia de uma cópia não é achada (nada indexa a cadeia); ali a
  * ficha mostra "não foi possível carregar" no lugar da mídia.
  */
 function patchDerivedFrom(it, uid, mantidos) {
-  const df = it && it.derived_from;
-  const patch = { ...semMidiaQueSome(it, uid, mantidos) };
-  if (df && typeof df === 'object' && df.author_name !== REMOVED_USER) {
-    patch.derived_from = { ...df, author_name: REMOVED_USER };
-  }
+  const patch = semMidiaQueSome(it, uid, mantidos);
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
@@ -775,18 +770,10 @@ function patchSharedUids(it, uid) {
   return { shared_uids: it.shared_uids.filter((u) => u !== uid) };
 }
 
-/** Mensagem da dúvida (`{ uid, name, text }`): o conteúdo sai, como no chat. */
-function patchTrainingMessage(m, uid) {
-  if (!m || m.uid !== uid) return null;
-  const patch = {};
-  if (m.name !== REMOVED_USER) patch.name = REMOVED_USER;
-  if (m.text !== REMOVED_MESSAGE) patch.text = REMOVED_MESSAGE;
-  return Object.keys(patch).length > 0 ? patch : null;
-}
-
 /**
- * Itens de treino que a pessoa criou: apaga os que são só dela, tira o nome
- * dos públicos aprovados e do "copiado de" das cópias de outras pessoas.
+ * Itens de treino que a pessoa criou: os que outras pessoas veem ficam, com a
+ * autoria; os privados não compartilhados são apagados. Nas cópias de outras
+ * pessoas saem só os links das mídias que somem.
  * ponytail: uma consulta de cópias por item (nada indexa "cópias de um
  * autor"); a conta tem no máximo QUERY_LIMIT itens.
  */
@@ -794,11 +781,13 @@ async function coletarItensDeTreino(db, uid, { mantidos } = {}) {
   const r = await consultar(db, 'training_items', 'author_uid', '==', uid);
   const itens = [];
   const deletes = [];
+  let count = 0;
   let truncated = r.truncated;
   for (const d of r.docs) {
     const it = d.data();
     if (trainingItemStays(it)) {
-      const p = patchTrainingItemAuthor(it, uid, mantidos);
+      count += 1;
+      const p = patchTrainingItemAuthor(it, uid);
       if (p) itens.push({ ref: d.ref, patch: p });
     } else {
       deletes.push(d.ref);
@@ -811,14 +800,14 @@ async function coletarItensDeTreino(db, uid, { mantidos } = {}) {
       if (pc) itens.push({ ref: c.ref, patch: pc });
     });
   }
-  return { itens, deletes, truncated };
+  return { itens, deletes, truncated, count };
 }
 
 /**
  * Diário de treino. O da pessoa é apagado COM os comentários (subcoleção não
  * some com o pai). No diário de um aluno que ela, professora, acompanhava:
- * o compartilhamento é desfeito e os comentários DELA saem; a sessão é do
- * aluno e fica.
+ * o compartilhamento é desfeito; a sessão é do aluno e os comentários DELA
+ * ficam, com o nome (o que ela escreveu para o aluno é conteúdo criado).
  */
 async function coletarDiario(db, uid) {
   const itens = [];
@@ -837,20 +826,16 @@ async function coletarDiario(db, uid) {
   for (const d of deAlunos.docs) {
     if (d.data().uid === uid) continue;
     itens.push({ ref: d.ref, patch: { shared_coach_id: null } });
-    // eslint-disable-next-line no-await-in-loop
-    const coms = await d.ref.collection('comments').where('uid', '==', uid).limit(QUERY_LIMIT).get();
-    coms.docs.forEach((c) => deletes.push(c.ref));
   }
   return { itens, deletes, truncated };
 }
 
 /**
- * Dúvidas. As que a pessoa FEZ são dela: somem com as mensagens. Nas que ela
- * RESPONDEU como professora, a conversa é do aluno: fica, com o nome e o
- * texto dela trocados (como no chat).
+ * Dúvidas que a pessoa FEZ: são dela e somem com as mensagens. As que ela
+ * respondeu como professora ficam como estão (RETAINED_AS_IS): as respostas
+ * são conteúdo criado, com o nome.
  */
 async function coletarDuvidas(db, uid) {
-  const itens = [];
   const deletes = [];
   const minhas = await consultar(db, 'training_questions', 'asker_uid', '==', uid);
   let truncated = minhas.truncated;
@@ -861,19 +846,30 @@ async function coletarDuvidas(db, uid) {
     msgs.docs.slice(0, QUERY_LIMIT).forEach((m) => deletes.push(m.ref));
     deletes.push(d.ref);
   }
-  const recebidas = await consultar(db, 'training_questions', 'coach_uid', '==', uid);
-  truncated = truncated || recebidas.truncated;
-  for (const d of recebidas.docs) {
-    const p = patchFlatFields(d.data(), uid, [{ idField: 'coach_uid', name: ['coach_name'] }], REMOVED_USER);
-    if (p) itens.push({ ref: d.ref, patch: p });
-    // eslint-disable-next-line no-await-in-loop
-    const msgs = await d.ref.collection('messages').where('uid', '==', uid).limit(QUERY_LIMIT).get();
-    msgs.docs.forEach((m) => {
-      const pm = patchTrainingMessage(m.data(), uid);
-      if (pm) itens.push({ ref: m.ref, patch: pm });
-    });
+  return { itens: [], deletes, truncated };
+}
+
+/**
+ * Cupom e campanha do PROFESSOR ficam (são conteúdo criado), mas saem do ar:
+ * seguiriam no carrossel do início oferecendo aula de quem não existe mais.
+ * O emissor da plataforma é 'platform', que nunca é um uid.
+ */
+const foraDoAr = (campo) => (d, uid) => (
+  d && d.issuer_id === uid && d[campo] !== false ? { [campo]: false } : null
+);
+
+/**
+ * A ficha de aluno de um professor, quando o ALUNO é excluído: o nome sai e o
+ * vínculo encerra — o professor deixou de ser professor dele. Fica na lista
+ * do professor como histórico ("A conta do aluno foi excluída"), sem convite.
+ */
+function patchCoachStudentLink(d, uid) {
+  if (!d || d.student_id !== uid) return null;
+  const patch = campos('student_id', ['student_name'], ['student_email'])(d, uid) || {};
+  if (d.status !== 'ended') {
+    Object.assign(patch, { status: 'ended', ended_at: new Date(), ended_by: uid, ended_reason: 'conta_excluida' });
   }
-  return { itens, deletes, truncated };
+  return Object.keys(patch).length > 0 ? patch : null;
 }
 
 /**
@@ -909,13 +905,15 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Fórum de clube', collect: coletarForum, deleteLabel: 'Votos em enquete de fórum' },
   { label: 'Publicações em clube', col: 'club_posts', wheres: [['author_id', '==']], patch: campos('author_id', ['author_name'], ['author_photo'], REMOVED_USER) },
   { label: 'Avaliações de arena', col: 'arena_reviews', wheres: [['user_id', '==']], patch: campos('user_id', ['user_name'], ['user_photo'], REMOVED_USER) },
-  { label: 'Fichas de aluno de professores', col: 'coach_students', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name'], ['student_email']) },
+  { label: 'Fichas de aluno de professores (vínculo encerrado)', col: 'coach_students', wheres: [['student_id', '==']], patch: patchCoachStudentLink },
   // Centro de Treino. `cols` diz o que um coletor com passos toca — é o que o
   // guarda `exclusaoCobreColecoes` confere contra o `firestore.rules`.
-  { label: 'Itens de treino públicos (autoria removida)', collect: coletarItensDeTreino, deleteLabel: 'Itens de treino privados e só para alunos', cols: ['training_items'] },
+  { label: 'Itens de treino que criou (ficam, com a autoria)', bucket: 'retained', collect: coletarItensDeTreino, deleteLabel: 'Itens de treino privados, não compartilhados', cols: ['training_items'] },
   { label: 'Acesso a itens de treino de outras pessoas', col: 'training_items', wheres: [['shared_uids', 'array-contains']], patch: patchSharedUids },
-  { label: 'Diários de alunos que acompanhava', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
-  { label: 'Dúvidas que respondeu como professor', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino e mensagens', cols: ['training_questions'] },
+  { label: 'Diários de alunos que acompanhava (os comentários ficam)', bucket: 'retained', collect: coletarDiario, deleteLabel: 'Diário de treino e comentários', cols: ['training_sessions'] },
+  { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
+  { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active') },
+  { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: foraDoAr('banner_active') },
   // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
   { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
   { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
@@ -950,7 +948,7 @@ async function coletarTrocas(db, uid, spec, extra = {}) {
   if (typeof spec.collect === 'function') {
     const r = await spec.collect(db, uid, extra);
     return {
-      label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [],
+      label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [], count: r.count,
       deletes: r.deletes || [], deleteLabel: spec.deleteLabel || spec.label, truncated: Boolean(r.truncated),
     };
   }
@@ -1001,17 +999,17 @@ async function contaDeLoginExiste(auth, uid) {
 const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`]);
 
 /**
- * Arquivos de `treino/{uid}/` que FICAM: a mídia que a pessoa, como admin,
- * enviou para itens da PLATAFORMA (autor "plataforma", `created_by` = ela). O
- * item é da plataforma e segue na biblioteca de todo mundo; apagar a pasta
- * inteira quebraria as fotos e vídeos dele.
+ * Arquivos de `treino/{uid}/` que FICAM: a mídia dos itens que ficam — os da
+ * própria pessoa que outras pessoas veem e os da PLATAFORMA que ela, como
+ * admin, enviou para a biblioteca. Apagar a pasta inteira
+ * quebraria as fotos e vídeos deles.
  */
 async function coletarMantidos(db, uid) {
-  const r = await consultar(db, 'training_items', 'created_by', '==', uid);
+  const r = await consultarUniao(db, 'training_items', [['created_by', '=='], ['author_uid', '==']], uid);
   const mantidos = new Set();
   r.docs.forEach((d) => {
     const it = d.data() || {};
-    if (it.author_uid === uid || !Array.isArray(it.media)) return;
+    if ((it.author_uid === uid && !trainingItemStays(it)) || !Array.isArray(it.media)) return;
     it.media.forEach((m) => {
       const caminho = caminhoDaMidia(m);
       if (caminho && caminho.startsWith(`treino/${uid}/`)) mantidos.add(caminho);
@@ -1172,13 +1170,13 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
     ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length })),
     ...(storageFiles > 0 ? [{ label: 'Fotos e arquivos enviados', count: storageFiles }] : []),
   ]);
-  const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained')
-    .map((t) => ({ label: t.label, count: t.itens.length, truncated: t.truncated })));
+  // `count` quando o coletor conta o que FICA (nem tudo o que fica muda).
+  const linha = (t) => ({ label: t.label, count: t.count ?? t.itens.length, truncated: t.truncated });
+  const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained').map(linha));
   const retained = somarPorRotulo([
-    ...trocas.filter((t) => t.bucket === 'retained')
-      .map((t) => ({ label: t.label, count: t.itens.length, truncated: t.truncated })),
+    ...trocas.filter((t) => t.bucket === 'retained').map(linha),
     ...retidos,
-    ...(mantidos.size > 0 ? [{ label: 'Fotos e vídeos de itens da biblioteca da plataforma', count: mantidos.size }] : []),
+    ...(mantidos.size > 0 ? [{ label: 'Fotos e vídeos dos itens de treino que ficam', count: mantidos.size }] : []),
   ]);
 
   const report = buildReport({
@@ -1344,7 +1342,7 @@ module.exports = {
   patchTrainingItemAuthor,
   patchDerivedFrom,
   patchSharedUids,
-  patchTrainingMessage,
+  patchCoachStudentLink,
   consolidarOps,
   analyzeAccount,
   executeAccountDeletion,
