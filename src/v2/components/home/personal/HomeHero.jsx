@@ -22,7 +22,7 @@ import PersonalizeHomeDialog from './PersonalizeHomeDialog';
 function Contador({ label, value, destaque = false }) {
   return (
     <div className={destaque ? 'rounded-3xl bg-acid p-4 text-ink' : 'rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-lg'}>
-      <p className={destaque ? 'text-[11px] font-bold uppercase tracking-wide text-ink/70' : 'text-[11px] font-bold uppercase tracking-wide text-gray-400'}>{label}</p>
+      <p className={destaque ? 'text-[11px] font-bold uppercase tracking-wide text-ink/70' : 'text-[11px] font-bold uppercase tracking-wide text-gray-500'}>{label}</p>
       <p className="mt-1 font-display text-3xl font-black leading-none">{value}</p>
     </div>
   );
@@ -68,7 +68,7 @@ export default function HomeHero({
             {frase || 'Carregando o que você tem pela frente…'}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Seu início mostra</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Seu início mostra</span>
             {chips.slice(0, MAX_CHIPS).map((c) => (
               <span
                 key={c.key}

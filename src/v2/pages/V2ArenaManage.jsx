@@ -561,7 +561,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
                   <tr key={c.key} className="border-t border-gray-100">
                     <td className="px-4 py-3 font-semibold text-ink">
                       {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
-                      {!c.athlete_id && <span className="ml-1 text-xs text-gray-400">· avulso</span>}
+                      {!c.athlete_id && <span className="ml-1 text-xs text-gray-500">· avulso</span>}
                     </td>
                     {membrosNaMao && (
                       <td className="px-4 py-3">
@@ -574,9 +574,9 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
                             <Crown className="h-3.5 w-3.5" /> Tornar membro
                           </V2Button>
                         ) : c.athlete_id ? (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-500">—</span>
                         ) : (
-                          <span className="text-xs text-gray-400" title="Sem conta na plataforma">sem conta</span>
+                          <span className="text-xs text-gray-500" title="Sem conta na plataforma">sem conta</span>
                         )}
                       </td>
                     )}
@@ -651,7 +651,7 @@ function PhotosTab({ arena }) {
             <div key={p.path || i} className="group relative">
               <PhotoLightbox src={p.url} alt={`Foto ${i + 1} da arena`}
                 trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
-              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-[10px] font-bold text-ink">Capa</span>}
+              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-[11px] font-bold text-ink">Capa</span>}
               <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remover foto">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -747,7 +747,7 @@ function ManagersTab({ arena }) {
           <li key={m.user_id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper px-4 py-3">
             <div className="min-w-0">
               <div className="truncate font-semibold text-ink">{m.user_name || 'Usuário'}</div>
-              <div className="mt-0.5 text-xs text-gray-400">{m.user_id}</div>
+              <div className="mt-0.5 text-xs text-gray-500">{m.user_id}</div>
             </div>
             <div className="flex items-center gap-2">
               <V2Badge tone="neutral">{m.role === ARENA_MANAGER_ROLE.OWNER ? 'Owner' : 'Admin'}</V2Badge>

@@ -470,7 +470,7 @@ function AccountLinkField({ label, nome, athletes, ready, failed, excluded, onPi
                   className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-left text-sm hover:border-gray-300"
                 >
                   <span className="truncate font-medium text-ink">{p.name}</span>
-                  {p.city && <span className="shrink-0 text-xs text-gray-400">{p.city}</span>}
+                  {p.city && <span className="shrink-0 text-xs text-gray-500">{p.city}</span>}
                 </button>
               ))}
             </div>

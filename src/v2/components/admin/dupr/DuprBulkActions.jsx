@@ -50,7 +50,7 @@ export default function DuprBulkActions({
           ({hiddenCount} fora do recorte atual — a ação também vale para ela(s))
         </span>
       )}
-      <span className="text-xs uppercase tracking-wide text-gray-400">Tornar</span>
+      <span className="text-xs uppercase tracking-wide text-gray-500">Tornar</span>
       {ADMIN_ASSIGNABLE_STATUSES.map((status) => {
         const Icon = STATUS_ICON[status];
         return (

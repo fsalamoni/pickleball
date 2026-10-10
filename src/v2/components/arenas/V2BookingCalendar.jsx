@@ -476,7 +476,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         {/* Header da semana */}
         <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
           {WEEKDAY_LABELS_PT.map((wd) => (
-            <div key={wd} className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <div key={wd} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">
               {wd}
             </div>
           ))}
@@ -590,7 +590,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       </div>
 
       {!isAuthenticated && (
-        <p className="text-center text-xs text-gray-400">
+        <p className="text-center text-xs text-gray-500">
           <Link to="/login" className="text-green-700 underline">Faça login</Link> para reservar.
         </p>
       )}

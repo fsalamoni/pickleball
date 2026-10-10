@@ -108,7 +108,7 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
     <V2Surface className="space-y-4 border-acid/40" data-dica="treino-planos-adicionar">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Pôr no meu treino</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Pôr no meu treino</p>
           <h2 className="mt-1 font-display text-lg font-bold text-ink">{titulo}</h2>
         </div>
         <button type="button" onClick={onFechar} aria-label="Fechar" className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
@@ -212,7 +212,7 @@ export default function PlansTab({ identity, params, irPara }) {
         grupos.map((g) => (
           <section key={g.status} className="space-y-3" aria-label={PLAN_STATUS_LABELS[g.status]}>
             {g.status !== PLAN_STATUS.ATIVO && (
-              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
                 {g.status === PLAN_STATUS.PAUSADO ? 'Pausados' : 'Concluídos'}
               </h2>
             )}

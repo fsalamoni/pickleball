@@ -51,7 +51,7 @@ export function SlotAction({ estado, semConta, ocupado, onEntrar, onSair, onFila
       return <V2Button variant="ghost" size={size} disabled={ocupado} onClick={onSair}>Sair deste jogo</V2Button>;
     case 'encerrado':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
+        <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
           <Clock className="h-3.5 w-3.5" /> Inscrições encerradas
         </span>
       );

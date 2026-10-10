@@ -333,7 +333,7 @@ export default function V2ProfileEdit() {
               label="Enviar foto"
               hint="Sua foto aparece no perfil, no diretório de atletas e nos clubes."
             />
-            <p className="mt-2 text-xs text-gray-400">{user?.email} · Login via Google</p>
+            <p className="mt-2 text-xs text-gray-500">{user?.email} · Login via Google</p>
           </div>
 
           <form onSubmit={onSaveIdentity} className="mt-6 space-y-4">
@@ -462,7 +462,7 @@ export default function V2ProfileEdit() {
                   <Icon className={cn('mt-0.5 h-4.5 w-4.5 shrink-0', active ? 'text-acid' : 'text-gray-400')} />
                   <span>
                     {label}
-                    {hint && <span className={cn('mt-0.5 block text-xs font-normal', active ? 'text-white/70' : 'text-gray-400')}>{hint}</span>}
+                    {hint && <span className={cn('mt-0.5 block text-xs font-normal', active ? 'text-white/70' : 'text-gray-500')}>{hint}</span>}
                   </span>
                 </button>
               );

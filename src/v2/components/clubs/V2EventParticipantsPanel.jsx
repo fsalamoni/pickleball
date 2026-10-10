@@ -176,7 +176,7 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
                           {inv.user_name}
                           {inv.user_id === event.created_by && <span className="ml-1 text-xs text-ink">(organizador)</span>}
                         </div>
-                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-[11px] text-gray-400">Convidado da plataforma</div>}
+                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-[11px] text-gray-500">Convidado da plataforma</div>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
 function Pool({ title, people, onInvite, emptyText }) {
   return (
     <div>
-      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">{title} ({people.length})</h4>
+      <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">{title} ({people.length})</h4>
       {people.length === 0 ? (
         <p className="text-sm text-gray-400">{emptyText}</p>
       ) : (

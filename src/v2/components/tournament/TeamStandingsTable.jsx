@@ -27,7 +27,7 @@ function GroupTable({ name, rows }) {
       <V2Surface className="overflow-x-auto p-0">
         <table className="w-full min-w-[620px] text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            <tr className="border-b border-gray-100 text-left text-[11px] font-bold uppercase tracking-widest text-gray-500">
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Equipe</th>
               <th className="px-4 py-3 text-center" title="Confrontos disputados">CJ</th>
@@ -90,7 +90,7 @@ export default function TeamStandingsTable({ matches = [], teamRegistrations = [
   return (
     <div className="space-y-4">
       {tables.map((t, i) => <GroupTable key={t.name || i} name={t.name} rows={t.rows} />)}
-      <p className="text-[11px] leading-5 text-gray-400">
+      <p className="text-[11px] leading-5 text-gray-500">
         Critérios de desempate: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.
       </p>
     </div>

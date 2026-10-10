@@ -53,7 +53,7 @@ export default function ArenaPendencias({ arena, onIrParaAba }) {
 
   return (
     <section aria-label="Precisa de você" data-dica="arena-pendencias" className="mt-5 rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Precisa de você</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Precisa de você</p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {itens.map((i) => (
           <li key={i.id}>

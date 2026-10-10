@@ -143,7 +143,7 @@ export default function CourtTimePicker({
                         aria-pressed={marcado}
                         title={`${court.name || 'Quadra'} · ${time}${celula.end ? `–${celula.end}` : ''} · ${SLOT_STATUS_LABELS[celula.status]}`}
                         className={cn(
-                          'flex h-10 w-full items-center justify-center rounded-lg border text-[10px] font-semibold transition-all',
+                          'flex h-10 w-full items-center justify-center rounded-lg border text-[11px] font-semibold transition-all',
                           cor.bg, cor.border, cor.text,
                           livre && 'cursor-pointer hover:ring-2 hover:ring-ink/20',
                           !livre && 'cursor-not-allowed opacity-70',

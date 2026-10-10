@@ -56,7 +56,7 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
           )}
         >
           {comNome && (
-            <span className="px-2.5 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:w-[4.5rem] sm:shrink-0 sm:pt-0">
+            <span className="px-2.5 pt-1 text-[11px] font-bold uppercase tracking-widest text-gray-500 sm:w-[4.5rem] sm:shrink-0 sm:pt-0">
               {linha.label}
             </span>
           )}

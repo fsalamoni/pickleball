@@ -320,7 +320,7 @@ function ViewTable({ lines }) {
   return (
     <table className="w-full min-w-[560px] text-sm">
       <thead>
-        <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
+        <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
           <th className="py-2 pr-2">Produto</th>
           <th className="px-2 text-right">Entrada</th>
           <th className="px-2 text-right">Compra (R$)</th>
@@ -336,7 +336,7 @@ function ViewTable({ lines }) {
             <td className="py-2 pr-2">
               <span className="font-semibold text-ink">{l.name}</span>
               {l.manual && <V2Badge tone="amber" className="ml-2">manual</V2Badge>}
-              {l.brand && <span className="block text-xs text-gray-400">{l.brand}</span>}
+              {l.brand && <span className="block text-xs text-gray-500">{l.brand}</span>}
             </td>
             <td className="px-2 text-right">{l.entered_qty || '—'}</td>
             <td className="px-2 text-right">{l.entered_cost ? formatPrice(l.entered_cost) : '—'}</td>
@@ -368,7 +368,7 @@ function EditTable({ lines, onChange, onRemove, onAdd, onCancel, onSave, saving 
       </p>
       <table className="w-full min-w-[640px] text-sm">
         <thead>
-          <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-400">
+          <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
             <th className="py-2 pr-2">Produto</th>
             <th className="px-2">Ent.</th>
             <th className="px-2">Compra</th>

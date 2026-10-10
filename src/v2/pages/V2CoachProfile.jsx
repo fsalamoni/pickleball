@@ -45,7 +45,7 @@ function ResidencyCard({ residency }) {
             {arena.name}
           </Link>
           {arena.city && (
-            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
               <MapPin className="h-3 w-3" /> {arena.city}{arena.state && `, ${arena.state}`}
             </div>
           )}
@@ -175,7 +175,7 @@ export default function V2CoachProfile() {
             )}
             {coach.certifications?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Certificações</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Certificações</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {coach.certifications.map((c) => <V2Badge key={c} tone="neutral">{c}</V2Badge>)}
                 </div>

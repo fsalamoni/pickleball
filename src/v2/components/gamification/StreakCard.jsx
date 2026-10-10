@@ -103,18 +103,18 @@ export default function StreakCard({ streak, meta = null, onStartVacation, onEnd
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <div className="rounded-2xl bg-paper p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Recorde</dt>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Recorde</dt>
           <dd className="font-bold tabular-nums text-ink" data-testid="streak-best">{semanas(streak.best)}</dd>
         </div>
         {streak.weeks > 0 && (
           <div className="rounded-2xl bg-paper p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Folga deste mês</dt>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Folga deste mês</dt>
             <dd className="font-bold text-ink" data-testid="streak-folga">{streak.folgaUsedThisMonth ? 'Já usada' : 'Disponível'}</dd>
           </div>
         )}
         {streak.lastPlayAt && (
           <div className="rounded-2xl bg-paper p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Último jogo</dt>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Último jogo</dt>
             <dd className="font-bold text-ink">{dia(streak.lastPlayAt)}</dd>
           </div>
         )}

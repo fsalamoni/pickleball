@@ -55,6 +55,10 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: '0'
           VITE_FIREBASE_APP_ID: '1:0:web:dummy'
 
+      # O pacote inicial (gzip) tem orçamento: ver scripts/check-bundle-size.mjs.
+      - name: Orçamento do pacote inicial
+        run: npm run build:budget
+
   # Regras de segurança do Firestore, contra o emulador. Job separado para
   # não pesar o build (precisa de Java e baixa o emulador). É o que impede
   # que uma regressão reabra um achado de segurança já corrigido —

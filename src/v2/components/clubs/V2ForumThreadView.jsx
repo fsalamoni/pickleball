@@ -299,7 +299,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 text-sm">
               <span className="font-bold text-ink">{comment.author_name}</span>
-              <span className="ml-2 text-xs text-gray-400">{timeAgo(comment.created_at_ms)}{comment.edited ? ' · editado' : ''}</span>
+              <span className="ml-2 text-xs text-gray-500">{timeAgo(comment.created_at_ms)}{comment.edited ? ' · editado' : ''}</span>
             </div>
             {(isAuthor || canDelete) && !editing && (
               <DropdownMenu>

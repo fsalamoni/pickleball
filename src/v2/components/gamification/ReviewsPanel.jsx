@@ -151,7 +151,7 @@ export default function ReviewsPanel({ uid, records, windowDays = 14, recordsLoa
           ))}
         </ul>
       )}
-      <p className="mt-3 text-[11px] leading-4 text-gray-400">Sem comentários livres: estrelas e elogios. Você pode retirar uma avaliação a qualquer momento.</p>
+      <p className="mt-3 text-[11px] leading-4 text-gray-500">Sem comentários livres: estrelas e elogios. Você pode retirar uma avaliação a qualquer momento.</p>
       {open && (
         <ReviewDialog open match={open} people={people} onClose={() => setOpen(null)} onSubmit={enviar} submitting={submit.isPending} />
       )}

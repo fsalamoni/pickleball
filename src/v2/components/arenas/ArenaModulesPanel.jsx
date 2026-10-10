@@ -83,7 +83,7 @@ function ModuleConfig({ arenaId, mod, current }) {
 
   return (
     <div className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
         Como este módulo funciona nesta arena
       </p>
       <div className="grid gap-3 sm:grid-cols-2">

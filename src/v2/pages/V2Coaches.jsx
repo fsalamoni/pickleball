@@ -133,7 +133,7 @@ function CoachCard({ coach, distancia = null }) {
               ))}
             </div>
             {coach.regions?.length > 0 && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+              <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                 <MapPin className="h-3 w-3" /> {coach.regions.join(' · ')}{distancia ? ` · ${distancia}` : ''}
               </div>
             )}
@@ -300,7 +300,7 @@ export default function V2Coaches() {
       ) : (
         <div className="space-y-3" data-dica="professores-lista">
           {discoveryOn && (
-            <p className="px-1 text-xs text-gray-400">{displayed.length} professor(es)</p>
+            <p className="px-1 text-xs text-gray-500">{displayed.length} professor(es)</p>
           )}
           {displayed.map((c) => (
             <CoachCard key={c.id} coach={c} distancia={regional.ativa ? distanceLabel(regional.infoDe(c)?.km) : null} />

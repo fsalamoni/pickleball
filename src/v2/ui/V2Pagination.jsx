@@ -55,7 +55,7 @@ export default function V2Pagination({
 
   return (
     <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         {total > 0
           ? `Mostrando ${from}–${to} de ${total} ${itemLabel}`
           : `Nenhum resultado`}

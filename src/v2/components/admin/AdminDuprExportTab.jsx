@@ -447,23 +447,23 @@ export default function AdminDuprExportTab() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Última atividade</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Última atividade</div>
             <div className="text-sm font-semibold text-ink">{formatDateTime(lastExport.lastActivityAt)}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Já exportadas</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Já exportadas</div>
             <div className="text-sm font-semibold text-ink">{lastExport.exportedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Lançadas no DUPR</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Lançadas no DUPR</div>
             <div className="text-sm font-semibold text-ink">{lastExport.submittedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Não lançar</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Não lançar</div>
             <div className="text-sm font-semibold text-ink">{lastExport.excludedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-400">Partidas no ledger</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">Partidas no ledger</div>
             <div className="text-sm font-semibold text-ink">{lastExport.total}</div>
           </div>
         </div>

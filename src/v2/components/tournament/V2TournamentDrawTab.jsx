@@ -823,7 +823,7 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
                 </div>
                 <div className="space-y-1.5">
                   {g.participants.length === 0 ? (
-                    <p className="text-xs text-gray-400">Grupo vazio</p>
+                    <p className="text-xs text-gray-500">Grupo vazio</p>
                   ) : (
                     g.participants.map((pid) => (
                       <div key={pid} className="flex items-center justify-between gap-2">

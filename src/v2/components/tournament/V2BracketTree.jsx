@@ -52,7 +52,7 @@ export default function V2BracketTree({ matches = [], labelById }) {
 
   return (
     <div className="overflow-x-auto">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500">
         {kind === 'bracket' ? 'Chave — fases finais' : 'Rodadas'}
       </div>
       <div className="flex min-w-max gap-4 pb-2">

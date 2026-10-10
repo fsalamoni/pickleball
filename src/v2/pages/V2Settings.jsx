@@ -188,7 +188,7 @@ export default function V2Settings() {
                   </div>
                 ))}
               </div>
-              {savingPrefs && <p className="mt-3 text-xs text-gray-400">Salvando…</p>}
+              {savingPrefs && <p className="mt-3 text-xs text-gray-500">Salvando…</p>}
               {centralAvisosOn && (
                 <div className="mt-4">
                   <V2Button asChild variant="secondary" size="sm">

@@ -115,7 +115,7 @@ function LinhaDoGrupo({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {politica !== GROUP_POLICY.QUEUE && (
           <span
-            className="w-5 text-xs font-bold tabular-nums text-gray-400"
+            className="w-5 text-xs font-bold tabular-nums text-gray-500"
             title={politica === GROUP_POLICY.PRIORITY ? 'Posição na prioridade' : 'Posição no revezamento'}
           >
             {indice + 1}º
@@ -466,7 +466,7 @@ export default function PlayGroupsCard({
             )}
 
             {!podeConfigurar && (
-              <p className="text-[11px] leading-5 text-gray-400">
+              <p className="text-[11px] leading-5 text-gray-500">
                 Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos. Você move as pessoas entre eles.
               </p>
             )}

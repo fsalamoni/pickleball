@@ -227,7 +227,7 @@ export default function AdminUserRecordsTab() {
             />
           ))}
           {listados.length > 100 && (
-            <p className="pt-2 text-center text-[11px] text-gray-400">
+            <p className="pt-2 text-center text-[11px] text-gray-500">
               Mostrando 100 de {listados.length}. Refine a busca.
             </p>
           )}
@@ -365,13 +365,13 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
             Falta preencher: {s.missing.map((f) => f.label).join(', ')}
           </div>
         )}
-        <div className="mt-1 text-[10px] text-gray-400">
+        <div className="mt-1 text-[11px] text-gray-500">
           {s.filledCount}/{s.totalCount} campos preenchidos
         </div>
         {u._teste.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {u._teste.map((m) => (
-              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900">
+              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
                 {m}
               </span>
             ))}
@@ -387,7 +387,7 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </V2Button>
         ) : (
-          <span className="self-center text-[10px] text-gray-400" title={bloqueio.reason}>não excluível</span>
+          <span className="self-center text-[11px] text-gray-500" title={bloqueio.reason}>não excluível</span>
         )}
       </div>
     </div>
@@ -425,14 +425,14 @@ function RecordEditDialog({ user, onClose }) {
         <DialogHeader>
           <DialogTitle>{user.platform_name || user.full_name || 'Cadastro'}</DialogTitle>
           <DialogDescription>
-            {user.email || '(sem e-mail)'} · <span className="font-mono text-[10px]">{user.uid}</span>
+            {user.email || '(sem e-mail)'} · <span className="font-mono text-[11px]">{user.uid}</span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {GRUPOS.map((g) => (
             <div key={g.id}>
-              <h4 className="text-xs font-bold uppercase tracking-wide text-gray-400">{g.label}</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</h4>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 {ADMIN_EDITABLE_FIELDS.filter((f) => f.group === g.id).map((f) => (
                   <label key={f.key} className="block text-xs font-semibold text-ink">
@@ -482,7 +482,7 @@ function RecordEditDialog({ user, onClose }) {
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ex.: o atleta pediu a correção do telefone por WhatsApp"
             />
-            <span className="mt-1 block text-[10px] font-normal text-gray-500">
+            <span className="mt-1 block text-[11px] font-normal text-gray-500">
               Fica na Auditoria junto com o antes e o depois de cada campo.
             </span>
           </label>
@@ -536,7 +536,7 @@ function CampoDeEdicao({ field: f, value, onChange }) {
         {foraDaLista && <option value={value}>{value} (valor antigo, fora da lista)</option>}
       </V2Select>
       {foraDaLista && (
-        <span className="mt-1 block text-[10px] font-normal text-amber-700">
+        <span className="mt-1 block text-[11px] font-normal text-amber-700">
           O valor gravado não está na lista atual. Escolha um da lista para corrigir.
         </span>
       )}

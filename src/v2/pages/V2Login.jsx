@@ -265,7 +265,7 @@ export default function Login() {
                 </button>
               </p>
 
-              <p className="text-center text-xs leading-6 text-gray-400">
+              <p className="text-center text-xs leading-6 text-gray-500">
                 Ao continuar você aceita nossa{' '}
                 <Link to="/politica-uso" className="font-bold text-gray-600 underline underline-offset-4">Política de Uso</Link>
                 {' '}e o{' '}

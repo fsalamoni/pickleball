@@ -26,7 +26,7 @@ function Numero({ to, label, value, icon: Icon }) {
       to={to}
       className="group flex flex-col rounded-3xl border border-gray-100 bg-paper p-4 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
     >
-      <span className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-gray-400">
+      <span className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-gray-500">
         {label} <Icon className="h-4 w-4 text-ink" aria-hidden="true" />
       </span>
       <span className="mt-1 font-display text-2xl font-black text-ink">{value}</span>

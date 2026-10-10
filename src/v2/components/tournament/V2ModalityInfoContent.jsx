@@ -64,7 +64,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
               : `até ${modality.max_entries} inscrições. Atualmente ${formatConfirmedCount(registrationsCount)}.`}
           </li>
           <li><strong className="text-ink">Categoria de gênero:</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
-          <li><strong className="text-ink">Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-400">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
+          <li><strong className="text-ink">Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-500">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
           <li><strong className="text-ink">Nível recomendado:</strong> {SKILL_LEVEL_LABELS[modality.skill_level]}</li>
           <li className="flex items-center gap-1"><Wallet className="h-3 w-3" /> <strong className="text-ink">Taxa de inscrição:</strong> {fee > 0 ? formatBRL(fee) : 'Gratuita'}</li>
         </ul>
@@ -75,7 +75,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
           <h4 className="flex items-center gap-2 font-display font-bold text-ink">
             <Layers className="h-4 w-4 text-ink" /> Como funciona a competição ({stages.length} fases)
           </h4>
-          <p className="text-xs text-gray-400">A inscrição é única; a cada fase os classificados avançam para a fase seguinte.</p>
+          <p className="text-xs text-gray-500">A inscrição é única; a cada fase os classificados avançam para a fase seguinte.</p>
           <ol className="space-y-2">
             {stages.map((s, i) => (
               <li key={i} className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -134,7 +134,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
             {modality.court_count && <li><strong className="text-ink">Quadras disponíveis:</strong> {modality.court_count}</li>}
             {modality.match_duration_minutes && <li><strong className="text-ink">Duração média do jogo:</strong> {modality.match_duration_minutes} minutos</li>}
           </ul>
-          <p className="text-xs text-gray-400">Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem conflito de jogadores.</p>
+          <p className="text-xs text-gray-500">Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem conflito de jogadores.</p>
         </section>
       )}
 

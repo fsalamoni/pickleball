@@ -81,9 +81,11 @@ describe('a chamada da fila na tela inicial', () => {
 });
 
 describe('⭐ o Dashboard monta a chamada só com os módulos de arena ligados', () => {
-  it('a montagem depende da chave-mestra', () => {
-    const src = readFileSync('src/v2/pages/V2Dashboard.jsx', 'utf8');
-    expect(src).toMatch(/useFeatureFlag\(PERMANENT_FEATURE\.ARENA_MODULES\)/);
+  it('a tela inicial monta a chamada da fila (o que tem prazo vem antes dos cards)', () => {
+    // Os módulos de arena viraram código permanente em 2026-10-10: a chamada
+    // monta sempre, e só aparece quando há chamada.
+    const src = readFileSync('src/v2/components/home/personal/V2PersonalHome.jsx', 'utf8');
     expect(src).toMatch(/\{arenaModulesOn && <HomeWaitlistCalls \/>\}/);
+    expect(src).toMatch(/const arenaModulesOn = true;/);
   });
 });

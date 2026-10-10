@@ -373,7 +373,7 @@ function ExternalToggle({ includeExternal, onChange, isAdmin }) {
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <Globe2 className="h-4 w-4 text-amber-600" /> Incluir resultados externos
             {includeExternal && (
-              <V2Badge tone="amber" className="rounded-full text-[10px]">
+              <V2Badge tone="amber" className="rounded-full text-[11px]">
                 ON
               </V2Badge>
             )}
@@ -491,7 +491,7 @@ function PairMembers({ members }) {
     <div className="flex flex-wrap items-center gap-2">
       {list.map((m, idx) => (
         <span key={m.id} className="inline-flex items-center gap-1.5">
-          {idx > 0 && <span className="text-xs text-gray-400">+</span>}
+          {idx > 0 && <span className="text-xs text-gray-500">+</span>}
           <V2Avatar size="xs" name={m.name} photoUrl={m.photo_url} />
           <span className="text-sm">{m.name}</span>
         </span>

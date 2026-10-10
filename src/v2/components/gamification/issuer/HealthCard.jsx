@@ -52,14 +52,14 @@ export default function HealthCard({ health, suggestions = [], unknown = [], tit
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
               <div className={cn('h-full rounded-full', BAR[d.score == null ? 'neutral' : d.score >= 85 ? 'green' : d.score >= 70 ? 'blue' : d.score >= 50 ? 'amber' : 'red'])} style={{ width: `${d.score ?? 0}%` }} />
             </div>
-            <p className="mt-0.5 text-[11px] text-gray-400">{d.detail}</p>
+            <p className="mt-0.5 text-[11px] text-gray-500">{d.detail}</p>
           </li>
         ))}
       </ul>
 
       {suggestions.length > 0 && (
         <div className="border-t border-gray-100 pt-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400"><Lightbulb className="h-3.5 w-3.5" aria-hidden="true" /> O que dá para melhorar</p>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500"><Lightbulb className="h-3.5 w-3.5" aria-hidden="true" /> O que dá para melhorar</p>
           <ul className="space-y-2">
             {suggestions.map((s) => (
               <li key={s.id} className={cn('rounded-xl p-3 text-sm', s.tone === 'warn' ? 'bg-amber-50 text-amber-900' : 'bg-paper text-gray-700')}>

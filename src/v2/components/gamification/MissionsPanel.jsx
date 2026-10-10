@@ -53,7 +53,7 @@ function ScopeBody({ scope, m, onTrack }) {
         onClaimBonus={() => { onTrack?.(scope, MISSION_BONUS_XP[scope]); m.claimBonus(); }}
       />
       {m.claimError && <p role="alert" className="text-xs text-red-600">Não deu para resgatar o bônus agora. Tente de novo.</p>}
-      <p className="text-[11px] leading-4 text-gray-400">
+      <p className="text-[11px] leading-4 text-gray-500">
         O progresso é medido pela sua atividade real — jogos, torneios, reservas, avaliações. Não há botão de marcar.
       </p>
     </div>

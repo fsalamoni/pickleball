@@ -90,7 +90,7 @@ export default function ItemCard({ item, to, showStatus = false, actions, extra,
       <KindIcon kind={item.kind} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{ITEM_KIND_LABELS[item.kind] || 'Item'}</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{ITEM_KIND_LABELS[item.kind] || 'Item'}</span>
           {item.featured && (
             <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-600">
               <Star className="h-3 w-3 fill-current" aria-hidden="true" /> Destaque
@@ -101,7 +101,7 @@ export default function ItemCard({ item, to, showStatus = false, actions, extra,
         {item.summary && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{item.summary}</p>}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <AuthorLine item={item} />
-          {meta && <span className="text-xs text-gray-400">{meta}</span>}
+          {meta && <span className="text-xs text-gray-500">{meta}</span>}
         </div>
         {extra && <div className="mt-2">{extra}</div>}
       </div>

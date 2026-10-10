@@ -190,7 +190,7 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                   )}
                 </div>
                 {m.source === 'upload' && (
-                  <p className="mt-2 text-xs text-gray-400">Se remover, o arquivo é apagado quando você salvar.</p>
+                  <p className="mt-2 text-xs text-gray-500">Se remover, o arquivo é apagado quando você salvar.</p>
                 )}
               </li>
             );

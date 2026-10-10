@@ -143,7 +143,7 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
           eram os três. Quem não está no diretório aparece como "Atleta". */}
       {pessoas.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Quem vem</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Quem vem</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {pessoas.map((p) => (
               <span key={p.uid} className="inline-flex items-center gap-1.5 rounded-full border border-gray-100 bg-paper py-0.5 pl-0.5 pr-2.5 text-xs text-ink">

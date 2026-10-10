@@ -134,7 +134,7 @@ export default function TrainingItemForm({
         {ve('steps') && (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-ink">Passo a passo</p>
-            <p className="text-xs text-gray-400">Um verbo por passo, na ordem. O último diz quando trocar de lado ou de papel.</p>
+            <p className="text-xs text-gray-500">Um verbo por passo, na ordem. O último diz quando trocar de lado ou de papel.</p>
             <ListEditor
               id={campoId('steps')}
               items={form.steps}
@@ -160,7 +160,7 @@ export default function TrainingItemForm({
         {ve('cues') && (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-ink">Dicas curtas</p>
-            <p className="text-xs text-gray-400">Até 8 palavras, apontando para fora do corpo: a bola, o alvo, a raquete.</p>
+            <p className="text-xs text-gray-500">Até 8 palavras, apontando para fora do corpo: a bola, o alvo, a raquete.</p>
             <ListEditor
               id={campoId('cues')}
               items={form.cues}
@@ -221,7 +221,7 @@ export default function TrainingItemForm({
         </div>
         <div className="space-y-2">
           <p className="text-sm font-semibold text-ink">Perguntas para fixar</p>
-          <p className="text-xs text-gray-400">Situações de jogo: “a bola quicou na linha da cozinha; pode volear?”</p>
+          <p className="text-xs text-gray-500">Situações de jogo: “a bola quicou na linha da cozinha; pode volear?”</p>
           <ListEditor
             id={campoId('questions')}
             items={form.questions}
@@ -315,7 +315,7 @@ export default function TrainingItemForm({
         <>
           <div className="space-y-2">
             <p className="text-sm font-semibold text-ink">Ponto a ponto</p>
-            <p className="text-xs text-gray-400">Ex.: Pernas — “joelhos flexionados, quadril baixo; a força sobe das pernas, não do braço”.</p>
+            <p className="text-xs text-gray-500">Ex.: Pernas — “joelhos flexionados, quadril baixo; a força sobe das pernas, não do braço”.</p>
             <ListEditor
               id={campoId('technique')}
               items={tec.checkpoints}
@@ -346,7 +346,7 @@ export default function TrainingItemForm({
           </div>
           <div className="space-y-2">
             <p className="text-sm font-semibold text-ink">Como saber se fez certo</p>
-            <p className="text-xs text-gray-400">O que a pessoa vê ou sente quando acerta: “a bola passa a um palmo da fita e cai na cozinha”.</p>
+            <p className="text-xs text-gray-500">O que a pessoa vê ou sente quando acerta: “a bola passa a um palmo da fita e cai na cozinha”.</p>
             <ListEditor
               id={campoId('self_check')}
               items={tec.self_check}

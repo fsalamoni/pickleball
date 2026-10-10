@@ -73,7 +73,7 @@ function MeuNivel({ member }) {
     <V2Surface>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Seu nível aqui</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Seu nível aqui</p>
           <div className="mt-1.5 flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${TIER_CLASS[current?.id] || TIER_CLASS.bronze}`}>
               <Trophy className="h-3.5 w-3.5" /> {current?.name || 'Bronze'}
@@ -267,7 +267,7 @@ function MinhaMensalidade({ sub }) {
     <V2Surface className={devendo ? 'border-amber-200 bg-amber-50' : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Sua mensalidade</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Sua mensalidade</p>
           <p className="mt-1 font-display text-base font-bold text-ink">{sub.plan_name}</p>
           <p className="text-sm text-gray-600">
             {formatPrice(sub.price)} por mês · vence todo dia {sub.billing_day}

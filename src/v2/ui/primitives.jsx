@@ -101,7 +101,7 @@ function V2CollapsibleSurface({
             className={cn('mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:text-ink', collapsed ? '' : 'rotate-180')}
           />
           <span className="min-w-0">
-            {eyebrow && <span className="block text-[11px] font-bold uppercase tracking-widest text-gray-400">{eyebrow}</span>}
+            {eyebrow && <span className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">{eyebrow}</span>}
             {title && <span className="mt-1 block font-display text-xl font-bold text-ink sm:text-2xl">{title}</span>}
             {description && !collapsed && <span className="mt-2 block max-w-2xl font-medium text-gray-500">{description}</span>}
           </span>
@@ -138,7 +138,7 @@ export function V2SectionHeader({ eyebrow, title, description, action, className
     <div className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{eyebrow}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{eyebrow}</p>
         )}
         {title && <h2 className="mt-1 font-display text-2xl font-bold text-ink sm:text-3xl">{title}</h2>}
         {description && <p className="mt-2 max-w-2xl font-medium text-gray-500">{description}</p>}
@@ -157,8 +157,8 @@ const BUTTON_VARIANTS = {
 };
 
 const BUTTON_SIZES = {
-  sm: 'px-5 py-2.5 text-sm',
-  md: 'px-6 py-3 text-sm',
+  sm: 'px-5 py-2.5 text-sm coarse:min-h-11',
+  md: 'px-6 py-3 text-sm coarse:min-h-11',
   lg: 'px-8 py-3.5 text-base',
   icon: 'h-11 w-11',
 };
@@ -242,14 +242,14 @@ export function V2StatCard({ icon: Icon, label, value, delta, deltaTone = 'green
           <h3 className="font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">{value}</h3>
           {delta && <span className={cn('rounded-lg px-2 py-1 text-sm font-bold', deltaClass)}>{delta}</span>}
         </div>
-        {hint && <p className="mt-2 text-xs font-medium text-gray-400">{hint}</p>}
+        {hint && <p className="mt-2 text-xs font-medium text-gray-500">{hint}</p>}
       </div>
     </div>
   );
 }
 
 const AVATAR_SIZES = {
-  xs: 'h-6 w-6 text-[10px]',
+  xs: 'h-6 w-6 text-[11px]',
   sm: 'h-9 w-9 text-xs',
   md: 'h-11 w-11 text-sm',
   lg: 'h-14 w-14 text-base',
@@ -377,7 +377,7 @@ export function V2ErrorState({
       </div>
       <h3 className="font-display text-2xl font-bold text-ink">{title}</h3>
       <p className="mt-3 max-w-lg font-medium leading-7 text-gray-500">{description}</p>
-      {detail && <p className="mt-2 max-w-lg text-xs text-gray-400">{detail}</p>}
+      {detail && <p className="mt-2 max-w-lg text-xs text-gray-500">{detail}</p>}
       {botao && <div className="mt-6 flex flex-wrap justify-center gap-3">{botao}</div>}
     </div>
   );
@@ -451,7 +451,7 @@ export function V2Field({ label, htmlFor, hint, error, required, className, chil
         </label>
       )}
       {children}
-      {hint && !error && <p className="text-xs leading-5 text-gray-400">{hint}</p>}
+      {hint && !error && <p className="text-xs leading-5 text-gray-500">{hint}</p>}
       {error && <p className="text-xs font-medium text-red-500">{error}</p>}
     </div>
   );
@@ -489,7 +489,7 @@ export function V2Toggle({ checked, onChange, label, hint, id }) {
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         {label && <label htmlFor={id} className="cursor-pointer text-sm font-semibold text-ink">{label}</label>}
-        {hint && <p className="text-xs leading-5 text-gray-400">{hint}</p>}
+        {hint && <p className="text-xs leading-5 text-gray-500">{hint}</p>}
       </div>
       <button
         id={id}
@@ -519,7 +519,7 @@ export function V2ContentHero({ eyebrow, title, description, meta, action }) {
           {eyebrow && <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{eyebrow}</span>}
           <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
           {description && <p className="mt-3 text-sm leading-7 text-gray-300">{description}</p>}
-          {meta && <p className="mt-3 text-xs text-gray-400">{meta}</p>}
+          {meta && <p className="mt-3 text-xs text-gray-500">{meta}</p>}
         </div>
         {action}
       </div>

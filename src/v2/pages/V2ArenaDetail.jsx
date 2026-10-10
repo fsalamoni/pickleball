@@ -265,7 +265,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <V2Button variant="secondary" onClick={() => setSharedOpen(true)}>
             <Users className="h-4 w-4" /> Reserva compartilhada — dividir a quadra
           </V2Button>
-          <p className="text-xs text-gray-400">Convide atletas e divida o valor, ou deixe a reserva aberta.</p>
+          <p className="text-xs text-gray-500">Convide atletas e divida o valor, ou deixe a reserva aberta.</p>
         </div>
       )}
       {sharedBookingsOn && <SharedBookingDialog arena={arena} open={sharedOpen} onOpenChange={setSharedOpen} />}
@@ -341,7 +341,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           )}
           {(arena.price_overrides || []).length > 0 && (
             <div className="mt-3">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400">Datas especiais</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">Datas especiais</h4>
               <div className="mt-2 space-y-2">
                 {(arena.price_overrides || []).map((o) => (
                   <div key={o.id} className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-2.5 text-sm">
@@ -355,7 +355,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
               </div>
             </div>
           )}
-          <p className="mt-3 text-xs text-gray-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
+          <p className="mt-3 text-xs text-gray-500">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
         </V2Surface>
       )}
       </div>
@@ -523,7 +523,7 @@ function V2ArenaPaymentSection({ arena }) {
       )}
       {payment.pix_key && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
             Chave PIX ({PIX_KEY_TYPE_LABELS[payment.pix_key_type] || payment.pix_key_type})
           </p>
           <div className="mt-1 flex items-center gap-2">
@@ -592,7 +592,7 @@ function ArenaRulesSection({ arena }) {
         <div className="mt-3 space-y-4">
           {Object.entries(grouped).map(([cat, items]) => (
             <div key={cat}>
-              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
                 {cat}
               </h4>
               <ol className="list-decimal space-y-2 pl-5">

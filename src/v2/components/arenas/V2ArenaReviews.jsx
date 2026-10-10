@@ -63,7 +63,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
         {summary.average != null && (
           <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
             <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {summary.average}
-            <span className="text-xs text-gray-400">({summary.count})</span>
+            <span className="text-xs text-gray-500">({summary.count})</span>
           </span>
         )}
       </div>
@@ -118,7 +118,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                     <UserAvatar name={r.user_name} photoUrl={r.user_photo} size="sm" />
                     <div>
                       <div className="text-sm font-bold text-ink">{r.user_name}</div>
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Icon className="h-3 w-3" />
                         {(r.type ?? 'review') !== 'review' ? REVIEW_TYPE_LABELS[r.type] : `${r.rating}★`}
                       </div>

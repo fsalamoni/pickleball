@@ -31,7 +31,7 @@ function rosterNames(team, prefix) {
 /** Escalação de um lado, em texto (com a ordem quando é rodízio). */
 function LineupText({ ids = [], names, rotation, align = 'left' }) {
   const list = (ids || []).map((id) => names.get(id) || '—').filter(Boolean);
-  if (list.length === 0) return <span className="text-xs text-gray-400">A definir</span>;
+  if (list.length === 0) return <span className="text-xs text-gray-500">A definir</span>;
   return (
     <span className={cn('block text-xs text-gray-700', align === 'right' && 'text-right')}>
       {rotation ? list.map((n, i) => `${i + 1}º ${n}`).join(' · ') : list.join(' / ')}
@@ -122,7 +122,7 @@ export default function TeamConfrontationCard({
           <div className="-mx-4 overflow-x-auto px-4">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-gray-500">
                   <th className="py-2 pr-2">Etapa</th>
                   <th className="py-2 pr-2">{teamAName}</th>
                   <th className="py-2 text-center">Games</th>
@@ -138,7 +138,7 @@ export default function TeamConfrontationCard({
                     <tr key={etapa.id} className="border-t border-gray-100 align-top">
                       <td className="py-3 pr-2">
                         <div className="text-xs font-bold text-ink">{etapa.label}</div>
-                        <div className="mt-0.5 text-[10px] text-gray-400">
+                        <div className="mt-0.5 text-[11px] text-gray-500">
                           {formatEtapaScoringLabel(etapa.scoring)}
                         </div>
                         {res.decided && (
@@ -152,7 +152,7 @@ export default function TeamConfrontationCard({
                       </td>
                       <td className="py-3 text-center">
                         {jogados.length === 0 ? (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-500">—</span>
                         ) : (
                           <div className="flex flex-col items-center gap-0.5">
                             {jogados.map((g, gi) => (
@@ -161,7 +161,7 @@ export default function TeamConfrontationCard({
                               </span>
                             ))}
                             {jogados.length > 1 && (
-                              <span className="text-[10px] text-gray-400">games {res.sets_a}–{res.sets_b}</span>
+                              <span className="text-[11px] text-gray-500">games {res.sets_a}–{res.sets_b}</span>
                             )}
                           </div>
                         )}

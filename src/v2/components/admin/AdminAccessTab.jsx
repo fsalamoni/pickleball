@@ -81,7 +81,7 @@ export default function AdminAccessTab() {
           <h3 className="font-display text-base font-bold text-ink">
             Administradores ({roster.counts.admins})
           </h3>
-          <span className="text-[11px] text-gray-400">
+          <span className="text-[11px] text-gray-500">
             {roster.counts.total} conta(s) na plataforma
           </span>
         </div>
@@ -184,7 +184,7 @@ function AccountRow({ account: c, souDono, onRevoke }) {
             {c.isOwnerEmail && <V2Badge tone="neutral">e-mail de dono</V2Badge>}
             {c.unexpectedAdmin && <V2Badge tone="red">inesperado</V2Badge>}
             {c.hidden && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
                 <EyeOff className="h-3 w-3" /> oculto
               </span>
             )}
@@ -192,8 +192,8 @@ function AccountRow({ account: c, souDono, onRevoke }) {
           <div className="mt-0.5 truncate text-xs text-gray-500">
             {c.email || <span className="text-amber-600">sem e-mail no documento</span>}
           </div>
-          <div className="mt-1 font-mono text-[10px] text-gray-400">{c.uid}</div>
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-gray-500">
+          <div className="mt-1 font-mono text-[11px] text-gray-500">{c.uid}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-500">
             <span className="rounded bg-gray-100 px-1.5 py-0.5">role: {c.role}</span>
             {c.canCreatePools && <span className="rounded bg-gray-100 px-1.5 py-0.5">cria pools</span>}
             <span className="rounded bg-gray-100 px-1.5 py-0.5">
@@ -214,7 +214,7 @@ function AccountRow({ account: c, souDono, onRevoke }) {
               <UserMinus className="mr-1 h-3.5 w-3.5" /> Revogar poder
             </V2Button>
           ) : (
-            <span className="block max-w-[190px] text-[11px] leading-4 text-gray-400">{motivo}</span>
+            <span className="block max-w-[190px] text-[11px] leading-4 text-gray-500">{motivo}</span>
           )}
         </div>
       </div>
@@ -330,7 +330,7 @@ function RevokeDialog({ account, onClose, onConfirm, pending }) {
 
         <div className="space-y-3">
           <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-            <div className="font-mono text-[10px] text-gray-500">{account.uid}</div>
+            <div className="font-mono text-[11px] text-gray-500">{account.uid}</div>
             <div className="mt-1">{account.email || '(sem e-mail)'}</div>
             <div className="mt-1">role atual: <strong>{account.role}</strong></div>
           </div>

@@ -22,7 +22,7 @@ function Position({ position }) {
 function RankStat({ label, value, strong, tone }) {
   return (
     <div className="rounded-xl bg-white/80 px-1 py-1.5">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</div>
       <div className={cn('text-sm tabular-nums', strong ? 'font-bold text-ink' : cn('font-medium', tone || 'text-gray-600'))}>{value}</div>
     </div>
   );

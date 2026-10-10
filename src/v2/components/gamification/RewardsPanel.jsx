@@ -35,7 +35,7 @@ function RewardCard({ r, claim, snapshot, onRequest, requesting }) {
           </div>
           {r.description && <p className="mt-0.5 text-sm text-gray-600">{r.description}</p>}
           <p className="mt-1 text-xs text-gray-500">{describeEligibility(r.eligibility, { achievementName })}</p>
-          {disp.available && disp.remaining != null && <p className="text-xs text-gray-400">{disp.remaining} {disp.remaining === 1 ? 'unidade restante' : 'unidades restantes'}</p>}
+          {disp.available && disp.remaining != null && <p className="text-xs text-gray-500">{disp.remaining} {disp.remaining === 1 ? 'unidade restante' : 'unidades restantes'}</p>}
           {r.instructions && <p className="mt-1 text-xs text-gray-500">Como usar: {r.instructions}</p>}
         </div>
       </div>

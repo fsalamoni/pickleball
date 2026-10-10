@@ -130,7 +130,7 @@ export default function V2ArenaOpenMatch() {
           <>
             {meus.length > 0 && (
               <div className="space-y-3">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
                   Você vai jogar
                 </h2>
                 {meus.map((s) => (
@@ -159,7 +159,7 @@ export default function V2ArenaOpenMatch() {
             ) : disponiveis.length > 0 && (
               <div className="space-y-3">
                 {meus.length > 0 && (
-                  <h2 className="pt-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                  <h2 className="pt-2 text-xs font-bold uppercase tracking-widest text-gray-500">
                     Outros jogos
                   </h2>
                 )}

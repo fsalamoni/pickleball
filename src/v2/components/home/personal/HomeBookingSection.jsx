@@ -66,7 +66,7 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
 
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
         <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Livres em {nomeArena}
       </p>
       {carregando ? (
@@ -90,7 +90,7 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
                 to={link}
                 className="btn-press flex flex-col rounded-2xl border border-gray-100 bg-paper px-3.5 py-2 transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
               >
-                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{agendaDayLabel(l.date, hoje)}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{agendaDayLabel(l.date, hoje)}</span>
                 <span className="font-display text-lg font-bold leading-tight text-ink">{l.time}</span>
                 <span className="text-[11px] text-gray-500">{l.freeCourts === 1 ? '1 quadra' : `${l.freeCourts} quadras`}</span>
               </Link>
@@ -135,7 +135,7 @@ function ArenasPerto() {
   }
   return (
     <div>
-      <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">
+      <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
         Arenas perto de você
       </p>
       <ul className="space-y-1">

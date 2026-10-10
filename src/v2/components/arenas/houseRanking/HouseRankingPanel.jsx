@@ -69,13 +69,13 @@ function Podio({ rows, meuUid }) {
               <p className="flex items-center gap-1 truncate font-bold">
                 <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span className="truncate">{r.name}</span>
-                {r.user_id === meuUid && <span className="shrink-0 text-[10px] font-black uppercase">· você</span>}
+                {r.user_id === meuUid && <span className="shrink-0 text-[11px] font-black uppercase">· você</span>}
               </p>
               <p className="text-xs opacity-80">{metaDaLinha(r)}</p>
             </div>
             <p className="shrink-0 text-right font-display text-xl font-black leading-none">
               {r.points}
-              <span className="block text-[10px] font-bold uppercase tracking-wider opacity-70">pts</span>
+              <span className="block text-[11px] font-bold uppercase tracking-wider opacity-70">pts</span>
             </p>
           </li>
         );
@@ -95,7 +95,7 @@ function Linha({ r, eu }) {
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-sm font-bold text-ink">
           <span className="truncate">{r.name}</span>
-          {eu && <V2Badge tone="acid" className="shrink-0 px-2 py-0 text-[10px]">você</V2Badge>}
+          {eu && <V2Badge tone="acid" className="shrink-0 px-2 py-0 text-[11px]">você</V2Badge>}
         </p>
         <p className="text-xs text-gray-500">{metaDaLinha(r)}</p>
       </div>

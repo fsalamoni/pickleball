@@ -158,7 +158,7 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
       <ol className="space-y-1.5" aria-label="Itens do dia, na ordem do treino">
         {ids.map((id, i) => (
           <li key={id} className="flex items-center gap-2 rounded-2xl bg-paper-pure px-2 py-1.5 text-sm">
-            <span className="w-5 shrink-0 text-center text-xs font-bold text-gray-400" aria-hidden="true">{i + 1}</span>
+            <span className="w-5 shrink-0 text-center text-xs font-bold text-gray-500" aria-hidden="true">{i + 1}</span>
             {visiveis.byId[id] && <KindIcon kind={visiveis.byId[id].kind} size="sm" className="hidden sm:inline-flex" />}
             <span className="min-w-0 flex-1">
               <span className="block line-clamp-2 font-semibold leading-snug text-ink">{titulo(id)}</span>

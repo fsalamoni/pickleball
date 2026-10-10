@@ -34,7 +34,7 @@ function Grupo({ titulo, itens, tom }) {
         <V2Badge tone={tom}>{itens.length}</V2Badge> {titulo}
       </summary>
       <ul className="mt-2 space-y-0.5 text-sm text-gray-600">
-        {itens.map((it) => <li key={it.slug}>{it.title} <span className="text-xs text-gray-400">· {ITEM_KIND_LABELS[it.kind] || it.kind}</span></li>)}
+        {itens.map((it) => <li key={it.slug}>{it.title} <span className="text-xs text-gray-500">· {ITEM_KIND_LABELS[it.kind] || it.kind}</span></li>)}
       </ul>
     </details>
   );

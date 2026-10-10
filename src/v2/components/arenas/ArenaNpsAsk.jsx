@@ -185,7 +185,7 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
           </button>
         ))}
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-gray-400">
+      <div className="mt-1.5 flex justify-between text-[11px] text-gray-500">
         <span>Não indicaria</span>
         <span>Indicaria com certeza</span>
       </div>

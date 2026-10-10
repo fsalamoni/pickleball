@@ -46,7 +46,7 @@ export default function V2TournamentAdmin() {
       {/* Cabeçalho compacto e objetivo — sem hero/vitrine. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-paper-pure p-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">
             <ShieldCheck className="h-3.5 w-3.5" /> Gestão do torneio
           </div>
           <h1 className="mt-0.5 truncate font-display text-xl font-bold text-ink">{tournament.name}</h1>

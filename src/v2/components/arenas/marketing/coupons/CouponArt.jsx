@@ -133,7 +133,7 @@ export default function CouponArt({
           {/* Os dois furos do picote */}
           <span aria-hidden className={cn('absolute -left-[9px] -top-[9px] h-4 w-4 rounded-full', notch, `${ESTREITO}:-left-[9px] ${ESTREITO}:-top-[9px]`)} />
           <span aria-hidden className={cn('absolute -bottom-[9px] -left-[9px] h-4 w-4 rounded-full', notch, `${ESTREITO}:-right-[9px] ${ESTREITO}:bottom-auto ${ESTREITO}:left-auto ${ESTREITO}:-top-[9px]`)} />
-          <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Código</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">Código</span>
           {copyable ? (
             <CopyCodeButton code={code} size="sm" tone="clear" className="max-w-full" successMessage={copyMessage} />
           ) : (

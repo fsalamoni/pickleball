@@ -31,10 +31,10 @@ const nomeDe = (u) => u?.full_name || u?.platform_name || u?.display_name || '(s
 function Conta({ titulo, nome, email, uid, tom }) {
   return (
     <div className={`min-w-0 flex-1 rounded-xl border p-3 ${tom}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{titulo}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{titulo}</p>
       <p className="truncate text-sm font-bold text-ink">{nome || '(sem nome)'}</p>
       <p className="truncate text-[11px] text-gray-500">{email || 'sem e-mail'}</p>
-      <p className="truncate text-[10px] text-gray-400">{uid}</p>
+      <p className="truncate text-[11px] text-gray-500">{uid}</p>
     </div>
   );
 }
@@ -118,7 +118,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                             <span className="block truncate text-sm font-semibold text-ink">{nomeDe(u)}</span>
                             <span className="block truncate text-[11px] text-gray-500">{u.email || u.uid}</span>
                           </span>
-                          <span className="shrink-0 text-[10px] text-gray-500">{motivos.join(' · ')}</span>
+                          <span className="shrink-0 text-[11px] text-gray-500">{motivos.join(' · ')}</span>
                         </button>
                       ))}
                     </div>
@@ -141,7 +141,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                         className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-left text-sm hover:border-gray-300"
                       >
                         <span className="truncate font-medium text-ink">{nomeDe(u)}</span>
-                        <span className="shrink-0 truncate text-[11px] text-gray-400">{u.email}</span>
+                        <span className="shrink-0 truncate text-[11px] text-gray-500">{u.email}</span>
                       </button>
                     ))}
                   </div>

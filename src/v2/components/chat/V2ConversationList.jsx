@@ -78,7 +78,7 @@ export default function V2ConversationList({
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-bold text-ink">{title}</span>
-                <span className="shrink-0 text-[11px] text-gray-400">{timeLabel(conversation.last_message_at_ms)}</span>
+                <span className="shrink-0 text-[11px] text-gray-500">{timeLabel(conversation.last_message_at_ms)}</span>
               </span>
               <span className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
                 {last?.sender_id === currentUserId && <span className="text-gray-400">Você:</span>}

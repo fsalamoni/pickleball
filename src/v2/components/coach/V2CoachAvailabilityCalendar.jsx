@@ -103,7 +103,7 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
           <CalendarDays className="h-4 w-4" /> Disponibilidade
         </h3>
-        <span className="text-xs text-gray-400">próximos 14 dias</span>
+        <span className="text-xs text-gray-500">próximos 14 dias</span>
       </div>
       <p className="mt-1 text-sm text-gray-500">
         Selecione um horário livre e o professor confirma a aula.
@@ -113,7 +113,7 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
         {visibleDays.map((day) => (
           <div key={day.date} className="rounded-2xl border border-gray-100 bg-paper p-3">
             <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
                 {fmtDay(day.date)}
               </span>
               <V2Badge tone="green">{day.slots.length} livre(s)</V2Badge>

@@ -367,7 +367,7 @@ function GameDayDetail({ gameDayId }) {
           </p>
         )}
         {isPublicGameDay(gameDay) && ehCriador && !daArena && (
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
             <ExternalLink className="h-3.5 w-3.5" /> Este dia de jogo aparece como convite em &quot;Procura-se jogo&quot;.
           </p>
         )}

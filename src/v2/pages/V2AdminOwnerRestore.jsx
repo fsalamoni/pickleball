@@ -262,7 +262,7 @@ function Field({ label, value, mono, highlight }) {
         : 'border-gray-100 bg-paper-pure';
   return (
     <div className={`${base} ${tone}`}>
-      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{label}</span>
       <span className={mono ? 'break-all font-mono text-xs' : 'truncate text-sm font-semibold text-ink'}>
         {value || '—'}
       </span>

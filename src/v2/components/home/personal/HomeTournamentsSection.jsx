@@ -61,7 +61,7 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
           <V2ErrorState inline title="Não carregou os seus torneios" description="Os seus torneios continuam lá." onRetry={meusQ.refetch} />
         ) : meusAtuais.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Seus torneios</p>
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Seus torneios</p>
             <ul className="space-y-1">
               {meusAtuais.slice(0, LIMITE_MEUS).map((item) => {
                 const { tournament: t, phase, organizo, inscrito } = item;
@@ -92,7 +92,7 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
         )}
 
         <div>
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Inscrições abertas</p>
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Inscrições abertas</p>
           <RegionBar regional={regional} compacta className="mb-2" nomeItens={['torneio', 'torneios']} />
           {/* Espera os MEUS também: sem eles, o torneio que eu organizo apareceria
               aqui como "inscreva-se" por um instante. */}

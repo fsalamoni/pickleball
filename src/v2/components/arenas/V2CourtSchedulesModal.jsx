@@ -235,14 +235,14 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">
               {Object.values(WEEKDAY_SHORT_PT).map((d) => (
                 <div key={d} className="rounded bg-gray-50 py-1">{d}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {[0, 1, 2, 3, 4, 5, 6].map((w) => (
-                <div key={w} className="min-h-[80px] space-y-1 rounded-2xl border border-gray-100 bg-paper p-1.5 text-[10px]">
+                <div key={w} className="min-h-[80px] space-y-1 rounded-2xl border border-gray-100 bg-paper p-1.5 text-[11px]">
                   {(byWeekday[w] || []).map((s) => (
                     <div
                       key={s.id}

@@ -92,7 +92,7 @@ export default function AdminGamificationConfig() {
         </div>
         {GAMIFICATION_MODULE_GROUPS.map((g) => (
           <div key={g.id} className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{g.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</p>
             {Object.entries(GAMIFICATION_MODULES).filter(([, m]) => m.grupo === g.id).map(([id, m]) => (
               <V2Toggle key={id} id={`mod-${id}`} checked={draft.modules[id]} label={m.label} hint={m.description}
                 onChange={(v) => setDraft((d) => ({ ...d, modules: { ...d.modules, [id]: v } }))} />
@@ -108,7 +108,7 @@ export default function AdminGamificationConfig() {
           return (
             <div key={g.id} className={`space-y-3 ${i > 0 ? 'border-t border-gray-100 pt-4' : ''}`} data-grupo={g.id}>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{g.titulo}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.titulo}</p>
                 {desligado && <V2Badge tone="amber">módulo desligado — só vale quando você ligar</V2Badge>}
               </div>
               {g.tier && (
@@ -140,7 +140,7 @@ export default function AdminGamificationConfig() {
           <V2Toggle key={k} id={`notif-${k}`} checked={draft.notifications[k]} label={l}
             onChange={(v) => setDraft((d) => setIn(d, `notifications.${k}`, v))} />
         ))}
-        <p className="text-xs text-gray-400">Cada pessoa ainda pode desligar o que não quer receber, nas preferências dela.</p>
+        <p className="text-xs text-gray-500">Cada pessoa ainda pode desligar o que não quer receber, nas preferências dela.</p>
       </V2Surface>
 
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure/95 p-4 shadow-lg backdrop-blur">

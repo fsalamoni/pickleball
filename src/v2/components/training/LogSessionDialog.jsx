@@ -155,7 +155,7 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
               aria-valuetext={f.rpeSet ? `${f.rpe}, ${rpeLabel(f.rpe)}` : 'Não marcado'}
               className="w-full accent-ink"
             />
-            <div className="flex justify-between text-xs text-gray-400" aria-hidden="true">
+            <div className="flex justify-between text-xs text-gray-500" aria-hidden="true">
               <span>0 · Repouso</span><span>5 · Puxado</span><span>10 · Máximo</span>
             </div>
           </div>

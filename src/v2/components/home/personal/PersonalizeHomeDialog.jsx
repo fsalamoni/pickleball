@@ -85,7 +85,7 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
                 <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', ativo ? 'text-acid' : 'text-gray-400')} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
                   {label}
-                  {hint && <span className={cn('mt-0.5 block text-xs font-normal', ativo ? 'text-white/70' : 'text-gray-400')}>{hint}</span>}
+                  {hint && <span className={cn('mt-0.5 block text-xs font-normal', ativo ? 'text-white/70' : 'text-gray-500')}>{hint}</span>}
                 </span>
                 {ativo && <Check className="h-4 w-4 shrink-0 text-acid" aria-hidden="true" />}
               </button>

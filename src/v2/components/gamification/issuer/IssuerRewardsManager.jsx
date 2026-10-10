@@ -120,7 +120,7 @@ function ClaimsQueue({ claims, onDecide, deciding }) {
       )}
       {fechados.length > 0 && (
         <div>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Já decididos</p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-500">Já decididos</p>
           <ul className="space-y-1">
             {fechados.map((c) => (
               <li key={c.id} className="flex items-center justify-between text-sm text-gray-600">
@@ -199,7 +199,7 @@ export default function IssuerRewardsManager({ issuer, actor }) {
                   <div className="min-w-0">
                     <p className="font-display text-base font-bold text-ink">{meta.emoji} {w.title}</p>
                     <p className="text-xs text-gray-500">{describeEligibility(w.eligibility, { achievementName })}</p>
-                    <p className="text-xs text-gray-400">{w.approvedCount || 0}{w.quantity != null ? ` de ${w.quantity}` : ''} liberadas</p>
+                    <p className="text-xs text-gray-500">{w.approvedCount || 0}{w.quantity != null ? ` de ${w.quantity}` : ''} liberadas</p>
                   </div>
                   <V2Badge tone={disp.available ? 'green' : 'neutral'}>{disp.available ? 'disponível' : (w.status === 'paused' ? 'pausada' : 'indisponível')}</V2Badge>
                 </div>

@@ -45,7 +45,7 @@ export default function DicasSettingsCard() {
           </span>
         )}
       </div>
-      <p className="mt-3 text-xs text-gray-400">A escolha fica salva neste aparelho, na sua conta.</p>
+      <p className="mt-3 text-xs text-gray-500">A escolha fica salva neste aparelho, na sua conta.</p>
     </V2Surface>
   );
 }

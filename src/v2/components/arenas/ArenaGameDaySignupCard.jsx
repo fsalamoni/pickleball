@@ -122,7 +122,7 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
           quem ainda não entrou. */}
       {porQuadra && !jaEstou && !semLista && (
         <div className="mt-3">
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Escolha a quadra</p>
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Escolha a quadra</p>
           <div className="flex flex-wrap gap-2">
             {vagas.byCourt.map((c) => (
               <button

@@ -23,7 +23,7 @@ export default function ArenaPixKey({ arena, className = 'mt-3' }) {
 
   return (
     <div className={`${className} rounded-2xl border border-gray-100 bg-paper p-3`}>
-      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
         <QrCode className="h-3.5 w-3.5" /> Pague por Pix
       </p>
       {payment.pix_key && (

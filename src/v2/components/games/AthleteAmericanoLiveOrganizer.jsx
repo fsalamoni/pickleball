@@ -170,7 +170,7 @@ function ProgressSection({ participants, games }) {
 function Metrica({ rotulo, valor, detalhe = null }) {
   return (
     <div className="rounded-xl border border-gray-100 p-2" title={detalhe || undefined}>
-      <div className="text-[10px] uppercase tracking-wide text-gray-400">{rotulo}</div>
+      <div className="text-[11px] uppercase tracking-wide text-gray-500">{rotulo}</div>
       <div className="mt-0.5 font-display text-base font-bold text-ink">{valor}</div>
     </div>
   );
@@ -322,7 +322,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
           </p>
         )}
         {canManage && participants.length > 0 && (
-          <p className="text-[11px] leading-5 text-gray-400">
+          <p className="text-[11px] leading-5 text-gray-500">
             Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
             <strong className="text-gray-500">simples</strong> — escolha na quadra livre, antes de gerar a partida.
             Simples e duplas têm rankings do dia separados.
@@ -442,7 +442,7 @@ function CourtCard({
         <>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
             <Lado side={game.side_a} align="right" onJogador={canManage ? onJogador : null} />
-            <span className="text-xs font-bold text-gray-400">VS</span>
+            <span className="text-xs font-bold text-gray-500">VS</span>
             <Lado side={game.side_b} align="left" onJogador={canManage ? onJogador : null} />
           </div>
           {canManage && (
@@ -469,7 +469,7 @@ function CourtCard({
               >
                 <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar partida
               </V2Button>
-              <p className="text-center text-[10px] leading-4 text-gray-400">
+              <p className="text-center text-[11px] leading-4 text-gray-500">
                 Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os jogadores
                 à fila, sem placar — e a quadra volta a oferecer um novo sorteio.
               </p>
@@ -552,7 +552,7 @@ function ForecastBlock({ previsao }) {
             </span>
             <GameKindBadge kind={b.kind} />
             {b.conditional && (
-              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">
                 quando liberar
               </span>
             )}
@@ -560,7 +560,7 @@ function ForecastBlock({ previsao }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[10px] leading-4 text-gray-400">
+      <p className="mt-2 text-[11px] leading-4 text-gray-500">
         A previsão das quadras ocupadas é condicional: depende de qual partida terminar
         primeiro. A hipótese é &quot;termina primeiro quem começou primeiro&quot;.
       </p>
@@ -600,7 +600,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
           {concluidas.map((g, i) => (
             <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 p-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="w-8 shrink-0 text-center text-[11px] font-bold text-gray-400 tabular-nums">
+                <span className="w-8 shrink-0 text-center text-[11px] font-bold text-gray-500 tabular-nums">
                   #{concluidas.length - i}
                 </span>
                 <div className="min-w-0 flex-1 text-sm">
@@ -617,7 +617,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
                     {(g.side_b || []).map((p) => p.name || p).join(' / ')}
                   </span>
                   {g.court != null && (
-                    <span className="ml-2 text-[10px] text-gray-400">quadra {g.court}</span>
+                    <span className="ml-2 text-[11px] text-gray-500">quadra {g.court}</span>
                   )}
                 </div>
               </div>

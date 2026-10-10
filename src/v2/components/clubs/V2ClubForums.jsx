@@ -93,7 +93,7 @@ export default function V2ClubForums({ clubId, isAdmin, initialThreadId, onThrea
                       {thread.pinned && <V2Badge tone="amber"><Pin className="h-3 w-3" /> Fixado</V2Badge>}
                       <h4 className="font-display text-base font-bold text-ink">{thread.title}</h4>
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-400">{thread.author_name} · {timeAgo(thread.last_activity_ms || thread.created_at_ms)}</div>
+                    <div className="mt-0.5 text-xs text-gray-500">{thread.author_name} · {timeAgo(thread.last_activity_ms || thread.created_at_ms)}</div>
                     {thread.body && <p className="mt-2 line-clamp-2 text-sm text-gray-600">{snippet(thread.body)}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                       <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {thread.comment_count || 0}</span>

@@ -57,7 +57,7 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
             <ol className="space-y-4" aria-label="Próximos compromissos">
               {grupos.map((g) => (
                 <li key={g.dia}>
-                  <p className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <p className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                     <span className={g.label === 'Hoje' ? 'rounded-full bg-acid px-2 py-0.5 text-ink' : ''}>{g.label}</span>
                   </p>
                   <ul className="space-y-1">
@@ -78,7 +78,7 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
                 </li>
               ))}
               {restantes > 0 && (
-                <li className="text-xs font-semibold text-gray-400">
+                <li className="text-xs font-semibold text-gray-500">
                   E mais {restantes} {restantes === 1 ? 'compromisso' : 'compromissos'} nos próximos dias.
                 </li>
               )}

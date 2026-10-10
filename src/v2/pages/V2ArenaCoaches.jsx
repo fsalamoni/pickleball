@@ -183,7 +183,7 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
             </div>
             {coach.modalities?.length > 0 && <p className="text-xs text-gray-500">{coach.modalities.join(' · ')}</p>}
             {coach.regions?.length > 0 && (
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3 w-3" /> {coach.regions.join(' · ')}</p>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {coach.regions.join(' · ')}</p>
             )}
           </div>
         </div>

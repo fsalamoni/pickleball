@@ -26,7 +26,7 @@ export default function PontoAberto({ ponto, guia, onFechar, onEntendi, onGuia }
   return (
     <Destaque el={el} rect={rect} tituloId={tituloId} chave={ponto.id}>
       <div className="flex items-start justify-between gap-3">
-        <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+        <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
           <Lightbulb className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" /> Dica
         </p>
         <button

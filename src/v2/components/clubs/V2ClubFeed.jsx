@@ -141,7 +141,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
               <Send className="h-4 w-4" /> {createPost.isPending ? 'Publicando…' : 'Publicar'}
             </V2Button>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             Até {MAX_IMAGES_PER_POST} imagens por publicação, {maxImageMb()} MB cada. As imagens podem ser baixadas em alta qualidade pelos membros.
           </p>
         </form>
@@ -163,7 +163,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <span className="font-bold text-ink">{post.author_name}</span>
-                        <span className="ml-2 text-xs text-gray-400">{timeAgo(post.created_at_ms)}</span>
+                        <span className="ml-2 text-xs text-gray-500">{timeAgo(post.created_at_ms)}</span>
                       </div>
                       {canDelete && (
                         <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-50" onClick={() => setConfirmDelete(post)}>

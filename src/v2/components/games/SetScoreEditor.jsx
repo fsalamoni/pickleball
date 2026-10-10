@@ -37,7 +37,7 @@ export default function SetScoreEditor({
       </div>
       {sets.map((s, i) => (
         <div key={i} className="flex items-center justify-center gap-2">
-          {varios && <span className="w-12 text-right text-[11px] font-semibold text-gray-400">Set {i + 1}</span>}
+          {varios && <span className="w-12 text-right text-[11px] font-semibold text-gray-500">Set {i + 1}</span>}
           <V2Input
             className={`${largura} text-center tabular-nums`}
             inputMode="numeric"
@@ -47,7 +47,7 @@ export default function SetScoreEditor({
             placeholder="0"
             aria-label={varios ? `Set ${i + 1}, ${labelA}` : `Placar, ${labelA}`}
           />
-          <span className="w-3 text-center text-xs text-gray-400">×</span>
+          <span className="w-3 text-center text-xs text-gray-500">×</span>
           <V2Input
             className={`${largura} text-center tabular-nums`}
             inputMode="numeric"

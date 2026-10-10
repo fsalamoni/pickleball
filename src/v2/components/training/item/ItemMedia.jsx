@@ -149,7 +149,7 @@ export function MediaTile({ media, className }) {
         <figcaption className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
           <TagChip tag={media.tag} />
           {media.caption && <span className="font-medium">{media.caption}</span>}
-          {trecho && <span className="text-xs text-gray-400">{trecho}</span>}
+          {trecho && <span className="text-xs text-gray-500">{trecho}</span>}
         </figcaption>
       )}
     </figure>
