@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  MY_LEVEL, buildLibrary, countByState, dayOf, groupSent, hasActiveFilters, inboxGroups, itemView,
+  MY_LEVEL, SECTION_TITLES, buildLibrary, countByState, dayOf, groupSent, hasActiveFilters, inboxGroups, itemView,
   libraryFiltersFromParams, libraryParams, myItemState, pendingInfo, resolveLevel, sentState,
   shareAvailability, shareResultText,
 } from './contentView';
@@ -154,5 +154,15 @@ describe('itemView', () => {
     const r = itemView({ legacy: true, kind: 'estudo', title: 'Antigo', summary: 'Texto longo', body: 'Texto longo do professor' });
     expect(r.sections).toEqual(['conteudo']);
     expect(r.resumo).toBe('');
+  });
+
+  it('técnica ponto a ponto e autoavaliação entram na ordem de leitura', () => {
+    const r = itemView({
+      kind: 'fundamento', title: 'Dink', summary: 'Resumo do golpe', steps: ['Faça'], cues: ['Bola baixa'],
+      common_errors: [{ error: 'Bola alta', fix: 'Abra a face' }],
+      technique: { checkpoints: [{ part: 'pernas', text: 'Joelhos flexionados' }], self_check: ['A bola cai na cozinha'] },
+    });
+    expect(r.sections).toEqual(['passos', 'tecnica', 'dicas', 'erros', 'autoavaliacao']);
+    for (const k of r.sections) expect(SECTION_TITLES[k]).toBeTruthy();
   });
 });

@@ -17,7 +17,7 @@ import { useMyTrainingSessions } from '@/modules/training/hooks/useTrainingSessi
 import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingItems';
 import { useTrainingMeta } from '@/modules/training/hooks/useTrainingMeta';
 import {
-  PLAN_STATUS, PLAN_STATUS_LABELS, currentPlanWeek, planProgress, slotDate,
+  PLAN_LIMITS, PLAN_STATUS, PLAN_STATUS_LABELS, currentPlanWeek, planProgress, slotDate,
 } from '@/modules/training/domain/plan';
 import { WEEK_ORDER, addItemToSlot, nextPlanSlot } from '@/modules/training/domain/treinar';
 import { WEEKDAY_LONG, formatDayLabel, todayLocal } from '@/modules/training/domain/dates';
@@ -67,8 +67,6 @@ function PlanCard({ plan, sessoes, hoje }) {
 /** "Pôr no meu treino": o item vindo da ficha entra num dia do plano ativo. */
 function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje, carregandoItem }) {
   const padrao = ativo ? nextPlanSlot(ativo, hoje) : null;
-  const [escolha, setEscolha] = useState(() => (padrao ? `${padrao.week}-${padrao.day}` : ''));
-  const [erro, setErro] = useState('');
   const titulo = item?.title || (carregandoItem ? 'Carregando…' : 'Este item');
 
   const opcoes = useMemo(() => {
@@ -78,12 +76,23 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
       for (const day of WEEK_ORDER.filter((d) => ativo.days.includes(d))) {
         const date = slotDate(ativo, { week, day });
         if (date >= hoje || (padrao && padrao.week === week && padrao.day === day)) {
-          out.push({ value: `${week}-${day}`, label: `Semana ${week} · ${WEEKDAY_LONG[day]}, ${formatDayLabel(date, hoje).split(', ')[1]}` });
+          const ids = (ativo.slots || []).find((s) => s.week === week && s.day === day)?.item_ids || [];
+          const ja = ids.includes(itemId);
+          const cheio = ids.length >= PLAN_LIMITS.itemsPerSlot;
+          const estado = ja ? ' · já está neste dia' : cheio ? ' · dia cheio' : ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'item' : 'itens'}` : ' · livre';
+          out.push({ value: `${week}-${day}`, label: `Semana ${week} · ${WEEKDAY_LONG[day]}, ${formatDayLabel(date, hoje).split(', ')[1]}${estado}`, disabled: ja || cheio });
         }
       }
     }
     return out;
-  }, [ativo, hoje, padrao]);
+  }, [ativo, hoje, padrao, itemId]);
+  // O dia sugerido é o próximo do plano; cheio ou já com o item, o primeiro que cabe.
+  const [escolha, setEscolha] = useState(() => {
+    const livres = opcoes.filter((o) => !o.disabled);
+    const sugerido = padrao && livres.find((o) => o.value === `${padrao.week}-${padrao.day}`);
+    return (sugerido || livres[0])?.value || '';
+  });
+  const [erro, setErro] = useState('');
 
   const salvar = () => {
     const [week, day] = escolha.split('-').map(Number);
@@ -111,7 +120,7 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
           <label className="block space-y-1 text-sm font-semibold text-ink">
             Em que dia do plano “{ativo.title}”?
             <V2Select value={escolha} onChange={(e) => { setErro(''); setEscolha(e.target.value); }}>
-              {opcoes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {opcoes.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
             </V2Select>
           </label>
           {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}

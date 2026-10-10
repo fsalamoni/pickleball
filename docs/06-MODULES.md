@@ -929,7 +929,7 @@ por `athletes/`, `auth/`, `coaches/`, `arenas/`, etc.).
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | `V2Ranking` · `V2DoublesRanking` · `V2FindPlayers` · `V2OpenGames` · `V2Partners` |
 | `/meu-desempenho` `/perfil*` `/configuracoes` | `V2Performance` · `V2AthleteAgenda` · `V2Profile` · `V2ProfileEdit` · `V2Settings` |
 | `/buscar` | `V2Search` (busca global, Onda 10) |
-| `/treino` `/treino/novo` `/treino/item/:itemId` `/treino/item/:itemId/editar` `/treino/planos/:planId` | `V2Training` · `V2TrainingEditor` · `V2TrainingItem` · `V2TrainingPlan` (Centro de Treino — flag `training_center`) |
+| `/treino` `/treino/novo` `/treino/item/:itemId` `/treino/item/:itemId/editar` `/treino/planos/:planId` `/treino/golpes` | `V2Training` · `V2TrainingEditor` · `V2TrainingItem` · `V2TrainingPlan` · `V2TrainingTechniques` (trilha dos golpes) (Centro de Treino — flag `training_center`) |
 | `/promocoes` `/campanhas/:campaignId` | `V2Promotions` · `V2PromoCampaign` (divulgação da plataforma e dos professores, Onda CG — flags `platform_marketing`/`coach_marketing`) |
 | `/404` | `V2NotFound` (Onda 1) |
 | `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | `V2Rules` · `V2Leveling` · `V2History` · `V2Conduct` · `V2Privacy` |

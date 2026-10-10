@@ -156,7 +156,7 @@ navegação nova.
 | `/torneios/:id/telao` | público (Telão) | TV mode fullscreen |
 | `/inicio` | autenticado (V2) | Dashboard |
 | `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
-| `/treino` `/treino/novo` `/treino/item/:id` `/treino/item/:id/editar` `/treino/planos/:id` | autenticado (V2), flag `training_center` | Centro de Treino (desligada ⇒ volta ao início) |
+| `/treino` `/treino/novo` `/treino/item/:id` `/treino/item/:id/editar` `/treino/planos/:id` `/treino/golpes` | autenticado (V2), flag `training_center` | Centro de Treino (desligada ⇒ volta ao início) |
 | `/configuracoes` | autenticado (V2) | Settings (privacidade, notificações, exportar dados) |
 | `/notificacoes` | autenticado (V2) | Central de notificações — todos os avisos, por dia, com filtros (flag `notifications_center`) |
 | `/404` | autenticado (V2) | NotFound (page_titles + not_found_page) |

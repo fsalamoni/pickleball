@@ -13,27 +13,33 @@ import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarRange, Check, CheckCircle2, NotebookPen, Pause, Pencil, Play, Plus, Trash2, X,
+  ArrowDown, ArrowLeft, ArrowUp, CalendarRange, Check, CheckCircle2, NotebookPen, Pause, Pencil, Play, Plus, Trash2, X,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import { useMyTrainingPlans, usePlanActions } from '@/modules/training/hooks/useTrainingPlans';
 import { useMyTrainingSessions } from '@/modules/training/hooks/useTrainingSessions';
 import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingItems';
+import { useTrainingMeta } from '@/modules/training/hooks/useTrainingMeta';
+import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import {
   PLAN_LIMITS, PLAN_STATUS, PLAN_STATUS_LABELS, currentPlanWeek, planProgress,
 } from '@/modules/training/domain/plan';
 import {
-  pickItems, planWeekView, planWeeksSummary, setSlotItems, weekRangeLabel,
+  courtBlocks, minutesFromSeconds, moveInList, pickItems, planWeekView, planWeeksSummary, repeatSlotInWeeks, setSlotItems, slotFit,
+  weekRangeLabel,
 } from '@/modules/training/domain/treinar';
 import { WEEKDAY_LONG, formatDayLabel, todayLocal, addDays } from '@/modules/training/domain/dates';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { KindIcon } from '@/v2/components/training/ItemCard';
+import ItemPickerDialog from '@/v2/components/training/plan/ItemPickerDialog';
 
 const LogSessionDialog = lazy(() => import('@/v2/components/training/LogSessionDialog'));
+const CourtMode = lazy(() => import('@/v2/components/training/today/CourtMode'));
 
 const VOLTAR = '/treino?aba=planos';
 const TOM = { [PLAN_STATUS.ATIVO]: 'acid', [PLAN_STATUS.PAUSADO]: 'amber', [PLAN_STATUS.CONCLUIDO]: 'neutral' };
@@ -104,69 +110,124 @@ function Cabecalho({ plan, acoes }) {
   );
 }
 
-/** Editar os itens de um dia: tirar, reordenar não (a ordem é a da lista), acrescentar da biblioteca. */
-function EditarDia({ plan, dia, semana, visiveis, acoes, onFechar }) {
-  const [ids, setIds] = useState(dia.slot?.item_ids || []);
-  const [erro, setErro] = useState('');
-  const opcoes = useMemo(
-    () => visiveis.items.filter((it) => !ids.includes(it.id) && !it.legacy)
-      .sort((a, b) => String(a.title).localeCompare(String(b.title), 'pt-BR')),
-    [visiveis.items, ids],
+/** Quanto do dia os itens ocupam, frente ao tempo do plano. */
+function TempoDoDia({ items, alvo }) {
+  const fit = slotFit(items, alvo);
+  if (fit.state === 'sem_tempo') return null;
+  return (
+    <p className={cn('text-xs font-semibold', fit.state === 'passa' ? 'text-amber-700' : 'text-gray-500')}>
+      {fit.state === 'passa'
+        ? `${fit.minutes} min · passa ${fit.over} min do tempo do plano (${alvo} min)`
+        : `${fit.minutes} de ${alvo} min do plano`}
+    </p>
   );
-  const cheio = ids.length >= PLAN_LIMITS.itemsPerSlot;
+}
+
+const BOTAO_ICONE = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-30';
+
+/**
+ * Editar um dia: acrescentar da biblioteca (vários de uma vez), mudar a
+ * ordem, tirar e, se quiser, repetir o dia nas semanas seguintes.
+ */
+function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
+  const [ids, setIds] = useState(dia.slot?.item_ids || []);
+  const [repetir, setRepetir] = useState(false);
+  const [escolher, setEscolher] = useState(false);
+  const [erro, setErro] = useState('');
+  const vagas = PLAN_LIMITS.itemsPerSlot - ids.length;
+  const seguintes = plan.weeks - semana;
+  const titulo = (id) => visiveis.byId[id]?.title || 'Item indisponível';
 
   const salvar = () => {
-    const r = setSlotItems(plan, { week: semana, day: dia.day }, ids);
+    const r = repetir && seguintes > 0
+      ? repeatSlotInWeeks(plan, { week: semana, day: dia.day }, ids)
+      : setSlotItems(plan, { week: semana, day: dia.day }, ids);
     if (!r.ok) { setErro(r.error); return; }
     acoes.update.mutate({ plan, input: { slots: r.slots } }, {
-      onSuccess: () => { toast.success('Dia atualizado.'); onFechar(); },
+      onSuccess: () => {
+        toast.success(r.weeks ? `Dia atualizado nesta semana e em mais ${r.weeks === 1 ? '1 semana' : `${r.weeks} semanas`}.` : 'Dia atualizado.');
+        onFechar();
+      },
       onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar agora.')),
     });
   };
 
   return (
-    <div className="space-y-3 rounded-3xl bg-gray-50 p-4">
+    <div className="space-y-3 rounded-3xl bg-gray-50 p-3 sm:p-4">
       {ids.length === 0 && <p className="text-sm text-gray-500">Nenhum item neste dia ainda.</p>}
-      <ul className="space-y-1.5">
-        {ids.map((id) => (
-          <li key={id} className="flex items-center justify-between gap-2 rounded-2xl bg-paper-pure px-3 py-2 text-sm">
-            <span className="min-w-0 truncate text-ink">{visiveis.byId[id]?.title || 'Item indisponível'}</span>
-            <button type="button" aria-label={`Tirar ${visiveis.byId[id]?.title || 'item'} deste dia`} onClick={() => setIds(ids.filter((x) => x !== id))} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+      <ol className="space-y-1.5" aria-label="Itens do dia, na ordem do treino">
+        {ids.map((id, i) => (
+          <li key={id} className="flex items-center gap-2 rounded-2xl bg-paper-pure px-2 py-1.5 text-sm">
+            <span className="w-5 shrink-0 text-center text-xs font-bold text-gray-400" aria-hidden="true">{i + 1}</span>
+            {visiveis.byId[id] && <KindIcon kind={visiveis.byId[id].kind} size="sm" className="hidden sm:inline-flex" />}
+            <span className="min-w-0 flex-1">
+              <span className="block line-clamp-2 font-semibold leading-snug text-ink">{titulo(id)}</span>
+              {visiveis.byId[id]?.duration_min ? <span className="block text-xs text-gray-500">{visiveis.byId[id].duration_min} min</span> : null}
+            </span>
+            <button type="button" aria-label={`Subir ${titulo(id)}`} disabled={i === 0} onClick={() => setIds(moveInList(ids, i, -1))} className={BOTAO_ICONE}>
+              <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button type="button" aria-label={`Descer ${titulo(id)}`} disabled={i === ids.length - 1} onClick={() => setIds(moveInList(ids, i, 1))} className={BOTAO_ICONE}>
+              <ArrowDown className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button type="button" aria-label={`Tirar ${titulo(id)} deste dia`} onClick={() => { setErro(''); setIds(ids.filter((x) => x !== id)); }} className={BOTAO_ICONE}>
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </li>
         ))}
-      </ul>
-      {cheio ? (
-        <p className="text-xs text-gray-500">Um dia tem no máximo {PLAN_LIMITS.itemsPerSlot} itens.</p>
+      </ol>
+      <TempoDoDia items={pickItems(ids, visiveis.byId).items} alvo={plan.minutes} />
+      {vagas > 0 ? (
+        <V2Button size="sm" variant="secondary" onClick={() => setEscolher(true)} disabled={visiveis.isLoading} data-dica="treino-plano-acrescentar">
+          <Plus className="h-4 w-4" aria-hidden="true" /> {visiveis.isLoading ? 'Carregando a biblioteca…' : 'Acrescentar da biblioteca'}
+        </V2Button>
       ) : (
-        <label className="block space-y-1 text-sm font-semibold text-ink">
-          Acrescentar um item
-          <V2Select value="" onChange={(e) => { if (e.target.value) { setErro(''); setIds([...ids, e.target.value]); } }} disabled={visiveis.isLoading}>
-            <option value="">{visiveis.isLoading ? 'Carregando a biblioteca…' : 'Escolha da biblioteca'}</option>
-            {opcoes.map((it) => <option key={it.id} value={it.id}>{it.title}</option>)}
-          </V2Select>
+        <p className="text-xs text-gray-500">Um dia tem no máximo {PLAN_LIMITS.itemsPerSlot} itens.</p>
+      )}
+      {seguintes > 0 && (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-ink" />
+          <span>
+            Repetir nas próximas semanas
+            <span className="block text-xs text-gray-500">
+              {WEEKDAY_LONG[dia.day]} das semanas {semana + 1}{seguintes > 1 ? ` a ${plan.weeks}` : ''} fica igual a este (substitui o que houver lá).
+            </span>
+          </span>
         </label>
       )}
-      {visiveis.incompleto && <p className="text-xs text-amber-700">Parte da biblioteca não carregou; a lista pode estar incompleta.</p>}
       {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
       <div className="flex gap-2">
         <V2Button size="sm" onClick={salvar} disabled={acoes.update.isPending}>{acoes.update.isPending ? 'Salvando…' : 'Salvar o dia'}</V2Button>
         <V2Button size="sm" variant="ghost" onClick={onFechar}>Cancelar</V2Button>
       </div>
+      {escolher && (
+        <ItemPickerDialog
+          open={escolher}
+          onOpenChange={setEscolher}
+          items={visiveis.items}
+          excludeIds={ids}
+          max={vagas}
+          favorites={contexto.favorites}
+          level={contexto.level}
+          incompleto={visiveis.incompleto}
+          onAdd={(novos) => { setErro(''); setIds([...ids, ...novos]); }}
+        />
+      )}
     </div>
   );
 }
 
-function Dia({ plan, dia, semana, visiveis, acoes, hoje, onRegistrar }) {
+function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, onRegistrar, onTreinar }) {
   const [editando, setEditando] = useState(false);
   const { items, missingIds } = pickItems(dia.slot?.item_ids || [], visiveis.byId);
   const e = ESTADO_DIA[dia.state] || ESTADO_DIA.planejado;
   const minutos = dia.sessions.reduce((t, s) => t + (s.duration_min || 0), 0);
-  const podeRegistrar = dia.date <= hoje && plan.status !== PLAN_STATUS.CONCLUIDO;
+  const aberto = plan.status !== PLAN_STATUS.CONCLUIDO;
+  const podeRegistrar = dia.date <= hoje && aberto;
+  const registro = { item_ids: items.map((i) => i.id), plan_id: plan.id, date: dia.date, title: dia.slot?.title || '' };
 
   return (
-    <li className={cn('space-y-3 rounded-4xl border bg-paper-pure p-5', dia.state === 'hoje' ? 'border-ink' : 'border-gray-100')}>
+    <li className={cn('min-w-0 space-y-3 rounded-4xl border bg-paper-pure p-5', dia.state === 'hoje' ? 'border-ink' : 'border-gray-100')}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-display text-lg font-bold text-ink">{WEEKDAY_LONG[dia.day]}</p>
@@ -176,19 +237,24 @@ function Dia({ plan, dia, semana, visiveis, acoes, hoje, onRegistrar }) {
       </div>
 
       {editando ? (
-        <EditarDia plan={plan} dia={dia} semana={semana} visiveis={visiveis} acoes={acoes} onFechar={() => setEditando(false)} />
+        <EditarDia plan={plan} dia={dia} semana={semana} visiveis={visiveis} contexto={contexto} acoes={acoes} onFechar={() => setEditando(false)} />
       ) : (
         <>
           {items.length > 0 ? (
-            <ul className="space-y-1.5">
-              {items.map((it) => (
-                <li key={it.id}>
-                  <Link to={`/treino/item/${it.id}`} className="block rounded-2xl bg-gray-50 px-3 py-2 text-sm font-semibold text-ink hover:bg-gray-100">
-                    {it.title}{it.duration_min ? <span className="font-normal text-gray-500"> · {it.duration_min} min</span> : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ol className="space-y-1.5">
+                {items.map((it) => (
+                  <li key={it.id}>
+                    <Link to={`/treino/item/${it.id}`} className="flex items-center gap-3 rounded-2xl bg-gray-50 px-2 py-1.5 hover:bg-gray-100">
+                      <KindIcon kind={it.kind} size="sm" />
+                      <span className="min-w-0 flex-1 line-clamp-2 text-sm leading-snug font-semibold text-ink">{it.title}</span>
+                      {it.duration_min ? <span className="shrink-0 text-xs text-gray-500">{it.duration_min} min</span> : null}
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+              <TempoDoDia items={items} alvo={plan.minutes} />
+            </>
           ) : (!missingIds.length && <p className="text-sm text-gray-500">Dia livre: escolha o que treinar.</p>)}
           {missingIds.length > 0 && !visiveis.isLoading && (
             <p className="text-xs text-gray-500">
@@ -202,13 +268,18 @@ function Dia({ plan, dia, semana, visiveis, acoes, hoje, onRegistrar }) {
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            {plan.status !== PLAN_STATUS.CONCLUIDO && (
+            {dia.date === hoje && aberto && items.length > 0 && (
+              <V2Button size="sm" onClick={() => onTreinar({ items, registro })}>
+                <Play className="h-4 w-4" aria-hidden="true" /> Treinar agora
+              </V2Button>
+            )}
+            {aberto && (
               <V2Button size="sm" variant="secondary" onClick={() => setEditando(true)} data-dica="treino-plano-editar-dia">
-                <Pencil className="h-4 w-4" aria-hidden="true" /> Editar o dia
+                <Pencil className="h-4 w-4" aria-hidden="true" /> {items.length || missingIds.length ? 'Editar o dia' : 'Escolher o que treinar'}
               </V2Button>
             )}
             {podeRegistrar && (
-              <V2Button size="sm" variant="ghost" onClick={() => onRegistrar({ item_ids: items.map((i) => i.id), plan_id: plan.id, date: dia.date, title: dia.slot?.title || '' })}>
+              <V2Button size="sm" variant="ghost" onClick={() => onRegistrar(registro)}>
                 <NotebookPen className="h-4 w-4" aria-hidden="true" /> Registrar
               </V2Button>
             )}
@@ -226,6 +297,10 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
   const [semana, setSemana] = useState(atual || 1);
   const [apagar, setApagar] = useState(false);
   const [registro, setRegistro] = useState(null);
+  const [quadra, setQuadra] = useState(null);
+  const meta = useTrainingMeta(identity.uid);
+  const { level } = useMyUnifiedLevel();
+  const contexto = useMemo(() => ({ favorites: meta.data?.favorites || [], level }), [meta.data, level]);
   const lista = sessoes.isSuccess ? sessoes.data : [];
   const resumo = useMemo(() => planWeeksSummary(plan, lista), [plan, lista]);
   const dias = useMemo(() => planWeekView(plan, lista, semana, hoje), [plan, lista, semana, hoje]);
@@ -292,7 +367,7 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
         <p className="text-sm text-gray-500">{weekRangeLabel(inicioSemana)}{semana === atual ? ' · esta semana' : ''}</p>
         <ul className="grid gap-3 md:grid-cols-2">
           {dias.map((d) => (
-            <Dia key={`${semana}-${d.day}`} plan={plan} dia={d} semana={semana} visiveis={visiveis} acoes={acoes} hoje={hoje} onRegistrar={setRegistro} />
+            <Dia key={`${semana}-${d.day}`} plan={plan} dia={d} semana={semana} visiveis={visiveis} contexto={contexto} acoes={acoes} hoje={hoje} onRegistrar={setRegistro} onTreinar={setQuadra} />
           ))}
         </ul>
       </section>
@@ -310,6 +385,17 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
         })}
       />
       <Suspense fallback={null}>
+        {quadra && (
+          <CourtMode
+            blocks={courtBlocks(quadra.items, plan.minutes)}
+            onClose={() => setQuadra(null)}
+            onFinish={(seg) => {
+              const { registro: base } = quadra;
+              setQuadra(null);
+              setRegistro({ ...base, duration_min: minutesFromSeconds(seg) || plan.minutes || null });
+            }}
+          />
+        )}
         {registro && (
           <LogSessionDialog
             open={!!registro}

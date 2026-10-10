@@ -956,7 +956,7 @@ const ATLETA = {
         p('O Treino reúne, num lugar só, o que você vai treinar, o que já treinou e como está evoluindo. Ele fica na Minha área e no card "Treino" do início (se você o escolher).'),
         list(
           'HOJE — o treino do dia: o do seu plano ativo; se não houver, o que o seu professor mandou com prazo; senão, uma sugestão pelo seu foco e pelo seu nível. "Modo quadra" deixa a tela acesa e conta o tempo de cada bloco.',
-          'PLANOS — de 1 a 16 semanas, nos dias e no tempo que você tem. O assistente monta e você ajusta dia a dia. O plano ativo vira o "Hoje".',
+          'PLANOS — de 1 a 16 semanas, nos dias e no tempo que você tem. O assistente monta e você ajusta dia a dia: "Editar o dia" acrescenta vários itens da biblioteca de uma vez (com busca, tipo, "do meu nível" e "salvos"), muda a ordem, mostra se o dia cabe no tempo do plano e pode repetir o dia nas semanas seguintes. No dia de hoje, "Treinar agora" abre o modo quadra. O plano ativo vira o "Hoje".',
           'DIÁRIO — o que você fez, semana a semana, com o planejado ao lado. O que ficou para depois não é falha: a semana segue.',
           'EVOLUÇÃO — minutos e carga por semana (o esforço que você deu, de 0 a 10, vezes os minutos), quanto variou, em que áreas você treinou, uma autoavaliação a cada 4 semanas e o que você já domina.',
         ),
@@ -1014,7 +1014,7 @@ const ATLETA = {
         list(
           'TIPOS — drill (exercício de quadra), treino (uma sessão em blocos), fundamento (golpe), jogada (tática), exercício físico e estudo (regra, vídeo, leitura).',
           'FILTROS — por tipo, habilidade, nível (2.0 a 8.0), local e origem. "Do meu nível" usa o seu nível na plataforma; quem não tem nível vê tudo.',
-          'A FICHA — o diagrama da quadra, o objetivo, a montagem, o passo a passo, dicas curtas, o CERTO ao lado do ERRADO, erros comuns com a correção, as fases do movimento, como deixar mais fácil ou mais difícil, a meta e a segurança.',
+          'A FICHA — o diagrama da quadra, o objetivo, a montagem, o passo a passo, o corpo ponto a ponto (nos golpes), dicas curtas, o CERTO ao lado do ERRADO, erros comuns com a correção, como saber se você fez certo, as fases do movimento, como deixar mais fácil ou mais difícil, a meta e a segurança. Ficha longa ganha um índice no topo.',
         ),
         steps(
           'Abra um item e toque em "Indicar" para mandá-lo a outros atletas, com um recado.',
@@ -1023,6 +1023,32 @@ const ATLETA = {
         ),
         tip('Achou algo errado ou perigoso num item? Use "Denunciar" na ficha: a equipe da plataforma revisa.'),
         link('/treino?aba=biblioteca', 'Abrir a Biblioteca'),
+      ],
+    },
+    {
+      id: 'treino-golpes',
+      title: 'Aprender os golpes: a trilha dos golpes',
+      summary: 'Cada golpe e movimento do pickleball, do básico ao avançado, com o certo e o errado.',
+      keywords: [
+        'golpe', 'golpes', 'trilha', 'fundamento', 'técnica', 'movimento', 'aprender', 'saque', 'devolução',
+        'drive', 'dink', 'drop', 'voleio', 'reset', 'lob', 'smash', 'erne', 'empunhadura', 'certo e errado',
+      ],
+      flags: ['training_center'],
+      guias: ['treino-golpes'],
+      blocks: [
+        p('A trilha dos golpes reúne os golpes e movimentos do pickleball numa ordem de aprender: o que vem antes é a base do que vem depois. Ela fica no topo da Biblioteca, em "Trilha dos golpes".'),
+        list(
+          'FAMÍLIAS — base do jogo (empunhadura, prontidão, deslocamento), saque e devolução, golpes de fundo, transição, cozinha, rede e jogadas avançadas.',
+          'CADA GOLPE — o passo a passo, o corpo ponto a ponto (empunhadura, olhar, pés, pernas, tronco, braço, punho e raquete), o certo ao lado do errado com o porquê, os erros comuns com a correção, como saber se você fez certo e quando usar no jogo.',
+          'NA FICHA — o golpe anterior e o próximo da trilha, e os drills que treinam aquele golpe.',
+        ),
+        steps(
+          'Abra a Biblioteca e toque em "Trilha dos golpes".',
+          'Comece pelo "Seu próximo golpe" ou escolha uma família.',
+          'Na ficha, leia o ponto a ponto, treine um drill sugerido e marque o seu domínio: Aprendendo, Consistente ou Dominado.',
+        ),
+        tip('"Só os que faltam dominar" esconde o que você já marcou como dominado. O seu domínio é só seu: ninguém mais vê.'),
+        link('/treino/golpes', 'Abrir a trilha dos golpes'),
       ],
     },
     {
@@ -1730,7 +1756,9 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/treino/item/*/editar', label: 'editar o item',
     refs: [[HELP_SECTION.ATHLETE, 'treino-criar']] },
   { pattern: '/treino/item/*', label: 'este item do treino',
-    refs: [[HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+    refs: [[HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-golpes'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+  { pattern: '/treino/golpes', label: 'a trilha dos golpes',
+    refs: [[HELP_SECTION.ATHLETE, 'treino-golpes'], [HELP_SECTION.ATHLETE, 'treino-biblioteca']] },
   { pattern: '/treino/planos/*', label: 'este plano',
     refs: [[HELP_SECTION.ATHLETE, 'treino']] },
   { pattern: '/treino', label: 'o treino',

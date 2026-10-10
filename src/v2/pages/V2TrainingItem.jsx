@@ -16,8 +16,8 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarPlus, CopyPlus, EyeOff, Flag, Heart, MessageCircleQuestion, NotebookPen, Pencil,
-  Send, ShieldCheck, Star, Trash2,
+  ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, CopyPlus, EyeOff, Flag, Heart, MessageCircleQuestion, NotebookPen,
+  Pencil, Route, Send, ShieldCheck, Star, Trash2,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
@@ -32,11 +32,13 @@ import { canEditItem, isAuthor, itemStatusLabel, REVIEW, VISIBILITY } from '@/mo
 import { canShareItem } from '@/modules/training/domain/share';
 import { canCopyItem } from '@/modules/training/domain/copy';
 import { MASTERY, MASTERY_LABELS } from '@/modules/training/domain/evolution';
+import { relatedDrills, trailFamilyOf, trailPosition } from '@/modules/training/domain/techniqueTrail';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import TrainingItemView from '@/v2/components/training/item/TrainingItemView';
+import ItemCard from '@/v2/components/training/ItemCard';
 import {
   ConfirmDialog, ReasonDialog, ReportDialog, mensagemDeErro,
 } from '@/v2/components/training/item/ItemActionDialogs';
@@ -328,6 +330,7 @@ function Ficha({ item, identity, settings }) {
           ? <FichaDeTreino item={item} identity={identity} aside={acoes} />
           : <TrainingItemView item={item} aside={acoes} />}
       </V2Surface>
+      {trailFamilyOf(item) && <NaTrilha item={item} identity={identity} />}
       {identity.isAdmin && !item.legacy && <PainelDaEquipe item={item} identity={identity} settings={settings} />}
       {enviando && (
         <Suspense fallback={null}>
@@ -347,6 +350,58 @@ function Ficha({ item, identity, settings }) {
           onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível excluir agora. Tente de novo.')),
         })}
       />
+    </>
+  );
+}
+
+/**
+ * Para golpe da trilha: onde ele está (anterior, próximo) e os drills que o
+ * treinam. Só monta para item da trilha — os outros não pagam a leitura.
+ */
+function NaTrilha({ item, identity }) {
+  const visiveis = useVisibleTrainingItems(identity);
+  if (visiveis.isLoading) return <V2Skeleton className="h-32 rounded-4xl" />;
+  if (visiveis.isError) {
+    return <V2ErrorState inline title="A trilha dos golpes não carregou" onRetry={() => visiveis.refetch()} />;
+  }
+  const pos = trailPosition(item, visiveis.items);
+  const drills = relatedDrills(item, visiveis.items);
+  if (!pos) return null;
+  const vizinho = (alvo, rotulo, Icon, depois) => alvo && (
+    <Link to={`/treino/item/${alvo.id}`} className={cn('flex min-w-0 flex-1 items-center gap-2 rounded-3xl border border-gray-100 px-4 py-3 hover:border-gray-300', depois && 'justify-end text-right')}>
+      {!depois && <Icon className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />}
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold text-gray-500">{rotulo}</span>
+        <span className="block line-clamp-2 font-semibold leading-snug text-ink">{alvo.title}</span>
+      </span>
+      {depois && <Icon className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />}
+    </Link>
+  );
+  return (
+    <>
+      <V2Surface className="space-y-4" data-dica="treino-item-trilha">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500">
+            <Route className="h-4 w-4" aria-hidden="true" /> Trilha dos golpes · {pos.family.title} · {pos.index} de {pos.total}
+          </p>
+          <Link to="/treino/golpes" className="text-sm font-semibold text-ink underline underline-offset-4">Ver a trilha</Link>
+        </div>
+        {(pos.prev || pos.next) && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {vizinho(pos.prev, 'Antes', ChevronLeft, false)}
+            {vizinho(pos.next, 'A seguir', ChevronRight, true)}
+          </div>
+        )}
+      </V2Surface>
+      {drills.length > 0 && (
+        <section className="space-y-3" aria-labelledby="drills-do-golpe">
+          <h2 id="drills-do-golpe" className="font-display text-xl font-bold text-ink">Drills para treinar este golpe</h2>
+          <p className="text-sm text-gray-500">Aprender o gesto é o começo; repetir num drill é o que o leva para o jogo.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {drills.map((d) => <ItemCard key={d.id} item={d} />)}
+          </div>
+        </section>
+      )}
     </>
   );
 }

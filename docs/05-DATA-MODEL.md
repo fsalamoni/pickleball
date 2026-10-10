@@ -1237,7 +1237,7 @@ autor. Autoria (imutável): `author_uid` (uid, ou `'plataforma'`),
 `players_*`, `roles[]`, `duration_min`, `intensity`, `place[]`, `equipment[]`,
 `setup`, `steps[]`, `cues[]`, `positioning[]` (`certo|errado`),
 `common_errors[]`, `variations`, `success_criteria`, `metric`, `safety`,
-`motor` (fases + capacidades), `blocks[]` (treino), `sets`/`reps`/`rest_sec`/
+`motor` (fases + capacidades), `technique` (opcional, fundamento/jogada: `checkpoints[] {part, text}` ≤ 8 + `self_check[]` ≤ 6), `blocks[]` (treino), `sets`/`reps`/`rest_sec`/
 `tempo` (físico), `study_type`/`rules_edition`/`rules_section`/`questions[]`/
 `link` (estudo), `when_to_use`, `diagrams[]` (≤ 4), `media[]` (≤ 8, com `path`
 quando enviado ao Storage). A semente usa ids `pickle_<slug>`.
