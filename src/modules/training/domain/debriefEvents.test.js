@@ -21,6 +21,16 @@ describe('gameDayEvent', () => {
   });
 });
 
+describe('gameDayEvent — formato com placar', () => {
+  const gd = { id: 'gd2', date: '2026-10-07', format: 'americano' };
+  const parts = [{ id: 'p1', user_id: 'u1' }, { id: 'p2', user_id: 'u2' }];
+  it('partida sorteada sem placar não conta como jogada', () => {
+    const sorteada = [{ side_a: [{ id: 'p1' }], side_b: [{ id: 'p2' }] }];
+    expect(gameDayEvent('u1', gd, sorteada, parts)).toBeNull();
+    expect(gameDayEvent('u1', gd, [{ ...sorteada[0], score_a: 11, score_b: 4 }], parts)).toMatchObject({ games: 1, wins: 1 });
+  });
+});
+
 describe('tournamentEvent', () => {
   it('vale a data de fim; encerrado já terminou; rascunho e cancelado não contam', () => {
     expect(tournamentEvent({ id: 't1', name: 'Open', status: 'finished', starts_at: '2026-10-04', ends_at: '2026-10-05' }))

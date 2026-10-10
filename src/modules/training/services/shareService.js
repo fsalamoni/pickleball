@@ -16,7 +16,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import {
-  buildShares, canShareItem, needsSharedAccess, SHARE_DONE_NOTE_MAX, SHARE_KIND,
+  buildShares, canShareItem, MAX_RECIPIENTS, needsSharedAccess, SHARE_DONE_NOTE_MAX, SHARE_KIND,
 } from '../domain/share.js';
 import { TRAINING_ITEMS, TrainingItemError } from './trainingItemService.js';
 
@@ -70,7 +70,7 @@ export async function shareItem({ item, toUids = [], kind = SHARE_KIND.INDICACAO
   const anteriores = await getDocs(query(collection(db, TRAINING_SHARES),
     where('from_uid', '==', identity.uid), where('item_id', '==', item.id)));
   const emAberto = new Set(anteriores.docs.map((d) => d.data()).filter((s) => !s.done_at).map((s) => s.to_uid));
-  const novos = destinos.filter((u) => !emAberto.has(u));
+  const novos = destinos.filter((u) => !emAberto.has(u)).slice(0, MAX_RECIPIENTS); // o mesmo teto de buildShares: quem lê o item é quem recebe o aviso
   if (!novos.length) return { sent: 0, skipped: destinos.length, failed: 0, notified: 0 };
 
   const shares = buildShares({

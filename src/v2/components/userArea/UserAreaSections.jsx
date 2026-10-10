@@ -380,6 +380,9 @@ function ClubesSecao({ ctx }) {
             ))}
           </ul>
         )}
+        {pedidosQ.isError && (
+          <V2ErrorState inline title="Não carregaram os seus pedidos para entrar" onRetry={() => pedidosQ.refetch()} />
+        )}
         {pedidos.length > 0 && (
           <p className="mt-3 text-sm text-gray-500">
             {plural(pedidos.length, 'pedido para entrar esperando', 'pedidos para entrar esperando')} o clube responder

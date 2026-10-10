@@ -35,12 +35,15 @@ export default function CourtMode({ blocks, onClose, onFinish }) {
   }, [rodando]);
 
   // Esc fecha; o foco começa no botão de fechar (diálogo de tela cheia).
+  // `onClose` vem inline do pai: em ref, para o efeito não rodar (e roubar o foco) a cada render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     fecharRef.current?.focus();
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   const b = blocks[i];
   const alvo = (b?.minutes || 0) * 60;

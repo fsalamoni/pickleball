@@ -12,6 +12,7 @@ import { buildParticipantResolver, resolveSlotUid } from '@/modules/clubs/domain
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery.js';
 import { diaLocal, instanteLocal } from '@/modules/home/domain/freshness.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
+import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { DEBRIEF_SOURCE } from './debrief.js';
 
 /**
@@ -21,6 +22,7 @@ import { DEBRIEF_SOURCE } from './debrief.js';
 export function gameDayEvent(uid, gd, games = [], participants = []) {
   if (!uid || !gd?.id || !gd.date) return null;
   const resolver = buildParticipantResolver(participants);
+  const comPlacar = !!gd.format && gd.format !== GAME_DAY_FORMAT.PLAY;
   let jogos = 0;
   let decididos = 0;
   let vitorias = 0;
@@ -29,6 +31,8 @@ export function gameDayEvent(uid, gd, games = [], participants = []) {
     const b = (g.side_b || []).map((s) => resolveSlotUid(s, resolver));
     const lado = a.includes(uid) ? 'a' : (b.includes(uid) ? 'b' : null);
     if (!lado) return;
+    // Formato com placar: partida sem placar não foi jogada (grade sorteada, quadra cancelada).
+    if (comPlacar && (g.score_a == null || g.score_b == null)) return;
     jogos += 1;
     const sa = Number(g.score_a);
     const sb = Number(g.score_b);

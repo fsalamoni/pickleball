@@ -628,6 +628,22 @@ describe('🔒 F0 — correções de regras antigas', () => {
     await assertFails(updateDoc(doc(como(CAIO), 'coach_students', `${PROF}_${CAIO}`), { status: 'active', tags: ['vip'] }));
   });
 
+  it('🔒 coach_student_notes: só o professor (e o admin) lê e escreve a nota privada', async () => {
+    const id = `${PROF}_${ANA}`;
+    const nota = { coach_id: PROF, student_id: ANA, text: 'parou em out/26' };
+    await assertSucceeds(setDoc(doc(como(PROF), 'coach_student_notes', id), nota));
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'coach_student_notes'), where('coach_id', '==', PROF))));
+    await assertSucceeds(getDocs(query(collection(como(ADMIN), 'coach_student_notes'), where('coach_id', '==', PROF))));
+    // o aluno não lê (nem por consulta, nem por id) nem escreve
+    await assertFails(getDocs(query(collection(como(ANA), 'coach_student_notes'), where('student_id', '==', ANA))));
+    await assertFails(getDoc(doc(como(ANA), 'coach_student_notes', id)));
+    await assertFails(updateDoc(doc(como(ANA), 'coach_student_notes', id), { text: 'x' }));
+    await assertFails(deleteDoc(doc(como(ANA), 'coach_student_notes', id)));
+    // id forjado / outro professor
+    await assertFails(setDoc(doc(como(DUDA), 'coach_student_notes', `${PROF}_${DUDA}`), { coach_id: PROF, student_id: DUDA, text: 'x' }));
+    await assertSucceeds(deleteDoc(doc(como(PROF), 'coach_student_notes', id)));
+  });
+
   it('coach_students: o professor segue editando tudo', async () => {
     await assertSucceeds(updateDoc(doc(como(PROF), 'coach_students', `${PROF}_${ANA}`), { private_notes: 'nova', status: 'paused' }));
   });

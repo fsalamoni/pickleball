@@ -5,7 +5,7 @@
  * Documento ausente é o começo (nada salvo ainda), não uma falha.
  */
 
-import { arrayRemove, arrayUnion, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { arrayRemove, arrayUnion, doc, getDoc, runTransaction, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 
 export const TRAINING_META = 'training_meta';
@@ -36,11 +36,15 @@ export async function setFavorite(uid, itemId, on) {
 
 /** Domínio de um item ("aprendendo" / "consistente" / "dominado"; `null` apaga). */
 export async function setMastery(uid, itemId, level) {
-  const atual = (await getMeta(uid))?.mastery || {};
-  const mastery = { ...atual };
-  if (level) mastery[itemId] = level; else delete mastery[itemId];
-  const chaves = Object.keys(mastery);
-  if (chaves.length > 300) delete mastery[chaves[0]];
-  // Sem merge no mapa: apagar uma chave exige regravar o mapa inteiro.
-  await setDoc(doc(db, TRAINING_META, uid), { mastery, updated_at: serverTimestamp() }, { mergeFields: ['mastery', 'updated_at'] });
+  const ref = doc(db, TRAINING_META, uid);
+  // Transação: duas marcações seguidas (ou em duas abas) não se sobrescrevem.
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const mastery = { ...(snap.exists() ? snap.data()?.mastery : null) };
+    if (level) mastery[itemId] = level; else delete mastery[itemId];
+    const chaves = Object.keys(mastery);
+    if (chaves.length > 300) delete mastery[chaves[0]];
+    // Sem merge no mapa: apagar uma chave exige regravar o mapa inteiro.
+    tx.set(ref, { mastery, updated_at: serverTimestamp() }, { mergeFields: ['mastery', 'updated_at'] });
+  });
 }

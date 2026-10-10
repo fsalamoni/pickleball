@@ -26,7 +26,8 @@ const matchesFocus = (item, focus) => !focus.length
  */
 export function todaySession({ today, uid, plan = null, inbox = [], items = [], routine = null, level = null, force = false }) {
   const slot = slotForDate(plan, today);
-  if (slot) {
+  // Dia do plano sem itens não esconde o que o professor mandou.
+  if (slot?.item_ids?.length) {
     return {
       source: TODAY_SOURCE.PLANO,
       title: slot.title || plan.title,

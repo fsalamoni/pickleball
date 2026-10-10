@@ -4,7 +4,7 @@
  * pessoa tendo ligado para si — desligado, nenhum destes hooks lê o banco
  * (fora o `training_meta`, que já é lido pelo treino).
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -67,11 +67,20 @@ export function usePendingDebriefs() {
   const on = s.enabled;
   const debriefs = useMyDebriefs(s.uid, { enabled: on });
   const recent = useRecentPlay(s.uid, { enabled: on });
+  // O jogo só vira pendência depois de terminar: reavalia a cada minuto, senão
+  // quem deixou o app aberto só o veria ao recarregar.
+  const [minuto, setMinuto] = useState(0);
+  useEffect(() => {
+    if (!on) return undefined;
+    const t = setInterval(() => setMinuto((m) => m + 1), 60000);
+    return () => clearInterval(t);
+  }, [on]);
   const pending = useMemo(
     () => (on && debriefs.data && recent.data
       ? pendingDebriefs({ events: recent.data.events, debriefs: debriefs.data, since: s.since })
       : []),
-    [on, debriefs.data, recent.data, s.since],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `minuto` só força a reavaliação do relógio
+    [on, debriefs.data, recent.data, s.since, minuto],
   );
   return {
     on,

@@ -178,7 +178,7 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
                       type="button"
                       aria-label={`Tirar ${nomeAtleta(p)}`}
                       onClick={() => setPessoas((atual) => atual.filter((x) => x.id !== p.id))}
-                      className="rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-ink"
+                      className="rounded-full p-2 text-gray-500 hover:bg-gray-200 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>

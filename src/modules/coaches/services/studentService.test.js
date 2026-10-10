@@ -88,10 +88,10 @@ describe('removeStudent', () => {
   it('a ficha encerrada fica no histórico do professor; o admin ainda apaga', async () => {
     await expect(removeStudent(link('ended', { ended_at: 1 }), PROF)).rejects.toThrow(/histórico/);
     await removeStudent(link('ended', { ended_at: 1 }), { uid: 'adm', isPlatformAdmin: true });
-    expect(mockDelete).toHaveBeenCalledTimes(1);
+    expect(mockDelete).toHaveBeenCalledTimes(2); // a nota privada e o vínculo
   });
   it('a ficha aberta o professor ainda remove', async () => {
     await removeStudent(link('active'), PROF);
-    expect(mockDelete).toHaveBeenCalledTimes(1);
+    expect(mockDelete).toHaveBeenCalledTimes(2); // a nota privada e o vínculo
   });
 });

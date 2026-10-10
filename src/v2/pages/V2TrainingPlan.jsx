@@ -217,14 +217,16 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
   );
 }
 
-function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, onRegistrar, onTreinar }) {
+function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, diarioPronto, onRegistrar, onTreinar }) {
   const [editando, setEditando] = useState(false);
   const { items, missingIds } = pickItems(dia.slot?.item_ids || [], visiveis.byId);
   const e = ESTADO_DIA[dia.state] || ESTADO_DIA.planejado;
   const minutos = dia.sessions.reduce((t, s) => t + (s.duration_min || 0), 0);
   const aberto = plan.status !== PLAN_STATUS.CONCLUIDO;
-  const podeRegistrar = dia.date <= hoje && aberto;
-  const registro = { item_ids: items.map((i) => i.id), plan_id: plan.id, date: dia.date, title: dia.slot?.title || '' };
+  // Sem o diário carregado todo dia parece "pendente": registrar de novo duplicaria o treino.
+  const podeRegistrar = dia.date <= hoje && aberto && diarioPronto;
+  const registro = { // Biblioteca parcial: guarda o que o plano pede, não só o que chegou.
+    item_ids: visiveis.isLoading || visiveis.incompleto ? (dia.slot?.item_ids || []) : items.map((i) => i.id), plan_id: plan.id, date: dia.date, title: dia.slot?.title || '' };
 
   return (
     <li className={cn('min-w-0 space-y-3 rounded-4xl border bg-paper-pure p-5', dia.state === 'hoje' ? 'border-ink' : 'border-gray-100')}>
@@ -367,7 +369,7 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
         <p className="text-sm text-gray-500">{weekRangeLabel(inicioSemana)}{semana === atual ? ' · esta semana' : ''}</p>
         <ul className="grid gap-3 md:grid-cols-2">
           {dias.map((d) => (
-            <Dia key={`${semana}-${d.day}`} plan={plan} dia={d} semana={semana} visiveis={visiveis} contexto={contexto} acoes={acoes} hoje={hoje} onRegistrar={setRegistro} onTreinar={setQuadra} />
+            <Dia key={`${semana}-${d.day}`} plan={plan} dia={d} semana={semana} visiveis={visiveis} contexto={contexto} acoes={acoes} hoje={hoje} diarioPronto={sessoes.isSuccess} onRegistrar={setRegistro} onTreinar={setQuadra} />
           ))}
         </ul>
       </section>
