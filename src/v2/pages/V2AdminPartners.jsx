@@ -179,9 +179,9 @@ function PartnerAdminRow({ link, startEdit, toggleActive, handleDelete }) {
 
 function StatMini({ label, value }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 text-center shadow-organic-sm">
+    <V2Surface variant="compacto" className="p-5 text-center">
       <p className="font-display text-3xl font-bold text-ink">{value}</p>
       <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-    </div>
+    </V2Surface>
   );
 }

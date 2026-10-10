@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { ClipboardCheck } from 'lucide-react';
 import { usePendingDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { DEBRIEF_SOURCE_LABELS } from '@/modules/training/domain/debrief';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 
 export default function HomeDebriefPrompt() {
   const { on, pending, isSuccess } = usePendingDebriefs();
@@ -18,7 +18,7 @@ export default function HomeDebriefPrompt() {
   const [primeiro] = pending;
   const outros = pending.length - 1;
   return (
-    <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm" data-dica="inicio-balanco">
+    <V2Surface className="mb-8 flex flex-wrap items-center justify-between gap-3 p-5 sm:p-5" data-dica="inicio-balanco">
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-acid/20 text-ink" aria-hidden="true">
           <ClipboardCheck className="h-5 w-5" />
@@ -34,6 +34,6 @@ export default function HomeDebriefPrompt() {
       <V2Button asChild size="sm">
         <Link to="/treino?aba=balanco">Fazer o balanço</Link>
       </V2Button>
-    </div>
+    </V2Surface>
   );
 }

@@ -17,6 +17,7 @@ const TETOS = {
   'text-gray-400': 293,
   'text-[Npx]': 0,
   'emerald/orange/rose/sky': 0,
+  'cartão à mão': 68,
   '<button> sem type': 250,
   'PERMANENT_FEATURE.': 116,
 };
@@ -55,6 +56,13 @@ describe('⭐ a dívida de design só desce', () => {
     // laranja em âmbar e esmeralda em verde, e dois grupos ficariam iguais.
     const semGrupos = v2.filter((p) => !p.endsWith('playGroups/playGroupTheme.js'));
     expect(conta(semGrupos, /-(?:emerald|orange|rose|sky)-\d{2,3}\b/g)).toBeLessThanOrEqual(TETOS['emerald/orange/rose/sky']);
+  });
+
+  it('cartão escrito à mão (rounded-3xl/4xl + border + bg-paper) fora de src/v2/ui', () => {
+    // O cartão é V2Surface (variantes padrao/compacto/plano). Escrever as classes
+    // à mão de novo é o que fez 393 cópias divergirem em raio, sombra e padding.
+    const foraDaUi = v2.filter((p) => !p.includes(`${path.sep}ui${path.sep}`));
+    expect(conta(foraDaUi, /rounded-(?:3xl|4xl) border border-gray-100 bg-paper/g)).toBeLessThanOrEqual(TETOS['cartão à mão']);
   });
 
   it('<button> sem type em src/v2', () => {

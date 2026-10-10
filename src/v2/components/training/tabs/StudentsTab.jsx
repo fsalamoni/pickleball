@@ -75,7 +75,7 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
     enviosOk && a.pending > 0 && `${a.pending} ${a.pending === 1 ? 'envio' : 'envios'} por fazer`,
   ].filter(Boolean).join(' · ');
   return (
-    <li className="rounded-4xl border border-gray-100 bg-paper-pure">
+    <V2Surface as="li">
       <button
         type="button"
         aria-expanded={aberto}
@@ -122,7 +122,7 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
           </section>
         </div>
       )}
-    </li>
+    </V2Surface>
   );
 }
 

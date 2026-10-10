@@ -12,7 +12,7 @@ import {
   EQUIPMENT, EQUIPMENT_LABELS, ITEM_KINDS, ITEM_KIND_LABELS, PLACES, PLACE_LABELS,
 } from '@/modules/training/domain/taxonomy';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Input, V2Select, V2Textarea, V2Surface } from '@/v2/ui/primitives';
 import { Avisos, MultiChips, SkillPicker } from './editorFields';
 import { formatLevel, levelOptions } from './editorForm';
 
@@ -154,7 +154,7 @@ export default function AiAssistPanel({ form, onApply }) {
             {lido && !lido.ok && <p role="alert" className="text-sm font-medium text-red-500">{lido.error}</p>}
 
             {primeiro && (
-              <div className="space-y-3 rounded-3xl border border-gray-100 bg-paper p-4">
+              <V2Surface variant="plano" className="space-y-3 p-4">
                 <p className="text-sm text-ink">
                   <strong>{primeiro.value.title || 'Item sem nome'}</strong> · {ITEM_KIND_LABELS[primeiro.value.kind]} · ficha {primeiro.quality.score} de {primeiro.quality.total}
                 </p>
@@ -177,7 +177,7 @@ export default function AiAssistPanel({ form, onApply }) {
                     Preenchido. Revise cada parte antes de salvar: a IA erra, inventa e não conhece a sua quadra.
                   </p>
                 )}
-              </div>
+              </V2Surface>
             )}
           </div>
         </div>

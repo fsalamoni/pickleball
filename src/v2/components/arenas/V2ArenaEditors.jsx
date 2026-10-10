@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
 import { useSaveArenaPricing } from '@/modules/arenas/hooks/useArenas';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 
 /**
@@ -167,7 +167,7 @@ export function V2PricingEditor({ arena }) {
         <p className="mt-1 text-xs text-gray-500">Usado quando nenhuma regra por dia/horário se aplica.</p>
       </div>
 
-      <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+      <V2Surface variant="compacto" className="p-5">
         <div className="mb-4 flex items-center justify-between">
           <h4 className="font-display text-base font-bold text-ink">Preços padrão (por dia e horário)</h4>
           <V2Button size="sm" variant="ghost" onClick={addRule}><Plus className="h-4 w-4" /> Regra</V2Button>
@@ -217,9 +217,9 @@ export function V2PricingEditor({ arena }) {
             </div>
           ))}
         </div>
-      </div>
+      </V2Surface>
 
-      <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+      <V2Surface variant="compacto" className="p-5">
         <div className="mb-4 flex items-center justify-between">
           <h4 className="font-display text-base font-bold text-ink">Exceções (ocasião ou cliente)</h4>
           <V2Button size="sm" variant="ghost" onClick={addOverride}><Plus className="h-4 w-4" /> Exceção</V2Button>
@@ -257,7 +257,7 @@ export function V2PricingEditor({ arena }) {
             </div>
           ))}
         </div>
-      </div>
+      </V2Surface>
 
       <div className="flex justify-end pt-2">
         <V2Button onClick={handleSave} disabled={save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar preços'}</V2Button>

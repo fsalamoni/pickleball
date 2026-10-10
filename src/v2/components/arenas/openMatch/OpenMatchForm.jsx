@@ -63,13 +63,13 @@ const SELECT = 'h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-
 
 function Secao({ icone: Icone, titulo, descricao, children }) {
   return (
-    <section className="rounded-3xl border border-gray-100 bg-paper p-4">
+    <V2Surface as="section" variant="plano">
       <h4 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
         <Icone className="h-4 w-4 text-gray-400" aria-hidden="true" /> {titulo}
       </h4>
       {descricao && <p className="mt-0.5 text-xs text-gray-500">{descricao}</p>}
       <div className="mt-3 space-y-3">{children}</div>
-    </section>
+    </V2Surface>
   );
 }
 

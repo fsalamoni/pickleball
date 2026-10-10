@@ -538,7 +538,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
         </div>
       )}
 
-      <V2Surface className="overflow-hidden p-0">
+      <V2Surface className="overflow-hidden p-0 sm:p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
@@ -759,14 +759,14 @@ function ManagersTab({ arena }) {
         ))}
       </ul>
 
-      <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-4">
+      <V2Surface variant="plano" className="mt-5 p-4">
         <V2Field label="Adicionar admin (e-mail do usuário já cadastrado)">
           <div className="flex gap-2">
             <V2Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
             <V2Button onClick={handleAddManager} disabled={addManager.isPending} aria-label="Adicionar admin"><UserPlus className="h-4 w-4" aria-hidden="true" /></V2Button>
           </div>
         </V2Field>
-      </div>
+      </V2Surface>
     </V2Surface>
   );
 }

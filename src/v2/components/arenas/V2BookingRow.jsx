@@ -22,7 +22,7 @@ import {
 } from '@/modules/arenas/hooks/useBookings';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
-import { V2Badge, V2Button } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 
 const STATUS_TONE = {
   [BOOKING_STATUS.REQUESTED]: 'amber',
@@ -137,7 +137,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
   };
 
   return (
-    <div className="rounded-4xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm sm:p-5">
+    <V2Surface className="p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-display text-base font-bold text-ink">
@@ -239,6 +239,6 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       {editing && (
         <BookingEditDialog booking={booking} open={editing} onOpenChange={setEditing} byManager={isArena} />
       )}
-    </div>
+    </V2Surface>
   );
 }

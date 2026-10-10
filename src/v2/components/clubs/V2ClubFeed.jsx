@@ -12,7 +12,7 @@ import {
   maxImageMb,
   ACCEPTED_IMAGE_ATTR,
 } from '@/core/services/storageService';
-import { V2Button, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 const MAX_IMAGES_PER_POST = 10;
 
@@ -96,7 +96,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-4xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm sm:p-5">
+      <V2Surface className="p-4 sm:p-5">
         <form onSubmit={handlePost} className="space-y-3">
           <textarea
             value={content}
@@ -145,7 +145,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
             Até {MAX_IMAGES_PER_POST} imagens por publicação, {maxImageMb()} MB cada. As imagens podem ser baixadas em alta qualidade pelos membros.
           </p>
         </form>
-      </div>
+      </V2Surface>
 
       {isLoading ? (
         <div className="space-y-3">{[1, 2].map((i) => <V2Skeleton key={i} className="h-24 rounded-4xl" />)}</div>

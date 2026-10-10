@@ -13,7 +13,7 @@ import {
   isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function formatDateTime(value) {
   if (!value) return null;
@@ -94,7 +94,7 @@ function EventCard({ event, clubId, isAdmin }) {
   };
 
   return (
-    <div className="rounded-4xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm sm:p-5">
+    <V2Surface className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -141,6 +141,6 @@ function EventCard({ event, clubId, isAdmin }) {
         loading={deleteEvent.isPending}
         onConfirm={handleDelete}
       />
-    </div>
+    </V2Surface>
   );
 }

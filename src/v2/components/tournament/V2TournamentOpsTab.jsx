@@ -16,14 +16,14 @@ const ALERT_TONES = {
 
 function OpsTile({ icon: Icon, label, value, hint }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+    <V2Surface variant="compacto" className="p-5">
       <div className="flex items-center gap-2 text-gray-400">
         <Icon className="h-4 w-4" />
         <span className="text-2xs font-bold uppercase tracking-widest">{label}</span>
       </div>
       <p className="mt-2 font-display text-3xl font-bold text-ink">{value}</p>
       {hint && <p className="mt-1 text-xs font-medium text-gray-500">{hint}</p>}
-    </div>
+    </V2Surface>
   );
 }
 

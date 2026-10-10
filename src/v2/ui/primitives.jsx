@@ -24,8 +24,21 @@ import { cn } from '@/core/lib/utils';
  * (`children`) recolhe/expande. O estado é lembrado por seção via localStorage
  * (`collapseId` ou o título). Use em toda seção interna de dados — nunca em heroes.
  */
+/**
+ * As variantes do cartão (Fase 2.2 do plano de UX). O `className` do ponto de uso
+ * continua vencendo (tailwind-merge), então o padding de cada tela é preservado.
+ *  - `padrao`:   o cartão de seção — rounded-4xl, paper-pure, sombra, p-6/8;
+ *  - `compacto`: o cartão interno — rounded-3xl, paper-pure, sombra, p-4;
+ *  - `plano`:    o bloco de apoio — rounded-3xl, paper (sem sombra), p-4.
+ */
+export const SURFACE_VARIANTS = Object.freeze({
+  padrao: 'rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm sm:p-8',
+  compacto: 'rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm',
+  plano: 'rounded-3xl border border-gray-100 bg-paper p-4',
+});
+
 export function V2Surface({
-  as: Tag = 'div', className, children,
+  as: Tag = 'div', className, children, variant = 'padrao',
   collapsible = false, title, eyebrow, description, headerAction,
   defaultCollapsed = false, collapseId,
   ...props
@@ -33,10 +46,7 @@ export function V2Surface({
   if (!collapsible) {
     return (
       <Tag
-        className={cn(
-          'rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm sm:p-8',
-          className,
-        )}
+        className={cn(SURFACE_VARIANTS[variant] || SURFACE_VARIANTS.padrao, className)}
         {...props}
       >
         {children}

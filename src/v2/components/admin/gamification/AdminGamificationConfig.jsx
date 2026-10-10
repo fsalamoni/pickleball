@@ -143,13 +143,13 @@ export default function AdminGamificationConfig() {
         <p className="text-xs text-gray-500">Cada pessoa ainda pode desligar o que não quer receber, nas preferências dela.</p>
       </V2Surface>
 
-      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure/95 p-4 shadow-lg backdrop-blur">
+      <V2Surface variant="plano" className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 bg-paper-pure/95 p-4 shadow-lg backdrop-blur">
         <p className="text-sm text-gray-600">{mudancas.length === 0 ? 'Nada alterado.' : `${mudancas.length} ${mudancas.length === 1 ? 'alteração' : 'alterações'} a salvar.`}</p>
         <div className="flex gap-2">
           <V2Button variant="ghost" size="sm" onClick={() => setDraft(normalizeGamificationConfig(DEFAULT_GAMIFICATION_CONFIG))}><RotateCcw className="mr-1 h-4 w-4" /> Padrões de fábrica</V2Button>
           <V2Button size="sm" disabled={saving || mudancas.length === 0} onClick={salvar} data-dica="admin-gam-salvar"><Save className="mr-1 h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}</V2Button>
         </div>
-      </div>
+      </V2Surface>
     </div>
   );
 }

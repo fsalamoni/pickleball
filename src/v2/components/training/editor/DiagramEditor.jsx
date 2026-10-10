@@ -16,7 +16,7 @@ import {
   MAX_DIAGRAMS, MAX_ELEMENTS,
 } from '@/modules/training/domain/diagram';
 import CourtDiagram, { courtPointFromEvent } from '@/v2/components/training/CourtDiagram';
-import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Input, V2Select, V2Surface } from '@/v2/ui/primitives';
 import { IconBtn } from './editorFields';
 import { removeAt, replaceAt } from './editorForm';
 import {
@@ -264,7 +264,7 @@ export default function DiagramEditor({ value = [], onChange }) {
             )}
 
             {escolhido && (
-              <div className="space-y-3 rounded-3xl border border-gray-100 bg-paper p-4">
+              <V2Surface variant="plano" className="space-y-3 p-4">
                 <p className="text-sm font-bold text-ink">{elementName(escolhido)}</p>
                 {COM_ROTULO.has(escolhido.t) && (
                   <V2Field
@@ -313,7 +313,7 @@ export default function DiagramEditor({ value = [], onChange }) {
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </IconBtn>
                 </div>
-              </div>
+              </V2Surface>
             )}
 
             <V2Button type="button" variant="ghost" size="sm" onClick={apagarQuadro}>
