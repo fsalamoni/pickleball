@@ -64,9 +64,20 @@ function adminDocId(tournamentId, userId) {
 
 /* --------------------------------- CRUD --------------------------------- */
 
+/** Gestores de uma arena (uids). `arena_managers` é de leitura pública. */
+async function arenaManagerIds(arenaId) {
+  const snap = await getDocs(query(collection(db, 'arena_managers'), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => d.data().user_id).filter(Boolean);
+}
+
 export async function createTournament(creator, data) {
   if (!creator?.uid) throw new Error('Usuário não autenticado.');
   const id = doc(collection(db, COL.tournaments)).id;
+  // Sede: quem gere a arena confirma na hora; os outros pedem, e a arena
+  // confirma ou recusa na Central (a regra exige a sede pendente).
+  const arenaId = data.arena_id || null;
+  const gestores = arenaId ? await arenaManagerIds(arenaId) : [];
+  const arenaConfirmada = arenaId ? gestores.includes(creator.uid) : null;
   const payload = {
     id,
     name: data.name?.trim() || 'Torneio',
@@ -89,7 +100,8 @@ export async function createTournament(creator, data) {
       displayName: creator.displayName, email: creator.email, fallback: 'Organizador',
     }),
     // Sprint 4 ARE-14: arena vinculada (opcional)
-    arena_id: data.arena_id || null,
+    arena_id: arenaId,
+    ...(arenaId ? { arena_confirmed: arenaConfirmada } : {}),
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   };
@@ -113,8 +125,43 @@ export async function createTournament(creator, data) {
     actor: creator,
     details: { tournament_id: id, name: payload.name },
   });
+  if (arenaId && !arenaConfirmada) {
+    notifyUsers(gestores, {
+      title: `"${payload.name.slice(0, 60)}" quer a sua arena como sede`,
+      message: 'Confirme ou recuse em Torneios, na Central da arena. Até lá ele não aparece na página da arena.',
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/arenas/${arenaId}/gerir?aba=torneios`,
+      actor: { uid: creator.uid, displayName: payload.creator_name },
+    });
+  }
   logger.info('tournament_created', { id });
   return id;
+}
+
+/** A arena decide a sede: confirma, ou recusa (o torneio deixa de ser da casa). */
+export async function decideTournamentArena(tournament, confirm, actor) {
+  if (!tournament?.id || !tournament.arena_id) throw new Error('Torneio sem sede.');
+  await updateDoc(doc(db, COL.tournaments, tournament.id), confirm
+    ? { arena_confirmed: true, updated_at: serverTimestamp() }
+    : { arena_id: null, arena_confirmed: false, updated_at: serverTimestamp() });
+  await createAuditLog({
+    action: confirm ? 'tournament_arena_confirmed' : 'tournament_arena_declined',
+    actor,
+    details: { tournament_id: tournament.id, arena_id: tournament.arena_id },
+  });
+  if (tournament.creator_uid) {
+    notifyUsers([tournament.creator_uid], {
+      title: confirm
+        ? `A arena confirmou a sede de "${String(tournament.name || 'seu torneio').slice(0, 60)}"`
+        : `A arena recusou a sede de "${String(tournament.name || 'seu torneio').slice(0, 60)}"`,
+      message: confirm
+        ? 'O torneio já aparece na página da arena e soma no ranking da casa.'
+        : 'O torneio segue de pé, sem sede vinculada. Fale com a arena ou escolha outra.',
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/torneios/${tournament.id}`,
+      actor,
+    });
+  }
 }
 
 export async function getTournament(id) {

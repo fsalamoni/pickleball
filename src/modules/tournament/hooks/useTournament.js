@@ -6,6 +6,7 @@ import {
   listAllTournaments,
   listPublicTournaments,
   listArenaTournaments,
+  decideTournamentArena,
   listTournamentAdmins,
   isTournamentAdmin,
   createTournament,
@@ -81,6 +82,7 @@ import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
 import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
+import { isHostConfirmed } from '@/modules/arenas/domain/houseTournaments';
 
 /* ------------------------------ Tournaments ----------------------------- */
 
@@ -133,12 +135,27 @@ export function usePublicTournaments({ enabled = true } = {}) {
   return useQuery({ queryKey: ['tournaments-public'], queryFn: listPublicTournaments, enabled });
 }
 
-// Sprint 4 ARE-14: tournaments de uma arena
-export function useArenaTournaments(arenaId) {
+// Sprint 4 ARE-14: tournaments de uma arena. Sem `includePending`, só os de
+// sede confirmada — o pendente é assunto da arena, não do público.
+export function useArenaTournaments(arenaId, { includePending = false } = {}) {
   return useQuery({
     queryKey: ['arena-tournaments', arenaId],
     queryFn: () => listArenaTournaments(arenaId),
     enabled: !!arenaId,
+    select: includePending ? undefined : selectHostConfirmed,
+  });
+}
+
+function selectHostConfirmed(list) {
+  return (list || []).filter(isHostConfirmed);
+}
+
+export function useDecideTournamentArena(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournament, confirm }) => decideTournamentArena(tournament, confirm, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-tournaments', arenaId] }),
   });
 }
 

@@ -10,6 +10,7 @@ import {
   updateClub,
   deleteClub,
   regenerateInviteCode,
+  getClubInviteCode,
   listClubMembers,
   getMembership,
   joinClubByCode,
@@ -157,7 +158,21 @@ export function useRegenerateInviteCode(id) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => regenerateInviteCode(id, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['club', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['club', id] });
+      qc.invalidateQueries({ queryKey: ['club-invite-code', id] });
+    },
+  });
+}
+
+/** O código de convite do clube — só para quem administra (a regra só deixa o admin listar). */
+export function useClubInviteCode(club, { enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['club-invite-code', club?.id],
+    queryFn: () => getClubInviteCode(club, user),
+    enabled: !!club?.id && enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

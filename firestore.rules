@@ -1316,7 +1316,11 @@ service cloud.firestore {
       allow read: if resource.data.get('archived', false) != true
         || isPlatformAdmin()
         || isTournamentCreator(tid);
-      allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid;
+      // Sede: quem não gere a arena cria o torneio com a sede PENDENTE
+      // (`arena_confirmed: false`) — a arena confirma ou recusa. Antes qualquer
+      // conta punha o torneio na página e no ranking da casa de qualquer arena.
+      allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid
+        && tournamentArenaOk();
       // Update: a regra antiga (platform_admin / tournament_admin / criador)
       // continua valendo para todos os campos. Para o campo 'archived'
       // especificamente:
@@ -1334,9 +1338,26 @@ service cloud.firestore {
         )
         // O co-administrador não se torna criador (que arquiva e apaga).
         && (isPlatformAdmin()
-          || request.resource.data.get('creator_uid', null) == resource.data.get('creator_uid', null));
+          || request.resource.data.get('creator_uid', null) == resource.data.get('creator_uid', null))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['arena_id', 'arena_confirmed'])
+          || tournamentArenaOk())
+        // A arena decide sobre a sede: confirma, ou recusa (o torneio sai dela).
+        || (resource.data.get('arena_id', null) is string
+          && isArenaManager(resource.data.arena_id)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['arena_id', 'arena_confirmed', 'updated_at'])
+          && ((request.resource.data.get('arena_id', null) == resource.data.arena_id
+                && request.resource.data.get('arena_confirmed', false) == true)
+            || (request.resource.data.get('arena_id', null) == null
+                && request.resource.data.get('arena_confirmed', false) == false)));
       allow delete: if isPlatformAdmin()
         || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+    }
+    // Sem sede, sede pendente, ou gerir a arena (o admin da plataforma também).
+    function tournamentArenaOk() {
+      return request.resource.data.get('arena_id', null) == null
+        || request.resource.data.get('arena_confirmed', null) == false
+        || isPlatformAdmin()
+        || (request.resource.data.arena_id is string && isArenaManager(request.resource.data.arena_id));
     }
 
     match /tournament_admins/{docId} {
@@ -1652,6 +1673,52 @@ service cloud.firestore {
         || (isAuthed() && resource.data.created_by == request.auth.uid);
     }
 
+    // ---- Convite de clube: as provas de entrada --------------------------
+    function hasPendingClubInvite(docId) {
+      return exists(/databases/$(database)/documents/club_member_invites/$(docId))
+        && get(/databases/$(database)/documents/club_member_invites/$(docId)).data.get('status', '') == 'pending';
+    }
+    // O código vale se é o código atual do clube (`club_invite_codes`) ou,
+    // no clube ainda não migrado, o que mora no próprio documento do clube.
+    function validClubCode(clubId, code) {
+      return code is string && code.matches('^[A-Z0-9]{4,12}$')
+        && ((exists(/databases/$(database)/documents/club_invite_codes/$(code))
+              && get(/databases/$(database)/documents/club_invite_codes/$(code)).data.club_id == clubId)
+          || get(/databases/$(database)/documents/clubs/$(clubId)).data.get('invite_code', '') == code);
+    }
+    function hasClubCodeJoin(docId, clubId) {
+      return existsAfter(/databases/$(database)/documents/club_code_joins/$(docId))
+        && validClubCode(clubId, getAfter(/databases/$(database)/documents/club_code_joins/$(docId)).data.code);
+    }
+
+    // id = o próprio código: quem sabe o código lê (é assim que o código leva
+    // ao clube). Listar é só dos admins do clube — o código não pode ser
+    // descoberto varrendo a coleção.
+    match /club_invite_codes/{code} {
+      allow get: if isAuthed();
+      allow list: if isAuthed() && (isClubAdmin(resource.data.club_id) || isPlatformAdmin());
+      allow create: if isAuthed()
+        && code.matches('^[A-Z0-9]{4,12}$')
+        && request.resource.data.code == code
+        && (isClubAdmin(request.resource.data.club_id) || isPlatformAdmin());
+      allow update: if false;
+      allow delete: if isAuthed() && (isClubAdmin(resource.data.club_id) || isPlatformAdmin());
+    }
+
+    // A prova de quem entrou pelo código (`{clube}_{uid}`). Só o dono e os
+    // admins do clube leem — o código não vai para club_members, que é público.
+    match /club_code_joins/{docId} {
+      allow read: if isAuthed() && (resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && docId == request.resource.data.club_id + '_' + request.auth.uid
+        && validClubCode(request.resource.data.club_id, request.resource.data.code);
+      allow update: if false;
+      allow delete: if isAuthed() && (resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin());
+    }
+
     match /club_members/{docId} {
       allow read: if isAuthed();
       // Auto-ingresso como membro, criador registrando-se como admin, ou um
@@ -1660,11 +1727,19 @@ service cloud.firestore {
       // `{clubId}_{uid}`. Sem amarrar o id aos campos, quem cria o próprio
       // clube A gravava `{CLUBE_ALHEIO}_{eu}` com `club_id: A, role: admin` e
       // virava admin do clube alheio.
+      // Entrar SOZINHO exige um dos três: ter criado o clube (o admin
+      // fundador), um convite pendente do admin (`club_member_invites`, mesmo
+      // id) ou o código de convite (a prova em `club_code_joins`, gravada no
+      // mesmo lote). Antes bastava querer: o código era decorativo e qualquer
+      // conta virava membro de qualquer clube — e via os eventos privados e os
+      // dias de jogo do clube.
       allow create: if isAuthed()
         && docId == request.resource.data.club_id + '_' + request.resource.data.user_id
         && (
           (request.resource.data.user_id == request.auth.uid
-            && (request.resource.data.role == 'member' || isClubCreator(request.resource.data.club_id)))
+            && (isClubCreator(request.resource.data.club_id)
+              || (request.resource.data.role == 'member'
+                && (hasPendingClubInvite(docId) || hasClubCodeJoin(docId, request.resource.data.club_id)))))
           || isClubAdmin(request.resource.data.club_id)
           || isPlatformAdmin()
         );
@@ -2539,13 +2614,38 @@ service cloud.firestore {
       allow update, delete: if isAuthed() && (
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
+      // O atleta mexe só no contador de vagas, de um em um, junto com a
+      // PRÓPRIA inscrição (mesmo lote): entra se ainda há vaga e a clínica
+      // está aberta; sai devolvendo a vaga. É o contador que faz o teto valer
+      // — contar as inscrições a regra não consegue.
+      allow update: if isAuthed()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['signup_count'])
+        && (
+          (request.resource.data.signup_count == resource.data.get('signup_count', 0) + 1
+            && request.resource.data.signup_count <= resource.data.capacity
+            && resource.data.get('status', 'open') == 'open'
+            && !exists(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + request.auth.uid))
+            && existsAfter(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + request.auth.uid)))
+          || (request.resource.data.signup_count == resource.data.get('signup_count', 0) - 1
+            && request.resource.data.signup_count >= 0
+            && exists(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + request.auth.uid))
+            && !existsAfter(/databases/$(database)/documents/coach_clinic_signups/$(clinicId + '_' + request.auth.uid)))
+        );
     }
     // coach_clinic_signups/{clinicId_athleteId} — inscrição do atleta.
-    // Leitura pública (contagem de vagas); cria o próprio atleta; remove o
-    // próprio atleta, o professor da clínica (coach_id) ou admin.
+    // Leitura pública (contagem de vagas); cria o próprio atleta — com o id,
+    // o professor e a vaga conferidos (o contador da clínica sobe no mesmo
+    // lote); remove o próprio atleta, o professor da clínica ou admin.
     match /coach_clinic_signups/{signupId} {
       allow read: if true;
-      allow create: if isAuthed() && request.auth.uid == request.resource.data.athlete_id;
+      allow create: if isAuthed()
+        && request.auth.uid == request.resource.data.athlete_id
+        && request.resource.data.clinic_id is string
+        && signupId == request.resource.data.clinic_id + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/coach_clinics/$(request.resource.data.clinic_id))
+        && request.resource.data.coach_id == get(/databases/$(database)/documents/coach_clinics/$(request.resource.data.clinic_id)).data.coach_id
+        && getAfter(/databases/$(database)/documents/coach_clinics/$(request.resource.data.clinic_id)).data.get('signup_count', 0)
+          == get(/databases/$(database)/documents/coach_clinics/$(request.resource.data.clinic_id)).data.get('signup_count', 0) + 1;
       allow delete: if isAuthed() && (
         request.auth.uid == resource.data.athlete_id ||
         request.auth.uid == resource.data.coach_id ||

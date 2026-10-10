@@ -144,6 +144,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'club_members', field: 'user_id', label: 'Participação em clubes', counter: { col: 'clubs', idField: 'club_id', field: 'member_count' } },
   { col: 'club_join_requests', field: 'user_id', label: 'Pedidos para entrar em clube' },
   { col: 'club_member_invites', field: 'user_id', label: 'Convites de clube' },
+  { col: 'club_code_joins', field: 'user_id', label: 'Entradas em clube pelo código' },
   { col: 'event_invites', field: 'user_id', label: 'Convites de evento' },
   { col: 'club_event_rsvps', field: 'user_id', label: 'Presenças em evento de clube' },
   { col: 'tournament_admins', field: 'user_id', label: 'Administração de torneio' },

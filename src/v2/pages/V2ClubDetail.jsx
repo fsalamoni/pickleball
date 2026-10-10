@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
-  useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
+  useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite, useClubInviteCode,
 } from '@/modules/clubs/hooks/useClubs';
 import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
@@ -62,6 +62,7 @@ export default function V2ClubDetail() {
 
   const isMember = !!membership;
   const isAdmin = membership?.role === CLUB_ROLE.ADMIN;
+  const { data: inviteCode } = useClubInviteCode(club, { enabled: isAdmin && inviteLinkOn });
 
   const handleJoin = async (e) => {
     e.preventDefault();
@@ -154,10 +155,10 @@ export default function V2ClubDetail() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {inviteLinkOn && isAdmin && club.invite_code && (
+            {inviteLinkOn && isAdmin && inviteCode && (
               <V2Button variant="ghost" size="sm" className="border-white/20 bg-white/10 text-white hover:border-white/40"
                 onClick={() => {
-                  const link = `${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(club.invite_code)}`;
+                  const link = `${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(inviteCode)}`;
                   navigator.clipboard?.writeText(link)
                     .then(() => toast.success('Link de convite copiado!'))
                     .catch(() => toast.error('Não foi possível copiar.'));

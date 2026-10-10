@@ -25,6 +25,7 @@ import {
   serverTimestamp,
   increment,
   writeBatch,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -50,8 +51,38 @@ function eventInviteId(eventId, userId) {
   return `${eventId}_${userId}`;
 }
 
+// Sem 0/O e 1/I: o código é lido em voz alta e digitado.
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
 function inviteCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+  const bytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+}
+
+function normalizeCode(code) {
+  return trimmed(code).toUpperCase();
+}
+
+/**
+ * Grava o código do clube em `club_invite_codes/{CÓDIGO}` (exige ser admin
+ * do clube). `code` dado = migrar o código legado sem quebrar links já
+ * compartilhados; sem `code`, sorteia um (com nova tentativa se colidir).
+ */
+async function saveInviteCode(clubId, actorUid, code) {
+  const tentativas = code ? [code] : [inviteCode(), inviteCode(), inviteCode()];
+  let ultimoErro;
+  for (const c of tentativas) {
+    try {
+      await setDoc(doc(db, COL.inviteCodes, c), {
+        code: c, club_id: clubId, created_by: actorUid || null, created_at: serverTimestamp(),
+      });
+      return c;
+    } catch (err) {
+      ultimoErro = err;
+    }
+  }
+  throw ultimoErro;
 }
 
 function memberDocId(clubId, userId) {
@@ -118,7 +149,6 @@ export async function createClub(creator, profile, data) {
     home_venue: trimmed(data.home_venue),
     linked_coach_id: trimmed(data.linked_coach_id) || null,
     linked_arena_id: trimmed(data.linked_arena_id) || null,
-    invite_code: inviteCode(),
     member_count: 1,
     created_by: creator.uid,
     creator_name: profile?.platform_name || creator.displayName || creator.email || '',
@@ -134,6 +164,9 @@ export async function createClub(creator, profile, data) {
     await deleteDoc(doc(db, COL.clubs, id)).catch(() => {});
     throw err;
   }
+  // Sem código o clube funciona (pedido de entrada e convite); o admin gera
+  // um depois na administração.
+  await saveInviteCode(id, creator.uid).catch((err) => logger.warn('club_invite_code_failed', err));
 
   await syncAthleteProfile(creator, profile);
   await createAuditLog({ action: 'club_created', actor: creator, details: { club_id: id, name: payload.name } });
@@ -149,11 +182,39 @@ export async function getClub(id) {
 }
 
 export async function getClubByInviteCode(code) {
-  if (!db) return null;
-  const snap = await getDocs(query(collection(db, COL.clubs), where('invite_code', '==', trimmed(code).toUpperCase())));
+  const c = normalizeCode(code);
+  if (!db || !c) return null;
+  const codeSnap = await getDoc(doc(db, COL.inviteCodes, c));
+  if (codeSnap.exists()) return getClub(codeSnap.data().club_id);
+  // Legado: clube cujo código ainda mora no próprio documento (até um admin
+  // abrir a administração, que o migra).
+  const snap = await getDocs(query(collection(db, COL.clubs), where('invite_code', '==', c)));
   if (snap.empty) return null;
   const d = snap.docs[0];
   return { id: d.id, ...d.data() };
+}
+
+/**
+ * O código de convite do clube, para o ADMIN mostrar. Migra o legado: o código
+ * que morava no documento do clube (legível por qualquer conta) passa para
+ * `club_invite_codes` — o MESMO código, para os links já enviados seguirem
+ * valendo — e sai do clube.
+ */
+export async function getClubInviteCode(club, actor) {
+  if (!db || !club?.id) return null;
+  const snap = await getDocs(query(collection(db, COL.inviteCodes), where('club_id', '==', club.id)));
+  if (!snap.empty) {
+    if (club.invite_code) {
+      await updateDoc(doc(db, COL.clubs, club.id), { invite_code: deleteField() }).catch(() => {});
+    }
+    const docs = snap.docs.map((d) => d.data()).sort((a, b) => (b.created_at?.toMillis?.() || 0) - (a.created_at?.toMillis?.() || 0));
+    return docs[0].code;
+  }
+  const legado = normalizeCode(club.invite_code);
+  const code = await saveInviteCode(club.id, actor?.uid, legado || undefined)
+    .catch(() => saveInviteCode(club.id, actor?.uid)); // legado colidiu: código novo
+  if (legado) await updateDoc(doc(db, COL.clubs, club.id), { invite_code: deleteField() }).catch(() => {});
+  return code;
 }
 
 export async function listClubs() {
@@ -201,8 +262,11 @@ export async function updateClub(id, updates, actor) {
 }
 
 export async function regenerateInviteCode(id, actor) {
-  const code = inviteCode();
-  await updateDoc(doc(db, COL.clubs, id), { invite_code: code, updated_at: serverTimestamp() });
+  const antigos = await getDocs(query(collection(db, COL.inviteCodes), where('club_id', '==', id)));
+  const code = await saveInviteCode(id, actor?.uid);
+  // O código antigo deixa de valer: é para isso que se gera um novo.
+  await Promise.all(antigos.docs.map((d) => deleteDoc(d.ref)));
+  await updateDoc(doc(db, COL.clubs, id), { invite_code: deleteField(), updated_at: serverTimestamp() });
   await createAuditLog({ action: 'club_invite_regenerated', actor, details: { club_id: id } });
   return code;
 }
@@ -215,6 +279,7 @@ export async function deleteClub(id, actor) {
     { col: COL.events, field: 'club_id' },
     { col: COL.rsvps, field: 'club_id' },
     { col: COL.posts, field: 'club_id' },
+    { col: COL.inviteCodes, field: 'club_id' },
     { col: COL.members, field: 'club_id' },
   ];
   for (const { col, field } of subcollections) {
@@ -253,7 +318,16 @@ export async function joinClubByCode(code, user, profile) {
   const existing = await getMembership(club.id, user.uid);
   if (existing) return club;
 
-  await setDoc(doc(db, COL.members, memberDocId(club.id, user.uid)), memberPayload(club.id, user, profile, CLUB_ROLE.MEMBER));
+  // A prova (o código) e a associação no MESMO lote: a regra de club_members
+  // lê a prova por `getAfter`. O código não vai no documento de membro, que
+  // qualquer conta logada lê.
+  const id = memberDocId(club.id, user.uid);
+  const batch = writeBatch(db);
+  batch.set(doc(db, COL.codeJoins, id), {
+    club_id: club.id, user_id: user.uid, code: normalizeCode(code), created_at: serverTimestamp(),
+  });
+  batch.set(doc(db, COL.members, id), memberPayload(club.id, user, profile, CLUB_ROLE.MEMBER));
+  await batch.commit();
   // Atualização cosmética do contador (best-effort).
   await updateDoc(doc(db, COL.clubs, club.id), { member_count: increment(1), updated_at: serverTimestamp() }).catch(() => {});
   await syncAthleteProfile(user, profile);
@@ -301,6 +375,8 @@ export async function removeMember(clubId, member, actor) {
     if (admins.length <= 1) throw new Error('Não é possível remover o último administrador.');
   }
   await deleteDoc(doc(db, COL.members, memberDocId(clubId, member.user_id)));
+  // Um convite que ficou pendente seria a porta de volta de quem foi removido.
+  await deleteDoc(doc(db, COL.memberInvites, memberDocId(clubId, member.user_id))).catch(() => {});
   await updateDoc(doc(db, COL.clubs, clubId), { member_count: increment(-1), updated_at: serverTimestamp() }).catch(() => {});
   await createAuditLog({ action: 'club_member_removed', actor, details: { club_id: clubId, user_id: member.user_id } });
 }

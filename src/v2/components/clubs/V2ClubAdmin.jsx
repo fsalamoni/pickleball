@@ -9,6 +9,7 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import {
   useUpdateClub,
   useRegenerateInviteCode,
+  useClubInviteCode,
   useDeleteClub,
   useJoinRequests,
   useApproveJoinRequest,
@@ -27,6 +28,8 @@ export default function V2ClubAdmin({ club }) {
   const { copy, copied } = useClipboard();
   const updateClub = useUpdateClub(club.id);
   const regenerate = useRegenerateInviteCode(club.id);
+  const inviteCodeQuery = useClubInviteCode(club);
+  const inviteCode = inviteCodeQuery.data;
   const deleteClub = useDeleteClub(club.id);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -87,13 +90,22 @@ export default function V2ClubAdmin({ club }) {
       <V2Surface>
         <h3 className="font-display text-base font-bold text-ink">Código de convite</h3>
         <p className="mt-1 text-sm text-gray-500">Compartilhe este código para que atletas ingressem no clube.</p>
+        {inviteCodeQuery.isError && (
+          <div className="mt-4"><V2ErrorState inline title="Não foi possível carregar o código." onRetry={() => inviteCodeQuery.refetch()} /></div>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <code className="rounded-2xl border border-gray-100 bg-paper-pure px-4 py-2 font-display text-lg font-bold tracking-[0.25em] text-ink shadow-organic-sm">
-            {club.invite_code}
-          </code>
-          <V2Button variant="ghost" size="sm" onClick={() => copy(club.invite_code, 'Código copiado!')}>
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar
-          </V2Button>
+          {inviteCode ? (
+            <>
+              <code className="rounded-2xl border border-gray-100 bg-paper-pure px-4 py-2 font-display text-lg font-bold tracking-[0.25em] text-ink shadow-organic-sm">
+                {inviteCode}
+              </code>
+              <V2Button variant="ghost" size="sm" onClick={() => copy(inviteCode, 'Código copiado!')}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar
+              </V2Button>
+            </>
+          ) : inviteCodeQuery.isLoading ? (
+            <span className="text-sm text-gray-500">Carregando o código…</span>
+          ) : null}
           <V2Button variant="ghost" size="sm" onClick={() => setConfirmRegen(true)} disabled={regenerate.isPending}>
             <RefreshCw className="h-4 w-4" /> Gerar novo
           </V2Button>
