@@ -77,6 +77,8 @@ import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
 // Gamificação V2 em segundo plano: só baixa o código com a flag ligada e uma conta logada.
 const GamificationBackground = lazy(() => import('@/v2/components/gamification/GamificationBackground'));
+// Paleta de comandos (nav_v3): só baixa quando a pessoa abre.
+const V2CommandPalette = lazy(() => import('@/v2/components/search/V2CommandPalette'));
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
@@ -610,7 +612,7 @@ function SubnavBar({ hub, pathname, onNavigate }) {
 }
 
 export default function V2Layout({ children }) {
-  const { user, userProfile, signOut, isRealPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
+  const { user, userProfile, signOut, isRealPlatformAdmin, isPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
   // O ranking NÃO é recalculado aqui: quem materializa os rankings é só o
   // servidor (functions/platformRankings.js). O recálculo que rodava no
   // navegador do admin era um segundo escritor das mesmas coleções — ver
@@ -628,6 +630,17 @@ export default function V2Layout({ children }) {
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Paleta de comandos (nav_v3): ícone de busca, campo do cabeçalho e Ctrl/⌘+K.
+  const [paletaAberta, setPaletaAberta] = useState(false);
+  const abrirPaleta = (origem) => { recordEvent('search_open', { origem }); setPaletaAberta(true); };
+  useEffect(() => {
+    if (!navV3) return undefined;
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); abrirPaleta('teclado'); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navV3]);
   const userMenuOn = true;
   const bottomNavOn = true;
   const navHubsOn = true;
@@ -850,6 +863,17 @@ export default function V2Layout({ children }) {
             <Menu className="h-5 w-5" />
           </button>
 
+          {navV3 ? (
+            <button type="button"
+              onClick={() => abrirPaleta('cabecalho')}
+              className="hidden max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 md:flex"
+              aria-label="Buscar ou ir para (Ctrl K)"
+            >
+              <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1 truncate">Buscar ou ir para…</span>
+              <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-[11px]">Ctrl K</kbd>
+            </button>
+          ) : (
           <form onSubmit={handleSearch} className="hidden max-w-md flex-1 md:block">
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -862,6 +886,7 @@ export default function V2Layout({ children }) {
               />
             </div>
           </form>
+          )}
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
             {isRealPlatformAdmin && (
@@ -882,6 +907,16 @@ export default function V2Layout({ children }) {
             {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
                 elas desligadas — é por ele que a pessoa liga. */}
             <BotaoDicas />
+            {navV3 && (
+              <button type="button"
+                onClick={() => abrirPaleta('icone')}
+                aria-label="Buscar ou ir para"
+                title="Buscar"
+                className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper md:hidden"
+              >
+                <SearchIcon className="h-5 w-5" />
+              </button>
+            )}
             {/* Navegação v3: Mensagens saiu da barra inferior e mora aqui, ao lado do sino. */}
             {navV3 && (
               <Link
@@ -928,6 +963,18 @@ export default function V2Layout({ children }) {
         </main>
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>
+        )}
+        {navV3 && paletaAberta && (
+          <Suspense fallback={null}>
+            <V2CommandPalette
+              open={paletaAberta}
+              onOpenChange={setPaletaAberta}
+              hubs={hubs}
+              arenas={myArenas}
+              treinoOn
+              isPlatformAdmin={isPlatformAdmin}
+            />
+          </Suspense>
         )}
         {bottomNavOn && (
           <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} items={navV3 ? bottomItemsV3 : BOTTOM_NAV_ITEMS} />

@@ -35,6 +35,17 @@ describe('navegação v3 (nav_v3)', () => {
     expect(src).toMatch(/!navV3 && hub\(\{\n\s+id: 'aprender'/);
   });
 
+  it('a paleta de comandos é lazy, só com a flag, e abre por Ctrl/⌘+K, campo e ícone', () => {
+    expect(src).toMatch(/const V2CommandPalette = lazy\(\(\) => import\('@\/v2\/components\/search\/V2CommandPalette'\)\)/);
+    expect(src).toMatch(/\{navV3 && paletaAberta && \(/);
+    for (const origem of ['teclado', 'cabecalho', 'icone']) expect(src, origem).toContain(`abrirPaleta('${origem}')`);
+    expect(src).toMatch(/recordEvent\('search_open'/);
+    const paleta = readFileSync(resolve(process.cwd(), 'src/v2/components/search/V2CommandPalette.jsx'), 'utf8');
+    expect(paleta).toMatch(/recordEvent\('search_pick'/);
+    expect(paleta).toMatch(/commandIndex\(/);
+    expect(paleta).toMatch(/role="combobox"/);
+  });
+
   it('o toque na barra e nos hubs é medido (nav_bottom_click / nav_hub_click)', () => {
     expect(src).toMatch(/recordEvent\('nav_bottom_click'/);
     expect((src.match(/recordEvent\('nav_hub_click'/g) || []).length).toBeGreaterThanOrEqual(2);
