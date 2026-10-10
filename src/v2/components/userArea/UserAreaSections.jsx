@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useMyPlayerRating } from '@/modules/rating/hooks/useRating';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useMyJoinRequests } from '@/modules/clubs/hooks/useClubs';
@@ -92,8 +92,8 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 function ResumoSecao({ ctx }) {
   const { isPlatformAdmin } = useAuth();
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const arenas = ctx.arenasQ.isSuccess ? ctx.arenasQ.data : [];
   return (
     <div className="space-y-6">
@@ -119,7 +119,7 @@ function ResumoSecao({ ctx }) {
 
 function PerfilSecao() {
   const { user } = useAuth();
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const rating = useMyPlayerRating();
   const me = rating.data;
   return (
@@ -223,7 +223,7 @@ function TreinoSecao({ ctx }) {
 }
 
 function JogoSecao() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   return (
     <Bloco id="jogo" icon={BarChart3} title="Jogo">
       <Atalhos
@@ -241,7 +241,7 @@ function JogoSecao() {
 }
 
 function AgendaSecao() {
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
   return (
     <div className="space-y-6">
       {arenaModulesOn && (
@@ -274,7 +274,7 @@ const TOM_DA_FASE = {
 };
 
 function TorneiosSecao() {
-  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
   const meusQ = useMyTournaments();
   const hoje = hojeLocal();
   const meus = useMemo(() => (meusQ.isSuccess ? myTournamentsForHome(meusQ.data || [], hoje) : []), [meusQ.isSuccess, meusQ.data, hoje]);
@@ -395,8 +395,8 @@ function ClubesSecao({ ctx }) {
 }
 
 function ProfessorSecao({ ctx }) {
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const { lessonsQ, coachQ, uid } = ctx;
   if (coachQ.isError) {
     return <V2ErrorState title="Não carregou o seu perfil de professor" description="Ele continua lá — tente de novo." onRetry={() => coachQ.refetch()} />;
@@ -465,10 +465,10 @@ function ArenasSecao({ ctx }) {
 }
 
 function ContaSecao() {
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
-  const notificacoesOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
-  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
-  const ajudaOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const notificacoesOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
+  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
+  const ajudaOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
   const inicioOn = useHomeCardsOn();
   return (
     <div className="space-y-6">
@@ -492,7 +492,7 @@ function ContaSecao() {
 }
 
 function AdminSecao() {
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   return (
     <Bloco id="admin" icon={LayoutDashboard} title="Administração">
       <Atalhos

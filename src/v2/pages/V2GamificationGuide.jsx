@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useGamificationGuide } from '@/modules/progression/hooks/useGamificationGuide';
 import {
   GUIDE_AUDIENCE, GUIDE_AUDIENCE_META, TERM_GROUP, TERM_GROUP_META, searchTerms, termsForAudience,
@@ -31,7 +31,7 @@ function publicoDoTermo(guide, termoId, podeAdmin) {
  * lê as mesmas constantes que o código usa e a configuração do admin.
  */
 export default function V2GamificationGuide() {
-  const on = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const on = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!on) {
     return (
       <div className="mx-auto max-w-[760px]">
@@ -45,7 +45,7 @@ export default function V2GamificationGuide() {
 
 function V2GamificationGuideOn() {
   const { isPlatformAdmin } = useAuth();
-  const helpOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  const helpOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
   const { guide, isModuleOn } = useGamificationGuide();
   const [params, setParams] = useSearchParams();
   const termoUrl = params.get('termo') || '';

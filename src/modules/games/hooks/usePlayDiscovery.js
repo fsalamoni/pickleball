@@ -30,7 +30,7 @@ import { useMemo } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useGlobalOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 import { useModuleOnInArenas } from '@/modules/arenas/hooks/useArenaModules';
 import { arenaQueries } from '@/modules/arenas/hooks/arenaQueries';
@@ -114,8 +114,8 @@ export function useClubGameDaysAhead({ hoje, enabled = true } = {}) {
 export function usePlayDiscovery({ hoje, agora, enabled = true }) {
   const { user } = useAuth();
   const uid = user?.uid || null;
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
-  const arenaGameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const arenaGameDayOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
 
   const diasQ = usePublicGameDaysAhead({ hoje, enabled });
   const clubeQ = useClubGameDaysAhead({ hoje, enabled });

@@ -4,7 +4,7 @@ import { ChevronLeft, GraduationCap, Swords, Users } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
 import {
   useUserCrews, usePublicCrews, useCrewActions,
@@ -36,7 +36,7 @@ const ABAS = [
  * Gated por GAMIFICATION_V2.
  */
 export default function V2SocialBonds() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">

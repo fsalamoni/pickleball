@@ -87,10 +87,11 @@ async function carregarConfig(db) {
 }
 
 /** A flag mestra `gamification_v2` está ligada? Com ela desligada, NADA roda. */
-async function gamificacaoLigada(db) {
-  const snap = await db.collection('platform_settings').doc('global').get();
-  const flags = snap.exists && snap.data() ? snap.data().feature_flags : null;
-  return Boolean(flags && flags.gamification_v2 === true);
+/* Gamificação V2 é permanente desde 2026-10-10 (era a flag `gamification_v2`,
+ * ligada em produção). A função fica pela assinatura que as tarefas usam. */
+// eslint-disable-next-line no-unused-vars
+async function gamificacaoLigada(_db) {
+  return true;
 }
 
 const moduloLigado = (cfg, id) => cfg.modules[id] !== false;

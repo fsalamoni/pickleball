@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import { usePeriodReview } from '@/modules/progression/hooks/usePeriodReview';
 import { ReviewBody } from '@/v2/components/gamification/PeriodReviewCard';
@@ -19,7 +19,7 @@ const KINDS = [
 
 /** Revisão do período: semana ou mês, com navegação para os anteriores. */
 export default function V2GamificationReview() {
-  const on = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const on = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!on) {
     return (
       <div className="mx-auto max-w-[900px]">

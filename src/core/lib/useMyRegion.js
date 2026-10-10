@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   REGION_MODE, placeInfo, regionLabel, regionLimits, regionMatcher, regionPhrase, regionShortLabel, resolveRegion,
 } from '@/core/domain/region';
@@ -67,7 +67,7 @@ export function useCityGeo({ enabled = true } = {}) {
 }
 
 export function useMyRegion() {
-  const ativa = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const ativa = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const retrato = useSyncExternalStore(subscribeRegion, () => regionSnapshot(uid), () => regionSnapshot(uid));

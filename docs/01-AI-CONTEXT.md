@@ -349,138 +349,28 @@ componentes ou services.
 
 ## 9. Feature flags (catálogo)
 
-`src/core/featureFlags.js` define **14 flags ativas** (FEATURE_FLAG).
-Defaults no Firestore em `platform_settings/feature_flags/{key}`.
-Migration em `migrateLegacyFlags` (sempre bump
-`FLAGS_MIGRATION_VERSION`).
+`src/core/featureFlags.js` define **3 flags** (`FEATURE_FLAG`), todas
+default OFF, lidas de `platform_settings/global.feature_flags`:
+- `dupr_official_sync` — integração oficial DUPR (fase 2, stub).
+- `gameday_mexicano` — o Mexicano entre os formatos do dia de jogo.
+- `gameday_king_of_court` — o Rei da Quadra entre os formatos do dia de jogo.
 
-**Catálogo enxuto** (Onda O — Sprints 47-48): 137 flags ativas
-viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
-14 flags default OFF sobreviveram. `FeatureFlagGuard` removido
-(guards explícitos no código de cada feature).
-
-**14 flags ativas (default OFF)**:
-- `dupr_official_sync` — integração oficial DUPR (fase 2,
-  stub em `duprOfficial.js`).
-- `dupr_match_export` — governança DUPR no admin: busca filtrável de
-  partidas + lista de exportação automática (pendentes e prontas) que
-  alimenta o CSV, com seleção em massa de situação e ledger
-  `dupr_export_log`.
-- `action_home` — Home orientada a ação.
-- `smart_matchmaking` — score 0-100 em Encontrar jogadores.
-- `post_game_flow` — fluxo pós-jogo enxuto.
-- `push_notifications` — PWA push com FCM.
-- `arena_ops_kpis` — "Como foi minha semana" (arena).
-- `arena_unified_checkout` — checkout unificado.
-- `arena_dynamic_pricing` — preço dinâmico.
-- `arena_member_crm` — CRM de membros.
-- `coach_public_discovery` — descoberta aprimorada.
-- `coach_booking_pay` — booking pay.
-- `coach_student_progress` — alunos ligados à evolução.
-- `coach_level_rating_seed` — semente por nível validado.
-
-**Torneio (2026-10-01)** — `tournament_americano_etapas`, default OFF: o
-formato de fase **Americano aprimorado em etapas** (grupos refeitos a cada
-etapa, classificação única). Ver `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
-
-**Onda CG (2026-09-26)** — mais três, default OFF (ver
-`docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`):
-- `personalized_home` — a tela inicial montada por pessoa (papéis reais +
-  interesses declarados), só com o que está valendo.
-- `platform_marketing` — cupons e campanhas DA PLATAFORMA (Painel admin →
-  Plataforma → Divulgação), com as ferramentas do marketing da arena.
-- `coach_marketing` — cupons e campanhas DE CADA PROFESSOR (Painel do
-  professor → Divulgação); o desconto entra no pedido de aula.
-
-**Onda CH (2026-09-27)** — mais uma, default OFF (ver `docs/30-MODO-ESCURO.md`):
-- `dark_mode` — cada pessoa escolhe a aparência (Claro / Escuro / Automático)
-  no menu do avatar, na gaveta do celular e em Configurações. A paleta decide
-  a cor e as telas não mudam; a escolha fica no navegador (zero banco).
-
-**Onda CI (2026-09-27)** — mais uma, default OFF (ver `docs/31-INICIO-SOB-MEDIDA.md`):
-- `home_cards` — sobre o início personalizado, cada pessoa escolhe os CARDS
-  do seu início e a ordem (padrão: Dias de jogo, Horários da arena e
-  Ranking), em "Personalizar" no próprio início ou em Configurações → Página
-  inicial. Card escondido não consulta nada; a escolha fica no navegador, por
-  usuário (zero banco).
-
-**Onda CJ (2026-09-27)** — mais uma, default OFF (ver `docs/32-DICAS-GUIADAS.md`):
-- `guided_tips` — as DICAS: um botão "Dicas" no topo de toda tela abre o
-  painel (ligar/desligar, os guias desta tela, "O que você quer fazer?").
-  Nada aparece sozinho: os 27 guias levam à tela, apontam o botão de verdade
-  com seta e avançam quando a pessoa faz; com as dicas ligadas, pontos
-  pulsando explicam os botões. Os tutoriais viram guias e deixam de abrir
-  sozinhos; a ajuda ganha "Mostre na tela". Zero banco (navegador, por
-  usuário). Âncoras: `data-dica="…"` nos elementos reais.
-
-**Cadastro essencial (2026-09-30)** — mais uma, default OFF (ver `docs/33-CADASTRO-ESSENCIAL.md`):
-- `essential_profile` — o cadastro passa a exigir a CATEGORIA em que a pessoa
-  joga (masculina/feminina — duplas mistas e categorias de torneio) e o NÍVEL
-  (autoindicação, teste ou rating DUPR); a UF vira lista; quem já tinha
-  cadastro vê só o que falta. DUPR segue opcional. Zero banco.
-
-**Minha região (2026-09-30)** — mais uma, default OFF (ver `docs/34-MINHA-REGIAO.md`):
-- `my_region` — o que a plataforma mostra segue a região de cada pessoa: a
-  cidade do perfil + 50 km por padrão, ou só a cidade, outro raio, o estado,
-  outro lugar (ou a localização do aparelho) e todo lugar. Vale no início
-  (Jogar, Torneios, Destaques, Horários da arena), Procura-se jogo, Torneios,
-  Arenas, Professores, Clubes, Promoções e Encontrar jogadores. A distância é
-  entre cidades (mapa do IBGE sob demanda). Zero banco (navegador, por
-  usuário). **Sempre ligados, sem flag**: o "Jogar" e o Procura-se jogo com os
-  dias de jogo das ARENAS, "Participar" dentro do dia de jogo e nada do que já
-  passou nas listas.
-
-**O "Jogar" abre no Dia de jogo (2026-09-30)** — sem flag nova, sempre ligado
-(ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`): abas Dia de jogo → Procura-se jogo →
-Encontrar jogadores, e "Jogar" abre `/dia-de-jogo` com "Com vaga para você"; os
-dias de jogo dos CLUBES de que a pessoa é membro entram nas listas; e um botão
-só de entrar e sair (`PlayItemAction`) em cada jogo, pelo caminho da origem.
-Zero banco.
-
-**Grupos dentro do Play (2026-10-07)** — flag `play_groups` (default OFF; ver
-`docs/39-PLAY-GRUPOS.md`): a fila do Play se divide em grupos por nível ou tipo
-de dupla (mista / mesmo sexo), com política entre grupos, nível e sexo para o
-convidado avulso, "por que este grupo não joga" e o selo do grupo no painel, na
-visão do jogador e no telão. Um sorteador só (`makeGroupsDrawer`) serve à
-previsão e à criação. Zero coleção, índice ou regra.
-
-Padrão de uso:
-
-```jsx
-// src/v2/pages/V2Arenas.jsx
-import { FEATURE_FLAG } from '@/core/featureFlags';
-
-export default function V2Arenas() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.ARENAS}
-      label="Arenas e reservas"
-      description="Diretório de arenas com quadras, preços e reservas."
-    >
-      {/* conteúdo real */}
-    </FeatureFlagGuard>
-  );
-}
-```
-
-Grupos (`featureFlagGroups.js`): core, nav, athlete, tournaments, arenas,
-coaches, community, arena_v3, other. O admin vê o catálogo completo e pode
-ativar/desativar 1-click.
-
-Ondas recentes (PR #71 + #72):
-- **Onda 1**: calendar_export, registrations_csv, not_found_page
-- **Onda 2**: gameday_formats (Mexicano + Rei da Quadra)
-- **Onda 3**: doubles_ranking, athlete_agenda
-- **Onda 4**: tournament_tv_mode · **4b**: courtside_scoring, bracket_tree
-- **Onda 5**: tournament_templates · **5b**: tournament_wizard
-- **Onda 6**: cancellation_policy, no_show_tracking
-- **Onda 6b**: arena_crm, booking_waitlist
-- **Onda 7**: partnership_mutual · **7b**: coach_leveling, coach_clinics
-- **Onda 8**: club_internal_ranking
-- **Onda 8b**: club_invite_link, club_recurring_events, club_public_page
-- **Onda 9**: settings_page (LGPD data export) · **9b**: notification_prefs,
-  public_seo
-- **Onda 10**: global_search · **10b**: a11y (skip-link + main landmark)
+**Incorporação de 2026-10-10.** As **33 funcionalidades que estavam LIGADAS
+em produção viraram permanentes** por decisão do dono: `PERMANENT_FEATURE`
+no mesmo arquivo (início personalizado e sob medida, Minha área, Centro de
+Treino, balanço do jogo, gamificação V2, grupos e rodízio do Play, Americano
+aprimorado, dia de jogo da arena, módulos de arena, dicas guiadas, central de
+ajuda, central de notificações, modo escuro, Minha região, cadastro
+essencial, campanhas da plataforma e dos professores, as quatro de arena e
+as quatro de professor, engajamento, push, exportação DUPR e Americano em
+etapas). Elas valem `true` sempre (`normalizeFeatureFlags` não as lê do
+banco), **não aparecem no painel admin** e `functions/gamification.js` não
+consulta mais a flag. As constantes continuam existindo só enquanto houver
+`if` consultando-as: o próximo passo é apagar esses `if` e os ramos
+"desligado" tela a tela (há três versões de início, por exemplo), o que faz
+parte do plano de UX. Guarda: `src/core/guards/flagsIncorporadas.test.js`.
+Antes disso, na Onda O (Sprints 47-48), 137 flags já tinham virado código.
+`FeatureFlagGuard` não existe; o gate é explícito no código de cada tela.
 
 ## 10. Build, testes e deploy
 

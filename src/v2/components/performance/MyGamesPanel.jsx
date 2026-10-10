@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices, Swords, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import {
@@ -64,7 +64,7 @@ function PostGameStrip() {
 export default function MyGamesPanel() {
   const { user } = useAuth();
   const uid = user?.uid;
-  const postGameOn = useFeatureFlag(FEATURE_FLAG.POST_GAME_FLOW);
+  const postGameOn = useFeatureFlag(PERMANENT_FEATURE.POST_GAME_FLOW);
   const [tab, setTab] = useState('proximos');
 
   const { data: upcoming = [], isLoading: loadingUp, isError: falhouAgendados, refetch: recarregarAgendados } = useQuery({

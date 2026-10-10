@@ -79,7 +79,7 @@ import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
  * já está aqui. Primeira pintura mais leve sem clique mais lento.
  */
 const V2DaySlotsDialog = lazy(() => import('./V2DaySlotsDialog'));
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
@@ -168,7 +168,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // legenda), nunca se a quadra está ocupada. Um dia de jogo marcado ocupa a
   // quadra exista flag ou não — condicionar o BLOQUEIO a uma flag é oferecer
   // para reserva uma quadra que já tem gente marcada nela.
-  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const gameDayOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
   const { data: arenaGameDays = [] } = useArenaGameDays(arenaId);
   const { data: vagasAbertas = [] } = useArenaOpenSlots(arenaId);
   // As AULAS entram pelo mesmo motivo das vagas: uma aula marcada às 19h na

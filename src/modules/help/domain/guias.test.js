@@ -102,15 +102,12 @@ describe('⭐ os tutoriais viraram guias', () => {
 });
 
 describe('⭐ quem vê o quê', () => {
-  it('flag desligada esconde o guia', () => {
-    expect(guiasVisiveis({}).map((g) => g.id)).not.toContain('escolher-aparencia');
-    expect(guiasVisiveis({ flags: { dark_mode: true } }).map((g) => g.id)).toContain('escolher-aparencia');
+  it('guia de funcionalidade permanente aparece sem flag nenhuma', () => {
+    expect(guiasVisiveis({}).map((g) => g.id)).toContain('escolher-aparencia');
   });
 
-  it('flagsTodas exige todas', () => {
-    expect(guiasVisiveis({ flags: { personalized_home: true } }).map((g) => g.id)).not.toContain('escolher-cards-do-inicio');
-    expect(guiasVisiveis({ flags: { personalized_home: true, home_cards: true } }).map((g) => g.id))
-      .toContain('escolher-cards-do-inicio');
+  it('o guia dos cards do início vale sempre (início sob medida é permanente)', () => {
+    expect(guiasVisiveis({}).map((g) => g.id)).toContain('escolher-cards-do-inicio');
   });
 
   it('⭐ papel: guia da Central só para quem gere arena; da agenda, só para professor', () => {
@@ -165,8 +162,8 @@ describe('"O que você quer fazer?"', () => {
     expect(buscarGuias('zzzzqq', TUDO)).toEqual([]);
   });
 
-  it('busca respeita quem vê', () => {
-    expect(buscarGuias('modo escuro', {}).map((g) => g.id)).not.toContain('escolher-aparencia');
+  it('busca acha o guia do modo escuro', () => {
+    expect(buscarGuias('modo escuro', {}).map((g) => g.id)).toContain('escolher-aparencia');
   });
 });
 
@@ -200,8 +197,7 @@ describe('⭐ pontos de dica', () => {
 
   it('pontosDaTela casa a rota e respeita a flag', () => {
     expect(pontosDaTela('/dia-de-jogo', {}).map((p) => p.id)).toEqual(['dia-de-jogo:criar']);
-    expect(pontosDaTela('/configuracoes', {}).map((p) => p.id)).not.toContain('config:aparencia');
-    expect(pontosDaTela('/configuracoes', { flags: { dark_mode: true } }).map((p) => p.id)).toContain('config:aparencia');
+    expect(pontosDaTela('/configuracoes', {}).map((p) => p.id)).toContain('config:aparencia');
     expect(pontoPorId('dia-de-jogo:criar').guide).toBe('criar-dia-de-jogo');
     expect(pontoPorId('nada')).toBeNull();
   });
@@ -260,10 +256,9 @@ describe('⭐ a gamificação nas dicas', () => {
   const COM_FLAG = { flags: { gamification_v2: true } };
   const daGamificacao = (ctx) => guiasVisiveis(ctx).filter((g) => g.area === GUIA_AREA.GAMIFICACAO).map((g) => g.id);
 
-  it('sem a flag da gamificação, nenhum guia nem ponto aparece (a porta não abre)', () => {
-    expect(daGamificacao({ gereArena: true, ehProfessor: true, ehAdmin: true })).toEqual([]);
-    expect(pontosDaTela('/gamification', {})).toEqual([]);
-    expect(pontosDaTela('/hall-da-fama', {})).toEqual([]);
+  it('a gamificação é permanente: os guias e pontos aparecem sem flag', () => {
+    expect(daGamificacao({ gereArena: true, ehProfessor: true, ehAdmin: true }).length).toBeGreaterThan(0);
+    expect(pontosDaTela('/gamification', {}).length).toBeGreaterThan(0);
   });
 
   it('com a flag, o atleta vê os guias dele — e nenhum de quem oferece ou administra', () => {
@@ -304,14 +299,12 @@ describe('⭐ a gamificação nas dicas', () => {
   it('o guia da tela certa aparece em "Nesta tela"', () => {
     expect(guiasDaTela('/hall-da-fama', COM_FLAG).map((g) => g.id)).toEqual(['gamificacao-hall']);
     expect(guiasDaTela('/vinculos', COM_FLAG).map((g) => g.id)).toEqual(['gamificacao-vinculos']);
-    expect(guiasDaTela('/hall-da-fama', {}).map((g) => g.id)).toEqual([]);
     expect(guiasDaTela('/gamification', COM_FLAG).map((g) => g.id)).toEqual(expect.arrayContaining(['gamificacao-entender', 'gamificacao-missoes']));
   });
 
-  it('busca: "férias" e "privacidade" levam aos guias certos, e só com a flag', () => {
+  it('busca: "férias" e "privacidade" levam aos guias certos', () => {
     expect(buscarGuias('ferias', COM_FLAG).map((g) => g.id)).toContain('gamificacao-sequencia');
     expect(buscarGuias('privacidade', COM_FLAG).map((g) => g.id)).toContain('gamificacao-privacidade');
-    expect(buscarGuias('ferias', {}).map((g) => g.id)).not.toContain('gamificacao-sequencia');
   });
 
   it('⭐ a primeira aba que um guia manda tocar existe no catálogo do hub', async () => {
@@ -330,18 +323,13 @@ describe('⭐ a gamificação nas dicas', () => {
 describe('⭐ o guia dos grupos do Play (flag play_groups)', () => {
   const ids = (caminho, ctx) => guiasDaTela(caminho, ctx).map((g) => g.id);
 
-  it('só aparece com a flag ligada — na busca, nas áreas e em "Nesta tela"', () => {
-    expect(guiasVisiveis({}).map((g) => g.id)).not.toContain('play-grupos');
-    expect(guiasVisiveis({ flags: { play_groups: true } }).map((g) => g.id)).toContain('play-grupos');
-    expect(buscarGuias('grupos', {}).map((g) => g.id)).not.toContain('play-grupos');
-    expect(buscarGuias('grupos', { flags: { play_groups: true } }).map((g) => g.id)).toContain('play-grupos');
+  it('aparece na busca e nas áreas (os grupos do Play são permanentes)', () => {
+    expect(guiasVisiveis({}).map((g) => g.id)).toContain('play-grupos');
+    expect(buscarGuias('grupos', {}).map((g) => g.id)).toContain('play-grupos');
   });
 
-  it('⭐ num dia de Play que já existe, a flag desligada ainda esconde o guia (diferente do guia do formato)', () => {
-    // O guia do FORMATO vale mesmo com a flag do formato desligada; o dos
-    // grupos ensina um cartão que, sem a flag, não existe.
-    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'play', flags: {} })).not.toContain('play-grupos');
-    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'play', flags: { play_groups: true } })).toContain('play-grupos');
+  it('num dia de Play o guia dos grupos aparece', () => {
+    expect(ids('/dia-de-jogo/x', { formatoDoDia: 'play', flags: {} })).toContain('play-grupos');
   });
 
   it('só no Play: num Americano com a flag ligada, não aparece', () => {

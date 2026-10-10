@@ -28,13 +28,6 @@ function jogo(id, a, b, winner, iso) {
 const seed = (...itens) => Object.fromEntries(itens.flatMap((i) => (Array.isArray(i[0]) ? i : [i])));
 
 describe('flag mestra e módulos', () => {
-  it('com a flag desligada nada roda', async () => {
-    const db = createRichFakeDb({});
-    expect(await g.runWeeklyDuels(db, { now: NOW, logger })).toEqual({ skipped: 'flag_desligada' });
-    expect(await g.runChallengeStandings(db, { now: NOW, logger })).toEqual({ skipped: 'flag_desligada' });
-    expect(await g.runReputation(db, { logger })).toEqual({ skipped: 'flag_desligada' });
-    expect(await g.runWeeklyDigest(db, { now: NOW, logger })).toEqual({ skipped: 'flag_desligada' });
-  });
 
   it('módulo desligado pelo admin para a tarefa', async () => {
     const db = createRichFakeDb({ ...LIGADA, 'platform_settings/gamification': { modules: { duels: false, challenges: false, match_reviews: false } } });

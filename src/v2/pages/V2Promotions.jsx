@@ -17,7 +17,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { GraduationCap, Megaphone, Tag } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
   PROMO_ISSUER, isVisibleTo, livePromoBanners, livePromoCoupons, reachMatchesRegion,
@@ -34,8 +34,8 @@ import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
 
 export default function V2Promotions() {
   const { flags, isLoading: flagsCarregando } = useFeatureFlags();
-  const plataformaOn = Boolean(flags?.[FEATURE_FLAG.PLATFORM_MARKETING]);
-  const professoresOn = Boolean(flags?.[FEATURE_FLAG.COACH_MARKETING]);
+  const plataformaOn = Boolean(flags?.[PERMANENT_FEATURE.PLATFORM_MARKETING]);
+  const professoresOn = Boolean(flags?.[PERMANENT_FEATURE.COACH_MARKETING]);
   const ligado = plataformaOn || professoresOn;
   const q = usePromoShowcase({ enabled: ligado });
   const quem = usePromoViewer({ enabled: professoresOn });

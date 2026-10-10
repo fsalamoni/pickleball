@@ -15,7 +15,7 @@ import { GraduationCap, MapPin, Plus, Edit3, Star, Award, Search } from 'lucide-
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoaches, useCoach, useUpsertCoachProfile } from '@/modules/coaches/hooks/useCoaches';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
@@ -158,7 +158,7 @@ export default function V2Coaches() {
   const cityDefaulted = useRef(false);
   // Com a MINHA REGIÃO, quem filtra por lugar é ela (cidade + raio, estado…),
   // e o campo de texto fica para quem quer procurar outro lugar à mão.
-  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
   useEffect(() => {
     if (regiaoOn) return;
     if (!cityDefaulted.current && userProfile?.city) {
@@ -177,7 +177,7 @@ export default function V2Coaches() {
   const [editing, setEditing] = useState(false);
 
   // Descoberta aprimorada (flag): filtro de preço, "aceitando alunos" e ordenação.
-  const discoveryOn = useFeatureFlag(FEATURE_FLAG.COACH_PUBLIC_DISCOVERY);
+  const discoveryOn = useFeatureFlag(PERMANENT_FEATURE.COACH_PUBLIC_DISCOVERY);
   const [maxPrice, setMaxPrice] = useState('');
   const [acceptingOnly, setAcceptingOnly] = useState(false);
   const [sortBy, setSortBy] = useState('relevancia');

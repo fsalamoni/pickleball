@@ -21,7 +21,7 @@ import { platformInterestMeta, sanitizeInterests } from '@/modules/athletes/doma
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import { V2ErrorState, V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import V2ActionHome from '@/v2/components/home/V2ActionHome';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
 import {
@@ -91,7 +91,7 @@ function formatMatchWhen(ms) {
  * ranking nacional inteiro, e a personalizada não precisa disso.
  */
 export default function V2Dashboard() {
-  const personalizadaOn = useFeatureFlag(FEATURE_FLAG.PERSONALIZED_HOME);
+  const personalizadaOn = useFeatureFlag(PERMANENT_FEATURE.PERSONALIZED_HOME);
   if (personalizadaOn) {
     return (
       <Suspense fallback={<HomeCarregando />}>
@@ -116,16 +116,16 @@ function HomeCarregando() {
 
 function DashboardClassico() {
   const { user, userProfile } = useAuth();
-  const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
+  const actionHomeOn = useFeatureFlag(PERMANENT_FEATURE.ACTION_HOME);
   // Sem a chave-mestra dos módulos de arena não existe jogo aberto — nem a
   // consulta da fila sai.
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
   // Divulgação da plataforma e dos professores (Onda CG): cada uma com a sua flag.
-  const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
-  const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
-  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const platformMarketingOn = useFeatureFlag(PERMANENT_FEATURE.PLATFORM_MARKETING);
+  const coachMarketingOn = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
+  const treinoOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   // O balanço do jogo só existe com o treino E a própria flag; ligado por pessoa.
-  const balancoOn = useFeatureFlag(FEATURE_FLAG.GAME_DEBRIEF) && treinoOn;
+  const balancoOn = useFeatureFlag(PERMANENT_FEATURE.GAME_DEBRIEF) && treinoOn;
   const {
     data: myTournaments = [], isLoading: loadingMine, isError: mineFailed, refetch: refetchMine,
   } = useMyTournaments();

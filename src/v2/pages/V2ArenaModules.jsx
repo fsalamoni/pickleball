@@ -19,7 +19,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import ArenaModulesPanel from '@/v2/components/arenas/ArenaModulesPanel';
 import { V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
@@ -27,7 +27,7 @@ import { V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 export default function V2ArenaModules() {
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
-  const masterOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const masterOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
   const { data: arena, isLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
 

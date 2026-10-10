@@ -232,13 +232,6 @@ describe('recomputeSeasonRanking de ponta a ponta', () => {
     'season_rankings/2026-10_b': { seasonId: '2026-10', uid: 'b', baselineXp: 4000, position: 2 },
   });
 
-  it('desligada a flag, não grava nada', async () => {
-    const db = createRichFakeDb({ ...base(), 'platform_settings/global': { feature_flags: {} } });
-    const r = await recomputeSeasonRanking({ now: NOW, logger, db });
-    expect(r.skipped).toBe('flag_desligada');
-    expect(db.dump('hall_of_fame')).toEqual({});
-  });
-
   it('grava temporada e Hall com nome, e tira do Hall quem passou a esconder o perfil', async () => {
     const db = createRichFakeDb({ ...base(), 'hall_of_fame/b': { uid: 'b', xp: 1 } });
     await db.collection('user_gamification_prefs').doc('b').set({ privacy: { showInHallOfFame: false } });

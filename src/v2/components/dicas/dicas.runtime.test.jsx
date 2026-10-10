@@ -382,12 +382,6 @@ describe('⭐ as dicas da gamificação', () => {
     await ate(() => texto().includes('O que você quer fazer?'));
   };
 
-  it('com a flag da gamificação desligada, a área não existe no painel', async () => {
-    await montar({ em: '/gamification' });
-    await abrirPainel();
-    expect(texto()).not.toContain('Entender o XP, o nível e o tier');
-  });
-
   it('com a flag ligada, o painel mostra a área "Gamificação" e os guias do atleta (e nenhum de admin)', async () => {
     flags.gamification_v2 = true;
     await montar({ em: '/gamification' });

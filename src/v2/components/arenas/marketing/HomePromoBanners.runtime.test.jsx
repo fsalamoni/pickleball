@@ -58,6 +58,7 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 
 const { default: HomePromoBanners } = await import('./HomePromoBanners.jsx');
+const { saveRegion } = await import('@/core/lib/regionPreference');
 
 const cupom = (id, arena_id, over = {}) => ({
   id, arena_id, code: id.toUpperCase(), type: 'percent', value: 10, active: true, show_public: true, show_home: true, ...over,
@@ -89,13 +90,15 @@ afterEach(() => {
 const render = async (props = {}) => {
   await act(async () => { root.render(<MemoryRouter><HomePromoBanners {...props} /></MemoryRouter>); });
 };
-const escolher = async (valor) => {
-  const sel = container.querySelector('select');
-  await act(async () => {
-    sel.value = valor;
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+// A Minha região é permanente (2026-10-10): os destaques seguem a região da
+// plataforma, guardada por `saveRegion` — o seletor próprio dos banners
+// não é mais montado. "Trocar a região" aqui é trocar a preferência.
+const escolher = async (pref) => {
+  await act(async () => { saveRegion('u1', pref); });
 };
+const ESTADO = { modo: 'estado', origem: 'perfil' };
+const TODOS = { modo: 'todos', origem: 'perfil' };
+const SAO_PAULO = { modo: 'cidade', origem: 'outra', cidade: 'São Paulo', uf: 'SP' };
 
 describe('promoções na tela inicial', () => {
   it('⭐ por padrão, só as da cidade do perfil', async () => {
@@ -111,17 +114,16 @@ describe('promoções na tela inicial', () => {
 
   it('⭐ trocar para o estado mostra as do RS, e a escolha fica guardada', async () => {
     await render();
-    await escolher('estado');
+    await escolher(ESTADO);
     expect(container.textContent).toContain('Promoções no RS');
     expect(container.textContent).toContain('Arena Serra');
     expect(container.textContent).not.toContain('Arena Paulista');
-    expect(localStorage.getItem('v2:view:u1:home:promocoes:regiao')).toBe('estado');
+    expect(localStorage.getItem('v2:view:u1:regiao')).toContain('estado');
   });
 
   it('outra cidade — quem vai viajar', async () => {
     await render();
-    const opcao = [...container.querySelectorAll('option')].find((o) => o.textContent.startsWith('São Paulo'));
-    await escolher(opcao.value);
+    await escolher(SAO_PAULO);
     expect(container.textContent).toContain('Promoções em São Paulo (SP)');
     expect(container.textContent).toContain('Arena Paulista');
     expect(container.textContent).not.toContain('Arena Sol');
@@ -137,7 +139,7 @@ describe('promoções na tela inicial', () => {
   it('região sem promoção diz isso e oferece trocar', async () => {
     estado.perfil = { city: 'Pelotas', state: 'RS' };
     await render();
-    expect(container.textContent).toMatch(/As arenas em Pelotas \(RS\) não divulgaram promoção agora/);
+    expect(container.textContent).toMatch(/As arenas em Pelotas \(RS\) e até 50 km não divulgaram promoção agora/);
   });
 
   it('falhando, ou sem banner em lugar nenhum, não aparece', async () => {
@@ -188,7 +190,7 @@ describe('⭐ Onda CC — banners de campanha no carrossel', () => {
     estado.campanhas = [campanha('k2', 'sp')];
     await render();
     expect(container.textContent).not.toContain('Arte k2');
-    await escolher('todas');
+    await escolher(TODOS);
     expect(container.textContent).toContain('Arte k2');
   });
 
@@ -286,7 +288,7 @@ describe('⭐ Onda CG — a plataforma e os professores no carrossel', () => {
     estado.promos = { coupons: [promoCupom('sp5', { reach: { mode: 'cidade', city: 'São Paulo', state: 'SP' } })], campaigns: [] };
     await render({ platformOn: true });
     expect(container.textContent).not.toContain('SP5');
-    await escolher('todas');
+    await escolher(TODOS);
     expect(container.querySelector('button[aria-label="Copiar o código SP5"]')).toBeTruthy();
   });
 

@@ -4,89 +4,26 @@
  * apenas definem rótulo e ordem; a completude (renderizar TODAS as flags) é
  * garantida iterando `FEATURE_FLAG` e caindo em `other` o que não foi mapeado.
  *
- * NOTA: a maioria das flags virou código permanente; resta apenas a flag
- * reservada abaixo. Os helpers de família da Arena V3 permanecem por
- * compatibilidade do painel (não classificam mais nada por ora).
+ * NOTA: em 2026-10-10 as 33 flags que estavam ligadas em produção viraram
+ * código permanente (`PERMANENT_FEATURE`); restam as 3 abaixo. Os helpers de
+ * família da Arena V3 permanecem por compatibilidade do painel.
  */
 
-import { FEATURE_FLAG } from './featureFlags.js';
+import { FEATURE_FLAG, PERMANENT_FEATURE } from './featureFlags.js';
 
 /** Grupos "normais" (fora Arena V3), na ordem de exibição. */
 export const FLAG_GROUPS = Object.freeze([
   {
-    id: 'engagement',
-    label: 'Engajamento e retenção',
-    keys: [
-      FEATURE_FLAG.PERSONALIZED_HOME, FEATURE_FLAG.HOME_CARDS,
-      FEATURE_FLAG.ACTION_HOME, FEATURE_FLAG.SMART_MATCHMAKING,
-      FEATURE_FLAG.POST_GAME_FLOW, FEATURE_FLAG.PUSH_NOTIFICATIONS,
-      FEATURE_FLAG.NOTIFICATIONS_CENTER,
-    ],
-  },
-  {
-    id: 'appearance',
-    label: 'Aparência',
-    keys: [FEATURE_FLAG.DARK_MODE],
-  },
-  {
-    id: 'help',
-    label: 'Ajuda e dicas',
-    keys: [FEATURE_FLAG.GUIDED_TIPS, FEATURE_FLAG.HELP_CENTER],
-  },
-  {
-    id: 'marketing',
-    label: 'Campanhas e cupons (plataforma e professores)',
-    keys: [FEATURE_FLAG.PLATFORM_MARKETING, FEATURE_FLAG.COACH_MARKETING],
-  },
-  {
-    id: 'arena_new',
-    label: 'Arena — operação e receita',
-    keys: [
-      FEATURE_FLAG.ARENA_MODULES,
-      FEATURE_FLAG.ARENA_OPS_KPIS, FEATURE_FLAG.ARENA_UNIFIED_CHECKOUT,
-      FEATURE_FLAG.ARENA_DYNAMIC_PRICING, FEATURE_FLAG.ARENA_MEMBER_CRM,
-    ],
-  },
-  {
-    id: 'coach_new',
-    label: 'Professor — descoberta e agenda',
-    keys: [
-      FEATURE_FLAG.COACH_PUBLIC_DISCOVERY, FEATURE_FLAG.COACH_BOOKING_PAY,
-      FEATURE_FLAG.COACH_STUDENT_PROGRESS, FEATURE_FLAG.COACH_LEVEL_RATING_SEED,
-    ],
-  },
-  {
     id: 'athlete',
     label: 'Atleta, rating e social',
-    keys: [FEATURE_FLAG.MY_REGION, FEATURE_FLAG.ESSENTIAL_PROFILE, FEATURE_FLAG.DUPR_OFFICIAL_SYNC, FEATURE_FLAG.DUPR_MATCH_EXPORT],
-  },
-  {
-    id: 'training',
-    label: 'Treino e Minha área',
-    keys: [FEATURE_FLAG.TRAINING_CENTER, FEATURE_FLAG.GAME_DEBRIEF, FEATURE_FLAG.USER_HUB],
-  },
-  {
-    id: 'gamification',
-    label: 'Gamificação V2',
-    keys: [FEATURE_FLAG.GAMIFICATION_V2],
-  },
-  {
-    id: 'tournament',
-    label: 'Torneios',
-    keys: [FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS],
+    keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],
   },
   {
     id: 'game_day',
     label: 'Dia de jogo',
-    keys: [
-      FEATURE_FLAG.PLAY_SMART_ROTATION,
-      FEATURE_FLAG.PLAY_GROUPS,
-      // Os formatos opcionais do dia de jogo ficam juntos, no grupo em que o
-      // admin procura por eles.
-      FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE,
-      FEATURE_FLAG.GAMEDAY_MEXICANO,
-      FEATURE_FLAG.GAMEDAY_KING_OF_COURT,
-    ],
+    // Os formatos opcionais do dia de jogo ficam juntos, no grupo em que o
+    // admin procura por eles.
+    keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT],
   },
 ]);
 

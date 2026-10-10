@@ -21,7 +21,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 
 const LIGADOS = new Set();
 const estado = { reservas: [], membros: [], torneiosPlataforma: [] };
@@ -33,7 +33,7 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false }),
 }));
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({
-  useFeatureFlag: (k) => k === FEATURE_FLAG.ARENA_MODULES,
+  useFeatureFlag: (k) => k === PERMANENT_FEATURE.ARENA_MODULES,
 }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: { id: 'a1', name: 'Arena Teste', owner_id: 'eu' }, isLoading: false }),

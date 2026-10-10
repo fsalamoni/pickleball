@@ -27,7 +27,7 @@ import {
 } from '@/modules/arenas/domain/calendar';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
@@ -76,7 +76,7 @@ export default function V2ArenaCalendar({ arena }) {
   // O dia de jogo da própria arena OCUPA quadra e fecha horário. Ele aparecia
   // no calendário do atleta e não aqui — a arena via um mês de reservas sem o
   // que ela mesma marcou, e um dia "vazio" que na verdade estava tomado.
-  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const gameDayOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
   const { data: arenaGameDays = [] } = useArenaGameDays(gameDayOn ? arena.id : null);
 
   const gameDaysByDate = useMemo(() => {

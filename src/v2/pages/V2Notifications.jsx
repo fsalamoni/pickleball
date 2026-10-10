@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { destinoDeAviso } from '@/core/domain/internalLink';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
@@ -119,7 +119,7 @@ function ListaCarregando() {
 
 export default function V2Notifications() {
   const { flags, isLoading: flagsCarregando } = useFeatureFlags();
-  const ligado = Boolean(flags?.[FEATURE_FLAG.NOTIFICATIONS_CENTER]);
+  const ligado = Boolean(flags?.[PERMANENT_FEATURE.NOTIFICATIONS_CENTER]);
   const { userProfile } = useAuth();
   const {
     notifications, allNotifications, muted, isLoading, isError, retry,

@@ -60,7 +60,7 @@ import { V2Avatar } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
 import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 // De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
 // do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
@@ -157,11 +157,11 @@ function useV2Nav() {
   const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = true;
   // Gamificação V2 (flag `gamification_v2`): a jornada, o Hall e as conquistas entram no menu.
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   // Centro de Treino (flag `training_center`): entra no hub do perfil.
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   // Minha área (flag `user_hub`): o perfil vira a central da pessoa — só o nome muda aqui.
-  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
 
   const sections = useMemo(() => [
     {
@@ -429,10 +429,10 @@ function MobileBottomNav({ pathname, userHubOn = false }) {
 
 function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
-  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
   const location = useLocation();
-  const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
-  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  const helpCenterOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
+  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
   // A mesma assinatura do sino (uma só por pessoa): contar aqui não custa leitura.
   const { unreadCount } = useNotifications();
   const seloAvisos = formatUnreadBadge(unreadCount);
@@ -562,7 +562,7 @@ export default function V2Layout({ children }) {
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
   const { sections, hubs } = useV2Nav();
-  const userHubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -570,9 +570,9 @@ export default function V2Layout({ children }) {
   const bottomNavOn = true;
   const navHubsOn = true;
   const legalCenterOn = true;
-  const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
-  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
-  const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const helpCenterOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
+  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
+  const gamificacaoOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   // A mesma assinatura do sino: o selo da gaveta não custa leitura nenhuma.
   const { unreadCount: avisosNaoLidos } = useNotifications();
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal

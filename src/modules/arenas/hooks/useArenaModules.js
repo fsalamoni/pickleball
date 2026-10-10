@@ -22,7 +22,7 @@ import { useMemo } from 'react';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { arenaKeys } from './arenaKeys.js';
 import {
   buildArenaModuleAccess,
@@ -88,7 +88,7 @@ export function useArenaModuleStates(arenaId) {
  * }}
  */
 export function useArenaModules(arenaId) {
-  const masterOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const masterOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
   const platformQuery = usePlatformArenaModules();
   const statesQuery = useArenaModuleStates(arenaId);
 
@@ -132,7 +132,7 @@ export function useArenaModules(arenaId) {
  * @returns {{ isOnIn: (arenaId: string) => boolean, isLoading: boolean }}
  */
 export function useModuleOnInArenas(arenaIds = [], moduleId) {
-  const masterOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const masterOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
   const platformQuery = usePlatformArenaModules();
   const ids = useMemo(() => [...new Set((arenaIds || []).filter(Boolean))].sort(), [arenaIds]);
   const results = useQueries({

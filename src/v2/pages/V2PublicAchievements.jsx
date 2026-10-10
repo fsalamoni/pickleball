@@ -4,7 +4,7 @@ import { Award, ChevronLeft, Gift, MessageCircle, Sparkles } from 'lucide-react'
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthlete } from '@/modules/athletes/hooks/useAthletes';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import { useKudoActions } from '@/modules/progression/hooks/useKudoActions';
@@ -34,7 +34,7 @@ import {
  *  - Gated por GAMIFICATION_V2
  */
 export default function V2PublicAchievements() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">

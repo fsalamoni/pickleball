@@ -4,7 +4,7 @@ import { Sparkles, Trophy, Calendar } from 'lucide-react';
 import { useUserCurrentSeason, useSeasonTop } from '@/modules/progression/hooks/useUserSeasonRanking';
 import { useGamificationConfig } from '@/modules/progression/hooks/useGamificationConfig';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { daysRemainingInMonth } from '@/modules/progression/domain/seasons';
 import TermHint from '@/v2/components/gamification/TermHint';
@@ -17,7 +17,7 @@ import TermHint from '@/v2/components/gamification/TermHint';
  * Gated por GAMIFICATION_V2.
  */
 export default function SeasonBanner({ className }) {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const { user } = useAuth();
   const { config, isModuleOn } = useGamificationConfig();
   const moduloOn = isModuleOn('hall_of_fame');

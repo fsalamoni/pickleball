@@ -28,7 +28,7 @@ import {
   Pencil, Trash2, Users, Info,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
@@ -78,7 +78,7 @@ function textoDeVagas(vagas) {
 }
 
 export default function V2ArenaGameDays() {
-  const ligado = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const ligado = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
   const { arenaId, gameDayId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);

@@ -46,7 +46,7 @@ import {
 } from '@/modules/games/domain/gameKind';
 import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
 import { useCourtKinds } from '@/v2/components/games/useCourtKinds';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
@@ -94,7 +94,7 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // quadra. Com o rodízio equilibrado, os primeiros da fila por tempo de
   // espera nem sempre são os quatro que entram — mostrar "#1 #2 #3 #4" e
   // colocar outros em quadra cria falsa expectativa.
-  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const rodizioEquilibrado = useFeatureFlag(PERMANENT_FEATURE.PLAY_SMART_ROTATION);
   const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
   // GRUPOS (flag `play_groups`): com grupos ativos, a fila deixa de ser uma só.
   // Os participantes chegam com o nível resolvido e a visão sai de
@@ -882,7 +882,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   // volta para a fila quando cada partida terminar. Com alguma quadra de
   // SIMPLES, a previsão passa a ser por quadra mesmo sem o rodízio — é a única
   // que sabe que ali entram dois, não quatro.
-  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const rodizioEquilibrado = useFeatureFlag(PERMANENT_FEATURE.PLAY_SMART_ROTATION);
   const historicoDoRodizio = useMemo(
     () => (rodizioEquilibrado ? buildPlayHistory(games) : null),
     [rodizioEquilibrado, games],

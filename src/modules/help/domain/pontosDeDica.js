@@ -325,7 +325,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'config-aparencia',
     title: 'Aparência',
     body: 'Troca entre claro, escuro e automático.',
-    flags: ['dark_mode'],
   },
   {
     id: 'config:notificacoes',
@@ -340,7 +339,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'notificacoes-filtros',
     title: 'Ache um aviso antigo',
     body: 'Só as não lidas, uma área (jogos, torneios, arenas…) ou uma palavra do aviso.',
-    flags: ['notifications_center'],
   },
   {
     id: 'notificacoes:lista',
@@ -348,7 +346,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'notificacoes-lista',
     title: 'Lida ou não lida',
     body: 'Tocar no aviso abre o assunto. O botão ao lado marca como lido — ou como não lido, para voltar nele depois.',
-    flags: ['notifications_center'],
   },
   /* ------------------------------------------------------ gamificação -- */
   {
@@ -358,7 +355,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Como funciona',
     body: 'Abre o guia completo: cada conceito explicado, com busca e os números reais.',
     guide: 'gamificacao-entender',
-    flags: ['gamification_v2'],
   },
   {
     id: 'gamificacao:preferencias',
@@ -367,7 +363,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Preferências',
     body: 'Abre a escolha do que os outros veem de você, dos avisos e de como você aparece.',
     guide: 'gamificacao-privacidade',
-    flags: ['gamification_v2'],
   },
   {
     id: 'gamificacao:abas',
@@ -376,7 +371,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'As seções',
     body: 'Jornada, Missões, Competir, Social e Recompensas — cada uma com um "Como funciona" no topo.',
     guide: 'gamificacao-missoes',
-    flags: ['gamification_v2'],
   },
   {
     id: 'gamificacao:sequencia',
@@ -385,7 +379,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Sua sequência',
     body: 'Semanas seguidas jogando. Uma semana sem jogar por mês é perdoada; para viagens, há as férias.',
     guide: 'gamificacao-sequencia',
-    flags: ['gamification_v2'],
   },
   {
     id: 'gamificacao:xp-origem',
@@ -394,7 +387,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'De onde vem o XP',
     body: 'Abre a conta do seu XP, por origem. Não existe XP escondido.',
     guide: 'gamificacao-entender',
-    flags: ['gamification_v2'],
   },
   {
     id: 'gamificacao:oferecer',
@@ -402,7 +394,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'oferecer',
     title: 'Para quem oferece',
     body: 'Atalhos de quem tem arena, dá aulas ou administra um clube: desafios e recompensas para quem joga com você.',
-    flags: ['gamification_v2'],
   },
   {
     id: 'conquistas:filtros',
@@ -411,7 +402,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Filtre as conquistas',
     body: 'Por família e por raridade — ou só as que você já abriu.',
     guide: 'gamificacao-conquistas',
-    flags: ['gamification_v2'],
   },
   {
     id: 'conquistas:lista',
@@ -419,7 +409,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'conquistas-lista',
     title: 'O que falta para abrir',
     body: 'Cada cartão mostra o seu progresso. Abrir uma conquista rende XP de bônus.',
-    flags: ['gamification_v2'],
   },
   {
     id: 'hall:abas',
@@ -428,7 +417,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Hall ou temporada',
     body: 'O Hall soma o XP de sempre; a temporada, só o do mês — e recomeça todo mês.',
     guide: 'gamificacao-hall',
-    flags: ['gamification_v2'],
   },
   {
     id: 'hall:posicao',
@@ -436,7 +424,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'hall-minha-posicao',
     title: 'Onde você está',
     body: 'A sua posição, e o atalho para escolher se você aparece no placar público.',
-    flags: ['gamification_v2'],
   },
   {
     id: 'vinculos:abas',
@@ -445,7 +432,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Rivais, crews e mentorias',
     body: 'Três jeitos de jogar com os outros: quem você mais enfrenta, o seu grupo e quem ensina quem.',
     guide: 'gamificacao-vinculos',
-    flags: ['gamification_v2'],
   },
   {
     id: 'revisao:periodo',
@@ -454,7 +440,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Volte no tempo',
     body: 'As setas levam ao período anterior. A revisão compara com ele.',
     guide: 'gamificacao-revisao',
-    flags: ['gamification_v2'],
   },
   {
     id: 'prefs:privacidade',
@@ -463,7 +448,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Quem vê você',
     body: 'Escolha se aparece no placar público e no perfil. A regra vale no servidor, não só na tela.',
     guide: 'gamificacao-privacidade',
-    flags: ['gamification_v2'],
   },
   {
     id: 'guia-gamificacao:publico',
@@ -471,7 +455,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'guia-publico',
     title: 'Para quem é',
     body: 'Troque o público para ler o que vale para quem joga, ensina, tem arena ou administra um clube.',
-    flags: ['gamification_v2'],
   },
   {
     id: 'arena:engajamento',
@@ -480,7 +463,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Engajamento',
     body: 'A saúde da arena, as metas do mês, os desafios e as recompensas que você oferece.',
     guide: 'gamificacao-oferecer-arena',
-    flags: ['gamification_v2'],
     audience: 'arena',
   },
   {
@@ -490,7 +472,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Engajamento',
     body: 'A saúde da sua agenda, as metas, os desafios e as recompensas para os seus alunos.',
     guide: 'gamificacao-oferecer-professor',
-    flags: ['gamification_v2'],
     audience: 'professor',
   },
   {
@@ -499,7 +480,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'clube-aba-atividade',
     title: 'Atividade do clube',
     body: 'Só quem administra vê: a saúde do clube, metas, desafios e recompensas para os membros.',
-    flags: ['gamification_v2'],
   },
   {
     id: 'admin:gamificacao',
@@ -508,7 +488,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Gamificação',
     body: 'Configuração, desafios, recompensas, integridade e métricas da gamificação da plataforma.',
     guide: 'gamificacao-admin-configurar',
-    flags: ['gamification_v2'],
     audience: 'admin',
   },
   {
@@ -518,7 +497,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Treino',
     body: 'Revisão, denúncias, todo o conteúdo, a biblioteca da plataforma e as configurações do Centro de Treino.',
     guide: 'treino-admin',
-    flags: ['training_center'],
     audience: 'admin',
   },
 
@@ -530,7 +508,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'As partes do treino',
     body: 'Treinar (o de hoje, planos, diário, evolução), o conteúdo (biblioteca, os seus, os recebidos) e as dúvidas.',
     guide: 'treino-hoje',
-    flags: ['training_center'],
   },
   {
     id: 'treino:criar',
@@ -539,7 +516,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Criar',
     body: 'Abre o formulário de um drill, treino, fundamento, jogada, exercício físico ou estudo.',
     guide: 'treino-criar',
-    flags: ['training_center'],
   },
   {
     id: 'treino:comecar',
@@ -548,7 +524,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Começar',
     body: 'Abre o modo quadra: a tela fica acesa e conta o tempo de cada bloco.',
     guide: 'treino-hoje',
-    flags: ['training_center'],
   },
   {
     id: 'treino:nivel',
@@ -557,7 +532,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Do meu nível',
     body: 'Mostra só o que serve para o seu nível na plataforma.',
     guide: 'treino-biblioteca',
-    flags: ['training_center'],
   },
   {
     id: 'treino:plano',
@@ -566,7 +540,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Criar um plano',
     body: 'Abre o assistente que monta as semanas nos dias e no tempo que você tem.',
     guide: 'treino-plano',
-    flags: ['training_center'],
   },
   {
     id: 'treino:golpes',
@@ -575,7 +548,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Trilha dos golpes',
     body: 'Os golpes do pickleball em ordem de aprender, com o corpo ponto a ponto e o certo e o errado.',
     guide: 'treino-golpes',
-    flags: ['training_center'],
   },
   {
     id: 'treino:golpes-proximo',
@@ -584,7 +556,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Seu próximo golpe',
     body: 'O que está "aprendendo" ou, sem nenhum, o primeiro que você ainda não marcou.',
     guide: 'treino-golpes',
-    flags: ['training_center'],
   },
   {
     id: 'treino:duvida',
@@ -593,7 +564,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Fazer uma pergunta',
     body: 'Abre uma conversa privada com o seu professor.',
     guide: 'treino-duvidas',
-    flags: ['training_center'],
   },
   {
     id: 'treino:indicar',
@@ -602,7 +572,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Indicar',
     body: 'Manda este item a outros atletas — e, se você é professor, aos seus alunos, com prazo.',
     guide: 'treino-biblioteca',
-    flags: ['training_center'],
   },
   {
     id: 'treino:ia',
@@ -611,7 +580,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Criar com IA',
     body: 'Monta um pedido para colar na IA que você preferir; a resposta preenche o formulário.',
     guide: 'treino-criar',
-    flags: ['training_center'],
   },
 
   /* -------------------------------------------------------- minha área -- */
@@ -622,7 +590,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: 'Precisa de você',
     body: 'Cada linha leva ao lugar que resolve: a reserva, o convite, a aula, o treino recebido.',
     guide: 'minha-area',
-    flags: ['user_hub'],
   },
 ]);
 

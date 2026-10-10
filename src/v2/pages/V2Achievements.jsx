@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Lock, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   ACHIEVEMENT_FAMILY,
   ACHIEVEMENT_FAMILY_META,
@@ -41,7 +41,7 @@ const RARITY_FILTERS = [
 ];
 
 export default function V2Achievements() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const { user } = useAuth();
 
   // Se a master flag está OFF, mostra empty state amigável

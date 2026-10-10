@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import ProfileProgressionSection from '@/v2/components/profile/ProfileProgressionSection';
 import { V2Skeleton } from '@/v2/ui/primitives';
 import MyReferralCodes from '@/v2/components/arenas/marketing/MyReferralCodes';
@@ -17,7 +17,7 @@ const UserArea = lazy(() => import('@/v2/components/userArea/UserArea'));
  * pessoa); desligada, é o perfil de sempre, sem mudança nenhuma.
  */
 export default function V2Profile() {
-  const hubOn = useFeatureFlag(FEATURE_FLAG.USER_HUB);
+  const hubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
   const { isLoading } = useFeatureFlags();
   const esqueleto = <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
   // Sem esperar as flags, quem tem a Minha área via o perfil antigo piscar antes.
@@ -35,9 +35,9 @@ export default function V2Profile() {
 function ClassicProfile() {
   const { user } = useAuth();
   const { data: ranking = [] } = useNationalRanking();
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   // Os códigos de indicação vivem nos módulos de arena (chave-mestra).
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
 
   const me = useMemo(
     () => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null,

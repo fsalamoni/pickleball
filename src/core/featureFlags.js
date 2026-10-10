@@ -5,11 +5,11 @@
  * (`platform_settings/global`, campo `feature_flags`) e podem ser ligadas/
  * desligadas em tempo de execução pelo admin master na página de Métricas.
  *
- * NOTA: as funcionalidades que estavam LIGADAS em produção foram convertidas
- * em código permanente — deixaram de ser flags. Resta apenas a flag abaixo,
- * que segue DESLIGADA por padrão. O documento do Firestore pode ainda conter
- * chaves antigas: `normalizeFeatureFlags` as ignora (só lê chaves conhecidas),
- * então nada precisa ser alterado no banco.
+ * NOTA (2026-10-10): as 33 funcionalidades que estavam LIGADAS em produção
+ * foram incorporadas — deixaram de ser flags e vivem em `PERMANENT_FEATURE`,
+ * sempre `true`. Restam as 3 flags abaixo, DESLIGADAS por padrão. O documento
+ * do Firestore ainda contém as chaves antigas: `normalizeFeatureFlags` as
+ * ignora (só lê chaves conhecidas), então nada precisa ser alterado no banco.
  */
 
 export const FEATURE_FLAG = Object.freeze({
@@ -19,6 +19,41 @@ export const FEATURE_FLAG = Object.freeze({
    * credenciais. Sem efeito enquanto a integração não for implementada.
    */
   DUPR_OFFICIAL_SYNC: 'dupr_official_sync',
+
+  /**
+   * Dia de jogo — MEXICANO como formato ESCOLHÍVEL.
+   *
+   * O Mexicano sempre existiu no dia de jogo; a partir da Onda CE ele passa a
+   * ser opcional, ligado pelo admin da plataforma. A flag decide só se o
+   * formato APARECE para ser escolhido — na criação, na edição do formato e
+   * no sorteio de grade, em toda origem (atleta, arena, clube, jogo aberto).
+   *
+   * O que ela NÃO faz, de propósito: tirar nada de quem já usa. Um dia de
+   * jogo gravado como Mexicano continua abrindo, sorteando, lançando placar e
+   * publicando como sempre, e o seletor dele mostra o formato que está
+   * gravado mesmo com a flag desligada. Nenhum dado é lido de outro jeito,
+   * nenhum é regravado. Fonte única das opções: `gameDayFormatChoices`.
+   */
+  GAMEDAY_MEXICANO: 'gameday_mexicano',
+
+  /**
+   * Dia de jogo — REI DA QUADRA como formato ESCOLHÍVEL.
+   *
+   * Mesma regra do Mexicano, com a própria chave: o admin liga um sem o
+   * outro. Desligada, o Rei da Quadra some das listas de escolha daqui para
+   * frente; os dias já gravados nele seguem funcionando (a próxima rodada,
+   * que sai dos RESULTADOS da anterior, continua sendo gerada normalmente).
+   */
+  GAMEDAY_KING_OF_COURT: 'gameday_king_of_court',
+});
+/**
+ * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
+ * produção e viraram permanentes por decisão do dono. Não são lidas do banco,
+ * não aparecem no painel admin e valem `true` sempre — as constantes só
+ * existem até os `if` que as consultam serem removidos, tela a tela
+ * (guarda: `src/core/guards/flagsIncorporadas.test.js`).
+ */
+export const PERMANENT_FEATURE = Object.freeze({
 
   /**
    * Exportação de partidas para o DUPR (admin da plataforma): uma seção no
@@ -174,32 +209,6 @@ export const FEATURE_FLAG = Object.freeze({
    * opção nem aparece na criação.
    */
   GAMEDAY_AMERICANO_LIVE: 'gameday_americano_live',
-
-  /**
-   * Dia de jogo — MEXICANO como formato ESCOLHÍVEL.
-   *
-   * O Mexicano sempre existiu no dia de jogo; a partir da Onda CE ele passa a
-   * ser opcional, ligado pelo admin da plataforma. A flag decide só se o
-   * formato APARECE para ser escolhido — na criação, na edição do formato e
-   * no sorteio de grade, em toda origem (atleta, arena, clube, jogo aberto).
-   *
-   * O que ela NÃO faz, de propósito: tirar nada de quem já usa. Um dia de
-   * jogo gravado como Mexicano continua abrindo, sorteando, lançando placar e
-   * publicando como sempre, e o seletor dele mostra o formato que está
-   * gravado mesmo com a flag desligada. Nenhum dado é lido de outro jeito,
-   * nenhum é regravado. Fonte única das opções: `gameDayFormatChoices`.
-   */
-  GAMEDAY_MEXICANO: 'gameday_mexicano',
-
-  /**
-   * Dia de jogo — REI DA QUADRA como formato ESCOLHÍVEL.
-   *
-   * Mesma regra do Mexicano, com a própria chave: o admin liga um sem o
-   * outro. Desligada, o Rei da Quadra some das listas de escolha daqui para
-   * frente; os dias já gravados nele seguem funcionando (a próxima rodada,
-   * que sai dos RESULTADOS da anterior, continua sendo gerada normalmente).
-   */
-  GAMEDAY_KING_OF_COURT: 'gameday_king_of_court',
 
   /**
    * CENTRAL DE AJUDA — a página `/ajuda`.
@@ -362,10 +371,6 @@ export const FEATURE_FLAG = Object.freeze({
    * `leveling_level`, `dupr_id`). Desligada, o cadastro segue como está.
    */
   ESSENTIAL_PROFILE: 'essential_profile',
-  // MINHA REGIÃO: o que a plataforma mostra (dias de jogo, torneios, arenas,
-  // professores, clubes, promoções) segue a região de cada pessoa — a cidade
-  // e um raio, o estado, outro lugar ou todo lugar. Escolha no navegador, por
-  // usuário; zero banco. Ver docs/34-MINHA-REGIAO.md.
   MY_REGION: 'my_region',
 
   /**
@@ -412,198 +417,16 @@ export const FEATURE_FLAG = Object.freeze({
    * aditivas). Desligada, nada disso aparece. Ver docs/40-CENTRO-DE-TREINO.md.
    */
   TRAINING_CENTER: 'training_center',
-  // Balanço do jogo: depois de jogar, a pessoa que ligou para si responde como
-  // foi e recebe a sugestão da semana de treino (só vale com training_center).
   GAME_DEBRIEF: 'game_debrief',
 });
 
+/** Mapa { chave: true } das funcionalidades incorporadas. */
+export const PERMANENT_FEATURES_ON = Object.freeze(
+  Object.fromEntries(Object.values(PERMANENT_FEATURE).map((key) => [key, true])),
+);
+
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
-  [FEATURE_FLAG.PERSONALIZED_HOME]: {
-    label: 'Início personalizado',
-    description:
-      'A tela inicial passa a ser montada para cada pessoa, pelos interesses '
-      + 'do perfil e pelo que ela faz na plataforma: agenda com todos os '
-      + 'compromissos, atalhos diretos (a Central da arena de quem gere, o '
-      + 'painel de quem dá aula, criar torneio de quem organiza), torneios com '
-      + 'inscrição aberta perto, o resultado do último torneio, ranking e '
-      + 'duplas, dias de jogo com vaga, horários livres, aulas e clubes. Nada '
-      + 'encerrado ou vencido aparece. Só leitura. Desligada, a tela inicial '
-      + 'segue como está.',
-  },
-  [FEATURE_FLAG.HOME_CARDS]: {
-    label: 'Início sob medida (escolher os cards)',
-    description:
-      'Cada pessoa escolhe os cards da tela inicial e a ordem deles — em '
-      + 'Configurações → Página inicial ou no "Personalizar" do próprio início. '
-      + 'Por padrão vêm só três: Dias de jogo, Horários da arena e Ranking; o '
-      + 'resto pode ser ligado, e o que a pessoa faz na plataforma aparece como '
-      + 'sugestão. Precisa do "Início personalizado" ligado. A escolha fica no '
-      + 'navegador de cada um; nada é gravado no banco. Desligada, o início '
-      + 'segue decidindo sozinho o que mostrar.',
-  },
-  [FEATURE_FLAG.PLATFORM_MARKETING]: {
-    label: 'Campanhas e cupons da plataforma',
-    description:
-      'Ganha a aba "Campanhas e cupons" aqui no painel (em Plataforma): cupons '
-      + 'por tipo com arte de tíquete e código para copiar, campanhas com '
-      + 'banner (cinco modelos ou arte enviada), destino da lista fechada, '
-      + 'aviso para todos, por região ou por interesse — com o número de '
-      + 'pessoas antes de enviar — e controle de uso. O que for divulgado '
-      + 'aparece na tela inicial de todos. Desligada, nada disso existe.',
-  },
-  [FEATURE_FLAG.COACH_MARKETING]: {
-    label: 'Campanhas e cupons dos professores',
-    description:
-      'Cada professor ganha, no painel dele, a seção "Divulgação": cupons '
-      + '(desconto em aula, aula grátis, clínica, brinde…) e campanhas com '
-      + 'banner, para todos os usuários ou só para os alunos, com aviso aos '
-      + 'alunos. O aluno informa o cupom ao pedir a aula e ele é contado '
-      + 'quando o professor confirma. Os banners e cupons aparecem na tela '
-      + 'inicial e no perfil do professor. Desligada, nada disso existe.',
-  },
-  [FEATURE_FLAG.DARK_MODE]: {
-    label: 'Modo escuro',
-    description:
-      'Cada pessoa passa a escolher a aparência da plataforma — Claro, Escuro '
-      + 'ou Automático (acompanha o aparelho) — no menu do usuário, na gaveta '
-      + 'do celular e em Configurações. O escuro segue as cores da marca, com '
-      + 'contraste conferido. Impresso, telão e totem continuam claros. A '
-      + 'escolha fica só no navegador de cada um; nada é gravado no banco. '
-      + 'Desligada, todos veem o claro de sempre.',
-  },
-  [FEATURE_FLAG.ARENA_MODULES]: {
-    label: 'Módulos adicionais da arena (chave geral)',
-    description:
-      'Liga o mecanismo dos módulos extras de arena. Com ela ativa, aparece a '
-      + 'aba "Módulos de arena" aqui em Funcionalidades, onde você libera cada '
-      + 'módulo às arenas — e cada arena passa a ter, em Configurações, a '
-      + 'escolha de ativar para si o que foi liberado. Desligada, nada disso '
-      + 'existe para ninguém: nem a aba daqui, nem a da arena, nem os módulos '
-      + 'que já estiverem ativados.',
-  },
-  [FEATURE_FLAG.GUIDED_TIPS]: {
-    label: 'Dicas guiadas (guias na tela)',
-    description:
-      'Um botão "Dicas" no topo de toda tela, que cada pessoa liga ou desliga. '
-      + 'Ligadas, pontos pulsando mostram o que cada botão faz, e "O que você '
-      + 'quer fazer?" traz um guia para cada tarefa (criar dia de jogo, '
-      + 'reservar quadra, inscrever-se em torneio, configurar a arena…), com '
-      + 'destaque e seta sobre o botão real, passo a passo. Os "Como funciona" '
-      + 'das ferramentas viram guias na tela e param de abrir sozinhos. A '
-      + 'escolha fica no navegador de cada um; nada é gravado no banco. '
-      + 'Desligada, tudo segue como antes.',
-  },
-  [FEATURE_FLAG.ESSENTIAL_PROFILE]: {
-    label: 'Cadastro essencial (categoria e nível obrigatórios)',
-    description:
-      'O cadastro passa a exigir também a categoria em que a pessoa joga '
-      + '(masculina ou feminina — usada nas duplas mistas do dia de jogo e nas '
-      + 'categorias dos torneios) e o nível, ao menos o que ela mesma indica. '
-      + 'A UF passa a ser escolhida numa lista. Quem já tem conta é chamado a '
-      + 'completar só o que falta, na próxima entrada. ID e rating DUPR seguem '
-      + 'opcionais. Nada é gravado além do que a pessoa preencher. Desligada, o '
-      + 'cadastro segue como está.',
-  },
-  [FEATURE_FLAG.MY_REGION]: {
-    label: 'Minha região (cidade + raio, estado ou todo lugar)',
-    description:
-      'O que a plataforma mostra passa a seguir a região de cada pessoa: dias '
-      + 'de jogo e jogos com vaga, torneios, arenas, professores, clubes e '
-      + 'promoções. O padrão é a cidade do perfil e até 50 km; em Configurações '
-      + '→ Minha região a pessoa escolhe outro raio, o estado inteiro, outro '
-      + 'lugar (quem vai viajar), a localização do aparelho ou todo lugar. O que '
-      + 'fica de fora não some: cada tela diz quantos são e oferece ver também. '
-      + 'A escolha fica no navegador; nada é gravado no banco. Desligada, as '
-      + 'telas seguem como estão.',
-  },
-  [FEATURE_FLAG.NOTIFICATIONS_CENTER]: {
-    label: 'Central de notificações (histórico de avisos)',
-    description:
-      'Publica a página Notificações: todos os avisos de cada pessoa, os '
-      + 'novos e os antigos, agrupados por dia (hoje, ontem, últimos 7 dias e '
-      + 'por mês), com filtro de não lidas, filtro por área (jogos, torneios, '
-      + 'arenas, clubes, aulas, mensagens, promoções), busca e marcar como '
-      + 'lida ou não lida. O sino mostra os 20 mais novos e leva à página. '
-      + 'Nada novo é gravado no banco. Desligada, o sino mostra a lista '
-      + 'inteira, com rolagem, e a página não existe.',
-  },
-  [FEATURE_FLAG.TOURNAMENT_AMERICANO_ETAPAS]: {
-    label: 'Torneio — Americano aprimorado em etapas',
-    description:
-      'Oferece um formato novo de fase para modalidades de inscrição '
-      + 'individual: os atletas jogam em etapas, cada etapa um Americano em '
-      + 'grupos (de 4, 5, 8 ou 9). A cada etapa os grupos são refeitos, '
-      + 'misturando quem ainda não se encontrou para criar o máximo de jogos '
-      + 'inéditos, e a classificação é uma só, somando todas as etapas — o '
-      + 'campeão é quem foi melhor no total. O organizador escolhe quantas '
-      + 'etapas. Desligada, o formato some do editor daqui para frente; as '
-      + 'modalidades já criadas nele seguem funcionando.',
-  },
-  [FEATURE_FLAG.USER_HUB]: {
-    label: 'Minha área (o perfil como central)',
-    description:
-      'O Perfil vira "Minha área": um resumo da pessoa no topo e as seções '
-      + 'pelo que ela faz na plataforma — perfil e nível, treino, jogos, '
-      + 'agenda, torneios, clubes, aulas, arena, conta e privacidade —, cada '
-      + 'uma levando à tela que resolve. Só leitura; nada novo no banco. '
-      + 'Desligada, o Perfil segue como está.',
-  },
-  [FEATURE_FLAG.TRAINING_CENTER]: {
-    label: 'Centro de Treino',
-    description:
-      'Publica /treino: a biblioteca de drills e treinos (da PickleRush, dos '
-      + 'professores e da comunidade), o modelo padrão para criar (objetivo, '
-      + 'passo a passo, certo × errado, erros e correções, diagrama de quadra, '
-      + 'fotos e vídeos por link ou envio), indicar a outros atletas e — só '
-      + 'professor — enviar aos alunos com prazo; o treino de hoje, planos, '
-      + 'diário e evolução; dúvidas ao professor. No painel admin, a seção '
-      + 'Treino controla todo o conteúdo (editar, ocultar, destacar, excluir), '
-      + 'a revisão do que é publicado, as denúncias, a biblioteca inicial e os '
-      + 'limites de envio. Desligada, nada disso aparece.',
-  },
-  [FEATURE_FLAG.GAME_DEBRIEF]: {
-    label: 'Balanço do jogo (treino sugerido depois de jogar)',
-    description:
-      'Depois de um dia de jogo, de um torneio ou de um jogo na arena, quem '
-      + 'LIGOU o balanço nas próprias Configurações responde em menos de um '
-      + 'minuto como foi, o que funcionou, o que faltou, se sentiu evolução e '
-      + 'como estavam o corpo e a cabeça. A plataforma junta isso com os '
-      + 'balanços anteriores e sugere a semana de treino (drills da '
-      + 'biblioteca, no nível e nos dias da pessoa), que ela escolhe se põe '
-      + 'nos seus treinos. Aba "Balanço" no /treino, lembrete no início e na '
-      + 'Minha área, e missões semanais e mensais na gamificação para quem '
-      + 'ligou. Só vale com o Centro de Treino ligado. Desligada, nada aparece.',
-  },
-  [FEATURE_FLAG.HELP_CENTER]: {
-    label: 'Central de ajuda',
-    description:
-      'Publica a página /ajuda: um manual completo da plataforma, com partes '
-      + 'separadas para atleta, arena e professor, além do que vale para todos '
-      + '(primeiros passos, conta e privacidade). Ganha um link na navegação, '
-      + 'em todas as telas. Só leitura — não consulta nem grava nada. '
-      + 'Desligada, a página não existe e o link não aparece.',
-  },
-  [FEATURE_FLAG.ARENA_GAME_DAY]: {
-    label: 'Dia de jogo da arena',
-    description:
-      'Deixa a arena criar os próprios dias de jogo, marcados no calendário: '
-      + 'escolher data, quadras e horários (do dia todo ou de cada quadra), '
-      + 'fechar essas quadras para reserva, definir limite de atletas por dia '
-      + 'ou por quadra (ou nenhum) e decidir se só a equipe da arena conduz as '
-      + 'partidas. Os atletas marcam presença pela página e pelo calendário da '
-      + 'arena, e o dia de jogo abre no mesmo organizador de sempre. '
-      + 'Desligada, a aba, a seção e a rota não existem.',
-  },
-  [FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE]: {
-    label: 'Dia de jogo — Americano aprimorado',
-    description:
-      'Formato novo que junta a organização do Play (quadra a quadra, um jogo '
-      + 'por vez, com fila e pausa) ao sorteio e ao placar do Americano. As '
-      + 'partidas saem uma a uma, sempre com quem está disponível no momento, '
-      + 'e cada uma grava resultado, entra no ranking do dia e pode ir para o '
-      + 'ranking da plataforma e o DUPR. Desligada, a opção nem aparece.',
-  },
   [FEATURE_FLAG.GAMEDAY_MEXICANO]: {
     label: 'Dia de jogo — Mexicano',
     description:
@@ -620,27 +443,6 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
       + 'criados como Rei da Quadra continuam funcionando normalmente.',
   },
-  [FEATURE_FLAG.PLAY_SMART_ROTATION]: {
-    label: 'Dia de jogo (Play) — rodízio equilibrado',
-    description:
-      'Varia os grupos e as duplas na criação das partidas do Play, sem furar '
-      + 'a ordem de participação: o primeiro da fila entra sempre e a escolha '
-      + 'fica dentro de uma janela curta. Evita que os mesmos quartetos se '
-      + 'repitam rodada após rodada. Desligada, nada muda.',
-  },
-  [FEATURE_FLAG.PLAY_GROUPS]: {
-    label: 'Dia de jogo (Play) — grupos',
-    description:
-      'Deixa quem organiza um Play criar GRUPOS — por nível, por tipo de dupla '
-      + '(mistas, masculinas, femininas) ou livres — e sortear as partidas dentro '
-      + 'de cada um. Cada grupo tem faixa de nível, formação das duplas, '
-      + 'diferença máxima de nível e quadras próprias; uma política decide quem '
-      + 'entra quando os grupos disputam as quadras. O convidado avulso informa '
-      + 'nível e sexo e cai no grupo certo, e há uma distribuição automática por '
-      + 'nível com prévia. Tudo vale no painel, no telão e na visão do jogador. '
-      + 'Só campos opcionais no banco. Desligada, os grupos gravados são '
-      + 'ignorados e o Play segue com a fila única de sempre.',
-  },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: 'DUPR oficial (fase 2 — reservado)',
     description:
@@ -648,108 +450,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'enviar partidas). Exige acesso de parceiro/clube DUPR e backend com '
       + 'credenciais. Sem efeito enquanto a integração não for implementada.',
   },
-  [FEATURE_FLAG.DUPR_MATCH_EXPORT]: {
-    label: 'DUPR · Exportação de partidas (CSV)',
-    description:
-      'Adiciona ao painel admin uma seção para extrair o histórico de partidas '
-      + 'disputadas (torneios + dias de jogo/eventos espelhados no ranking), com '
-      + 'filtros por data, torneio, clube, dia de jogo, evento, atleta e tipo, e '
-      + 'gerar um CSV no formato de upload de clubes do DUPR. Somente leitura — '
-      + 'desligada, a seção não existe.',
-  },
-  [FEATURE_FLAG.ACTION_HOME]: {
-    label: 'Home orientada a ação',
-    description:
-      'A tela inicial ganha um bloco "O que fazer agora" (próximo jogo, '
-      + 'convites de dupla pendentes, torneios perto) e uma faixa de evolução '
-      + '(streak, XP/nível, próxima conquista e metas). Desligada, a home segue '
-      + 'exatamente como está.',
-  },
-  [FEATURE_FLAG.SMART_MATCHMAKING]: {
-    label: 'Matchmaking inteligente',
-    description:
-      'Em "Encontrar jogadores", ordena e explica a compatibilidade cruzando '
-      + 'nível (2.0–8.0), lado da quadra, cidade e interesses em comum. '
-      + 'Desligada, a lista segue como está.',
-  },
-  [FEATURE_FLAG.POST_GAME_FLOW]: {
-    label: 'Fluxo pós-jogo enxuto',
-    description:
-      'Ao lançar um resultado, mostra atalho para "jogar de novo" com os '
-      + 'mesmos atletas e link para a evolução do rating. Desligada, o '
-      + 'lançamento segue como está.',
-  },
-  [FEATURE_FLAG.PUSH_NOTIFICATIONS]: {
-    label: 'Notificações push (PWA)',
-    description:
-      'Opt-in do atleta para receber avisos push ("seu jogo é amanhã", "o '
-      + 'sorteio saiu", "resultado lançado", "reserva confirmada"), espelhando '
-      + 'as notificações in-app. Requer configuração de VAPID/FCM. Desligada ou '
-      + 'sem VAPID, nada é registrado e nada muda.',
-  },
-  [FEATURE_FLAG.ARENA_OPS_KPIS]: {
-    label: 'Arena · Painel operacional (KPIs)',
-    description:
-      'Visão sintética "como foi minha semana": ocupação, receita, mapa de '
-      + 'calor de horários e no-show num só lugar. Desligada, o painel segue como está.',
-  },
-  [FEATURE_FLAG.ARENA_UNIFIED_CHECKOUT]: {
-    label: 'Arena · Checkout unificado (reserva + PDV + Pix)',
-    description:
-      'Reservar quadra, adicionar produtos e pagar por Pix num fluxo só '
-      + '(Pix manual, sem gateway). Desligada, reserva e PDV seguem separados.',
-  },
-  [FEATURE_FLAG.ARENA_DYNAMIC_PRICING]: {
-    label: 'Arena · Preço dinâmico',
-    description:
-      'Desconto em horário de baixa e preço de pico para encher a grade. '
-      + 'Desligada, o preço segue a tabela padrão por dia/horário.',
-  },
-  [FEATURE_FLAG.ARENA_MEMBER_CRM]: {
-    label: 'Arena · Relacionamento com membros',
-    description:
-      'Mensalidade/pacotes, campanhas segmentadas e resposta pública às '
-      + 'avaliações, num painel de relacionamento. Desligada, some.',
-  },
-  [FEATURE_FLAG.COACH_PUBLIC_DISCOVERY]: {
-    label: 'Professor · Perfil público que se acha',
-    description:
-      'Filtros por nível, preço e localização no diretório e depoimentos/'
-      + 'avaliações no perfil. Desligada, o diretório segue como está.',
-  },
-  [FEATURE_FLAG.COACH_BOOKING_PAY]: {
-    label: 'Professor · Agenda com reserva + pagamento',
-    description:
-      'Disponibilidade → aluno reserva → paga (Pix manual) num fluxo, com '
-      + 'política de no-show. Desligada, a solicitação de aula segue como está.',
-  },
-  [FEATURE_FLAG.COACH_STUDENT_PROGRESS]: {
-    label: 'Professor · Alunos ligados à evolução',
-    description:
-      'No roster, mostra o progresso do aluno (nível/rating), pacotes e '
-      + 'clínicas. Desligada, o roster segue como está.',
-  },
-  [FEATURE_FLAG.COACH_LEVEL_RATING_SEED]: {
-    label: 'Professor · Nível validado alimenta o rating',
-    description:
-      'O nível validado pelo professor vira semente do rating (elo professor↔'
-      + 'atleta↔ranking). Desligada, a semente segue a lógica atual.',
-  },
-  [FEATURE_FLAG.GAMIFICATION_V2]: {
-    label: 'Gamificação V2 (master)',
-    description:
-      'Liga o sistema novo de progressão: tiers com nome (Calouro→Imortal), '
-      + '5 trilhas paralelas de XP, XP multi-fonte com limites anti-farm, '
-      + 'conquistas V2 (5 famílias e 5 raridades), missões diárias, sequência '
-      + 'com dias de folga e modo férias, kudos e programa de indicação. '
-      + 'Desligada, NADA muda — XP/nível/conquistas V1 seguem intactos.',
-  },
 });
 
 /** Valor padrão (todas as flags desligadas). */
-export const DEFAULT_FEATURE_FLAGS = Object.freeze(
-  Object.fromEntries(Object.values(FEATURE_FLAG).map((key) => [key, false])),
-);
+export const DEFAULT_FEATURE_FLAGS = Object.freeze({
+  ...PERMANENT_FEATURES_ON,
+  ...Object.fromEntries(Object.values(FEATURE_FLAG).map((key) => [key, false])),
+});
 
 /** Todas as chaves de flag conhecidas (fonte única de verdade para contagens). */
 export const ALL_FLAG_KEYS = Object.freeze(Object.values(FEATURE_FLAG));
