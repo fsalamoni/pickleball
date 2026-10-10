@@ -59,6 +59,7 @@ import {
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
+import { resultFromSets } from '../domain/gameSets.js';
 
 const COL = 'game_days';
 // O jogo aberto ligado a este dia de jogo (Onda CA). Escrito direto aqui, e
@@ -2042,6 +2043,18 @@ export async function createAmericanoLiveRoundForFreeCourts(gdId, actor, { court
 }
 
 /**
+ * O placar lançado → os campos do jogo. Aceita `sets` (um ou mais, como a tela
+ * manda) ou o par `scoreA`/`scoreB` de sempre, que vale como um set. A tela
+ * confere antes; aqui é refeito, porque o serviço é quem decide.
+ */
+function placarDoLancamento({ scoreA, scoreB, sets } = {}) {
+  const lista = Array.isArray(sets) && sets.length > 0 ? sets : [{ a: scoreA, b: scoreB }];
+  const r = resultFromSets(lista);
+  if (!r.ok) throw new Error(r.error);
+  return r.fields;
+}
+
+/**
  * LANÇA O RESULTADO de uma partida do Americano aprimorado.
  *
  * Diferente do Play (`finishPlayGame`, que já cria o próximo jogo sozinho),
@@ -2053,12 +2066,8 @@ export async function createAmericanoLiveRoundForFreeCourts(gdId, actor, { court
  * Se o dia já foi publicado no ranking, o espelho é sincronizado na hora, para
  * a partida entrar no rating e no DUPR sem exigir republicação manual.
  */
-export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = {}, actor) {
-  const a = Number(scoreA);
-  const b = Number(scoreB);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
-    throw new Error('Informe os dois placares.');
-  }
+export async function submitAmericanoLiveResult(gdId, gid, placar = {}, actor) {
+  const resultado = placarDoLancamento(placar);
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
@@ -2078,7 +2087,7 @@ export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = 
 
   const batch = writeBatch(db);
   batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
-    score_a: a, score_b: b,
+    ...resultado,
     status: PLAY_GAME_STATUS.FINISHED,
     finished_at: serverTimestamp(),
     updated_at: serverTimestamp(),
@@ -2094,7 +2103,7 @@ export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = 
 
   await createAuditLog({
     action: 'game_day_americano_live_result', actor,
-    details: { game_day_id: gdId, game_id: gid, score_a: a, score_b: b },
+    details: { game_day_id: gdId, game_id: gid, ...resultado },
   });
   // Best-effort: o resultado já está gravado; uma falha aqui só adia o espelho.
   await syncGameDayRankingIfPublished(gdId, actor).catch(() => null);
@@ -2103,7 +2112,7 @@ export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = 
 
 /** Criação MANUAL de uma partida do Americano aprimorado (com placar opcional). */
 export async function createManualAmericanoLiveGame(
-  gdId, { court = null, sideAIds = [], sideBIds = [], scoreA = null, scoreB = null }, actor,
+  gdId, { court = null, sideAIds = [], sideBIds = [], scoreA = null, scoreB = null, sets = null }, actor,
 ) {
   // 1 × 1 (simples) ou 2 × 2 (duplas), conferido aqui — Onda CF.
   const tipo = manualGameKind(sideAIds, sideBIds);
@@ -2111,7 +2120,13 @@ export async function createManualAmericanoLiveGame(
   const byId = new Map(participants.map((p) => [p.id, p]));
   const ids = [...sideAIds, ...sideBIds].filter(Boolean);
 
-  const temPlacar = scoreA != null && scoreB != null;
+  // Placar opcional: em branco, a partida vai para a quadra; preenchido (um
+  // ou mais sets), registra um jogo que já aconteceu.
+  const semPlacar = Array.isArray(sets)
+    ? sets.every((x) => (x?.a ?? '') === '' && (x?.b ?? '') === '')
+    : (scoreA == null || scoreB == null);
+  const temPlacar = !semPlacar;
+  const resultado = temPlacar ? placarDoLancamento({ scoreA, scoreB, sets }) : null;
 
   // REGRA DO FORMATO: ninguém em duas quadras ao mesmo tempo.
   //
@@ -2148,7 +2163,7 @@ export async function createManualAmericanoLiveGame(
   });
   if (temPlacar) {
     batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
-      score_a: Number(scoreA), score_b: Number(scoreB),
+      ...resultado,
       status: PLAY_GAME_STATUS.FINISHED, finished_at: serverTimestamp(),
     });
   }
@@ -2162,18 +2177,14 @@ export async function createManualAmericanoLiveGame(
 }
 
 /** Corrige o PLACAR de uma partida já concluída (e re-sincroniza o espelho). */
-export async function updateAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, actor) {
-  const a = Number(scoreA);
-  const b = Number(scoreB);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
-    throw new Error('Informe os dois placares.');
-  }
+export async function updateAmericanoLiveResult(gdId, gid, placar = {}, actor) {
+  const resultado = placarDoLancamento(placar);
   await updateDoc(doc(db, COL, gdId, SUB_GAMES, gid), {
-    score_a: a, score_b: b, updated_at: serverTimestamp(),
+    ...resultado, updated_at: serverTimestamp(),
   });
   await createAuditLog({
     action: 'game_day_americano_live_result_edited', actor,
-    details: { game_day_id: gdId, game_id: gid, score_a: a, score_b: b },
+    details: { game_day_id: gdId, game_id: gid, ...resultado },
   });
   await syncGameDayRankingIfPublished(gdId, actor).catch(() => null);
 }

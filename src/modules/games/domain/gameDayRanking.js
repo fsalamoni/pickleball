@@ -18,6 +18,7 @@
  *  5. `club_id` por partida = clube comum a TODOS os atletas (ou null).
  */
 
+import { gamePoints, gameSetList, hasSets } from './gameSets.js';
 import {
   isGameDecided, winnerSideOf, inferKind,
   buildParticipantResolver, resolveSideUidsFromParticipants, resolveSlotUid,
@@ -101,8 +102,12 @@ export function buildGameDayMatch({ gameDay, gameId, game, participants, clubIds
 
   const kind = inferKind(game.side_a, game.side_b);
   const winner = winnerSideOf(game);
-  const pointsA = Number(game.score_a) || 0;
-  const pointsB = Number(game.score_b) || 0;
+  // Pontos para o rating (a fração de pontos do DUPR) e sets vencidos à parte:
+  // num jogo por sets, `score_*` do jogo são os sets e os pontos são o total.
+  const { a: pointsA, b: pointsB } = gamePoints(game);
+  const porSets = hasSets(game);
+  const setsA = porSets ? Number(game.score_a) : pointsA;
+  const setsB = porSets ? Number(game.score_b) : pointsB;
   // Dia de jogo de CLUBE: o clube dono é CONHECIDO e vence a inferência pelos
   // atletas. Duas razões: é o clube certo (a partida aconteceu no evento dele,
   // não no clube que por acaso todos têm em comum) e é o campo que a regra de
@@ -129,8 +134,9 @@ export function buildGameDayMatch({ gameDay, gameId, game, participants, clubIds
       kind,
       score_a: pointsA,
       score_b: pointsB,
-      sets_a: pointsA,
-      sets_b: pointsB,
+      sets_a: setsA,
+      sets_b: setsB,
+      ...(porSets ? { set_scores: gameSetList(game) } : {}),
       winner_side: winner,
       status: 'finished',
       result_recorded_at: game.updated_at || game.created_at || new Date().toISOString(),
@@ -164,6 +170,9 @@ export function mirrorDecisionChanged(stored, fresh) {
   }
   if ((stored.side_a_ids || []).join('+') !== (fresh.side_a_ids || []).join('+')) return true;
   if ((stored.side_b_ids || []).join('+') !== (fresh.side_b_ids || []).join('+')) return true;
+  // Placar de cada set (jogo por sets): corrigir um set sem mudar o total nem
+  // o vencedor ainda é uma correção do resultado.
+  if (JSON.stringify(stored.set_scores || null) !== JSON.stringify(fresh.set_scores || null)) return true;
   return false;
 }
 

@@ -39,6 +39,7 @@ import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/cl
 import { suggestRounds, suggestSinglesRounds } from '@/modules/clubs/domain/gameDayDraw';
 import { GAME_KIND, slotsForKind } from '@/modules/games/domain/gameKind';
 import { GameKindToggle } from '@/v2/components/games/GameKindToggle';
+import GridScoreCell from '@/v2/components/games/GridScoreCell';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
@@ -688,16 +689,7 @@ function DailyRankingSection({ eventId, dateId, participants }) {
 function GameRow({ eventId, game }) {
   const updateGame = useUpdateEventGame(eventId);
   const deleteGame = useDeleteEventGame(eventId);
-  const [a, setA] = useState(game.score_a ?? '');
-  const [b, setB] = useState(game.score_b ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const saveScore = () => {
-    const score_a = a === '' ? null : Number(a);
-    const score_b = b === '' ? null : Number(b);
-    if (score_a === game.score_a && score_b === game.score_b) return;
-    updateGame.mutate({ gameId: game.id, updates: { score_a, score_b } });
-  };
 
   const sideNames = (side) => (side || []).map((p) => p.name).join(' / ') || '—';
   const winA = game.score_a != null && game.score_b != null && game.score_a > game.score_b;
@@ -708,27 +700,10 @@ function GameRow({ eventId, game }) {
       <div className={`flex-1 text-right ${winA ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>
         {sideNames(game.side_a)}
       </div>
-      <div className="flex items-center gap-1">
-        <Input
-          type="number"
-          min={0}
-          value={a}
-          onChange={(e) => setA(e.target.value)}
-          onBlur={saveScore}
-          className="h-8 w-12 px-1 text-center tabular-nums"
-          aria-label="Placar lado A"
-        />
-        <span className="text-xs text-gray-400">×</span>
-        <Input
-          type="number"
-          min={0}
-          value={b}
-          onChange={(e) => setB(e.target.value)}
-          onBlur={saveScore}
-          className="h-8 w-12 px-1 text-center tabular-nums"
-          aria-label="Placar lado B"
-        />
-      </div>
+      <GridScoreCell
+        game={game}
+        onSave={(updates) => updateGame.mutate({ gameId: game.id, updates })}
+      />
       <div className={`flex-1 ${winB ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>
         {sideNames(game.side_b)}
       </div>

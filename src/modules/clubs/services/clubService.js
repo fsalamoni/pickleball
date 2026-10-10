@@ -1230,6 +1230,15 @@ export async function updateEventGame(eventId, gameId, updates, user) {
   if (updates.kind !== undefined) sanitized.kind = updates.kind === 'singles' ? 'singles' : 'doubles';
   if (updates.score_a !== undefined) sanitized.score_a = Number.isFinite(updates.score_a) ? updates.score_a : null;
   if (updates.score_b !== undefined) sanitized.score_b = Number.isFinite(updates.score_b) ? updates.score_b : null;
+  // Placar por sets (opcional): a lista dos sets e o total de pontos. Nulos
+  // quando o jogo volta a um set só.
+  if (updates.sets !== undefined) {
+    sanitized.sets = Array.isArray(updates.sets) && updates.sets.length > 1
+      ? updates.sets.map((x) => ({ a: Number(x?.a) || 0, b: Number(x?.b) || 0 }))
+      : null;
+  }
+  if (updates.points_a !== undefined) sanitized.points_a = Number.isFinite(updates.points_a) ? updates.points_a : null;
+  if (updates.points_b !== undefined) sanitized.points_b = Number.isFinite(updates.points_b) ? updates.points_b : null;
   if (updates.order !== undefined) sanitized.order = updates.order;
   await updateDoc(doc(db, COL.events, eventId, COL.eventGames, gameId), { ...sanitized, updated_at: serverTimestamp() });
   // Resolve o date_id para sincronizar o dia correto (best-effort). Prefere o

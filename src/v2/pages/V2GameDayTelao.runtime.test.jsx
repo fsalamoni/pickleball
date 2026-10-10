@@ -585,7 +585,7 @@ describe('telão — Americano aprimorado', () => {
     click(botaoDoDialogo('Salvar resultado'));
     await act(async () => { await Promise.resolve(); });
 
-    expect(mutacoes.lancarResultado).toHaveBeenCalledWith({ gid: 'g2', scoreA: 11, scoreB: 9 });
+    expect(mutacoes.lancarResultado).toHaveBeenCalledWith({ gid: 'g2', sets: [{ a: '11', b: '9' }] });
     // Dois passos: lançar o resultado NÃO cria a próxima partida.
     expect(mutacoes.gerarAoVivo).not.toHaveBeenCalled();
   });

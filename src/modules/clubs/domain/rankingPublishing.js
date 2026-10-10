@@ -18,6 +18,7 @@
  * `firestore.rules` (ver bloco `match /club_event_games/{gameId}`).
  */
 
+import { gamePoints, gameSetList, hasSets } from '@/modules/games/domain/gameSets.js';
 import { GAME_DAY_RANKING_RESULT, GAME_DAY_RANKING_SOURCE } from './constants.js';
 
 /** Verifica se um jogo está decidido (tem placar e um vencedor). */
@@ -258,8 +259,12 @@ export function buildPublishableMatch({ event, dateId, clubId, gameId, game, par
 
   const kind = inferKind(sideASource, sideBSource);
   const winner = winnerSideOf(game);
-  const pointsA = Number(game.score_a) || 0;
-  const pointsB = Number(game.score_b) || 0;
+  // Pontos para o rating (a fração de pontos do DUPR) e sets vencidos à parte:
+  // num jogo por sets, `score_*` do jogo são os sets e os pontos são o total.
+  const { a: pointsA, b: pointsB } = gamePoints(game);
+  const porSets = hasSets(game);
+  const setsA = porSets ? Number(game.score_a) : pointsA;
+  const setsB = porSets ? Number(game.score_b) : pointsB;
 
   return {
     id: `${event.id}_${dateId}_${gameId}`,
@@ -279,8 +284,9 @@ export function buildPublishableMatch({ event, dateId, clubId, gameId, game, par
       kind,
       score_a: pointsA,
       score_b: pointsB,
-      sets_a: pointsA,
-      sets_b: pointsB,
+      sets_a: setsA,
+      sets_b: setsB,
+      ...(porSets ? { set_scores: gameSetList(game) } : {}),
       winner_side: winner,
       status: 'finished',
       result_recorded_at: game.updated_at || game.created_at || new Date().toISOString(),
@@ -313,6 +319,9 @@ export function mirrorDecisionChanged(stored, fresh) {
   }
   if ((stored.side_a_ids || []).join('+') !== (fresh.side_a_ids || []).join('+')) return true;
   if ((stored.side_b_ids || []).join('+') !== (fresh.side_b_ids || []).join('+')) return true;
+  // Placar de cada set (jogo por sets): corrigir um set sem mudar o total nem
+  // o vencedor ainda é uma correção do resultado.
+  if (JSON.stringify(stored.set_scores || null) !== JSON.stringify(fresh.set_scores || null)) return true;
   return false;
 }
 

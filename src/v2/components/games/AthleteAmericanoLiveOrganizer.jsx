@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button, V2Badge, V2Input, V2Select, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import {
@@ -33,6 +33,8 @@ import {
 } from '@/modules/games/domain/gameKind';
 import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
 import { useCourtKinds } from '@/v2/components/games/useCourtKinds';
+import SetScoreEditor from '@/v2/components/games/SetScoreEditor';
+import { setsForEdit, setsReady, setsText } from '@/modules/games/domain/gameSets';
 import {
   americanoLiveView, forecastAmericanoLiveMatches, americanoLiveProgress,
   americanoLiveInCourtIds,
@@ -346,11 +348,11 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
               const g = porQuadra.get(court);
               if (g) setAlvoCancelar({ gid: g.id, court });
             }}
-            onLancar={async ({ scoreA, scoreB }) => {
+            onLancar={async ({ sets }) => {
               const g = porQuadra.get(court);
               if (!g) return;
               try {
-                await lancar.mutateAsync({ gid: g.id, scoreA, scoreB });
+                await lancar.mutateAsync({ gid: g.id, sets });
                 toast.success(`Resultado salvo. A quadra ${court} está livre para a próxima.`);
               } catch (e) {
                 toast.error(e?.message || 'Não foi possível salvar o resultado.');
@@ -418,13 +420,11 @@ function CourtCard({
   semNinguem = false, kind = GAME_KIND.DOUBLES, onKind = null,
 }) {
   const vagas = slotsForKind(kind);
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
-  React.useEffect(() => { setA(''); setB(''); }, [game?.id]);
-
-  const placarValido = a !== '' && b !== ''
-    && Number.isFinite(Number(a)) && Number.isFinite(Number(b))
-    && Number(a) >= 0 && Number(b) >= 0;
+  // Um set por padrão; "Adicionar set" na hora de lançar. Cada partida começa
+  // limpa: o placar da anterior nunca vaza para a próxima.
+  const [sets, setSets] = useState([{ a: '', b: '' }]);
+  React.useEffect(() => { setSets([{ a: '', b: '' }]); }, [game?.id]);
+  const placarValido = setsReady(sets);
 
   return (
     <div className={`rounded-2xl border p-3 ${game ? 'border-acid/40 bg-acid/5' : 'border-gray-100'}`}>
@@ -446,31 +446,12 @@ function CourtCard({
             <Lado side={game.side_b} align="left" onJogador={canManage ? onJogador : null} />
           </div>
           {canManage && (
-            <div className="mt-3 flex flex-wrap items-end justify-center gap-2">
-              <label className="text-[11px] font-semibold text-gray-500">
-                Lado A
-                <V2Input
-                  className="mt-0.5 w-20 text-center"
-                  inputMode="numeric"
-                  value={a}
-                  onChange={(e) => setA(e.target.value)}
-                  placeholder="0"
-                />
-              </label>
-              <label className="text-[11px] font-semibold text-gray-500">
-                Lado B
-                <V2Input
-                  className="mt-0.5 w-20 text-center"
-                  inputMode="numeric"
-                  value={b}
-                  onChange={(e) => setB(e.target.value)}
-                  placeholder="0"
-                />
-              </label>
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <SetScoreEditor value={sets} onChange={setSets} disabled={pendente} />
               <V2Button
                 size="sm"
                 disabled={!placarValido || pendente}
-                onClick={() => onLancar({ scoreA: Number(a), scoreB: Number(b) })}
+                onClick={() => onLancar({ sets })}
                 data-dica="dia-de-jogo-lancar-resultado"
               >
                 <Check className="mr-1 h-3.5 w-3.5" /> Lançar resultado
@@ -629,6 +610,9 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
                   <span className="mx-2 font-bold text-ink tabular-nums">
                     {g.score_a} × {g.score_b}
                   </span>
+                  {setsText(g) && (
+                    <span className="mr-2 text-[11px] text-gray-500 tabular-nums">sets {setsText(g)} ·</span>
+                  )}
                   <span className={Number(g.score_b) > Number(g.score_a) ? 'font-bold text-ink' : 'text-gray-600'}>
                     {(g.side_b || []).map((p) => p.name || p).join(' / ')}
                   </span>
@@ -681,12 +665,12 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
       <EditScoreDialog
         game={alvoEditar}
         onClose={() => setAlvoEditar(null)}
-        onSave={async ({ scoreA, scoreB }) => {
+        onSave={async ({ sets }) => {
           const g = alvoEditar;
           setAlvoEditar(null);
           if (!g) return;
           try {
-            await editar.mutateAsync({ gid: g.id, scoreA, scoreB });
+            await editar.mutateAsync({ gid: g.id, sets });
             toast.success('Placar corrigido.');
           } catch (e) {
             toast.error(e?.message || 'Não foi possível corrigir.');
@@ -699,14 +683,13 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
 }
 
 function EditScoreDialog({ game, onClose, onSave }) {
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
+  const [sets, setSets] = useState([{ a: '', b: '' }]);
   React.useEffect(() => {
-    setA(game?.score_a != null ? String(game.score_a) : '');
-    setB(game?.score_b != null ? String(game.score_b) : '');
-  }, [game?.id, game?.score_a, game?.score_b]);
+    setSets(setsForEdit(game));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, game?.score_a, game?.score_b, game?.sets]);
   if (!game) return null;
-  const valido = a !== '' && b !== '' && Number(a) >= 0 && Number(b) >= 0;
+  const valido = setsReady(sets);
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
@@ -717,20 +700,10 @@ function EditScoreDialog({ game, onClose, onSave }) {
             {(game.side_b || []).map((p) => p.name || p).join(' / ')}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-end justify-center gap-3">
-          <label className="text-xs font-semibold text-gray-500">
-            Lado A
-            <V2Input className="mt-1 w-24 text-center" inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
-          </label>
-          <span className="pb-2 text-gray-400">×</span>
-          <label className="text-xs font-semibold text-gray-500">
-            Lado B
-            <V2Input className="mt-1 w-24 text-center" inputMode="numeric" value={b} onChange={(e) => setB(e.target.value)} />
-          </label>
-        </div>
+        <SetScoreEditor value={sets} onChange={setSets} />
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button disabled={!valido} onClick={() => onSave({ scoreA: Number(a), scoreB: Number(b) })}>
+          <V2Button disabled={!valido} onClick={() => onSave({ sets })}>
             Salvar
           </V2Button>
         </DialogFooter>
@@ -758,11 +731,10 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
   const [ids, setIds] = useState(['', '', '', '']);
   const [court, setCourt] = useState('');
   const [kind, setKind] = useState(GAME_KIND.DOUBLES);
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
+  const [sets, setSets] = useState([{ a: '', b: '' }]);
   React.useEffect(() => {
     if (open) {
-      setIds(['', '', '', '']); setCourt(String(livres[0] ?? '')); setA(''); setB('');
+      setIds(['', '', '', '']); setCourt(String(livres[0] ?? '')); setSets([{ a: '', b: '' }]);
       // Começa com o tipo que a primeira quadra livre já tem.
       setKind(livres[0] != null ? kindOfCourt(courtKinds, livres[0]) : GAME_KIND.DOUBLES);
     }
@@ -776,7 +748,10 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
   const posicoes = Array.from({ length: porLado * 2 }, (_, i) => i);
   const escolhidos = ids.slice(0, porLado * 2).filter(Boolean);
   const valido = escolhidos.length === porLado * 2 && new Set(escolhidos).size === escolhidos.length;
-  const comPlacar = a !== '' && b !== '';
+  // Placar opcional: tudo em branco = vai para a quadra; qualquer campo
+  // preenchido = jogo já disputado, e aí o placar precisa estar completo.
+  const comPlacar = sets.some((x) => x.a !== '' || x.b !== '');
+  const placarOk = !comPlacar || setsReady(sets);
   const emQuadra = americanoLiveInCourtIds(games);
   const conflitos = comPlacar ? [] : escolhidos.filter((id) => emQuadra.has(id));
   const nomesEmConflito = conflitos
@@ -826,16 +801,9 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
             </V2Select>
           </label>
 
-          <div className="flex items-end gap-3">
-            <label className="text-xs font-semibold text-gray-500">
-              Placar A (opcional)
-              <V2Input className="mt-1 w-24 text-center" inputMode="numeric" value={a} onChange={(e) => setA(e.target.value)} />
-            </label>
-            <span className="pb-2 text-gray-400">×</span>
-            <label className="text-xs font-semibold text-gray-500">
-              Placar B
-              <V2Input className="mt-1 w-24 text-center" inputMode="numeric" value={b} onChange={(e) => setB(e.target.value)} />
-            </label>
+          <div>
+            <p className="mb-1 text-xs font-semibold text-ink">Placar (opcional)</p>
+            <SetScoreEditor value={sets} onChange={setSets} />
           </div>
         </div>
 
@@ -850,15 +818,14 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
           <V2Button
-            disabled={!valido || conflitos.length > 0 || criar.isPending}
+            disabled={!valido || !placarOk || conflitos.length > 0 || criar.isPending}
             onClick={async () => {
               try {
                 await criar.mutateAsync({
                   court: court === '' ? null : Number(court),
                   sideAIds: porLado === 1 ? [ids[0]] : [ids[0], ids[1]],
                   sideBIds: porLado === 1 ? [ids[1]] : [ids[2], ids[3]],
-                  scoreA: comPlacar ? Number(a) : null,
-                  scoreB: comPlacar ? Number(b) : null,
+                  sets: comPlacar ? sets : null,
                 });
                 toast.success(comPlacar ? 'Partida e resultado salvos.' : 'Partida criada.');
                 onClose();

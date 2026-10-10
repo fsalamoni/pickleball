@@ -413,3 +413,11 @@ Há teste de domínio prendendo isso em `gameDayRanking.test.js`.
    volta a sair uma contra a outra — e o sintoma aparece só na SEGUNDA partida
    do dia, que é o que o tornou difícil de ver. Use
    `fixedPairsWithin(ids, participantes)` em todo caminho novo de sorteio.
+
+## Placar por sets (2026-10-10)
+
+"Lançar resultado" abre com UM set; "Adicionar set" acrescenta quantos houve
+(até 5), e a linha de baixo diz como fica ("Por sets: 2 × 1") ou o que falta.
+O mesmo editor (`SetScoreEditor`) está na quadra, no telão, na correção do
+placar e na criação manual. Regra, gravação e leitores em
+`docs/25-DIA-DE-JOGO-COMO-MODULO.md` §12.

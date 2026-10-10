@@ -91,19 +91,24 @@ function sideToUids(side, participantById) {
 /** Normaliza um match do `club_events/{id}/.../games` (organizer). */
 function normalizeClubGame(g, participantById) {
   if (!g) return null;
-  const points_a = Number(g.score_a) || 0;
-  const points_b = Number(g.score_b) || 0;
+  // Jogo por sets: `score_*` são os sets vencidos (decidem o vencedor) e
+  // `points_*` o total de pontos dos sets. Com um set, o placar é os pontos.
+  const sa = Number(g.score_a) || 0;
+  const sb = Number(g.score_b) || 0;
+  const porSets = Array.isArray(g.sets) && g.sets.length > 1;
+  const points_a = porSets && g.points_a != null ? Number(g.points_a) || 0 : sa;
+  const points_b = porSets && g.points_b != null ? Number(g.points_b) || 0 : sb;
   const a = sideToUids(g.side_a, participantById);
   const b = sideToUids(g.side_b, participantById);
   if (a.length === 0 || b.length === 0) return null;
   if (a.length > 2 || b.length > 2) return null;
   if (a.length !== b.length) return null;
-  if (points_a === points_b) return null; // só decididos
+  if (sa === sb) return null; // só decididos
   return {
     source: 'club_event_game',
     side_a: a,
     side_b: b,
-    winner: points_a > points_b ? 'a' : 'b',
+    winner: sa > sb ? 'a' : 'b',
     points_a,
     points_b,
   };

@@ -239,7 +239,8 @@ export function normalizeExportMatches({
     // no par `score_a`/`score_b` (jogo único). Sintetizamos o jogo único, mas
     // descartamos partidas sem placar (0×0 de W.O./não disputado), igual ao
     // caminho de torneio (`games.length === 0` → ignora).
-    const explicitGames = cleanGames(m.games);
+    // Dia de jogo lançado por sets: cada set é um jogo no DUPR.
+    const explicitGames = cleanGames(m.games).length ? cleanGames(m.games) : cleanGames(m.set_scores);
     let games = explicitGames;
     if (!games.length) {
       const scoreA = Math.trunc(Number(m.score_a) || 0);

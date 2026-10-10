@@ -188,8 +188,38 @@ describe('painel do Americano aprimorado — o fluxo de dois passos', () => {
     click(botao('Lançar resultado'));
     await act(async () => { await Promise.resolve(); });
 
-    expect(mutacoes.lancar).toHaveBeenCalledWith({ gid: 'g2', scoreA: 11, scoreB: 9 });
+    expect(mutacoes.lancar).toHaveBeenCalledWith({ gid: 'g2', sets: [{ a: '11', b: '9' }] });
     expect(mutacoes.gerar).not.toHaveBeenCalled();
+  });
+
+  it('⭐ mais de um set: "Adicionar set" e o resultado por sets', async () => {
+    await render();
+    click(botao('Adicionar set'));
+    const campos = () => [...container.querySelectorAll('input')]
+      .filter((i) => i.getAttribute('aria-label')?.startsWith('Set '));
+    expect(campos()).toHaveLength(4);
+    const [a1, b1, a2, b2] = campos();
+    digitar(a1, '11'); digitar(b1, '9');
+    digitar(a2, '9'); digitar(b2, '11');
+    // 1 × 1 em sets: falta o desempate, e o lançamento fica travado.
+    expect(container.textContent).toContain('acrescente o set de desempate');
+    expect(botao('Lançar resultado').disabled).toBe(true);
+    click(botao('Adicionar set'));
+    const [, , , , a3, b3] = campos();
+    digitar(a3, '11'); digitar(b3, '4');
+    expect(container.textContent).toContain('Por sets: 2 × 1');
+    click(botao('Lançar resultado'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.lancar).toHaveBeenCalledWith({
+      gid: 'g2',
+      sets: [{ a: '11', b: '9' }, { a: '9', b: '11' }, { a: '11', b: '4' }],
+    });
+  });
+
+  it('a concluída por sets mostra o placar de cada set', async () => {
+    dados.games = [{ ...concluida, score_a: 2, score_b: 1, sets: [{ a: 11, b: 9 }, { a: 8, b: 11 }, { a: 11, b: 3 }], points_a: 30, points_b: 23 }, emQuadra];
+    await render();
+    expect(container.textContent).toContain('sets 11-9 · 8-11 · 11-3');
   });
 
   it('sem os dois placares, lançar fica travado', async () => {

@@ -295,8 +295,8 @@ export function useSubmitAmericanoLiveResult(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: ({ gid, scoreA, scoreB }) => (
-      submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, user)
+    mutationFn: ({ gid, scoreA, scoreB, sets }) => (
+      submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB, sets }, user)
     ),
     onSuccess: invalidate,
   });
@@ -306,8 +306,8 @@ export function useUpdateAmericanoLiveResult(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: ({ gid, scoreA, scoreB }) => (
-      updateAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, user)
+    mutationFn: ({ gid, scoreA, scoreB, sets }) => (
+      updateAmericanoLiveResult(gdId, gid, { scoreA, scoreB, sets }, user)
     ),
     onSuccess: invalidate,
   });
