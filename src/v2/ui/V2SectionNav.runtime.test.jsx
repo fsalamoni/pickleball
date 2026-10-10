@@ -8,8 +8,10 @@
  *  3. seção sem grupo conhecido vai para o fim — nunca some;
  *  4. a seção e a aba ativas são anunciadas (`aria-current`);
  *  5. tocar numa seção ou numa aba devolve o item tocado;
- *  6. ⭐ as centrais usam esta peça (guarda de fonte): arena, professor e
- *     gestão do torneio.
+ *  6. ⭐ as centrais usam esta peça (guarda de fonte): arena, professor,
+ *     gestão do torneio e o painel do admin;
+ *  7. as setas do teclado movem o foco entre as seções (Home/End às pontas),
+ *     sem trocar de seção sozinhas.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -91,6 +93,27 @@ describe('V2SectionNav', () => {
     expect(container.querySelectorAll('button')).toHaveLength(4);
   });
 
+  it('as setas movem o foco entre as seções, Home e End vão às pontas, e nada é selecionado', async () => {
+    const onSelect = vi.fn();
+    await act(async () => {
+      root.render(<V2SectionNav sections={SECOES} grupos={GRUPOS} activeId="reservas" onSelect={onSelect} />);
+    });
+    const botoes = [...container.querySelectorAll('button')];
+    const tecla = (el, key) => act(async () => { el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })); });
+    botoes[0].focus();
+    await tecla(botoes[0], 'ArrowRight');
+    expect(document.activeElement).toBe(botoes[1]);
+    await tecla(botoes[1], 'ArrowLeft');
+    expect(document.activeElement).toBe(botoes[0]);
+    await tecla(botoes[0], 'ArrowLeft');
+    expect(document.activeElement).toBe(botoes.at(-1));
+    await tecla(botoes.at(-1), 'Home');
+    expect(document.activeElement).toBe(botoes[0]);
+    await tecla(botoes[0], 'End');
+    expect(document.activeElement).toBe(botoes.at(-1));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('tocar numa seção devolve a seção tocada', async () => {
     const onSelect = vi.fn();
     await act(async () => {
@@ -124,6 +147,7 @@ describe('⭐ as centrais usam a navegação que quebra em linhas', () => {
     ['src/v2/pages/V2ArenaManage.jsx', 'Central da arena'],
     ['src/v2/pages/V2CoachAgenda.jsx', 'painel do professor'],
     ['src/v2/components/tournament/V2TournamentAdminPanel.jsx', 'gestão do torneio'],
+    ['src/v2/pages/V2AdminConsole.jsx', 'painel do admin'],
   ];
   for (const [arquivo, nome] of telas) {
     it(`${nome}`, () => {
