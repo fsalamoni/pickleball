@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { V2Surface, V2Button, V2Badge, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2ErrorState, V2Select } from '@/v2/ui/primitives';
 import V2Collapsible from '@/v2/components/tournament/V2Collapsible';
 
 
@@ -828,8 +828,8 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
                     g.participants.map((pid) => (
                       <div key={pid} className="flex items-center justify-between gap-2">
                         <span className="min-w-0 truncate text-sm">{labelById.get(pid) || pid}</span>
-                        <select
-                          className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-xs"
+                        <V2Select
+                          className="h-8 shrink-0 px-2 text-xs"
                           value={g.name}
                           disabled={moveMutation.isPending}
                           onChange={(e) => requestMove(pid, e.target.value, g.name)}
@@ -841,7 +841,7 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
                               {name === g.name ? `${name} (atual)` : `Mover para ${name}`}
                             </option>
                           ))}
-                        </select>
+                        </V2Select>
                       </div>
                     ))
                   )}
@@ -933,8 +933,8 @@ function SubstitutePlayerDialog({
                 Nenhum jogador disponível para substituição.
               </p>
             ) : (
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm mt-1"
+              <V2Select
+                className="h-10 px-3 mt-1"
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
               >
@@ -944,7 +944,7 @@ function SubstitutePlayerDialog({
                     {r.label || r.player_a_name}
                   </option>
                 ))}
-              </select>
+              </V2Select>
             )}
           </div>
         </div>

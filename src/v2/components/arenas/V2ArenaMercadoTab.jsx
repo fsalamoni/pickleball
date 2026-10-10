@@ -38,9 +38,7 @@ import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser'
 import V2ArenaFinanceTab from '@/v2/components/arenas/V2ArenaFinanceTab';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
-import {
-  V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 
 const EXIT_TYPE_LABELS = {
   sale: 'Venda', consumption: 'Consumo interno', loss: 'Perda', gift: 'Brinde', return: 'Devolução',
@@ -367,13 +365,13 @@ function ProductsSection({ arenaId, onOpenCatalog, filtro = STOCK_FILTERS[0].val
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <V2Field label="Preço de venda (R$)">
-              <input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 8,00" />
+              <V2Input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="bg-paper px-3 py-2" placeholder="Ex: 8,00" />
             </V2Field>
             <V2Field label="Estoque mínimo">
-              <input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 6" />
+              <V2Input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="bg-paper px-3 py-2" placeholder="Ex: 6" />
             </V2Field>
             <V2Field label="Validade">
-              <input type="date" value={form.expiry_date} onChange={set('expiry_date')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="date" value={form.expiry_date} onChange={set('expiry_date')} className="bg-paper px-3 py-2" />
             </V2Field>
           </div>
           <V2Field label="Descrição">
@@ -709,15 +707,15 @@ function EntriesSection({ arenaId }) {
               />
             </V2Field>
             <V2Field label="Data" required>
-              <input type="date" value={form.date} onChange={setField('date')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="date" value={form.date} onChange={setField('date')} required className="bg-paper px-3 py-2" />
             </V2Field>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <V2Field label="Quantidade" required>
-              <input type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className="bg-paper px-3 py-2" />
             </V2Field>
             <V2Field label="Custo unitário (R$)" required>
-              <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={setField('unit_cost')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="number" min="0" step="0.01" value={form.unit_cost} onChange={setField('unit_cost')} required className="bg-paper px-3 py-2" />
             </V2Field>
             <V2Field label="Fornecedor">
               <V2Input value={form.supplier} onChange={setField('supplier')} maxLength={120} />
@@ -923,7 +921,7 @@ function ExitsSection({ arenaId }) {
               />
             </V2Field>
             <V2Field label="Data" required>
-              <input type="date" value={form.date} onChange={setField('date')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="date" value={form.date} onChange={setField('date')} required className="bg-paper px-3 py-2" />
             </V2Field>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -932,7 +930,7 @@ function ExitsSection({ arenaId }) {
               {overSells && <p className="mt-1 text-xs text-red-600">Quantidade maior que o estoque disponível ({selectedAvailable}).</p>}
             </V2Field>
             <V2Field label="Preço unitário (R$)" required>
-              <input type="number" min="0" step="0.01" value={form.unit_price} onChange={setField('unit_price')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+              <V2Input type="number" min="0" step="0.01" value={form.unit_price} onChange={setField('unit_price')} required className="bg-paper px-3 py-2" />
             </V2Field>
             <V2Field label="Tipo" required>
               <V2Select value={form.exit_type} onChange={setField('exit_type')}>

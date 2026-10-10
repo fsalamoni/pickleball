@@ -21,11 +21,7 @@ import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import { parsePlaceText } from '@/core/domain/locality';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
-import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
-  V2Skeleton,
-  V2ErrorState,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton, V2ErrorState } from '@/v2/ui/primitives';
 
 function CoachForm({ existing, onClose }) {
   const { user } = useAuth();
@@ -79,8 +75,8 @@ function CoachForm({ existing, onClose }) {
         </V2Field>
         <div className="grid grid-cols-2 gap-2">
           <V2Field label="Valor/hora (R$)">
-            <input type="number" min="0" step="0.01" value={form.hourly_rate} onChange={setField('hourly_rate')}
-              className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+            <V2Input type="number" min="0" step="0.01" value={form.hourly_rate} onChange={setField('hourly_rate')}
+              className="bg-paper px-4 py-3" />
           </V2Field>
           <V2Field label="Regiões (separadas por vírgula)">
             <V2Input value={form.regions} onChange={setField('regions')} placeholder="São Paulo, Rio" />

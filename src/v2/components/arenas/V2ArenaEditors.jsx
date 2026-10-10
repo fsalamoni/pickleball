@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
 import { useSaveArenaPricing } from '@/modules/arenas/hooks/useArenas';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2Surface, V2Input, V2Textarea } from '@/v2/ui/primitives';
 import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 
 /**
@@ -15,71 +15,71 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
     <div className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="arena-name" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nome da arena *</label>
-        <input
+        <V2Input
           id="arena-name" value={form.name} onChange={setField('name')} maxLength={120}
-          className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+          className="bg-paper px-4 py-3"
         />
         {errors.name && <p className="mt-1 text-xs font-bold text-red-500">{errors.name}</p>}
       </div>
 
       <div className="space-y-2">
         <label htmlFor="arena-desc" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Descrição</label>
-        <textarea
+        <V2Textarea
           id="arena-desc" value={form.description} onChange={setField('description')} rows={3} maxLength={2000} placeholder="Estrutura, quadras, iluminação, estacionamento, etc."
-          className="w-full resize-y rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+          className="bg-paper px-4 py-3"
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="arena-address" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Endereço</label>
-          <input id="arena-address" value={form.address} onChange={setField('address')} maxLength={240} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-address" value={form.address} onChange={setField('address')} maxLength={240} className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-neighborhood" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Bairro</label>
-          <input id="arena-neighborhood" value={form.neighborhood} onChange={setField('neighborhood')} maxLength={120} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-neighborhood" value={form.neighborhood} onChange={setField('neighborhood')} maxLength={120} className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-city" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Cidade</label>
-          <input id="arena-city" value={form.city} onChange={setField('city')} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-city" value={form.city} onChange={setField('city')} maxLength={80} className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-state" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Estado (UF)</label>
-          <input id="arena-state" value={form.state} onChange={setField('state')} maxLength={2} placeholder="SP" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-state" value={form.state} onChange={setField('state')} maxLength={2} placeholder="SP" className="bg-paper px-4 py-3" />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="arena-phone" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Telefone</label>
-          <input id="arena-phone" value={form.contact_phone} onChange={setField('contact_phone')} maxLength={40} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-phone" value={form.contact_phone} onChange={setField('contact_phone')} maxLength={40} className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-whatsapp" className="text-2xs font-bold uppercase tracking-widest text-gray-500">WhatsApp</label>
-          <input id="arena-whatsapp" value={form.contact_whatsapp} onChange={setField('contact_whatsapp')} maxLength={40} placeholder="(11) 90000-0000" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-whatsapp" value={form.contact_whatsapp} onChange={setField('contact_whatsapp')} maxLength={40} placeholder="(11) 90000-0000" className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-email" className="text-2xs font-bold uppercase tracking-widest text-gray-500">E-mail</label>
-          <input id="arena-email" type="email" value={form.contact_email} onChange={setField('contact_email')} maxLength={160} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-email" type="email" value={form.contact_email} onChange={setField('contact_email')} maxLength={160} className="bg-paper px-4 py-3" />
           {errors.contact_email && <p className="mt-1 text-xs font-bold text-red-500">{errors.contact_email}</p>}
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-instagram" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Instagram</label>
-          <input id="arena-instagram" value={form.instagram} onChange={setField('instagram')} placeholder="@suaarena" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-instagram" value={form.instagram} onChange={setField('instagram')} placeholder="@suaarena" className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-website" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Site</label>
-          <input id="arena-website" value={form.website} onChange={setField('website')} placeholder="https://..." className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-website" value={form.website} onChange={setField('website')} placeholder="https://..." className="bg-paper px-4 py-3" />
         </div>
         <div className="space-y-2">
           <label htmlFor="arena-courts" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nº de quadras</label>
-          <input id="arena-courts" type="number" min="0" value={form.court_count} onChange={setField('court_count')} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <V2Input id="arena-courts" type="number" min="0" value={form.court_count} onChange={setField('court_count')} className="bg-paper px-4 py-3" />
         </div>
       </div>
 
       <div className="space-y-2">
         <label htmlFor="arena-hours" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Horário de funcionamento</label>
-        <input id="arena-hours" value={form.hours} onChange={setField('hours')} maxLength={400} placeholder="Seg–Sex 6h–23h · Sáb–Dom 7h–20h" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+        <V2Input id="arena-hours" value={form.hours} onChange={setField('hours')} maxLength={400} placeholder="Seg–Sex 6h–23h · Sáb–Dom 7h–20h" className="bg-paper px-4 py-3" />
       </div>
 
       {/* Sprint 3 ARE-18: Termos de uso / regras da casa */}
@@ -87,14 +87,14 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
         <label htmlFor="arena-house-rules" className="text-2xs font-bold uppercase tracking-widest text-gray-500">
           Regras da casa (público)
         </label>
-        <textarea
+        <V2Textarea
           id="arena-house-rules"
           value={form.house_rules_md || ''}
           onChange={setField('house_rules_md')}
           rows={4}
           maxLength={2000}
           placeholder="Regras, política de cancelamento, exigência de uso de equipamento, código de conduta, etc. Aparece na página pública da arena."
-          className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+          className="bg-paper px-4 py-3"
         />
         <p className="text-2xs text-gray-500">
           {(form.house_rules_md || '').length}/2000. Exibido em /arenas/:id → seção &quot;Regras&quot;.

@@ -18,6 +18,7 @@ const TETOS = {
   'text-[Npx]': 0,
   'emerald/orange/rose/sky': 0,
   'cartão à mão': 68,
+  'campo cru': 0,
   '<button> sem type': 250,
   'PERMANENT_FEATURE.': 116,
 };
@@ -63,6 +64,12 @@ describe('⭐ a dívida de design só desce', () => {
     // à mão de novo é o que fez 393 cópias divergirem em raio, sombra e padding.
     const foraDaUi = v2.filter((p) => !p.includes(`${path.sep}ui${path.sep}`));
     expect(conta(foraDaUi, /rounded-(?:3xl|4xl) border border-gray-100 bg-paper/g)).toBeLessThanOrEqual(TETOS['cartão à mão']);
+  });
+
+  it('campo de formulário escrito à mão (input/select/textarea com a borda do V2Input) fora de src/v2/ui', () => {
+    // O campo é V2Input/V2Select/V2Textarea: um foco, um disabled, um placeholder.
+    const foraDaUi = v2.filter((p) => !p.includes(`${path.sep}ui${path.sep}`));
+    expect(conta(foraDaUi, /<(?:input|select|textarea)\b[^>]*className="[^"]*rounded-(?:2xl|md) border border-(?:gray-200|input)/g)).toBeLessThanOrEqual(TETOS['campo cru']);
   });
 
   it('<button> sem type em src/v2', () => {

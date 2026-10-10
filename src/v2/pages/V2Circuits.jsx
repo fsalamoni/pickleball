@@ -13,10 +13,7 @@ import { toast } from 'sonner';
 import { Trophy, Plus, Calendar } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCircuits, useCreateCircuit } from '@/modules/circuits/hooks/useCircuits';
-import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea,
-  V2Skeleton,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton } from '@/v2/ui/primitives';
 
 function CreateCircuitForm({ onClose }) {
   const [form, setForm] = useState({
@@ -61,8 +58,8 @@ function CreateCircuitForm({ onClose }) {
           <V2Textarea value={form.description} onChange={setField('description')} maxLength={500} placeholder="4 etapas com pontuação acumulada" />
         </V2Field>
         <div className="grid grid-cols-2 gap-2">
-          <V2Field label="Início"><input type="date" value={form.start_date} onChange={setField('start_date')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm outline-none" /></V2Field>
-          <V2Field label="Fim"><input type="date" value={form.end_date} onChange={setField('end_date')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm outline-none" /></V2Field>
+          <V2Field label="Início"><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
+          <V2Field label="Fim"><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
         </div>
         <div className="flex justify-end gap-2">
           <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>

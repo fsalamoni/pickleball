@@ -123,19 +123,7 @@ import {
 } from '@/modules/partners/domain/affiliate';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { cn } from '@/core/lib/utils';
-import {
-  V2Badge,
-  V2Button,
-  V2EmptyState,
-  V2Field,
-  V2Input,
-  V2PageIntro,
-  V2Skeleton,
-  V2StatCard,
-  V2Surface,
-  V2Textarea,
-  V2Toggle,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Textarea, V2Toggle, V2Select } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 
 // Navegação em dois níveis: seções amplas por tema, cada uma com sub-abas.
@@ -750,15 +738,15 @@ function PartnersTab() {
           </V2Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <V2Field label="Categoria">
-              <select
-                className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 text-sm"
+              <V2Select
+                className="h-11 px-3"
                 value={form.category}
                 onChange={(e) => set({ category: e.target.value })}
               >
                 {Object.entries(AFFILIATE_CATEGORY_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
-              </select>
+              </V2Select>
             </V2Field>
             <V2Field label="Ordem" hint="Menor aparece primeiro">
               <V2Input type="number" value={form.sort_order} onChange={(e) => set({ sort_order: Number(e.target.value) })} />
