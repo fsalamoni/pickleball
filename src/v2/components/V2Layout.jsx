@@ -41,6 +41,14 @@ import {
   Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { bottomNavItems } from '@/core/domain/bottomNav';
+import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import { recordEvent } from '@/core/services/observabilityService';
+import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
+import { myCurrentTournaments } from '@/modules/home/domain/homeTournaments';
+import { hojeLocal } from '@/modules/home/domain/freshness';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 import NotificationsBell, { NOTIFICATIONS_PATH } from '@/v2/components/notifications/NotificationsBell';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
@@ -129,7 +137,7 @@ function resolvePageTitle(pathname, { userHubOn = false } = {}) {
   return match ? match[1] : null;
 }
 
-function useV2Nav() {
+function useV2Nav({ navV3 = false } = {}) {
   const { isPlatformAdmin, user } = useAuth();
   const performanceOn = true;
   const ratingOn = true;
@@ -148,7 +156,7 @@ function useV2Nav() {
   const legalCenterOn = true;
   const settingsPageOn = true;
   const tournamentAdminConsoleOn = true;
-  const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
+  const { arenas: myArenas, pendingByArena, totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
   const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
@@ -269,12 +277,23 @@ function useV2Nav() {
           { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         ],
       }),
+      // Navegação v3: quem GERE arena tem a porta dela no 1º nível, acima de
+      // "Arenas" (que é a lista para quem reserva). Com 2+ arenas, uma aba cada.
+      navV3 && showMyArenas && hub({
+        id: 'minha-arena', label: myArenas.length === 1 ? (myArenas[0].name || 'Minha arena') : 'Minhas arenas',
+        icon: LayoutDashboard, to: `/arenas/${myArenas[0].id}/gerir`,
+        badge: myPendingBookings,
+        badgeHint: myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
+        children: myArenas.map((a) => ({
+          to: `/arenas/${a.id}/gerir`, label: a.name || 'Arena', icon: LayoutDashboard, badge: pendingByArena[a.id] || 0,
+        })),
+      }),
       (arenasOn || isPlatformAdmin) && hub({
         id: 'arenas', dica: 'menu-arenas', label: 'Arenas', icon: Building2, to: '/arenas',
-        badge: showMyArenas ? myPendingBookings : 0,
-        badgeHint: showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
+        badge: !navV3 && showMyArenas ? myPendingBookings : 0,
+        badgeHint: !navV3 && showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
         children: [
-          { to: '/arenas', label: 'Explorar quadras', icon: MapPin },
+          { to: '/arenas', label: navV3 ? 'Reservar quadra' : 'Explorar quadras', icon: MapPin },
           arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
         ],
       }),
@@ -283,8 +302,13 @@ function useV2Nav() {
         children: [
           coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
           coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
-          isCoach && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
+          // Na navegação v3 o painel do professor é hub próprio (abaixo).
+          isCoach && !navV3 && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
         ],
+      }),
+      navV3 && isCoach && hub({
+        id: 'professor', label: 'Painel do professor', icon: GraduationCap, to: '/aulas',
+        children: [{ to: '/aulas', label: 'Painel do professor', icon: GraduationCap }],
       }),
       hub({
         id: 'aprender', dica: 'menu-pickleball', label: 'Pickleball', icon: BookOpen, to: '/regras',
@@ -316,9 +340,9 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, myArenas, pendingByArena]);
 
-  return { sections, hubs };
+  return { sections, hubs, myArenas, pendingByArena, isCoach };
 }
 
 /** Hub ativo: o que contém a subpágina mais específica que casa com o path. */
@@ -391,7 +415,29 @@ const BOTTOM_NAV_ITEMS = [
   { to: '/perfil', label: 'Perfil', icon: User },
 ];
 
-function MobileBottomNav({ pathname, userHubOn = false }) {
+const BOTTOM_NAV_ICONS = {
+  inicio: LayoutGrid, jogar: Swords, arenas: Building2, torneios: Trophy, treino: Dumbbell,
+  painel: GraduationCap, central: LayoutDashboard, 'minha-area': User,
+};
+
+/**
+ * O quarto item da barra v3 muda com a pessoa (core/domain/bottomNav.js). O
+ * Treino "recente" é preferência do navegador, por uid — zero banco.
+ */
+function useBottomNavV3({ uid, pathname, arenas, pendingByArena, ehProfessor }) {
+  const { data: meusTorneios = [] } = useMyTournaments();
+  useEffect(() => {
+    if (uid && pathname.startsWith('/treino')) writeViewPreference(uid, 'treino:ultimo-acesso', String(Date.now()));
+  }, [uid, pathname]);
+  return useMemo(() => bottomNavItems({
+    arenas: (arenas || []).map((a) => ({ id: a.id, pendencias: pendingByArena?.[a.id] || 0 })),
+    ehProfessor,
+    temTorneioAtual: myCurrentTournaments(meusTorneios, hojeLocal()).length > 0,
+    treinoUltimoAcessoMs: Number(readViewPreference(uid, 'treino:ultimo-acesso')) || null,
+  }).map((i) => ({ ...i, icon: BOTTOM_NAV_ICONS[i.icon] || LayoutGrid })), [arenas, pendingByArena, ehProfessor, meusTorneios, uid]);
+}
+
+function MobileBottomNav({ pathname, userHubOn = false, items = BOTTOM_NAV_ITEMS }) {
   return (
     <nav
       aria-label="Navegação principal"
@@ -399,22 +445,29 @@ function MobileBottomNav({ pathname, userHubOn = false }) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex h-16 max-w-lg items-stretch justify-around">
-        {BOTTOM_NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item);
+          const badge = typeof item.badge === 'number' && item.badge > 0 ? item.badge : 0;
           return (
             <Link
               key={item.to}
               to={item.to}
               data-dica={item.dica}
+              onClick={() => recordEvent('nav_bottom_click', { item: item.id || item.to })}
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors',
                 active ? 'text-ink' : 'text-gray-400',
               )}
             >
-              <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
+              <span className={cn('relative flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
                 <Icon className={cn('h-5 w-5', active && 'text-acid')} />
+                {badge > 0 && (
+                  <span className="absolute -right-0.5 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-[11px] font-bold leading-none text-ink">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </span>
               {userHubOn && item.to === '/perfil' ? 'Minha área' : item.label}
             </Link>
@@ -493,7 +546,7 @@ function HubItem({ hub, active, collapsed, onClick }) {
   return (
     <Link
       to={hub.to}
-      onClick={onClick}
+      onClick={(e) => { recordEvent('nav_hub_click', { hub: hub.id, origem: 'lateral' }); onClick?.(e); }}
       data-dica={hub.dica}
       title={collapsed ? hub.label : hub.badgeHint || undefined}
       aria-label={collapsed ? hub.label : undefined}
@@ -559,7 +612,11 @@ export default function V2Layout({ children }) {
   const navigate = useNavigate();
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
-  const { sections, hubs } = useV2Nav();
+  const navV3 = useFeatureFlag(FEATURE_FLAG.NAV_V3);
+  const { sections, hubs, myArenas, pendingByArena, isCoach } = useV2Nav({ navV3 });
+  const bottomItemsV3 = useBottomNavV3({
+    uid: user?.uid, pathname: location.pathname, arenas: myArenas, pendingByArena, ehProfessor: isCoach,
+  });
   const userHubOn = true;
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -769,10 +826,14 @@ export default function V2Layout({ children }) {
       )}
 
       <div className="relative flex w-full flex-1 flex-col">
-        <header className={cn(
-          'glass z-20 flex h-20 w-full items-center justify-between px-4 sm:px-6 lg:px-10',
-          navHubsOn ? 'flex-shrink-0 border-b border-gray-100' : 'absolute top-0',
-        )}>
+        <header
+          className={cn(
+            'glass z-20 flex w-full items-center justify-between px-4 sm:px-6 lg:px-10',
+            navV3 ? 'h-14 lg:h-20' : 'h-20',
+            navHubsOn ? 'flex-shrink-0 border-b border-gray-100' : 'absolute top-0',
+          )}
+          style={navV3 ? { paddingTop: 'env(safe-area-inset-top)', boxSizing: 'content-box' } : undefined}
+        >
           <button
             onClick={() => setMobileOpen(true)}
             data-dica="menu-celular"
@@ -814,6 +875,17 @@ export default function V2Layout({ children }) {
             {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
                 elas desligadas — é por ele que a pessoa liga. */}
             <BotaoDicas />
+            {/* Navegação v3: Mensagens saiu da barra inferior e mora aqui, ao lado do sino. */}
+            {navV3 && (
+              <Link
+                to="/chat"
+                aria-label="Mensagens"
+                title="Mensagens"
+                className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Link>
+            )}
             <NotificationsBell />
             {userMenuOn && (
               <UserMenu
@@ -826,10 +898,10 @@ export default function V2Layout({ children }) {
             <Link
               to="/procura-jogo"
               data-dica="botao-procuro-jogo"
-              aria-label="Procuro jogo"
+              aria-label={navV3 ? 'Entrar num jogo' : 'Procuro jogo'}
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
             >
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Procuro jogo</span>
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{navV3 ? 'Entrar num jogo' : 'Procuro jogo'}</span>
             </Link>
           </div>
         </header>
@@ -850,7 +922,9 @@ export default function V2Layout({ children }) {
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>
         )}
-        {bottomNavOn && <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} />}
+        {bottomNavOn && (
+          <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} items={navV3 ? bottomItemsV3 : BOTTOM_NAV_ITEMS} />
+        )}
       </div>
 
       <div
@@ -873,6 +947,22 @@ export default function V2Layout({ children }) {
           </button>
         </div>
         <div className="hide-scrollbar flex-1 overflow-y-auto px-6 pb-10">
+          {navV3 && (
+            <form onSubmit={handleSearch} className="mb-4">
+              <label htmlFor="busca-gaveta" className="sr-only">Buscar</label>
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
+                <input
+                  id="busca-gaveta"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full rounded-full border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-base text-white placeholder:text-white/60 focus:border-acid focus:outline-none"
+                  placeholder="Buscar atletas, torneios, arenas…"
+                />
+              </div>
+            </form>
+          )}
           {navHubsOn ? (
             /* Hubs: lista enxuta (nível 1). As subpáginas aparecem na barra
                superior ao entrar no hub — igual ao desktop. */
@@ -885,7 +975,7 @@ export default function V2Layout({ children }) {
                   <Link
                     key={hub.id}
                     to={hub.to}
-                    onClick={closeMobile}
+                    onClick={() => { recordEvent('nav_hub_click', { hub: hub.id, origem: 'gaveta' }); closeMobile(); }}
                     data-dica={hub.dica}
                     className={cn(
                       'flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold transition-colors',

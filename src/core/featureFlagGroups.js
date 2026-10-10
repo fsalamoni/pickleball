@@ -25,6 +25,11 @@ export const FLAG_GROUPS = Object.freeze([
     // admin procura por eles.
     keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT],
   },
+  {
+    id: 'navigation',
+    label: 'Navegação e aparência',
+    keys: [FEATURE_FLAG.NAV_V3],
+  },
 ]);
 
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });
