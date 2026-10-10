@@ -12,6 +12,7 @@
  * importantes nunca ficam sem porta por causa de uma frente com muitos atalhos.
  */
 import { HOME_FOCUS } from './homeProfile.js';
+import { ROTULOS_ANTIGOS } from '../../../core/domain/navRotulos.js';
 import { agendaDayLabel } from './homeAgenda.js';
 
 /** Quantos atalhos cabem sem virar um menu. */
@@ -33,6 +34,8 @@ export const SHORTCUTS_MAX = 8;
  * @returns {Array<{ id, label, hint, to, icon, badge? }>}
  */
 export function homeShortcuts(foci = [], ctx = {}) {
+  // Vocabulário da navegação (nav_v3): a tela passa `rotulos`; sem ele, os de sempre.
+  const rotulos = { ...ROTULOS_ANTIGOS, ...(ctx.rotulos || {}) };
   const arenas = (ctx.arenas || []).filter((a) => a?.id).slice(0, 2);
   const porFrente = {
     [HOME_FOCUS.ARENA]: arenas.length > 0
@@ -54,15 +57,15 @@ export function homeShortcuts(foci = [], ctx = {}) {
       : [{ id: 'professor:ativar', label: 'Ativar perfil de professor', hint: 'Receba pedidos de aula', to: '/perfil/editar', icon: 'GraduationCap' }],
     [HOME_FOCUS.ORGANIZAR]: [
       { id: 'torneio:criar', label: 'Criar torneio', hint: 'Do rascunho à inscrição', to: '/torneios/criar', icon: 'ClipboardList' },
-      { id: 'torneio:meus', label: 'Torneios que organizo', hint: 'Gestão de cada um', to: '/perfil/torneios', icon: 'Trophy' },
+      { id: 'torneio:meus', label: rotulos.meusTorneios, hint: 'Gestão de cada um', to: '/perfil/torneios', icon: 'Trophy' },
     ],
     [HOME_FOCUS.COMPETIR]: [
       { id: 'torneios', label: 'Torneios abertos', hint: 'Inscreva-se', to: '/torneios', icon: 'Trophy' },
     ],
     [HOME_FOCUS.JOGAR]: [
-      { id: 'procura-jogo', label: 'Procura-se jogo', hint: 'Jogos com vaga', to: '/procura-jogo', icon: 'Megaphone' },
+      { id: 'procura-jogo', label: rotulos.vagas, hint: 'Jogos com vaga', to: '/procura-jogo', icon: 'Megaphone' },
       { id: 'dia-de-jogo:criar', label: 'Criar dia de jogo', hint: 'Monte a rodada', to: '/dia-de-jogo?criar=1', icon: 'Dices' },
-      { id: 'jogadores', label: 'Encontrar jogadores', hint: 'Do seu nível', to: '/encontrar-jogadores', icon: 'Users' },
+      { id: 'jogadores', label: rotulos.pessoas, hint: 'Do seu nível', to: '/encontrar-jogadores', icon: 'Users' },
     ],
     [HOME_FOCUS.TREINAR]: [
       { id: 'treino', label: 'Treino de hoje', hint: 'Rotina, biblioteca e diário', to: '/treino', icon: 'Dumbbell' },

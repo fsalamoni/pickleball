@@ -73,6 +73,7 @@ import HomeLessonsSection from './HomeLessonsSection';
 import HomeClubsSection from './HomeClubsSection';
 import HomeCommunitySection from './HomeCommunitySection';
 import HomeCardsEmpty from '../cards/HomeCardsEmpty';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { V2Skeleton } from '@/v2/ui/primitives';
 
 // O seletor dos cards só baixa quando a pessoa abre "Personalizar".
@@ -134,13 +135,15 @@ export default function V2PersonalHome() {
   }), [userProfile?.interests, treinoOn, arenas.length, ehProfessor, organizando, competindo, temClubes, agenda.sinais]);
 
   const secoes = useMemo(() => homeSectionsFor(foci), [foci]);
+  const rotulos = useNavRotulos();
   const atalhos = useMemo(() => homeShortcuts(foci, {
+    rotulos,
     arenas: arenas.map((a) => ({ id: a.id, name: a.name, pending: pendingByArena?.[a.id] || 0 })),
     ehProfessor,
     isPlatformAdmin,
     arenasDesconhecidas: arenasQ.isError,
     professorDesconhecido: coachQ.isError,
-  }), [foci, arenas, pendingByArena, ehProfessor, isPlatformAdmin, arenasQ.isError, coachQ.isError]);
+  }), [foci, arenas, pendingByArena, ehProfessor, isPlatformAdmin, arenasQ.isError, coachQ.isError, rotulos]);
   const sugestoes = useMemo(
     () => atalhos.filter((a) => SUGESTOES_AGENDA_LIVRE.has(a.id)),
     [atalhos],

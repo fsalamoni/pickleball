@@ -44,6 +44,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { bottomNavItems } from '@/core/domain/bottomNav';
+import { navRotulos } from '@/core/domain/navRotulos';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { recordEvent } from '@/core/services/observabilityService';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -93,8 +94,8 @@ const PAGE_TITLES = [
   ['/atletas', 'Atletas'],
   ['/atleta/', 'Atleta'],
   ['/ranking', 'Ranking'],
-  ['/encontrar-jogadores', 'Encontrar jogadores'],
-  ['/procura-jogo', 'Procura-se jogo'],
+  ['/encontrar-jogadores', (r) => r.pessoas],
+  ['/procura-jogo', (r) => r.vagas],
   ['/dia-de-jogo', 'Dia de jogo'],
   ['/clubes', 'Clubes'],
   ['/novidades', 'Comunidade'],
@@ -112,7 +113,7 @@ const PAGE_TITLES = [
   ['/gamification/como-funciona', 'Como funciona a gamificação'],
   ['/gamification/revisao', 'Revisão da gamificação'],
   ['/gamification/configuracoes', 'Preferências da gamificação'],
-  ['/gamification', 'Gamificação'],
+  ['/gamification', (r) => r.gamificacao],
   ['/hall-da-fama', 'Hall da Fama'],
   ['/conquistas', 'Conquistas'],
   ['/vinculos', 'Vínculos'],
@@ -129,12 +130,14 @@ function jogarHubTo({ gameDayOn, openGamesOn }) {
   return openGamesOn ? '/procura-jogo' : '/encontrar-jogadores';
 }
 
-function resolvePageTitle(pathname, { userHubOn = false } = {}) {
+function resolvePageTitle(pathname, { userHubOn = false, navV3 = false } = {}) {
   if (pathname === '/') return 'Visão Geral';
   const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
   // Minha área (flag `user_hub`): o `/perfil` é a central da pessoa.
   if (match && userHubOn && match[0] === '/perfil') return 'Minha área';
-  return match ? match[1] : null;
+  if (!match) return null;
+  // Rótulo que muda com o vocabulário da navegação (nav_v3) é função.
+  return typeof match[1] === 'function' ? match[1](navRotulos(navV3)) : match[1];
 }
 
 function useV2Nav({ navV3 = false } = {}) {
@@ -157,6 +160,7 @@ function useV2Nav({ navV3 = false } = {}) {
   const settingsPageOn = true;
   const tournamentAdminConsoleOn = true;
   const { arenas: myArenas, pendingByArena, totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
+  const rotulos = navRotulos(navV3);
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
   const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
@@ -187,8 +191,8 @@ function useV2Nav({ navV3 = false } = {}) {
         { to: '/atletas', label: 'Atletas', icon: Users },
         ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
         doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
-        ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
-        openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
+        ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: rotulos.pessoas, icon: Swords },
+        openGamesOn && { to: '/procura-jogo', label: rotulos.vagas, icon: Megaphone },
         { to: '/clubes', label: 'Clubes', icon: Building2 },
         affiliatesOn && { to: '/parceiros', label: 'Parceiros', icon: HeartHandshake },
       ].filter(Boolean),
@@ -199,7 +203,7 @@ function useV2Nav({ navV3 = false } = {}) {
         { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
-        gamificationOn && { to: '/gamification', label: 'Gamificação', icon: Sparkles },
+        gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
         showMyArenas && {
           to: '/arenas',
           label: 'Minhas arenas',
@@ -214,7 +218,7 @@ function useV2Nav({ navV3 = false } = {}) {
         coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu Perfil', icon: User },
         trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
-        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: userHubOn ? 'Torneios que organizo' : 'Meus torneios', icon: Trophy },
+        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: navV3 ? rotulos.meusTorneios : (userHubOn ? 'Torneios que organizo' : 'Meus torneios'), icon: Trophy },
         settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
       ].filter(Boolean),
     },
@@ -234,7 +238,7 @@ function useV2Nav({ navV3 = false } = {}) {
         { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, rotulos]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -253,7 +257,7 @@ function useV2Nav({ navV3 = false } = {}) {
           ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
           doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
           // Gamificação V2: a temporada do mês, os desafios e o Hall da Fama são competição.
-          gamificationOn && { to: '/gamification', label: 'Gamificação', icon: Sparkles },
+          gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
           gamificationOn && { to: '/hall-da-fama', label: 'Hall da Fama', icon: Crown },
         ],
       }),
@@ -263,9 +267,9 @@ function useV2Nav({ navV3 = false } = {}) {
       hub({
         id: 'jogar', dica: 'menu-jogar', label: 'Jogar', icon: Swords, to: jogarHubTo({ gameDayOn, openGamesOn }),
         children: [
-          gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
-          openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
-          ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
+          gameDayOn && { to: '/dia-de-jogo', label: rotulos.abaDiaDeJogo, icon: Dices },
+          openGamesOn && { to: '/procura-jogo', label: rotulos.vagas, icon: Megaphone },
+          ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: rotulos.pessoas, icon: Swords },
         ],
       }),
       hub({
@@ -293,7 +297,7 @@ function useV2Nav({ navV3 = false } = {}) {
         badge: !navV3 && showMyArenas ? myPendingBookings : 0,
         badgeHint: !navV3 && showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
         children: [
-          { to: '/arenas', label: navV3 ? 'Reservar quadra' : 'Explorar quadras', icon: MapPin },
+          { to: '/arenas', label: rotulos.reservar, icon: MapPin },
           arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
         ],
       }),
@@ -310,7 +314,10 @@ function useV2Nav({ navV3 = false } = {}) {
         id: 'professor', label: 'Painel do professor', icon: GraduationCap, to: '/aulas',
         children: [{ to: '/aulas', label: 'Painel do professor', icon: GraduationCap }],
       }),
-      hub({
+      // Navegação v3 (§5.1): "Pickleball" sai do 1º nível — regras, nivelamento e
+      // história continuam na Ajuda (artigo "Pickleball — regras, nivelamento…")
+      // e nas rotas de sempre; o menu fica com o que a pessoa FAZ.
+      !navV3 && hub({
         id: 'aprender', dica: 'menu-pickleball', label: 'Pickleball', icon: BookOpen, to: '/regras',
         children: [
           { to: '/regras', label: 'Regras', icon: BookOpen },
@@ -326,7 +333,7 @@ function useV2Nav({ navV3 = false } = {}) {
           trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: 'Conquistas', icon: Award },
-          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: userHubOn ? 'Torneios que organizo' : 'Meus torneios', icon: Trophy },
+          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: navV3 ? rotulos.meusTorneios : (userHubOn ? 'Torneios que organizo' : 'Meus torneios'), icon: Trophy },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
       }),
@@ -340,7 +347,7 @@ function useV2Nav({ navV3 = false } = {}) {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, myArenas, pendingByArena]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, myArenas, pendingByArena, rotulos]);
 
   return { sections, hubs, myArenas, pendingByArena, isCoach };
 }
@@ -675,9 +682,9 @@ export default function V2Layout({ children }) {
   const globalSearchOn = true;
   useEffect(() => {
     if (!pageTitlesOn) return;
-    const title = resolvePageTitle(location.pathname, { userHubOn });
+    const title = resolvePageTitle(location.pathname, { userHubOn, navV3 });
     document.title = title ? `${title} · ${BRAND}` : BRAND;
-  }, [pageTitlesOn, location.pathname, userHubOn]);
+  }, [pageTitlesOn, location.pathname, userHubOn, navV3]);
 
   const closeMobile = () => setMobileOpen(false);
 

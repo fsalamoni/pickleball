@@ -24,6 +24,17 @@ describe('navegação v3 (nav_v3)', () => {
     }
   });
 
+  it('o vocabulário do menu sai de navRotulos (§5.1), nunca de texto na tela', () => {
+    expect(src).toMatch(/import \{ navRotulos \} from '@\/core\/domain\/navRotulos'/);
+    for (const chave of ['abaDiaDeJogo', 'vagas', 'pessoas', 'reservar', 'gamificacao', 'meusTorneios']) {
+      expect(src, chave).toContain(`rotulos.${chave}`);
+    }
+    // Os nomes antigos não voltam escritos à mão no menu.
+    expect(src).not.toMatch(/label: 'Procura-se jogo'|label: 'Encontrar jogadores'|label: 'Explorar quadras'/);
+    // "Pickleball" sai do 1º nível só com a flag.
+    expect(src).toMatch(/!navV3 && hub\(\{\n\s+id: 'aprender'/);
+  });
+
   it('o toque na barra e nos hubs é medido (nav_bottom_click / nav_hub_click)', () => {
     expect(src).toMatch(/recordEvent\('nav_bottom_click'/);
     expect((src.match(/recordEvent\('nav_hub_click'/g) || []).length).toBeGreaterThanOrEqual(2);

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useMyPlayerRating } from '@/modules/rating/hooks/useRating';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -224,6 +225,7 @@ function TreinoSecao({ ctx }) {
 
 function JogoSecao() {
   const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const rotulos = useNavRotulos();
   return (
     <Bloco id="jogo" icon={BarChart3} title="Jogo">
       <Atalhos
@@ -232,7 +234,7 @@ function JogoSecao() {
           { to: '/ranking', label: 'Ranking', descricao: 'Nacional, duplas e 2.0–8.0', icon: Trophy },
           { to: '/meus-jogos', label: 'Meus jogos', descricao: 'As partidas que você tem marcadas', icon: Swords },
           { to: '/dia-de-jogo', label: 'Dia de jogo', descricao: 'Os seus dias e os com vaga', icon: CalendarDays },
-          { to: '/procura-jogo', label: 'Procura-se jogo', descricao: 'Jogos abertos e convites', icon: Search },
+          { to: '/procura-jogo', label: rotulos.vagas, descricao: 'Jogos abertos e convites', icon: Search },
           gamificationOn && { to: '/conquistas', label: 'Conquistas', descricao: 'Medalhas e progresso', icon: Award },
         ]}
       />

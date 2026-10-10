@@ -8,11 +8,13 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, Users, Zap } from 'lucide-react';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { V2Avatar, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeSection } from './HomeSection';
 
 export default function HomeCommunitySection({ reason, perfil, uid }) {
+  const rotulos = useNavRotulos();
   const atletas = useAthletes(true);
   const perto = useMemo(() => (atletas.data || [])
     .filter((a) => a && (a.uid || a.id) !== uid)
@@ -51,7 +53,7 @@ export default function HomeCommunitySection({ reason, perfil, uid }) {
         <div className="flex flex-wrap gap-2">
           <HomeAction to="/novidades"><Zap className="h-3.5 w-3.5" aria-hidden="true" /> Novidades</HomeAction>
           <HomeAction to="/chat"><MessageSquare className="h-3.5 w-3.5" aria-hidden="true" /> Mensagens</HomeAction>
-          <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> Encontrar jogadores</HomeAction>
+          <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {rotulos.pessoas}</HomeAction>
         </div>
       </div>
     </HomeSection>
