@@ -13,7 +13,7 @@
 
 import {
   collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp,
-  setDoc, updateDoc, where,
+  setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
@@ -23,6 +23,12 @@ import {
 } from '../domain/student.js';
 
 export const COACH_STUDENT_COLLECTION = 'coach_students';
+/**
+ * Notas privadas do professor: `coach_student_notes/{coachId_studentId}`. O
+ * vínculo é legível pelo ALUNO e o Firestore não esconde campo, então a nota
+ * mora numa coleção que só o professor (e o admin) lê.
+ */
+export const COACH_STUDENT_NOTES = 'coach_student_notes';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -30,8 +36,34 @@ const str = (v) => String(v ?? '').trim();
 export async function listCoachStudents(coachId) {
   if (!coachId) return [];
   const q = query(collection(db, COACH_STUDENT_COLLECTION), where('coach_id', '==', coachId));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Falhar a leitura das notas falha a lista: salvar uma ficha com a nota em
+  // branco por engano apagaria o que o professor escreveu.
+  const [snap, notasSnap] = await Promise.all([
+    getDocs(q),
+    getDocs(query(collection(db, COACH_STUDENT_NOTES), where('coach_id', '==', coachId))),
+  ]);
+  const notas = new Map(notasSnap.docs.map((d) => [d.id, d.data()?.text || '']));
+  const fichas = snap.docs.map((d) => {
+    const data = d.data();
+    return { id: d.id, ...data, private_notes: notas.has(d.id) ? notas.get(d.id) : (data.private_notes || '') };
+  });
+  migrarNotasLegadas(coachId, snap.docs, notas);
+  return fichas;
+}
+
+/** Nota que ainda mora no vínculo (visível ao aluno) vai para a coleção privada. Melhor esforço. */
+function migrarNotasLegadas(coachId, docs, notas) {
+  const pendentes = docs.filter((d) => d.data()?.private_notes && !notas.has(d.id));
+  if (!pendentes.length) return;
+  const batch = writeBatch(db);
+  pendentes.slice(0, 200).forEach((d) => {
+    const data = d.data();
+    batch.set(doc(db, COACH_STUDENT_NOTES, d.id), {
+      coach_id: coachId, student_id: data.student_id, text: data.private_notes, updated_at: serverTimestamp(),
+    });
+    batch.update(doc(db, COACH_STUDENT_COLLECTION, d.id), { private_notes: deleteField() });
+  });
+  batch.commit().catch(() => {});
 }
 
 /** Vínculos de um aluno (professores que o adicionaram). */
@@ -68,8 +100,9 @@ export async function upsertStudent(coachId, input, actor) {
   if (actor.uid !== coachId && !actor.isPlatformAdmin) {
     throw new Error('Sem permissão para editar este aluno.');
   }
-  const { valid, error, value } = normalizeStudent({ ...input, coach_id: coachId });
+  const { valid, error, value: completo } = normalizeStudent({ ...input, coach_id: coachId });
   if (!valid) throw new Error(error);
+  const { private_notes: notas, ...value } = completo;
 
   const id = studentDocId(coachId, value.student_id);
   const existing = await getDoc(doc(db, COACH_STUDENT_COLLECTION, id));
@@ -84,7 +117,11 @@ export async function upsertStudent(coachId, input, actor) {
     status,
     updated_at: serverTimestamp(),
     ...(isNew ? { joined_at: serverTimestamp(), invited_by: actor.uid } : {}),
+    private_notes: deleteField(), // nunca no vínculo, que o aluno lê
   }, { merge: true });
+  await setDoc(doc(db, COACH_STUDENT_NOTES, id), {
+    coach_id: coachId, student_id: value.student_id, text: notas, updated_at: serverTimestamp(),
+  });
 
   if (isNew && value.student_id) {
     notifyUsers([value.student_id], {
@@ -180,6 +217,7 @@ export async function removeStudent(student, actor) {
     throw new Error('O vínculo encerrado fica no histórico.');
   }
   const id = studentDocId(student.coach_id, student.student_id);
+  await deleteDoc(doc(db, COACH_STUDENT_NOTES, id)).catch(() => {});
   await deleteDoc(doc(db, COACH_STUDENT_COLLECTION, id));
   await createAuditLog({ action: 'coach_student_removed', actor, details: { coach_id: student.coach_id, student_id: student.student_id } });
 }

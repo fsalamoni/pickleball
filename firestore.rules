@@ -2197,6 +2197,21 @@ service cloud.firestore {
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
+    // coach_student_notes/{coachId_studentId} — notas privadas do professor sobre
+    // o aluno. O vínculo (`coach_students`) é legível pelo aluno e regra não
+    // esconde campo; por isso a nota mora aqui, só do professor e do admin.
+    // Lê-se por CONSULTA (`coach_id == uid`): `get` de id inexistente seria recusado.
+    match /coach_student_notes/{noteId} {
+      allow read: if isAuthed() && (request.auth.uid == resource.data.coach_id || isPlatformAdmin());
+      allow create: if isAuthed()
+        && noteId == request.resource.data.coach_id + '_' + request.resource.data.student_id
+        && (request.auth.uid == request.resource.data.coach_id || isPlatformAdmin());
+      allow update: if isAuthed()
+        && request.resource.data.coach_id == resource.data.coach_id
+        && request.resource.data.student_id == resource.data.student_id
+        && (request.auth.uid == resource.data.coach_id || isPlatformAdmin());
+      allow delete: if isAuthed() && (request.auth.uid == resource.data.coach_id || isPlatformAdmin());
+    }
     // coach_students/{coachId_studentId} — vínculo aluno↔professor.
     // Lê o professor e o aluno. Cria/edita/remove o professor; o aluno pode
     // atualizar (aceitar o convite mudando o próprio status).

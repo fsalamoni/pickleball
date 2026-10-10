@@ -155,6 +155,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'arena_nps_responses', field: 'user_id', label: 'Respostas de satisfação' },
   { col: 'coach_arenas', field: 'coach_id', label: 'Parcerias de professor com arena' },
   { col: 'coach_students', field: 'coach_id', label: 'Lista de alunos (como professor)' },
+  { col: 'coach_student_notes', field: 'coach_id', label: 'Notas privadas sobre alunos (como professor)' },
   { col: 'coach_clinic_signups', field: 'athlete_id', label: 'Inscrições em clínica' },
   // Notificação de OUTRA pessoa que cita esta conta ("Fulano te convidou…").
   // É operacional e expira em 90 dias; o texto costuma trazer o nome, então
