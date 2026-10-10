@@ -133,6 +133,8 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     const input = { ...f, source: fonte };
     const { valid, error, value } = normalizeDebrief(input);
     if (!valid) { setErro(error); return; }
+    // Sem a biblioteca inteira a sugestão sairia vazia e diria que não há drills.
+    if (visiveis.incompleto || meta.isError) { setErro('Parte da biblioteca não carregou. Tente de novo em instantes para a semana sugerida sair completa.'); return; }
     const chave = debriefSourceKey(value.source);
     const anteriores = answeredDebriefs(history).filter((d) => debriefSourceKey(d.source) !== chave);
     const sugestao = suggestWeek({
