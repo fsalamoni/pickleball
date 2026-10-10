@@ -36,6 +36,7 @@ import { usePlayDiscovery } from '@/modules/games/hooks/usePlayDiscovery';
 import { PLAY_KIND, PLAY_ORIGIN, playItemsForMe } from '@/modules/games/domain/playDiscovery';
 import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { useRegionalList } from '@/core/lib/useMyRegion';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { distanceLabel } from '@/core/domain/region';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
@@ -98,6 +99,7 @@ function PlayRow({ item, selo, tomSelo, subtitulo }) {
 }
 
 export default function HomePlaySection({ reason, hoje, agora, perfil }) {
+  const rotulos = useNavRotulos();
   const jogos = usePlayDiscovery({ hoje, agora });
   // Só o que a pessoa pode fazer: o que preenche os requisitos, ou já tem.
   const paraMim = useMemo(() => playItemsForMe(jogos.itens), [jogos.itens]);
@@ -121,7 +123,7 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
   const resto = lista.length - mostrados.length;
 
   return (
-    <HomeSection id="jogar" icon={Swords} title="Jogar" reason={reason} action={{ to: '/procura-jogo', label: 'Procura-se jogo' }}>
+    <HomeSection id="jogar" icon={Swords} title="Jogar" reason={reason} action={{ to: '/procura-jogo', label: rotulos.vagas }}>
       <div className="space-y-4">
         <RegionBar regional={regional} compacta nomeItens={['jogo', 'jogos']} />
         {jogos.falhas.dias && (
@@ -173,7 +175,7 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
           {!nada && (
             <HomeAction to="/dia-de-jogo?criar=1"><Dices className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>
           )}
-          <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> Encontrar jogadores</HomeAction>
+          <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {rotulos.pessoas}</HomeAction>
         </div>
       </div>
     </HomeSection>

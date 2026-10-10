@@ -28,6 +28,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import {
   ArrowRight, CalendarDays, Clock, Dices, MapPin, Megaphone, Plus, Trophy, X,
 } from 'lucide-react';
@@ -111,6 +112,7 @@ function OpenGameCard({ g, distancia }) {
 }
 
 export default function V2OpenGames() {
+  const rotulos = useNavRotulos();
   const { ms: agora } = useRelogio(60_000);
   const hoje = hojeLocal(new Date(agora));
   const jogos = usePlayDiscovery({ hoje, agora });
@@ -144,7 +146,7 @@ export default function V2OpenGames() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
-        title="Procura-se jogo"
+        title={rotulos.vagas}
         subtitle="Dias de jogo com vaga, jogos abertos das arenas e convites — de hoje em diante."
         action={<V2Button onClick={() => setCreateOpen(true)} data-dica="procura-publicar"><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
       />

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { MapPin, Medal, Sparkles, Swords } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { rankMatchmakingCandidates, DEFAULT_MAX_RATING_DIFF } from '@/modules/rating/domain/matchmaking';
@@ -32,6 +33,7 @@ function compatTone(score) {
 
 export default function V2FindPlayers() {
   const { user, userProfile } = useAuth();
+  const rotulos = useNavRotulos();
   const smartOn = useFeatureFlag(PERMANENT_FEATURE.SMART_MATCHMAKING);
   const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
   // Diretório (lado da quadra + interesses) só é buscado no modo inteligente.
@@ -99,7 +101,7 @@ export default function V2FindPlayers() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1100px]">
-        <V2PageIntro title="Encontrar jogadores" subtitle="Parceiros e adversários do seu nível, prontos para um jogo." />
+        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível, prontos para um jogo." />
         <V2Skeleton className="h-64 rounded-4xl" />
       </div>
     );
@@ -110,7 +112,7 @@ export default function V2FindPlayers() {
   if (isError) {
     return (
       <div className="mx-auto max-w-[900px]">
-        <V2PageIntro title="Encontrar jogadores" subtitle="Parceiros e adversários do seu nível." />
+        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível." />
         <V2Surface>
           <V2ErrorState
             title="Não foi possível carregar as sugestões"
@@ -125,7 +127,7 @@ export default function V2FindPlayers() {
   if (!me) {
     return (
       <div className="mx-auto max-w-[900px]">
-        <V2PageIntro title="Encontrar jogadores" subtitle="Parceiros e adversários do seu nível." />
+        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível." />
         <V2Surface>
           <V2EmptyState
             icon={Medal}
@@ -140,7 +142,7 @@ export default function V2FindPlayers() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
-        title="Encontrar jogadores"
+        title={rotulos.pessoas}
         subtitle={smartOn
           ? 'Compatibilidade calculada pelo seu nível, lado da quadra, cidade e interesses.'
           : 'A leitura parte do seu rating atual para sugerir parcerias coerentes.'}
