@@ -56,8 +56,11 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
   if (!mine) return null;
   const myUids = mine === 'a' ? a : b;
   const oppUids = mine === 'a' ? b : a;
-  const scoreA = Number(m.score_a) || 0;
-  const scoreB = Number(m.score_b) || 0;
+  // Jogo por sets: o espelho guarda os PONTOS em `score_*` (para o rating) e
+  // os sets vencidos em `sets_*` — o "venceu 2 × 1" é o que a pessoa reconhece.
+  const porSets = Array.isArray(m.set_scores) && m.set_scores.length > 1;
+  const scoreA = Number(porSets ? m.sets_a : m.score_a) || 0;
+  const scoreB = Number(porSets ? m.sets_b : m.score_b) || 0;
   const source = m.source === 'athlete_game_day' ? MY_GAME_SOURCE.GAME_DAY : MY_GAME_SOURCE.CLUB_GAME_DAY;
   const resolveName = (id) => (nameByUid && nameByUid.get(id)) || 'Atleta';
   return {

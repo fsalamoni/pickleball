@@ -585,6 +585,32 @@ ganhou nada. Provas: 7 asserções no emulador
 (`tests/rules/gameDaySingles.rules.test.js`) e 5 testes dos motores do
 servidor (`functions/singlesRankings.test.js`).
 
+## 12. Placar por sets (2026-10-10)
+
+Pedido: *"em dia de jogo americano e americano aprimorado… a possibilidade de
+colocar resultado para um ou mais sets… a regra deve ser um set, mas com a
+opção de inserir mais"*.
+
+- **A regra é um set.** O lançamento abre com os dois campos de sempre; quem
+  lança acrescenta sets na hora ("Adicionar set" na quadra, no telão, na
+  correção e na criação manual do Americano aprimorado; "Sets" ao lado do
+  placar na grade do Americano, do clube legado e dos demais formatos de
+  grade). Até 5 sets; cada set precisa de vencedor e os sets não podem
+  terminar empatados (a tela pede o set de desempate).
+- **O que é gravado** (`resultFromSets`, `games/domain/gameSets.js` — a tela
+  confere e o serviço refaz): com um set, o placar de sempre; com mais,
+  `score_*` = sets vencidos, `sets` e `points_*` (total). Por que os sets em
+  `score_*`: todo leitor decide o vencedor por `score_a > score_b`, e um
+  vencedor por pontos pode ser o perdedor por sets (11-0, 9-11, 9-11).
+- **Quem usa pontos lê `gamePoints`**: saldo do ranking do dia, ranking
+  interno do clube e o servidor (`functions/clubRanking.js`).
+- **Publicação**: o espelho grava os PONTOS em `score_*` (o rating usa a
+  fração de pontos), os sets em `sets_*`, `winner_side` pelos sets e
+  `set_scores` — corrigir um set regrava o espelho. "Meus jogos" mostra
+  "2 × 1"; a exportação ao DUPR manda um jogo por set.
+- **Banco**: só campos opcionais; nenhuma regra, coleção ou índice. Jogo
+  antigo é um jogo de um set.
+
 ## Atualização 2026-09-30 — entrar pelo próprio dia de jogo
 
 Quem chega a um dia de jogo PÚBLICO de outra pessoa (pelo "Jogar" do início ou

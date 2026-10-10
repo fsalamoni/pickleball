@@ -20,6 +20,7 @@
 import {
   GAME_KIND, GAME_KIND_LABELS, gameKindsIn, splitGamesByKind,
 } from '@/modules/games/domain/gameKind.js';
+import { gamePoints } from '@/modules/games/domain/gameSets.js';
 
 function makeRow(id, name) {
   return {
@@ -61,15 +62,18 @@ export function computeGameDayLeaderboard(participants, games) {
       && Number.isFinite(a) && Number.isFinite(b);
     if (!decided) return;
 
+    // O vencedor sai do placar (sets vencidos, num jogo por sets); o saldo,
+    // dos PONTOS — num jogo por sets, o total dos sets.
     const aWin = a > b;
     const bWin = b > a;
+    const pts = gamePoints(g);
 
     (g.side_a || []).forEach((p) => {
       const row = ensure(p?.id, p?.name);
       if (!row) return;
       row.games += 1;
-      row.pointsFor += a;
-      row.pointsAgainst += b;
+      row.pointsFor += pts.a;
+      row.pointsAgainst += pts.b;
       if (aWin) row.wins += 1;
       else if (bWin) row.losses += 1;
     });
@@ -77,8 +81,8 @@ export function computeGameDayLeaderboard(participants, games) {
       const row = ensure(p?.id, p?.name);
       if (!row) return;
       row.games += 1;
-      row.pointsFor += b;
-      row.pointsAgainst += a;
+      row.pointsFor += pts.b;
+      row.pointsAgainst += pts.a;
       if (bWin) row.wins += 1;
       else if (aWin) row.losses += 1;
     });

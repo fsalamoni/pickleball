@@ -9,6 +9,8 @@
  *   { side_a: [{id,name}|id], side_b: [...], score_a, score_b }
  */
 
+import { gamePoints } from '@/modules/games/domain/gameSets.js';
+
 function sideEntries(side) {
   return (side || []).map((p) => (p && typeof p === 'object' ? p : { id: p, name: String(p) })).filter((p) => p && p.id);
 }
@@ -42,15 +44,17 @@ export function computeClubRanking(games = []) {
     const decided = sa != null && sb != null && Number(sa) !== Number(sb);
     if (!decided) return;
     const aWon = Number(sa) > Number(sb);
+    // Pontos: num jogo por sets, o total dos sets (o placar são os sets vencidos).
+    const pts = gamePoints(g);
 
     a.forEach((e) => {
       const r = ensure(map, e);
-      r.games += 1; r.points_for += Number(sa) || 0; r.points_against += Number(sb) || 0;
+      r.games += 1; r.points_for += pts.a; r.points_against += pts.b;
       if (aWon) r.wins += 1; else r.losses += 1;
     });
     b.forEach((e) => {
       const r = ensure(map, e);
-      r.games += 1; r.points_for += Number(sb) || 0; r.points_against += Number(sa) || 0;
+      r.games += 1; r.points_for += pts.b; r.points_against += pts.a;
       if (aWon) r.losses += 1; else r.wins += 1;
     });
   });

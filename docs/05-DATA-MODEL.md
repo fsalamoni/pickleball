@@ -531,7 +531,11 @@ Mesmo schema de `tournament_matches` + campos extras:
 - `side_a_ids`/`side_b_ids` são **uids** (não passam por
   `tournament_registrations`).
 - `status: 'finished'`, `winner_side: 'a'|'b'`, `score_a`, `score_b`.
-- `sets_a`/`sets_b` espelham o placar (helper p/ rankings derivados).
+- `sets_a`/`sets_b` espelham o placar (helper p/ rankings derivados). Jogo
+  de dia de jogo lançado POR SETS (2026-10-10): `score_*` = total de pontos
+  (para o rating), `sets_*` = sets vencidos, `winner_side` pelos sets e
+  `set_scores?: [{a,b}]` com o placar de cada set (a exportação ao DUPR manda
+  um jogo por set). Um set só: tudo como antes, sem `set_scores`.
 - `kind: 'singles'|'doubles'`, `result_recorded_at`.
 
 O **Dia de jogo do atleta** (`game_days`, flag `athlete_game_day`) reaproveita
@@ -658,6 +662,12 @@ Subcoleções:
   (`[{id,name}]`), `score_a`/`score_b`, `order`; `group_id?`/`group_name?`/
   `group_color?` (cópia do grupo do Play em que a partida foi sorteada — o
   telão e a lista sobrevivem à remoção do grupo)
+  - **Placar por sets (2026-10-10, opcional):** `sets?: [{a,b}]` (dois ou
+    mais), `points_a?`/`points_b?` (total de pontos). Com sets, `score_*` são
+    os SETS VENCIDOS — todo leitor que decide o vencedor por `score_a >
+    score_b` segue certo; quem precisa de pontos usa `gamePoints`
+    (`games/domain/gameSets.js`). Um set: `sets`/`points_*` nulos ou ausentes.
+    Vale também em `club_events/{id}/games` (legado do clube). Sem regra nova.
   - **`kind` (2026-09-26, Onda CF):** `'doubles'` (padrão, 2 × 2) ou
     `'singles'` (1 × 1). O campo sempre existiu; passou a receber `singles`
     também no Play, no Americano aprimorado e no sorteio do Americano (o

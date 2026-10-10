@@ -54,11 +54,13 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button, V2Input } from '@/v2/ui/primitives';
+import { V2Button } from '@/v2/ui/primitives';
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
 import { gameDayWhenText } from '@/modules/games/domain/gameDay';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
+import { setsReady, setsText } from '@/modules/games/domain/gameSets';
+import SetScoreEditor from '@/v2/components/games/SetScoreEditor';
 import {
   computePlayOrder, forecastPlayByCourt, freePlayCourts,
   PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
@@ -321,10 +323,12 @@ function LinhaResultado({ jogo }) {
       </span>
     </div>
   );
+  const detalhe = setsText(jogo);
   return (
     <div className="space-y-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
       {linha(jogo.side_a, jogo.score_a, venc === 'a')}
       {linha(jogo.side_b, jogo.score_b, venc === 'b')}
+      {detalhe && <p className="text-right text-xs tabular-nums text-white/40">sets {detalhe}</p>}
     </div>
   );
 }
@@ -962,8 +966,8 @@ export default function V2GameDayTelao() {
     () => criarProximoAoVivo.mutateAsync({ court, ...pedidoDoTipo(court) }),
     (res) => `Partida sorteada na quadra ${res?.court ?? court}.`,
   );
-  const salvarResultado = ({ gid, court, scoreA, scoreB }) => executar(
-    () => lancarResultado.mutateAsync({ gid, scoreA, scoreB }),
+  const salvarResultado = ({ gid, court, sets }) => executar(
+    () => lancarResultado.mutateAsync({ gid, sets }),
     `Resultado salvo. A quadra ${court} está livre para a próxima partida.`,
   );
   const vincular = (pid, partnerId) => executar(
@@ -1374,10 +1378,10 @@ export default function V2GameDayTelao() {
             alvo={alvoResultado}
             ocupado={ocupado}
             onClose={() => setAlvoResultado(null)}
-            onConfirm={({ scoreA, scoreB }) => {
+            onConfirm={({ sets }) => {
               const alvo = alvoResultado;
               setAlvoResultado(null);
-              if (alvo) salvarResultado({ gid: alvo.gid, court: alvo.court, scoreA, scoreB });
+              if (alvo) salvarResultado({ gid: alvo.gid, court: alvo.court, sets });
             }}
           />
 
@@ -1416,16 +1420,14 @@ export default function V2GameDayTelao() {
  * um "0" herdado que ninguém percebeu seria pior do que um campo vazio.
  */
 function ResultadoDialog({ alvo, ocupado, onClose, onConfirm }) {
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
+  // Um set por padrão, com "Adicionar set" para quem jogou mais de um.
+  const [sets, setSets] = useState([{ a: '', b: '' }]);
 
   // Cada partida começa com os campos limpos: o estado do diálogo anterior
   // nunca pode vazar para o próximo lançamento.
-  useEffect(() => { setA(''); setB(''); }, [alvo?.gid]);
+  useEffect(() => { setSets([{ a: '', b: '' }]); }, [alvo?.gid]);
 
-  const valido = a !== '' && b !== ''
-    && Number.isFinite(Number(a)) && Number.isFinite(Number(b))
-    && Number(a) >= 0 && Number(b) >= 0;
+  const valido = setsReady(sets);
 
   return (
     <Dialog open={!!alvo} onOpenChange={(v) => !v && onClose()}>
@@ -1438,38 +1440,17 @@ function ResultadoDialog({ alvo, ocupado, onClose, onConfirm }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-end justify-center gap-4">
-          <label className="flex-1 text-xs font-semibold text-gray-500">
-            <span className="mb-1 block truncate">
-              {sideNames(alvo?.game?.side_a).join(' · ') || 'Lado A'}
-            </span>
-            <V2Input
-              className="text-center text-lg"
-              inputMode="numeric"
-              value={a}
-              onChange={(e) => setA(e.target.value)}
-              placeholder="0"
-            />
-          </label>
-          <span className="pb-2 text-xs font-bold text-gray-400">VS</span>
-          <label className="flex-1 text-xs font-semibold text-gray-500">
-            <span className="mb-1 block truncate">
-              {sideNames(alvo?.game?.side_b).join(' · ') || 'Lado B'}
-            </span>
-            <V2Input
-              className="text-center text-lg"
-              inputMode="numeric"
-              value={b}
-              onChange={(e) => setB(e.target.value)}
-              placeholder="0"
-            />
-          </label>
-        </div>
+        <SetScoreEditor
+          value={sets}
+          onChange={setSets}
+          labelA={sideNames(alvo?.game?.side_a).join(' · ') || 'Lado A'}
+          labelB={sideNames(alvo?.game?.side_b).join(' · ') || 'Lado B'}
+        />
 
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
           <V2Button
-            onClick={() => onConfirm({ scoreA: Number(a), scoreB: Number(b) })}
+            onClick={() => onConfirm({ sets })}
             disabled={!valido || ocupado}
           >
             <Check className="mr-1.5 h-4 w-4" /> Salvar resultado

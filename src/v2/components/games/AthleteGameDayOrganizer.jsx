@@ -24,6 +24,7 @@ import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { suggestRounds, suggestSinglesRounds } from '@/modules/clubs/domain/gameDayDraw';
 import { GAME_KIND, gameKindOf, slotsForKind } from '@/modules/games/domain/gameKind';
 import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
+import GridScoreCell from '@/v2/components/games/GridScoreCell';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
@@ -690,16 +691,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
 function GameRow({ gdId, game, isOwner }) {
   const updateGame = useUpdateGameDayGame(gdId);
   const deleteGame = useDeleteGameDayGame(gdId);
-  const [a, setA] = useState(game.score_a ?? '');
-  const [b, setB] = useState(game.score_b ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const saveScore = () => {
-    const score_a = a === '' ? null : Number(a);
-    const score_b = b === '' ? null : Number(b);
-    if (score_a === game.score_a && score_b === game.score_b) return;
-    updateGame.mutate({ gameId: game.id, updates: { score_a, score_b } });
-  };
 
   const sideNames = (side) => (side || []).map((p) => p.name).join(' / ') || '—';
   const winA = game.score_a != null && game.score_b != null && game.score_a > game.score_b;
@@ -714,13 +706,10 @@ function GameRow({ gdId, game, isOwner }) {
       )}
       <GameKindBadge kind={gameKindOf(game)} className="shrink-0" />
       <div className={`flex-1 text-right ${winA ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>{sideNames(game.side_a)}</div>
-      <div className="flex items-center gap-1">
-        <Input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} onBlur={saveScore}
-          disabled={!isOwner} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado A" />
-        <span className="text-xs text-gray-400">×</span>
-        <Input type="number" min={0} value={b} onChange={(e) => setB(e.target.value)} onBlur={saveScore}
-          disabled={!isOwner} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado B" />
-      </div>
+      <GridScoreCell
+        game={game} disabled={!isOwner}
+        onSave={(updates) => updateGame.mutate({ gameId: game.id, updates })}
+      />
       <div className={`flex-1 ${winB ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>{sideNames(game.side_b)}</div>
       {isOwner && (
         <>

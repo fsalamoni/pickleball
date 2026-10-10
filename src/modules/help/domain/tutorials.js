@@ -258,6 +258,7 @@ const AMERICANO = {
       body: [
         'Na seção Jogos, lance o placar de cada partida. O ranking do dia se atualiza a cada resultado.',
         'Também é possível criar uma partida avulsa na mão e excluir um jogo que não vai acontecer.',
+        'A regra é UM set. Jogou mais de um? Toque em "Sets" ao lado do placar e acrescente quantos sets houve (até 5): vence quem ganhou mais sets, e os pontos de todos os sets contam no saldo.',
         'Errou? Edite o placar: o ranking do dia recalcula na hora.',
       ],
       tip: 'Jogos sem placar simplesmente não contam — nada trava se uma partida não acontecer.',
@@ -321,6 +322,7 @@ const AMERICANO_LIVE = {
       title: '3. O fluxo de DOIS passos',
       body: [
         'É a diferença que dá nome ao formato. Numa quadra com partida em andamento, o botão é "LANÇAR RESULTADO": você digita o placar dos dois lados e salva.',
+        'O placar é de UM set. Se jogaram mais, toque em "Adicionar set" antes de lançar e digite cada set: vence quem ganhou mais sets.',
         'Lançado o resultado, a partida vai para as concluídas e a quadra FICA LIVRE. Só então aparece "GERAR PRÓXIMA PARTIDA".',
         'São dois cliques de propósito: entre um e outro você confere que o resultado entrou certo.',
       ],
