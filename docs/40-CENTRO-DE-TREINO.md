@@ -38,8 +38,12 @@ remessa para alunos só do professor; e o admin com controle total."*
 Mais três rotas:
 
 - `/treino/item/:id` — a **ficha**: diagrama primeiro, depois objetivo,
-  montagem, passo a passo, dicas, **certo ao lado do errado**, erros e
-  correção, fases do movimento, variações, meta, segurança e mídia. Autoria
+  montagem, passo a passo, **o corpo ponto a ponto** (fundamentos e jogadas),
+  dicas, **certo ao lado do errado**, erros e correção, **"Fiz certo?"**, fases
+  do movimento, variações, meta, segurança e mídia. Com seis seções ou mais, um
+  índice **"Nesta ficha"** no topo (rola com `rolarAte`, nunca por `#`). O
+  golpe da trilha mostra a posição dele na família (anterior/próximo) e os
+  **drills para treinar este golpe** (`relatedDrills`). Autoria
   sempre visível ("Equipe PickleRush", "Professor X", o nome do atleta, selo
   "IA"). Ações: pôr no treino, registrar, salvar, copiar e adaptar, indicar,
   enviar aos alunos (professor), perguntar ao professor, editar/excluir (autor),
@@ -48,7 +52,25 @@ Mais três rotas:
   por seções, só as que valem para o tipo), com medidor de qualidade, prévia,
   rascunho no aparelho, editor de diagrama, mídia por link ou envio, e "Criar
   com IA".
-- `/treino/planos/:id` — o plano semana a semana.
+- `/treino/planos/:id` — o plano semana a semana. Editar o dia é uma lista
+  em ordem (subir, descer, tirar), **"Acrescentar da biblioteca"** abre o
+  seletor (`ItemPickerDialog`: busca, tipo, "do meu nível", "salvos", vários de
+  uma vez na ordem dos toques, até o máximo do dia), o **tempo do dia** contra
+  os minutos do plano (`slotFit`, "passa N min" em âmbar, nunca bloqueia),
+  **"Repetir nas próximas semanas"** (`repeatSlotInWeeks`) e, no dia de hoje,
+  **"Treinar agora"** (Modo quadra com os itens do dia, e o registro já
+  preenchido com o tempo cronometrado). Pôr um item no plano a partir da ficha
+  mostra cada dia como livre, "N itens", "dia cheio" ou "já está neste dia".
+- `/treino/golpes` — a **trilha dos golpes** (`V2TrainingTechniques`): os
+  golpes e movimentos numa ordem de aprender, em sete famílias (base, saque e
+  devolução, fundo, transição, cozinha, rede, avançados), com o domínio que a
+  pessoa marcou, o **próximo golpe** ("Continue de onde parou" quando há um
+  "Aprendendo") e o filtro "Só os que faltam dominar". Domínio que não carregou
+  não vira "nada dominado": a trilha aparece sem ele. Domínio puro em
+  `domain/techniqueTrail.js` (`TRAIL_FAMILIES`, `buildTechniqueTrail`,
+  `trailPosition`, `relatedDrills`); o fundamento de outro autor entra pela
+  habilidade principal, no fim da família. Chega-se pela faixa no topo da
+  Biblioteca.
 
 ### 2.1 Entradas e links que as telas trocam entre si
 
@@ -114,6 +136,7 @@ blocos. Viraram os campos do item e as seções do editor e da ficha:
 | Dicas curtas | `cues[]` (≤ 8, ≤ 120 car.) | **Foco externo** (bola, alvo, trajetória), uma por vez — `cueWarnings` avisa dica longa ou voltada ao corpo |
 | Certo × errado | `positioning[]` | O errado **só ajuda ao lado do certo** — `positioningWarnings` avisa errado sozinho |
 | Erros comuns | `common_errors[] {error, fix}` | Erro sempre com a correção |
+| Técnica ponto a ponto | `technique.checkpoints[] {part, text}` (≤ 8, ≤ 300 car.) + `technique.self_check[]` (≤ 6, ≤ 200 car.) | Fundamento e jogada: o que cada parte do corpo faz (`TECHNIQUE_PARTS`: empunhadura, olhar, pés, pernas, tronco, braço, punho, raquete) e como a pessoa confere sozinha se fez certo. Sem lista fechada na regra: campo opcional, item antigo sem ele segue igual |
 | Relação motora | `motor.phases` (preparação/execução/finalização) + `motor.abilities` | Fases do golpe e capacidades (coordenação, equilíbrio, tempo de reação…) |
 | Variações | `variations {easier, harder}` | Regressão/progressão (alavancas STEP: espaço, tarefa, equipamento, pessoas) |
 | Meta | `metric {type, target}` + `success_criteria` | Mensurável ("10 dinks seguidos") |
@@ -230,6 +253,26 @@ instalar é idempotente por slug, o admin clica em **Instalar/atualizar** e só
 os 47 novos são criados — nada dos 80 de antes é regravado, e o que o admin
 editou ou apagou continua como ele deixou.
 
+### 8.2 Versão 3 — a trilha dos golpes (2026-10-10)
+
+Pedido: *"inserir na biblioteca as ações e movimentos do pickleball, com
+descrição clara e precisa de como eles são feitos… o que é certo e o que é
+errado"*. Entraram **22 golpes e movimentos** (`content/seed/golpes-base.js`,
+`golpes-saque-fundo.js`, `golpes-cozinha.js`, `golpes-rede.js`, `version: 1`):
+empunhaduras eastern e western, olhar na bola, split step, deslocamento
+lateral, avançar e recuar, saque drop, saque com efeito, drive de backhand,
+topspin, slice, lob, passada, meio-voleio, dink de backhand, dink com efeito,
+dink-voleio, voleio punch, bloqueio, defesa de corpo, speed-up, contra-ataque e
+flick de backhand. Os **10 fundamentos** de antes e as jogadas **Erne** e
+**ATP** ganharam a técnica ponto a ponto, com correções de regra (o saque não
+tem mais *let* desde 2021; as regras do saque drop; a linha da cozinha é
+cozinha; o ATP só depois do quique). Cada fundamento tem pelo menos 5 pontos do
+corpo (partes diferentes) e 3 "fiz certo?" — `seed.test.js` confere, e confere
+que todo slug da trilha existe. São 149 itens (32 fundamentos).
+`SEED_VERSION` foi a 3: **o admin clica em Instalar/atualizar** para os novos
+chegarem e os atualizados (versão maior, não editados pelo admin) serem
+regravados.
+
 ## 9. Privacidade
 
 - Diário sem campo de saúde, com aviso na tela (`SESSION_HEALTH_HINT`).
@@ -294,6 +337,8 @@ editou ou apagou continua como ele deixou.
    `treino-*` e dos pontos `treino:*` (guarda `dicas.test.js`).
 7. **Coleção nova do treino entra na exclusão e na exportação** (guarda
    `exclusaoCobreColecoes.test.js`).
+8. **O slug é contrato da trilha**: `TRAIL_FAMILIES` lista `seed_slug`;
+   renomear um golpe da semente o tira da trilha (o teste da semente reprova).
 
 ## 11. Fica para depois
 

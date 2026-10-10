@@ -5,6 +5,7 @@ import { SEED_VERSION, SEED_ITEMS } from './seed.js';
 import { normalizeItemInput, itemQuality } from '../domain/trainingItem.js';
 import { cueWarnings, positioningWarnings } from '../domain/aiTemplate.js';
 import { VIEW_BOUNDS } from '../domain/diagram.js';
+import { TRAIL_FAMILIES } from '../domain/techniqueTrail.js';
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const inputOf = ({ slug: _s, version: _v, featured: _f, ...input }) => input;
@@ -85,14 +86,14 @@ describe('biblioteca inicial (semente)', () => {
     expect(n('fisico')).toBeLessThanOrEqual(22);
     expect(n('jogada')).toBeGreaterThanOrEqual(8);
     expect(n('jogada')).toBeLessThanOrEqual(12);
-    expect(n('fundamento')).toBeGreaterThanOrEqual(8);
-    expect(n('fundamento')).toBeLessThanOrEqual(12);
+    expect(n('fundamento')).toBeGreaterThanOrEqual(30);
+    expect(n('fundamento')).toBeLessThanOrEqual(40);
     expect(n('treino')).toBeGreaterThanOrEqual(6);
     expect(n('treino')).toBeLessThanOrEqual(12);
     expect(n('estudo')).toBeGreaterThanOrEqual(5);
     expect(n('estudo')).toBeLessThanOrEqual(9);
     expect(SEED_ITEMS.length).toBeGreaterThanOrEqual(115);
-    expect(SEED_ITEMS.length).toBeLessThanOrEqual(140);
+    expect(SEED_ITEMS.length).toBeLessThanOrEqual(165);
     const destaques = SEED_ITEMS.filter((i) => i.featured).length;
     expect(destaques).toBeGreaterThanOrEqual(6);
     expect(destaques).toBeLessThanOrEqual(10);
@@ -104,6 +105,17 @@ describe('biblioteca inicial (semente)', () => {
       expect(it.common_errors.length >= 2 && it.common_errors.length <= 4, it.slug).toBe(true);
       for (const e of it.common_errors) expect(e.fix, it.slug).toBeTruthy();
       expect(it.metric?.type && it.success_criteria, it.slug).toBeTruthy();
+    }
+  });
+
+  it('trilha dos golpes: todo golpe da trilha existe, e todo fundamento ensina o corpo ponto a ponto', () => {
+    const slugs = new Set(SEED_ITEMS.map((i) => i.slug));
+    for (const f of TRAIL_FAMILIES) for (const s of f.slugs) expect(slugs.has(s), s).toBe(true);
+    for (const it of porTipo('fundamento')) {
+      const t = normalizeItemInput(inputOf(it)).value.technique;
+      expect(t.checkpoints.length >= 5, it.slug).toBe(true);
+      expect(new Set(t.checkpoints.map((c) => c.part)).size, `${it.slug}: parte repetida`).toBe(t.checkpoints.length);
+      expect(t.self_check.length >= 3, it.slug).toBe(true);
     }
   });
 

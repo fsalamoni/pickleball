@@ -34,6 +34,7 @@ export const FIELD_KINDS = Object.freeze({
   positioning: exceto('treino'),
   common_errors: QUADRA,
   motor: ['drill', 'fundamento', 'fisico'],
+  technique: ['fundamento', 'jogada'],
   variations: QUADRA,
   metric: QUADRA,
   success_criteria: QUADRA,
@@ -87,6 +88,12 @@ export const EDITOR_SECTIONS = Object.freeze([
     titulo: 'Como fazer',
     porque: 'Escreva para quem chega na quadra sem você: onde cada um fica, os passos na ordem e uma ou duas dicas curtas.',
     campos: ['setup', 'steps', 'cues'],
+  },
+  {
+    id: 'tecnica',
+    titulo: 'O corpo, ponto a ponto',
+    porque: 'Uma parte do corpo por linha — empunhadura, pés, pernas, tronco, braço, punho, raquete — e o que cada uma faz. Feche com 3 ou 4 sinais de que saiu certo, que a pessoa confere sozinha.',
+    campos: ['technique'],
   },
   {
     id: 'blocos',
@@ -191,6 +198,10 @@ export function formFromItem(item = {}) {
   out.motor = {
     phases: { ...base.motor.phases, ...(item?.motor?.phases || {}) },
     abilities: Array.isArray(item?.motor?.abilities) ? item.motor.abilities : [],
+  };
+  out.technique = {
+    checkpoints: Array.isArray(item?.technique?.checkpoints) ? item.technique.checkpoints : [],
+    self_check: Array.isArray(item?.technique?.self_check) ? item.technique.self_check : [],
   };
   for (const k of LISTAS) if (!Array.isArray(out[k])) out[k] = [];
   out.visibility = Object.values(VISIBILITY).includes(item?.visibility) ? item.visibility : base.visibility;

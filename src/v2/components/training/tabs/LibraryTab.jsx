@@ -9,12 +9,13 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Heart, Library, Plus, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { ArrowRight, Heart, Library, Plus, Route, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useCoachTrainingItems, usePublicTrainingItems } from '@/modules/training/hooks/useTrainingItems';
 import { useMetaActions, useTrainingMeta } from '@/modules/training/hooks/useTrainingMeta';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { filterItems, sortLibrary } from '@/modules/training/domain/trainingItem';
+import { buildTechniqueTrail } from '@/modules/training/domain/techniqueTrail';
 import {
   ITEM_KINDS, ITEM_KIND_LABELS, PLACES, PLACE_LABELS, skillOptions,
 } from '@/modules/training/domain/taxonomy';
@@ -224,6 +225,7 @@ export default function LibraryTab({ identity, params, irPara }) {
   const podeAfirmarVazio = !coachCarregando && !(f.origem === 'meus_professores' && coach.isError)
     && !(f.origem === 'salvos' && !meta.isSuccess);
 
+  const trilha = buildTechniqueTrail(pub.data || [], meta.data?.mastery || {});
   const destaques = !filtrando ? sortLibrary((pub.data || []).filter((it) => it.featured)) : [];
   const vazio = !podeAfirmarVazio ? (
     <V2Skeleton className="h-40 rounded-4xl" />
@@ -272,6 +274,26 @@ export default function LibraryTab({ identity, params, irPara }) {
         />
       )}
       {salvosFalhou && <V2ErrorState inline title="Não foi possível carregar os seus salvos" onRetry={() => meta.refetch()} />}
+
+      {!filtrando && trilha.counts.total > 0 && (
+        <Link
+          to="/treino/golpes"
+          data-dica="treino-biblioteca-golpes"
+          className="flex items-center gap-4 rounded-4xl border border-ink bg-paper-pure p-5 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        >
+          <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-acid text-ink">
+            <Route className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-lg font-bold text-ink">Trilha dos golpes</span>
+            <span className="block text-sm text-gray-600">
+              {trilha.counts.total} golpes e movimentos, do básico ao avançado: o corpo ponto a ponto, o certo e o errado.
+              {meta.isSuccess && trilha.counts.dominado > 0 ? ` Você domina ${trilha.counts.dominado}.` : ''}
+            </span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
+        </Link>
+      )}
 
       {destaques.length > 0 && (
         <section aria-labelledby="treino-destaques" className="space-y-3">

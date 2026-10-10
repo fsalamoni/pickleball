@@ -16,12 +16,15 @@ import { cn } from '@/core/lib/utils';
 import { itemMetaLine } from '@/modules/training/domain/trainingItem';
 import {
   BLOCK_TYPE_LABELS, EQUIPMENT_LABELS, ITEM_KIND_LABELS, METRIC_TYPE_LABELS, MOTOR_ABILITY_LABELS,
-  PLACE_LABELS, PRACTICE_MODE_LABELS, STUDY_TYPE_LABELS, rpeLabel, skillLabel,
+  PLACE_LABELS, PRACTICE_MODE_LABELS, STUDY_TYPE_LABELS, TECHNIQUE_PART_LABELS, rpeLabel, skillLabel,
 } from '@/modules/training/domain/taxonomy';
 import CourtDiagram from '@/v2/components/training/CourtDiagram';
 import { AuthorLine, KindIcon } from '@/v2/components/training/ItemCard';
 import { MediaGallery, MediaTile } from './ItemMedia';
-import { itemView } from './contentView';
+import { INDEX_MIN_SECTIONS, SECTION_TITLES, itemView } from './contentView';
+import { rolarAte } from '@/v2/ui/rolarAte';
+
+const menosMovimento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 function Secao({ id, title, children, className }) {
   return (
@@ -169,6 +172,31 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
         </ol>
       </Secao>
     ),
+    tecnica: () => (
+      <Secao id={hid('tecnica')} title="O corpo, ponto a ponto">
+        <p className="text-sm text-gray-500">Confira cada parte do corpo, uma de cada vez — é assim que o golpe sai igual toda vez.</p>
+        <dl className="divide-y divide-gray-100 overflow-hidden rounded-3xl border border-gray-100">
+          {v.technique.checkpoints.map((c, i) => (
+            <div key={i} className="grid gap-1 p-4 sm:grid-cols-[11rem_1fr] sm:gap-4">
+              <dt className="text-sm font-bold text-ink">{TECHNIQUE_PART_LABELS[c.part]}</dt>
+              <dd className="leading-7 text-gray-700">{c.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </Secao>
+    ),
+    autoavaliacao: () => (
+      <Secao id={hid('autoavaliacao')} title="Como saber se você fez certo">
+        <ul className="space-y-2">
+          {v.technique.self_check.map((t, i) => (
+            <li key={i} className="flex gap-2 rounded-2xl bg-emerald-50 p-3 text-emerald-900">
+              <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+      </Secao>
+    ),
     dicas: () => <Secao id={hid('dicas')} title="Dicas"><Chips items={v.cues} /></Secao>,
     certoErrado: () => {
       const temCerto = view.certos.length + view.mediaCerto.length > 0;
@@ -307,6 +335,20 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
         {view.resumo && <p className="text-lg leading-8 text-gray-600">{view.resumo}</p>}
       </header>
       {aside}
+      {view.sections.length >= INDEX_MIN_SECTIONS && (
+        <nav aria-label="Nesta ficha" className="flex flex-wrap gap-1.5">
+          {view.sections.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => rolarAte(document.getElementById(hid(k === 'certoErrado' ? 'certo' : k)), { suave: !menosMovimento() })}
+              className="rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-semibold text-gray-600 hover:border-ink hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+            >
+              {SECTION_TITLES[k]}
+            </button>
+          ))}
+        </nav>
+      )}
       {view.sections.map((k) => <React.Fragment key={k}>{secoes[k]()}</React.Fragment>)}
     </article>
   );

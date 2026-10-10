@@ -10,7 +10,8 @@ import { Plus } from 'lucide-react';
 import { cueWarnings, positioningWarnings } from '@/modules/training/domain/aiTemplate';
 import {
   EQUIPMENT, EQUIPMENT_LABELS, METRIC_TYPES, METRIC_TYPE_LABELS, MOTOR_ABILITIES, MOTOR_ABILITY_LABELS,
-  PLACES, PLACE_LABELS, PRACTICE_MODES, PRACTICE_MODE_LABELS, STUDY_TYPES, STUDY_TYPE_LABELS, rpeLabel,
+  PLACES, PLACE_LABELS, PRACTICE_MODES, PRACTICE_MODE_LABELS, STUDY_TYPES, STUDY_TYPE_LABELS, TECHNIQUE_PARTS,
+  TECHNIQUE_PART_LABELS, rpeLabel,
 } from '@/modules/training/domain/taxonomy';
 import { ITEM_LIMITS } from '@/modules/training/domain/trainingItem';
 import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primitives';
@@ -305,6 +306,63 @@ export default function TrainingItemForm({
         )}
       />
     ),
+
+    tecnica: () => {
+      const tec = form.technique || { checkpoints: [], self_check: [] };
+      const setTec = (sub, v) => setField('technique', { ...tec, [sub]: v });
+      const proximaParte = () => TECHNIQUE_PARTS.find((pt) => !tec.checkpoints.some((c) => c.part === pt)) || TECHNIQUE_PARTS[0];
+      return (
+        <>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-ink">Ponto a ponto</p>
+            <p className="text-xs text-gray-400">Ex.: Pernas — “joelhos flexionados, quadril baixo; a força sobe das pernas, não do braço”.</p>
+            <ListEditor
+              id={campoId('technique')}
+              items={tec.checkpoints}
+              onChange={(v) => setTec('checkpoints', v)}
+              max={ITEM_LIMITS.checkpoints}
+              addLabel="Adicionar parte do corpo"
+              makeNew={() => ({ part: proximaParte(), text: '' })}
+              itemLabel="ponto"
+              renderItem={(c, i, set) => (
+                <div className="grid gap-2 sm:grid-cols-[11rem_minmax(0,1fr)]">
+                  <V2Select
+                    aria-label={`Parte do corpo ${i + 1}`}
+                    value={c.part}
+                    onChange={(e) => set({ ...c, part: e.target.value })}
+                    options={TECHNIQUE_PARTS.map((pt) => ({ value: pt, label: TECHNIQUE_PART_LABELS[pt] }))}
+                  />
+                  <V2Textarea
+                    rows={2}
+                    aria-label={`O que ${TECHNIQUE_PART_LABELS[c.part] || 'esta parte'} faz`}
+                    maxLength={ITEM_LIMITS.checkpoint}
+                    value={c.text || ''}
+                    onChange={(e) => set({ ...c, text: e.target.value })}
+                    className="min-h-[4rem]"
+                  />
+                </div>
+              )}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-ink">Como saber se fez certo</p>
+            <p className="text-xs text-gray-400">O que a pessoa vê ou sente quando acerta: “a bola passa a um palmo da fita e cai na cozinha”.</p>
+            <ListEditor
+              id={campoId('self_check')}
+              items={tec.self_check}
+              onChange={(v) => setTec('self_check', v)}
+              max={ITEM_LIMITS.selfChecks}
+              addLabel="Adicionar sinal"
+              makeNew={() => ''}
+              itemLabel="sinal"
+              renderItem={(t, i, set) => (
+                <V2Input aria-label={`Sinal de acerto ${i + 1}`} maxLength={ITEM_LIMITS.selfCheck} value={t} onChange={(e) => set(e.target.value)} />
+              )}
+            />
+          </div>
+        </>
+      );
+    },
 
     movimento: () => (
       <>

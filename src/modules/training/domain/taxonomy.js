@@ -32,11 +32,15 @@ export const SKILLS = Object.freeze({
   'serve.saque_profundo': 'Saque profundo',
   'serve.devolucao_profunda': 'Devolução profunda',
   'serve.consistencia': 'Consistência no saque',
+  'serve.efeito': 'Saque com efeito',
   'groundstrokes.drive': 'Drive',
   'groundstrokes.terceira_bola_drop': 'Drop da terceira bola',
   'groundstrokes.terceira_bola_drive': 'Drive da terceira bola',
   'groundstrokes.transicao': 'Transição para a rede',
   'groundstrokes.lob': 'Lob',
+  'groundstrokes.backhand': 'Backhand',
+  'groundstrokes.efeito': 'Efeito (topspin e slice)',
+  'groundstrokes.passada': 'Passada',
   'kitchen.dink_cruzado': 'Dink cruzado',
   'kitchen.dink_paralelo': 'Dink paralelo',
   'kitchen.dink_atacavel': 'Atacar o dink alto',
@@ -48,6 +52,9 @@ export const SKILLS = Object.freeze({
   'net.smash': 'Smash',
   'net.erne': 'Erne',
   'net.atp': 'ATP (por fora do poste)',
+  'net.bloqueio': 'Bloqueio',
+  'net.meio_voleio': 'Meio-voleio',
+  'net.defesa_corpo': 'Defesa de corpo',
   'tactics.selecao_golpe': 'Escolha do golpe',
   'tactics.alvo': 'Alvos e ângulos',
   'tactics.leitura_adversario': 'Leitura do adversário',
@@ -150,6 +157,19 @@ export const MOTOR_ABILITY_LABELS = Object.freeze({
   agilidade: 'Agilidade', ritmo: 'Ritmo', forca: 'Força', potencia: 'Potência',
   resistencia: 'Resistência', mobilidade: 'Mobilidade', precisao: 'Precisão',
   leitura: 'Leitura e antecipação',
+});
+
+/**
+ * As partes do gesto que a TÉCNICA de um golpe descreve, ponto a ponto
+ * (`technique.checkpoints`). Aqui falar do corpo é o certo — é o que se
+ * ensina ao aprender o golpe; as DICAS curtas continuam com foco externo.
+ */
+export const TECHNIQUE_PARTS = Object.freeze([
+  'empunhadura', 'olhar', 'pes', 'pernas', 'tronco', 'braco', 'punho', 'raquete',
+]);
+export const TECHNIQUE_PART_LABELS = Object.freeze({
+  empunhadura: 'Empunhadura', olhar: 'Olhar', pes: 'Pés', pernas: 'Pernas',
+  tronco: 'Quadril e tronco', braco: 'Braço e ombro', punho: 'Punho', raquete: 'Face da raquete',
 });
 
 /** Escala de esforço CR-10 (RPE), com rótulos que qualquer pessoa entende. */

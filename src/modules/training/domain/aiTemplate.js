@@ -14,7 +14,7 @@
 
 import {
   EQUIPMENT, ITEM_KIND, ITEM_KIND_LABELS, ITEM_KINDS, METRIC_TYPES, MOTOR_ABILITIES, PLACES,
-  PRACTICE_MODES, SKILLS, SKILL_AREAS,
+  PRACTICE_MODES, SKILLS, SKILL_AREAS, TECHNIQUE_PARTS,
 } from './taxonomy.js';
 import { blankItem, itemQuality, normalizeItemInput } from './trainingItem.js';
 
@@ -120,8 +120,8 @@ export const AI_EXAMPLE = Object.freeze({
 const KIND_FIELDS = {
   drill: ['setup', 'steps', 'cues', 'common_errors', 'variations', 'metric', 'success_criteria', 'safety', 'motor', 'practice_mode', 'when_to_use', 'diagrams'],
   treino: ['blocks', 'safety'],
-  fundamento: ['steps', 'cues', 'positioning', 'common_errors', 'motor', 'when_to_use', 'variations', 'diagrams'],
-  jogada: ['steps', 'cues', 'positioning', 'common_errors', 'when_to_use', 'variations', 'diagrams'],
+  fundamento: ['steps', 'technique', 'cues', 'positioning', 'common_errors', 'motor', 'when_to_use', 'variations', 'diagrams'],
+  jogada: ['steps', 'technique', 'cues', 'positioning', 'common_errors', 'when_to_use', 'variations', 'diagrams'],
   fisico: ['steps', 'cues', 'common_errors', 'sets', 'reps', 'rest_sec', 'tempo', 'safety', 'motor', 'variations'],
   estudo: ['study_type', 'rules_edition', 'questions', 'link'],
 };
@@ -176,6 +176,7 @@ export function buildAiPrompt({ kind = ITEM_KIND.DRILL, skills = [], level = nul
     `- "practice_mode": ${list(PRACTICE_MODES)} (em bloco para quem começa; variado/aleatório quando já sai consistente; jogo para levar à partida).`,
     '- "safety": o risco real do exercício e como evitar; vazio se não houver. Nunca diagnostique nem prometa resultado de saúde.',
     `- "motor.phases": preparação, execução e finalização, cada uma em uma frase sobre o que o corpo e a raquete FAZEM; "motor.abilities": 2–4 de ${list(MOTOR_ABILITIES)}.`,
+    `- "technique" (fundamento/jogada): "checkpoints" com 5–8 itens {part, text}, uma parte do corpo por item, "part" de ${list(TECHNIQUE_PARTS)}, dizendo o que ela FAZ e o porquê (aqui, e só aqui, pode citar o corpo); "self_check": 3–4 sinais que a pessoa confere sozinha de que saiu certo (o que a bola faz, o que ela sente).`,
     '- "positioning" (fundamento/jogada): pares — primeiro {type:"certo"}, depois o {type:"errado"} correspondente com o PORQUÊ ("… → a bola sobe").',
     '- "diagrams" (drill/jogada): quadra 0–100 nos dois eixos, rede em y=50, cozinha entre y=34 e y=66; setas "bola" para trajetória e "movimento" para deslocamento; rótulos "1","2","3" na ordem dos golpes; no máximo 12 elementos.',
     k === ITEM_KIND.TREINO ? '- "blocks": aquecimento (5–10 min) → técnica/tática → jogo (a maior parte) → volta à calma; "type" de aquecimento, tecnica, tatica, jogo, fisico, volta_calma.' : null,

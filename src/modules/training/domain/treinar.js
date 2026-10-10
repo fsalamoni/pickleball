@@ -216,3 +216,42 @@ export function nextPlanSlot(plan, today) {
   const day = WEEK_ORDER.find((d) => plan.days.includes(d));
   return { week: 1, day, date: slotDate(plan, { week: 1, day }) };
 }
+
+/**
+ * Os itens de um dia repetidos no MESMO dia da semana das semanas seguintes
+ * do plano ("repetir nas próximas semanas"). Substitui o que havia nesses
+ * dias; o título e o tempo de cada dia ficam.
+ * @returns {{ ok: boolean, error: string, slots: object[], weeks: number }}
+ */
+export function repeatSlotInWeeks(plan, { week, day }, itemIds = []) {
+  let r = setSlotItems(plan, { week, day }, itemIds);
+  if (!r.ok) return { ...r, weeks: 0 };
+  let weeks = 0;
+  for (let w = week + 1; w <= (plan?.weeks || 0); w += 1) {
+    r = setSlotItems({ ...plan, slots: r.slots }, { week: w, day }, itemIds);
+    if (!r.ok) return { ...r, weeks: 0 };
+    weeks += 1;
+  }
+  return { ok: true, error: '', slots: r.slots, weeks };
+}
+
+/**
+ * O tempo dos itens de um dia frente ao tempo do plano: `cabe`, `passa` ou
+ * `sem_tempo` (nenhum item diz a duração — não dá para afirmar nada).
+ * @returns {{ minutes: number, target: number, state: 'cabe'|'passa'|'sem_tempo', over: number }}
+ */
+export function slotFit(items = [], target = 0) {
+  const minutes = items.reduce((a, it) => a + (it?.duration_min || 0), 0);
+  if (!minutes) return { minutes: 0, target, state: 'sem_tempo', over: 0 };
+  const over = target ? Math.max(0, minutes - target) : 0;
+  return { minutes, target, state: over > 0 ? 'passa' : 'cabe', over };
+}
+
+/** Um item da lista andando uma posição (para cima: -1; para baixo: 1). */
+export function moveInList(list = [], i, dir) {
+  const j = i + dir;
+  if (i < 0 || i >= list.length || j < 0 || j >= list.length) return [...list];
+  const out = [...list];
+  [out[i], out[j]] = [out[j], out[i]];
+  return out;
+}

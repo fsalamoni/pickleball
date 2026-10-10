@@ -227,6 +227,18 @@ export function shareResultText({ sent = 0, skipped = 0, failed = 0, notified = 
 
 // ── Ficha ───────────────────────────────────────────────────────────────
 
+/** Os nomes das seções da ficha, para o índice "Nesta ficha". */
+export const SECTION_TITLES = Object.freeze({
+  diagramas: 'Diagrama', objetivo: 'Objetivo', quando: 'Quando usar', pratica: 'Para praticar',
+  seguranca: 'Segurança', blocos: 'Blocos', fisico: 'Séries', montagem: 'Montagem', passos: 'Passo a passo',
+  tecnica: 'O corpo, ponto a ponto', dicas: 'Dicas', certoErrado: 'Certo e errado', erros: 'Erros comuns',
+  autoavaliacao: 'Fiz certo?', motor: 'O movimento', variacoes: 'Variações', meta: 'Meta', estudo: 'Para estudar',
+  midia: 'Fotos e vídeos', conteudo: 'Conteúdo',
+});
+
+/** A ficha é longa o bastante para um índice no topo? */
+export const INDEX_MIN_SECTIONS = 6;
+
 /**
  * A ficha a partir do item: o conteúdo normalizado (o que o banco tem de
  * fora do formato some, nunca vira HTML) e as seções que TÊM conteúdo, na
@@ -253,9 +265,11 @@ export function itemView(item = {}) {
     fisico: !!(v.sets || v.reps || v.rest_sec || v.tempo),
     montagem: !!v.setup,
     passos: v.steps.length > 0,
+    tecnica: v.technique.checkpoints.length > 0,
     dicas: v.cues.length > 0,
     certoErrado: certos.length + errados.length + mediaCerto.length + mediaErrado.length > 0,
     erros: v.common_errors.length > 0,
+    autoavaliacao: v.technique.self_check.length > 0,
     motor: !!(fase.preparacao || fase.execucao || fase.finalizacao) || v.motor.abilities.length > 0,
     variacoes: !!(v.variations.easier || v.variations.harder),
     meta: !!(v.success_criteria || v.metric.type),

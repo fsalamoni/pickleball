@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   addItemToSlot, courtBlocks, formatClock, masteryGroups, minutesFromSeconds, nextPlanSlot, normalizeRoutine,
-  pickItems, planWeekView, planWeeksSummary, sessionsByWeek, setSlotItems, totalMinutes, weekRangeLabel,
+  moveInList, pickItems, planWeekView, planWeeksSummary, repeatSlotInWeeks, sessionsByWeek, setSlotItems, slotFit,
+  totalMinutes, weekRangeLabel,
 } from './treinar.js';
 
 // 2026-10-05 é segunda-feira. Plano de 2 semanas, terças (2) e quintas (4).
@@ -106,5 +107,41 @@ describe('sessionsByWeek / masteryGroups', () => {
     expect(g.dominado).toEqual([{ id: 'a', title: 'Dink', available: true }]);
     expect(g.aprendendo).toEqual([{ id: 'z', title: 'Item indisponível', available: false }]);
     expect(g.consistente).toEqual([]);
+  });
+});
+
+describe('repetir o dia, tempo do dia e reordenar', () => {
+  const plano = { id: 'p', weeks: 4, days: [1, 3], minutes: 60, slots: [
+    { week: 1, day: 1, title: 'Treino A', item_ids: ['a'], duration_min: 60 },
+    { week: 3, day: 1, title: 'Treino C', item_ids: ['z'], duration_min: 45 },
+    { week: 2, day: 3, title: 'Outro dia', item_ids: ['q'], duration_min: 60 },
+  ] };
+
+  it('repeatSlotInWeeks põe os itens no mesmo dia das semanas seguintes e mantém título e tempo', () => {
+    const r = repeatSlotInWeeks(plano, { week: 2, day: 1 }, ['a', 'b']);
+    expect(r.ok).toBe(true);
+    expect(r.weeks).toBe(2);
+    const seg = r.slots.filter((s) => s.day === 1).sort((x, y) => x.week - y.week);
+    expect(seg.map((s) => [s.week, s.item_ids])).toEqual([[1, ['a']], [2, ['a', 'b']], [3, ['a', 'b']], [4, ['a', 'b']]]);
+    expect(seg.find((s) => s.week === 3)).toMatchObject({ title: 'Treino C', duration_min: 45 });
+    expect(r.slots.find((s) => s.day === 3).item_ids).toEqual(['q']);
+  });
+
+  it('na última semana não repete nada; dia fora do plano é recusado', () => {
+    expect(repeatSlotInWeeks(plano, { week: 4, day: 1 }, ['a']).weeks).toBe(0);
+    expect(repeatSlotInWeeks(plano, { week: 1, day: 5 }, ['a']).ok).toBe(false);
+  });
+
+  it('slotFit soma o tempo e diz se cabe no tempo do plano', () => {
+    expect(slotFit([{ duration_min: 20 }, { duration_min: 30 }], 60)).toEqual({ minutes: 50, target: 60, state: 'cabe', over: 0 });
+    expect(slotFit([{ duration_min: 50 }, { duration_min: 30 }], 60)).toEqual({ minutes: 80, target: 60, state: 'passa', over: 20 });
+    expect(slotFit([{}, null], 60).state).toBe('sem_tempo');
+    expect(slotFit([{ duration_min: 90 }], 0).state).toBe('cabe');
+  });
+
+  it('moveInList troca vizinhos e ignora as pontas', () => {
+    expect(moveInList(['a', 'b', 'c'], 2, -1)).toEqual(['a', 'c', 'b']);
+    expect(moveInList(['a', 'b', 'c'], 0, -1)).toEqual(['a', 'b', 'c']);
+    expect(moveInList(['a', 'b', 'c'], 2, 1)).toEqual(['a', 'b', 'c']);
   });
 });

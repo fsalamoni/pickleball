@@ -98,6 +98,7 @@ const V2Training = lazy(() => import('@/v2/pages/V2Training'));
 const V2TrainingItem = lazy(() => import('@/v2/pages/V2TrainingItem'));
 const V2TrainingEditor = lazy(() => import('@/v2/pages/V2TrainingEditor'));
 const V2TrainingPlan = lazy(() => import('@/v2/pages/V2TrainingPlan'));
+const V2TrainingTechniques = lazy(() => import('@/v2/pages/V2TrainingTechniques'));
 const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
 // Conteúdo de referência — nativo v2.
@@ -252,6 +253,7 @@ export default function V2App() {
           {/* Central de notificações (flag notifications_center): todos os avisos, os novos e os antigos. */}
           <Route path="notificacoes" element={<Isolada nome="notificacoes"><V2Notifications /></Isolada>} />
           <Route path="treino" element={<Isolada nome="treino"><V2Training /></Isolada>} />
+          <Route path="treino/golpes" element={<Isolada nome="treino"><V2TrainingTechniques /></Isolada>} />
           <Route path="treino/novo" element={<Isolada nome="treino"><V2TrainingEditor /></Isolada>} />
           <Route path="treino/item/:itemId" element={<Isolada nome="treino"><V2TrainingItem /></Isolada>} />
           <Route path="treino/item/:itemId/editar" element={<Isolada nome="treino"><V2TrainingEditor /></Isolada>} />
