@@ -170,7 +170,9 @@ describe('cancelPlayGame', () => {
   };
 
   it('⭐ partida aberta: some da quadra e os quatro voltam para a fila', async () => {
-    h.getDocs.mockResolvedValue(snap([emQuadra]));
+    h.getDocs
+      .mockResolvedValueOnce(snap([emQuadra]))
+      .mockResolvedValueOnce(snap([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]));
 
     await cancelPlayGame(GD_ID, 'g9', ACTOR);
 
@@ -180,6 +182,17 @@ describe('cancelPlayGame', () => {
     expect(h.createAuditLog).toHaveBeenCalledWith(expect.objectContaining({
       action: 'game_day_play_game_cancelled',
     }));
+  });
+
+  it('quem já saiu do dia não derruba o cancelamento', async () => {
+    h.getDocs
+      .mockResolvedValueOnce(snap([emQuadra]))
+      .mockResolvedValueOnce(snap([{ id: 'a' }, { id: 'b' }, { id: 'c' }]));
+
+    await cancelPlayGame(GD_ID, 'g9', ACTOR);
+
+    expect(h.batchUpdate).toHaveBeenCalledTimes(3); // d saiu: sem inscrição
+    expect(h.batchCommit).toHaveBeenCalledTimes(1);
   });
 
   it('⭐ partida com PLACAR não é cancelada por aqui — nada é apagado', async () => {

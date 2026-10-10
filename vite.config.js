@@ -45,7 +45,11 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('@firebase/auth') || normalizedId.includes('/firebase/auth')) return 'vendor-firebase-auth';
             if (normalizedId.includes('@firebase/functions') || normalizedId.includes('/firebase/functions')) return 'vendor-firebase-functions';
             if (normalizedId.includes('@firebase') || normalizedId.includes('/firebase/')) return 'vendor-firebase-core';
-            return 'vendor';
+            // React fica num pedaço só; o resto vai junto de quem o importa —
+            // antes tudo caía em `vendor`, baixado na primeira tela, inclusive
+            // bibliotecas que só telas preguiçosas usam.
+            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalizedId)) return 'vendor';
+            return undefined;
           },
         },
       },

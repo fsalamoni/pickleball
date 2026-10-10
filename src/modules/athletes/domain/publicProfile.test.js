@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAthletePublicProfile, filterEmptyStringFields } from './publicProfile.js';
+import { buildAthletePublicProfile, filterEmptyStringFields, privateContactsToClear } from './publicProfile.js';
 
 describe('filterEmptyStringFields', () => {
   it('remove strings vazias', () => {
@@ -88,5 +88,13 @@ describe('buildAthletePublicProfile — regressão de campos vazios', () => {
   it('projeta o ID DUPR (trim) e null quando ausente', () => {
     expect(buildAthletePublicProfile('uid-1', { platform_name: 'Fulano', dupr_id: '  ABC123 ' }).dupr_id).toBe('ABC123');
     expect(buildAthletePublicProfile('uid-1', { platform_name: 'Fulano' }).dupr_id).toBeNull();
+  });
+});
+
+describe('🐞 privateContactsToClear — desligar a opção apaga o contato publicado', () => {
+  it('lista o que não está marcado como público', () => {
+    const p = buildAthletePublicProfile('u', { phone: '51999', phone_public: true, email: 'a@b.c', address: 'Rua' });
+    expect(privateContactsToClear(p)).toEqual(['email', 'address']);
+    expect(filterEmptyStringFields(p).email).toBeUndefined(); // por isso o apagamento explícito
   });
 });

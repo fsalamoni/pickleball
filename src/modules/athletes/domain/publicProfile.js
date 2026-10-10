@@ -37,6 +37,21 @@ export function filterEmptyStringFields(payload) {
 }
 
 /**
+ * Os contatos que a pessoa NÃO marcou como públicos. A projeção os devolve
+ * como `''`, e `filterEmptyStringFields` os tira do payload — o que, com
+ * `merge: true`, MANTINHA o telefone/e-mail/endereço gravado quando a pessoa
+ * desligava a opção. O serviço apaga estes campos explicitamente.
+ *
+ * @param {object} publicProfile saída de `buildAthletePublicProfile`
+ * @returns {string[]}
+ */
+export function privateContactsToClear(publicProfile = {}) {
+  return [['phone', 'phone_public'], ['email', 'email_public'], ['address', 'address_public']]
+    .filter(([, flag]) => publicProfile[flag] !== true)
+    .map(([campo]) => campo);
+}
+
+/**
  * @param {string} uid
  * @param {object} profile - perfil mesclado do usuário
  * @param {Array<{id:string,name:string}>} clubs - clubes do atleta

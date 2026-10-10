@@ -358,12 +358,6 @@ async function fecharDuelos(db, semana, { cfg, jogosPorUid, agora, logger }) {
     const a = medir(d.uidA);
     const b = medir(d.uidB);
     const r = core.duelOutcome(a, b);
-    await db.collection('duels').doc(d.id).update({
-      status: 'finished', outcome: r.outcome, winner: r.winner,
-      resultA: { games: a.games, wins: a.wins }, resultB: { games: b.games, wins: b.wins },
-      finishedAt: agora,
-    });
-    fechados += 1;
     for (const [lado, outro, quem] of [[a, b, 'a'], [b, a, 'b']]) {
       if (lado.games === 0) continue;
       const venceu = r.winner === lado.uid;
@@ -378,6 +372,15 @@ async function fecharDuelos(db, semana, { cfg, jogosPorUid, agora, logger }) {
         });
       }
     }
+    // Fecha DEPOIS do XP: se a função cair no meio, o duelo segue `active` e a
+    // próxima passada conclui (o XP e o aviso têm id fixo, não duplicam).
+    // eslint-disable-next-line no-await-in-loop
+    await db.collection('duels').doc(d.id).update({
+      status: 'finished', outcome: r.outcome, winner: r.winner,
+      resultA: { games: a.games, wins: a.wins }, resultB: { games: b.games, wins: b.wins },
+      finishedAt: agora,
+    });
+    fechados += 1;
   }
   logger.info(`Duelos ${semana}: ${fechados} fechados.`);
   return fechados;

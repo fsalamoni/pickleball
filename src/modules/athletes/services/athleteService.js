@@ -19,17 +19,25 @@ import {
   query,
   where,
   serverTimestamp,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { ATHLETE_DIRECTORY_COLLECTION } from '../domain/constants.js';
-import { buildAthletePublicProfile, filterEmptyStringFields } from '../domain/publicProfile.js';
+import { buildAthletePublicProfile, filterEmptyStringFields, privateContactsToClear } from '../domain/publicProfile.js';
 import { groupClubsByUser, buildAthleteProfilesResyncPlan } from '../domain/directoryResync.js';
 
 const CLUB_MEMBERS_COLLECTION = 'club_members';
 
 export { buildAthletePublicProfile };
+
+/** Apaga do documento público os contatos que a pessoa deixou privados. */
+function comContatosPrivadosApagados(payload, publicProfile) {
+  const out = { ...payload };
+  privateContactsToClear(publicProfile).forEach((campo) => { out[campo] = deleteField(); });
+  return out;
+}
 
 /**
  * Busca os clubes de um usuário (best-effort) para enriquecer o diretório.
@@ -73,7 +81,7 @@ export async function syncAthleteProfile(user, profile = {}) {
       // só updated_at — nada para sincronizar; evita no-op Firestore write
       return;
     }
-    await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, user.uid), payload, { merge: true });
+    await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, user.uid), comContatosPrivadosApagados(payload, publicProfile), { merge: true });
   } catch (err) {
     logger.error('Falha ao sincronizar perfil de atleta no diretório:', err);
   }
@@ -105,7 +113,7 @@ export async function restoreAthleteProfileFromUserDoc(uid, actor) {
     restored_at: serverTimestamp(),
     restored_by: actor.uid,
   });
-  await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, uid), payload, { merge: true });
+  await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, uid), comContatosPrivadosApagados(payload, publicProfile), { merge: true });
   // Audit log
   try {
     const { createAuditLog } = await import('@/core/services/auditService');

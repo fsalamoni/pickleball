@@ -13,6 +13,7 @@
  *    apps de mensagem, sem destruir o histórico do outro participante.
  */
 
+import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import {
   collection,
   doc,
@@ -50,7 +51,7 @@ function trimmed(value, max) {
 
 function sanitizeAttachments(attachments) {
   return (Array.isArray(attachments) ? attachments : [])
-    .filter((a) => a && a.url)
+    .filter((a) => a && isAllowedImageUrl(a.url))
     .slice(0, CHAT_LIMITS.MAX_ATTACHMENTS)
     .map((a) => ({
       url: a.url,

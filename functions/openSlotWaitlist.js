@@ -34,12 +34,30 @@ function venceu(entrada, agoraMs) {
   return Number.isFinite(t) && t < agoraMs;
 }
 
-/** Quem espera, na ordem da fila (menor posição; empate, quem entrou antes). */
+/**
+ * Quem espera, na ordem da fila. Vale a hora em que o SERVIDOR criou a entrada
+ * (`_criado`, do `createTime` do documento): `position` e `joined_at` são
+ * escritos pelo navegador de quem entra, e quem gravasse `position: 0` furava
+ * a fila. Sem `_criado` (teste, dado antigo), a posição gravada.
+ */
 function naOrdemDaFila(entradas) {
+  const chave = (e) => (Number.isFinite(e._criado) ? e._criado : null);
   return entradas
     .filter((e) => e && e.status === 'waiting')
-    .sort((a, b) => ((Number(a.position) || 0) - (Number(b.position) || 0))
-      || ((ms(a.joined_at) || 0) - (ms(b.joined_at) || 0)));
+    .sort((a, b) => {
+      const ca = chave(a); const cb = chave(b);
+      if (ca !== null && cb !== null && ca !== cb) return ca - cb;
+      return ((Number(a.position) || 0) - (Number(b.position) || 0))
+        || ((ms(a.joined_at) || 0) - (ms(b.joined_at) || 0));
+    });
+}
+
+/** O jogo já começou? Data e hora da vaga são de Brasília. */
+function jaComecou(slot, agoraMs) {
+  if (!slot || !/^\d{4}-\d{2}-\d{2}$/.test(String(slot.date || ''))) return false;
+  const hora = /^\d{2}:\d{2}$/.test(String(slot.start || '')) ? slot.start : '23:59';
+  const inicio = Date.parse(`${slot.date}T${hora}:00-03:00`);
+  return Number.isFinite(inicio) && inicio <= agoraMs;
 }
 
 /**
@@ -53,6 +71,8 @@ function naOrdemDaFila(entradas) {
  */
 function lugaresParaChamar(slot, entradas, agoraMs, { noDiaDeJogo = 0 } = {}) {
   if (!slot || !['open', 'full'].includes(slot.status || 'open')) return 0;
+  // Jogo que já começou não chama ninguém: o aviso chegaria tarde demais.
+  if (jaComecou(slot, agoraMs)) return 0;
   const total = Number(slot.total_spots) || 0;
   const naVaga = Array.isArray(slot.participants) ? slot.participants.length : 0;
   const ocupados = Math.max(naVaga, Number(noDiaDeJogo) || 0);
@@ -80,7 +100,7 @@ async function promoverProximo(ctx, slotId) {
     const slotSnap = await tx.get(slotRef);
     const slot = slotSnap.exists ? slotSnap.data() : null;
     const filaSnap = await tx.get(filaQuery);
-    const entradas = filaSnap.docs.map((d) => ({ id: d.id, ref: d.ref, ...d.data() }));
+    const entradas = filaSnap.docs.map((d) => ({ id: d.id, ref: d.ref, ...d.data(), _criado: ms(d.createTime) }));
     // Jogo aberto que é um dia de jogo (Onda CA): conta quem está no dia.
     let noDiaDeJogo = 0;
     if (slot && typeof slot.game_day_id === 'string' && slot.game_day_id) {
@@ -145,6 +165,7 @@ module.exports = {
   JANELA_PROMOCAO_MIN,
   venceu,
   naOrdemDaFila,
+  jaComecou,
   lugaresParaChamar,
   promoverProximo,
   vagaAbriuLugar,

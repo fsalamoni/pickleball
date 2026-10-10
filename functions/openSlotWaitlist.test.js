@@ -26,7 +26,7 @@ const AGORA = 1_800_000_000_000;
 const Timestamp = { fromMillis: (n) => n };
 
 const vaga = (over = {}) => ({
-  arena_id: 'A', arena_name: 'Arena', date: '2026-10-01', start: '19:00',
+  arena_id: 'A', arena_name: 'Arena', date: '2027-06-01', start: '19:00',
   status: 'open', total_spots: 4, participants: ['p1', 'p2', 'p3'], ...over,
 });
 const entrada = (uid, pos, over = {}) => ({
@@ -114,6 +114,18 @@ describe('peças puras', () => {
       entrada('b', 1, { joined_at: 20 }), entrada('a', 1, { joined_at: 10 }), entrada('c', 0),
     ]);
     expect(r.map((e) => e.athlete_id)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('⭐ com a hora do servidor, posição gravada pelo navegador não fura a fila', () => {
+    const r = naOrdemDaFila([
+      entrada('cedo', 5, { _criado: 100 }), entrada('furao', 0, { _criado: 200 }),
+    ]);
+    expect(r.map((e) => e.athlete_id)).toEqual(['cedo', 'furao']);
+  });
+
+  it('jogo que já começou não chama ninguém', () => {
+    const passado = vaga({ date: '2020-01-01', start: '19:00' });
+    expect(lugaresParaChamar(passado, [], AGORA)).toBe(0);
   });
 
   it('lugares = total − na vaga − chamados no prazo', () => {

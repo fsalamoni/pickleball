@@ -71,6 +71,11 @@ describe('normalizeTimeString / normalizeDateString', () => {
 });
 
 describe('buildStartAtISO', () => {
+  it('data base AAAA-MM-DD é o dia LOCAL, não o UTC', () => {
+    const iso = buildStartAtISO(null, '14:00', '2026-06-20');
+    expect(iso).toBe(new Date('2026-06-20T14:00:00').toISOString());
+  });
+
   it('combina data e horário', () => {
     const iso = buildStartAtISO('2026-06-20', '14:00');
     expect(iso).toBe(new Date('2026-06-20T14:00:00').toISOString());

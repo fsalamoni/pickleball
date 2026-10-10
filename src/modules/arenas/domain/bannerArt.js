@@ -21,6 +21,7 @@
  *
  * PURO. Sem React, sem Firebase.
  */
+import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import { luminance, normalizeHex, readableInk } from './whiteLabel.js';
 
 /* ------------------------------------------------------------------ */
@@ -168,12 +169,7 @@ export const MIN_TEXT_CONTRAST = 4.5;
  * Endereço de fora faria a página da arena carregar o que ninguém conferiu
  * (e contar quem abriu).
  */
-export function isAllowedImageUrl(url) {
-  const u = String(url || '').trim();
-  if (!u) return false;
-  return /^https:\/\/(firebasestorage\.googleapis\.com|storage\.googleapis\.com)\//i.test(u)
-    || /^http:\/\/(127\.0\.0\.1|localhost):\d+\//i.test(u);
-}
+
 
 /**
  * O que se exige de um banner ENVIADO — escrito na tela antes do envio.
@@ -423,3 +419,5 @@ export function switchTemplate(atual = {}, de = null, para = BANNER_TEMPLATES[0]
   }
   return normalizeBannerDesign(saida).value;
 }
+
+export { isAllowedImageUrl };

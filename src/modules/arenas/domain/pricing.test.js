@@ -272,6 +272,12 @@ describe('bookingPriceInfo — qual número é qual', () => {
     expect(r.text).toContain('3h');
   });
 
+  it('🐞 reserva com benefício de membro/cupom mostra o valor COM o benefício', () => {
+    const r = bookingPriceInfo(reserva({ proposed_price: 180, member_benefit: { table_price: 240 } }), { arena });
+    expect(r.value).toBe(180);
+    expect(r.recalculado).toBe(false);
+  });
+
   it('o valor ACORDADO manda em tudo', () => {
     const r = bookingPriceInfo(reserva({ agreed_price: 200 }), { arena });
     expect(r.value).toBe(200);

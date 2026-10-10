@@ -967,14 +967,31 @@ function faltaGente(kind, partida = 'o próximo jogo') {
  *   quem está sem grupo) — vale por cima da política e das quadras do grupo
  * @returns {{ gameId: string, court: number, kind: string, groupId?: string|null }}
  */
+/**
+ * A quadra da próxima partida: a pedida ou a menor livre. 🐞 A pedida era
+ * aceita sem conferir — duas pessoas tocando "Criar próxima" na mesma quadra
+ * ao mesmo tempo punham DUAS partidas nela. A lista de jogos é lida agora.
+ */
+function quadraParaPartida(court, gd, games) {
+  const total = gd.play_courts || 1;
+  if (court != null) {
+    if (!freePlayCourts({ courts: Math.max(total, Number(court) || 0), games }).includes(Number(court))) {
+      throw new Error('Esta quadra já está em jogo. Atualize a tela.');
+    }
+    return court;
+  }
+  const livre = nextFreePlayCourt({ courts: total, games });
+  if (livre == null) throw new Error('Todas as quadras já estão em jogo.');
+  return livre;
+}
+
 export async function createNextPlayGame(gdId, actor, { court = null, kind = null, groupId = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participantsBrutos, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
-  const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
-  if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
+  const targetCourt = quadraParaPartida(court, gd, games);
   const tipo = kindForCourt(kind, games, targetCourt, gd.play_courts || 1);
   const vagas = slotsForKind(tipo);
 
@@ -1318,7 +1335,9 @@ export async function finishPlayGame(gdId, gid, actor, { createNext = true, kind
  * partida" apagaria em silêncio um placar já publicado.
  */
 export async function cancelPlayGame(gdId, gid, actor) {
-  const games = await listGameDayGames(gdId);
+  const [games, participants] = await Promise.all([
+    listGameDayGames(gdId), listGameDayParticipants(gdId),
+  ]);
   const game = games.find((g) => g.id === gid);
   if (!game) return;
   const temPlacar = game.score_a != null && game.score_b != null;
@@ -1326,7 +1345,11 @@ export async function cancelPlayGame(gdId, gid, actor) {
     throw new Error('Esta partida já tem resultado lançado. Para desfazê-la, exclua-a na lista de partidas concluídas.');
   }
   const now = Date.now();
-  const playerIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id).filter(Boolean);
+  // Só quem ainda está no dia: atualizar a inscrição de quem saiu falharia o
+  // lote inteiro, e a partida nunca seria cancelada.
+  const noDia = new Set(participants.map((p) => p.id));
+  const playerIds = [...(game.side_a || []), ...(game.side_b || [])]
+    .map((p) => p.id).filter((pid) => pid && noDia.has(pid));
   const batch = writeBatch(db);
   batch.delete(doc(db, COL, gdId, SUB_GAMES, gid));
   playerIds.forEach((pid) => {
@@ -1401,12 +1424,16 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
     swapped_out_ids: nextSwappedOut,
     updated_at: serverTimestamp(),
   });
-  // O ausente assume a posição do substituto na fila (trocam de lugar).
-  batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, absentId), {
-    available_since: Number(repl.available_since) || Date.now(),
-    available_tie: Number.isFinite(Number(repl.available_tie)) ? Number(repl.available_tie) : Math.random(),
-    updated_at: serverTimestamp(),
-  });
+  // O ausente assume a posição do substituto na fila (trocam de lugar) — se
+  // ainda estiver no dia: quem já saiu não tem inscrição para atualizar, e o
+  // lote falharia inteiro, sem a troca.
+  if (participants.some((p) => p.id === absentId)) {
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, absentId), {
+      available_since: Number(repl.available_since) || Date.now(),
+      available_tie: Number.isFinite(Number(repl.available_tie)) ? Number(repl.available_tie) : Math.random(),
+      updated_at: serverTimestamp(),
+    });
+  }
   await batch.commit();
   await createAuditLog({
     action: 'game_day_play_no_show', actor,
@@ -1920,8 +1947,7 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null, k
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
-  const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
-  if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
+  const targetCourt = quadraParaPartida(court, gd, games);
 
   const { order } = computePlayOrder({ participants, games });
 
@@ -2038,6 +2064,12 @@ export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = 
   ]);
   const game = games.find((g) => g.id === gid);
   if (!game) throw new Error('Partida não encontrada.');
+  // Lançada de outro aparelho enquanto esta tela estava aberta: lançar de novo
+  // mandaria os quatro outra vez para o fim da fila — quem já está em outra
+  // partida inclusive. Corrigir o placar é na lista de concluídas.
+  if (game.status === PLAY_GAME_STATUS.FINISHED) {
+    throw new Error('O resultado desta partida já foi lançado. Para corrigir, edite na lista de partidas concluídas.');
+  }
 
   const now = Date.now();
   const playerIds = [...(game.side_a || []), ...(game.side_b || [])]

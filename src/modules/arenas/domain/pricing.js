@@ -274,7 +274,12 @@ export function bookingPriceInfo(booking, { arena = null } = {}) {
     return { value: acordado, hours, agreed: true, recalculado: false, text: priceWithDurationText(acordado, hours, []) };
   }
 
-  if (arena && slots.length > 0) {
+  // 🐞 Reserva com benefício (pacote, desconto de membro, cupom, carteira):
+  // o `proposed_price` já é o valor COM o benefício, conferido pelo serviço.
+  // Recalcular pela tabela apagava o desconto — na tela e no valor acordado
+  // que a arena grava ao confirmar.
+  const comBeneficio = booking?.member_benefit && num(booking?.proposed_price) != null;
+  if (arena && slots.length > 0 && !comBeneficio) {
     const r = totalBookingPrice(arena, { courtId: booking?.court_id || null, slots, clientId: booking?.athlete_id || null });
     if (r.total > 0) {
       return { value: r.total, hours, agreed: false, recalculado: true, text: priceWithDurationText(r.total, hours, r.hourlyRates) };

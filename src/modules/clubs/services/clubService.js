@@ -11,6 +11,7 @@
  *    operação principal.
  */
 
+import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import {
   collection,
   doc,
@@ -1298,7 +1299,7 @@ export async function createClubPost(clubId, input, user, profile) {
   const text = trimmed(payload.content);
   const images = Array.isArray(payload.images)
     ? payload.images
-        .filter((img) => img && img.url)
+        .filter((img) => img && isAllowedImageUrl(img.url))
         .slice(0, 10)
         .map((img) => ({
           url: img.url,
