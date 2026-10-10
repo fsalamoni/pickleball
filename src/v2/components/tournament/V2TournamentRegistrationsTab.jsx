@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2Select } from '@/v2/ui/primitives';
 import V2Collapsible from '@/v2/components/tournament/V2Collapsible';
 
 
@@ -392,8 +392,8 @@ function PlayerFields({ prefix, value, onChange }) {
       </div>
       <div>
         <Label>Nível</Label>
-        <select
-          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+        <V2Select
+          className="h-10 px-3"
           value={value.level}
           onChange={(e) => onChange({ ...value, level: e.target.value })}
         >
@@ -401,12 +401,12 @@ function PlayerFields({ prefix, value, onChange }) {
           {LEVEL_OPTIONS.map((o) => (
             <option key={o.code} value={o.code}>{o.label}</option>
           ))}
-        </select>
+        </V2Select>
       </div>
       <div>
         <Label>Gênero (categoria)</Label>
-        <select
-          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+        <V2Select
+          className="h-10 px-3"
           value={value.competition_gender}
           onChange={(e) => onChange({ ...value, competition_gender: e.target.value })}
         >
@@ -414,7 +414,7 @@ function PlayerFields({ prefix, value, onChange }) {
           {Object.entries(COMPETITION_GENDER_LABELS).map(([k, label]) => (
             <option key={k} value={k}>{label}</option>
           ))}
-        </select>
+        </V2Select>
       </div>
     </div>
   );

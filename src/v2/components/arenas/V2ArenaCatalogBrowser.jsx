@@ -28,10 +28,7 @@ import {
   filterCatalog, catalogProductLabel, findDuplicates,
 } from '@/modules/arenas/domain/productCatalog';
 import { cn } from '@/core/lib/utils';
-import {
-  V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
-  V2EmptyState, V2ErrorState, V2Skeleton,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { todayISO } from '@/modules/arenas/domain/calendar';
 
 const todayStr = () => todayISO();
@@ -313,19 +310,19 @@ function AdoptForm({ arenaId, product, onDone }) {
     <form onSubmit={submit} className="mt-3 space-y-2 border-t border-green-200 pt-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <V2Field label="Preço de venda (R$)">
-          <input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 6,00" />
+          <V2Input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="bg-paper px-3 py-2" placeholder="Ex: 6,00" />
         </V2Field>
         <V2Field label="Preço de compra (R$)">
-          <input type="number" min="0" step="0.01" value={form.purchase_price} onChange={set('purchase_price')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 3,50" />
+          <V2Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={set('purchase_price')} className="bg-paper px-3 py-2" placeholder="Ex: 3,50" />
         </V2Field>
         <V2Field label="Qtd. inicial">
-          <input type="number" min="0" value={form.initial_quantity} onChange={set('initial_quantity')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 24" />
+          <V2Input type="number" min="0" value={form.initial_quantity} onChange={set('initial_quantity')} className="bg-paper px-3 py-2" placeholder="Ex: 24" />
         </V2Field>
         <V2Field label="Estoque mínimo">
-          <input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" placeholder="Ex: 6" />
+          <V2Input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="bg-paper px-3 py-2" placeholder="Ex: 6" />
         </V2Field>
         <V2Field label="Validade">
-          <input type="date" value={form.expiry_date} onChange={set('expiry_date')} min={todayStr()} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+          <V2Input type="date" value={form.expiry_date} onChange={set('expiry_date')} min={todayStr()} className="bg-paper px-3 py-2" />
         </V2Field>
         <V2Field label="Fornecedor">
           <V2Input value={form.supplier} onChange={set('supplier')} maxLength={120} placeholder="Opcional" />

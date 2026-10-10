@@ -15,7 +15,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronRight, SkipForward, AlertTriangle, Check } from 'lucide-react';
 
-import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface, V2Select } from '@/v2/ui/primitives';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
@@ -121,8 +121,8 @@ export default function DirectEntryPanel({
                   <div className="text-xs font-semibold text-ink">
                     Fase {i + 1}{fase.name ? ` — ${fase.name}` : ''}
                   </div>
-                  <select
-                    className="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm"
+                  <V2Select
+                    className="h-9 bg-white px-2"
                     value={direct.mode}
                     disabled={saving}
                     onChange={(e) => patch(i, { ...direct, mode: e.target.value })}
@@ -130,7 +130,7 @@ export default function DirectEntryPanel({
                     {Object.entries(DIRECT_ENTRY_MODE_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
                     ))}
-                  </select>
+                  </V2Select>
                   <p className="text-2xs leading-snug text-gray-500">
                     {DIRECT_ENTRY_MODE_HELP[direct.mode]}
                   </p>

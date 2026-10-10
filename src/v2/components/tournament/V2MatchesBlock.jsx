@@ -27,7 +27,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
-import { V2Badge, V2Button, V2Surface, V2ErrorState} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface, V2ErrorState, V2Select } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
@@ -547,15 +547,15 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
 
           <div>
             <Label>Walkover (WO) — opcional</Label>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <V2Select
+              className="h-10 px-3"
               value={walkover}
               onChange={(e) => setWalkover(e.target.value)}
             >
               <option value="">— sem WO —</option>
               <option value="a">WO para {sideA}</option>
               <option value="b">WO para {sideB}</option>
-            </select>
+            </V2Select>
           </div>
         </div>
 

@@ -5,7 +5,7 @@ import { CalendarDays, MapPin, Plus, Trash2, Check, X, Pencil, ChevronDown, Chev
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2Select } from '@/v2/ui/primitives';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -148,16 +148,16 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                 <>
                   <div className="space-y-1.5">
                     <Label htmlFor="new_date_format">Formato</Label>
-                    <select
+                    <V2Select
                       id="new_date_format"
-                      className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink"
+                      className="h-10 bg-white px-3"
                       value={form.format}
                       onChange={(e) => setForm((p) => ({ ...p, format: e.target.value }))}
                     >
                       {formatosOferecidos.map((value) => (
                         <option key={value} value={value}>{GAME_DAY_FORMAT_LABELS[value]}</option>
                       ))}
-                    </select>
+                    </V2Select>
                     <p className="text-xs text-gray-500">Dá para mudar na aba de jogos, enquanto não houver partidas.</p>
                   </div>
                   {isCourtByCourtFormat(form.format) && (

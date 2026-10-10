@@ -52,7 +52,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2Input, V2Select } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
@@ -270,9 +270,9 @@ export default function GameDaySettingsCard({ gameDay }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor={`gds-fmt-${gdId}`}>Formato</Label>
-              <select
+              <V2Select
                 id={`gds-fmt-${gdId}`}
-                className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink disabled:bg-paper disabled:text-gray-400"
+                className="h-10 bg-white px-3 disabled:bg-paper disabled:text-gray-400"
                 value={format}
                 disabled={formatoTravado}
                 onChange={(e) => trocarFormato(e.target.value)}
@@ -280,7 +280,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                 {opcoesDeFormato.map((v) => (
                   <option key={v} value={v}>{GAME_DAY_FORMAT_LABELS[v] || v}</option>
                 ))}
-              </select>
+              </V2Select>
               {falhouJogos ? (
                 <p className="text-xs text-amber-700">
                   A lista de partidas não carregou, então não dá para saber se este dia já tem jogos.
@@ -309,12 +309,12 @@ export default function GameDaySettingsCard({ gameDay }) {
                 </>
               ) : (
                 <>
-                  <input
+                  <V2Input
                     id={`gds-qd-${gdId}`}
                     type="number"
                     min={1}
                     max={12}
-                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink"
+                    className="h-10 bg-white px-3"
                     defaultValue={quadras}
                     disabled={update.isPending}
                     onBlur={(e) => trocarQuadras(e.target.value)}

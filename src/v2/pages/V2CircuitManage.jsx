@@ -22,10 +22,7 @@ import {
 } from '@/modules/circuits/hooks/useCircuits';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
-import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
-  V2Skeleton, V2BackLink,
-} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
 
 const athleteLabel = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
 
@@ -365,8 +362,8 @@ function EditCircuitModal({ circuit, onClose }) {
           <V2Field label="Categorias (separadas por vírgula)"><V2Input value={form.categories} onChange={setField('categories')} placeholder="Open, Sênior, Misto" /></V2Field>
           <V2Field label="Descrição"><V2Textarea value={form.description} onChange={setField('description')} maxLength={500} /></V2Field>
           <div className="grid grid-cols-2 gap-2">
-            <V2Field label="Início"><input type="date" value={form.start_date} onChange={setField('start_date')} className="rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" /></V2Field>
-            <V2Field label="Fim"><input type="date" value={form.end_date} onChange={setField('end_date')} className="rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" /></V2Field>
+            <V2Field label="Início"><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
+            <V2Field label="Fim"><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.active} onChange={setField('active')} />
