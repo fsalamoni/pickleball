@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import { usePeriodReview } from '@/modules/progression/hooks/usePeriodReview';
 import { ReviewBody } from '@/v2/components/gamification/PeriodReviewCard';
-import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { Sparkles } from 'lucide-react';
 import MiniStat from '@/v2/components/gamification/MiniStat';
@@ -42,9 +42,7 @@ function ReviewOn() {
 
   return (
     <div className="mx-auto max-w-[900px] space-y-5" data-testid="gamification-review">
-      <Link to="/gamification" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Gamificação
-      </Link>
+      <V2BackLink to="/gamification">Gamificação</V2BackLink>
       <V2PageIntro title="Sua revisão" subtitle="O que você fez no período, comparado com o anterior. Nada aqui é cobrança." />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

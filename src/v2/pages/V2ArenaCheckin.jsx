@@ -26,7 +26,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarClock, CheckCircle2, Clock, Loader2, QrCode,
+  CalendarClock, CheckCircle2, Clock, Loader2, QrCode,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
@@ -40,7 +40,7 @@ import {
 } from '@/modules/arenas/domain/checkin';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 
 const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
@@ -171,9 +171,7 @@ export default function V2ArenaCheckin() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
-      <Link to={`/arenas/${arenaId}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-      </Link>
+      <V2BackLink to={`/arenas/${arenaId}`} className="mb-3">{arena.name}</V2BackLink>
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Chegada</h1>
       <p className="mt-2 font-medium text-gray-500">
         Confirme sua presença com o código do totem da recepção.

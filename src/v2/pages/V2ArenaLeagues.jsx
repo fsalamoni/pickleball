@@ -26,7 +26,7 @@
 
 import React, { useMemo } from 'react';
 import { Link, Navigate, useMatch, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Settings2, Trophy } from 'lucide-react';
+import { Plus, Settings2, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
@@ -35,7 +35,7 @@ import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { sortHouseTournaments } from '@/modules/arenas/domain/houseTournaments';
 import HouseRankingPanel from '@/v2/components/arenas/houseRanking/HouseRankingPanel';
 import { HouseTournamentRow } from '@/v2/components/arenas/tournaments/HouseTournamentsSection';
-import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 
 function TorneiosDaCasa({ arena, podeGerir }) {
   const q = useArenaTournaments(arena.id);
@@ -112,12 +112,7 @@ export default function V2ArenaLeagues() {
   return (
     <div className="mx-auto max-w-[900px] space-y-4">
       <div className="mb-2">
-        <Link
-          to={`/arenas/${arena.id}`}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
           {comRanking ? 'Torneios e ranking da casa' : 'Torneios da casa'}
         </h1>

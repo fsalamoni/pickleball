@@ -18,7 +18,7 @@
  */
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CalendarClock, LayoutGrid, MapPin } from 'lucide-react';
+import { ArrowRight, CalendarClock, LayoutGrid, MapPin } from 'lucide-react';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useCampaign } from '@/modules/arenas/hooks/useCampaignBanners';
 import {
@@ -27,16 +27,14 @@ import {
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
-  V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import CampaignBanner from '@/v2/components/arenas/marketing/campaigns/CampaignBanner';
 
 function Voltar({ arenaId, arenaName }) {
   return (
-    <Link to={`/arenas/${arenaId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" /> {arenaName || 'Voltar para a arena'}
-    </Link>
+    <V2BackLink to={`/arenas/${arenaId}`}>{arenaName || 'Voltar para a arena'}</V2BackLink>
   );
 }
 

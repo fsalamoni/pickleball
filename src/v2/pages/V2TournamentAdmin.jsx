@@ -12,13 +12,13 @@
 
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, ShieldCheck } from 'lucide-react';
+import { Eye, ShieldCheck } from 'lucide-react';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
-import { V2Badge, V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
 
 export default function V2TournamentAdmin() {
   const { tournamentId } = useParams();
@@ -64,9 +64,7 @@ export default function V2TournamentAdmin() {
         </div>
       </div>
 
-      <Link to="/perfil/torneios" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Meus torneios
-      </Link>
+      <V2BackLink to="/perfil/torneios" className="mb-4">Meus torneios</V2BackLink>
 
       <V2TournamentAdminPanel tournament={tournament} />
     </div>

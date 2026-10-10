@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Globe, Hash } from 'lucide-react';
+import { ArrowRight, Globe, Hash } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getTournamentByInviteCode } from '@/modules/tournament/services/tournamentService';
-import { V2Button, V2Field, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 
 const STEPS = [
   { order: '01', title: 'Receba o código do organizador', description: 'Torneios privados usam um código curto para liberar o acesso.' },
@@ -38,9 +38,7 @@ export default function V2JoinTournament() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
-      </Link>
+      <V2BackLink to="/torneios" className="mb-5">Voltar aos torneios</V2BackLink>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
         <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

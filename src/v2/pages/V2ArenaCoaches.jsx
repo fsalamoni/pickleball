@@ -12,7 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, GraduationCap, Search, Plus, Trash2, Pause, Play, MapPin,
+  GraduationCap, Search, Plus, Trash2, Pause, Play, MapPin,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -27,7 +27,7 @@ import {
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2SearchInput,
   V2Skeleton, V2Surface, V2Textarea,
-  V2ErrorState,
+  V2ErrorState, V2BackLink,
 } from '@/v2/ui/primitives';
 
 /* ----------------------- Adicionar parceiro ----------------------- */
@@ -320,9 +320,7 @@ function V2ArenaCoachesContent() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
-        <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao hub admin
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Voltar ao hub admin</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Professores parceiros · {arena.name}</h1>
         <p className="mt-2 font-medium text-gray-500">Vincule professores à arena. Os parceiros ativos aparecem na página pública.</p>
       </div>

@@ -29,7 +29,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   V2Badge, V2Button, V2Surface,
-  V2ErrorState,
+  V2ErrorState, V2BackLink,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -227,9 +227,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <Link to="/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar às arenas
-      </Link>
+      <V2BackLink to="/arenas" className="mb-5">Voltar às arenas</V2BackLink>
 
       <V2Surface className="p-6 md:p-8">
         <div className="mb-6 flex flex-wrap items-center gap-2">

@@ -24,14 +24,14 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarClock, CalendarPlus, ChevronLeft, History, LayoutGrid,
+  CalendarClock, CalendarPlus, ChevronLeft, History, LayoutGrid,
   Pencil, Trash2, Users, Info,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -153,9 +153,7 @@ function ListaDaArena({ arena }) {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Central da arena
-      </Link>
+      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Central da arena</V2BackLink>
 
       <V2PageIntro
         title="Dia de jogo da arena"

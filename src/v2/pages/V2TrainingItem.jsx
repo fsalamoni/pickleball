@@ -16,7 +16,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarPlus, ChevronLeft, ChevronRight, CopyPlus, EyeOff, Flag, Heart, MessageCircleQuestion, NotebookPen,
+  CalendarPlus, ChevronLeft, ChevronRight, CopyPlus, EyeOff, Flag, Heart, MessageCircleQuestion, NotebookPen,
   Pencil, Route, Send, ShieldCheck, Star, Trash2,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
@@ -34,7 +34,7 @@ import { canCopyItem } from '@/modules/training/domain/copy';
 import { MASTERY, MASTERY_LABELS } from '@/modules/training/domain/evolution';
 import { relatedDrills, trailFamilyOf, trailPosition } from '@/modules/training/domain/techniqueTrail';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import TrainingItemView from '@/v2/components/training/item/TrainingItemView';
@@ -49,9 +49,7 @@ const VOLTAR = '/treino?aba=biblioteca';
 
 function Voltar() {
   return (
-    <Link to={VOLTAR} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Biblioteca
-    </Link>
+    <V2BackLink to={VOLTAR}>Biblioteca</V2BackLink>
   );
 }
 

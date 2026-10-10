@@ -21,7 +21,7 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Gift, Package,
+  AlertTriangle, CalendarClock, Check, Clock, Gift, Package,
   Sparkles, Star, Trophy, Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -39,7 +39,7 @@ import {
 } from '@/modules/arenas/domain/subscription';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import PackageForSaleCard from '@/v2/components/arenas/PackageForSaleCard';
 import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
 
@@ -332,12 +332,7 @@ export default function V2ArenaMembers() {
 
   return (
     <div className="mx-auto max-w-[820px]">
-      <Link
-        to={`/arenas/${arena.id}`}
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-      </Link>
+      <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Você nesta arena</h1>
       <p className="mt-1 text-sm text-gray-500">
         Seu nível, suas horas e seu saldo na {arena.name}.

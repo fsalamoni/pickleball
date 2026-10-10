@@ -16,13 +16,13 @@
 
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import ArenaModulesPanel from '@/v2/components/arenas/ArenaModulesPanel';
-import { V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
 
 export default function V2ArenaModules() {
   const { arenaId } = useParams();
@@ -75,12 +75,7 @@ export default function V2ArenaModules() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <Link
-        to={`/arenas/${arena.id}/gerir`}
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Central da arena
-      </Link>
+      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Central da arena</V2BackLink>
       <h1 className="mb-5 font-display text-3xl font-bold tracking-tight text-ink">
         Módulos · {arena.name}
       </h1>

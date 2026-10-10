@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
+  Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
   Globe2, ListChecks, Trophy,
 } from 'lucide-react';
@@ -20,7 +20,7 @@ import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
@@ -130,9 +130,7 @@ export default function V2ClubDetail() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link to="/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar para clubes
-      </Link>
+      <V2BackLink to="/clubes" className="mb-5">Voltar para clubes</V2BackLink>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

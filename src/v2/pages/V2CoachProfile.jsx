@@ -7,7 +7,7 @@
 
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams, Navigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
+import { GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoaches';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
@@ -27,7 +27,7 @@ import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabili
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
-  V2ErrorState,
+  V2ErrorState, V2BackLink,
 } from '@/v2/ui/primitives';
 
 // Promoções do professor (Onda CG, flag `coach_marketing`) — sob demanda: com
@@ -127,9 +127,7 @@ export default function V2CoachProfile() {
 
   return (
     <div className="space-y-4 p-4">
-      <Link to="/coaches" className="inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Professores
-      </Link>
+      <V2BackLink to="/coaches">Professores</V2BackLink>
 
       {semVagas && (
         <div role="status" className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
+import { ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
@@ -11,7 +11,7 @@ import {
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
 import { cn } from '@/core/lib/utils';
 import {
-  V2ContentHero, V2EmptyState, V2PageIntro, V2SearchInput, V2Surface,
+  V2ContentHero, V2EmptyState, V2PageIntro, V2SearchInput, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { rolarAte } from '@/v2/ui/rolarAte';
@@ -87,9 +87,7 @@ function V2GamificationGuideOn() {
 
   return (
     <div className="mx-auto max-w-[900px] space-y-5" data-testid="gamification-guide">
-      <Link to="/gamification" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Gamificação
-      </Link>
+      <V2BackLink to="/gamification">Gamificação</V2BackLink>
 
       <V2ContentHero
         eyebrow="Guia da gamificação"

@@ -20,7 +20,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Search, Users } from 'lucide-react';
+import { MessageCircle, Search, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
@@ -34,7 +34,7 @@ import {
   scoreTone,
   normalizeMatchmakingCriteria,
 } from '@/modules/arenas/domain/matchmaking';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
 
 function MatchCard({ candidate, score, arenaId, onChat }) {
   const tone = scoreTone(score);
@@ -178,12 +178,7 @@ export default function V2ArenaMatchmaking() {
     return (
       <div className="mx-auto max-w-[700px]">
         <div className="mb-4">
-          <Link
-            to={`/arenas/${arena.id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar à arena
-          </Link>
+          <V2BackLink to={`/arenas/${arena.id}`}>Voltar à arena</V2BackLink>
         </div>
         <V2Surface>
           <V2EmptyState
@@ -204,12 +199,7 @@ export default function V2ArenaMatchmaking() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
-        <Link
-          to={`/arenas/${arena.id}`}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar à arena
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">Voltar à arena</V2BackLink>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
