@@ -125,7 +125,7 @@ describe('⭐ escopos', () => {
   it('o claro é o padrão e o .tema-claro o redeclara', () => {
     expect(regras(':root')).toMatch(/--k: 0;[\s\S]*--kf: 0/);
     expect(regras('.tema-claro')).toMatch(/--k: 0;[\s\S]*--kf: 0;[\s\S]*color-scheme: light/);
-    expect(regras('.tema-claro')).toContain('--background: 48 45% 97%');
+    expect(regras('.tema-claro')).toContain(`--background: ${SHADCN_LIGHT['--background']}`);
   });
 
   it('as sombras da marca acompanham o modo', () => {
