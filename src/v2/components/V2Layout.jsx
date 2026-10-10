@@ -60,8 +60,6 @@ import { V2Avatar } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
 import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 // De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
 // do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
@@ -157,11 +155,11 @@ function useV2Nav() {
   const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = true;
   // Gamificação V2 (flag `gamification_v2`): a jornada, o Hall e as conquistas entram no menu.
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const gamificationOn = true;
   // Centro de Treino (flag `training_center`): entra no hub do perfil.
-  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
+  const trainingOn = true;
   // Minha área (flag `user_hub`): o perfil vira a central da pessoa — só o nome muda aqui.
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const userHubOn = true;
 
   const sections = useMemo(() => [
     {
@@ -368,12 +366,12 @@ function NavItem({ item, active, onClick }) {
       <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
       <span className="ml-3 font-medium">{item.label}</span>
       {item.tag && !showBadge && (
-        <span className="ml-auto rounded-full bg-acid/20 px-2 py-0.5 text-[10px] font-bold text-ink-lighter">{item.tag}</span>
+        <span className="ml-auto rounded-full bg-acid/20 px-2 py-0.5 text-[11px] font-bold text-ink-lighter">{item.tag}</span>
       )}
       {showBadge && (
         <span
           className={cn(
-            'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
+            'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[11px] font-bold',
             active ? 'bg-acid text-ink' : 'bg-acid/90 text-ink',
           )}
           title={item.badgeHint || `${item.badge} pendência(s)`}
@@ -429,10 +427,10 @@ function MobileBottomNav({ pathname, userHubOn = false }) {
 
 function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const userHubOn = true;
   const location = useLocation();
-  const helpCenterOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
-  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
+  const helpCenterOn = true;
+  const centralAvisosOn = true;
   // A mesma assinatura do sino (uma só por pessoa): contar aqui não custa leitura.
   const { unreadCount } = useNotifications();
   const seloAvisos = formatUnreadBadge(unreadCount);
@@ -465,7 +463,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
             <Bell className="mr-2 h-4 w-4" />
             <span className="flex-1">Notificações</span>
             {seloAvisos && (
-              <span className="ml-2 rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">{seloAvisos}</span>
+              <span className="ml-2 rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">{seloAvisos}</span>
             )}
           </DropdownMenuItem>
         )}
@@ -515,7 +513,7 @@ function HubItem({ hub, active, collapsed, onClick }) {
       </span>
       {!collapsed && <span className="ml-3 truncate font-medium">{hub.label}</span>}
       {!collapsed && badge > 0 && (
-        <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+        <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -562,7 +560,7 @@ export default function V2Layout({ children }) {
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
   const { sections, hubs } = useV2Nav();
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const userHubOn = true;
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -570,9 +568,9 @@ export default function V2Layout({ children }) {
   const bottomNavOn = true;
   const navHubsOn = true;
   const legalCenterOn = true;
-  const helpCenterOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
-  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
-  const gamificacaoOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const helpCenterOn = true;
+  const centralAvisosOn = true;
+  const gamificacaoOn = true;
   // A mesma assinatura do sino: o selo da gaveta não custa leitura nenhuma.
   const { unreadCount: avisosNaoLidos } = useNotifications();
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
@@ -744,7 +742,7 @@ export default function V2Layout({ children }) {
           <nav className="hide-scrollbar flex-1 space-y-1 overflow-y-auto px-4 py-4">
             {sections.map((section) => (
               <div key={section.title} className="mb-6 last:mb-0">
-                <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-widest text-gray-400">{section.title}</p>
+                <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-widest text-gray-500">{section.title}</p>
                 <div className="space-y-1.5">
                   {section.items.map((item) => (
                     <NavItem key={item.to} item={item} active={isActive(location.pathname, item)} />
@@ -897,7 +895,7 @@ export default function V2Layout({ children }) {
                     <Icon className="h-5 w-5" />
                     <span className="flex-1">{hub.label}</span>
                     {badge > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
                         {badge > 99 ? '99+' : badge}
                       </span>
                     )}
@@ -943,7 +941,7 @@ export default function V2Layout({ children }) {
                 <Bell className="h-5 w-5" />
                 <span className="flex-1">Notificações</span>
                 {avisosNaoLidos > 0 && (
-                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
                     {formatUnreadBadge(avisosNaoLidos)}
                   </span>
                 )}

@@ -452,7 +452,7 @@ export const SHADOWS = Object.freeze({
 });
 
 /** A cor do topo do navegador/app instalado em cada modo (meta theme-color). */
-export const META_THEME_COLOR = Object.freeze({ light: '#065f46', dark: DARK.page });
+export const META_THEME_COLOR = Object.freeze({ light: '#0B0F19', dark: DARK.page });
 
 /** O fundo do corpo (fora do V2: landing, login, páginas públicas) no escuro. */
 export const DARK_BODY_BACKGROUND = [

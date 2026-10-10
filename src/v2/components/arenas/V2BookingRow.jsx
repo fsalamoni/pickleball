@@ -153,7 +153,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
             {BOOKING_STATUS_LABELS[booking.status]}
           </V2Badge>
           {booking.payment_status && booking.payment_status !== PAYMENT_STATUS.NONE && (
-            <V2Badge tone="neutral" className="text-[10px]">
+            <V2Badge tone="neutral" className="text-[11px]">
               {PAYMENT_STATUS_LABELS[booking.payment_status]}
             </V2Badge>
           )}
@@ -181,7 +181,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       {active && (
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
           <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-gray-400">Valor (R$)</label>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-gray-500">Valor (R$)</label>
             <input
               type="number"
               min="0"

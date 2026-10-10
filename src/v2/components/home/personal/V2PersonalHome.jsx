@@ -37,8 +37,6 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -57,7 +55,7 @@ import {
 import { useHomeCards, useHomeCardsContext, useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { managedTournamentsForHome, myCurrentTournaments } from '@/modules/home/domain/homeTournaments';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
-import { EvolutionStrip } from '@/v2/components/home/V2ActionHome';
+import { EvolutionStrip } from '@/v2/components/home/EvolutionStrip';
 import HomeHero from './HomeHero';
 import HomeShortcuts from './HomeShortcuts';
 import { HomeSectionBoundary } from './HomeSection';
@@ -97,13 +95,13 @@ export default function V2PersonalHome() {
   const uid = user?.uid || null;
   const { ms: agora } = useRelogio(60_000);
   const hoje = hojeLocal(new Date(agora));
-  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
-  const actionHomeOn = useFeatureFlag(PERMANENT_FEATURE.ACTION_HOME);
-  const coachMarketingOn = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
-  const platformMarketingOn = useFeatureFlag(PERMANENT_FEATURE.PLATFORM_MARKETING);
-  const treinoOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
-  // O balanço do jogo só existe com o treino E a própria flag; ligado por pessoa.
-  const balancoOn = useFeatureFlag(PERMANENT_FEATURE.GAME_DEBRIEF) && treinoOn;
+  // Funcionalidades incorporadas em 2026-10-10 (eram flags): sempre ligadas.
+  const arenaModulesOn = true;
+  const actionHomeOn = true;
+  const coachMarketingOn = true;
+  const platformMarketingOn = true;
+  const treinoOn = true;
+  const balancoOn = true;
 
   // Papéis reais — todos já em cache pela barra lateral (arena, professor).
   const { arenas, pendingByArena, totalPendingBookings } = useMyArenaSummary();

@@ -56,7 +56,7 @@ function Miniatura({ nome, design, ativo, seu, onClick, amostra }) {
       </span>
       <span className="mt-1 flex items-center gap-1 px-1 text-xs font-bold text-ink">
         <span className="truncate">{nome}</span>
-        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-[10px]">seu</V2Badge>}
+        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-[11px]">seu</V2Badge>}
       </span>
     </button>
   );
@@ -64,7 +64,7 @@ function Miniatura({ nome, design, ativo, seu, onClick, amostra }) {
 
 function Contador({ valor, max }) {
   const n = String(valor || '').length;
-  return <span className={cn('text-[11px]', n >= max ? 'text-amber-700' : 'text-gray-400')}>{n}/{max}</span>;
+  return <span className={cn('text-[11px]', n >= max ? 'text-amber-700' : 'text-gray-500')}>{n}/{max}</span>;
 }
 
 function CampoCor({ id, label, valor, onChange }) {
@@ -181,7 +181,7 @@ export default function CouponArtEditor({
       {origem === COUPON_ART_SOURCE.DESIGN ? (
         <>
           <div>
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">Modelos da plataforma</p>
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">Modelos da plataforma</p>
             <div className="-mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 pb-1">
               {COUPON_ART_TEMPLATES.map((t) => (
                 <Miniatura key={t.id} nome={t.name} design={t.design} amostra={amostra} ativo={templateId === t.id}
@@ -193,7 +193,7 @@ export default function CouponArtEditor({
                 description="Os da plataforma continuam aqui." onRetry={() => modelosQ.refetch()} />
             ) : meus.length > 0 && (
               <>
-                <p className="mb-1.5 mt-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Meus modelos</p>
+                <p className="mb-1.5 mt-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">Meus modelos</p>
                 <div className="-mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 pb-1">
                   {meus.map((t) => (
                     <Miniatura key={t.id} nome={t.name} design={t.design} amostra={amostra} seu ativo={templateId === t.id}

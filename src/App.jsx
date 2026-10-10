@@ -6,6 +6,7 @@ import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
 import { AparenciaClara, ThemeProvider } from '@/core/lib/ThemeContext';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
+import { reportWebVitals } from '@/core/services/webVitals';
 import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
 
 // Páginas públicas (sem autenticação) — precisam funcionar fora do app autenticado.
@@ -96,6 +97,7 @@ function MainEntry() {
 
 function RouteTelemetry() {
   const location = useLocation();
+  useEffect(() => { reportWebVitals(); }, []);
   useEffect(() => {
     recordPageView(location.pathname);
     // Algumas navegações internas preservam a posição atual por intenção

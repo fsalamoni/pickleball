@@ -129,7 +129,7 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
                 : <Circle className="h-5 w-5 shrink-0 text-gray-300" />}
               <div className="min-w-0 flex-1">
                 <div className={cn('text-sm font-semibold', s.done ? 'text-gray-500 line-through' : 'text-ink')}>{s.label}</div>
-                <div className="text-xs text-gray-400">{s.hint}</div>
+                <div className="text-xs text-gray-500">{s.hint}</div>
               </div>
               {!s.done && s.action && (
                 <button type="button" onClick={s.action} className="shrink-0 text-xs font-bold text-green-700 hover:underline">
@@ -217,7 +217,7 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
         )}
       </V2Surface>
 
-      <p className="text-center text-xs text-gray-400">
+      <p className="text-center text-xs text-gray-500">
         <ShoppingBasket className="mr-1 inline h-3 w-3" />
         Use a aba <strong>Estoque</strong> para puxar produtos do catálogo, <strong>Compras</strong> para registrar
         o que entrou e <strong>Vendas</strong> para o que saiu.

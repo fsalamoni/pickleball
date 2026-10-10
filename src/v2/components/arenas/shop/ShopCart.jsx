@@ -84,7 +84,7 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
 
       {temSplit && (
         <div className="mt-3 border-t border-gray-100 pt-3">
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
             <Users className="h-3.5 w-3.5" /> Dividir com
           </p>
           {dividirCom.length > 0 && (

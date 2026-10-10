@@ -83,7 +83,7 @@ export default function HomeClubsSection({ reason, hoje }) {
             <V2ErrorState inline title="Não carregou os eventos dos clubes" description="Pode haver evento marcado." onRetry={eventos.refetch} />
           ) : proximos.length > 0 && (
             <div>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Próximos eventos</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Próximos eventos</p>
               <ul className="space-y-1">
                 {proximos.map((e) => {
                   const [dia, hora] = String(e.starts_at || '').split('T');

@@ -30,7 +30,7 @@ export default function HomeCommunitySection({ reason, perfil, uid }) {
           <V2ErrorState inline title="Não carregou os atletas" description="Tente de novo em instantes." onRetry={atletas.refetch} />
         ) : perto.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
               Atletas {perto[0].p === 2 ? 'da sua cidade' : 'do seu estado'}
             </p>
             <ul className="flex flex-wrap gap-3">

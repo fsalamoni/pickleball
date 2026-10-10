@@ -96,7 +96,7 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
         <div className="min-w-0">
           <p className="font-bold text-ink">{sale.buyer_name || 'Atleta'}</p>
           <p className="text-sm text-gray-600">{(sale.items || []).map((i) => `${i.quantity}× ${i.name}`).join(', ')}</p>
-          <p className="mt-0.5 text-xs text-gray-400">
+          <p className="mt-0.5 text-xs text-gray-500">
             {saleWhenLabel(sale)}{dividida ? ` · dividido entre ${sale.split_with.length}` : ''}
           </p>
         </div>

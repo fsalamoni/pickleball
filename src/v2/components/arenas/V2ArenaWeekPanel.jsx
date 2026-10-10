@@ -54,7 +54,7 @@ export default function V2ArenaWeekPanel({ arenaId }) {
         <div className="mb-4 flex items-center gap-2">
           <CalendarRange className="h-5 w-5 text-acid" />
           <h2 className="font-display text-lg font-bold text-ink">Como foi sua semana</h2>
-          <span className="text-xs text-gray-400">últimos 7 dias</span>
+          <span className="text-xs text-gray-500">últimos 7 dias</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -80,7 +80,7 @@ export default function V2ArenaWeekPanel({ arenaId }) {
               <div className="flex">
                 <div className="w-10 shrink-0" />
                 {heat.hours.map((h) => (
-                  <div key={h} className="w-7 shrink-0 text-center text-[10px] text-gray-400">{h}h</div>
+                  <div key={h} className="w-7 shrink-0 text-center text-[11px] text-gray-500">{h}h</div>
                 ))}
               </div>
               {heat.grid.map((row, dow) => (
@@ -116,7 +116,7 @@ function Kpi({ icon: Icon, accent = 'ink', label, value, hint }) {
         <Icon className={cn('h-4 w-4', accent === 'acid' ? 'text-acid' : 'text-gray-400')} />
       </div>
       <div className="mt-1 font-display text-2xl font-bold text-ink tabular-nums">{value}</div>
-      {hint && <div className="mt-1 text-xs text-gray-400">{hint}</div>}
+      {hint && <div className="mt-1 text-xs text-gray-500">{hint}</div>}
     </V2Surface>
   );
 }

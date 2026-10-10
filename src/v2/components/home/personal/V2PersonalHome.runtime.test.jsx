@@ -140,7 +140,7 @@ vi.mock('@/modules/rating/hooks/useRating', () => ({
 }));
 vi.mock('@/modules/rating/hooks/useDuprRating', () => ({ useDuprRatingForUid: () => ok(null) }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({ useAthletes: () => ok([]) }));
-vi.mock('@/v2/components/home/V2ActionHome', () => ({
+vi.mock('@/v2/components/home/EvolutionStrip', () => ({
   EvolutionStrip: ({ className }) => <section data-extra-inicio="evolucao" className={className} />,
 }));
 vi.mock('@/v2/components/arenas/openMatch/HomeWaitlistCalls', () => ({

@@ -78,7 +78,7 @@ export default function CourtDayGrid({
                         isSel && 'ring-2 ring-ink',
                       )}
                     >
-                      <span className="truncate px-1 text-[10px] font-semibold leading-tight">{label}</span>
+                      <span className="truncate px-1 text-[11px] font-semibold leading-tight">{label}</span>
                     </button>
                   </td>
                 );

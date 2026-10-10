@@ -33,7 +33,7 @@ const ROTULO_DESTAQUE = {
 
 function Contador({ valor, max }) {
   const n = String(valor || '').length;
-  return <span className={cn('text-[11px]', n >= max ? 'text-amber-700' : 'text-gray-400')}>{n}/{max}</span>;
+  return <span className={cn('text-[11px]', n >= max ? 'text-amber-700' : 'text-gray-500')}>{n}/{max}</span>;
 }
 
 function CampoTexto({ id, label, campo, design, onCampo, placeholder, hint, required }) {
@@ -83,7 +83,7 @@ function Miniatura({ id, nome, design, ativo, seu, onClick }) {
       <BannerThumb banner={{ source: 'design', design }} cta={design.cta} width={176} />
       <span className="mt-1 flex w-[176px] items-center gap-1 px-1 text-xs font-bold text-ink">
         <span className="truncate">{nome}</span>
-        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-[10px]">seu</V2Badge>}
+        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-[11px]">seu</V2Badge>}
       </span>
     </button>
   );
@@ -173,7 +173,7 @@ export default function BannerDesigner({
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">Modelos da plataforma</p>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Modelos da plataforma</p>
         <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
           {BANNER_TEMPLATES.map((t) => (
             <Miniatura key={t.id} id={t.id} nome={t.name} design={t.design} ativo={templateId === t.id}
@@ -185,7 +185,7 @@ export default function BannerDesigner({
             description="Os da plataforma continuam aqui." onRetry={() => modelosQ.refetch()} />
         ) : meus.length > 0 && (
           <>
-            <p className="mb-2 mt-3 text-xs font-bold uppercase tracking-widest text-gray-400">Meus modelos</p>
+            <p className="mb-2 mt-3 text-xs font-bold uppercase tracking-widest text-gray-500">Meus modelos</p>
             <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
               {meus.map((t) => (
                 <Miniatura key={t.id} id={t.id} nome={t.name} design={t.design} seu ativo={templateId === t.id}

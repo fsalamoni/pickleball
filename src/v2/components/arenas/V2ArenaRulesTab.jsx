@@ -139,7 +139,7 @@ export default function V2ArenaRulesTab() {
                     >
                       <ChevronUp className="h-4 w-4" />
                     </button>
-                    <span className="text-xs font-bold text-gray-400">{idx + 1}</span>
+                    <span className="text-xs font-bold text-gray-500">{idx + 1}</span>
                     <button
                       onClick={() => moveRule(idx, 1)}
                       disabled={idx === rules.length - 1}

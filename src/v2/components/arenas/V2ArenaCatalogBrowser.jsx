@@ -170,7 +170,7 @@ export default function V2ArenaCatalogBrowser() {
           </V2Select>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             {filtered.length} no catálogo · {selectableFiltered.length} fora do seu mercado
           </p>
           {selectableFiltered.length > 0 && (
@@ -248,7 +248,7 @@ export default function V2ArenaCatalogBrowser() {
                       {p.subcategory && <V2Badge tone="neutral">{p.subcategory}</V2Badge>}
                       {p.packaging && <span>{p.packaging}{p.size ? ` · ${p.size}` : ''}</span>}
                     </div>
-                    {p.brand && <div className="mt-0.5 text-xs text-gray-400">Marca: {p.brand}</div>}
+                    {p.brand && <div className="mt-0.5 text-xs text-gray-500">Marca: {p.brand}</div>}
                   </div>
                   {adopted ? (
                     <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> No seu mercado</V2Badge>
@@ -269,7 +269,7 @@ export default function V2ArenaCatalogBrowser() {
             );
           })}
           {filtered.length > 400 && (
-            <p className="sm:col-span-2 py-2 text-center text-xs text-gray-400">
+            <p className="sm:col-span-2 py-2 text-center text-xs text-gray-500">
               Mostrando 400 de {filtered.length}. Refine os filtros para ver os demais — ou use
               &quot;Selecionar todos&quot; para adicioná-los em lote de uma vez.
             </p>
@@ -331,7 +331,7 @@ function AdoptForm({ arenaId, product, onDone }) {
           <V2Input value={form.supplier} onChange={set('supplier')} maxLength={120} placeholder="Opcional" />
         </V2Field>
       </div>
-      <p className="text-[11px] text-gray-400">
+      <p className="text-[11px] text-gray-500">
         Só o preço de venda é recomendado para vender no PDV. A quantidade inicial registra uma entrada de estoque.
       </p>
       <div className="flex justify-end gap-2">

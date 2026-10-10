@@ -45,7 +45,7 @@ export function HomeSection({
           )}
           <div className="min-w-0">
             {reason && (
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{reason}</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{reason}</p>
             )}
             <h2 id={tituloId} className="font-display text-lg font-bold leading-tight text-ink sm:text-xl">{title}</h2>
           </div>

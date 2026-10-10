@@ -39,7 +39,7 @@ export default function HomeShortcuts({ atalhos = [], className = 'mb-6' }) {
                   {a.hint && <span className="block truncate text-xs text-gray-500">{a.hint}</span>}
                 </span>
                 {a.badge > 0 && (
-                  <span className="absolute right-3 top-3 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+                  <span className="absolute right-3 top-3 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
                     {a.badge > 99 ? '99+' : a.badge}
                   </span>
                 )}

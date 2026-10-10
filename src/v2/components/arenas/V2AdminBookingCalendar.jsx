@@ -393,11 +393,11 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   )}
                 >
                   <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
-                  <div className={cn('text-[10px] uppercase tracking-widest', c.text)}>
+                  <div className={cn('text-[11px] uppercase tracking-widest', c.text)}>
                     {SLOT_STATUS_LABELS[status]}
                   </div>
                   {booking?.athlete_name && (
-                    <div className="mt-0.5 truncate text-[10px] text-gray-600 max-w-full">
+                    <div className="mt-0.5 truncate text-[11px] text-gray-600 max-w-full">
                       {booking.athlete_name.split(' ')[0]}
                     </div>
                   )}
@@ -588,7 +588,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                         />
                         Já está pago
                       </label>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-500">
                         {formatDateShortBR(date)} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · a reserva já entra como confirmada.
                       </p>
                       <V2Button size="sm" onClick={handleCreateManual} disabled={createManual.isPending || !manualForm.client_name.trim()}>

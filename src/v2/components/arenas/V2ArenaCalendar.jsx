@@ -190,7 +190,7 @@ export default function V2ArenaCalendar({ arena }) {
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">
               {getWeekdayHeaders().map((d) => (
                 <div key={d} className="rounded bg-gray-50 py-1.5">{d}</div>
               ))}
@@ -217,7 +217,7 @@ export default function V2ArenaCalendar({ arena }) {
                     disabled={!temConteudo}
                   >
                     <div className={cn(
-                      'text-[10px] font-bold',
+                      'text-[11px] font-bold',
                       cell.inMonth ? 'text-ink' : 'text-gray-400',
                       cell.isToday && 'text-acid',
                     )}>
@@ -264,7 +264,7 @@ export default function V2ArenaCalendar({ arena }) {
         </div>
       )}
 
-      <div className="text-[10px] text-gray-400">
+      <div className="text-[11px] text-gray-500">
         Período carregado: {rangeInfo.start} → {rangeInfo.end} ({rangeInfo.dates.length} dias)
       </div>
 

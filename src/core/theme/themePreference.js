@@ -49,7 +49,7 @@ export const TEMA_DISPOSITIVO_KEY = 'picklerush:tema';
  * no pacote do navegador) e do script de `index.html` — há teste de paridade.
  */
 export const COR_DA_BARRA = Object.freeze({
-  claro: '#065f46',
+  claro: '#0B0F19',
   escuro: '#070B13',
 });
 

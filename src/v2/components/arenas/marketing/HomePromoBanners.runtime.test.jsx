@@ -335,9 +335,9 @@ describe('⭐ Onda CG — a plataforma e os professores no carrossel', () => {
 
 describe('⭐ a tela inicial monta os banners', () => {
   it('guarda de fonte', () => {
-    // As DUAS telas iniciais (clássica e personalizada) montam o carrossel,
-    // sob demanda, quando alguma fonte está ligada — e cada fonte com a sua flag.
-    for (const arquivo of ['src/v2/pages/V2Dashboard.jsx', 'src/v2/components/home/personal/V2PersonalHome.jsx']) {
+    // A tela inicial (a personalizada é a única desde 2026-10-10) monta o
+    // carrossel sob demanda, quando alguma fonte está ligada.
+    for (const arquivo of ['src/v2/components/home/personal/V2PersonalHome.jsx']) {
       const src = readFileSync(arquivo, 'utf8');
       expect(src).toMatch(/\{\(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} \/>/);
       // Sob demanda — as chaves nascem desligadas.

@@ -60,7 +60,7 @@ function Stat({ label, value, sub, tone = 'default', icon: Icon }) {
         {Icon && <Icon className="h-4 w-4 text-gray-400" />}
       </div>
       <div className={`mt-1 font-display text-2xl font-bold ${toneColors[tone]}`}>{value}</div>
-      {sub && <div className="mt-1 text-xs text-gray-400">{sub}</div>}
+      {sub && <div className="mt-1 text-xs text-gray-500">{sub}</div>}
     </V2Surface>
   );
 }

@@ -54,7 +54,7 @@ function montar() {
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.className = '';
-  document.head.innerHTML = '<meta name="theme-color" content="#065f46">';
+  document.head.innerHTML = '<meta name="theme-color" content="#0B0F19">';
   sistemaEscuro = false;
   instalarMatchMedia();
   estado.auth = { user: { uid: 'ana' }, isAuthenticated: true, isLoadingAuth: false };

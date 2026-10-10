@@ -1,4 +1,5 @@
 import animate from 'tailwindcss-animate';
+import plugin from 'tailwindcss/plugin';
 import { themeExtension, themePlugin } from './src/core/theme/tailwindTheme.js';
 
 // MODO ESCURO: as cores de cada propriedade (fundo, texto, borda…) vêm da
@@ -145,5 +146,11 @@ export default {
       },
     },
   },
-  plugins: [animate, themePlugin],
+  plugins: [
+    animate,
+    themePlugin,
+    // `coarse:` = ponteiro grosso (dedo). É onde o alvo de toque precisa de 44 px;
+    // no mouse o botão pequeno segue pequeno.
+    plugin(({ addVariant }) => addVariant('coarse', '@media (pointer: coarse)')),
+  ],
 };

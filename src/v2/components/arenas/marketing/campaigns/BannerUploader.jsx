@@ -47,7 +47,7 @@ function DiagramaAreaSegura() {
     <div className="relative mx-auto aspect-[2/1] w-full max-w-[260px] rounded-lg border-2 border-ink bg-paper" aria-hidden>
       <div className="absolute inset-y-0 left-[5.5%] right-[5.5%] border-x-2 border-dotted border-gray-400" />
       <div
-        className="absolute flex items-center justify-center rounded border-2 border-dashed border-ink/70 bg-acid/30 text-[10px] font-bold text-ink"
+        className="absolute flex items-center justify-center rounded border-2 border-dashed border-ink/70 bg-acid/30 text-[11px] font-bold text-ink"
         style={{
           left: `${((1 - safeArea.width) / 2) * 100}%`,
           right: `${((1 - safeArea.width) / 2) * 100}%`,
@@ -57,7 +57,7 @@ function DiagramaAreaSegura() {
       >
         área segura: texto e logo aqui
       </div>
-      <span className="absolute -bottom-5 left-0 right-0 text-center text-[10px] text-gray-500">
+      <span className="absolute -bottom-5 left-0 right-0 text-center text-[11px] text-gray-500">
         pontilhado: o que o celular mostra (16:9)
       </span>
     </div>

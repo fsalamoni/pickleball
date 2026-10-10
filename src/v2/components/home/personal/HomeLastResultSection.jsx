@@ -81,7 +81,7 @@ export default function HomeLastResultSection({ reason, hoje, escolhido = false 
           <span className="mt-0.5 block text-sm text-gray-300">
             {colocacaoTexto(best)} na classificação · {best.modality}
           </span>
-          <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+          <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
             <span>{best.wins}V – {best.losses}D</span>
             {best.partnerName && <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" aria-hidden="true" /> com {best.partnerName}</span>}
             <span>{ultimo.encerrado ? 'Encerrado' : TOURNAMENT_PHASE_LABEL[ultimo.phase]}{ultimo.when ? ` · ${ultimo.when}` : ''}</span>
