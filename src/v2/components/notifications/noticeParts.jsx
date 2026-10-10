@@ -57,7 +57,7 @@ export function NoticeTime({ notice, agora, className }) {
     <time
       dateTime={new Date(ms).toISOString()}
       title={completo}
-      className={cn('text-[11px] font-medium text-gray-500', className)}
+      className={cn('text-2xs font-medium text-gray-500', className)}
     >
       <span aria-hidden="true">{curto}</span>
       <span className="sr-only">{completo}</span>

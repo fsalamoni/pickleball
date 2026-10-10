@@ -66,7 +66,7 @@ export default function ArenaPromosSection({ arena }) {
             />
             {(promoConditions(p) || !p.bookable) && (
               <p className="mt-1.5 px-1 text-xs text-gray-500">
-                {!p.bookable && <span className="mr-1.5 rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-gray-600">vale na recepção</span>}
+                {!p.bookable && <span className="mr-1.5 rounded-full bg-paper px-2 py-0.5 text-2xs font-bold text-gray-600">vale na recepção</span>}
                 {promoConditions(p)}
               </p>
             )}

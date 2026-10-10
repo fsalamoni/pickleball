@@ -227,15 +227,15 @@ export default function ArenaShopOrdersPanel({ arena, onIrAoMercado }) {
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">A entregar</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">A entregar</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? resumo.aEntregar.length : '–'}</p>
           </div>
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Pedidos hoje</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">Pedidos hoje</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? resumo.doDia.length : '–'}</p>
           </div>
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Vendido hoje</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">Vendido hoje</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? formatPrice(resumo.caixa) : '–'}</p>
           </div>
         </div>

@@ -86,7 +86,7 @@ function PlayRow({ item, selo, tomSelo, subtitulo }) {
           {subtitulo && <span className="block truncate text-xs text-gray-500">{subtitulo}</span>}
         </span>
         {selo && !item.estou && (
-          <span className={cn('hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-block', TONS[tomSelo] || TONS.acid)}>
+          <span className={cn('hidden shrink-0 rounded-full px-2.5 py-1 text-2xs font-bold sm:inline-block', TONS[tomSelo] || TONS.acid)}>
             {selo}
           </span>
         )}

@@ -298,14 +298,14 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
 
       {historico.length > 0 && (
         <div className="mt-3 border-t border-gray-100 pt-3">
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <p className="mb-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
             Últimos dias
           </p>
           <div className="flex flex-wrap gap-1.5">
             {historico.map((h) => (
               <span key={h.date}
                 title={`${formatDateShortBR(h.date)} — ${h.done} de ${h.total}`}
-                className={`rounded-lg px-2 py-0.5 text-[11px] font-bold ${h.progress === 100 ? 'bg-green-100 text-green-800' : h.progress > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
+                className={`rounded-lg px-2 py-0.5 text-2xs font-bold ${h.progress === 100 ? 'bg-green-100 text-green-800' : h.progress > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
                 {formatDateShortBR(h.date)} · {h.progress}%
               </span>
             ))}
@@ -806,7 +806,7 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
               <div className="space-y-3">
                 {grupos.map((g) => (
                   <div key={g.role}>
-                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
+                    <p className="mb-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {g.people.map((m) => (
                         <span key={m.id || m.name}

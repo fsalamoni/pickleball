@@ -105,7 +105,7 @@ const LEGENDA = [
   { status: 'pending', cor: 'bg-amber-500', texto: 'Reservas pendentes' },
   { status: 'confirmed', cor: 'bg-red-500', texto: 'Reservado' },
   { status: 'completed', cor: 'bg-green-400', texto: 'Concluído' },
-  { status: 'unavailable', cor: 'bg-orange-500', texto: 'Indisponível (admin)' },
+  { status: 'unavailable', cor: 'bg-amber-500', texto: 'Indisponível (admin)' },
   { status: 'closed', cor: 'bg-gray-300', texto: 'Fechado (sem horário)' },
 ];
 
@@ -124,7 +124,7 @@ function faixasDeOcupacao(count = {}) {
     { key: 'available', cls: 'bg-green-500', n: count.available || 0 },
     { key: 'pending', cls: 'bg-amber-400', n: count.pending || 0 },
     { key: 'confirmed', cls: 'bg-red-400', n: count.confirmed || 0 },
-    { key: 'unavailable', cls: 'bg-orange-400', n: count.unavailable || 0 },
+    { key: 'unavailable', cls: 'bg-amber-400', n: count.unavailable || 0 },
   ].filter((f) => f.n > 0);
 }
 
@@ -476,7 +476,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         {/* Header da semana */}
         <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
           {WEEKDAY_LABELS_PT.map((wd) => (
-            <div key={wd} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">
+            <div key={wd} className="px-2 py-2 text-center text-2xs font-bold uppercase tracking-widest text-gray-500">
               {wd}
             </div>
           ))}
@@ -505,7 +505,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
               if ((meta.count?.pending || 0) + (meta.count?.confirmed || 0) > 0) {
                 return { texto: 'Lotado', cls: 'text-red-600' };
               }
-              if (meta.count?.unavailable) return { texto: 'Bloqueado', cls: 'text-orange-600' };
+              if (meta.count?.unavailable) return { texto: 'Bloqueado', cls: 'text-amber-600' };
               return null;
             })();
             // Tooltip (e aria-label): o mesmo que a barra diz, por extenso —
@@ -573,15 +573,15 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                   )
                 )}
                 {inMonth && !past && !ocupacaoDesconhecida && rotulo && (
-                  <span className={cn('text-[9px] font-bold leading-none', rotulo.cls)}>{rotulo.texto}</span>
+                  <span className={cn('text-2xs font-bold leading-none', rotulo.cls)}>{rotulo.texto}</span>
                 )}
                 {inMonth && !past && gameDayOn && diasDeJogo.length > 0 && (
-                  <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-bold leading-none text-ink">
+                  <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-2xs font-bold leading-none text-ink">
                     Dia de jogo
                   </span>
                 )}
                 {inMonth && past && (
-                  <span className="text-[9px] text-gray-300">passou</span>
+                  <span className="text-2xs text-gray-300">passou</span>
                 )}
               </button>
             );

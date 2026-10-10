@@ -156,7 +156,7 @@ function ProgressSection({ participants, games }) {
           <Metrica rotulo="Mais jogou" valor={`${p.maxJogos} jogo(s)`} />
           <Metrica rotulo="Partidas criadas" valor={p.partidasCriadas} />
         </div>
-        <p className="text-[11px] leading-5 text-gray-500">
+        <p className="text-2xs leading-5 text-gray-500">
           A previsão de <strong>~{p.partidasPrevistas}</strong> partidas é o número que faria
           todos formarem dupla com todos e enfrentarem todos duas vezes. É uma
           <strong> referência, não um compromisso</strong>: gente entrando, saindo, pausando ou
@@ -170,7 +170,7 @@ function ProgressSection({ participants, games }) {
 function Metrica({ rotulo, valor, detalhe = null }) {
   return (
     <div className="rounded-xl border border-gray-100 p-2" title={detalhe || undefined}>
-      <div className="text-[11px] uppercase tracking-wide text-gray-500">{rotulo}</div>
+      <div className="text-2xs uppercase tracking-wide text-gray-500">{rotulo}</div>
       <div className="mt-0.5 font-display text-base font-bold text-ink">{valor}</div>
     </div>
   );
@@ -322,7 +322,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
           </p>
         )}
         {canManage && participants.length > 0 && (
-          <p className="text-[11px] leading-5 text-gray-500">
+          <p className="text-2xs leading-5 text-gray-500">
             Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
             <strong className="text-gray-500">simples</strong> — escolha na quadra livre, antes de gerar a partida.
             Simples e duplas têm rankings do dia separados.
@@ -429,7 +429,7 @@ function CourtCard({
   return (
     <div className={`rounded-2xl border p-3 ${game ? 'border-acid/40 bg-acid/5' : 'border-gray-100'}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-bold ${
           game ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}
         >
           Quadra {court}
@@ -469,7 +469,7 @@ function CourtCard({
               >
                 <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar partida
               </V2Button>
-              <p className="text-center text-[11px] leading-4 text-gray-500">
+              <p className="text-center text-2xs leading-4 text-gray-500">
                 Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os jogadores
                 à fila, sem placar — e a quadra volta a oferecer um novo sorteio.
               </p>
@@ -552,7 +552,7 @@ function ForecastBlock({ previsao }) {
             </span>
             <GameKindBadge kind={b.kind} />
             {b.conditional && (
-              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-2xs text-amber-700">
                 quando liberar
               </span>
             )}
@@ -560,7 +560,7 @@ function ForecastBlock({ previsao }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] leading-4 text-gray-500">
+      <p className="mt-2 text-2xs leading-4 text-gray-500">
         A previsão das quadras ocupadas é condicional: depende de qual partida terminar
         primeiro. A hipótese é &quot;termina primeiro quem começou primeiro&quot;.
       </p>
@@ -600,7 +600,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
           {concluidas.map((g, i) => (
             <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 p-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="w-8 shrink-0 text-center text-[11px] font-bold text-gray-500 tabular-nums">
+                <span className="w-8 shrink-0 text-center text-2xs font-bold text-gray-500 tabular-nums">
                   #{concluidas.length - i}
                 </span>
                 <div className="min-w-0 flex-1 text-sm">
@@ -611,13 +611,13 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
                     {g.score_a} × {g.score_b}
                   </span>
                   {setsText(g) && (
-                    <span className="mr-2 text-[11px] text-gray-500 tabular-nums">sets {setsText(g)} ·</span>
+                    <span className="mr-2 text-2xs text-gray-500 tabular-nums">sets {setsText(g)} ·</span>
                   )}
                   <span className={Number(g.score_b) > Number(g.score_a) ? 'font-bold text-ink' : 'text-gray-600'}>
                     {(g.side_b || []).map((p) => p.name || p).join(' / ')}
                   </span>
                   {g.court != null && (
-                    <span className="ml-2 text-[11px] text-gray-500">quadra {g.court}</span>
+                    <span className="ml-2 text-2xs text-gray-500">quadra {g.court}</span>
                   )}
                 </div>
               </div>

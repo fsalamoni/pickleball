@@ -89,7 +89,7 @@ function EntrarNoDia({ gameDay, uid }) {
       </p>
       {jaEstou ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
             <Check className="h-4 w-4" aria-hidden="true" /> Você está inscrito.
           </span>
           <V2Button variant="ghost" size="sm" onClick={onSair} disabled={sair.isPending}>

@@ -53,7 +53,7 @@ function Leaderboard({ challenge, subjectId }) {
           );
         })}
       </ol>
-      <p className="text-[11px] text-gray-500">O placar é calculado pelo servidor a cada poucas horas, a partir dos jogos registrados.</p>
+      <p className="text-2xs text-gray-500">O placar é calculado pelo servidor a cada poucas horas, a partir dos jogos registrados.</p>
     </div>
   );
 }

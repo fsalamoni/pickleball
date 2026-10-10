@@ -71,10 +71,10 @@ export default function DirectEntryPanel({
         </span>
         <span className="flex items-center gap-2">
           {configuradas.length === 0
-            ? <span className="text-[11px] text-gray-500">todos começam na 1ª fase</span>
+            ? <span className="text-2xs text-gray-500">todos começam na 1ª fase</span>
             : <V2Badge tone="acid">{configuradas.length} fase(s) com entrada direta</V2Badge>}
           {plano.warnings.some((w) => w.level === 'error') && (
-            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-rose-500" />
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 text-red-500" />
           )}
         </span>
       </button>
@@ -99,9 +99,9 @@ export default function DirectEntryPanel({
           </div>
 
           {plano.warnings.length > 0 && (
-            <ul className="space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-900">
+            <ul className="space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-3 text-2xs text-amber-900">
               {plano.warnings.map((w, i) => (
-                <li key={i} className={w.level === 'error' ? 'font-semibold text-rose-800' : ''}>
+                <li key={i} className={w.level === 'error' ? 'font-semibold text-red-800' : ''}>
                   {w.text}
                 </li>
               ))}
@@ -109,7 +109,7 @@ export default function DirectEntryPanel({
           )}
 
           {!isAdmin ? (
-            <p className="text-[11px] italic text-gray-500">
+            <p className="text-2xs italic text-gray-500">
               Só quem administra o torneio pode mudar isto.
             </p>
           ) : (
@@ -131,7 +131,7 @@ export default function DirectEntryPanel({
                       <option key={k} value={k}>{v}</option>
                     ))}
                   </select>
-                  <p className="text-[11px] leading-snug text-gray-500">
+                  <p className="text-2xs leading-snug text-gray-500">
                     {DIRECT_ENTRY_MODE_HELP[direct.mode]}
                   </p>
 
@@ -155,7 +155,7 @@ export default function DirectEntryPanel({
                       <Label className="text-xs">Quem entra direto nesta fase</Label>
                       <div className="flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-gray-100 bg-paper p-2">
                         {entrants.length === 0 && (
-                          <span className="text-[11px] text-gray-500">Ainda não há inscrições confirmadas.</span>
+                          <span className="text-2xs text-gray-500">Ainda não há inscrições confirmadas.</span>
                         )}
                         {entrants.map((e) => {
                           const escolhido = direct.ids.includes(e.id);
@@ -168,7 +168,7 @@ export default function DirectEntryPanel({
                               disabled={saving}
                               onClick={() => alternarManual(i, e.id)}
                               title={emOutraFase ? 'Já entra direto em outra fase' : ''}
-                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] transition-colors ${
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-2xs transition-colors ${
                                 escolhido
                                   ? 'border-acid bg-acid/20 font-semibold text-ink'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
@@ -187,7 +187,7 @@ export default function DirectEntryPanel({
             })
           )}
 
-          <p className="text-[11px] italic text-gray-500">
+          <p className="text-2xs italic text-gray-500">
             Quem entra direto numa fase <strong>não joga</strong> as anteriores — não entra no
             sorteio delas nem na classificação delas. Mudanças aqui valem no próximo sorteio
             daquela fase.

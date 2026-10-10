@@ -115,7 +115,7 @@ function Contas() {
           {mod.moderated.map((m) => (
             <li key={m.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
               <div>
-                <p className="text-sm font-bold text-ink">{people.get(m.uid)?.name || 'Atleta'} <span className="font-mono text-[11px] font-normal text-gray-500">{m.uid}</span></p>
+                <p className="text-sm font-bold text-ink">{people.get(m.uid)?.name || 'Atleta'} <span className="font-mono text-2xs font-normal text-gray-500">{m.uid}</span></p>
                 <p className="text-xs text-gray-500">{m.excluded ? 'Fora do placar' : 'Escondida do público'}{m.reason ? ` · ${m.reason}` : ''}</p>
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => aplicar(m.uid, {})}>Devolver ao normal</V2Button>

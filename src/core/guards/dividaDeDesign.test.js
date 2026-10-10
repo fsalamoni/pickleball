@@ -15,7 +15,8 @@ import path from 'node:path';
 const RAIZ = path.resolve(__dirname, '../../..');
 const TETOS = {
   'text-gray-400': 293,
-  'text-[10px]': 0,
+  'text-[Npx]': 0,
+  'emerald/orange/rose/sky': 0,
   '<button> sem type': 250,
   'PERMANENT_FEATURE.': 116,
 };
@@ -41,7 +42,19 @@ describe('⭐ a dívida de design só desce', () => {
   });
 
   it('texto de 10 px em src/v2 (o piso é 11 px)', () => {
-    expect(conta(v2, /text-\[10px\]/g)).toBeLessThanOrEqual(TETOS['text-[10px]']);
+    // Tamanho arbitrário em px é dívida: a escala é text-2xs (11) · xs · sm · base…
+    expect(conta(v2, /text-\[\d+px\]/g)).toBeLessThanOrEqual(TETOS['text-[Npx]']);
+  });
+
+  it('cores de estado só nas quatro famílias (green/amber/red/blue) em src/v2', () => {
+    // emerald, orange, rose e sky eram sinônimos soltos das mesmas quatro
+    // intenções; uma família por intenção é o que mantém o escuro e o contraste
+    // conferidos num lugar só (palette.test.js).
+    // Isenção única: a paleta de IDENTIDADE dos grupos do Play (oito cores
+    // distintas para distinguir grupos, não estados) — mapear colapsaria
+    // laranja em âmbar e esmeralda em verde, e dois grupos ficariam iguais.
+    const semGrupos = v2.filter((p) => !p.endsWith('playGroups/playGroupTheme.js'));
+    expect(conta(semGrupos, /-(?:emerald|orange|rose|sky)-\d{2,3}\b/g)).toBeLessThanOrEqual(TETOS['emerald/orange/rose/sky']);
   });
 
   it('<button> sem type em src/v2', () => {

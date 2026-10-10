@@ -268,7 +268,7 @@ function HeroFact({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2.5xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">{label}</span>
+        <span className="text-2xs font-bold uppercase tracking-widest text-white/60">{label}</span>
         <Icon className="h-4 w-4 text-white/70" />
       </div>
       <p className="mt-2 text-sm font-medium text-white">{value}</p>

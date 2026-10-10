@@ -22,6 +22,11 @@ export default {
       ...tema,
       // v2 (Athleisure Premium) — tipografia de display/leitura. Aditivo: o v1
       // continua usando a fonte padrão definida em index.css.
+      // Piso tipográfico da plataforma: 11 px, só para selo e legenda (plano de
+      // UX §5.13). Abaixo disso é ilegível no celular; `text-[Npx]` é dívida.
+      fontSize: {
+        '2xs': ['11px', { lineHeight: '1rem' }],
+      },
       fontFamily: {
         display: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         inter: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],

@@ -138,12 +138,12 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
               className="h-14 w-full bg-transparent text-base text-ink outline-none placeholder:text-gray-500"
               autoComplete="off"
             />
-            <kbd className="hidden rounded-md border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-500 sm:inline">Esc</kbd>
+            <kbd className="hidden rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs text-gray-500 sm:inline">Esc</kbd>
           </div>
           <div ref={listaRef} id="cmd-lista" role="listbox" aria-label="Resultados" className="max-h-[60dvh] overflow-y-auto overscroll-contain p-2">
             {grupos.map((g) => (
               <div key={g.grupo} role="group" aria-label={g.label} className="mb-1">
-                <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
+                <p className="px-3 pb-1 pt-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
                 {g.itens.map((item) => {
                   indice2 += 1;
                   const i = indice2;

@@ -31,10 +31,10 @@ const nomeDe = (u) => u?.full_name || u?.platform_name || u?.display_name || '(s
 function Conta({ titulo, nome, email, uid, tom }) {
   return (
     <div className={`min-w-0 flex-1 rounded-xl border p-3 ${tom}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{titulo}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wide text-gray-500">{titulo}</p>
       <p className="truncate text-sm font-bold text-ink">{nome || '(sem nome)'}</p>
-      <p className="truncate text-[11px] text-gray-500">{email || 'sem e-mail'}</p>
-      <p className="truncate text-[11px] text-gray-500">{uid}</p>
+      <p className="truncate text-2xs text-gray-500">{email || 'sem e-mail'}</p>
+      <p className="truncate text-2xs text-gray-500">{uid}</p>
     </div>
   );
 }
@@ -116,9 +116,9 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-semibold text-ink">{nomeDe(u)}</span>
-                            <span className="block truncate text-[11px] text-gray-500">{u.email || u.uid}</span>
+                            <span className="block truncate text-2xs text-gray-500">{u.email || u.uid}</span>
                           </span>
-                          <span className="shrink-0 text-[11px] text-gray-500">{motivos.join(' · ')}</span>
+                          <span className="shrink-0 text-2xs text-gray-500">{motivos.join(' · ')}</span>
                         </button>
                       ))}
                     </div>
@@ -141,7 +141,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                         className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-left text-sm hover:border-gray-300"
                       >
                         <span className="truncate font-medium text-ink">{nomeDe(u)}</span>
-                        <span className="shrink-0 truncate text-[11px] text-gray-500">{u.email}</span>
+                        <span className="shrink-0 truncate text-2xs text-gray-500">{u.email}</span>
                       </button>
                     ))}
                   </div>
@@ -169,7 +169,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                     tom="border-acid/40 bg-acid/10"
                   />
                 </div>
-                <button type="button" className="text-[11px] font-semibold text-gray-500 underline hover:text-ink" onClick={() => { setDestino(null); preview.reset(); }}>
+                <button type="button" className="text-2xs font-semibold text-gray-500 underline hover:text-ink" onClick={() => { setDestino(null); preview.reset(); }}>
                   Escolher outra conta
                 </button>
 
@@ -194,7 +194,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                           {report.conflitosTotal} conflito(s): as duas contas aparecem no mesmo registro — juntá-las faria a
                           pessoa jogar com (ou contra) ela mesma. Nada será gravado enquanto isso existir.
                         </p>
-                        <ul className="mt-1 space-y-0.5 text-[11px]">
+                        <ul className="mt-1 space-y-0.5 text-2xs">
                           {report.conflitos.map((c) => <li key={c.path}>{c.motivo} <span className="text-red-400">({c.path})</span></li>)}
                         </ul>
                       </div>
@@ -207,11 +207,11 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                     {report.itens.length > 0 && (
                       <div className="rounded-xl border border-gray-100 p-3">
                         <p className="text-xs font-semibold text-ink">O que passa para {report.destino?.name}:</p>
-                        <ul className="mt-1 grid gap-x-4 gap-y-0.5 text-[11px] text-gray-600 sm:grid-cols-2">
+                        <ul className="mt-1 grid gap-x-4 gap-y-0.5 text-2xs text-gray-600 sm:grid-cols-2">
                           {report.itens.map((i) => <li key={i.label}>{i.label}: <strong className="text-ink">{i.count}</strong></li>)}
                         </ul>
                         {report.truncado && (
-                          <p className="mt-1 text-[11px] text-amber-700">Há mais registros do que cabem numa passada — rode de novo depois para terminar.</p>
+                          <p className="mt-1 text-2xs text-amber-700">Há mais registros do que cabem numa passada — rode de novo depois para terminar.</p>
                         )}
                       </div>
                     )}

@@ -40,7 +40,7 @@ function inAgeBucket(age, bucketValue) {
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="mb-1 block text-2xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -63,7 +63,7 @@ function formatBalance(balance) {
 function Stat({ label, value }) {
   return (
     <div className="text-right">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-2xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="font-semibold text-ink tabular-nums">{value}</p>
     </div>
   );

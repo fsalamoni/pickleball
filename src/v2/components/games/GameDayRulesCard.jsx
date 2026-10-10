@@ -64,7 +64,7 @@ export default function GameDayRulesCard({ gameDay, podeGerenciar = false }) {
           <V2Badge tone="acid">{formato.value}</V2Badge>
           <span className="min-w-0 text-xs text-gray-500">{formato.help}</span>
         </span>
-        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-gray-500">
+        <span className="inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-gray-500">
           <Chevron className="h-3 w-3" />
           {aberto ? 'Ocultar' : 'Como funciona este dia'}
         </span>

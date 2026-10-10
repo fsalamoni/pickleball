@@ -68,7 +68,7 @@ function CartaoCupom({ issuer, cupom, onEditar, onRegistrar, onAlternar, onApaga
   return (
     <div data-cupom={cupom.code} className={cn('rounded-2xl border p-3', desligado ? 'border-gray-100 bg-gray-50 opacity-75' : 'border-gray-100 bg-paper')}>
       <div className="flex items-start justify-between gap-2">
-        <p className="inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold text-gray-600">
+        <p className="inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-2xs font-bold text-gray-600">
           {Icone && <Icone className="h-3 w-3" aria-hidden />} {promoKindLabel(issuer.type, kind)}
         </p>
         <V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge>

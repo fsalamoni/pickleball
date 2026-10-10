@@ -120,7 +120,7 @@ export default function V2CreateTournament() {
             </div>
 
             <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-lg">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-acid">Prévia do evento</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-acid">Prévia do evento</div>
               <div className="mt-2 font-display text-2xl font-bold text-white">{form.name.trim() || 'Seu torneio ainda sem nome'}</div>
               <p className="mt-2 text-sm leading-6 text-gray-300">{form.description.trim() || 'Adicione uma descrição para dar contexto a atletas e público.'}</p>
               <div className="mt-4 flex items-center gap-2 text-sm text-gray-300"><MapPin className="h-4 w-4 text-acid" /> {locationPreview}</div>
@@ -307,7 +307,7 @@ function WizardStepper({ steps, current, onGo }) {
                 active ? 'bg-ink text-white' : done ? 'bg-acid/20 text-ink' : 'bg-paper text-gray-400',
               )}
             >
-              <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[11px]', active ? 'bg-acid text-ink' : done ? 'bg-ink text-acid' : 'bg-gray-200 text-gray-500')}>
+              <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-2xs', active ? 'bg-acid text-ink' : done ? 'bg-ink text-acid' : 'bg-gray-200 text-gray-500')}>
                 {done ? <Check className="h-3 w-3" /> : i + 1}
               </span>
               <span className="hidden sm:inline">{s.label}</span>
@@ -324,7 +324,7 @@ function PreviewFact({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">{label}</span>
+        <span className="text-2xs font-bold uppercase tracking-widest text-white/50">{label}</span>
         <Icon className="h-3.5 w-3.5 text-white/60" />
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold text-white">{value}</p>

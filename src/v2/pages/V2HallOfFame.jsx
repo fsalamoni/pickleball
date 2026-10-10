@@ -167,14 +167,14 @@ function HallOfFameOn() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold tabular-nums text-ink">{p.xp.toLocaleString('pt-BR')} XP</p>
-                  <p className="text-[11px] text-gray-500">Nível {p.level}{p.delta !== 0 ? ` · ${p.delta > 0 ? '▲' : '▼'}${Math.abs(p.delta)}` : ''}</p>
+                  <p className="text-2xs text-gray-500">Nível {p.level}{p.delta !== 0 ? ` · ${p.delta > 0 ? '▲' : '▼'}${Math.abs(p.delta)}` : ''}</p>
                 </div>
               </li>
             ))}
           </ol>
         </V2Surface>
       )}
-      <p className="text-center text-[11px] text-gray-500">Atualizado uma vez por dia. Só aparece quem aceitou — em Preferências você escolhe.</p>
+      <p className="text-center text-2xs text-gray-500">Atualizado uma vez por dia. Só aparece quem aceitou — em Preferências você escolhe.</p>
     </div>
   );
 }
@@ -183,7 +183,7 @@ function PodiumCard({ row, me }) {
   const colors = {
     1: { bg: 'from-amber-300 to-amber-500', text: 'text-amber-900', icon: Crown },
     2: { bg: 'from-slate-300 to-slate-400', text: 'text-slate-900', icon: Medal },
-    3: { bg: 'from-orange-300 to-orange-400', text: 'text-orange-900', icon: Medal },
+    3: { bg: 'from-amber-300 to-amber-400', text: 'text-amber-900', icon: Medal },
   };
   const { bg, text, icon: Icon } = colors[row.position] || colors[3];
   return (
@@ -199,7 +199,7 @@ function PodiumCard({ row, me }) {
           </div>
         </div>
         <p className="mt-3 text-3xl font-bold tabular-nums">{row.xp.toLocaleString('pt-BR')}</p>
-        <p className="text-[11px] uppercase tracking-wide opacity-80">{row.sub}</p>
+        <p className="text-2xs uppercase tracking-wide opacity-80">{row.sub}</p>
         <p className="mt-1 text-xs">Nível {row.level}</p>
       </div>
     </div>

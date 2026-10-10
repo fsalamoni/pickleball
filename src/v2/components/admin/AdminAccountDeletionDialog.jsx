@@ -30,7 +30,7 @@ import {
 
 function Linhas({ itens }) {
   return (
-    <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-600">
+    <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-gray-600">
       {itens.map((i) => (
         <li key={i.label}>
           {i.label}{i.count > 1 ? ` (${i.count})` : ''}
@@ -47,7 +47,7 @@ function RelatorioDaConta({ report }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-ink">{r.name}</p>
-          <p className="truncate text-[11px] text-gray-500">{r.email || r.uid}</p>
+          <p className="truncate text-2xs text-gray-500">{r.email || r.uid}</p>
         </div>
         {r.canDelete
           ? <V2Badge tone="green">Pode excluir</V2Badge>
@@ -67,7 +67,7 @@ function RelatorioDaConta({ report }) {
       {r.canDelete && (
         <div className="mt-2 space-y-2">
           <div>
-            <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-red-700">
+            <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-red-700">
               <Trash2 className="h-3 w-3" /> Será apagado
             </p>
             <Linhas itens={[
@@ -79,7 +79,7 @@ function RelatorioDaConta({ report }) {
           </div>
           {r.pseudonyms.length > 0 && (
             <div>
-              <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-gray-500">
                 <History className="h-3 w-3" /> Fica no histórico, como &ldquo;Atleta removido&rdquo;
               </p>
               <Linhas itens={r.pseudonyms} />
@@ -87,14 +87,14 @@ function RelatorioDaConta({ report }) {
           )}
           {r.retained.length > 0 && (
             <div>
-              <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-gray-500">
                 <Clock className="h-3 w-3" /> Fica guardado
               </p>
               <Linhas itens={r.retained} />
             </div>
           )}
           {r.truncated && (
-            <p className="text-[11px] text-amber-700">
+            <p className="text-2xs text-amber-700">
               Tem mais itens do que uma passada alcança. Rode a exclusão de novo depois para terminar.
             </p>
           )}
@@ -168,9 +168,9 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
                 <div key={r.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 p-3">
                   <span className="min-w-0 truncate text-sm font-semibold text-ink">{nome}</span>
                   <V2Badge tone={meta.tone}><meta.Icon className="h-3 w-3" /> {meta.label}</V2Badge>
-                  {r.error && <p className="w-full text-[11px] text-red-700">{r.error}</p>}
+                  {r.error && <p className="w-full text-2xs text-red-700">{r.error}</p>}
                   {r.storageError && (
-                    <p className="w-full text-[11px] text-amber-700">
+                    <p className="w-full text-2xs text-amber-700">
                       As fotos enviadas não puderam ser apagadas agora; o resto foi feito.
                     </p>
                   )}
@@ -219,7 +219,7 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
                     placeholder="Ex.: contas de exemplo criadas para testar os torneios"
                   />
                   {motivo && validacao.errors.reason && (
-                    <p className="mt-1 text-[11px] text-red-600">{validacao.errors.reason}</p>
+                    <p className="mt-1 text-2xs text-red-600">{validacao.errors.reason}</p>
                   )}
                 </div>
                 <div>

@@ -201,7 +201,7 @@ function Cabecalho({ user, userProfile }) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <V2Avatar name={name} photoUrl={photo} size="xl" className="h-20 w-20 text-2xl" />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Minha área</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Minha área</p>
           <h1 className="truncate font-display text-2xl font-bold text-ink sm:text-3xl">{name}</h1>
           <p className="mt-0.5 text-sm text-gray-500">
             {[location, year ? `Membro desde ${year}` : null].filter(Boolean).join(' • ') || 'Complete seu perfil para aparecer no diretório'}

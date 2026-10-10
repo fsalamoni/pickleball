@@ -298,7 +298,7 @@ function LinhaJogo({ jogo, mostrarRodada }) {
       <Lado side={jogo.side_a} variante="linha" />
       <div className="my-1 flex items-center gap-2">
         <span className="h-px flex-1 bg-white/10" />
-        <span className="text-[11px] font-bold text-white/30">VS</span>
+        <span className="text-2xs font-bold text-white/30">VS</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
       <Lado side={jogo.side_b} variante="linha" />
@@ -595,7 +595,7 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
               </div>
               <div className="my-1 flex items-center gap-2">
                 <span className="h-px flex-1 bg-white/10" />
-                <span className="text-[11px] font-bold text-white/30">VS</span>
+                <span className="text-2xs font-bold text-white/30">VS</span>
                 <span className="h-px flex-1 bg-white/10" />
               </div>
               <div className="truncate text-lg font-semibold leading-snug text-white">

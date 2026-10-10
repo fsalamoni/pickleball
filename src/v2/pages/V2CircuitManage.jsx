@@ -314,8 +314,8 @@ function Ranking({ circuitId }) {
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-display text-lg font-bold text-emerald-700">{u.total_points}</div>
-                <div className="text-[11px] uppercase tracking-widest text-gray-500">pontos</div>
+                <div className="font-display text-lg font-bold text-green-700">{u.total_points}</div>
+                <div className="text-2xs uppercase tracking-widest text-gray-500">pontos</div>
               </div>
             </div>
           ))
@@ -409,13 +409,13 @@ export default function V2CircuitManage() {
         description="O circuito continua lá — só não conseguimos buscá-lo agora."
         onRetry={() => refetch()}
       />
-      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-emerald-700">← Ver circuitos</Link>
+      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">← Ver circuitos</Link>
     </div>
   );
   if (!circuit) return (
     <div className="p-4">
       <V2EmptyState icon={Trophy} title="Circuito não encontrado" description="Confira o link ou volte para a lista." />
-      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-emerald-700">← Ver circuitos</Link>
+      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">← Ver circuitos</Link>
     </div>
   );
 

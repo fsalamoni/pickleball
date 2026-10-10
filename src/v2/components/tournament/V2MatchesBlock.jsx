@@ -116,7 +116,7 @@ export function TeamConfrontationScore({ match, config }) {
       <div className="space-y-0.5">
         {rows.map(({ etapa, res }) => (
           <div key={etapa.id} className="flex items-baseline gap-2">
-            <span className="w-28 shrink-0 truncate text-[11px] font-medium uppercase tracking-wide text-gray-500" title={etapa.label}>
+            <span className="w-28 shrink-0 truncate text-2xs font-medium uppercase tracking-wide text-gray-500" title={etapa.label}>
               {etapa.label}
             </span>
             {res.games.length > 0 ? (
@@ -135,7 +135,7 @@ export function TeamConfrontationScore({ match, config }) {
           </div>
         ))}
       </div>
-      <div className="text-[11px] font-bold text-ink">{winsA}–{winsB} etapas</div>
+      <div className="text-2xs font-bold text-ink">{winsA}–{winsB} etapas</div>
     </div>
   );
 }
@@ -268,10 +268,10 @@ function MatchesTable({
           return (
             <div key={m.id} className={cn('rounded-2xl border p-3', inProgress ? 'border-amber-200 bg-amber-50/70' : 'border-gray-100 bg-white')}>
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                {hasGroups && m.group && <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-600">{m.group}</span>}
-                <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-600">Rod. {roundLabel(m)}</span>
-                {hasSchedule && m.court && <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-600">{m.court}</span>}
-                {hasSchedule && m.scheduled_at && <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium tabular-nums text-gray-600">{formatMatchTime(m.scheduled_at)}</span>}
+                {hasGroups && m.group && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{m.group}</span>}
+                <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">Rod. {roundLabel(m)}</span>
+                {hasSchedule && m.court && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{m.court}</span>}
+                {hasSchedule && m.scheduled_at && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium tabular-nums text-gray-600">{formatMatchTime(m.scheduled_at)}</span>}
                 <V2Badge tone={statusTone(m.status)} className="ml-auto">{MATCH_STATUS_LABELS[m.status] || m.status}</V2Badge>
               </div>
               <div className="space-y-1.5">
@@ -281,7 +281,7 @@ function MatchesTable({
                     <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{Number(m.etapa_wins_a) || 0}</span>
                   ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.a).join('  ')}</span>}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-gray-300">
+                <div className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-gray-300">
                   <span className="h-px flex-1 bg-gray-100" />vs<span className="h-px flex-1 bg-gray-100" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -528,7 +528,7 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
                 return (
                   <div key={i} className="rounded-2xl border border-gray-100 p-3">
                     {setsCount > 1 && (
-                      <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">Set {i + 1}</div>
+                      <div className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">Set {i + 1}</div>
                     )}
                     <div className="flex items-center justify-between gap-2">
                       <div className={cn('rounded-lg px-1', aWins && 'bg-green-50')}>

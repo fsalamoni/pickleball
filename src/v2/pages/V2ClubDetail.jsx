@@ -371,7 +371,7 @@ function ExternalToggle({ includeExternal, onChange, isAdmin }) {
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <Globe2 className="h-4 w-4 text-amber-600" /> Incluir resultados externos
             {includeExternal && (
-              <V2Badge tone="amber" className="rounded-full text-[11px]">
+              <V2Badge tone="amber" className="rounded-full text-2xs">
                 ON
               </V2Badge>
             )}
@@ -404,7 +404,7 @@ function IndividualRankingTable({ ranking, emptyMessage, action }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+        <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
           <tr>
             <th className="px-4 py-3">#</th>
             <th className="px-4 py-3">Atleta</th>
@@ -446,7 +446,7 @@ function DoublesRankingTable({ ranking, emptyMessage }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+        <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
           <tr>
             <th className="px-4 py-3">#</th>
             <th className="px-4 py-3">Dupla</th>

@@ -37,7 +37,7 @@ function Denuncia({ r, item, itensOk, nomeDe, abertasDoItem, acoes }) {
       <V2Surface className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+            <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
               {REPORT_REASONS[r.reason] || r.reason}{quandoFoi(r.created_at) ? ` · ${quandoFoi(r.created_at)}` : ''}
             </p>
             <Link to={`/treino/item/${r.item_id}`} className="mt-0.5 inline-flex items-center gap-1.5 font-display text-lg font-bold text-ink hover:underline">

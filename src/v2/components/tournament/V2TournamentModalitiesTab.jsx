@@ -306,11 +306,11 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         <V2Surface className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Nome (ex.: Duplas Mistas Inic.) *</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nome (ex.: Duplas Mistas Inic.) *</label>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Formato</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Formato</label>
               <select
                 value={form.team_enabled ? 'team' : form.format}
                 onChange={(e) => handleFormatSelect(e.target.value)}
@@ -332,19 +332,19 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         <V2Surface className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Nível / Perfil</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nível / Perfil</label>
               <select value={form.skill_level} onChange={(e) => set('skill_level', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(SKILL_LEVEL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Gênero</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Gênero</label>
               <select value={form.gender_category} onChange={(e) => set('gender_category', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(GENDER_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Faixa Etária</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Faixa Etária</label>
               <select value={form.age_category} onChange={(e) => set('age_category', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(AGE_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
@@ -356,7 +356,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
           <div className="flex items-center gap-2 mb-4 text-ink font-bold"><Ticket className="h-4 w-4" /> Vagas e Ingresso</div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500 flex justify-between">
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500 flex justify-between">
                 <span>Vagas (inscrições / {form.team_enabled ? 'equipes' : (form.format === MODALITY_FORMAT.SINGLES ? 'atletas' : 'duplas')})</span>
                 <label className="flex items-center gap-1.5 text-xs normal-case tracking-normal">
                   <input type="checkbox" checked={form.has_unlimited_entries} onChange={(e) => set('has_unlimited_entries', e.target.checked)} />
@@ -366,7 +366,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               <input type="number" min="2" max={MAX_REGISTRATIONS_PER_MODALITY} value={form.max_entries} onChange={(e) => set('max_entries', e.target.value)} disabled={form.has_unlimited_entries} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30 disabled:opacity-50" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Valor da inscrição (R$)</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Valor da inscrição (R$)</label>
               <input type="number" min="0" step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
@@ -387,21 +387,21 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Modelo da chave</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Modelo da chave</label>
                   <select value={form.stage_type} onChange={(e) => setStageType(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                     {Object.entries(stageOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
                 {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Qtd. de grupos</label>
+                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Qtd. de grupos</label>
                     <input type="number" min="2" max="16" value={form.group_count} onChange={(e) => set('group_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
-                    <p className="text-[11px] leading-relaxed text-gray-500">Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.</p>
+                    <p className="text-2xs leading-relaxed text-gray-500">Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.</p>
                   </div>
                 )}
                 {[TOURNAMENT_STAGE_TYPE.SINGLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.DOUBLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.TWO_STAGE].includes(form.stage_type) && (
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Cabeças de chave (Seeds)</label>
+                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Cabeças de chave (Seeds)</label>
                     <input type="number" min="0" max="32" value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
                   </div>
                 )}
@@ -426,23 +426,23 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
           <p className="mb-4 text-sm text-gray-500">Se preenchido, os jogos gerados calcularão automaticamente sua estimativa de horário e distribuição nas quadras.</p>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
             <div className="space-y-2 md:col-span-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Data Base</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Data Base</label>
               <input type="date" value={form.play_date} onChange={(e) => set('play_date', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Início</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Início</label>
               <input type="time" value={form.play_start_time} onChange={(e) => set('play_start_time', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Fim (Teto)</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Fim (Teto)</label>
               <input type="time" value={form.play_end_time} onChange={(e) => set('play_end_time', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Quadras</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Quadras</label>
               <input type="number" min="1" max={MAX_COURT_COUNT} value={form.court_count} onChange={(e) => set('court_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Min/Jogo</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Min/Jogo</label>
               <input type="number" min="10" max="180" step="5" value={form.match_duration_minutes} onChange={(e) => set('match_duration_minutes', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
@@ -515,7 +515,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                     {Array.isArray(m.stages) && m.stages.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {m.stages.map((stage, index) => (
-                          <V2Badge key={`${m.id}-${index}`} tone="neutral" className="px-2 py-0.5 text-[11px]">
+                          <V2Badge key={`${m.id}-${index}`} tone="neutral" className="px-2 py-0.5 text-2xs">
                             Fase {index + 1}: {formatScoringSummary(stage.scoring_override || {})}
                           </V2Badge>
                         ))}

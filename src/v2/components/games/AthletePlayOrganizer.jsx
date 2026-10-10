@@ -369,7 +369,7 @@ export function PlayParticipantsSection({
                       <span className="truncate font-medium text-ink">{p.name}</span>
                       {statusBadge(st)}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-gray-500">
                       {/* Quem não pode mexer vê o grupo como selo; quem pode vê o
                           seletor, ao lado das ações. */}
                       {comGrupos && !editable && (
@@ -484,7 +484,7 @@ export function PlayParticipantsSection({
                       />
                     )}
                   </div>
-                  <p className="text-[11px] leading-5 text-gray-500">
+                  <p className="text-2xs leading-5 text-gray-500">
                     O nível e o sexo ajudam o sorteio a achar o grupo e a formar as duplas. Sem eles, o convidado
                     entra sem grupo — e você move depois.
                   </p>
@@ -685,7 +685,7 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
               <UserX className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-ink">Indisponível para esta partida</span>
-                <span className="block text-[12px] leading-snug text-gray-500">
+                <span className="block text-xs leading-snug text-gray-500">
                   {nome} sai e entra automaticamente o próximo da ordem
                   {proximo ? <> — <strong className="font-semibold text-ink">{proximo.name}</strong></> : null}.
                 </span>
@@ -700,7 +700,7 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
               <ArrowRightLeft className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-ink">Substituir por outro jogador</span>
-                <span className="block text-[12px] leading-snug text-gray-500">
+                <span className="block text-xs leading-snug text-gray-500">
                   Você escolhe quem entra, entre os {elegiveis.length} disponíveis na ordem de participação.
                 </span>
               </span>
@@ -718,14 +718,14 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
                 <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
                   <div className="flex min-w-0 items-center gap-2">
                     {(p.groupNo ?? p.orderNo) ? (
-                      <span className="w-6 shrink-0 text-center text-[11px] font-bold text-gray-500 tabular-nums">
+                      <span className="w-6 shrink-0 text-center text-2xs font-bold text-gray-500 tabular-nums">
                         #{p.groupNo ?? p.orderNo}
                       </span>
                     ) : <span className="w-6 shrink-0" />}
                     <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                     <span className="truncate text-sm font-medium text-ink">{p.name}</span>
                     {game?.group_id && p.group_id === game.group_id && (
-                      <span className="shrink-0 text-[11px] font-semibold text-emerald-700">do grupo</span>
+                      <span className="shrink-0 text-2xs font-semibold text-green-700">do grupo</span>
                     )}
                   </div>
                   <V2Button size="sm" variant="ghost" onClick={() => confirmar(p.id)}>
@@ -789,7 +789,7 @@ export function PartnerDialog({ participant, participants, view, onClose, onConf
               <div className="flex min-w-0 items-center gap-2">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-                {p.partner_id && <span className="text-[11px] text-amber-600">já tem dupla</span>}
+                {p.partner_id && <span className="text-2xs text-amber-600">já tem dupla</span>}
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => onConfirm(p.id)}>
                 <Link2 className="mr-1 h-3.5 w-3.5" /> Escolher
@@ -1062,7 +1062,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
           </p>
         )}
         {canManage && (
-          <p className="text-[11px] leading-5 text-gray-500">
+          <p className="text-2xs leading-5 text-gray-500">
             Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
             <strong className="text-gray-500">simples</strong> — escolha na própria quadra. A quadra mantém o tipo
             do último jogo até você trocar; no simples entram os dois primeiros da fila, e a dupla vinculada não vale.
@@ -1085,7 +1085,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-collapse text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-[11px] uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 text-2xs uppercase tracking-wide text-gray-500">
                 <th className="py-2 pr-2 text-left font-semibold">Quadra</th>
                 <th className="py-2 px-2 text-left font-semibold">Início</th>
                 <th className="py-2 px-2 text-right font-semibold">Lado A</th>
@@ -1216,7 +1216,7 @@ function CourtRow({
     <tr className="border-b border-gray-100 align-middle last:border-0">
       <td className="py-2.5 pr-2">
         <div className="flex flex-col items-start gap-1">
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
             Quadra {court}
           </span>
           {/* O tipo da PRÓXIMA partida desta quadra. Com a partida em andamento
@@ -1298,17 +1298,17 @@ function PlayForecastByCourt({ forecast }) {
         <ListOrdered className="h-4 w-4 text-gray-400" />
         <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
       </div>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-2xs text-gray-500">
         Quem entra em cada quadra, dentro do grupo que a política escolheria. Só indica quem entra — as duplas
         saem na hora de criar. A previsão de uma quadra ocupada depende de qual partida terminar primeiro.
       </p>
       <ul className="space-y-1.5">
         {forecast.map((b) => (
           <li key={b.court} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-gray-100 bg-white p-2.5">
-            <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-gray-600">
+            <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-2xs font-bold text-gray-600">
               Quadra {b.court}
             </span>
-            <span className="text-[11px] text-gray-500">{b.free ? 'livre agora' : 'quando liberar'}</span>
+            <span className="text-2xs text-gray-500">{b.free ? 'livre agora' : 'quando liberar'}</span>
             <GameKindBadge kind={b.kind} />
             {b.group && <PlayGroupBadge name={b.group.name} color={b.group.color} size="xs" />}
             {b.full ? (
@@ -1338,7 +1338,7 @@ function PlayForecastTable({ forecast, availableCount }) {
         <ListOrdered className="h-4 w-4 text-gray-400" />
         <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
       </div>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-2xs text-gray-500">
         Ordem prevista para as próximas partidas conforme a fila — só indica quem entra (não define as duplas).
         Na quadra de simples entram dois.
       </p>
@@ -1351,7 +1351,7 @@ function PlayForecastTable({ forecast, availableCount }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-[11px] uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 text-2xs uppercase tracking-wide text-gray-500">
                 <th className="w-28 py-2 pr-2 text-left font-semibold">Previsão</th>
                 <th className="py-2 pl-2 text-left font-semibold">Participantes previstos</th>
               </tr>
@@ -1361,7 +1361,7 @@ function PlayForecastTable({ forecast, availableCount }) {
                 <tr key={i} className="border-b border-gray-100 last:border-0 align-top">
                   <td className="py-2 pr-2">
                     <div className="flex flex-col items-start gap-1">
-                      <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-600">
+                      <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-2xs font-bold text-gray-600">
                         {i + 1}ª próxima
                       </span>
                       <GameKindBadge kind={block.kind} />
@@ -1377,7 +1377,7 @@ function PlayForecastTable({ forecast, availableCount }) {
                         </span>
                       ))}
                       {block.waiting > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-200 bg-amber-50 px-2 py-0.5 text-2xs text-amber-700">
                           +{block.waiting} aguardando conclusão de partida em andamento
                         </span>
                       )}

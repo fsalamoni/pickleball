@@ -183,7 +183,7 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
     <Destaque el={naTela ? el : null} rect={naTela ? rect : null} tituloId={tituloId} chave={`${chave}:${naTela}`}>
       <p className="sr-only" aria-live="polite">{`Passo ${idx + 1} de ${total}: ${passo.title}`}</p>
       <div className="flex items-start justify-between gap-3">
-        <p className="flex min-w-0 items-baseline text-[11px] font-bold uppercase tracking-widest text-gray-500">
+        <p className="flex min-w-0 items-baseline text-2xs font-bold uppercase tracking-widest text-gray-500">
           <span className="min-w-0 truncate">{guia.title}</span>
           <span className="shrink-0 whitespace-nowrap">&nbsp;· {idx + 1} de {total}</span>
         </p>

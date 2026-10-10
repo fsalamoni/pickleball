@@ -146,13 +146,13 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                   )}
                 >
                   <span className="block text-sm font-semibold">{GAME_DAY_MANAGE_MODE_LABELS[m]}</span>
-                  <span className={cn('mt-0.5 block text-[11px]', form.manage_mode === m ? 'text-white/70' : 'text-gray-500')}>
+                  <span className={cn('mt-0.5 block text-2xs', form.manage_mode === m ? 'text-white/70' : 'text-gray-500')}>
                     {GAME_DAY_MANAGE_MODE_HINTS[m]}
                   </span>
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-[11px] text-gray-500">
+            <p className="mt-1 text-2xs text-gray-500">
               Editar o dia de jogo, arquivar, publicar no ranking e nomear organizadores continuam só com você.
             </p>
           </div>
@@ -197,13 +197,13 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                 ))}
               </select>
               {playOn && isPlayFormat(form.format) && (
-                <p className="mt-1 text-[11px] text-gray-500">
+                <p className="mt-1 text-2xs text-gray-500">
                   No Play, os jogos são criados por ordem de chegada, quadra a quadra, sem sorteio de grade e sem
                   resultados. Ao concluir um jogo, o próximo entra automaticamente na quadra liberada.
                 </p>
               )}
               {isAmericanoLiveFormat(form.format) && (
-                <p className="mt-1 text-[11px] leading-5 text-gray-500">
+                <p className="mt-1 text-2xs leading-5 text-gray-500">
                   No <strong>Americano aprimorado</strong>, as partidas são sorteadas <strong>uma a uma</strong>,
                   quadra por quadra, sempre com quem está disponível naquele momento — usando as mesmas regras do
                   Americano (duplas inéditas, adversários inéditos, participação e nível equilibrados).

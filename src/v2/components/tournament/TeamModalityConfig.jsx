@@ -40,7 +40,7 @@ export function defaultTeamConfig() {
 }
 
 const inputCls = 'w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30';
-const labelCls = 'text-[11px] font-bold uppercase tracking-widest text-gray-500';
+const labelCls = 'text-2xs font-bold uppercase tracking-widest text-gray-500';
 const smallSelectCls = 'w-full rounded-xl border border-gray-200 bg-paper px-2 py-1.5 text-xs text-ink outline-none focus-visible:ring-2 focus-visible:ring-acid/30';
 
 export default function TeamModalityConfig({ value, onChange }) {
@@ -152,7 +152,7 @@ export default function TeamModalityConfig({ value, onChange }) {
                   </select>
                 </label>
               </div>
-              <p className="mt-1 pl-8 text-[11px] text-gray-500">
+              <p className="mt-1 pl-8 text-2xs text-gray-500">
                 Vale: {formatEtapaScoringLabel(resolveEtapaScoring(preview.value, { ...e, id: preview.value.etapas[i]?.id }))}
               </p>
             </div>

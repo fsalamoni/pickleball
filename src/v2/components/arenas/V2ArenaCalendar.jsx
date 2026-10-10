@@ -190,7 +190,7 @@ export default function V2ArenaCalendar({ arena }) {
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">
+            <div className="grid grid-cols-7 gap-1 text-center text-2xs font-bold uppercase tracking-widest text-gray-500">
               {getWeekdayHeaders().map((d) => (
                 <div key={d} className="rounded bg-gray-50 py-1.5">{d}</div>
               ))}
@@ -217,7 +217,7 @@ export default function V2ArenaCalendar({ arena }) {
                     disabled={!temConteudo}
                   >
                     <div className={cn(
-                      'text-[11px] font-bold',
+                      'text-2xs font-bold',
                       cell.inMonth ? 'text-ink' : 'text-gray-400',
                       cell.isToday && 'text-acid',
                     )}>
@@ -229,7 +229,7 @@ export default function V2ArenaCalendar({ arena }) {
                         return (
                           <div
                             key={g.id}
-                            className="truncate rounded bg-acid px-1 py-0.5 text-[9px] font-bold text-ink"
+                            className="truncate rounded bg-acid px-1 py-0.5 text-2xs font-bold text-ink"
                             title={`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`}
                           >
                             {faixa ? faixa.start : 'Dia de jogo'}
@@ -240,12 +240,12 @@ export default function V2ArenaCalendar({ arena }) {
                         <div
                           key={`${s.booking_id}_${s.start}_${i}`}
                           className={cn(
-                            'truncate rounded px-1 py-0.5 text-[9px] font-semibold',
+                            'truncate rounded px-1 py-0.5 text-2xs font-semibold',
                             s.booking_status === 'confirmed' && 'bg-green-100 text-green-800',
                             s.booking_status === 'requested' && 'bg-amber-100 text-amber-800',
-                            s.booking_status === 'negotiating' && 'bg-sky-100 text-sky-800',
+                            s.booking_status === 'negotiating' && 'bg-blue-100 text-blue-800',
                             (s.booking_status === 'cancelled' || s.booking_status === 'declined') && 'bg-gray-100 text-gray-500 line-through',
-                            s.booking_status === 'completed' && 'bg-sky-100 text-sky-700',
+                            s.booking_status === 'completed' && 'bg-blue-100 text-blue-700',
                           )}
                           title={`${s.start}–${s.end} · ${s.athlete_name || 'Atleta'} (${STATUS_LABEL[s.booking_status] || s.booking_status})`}
                         >
@@ -253,7 +253,7 @@ export default function V2ArenaCalendar({ arena }) {
                         </div>
                       ))}
                       {extra > 0 && (
-                        <div className="text-[9px] font-semibold text-gray-500">+{extra}</div>
+                        <div className="text-2xs font-semibold text-gray-500">+{extra}</div>
                       )}
                     </div>
                   </button>
@@ -264,7 +264,7 @@ export default function V2ArenaCalendar({ arena }) {
         </div>
       )}
 
-      <div className="text-[11px] text-gray-500">
+      <div className="text-2xs text-gray-500">
         Período carregado: {rangeInfo.start} → {rangeInfo.end} ({rangeInfo.dates.length} dias)
       </div>
 

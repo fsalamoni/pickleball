@@ -81,7 +81,7 @@ export default function AdminAccessTab() {
           <h3 className="font-display text-base font-bold text-ink">
             Administradores ({roster.counts.admins})
           </h3>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-2xs text-gray-500">
             {roster.counts.total} conta(s) na plataforma
           </span>
         </div>
@@ -105,7 +105,7 @@ export default function AdminAccessTab() {
           <h3 className="font-display text-base font-bold text-ink">
             Podem criar pools, sem ser administradores ({roster.poolCreators.length})
           </h3>
-          <p className="mt-1 text-[11px] text-gray-500">
+          <p className="mt-1 text-2xs text-gray-500">
             Poder menor, mas ainda é poder: vale conferir se cada um faz sentido.
           </p>
           <div className="mt-3 space-y-2">
@@ -152,7 +152,7 @@ const TOM_ALERTA = {
     Icon: ShieldAlert,
   },
   [ALERT_LEVEL.INFO]: {
-    caixa: 'border-emerald-200 bg-emerald-50', icone: 'text-emerald-500', titulo: 'text-emerald-800',
+    caixa: 'border-green-200 bg-green-50', icone: 'text-green-500', titulo: 'text-green-800',
     Icon: ShieldCheck,
   },
 };
@@ -184,7 +184,7 @@ function AccountRow({ account: c, souDono, onRevoke }) {
             {c.isOwnerEmail && <V2Badge tone="neutral">e-mail de dono</V2Badge>}
             {c.unexpectedAdmin && <V2Badge tone="red">inesperado</V2Badge>}
             {c.hidden && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-semibold text-gray-600">
                 <EyeOff className="h-3 w-3" /> oculto
               </span>
             )}
@@ -192,8 +192,8 @@ function AccountRow({ account: c, souDono, onRevoke }) {
           <div className="mt-0.5 truncate text-xs text-gray-500">
             {c.email || <span className="text-amber-600">sem e-mail no documento</span>}
           </div>
-          <div className="mt-1 font-mono text-[11px] text-gray-500">{c.uid}</div>
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-500">
+          <div className="mt-1 font-mono text-2xs text-gray-500">{c.uid}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-2xs text-gray-500">
             <span className="rounded bg-gray-100 px-1.5 py-0.5">role: {c.role}</span>
             {c.canCreatePools && <span className="rounded bg-gray-100 px-1.5 py-0.5">cria pools</span>}
             <span className="rounded bg-gray-100 px-1.5 py-0.5">
@@ -201,7 +201,7 @@ function AccountRow({ account: c, souDono, onRevoke }) {
             </span>
           </div>
           {c.hiddenButPowerful && (
-            <p className="mt-2 rounded-lg bg-red-100 px-2 py-1 text-[11px] leading-4 text-red-800">
+            <p className="mt-2 rounded-lg bg-red-100 px-2 py-1 text-2xs leading-4 text-red-800">
               Esta conta está oculta, mas <strong>continua com poder</strong>. Ocultar
               afeta só a exibição nas listagens.
             </p>
@@ -214,7 +214,7 @@ function AccountRow({ account: c, souDono, onRevoke }) {
               <UserMinus className="mr-1 h-3.5 w-3.5" /> Revogar poder
             </V2Button>
           ) : (
-            <span className="block max-w-[190px] text-[11px] leading-4 text-gray-500">{motivo}</span>
+            <span className="block max-w-[190px] text-2xs leading-4 text-gray-500">{motivo}</span>
           )}
         </div>
       </div>
@@ -245,7 +245,7 @@ function EmergencyToolsCard() {
           <KeyRound className="h-4 w-4 shrink-0 text-gray-400" />
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-ink">Restaurar meu admin</span>
-            <span className="block text-[11px] text-gray-500">
+            <span className="block text-2xs text-gray-500">
               Devolve o seu próprio poder. Foi por aqui que você voltou da última vez.
             </span>
           </span>
@@ -257,7 +257,7 @@ function EmergencyToolsCard() {
           <Terminal className="h-4 w-4 shrink-0 text-gray-400" />
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-ink">Diagnóstico da minha conta</span>
-            <span className="block text-[11px] text-gray-500">
+            <span className="block text-2xs text-gray-500">
               Mostra o que o banco tem sobre você e o que cada regra está recusando.
             </span>
           </span>
@@ -330,12 +330,12 @@ function RevokeDialog({ account, onClose, onConfirm, pending }) {
 
         <div className="space-y-3">
           <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-            <div className="font-mono text-[11px] text-gray-500">{account.uid}</div>
+            <div className="font-mono text-2xs text-gray-500">{account.uid}</div>
             <div className="mt-1">{account.email || '(sem e-mail)'}</div>
             <div className="mt-1">role atual: <strong>{account.role}</strong></div>
           </div>
 
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-800">
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-800">
             A sessão que essa pessoa já tem aberta <strong>continua valendo até expirar</strong>.
             Para cortar na hora, use <code>revokeRefreshTokens</code> no Admin SDK.
           </p>

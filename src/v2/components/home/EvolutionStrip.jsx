@@ -59,7 +59,7 @@ export function EvolutionStrip({ uid, className }) {
           {/* Nível / XP */}
           <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Nível de perfil</span>
+              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">Nível de perfil</span>
               <Sparkles className="h-4 w-4 text-acid" />
             </div>
             <div className="font-display text-2xl font-black text-ink">Nível {level.level}</div>
@@ -84,7 +84,7 @@ export function EvolutionStrip({ uid, className }) {
           {/* Metas */}
           <Link to="/meu-desempenho" className="group rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm transition-colors hover:border-gray-300">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Metas</span>
+              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">Metas</span>
               <Target className="h-4 w-4 text-ink" />
             </div>
             {activeGoals > 0 ? (
@@ -108,7 +108,7 @@ function MiniCard({ icon: Icon, accent = 'ink', label, children }) {
   return (
     <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{label}</span>
+        <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{label}</span>
         <Icon className={cn('h-4 w-4', accent === 'acid' ? 'text-acid' : 'text-ink')} />
       </div>
       <div>{children}</div>

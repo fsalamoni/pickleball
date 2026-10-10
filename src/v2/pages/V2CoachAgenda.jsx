@@ -283,7 +283,7 @@ function LessonCard({ lesson, onAction, isPending }) {
           </div>
           {lesson.notes && <p className="mt-1.5 text-xs text-gray-500">{lesson.notes}</p>}
           {lesson.coupon?.code && (
-            <p className={`mt-1.5 inline-flex items-start gap-1 rounded-xl px-2 py-0.5 text-[11px] font-bold leading-4 ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
+            <p className={`mt-1.5 inline-flex items-start gap-1 rounded-xl px-2 py-0.5 text-2xs font-bold leading-4 ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
               <Tag className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> <span>{lessonCouponLine(lesson.coupon, { lessonStatus: lesson.status })}</span>
             </p>
           )}

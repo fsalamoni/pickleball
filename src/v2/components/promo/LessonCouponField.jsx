@@ -132,7 +132,7 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
 
       {paraTocar.length > 0 && !value && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">Promoções:</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink/50">Promoções:</span>
           {paraTocar.map((c) => (
             <button
               key={c.id}

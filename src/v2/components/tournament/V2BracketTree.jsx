@@ -52,13 +52,13 @@ export default function V2BracketTree({ matches = [], labelById }) {
 
   return (
     <div className="overflow-x-auto">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500">
+      <div className="mb-2 text-2xs font-semibold uppercase tracking-widest text-gray-500">
         {kind === 'bracket' ? 'Chave — fases finais' : 'Rodadas'}
       </div>
       <div className="flex min-w-max gap-4 pb-2">
         {columns.map((col) => (
           <div key={col.round} className="flex min-w-[190px] flex-1 flex-col">
-            <div className="mb-2 text-center text-[11px] font-bold uppercase tracking-widest text-gray-500">{col.label}</div>
+            <div className="mb-2 text-center text-2xs font-bold uppercase tracking-widest text-gray-500">{col.label}</div>
             <div className="flex flex-1 flex-col justify-around gap-3">
               {col.matches.map((m) => {
                 const decided = m.winner_side === 'a' || m.winner_side === 'b';

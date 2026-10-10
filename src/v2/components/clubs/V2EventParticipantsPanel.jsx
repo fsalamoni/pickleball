@@ -176,7 +176,7 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
                           {inv.user_name}
                           {inv.user_id === event.created_by && <span className="ml-1 text-xs text-ink">(organizador)</span>}
                         </div>
-                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-[11px] text-gray-500">Convidado da plataforma</div>}
+                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-2xs text-gray-500">Convidado da plataforma</div>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

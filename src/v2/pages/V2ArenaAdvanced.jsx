@@ -424,7 +424,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
             </div>
           )}
 
-          <p className="mt-3 text-[11px] text-gray-500">
+          <p className="mt-3 text-2xs text-gray-500">
             Último dia lido: {formatDateShortBR(historico[historico.length - 1].date)}
           </p>
         </>

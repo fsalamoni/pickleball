@@ -123,7 +123,7 @@ function V2AchievementsOn({ user }) {
       {/* Filtros */}
       <V2Surface className="mb-6 space-y-4" data-dica="conquistas-filtros">
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Família</p>
+          <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">Família</p>
           <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por família">
             {FAMILY_TABS.map((t) => (
               <button
@@ -146,7 +146,7 @@ function V2AchievementsOn({ user }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Raridade</p>
+            <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">Raridade</p>
             <div className="flex flex-wrap gap-1.5">
               {RARITY_FILTERS.map((r) => (
                 <button
@@ -183,7 +183,7 @@ function V2AchievementsOn({ user }) {
             return (
               <div key={key} className="rounded-2xl bg-paper p-3 text-center">
                 <p className="text-lg font-bold text-ink">{f.unlocked}<span className="text-xs text-gray-500">/{f.total}</span></p>
-                <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{meta.name}</p>
+                <p className="mt-0.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">{meta.name}</p>
               </div>
             );
           })}

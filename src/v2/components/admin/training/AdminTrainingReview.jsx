@@ -39,7 +39,7 @@ function NaFila({ item, acoes, verificar, settings }) {
         <div className="flex gap-3">
           <KindIcon kind={item.kind} />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+            <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
               {ITEM_KIND_LABELS[item.kind] || 'Item'}{enviado ? ` · enviado ${enviado}` : ''}
             </p>
             <h3 className="font-display text-lg font-bold text-ink">{item.title}</h3>
@@ -58,7 +58,7 @@ function NaFila({ item, acoes, verificar, settings }) {
               ))}
             </ul>
           ) : (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> Tem tudo o que um bom item pede.</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" aria-hidden="true" /> Tem tudo o que um bom item pede.</p>
           )}
           <p className="mt-1 text-xs text-gray-500">O checklist orienta; não impede aprovar.</p>
         </div>

@@ -59,7 +59,7 @@ export function ThemeMenuSection() {
   return (
     <>
       <DropdownMenuSeparator />
-      <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+      <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
         Aparência
       </DropdownMenuLabel>
       <DropdownMenuRadioGroup
@@ -77,7 +77,7 @@ export function ThemeMenuSection() {
               // Não fecha: a página troca por trás do menu, e a pessoa compara.
               onSelect={(e) => e.preventDefault()}
               className={cn(
-                'flex cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold text-gray-500',
+                'flex cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 text-2xs font-semibold text-gray-500',
                 'focus:bg-transparent focus:text-gray-500',
                 'data-[state=unchecked]:data-[highlighted]:bg-gray-50 data-[state=unchecked]:data-[highlighted]:text-ink',
                 // Marcado: o mesmo "ativo" da barra lateral (ink, ícone ácido).
@@ -103,7 +103,7 @@ export function ThemeDrawerSwitcher() {
   if (!disponivel) return null;
   return (
     <div className="px-4 pb-3 pt-1">
-      <p id={rotuloId} className="mb-2 text-[11px] font-bold uppercase tracking-widest text-white/40">Aparência</p>
+      <p id={rotuloId} className="mb-2 text-2xs font-bold uppercase tracking-widest text-white/40">Aparência</p>
       <div role="radiogroup" aria-labelledby={rotuloId} className="grid grid-cols-3 gap-1 rounded-2xl bg-white/10 p-1">
         {OPCOES_DE_TEMA.map(({ valor, rotulo }, i) => {
           const Icone = ICONE_DO_TEMA[valor];
@@ -238,7 +238,7 @@ export function ThemeSettingsCard() {
               <span className="flex items-center gap-1.5 px-0.5 pt-2 sm:px-1">
                 {/* No celular o cartão é estreito: sem o ícone, "Automático" cabe inteiro. */}
                 <Icone className={cn('hidden h-4 w-4 shrink-0 sm:block', marcado ? 'text-ink' : 'text-gray-400')} aria-hidden />
-                <span className="truncate font-display text-[11px] font-bold tracking-tight text-ink sm:text-sm sm:tracking-normal">{rotulo}</span>
+                <span className="truncate font-display text-2xs font-bold tracking-tight text-ink sm:text-sm sm:tracking-normal">{rotulo}</span>
               </span>
               <span id={`${rotuloId}-${valor}`} className="hidden px-1 pb-1 pt-1 text-xs leading-snug text-gray-500 sm:block">
                 {descricao}

@@ -38,7 +38,7 @@ export default function XpBreakdownCard({ uid, xp }) {
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
                 <div className={cn('h-full rounded-full', p.color)} style={{ width: `${Math.min(100, Math.round((v / total) * 100))}%` }} />
               </div>
-              <p className="mt-0.5 text-[11px] text-gray-500">{p.hint}</p>
+              <p className="mt-0.5 text-2xs text-gray-500">{p.hint}</p>
             </li>
           );
         })}
@@ -56,7 +56,7 @@ export default function XpBreakdownCard({ uid, xp }) {
           </ul>
         </div>
       )}
-      <p className="mt-3 text-[11px] leading-4 text-gray-500">
+      <p className="mt-3 text-2xs leading-4 text-gray-500">
         O total é sempre recalculado do zero a partir de fatos reais — ele nunca é um saldo que alguém soma.{' '}
         <Link to="/gamification/como-funciona?termo=xp" className="font-bold text-ink hover:underline">Entender o XP</Link>
       </p>

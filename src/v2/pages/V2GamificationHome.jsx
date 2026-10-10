@@ -201,7 +201,7 @@ function V2GamificationHomeOn() {
             </div>
           </div>
           <Link to="/gamification#sequencia-card" className="flex items-center gap-3 rounded-2xl hover:bg-paper">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Flame className="h-5 w-5" aria-hidden="true" /></div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600"><Flame className="h-5 w-5" aria-hidden="true" /></div>
             <div>
               <p className="text-2xl font-bold tabular-nums text-ink">{streak.weeks}</p>
               <p className="text-xs text-gray-500">{streak.weeks === 1 ? 'semana seguida' : 'semanas seguidas'}{streak.status === 'em_risco' ? ' · jogue até domingo' : ''}</p>

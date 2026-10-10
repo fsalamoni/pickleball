@@ -45,7 +45,7 @@ function CreateCircuitForm({ onClose }) {
   };
 
   return (
-    <V2Surface className="border-emerald-200 bg-emerald-50/40">
+    <V2Surface className="border-green-200 bg-green-50/40">
       <h3 className="font-display text-base font-bold text-ink">Novo circuito</h3>
       <form onSubmit={handleSubmit} className="mt-3 space-y-3">
         <V2Field label="Nome do circuito" required>
@@ -87,7 +87,7 @@ export default function V2Circuits() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-emerald-700" /> Circuitos
+            <Trophy className="h-6 w-6 text-green-700" /> Circuitos
           </h1>
           <p className="mt-1 text-sm text-gray-500">Séries de torneios com ranking acumulado</p>
         </div>

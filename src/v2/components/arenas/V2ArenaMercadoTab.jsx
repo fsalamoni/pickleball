@@ -848,7 +848,7 @@ function ExitsSection({ arenaId }) {
     <V2Surface>
       <div className="flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink flex items-center gap-2">
-          <TrendingDown className="h-4 w-4 text-orange-700" /> Saídas (vendas / consumo / perdas)
+          <TrendingDown className="h-4 w-4 text-amber-700" /> Saídas (vendas / consumo / perdas)
         </h3>
         {!falhou && (
           <V2Button size="sm" onClick={() => setCreating(true)} disabled={inStockProducts.length === 0}>
@@ -880,14 +880,14 @@ function ExitsSection({ arenaId }) {
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold text-ink">{s.product.name}</div>
-                  <div className="text-[11px] uppercase text-gray-500">{s.product.category}</div>
+                  <div className="text-2xs uppercase text-gray-500">{s.product.category}</div>
                 </div>
                 <div className="text-right">
                   <div className="font-display text-xl font-bold text-ink">{s.sold_qty}</div>
-                  <div className="text-[11px] text-gray-500">vendidos</div>
+                  <div className="text-2xs text-gray-500">vendidos</div>
                 </div>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex items-center justify-between text-2xs">
                 <V2Badge tone={
                   s.quantity <= 0 || s.posicao.situacao === STOCK_SITUATION.VENCIDO ? 'red'
                     : s.posicao.situacao === STOCK_SITUATION.BAIXO ? 'amber' : 'green'
@@ -909,7 +909,7 @@ function ExitsSection({ arenaId }) {
       )}
 
       {creating && (
-        <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-orange-200 bg-orange-50/40 p-3">
+        <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-amber-200 bg-amber-50/40 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <V2Field label="Produto (em estoque)" required>
               <ProductTypeahead
@@ -968,7 +968,7 @@ function ExitsSection({ arenaId }) {
           exits.map((x) => {
             const product = products.find((p) => p.id === x.product_id);
             return (
-              <div key={x.id} className="rounded-2xl border border-orange-200 bg-orange-50/40 p-3">
+              <div key={x.id} className="rounded-2xl border border-amber-200 bg-amber-50/40 p-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="text-sm font-bold text-ink">{product?.name || 'Produto removido'}</div>

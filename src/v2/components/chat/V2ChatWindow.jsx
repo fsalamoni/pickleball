@@ -206,7 +206,7 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
           rendered.map((item) =>
             item.type === 'day' ? (
               <div key={item.id} className="my-3 flex justify-center">
-                <span className="rounded-full border border-gray-100 bg-paper-pure px-3 py-1 text-[11px] font-medium text-gray-500 shadow-organic-sm">{item.label}</span>
+                <span className="rounded-full border border-gray-100 bg-paper-pure px-3 py-1 text-2xs font-medium text-gray-500 shadow-organic-sm">{item.label}</span>
               </div>
             ) : (
               <V2MessageBubble

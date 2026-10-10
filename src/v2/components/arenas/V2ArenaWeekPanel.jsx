@@ -80,12 +80,12 @@ export default function V2ArenaWeekPanel({ arenaId }) {
               <div className="flex">
                 <div className="w-10 shrink-0" />
                 {heat.hours.map((h) => (
-                  <div key={h} className="w-7 shrink-0 text-center text-[11px] text-gray-500">{h}h</div>
+                  <div key={h} className="w-7 shrink-0 text-center text-2xs text-gray-500">{h}h</div>
                 ))}
               </div>
               {heat.grid.map((row, dow) => (
                 <div key={dow} className="flex items-center">
-                  <div className="w-10 shrink-0 text-[11px] font-semibold text-gray-500">{WEEKDAYS[dow]}</div>
+                  <div className="w-10 shrink-0 text-2xs font-semibold text-gray-500">{WEEKDAYS[dow]}</div>
                   {row.map((v, col) => {
                     const intensity = heat.max > 0 ? v / heat.max : 0;
                     return (

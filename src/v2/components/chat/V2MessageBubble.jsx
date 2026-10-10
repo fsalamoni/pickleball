@@ -113,7 +113,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
                   className={cn(hasText && 'mt-2', isOwn && '[&_a]:text-white')}
                 />
               )}
-              <div className={cn('mt-1 flex items-center justify-end gap-1 text-[11px]', isOwn ? 'text-white/60' : 'text-gray-500')}>
+              <div className={cn('mt-1 flex items-center justify-end gap-1 text-2xs', isOwn ? 'text-white/60' : 'text-gray-500')}>
                 {message.edited && <span>editada</span>}
                 <span>{formatTime(message.created_at_ms)}</span>
               </div>

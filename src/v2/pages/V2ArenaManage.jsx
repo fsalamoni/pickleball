@@ -541,7 +541,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
       <V2Surface className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+            <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-3">Cliente</th>
                 {membrosNaMao && <th className="px-4 py-3">Membro</th>}
@@ -649,7 +649,7 @@ function PhotosTab({ arena }) {
             <div key={p.path || i} className="group relative">
               <PhotoLightbox src={p.url} alt={`Foto ${i + 1} da arena`}
                 trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
-              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-[11px] font-bold text-ink">Capa</span>}
+              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-2xs font-bold text-ink">Capa</span>}
               <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remover foto">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

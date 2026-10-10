@@ -45,9 +45,9 @@ export function V2LevelingResultCard({ result, onRestart, onPrint = () => window
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <div key={key} className="rounded-3xl border border-gray-100 bg-paper p-4 text-center">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+                <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{label}</p>
                 <p className="mt-2 text-2xl font-bold text-ink">{Number(breakdown[key] || 0).toFixed(1)}</p>
-                <p className="text-[11px] uppercase text-gray-500">de 5.0</p>
+                <p className="text-2xs uppercase text-gray-500">de 5.0</p>
               </div>
             ))}
           </div>
@@ -93,7 +93,7 @@ export function V2LevelingResultCard({ result, onRestart, onPrint = () => window
 
 function getColorClass(value) {
   if (value === 1) return 'border-red-200 bg-red-50 text-red-900';
-  if (value === 2) return 'border-orange-200 bg-orange-50 text-orange-900';
+  if (value === 2) return 'border-amber-200 bg-amber-50 text-amber-900';
   if (value === 3) return 'border-amber-200 bg-amber-50 text-amber-900';
   if (value === 4) return 'border-lime-200 bg-lime-50 text-lime-900';
   if (value === 5) return 'border-green-200 bg-green-50 text-green-900';
@@ -106,7 +106,7 @@ function QuestionCard({ questionNumber, question, value, showContext, onToggleCo
       <div className="mb-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-ink px-3 py-1 font-display text-sm font-bold text-acid">Q{questionNumber}</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{question.category}</span>
+          <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">{question.category}</span>
         </div>
         <p className="font-display text-lg font-bold leading-relaxed text-ink">{question.statement}</p>
         <button type="button" onClick={onToggleContext} className="mt-3 flex items-center gap-2 text-xs font-bold text-acid transition-colors hover:text-ink">
@@ -129,7 +129,7 @@ function QuestionCard({ questionNumber, question, value, showContext, onToggleCo
           >
             <div className="font-display text-xl font-bold">{option.value}</div>
             <div className="mt-1 text-xs font-bold text-ink">{option.label}</div>
-            <div className="mt-1 text-[11px] text-gray-500">{option.sublabel}</div>
+            <div className="mt-1 text-2xs text-gray-500">{option.sublabel}</div>
           </button>
         ))}
       </div>

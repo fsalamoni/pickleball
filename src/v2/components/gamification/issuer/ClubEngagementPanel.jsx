@@ -63,7 +63,7 @@ export default function ClubEngagementPanel({ club }) {
           </div>
         </>
       ) : <p className="text-sm text-gray-600">Sem dados para mostrar agora.</p>}
-      <p className="text-[11px] leading-4 text-gray-500">Contam os jogos publicados no ranking pelos dias de jogo do clube. Nada aqui é público — só quem administra o clube vê.</p>
+      <p className="text-2xs leading-4 text-gray-500">Contam os jogos publicados no ranking pelos dias de jogo do clube. Nada aqui é público — só quem administra o clube vê.</p>
     </V2Surface>
   );
   return <OwnerEngagementPanel ownerType="club" issuer={{ type: 'club', id: club.id, name: club.name }} summary={summary} actuals={m.actuals} monthKey={monthWindow().key} />;

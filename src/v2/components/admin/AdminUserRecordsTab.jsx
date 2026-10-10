@@ -145,7 +145,7 @@ export default function AdminUserRecordsTab() {
           Corrija erros e preencha o que falta no cadastro de qualquer usuário. Toda alteração
           exige um motivo e fica registrada na Auditoria, com o antes e o depois de cada campo.
         </p>
-        <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-5 text-gray-600">
+        <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-2xs leading-5 text-gray-600">
           <strong className="text-ink">O que esta tela NÃO faz, de propósito:</strong> não mexe em
           poder (<code>role</code>), não altera as preferências de privacidade do titular
           (quem vê o e-mail, o telefone, o endereço) e não troca o e-mail de login — esse mora
@@ -180,7 +180,7 @@ export default function AdminUserRecordsTab() {
         </div>
 
         {filtro === 'teste' && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
             A suspeita vem de sinais simples — conta oculta na moderação, e-mail de domínio de
             exemplo, nome ou e-mail com &ldquo;teste&rdquo;, &ldquo;mock&rdquo;, &ldquo;demo&rdquo;. Cada linha
             mostra o que levantou a suspeita. <strong>Confira antes de excluir</strong>: é sugestão,
@@ -207,7 +207,7 @@ export default function AdminUserRecordsTab() {
           </div>
         ) : listados.some((u) => u._bloqueio.ok) && (
           <div className="mt-3 text-right">
-            <button type="button" className="text-[11px] font-semibold text-gray-500 underline hover:text-ink" onClick={selecionarVisiveis}>
+            <button type="button" className="text-2xs font-semibold text-gray-500 underline hover:text-ink" onClick={selecionarVisiveis}>
               Selecionar os que aparecem (até {DELETION_BATCH_MAX})
             </button>
           </div>
@@ -227,7 +227,7 @@ export default function AdminUserRecordsTab() {
             />
           ))}
           {listados.length > 100 && (
-            <p className="pt-2 text-center text-[11px] text-gray-500">
+            <p className="pt-2 text-center text-2xs text-gray-500">
               Mostrando 100 de {listados.length}. Refine a busca.
             </p>
           )}
@@ -305,7 +305,7 @@ function DeletedAccountsPanel({ users, enabled }) {
           <div key={c.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">{c.name}</p>
-              <p className="truncate text-[11px] text-gray-500">
+              <p className="truncate text-2xs text-gray-500">
                 {[c.email, c.deletedAtMs ? `excluída em ${formatarData(c.deletedAtMs)}` : null].filter(Boolean).join(' · ')}
               </p>
             </div>
@@ -361,17 +361,17 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
         </div>
         <div className="mt-0.5 truncate text-xs text-gray-500">{u.email || '(sem e-mail)'}</div>
         {s.missingCount > 0 && (
-          <div className="mt-1 text-[11px] text-gray-500">
+          <div className="mt-1 text-2xs text-gray-500">
             Falta preencher: {s.missing.map((f) => f.label).join(', ')}
           </div>
         )}
-        <div className="mt-1 text-[11px] text-gray-500">
+        <div className="mt-1 text-2xs text-gray-500">
           {s.filledCount}/{s.totalCount} campos preenchidos
         </div>
         {u._teste.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {u._teste.map((m) => (
-              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-900">
                 {m}
               </span>
             ))}
@@ -387,7 +387,7 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </V2Button>
         ) : (
-          <span className="self-center text-[11px] text-gray-500" title={bloqueio.reason}>não excluível</span>
+          <span className="self-center text-2xs text-gray-500" title={bloqueio.reason}>não excluível</span>
         )}
       </div>
     </div>
@@ -425,7 +425,7 @@ function RecordEditDialog({ user, onClose }) {
         <DialogHeader>
           <DialogTitle>{user.platform_name || user.full_name || 'Cadastro'}</DialogTitle>
           <DialogDescription>
-            {user.email || '(sem e-mail)'} · <span className="font-mono text-[11px]">{user.uid}</span>
+            {user.email || '(sem e-mail)'} · <span className="font-mono text-2xs">{user.uid}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -440,7 +440,7 @@ function RecordEditDialog({ user, onClose }) {
                       {f.label}
                       {isRequiredField(f, { essencial }) && <span className="text-red-500">*</span>}
                       {faltando.has(f.key) && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-2xs font-bold text-amber-700">
                           vazio
                         </span>
                       )}
@@ -457,7 +457,7 @@ function RecordEditDialog({ user, onClose }) {
               <h4 className="text-xs font-bold text-ink">
                 O que vai mudar ({changes.length})
               </h4>
-              <ul className="mt-2 space-y-1 text-[11px]">
+              <ul className="mt-2 space-y-1 text-2xs">
                 {changes.map((c) => (
                   <li key={c.field} className="flex flex-wrap items-center gap-1.5 text-gray-600">
                     <span className="font-semibold text-ink">{c.label}:</span>
@@ -482,7 +482,7 @@ function RecordEditDialog({ user, onClose }) {
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ex.: o atleta pediu a correção do telefone por WhatsApp"
             />
-            <span className="mt-1 block text-[11px] font-normal text-gray-500">
+            <span className="mt-1 block text-2xs font-normal text-gray-500">
               Fica na Auditoria junto com o antes e o depois de cada campo.
             </span>
           </label>
@@ -536,7 +536,7 @@ function CampoDeEdicao({ field: f, value, onChange }) {
         {foraDaLista && <option value={value}>{value} (valor antigo, fora da lista)</option>}
       </V2Select>
       {foraDaLista && (
-        <span className="mt-1 block text-[11px] font-normal text-amber-700">
+        <span className="mt-1 block text-2xs font-normal text-amber-700">
           O valor gravado não está na lista atual. Escolha um da lista para corrigir.
         </span>
       )}

@@ -167,7 +167,7 @@ export default function NotificationsBell() {
           {selo && (
             <span
               aria-hidden="true"
-              className="absolute -right-1 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-[11px] font-bold leading-none text-ink"
+              className="absolute -right-1 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-2xs font-bold leading-none text-ink"
             >
               {selo}
             </span>

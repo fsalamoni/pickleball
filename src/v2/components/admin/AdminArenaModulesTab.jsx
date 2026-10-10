@@ -106,7 +106,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
                 <Building2 className="h-3 w-3" /> {adoption}
               </V2Badge>
             )}
-            <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[11px] text-gray-500">
+            <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-2xs text-gray-500">
               {mod.id}
             </code>
           </div>
@@ -116,7 +116,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
             {mod.audience.map((who) => (
               <span
                 key={who}
-                className="rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-500"
+                className="rounded-full bg-paper-pure px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-gray-500"
               >
                 {who}
               </span>
@@ -124,13 +124,13 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
           </div>
 
           {mod.status === ARENA_MODULE_STATUS.EXTERNAL && mod.externalNote && (
-            <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-[11px] leading-4 text-purple-800">
+            <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-2xs leading-4 text-purple-800">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>{mod.externalNote}</span>
             </p>
           )}
           {!releasable && (
-            <p className="mt-2 flex gap-1.5 text-[11px] leading-4 text-gray-500">
+            <p className="mt-2 flex gap-1.5 text-2xs leading-4 text-gray-500">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>{ARENA_MODULE_STATUS_META[mod.status]?.hint}</span>
             </p>
@@ -138,7 +138,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
 
           {released && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <span className="text-2xs font-bold uppercase tracking-wider text-gray-500">
                 Como a arena recebe
               </span>
               {[
@@ -151,7 +151,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
                   disabled={busy}
                   onClick={() => onMode(mod.id, opt.id)}
                   className={[
-                    'rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
+                    'rounded-full border px-2.5 py-1 text-2xs font-bold transition-colors',
                     (entry?.mode || MODULE_RELEASE_MODE.OPT_IN) === opt.id
                       ? 'border-ink bg-ink text-paper-pure'
                       : 'border-gray-200 bg-paper-pure text-gray-500 hover:border-ink hover:text-ink',
@@ -418,7 +418,7 @@ export default function AdminArenaModulesTab() {
               <p className="text-sm font-bold text-amber-900">A chave geral está desligada</p>
               <p className="mt-1 text-xs leading-5 text-amber-800">
                 Você pode preparar as liberações aqui, mas enquanto a flag{' '}
-                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[11px]">arena_modules</code>{' '}
+                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-2xs">arena_modules</code>{' '}
                 estiver desligada em <strong>Flags por assunto</strong>, nenhuma arena vê nem usa
                 módulo nenhum.
               </p>

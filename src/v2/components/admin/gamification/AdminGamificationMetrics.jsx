@@ -108,7 +108,7 @@ export default function AdminGamificationMetrics() {
           <Spark dados={dados} campo="reviews7" label="Avaliações por semana" />
           <Spark dados={dados} campo="kudos7" label="Kudos por semana" />
         </div>
-        <p className="text-[11px] text-gray-500">Último retrato: {ultimo.day}. {ultimo.prefsDocs} pessoas já abriram as preferências da gamificação.</p>
+        <p className="text-2xs text-gray-500">Último retrato: {ultimo.day}. {ultimo.prefsDocs} pessoas já abriram as preferências da gamificação.</p>
       </V2Surface>
     </div>
   );

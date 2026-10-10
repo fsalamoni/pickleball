@@ -268,7 +268,7 @@ function OutroLugar({ escolha, region, geo, definir }) {
           <V2Button type="button" variant="secondary" size="sm" onClick={localizar} disabled={localizando}>
             <LocateFixed className="h-4 w-4" aria-hidden="true" /> {localizando ? 'Localizando…' : 'Usar a minha localização atual'}
           </V2Button>
-          <p className="text-[11px] leading-4 text-gray-500">
+          <p className="text-2xs leading-4 text-gray-500">
             A localização é usada só neste aparelho para achar a cidade mais próxima. Ela não é enviada nem guardada.
           </p>
         </div>

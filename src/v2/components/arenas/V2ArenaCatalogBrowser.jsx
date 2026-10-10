@@ -331,7 +331,7 @@ function AdoptForm({ arenaId, product, onDone }) {
           <V2Input value={form.supplier} onChange={set('supplier')} maxLength={120} placeholder="Opcional" />
         </V2Field>
       </div>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-2xs text-gray-500">
         Só o preço de venda é recomendado para vender no PDV. A quantidade inicial registra uma entrada de estoque.
       </p>
       <div className="flex justify-end gap-2">

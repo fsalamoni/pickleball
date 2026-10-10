@@ -120,7 +120,7 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
 
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
         <table className="w-full text-sm">
-          <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+          <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
             <tr>
               <th className="px-3 py-2.5">Cupom</th>
               <th className="px-3 py-2.5">Estado</th>
