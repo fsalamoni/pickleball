@@ -10,7 +10,7 @@
 
 import {
   ITEM_KINDS, ITEM_KIND, isValidSkill, PLACES, EQUIPMENT, MOTOR_ABILITIES,
-  BLOCK_TYPES, METRIC_TYPES, STUDY_TYPES, PRACTICE_MODES, LEVEL_MIN, LEVEL_MAX,
+  BLOCK_TYPES, METRIC_TYPES, STUDY_TYPES, PRACTICE_MODES, LEVEL_MIN, LEVEL_MAX, TECHNIQUE_PARTS,
 } from './taxonomy.js';
 import { normalizeDiagrams } from './diagram.js';
 import { normalizeMediaList } from './media.js';
@@ -23,7 +23,7 @@ export const ITEM_LIMITS = Object.freeze({
   variation: 400, success: 300, metricTarget: 60, safety: 400, phase: 300, abilities: 6,
   skills: 6, roles: 6, role: 40, equipment: 10, blocks: 12, blockTitle: 80, blockNotes: 300,
   questions: 6, question: 200, whenToUse: 400, link: 500, rulesEdition: 40, rulesSection: 60,
-  reps: 40, tempo: 40, sharedUids: 50,
+  reps: 40, tempo: 40, sharedUids: 50, checkpoints: 8, checkpoint: 300, selfChecks: 6, selfCheck: 200,
 });
 
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
@@ -60,6 +60,7 @@ export function blankItem(kind = ITEM_KIND.DRILL) {
     variations: { easier: '', harder: '' },
     success_criteria: '', metric: { type: '', target: '' }, safety: '',
     motor: { phases: { preparacao: '', execucao: '', finalizacao: '' }, abilities: [] },
+    technique: { checkpoints: [], self_check: [] },
     blocks: [], sets: null, reps: '', rest_sec: null, tempo: '',
     study_type: '', rules_edition: '', rules_section: '', questions: [], link: '',
     when_to_use: '', diagrams: [], media: [],
@@ -130,6 +131,17 @@ export function normalizeItemInput(input = {}) {
     abilities: enumList(input.motor?.abilities, MOTOR_ABILITIES, ITEM_LIMITS.abilities),
   };
 
+  // A técnica ponto a ponto (fundamento/jogada): cada parte do gesto e como
+  // saber, pelo que a bola faz, se saiu certo. Opcional para todo tipo.
+  const technique = {
+    checkpoints: (Array.isArray(input.technique?.checkpoints) ? input.technique.checkpoints : []).map((c) => {
+      const part = oneOf(TECHNIQUE_PARTS, c?.part, null);
+      const text = str(c?.text, ITEM_LIMITS.checkpoint);
+      return part && text ? { part, text } : null;
+    }).filter(Boolean).slice(0, ITEM_LIMITS.checkpoints),
+    self_check: strList(input.technique?.self_check, ITEM_LIMITS.selfChecks, ITEM_LIMITS.selfCheck),
+  };
+
   const study_type = kind === ITEM_KIND.ESTUDO ? oneOf(STUDY_TYPES, input.study_type, 'leitura') : '';
   const rules_edition = kind === ITEM_KIND.ESTUDO ? str(input.rules_edition, ITEM_LIMITS.rulesEdition) : '';
   if (study_type === 'regra' && !rules_edition) {
@@ -177,6 +189,7 @@ export function normalizeItemInput(input = {}) {
     metric,
     safety: str(input.safety, ITEM_LIMITS.safety),
     motor,
+    technique,
     blocks,
     sets: kind === ITEM_KIND.FISICO ? int(input.sets, 0, 20) : null,
     reps: kind === ITEM_KIND.FISICO ? str(input.reps, ITEM_LIMITS.reps) : '',
@@ -229,6 +242,7 @@ export function itemQuality(item = {}) {
       add(certos > 0 && errados > 0 && certos >= errados, 'Certo e errado lado a lado');
       add(item.when_to_use, 'Quando usar');
     }
+    if (item.kind === ITEM_KIND.FUNDAMENTO) add(item.technique?.checkpoints?.length, 'Técnica ponto a ponto');
     if (item.kind === ITEM_KIND.FISICO) add(item.sets || item.reps, 'Séries e repetições');
   }
   const ok = checks.filter((c) => c.ok).length;

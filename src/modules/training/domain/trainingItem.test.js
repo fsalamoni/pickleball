@@ -130,6 +130,43 @@ describe('normalizeItemInput — limites e normalização', () => {
   });
 });
 
+describe('normalizeItemInput — técnica ponto a ponto', () => {
+  it('guarda as partes conhecidas, corta nos limites e descarta o vazio', () => {
+    const longo = 'x'.repeat(400);
+    const { value } = normalizeItemInput(ok({
+      kind: 'fundamento',
+      technique: {
+        checkpoints: [
+          { part: 'empunhadura', text: ' Continental ' },
+          { part: 'cotovelo', text: 'parte que não existe' },
+          { part: 'olhar', text: '' },
+          { part: 'raquete', text: longo },
+          ...Array.from({ length: 10 }, () => ({ part: 'pes', text: 'Base larga' })),
+        ],
+        self_check: ['A bola cai na cozinha', '', ...Array.from({ length: 10 }, (_, i) => `Confere ${i}`)],
+      },
+    }));
+    expect(value.technique.checkpoints[0]).toEqual({ part: 'empunhadura', text: 'Continental' });
+    expect(value.technique.checkpoints[1].text).toHaveLength(ITEM_LIMITS.checkpoint);
+    expect(value.technique.checkpoints).toHaveLength(ITEM_LIMITS.checkpoints);
+    expect(value.technique.checkpoints.some((c) => c.part === 'cotovelo')).toBe(false);
+    expect(value.technique.self_check[0]).toBe('A bola cai na cozinha');
+    expect(value.technique.self_check).toHaveLength(ITEM_LIMITS.selfChecks);
+  });
+
+  it('item antigo, sem o campo, ganha a técnica vazia (nada quebra)', () => {
+    expect(normalizeItemInput(ok()).value.technique).toEqual({ checkpoints: [], self_check: [] });
+    expect(blankItem('fundamento').technique).toEqual({ checkpoints: [], self_check: [] });
+  });
+
+  it('a qualidade do fundamento pede a técnica; a do drill não', () => {
+    expect(itemQuality({ kind: 'fundamento' }).missing).toContain('Técnica ponto a ponto');
+    expect(itemQuality({ kind: 'fundamento', technique: { checkpoints: [{ part: 'pes', text: 'x' }] } }).missing)
+      .not.toContain('Técnica ponto a ponto');
+    expect(itemQuality({ kind: 'drill' }).missing).not.toContain('Técnica ponto a ponto');
+  });
+});
+
 describe('itemQuality', () => {
   it('drill completo tira nota máxima; vazio aponta o que falta', () => {
     const full = {

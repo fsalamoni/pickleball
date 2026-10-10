@@ -436,7 +436,7 @@ export const JOGADAS = [
   },
   {
     slug: 'erne',
-    version: 1,
+    version: 2,
     kind: 'jogada',
     title: 'Erne: voleio por fora da cozinha',
     summary: 'Contra o dink paralelo junto à lateral, o jogador sai da quadra pela lateral, ao lado da cozinha, e volea a bola perto do poste. Jogada avançada e legal quando os pés ficam fora da cozinha.',
@@ -453,21 +453,40 @@ export const JOGADAS = [
     practice_mode: 'variado',
     steps: [
       'Repare no adversário que dinka paralelo, junto à lateral, de forma previsível.',
-      'No dink seguinte, saia pela lateral, por fora da cozinha, até ficar ao lado do poste, fora da quadra.',
-      'Volee a bola antes de ela quicar, para baixo, no pé ou no meio dos adversários.',
+      'No dink seguinte, saia pela lateral, por fora da cozinha, até ficar ao lado do poste, fora da quadra. Se pular o canto da cozinha, caia com os dois pés fora dela e da linha.',
+      'Espere a bola passar para o seu lado da rede e volee antes de ela quicar, para baixo, no pé ou no meio dos adversários.',
       'Se você pisou na cozinha no caminho, os dois pés precisam voltar para fora dela antes do voleio.',
-      'Volte para a quadra para a próxima bola.',
+      'Depois do voleio, freie sem encostar na rede nem no poste e volte para a quadra para a próxima bola.',
     ],
     cues: ['Leia o paralelo, depois saia', 'Pés fora da cozinha no voleio', 'Volee para baixo, no meio'],
     positioning: [
       { type: 'certo', text: 'No voleio, os dois pés fora da cozinha e da linha dela, ao lado da quadra, perto do poste.' },
       { type: 'errado', text: 'Volear com um pé ainda na cozinha ou na linha: é falta, mesmo que a bola entre.' },
+      { type: 'certo', text: 'Sair quando o adversário já se comprometeu com o dink paralelo.' },
+      { type: 'errado', text: 'Sair antes de ele bater: ele vê, muda para o cruzado e o seu lado fica aberto.' },
     ],
     common_errors: [
       { error: 'Sair cedo e o adversário mudar o dink para o cruzado.', fix: 'Saia quando ele já se comprometeu com o paralelo.' },
       { error: 'Esquecer de restabelecer os pés fora da cozinha.', fix: 'Pisou na cozinha? Os dois pés voltam para fora antes de volear.' },
+      { error: 'Volear a bola antes de ela passar para o seu lado da rede.', fix: 'Espere a bola cruzar o plano da rede; bater do lado de lá é falta.' },
+      { error: 'Encostar na rede ou no poste depois do voleio.', fix: 'É falta enquanto a bola está em jogo: freie o embalo para o lado, longe do poste.' },
     ],
     when_to_use: 'Contra quem dinka repetidamente no paralelo, junto à lateral do seu lado.',
+    technique: {
+      checkpoints: [
+        { part: 'olhar', text: 'No adversário que vai dinkar: o corpo e a raquete dele mostram o paralelo antes de a bola sair.' },
+        { part: 'pes', text: 'Passos rápidos pela lateral, por fora da cozinha; no voleio, os dois fora da cozinha e da linha.' },
+        { part: 'pernas', text: 'Dobradas na chegada, para frear o embalo e ficar equilibrado ao lado do poste.' },
+        { part: 'braco', text: 'Gesto curto, de cima para baixo, com a raquete na frente do corpo.' },
+        { part: 'raquete', text: 'Alta e pronta desde a saída; no contato, a face aponta para baixo e para dentro da quadra adversária.' },
+      ],
+      self_check: [
+        'No momento do voleio, seus dois pés estavam fora da cozinha e da linha.',
+        'Você bateu a bola depois que ela passou para o seu lado da rede.',
+        'A bola desceu na quadra adversária, no pé ou no meio, sem dar chance de resposta.',
+        'Você não encostou na rede nem no poste até a bola morrer.',
+      ],
+    },
     safety: 'Cuidado com o poste e com o espaço fora da quadra: veja se não há banco, cadeira ou outra pessoa no caminho.',
     diagrams: [
       diagrama('O caminho do Erne', 'cozinha', [
@@ -483,10 +502,10 @@ export const JOGADAS = [
   },
   {
     slug: 'atp-por-fora-do-poste',
-    version: 1,
+    version: 2,
     kind: 'jogada',
     title: 'ATP: a bola por fora do poste',
-    summary: 'Quando o adversário abre muito o ângulo e a bola quica para fora da quadra, ela pode voltar por fora do poste, sem passar por cima da rede. Raro e legal.',
+    summary: 'Quando o adversário abre muito o ângulo, a bola quica na sua quadra e segue para fora pela lateral; ela pode voltar por fora do poste, sem passar por cima da rede. Raro e legal.',
     objective: 'Ao final, o atleta reconhece a bola aberta o bastante para o ATP e a devolve baixa, por fora do poste, dentro da quadra.',
     skills: ['net.atp', 'tactics.leitura_adversario'],
     level_min: 4.5,
@@ -499,22 +518,39 @@ export const JOGADAS = [
     equipment: ['bolas'],
     practice_mode: 'variado',
     steps: [
-      'O adversário mandou um dink cruzado muito aberto, que vai quicar perto da lateral e sair da quadra.',
-      'Deixe a bola quicar (ela precisa quicar do seu lado) e vá atrás dela, por fora da quadra.',
-      'Bata a bola baixa, por fora do poste, direto para a quadra adversária.',
-      'A bola não precisa passar por cima da rede, mas precisa cair dentro da quadra.',
+      'O adversário mandou um dink cruzado muito aberto, que quica dentro da sua quadra, perto da lateral, e segue para fora dela.',
+      'Deixe a bola quicar e vá atrás dela, por fora da quadra; depois do quique, você pode até pisar na cozinha no caminho.',
+      'Bata a bola baixa, por fora do poste, direto para a quadra adversária, antes de ela quicar de novo.',
+      'A bola não precisa passar por cima da rede, mas precisa cair dentro da quadra adversária.',
       'Volte depressa para a quadra: se o ATP for devolvido, seu lado está aberto.',
     ],
     cues: ['Bola bem aberta? Pense no poste', 'Bata baixo, por fora do poste', 'Volte depressa para a quadra'],
     positioning: [
       { type: 'certo', text: 'Ir atrás da bola por fora da quadra e bater depois do quique, ao lado do poste.' },
-      { type: 'errado', text: 'Tentar o ATP com a bola ainda dentro da quadra ou sem o quique: a bola tem de passar por cima da rede.' },
+      { type: 'errado', text: 'Tentar o ATP ainda dentro da quadra, na frente da rede: sem ângulo para contornar o poste, a bola bate na rede ou no poste.' },
+      { type: 'certo', text: 'Bola baixa, que cai funda na quadra adversária, longe de quem está na rede.' },
+      { type: 'errado', text: 'Bola alta, por fora do poste mas perto do adversário: ele volea para o seu lado aberto.' },
     ],
     common_errors: [
       { error: 'Tentar o ATP em bola pouco aberta.', fix: 'Sem ângulo, jogue por cima da rede, com um dink ou um voleio normal.' },
       { error: 'Ficar fora da quadra depois do ATP.', fix: 'Volte para a quadra logo depois de bater.' },
+      { error: 'Encostar no poste ou na rede ao correr para a bola.', fix: 'É falta: passe por fora, com espaço, e bata ao lado do poste.' },
     ],
     when_to_use: 'Dink cruzado ou bola com efeito muito aberta, que sai da quadra pela lateral perto da rede.',
+    technique: {
+      checkpoints: [
+        { part: 'olhar', text: 'Na bola desde a raquete do adversário: leia cedo que ela vai quicar perto da lateral e sair.' },
+        { part: 'pes', text: 'Correm por fora da quadra, acompanhando a bola, e chegam ao lado dela antes do segundo quique.' },
+        { part: 'pernas', text: 'Dobradas na chegada, para bater baixo e manter o equilíbrio fora da quadra.' },
+        { part: 'braco', text: 'Gesto curto e firme, de lado, como um drive compacto ou um dink firme.' },
+        { part: 'raquete', text: 'Face virada para a quadra adversária, contato baixo, abaixo da altura da fita, terminando apontando o alvo.' },
+      ],
+      self_check: [
+        'A bola contornou o poste e caiu dentro da quadra adversária.',
+        'Ela passou baixa, sem dar ao adversário um voleio fácil.',
+        'Você voltou para a quadra antes de o adversário bater a próxima bola.',
+      ],
+    },
     safety: 'Veja o espaço fora da quadra antes de correr: poste, cadeiras e outras pessoas.',
     diagrams: [
       diagrama('Por fora do poste', 'cozinha', [
