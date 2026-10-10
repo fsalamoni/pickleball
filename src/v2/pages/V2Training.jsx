@@ -74,7 +74,7 @@ function TrainingHub() {
   const [params, setParams] = useSearchParams();
 
   const sections = useMemo(
-    () => trainingSections({ isCoach: identity.isCoach, recebidosNovos: unreadCount(inbox.data || []), balanco }),
+    () => trainingSections({ isCoach: identity.isCoach, recebidosNovos: inbox.isSuccess ? unreadCount(inbox.data || []) : 0, balanco }),
     [identity.isCoach, inbox.data, balanco],
   );
   const pedida = params.get('aba');

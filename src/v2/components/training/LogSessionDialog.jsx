@@ -186,7 +186,7 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
                       type="button"
                       aria-label={`Tirar "${itemsById[id]?.title || 'item'}" do registro`}
                       onClick={() => set({ item_ids: f.item_ids.filter((x) => x !== id) })}
-                      className="rounded-full p-1 text-gray-500 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                      className="rounded-full p-2 text-gray-500 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
