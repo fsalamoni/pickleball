@@ -21,6 +21,7 @@ const estado = {
   internos: [],
   internosErro: false,
   cancelou: [],
+  decidiu: [],
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -30,6 +31,10 @@ vi.mock('@/modules/tournament/hooks/useTournament', () => ({
     isLoading: false,
     isError: estado.torneiosErro,
     refetch: vi.fn(),
+  }),
+  useDecideTournamentArena: () => ({
+    isPending: false,
+    mutateAsync: async (v) => { estado.decidiu.push(v); },
   }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
@@ -107,6 +112,17 @@ describe('⭐ a aba "Torneios da casa" da Central', () => {
     expect(texto).toContain('Rascunho');
     const criar = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Criar torneio aqui'));
     expect(criar.getAttribute('href')).toBe('/torneios/criar?arena=a1');
+  });
+
+  it('⭐ a sede pedida por quem não gere a arena espera a confirmação dela', async () => {
+    estado.decidiu = [];
+    estado.torneios = [{ ...T('pedido', 'registrations_open', '2026-11-01'), arena_confirmed: false }];
+    await render(<ArenaPlatformTournamentsTab arena={{ id: 'a1' }} />);
+    expect(container.textContent).toContain('Pedidos de sede');
+    expect(container.textContent).toContain('Nenhum torneio sediado aqui');
+    const confirmar = [...container.querySelectorAll('button')].find((b) => b.textContent.includes('Confirmar sede'));
+    await act(async () => { confirmar.click(); });
+    expect(estado.decidiu).toEqual([expect.objectContaining({ confirm: true })]);
   });
 
   it('⭐ falhando, é erro — não "nenhum torneio sediado aqui"', async () => {

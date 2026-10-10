@@ -177,6 +177,17 @@ Pedido de ingresso (fluxo "Pedir para ingressar"). `status`
 Convite enviado por admin ("Adicionar membros"). `status`
 (`pending | accepted | declined`); aceitar cria `club_members` e notifica admins.
 
+### `club_invite_codes/{CÓDIGO}` (2026-10-10)
+O código de convite do clube: `{ code, club_id, created_by, created_at }`. Quem
+sabe o código lê (`get`); listar é só do admin do clube. Antes morava em
+`clubs.invite_code`, legível por toda conta (o campo legado é migrado e
+apagado quando um admin abre a administração).
+
+### `club_code_joins/{clubId_uid}` (2026-10-10)
+A prova de entrada pelo código (`{ club_id, user_id, code }`), gravada no mesmo
+lote que `club_members` — a regra a lê por `getAfter`. Só o dono e os admins
+leem. Entra na exclusão de conta.
+
 ### `club_posts/{id}`
 Mural do clube (posts dos membros). `club_id`, autor, conteúdo.
 

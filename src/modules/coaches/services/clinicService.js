@@ -13,7 +13,7 @@
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
-  serverTimestamp, setDoc, updateDoc, where,
+  serverTimestamp, updateDoc, where, increment, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
@@ -86,8 +86,12 @@ export async function updateClinic(clinicId, input, actor) {
   }
   const { valid, error, value } = normalizeClinic({ ...existing, ...input, coach_id: existing.coach_id });
   if (!valid) throw new Error(error);
+  // O contador de vagas acerta com as inscrições reais (clínicas antigas
+  // nasceram com 0 e nunca subiam).
+  const inscritos = await listClinicSignups(clinicId);
   await updateDoc(doc(db, COACH_CLINIC_COLLECTION, clinicId), {
     ...value,
+    signup_count: inscritos.length,
     updated_at: serverTimestamp(),
   });
   await createAuditLog({ action: 'coach_clinic_updated', actor, details: { clinic_id: clinicId } });
@@ -135,7 +139,10 @@ export async function enrollInClinic(clinic, athlete) {
   if (!athlete?.uid) throw new Error('Usuário não autenticado.');
   if (!clinic?.id || !clinic?.coach_id) throw new Error('Clínica inválida.');
   const id = clinicSignupDocId(clinic.id, athlete.uid);
-  await setDoc(doc(db, COACH_CLINIC_SIGNUP_COLLECTION, id), {
+  // A inscrição e a vaga no mesmo lote: a regra recusa as duas quando a
+  // clínica lotou, mesmo que a tela ainda mostrasse vaga.
+  const batch = writeBatch(db);
+  batch.set(doc(db, COACH_CLINIC_SIGNUP_COLLECTION, id), {
     clinic_id: clinic.id,
     coach_id: clinic.coach_id,
     athlete_id: athlete.uid,
@@ -143,6 +150,15 @@ export async function enrollInClinic(clinic, athlete) {
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
   });
+  batch.update(doc(db, COACH_CLINIC_COLLECTION, clinic.id), { signup_count: increment(1) });
+  try {
+    await batch.commit();
+  } catch (err) {
+    if (err?.code === 'permission-denied') {
+      throw new Error('Não foi possível se inscrever: a clínica lotou ou não está mais aberta.');
+    }
+    throw err;
+  }
   notifyUsers([clinic.coach_id], {
     title: 'Nova inscrição em clínica',
     message: `${str(athlete.displayName) || 'Um atleta'} se inscreveu em "${clinic.title}".`,
@@ -159,5 +175,15 @@ export async function cancelEnrollment(clinic, athleteId, actor) {
   const isSelf = actor.uid === athleteId;
   const isCoach = actor.uid === clinic?.coach_id || actor.isPlatformAdmin;
   if (!isSelf && !isCoach) throw new Error('Sem permissão.');
-  await deleteDoc(doc(db, COACH_CLINIC_SIGNUP_COLLECTION, clinicSignupDocId(clinic.id, athleteId)));
+  const ref = doc(db, COACH_CLINIC_SIGNUP_COLLECTION, clinicSignupDocId(clinic.id, athleteId));
+  const [snap, atual] = await Promise.all([getDoc(ref), getClinic(clinic.id)]);
+  if (!snap.exists()) return;
+  // Sair devolve a vaga (mesmo lote). Clínica antiga com o contador em 0 (as
+  // inscrições de antes não o subiam): só apaga — contador negativo a regra recusa.
+  const batch = writeBatch(db);
+  batch.delete(ref);
+  if (atual && Number(atual.signup_count) > 0) {
+    batch.update(doc(db, COACH_CLINIC_COLLECTION, clinic.id), { signup_count: increment(-1) });
+  }
+  await batch.commit();
 }

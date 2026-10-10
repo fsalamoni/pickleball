@@ -25,6 +25,13 @@ export const CLUB_COLLECTIONS = Object.freeze({
   members: 'club_members',
   joinRequests: 'club_join_requests',
   memberInvites: 'club_member_invites',
+  // Código de convite: id = o próprio código (quem sabe o código lê); a lista
+  // é só dos admins do clube. O código saiu do documento do clube, que
+  // qualquer conta logada lê.
+  inviteCodes: 'club_invite_codes',
+  // Prova de que a pessoa entrou pelo código (lida pela regra de club_members
+  // no mesmo lote). Só o dono e os admins do clube leem.
+  codeJoins: 'club_code_joins',
   events: 'club_events',
   rsvps: 'club_event_rsvps',
   eventInvites: 'event_invites',

@@ -222,7 +222,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // nenhuma.
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const { isOn: moduloLigado, isLoading: modulosCarregando } = useArenaModules(arenaId);
-  const { data: torneiosDaPlataforma = [], isLoading: torneiosCarregando } = useArenaPlatformTournaments(arenaId);
+  const { data: torneiosDaPlataforma = [], isLoading: torneiosCarregando } = useArenaPlatformTournaments(arenaId, { includePending: true });
   const modulos = {
     jogoAberto: moduloLigado(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH),
     membros: moduloLigado(ARENA_MODULE_ID.MEMBERS),

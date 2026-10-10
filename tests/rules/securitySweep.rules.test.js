@@ -8,7 +8,7 @@ import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, writeBatch, increment } from 'firebase/firestore';
 
 const DONO = 'dono_uid';
 const GESTOR = 'gestor_uid';
@@ -232,5 +232,120 @@ describe('avaliação da arena', () => {
     await assertSucceeds(updateDoc(doc(as(GESTOR), 'arena_reviews', 'r1'), { response: 'Obrigado!', responded_by: GESTOR }));
     await assertFails(updateDoc(doc(as(GESTOR), 'arena_reviews', 'r1'), { rating: 1 }));
     await assertSucceeds(getDoc(doc(as(ATLETA), 'arena_reviews', 'r1')));
+  });
+});
+
+describe('clube: entrar exige código, convite ou ter criado o clube', () => {
+  const entrarComCodigo = (uid, code) => {
+    const db = as(uid);
+    const b = writeBatch(db);
+    b.set(doc(db, 'club_code_joins', `${CLUBE}_${uid}`), { club_id: CLUBE, user_id: uid, code });
+    b.set(doc(db, 'club_members', `${CLUBE}_${uid}`), { club_id: CLUBE, user_id: uid, role: 'member' });
+    return b.commit();
+  };
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'club_members', `${CLUBE}_${DONO}`), { club_id: CLUBE, user_id: DONO, role: 'admin' });
+      await setDoc(doc(db, 'club_invite_codes', 'ABCD2345'), { code: 'ABCD2345', club_id: CLUBE });
+    });
+  });
+  it('sem prova nenhuma, ninguém vira membro', async () => {
+    await assertFails(setDoc(doc(as(ATLETA), 'club_members', `${CLUBE}_${ATLETA}`), { club_id: CLUBE, user_id: ATLETA, role: 'member' }));
+  });
+  it('com o código certo entra; com o errado ou de outro clube, não', async () => {
+    await assertFails(entrarComCodigo(ATLETA, 'ZZZZ9999'));
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'club_invite_codes', 'OUTRO234'), { code: 'OUTRO234', club_id: CLUBE_INV });
+    });
+    await assertFails(entrarComCodigo(ATLETA, 'OUTRO234'));
+    await assertSucceeds(entrarComCodigo(ATLETA, 'ABCD2345'));
+  });
+  it('clube ainda não migrado: vale o código do próprio documento', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'clubs', CLUBE), { invite_code: 'LEGADO2' });
+    });
+    await assertSucceeds(entrarComCodigo(ALICE, 'LEGADO2'));
+  });
+  it('com convite pendente entra; com convite recusado, não', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'club_member_invites', `${CLUBE}_${BOB}`), { club_id: CLUBE, user_id: BOB, status: 'declined' });
+      await setDoc(doc(ctx.firestore(), 'club_member_invites', `${CLUBE}_${ALICE}`), { club_id: CLUBE, user_id: ALICE, status: 'pending' });
+    });
+    await assertFails(setDoc(doc(as(BOB), 'club_members', `${CLUBE}_${BOB}`), { club_id: CLUBE, user_id: BOB, role: 'member' }));
+    await assertSucceeds(setDoc(doc(as(ALICE), 'club_members', `${CLUBE}_${ALICE}`), { club_id: CLUBE, user_id: ALICE, role: 'member' }));
+  });
+  it('o código: quem sabe lê; listar e criar é do admin do clube', async () => {
+    await assertSucceeds(getDoc(doc(as(ATLETA), 'club_invite_codes', 'ABCD2345')));
+    await assertFails(getDocs(query(collection(as(ATLETA), 'club_invite_codes'), where('club_id', '==', CLUBE))));
+    await assertSucceeds(getDocs(query(collection(as(DONO), 'club_invite_codes'), where('club_id', '==', CLUBE))));
+    await assertFails(setDoc(doc(as(ATLETA), 'club_invite_codes', 'MEU23456'), { code: 'MEU23456', club_id: CLUBE }));
+    await assertSucceeds(setDoc(doc(as(DONO), 'club_invite_codes', 'NOVO2345'), { code: 'NOVO2345', club_id: CLUBE }));
+    await assertSucceeds(deleteDoc(doc(as(DONO), 'club_invite_codes', 'ABCD2345')));
+  });
+});
+
+describe('torneio: a sede é confirmada pela arena', () => {
+  const novo = (extra) => ({ creator_uid: INVASOR, archived: false, ...extra });
+  it('quem não gere a arena cria com a sede pendente, nunca confirmada', async () => {
+    await assertFails(setDoc(doc(as(INVASOR), 'tournaments', 't1'), novo({ arena_id: ARENA })));
+    await assertFails(setDoc(doc(as(INVASOR), 'tournaments', 't1'), novo({ arena_id: ARENA, arena_confirmed: true })));
+    await assertSucceeds(setDoc(doc(as(INVASOR), 'tournaments', 't1'), novo({ arena_id: ARENA, arena_confirmed: false })));
+    await assertFails(updateDoc(doc(as(INVASOR), 'tournaments', 't1'), { arena_confirmed: true }));
+  });
+  it('o gestor cria já confirmado; e confirma ou recusa a sede alheia', async () => {
+    await assertSucceeds(setDoc(doc(as(GESTOR), 'tournaments', 't2'), { creator_uid: GESTOR, archived: false, arena_id: ARENA, arena_confirmed: true }));
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tournaments', 't3'), novo({ arena_id: ARENA, arena_confirmed: false, name: 'X' }));
+      await setDoc(doc(ctx.firestore(), 'tournaments', 't4'), novo({ arena_id: ARENA, arena_confirmed: false }));
+    });
+    await assertFails(updateDoc(doc(as(GESTOR), 'tournaments', 't3'), { name: 'Outro' }));
+    await assertSucceeds(updateDoc(doc(as(GESTOR), 'tournaments', 't3'), { arena_confirmed: true }));
+    await assertSucceeds(updateDoc(doc(as(GESTOR), 'tournaments', 't4'), { arena_id: null, arena_confirmed: false }));
+  });
+  it('o organizador edita o torneio antigo sem o campo, como sempre', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tournaments', 't5'), novo({ arena_id: ARENA }));
+    });
+    await assertSucceeds(updateDoc(doc(as(INVASOR), 'tournaments', 't5'), { name: 'Renomeado' }));
+  });
+});
+
+describe('clínica: o teto de vagas vale no banco', () => {
+  const inscrever = (uid, extra = {}) => {
+    const db = as(uid);
+    const b = writeBatch(db);
+    b.set(doc(db, 'coach_clinic_signups', `c1_${uid}`), { clinic_id: 'c1', coach_id: DONO, athlete_id: uid, ...extra });
+    b.update(doc(db, 'coach_clinics', 'c1'), { signup_count: increment(1) });
+    return b.commit();
+  };
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'coach_clinics', 'c1'), { coach_id: DONO, capacity: 1, signup_count: 0, status: 'open' });
+    });
+  });
+  it('entra com vaga; a próxima é recusada; inscrição sem subir o contador também', async () => {
+    await assertFails(setDoc(doc(as(ALICE), 'coach_clinic_signups', `c1_${ALICE}`), { clinic_id: 'c1', coach_id: DONO, athlete_id: ALICE }));
+    await assertSucceeds(inscrever(ATLETA));
+    await assertFails(inscrever(ALICE));
+  });
+  it('o atleta não mexe no contador sem a própria inscrição, nem mente o professor', async () => {
+    await assertFails(updateDoc(doc(as(ATLETA), 'coach_clinics', 'c1'), { signup_count: 1 }));
+    await assertFails(inscrever(ATLETA, { coach_id: INVASOR }));
+  });
+  it('sair devolve a vaga', async () => {
+    await assertSucceeds(inscrever(ATLETA));
+    const db = as(ATLETA);
+    const b = writeBatch(db);
+    b.delete(doc(db, 'coach_clinic_signups', `c1_${ATLETA}`));
+    b.update(doc(db, 'coach_clinics', 'c1'), { signup_count: increment(-1) });
+    await assertSucceeds(b.commit());
+    await assertSucceeds(inscrever(ALICE));
+  });
+  it('clínica cancelada não recebe inscrição', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'coach_clinics', 'c1'), { status: 'cancelled' });
+    });
+    await assertFails(inscrever(ATLETA));
   });
 });

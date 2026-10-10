@@ -12,7 +12,7 @@
  * default), por isso o gatilho e o cliente admin apontam para ela.
  *
  * Arena V3 (2026-07-21): automações adicionadas para sprints 1, 5, 6, 7.
- *  - expireStaleNotifications (sprint 1): limpa notificações com > 7 dias.
+ *  - expireStaleNotifications (sprint 1): aposentada em 2026-10-10 (no-op).
  *  - refreshLadderWeekly (sprint 5): agrega ladder de arenas ativas.
  *  - aggregateNpsDaily (sprint 6): consolida NPS por arena.
  *  - autoCloseChecklists (sprint 7): fecha checklists opening/closing do dia.
@@ -168,41 +168,23 @@ exports.catchUpPlatformRankings = onSchedule(
 );
 
 // =====================================================================
-// ARENA V3 — Sprint 1: expireStaleNotifications
+// expireStaleNotifications — APOSENTADA (2026-10-10)
 // =====================================================================
-// Limpa notificações com mais de 7 dias e não lidas.
-// Roda todo dia às 3h (horário de SP).
-
+// Marcava `archived: true` nos avisos não lidos com mais de 7 dias. Falhava
+// TODO dia (`created_at <` + `read ==` pede índice composto que não existe) e,
+// mesmo funcionando, não servia: ninguém lê `archived`, e a central de
+// notificações guarda os avisos antigos de propósito (docs/36). Fica como
+// no-op só porque o deploy é por nome e não apaga função: tirar a exportação
+// deixaria a versão antiga rodando (e falhando) no projeto. Para removê-la de
+// vez: `firebase functions:delete expireStaleNotifications --region
+// southamerica-east1` e então apagar este bloco.
 exports.expireStaleNotifications = onSchedule(
   {
-    schedule: '0 3 * * *',
+    schedule: '0 3 1 1 *', // uma vez por ano: não há o que fazer
     timeZone: 'America/Sao_Paulo',
     region: REGION,
   },
-  async () => {
-    const db = getFirestore(getApp(), DATABASE_ID);
-    const cutoff = Timestamp.fromMillis(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    try {
-      const snap = await db
-        .collection('notifications')
-        .where('created_at', '<', cutoff)
-        .where('read', '==', false)
-        .limit(500)
-        .get();
-      if (snap.empty) {
-        logger.info('expireStaleNotifications: nada a limpar.');
-        return { archived: 0 };
-      }
-      const batch = db.batch();
-      snap.docs.forEach((d) => batch.update(d.ref, { archived: true, archived_at: Timestamp.now() }));
-      await batch.commit();
-      logger.info('expireStaleNotifications: notificações arquivadas.', { count: snap.size });
-      return { archived: snap.size };
-    } catch (err) {
-      logger.error('expireStaleNotifications: erro.', err);
-      throw err;
-    }
-  },
+  async () => ({ archived: 0 }),
 );
 
 // =====================================================================

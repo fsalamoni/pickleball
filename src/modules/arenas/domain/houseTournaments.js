@@ -55,6 +55,15 @@ const GRUPO_DO_STATUS = Object.freeze({
 });
 
 /**
+ * A sede está valendo? Só `false` explícito é pendente: o torneio criado por
+ * quem não gere a arena espera a confirmação dela. Torneio antigo (sem o
+ * campo) segue valendo como sempre.
+ */
+export function isHostConfirmed(t) {
+  return t?.arena_confirmed !== false;
+}
+
+/**
  * Os torneios da casa (torneios da plataforma sediados na arena), na ordem
  * de quem olha: o que está rolando, o que vem aí (do mais próximo), e só
  * depois o que já terminou (do mais recente). Arquivado nunca aparece;
