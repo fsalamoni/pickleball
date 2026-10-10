@@ -1262,7 +1262,17 @@ de saúde.** Comentários: `uid`, `name`, `text`, `created_at`.
 ### `training_meta/{uid}` (NOVO)
 `favorites[]` (≤ 300), `routine`, `onboarding_done`, `mastery` (`{ itemId:
 aprendendo|consistente|dominado }`, ≤ 300), `assessments[]` (≤ 24),
-`focus_hint`, `updated_at`. Só o dono.
+`focus_hint`, `debrief` (`{ enabled, since }` — o balanço do jogo ligado
+pela pessoa, flag `game_debrief`), `updated_at`. Só o dono.
+
+### `training_debriefs/{uid}_{tipo}_{ref}` (NOVO, flag `game_debrief`)
+Balanço depois de um jogo: `uid`, `source { type: dia_de_jogo|torneio|reserva|avulso,
+ref_id, title, date, games, wins }`, `status` (`respondido|dispensado`),
+`rating` (1–5), `strengths[]`, `weaknesses[]` (≤ 3, ids de `GAME_ASPECTS`),
+`evolution`, `body`, `mind`, `note` (≤ 500), `suggestion { focus[], item_ids[],
+light }`, `applied { plan_id, mode, dates[], at }`. Só o dono (o admin lê e
+apaga); a regra confere o prefixo do id e a forma. Zero índice. Ver
+`docs/42-BALANCO-DO-JOGO.md`.
 
 ### `training_questions/{id}` + `messages/{mid}` (NOVO)
 Dúvida privada aluno ↔ professor: `asker_uid`, `asker_name`, `coach_uid`,

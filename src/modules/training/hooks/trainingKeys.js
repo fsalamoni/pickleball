@@ -18,6 +18,8 @@ export const trainingKeys = {
   comments: (sid) => ['treino', 'diario', 'comentarios', sid],
   plans: (uid) => ['treino', 'planos', uid],
   meta: (uid) => ['treino', 'meta', uid],
+  debriefs: (uid) => ['treino', 'balanco', uid],
+  recentPlay: (uid) => ['treino', 'balanco', 'jogos', uid],
   questions: ['treino', 'duvidas'],
   myQuestions: (uid) => ['treino', 'duvidas', 'minhas', uid],
   coachQuestions: (uid) => ['treino', 'duvidas', 'professor', uid],

@@ -547,16 +547,22 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     const ligado = helpCatalog({
       personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
       my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true, training_center: true, user_hub: true,
+      play_groups: true, training_center: true, user_hub: true, game_debrief: true,
     });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
       guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true, training_center: true, user_hub: true,
+      play_groups: true, training_center: true, user_hub: true, game_debrief: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
+  });
+
+  it('o balanço do jogo: o artigo pede o treino E a própria flag', () => {
+    expect(helpCatalog({ training_center: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).toBeNull();
+    expect(helpCatalog({ game_debrief: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).toBeNull();
+    expect(helpCatalog({ training_center: true, game_debrief: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).not.toBeNull();
   });
 
   it('a central de notificações: o artigo só existe com a flag, e a tela tem ajuda própria', () => {

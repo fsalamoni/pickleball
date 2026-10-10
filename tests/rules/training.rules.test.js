@@ -508,6 +508,57 @@ describe('planos e preferências', () => {
     await assertFails(setDoc(doc(como(ANA), 'training_meta', ANA), { xp: 999 }));
     await assertFails(getDoc(doc(como(DUDA), 'training_meta', ANA)));
   });
+
+  it('training_meta: o balanço ligado ou não (só enabled e since)', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_meta', ANA), { debrief: { enabled: true, since: '2026-10-09' } }));
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_meta', ANA), { debrief: { enabled: false, since: null } }, { merge: true }));
+    await assertFails(setDoc(doc(como(ANA), 'training_meta', ANA), { debrief: { enabled: true, xp: 10 } }));
+    await assertFails(setDoc(doc(como(ANA), 'training_meta', ANA), { debrief: 'sim' }));
+  });
+});
+
+describe('balanço do jogo', () => {
+  const fonte = { type: 'dia_de_jogo', ref_id: 'gd1', title: 'Sábado', date: '2026-10-08', games: 4, wins: 3 };
+  const balanco = (over = {}) => ({
+    uid: ANA, source: fonte, status: 'respondido', rating: 4, strengths: ['dink'], weaknesses: ['saque', 'devolucao'],
+    evolution: 'melhorou', body: 4, mind: 3, note: 'Saque curto demais.', suggestion: { focus: ['saque'], item_ids: ['a', 'b'], light: false },
+    applied: null, ...over,
+  });
+
+  it('a dona grava, relê, atualiza e apaga; o id começa pelo uid dela', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`), balanco()));
+    await assertSucceeds(getDoc(doc(como(ANA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`)));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`), { applied: { plan_id: 'p', mode: 'novo' } }));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'training_debriefs'), where('uid', '==', ANA))));
+    await assertSucceeds(deleteDoc(doc(como(ANA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`)));
+  });
+
+  it('ninguém grava no balanço de outra pessoa nem lê', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`), balanco()));
+    await assertFails(getDoc(doc(como(DUDA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`)));
+    await assertFails(getDocs(query(collection(como(DUDA), 'training_debriefs'), where('uid', '==', ANA))));
+    await assertFails(setDoc(doc(como(DUDA), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`), balanco({ uid: DUDA })));
+    await assertFails(setDoc(doc(como(DUDA), 'training_debriefs', `${DUDA}_x`), balanco()));
+    await assertFails(setDoc(doc(como(DUDA), 'training_debriefs', 'qualquer'), balanco({ uid: DUDA })));
+    await assertSucceeds(getDoc(doc(como(ADMIN), 'training_debriefs', `${ANA}_dia_de_jogo_gd1`)));
+  });
+
+  it('o formato é conferido: nota 1–5, até 3 aspectos, texto curto, campos conhecidos', async () => {
+    const id = `${ANA}_avulso_2026-10-08_1`;
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ rating: 9 })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ rating: null })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ weaknesses: ['a', 'b', 'c', 'd'] })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ note: 'x'.repeat(501) })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ xp: 50 })));
+    await assertFails(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: { ...fonte, type: 'treino' } })));
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', id), balanco({ source: { ...fonte, type: 'avulso', ref_id: '2026-10-08_1' } })));
+  });
+
+  it('dispensar fica gravado sem nota', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'training_debriefs', `${ANA}_torneio_t1`), {
+      uid: ANA, source: { ...fonte, type: 'torneio', ref_id: 't1', games: null, wins: null }, status: 'dispensado',
+    }));
+  });
 });
 
 describe('dúvidas', () => {

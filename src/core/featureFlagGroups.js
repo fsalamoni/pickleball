@@ -63,7 +63,7 @@ export const FLAG_GROUPS = Object.freeze([
   {
     id: 'training',
     label: 'Treino e Minha área',
-    keys: [FEATURE_FLAG.TRAINING_CENTER, FEATURE_FLAG.USER_HUB],
+    keys: [FEATURE_FLAG.TRAINING_CENTER, FEATURE_FLAG.GAME_DEBRIEF, FEATURE_FLAG.USER_HUB],
   },
   {
     id: 'gamification',

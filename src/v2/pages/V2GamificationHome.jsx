@@ -45,6 +45,7 @@ import {
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { HUB_TABS, abaDaUrl } from '@/v2/components/gamification/hubTabs';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
+import { useDebriefSettings } from '@/modules/training/hooks/useDebriefs';
 
 /**
  * V2GamificationHome — o hub da gamificação, em cinco abas:
@@ -110,8 +111,13 @@ function V2GamificationHomeOn() {
     kudoIndex, referralCode, facts: engine.facts,
   }), [engine.matchDates, engine.dates, kudoIndex, referralCode, engine.facts]);
 
-  const modulesCfg = config.modules;
-  const missionsReady = !!uid && engine.ready;
+  // O balanço do jogo é escolha da pessoa: as missões dele só saem para quem ligou.
+  const debrief = useDebriefSettings();
+  const modulesCfg = useMemo(
+    () => ({ ...config.modules, game_debrief: debrief.enabled }),
+    [config.modules, debrief.enabled],
+  );
+  const missionsReady = !!uid && engine.ready && !debrief.isLoading;
   const daily = useScopedMissions(uid, 'daily', { tier, enabled: missionsReady, activity, modules: modulesCfg });
   const weekly = useScopedMissions(uid, 'weekly', { tier, enabled: missionsReady && isModuleOn('missions_weekly'), activity, modules: modulesCfg });
   const monthly = useScopedMissions(uid, 'monthly', { tier, enabled: missionsReady && isModuleOn('missions_monthly'), activity, modules: modulesCfg });

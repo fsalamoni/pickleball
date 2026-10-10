@@ -297,6 +297,9 @@ editou ou apagou continua como ele deixou.
 
 ## 11. Fica para depois
 
+> O **balanço do jogo** (perguntas depois de jogar + semana sugerida) é a
+> flag `game_debrief`: ver `docs/42-BALANCO-DO-JOGO.md`.
+
 - Arena e clube como emissores de conteúdo.
 - Validação do arquivo enviado também no servidor (função ao finalizar o envio).
 - XP do treino confirmado pelo professor, pelo servidor.

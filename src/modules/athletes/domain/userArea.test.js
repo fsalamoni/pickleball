@@ -46,10 +46,12 @@ describe('userAreaPending', () => {
       convitesEvento: [{ status: 'invited' }, { status: 'going' }],
       duvidasEsperando: 0,
       treinosNaoLidos: 3,
+      balancosPendentes: 2,
     });
     expect(itens.map((i) => [i.id, i.count])).toEqual([
-      ['arena:a1', 2], ['aulas', 1], ['convites-clube', 1], ['convites-evento', 1], ['treinos', 3],
+      ['arena:a1', 2], ['aulas', 1], ['convites-clube', 1], ['convites-evento', 1], ['treinos', 3], ['balancos', 2],
     ]);
+    expect(itens[5]).toMatchObject({ to: '/treino?aba=balanco', label: '2 jogos esperando o seu balanço' });
     expect(itens[0]).toMatchObject({ to: '/arenas/a1/gerir?aba=reservas', detalhe: 'Arena Sol', label: '2 pedidos de reserva esperando resposta' });
     expect(itens[2]).toMatchObject({ secao: S.CLUBES, label: '1 convite para entrar num clube' });
   });

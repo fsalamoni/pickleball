@@ -25,6 +25,7 @@ function reset() {
     clubes: ok([]),
     convites: ok([]),
     eventos: ok([]),
+    balancos: { on: false, pending: [], isSuccess: false, isError: false, refetch: vi.fn() },
   });
 }
 
@@ -54,6 +55,7 @@ vi.mock('@/modules/training/hooks/useTrainingQuestions', () => ({
   useMyTrainingQuestions: () => ok([]),
   useCoachTrainingQuestions: () => ok([]),
 }));
+vi.mock('@/modules/training/hooks/useDebriefs', () => ({ usePendingDebriefs: () => estado.balancos }));
 vi.mock('@/modules/rating/hooks/useMyUnifiedLevel', () => ({ useMyUnifiedLevel: () => ({ level: null, source: null, isLoading: false }) }));
 vi.mock('@/modules/rating/hooks/useRating', () => ({
   useMyPlayerRating: () => ok(null),
@@ -121,6 +123,14 @@ describe('Minha área ligada', () => {
     const link = container.querySelector('[data-dica="minha-area-pendencias"] a');
     expect(link.textContent).toContain('2 pedidos de reserva esperando resposta');
     expect(link.getAttribute('href')).toBe('/arenas/a1/gerir?aba=reservas');
+  });
+
+  it('jogo esperando balanço vira pendência que leva à aba Balanço', async () => {
+    estado.balancos = { on: true, pending: [{ type: 'torneio', ref_id: 't1' }], isSuccess: true, isError: false, refetch: vi.fn() };
+    await render(<UserArea />);
+    const link = container.querySelector('[data-dica="minha-area-pendencias"] a');
+    expect(link.textContent).toContain('1 jogo esperando o seu balanço');
+    expect(link.getAttribute('href')).toBe('/treino?aba=balanco');
   });
 
   it('contagem que falhou não vira zero — a faixa diz o que ficou de fora', async () => {

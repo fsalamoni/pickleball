@@ -62,7 +62,7 @@ export function normalizePlan(input = {}, { today = todayLocal() } = {}) {
       minutes: int(input.minutes, 10, 240, 60),
       slots,
       status: Object.values(PLAN_STATUS).includes(input.status) ? input.status : PLAN_STATUS.ATIVO,
-      source: ['manual', 'assistente'].includes(input.source) ? input.source : 'manual',
+      source: ['manual', 'assistente', 'balanco'].includes(input.source) ? input.source : 'manual',
     },
   };
 }

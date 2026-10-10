@@ -972,6 +972,34 @@ const ATLETA = {
       ],
     },
     {
+      id: 'balanco-do-jogo',
+      title: 'O balanço do jogo e a semana de treino sugerida',
+      summary: 'Depois de jogar, contar como foi — e receber drills para a semana.',
+      keywords: [
+        'balanço', 'balanço do jogo', 'depois do jogo', 'desempenho', 'ponto forte', 'ponto fraco',
+        'melhorar', 'evoluir', 'sugestão', 'drill da semana', 'plano', 'autoavaliação do jogo',
+      ],
+      flagsTodas: ['training_center', 'game_debrief'],
+      guias: ['treino-balanco'],
+      blocks: [
+        p('O balanço do jogo é opcional e só seu: cada pessoa liga para si, no Treino → Balanço ou em Configurações. Ligado, depois de um dia de jogo, de um torneio ou de uma reserva de quadra a plataforma pergunta como foi — e sugere o que treinar na semana.'),
+        list(
+          'AS PERGUNTAS — como foi o jogo (1 a 5), o que funcionou e o que faltou (até 3 de cada), se você sente que evoluiu, como estavam o corpo e a cabeça, e uma anotação, se quiser. Leva um minuto.',
+          'A SUGESTÃO — até 2 focos, saídos do que faltou HOJE e do que se repete nos seus balanços, mais um ponto forte para manter. Os drills vêm da Biblioteca, no seu nível, nos dias da sua rotina.',
+          'SEMANA MAIS LEVE — se o corpo ou a cabeça estavam no limite, a sugestão tem menos dias e menos intensidade.',
+          'VOCÊ DECIDE — escolha os dias e toque em "Adicionar aos meus treinos". Com um plano ativo em andamento, os dias entram nele; sem plano, vira um plano curto, a "Semana do balanço". Ou toque em "Agora não": o balanço fica salvo do mesmo jeito.',
+        ),
+        steps(
+          'Ligue o balanço no Treino → Balanço (ou em Configurações).',
+          'Depois de jogar, o jogo aparece no Balanço e no seu início. Toque em "Fazer o balanço".',
+          'Veja a semana sugerida, tire os dias que não servem e adicione aos seus treinos.',
+        ),
+        p('Jogou e o jogo não aparece? Use "Balanço de outro jogo" e diga a data. Só entram os jogos dos últimos 7 dias, depois que terminam, e só os de depois que você ligou — ligar não cobra o passado.'),
+        tip('Com a gamificação ligada, quem usa o balanço ganha missões da semana e do mês para fazer os balanços.'),
+        link('/treino?aba=balanco', 'Abrir o Balanço'),
+      ],
+    },
+    {
       id: 'treino-biblioteca',
       title: 'Achar, salvar e indicar drills e treinos',
       summary: 'A biblioteca, quem criou cada item, copiar e adaptar, indicar a outro atleta.',
@@ -1706,7 +1734,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/treino/planos/*', label: 'este plano',
     refs: [[HELP_SECTION.ATHLETE, 'treino']] },
   { pattern: '/treino', label: 'o treino',
-    refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
+    refs: [[HELP_SECTION.ATHLETE, 'treino'], [HELP_SECTION.ATHLETE, 'balanco-do-jogo'], [HELP_SECTION.ATHLETE, 'treino-biblioteca'], [HELP_SECTION.ATHLETE, 'treino-criar'], [HELP_SECTION.COACH, 'treino-professor']] },
   { pattern: '/circuits', label: 'circuitos',
     refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
   { pattern: '/meus-jogos', label: 'seus jogos',

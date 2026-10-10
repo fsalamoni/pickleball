@@ -63,6 +63,9 @@ const MISSION_TEMPLATES = Object.freeze([
   { id: 'weekly_letter_1',    metric: 'letter_sent',       target: 1,  xpReward: 50,  weight: 5,  tier: null, category: 'social', module: 'partner_letters' },
   { id: 'weekly_booking_1',   metric: 'booking_attended',  target: 1,  xpReward: 80,  weight: 7,  tier: null, category: 'discover' },
   { id: 'weekly_lesson_1',    metric: 'lesson_attended',   target: 1,  xpReward: 100, weight: 5,  tier: null, category: 'discover' },
+  // `optIn`: só para quem LIGOU a funcionalidade para si (o balanço do jogo é
+  // pessoal); sem `modules[module] === true`, a missão nunca sai.
+  { id: 'weekly_debrief_1',   metric: 'debrief_done',      target: 1,  xpReward: 60,  weight: 6,  tier: null, category: 'discover', module: 'game_debrief', optIn: true },
 
   // ─── MENSAIS ─────────────────────────────────────────────────────
   { id: 'monthly_play_15',    metric: 'game_played',       target: 15, xpReward: 500, weight: 8,  tier: null, category: 'play' },
@@ -79,6 +82,7 @@ const MISSION_TEMPLATES = Object.freeze([
   { id: 'monthly_review_arena_2', metric: 'arena_reviewed', target: 2, xpReward: 150, weight: 5,  tier: null, category: 'discover' },
   { id: 'monthly_clinic_1',   metric: 'clinic_attended',   target: 1,  xpReward: 150, weight: 4,  tier: null, category: 'discover' },
   { id: 'monthly_challenge_1', metric: 'challenge_joined', target: 1,  xpReward: 120, weight: 5,  tier: null, category: 'discover', module: 'challenges' },
+  { id: 'monthly_debriefs_3', metric: 'debrief_done',      target: 3,  xpReward: 200, weight: 5,  tier: null, category: 'discover', module: 'game_debrief', optIn: true },
 ]);
 
 /** O catálogo (somente leitura) — a Central do admin e os testes o consultam. */
@@ -278,6 +282,10 @@ export function missionLabel({ metric, target = 1 } = {}) {
       title: plural ? `Entre em ${n} desafios` : 'Entre num desafio',
       description: 'Participe de um desafio da plataforma, de um clube ou de uma arena.',
     },
+    debrief_done: {
+      title: plural ? `Faça ${n} balanços de jogo` : 'Faça o balanço de um jogo',
+      description: 'Depois de jogar, conte como foi no Treino → Balanço. A semana de treino sai sugerida.',
+    },
   };
   return textos[metric] || {
     title: `Complete ${n}`,
@@ -374,6 +382,8 @@ export function generateMissions({
     // MEDIR. Missão de métrica não medível ficaria parada em 0 para sempre
     // (ou dependeria do usuário marcar sozinho, que era o furo antigo).
     if (t.module && modules && modules[t.module] === false) return false;
+    // Missão de escolha pessoal (o balanço do jogo): só com o "sim" explícito.
+    if (t.optIn && modules?.[t.module] !== true) return false;
     return isMeasurableMetric(t.metric, scope);
   });
 

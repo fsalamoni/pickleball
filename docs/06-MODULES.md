@@ -807,6 +807,13 @@ local. Admin: Painel → Treino. Telas `V2Training` (`/treino`, abas por `?aba=`
 `V2TrainingItem`, `V2TrainingEditor`, `V2TrainingPlan`. Ver
 `src/modules/training/README.md` e `docs/40-CENTRO-DE-TREINO.md`.
 
+**Balanço do jogo** (flag `game_debrief`, sobre `training_center`, ligado por
+cada pessoa): depois de um dia de jogo, torneio ou reserva, perguntas rápidas
+(nota, o que funcionou, o que faltou, evolução, corpo e cabeça) e a semana de
+drills sugerida, que a pessoa decide pôr nos treinos. Aba `/treino?aba=balanco`,
+cartão no início, configuração própria e missões opcionais. Ver
+`docs/42-BALANCO-DO-JOGO.md`.
+
 ## arenas/ — Mercado (NOVO Onda J)
 
 Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).

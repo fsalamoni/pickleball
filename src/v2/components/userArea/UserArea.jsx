@@ -29,6 +29,7 @@ import { useMyClubInvites, useMyClubs, useMyEventInvites } from '@/modules/clubs
 import { useTrainingInbox } from '@/modules/training/hooks/useTrainingShares';
 import { useCoachTrainingQuestions, useMyTrainingQuestions } from '@/modules/training/hooks/useTrainingQuestions';
 import { unreadCount } from '@/modules/training/domain/share';
+import { usePendingDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { esperaPorMim } from '@/v2/components/training/questions/questionsView';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
@@ -66,6 +67,8 @@ export default function UserArea() {
   const inboxQ = useTrainingInbox(trainingOn ? uid : null);
   const myQuestionsQ = useMyTrainingQuestions(trainingOn ? uid : null);
   const coachQuestionsQ = useCoachTrainingQuestions(trainingOn ? uid : null, { enabled: isCoach });
+  // Balanço do jogo: só consulta para quem ligou (flag + escolha da pessoa).
+  const balancos = usePendingDebriefs();
 
   const convitesEventoPendentes = (eventInvitesQ.data || []).filter((i) => i?.status === 'invited');
   const temConvite = (clubInvitesQ.data || []).length > 0 || convitesEventoPendentes.length > 0;
@@ -103,6 +106,7 @@ export default function UserArea() {
     convitesEvento: eventInvitesQ.isSuccess ? eventInvitesQ.data : undefined,
     duvidasEsperando,
     treinosNaoLidos: trainingOn && inboxQ.isSuccess ? unreadCount(inboxQ.data || []) : undefined,
+    balancosPendentes: balancos.isSuccess ? balancos.pending.length : undefined,
   });
   const falhas = [
     arenasQ.isError && 'as suas arenas',
@@ -111,11 +115,13 @@ export default function UserArea() {
     (clubInvitesQ.isError || eventInvitesQ.isError) && 'os convites dos clubes',
     trainingOn && (myQuestionsQ.isError || coachQuestionsQ.isError) && 'as dúvidas de treino',
     trainingOn && inboxQ.isError && 'os treinos recebidos',
+    balancos.isError && 'os jogos para o balanço',
   ].filter(Boolean);
   const tentarDeNovo = () => {
     [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ]
       .filter((q) => q.isError).forEach((q) => q.refetch());
     if (arenaSummary.pendingError) arenaSummary.refetch?.();
+    if (balancos.isError) balancos.refetch();
   };
 
   const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes };

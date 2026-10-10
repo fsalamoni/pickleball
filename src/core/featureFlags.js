@@ -412,6 +412,9 @@ export const FEATURE_FLAG = Object.freeze({
    * aditivas). Desligada, nada disso aparece. Ver docs/40-CENTRO-DE-TREINO.md.
    */
   TRAINING_CENTER: 'training_center',
+  // Balanço do jogo: depois de jogar, a pessoa que ligou para si responde como
+  // foi e recebe a sugestão da semana de treino (só vale com training_center).
+  GAME_DEBRIEF: 'game_debrief',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -558,6 +561,19 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'Treino controla todo o conteúdo (editar, ocultar, destacar, excluir), '
       + 'a revisão do que é publicado, as denúncias, a biblioteca inicial e os '
       + 'limites de envio. Desligada, nada disso aparece.',
+  },
+  [FEATURE_FLAG.GAME_DEBRIEF]: {
+    label: 'Balanço do jogo (treino sugerido depois de jogar)',
+    description:
+      'Depois de um dia de jogo, de um torneio ou de um jogo na arena, quem '
+      + 'LIGOU o balanço nas próprias Configurações responde em menos de um '
+      + 'minuto como foi, o que funcionou, o que faltou, se sentiu evolução e '
+      + 'como estavam o corpo e a cabeça. A plataforma junta isso com os '
+      + 'balanços anteriores e sugere a semana de treino (drills da '
+      + 'biblioteca, no nível e nos dias da pessoa), que ela escolhe se põe '
+      + 'nos seus treinos. Aba "Balanço" no /treino, lembrete no início e na '
+      + 'Minha área, e missões semanais e mensais na gamificação para quem '
+      + 'ligou. Só vale com o Centro de Treino ligado. Desligada, nada aparece.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

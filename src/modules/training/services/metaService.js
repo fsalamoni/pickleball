@@ -1,6 +1,7 @@
 /**
  * Preferências e progresso do treino de cada pessoa (`training_meta/{uid}`):
- * favoritos, rotina (o "Hoje"), domínio por item e autoavaliações.
+ * favoritos, rotina (o "Hoje"), domínio por item, autoavaliações e o balanço
+ * do jogo ligado ou não (`debrief: { enabled, since }`).
  * Documento ausente é o começo (nada salvo ainda), não uma falha.
  */
 
@@ -16,7 +17,7 @@ export async function getMeta(uid) {
   return snap.exists() ? snap.data() : null;
 }
 
-const ALLOWED = ['favorites', 'routine', 'onboarding_done', 'mastery', 'assessments', 'focus_hint'];
+const ALLOWED = ['favorites', 'routine', 'onboarding_done', 'mastery', 'assessments', 'focus_hint', 'debrief'];
 
 /** Grava só as chaves conhecidas (a regra recusa qualquer outra). */
 export async function saveMeta(uid, patch = {}) {

@@ -3548,7 +3548,9 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isPlatformAdmin();
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['favorites', 'routine', 'onboarding_done', 'mastery',
-          'assessments', 'focus_hint', 'updated_at'])
+          'assessments', 'focus_hint', 'debrief', 'updated_at'])
+        && request.resource.data.get('debrief', {}) is map
+        && request.resource.data.get('debrief', {}).keys().hasOnly(['enabled', 'since'])
         && request.resource.data.get('favorites', []) is list
         && request.resource.data.get('favorites', []).size() <= 300
         && request.resource.data.get('assessments', []) is list
@@ -3556,6 +3558,37 @@ service cloud.firestore {
         && request.resource.data.get('mastery', {}) is map
         && request.resource.data.get('mastery', {}).size() <= 300;
       allow delete: if isOwner(uid) || isPlatformAdmin();
+    }
+
+    // Balanço do jogo (flag `game_debrief`): só da pessoa. O id começa pelo
+    // uid de quem escreve (`{uid}_{jogo}`), então ninguém grava no balanço de
+    // outra pessoa nem cria um em nome dela.
+    function trainingDebriefShapeOk(d) {
+      return d.keys().hasOnly(['uid', 'source', 'status', 'rating', 'strengths', 'weaknesses', 'evolution',
+          'body', 'mind', 'note', 'suggestion', 'applied', 'created_at', 'updated_at'])
+        && d.status in ['respondido', 'dispensado']
+        && d.source is map
+        && d.source.keys().hasOnly(['type', 'ref_id', 'title', 'date', 'games', 'wins'])
+        && d.source.type in ['dia_de_jogo', 'torneio', 'reserva', 'avulso']
+        && d.source.ref_id is string && d.source.ref_id.size() <= 80
+        && d.source.get('title', '') is string && d.source.get('title', '').size() <= 120
+        && d.source.date is string && d.source.date.size() == 10
+        && (d.get('rating', null) == null || (d.rating is int && d.rating >= 1 && d.rating <= 5))
+        && (d.status == 'dispensado' || d.get('rating', null) != null)
+        && d.get('strengths', []) is list && d.get('strengths', []).size() <= 3
+        && d.get('weaknesses', []) is list && d.get('weaknesses', []).size() <= 3
+        && d.get('note', '') is string && d.get('note', '').size() <= 500
+        && (d.get('suggestion', null) == null
+          || (d.suggestion is map && d.suggestion.get('item_ids', []) is list && d.suggestion.get('item_ids', []).size() <= 16))
+        && (d.get('applied', null) == null || d.applied is map);
+    }
+    match /training_debriefs/{debriefId} {
+      allow read: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
+      allow create, update: if isAuthed()
+        && request.resource.data.uid == request.auth.uid
+        && debriefId.matches(request.auth.uid + '_.+')
+        && trainingDebriefShapeOk(request.resource.data);
+      allow delete: if isAuthed() && (resource.data.uid == request.auth.uid || isPlatformAdmin());
     }
 
     // Dúvidas: privadas entre quem pergunta e o professor (vínculo ATIVO para

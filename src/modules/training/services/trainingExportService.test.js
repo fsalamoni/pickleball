@@ -19,6 +19,7 @@ vi.mock('./sessionService.js', () => ({
   }),
 }));
 vi.mock('./planService.js', () => ({ listMyPlans: resp('plans', [{ id: 'p1' }]) }));
+vi.mock('./debriefService.js', () => ({ listMyDebriefs: resp('debriefs', [{ id: 'u1_avulso_x' }]) }));
 vi.mock('./metaService.js', () => ({ getMeta: resp('meta', { routine: { days: [2] } }) }));
 vi.mock('./shareService.js', () => ({ listSent: resp('sent', [{ id: 'e1' }]), listInbox: resp('received', []) }));
 vi.mock('./questionService.js', () => ({
@@ -44,6 +45,7 @@ describe('collectTrainingExport', () => {
     expect(r.training.shares).toEqual({ sent: [{ id: 'e1' }], received: [] });
     expect(r.training.media_paths).toEqual(['treino/u1/a.webp']);
     expect(r.goals).toEqual([{ id: 'g1' }]);
+    expect(r.training.debriefs).toEqual([{ id: 'u1_avulso_x' }]);
   });
 
   it('⭐ uma parte que falha não derruba as outras e fica escrita', async () => {

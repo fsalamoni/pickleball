@@ -85,6 +85,10 @@ export const MEASURABLE_MISSION_METRICS = Object.freeze({
     scopes: ['monthly'],
     fonte: 'contador do mês no código de indicação',
   },
+  debrief_done: {
+    scopes: ['weekly', 'monthly'],
+    fonte: 'balanços de jogo respondidos (Centro de Treino)',
+  },
 });
 
 /**
@@ -183,6 +187,7 @@ export function computeMissionMetrics(sources = {}, { scope = 'daily', now = new
     review_given: contarNaJanela(fatos.matchReviews, dentro),
     letter_sent: contarNaJanela(fatos.letters, dentro),
     challenge_joined: contarNaJanela(fatos.challengesJoined, dentro),
+    debrief_done: contarNaJanela(fatos.debriefs, dentro),
     referral_signed_up: 0,
   };
 

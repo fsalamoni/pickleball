@@ -266,6 +266,22 @@ describe('catálogo e equilíbrio das missões', () => {
     }
   });
 
+  it('missão do balanço do jogo só sai para quem LIGOU (opt-in), nunca por padrão', () => {
+    const geradas = (modules) => {
+      const ids = new Set();
+      for (let dia = 1; dia <= 28; dia += 1) {
+        const now = new Date(Date.UTC(2026, 9, dia, 15));
+        ['weekly', 'monthly'].forEach((scope) => generateMissions({ uid: 'u', scope, now, modules })
+          .forEach((x) => ids.add(x.templateId)));
+      }
+      return [...ids].filter((id) => /debrief/.test(id));
+    };
+    expect(geradas(null)).toEqual([]);
+    expect(geradas({})).toEqual([]);
+    expect(geradas({ game_debrief: false })).toEqual([]);
+    expect(geradas({ game_debrief: true }).length).toBeGreaterThan(0);
+  });
+
   it('todo texto de missão é pt-BR e específico (sem o genérico "Complete N")', () => {
     MISSION_CATALOG.forEach((t) => {
       expect(missionLabel(t).title, t.id).not.toMatch(/^Complete /);

@@ -294,8 +294,9 @@ Detalhe de campos em `docs/05-DATA-MODEL.md`.
 - **Treino** (flag `training_center`): `training_items` · `training_shares` ·
   `training_sessions` (+ `comments`) · `training_plans` · `training_meta` ·
   `training_questions` (+ `messages`) · `training_reports` ·
+  `training_debriefs` (balanço do jogo, flag `game_debrief`) ·
   `platform_settings/training` · Storage `treino/{uid}/`. Ver
-  `docs/40-CENTRO-DE-TREINO.md`.
+  `docs/40-CENTRO-DE-TREINO.md` e `docs/42-BALANCO-DO-JOGO.md`.
 - **Transversal**: `notifications` (com `preferences` por categoria) ·
   `audit_logs` · `platform_settings`.
 
@@ -557,3 +558,5 @@ usuário" (apenas para `platform_admin`). Quando ativo:
   autores, criar, indicar, enviar a alunos, hoje, planos, diário, evolução,
   dúvidas e o admin (flag `training_center`).
 - `docs/41-MINHA-AREA.md` — o `/perfil` como central do usuário (flag `user_hub`).
+- `docs/42-BALANCO-DO-JOGO.md` — o balanço depois do jogo e a semana de drills
+  sugerida, ligado por cada pessoa (flag `game_debrief`).

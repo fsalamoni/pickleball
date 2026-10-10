@@ -83,6 +83,9 @@ const HomeCardsDialog = lazy(() => import('../cards/HomeCardsDialog'));
 // Sob demanda: só quem escolheu o card do treino baixa o treino.
 const HomeTrainingCard = lazy(() => import('./HomeTrainingCard'));
 
+// O balanço do jogo: só quem ligou para si, e só com jogo esperando.
+const HomeDebriefPrompt = lazy(() => import('@/v2/components/training/debrief/HomeDebriefPrompt'));
+
 // Sob demanda: só com alguma fonte de promoção ligada (arena, plataforma ou professores).
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
 
@@ -99,6 +102,8 @@ export default function V2PersonalHome() {
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  // O balanço do jogo só existe com o treino E a própria flag; ligado por pessoa.
+  const balancoOn = useFeatureFlag(FEATURE_FLAG.GAME_DEBRIEF) && treinoOn;
 
   // Papéis reais — todos já em cache pela barra lateral (arena, professor).
   const { arenas, pendingByArena, totalPendingBookings } = useMyArenaSummary();
@@ -247,6 +252,7 @@ export default function V2PersonalHome() {
 
         {/* O que tem PRAZO não é card: a chamada da fila vence em 1 hora. */}
         {arenaModulesOn && <HomeWaitlistCalls />}
+        {balancoOn && <Suspense fallback={null}><HomeDebriefPrompt /></Suspense>}
 
         {cards.length === 0 ? (
           <HomeCardsEmpty onEscolher={() => setEscolhendo(true)} />
@@ -297,6 +303,7 @@ export default function V2PersonalHome() {
 
       {/* O que tem PRAZO vem antes de tudo: a chamada da fila vence em 1 hora. */}
       {arenaModulesOn && <HomeWaitlistCalls />}
+      {balancoOn && <Suspense fallback={null}><HomeDebriefPrompt /></Suspense>}
 
       {/* Destaques da região — das arenas, da plataforma e dos professores
           (cupons e campanhas). Vitrine: some sem nada. */}
