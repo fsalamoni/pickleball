@@ -136,6 +136,7 @@ import {
   V2Textarea,
   V2Toggle,
 } from '@/v2/ui/primitives';
+import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 
 // Navegação em dois níveis: seções amplas por tema, cada uma com sub-abas.
 const SECTIONS = Object.freeze([
@@ -346,55 +347,23 @@ export default function V2AdminConsole() {
 /* ----------------------------- Tabs nav -------------------------------- */
 
 function ConsoleTabs({ tab, setTab, activeSection, sections = SECTIONS }) {
+  // A mesma barra das centrais (arena, professor, torneio): quebra em linhas,
+  // nunca rola para o lado — era o único lugar que ainda rolava.
   return (
     <div className="sticky top-2 z-20 -mx-4 mb-2 space-y-2 bg-paper-pure/80 px-4 py-2 backdrop-blur sm:top-3">
-      {/* Nível 1: seções amplas */}
-      <div className="overflow-x-auto">
-        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            const active = section.id === activeSection.id;
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setTab(section.tabs[0].id)}
-                data-dica={section.dica}
-                className={cn(
-                  'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors',
-                  active ? 'bg-ink text-white shadow-sm' : 'text-gray-500 hover:text-ink',
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {section.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      {/* Nível 2: sub-abas da seção ativa (só quando há mais de uma) */}
+      <V2SectionNav
+        sections={sections}
+        activeId={activeSection.id}
+        onSelect={(section) => setTab(section.tabs[0].id)}
+        ariaLabel="Seções do painel"
+      />
       {activeSection.tabs.length > 1 && (
-        <div className="overflow-x-auto">
-          <div className="inline-flex flex-wrap gap-1.5 px-1">
-            {activeSection.tabs.map(({ id, label, icon: Icon }) => {
-              const active = tab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
-                    active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <V2SubTabs
+          tabs={activeSection.tabs.map((t) => ({ value: t.id, label: t.label, icon: t.icon }))}
+          activeValue={tab}
+          onSelect={(t) => setTab(t.value)}
+          ariaLabel={`Abas de ${activeSection.label}`}
+        />
       )}
     </div>
   );

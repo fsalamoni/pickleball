@@ -31,6 +31,22 @@ import { cn } from '@/core/lib/utils';
  * @param {Array<{ id: string, label: string }>} [grupos]
  * @returns {Array<{ id: string, label: string|null, secoes: Array<object> }>}
  */
+/**
+ * Setas do teclado na barra: ← → ↑ ↓ movem o foco entre as seções/abas, Home e
+ * End vão às pontas. Enter/Espaço continuam sendo o toque. Só move o FOCO — não
+ * troca de seção sozinho, porque aqui trocar é navegar (a aba mora na URL).
+ */
+function moverFocoComSetas(e) {
+  const teclas = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: 0, End: 0 };
+  if (!(e.key in teclas) || e.target.tagName !== 'BUTTON') return;
+  const botoes = [...e.currentTarget.querySelectorAll('button:not([disabled])')];
+  const i = botoes.indexOf(e.target);
+  if (i < 0) return;
+  e.preventDefault();
+  const alvo = e.key === 'Home' ? 0 : e.key === 'End' ? botoes.length - 1 : (i + teclas[e.key] + botoes.length) % botoes.length;
+  botoes[alvo]?.focus();
+}
+
 export function agruparSecoes(sections = [], grupos = []) {
   if (!grupos?.length) return [{ id: 'todas', label: null, secoes: sections }];
   const conhecidos = new Set(grupos.map((g) => g.id));
@@ -46,7 +62,7 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
   const linhas = agruparSecoes(sections, grupos);
   const comNome = linhas.some((l) => l.label);
   return (
-    <nav aria-label={ariaLabel} data-dica={dica} className="rounded-3xl border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+    <nav aria-label={ariaLabel} data-dica={dica} onKeyDown={moverFocoComSetas} className="rounded-3xl border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
       {linhas.map((linha, i) => (
         <div
           key={linha.id}
@@ -90,7 +106,7 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
 
 export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = 'Abas da seção', dica }) {
   return (
-    <nav aria-label={ariaLabel} data-dica={dica} className="flex flex-wrap gap-1.5 px-1">
+    <nav aria-label={ariaLabel} data-dica={dica} onKeyDown={moverFocoComSetas} className="flex flex-wrap gap-1.5 px-1">
       {tabs.map((t) => {
         const Icon = t.icon;
         const active = activeValue === t.value;
