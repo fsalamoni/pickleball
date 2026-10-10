@@ -110,7 +110,7 @@ export default function V2ClubAdmin({ club }) {
             <RefreshCw className="h-4 w-4" /> Gerar novo
           </V2Button>
         </div>
-        <p className="mt-3 text-xs text-gray-400">Ao gerar um novo código, o anterior deixa de funcionar imediatamente.</p>
+        <p className="mt-3 text-xs text-gray-500">Ao gerar um novo código, o anterior deixa de funcionar imediatamente.</p>
       </V2Surface>
 
       <V2ClubPublicPageCard club={club} updateClub={updateClub} copy={copy} />
@@ -120,7 +120,7 @@ export default function V2ClubAdmin({ club }) {
         <p className="mt-1 text-sm text-gray-500">Atualize as informações exibidas para a comunidade.</p>
         <form onSubmit={handleSave} className="mt-5 space-y-4">
           <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Logo / imagem do clube</label>
+            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Logo / imagem do clube</label>
             <ImageUpload
               value={form.logo_url}
               onChange={(url) => setForm((prev) => ({ ...prev, logo_url: url }))}
@@ -131,14 +131,14 @@ export default function V2ClubAdmin({ club }) {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="admin_name" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Nome *</label>
+            <label htmlFor="admin_name" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Nome *</label>
             <input
               id="admin_name" value={form.name} onChange={setField('name')} maxLength={80} required
               className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="admin_description" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Descrição</label>
+            <label htmlFor="admin_description" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Descrição</label>
             <textarea
               id="admin_description" value={form.description} onChange={setField('description')} rows={3} maxLength={1000}
               className="w-full resize-y rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
@@ -146,30 +146,30 @@ export default function V2ClubAdmin({ club }) {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label htmlFor="admin_city" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Cidade</label>
+              <label htmlFor="admin_city" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Cidade</label>
               <input id="admin_city" value={form.city} onChange={setField('city')} maxLength={60} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2">
-              <label htmlFor="admin_state" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Estado (UF)</label>
+              <label htmlFor="admin_state" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Estado (UF)</label>
               <input id="admin_state" value={form.state} onChange={setField('state')} maxLength={2} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
           <div className="space-y-2">
-            <label htmlFor="admin_venue" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Local / quadra principal</label>
+            <label htmlFor="admin_venue" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Local / quadra principal</label>
             <input id="admin_venue" value={form.home_venue} onChange={setField('home_venue')} maxLength={120} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label htmlFor="admin_email" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">E-mail de contato</label>
+              <label htmlFor="admin_email" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">E-mail de contato</label>
               <input id="admin_email" type="email" value={form.contact_email} onChange={setField('contact_email')} maxLength={120} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2">
-              <label htmlFor="admin_phone" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Telefone de contato</label>
+              <label htmlFor="admin_phone" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Telefone de contato</label>
               <input id="admin_phone" type="tel" value={form.contact_phone} onChange={setField('contact_phone')} maxLength={30} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
           <div className="space-y-2">
-            <label htmlFor="admin_instagram" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Instagram</label>
+            <label htmlFor="admin_instagram" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Instagram</label>
             <input id="admin_instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
           </div>
           <div className="pt-2">
@@ -469,7 +469,7 @@ function V2ClubAddMembers({ club }) {
 
         {invites.length > 0 && (
           <div className="border-t border-gray-100 pt-4">
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Convites pendentes ({invites.length})</div>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">Convites pendentes ({invites.length})</div>
             <div className="space-y-1.5">
               {invites.map((i) => (
                 <div key={i.id} className="flex items-center gap-3 rounded-2xl bg-paper px-3 py-2">

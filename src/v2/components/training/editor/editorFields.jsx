@@ -126,7 +126,7 @@ export function ListEditor({
           </V2Button>
         )}
         {extraActions}
-        <span className="text-xs text-gray-400">{items.length} de {max}</span>
+        <span className="text-xs text-gray-500">{items.length} de {max}</span>
       </div>
     </div>
   );
@@ -151,7 +151,7 @@ export function MultiChips({ id, legend, hint, options = [], value = [], onChang
           </ChipToggle>
         ))}
       </div>
-      {hint && <p className="mt-2 text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="mt-2 text-xs text-gray-500">{hint}</p>}
     </fieldset>
   );
 }
@@ -175,11 +175,11 @@ export function SkillPicker({ id, value = [], onChange, max = 6 }) {
   return (
     <fieldset id={id} className="scroll-mt-4">
       <legend className="mb-1 text-sm font-semibold text-ink">Habilidades</legend>
-      <p className="mb-3 text-xs text-gray-400">A principal primeiro. Até {max} ({lista.length} escolhidas).</p>
+      <p className="mb-3 text-xs text-gray-500">A principal primeiro. Até {max} ({lista.length} escolhidas).</p>
       <div className="space-y-3">
         {SKILL_GROUPS.map((g) => (
           <div key={g.value}>
-            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">{g.label}</p>
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</p>
             <div className="flex flex-wrap gap-2">
               {chip({ value: g.value, label: `${g.label} (geral)` })}
               {g.children.map(chip)}

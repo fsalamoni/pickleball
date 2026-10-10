@@ -253,7 +253,7 @@ export default function V2DoublesRanking() {
                             se perde. */}
                         {recorteAtivo && (
                           <span
-                            className="ml-1.5 align-middle text-[11px] font-normal text-gray-400"
+                            className="ml-1.5 align-middle text-[11px] font-normal text-gray-500"
                             title={`Posição ${row.overall_position} no ranking geral`}
                           >
                             #{row.overall_position}

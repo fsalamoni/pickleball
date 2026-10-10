@@ -38,14 +38,14 @@ export default function XpBreakdownCard({ uid, xp }) {
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
                 <div className={cn('h-full rounded-full', p.color)} style={{ width: `${Math.min(100, Math.round((v / total) * 100))}%` }} />
               </div>
-              <p className="mt-0.5 text-[11px] text-gray-400">{p.hint}</p>
+              <p className="mt-0.5 text-[11px] text-gray-500">{p.hint}</p>
             </li>
           );
         })}
       </ul>
       {recentes.length > 0 && (
         <div className="mt-4 border-t border-gray-100 pt-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Prêmios recentes</p>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Prêmios recentes</p>
           <ul className="space-y-1">
             {recentes.map((g) => (
               <li key={g.id} className="flex items-center justify-between text-sm">
@@ -56,7 +56,7 @@ export default function XpBreakdownCard({ uid, xp }) {
           </ul>
         </div>
       )}
-      <p className="mt-3 text-[11px] leading-4 text-gray-400">
+      <p className="mt-3 text-[11px] leading-4 text-gray-500">
         O total é sempre recalculado do zero a partir de fatos reais — ele nunca é um saldo que alguém soma.{' '}
         <Link to="/gamification/como-funciona?termo=xp" className="font-bold text-ink hover:underline">Entender o XP</Link>
       </p>

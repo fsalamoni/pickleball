@@ -138,7 +138,7 @@ function NpsSecao({ arenaId }) {
         <>
           <div className="flex flex-wrap items-end gap-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">NPS</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">NPS</p>
               <p className="font-display text-4xl font-bold text-ink">{temNota ? nota : '—'}</p>
               <p className="text-xs text-gray-500">{total} {total === 1 ? 'resposta' : 'respostas'}</p>
             </div>
@@ -169,7 +169,7 @@ function NpsSecao({ arenaId }) {
           </p>
 
           <div className="mt-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">
               O que estão dizendo
             </p>
             {comentarios.length === 0 ? (
@@ -186,7 +186,7 @@ function NpsSecao({ arenaId }) {
                         {r.score} · {NPS_LABEL[classifyNps(r.score)]}
                       </V2Badge>
                       {iso(r.created_at) && (
-                        <span className="text-xs text-gray-400">{formatDateShortBR(iso(r.created_at))}</span>
+                        <span className="text-xs text-gray-500">{formatDateShortBR(iso(r.created_at))}</span>
                       )}
                     </div>
                     <p className="mt-1.5 text-sm leading-6 text-gray-700">{r.comment}</p>

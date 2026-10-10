@@ -143,7 +143,7 @@ function TournamentList({ circuitId, isAdmin }) {
         </form>
       )}
       {adding && options.length === 0 && (
-        <p className="mt-2 text-xs text-gray-400">Você não tem torneios disponíveis para vincular (ou todos já estão no circuito).</p>
+        <p className="mt-2 text-xs text-gray-500">Você não tem torneios disponíveis para vincular (ou todos já estão no circuito).</p>
       )}
       <div className="mt-3 space-y-2">
         {tournaments.length === 0 ? (
@@ -155,7 +155,7 @@ function TournamentList({ circuitId, isAdmin }) {
                 <Link to={`/torneios/${t.tournament_id}`} className="truncate text-sm font-bold text-ink hover:underline">
                   {nameById[t.tournament_id] || `Torneio ${t.tournament_id}`}
                 </Link>
-                <div className="text-xs text-gray-400">Vinculado em {t.added_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || '—'}</div>
+                <div className="text-xs text-gray-500">Vinculado em {t.added_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || '—'}</div>
               </div>
               {isAdmin && (
                 <V2Button variant="ghost" size="sm" onClick={() => remove.mutate({ circuitId, tournamentId: t.tournament_id })}>
@@ -293,7 +293,7 @@ function Ranking({ circuitId }) {
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
         <Award className="h-4 w-4" /> Ranking do circuito
       </h3>
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs text-gray-500">
         Pontos por posição: 1º {pointsTable?.[1] || 100} · 2º {pointsTable?.[2] || 75} · 3º/4º {pointsTable?.[3] || 50}
       </p>
       <div className="mt-3 space-y-1.5">
@@ -308,14 +308,14 @@ function Ranking({ circuitId }) {
               <RankBadge rank={u.rank} />
               <div className="flex-1">
                 <div className="text-sm font-bold text-ink">{u.user_name}</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-500">
                   {u.tournaments} torneio{u.tournaments !== 1 ? 's' : ''}
                   {u.best_position && ` · melhor ${u.best_position}º`}
                 </div>
               </div>
               <div className="text-right">
                 <div className="font-display text-lg font-bold text-emerald-700">{u.total_points}</div>
-                <div className="text-[10px] uppercase tracking-widest text-gray-400">pontos</div>
+                <div className="text-[11px] uppercase tracking-widest text-gray-500">pontos</div>
               </div>
             </div>
           ))

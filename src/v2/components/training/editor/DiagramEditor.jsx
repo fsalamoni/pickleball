@@ -153,7 +153,7 @@ export default function DiagramEditor({ value = [], onChange }) {
             <Undo2 className="h-4 w-4" aria-hidden="true" /> Desfazer
           </V2Button>
         )}
-        <span className="text-xs text-gray-400">{diagrams.length} de {MAX_DIAGRAMS}</span>
+        <span className="text-xs text-gray-500">{diagrams.length} de {MAX_DIAGRAMS}</span>
       </div>
 
       {quadro && (

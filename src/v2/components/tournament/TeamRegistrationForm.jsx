@@ -70,7 +70,7 @@ function RosterSlot({
           <>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-ink">{slot.label}</div>
-              <div className="text-xs text-gray-400">Vaga livre</div>
+              <div className="text-xs text-gray-500">Vaga livre</div>
             </div>
             <V2Button size="sm" variant="ghost" onClick={isOpen ? onClose : onOpen}>
               <Search className="h-4 w-4" /> Escolher
@@ -94,7 +94,7 @@ function RosterSlot({
               ) : (
                 <div className="truncate text-sm font-semibold text-ink">{value.name}</div>
               )}
-              <div className="truncate text-xs text-gray-400">
+              <div className="truncate text-xs text-gray-500">
                 {slot.label}
                 {isGuest ? ' · convidado (sem conta)' : ''}
                 {value.level ? ` · nível ${value.level}` : ''}
@@ -150,7 +150,7 @@ function RosterSlot({
                 >
                   <UserAvatar name={profile.platform_name} photoUrl={profile.photo_url} size="sm" />
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">{profile.platform_name}</span>
-                  <span className="shrink-0 text-xs text-gray-400">{profile.city || ''}</span>
+                  <span className="shrink-0 text-xs text-gray-500">{profile.city || ''}</span>
                 </button>
               );
             })}
@@ -338,7 +338,7 @@ export default function TeamRegistrationForm({
                 <UserPlus className="h-4 w-4" /> Sou eu
               </V2Button>
             )}
-            <span className={cn('text-xs font-semibold', progress.complete ? 'text-green-600' : 'text-gray-400')}>
+            <span className={cn('text-xs font-semibold', progress.complete ? 'text-green-600' : 'text-gray-500')}>
               {progress.complete ? (
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Elenco completo</span>
               ) : `Faltam ${missingHint}`}

@@ -171,7 +171,7 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
             .filter((o) => !taken.includes(o.id) || chosen[slot.index] === o.id);
           return (
             <label key={slot.index} className="flex items-center gap-2">
-              <span className="w-[5.5rem] shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              <span className="w-[5.5rem] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 {slot.label}
               </span>
               <select
@@ -224,11 +224,11 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">{teamAName}</div>
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">{teamAName}</div>
                     {renderSide(etapa, ei, 'a', optsA)}
                   </div>
                   <div>
-                    <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">{teamBName}</div>
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">{teamBName}</div>
                     {renderSide(etapa, ei, 'b', optsB)}
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export function TeamResultDialog({
                       {etapa.games.map((g, gi) => (
                         <div key={gi} className="flex items-center gap-1">
                           {etapa.games.length > 1 && (
-                            <span className="w-10 text-right text-[10px] font-semibold uppercase text-gray-400">
+                            <span className="w-10 text-right text-[11px] font-semibold uppercase text-gray-500">
                               Game {gi + 1}
                             </span>
                           )}
@@ -381,7 +381,7 @@ export function TeamResultDialog({
                         </div>
                       ))}
                       {etapa.games.length > 1 && (
-                        <span className="text-[10px] text-gray-400">games {res.sets_a}–{res.sets_b}</span>
+                        <span className="text-[11px] text-gray-500">games {res.sets_a}–{res.sets_b}</span>
                       )}
                     </div>
 

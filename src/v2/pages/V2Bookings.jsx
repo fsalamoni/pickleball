@@ -159,7 +159,7 @@ export default function V2Bookings() {
 function BookingsGroup({ title, bookings, emptyText, sharedOn }) {
   return (
     <div>
-      <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">{title}</p>
+      <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-gray-500">{title}</p>
       {bookings.length === 0 ? (
         <p className="text-sm text-gray-500">{emptyText}</p>
       ) : (

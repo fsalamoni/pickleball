@@ -52,7 +52,7 @@ function descanso(s) {
 }
 
 function Rotulo({ children }) {
-  return <dt className="text-xs font-bold uppercase tracking-wider text-gray-400">{children}</dt>;
+  return <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">{children}</dt>;
 }
 
 /** Uma coluna do certo × errado: ícone + palavra, não só a cor. */
@@ -132,8 +132,8 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
             return (
               <li key={i} className="rounded-3xl border border-gray-100 p-4">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{i + 1}. {BLOCK_TYPE_LABELS[b.type]}</span>
-                  {b.duration_min ? <span className="text-xs text-gray-400">{b.duration_min} min</span> : null}
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{i + 1}. {BLOCK_TYPE_LABELS[b.type]}</span>
+                  {b.duration_min ? <span className="text-xs text-gray-500">{b.duration_min} min</span> : null}
                 </div>
                 <p className="mt-1 font-semibold text-ink">{b.title}</p>
                 {b.notes && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{b.notes}</p>}
@@ -239,7 +239,7 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
             <ol className="grid gap-3 sm:grid-cols-3">
               {fases.map(([k, rot], i) => (
                 <li key={k} className="rounded-3xl bg-gray-50 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400">{i + 1}. {rot}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{i + 1}. {rot}</p>
                   <p className="mt-1 whitespace-pre-line text-gray-700">{v.motor.phases[k]}</p>
                 </li>
               ))}
@@ -311,7 +311,7 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <KindIcon kind={v.kind} size="sm" />
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{ITEM_KIND_LABELS[v.kind]}</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{ITEM_KIND_LABELS[v.kind]}</span>
           {item.featured && (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600">
               <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" /> Destaque

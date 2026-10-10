@@ -241,7 +241,7 @@ export default function V2AdminOwnerDebug() {
       <V2Surface className="mb-6 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">UID alvo</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">UID alvo</div>
             <code className="mt-1 block break-all font-mono text-sm text-ink">{user?.uid || '—'}</code>
           </div>
           <V2Button onClick={() => runDiagnostics(user.uid)} disabled={loading}>
@@ -343,7 +343,7 @@ function Section({ title, data, summary }) {
         </div>
       )}
       <details className="mt-3">
-        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-widest text-gray-400">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-widest text-gray-500">
           Detalhes
         </summary>
         <pre className="mt-2 overflow-x-auto rounded-xl bg-ink p-3 text-xs text-acid">

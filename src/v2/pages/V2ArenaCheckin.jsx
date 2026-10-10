@@ -248,7 +248,7 @@ export default function V2ArenaCheckin() {
         </>
       )}
 
-      <p className="mt-6 text-xs leading-5 text-gray-400">
+      <p className="mt-6 text-xs leading-5 text-gray-500">
         A confirmação vale só para o seu horário, e é o que faz a arena saber que a quadra
         está em uso. Esqueceu de confirmar? A recepção resolve na hora.
       </p>

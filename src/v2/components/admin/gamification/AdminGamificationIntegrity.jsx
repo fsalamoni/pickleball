@@ -52,7 +52,7 @@ function Sinais() {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-ink">{TIPO[f.type] || f.type}</p>
                   <p className="text-xs text-gray-600">{nome(f.subjectUid)}{f.otherUid ? ` × ${nome(f.otherUid)}` : ''}</p>
-                  <p className="text-xs text-gray-400">{detalhe(f)}</p>
+                  <p className="text-xs text-gray-500">{detalhe(f)}</p>
                 </div>
                 <V2Badge tone={SEV[f.severity] || 'neutral'}>{f.severity === 'high' ? 'alta' : 'média'}</V2Badge>
               </div>
@@ -62,7 +62,7 @@ function Sinais() {
                   <V2Button size="sm" variant="ghost" onClick={() => decidir(f, 'dismissed')}>Dispensar</V2Button>
                   <V2Button size="sm" variant="ghost" onClick={() => decidir(f, 'actioned')}>Tomei providência</V2Button>
                 </div>
-              ) : <p className="mt-1 text-xs text-gray-400">Estado: {f.status}{f.reviewNote ? ` · ${f.reviewNote}` : ''}</p>}
+              ) : <p className="mt-1 text-xs text-gray-500">Estado: {f.status}{f.reviewNote ? ` · ${f.reviewNote}` : ''}</p>}
             </li>
           ))}
         </ul>
@@ -115,7 +115,7 @@ function Contas() {
           {mod.moderated.map((m) => (
             <li key={m.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
               <div>
-                <p className="text-sm font-bold text-ink">{people.get(m.uid)?.name || 'Atleta'} <span className="font-mono text-[11px] font-normal text-gray-400">{m.uid}</span></p>
+                <p className="text-sm font-bold text-ink">{people.get(m.uid)?.name || 'Atleta'} <span className="font-mono text-[11px] font-normal text-gray-500">{m.uid}</span></p>
                 <p className="text-xs text-gray-500">{m.excluded ? 'Fora do placar' : 'Escondida do público'}{m.reason ? ` · ${m.reason}` : ''}</p>
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => aplicar(m.uid, {})}>Devolver ao normal</V2Button>

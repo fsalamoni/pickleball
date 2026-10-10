@@ -40,8 +40,8 @@ function DuprExplainer() {
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
           <span className="font-semibold text-ink">Como funciona este ranking?</span>
-          <span className="text-xs text-gray-400 group-open:hidden">ver explicação</span>
-          <span className="hidden text-xs text-gray-400 group-open:inline">ocultar</span>
+          <span className="text-xs text-gray-500 group-open:hidden">ver explicação</span>
+          <span className="hidden text-xs text-gray-500 group-open:inline">ocultar</span>
         </summary>
         <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
           <p>
@@ -185,10 +185,10 @@ export default function V2DuprRankingView() {
                   <Stat label="V–D" value={`${p.wins ?? 0}–${p.losses ?? 0}`} />
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wide text-gray-400">{format === 'doubles' ? 'Duplas' : 'Simples'}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{format === 'doubles' ? 'Duplas' : 'Simples'}</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{fmt(p.rating)}</p>
                   {Number.isFinite(p.reliability) && (
-                    <p className="text-[10px] text-gray-400" title="Confiabilidade — cresce com o número de jogos">
+                    <p className="text-[11px] text-gray-500" title="Confiabilidade — cresce com o número de jogos">
                       conf. {p.reliability}%
                     </p>
                   )}
@@ -208,7 +208,7 @@ export default function V2DuprRankingView() {
 function Stat({ label, value }) {
   return (
     <div className="text-center">
-      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
       <p className="font-semibold text-ink tabular-nums">{value}</p>
     </div>
   );

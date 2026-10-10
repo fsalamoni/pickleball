@@ -330,7 +330,7 @@ function ProgressBar({ steps, progress, activeIdx, setActiveIdx }) {
             >
               <span
                 className={cn(
-                  'flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold',
+                  'flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold',
                   active
                     ? 'bg-acid text-ink'
                     : done

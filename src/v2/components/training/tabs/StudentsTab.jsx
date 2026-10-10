@@ -36,7 +36,7 @@ function SessaoDoAluno({ s, identity, acoes, hoje }) {
     <li className="space-y-2 rounded-3xl bg-gray-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
           <p className="font-semibold text-ink">{s.title}</p>
           <p className="text-sm text-gray-500">{s.duration_min} min{Number.isFinite(s.rpe) ? ` · esforço ${s.rpe} (${rpeLabel(s.rpe).toLowerCase()})` : ''}</p>
         </div>
@@ -92,7 +92,7 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
       {aberto && (
         <div className="space-y-5 border-t border-gray-100 p-5">
           <section className="space-y-2" aria-label={`Treinos de ${nome}`}>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Treinos que mostrou a você</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Treinos que mostrou a você</h3>
             {!sessoesOk ? <p className="text-sm text-gray-500">{sessoesFalharam ? 'Não carregou.' : 'Carregando…'}</p>
               : a.sessions.length === 0 ? <p className="text-sm text-gray-500">Nenhum ainda. No diário, o aluno escolhe “Mostrar ao professor”.</p>
                 : (
@@ -102,7 +102,7 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
                 )}
           </section>
           <section className="space-y-2" aria-label={`Envios para ${nome}`}>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">O que você enviou</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">O que você enviou</h3>
             {!enviosOk ? <p className="text-sm text-gray-500">{enviosFalharam ? 'Não carregou.' : 'Carregando…'}</p>
               : a.sent.length === 0 ? <p className="text-sm text-gray-500">Nada enviado. Na ficha de um item, use “Enviar a alunos”.</p>
                 : (
@@ -186,7 +186,7 @@ export default function StudentsTab({ identity, irPara }) {
 
       {convidados.length > 0 && (
         <section className="space-y-2" aria-label="Convidados">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">Convidados, ainda sem aceitar</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Convidados, ainda sem aceitar</h2>
           <ul className="flex flex-wrap gap-2">
             {convidados.map((s) => <li key={s.id}><V2Badge>{s.student_name || 'Convidado'}</V2Badge></li>)}
           </ul>

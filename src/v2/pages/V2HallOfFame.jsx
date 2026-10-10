@@ -167,14 +167,14 @@ function HallOfFameOn() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold tabular-nums text-ink">{p.xp.toLocaleString('pt-BR')} XP</p>
-                  <p className="text-[10px] text-gray-500">Nível {p.level}{p.delta !== 0 ? ` · ${p.delta > 0 ? '▲' : '▼'}${Math.abs(p.delta)}` : ''}</p>
+                  <p className="text-[11px] text-gray-500">Nível {p.level}{p.delta !== 0 ? ` · ${p.delta > 0 ? '▲' : '▼'}${Math.abs(p.delta)}` : ''}</p>
                 </div>
               </li>
             ))}
           </ol>
         </V2Surface>
       )}
-      <p className="text-center text-[11px] text-gray-400">Atualizado uma vez por dia. Só aparece quem aceitou — em Preferências você escolhe.</p>
+      <p className="text-center text-[11px] text-gray-500">Atualizado uma vez por dia. Só aparece quem aceitou — em Preferências você escolhe.</p>
     </div>
   );
 }
@@ -199,7 +199,7 @@ function PodiumCard({ row, me }) {
           </div>
         </div>
         <p className="mt-3 text-3xl font-bold tabular-nums">{row.xp.toLocaleString('pt-BR')}</p>
-        <p className="text-[10px] uppercase tracking-wide opacity-80">{row.sub}</p>
+        <p className="text-[11px] uppercase tracking-wide opacity-80">{row.sub}</p>
         <p className="mt-1 text-xs">Nível {row.level}</p>
       </div>
     </div>

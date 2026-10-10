@@ -69,7 +69,7 @@ function PrimeirosPassos({ retrato }) {
           Dispensaram o roteiro: <strong className="text-ink">{funil.dismissed.toLocaleString('pt-BR')}</strong>
           {funil.dismissedPct != null && ` (${funil.dismissedPct}%)`}.
         </p>
-        <p className="text-xs text-gray-400">Nenhuma etapa é obrigatória: quem não a conclui não perde nada. Uma etapa travada é um sinal para facilitar o caminho, não para cobrar a pessoa.</p>
+        <p className="text-xs text-gray-500">Nenhuma etapa é obrigatória: quem não a conclui não perde nada. Uma etapa travada é um sinal para facilitar o caminho, não para cobrar a pessoa.</p>
       </div>
     </V2Surface>
   );
@@ -108,7 +108,7 @@ export default function AdminGamificationMetrics() {
           <Spark dados={dados} campo="reviews7" label="Avaliações por semana" />
           <Spark dados={dados} campo="kudos7" label="Kudos por semana" />
         </div>
-        <p className="text-[11px] text-gray-400">Último retrato: {ultimo.day}. {ultimo.prefsDocs} pessoas já abriram as preferências da gamificação.</p>
+        <p className="text-[11px] text-gray-500">Último retrato: {ultimo.day}. {ultimo.prefsDocs} pessoas já abriram as preferências da gamificação.</p>
       </V2Surface>
     </div>
   );

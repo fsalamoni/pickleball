@@ -152,7 +152,7 @@ export default function AdminCatalogTab() {
             {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </V2Select>
         </div>
-        <p className="text-xs text-gray-400">{filtered.length} produto(s)</p>
+        <p className="text-xs text-gray-500">{filtered.length} produto(s)</p>
       </V2Surface>
 
       {isLoading ? (
@@ -182,7 +182,7 @@ export default function AdminCatalogTab() {
             />
           ))}
           {filtered.length > 500 && (
-            <p className="py-2 text-center text-xs text-gray-400">Mostrando 500 de {filtered.length}. Refine a busca para ver os demais.</p>
+            <p className="py-2 text-center text-xs text-gray-500">Mostrando 500 de {filtered.length}. Refine a busca para ver os demais.</p>
           )}
         </div>
       )}

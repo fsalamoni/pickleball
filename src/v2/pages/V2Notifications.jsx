@@ -70,7 +70,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
           <p>{titulo}</p>
         )}
         {n.message && <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-gray-600">{n.message}</p>}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-gray-400">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-gray-500">
           <NoticeTime notice={n} agora={agora} />
           <span aria-hidden="true">·</span>
           <span>{area.label}</span>
@@ -235,7 +235,7 @@ export default function V2Notifications() {
       <div className="space-y-6" data-dica="notificacoes-lista">
         {grupos.map((g) => (
           <section key={g.key} aria-labelledby={`grupo-${g.key}`}>
-            <h2 id={`grupo-${g.key}`} className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+            <h2 id={`grupo-${g.key}`} className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-gray-500">
               {g.label}
             </h2>
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure shadow-organic-sm">
@@ -253,7 +253,7 @@ export default function V2Notifications() {
           </section>
         ))}
         <div className="flex flex-col items-center gap-2 pt-2 text-center">
-          <p className="text-xs text-gray-400" aria-live="polite">
+          <p className="text-xs text-gray-500" aria-live="polite">
             Mostrando {visiveis.length} de {plural(filtrada.length, 'notificação', 'notificações')}
           </p>
           {filtrada.length > visiveis.length && (

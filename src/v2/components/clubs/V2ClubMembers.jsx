@@ -64,7 +64,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-bold text-ink">{member.user_name}</span>
-                {isSelf && <span className="text-xs text-gray-400">(você)</span>}
+                {isSelf && <span className="text-xs text-gray-500">(você)</span>}
               </div>
               {/* P1-01: o e-mail saiu daqui. `club_members` é lido por
                   qualquer conta da plataforma, então exibi-lo — mesmo vindo de

@@ -62,7 +62,7 @@ export default function GoalsCard({ ownerType, ownerId, monthKey, actuals }) {
             <V2Button size="sm" disabled={g.save.isPending} onClick={salvar}>Salvar</V2Button>
             <V2Button size="sm" variant="ghost" onClick={() => setEditando(false)}>Cancelar</V2Button>
           </div>
-          <p className="text-[11px] text-gray-400">As metas valem para o mês corrente. O progresso é contado a partir do que a plataforma já registra.</p>
+          <p className="text-[11px] text-gray-500">As metas valem para o mês corrente. O progresso é contado a partir do que a plataforma já registra.</p>
         </div>
       ) : avaliadas.length === 0 ? (
         <p className="text-sm text-gray-600">Sem metas para este mês. Metas pequenas e mensuráveis funcionam melhor que metas grandes demais.</p>
@@ -72,13 +72,13 @@ export default function GoalsCard({ ownerType, ownerId, monthKey, actuals }) {
             <li key={m.metric} data-goal={m.metric}>
               <div className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-semibold text-ink">{m.label}</span>
-                {m.known ? <span className="tabular-nums text-gray-600">{m.value} de {m.target} {m.unit}</span> : <span className="text-xs text-gray-400">ainda não dá para medir</span>}
+                {m.known ? <span className="tabular-nums text-gray-600">{m.value} de {m.target} {m.unit}</span> : <span className="text-xs text-gray-500">ainda não dá para medir</span>}
               </div>
               <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
                 <div className={cn('h-full rounded-full', m.done ? 'bg-green-500' : 'bg-amber-400')} style={{ width: `${Math.round(m.progress * 100)}%` }} />
               </div>
               {m.done && <V2Badge tone="green" className="mt-1">Meta batida 🎉</V2Badge>}
-              {m.known && !m.done && <p className="mt-0.5 text-[11px] text-gray-400">Faltam {m.remaining} {m.unit}.</p>}
+              {m.known && !m.done && <p className="mt-0.5 text-[11px] text-gray-500">Faltam {m.remaining} {m.unit}.</p>}
             </li>
           ))}
         </ul>

@@ -64,7 +64,7 @@ function Tendencias({ trends }) {
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Mais falta</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Mais falta</p>
           {trends.weaknesses.length ? (
             <ul className="mt-2 space-y-1 text-sm text-ink">
               {trends.weaknesses.map((w) => <li key={w.id}>{w.label} <span className="text-gray-400">({w.count}×)</span></li>)}
@@ -72,7 +72,7 @@ function Tendencias({ trends }) {
           ) : <p className="mt-2 text-sm text-gray-500">Nada marcado ainda.</p>}
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Mais funciona</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Mais funciona</p>
           {trends.strengths.length ? (
             <ul className="mt-2 space-y-1 text-sm text-ink">
               {trends.strengths.map((s) => <li key={s.id}>{s.label} <span className="text-gray-400">({s.count}×)</span></li>)}
@@ -175,7 +175,7 @@ export default function DebriefTab({ identity }) {
                     <Link className="text-xs font-semibold text-ink underline" to={`/treino/planos/${d.applied.plan_id}`}>
                       A sugestão entrou nos treinos
                     </Link>
-                  ) : <span className="text-xs text-gray-400">Sugestão não adicionada</span>}
+                  ) : <span className="text-xs text-gray-500">Sugestão não adicionada</span>}
                   <V2Button size="sm" variant="ghost" onClick={() => setAberto({ source: d.source, initial: d })}>Refazer</V2Button>
                 </div>
               </li>

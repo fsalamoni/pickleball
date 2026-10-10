@@ -65,7 +65,7 @@ export default function V2LevelTable() {
                   <p className="text-sm text-gray-500">{level.tagline}</p>
                 </div>
                 <div className="hidden text-right md:block">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Score normalizado</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Score normalizado</p>
                   <p className="mt-1 font-display text-xl font-bold text-ink">{level.normalizedRange}</p>
                 </div>
                 <div className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">

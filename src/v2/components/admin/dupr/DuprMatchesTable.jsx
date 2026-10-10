@@ -147,7 +147,7 @@ export default function DuprMatchesTable({
     <V2Surface className="overflow-hidden p-0">
       {toolbar}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           {pageData.total > 0
             ? `Mostrando ${pageData.from}–${pageData.to} de ${pageData.total}`
             : 'Nenhuma partida no recorte'}
@@ -167,7 +167,7 @@ export default function DuprMatchesTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
               <th className="w-10 px-4 py-2">
                 <SelectCheckbox
                   id={`${idPrefix}-select-all`}

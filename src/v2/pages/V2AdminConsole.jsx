@@ -884,7 +884,7 @@ function FlagRow({ flagKey, checked, disabled, onToggle }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-ink">{label}</span>
-          <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[10px] text-gray-500">{flagKey}</code>
+          <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[11px] text-gray-500">{flagKey}</code>
         </div>
         {meta?.description && <p className="mt-0.5 text-xs text-gray-500">{meta.description}</p>}
       </div>
@@ -1009,7 +1009,7 @@ function FlagsTab() {
                   const famKeys = keys.filter((k) => (arenaFlagFamily(k) || 'other') === fam);
                   return (
                     <div key={fam}>
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">
                         {ARENA_FAMILY_LABEL[fam] || fam}
                       </p>
                       {renderRows(famKeys)}
@@ -1145,7 +1145,7 @@ function BrandingTab() {
               )}
               <div>
                 <div className="text-sm font-bold" style={{ color: form.primary_color }}>{form.platform_name || 'Plataforma'}</div>
-                <div className="text-[10px] text-gray-500">{form.tagline || '—'}</div>
+                <div className="text-[11px] text-gray-500">{form.tagline || '—'}</div>
               </div>
             </div>
             <button
@@ -1162,7 +1162,7 @@ function BrandingTab() {
             >
               Botão primário
             </button>
-            <p className="text-[10px] text-gray-500">
+            <p className="text-[11px] text-gray-500">
               Pré-visualização aproximada. A aplicação das cores nos componentes existentes
               é progressiva — só os novos componentes lidos de platform_settings respeitam
               o branding customizado por enquanto.

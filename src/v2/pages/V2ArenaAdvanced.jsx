@@ -228,7 +228,7 @@ function RedeSecao({ arena }) {
           </form>
           {minhasRedes.length > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
                 Ou entrar numa rede sua
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -278,7 +278,7 @@ function RedeSecao({ arena }) {
 
           {podemEntrar.length > 0 && (
             <div className="mt-3 border-t border-gray-100 pt-3">
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
                 Incluir outra unidade sua
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -379,7 +379,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
 
           {temPrevisao && (
             <div className="mt-3 rounded-2xl bg-paper p-3">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
                 <TrendingUp className="h-3.5 w-3.5" /> Próximos 7 dias
               </p>
               <p className="mt-1 font-display text-xl font-bold text-ink">
@@ -394,7 +394,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
 
           {temPreco && base > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
                 Preço sugerido (sua tabela: {formatPrice(base)}/h)
               </p>
               <div className="space-y-1.5">
@@ -424,7 +424,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
             </div>
           )}
 
-          <p className="mt-3 text-[11px] text-gray-400">
+          <p className="mt-3 text-[11px] text-gray-500">
             Último dia lido: {formatDateShortBR(historico[historico.length - 1].date)}
           </p>
         </>

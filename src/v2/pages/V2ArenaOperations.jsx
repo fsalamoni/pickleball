@@ -298,7 +298,7 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
 
       {historico.length > 0 && (
         <div className="mt-3 border-t border-gray-100 pt-3">
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
             Últimos dias
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -806,7 +806,7 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
               <div className="space-y-3">
                 {grupos.map((g) => (
                   <div key={g.role}>
-                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">{g.label}</p>
+                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {g.people.map((m) => (
                         <span key={m.id || m.name}

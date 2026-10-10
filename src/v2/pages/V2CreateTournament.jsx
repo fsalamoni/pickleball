@@ -326,7 +326,7 @@ function PreviewFact({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">{label}</span>
         <Icon className="h-3.5 w-3.5 text-white/60" />
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold text-white">{value}</p>

@@ -51,19 +51,19 @@ export default function ClubEngagementPanel({ club }) {
           </div>
           {top.length > 0 && (
             <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400"><Trophy className="h-3.5 w-3.5" aria-hidden="true" /> Quem mais jogou no mês</p>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500"><Trophy className="h-3.5 w-3.5" aria-hidden="true" /> Quem mais jogou no mês</p>
               <ol className="space-y-1">
                 {top.map((t, i) => <li key={t.uid} className="flex justify-between text-sm"><span className="text-ink">{i + 1}º {people.get(t.uid)?.name || 'Atleta'}</span><span className="tabular-nums text-gray-600">{t.games} {t.games === 1 ? 'jogo' : 'jogos'} · {t.wins} {t.wins === 1 ? 'vitória' : 'vitórias'}</span></li>)}
               </ol>
             </div>
           )}
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">Conquistas coletivas</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Conquistas coletivas</p>
             <ul className="space-y-2">{[...m.goalsWeek, ...m.goalsMonth].map((g) => <GoalRow key={g.id} g={g} />)}</ul>
           </div>
         </>
       ) : <p className="text-sm text-gray-600">Sem dados para mostrar agora.</p>}
-      <p className="text-[11px] leading-4 text-gray-400">Contam os jogos publicados no ranking pelos dias de jogo do clube. Nada aqui é público — só quem administra o clube vê.</p>
+      <p className="text-[11px] leading-4 text-gray-500">Contam os jogos publicados no ranking pelos dias de jogo do clube. Nada aqui é público — só quem administra o clube vê.</p>
     </V2Surface>
   );
   return <OwnerEngagementPanel ownerType="club" issuer={{ type: 'club', id: club.id, name: club.name }} summary={summary} actuals={m.actuals} monthKey={monthWindow().key} />;

@@ -369,7 +369,7 @@ export function PlayParticipantsSection({
                       <span className="truncate font-medium text-ink">{p.name}</span>
                       {statusBadge(st)}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-400">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
                       {/* Quem não pode mexer vê o grupo como selo; quem pode vê o
                           seletor, ao lado das ações. */}
                       {comGrupos && !editable && (
@@ -484,7 +484,7 @@ export function PlayParticipantsSection({
                       />
                     )}
                   </div>
-                  <p className="text-[11px] leading-5 text-gray-400">
+                  <p className="text-[11px] leading-5 text-gray-500">
                     O nível e o sexo ajudam o sorteio a achar o grupo e a formar as duplas. Sem eles, o convidado
                     entra sem grupo — e você move depois.
                   </p>
@@ -718,7 +718,7 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
                 <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
                   <div className="flex min-w-0 items-center gap-2">
                     {(p.groupNo ?? p.orderNo) ? (
-                      <span className="w-6 shrink-0 text-center text-[11px] font-bold text-gray-400 tabular-nums">
+                      <span className="w-6 shrink-0 text-center text-[11px] font-bold text-gray-500 tabular-nums">
                         #{p.groupNo ?? p.orderNo}
                       </span>
                     ) : <span className="w-6 shrink-0" />}
@@ -1062,7 +1062,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
           </p>
         )}
         {canManage && (
-          <p className="text-[11px] leading-5 text-gray-400">
+          <p className="text-[11px] leading-5 text-gray-500">
             Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
             <strong className="text-gray-500">simples</strong> — escolha na própria quadra. A quadra mantém o tipo
             do último jogo até você trocar; no simples entram os dois primeiros da fila, e a dupla vinculada não vale.
@@ -1250,7 +1250,7 @@ function CourtRow({
       <td className="py-2.5 px-2 text-right">
         {game ? <SideCell side={game.side_a} align="right" canManage={canManage} onPlayer={onPlayer} /> : <span className="text-gray-300">—</span>}
       </td>
-      <td className="py-2.5 px-1 text-center text-xs text-gray-400">{game ? 'vs' : ''}</td>
+      <td className="py-2.5 px-1 text-center text-xs text-gray-500">{game ? 'vs' : ''}</td>
       <td className="py-2.5 px-2">
         {game ? <SideCell side={game.side_b} align="left" canManage={canManage} onPlayer={onPlayer} /> : <span className="text-gray-300">—</span>}
       </td>
@@ -1308,7 +1308,7 @@ function PlayForecastByCourt({ forecast }) {
             <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-gray-600">
               Quadra {b.court}
             </span>
-            <span className="text-[11px] text-gray-400">{b.free ? 'livre agora' : 'quando liberar'}</span>
+            <span className="text-[11px] text-gray-500">{b.free ? 'livre agora' : 'quando liberar'}</span>
             <GameKindBadge kind={b.kind} />
             {b.group && <PlayGroupBadge name={b.group.name} color={b.group.color} size="xs" />}
             {b.full ? (
@@ -1322,7 +1322,7 @@ function PlayForecastByCourt({ forecast }) {
                 ))}
               </span>
             ) : (
-              <span className="w-full text-xs text-gray-400">Nenhum grupo tem partida pronta para esta quadra.</span>
+              <span className="w-full text-xs text-gray-500">Nenhum grupo tem partida pronta para esta quadra.</span>
             )}
           </li>
         ))}
@@ -1403,7 +1403,7 @@ function FinishedGamesList({ games }) {
     <div className="rounded-lg border border-gray-100 bg-paper p-3">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 text-sm font-semibold text-ink">
         <Swords className="h-4 w-4 text-gray-400" /> Jogos concluídos ({games.length})
-        <span className="ml-auto text-xs text-gray-400">{open ? 'ocultar' : 'ver'}</span>
+        <span className="ml-auto text-xs text-gray-500">{open ? 'ocultar' : 'ver'}</span>
       </button>
       {open && (
         <div className="mt-2 space-y-1.5">
@@ -1501,7 +1501,7 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
                 <PlayerSelect key={i} value={sideA[i] || ''} onChange={(v) => setSideA((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
             </div>
-            <div className="pt-7 text-xs font-medium text-gray-400">vs</div>
+            <div className="pt-7 text-xs font-medium text-gray-500">vs</div>
             <div className="space-y-2">
               <Label className="text-xs uppercase text-gray-500">Lado B</Label>
               {Array.from({ length: porLado }, (_, i) => (
@@ -1581,14 +1581,14 @@ function OrdemPorGrupo({ view, config }) {
           <section key={id ?? 'sem-grupo'} aria-label={g ? `Fila do grupo ${g.name}` : 'Fila de quem está sem grupo'} className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               {g ? <PlayGroupBadge name={g.name} color={g.color} /> : <NoGroupBadge />}
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 {fila.length} aguardando{jogando.length > 0 ? ` · ${jogando.length} em quadra` : ''}
                 {pausados.length > 0 ? ` · ${pausados.length} pausado(s)` : ''}
                 {g?.paused ? ' · grupo em pausa' : ''}
               </span>
             </div>
             {fila.length === 0 && jogando.length + pausados.length === 0 && (
-              <p className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400">Ninguém neste grupo ainda.</p>
+              <p className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500">Ninguém neste grupo ainda.</p>
             )}
             {fila.map((p) => (
               <OrderRow key={p.id} p={p} badge={<V2Badge tone="green">#{p.groupNo}</V2Badge>} />

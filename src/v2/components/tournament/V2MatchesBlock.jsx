@@ -116,7 +116,7 @@ export function TeamConfrontationScore({ match, config }) {
       <div className="space-y-0.5">
         {rows.map(({ etapa, res }) => (
           <div key={etapa.id} className="flex items-baseline gap-2">
-            <span className="w-28 shrink-0 truncate text-[10px] font-medium uppercase tracking-wide text-gray-400" title={etapa.label}>
+            <span className="w-28 shrink-0 truncate text-[11px] font-medium uppercase tracking-wide text-gray-500" title={etapa.label}>
               {etapa.label}
             </span>
             {res.games.length > 0 ? (
@@ -202,7 +202,7 @@ function MatchesTable({
                   {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
                   {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideAPeople} fallback={sideA} win={winA} /></td>
-                  <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-400">vs</td>
+                  <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-500">vs</td>
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideBPeople} fallback={sideB} win={winB} /></td>
                   <td className="px-3 py-2 tabular-nums text-ink">
                     {m.team_confrontation && teamConfig
@@ -213,7 +213,7 @@ function MatchesTable({
                   {canEdit && (
                     <td className="px-3 py-2 text-right">
                       {isBye ? (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-gray-500">—</span>
                       ) : team ? (
                         <TeamMatchActions
                           match={m}
@@ -281,7 +281,7 @@ function MatchesTable({
                     <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{Number(m.etapa_wins_a) || 0}</span>
                   ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.a).join('  ')}</span>}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-300">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-gray-300">
                   <span className="h-px flex-1 bg-gray-100" />vs<span className="h-px flex-1 bg-gray-100" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -390,7 +390,7 @@ function TeamMatchActions({ match, team, onLineup, onResult }) {
   const teamA = team.teamById.get(match.side_a_ids?.[0]);
   const teamB = team.teamById.get(match.side_b_ids?.[0]);
   if (!teamA || !teamB) {
-    return <span className="text-xs text-gray-400">Aguarda definição das equipes</span>;
+    return <span className="text-xs text-gray-500">Aguarda definição das equipes</span>;
   }
   const snap = confrontationSnapshot(match, team.modality.team_config, {
     rosterASize: (teamA.members || []).length,
@@ -528,7 +528,7 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
                 return (
                   <div key={i} className="rounded-2xl border border-gray-100 p-3">
                     {setsCount > 1 && (
-                      <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Set {i + 1}</div>
+                      <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">Set {i + 1}</div>
                     )}
                     <div className="flex items-center justify-between gap-2">
                       <div className={cn('rounded-lg px-1', aWins && 'bg-green-50')}>

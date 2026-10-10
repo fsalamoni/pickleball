@@ -106,7 +106,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
                 <Building2 className="h-3 w-3" /> {adoption}
               </V2Badge>
             )}
-            <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[10px] text-gray-400">
+            <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[11px] text-gray-500">
               {mod.id}
             </code>
           </div>
@@ -116,7 +116,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
             {mod.audience.map((who) => (
               <span
                 key={who}
-                className="rounded-full bg-paper-pure px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500"
+                className="rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-500"
               >
                 {who}
               </span>
@@ -130,7 +130,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
             </p>
           )}
           {!releasable && (
-            <p className="mt-2 flex gap-1.5 text-[11px] leading-4 text-gray-400">
+            <p className="mt-2 flex gap-1.5 text-[11px] leading-4 text-gray-500">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>{ARENA_MODULE_STATUS_META[mod.status]?.hint}</span>
             </p>
@@ -138,7 +138,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
 
           {released && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
                 Como a arena recebe
               </span>
               {[
@@ -398,7 +398,7 @@ export default function AdminArenaModulesTab() {
         </div>
 
         {showAdoption && adoptionQuery.isLoading && (
-          <p className="mt-2 text-xs text-gray-400">Contando as arenas…</p>
+          <p className="mt-2 text-xs text-gray-500">Contando as arenas…</p>
         )}
         {showAdoption && adoptionQuery.isError && (
           <p className="mt-2 text-xs text-red-600">

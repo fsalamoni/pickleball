@@ -177,7 +177,7 @@ export default function V2TutorialLauncher({
             rodapé com os botões fica fora da tela e o tutorial não fecha. */}
         <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           <DialogHeader>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
               Passo {passo + 1} de {total}
             </p>
             <DialogTitle>{tutorial.steps[passo].title}</DialogTitle>

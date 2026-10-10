@@ -104,7 +104,7 @@ export default function TodayTab({ identity, irPara }) {
       <V2Surface className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
+            <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
               <OrigemIcon className="h-4 w-4" aria-hidden="true" /> {origem.texto}
             </p>
             <h2 className="mt-1 font-display text-2xl font-bold text-ink">{sessao.title}</h2>

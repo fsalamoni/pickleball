@@ -39,7 +39,7 @@ function NaFila({ item, acoes, verificar, settings }) {
         <div className="flex gap-3">
           <KindIcon kind={item.kind} />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
               {ITEM_KIND_LABELS[item.kind] || 'Item'}{enviado ? ` · enviado ${enviado}` : ''}
             </p>
             <h3 className="font-display text-lg font-bold text-ink">{item.title}</h3>

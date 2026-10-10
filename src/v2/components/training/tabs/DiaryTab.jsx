@@ -42,7 +42,7 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
     <li className="space-y-3 rounded-4xl border border-gray-100 bg-paper-pure p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
           <h3 className="mt-1 font-display text-lg font-bold text-ink">{s.title}</h3>
           <p className="mt-0.5 text-sm text-gray-500">
             {s.duration_min} min
@@ -65,7 +65,7 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
               {byId[id] ? (
                 <Link to={`/treino/item/${id}`} className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs font-semibold text-ink hover:bg-gray-100">{byId[id].title}</Link>
               ) : (
-                <span className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs text-gray-400">{itensIncompletos ? 'Item (não carregou)' : 'Item indisponível'}</span>
+                <span className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs text-gray-500">{itensIncompletos ? 'Item (não carregou)' : 'Item indisponível'}</span>
               )}
             </li>
           ))}

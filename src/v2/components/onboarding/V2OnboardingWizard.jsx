@@ -506,7 +506,7 @@ export default function V2OnboardingWizard() {
                 <p className="mt-1 text-sm leading-6 text-gray-500">{selectedLevelInfo.description}</p>
               </div>
             ) : (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 Escolha um nível para ver a explicação do que ele significa. Prefere o teste de nivelamento
                 (cerca de 3 minutos)? Faça depois em Perfil → Nível — o resultado substitui a escolha daqui.
               </p>
@@ -569,7 +569,7 @@ export default function V2OnboardingWizard() {
                     <p className="mt-1 text-sm leading-6 text-gray-500">{selectedLevelInfo.description}</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     Escolha um nível para ver a explicação do que ele significa.
                   </p>
                 )}

@@ -79,7 +79,7 @@ export default function GamificationPreferences({ uid, isModuleOn = () => true }
             <option value="">O meu tier (padrão)</option>
             {titulos.map((a) => <option key={a.id} value={a.id}>{a.icon} {a.name}</option>)}
           </V2Select>
-          {titulos.length === 0 && <p className="mt-1 text-xs text-gray-400">Quando você desbloquear conquistas, poderá escolher uma como título.</p>}
+          {titulos.length === 0 && <p className="mt-1 text-xs text-gray-500">Quando você desbloquear conquistas, poderá escolher uma como título.</p>}
         </div>
         {isModuleOn('onboarding') && prefs.onboarding.dismissed && (
           <V2Button variant="secondary" size="sm" onClick={() => set('onboarding', 'dismissed')(false)}>Mostrar os primeiros passos de novo</V2Button>

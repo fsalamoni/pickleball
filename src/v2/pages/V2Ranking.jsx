@@ -40,7 +40,7 @@ function inAgeBucket(age, bucketValue) {
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -63,7 +63,7 @@ function formatBalance(balance) {
 function Stat({ label, value }) {
   return (
     <div className="text-right">
-      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
       <p className="font-semibold text-ink tabular-nums">{value}</p>
     </div>
   );
@@ -76,8 +76,8 @@ function RankingExplainer() {
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
           <span className="font-semibold text-ink">Como funciona o ranking?</span>
-          <span className="text-xs text-gray-400 group-open:hidden">ver explicação</span>
-          <span className="hidden text-xs text-gray-400 group-open:inline">ocultar</span>
+          <span className="text-xs text-gray-500 group-open:hidden">ver explicação</span>
+          <span className="hidden text-xs text-gray-500 group-open:inline">ocultar</span>
         </summary>
         <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
           <p>
@@ -280,7 +280,7 @@ function NationalRankingView() {
                   <Stat label="Saldo" value={formatBalance(p.points_balance)} />
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wide text-gray-400">Rating</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Rating</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{p.rating}</p>
                 </div>
               </div>

@@ -59,7 +59,7 @@ export default function QuestionThread({ question, identity, onVoltar }) {
       <V2Surface className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
               {professor ? `Dúvida de ${outroLado(question, identity.uid)}` : `Com ${outroLado(question, identity.uid)}`}
             </p>
             <h2 className="mt-1 font-display text-xl font-bold text-ink">{question.subject}</h2>

@@ -186,7 +186,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="font-display text-xs font-bold uppercase tracking-widest text-gray-400">Modalidades</div>
+            <div className="font-display text-xs font-bold uppercase tracking-widest text-gray-500">Modalidades</div>
             <h3 className="mt-2 font-display text-2xl font-bold text-ink">Escolha onde jogar ou o que acompanhar</h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">
               Cada card mostra formato, nível, capacidade e ação disponível para cada modalidade.
@@ -370,7 +370,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-3xl border border-gray-100 bg-paper p-4">
-          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Capacidade</div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Capacidade</div>
           <div className="mt-2 text-sm font-medium text-ink">
             {hasUnlimitedEntries(modality.max_entries)
               ? `${confirmed} inscritos confirmados`
@@ -403,7 +403,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
         </div>
 
         <div className="rounded-3xl border border-gray-100 bg-paper p-4">
-          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Inscrição</div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Inscrição</div>
           <div className="mt-2 flex items-center gap-2 text-sm font-medium text-ink">
             <Wallet className="h-4 w-4 text-ink" />
             {fee > 0 ? formatBRL(fee) : 'Gratuita'}

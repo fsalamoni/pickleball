@@ -280,7 +280,7 @@ function RecentGameDayGames({ games }) {
     <V2Surface className="mt-8">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-lg font-bold text-ink">Jogos recentes em dias de jogo</h2>
-        <span className="text-xs text-gray-400">{games.length} jogo(s) no ranking</span>
+        <span className="text-xs text-gray-500">{games.length} jogo(s) no ranking</span>
       </div>
       <div className="space-y-2">
         {lista.map((g) => (
@@ -306,7 +306,7 @@ function MiniStat({ icon: Icon, label, value }) {
     <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 text-center shadow-organic-sm">
       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-paper text-ink"><Icon className="h-5 w-5" /></div>
       <p className="font-display text-2xl font-bold text-ink tabular-nums">{value}</p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
     </div>
   );
 }

@@ -353,7 +353,7 @@ export default function ArenaGameDayDialog({
                             className="h-4 w-4 rounded border-gray-300"
                           />
                           <span className="text-sm font-semibold text-ink">{c.name || 'Quadra'}</span>
-                          {c.surface && <span className="text-xs text-gray-400">{c.surface}</span>}
+                          {c.surface && <span className="text-xs text-gray-500">{c.surface}</span>}
                         </label>
 
                         {escolhida && !form.horarioUnico && (

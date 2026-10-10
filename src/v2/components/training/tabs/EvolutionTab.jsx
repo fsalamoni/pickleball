@@ -47,7 +47,7 @@ function Ritmo({ serie }) {
               style={{ height: `${Math.max(4, (s.minutes / max) * 100)}%` }}
               aria-hidden="true"
             />
-            <span className="text-[11px] text-gray-400" aria-hidden="true">{curto(s.weekKey)}</span>
+            <span className="text-[11px] text-gray-500" aria-hidden="true">{curto(s.weekKey)}</span>
             <span className="sr-only">
               {`${atual ? 'Esta semana' : `Semana de ${weekRangeLabel(s.weekKey)}`}: ${s.minutes} minutos em ${s.count} ${s.count === 1 ? 'treino' : 'treinos'}`}
             </span>
@@ -264,7 +264,7 @@ export default function EvolutionTab({ identity, irPara }) {
             <div className="grid gap-4 md:grid-cols-3">
               {[MASTERY.APRENDENDO, MASTERY.CONSISTENTE, MASTERY.DOMINADO].map((nivel) => (
                 <section key={nivel} className="space-y-2" aria-label={MASTERY_LABELS[nivel]}>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">{MASTERY_LABELS[nivel]} · {dominio[nivel].length}</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">{MASTERY_LABELS[nivel]} · {dominio[nivel].length}</h3>
                   <ul className="space-y-1.5">
                     {dominio[nivel].map((it) => (
                       <li key={it.id}>

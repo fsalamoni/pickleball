@@ -45,20 +45,20 @@ export default function GridScoreCell({ game, disabled = false, onSave }) {
           aria-label={`Placar por sets ${game.score_a} a ${game.score_b}: ${setsText(game)}`}
         >
           <span className="font-bold tabular-nums text-ink">{game.score_a} × {game.score_b}</span>
-          <span className="text-[10px] tabular-nums text-gray-500">{setsText(game)}</span>
+          <span className="text-[11px] tabular-nums text-gray-500">{setsText(game)}</span>
         </button>
       ) : (
         <>
           <Input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} onBlur={salvarUmSet}
             disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado A" />
-          <span className="text-xs text-gray-400">×</span>
+          <span className="text-xs text-gray-500">×</span>
           <Input type="number" min={0} value={b} onChange={(e) => setB(e.target.value)} onBlur={salvarUmSet}
             disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado B" />
           {!disabled && (
             <button
               type="button"
               onClick={() => setAberto(true)}
-              className="ml-0.5 flex h-7 items-center gap-0.5 rounded-md px-1.5 text-[10px] font-semibold text-gray-400 hover:bg-gray-100 hover:text-ink"
+              className="ml-0.5 flex h-7 items-center gap-0.5 rounded-md px-1.5 text-[11px] font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink"
               title="Lançar por sets"
               aria-label="Lançar por sets"
             >

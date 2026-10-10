@@ -184,7 +184,7 @@ function Artigo({
         >
           <span className="min-w-0">
             {mostrarSecao && (
-              <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-gray-400">
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-gray-500">
                 {artigo.sectionLabel}
               </span>
             )}
@@ -195,7 +195,7 @@ function Artigo({
               <Realce texto={artigo.summary} termo={termo} />
             </span>
             {!aberto && trecho && (
-              <span className="mt-1.5 block text-xs leading-5 text-gray-400">
+              <span className="mt-1.5 block text-xs leading-5 text-gray-500">
                 <Realce texto={trecho} termo={termo} />
               </span>
             )}
@@ -422,7 +422,7 @@ export default function V2Help() {
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
         ) : (
-          <kbd className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-paper px-1.5 py-0.5 text-[10px] font-bold text-gray-400 sm:block">
+          <kbd className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-gray-200 bg-paper px-1.5 py-0.5 text-[11px] font-bold text-gray-500 sm:block">
             /
           </kbd>
         )}
@@ -460,7 +460,7 @@ export default function V2Help() {
                   className="flex w-full items-start justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure px-4 py-3 text-left transition-colors hover:border-ink/25"
                 >
                   <span className="min-w-0">
-                    <span className="mb-0.5 block text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                    <span className="mb-0.5 block text-[11px] font-bold uppercase tracking-widest text-gray-500">
                       {a.sectionLabel}
                     </span>
                     <span className="block font-semibold text-ink">{a.title}</span>
@@ -577,7 +577,7 @@ export default function V2Help() {
                         </span>
                         <span className="mt-2.5 block font-display text-base font-bold text-ink">{SOU[id]}</span>
                         <span className="mt-0.5 block text-xs leading-5 text-gray-500">{s.tagline}</span>
-                        <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-gray-400 transition-colors group-hover:text-ink">
+                        <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-gray-500 transition-colors group-hover:text-ink">
                           {s.articles.length} artigos
                           <ArrowRight aria-hidden="true" className="h-3 w-3" />
                         </span>

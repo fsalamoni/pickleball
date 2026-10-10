@@ -123,7 +123,7 @@ function V2AchievementsOn({ user }) {
       {/* Filtros */}
       <V2Surface className="mb-6 space-y-4" data-dica="conquistas-filtros">
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Família</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Família</p>
           <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por família">
             {FAMILY_TABS.map((t) => (
               <button
@@ -146,7 +146,7 @@ function V2AchievementsOn({ user }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Raridade</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Raridade</p>
             <div className="flex flex-wrap gap-1.5">
               {RARITY_FILTERS.map((r) => (
                 <button
@@ -182,8 +182,8 @@ function V2AchievementsOn({ user }) {
             const f = result.byFamily[key] || { unlocked: 0, total: 0 };
             return (
               <div key={key} className="rounded-2xl bg-paper p-3 text-center">
-                <p className="text-lg font-bold text-ink">{f.unlocked}<span className="text-xs text-gray-400">/{f.total}</span></p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">{meta.name}</p>
+                <p className="text-lg font-bold text-ink">{f.unlocked}<span className="text-xs text-gray-500">/{f.total}</span></p>
+                <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{meta.name}</p>
               </div>
             );
           })}
@@ -229,7 +229,7 @@ function V2AchievementsOn({ user }) {
                 <span className="text-2xl opacity-60" aria-hidden="true">{a.icon}</span>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-600">{a.name}</p>
-                  <p className="text-xs text-gray-400">{a.description}</p>
+                  <p className="text-xs text-gray-500">{a.description}</p>
                 </div>
               </li>
             ))}

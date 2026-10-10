@@ -146,7 +146,7 @@ export default function V2Tournaments() {
           {verEncerrados ? (
             <>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Encerrados ({encerrados.length})</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Encerrados ({encerrados.length})</p>
                 <V2Button variant="ghost" size="sm" onClick={() => setVerEncerrados(false)}>Esconder encerrados</V2Button>
               </div>
               <div className="grid gap-6 opacity-80 lg:grid-cols-2 xl:grid-cols-3">
