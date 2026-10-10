@@ -188,7 +188,7 @@ export default function V2DuprRankingView() {
                   <p className="text-xs uppercase tracking-wide text-gray-500">{format === 'doubles' ? 'Duplas' : 'Simples'}</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{fmt(p.rating)}</p>
                   {Number.isFinite(p.reliability) && (
-                    <p className="text-[11px] text-gray-500" title="Confiabilidade — cresce com o número de jogos">
+                    <p className="text-2xs text-gray-500" title="Confiabilidade — cresce com o número de jogos">
                       conf. {p.reliability}%
                     </p>
                   )}
@@ -208,7 +208,7 @@ export default function V2DuprRankingView() {
 function Stat({ label, value }) {
   return (
     <div className="text-center">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-2xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="font-semibold text-ink tabular-nums">{value}</p>
     </div>
   );

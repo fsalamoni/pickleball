@@ -99,7 +99,7 @@ export default function V2Search() {
             const Icon = TYPE_ICON[group.type] || Search;
             return (
               <div key={group.type}>
-                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                <p className="mb-2 flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
                   <Icon className="h-3.5 w-3.5" /> {group.label} ({group.items.length})
                 </p>
                 <div className="space-y-2">

@@ -185,11 +185,11 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
               <div key={p.id} className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-2 text-sm">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
                 <span className="font-medium text-ink">{p.name}</span>
-                <V2Badge tone="neutral" className="rounded-full px-1.5 py-0 text-[11px] font-normal">
+                <V2Badge tone="neutral" className="rounded-full px-1.5 py-0 text-2xs font-normal">
                   {GD_PARTICIPANT_SOURCE_LABELS[p.source] || 'Atleta'}
                 </V2Badge>
                 {parceiroDe(p) && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-[11px] font-semibold text-ink" title={`Dupla fixa com ${parceiroDe(p).name}`}>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-2xs font-semibold text-ink" title={`Dupla fixa com ${parceiroDe(p).name}`}>
                     <Link2 aria-hidden="true" className="h-3 w-3" /> {parceiroDe(p).name}
                   </span>
                 )}
@@ -700,7 +700,7 @@ function GameRow({ gdId, game, isOwner }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 text-sm">
       {game.court != null && (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${game.court === 1 ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-bold ${game.court === 1 ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
           Q{game.court}
         </span>
       )}

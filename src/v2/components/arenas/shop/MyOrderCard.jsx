@@ -52,7 +52,7 @@ export default function MyOrderCard({ sale, uid, myPayments = [], showArena = fa
         </div>
         <div className="text-right">
           <p className="font-display text-base font-bold text-ink">{formatPrice(valor)}</p>
-          {v.dividida && <p className="text-[11px] text-gray-500">a sua parte</p>}
+          {v.dividida && <p className="text-2xs text-gray-500">a sua parte</p>}
           <div className="mt-1 flex flex-wrap justify-end gap-1">
             <V2Badge tone={etapa.tone}>{etapa.label}</V2Badge>
             {v.etapa !== 'cancelado' && (

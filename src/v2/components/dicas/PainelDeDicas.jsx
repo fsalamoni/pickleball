@@ -59,7 +59,7 @@ function LinhaGuia({ guia, feito, onIniciar }) {
 function Rotulo({ children, dica }) {
   return (
     <div className="flex items-baseline justify-between gap-3 px-1">
-      <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{children}</h3>
+      <h3 className="text-2xs font-bold uppercase tracking-widest text-gray-500">{children}</h3>
       {dica && <p className="text-xs text-gray-500">{dica}</p>}
     </div>
   );

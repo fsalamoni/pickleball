@@ -53,7 +53,7 @@ export function GameKindToggle({
             onClick={() => { if (!ativo) onChange(kind); }}
             className={cn(
               'inline-flex items-center gap-1 rounded-full font-semibold transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-50',
-              size === 'xs' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
+              size === 'xs' ? 'px-2 py-0.5 text-2xs' : 'px-2.5 py-1 text-xs',
               escuro
                 ? (ativo ? 'bg-acid text-ink focus-visible:ring-acid' : 'text-white/60 hover:text-white focus-visible:ring-white/60')
                 : (ativo ? 'bg-ink text-white focus-visible:ring-ink' : 'text-gray-500 hover:text-ink focus-visible:ring-ink'),
@@ -74,7 +74,7 @@ export function GameKindBadge({ kind, variant = 'light', className }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold',
         variant === 'dark' ? 'bg-white/10 text-white/80' : 'bg-blue-50 text-blue-700',
         className,
       )}

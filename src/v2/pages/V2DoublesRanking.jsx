@@ -228,7 +228,7 @@ export default function V2DoublesRanking() {
               <caption className="sr-only">
                 Ranking de duplas, classificado por aproveitamento
               </caption>
-              <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+              <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th scope="col" className="px-4 py-3">#</th>
                   <th scope="col" className="px-4 py-3">Dupla</th>
@@ -253,7 +253,7 @@ export default function V2DoublesRanking() {
                             se perde. */}
                         {recorteAtivo && (
                           <span
-                            className="ml-1.5 align-middle text-[11px] font-normal text-gray-500"
+                            className="ml-1.5 align-middle text-2xs font-normal text-gray-500"
                             title={`Posição ${row.overall_position} no ranking geral`}
                           >
                             #{row.overall_position}

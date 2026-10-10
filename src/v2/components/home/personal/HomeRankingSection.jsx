@@ -28,7 +28,7 @@ function Tile({ to, icon: Icon, label, value, detail, carregando, falhou, onRetr
       to={to}
       className="group flex min-w-0 flex-col justify-between rounded-3xl border border-gray-100 bg-paper p-4 transition-all hover:border-gray-300 hover:bg-paper-pure focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
     >
-      <span className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-gray-500">
+      <span className="flex items-center justify-between text-2xs font-bold uppercase tracking-wide text-gray-500">
         {label}
         <Icon className="h-4 w-4 text-ink" aria-hidden="true" />
       </span>

@@ -66,7 +66,7 @@ function CoachForm({ existing, onClose }) {
   function str(s) { return String(s ?? ''); }
 
   return (
-    <V2Surface className="border-emerald-200 bg-emerald-50/40" data-dica="professor-formulario">
+    <V2Surface className="border-green-200 bg-green-50/40" data-dica="professor-formulario">
       <h3 className="font-display text-base font-bold text-ink">
         {existing ? 'Editar perfil de professor' : 'Tornar-se professor'}
       </h3>
@@ -118,7 +118,7 @@ function CoachCard({ coach, distancia = null }) {
     <Link to={`/coaches/${coach.id}`} className="block transition-transform hover:scale-[1.01]">
       <V2Surface>
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-lg font-bold text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-amber-500 text-lg font-bold text-white">
             {coach.display_name?.[0] || '?'}
           </div>
           <div className="flex-1">
@@ -138,7 +138,7 @@ function CoachCard({ coach, distancia = null }) {
               </div>
             )}
             {coach.hourly_rate != null && (
-              <div className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-emerald-700">
+              <div className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-green-700">
                 <Award className="h-3 w-3" /> R$ {Number(coach.hourly_rate).toFixed(2)}/h
               </div>
             )}
@@ -215,7 +215,7 @@ export default function V2Coaches() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-emerald-700" /> Professores
+            <GraduationCap className="h-6 w-6 text-green-700" /> Professores
           </h1>
           <p className="mt-1 text-sm text-gray-500">Encontre coaches de pickleball ou cadastre-se como professor</p>
         </div>

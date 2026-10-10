@@ -45,7 +45,7 @@ const NOVO = '__novo__';
 
 /** O ícone e a cor da frase de status de cada grupo. */
 const STATUS = {
-  ready: { Icone: CheckCircle2, classe: 'text-emerald-700' },
+  ready: { Icone: CheckCircle2, classe: 'text-green-700' },
   short: { Icone: Users, classe: 'text-amber-700' },
   blocked: { Icone: AlertTriangle, classe: 'text-amber-700' },
   no_court: { Icone: LayoutGrid, classe: 'text-amber-700' },
@@ -99,7 +99,7 @@ function Chips({ group }) {
   return (
     <ul className="mt-2 flex flex-wrap gap-1.5">
       {chips.map((c) => (
-        <li key={c.key} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+        <li key={c.key} className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-medium text-gray-600">
           {c.label}
         </li>
       ))}
@@ -466,7 +466,7 @@ export default function PlayGroupsCard({
             )}
 
             {!podeConfigurar && (
-              <p className="text-[11px] leading-5 text-gray-500">
+              <p className="text-2xs leading-5 text-gray-500">
                 Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos. Você move as pessoas entre eles.
               </p>
             )}

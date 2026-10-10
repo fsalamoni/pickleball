@@ -78,7 +78,7 @@ export default function CourtDayGrid({
                         isSel && 'ring-2 ring-ink',
                       )}
                     >
-                      <span className="truncate px-1 text-[11px] font-semibold leading-tight">{label}</span>
+                      <span className="truncate px-1 text-2xs font-semibold leading-tight">{label}</span>
                     </button>
                   </td>
                 );
@@ -87,7 +87,7 @@ export default function CourtDayGrid({
           ))}
         </tbody>
       </table>
-      <div className="flex flex-wrap gap-3 border-t border-gray-100 bg-paper px-3 py-2 text-[11px]">
+      <div className="flex flex-wrap gap-3 border-t border-gray-100 bg-paper px-3 py-2 text-2xs">
         {Object.entries(SLOT_STATUS_LABELS).map(([k, v]) => (
           <span key={k} className="inline-flex items-center gap-1">
             <span className={cn('h-2.5 w-2.5 rounded-full', SLOT_STATUS_COLORS[k].dot)} />

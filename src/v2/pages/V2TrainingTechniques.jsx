@@ -53,7 +53,7 @@ function Golpe({ item, mastery, ordem, comDominio }) {
           aria-hidden="true"
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-            mastery === MASTERY.DOMINADO ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500',
+            mastery === MASTERY.DOMINADO ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500',
           )}
         >
           {mastery === MASTERY.DOMINADO ? <Check className="h-4 w-4" /> : ordem}

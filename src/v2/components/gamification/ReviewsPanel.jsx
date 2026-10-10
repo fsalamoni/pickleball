@@ -49,7 +49,7 @@ function ReviewDialog({ open, onClose, match, people, onSubmit, submitting }) {
                   <V2Avatar name={p.name} photoUrl={p.photoUrl} size="sm" />
                   <div>
                     <p className="text-sm font-bold text-ink">{p.name}</p>
-                    <p className="text-[11px] text-gray-500">{RELATION[t.relation]}</p>
+                    <p className="text-2xs text-gray-500">{RELATION[t.relation]}</p>
                   </div>
                 </div>
                 <StarPicker value={d.rating} onChange={(n) => set(t.uid, { rating: n, ...(n <= LOW_RATING ? { tags: [] } : { issues: [] }) })} label={`Nota para ${p.name}`} />
@@ -151,7 +151,7 @@ export default function ReviewsPanel({ uid, records, windowDays = 14, recordsLoa
           ))}
         </ul>
       )}
-      <p className="mt-3 text-[11px] leading-4 text-gray-500">Sem comentários livres: estrelas e elogios. Você pode retirar uma avaliação a qualquer momento.</p>
+      <p className="mt-3 text-2xs leading-4 text-gray-500">Sem comentários livres: estrelas e elogios. Você pode retirar uma avaliação a qualquer momento.</p>
       {open && (
         <ReviewDialog open match={open} people={people} onClose={() => setOpen(null)} onSubmit={enviar} submitting={submit.isPending} />
       )}

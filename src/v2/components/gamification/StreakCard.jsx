@@ -15,7 +15,7 @@ const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
 
 const STATUS = {
   [STREAK_STATUS.NONE]: { label: 'Ainda não começou', tone: 'neutral', icon: 'bg-gray-100 text-gray-500' },
-  [STREAK_STATUS.ACTIVE]: { label: 'Em dia', tone: 'green', icon: 'bg-orange-100 text-orange-600' },
+  [STREAK_STATUS.ACTIVE]: { label: 'Em dia', tone: 'green', icon: 'bg-amber-100 text-amber-600' },
   [STREAK_STATUS.AT_RISK]: { label: 'Jogue até domingo', tone: 'amber', icon: 'bg-amber-100 text-amber-700' },
   [STREAK_STATUS.VACATION]: { label: 'De férias', tone: 'blue', icon: 'bg-blue-100 text-blue-700' },
   [STREAK_STATUS.BROKEN]: { label: 'Recomeça no próximo jogo', tone: 'neutral', icon: 'bg-gray-100 text-gray-500' },
@@ -96,25 +96,25 @@ export default function StreakCard({ streak, meta = null, onStartVacation, onEnd
             role="progressbar" aria-label="Progresso até o próximo marco da sequência"
             aria-valuemin={0} aria-valuemax={proximo.weeks} aria-valuenow={streak.weeks}
           >
-            <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-400" style={{ width: `${Math.round(progresso * 100)}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-400" style={{ width: `${Math.round(progresso * 100)}%` }} />
           </div>
         </div>
       )}
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <div className="rounded-2xl bg-paper p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Recorde</dt>
+          <dt className="text-2xs font-semibold uppercase tracking-wide text-gray-500">Recorde</dt>
           <dd className="font-bold tabular-nums text-ink" data-testid="streak-best">{semanas(streak.best)}</dd>
         </div>
         {streak.weeks > 0 && (
           <div className="rounded-2xl bg-paper p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Folga deste mês</dt>
+            <dt className="text-2xs font-semibold uppercase tracking-wide text-gray-500">Folga deste mês</dt>
             <dd className="font-bold text-ink" data-testid="streak-folga">{streak.folgaUsedThisMonth ? 'Já usada' : 'Disponível'}</dd>
           </div>
         )}
         {streak.lastPlayAt && (
           <div className="rounded-2xl bg-paper p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Último jogo</dt>
+            <dt className="text-2xs font-semibold uppercase tracking-wide text-gray-500">Último jogo</dt>
             <dd className="font-bold text-ink">{dia(streak.lastPlayAt)}</dd>
           </div>
         )}

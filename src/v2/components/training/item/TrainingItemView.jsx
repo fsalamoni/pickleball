@@ -59,15 +59,15 @@ function Rotulo({ children }) {
 function Coluna({ certo, textos, midias }) {
   const Icon = certo ? CircleCheck : CircleX;
   return (
-    <div className={cn('space-y-3 rounded-3xl border-2 p-4', certo ? 'border-emerald-300' : 'border-red-300')}>
-      <p className={cn('flex items-center gap-1.5 font-bold', certo ? 'text-emerald-700' : 'text-red-700')}>
+    <div className={cn('space-y-3 rounded-3xl border-2 p-4', certo ? 'border-green-300' : 'border-red-300')}>
+      <p className={cn('flex items-center gap-1.5 font-bold', certo ? 'text-green-700' : 'text-red-700')}>
         <Icon className="h-5 w-5" aria-hidden="true" /> {certo ? 'Certo' : 'Errado'}
       </p>
       {textos.length > 0 && (
         <ul className="space-y-2">
           {textos.map((p, i) => (
             <li key={i} className="flex gap-2 text-gray-700">
-              <Icon className={cn('mt-1 h-4 w-4 shrink-0', certo ? 'text-emerald-600' : 'text-red-600')} aria-hidden="true" />
+              <Icon className={cn('mt-1 h-4 w-4 shrink-0', certo ? 'text-green-600' : 'text-red-600')} aria-hidden="true" />
               <span><span className="sr-only">{certo ? 'Certo: ' : 'Errado: '}</span>{p.text}</span>
             </li>
           ))}
@@ -189,8 +189,8 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
       <Secao id={hid('autoavaliacao')} title="Como saber se você fez certo">
         <ul className="space-y-2">
           {v.technique.self_check.map((t, i) => (
-            <li key={i} className="flex gap-2 rounded-2xl bg-emerald-50 p-3 text-emerald-900">
-              <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+            <li key={i} className="flex gap-2 rounded-2xl bg-green-50 p-3 text-green-900">
+              <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" aria-hidden="true" />
               <span>{t}</span>
             </li>
           ))}
@@ -221,7 +221,7 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
               </p>
               {e.fix && (
                 <p className="mt-2 flex gap-2 text-gray-700">
-                  <CircleCheck className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <CircleCheck className="mt-1 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
                   <span><span className="font-semibold">Como corrigir: </span>{e.fix}</span>
                 </p>
               )}

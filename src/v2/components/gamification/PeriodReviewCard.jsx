@@ -42,7 +42,7 @@ export default function PeriodReviewCard({ review }) {
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
           <CalendarDays className="h-5 w-5" aria-hidden="true" /> Sua semana em revisão <TermHint term="revisao" />
         </h2>
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{review.window.label}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">{review.window.label}</span>
       </div>
       <ReviewBody review={review} limit={4} />
       <Link

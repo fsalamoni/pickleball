@@ -393,11 +393,11 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   )}
                 >
                   <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
-                  <div className={cn('text-[11px] uppercase tracking-widest', c.text)}>
+                  <div className={cn('text-2xs uppercase tracking-widest', c.text)}>
                     {SLOT_STATUS_LABELS[status]}
                   </div>
                   {booking?.athlete_name && (
-                    <div className="mt-0.5 truncate text-[11px] text-gray-600 max-w-full">
+                    <div className="mt-0.5 truncate text-2xs text-gray-600 max-w-full">
                       {booking.athlete_name.split(' ')[0]}
                     </div>
                   )}
@@ -446,7 +446,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {selectedSlot.booking.participants.map((p, i) => (
                       <span key={p.athlete_id || `m-${i}`}
-                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2 py-0.5 text-[11px] text-ink">
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2 py-0.5 text-2xs text-ink">
                         {p.name || 'Responsável'}
                         <span className="text-gray-400">· {participantStatusLabel(p.status)}</span>
                       </span>
@@ -506,13 +506,13 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
               tem, porque é derivado do próprio dia de jogo. */}
           {selectedSlot.unavailability && (
             <div className="mt-3 space-y-2">
-              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
-                <p className="text-xs font-bold uppercase text-orange-700">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-bold uppercase text-amber-700">
                   {selectedSlot.unavailability.game_day_id ? 'Dia de jogo da arena' : 'Indisponibilidade'}
                 </p>
-                {selectedSlot.unavailability.notes && <p className="mt-1 text-sm text-orange-900">{selectedSlot.unavailability.notes}</p>}
+                {selectedSlot.unavailability.notes && <p className="mt-1 text-sm text-amber-900">{selectedSlot.unavailability.notes}</p>}
                 {selectedSlot.unavailability.game_day_id && (
-                  <p className="mt-1 text-xs text-orange-800">
+                  <p className="mt-1 text-xs text-amber-800">
                     A quadra está tomada por um dia de jogo. Para liberar este horário, edite ou arquive o dia de jogo.
                   </p>
                 )}
@@ -717,13 +717,13 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-bold text-ink">{p.name || 'Responsável'}</div>
-                        <div className="text-[11px] text-gray-500">
+                        <div className="text-2xs text-gray-500">
                           {participantStatusLabel(p.status)}{isTitular ? ' · titular' : ''}{p.athlete_id ? '' : ' · avulso'}
                         </div>
                       </div>
                       {!isTitular && (p.athlete_id || p.name) && (
                         <button type="button" onClick={() => makePrimary(p)} disabled={busy}
-                          className="rounded-lg px-2 py-1 text-[11px] font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink">
+                          className="rounded-lg px-2 py-1 text-2xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink">
                           Tornar titular
                         </button>
                       )}

@@ -66,7 +66,7 @@ function ProfessorVerificado({ uid, remover }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
       <span className="flex min-w-0 items-center gap-2 text-sm text-ink">
-        <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+        <BadgeCheck className="h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
         <span className="truncate font-semibold">
           {nome || (coach.isPending ? 'Carregando…' : coach.isError ? 'Professor (o nome não carregou)' : 'Conta sem perfil de professor')}
         </span>

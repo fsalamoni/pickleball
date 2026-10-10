@@ -62,7 +62,7 @@ export default function GoalsCard({ ownerType, ownerId, monthKey, actuals }) {
             <V2Button size="sm" disabled={g.save.isPending} onClick={salvar}>Salvar</V2Button>
             <V2Button size="sm" variant="ghost" onClick={() => setEditando(false)}>Cancelar</V2Button>
           </div>
-          <p className="text-[11px] text-gray-500">As metas valem para o mês corrente. O progresso é contado a partir do que a plataforma já registra.</p>
+          <p className="text-2xs text-gray-500">As metas valem para o mês corrente. O progresso é contado a partir do que a plataforma já registra.</p>
         </div>
       ) : avaliadas.length === 0 ? (
         <p className="text-sm text-gray-600">Sem metas para este mês. Metas pequenas e mensuráveis funcionam melhor que metas grandes demais.</p>
@@ -78,7 +78,7 @@ export default function GoalsCard({ ownerType, ownerId, monthKey, actuals }) {
                 <div className={cn('h-full rounded-full', m.done ? 'bg-green-500' : 'bg-amber-400')} style={{ width: `${Math.round(m.progress * 100)}%` }} />
               </div>
               {m.done && <V2Badge tone="green" className="mt-1">Meta batida 🎉</V2Badge>}
-              {m.known && !m.done && <p className="mt-0.5 text-[11px] text-gray-500">Faltam {m.remaining} {m.unit}.</p>}
+              {m.known && !m.done && <p className="mt-0.5 text-2xs text-gray-500">Faltam {m.remaining} {m.unit}.</p>}
             </li>
           ))}
         </ul>

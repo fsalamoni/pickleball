@@ -884,7 +884,7 @@ function FlagRow({ flagKey, checked, disabled, onToggle }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-ink">{label}</span>
-          <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[11px] text-gray-500">{flagKey}</code>
+          <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-2xs text-gray-500">{flagKey}</code>
         </div>
         {meta?.description && <p className="mt-0.5 text-xs text-gray-500">{meta.description}</p>}
       </div>
@@ -1009,7 +1009,7 @@ function FlagsTab() {
                   const famKeys = keys.filter((k) => (arenaFlagFamily(k) || 'other') === fam);
                   return (
                     <div key={fam}>
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                      <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">
                         {ARENA_FAMILY_LABEL[fam] || fam}
                       </p>
                       {renderRows(famKeys)}
@@ -1145,7 +1145,7 @@ function BrandingTab() {
               )}
               <div>
                 <div className="text-sm font-bold" style={{ color: form.primary_color }}>{form.platform_name || 'Plataforma'}</div>
-                <div className="text-[11px] text-gray-500">{form.tagline || '—'}</div>
+                <div className="text-2xs text-gray-500">{form.tagline || '—'}</div>
               </div>
             </div>
             <button
@@ -1162,7 +1162,7 @@ function BrandingTab() {
             >
               Botão primário
             </button>
-            <p className="text-[11px] text-gray-500">
+            <p className="text-2xs text-gray-500">
               Pré-visualização aproximada. A aplicação das cores nos componentes existentes
               é progressiva — só os novos componentes lidos de platform_settings respeitam
               o branding customizado por enquanto.
@@ -1517,7 +1517,7 @@ function ArenasTab() {
                           <X className="h-3 w-3" /> Inativa
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">
                           <Check className="h-3 w-3" /> Ativa
                         </span>
                       )}
@@ -1544,9 +1544,9 @@ function ArenasTab() {
 function Stat({ label, value, variant = 'default' }) {
   const colorMap = {
     default: 'text-ink',
-    success: 'text-emerald-700',
+    success: 'text-green-700',
     amber: 'text-amber-700',
-    info: 'text-sky-700',
+    info: 'text-blue-700',
   };
   return (
     <V2Surface className="p-4">
@@ -1559,10 +1559,10 @@ function Stat({ label, value, variant = 'default' }) {
 function OnboardingBadge({ doneCount }) {
   const label = `${doneCount}/4`;
   if (doneCount === 4) {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700"><Check className="h-3 w-3" /> {label}</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700"><Check className="h-3 w-3" /> {label}</span>;
   }
   if (doneCount === 0) {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700"><X className="h-3 w-3" /> {label}</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700"><X className="h-3 w-3" /> {label}</span>;
   }
   return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700"> {label}</span>;
 }

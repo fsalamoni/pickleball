@@ -142,7 +142,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
             {config.win_rule === TEAM_WIN_RULE.BEST_OF ? `Melhor de ${config.win_target}` : 'Todas as etapas'}
           </V2Badge>
         </div>
-        <div className="flex flex-wrap gap-1.5 text-[11px] text-gray-500">
+        <div className="flex flex-wrap gap-1.5 text-2xs text-gray-500">
           {(config.etapas || []).map((e, i) => (
             <span key={e.id || i} className="rounded-full border border-gray-100 bg-paper px-2.5 py-1">
               {i + 1}. {e.label} · {formatEtapaScoringLabel(resolveEtapaScoring(config, e))}

@@ -151,7 +151,7 @@ function Bloco({ titulo, dica, children }) {
   return (
     <section aria-labelledby={id} className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-1">
-        <h3 id={id} className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{titulo}</h3>
+        <h3 id={id} className="text-2xs font-bold uppercase tracking-widest text-gray-500">{titulo}</h3>
         {dica && <p className="text-xs text-gray-500">{dica}</p>}
       </div>
       {children}

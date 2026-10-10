@@ -62,7 +62,7 @@ function RosterSlot({
     )}
     >
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink text-[11px] font-bold text-acid">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink text-2xs font-bold text-acid">
           {slot.short}
         </span>
 

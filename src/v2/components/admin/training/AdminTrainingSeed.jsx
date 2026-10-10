@@ -45,7 +45,7 @@ function Resultado({ r }) {
   return (
     <div className="rounded-3xl bg-gray-50 p-3 text-sm" role="status">
       <p className="flex items-center gap-1.5 font-semibold text-ink">
-        <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+        <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
         {[r.created !== undefined && `${r.created} criado${r.created === 1 ? '' : 's'}`, r.updated !== undefined && `${r.updated} atualizado${r.updated === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
       </p>
       {r.failed?.length > 0 && (

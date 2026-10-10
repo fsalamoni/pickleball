@@ -70,7 +70,7 @@ export default function OpenSlotsDiscovery() {
 
   return (
     <section className="mb-8" data-dica="procura-arenas">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+      <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
         <Building2 className="h-3.5 w-3.5" /> Jogos abertos nas arenas
       </p>
       <p className="mt-1 text-sm text-gray-500">

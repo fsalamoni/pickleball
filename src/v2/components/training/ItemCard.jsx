@@ -29,10 +29,10 @@ const KIND_ICON = {
 // Tons claros (50–200) não mudam no modo escuro; o texto 700+ espelha junto.
 const KIND_TONE = {
   drill: 'bg-lime-100 text-lime-800',
-  treino: 'bg-sky-100 text-sky-800',
+  treino: 'bg-blue-100 text-blue-800',
   fundamento: 'bg-violet-100 text-violet-800',
   jogada: 'bg-amber-100 text-amber-800',
-  fisico: 'bg-rose-100 text-rose-800',
+  fisico: 'bg-red-100 text-red-800',
   estudo: 'bg-teal-100 text-teal-800',
 };
 
@@ -59,7 +59,7 @@ export function AuthorLine({ item, className }) {
   const Icon = a.role === 'plataforma' ? BadgeCheck : a.role === 'professor' ? GraduationCap : null;
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-1 text-xs font-semibold text-gray-500', className)}>
-      {Icon && <Icon className={cn('h-3.5 w-3.5 shrink-0', a.role === 'plataforma' ? 'text-emerald-600' : 'text-sky-600')} aria-hidden="true" />}
+      {Icon && <Icon className={cn('h-3.5 w-3.5 shrink-0', a.role === 'plataforma' ? 'text-green-600' : 'text-blue-600')} aria-hidden="true" />}
       <span className="truncate">{a.label}</span>
       {item?.ai_assisted && (
         <span className="inline-flex shrink-0 items-center gap-0.5 text-gray-400" title="Criado com ajuda de IA e revisado pelo autor">
@@ -90,9 +90,9 @@ export default function ItemCard({ item, to, showStatus = false, actions, extra,
       <KindIcon kind={item.kind} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{ITEM_KIND_LABELS[item.kind] || 'Item'}</span>
+          <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">{ITEM_KIND_LABELS[item.kind] || 'Item'}</span>
           {item.featured && (
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-600">
+            <span className="inline-flex items-center gap-0.5 text-2xs font-bold text-amber-600">
               <Star className="h-3 w-3 fill-current" aria-hidden="true" /> Destaque
             </span>
           )}

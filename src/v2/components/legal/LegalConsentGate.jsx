@@ -95,7 +95,7 @@ export default function LegalConsentGate() {
           <V2Button className="w-full" onClick={handleAccept} disabled={!allChecked || acceptAll.isPending}>
             {acceptAll.isPending ? 'Registrando…' : 'Aceitar e continuar'}
           </V2Button>
-          <p className="mt-2 text-center text-[11px] text-gray-500">
+          <p className="mt-2 text-center text-2xs text-gray-500">
             Marque todos os itens para continuar. Seu aceite fica registrado com data e versão.
           </p>
         </div>

@@ -14,7 +14,7 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="arena-name" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Nome da arena *</label>
+        <label htmlFor="arena-name" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nome da arena *</label>
         <input
           id="arena-name" value={form.name} onChange={setField('name')} maxLength={120}
           className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
@@ -23,7 +23,7 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="arena-desc" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Descrição</label>
+        <label htmlFor="arena-desc" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Descrição</label>
         <textarea
           id="arena-desc" value={form.description} onChange={setField('description')} rows={3} maxLength={2000} placeholder="Estrutura, quadras, iluminação, estacionamento, etc."
           className="w-full resize-y rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
@@ -32,59 +32,59 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label htmlFor="arena-address" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Endereço</label>
+          <label htmlFor="arena-address" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Endereço</label>
           <input id="arena-address" value={form.address} onChange={setField('address')} maxLength={240} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-neighborhood" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Bairro</label>
+          <label htmlFor="arena-neighborhood" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Bairro</label>
           <input id="arena-neighborhood" value={form.neighborhood} onChange={setField('neighborhood')} maxLength={120} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-city" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Cidade</label>
+          <label htmlFor="arena-city" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Cidade</label>
           <input id="arena-city" value={form.city} onChange={setField('city')} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-state" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Estado (UF)</label>
+          <label htmlFor="arena-state" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Estado (UF)</label>
           <input id="arena-state" value={form.state} onChange={setField('state')} maxLength={2} placeholder="SP" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label htmlFor="arena-phone" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Telefone</label>
+          <label htmlFor="arena-phone" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Telefone</label>
           <input id="arena-phone" value={form.contact_phone} onChange={setField('contact_phone')} maxLength={40} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-whatsapp" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">WhatsApp</label>
+          <label htmlFor="arena-whatsapp" className="text-2xs font-bold uppercase tracking-widest text-gray-500">WhatsApp</label>
           <input id="arena-whatsapp" value={form.contact_whatsapp} onChange={setField('contact_whatsapp')} maxLength={40} placeholder="(11) 90000-0000" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-email" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">E-mail</label>
+          <label htmlFor="arena-email" className="text-2xs font-bold uppercase tracking-widest text-gray-500">E-mail</label>
           <input id="arena-email" type="email" value={form.contact_email} onChange={setField('contact_email')} maxLength={160} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
           {errors.contact_email && <p className="mt-1 text-xs font-bold text-red-500">{errors.contact_email}</p>}
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-instagram" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Instagram</label>
+          <label htmlFor="arena-instagram" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Instagram</label>
           <input id="arena-instagram" value={form.instagram} onChange={setField('instagram')} placeholder="@suaarena" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-website" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Site</label>
+          <label htmlFor="arena-website" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Site</label>
           <input id="arena-website" value={form.website} onChange={setField('website')} placeholder="https://..." className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
         <div className="space-y-2">
-          <label htmlFor="arena-courts" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Nº de quadras</label>
+          <label htmlFor="arena-courts" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nº de quadras</label>
           <input id="arena-courts" type="number" min="0" value={form.court_count} onChange={setField('court_count')} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </div>
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="arena-hours" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Horário de funcionamento</label>
+        <label htmlFor="arena-hours" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Horário de funcionamento</label>
         <input id="arena-hours" value={form.hours} onChange={setField('hours')} maxLength={400} placeholder="Seg–Sex 6h–23h · Sáb–Dom 7h–20h" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
       </div>
 
       {/* Sprint 3 ARE-18: Termos de uso / regras da casa */}
       <div className="space-y-2">
-        <label htmlFor="arena-house-rules" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+        <label htmlFor="arena-house-rules" className="text-2xs font-bold uppercase tracking-widest text-gray-500">
           Regras da casa (público)
         </label>
         <textarea
@@ -96,7 +96,7 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
           placeholder="Regras, política de cancelamento, exigência de uso de equipamento, código de conduta, etc. Aparece na página pública da arena."
           className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         />
-        <p className="text-[11px] text-gray-500">
+        <p className="text-2xs text-gray-500">
           {(form.house_rules_md || '').length}/2000. Exibido em /arenas/:id → seção &quot;Regras&quot;.
         </p>
       </div>
@@ -159,7 +159,7 @@ export function V2PricingEditor({ arena }) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="base-price" className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Preço base (fallback)</label>
+        <label htmlFor="base-price" className="text-2xs font-bold uppercase tracking-widest text-gray-500">Preço base (fallback)</label>
         <input
           id="base-price" type="number" min="0" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder="Ex.: 80"
           className="w-40 rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
@@ -193,19 +193,19 @@ export function V2PricingEditor({ arena }) {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Início</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Início</label>
                   <input type="time" value={r.start} onChange={(e) => updateRule(r.id, { start: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Fim</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Fim</label>
                   <input type="time" value={r.end} onChange={(e) => updateRule(r.id, { end: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Preço (R$)</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Preço (R$)</label>
                   <input type="number" min="0" step="0.01" value={r.price} onChange={(e) => updateRule(r.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Rótulo</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Rótulo</label>
                   <input value={r.label} onChange={(e) => updateRule(r.id, { label: e.target.value })} placeholder="Nobre" className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
               </div>
@@ -230,19 +230,19 @@ export function V2PricingEditor({ arena }) {
             <div key={o.id} className="rounded-2xl border border-gray-100 bg-paper p-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Data (opcional)</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Data (opcional)</label>
                   <input type="date" value={o.date} onChange={(e) => updateOverride(o.id, { date: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">ID do cliente</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">ID do cliente</label>
                   <input value={o.client_id} onChange={(e) => updateOverride(o.id, { client_id: e.target.value })} placeholder="uid do atleta" className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Preço (R$)</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Preço (R$)</label>
                   <input type="number" min="0" step="0.01" value={o.price} onChange={(e) => updateOverride(o.id, { price: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Rótulo</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Rótulo</label>
                   <input value={o.label} onChange={(e) => updateOverride(o.id, { label: e.target.value })} placeholder="Feriado" className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus-visible:border-ink" />
                 </div>
               </div>

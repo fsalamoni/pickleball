@@ -22,7 +22,7 @@ export function PlayGroupBadge({ name, color, variant = 'light', size = 'sm', cl
       title={title || `Grupo ${name}`}
       className={cn(
         'inline-flex max-w-full items-center gap-1.5 rounded-full border font-semibold',
-        size === 'xs' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
+        size === 'xs' ? 'px-2 py-0.5 text-2xs' : 'px-2.5 py-1 text-xs',
         escuro ? tema.chipDark : tema.chip,
         className,
       )}

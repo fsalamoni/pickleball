@@ -48,7 +48,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
   const destino = destinoDeAviso(n.link);
   const area = noticeAreaMeta(noticeArea(n));
   const titulo = (
-    <span className={cn('text-[15px] leading-snug text-ink', n.read ? 'font-semibold' : 'font-bold')}>
+    <span className={cn('text-base leading-snug text-ink', n.read ? 'font-semibold' : 'font-bold')}>
       {n.title}
     </span>
   );
@@ -70,7 +70,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
           <p>{titulo}</p>
         )}
         {n.message && <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-gray-600">{n.message}</p>}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-gray-500">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs font-medium text-gray-500">
           <NoticeTime notice={n} agora={agora} />
           <span aria-hidden="true">·</span>
           <span>{area.label}</span>

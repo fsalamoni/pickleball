@@ -88,7 +88,7 @@ export default function HomeTrainingCard() {
 
       {!vazioIncerto && (
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{ORIGEM[sessao.source]}</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{ORIGEM[sessao.source]}</p>
           <p className="mt-0.5 font-display text-lg font-bold leading-tight text-ink">{sessao.title}</p>
           <p className="mt-1 text-sm text-gray-500">
             {sessao.note}

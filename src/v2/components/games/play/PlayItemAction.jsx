@@ -65,7 +65,7 @@ function AcaoDoDia({ item, size, mostrarAbrir }) {
     };
     return (
       <>
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
           <Check className="h-3.5 w-3.5" aria-hidden="true" /> Você vai
         </span>
         {mostrarAbrir && <Abrir item={item} size={size} />}

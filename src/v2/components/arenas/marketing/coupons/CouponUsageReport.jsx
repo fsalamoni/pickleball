@@ -136,7 +136,7 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
         <h3 id="uso-por-tipo" className="mb-2 font-display text-base font-bold text-ink">Por tipo de cupom</h3>
         <div className="overflow-x-auto rounded-2xl border border-gray-100">
           <table className="w-full text-sm">
-            <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+            <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-3 py-2.5">Tipo</th>
                 <th className="px-3 py-2.5 text-center">Cupons</th>
@@ -171,7 +171,7 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
         <h3 id="uso-por-cupom" className="mb-2 font-display text-base font-bold text-ink">Cupom a cupom</h3>
         <div className="overflow-x-auto rounded-2xl border border-gray-100">
           <table className="w-full text-sm">
-            <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+            <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-3 py-2.5">Cupom</th>
                 <th className="px-3 py-2.5">Estado</th>
@@ -197,7 +197,7 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
                     <td className="px-3 py-2.5"><V2Badge tone={TOM_DO_ESTADO[r.status]}>{COUPON_STATUS_LABEL[r.status]}</V2Badge></td>
                     <td className="px-3 py-2.5 text-center">
                       {r.uses}{r.maxUses ? <span className="text-gray-400"> / {r.maxUses}</span> : null}
-                      {r.newCustomers ? <span className="block text-[11px] text-gray-500">{r.newCustomers} novos</span> : null}
+                      {r.newCustomers ? <span className="block text-2xs text-gray-500">{r.newCustomers} novos</span> : null}
                     </td>
                     <td className="px-3 py-2.5 text-right">{dinheiro(r.cost)}</td>
                     <td className="px-3 py-2.5 text-right">{r.revenue == null ? '—' : formatPrice(r.revenue)}</td>

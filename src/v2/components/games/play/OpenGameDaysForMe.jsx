@@ -51,7 +51,7 @@ export default function OpenGameDaysForMe() {
     <section aria-labelledby="com-vaga-titulo" data-dica="dia-de-jogo-com-vaga" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
             <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Com vaga para você
           </p>
           <h2 id="com-vaga-titulo" className="mt-1 font-display text-xl font-bold text-ink">Dias de jogo para entrar</h2>

@@ -229,7 +229,7 @@ function Stat({ label, value }) {
   return (
     <div className="rounded-2xl bg-paper p-3 text-center">
       <p className="text-2xl font-bold text-ink tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-0.5 text-2xs font-bold uppercase tracking-wide text-gray-500">{label}</p>
     </div>
   );
 }
@@ -256,7 +256,7 @@ function AchievementPublicCard({ achievement, unlocked }) {
         <p className={`text-sm font-bold ${unlocked ? 'text-ink' : 'text-gray-500'}`}>
           {achievement.name}
         </p>
-        <p className="mt-0.5 text-[11px] font-bold uppercase" style={{ color: rarity.color || '#666' }}>
+        <p className="mt-0.5 text-2xs font-bold uppercase" style={{ color: rarity.color || '#666' }}>
           {rarity.label || achievement.rarity}
         </p>
       </div>

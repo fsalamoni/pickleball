@@ -45,7 +45,7 @@ export const MODULE_COLOR_CLASS = Object.freeze({
   slate: 'bg-slate-100 text-slate-600',
   cyan: 'bg-cyan-50 text-cyan-600',
   indigo: 'bg-indigo-50 text-indigo-600',
-  rose: 'bg-rose-50 text-rose-600',
+  rose: 'bg-red-50 text-red-600',
   violet: 'bg-violet-50 text-violet-600',
 });
 

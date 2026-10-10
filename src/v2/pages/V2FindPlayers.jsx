@@ -208,7 +208,7 @@ export default function V2FindPlayers() {
                 {smartOn && p.compatibility?.reasons?.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {p.compatibility.reasons.map((r) => (
-                      <span key={r} className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-600">{r}</span>
+                      <span key={r} className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{r}</span>
                     ))}
                   </div>
                 )}

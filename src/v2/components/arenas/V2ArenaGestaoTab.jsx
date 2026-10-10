@@ -188,14 +188,14 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
       {/* Validade: só do que está na prateleira */}
       <V2Surface>
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <CalendarClock className="h-4 w-4 text-orange-600" /> Validade
+          <CalendarClock className="h-4 w-4 text-amber-600" /> Validade
         </h3>
         {validade.length === 0 ? (
           <p className="mt-2 text-sm text-gray-500">Nada em estoque vencido ou perto de vencer.</p>
         ) : (
           <div className="mt-2 space-y-1.5">
             {validade.slice(0, MAX_ALERTAS).map((r) => (
-              <div key={r.product.id} className={cn('flex items-center gap-2 rounded-2xl border p-2.5', r.validade === 'expired' ? 'border-red-200 bg-red-50' : 'border-orange-200 bg-orange-50/50')}>
+              <div key={r.product.id} className={cn('flex items-center gap-2 rounded-2xl border p-2.5', r.validade === 'expired' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50/50')}>
                 <CalendarClock className="h-4 w-4 shrink-0 text-gray-400" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.product.name}</span>
                 <span className="shrink-0 text-xs text-gray-500">{r.quantity} na prateleira</span>

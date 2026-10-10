@@ -90,9 +90,9 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
                 to={link}
                 className="btn-press flex flex-col rounded-2xl border border-gray-100 bg-paper px-3.5 py-2 transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
               >
-                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{agendaDayLabel(l.date, hoje)}</span>
+                <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{agendaDayLabel(l.date, hoje)}</span>
                 <span className="font-display text-lg font-bold leading-tight text-ink">{l.time}</span>
-                <span className="text-[11px] text-gray-500">{l.freeCourts === 1 ? '1 quadra' : `${l.freeCourts} quadras`}</span>
+                <span className="text-2xs text-gray-500">{l.freeCourts === 1 ? '1 quadra' : `${l.freeCourts} quadras`}</span>
               </Link>
             </li>
           ))}

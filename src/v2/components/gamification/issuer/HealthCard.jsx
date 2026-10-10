@@ -52,7 +52,7 @@ export default function HealthCard({ health, suggestions = [], unknown = [], tit
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
               <div className={cn('h-full rounded-full', BAR[d.score == null ? 'neutral' : d.score >= 85 ? 'green' : d.score >= 70 ? 'blue' : d.score >= 50 ? 'amber' : 'red'])} style={{ width: `${d.score ?? 0}%` }} />
             </div>
-            <p className="mt-0.5 text-[11px] text-gray-500">{d.detail}</p>
+            <p className="mt-0.5 text-2xs text-gray-500">{d.detail}</p>
           </li>
         ))}
       </ul>

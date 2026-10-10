@@ -102,7 +102,7 @@ function V2CollapsibleSurface({
             className={cn('mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:text-ink', collapsed ? '' : 'rotate-180')}
           />
           <span className="min-w-0">
-            {eyebrow && <span className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">{eyebrow}</span>}
+            {eyebrow && <span className="block text-2xs font-bold uppercase tracking-widest text-gray-500">{eyebrow}</span>}
             {title && <span className="mt-1 block font-display text-xl font-bold text-ink sm:text-2xl">{title}</span>}
             {description && !collapsed && <span className="mt-2 block max-w-2xl font-medium text-gray-500">{description}</span>}
           </span>
@@ -165,7 +165,7 @@ export function V2SectionHeader({ eyebrow, title, description, action, className
     <div className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{eyebrow}</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{eyebrow}</p>
         )}
         {title && <h2 className="mt-1 font-display text-2xl font-bold text-ink sm:text-3xl">{title}</h2>}
         {description && <p className="mt-2 max-w-2xl font-medium text-gray-500">{description}</p>}
@@ -276,7 +276,7 @@ export function V2StatCard({ icon: Icon, label, value, delta, deltaTone = 'green
 }
 
 const AVATAR_SIZES = {
-  xs: 'h-6 w-6 text-[11px]',
+  xs: 'h-6 w-6 text-2xs',
   sm: 'h-9 w-9 text-xs',
   md: 'h-11 w-11 text-sm',
   lg: 'h-14 w-14 text-base',

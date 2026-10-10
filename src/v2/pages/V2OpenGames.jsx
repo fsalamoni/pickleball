@@ -156,7 +156,7 @@ export default function V2OpenGames() {
 
       {myOpen.length > 0 && (
         <V2Surface className="mb-8">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Seus convites abertos</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Seus convites abertos</p>
           <div className="mt-4 space-y-2">
             {myOpen.map((g) => {
               const dateLabel = formatDate(g.date);
@@ -203,7 +203,7 @@ export default function V2OpenGames() {
         <div data-dica="procura-lista" className="space-y-10">
           {(dias.itens.length > 0 || dias.fora > 0) && (
             <section>
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+              <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
                 <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Dias de jogo com vaga
               </p>
               <p className="mt-1 text-sm text-gray-500">
@@ -230,7 +230,7 @@ export default function V2OpenGames() {
 
           {(convites.itens.length > 0 || convites.fora > 0) && (
             <section>
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+              <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
                 <Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> Convites de quem procura jogo
               </p>
               <RegionForaNote regional={convites} nomeItens={['convite', 'convites']} className="mt-1 block text-sm" />

@@ -472,7 +472,7 @@ export default function V2DaySlotsDialog({
               "indisponível" e conclui que a arena fechou sem motivo. */}
           {gameDays.length > 0 && (
             <div className="border-b border-acid/40 bg-acid/10 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-ink/60">Dia de jogo na arena</p>
+              <p className="text-2xs font-bold uppercase tracking-widest text-ink/60">Dia de jogo na arena</p>
               <ul className="mt-1.5 space-y-1.5">
                 {gameDays.map((g) => (
                   <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink">
@@ -525,7 +525,7 @@ export default function V2DaySlotsDialog({
               <>
                 {/* Resumo do dia */}
                 <div className="border-b border-gray-100 bg-paper-pure p-4">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Resumo do dia</p>
+                  <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Resumo do dia</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {/* Tudo aqui é contado em HORÁRIOS — e é o que o texto diz.
                         Antes o mesmo número saía como "2 solicitações em
@@ -615,7 +615,7 @@ export default function V2DaySlotsDialog({
                       {/* Legenda: SÓ o que está na tela. Mostrar "Concluído" e
                           "Fechado" num dia que não tem nem um nem outro é
                           ruído que ensina a ignorar a legenda. */}
-                      <div className="mb-3 flex flex-wrap gap-2 text-[11px]">
+                      <div className="mb-3 flex flex-wrap gap-2 text-2xs">
                         {statusPresentes.map((k) => {
                           const c = SLOT_STATUS_COLORS[k];
                           return (
@@ -680,20 +680,20 @@ export default function V2DaySlotsDialog({
                               )}
                             >
                               <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
-                              <div className={cn('text-[11px] uppercase tracking-widest', c.text)}>
+                              <div className={cn('text-2xs uppercase tracking-widest', c.text)}>
                                 {SLOT_STATUS_LABELS[status]}
                               </div>
                               {(status === SLOT_STATUS.PENDING || status === SLOT_STATUS.CONFIRMED) && booking?.athlete_name && (
-                                <div className="mt-1 truncate text-[9px] italic text-gray-600">
+                                <div className="mt-1 truncate text-2xs italic text-gray-600">
                                   {booking.athlete_name}
                                 </div>
                               )}
                               {showCourts && !isSelected && (
-                                <div className="mt-1 text-[9px] font-semibold text-green-700">
+                                <div className="mt-1 text-2xs font-semibold text-green-700">
                                   {freeCourts}/{totalCourts} quadra{totalCourts === 1 ? '' : 's'}
                                 </div>
                               )}
-                              {isSelected && <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
+                              {isSelected && <div className="mt-1 flex items-center gap-1 text-2xs font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
                             </button>
                           );
                         })}
@@ -707,7 +707,7 @@ export default function V2DaySlotsDialog({
                 {activeBookingsOfDay.length > 0 && (
                   <div className="border-b border-gray-100 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                      <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
                         <Users className="mr-1 inline h-3 w-3" /> Reservas neste dia ({activeBookingsOfDay.length})
                       </p>
                       {selectedCancel.length > 0 && (
@@ -722,7 +722,7 @@ export default function V2DaySlotsDialog({
                       )}
                     </div>
                     {myBookingsOfDay.length > 0 && (
-                      <p className="mt-1 text-[11px] text-gray-500">
+                      <p className="mt-1 text-2xs text-gray-500">
                         Marque suas reservas para cancelar em conjunto, ou cancele/convide em cada uma.
                       </p>
                     )}
@@ -850,7 +850,7 @@ export default function V2DaySlotsDialog({
                 {/* Indisponibilidades admin */}
                 {unavailabilitiesOfDay.length > 0 && (
                   <div className="border-b border-gray-100 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                    <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
                       <Ban className="mr-1 inline h-3 w-3" /> Indisponibilidades ({unavailabilitiesOfDay.length})
                     </p>
                     <ul className="mt-2 space-y-1 text-xs text-gray-600">
@@ -860,7 +860,7 @@ export default function V2DaySlotsDialog({
                           : 'Todas as quadras';
                         return (
                           <li key={u.id} className="flex items-center gap-2">
-                            <Ban className="h-3 w-3 shrink-0 text-orange-500" />
+                            <Ban className="h-3 w-3 shrink-0 text-amber-500" />
                             <span><strong>{u.start_time}–{u.end_time}</strong> · {courtName}</span>
                             {u.notes && <span className="italic text-gray-500">— {u.notes}</span>}
                           </li>

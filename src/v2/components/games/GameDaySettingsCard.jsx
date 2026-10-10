@@ -347,7 +347,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                 )}
               >
                 <span className="block text-sm font-semibold">{GAME_DAY_MANAGE_MODE_LABELS[m]}</span>
-                <span className={cn('mt-0.5 block text-[11px] leading-4', modo === m ? 'text-white/70' : 'text-gray-500')}>
+                <span className={cn('mt-0.5 block text-2xs leading-4', modo === m ? 'text-white/70' : 'text-gray-500')}>
                   {GAME_DAY_MANAGE_MODE_HINTS[m]}
                 </span>
               </button>
@@ -383,7 +383,7 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-gray-500">
+          <p className="text-2xs text-gray-500">
             O organizador conduz as partidas e a lista de participantes. Remover não tira ninguém do
             dia de jogo. Editar, arquivar e publicar no ranking continuam com quem configura o dia.
           </p>
@@ -424,7 +424,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-2xs text-gray-500">
                   Público publica um convite em &quot;Procura-se jogo&quot;; privado remove esse convite.
                 </p>
               </div>

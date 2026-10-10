@@ -501,7 +501,7 @@ export default function V2AdminProfiles({ embedded = false }) {
                       <td className="px-4 py-3 font-semibold text-ink">
                         <span className={isHidden ? 'text-gray-400 line-through' : ''}>{p.platform_name || '—'}</span>
                         {isHidden && (
-                          <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-[11px] font-semibold text-gray-600">Oculto</span>
+                          <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-2xs font-semibold text-gray-600">Oculto</span>
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500">{target}</td>

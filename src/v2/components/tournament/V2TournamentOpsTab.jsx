@@ -19,7 +19,7 @@ function OpsTile({ icon: Icon, label, value, hint }) {
     <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
       <div className="flex items-center gap-2 text-gray-400">
         <Icon className="h-4 w-4" />
-        <span className="text-[11px] font-bold uppercase tracking-widest">{label}</span>
+        <span className="text-2xs font-bold uppercase tracking-widest">{label}</span>
       </div>
       <p className="mt-2 font-display text-3xl font-bold text-ink">{value}</p>
       {hint && <p className="mt-1 text-xs font-medium text-gray-500">{hint}</p>}

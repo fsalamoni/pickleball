@@ -399,12 +399,12 @@ function NavItem({ item, active, onClick }) {
       <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
       <span className="ml-3 font-medium">{item.label}</span>
       {item.tag && !showBadge && (
-        <span className="ml-auto rounded-full bg-acid/20 px-2 py-0.5 text-[11px] font-bold text-ink-lighter">{item.tag}</span>
+        <span className="ml-auto rounded-full bg-acid/20 px-2 py-0.5 text-2xs font-bold text-ink-lighter">{item.tag}</span>
       )}
       {showBadge && (
         <span
           className={cn(
-            'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[11px] font-bold',
+            'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-2xs font-bold',
             active ? 'bg-acid text-ink' : 'bg-acid/90 text-ink',
           )}
           title={item.badgeHint || `${item.badge} pendência(s)`}
@@ -466,14 +466,14 @@ function MobileBottomNav({ pathname, userHubOn = false, items = BOTTOM_NAV_ITEMS
               onClick={() => recordEvent('nav_bottom_click', { item: item.id || item.to })}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors',
+                'flex flex-1 flex-col items-center justify-center gap-0.5 text-2xs font-semibold transition-colors',
                 active ? 'text-ink' : 'text-gray-400',
               )}
             >
               <span className={cn('relative flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
                 <Icon className={cn('h-5 w-5', active && 'text-acid')} />
                 {badge > 0 && (
-                  <span className="absolute -right-0.5 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-[11px] font-bold leading-none text-ink">
+                  <span className="absolute -right-0.5 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-2xs font-bold leading-none text-ink">
                     {badge > 99 ? '99+' : badge}
                   </span>
                 )}
@@ -525,7 +525,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
             <Bell className="mr-2 h-4 w-4" />
             <span className="flex-1">Notificações</span>
             {seloAvisos && (
-              <span className="ml-2 rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">{seloAvisos}</span>
+              <span className="ml-2 rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">{seloAvisos}</span>
             )}
           </DropdownMenuItem>
         )}
@@ -568,14 +568,14 @@ function HubItem({ hub, active, collapsed, onClick }) {
       <span className="relative flex items-center">
         <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
         {collapsed && badge > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-[9px] font-bold text-ink">
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-2xs font-bold text-ink">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
       </span>
       {!collapsed && <span className="ml-3 truncate font-medium">{hub.label}</span>}
       {!collapsed && badge > 0 && (
-        <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
+        <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -819,7 +819,7 @@ export default function V2Layout({ children }) {
           <nav className="hide-scrollbar flex-1 space-y-1 overflow-y-auto px-4 py-4">
             {sections.map((section) => (
               <div key={section.title} className="mb-6 last:mb-0">
-                <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-widest text-gray-500">{section.title}</p>
+                <p className="mb-3 px-4 text-2xs font-bold uppercase tracking-widest text-gray-500">{section.title}</p>
                 <div className="space-y-1.5">
                   {section.items.map((item) => (
                     <NavItem key={item.to} item={item} active={isActive(location.pathname, item)} />
@@ -871,7 +871,7 @@ export default function V2Layout({ children }) {
             >
               <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="flex-1 truncate">Buscar ou ir para…</span>
-              <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-[11px]">Ctrl K</kbd>
+              <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
             </button>
           ) : (
           <form onSubmit={handleSearch} className="hidden max-w-md flex-1 md:block">
@@ -1039,7 +1039,7 @@ export default function V2Layout({ children }) {
                     <Icon className="h-5 w-5" />
                     <span className="flex-1">{hub.label}</span>
                     {badge > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">
                         {badge > 99 ? '99+' : badge}
                       </span>
                     )}
@@ -1050,7 +1050,7 @@ export default function V2Layout({ children }) {
           ) : (
             drawerGroups.map((section) => (
               <div key={section.title} className="mb-8">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-white/40">{section.title}</p>
+                <p className="mb-3 text-2xs font-bold uppercase tracking-widest text-white/40">{section.title}</p>
                 <div className="space-y-1">
                   {section.items.map((item) => {
                     const Icon = item.icon;
@@ -1085,7 +1085,7 @@ export default function V2Layout({ children }) {
                 <Bell className="h-5 w-5" />
                 <span className="flex-1">Notificações</span>
                 {avisosNaoLidos > 0 && (
-                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[11px] font-bold text-ink">
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">
                     {formatUnreadBadge(avisosNaoLidos)}
                   </span>
                 )}

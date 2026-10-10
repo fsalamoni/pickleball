@@ -32,7 +32,7 @@ function WriteDialog({ target, people, onClose, onSend, sending }) {
             value={text} rows={4} maxLength={LETTER_MAX} placeholder="Escreva com carinho…" aria-label="Texto da carta"
             onChange={(e) => setText(e.target.value)}
           />
-          <p className="text-right text-[11px] text-gray-500">{text.length}/{LETTER_MAX}</p>
+          <p className="text-right text-2xs text-gray-500">{text.length}/{LETTER_MAX}</p>
           <V2Toggle id="letter-name" checked={showName} onChange={setShowName} label="Assinar com o meu nome" hint="Desligado: a pessoa recebe como “Um parceiro de dupla”." />
         </div>
         <DialogFooter>

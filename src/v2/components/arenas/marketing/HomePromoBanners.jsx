@@ -229,7 +229,7 @@ function Banner({ banner, posicao, total }) {
     >
       {!marca.on && <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-acid opacity-25 blur-[60px]" />}
       <div className="relative">
-        <p className="text-[11px] font-bold uppercase tracking-widest opacity-80">
+        <p className="text-2xs font-bold uppercase tracking-widest opacity-80">
           {banner.arenaName}{banner.city ? ` · ${banner.city}` : ''}
         </p>
         <p className="mt-1 font-display text-2xl font-bold leading-tight">{banner.benefit}</p>

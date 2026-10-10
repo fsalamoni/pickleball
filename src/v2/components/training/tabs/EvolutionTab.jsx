@@ -41,13 +41,13 @@ function Ritmo({ serie }) {
         const atual = i === serie.length - 1;
         return (
           <li key={s.weekKey} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-            <span className="text-[11px] font-semibold tabular-nums text-gray-500" aria-hidden="true">{s.minutes || ''}</span>
+            <span className="text-2xs font-semibold tabular-nums text-gray-500" aria-hidden="true">{s.minutes || ''}</span>
             <span
               className={cn('w-full rounded-t-xl', atual ? 'bg-acid' : 'bg-ink/80', s.minutes ? '' : 'bg-gray-100')}
               style={{ height: `${Math.max(4, (s.minutes / max) * 100)}%` }}
               aria-hidden="true"
             />
-            <span className="text-[11px] text-gray-500" aria-hidden="true">{curto(s.weekKey)}</span>
+            <span className="text-2xs text-gray-500" aria-hidden="true">{curto(s.weekKey)}</span>
             <span className="sr-only">
               {`${atual ? 'Esta semana' : `Semana de ${weekRangeLabel(s.weekKey)}`}: ${s.minutes} minutos em ${s.count} ${s.count === 1 ? 'treino' : 'treinos'}`}
             </span>

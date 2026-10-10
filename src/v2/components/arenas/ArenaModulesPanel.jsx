@@ -83,7 +83,7 @@ function ModuleConfig({ arenaId, mod, current }) {
 
   return (
     <div className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+      <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-gray-500">
         Como este módulo funciona nesta arena
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -163,7 +163,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
           {/* A promessa, na voz de quem recebe. */}
           <ul className="mt-2 space-y-1">
             {Object.entries(mod.benefit).map(([who, text]) => (
-              <li key={who} className="flex gap-1.5 text-[11px] leading-4 text-gray-500">
+              <li key={who} className="flex gap-1.5 text-2xs leading-4 text-gray-500">
                 <span className="shrink-0 font-bold text-gray-400">{AUDIENCE_LABEL[who] || who}:</span>
                 <span>{text}</span>
               </li>
@@ -171,14 +171,14 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
           </ul>
 
           {mod.status === ARENA_MODULE_STATUS.EXTERNAL && mod.externalNote && (
-            <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-[11px] leading-4 text-purple-800">
+            <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-2xs leading-4 text-purple-800">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>{mod.externalNote}</span>
             </p>
           )}
 
           {!on && blockedByDependency && (
-            <p className="mt-2 flex gap-1.5 text-[11px] leading-4 text-amber-700">
+            <p className="mt-2 flex gap-1.5 text-2xs leading-4 text-amber-700">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>
                 Precisa de <strong>{nameList(access.missingFor(mod.id))}</strong>. Ao ativar,
@@ -192,7 +192,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
               {manageRoute && (
                 <Link
                   to={manageRoute}
-                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-[11px] font-bold text-ink hover:border-ink"
+                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-ink hover:border-ink"
                 >
                   Gerenciar <ArrowUpRight className="h-3 w-3" />
                 </Link>
@@ -200,7 +200,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
               {publicRoute && (
                 <Link
                   to={publicRoute}
-                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-[11px] font-bold text-gray-600 hover:border-ink hover:text-ink"
+                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-gray-600 hover:border-ink hover:text-ink"
                 >
                   Ver como o atleta vê <ArrowUpRight className="h-3 w-3" />
                 </Link>
@@ -209,7 +209,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
                 <button
                   type="button"
                   onClick={() => setShowConfig((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-[11px] font-bold text-gray-600 hover:border-ink hover:text-ink"
+                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-gray-600 hover:border-ink hover:text-ink"
                 >
                   Configurar
                   <ChevronDown className={`h-3 w-3 transition-transform ${showConfig ? 'rotate-180' : ''}`} />

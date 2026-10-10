@@ -45,7 +45,7 @@ export function HomeSection({
           )}
           <div className="min-w-0">
             {reason && (
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{reason}</p>
+              <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{reason}</p>
             )}
             <h2 id={tituloId} className="font-display text-lg font-bold leading-tight text-ink sm:text-xl">{title}</h2>
           </div>
@@ -92,7 +92,7 @@ export function HomeRow({ to, icon: Icon, title, subtitle, badge, badgeTone = 'n
         {subtitle && <span className="block truncate text-xs text-gray-500">{subtitle}</span>}
       </span>
       {badge && (
-        <span className={cn('hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-block', tones[badgeTone] || tones.neutral)}>
+        <span className={cn('hidden shrink-0 rounded-full px-2.5 py-1 text-2xs font-bold sm:inline-block', tones[badgeTone] || tones.neutral)}>
           {badge}
         </span>
       )}

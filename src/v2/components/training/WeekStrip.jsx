@@ -25,7 +25,7 @@ export default function WeekStrip({ summary, className }) {
         const wd = weekdayOf(d.date);
         return (
           <li key={d.date} className="flex flex-col items-center gap-1">
-            <span className="text-[11px] font-bold uppercase text-gray-500" aria-hidden="true">{WEEKDAY_SHORT[wd].slice(0, 3)}</span>
+            <span className="text-2xs font-bold uppercase text-gray-500" aria-hidden="true">{WEEKDAY_SHORT[wd].slice(0, 3)}</span>
             <span
               className={cn('flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold', e.cls)}
               title={`${WEEKDAY_LONG[wd]}: ${e.texto}`}

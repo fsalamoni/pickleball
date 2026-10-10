@@ -260,7 +260,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                           </div>
                           {isAdmin && r.status !== REGISTRATION_STATUS.CANCELLED
                             && registrationSlotsWithoutAccount(r).length > 0 && (
-                            <div className="mt-0.5 text-[11px] font-medium text-amber-700">
+                            <div className="mt-0.5 text-2xs font-medium text-amber-700">
                               {registrationSlotsWithoutAccount(r).map((lado) => (lado === 'a' ? r.player_a_name : r.player_b_name) || `jogador ${lado.toUpperCase()}`).join(' e ')}
                               {' '}sem conta · não pontua no ranking
                             </div>
@@ -279,7 +279,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                         {REGISTRATION_STATUS_LABELS[r.status] || r.status}
                       </V2Badge>
                       {paymentOn && isAdmin && r.status === REGISTRATION_STATUS.PENDING_PAYMENT && r.payment_declared_at && (
-                        <div className="mt-1 text-[11px] font-medium text-amber-700">pagamento informado</div>
+                        <div className="mt-1 text-2xs font-medium text-amber-700">pagamento informado</div>
                       )}
                       {partnerInvitesOn && (() => {
                         const invite = partnerInviteBadge(r);
@@ -289,7 +289,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                           : invite.tone === 'red'
                             ? 'text-red-600'
                             : 'text-amber-700';
-                        return <div className={`mt-1 text-[11px] font-medium ${toneClass}`}>{invite.text.toLowerCase()}</div>;
+                        return <div className={`mt-1 text-2xs font-medium ${toneClass}`}>{invite.text.toLowerCase()}</div>;
                       })()}
                     </td>
                     {isAdmin && (

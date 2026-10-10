@@ -48,7 +48,7 @@ export default function V2JoinTournament() {
           <div className="mt-8 space-y-3">
             {STEPS.map((s) => (
               <div key={s.order} className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-widest text-acid">{s.order}</div>
+                <div className="text-2xs font-bold uppercase tracking-widest text-acid">{s.order}</div>
                 <div className="mt-1.5 font-display text-lg font-bold text-white">{s.title}</div>
                 <p className="mt-1 text-sm leading-6 text-gray-300">{s.description}</p>
               </div>

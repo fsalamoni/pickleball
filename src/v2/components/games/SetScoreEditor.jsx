@@ -28,7 +28,7 @@ export default function SetScoreEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-gray-500">
+      <div className="flex items-center justify-center gap-2 text-2xs font-semibold text-gray-500">
         {varios && <span className="w-12" aria-hidden="true" />}
         <span className={`${largura} truncate text-center`} title={labelA}>{labelA}</span>
         <span className="w-3" aria-hidden="true" />
@@ -37,7 +37,7 @@ export default function SetScoreEditor({
       </div>
       {sets.map((s, i) => (
         <div key={i} className="flex items-center justify-center gap-2">
-          {varios && <span className="w-12 text-right text-[11px] font-semibold text-gray-500">Set {i + 1}</span>}
+          {varios && <span className="w-12 text-right text-2xs font-semibold text-gray-500">Set {i + 1}</span>}
           <V2Input
             className={`${largura} text-center tabular-nums`}
             inputMode="numeric"
@@ -77,13 +77,13 @@ export default function SetScoreEditor({
             type="button"
             onClick={adicionar}
             disabled={disabled}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink disabled:opacity-50"
           >
             <Plus className="h-3 w-3" /> Adicionar set
           </button>
         )}
         {resumo && (
-          <p className={`text-[11px] ${resumo.ok ? 'text-gray-500' : 'text-amber-700'}`} role="status">
+          <p className={`text-2xs ${resumo.ok ? 'text-gray-500' : 'text-amber-700'}`} role="status">
             {resumo.ok
               ? `Por sets: ${resumo.fields.score_a} × ${resumo.fields.score_b} (${resumo.fields.points_a} × ${resumo.fields.points_b} em pontos)`
               : resumo.error}

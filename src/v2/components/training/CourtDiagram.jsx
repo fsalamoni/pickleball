@@ -61,9 +61,9 @@ function Court({ markerBola, markerMov }) {
           <path d="M0,0 L10,5 L0,10 z" className="fill-white" />
         </marker>
       </defs>
-      <rect x={-M * 4} y={-M * 4} width={200 + M * 8} height={440 + M * 8} className="fill-emerald-700" />
-      <rect x={0} y={0} width={200} height={440} className="fill-sky-700" />
-      <rect x={0} y={kt} width={200} height={kb - kt} className="fill-sky-600" />
+      <rect x={-M * 4} y={-M * 4} width={200 + M * 8} height={440 + M * 8} className="fill-green-700" />
+      <rect x={0} y={0} width={200} height={440} className="fill-blue-700" />
+      <rect x={0} y={kt} width={200} height={kb - kt} className="fill-blue-600" />
       <g className="stroke-white" strokeWidth="2" fill="none">
         <rect x={0} y={0} width={200} height={440} />
         <line x1={0} y1={kt} x2={200} y2={kt} />
@@ -89,7 +89,7 @@ function Element({ el, selected, markerBola, markerMov, onPointerDown }) {
       return (
         <g {...common}>
           {halo}
-          <circle cx={px(el.x)} cy={py(el.y)} r={10} className={cn('stroke-ink', el.team === 'b' ? 'fill-orange-400' : 'fill-acid')} strokeWidth="2" />
+          <circle cx={px(el.x)} cy={py(el.y)} r={10} className={cn('stroke-ink', el.team === 'b' ? 'fill-amber-400' : 'fill-acid')} strokeWidth="2" />
           {curto && (
             <text x={px(el.x)} y={py(el.y) + 4} textAnchor="middle" fontSize="11" fontWeight="700" className="fill-ink">{el.label}</text>
           )}
@@ -111,7 +111,7 @@ function Element({ el, selected, markerBola, markerMov, onPointerDown }) {
       return (
         <g {...common}>
           {halo}
-          <path d={`M${x},${y - 8} L${x + 7},${y + 6} L${x - 7},${y + 6} z`} className="fill-orange-500 stroke-ink" strokeWidth="1.5" />
+          <path d={`M${x},${y - 8} L${x + 7},${y + 6} L${x - 7},${y + 6} z`} className="fill-amber-500 stroke-ink" strokeWidth="1.5" />
         </g>
       );
     }
@@ -167,7 +167,7 @@ function Element({ el, selected, markerBola, markerMov, onPointerDown }) {
 }
 
 const TAG_TONE = {
-  certo: 'bg-emerald-100 text-emerald-800',
+  certo: 'bg-green-100 text-green-800',
   errado: 'bg-red-100 text-red-800',
   neutro: 'bg-gray-100 text-gray-700',
 };

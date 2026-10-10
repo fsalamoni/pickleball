@@ -521,7 +521,7 @@ function V2ArenaPaymentSection({ arena }) {
       )}
       {payment.pix_key && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
             Chave PIX ({PIX_KEY_TYPE_LABELS[payment.pix_key_type] || payment.pix_key_type})
           </p>
           <div className="mt-1 flex items-center gap-2">
