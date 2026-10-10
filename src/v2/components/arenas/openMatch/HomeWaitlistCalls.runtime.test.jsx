@@ -83,7 +83,7 @@ describe('a chamada da fila na tela inicial', () => {
 describe('⭐ o Dashboard monta a chamada só com os módulos de arena ligados', () => {
   it('a montagem depende da chave-mestra', () => {
     const src = readFileSync('src/v2/pages/V2Dashboard.jsx', 'utf8');
-    expect(src).toMatch(/useFeatureFlag\(FEATURE_FLAG\.ARENA_MODULES\)/);
+    expect(src).toMatch(/useFeatureFlag\(PERMANENT_FEATURE\.ARENA_MODULES\)/);
     expect(src).toMatch(/\{arenaModulesOn && <HomeWaitlistCalls \/>\}/);
   });
 });

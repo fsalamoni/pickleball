@@ -15,7 +15,7 @@ import { courtKindsFromGames } from '@/modules/games/domain/gameKind';
 import { groupIdOf } from '@/modules/games/domain/playGroups';
 import { buildGroupedPlayView } from '@/modules/games/domain/playGroupsDraw';
 import { usePlayGroupsContext } from '@/modules/games/hooks/usePlayGroups';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   useGameDayParticipants, useGameDayGames, useJoinPublicGameDay, useLeaveGameDay,
@@ -43,7 +43,7 @@ export default function AthletePlayParticipant({ gameDay }) {
   // GRUPOS (flag `play_groups`): a mesma visão do organizador, pelo mesmo lugar
   // — quem joga lê a posição que o organizador lê.
   const grupos = usePlayGroupsContext({ gameDay, participants, games });
-  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const rodizioEquilibrado = useFeatureFlag(PERMANENT_FEATURE.PLAY_SMART_ROTATION);
   const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
   const view = useMemo(() => {
     if (grupos.ativo) {

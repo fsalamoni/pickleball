@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   birthDateToBrtDate, missingRegistrationFields, parseDuprRating, validateRequiredProfile, normalizeFullName,
 } from '@/core/lib/profileValidation';
@@ -76,8 +76,8 @@ function passosPara(faltando, essencial) {
  */
 export default function V2OnboardingWizard() {
   const { userProfile, updateUserProfile } = useAuth();
-  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
-  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const essencial = useFeatureFlag(PERMANENT_FEATURE.ESSENTIAL_PROFILE);
+  const treinoOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const navigate = useNavigate();
   const [passos, setPassos] = useState(PASSOS);
   const [indice, setIndice] = useState(0);

@@ -48,7 +48,7 @@ import {
   Compass, HelpCircle, Link2, ArrowUp, CornerDownLeft, X,
 } from 'lucide-react';
 
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
@@ -259,7 +259,7 @@ function Perguntas({ perguntas, onAbrir, titulo, subtitulo }) {
 /* -------------------------------------------------------------- a página -- */
 
 export default function V2Help() {
-  const ligado = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  const ligado = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
   // Só o que está LIGADO para quem abre: artigo de funcionalidade desligada
   // mandaria a pessoa para uma porta que não abre.
   const { flags } = useFeatureFlags();

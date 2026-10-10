@@ -13,7 +13,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { FEATURE_FLAG, PERMANENT_FEATURE } from '@/core/featureFlags';
 
 const flags = vi.hoisted(() => ({ valores: {} }));
 
@@ -102,7 +102,7 @@ describe('⭐ criar um dia de jogo: o que se pode escolher', () => {
     flags.valores = {
       [FEATURE_FLAG.GAMEDAY_MEXICANO]: true,
       [FEATURE_FLAG.GAMEDAY_KING_OF_COURT]: true,
-      [FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE]: true,
+      [PERMANENT_FEATURE.GAMEDAY_AMERICANO_LIVE]: true,
     };
     await abrir();
     expect(opcoes()).toEqual(['americano', 'mexicano', 'king_of_court', 'play', 'americano_live']);

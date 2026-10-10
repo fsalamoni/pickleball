@@ -333,7 +333,6 @@ const GUIAS_BASE = [
     // A flag aqui gateia a FUNCIONALIDADE, não só a escolha de um formato:
     // `flagObrigatoria` faz o guia respeitá-la mesmo num dia de Play que já
     // existe (ver `guiasDaTela`).
-    flags: ['play_groups'],
     flagObrigatoria: true,
     formatos: [GAME_DAY_FORMAT.PLAY],
     title: 'Dividir o Play em grupos',
@@ -876,7 +875,6 @@ const GUIAS_BASE = [
     id: 'ligar-modulos',
     area: GUIA_AREA.MINHA_ARENA,
     audience: 'arena',
-    flags: ['arena_modules'],
     title: 'Ligar os módulos da arena',
     summary: 'Membros, aulas, jogo aberto, loja, marketing: o que a arena ativa para si.',
     keywords: ['módulos', 'membros', 'aulas', 'loja', 'marketing', 'ativar'],
@@ -1003,7 +1001,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-hoje',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Treinar hoje',
     summary: 'A rotina, o treino do dia e o registro em três toques.',
     keywords: ['treino', 'treinar', 'hoje', 'rotina', 'começar', 'modo quadra', 'registrar'],
@@ -1047,7 +1044,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-plano',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Montar um plano de semanas',
     summary: 'De 1 a 16 semanas, nos dias e no tempo que você tem.',
     keywords: ['plano', 'planejar', 'semanas', 'periodização', 'programa', 'treino'],
@@ -1085,7 +1081,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-golpes',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Aprender um golpe pela trilha',
     summary: 'Os golpes do pickleball em ordem de aprender, com o corpo ponto a ponto.',
     keywords: ['golpe', 'golpes', 'trilha', 'fundamento', 'técnica', 'aprender', 'certo', 'errado', 'movimento'],
@@ -1122,7 +1117,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-biblioteca',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Achar um drill na Biblioteca',
     summary: 'Filtrar pelo seu nível, abrir a ficha e levar para o seu treino.',
     keywords: ['biblioteca', 'drill', 'exercício', 'achar', 'filtro', 'nível', 'indicar', 'copiar'],
@@ -1175,7 +1169,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-criar',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Criar um drill ou treino',
     summary: 'O tipo, o certo e o errado, fotos e vídeos — e quem vê.',
     keywords: ['criar', 'drill', 'treino', 'publicar', 'vídeo', 'foto', 'ia', 'privado', 'público'],
@@ -1233,7 +1226,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-evolucao',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Acompanhar o diário e a evolução',
     summary: 'O que você treinou, semana a semana, e quanto evoluiu.',
     keywords: ['diário', 'evolução', 'carga', 'esforço', 'semana', 'autoavaliação', 'registrar'],
@@ -1279,7 +1271,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-balanco',
     area: GUIA_AREA.TREINO,
-    flagsTodas: ['training_center', 'game_debrief'],
     title: 'Fazer o balanço de um jogo',
     summary: 'Contar como foi o jogo e receber a semana de treino sugerida.',
     keywords: ['balanço', 'depois do jogo', 'desempenho', 'ponto fraco', 'melhorar', 'sugestão', 'treino'],
@@ -1317,7 +1308,6 @@ const GUIAS_BASE = [
   {
     id: 'treino-duvidas',
     area: GUIA_AREA.TREINO,
-    flags: ['training_center'],
     title: 'Tirar uma dúvida com o professor',
     summary: 'Perguntas privadas, só entre você e o seu professor.',
     keywords: ['dúvida', 'pergunta', 'professor', 'conversa', 'treino'],
@@ -1348,7 +1338,6 @@ const GUIAS_BASE = [
     id: 'treino-alunos',
     area: GUIA_AREA.TREINO,
     audience: 'professor',
-    flags: ['training_center'],
     title: 'Treinos para os seus alunos',
     summary: 'Enviar com prazo, confirmar sessões e responder dúvidas.',
     keywords: ['aluno', 'alunos', 'enviar', 'prazo', 'professor', 'confirmar', 'sessão'],
@@ -1391,7 +1380,6 @@ const GUIAS_BASE = [
     id: 'treino-admin',
     area: GUIA_AREA.TREINO,
     audience: 'admin',
-    flags: ['training_center'],
     title: 'Cuidar do Centro de Treino (admin)',
     summary: 'Revisão, denúncias, conteúdo, biblioteca e as configurações.',
     keywords: ['admin', 'treino', 'revisão', 'denúncia', 'moderação', 'biblioteca', 'semente', 'configuração'],
@@ -1452,7 +1440,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-entender',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Entender o XP, o nível e o tier',
     summary: 'O que a gamificação mede, de onde vem o seu XP e onde tirar dúvidas.',
     keywords: ['xp', 'nível', 'tier', 'pontos', 'gamificação', 'como funciona', 'jornada'],
@@ -1505,7 +1492,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-missoes',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Cumprir missões e primeiros passos',
     summary: 'Metas curtas por dia, semana e mês — e o roteiro de quem está começando.',
     keywords: ['missão', 'missões', 'diária', 'semanal', 'mensal', 'primeiros passos', 'bônus'],
@@ -1552,7 +1538,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-sequencia',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Manter a sequência e tirar férias',
     summary: 'Semanas seguidas jogando, a folga automática e as férias.',
     keywords: ['sequência', 'streak', 'semanas', 'férias', 'folga', 'pausa'],
@@ -1586,7 +1571,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-revisao',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Ver a revisão da semana ou do mês',
     summary: 'O que você fez no período, comparado com o anterior.',
     keywords: ['revisão', 'resumo', 'semana', 'mês', 'balanço', 'período'],
@@ -1619,7 +1603,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-competir',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Competir: temporada, duelo e desafios',
     summary: 'O placar do mês, o duelo da semana e os desafios abertos.',
     keywords: ['competir', 'temporada', 'duelo', 'desafio', 'ranking', 'hall'],
@@ -1662,7 +1645,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-social',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Avaliar quem jogou com você',
     summary: 'Avaliações, cartas aos parceiros e a sua reputação.',
     keywords: ['avaliação', 'avaliar', 'carta', 'parceiro', 'reputação', 'elogio', 'social'],
@@ -1704,7 +1686,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-vinculos',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Rivais, crews e mentorias',
     summary: 'Com quem você joga mais, os grupos de amigos e quem ensina quem.',
     keywords: ['vínculos', 'rival', 'crew', 'mentoria', 'mentor', 'grupo', 'amigos'],
@@ -1762,7 +1743,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-recompensas',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Pedir uma recompensa',
     summary: 'Benefícios de arenas, professores e clubes para quem joga e evolui.',
     keywords: ['recompensa', 'prêmio', 'benefício', 'código', 'resgatar', 'brinde'],
@@ -1794,7 +1774,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-hall',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Ver o Hall da Fama e a temporada',
     summary: 'Os maiores atletas por XP, por estado e por mês.',
     keywords: ['hall da fama', 'placar', 'ranking', 'temporada', 'estado', 'posição'],
@@ -1827,7 +1806,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-conquistas',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Explorar as conquistas',
     summary: 'Os troféus, o que falta para abrir cada um e quanto XP dão.',
     keywords: ['conquista', 'troféu', 'raridade', 'medalha', 'progresso'],
@@ -1854,7 +1832,6 @@ const GUIAS_BASE = [
   {
     id: 'gamificacao-privacidade',
     area: GUIA_AREA.GAMIFICACAO,
-    flags: ['gamification_v2'],
     title: 'Escolher o que os outros veem de você',
     summary: 'Privacidade, avisos e como você aparece na gamificação.',
     keywords: ['privacidade', 'placar', 'preferências', 'avisos', 'título', 'ocultar', 'aparecer'],
@@ -1905,7 +1882,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-oferecer-arena',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'arena',
-    flags: ['gamification_v2'],
     title: 'Engajar os atletas da sua arena',
     summary: 'A saúde da arena, as metas do mês, e como criar desafios e recompensas.',
     keywords: ['engajamento', 'desafio', 'recompensa', 'meta', 'saúde', 'arena', 'fidelizar'],
@@ -1974,7 +1950,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-recompensa-arena',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'arena',
-    flags: ['gamification_v2'],
     title: 'Criar uma recompensa na sua arena',
     summary: 'Um benefício com critério claro e código para você conferir.',
     keywords: ['recompensa', 'benefício', 'brinde', 'código', 'desconto', 'arena'],
@@ -2022,7 +1997,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-oferecer-professor',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'professor',
-    flags: ['gamification_v2'],
     title: 'Engajar os seus alunos',
     summary: 'A saúde da sua agenda, as metas, os desafios e as recompensas.',
     keywords: ['engajamento', 'alunos', 'desafio', 'recompensa', 'meta', 'professor'],
@@ -2063,7 +2037,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-admin-configurar',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'admin',
-    flags: ['gamification_v2'],
     title: 'Configurar a gamificação (admin)',
     summary: 'Ligar e desligar módulos, ajustar prêmios e avisos da plataforma.',
     keywords: ['admin', 'configuração', 'módulos', 'prêmios', 'limiares', 'avisos', 'gamificação'],
@@ -2112,7 +2085,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-admin-integridade',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'admin',
-    flags: ['gamification_v2'],
     title: 'Revisar a integridade (admin)',
     summary: 'Sinais do antifarm, contas ocultas e cartas denunciadas.',
     keywords: ['admin', 'integridade', 'antifarm', 'moderação', 'sinais', 'cartas', 'denúncia'],
@@ -2142,7 +2114,6 @@ const GUIAS_BASE = [
     id: 'gamificacao-admin-metricas',
     area: GUIA_AREA.GAMIFICACAO,
     audience: 'admin',
-    flags: ['gamification_v2'],
     title: 'Acompanhar as métricas (admin)',
     summary: 'O retrato diário do uso: quem joga, quem engaja e para onde vai.',
     keywords: ['admin', 'métricas', 'retrato', 'uso', 'evolução', 'gamificação'],
@@ -2163,7 +2134,6 @@ const GUIAS_BASE = [
   {
     id: 'minha-area',
     area: GUIA_AREA.COMECAR,
-    flags: ['user_hub'],
     title: 'Conhecer a Minha área',
     summary: 'O que precisa de você e tudo o que é seu, num lugar só.',
     keywords: ['minha área', 'perfil', 'pendências', 'precisa de você', 'central', 'meus dados'],
@@ -2200,7 +2170,6 @@ const GUIAS_BASE = [
   {
     id: 'escolher-aparencia',
     area: GUIA_AREA.CONTA,
-    flags: ['dark_mode'],
     title: 'Mudar a aparência (modo escuro)',
     summary: 'Claro, escuro ou automático — escolha sua, neste aparelho.',
     keywords: ['modo escuro', 'tema', 'aparência', 'claro', 'escuro'],
@@ -2220,7 +2189,6 @@ const GUIAS_BASE = [
   {
     id: 'escolher-cards-do-inicio',
     area: GUIA_AREA.CONTA,
-    flagsTodas: ['personalized_home', 'home_cards'],
     title: 'Escolher o que aparece no início',
     summary: 'Ligar, desligar e ordenar os cards da tela inicial.',
     keywords: ['início', 'cards', 'personalizar', 'tela inicial', 'ordem'],
@@ -2367,7 +2335,6 @@ const ANCORAS_DOS_TUTORIAIS = Object.freeze({
     area: GUIA_AREA.JOGAR,
     title: 'Conduzir um dia de jogo — Americano aprimorado',
     summary: 'A fila, os dois passos por quadra, as concluídas e o ranking.',
-    flags: ['gameday_americano_live'],
     formatos: [GAME_DAY_FORMAT.AMERICANO_LIVE],
     alvos: {
       'o-que-e': 'dia-de-jogo-regras',

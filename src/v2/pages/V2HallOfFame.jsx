@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Crown, EyeOff, Medal, Settings2, Sparkles, Trophy, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { BR_UFS, BR_UF_NAMES } from '@/core/domain/ufs';
 import { useHallOfFame, useMyHallRow } from '@/modules/progression/hooks/useHallOfFame';
 import { useSeasonTop, useUserCurrentSeason } from '@/modules/progression/hooks/useUserSeasonRanking';
@@ -26,7 +26,7 @@ const TABS = [
  * quem aceitou — a regra é aplicada pelo servidor.
  */
 export default function V2HallOfFame() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">

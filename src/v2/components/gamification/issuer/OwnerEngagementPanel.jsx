@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Gift, LineChart, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useGamificationConfig } from '@/modules/progression/hooks/useGamificationConfig';
 import { V2EmptyState } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
@@ -22,7 +22,7 @@ import { Sparkles } from 'lucide-react';
  * }} props
  */
 export default function OwnerEngagementPanel({ ownerType, issuer, summary, actuals, monthKey }) {
-  const on = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const on = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const { user } = useAuth();
   const { isModuleOn } = useGamificationConfig();
   const [aba, setAba] = useState('resumo');

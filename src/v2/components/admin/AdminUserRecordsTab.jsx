@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   useAllPlatformUsers, useUpdateUserRecordAsAdmin, useAccountLifecycleLogs,
 } from '@/modules/admin/hooks/usePlatformUsers';
@@ -70,7 +70,7 @@ export default function AdminUserRecordsTab() {
 
   // "Obrigatório" aqui é a MESMA regra do cadastro — com o cadastro essencial
   // ligado, a categoria e o nível entram na conta.
-  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
+  const essencial = useFeatureFlag(PERMANENT_FEATURE.ESSENTIAL_PROFILE);
   const comStatus = useMemo(() => (users || []).map((u) => ({
     ...u,
     _status: userRecordStatus(u, { essencial }),
@@ -405,7 +405,7 @@ function RecordEditDialog({ user, onClose }) {
   const changes = diffAdminUserPatch(user, patch);
   const validacao = validateAdminEdit({ changes, reason: motivo });
   const faltando = new Set(user._status?.missing?.map((f) => f.key) || []);
-  const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
+  const essencial = useFeatureFlag(PERMANENT_FEATURE.ESSENTIAL_PROFILE);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 

@@ -91,7 +91,7 @@ function FeatureFlagsPanel() {
   return (
     <V2Surface>
       <div className="flex items-center gap-2"><Flag className="h-5 w-5 text-ink" /><h2 className="font-display text-lg font-bold text-ink">Funcionalidades (flags)</h2></div>
-      <p className="mt-2 text-xs text-gray-500">Ative ou desative funcionalidades em tempo real. Cada flag nasce desligada e é puramente aditiva.</p>
+      <p className="mt-2 text-xs text-gray-500">Ative ou desative as funcionalidades opcionais em tempo real. As demais são permanentes desde 10/10/2026.</p>
       <div className="mt-4 space-y-2">
         {Object.entries(FEATURE_FLAG_META).map(([key, meta]) => (
           <div key={key} className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">

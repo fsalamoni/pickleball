@@ -13,7 +13,7 @@
 
 import { useMemo } from 'react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { FEATURE_FLAG, PERMANENT_FEATURE } from '@/core/featureFlags';
 import { gameDayFormatChoices } from '@/modules/clubs/domain/gameDayFormats';
 
 /**
@@ -21,7 +21,7 @@ import { gameDayFormatChoices } from '@/modules/clubs/domain/gameDayFormats';
  * @returns {string[]}
  */
 export function useGameDayFormatChoices({ current = null, scope = 'all' } = {}) {
-  const americanoLive = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
+  const americanoLive = useFeatureFlag(PERMANENT_FEATURE.GAMEDAY_AMERICANO_LIVE);
   const mexicano = useFeatureFlag(FEATURE_FLAG.GAMEDAY_MEXICANO);
   const kingOfCourt = useFeatureFlag(FEATURE_FLAG.GAMEDAY_KING_OF_COURT);
   return useMemo(

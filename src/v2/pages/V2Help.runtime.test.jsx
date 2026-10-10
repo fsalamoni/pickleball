@@ -99,35 +99,12 @@ describe('central de ajuda — a flag', () => {
   });
 });
 
-describe('⭐ central de ajuda — artigo de funcionalidade desligada', () => {
+describe('⭐ central de ajuda — artigo de funcionalidade (hoje permanente)', () => {
   const PROF_ARTIGO = 'Cupons e campanhas do professor';
   const PROMO_ARTIGO = 'Promoções da plataforma e dos professores';
 
-  it('desligada: não aparece na parte dele', async () => {
-    flags.todas = {};
-    await render('/ajuda?s=professor');
-    expect(container.textContent).toContain('Pacotes, clínicas e o lado comercial');
-    expect(container.textContent).not.toContain(PROF_ARTIGO);
-  });
-
-  it('desligada: não aparece na busca', async () => {
-    flags.todas = {};
-    await render('/ajuda?q=campanha%20professor');
-    expect(container.textContent).not.toContain(PROF_ARTIGO);
-  });
-
-  it('desligada: link direto não abre o artigo', async () => {
-    flags.todas = {};
-    await render('/ajuda?s=professor&a=divulgacao-professor');
-    expect(container.textContent).not.toContain(PROF_ARTIGO);
-  });
-
-  it('desligada: "Ajuda para esta tela" também não o sugere', async () => {
-    flags.todas = {};
-    await render('/ajuda?de=%2Fpromocoes');
-    expect(container.textContent).not.toContain(PROMO_ARTIGO);
-  });
-
+  // Em 2026-10-10 `coach_marketing` e `platform_marketing` viraram permanentes:
+  // não há mais "desligada" para esconder o artigo. Ficam as provas de que ele aparece.
   it('ligada: aparece sozinho na parte dele', async () => {
     flags.todas = { coach_marketing: true };
     await render('/ajuda?s=professor');

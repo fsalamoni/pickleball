@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useKudoActions } from '@/modules/progression/hooks/useKudoActions';
 import { useUserReferralCode } from '@/modules/progression/hooks/useUserReferralCode';
 import { useScopedMissions } from '@/modules/progression/hooks/useScopedMissions';
@@ -56,7 +56,7 @@ import { useDebriefSettings } from '@/modules/training/hooks/useDebriefs';
  * Gated por GAMIFICATION_V2.
  */
 export default function V2GamificationHome() {
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">

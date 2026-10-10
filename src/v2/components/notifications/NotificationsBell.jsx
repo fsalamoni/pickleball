@@ -18,7 +18,7 @@ import { Bell, CheckCheck, ChevronRight, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { destinoDeAviso } from '@/core/domain/internalLink';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
 import {
@@ -35,7 +35,7 @@ export const NOTIFICATION_PREFS_PATH = '/configuracoes#notificacoes';
 
 export default function NotificationsBell() {
   const navigate = useNavigate();
-  const centralOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  const centralOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
   const {
     notifications, unreadCount, muted, isLoading, isError, retry, markAsRead, markAllAsRead,
   } = useNotifications();

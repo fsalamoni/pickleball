@@ -87,7 +87,7 @@ import {
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG, FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
+import { FEATURE_FLAG_META, countFlags, PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   getPlatformSettings,
   setFeatureFlag,
@@ -260,11 +260,11 @@ const DEFAULT_CONTENT = Object.freeze({
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const enabled = true;
-  const duprExportOn = useFeatureFlag(FEATURE_FLAG.DUPR_MATCH_EXPORT);
-  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
-  const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const duprExportOn = useFeatureFlag(PERMANENT_FEATURE.DUPR_MATCH_EXPORT);
+  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const platformMarketingOn = useFeatureFlag(PERMANENT_FEATURE.PLATFORM_MARKETING);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -971,7 +971,7 @@ function FlagsTab() {
             <Flag className="h-5 w-5 text-ink" />
             <div>
               <h2 className="font-display text-lg font-bold text-ink">Funcionalidades (flags)</h2>
-              <p className="text-xs text-gray-500">{activeFlags} ativas de {totalFlags} — todas as funcionalidades da plataforma, por assunto. Cada flag é aditiva.</p>
+              <p className="text-xs text-gray-500">{activeFlags} ativas de {totalFlags}. Em 10/10/2026 as 33 funcionalidades que estavam ligadas viraram permanentes e saíram daqui; ficam só as opcionais.</p>
             </div>
           </div>
           <input

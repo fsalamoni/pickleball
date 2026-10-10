@@ -11,7 +11,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { isPlayFormat } from '@/modules/clubs/domain/gameDayFormats';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
@@ -33,7 +33,7 @@ const SEM_GRUPOS = Object.freeze({ groups: [], policy: 'queue' });
  * @param {object|null} gameDay
  */
 export function usePlayGroups(gameDay) {
-  const flag = useFeatureFlag(FEATURE_FLAG.PLAY_GROUPS);
+  const flag = useFeatureFlag(PERMANENT_FEATURE.PLAY_GROUPS);
   const lista = gameDay?.play_groups;
   const politica = gameDay?.play_groups_policy;
   const formato = gameDay?.format;

@@ -24,7 +24,7 @@ import {
   V2Button, V2PageIntro, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import V2PushCard from '@/v2/components/settings/V2PushCard';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
@@ -40,13 +40,13 @@ import { useDicas } from '@/v2/components/dicas/DicasContext';
 export default function V2Settings() {
   const enabled = true;
   const notifPrefsOn = true;
-  const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
-  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
-  const gamificacaoOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
-  const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const pushOn = useFeatureFlag(PERMANENT_FEATURE.PUSH_NOTIFICATIONS);
+  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
+  const gamificacaoOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const treinoOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
-  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
   const { on: dicasOn } = useDicas();
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
   // `/configuracoes#minha-regiao` caem no cartão certo.

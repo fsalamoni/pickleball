@@ -145,7 +145,6 @@ const COMECAR = {
     },
     {
       id: 'minha-area',
-      flags: ['user_hub'],
       title: 'Minha área: tudo o que é seu, num lugar só',
       summary: 'O que precisa de você agora e as seções do seu perfil.',
       keywords: [
@@ -166,7 +165,6 @@ const COMECAR = {
     },
     {
       id: 'dicas',
-      flags: ['guided_tips'],
       title: 'Dicas: a plataforma mostra na tela, quando você pedir',
       summary: 'Guias que apontam o botão de verdade, e pontos que explicam cada tela.',
       keywords: ['dicas', 'dica', 'guia', 'tutorial', 'seta', 'como faço', 'ajuda na tela', 'passo a passo', 'como funciona'],
@@ -185,35 +183,7 @@ const COMECAR = {
       ],
     },
     {
-      id: 'inicio-personalizado',
-      flags: ['personalized_home'],
-      // Com o início sob medida, quem manda são os cards (o artigo seguinte):
-      // aqui "Personalizar" muda os interesses, e lá abre o seletor dos cards.
-      semFlags: ['home_cards'],
-      title: 'A sua tela inicial',
-      summary: 'Por que ela mostra o que mostra, e como mudar.',
-      keywords: ['início', 'tela inicial', 'home', 'personalizar', 'interesses', 'atalhos', 'agenda', 'hoje'],
-      blocks: [
-        p('A tela inicial é montada para VOCÊ: o que aparece nela e em que ordem depende do que você faz na plataforma e do que disse que gosta.'),
-        list(
-          'O QUE VOCÊ FAZ vem primeiro — se você gere uma arena, dá aula ou organiza torneio, essas seções abrem a tela.',
-          'O QUE VOCÊ JÁ USA vem junto — quem tem reserva, dia de jogo ou torneio marcado vê essa seção mesmo sem ter marcado o interesse.',
-          'O QUE VOCÊ DISSE QUE GOSTA completa — são os interesses do seu perfil.',
-        ),
-        p('No topo ficam a sua agenda de hoje numa frase, os atalhos para o que você mais usa (criar dia de jogo, torneios abertos, a Central da sua arena com os pedidos esperando, o painel do professor…) e, mais abaixo, o seu último torneio, o ranking e as duplas.'),
-        steps(
-          'Toque em "Personalizar", no topo da tela inicial.',
-          'Marque ou desmarque os assuntos que quer ver.',
-          'Pronto: a tela muda na hora. Os seus interesses do perfil são atualizados juntos.',
-        ),
-        tip('A tela inicial NUNCA mostra coisa vencida: torneio encerrado, dia de jogo que já passou, inscrição com prazo esgotado, cupom vencido e horário que já passou ficam de fora. Seção sem nada atual some ou diz que não há nada.'),
-        warn('Se uma parte não carregar (conexão), a seção diz que não carregou, com "Tentar de novo" — ela não afirma que você não tem nada.'),
-        link('/perfil/editar', 'Revisar os meus interesses no perfil'),
-      ],
-    },
-    {
       id: 'inicio-sob-medida',
-      flagsTodas: ['personalized_home', 'home_cards'],
       title: 'A sua tela inicial: você escolhe os cards',
       summary: 'Ligue, desligue e ponha na ordem o que aparece no seu início.',
       keywords: ['início', 'tela inicial', 'home', 'personalizar', 'cards', 'cartões', 'ordem', 'esconder', 'mostrar', 'página inicial', 'enxuto', 'poluído', 'cheio'],
@@ -321,7 +291,6 @@ const ATLETA = {
       title: 'Ver o que acontece perto de você (Minha região)',
       summary: 'A sua cidade e um raio, o estado, outro lugar ou todo lugar.',
       keywords: ['região', 'regiao', 'cidade', 'perto', 'distância', 'distancia', 'raio', 'km', 'localização', 'viajar', 'outro estado', 'todo lugar'],
-      flags: ['my_region'],
       blocks: [
         p('Dias de jogo, torneios, arenas, professores, clubes e promoções aparecem a partir da SUA região. O padrão é a cidade do seu perfil e as cidades a até 50 km.'),
         steps(
@@ -344,7 +313,6 @@ const ATLETA = {
       title: 'Gamificação: o que é e onde fica cada coisa',
       summary: 'XP, missões, conquistas, temporada, avaliações e recompensas — tudo medido pelo que você joga de verdade, sem cobrança.',
       keywords: ['gamificação', 'gamificacao', 'xp', 'nível', 'nivel', 'missão', 'missao', 'conquista', 'hall da fama', 'temporada', 'desafio', 'recompensa', 'duelo', 'mentoria', 'avaliação', 'carta', 'reputação', 'revisão', 'como funciona', 'jornada'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-entender'],
       blocks: [
         p('A gamificação transforma o que você já faz — jogar, disputar torneios, avaliar parceiros — em XP, nível e conquistas. Nada aqui é cobrança: ninguém perde pontos por ficar uma semana sem jogar, e nada se compra com XP.'),
@@ -370,7 +338,6 @@ const ATLETA = {
       title: 'XP, nível e tier: como a conta é feita',
       summary: 'De onde vem o seu XP, o que é nível, o que é tier e por que ele não é moeda.',
       keywords: ['xp', 'nível', 'nivel', 'tier', 'pontos', 'calouro', 'imortal', 'de onde vem', 'bônus', 'conta'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-entender'],
       blocks: [
         p('O XP não é um contador que você clica: ele é recalculado do zero a partir da sua atividade real. Por isso não dá para "ganhar de mentirinha" — e, se um resultado for corrigido, o seu XP acompanha.'),
@@ -393,7 +360,6 @@ const ATLETA = {
       title: 'Missões e primeiros passos',
       summary: 'Metas por dia, semana e mês — e o roteiro de quem acabou de chegar.',
       keywords: ['missão', 'missao', 'missões', 'diária', 'semanal', 'mensal', 'bônus', 'primeiros passos', 'roteiro', 'onboarding', 'resgatar'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-missoes'],
       blocks: [
         p('As missões são metas pequenas, medidas pelo que você joga: jogos, torneios, avaliações, reservas. Não existe botão de "marcar como feita" — o progresso anda sozinho.'),
@@ -417,7 +383,6 @@ const ATLETA = {
       title: 'Sequência, folga automática e férias',
       summary: 'Semanas seguidas jogando: como se conta, o que perdoa uma semana parada e como pausar de propósito.',
       keywords: ['sequência', 'sequencia', 'streak', 'semanas', 'folga', 'férias', 'ferias', 'pausa', 'recorde', 'em risco', 'quebrou', 'viagem'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-sequencia'],
       blocks: [
         p('A sequência conta as semanas seguidas em que você jogou pelo menos uma vez — torneio, dia de jogo ou partida com resultado registrado. A semana vai de segunda a domingo, no horário de Brasília.'),
@@ -442,7 +407,6 @@ const ATLETA = {
       title: 'Temporada, Hall da Fama, duelo e desafios',
       summary: 'As quatro formas de competir na gamificação e como cada uma é decidida.',
       keywords: ['temporada', 'hall da fama', 'duelo', 'desafio', 'ranking', 'placar', 'competir', 'prêmio', 'estado', 'posição', 'evento'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-competir', 'gamificacao-hall'],
       blocks: [
         list(
@@ -467,7 +431,6 @@ const ATLETA = {
       title: 'Avaliações, cartas, reputação e vínculos',
       summary: 'Reconhecer quem jogou com você — com anonimato, controle de quem recebe e saída em um toque.',
       keywords: ['avaliação', 'avaliacao', 'avaliar', 'carta', 'reputação', 'reputacao', 'elogio', 'estrelas', 'kudos', 'rival', 'crew', 'mentoria', 'mentor', 'vínculos', 'vinculos', 'denunciar'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-social', 'gamificacao-vinculos'],
       blocks: [
         list(
@@ -494,7 +457,6 @@ const ATLETA = {
       title: 'Recompensas: como pedir e receber',
       summary: 'Benefícios reais liberados por marcos — não se compram com XP.',
       keywords: ['recompensa', 'recompensas', 'prêmio', 'brinde', 'benefício', 'código', 'resgatar', 'elegível', 'critério'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-recompensas'],
       blocks: [
         p('Uma recompensa é uma porta que se abre quando você cruza um marco: ser de um tier, ter uma conquista, estar entre os melhores da temporada, manter uma sequência ou ter jogado um número de partidas. O XP mostra a sua trajetória; ele não é moeda, então nada é "comprado".'),
@@ -513,7 +475,6 @@ const ATLETA = {
       title: 'Privacidade na gamificação',
       summary: 'O que os outros veem de você e como mudar — a regra vale no servidor, não só na tela.',
       keywords: ['privacidade', 'placar', 'hall', 'perfil', 'esconder', 'aparecer', 'ocultar', 'preferências', 'avisos', 'título', 'lgpd'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-privacidade'],
       blocks: [
         p('Você decide o que os outros veem. Cada interruptor responde na hora e vale no servidor: a temporada e o Hall já nascem sem quem pediu para ficar de fora.'),
@@ -533,7 +494,6 @@ const ATLETA = {
       title: 'Engajamento do seu clube (gamificação)',
       summary: 'Para quem administra um clube: atividade, metas, desafios e recompensas para os membros.',
       keywords: ['clube', 'atividade', 'engajamento', 'membros', 'desafio', 'recompensa', 'meta', 'administrar', 'gamificação'],
-      flags: ['gamification_v2'],
       blocks: [
         p('Quem administra um clube vê a aba "Atividade" na página do clube. Ela mostra a vida do clube pelo que foi publicado — partidas dos dias de jogo, membros que jogaram, membros novos — e é visível só para quem administra.'),
         list(
@@ -636,7 +596,6 @@ const ATLETA = {
     },
     {
       id: 'promocoes-plataforma-professores',
-      flags: ['platform_marketing', 'coach_marketing'],
       title: 'Promoções da plataforma e dos professores',
       summary: 'Onde achar os cupons, como usar na aula e quando o desconto vale.',
       keywords: ['promoção', 'promoções', 'cupom', 'código', 'desconto', 'professor', 'aula', 'plataforma', 'campanha', 'vale', 'aula experimental', 'copiar'],
@@ -727,7 +686,6 @@ const ATLETA = {
         'grupos', 'play', 'nível', 'turma', 'mista', 'mesmo sexo', 'fila', 'iniciante',
         'convidado', 'avulso', 'revezar', 'prioridade',
       ],
-      flags: ['play_groups'],
       guias: ['play-grupos'],
       blocks: [
         p('No Play comum há uma fila só: entra quem espera há mais tempo. Com GRUPOS, o dia ganha uma fila por grupo e as partidas saem DENTRO de cada um — iniciantes jogam com iniciantes, as mistas ficam entre si. Quem está sem grupo segue numa fila própria, como sempre foi.'),
@@ -829,7 +787,6 @@ const ATLETA = {
       title: 'Americano aprimorado em etapas',
       summary: 'Grupos refeitos a cada etapa e uma classificação só, somando tudo.',
       keywords: ['americano', 'etapas', 'etapa', 'grupos misturados', 'mistura', 'rotação', 'classificação única', 'americano aprimorado'],
-      flags: ['tournament_americano_etapas'],
       blocks: [
         p('Um formato de fase para inscrição INDIVIDUAL. Os atletas jogam em etapas; em cada etapa, um Americano em grupos — num grupo de 4, cada um forma dupla com cada outro uma vez: 3 jogos. Terminada a etapa, os grupos são REFEITOS, misturando quem ainda não se encontrou, e a etapa seguinte começa.'),
         p('A classificação é UMA só, somando o que cada um fez em todas as etapas. O campeão é quem teve o melhor desempenho no total.'),
@@ -950,7 +907,6 @@ const ATLETA = {
         'treino', 'treinar', 'drill', 'plano', 'planejar', 'diário', 'registrar', 'evolução',
         'carga', 'rotina', 'modo quadra', 'semana', 'organizar meu treino',
       ],
-      flags: ['training_center'],
       guias: ['treino-hoje', 'treino-plano', 'treino-evolucao'],
       blocks: [
         p('O Treino reúne, num lugar só, o que você vai treinar, o que já treinou e como está evoluindo. Ele fica na Minha área e no card "Treino" do início (se você o escolher).'),
@@ -979,7 +935,6 @@ const ATLETA = {
         'balanço', 'balanço do jogo', 'depois do jogo', 'desempenho', 'ponto forte', 'ponto fraco',
         'melhorar', 'evoluir', 'sugestão', 'drill da semana', 'plano', 'autoavaliação do jogo',
       ],
-      flagsTodas: ['training_center', 'game_debrief'],
       guias: ['treino-balanco'],
       blocks: [
         p('O balanço do jogo é opcional e só seu: cada pessoa liga para si, no Treino → Balanço ou em Configurações. Ligado, depois de um dia de jogo, de um torneio ou de uma reserva de quadra a plataforma pergunta como foi — e sugere o que treinar na semana.'),
@@ -1007,7 +962,6 @@ const ATLETA = {
         'biblioteca', 'drill', 'exercício', 'jogada', 'fundamento', 'físico', 'estudo', 'regra',
         'indicar', 'compartilhar', 'copiar', 'adaptar', 'favorito', 'recebidos', 'autor',
       ],
-      flags: ['training_center'],
       guias: ['treino-biblioteca'],
       blocks: [
         p('A Biblioteca mostra tudo o que você pode ver: o conteúdo da Equipe PickleRush, o que os professores publicaram, o que a comunidade publicou e o que o SEU professor deixou só para os alunos dele. Cada item diz quem o criou — e leva o selo "IA" quando foi feito com ajuda de inteligência artificial.'),
@@ -1033,7 +987,6 @@ const ATLETA = {
         'golpe', 'golpes', 'trilha', 'fundamento', 'técnica', 'movimento', 'aprender', 'saque', 'devolução',
         'drive', 'dink', 'drop', 'voleio', 'reset', 'lob', 'smash', 'erne', 'empunhadura', 'certo e errado',
       ],
-      flags: ['training_center'],
       guias: ['treino-golpes'],
       blocks: [
         p('A trilha dos golpes reúne os golpes e movimentos do pickleball numa ordem de aprender: o que vem antes é a base do que vem depois. Ela fica no topo da Biblioteca, em "Trilha dos golpes".'),
@@ -1059,7 +1012,6 @@ const ATLETA = {
         'criar', 'drill', 'treino', 'publicar', 'privado', 'público', 'revisão', 'diagrama',
         'vídeo', 'imagem', 'foto', 'upload', 'enviar vídeo', 'youtube', 'ia', 'inteligência artificial',
       ],
-      flags: ['training_center'],
       guias: ['treino-criar'],
       blocks: [
         p('Qualquer pessoa cria. O formulário segue o modelo que os cursos de treinador usam, e só mostra as partes que valem para o tipo escolhido. Um medidor mostra o que ainda falta — ele orienta, não impede salvar.'),
@@ -1101,7 +1053,6 @@ const ARENA = {
       title: 'Engajamento dos seus clientes (gamificação)',
       summary: 'Saúde da arena, metas, desafios e recompensas para quem joga aí.',
       keywords: ['gamificação', 'gamificacao', 'engajamento', 'clientes', 'desafio', 'recompensa', 'meta', 'saúde', 'fidelizar', 'prêmio', 'código'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-oferecer-arena', 'gamificacao-recompensa-arena'],
       blocks: [
         p('Na Central da arena, em Desempenho → Engajamento, você acompanha a saúde da arena, define metas e oferece desafios e recompensas a quem joga aí. Tudo nasce do que acontece nas suas quadras — nada é digitado à mão.'),
@@ -1357,7 +1308,6 @@ const PROFESSOR = {
       title: 'Engajamento dos seus alunos (gamificação)',
       summary: 'Saúde da sua base, metas e desafios e recompensas só para os seus alunos.',
       keywords: ['gamificação', 'gamificacao', 'engajamento', 'alunos', 'desafio', 'recompensa', 'meta', 'saúde', 'fidelizar'],
-      flags: ['gamification_v2'],
       guias: ['gamificacao-oferecer-professor'],
       blocks: [
         p('No Painel do professor, a seção "Engajamento" mostra a saúde da sua base (alunos ativos, aulas no mês), as metas que você define e os desafios e recompensas que você oferece aos seus alunos.'),
@@ -1435,7 +1385,6 @@ const PROFESSOR = {
     },
     {
       id: 'divulgacao-professor',
-      flags: ['coach_marketing'],
       title: 'Cupons e campanhas do professor',
       summary: 'Criar cupom, divulgar com banner, avisar os alunos e medir o uso.',
       keywords: ['divulgação', 'cupom', 'campanha', 'banner', 'promoção', 'desconto', 'aula experimental', 'alunos', 'aviso', 'controle de uso', 'vale'],
@@ -1466,7 +1415,6 @@ const PROFESSOR = {
         'treino', 'drill', 'aluno', 'alunos', 'enviar', 'prazo', 'tarefa', 'dúvida', 'pergunta',
         'confirmar', 'diário', 'só alunos',
       ],
-      flags: ['training_center'],
       guias: ['treino-alunos', 'treino-duvidas'],
       blocks: [
         p('No Treino, o professor tem o que o atleta tem e mais três coisas: publicar só para os alunos, ENVIAR um item a um aluno (com prazo) e a aba "Alunos".'),
@@ -1526,7 +1474,6 @@ const CONTA = {
     },
     {
       id: 'treino-dados',
-      flags: ['training_center'],
       title: 'O seu treino: baixar e excluir',
       summary: 'O que do Treino vai no arquivo dos seus dados, e o que acontece se você excluir a conta.',
       keywords: ['treino', 'diário', 'dados', 'exportar', 'baixar', 'excluir', 'lgpd', 'biblioteca'],
@@ -1556,7 +1503,6 @@ const CONTA = {
     },
     {
       id: 'central-de-notificacoes',
-      flags: ['notifications_center'],
       title: 'Ver as notificações antigas',
       summary: 'Todos os seus avisos num lugar só, com filtros e busca.',
       keywords: ['notificação antiga', 'histórico', 'aviso antigo', 'central de notificações', 'não lida', 'sino', 'perdi um aviso'],
@@ -1575,7 +1521,6 @@ const CONTA = {
     },
     {
       id: 'modo-escuro',
-      flags: ['dark_mode'],
       title: 'Modo escuro: claro, escuro ou automático',
       summary: 'Escolha a aparência da plataforma — é só sua.',
       keywords: ['modo escuro', 'escuro', 'tema', 'aparência', 'noite', 'claro', 'automático', 'dark'],

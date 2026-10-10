@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { Gift, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { capturePendingReferral } from '@/modules/progression/domain/referralCapture';
 import { REFERRAL_REWARDS } from '@/modules/progression/domain/referrals';
 import { V2Button, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
@@ -24,7 +24,7 @@ import { V2Button, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
 export default function V2ReferralLanding() {
   const { code } = useParams();
   const { isAuthenticated, isLoading } = useAuth();
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const [guardado, setGuardado] = useState(null);
 
   // Só captura com a feature ligada — com a flag OFF nada é gravado em

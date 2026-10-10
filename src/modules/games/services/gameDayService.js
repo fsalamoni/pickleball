@@ -48,7 +48,7 @@ import {
   groupSnapshot, withLevels, NO_GROUP,
 } from '../domain/playGroups.js';
 import { makeGroupsDrawer, explainGroups, describeNoMatch } from '../domain/playGroupsDraw.js';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { getPlatformSettings } from '@/core/services/platformSettingsService';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
@@ -434,7 +434,7 @@ export async function resolveEntryGroup(gameDay, entry) {
     // que custa uma leitura. Dia sem grupos nunca paga essa leitura.
     if (!isPlayGroupsActive(gameDay, true)) return null;
     const flags = await lerFlags();
-    if (flags[FEATURE_FLAG.PLAY_GROUPS] !== true) return null;
+    if (flags[PERMANENT_FEATURE.PLAY_GROUPS] !== true) return null;
     const niveis = await fetchUnifiedLevelsByParticipant([entry]).catch(() => ({}));
     return groupForEntry(normalizePlayGroupsConfig(gameDay), withLevels([entry], niveis)[0]);
   } catch (err) {
@@ -1001,9 +1001,9 @@ export async function createNextPlayGame(gdId, actor, { court = null, kind = nul
   // qualquer falha devolve os padrões (tudo desligado) e a criação segue como
   // sempre seguiu.
   const flags = await lerFlags();
-  const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
+  const rodizioEquilibrado = flags[PERMANENT_FEATURE.PLAY_SMART_ROTATION] === true;
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
-  const grupos = isPlayGroupsActive(gd, flags[FEATURE_FLAG.PLAY_GROUPS] === true)
+  const grupos = isPlayGroupsActive(gd, flags[PERMANENT_FEATURE.PLAY_GROUPS] === true)
     ? normalizePlayGroupsConfig(gd)
     : null;
 
@@ -1141,9 +1141,9 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
   // equilibrado varia grupos e duplas sem furar a ordem, e os GRUPOS sorteiam
   // dentro de cada grupo; desligadas, a escolha é a de sempre. Best-effort.
   const flags = await lerFlags();
-  const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
+  const rodizioEquilibrado = flags[PERMANENT_FEATURE.PLAY_SMART_ROTATION] === true;
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
-  const grupos = isPlayGroupsActive(gd, flags[FEATURE_FLAG.PLAY_GROUPS] === true)
+  const grupos = isPlayGroupsActive(gd, flags[PERMANENT_FEATURE.PLAY_GROUPS] === true)
     ? normalizePlayGroupsConfig(gd)
     : null;
 
@@ -1247,7 +1247,7 @@ async function grupoComumDosJogadores(gdId, ids, byId) {
   const doGrupo = ids.map((id) => byId.get(id)?.play_group_id).filter(Boolean);
   if (doGrupo.length === 0 || new Set(doGrupo).size !== 1 || doGrupo.length !== ids.length) return null;
   const flags = await lerFlags();
-  if (flags[FEATURE_FLAG.PLAY_GROUPS] !== true) return null;
+  if (flags[PERMANENT_FEATURE.PLAY_GROUPS] !== true) return null;
   const gd = await getGameDay(gdId).catch(() => null);
   if (!isPlayGroupsActive(gd, true)) return null;
   return groupById(normalizePlayGroupsConfig(gd), doGrupo[0]);

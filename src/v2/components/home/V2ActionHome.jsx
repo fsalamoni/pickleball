@@ -11,7 +11,7 @@ import { useNotifications } from '@/modules/notifications/hooks/useNotifications
 import { formatUnreadBadge } from '@/modules/notifications/domain/noticeFeed';
 import { NoticeIcon } from '@/v2/components/notifications/noticeParts';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
@@ -43,7 +43,7 @@ export default function V2ActionHome() {
     notifications = [], unreadCount, isLoading: avisosCarregando, isError: avisosFalharam,
     retry: tentarAvisosDeNovo, markAsRead,
   } = useNotifications();
-  const centralAvisosOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_CENTER);
+  const centralAvisosOn = useFeatureFlag(PERMANENT_FEATURE.NOTIFICATIONS_CENTER);
   const { data: publicTournaments = [] } = usePublicTournaments();
   const {
     data: upcoming = [], isLoading: loadingUpcoming, isError: upcomingFailed, refetch: refetchUpcoming,

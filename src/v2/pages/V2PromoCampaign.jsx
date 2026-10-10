@@ -16,7 +16,7 @@ import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CalendarClock, GraduationCap, Tag } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { BANNER_STATE, campaignBannerState } from '@/modules/arenas/domain/campaignBanner';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
@@ -40,7 +40,7 @@ function Voltar() {
 export default function V2PromoCampaign() {
   const { campaignId } = useParams();
   const { flags, isLoading: flagsCarregando } = useFeatureFlags();
-  const ligado = Boolean(flags?.[FEATURE_FLAG.PLATFORM_MARKETING] || flags?.[FEATURE_FLAG.COACH_MARKETING]);
+  const ligado = Boolean(flags?.[PERMANENT_FEATURE.PLATFORM_MARKETING] || flags?.[PERMANENT_FEATURE.COACH_MARKETING]);
   const q = usePromoCampaign(ligado ? campaignId : null);
   const campanha = q.data;
   const today = todayISO();

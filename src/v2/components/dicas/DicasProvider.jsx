@@ -13,7 +13,7 @@
 import React, { Suspense, lazy, useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import {
   dicasSnapshot, marcarGuiaFeito, marcarPontoVisto, recomecarPontos, setDicasLigadas, setGuiaAtivo, subscribeDicas,
 } from '@/modules/help/services/dicasPreference';
@@ -22,7 +22,7 @@ import { DICAS_INERTES, DicasContext } from './DicasContext';
 const DicasCamada = lazy(() => import('./DicasCamada'));
 
 export default function DicasProvider({ children }) {
-  const on = useFeatureFlag(FEATURE_FLAG.GUIDED_TIPS);
+  const on = useFeatureFlag(PERMANENT_FEATURE.GUIDED_TIPS);
   const { user } = useAuth();
   const uid = user?.uid || null;
   const snap = useSyncExternalStore(subscribeDicas, () => dicasSnapshot(uid), () => dicasSnapshot(uid));

@@ -20,7 +20,7 @@ src/
 │   ├── lib/                  # utils (logger, useClipboard, profileValidation)
 │   ├── domain/               # types.js (JSDoc typedefs compartilhados)
 │   ├── services/             # auditService, notificationService, baseService
-│   ├── featureFlags.js       # 124 flags (FEATURE_FLAG)
+│   ├── featureFlags.js       # 3 flags opcionais (as 33 ligadas viraram código em 2026-10-10) (FEATURE_FLAG)
 │   ├── featureFlagGroups.js  # agrupamento pra admin
 │   └── pwa/                  # registerPwa + sw lifecycle
 │

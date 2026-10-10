@@ -82,7 +82,7 @@ describe('⭐ a flag `play_groups` é o interruptor geral', () => {
 
   it('o hook consulta a flag e o domínio decide se os grupos valem', () => {
     const hook = semComentarios(ler('src/modules/games/hooks/usePlayGroups.js'));
-    expect(hook).toContain('FEATURE_FLAG.PLAY_GROUPS');
+    expect(hook).toContain('PERMANENT_FEATURE.PLAY_GROUPS');
     expect(hook).toContain('isPlayGroupsActive(');
   });
 
@@ -91,9 +91,9 @@ describe('⭐ a flag `play_groups` é o interruptor geral', () => {
     expect(svc).toContain('isPlayGroupsActive(');
   });
 
-  it('nasce desligada', async () => {
-    const { DEFAULT_FEATURE_FLAGS, FEATURE_FLAG } = await import('@/core/featureFlags');
-    expect(DEFAULT_FEATURE_FLAGS[FEATURE_FLAG.PLAY_GROUPS]).toBe(false);
+  it('é permanente desde 2026-10-10 (estava ligada em produção)', async () => {
+    const { DEFAULT_FEATURE_FLAGS, PERMANENT_FEATURE } = await import('@/core/featureFlags');
+    expect(DEFAULT_FEATURE_FLAGS[PERMANENT_FEATURE.PLAY_GROUPS]).toBe(true);
   });
 });
 
@@ -154,14 +154,6 @@ describe('⭐ banco: só campos opcionais e UMA cláusula estreita de regra', ()
     expect(clausula).not.toMatch(/canManageGameDayOf|gameDayOpenToParticipants|member_uids/);
   });
 
-  it('⭐ a flag aparece no painel admin, no grupo "Dia de jogo", com rótulo e explicação', async () => {
-    const { FLAG_GROUPS } = await import('@/core/featureFlagGroups');
-    const { FEATURE_FLAG, FEATURE_FLAG_META } = await import('@/core/featureFlags');
-    const grupo = FLAG_GROUPS.find((g) => g.keys.includes(FEATURE_FLAG.PLAY_GROUPS));
-    expect(grupo?.label).toBe('Dia de jogo');
-    expect(FEATURE_FLAG_META[FEATURE_FLAG.PLAY_GROUPS].label.length).toBeGreaterThan(5);
-    expect(FEATURE_FLAG_META[FEATURE_FLAG.PLAY_GROUPS].description.length).toBeGreaterThan(40);
-  });
 
   it('⭐ o cartão recebe a permissão de editar os grupos (`podeEditarGrupos`), não a de configurar o dia', () => {
     const src = semComentarios(ler('src/v2/components/games/AthletePlayOrganizer.jsx'));

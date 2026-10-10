@@ -142,23 +142,6 @@ describe('links internos', () => {
     expect(quebrados).toEqual([]);
   });
 
-  it('⭐ a ajuda NÃO documenta o que está atrás de flag desligada', () => {
-    // A gamificação (`conquistas`, `hall-da-fama`, `vinculos`, `gamification`) vive
-    // dentro de <Gamified>: com `gamification_v2` OFF essas telas não existem.
-    // Citá-las só é permitido num artigo que tenha a PRÓPRIA flag (o catálogo
-    // esconde o artigo junto com a tela) — senão a pessoa seria mandada a uma
-    // porta que não abre.
-    const atrasDeFlagDesligada = ['/conquistas', '/hall-da-fama', '/vinculos', '/gamification'];
-    const citados = [];
-    artigos.forEach((a) => {
-      if ((a.flags || []).includes('gamification_v2')) return;
-      a.blocks.filter((b) => b.type === 'link').forEach((b) => {
-        const rota = String(b.to).split(/[?#]/)[0];
-        if (atrasDeFlagDesligada.includes(rota)) citados.push(`${a.sectionId}/${a.id} → ${b.to}`);
-      });
-    });
-    expect(citados).toEqual([]);
-  });
 
   it('nenhum link aponta para fora da plataforma sem necessidade', () => {
     artigos.forEach((a) => {
@@ -506,7 +489,6 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
   it('toda flag citada num artigo EXISTE — um erro de digitação o esconderia para sempre', () => {
     const conhecidas = new Set(Object.values(FEATURE_FLAG));
     const invalidas = allHelpArticles().flatMap((a) => citadas(a).filter((f) => !conhecidas.has(f)).map((f) => `${a.id} → ${f}`));
-    expect(comFlag.length).toBeGreaterThan(0);
     expect(invalidas).toEqual([]);
   });
 
@@ -523,71 +505,40 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     expect(helpArticleVisible({ id: 'x', flags: ['a'], semFlags: ['c'] }, { a: true, c: true })).toBe(false);
   });
 
-  it('⭐ a tela inicial: um artigo por jeito, nunca os dois ensinando coisas diferentes para "Personalizar"', () => {
-    const inicio = (flags) => helpCatalog(flags).all().map((a) => a.id).filter((id) => id.startsWith('inicio-'));
-    expect(inicio({})).toEqual([]);
-    expect(inicio({ home_cards: true })).toEqual([]);
-    expect(inicio({ personalized_home: true })).toEqual(['inicio-personalizado']);
-    expect(inicio({ personalized_home: true, home_cards: true })).toEqual(['inicio-sob-medida']);
-    const configuracoes = helpCatalog({ personalized_home: true, home_cards: true }).forRoute('/configuracoes');
-    expect(configuracoes.articles.map((a) => a.id)).toContain('inicio-sob-medida');
-    expect(helpCatalog({}).forRoute('/configuracoes').articles.map((a) => a.id)).not.toContain('inicio-sob-medida');
+  it('⭐ a tela inicial: um artigo só, o do início sob medida (os dois jeitos são permanentes)', () => {
+    const inicio = helpCatalog({}).all().map((a) => a.id).filter((id) => id.startsWith('inicio-'));
+    expect(inicio).toEqual(['inicio-sob-medida']);
+    expect(helpCatalog({}).forRoute('/configuracoes').articles.map((a) => a.id)).toContain('inicio-sob-medida');
   });
 
-  it('o catálogo de quem abre esconde o desligado em TODAS as consultas', () => {
+  it('o catálogo de quem abre esconde o que depende de flag e mostra o permanente', () => {
     const desligado = helpCatalog({});
     const ids = new Set(desligado.all().map((a) => a.id));
     comFlag.forEach((a) => expect(ids.has(a.id)).toBe(false));
-    expect(desligado.getArticle(HELP_SECTION.COACH, 'divulgacao-professor')).toBeNull();
-    expect(desligado.search('divulgação professor').map((a) => a.id)).not.toContain('divulgacao-professor');
-    expect((desligado.forRoute('/promocoes')?.articles || []).map((a) => a.id)).not.toContain('promocoes-plataforma-professores');
-    // O próximo artigo pula o que está escondido.
-    expect(desligado.next(HELP_SECTION.COACH, 'pacotes-clinicas')?.id).toBe('parcerias');
-
-    const ligado = helpCatalog({
-      personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
-      my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true, training_center: true, user_hub: true, game_debrief: true,
-    });
-    // Todos, menos o que só existe com o início sob medida.
-    expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
-    expect(helpCatalog({
-      personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
-      guided_tips: true, my_region: true, notifications_center: true, tournament_americano_etapas: true, gamification_v2: true,
-      play_groups: true, training_center: true, user_hub: true, game_debrief: true,
-    }).all()).toHaveLength(allHelpArticles().length - 1);
-    expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
+    // Funcionalidades incorporadas (2026-10-10): sempre no catálogo.
+    expect(desligado.all()).toHaveLength(allHelpArticles().length - comFlag.length);
+    expect(desligado.getArticle(HELP_SECTION.COACH, 'divulgacao-professor')).not.toBeNull();
+    expect(desligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
 
-  it('o balanço do jogo: o artigo pede o treino E a própria flag', () => {
-    expect(helpCatalog({ training_center: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).toBeNull();
-    expect(helpCatalog({ game_debrief: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).toBeNull();
-    expect(helpCatalog({ training_center: true, game_debrief: true }).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).not.toBeNull();
+  it('o balanço do jogo está no catálogo', () => {
+    expect(helpCatalog({}).getArticle(HELP_SECTION.ATHLETE, 'balanco-do-jogo')).not.toBeNull();
   });
 
-  it('a central de notificações: o artigo só existe com a flag, e a tela tem ajuda própria', () => {
-    const desligado = helpCatalog({});
-    expect(desligado.getArticle(HELP_SECTION.ACCOUNT, 'central-de-notificacoes')).toBeNull();
-    expect(desligado.search('notificações antigas').map((a) => a.id)).not.toContain('central-de-notificacoes');
-    const ligado = helpCatalog({ notifications_center: true });
+  it('a central de notificações: a tela tem ajuda própria', () => {
+    const ligado = helpCatalog({});
     expect(ligado.getArticle(HELP_SECTION.ACCOUNT, 'central-de-notificacoes')).not.toBeNull();
     expect(ligado.forRoute('/notificacoes').articles.map((a) => a.id)).toEqual(['central-de-notificacoes', 'notificacoes']);
   });
 
-  it('o modo escuro: sem a flag, "Ajuda para esta tela" em Configurações não o cita', () => {
-    const desligado = helpCatalog({});
-    expect(desligado.forRoute('/configuracoes').articles.map((a) => a.id)).not.toContain('modo-escuro');
-    expect(desligado.search('modo escuro').map((a) => a.id)).not.toContain('modo-escuro');
-    const ligado = helpCatalog({ dark_mode: true });
+  it('o modo escuro: "Ajuda para esta tela" em Configurações o cita', () => {
+    const ligado = helpCatalog({});
     expect(ligado.forRoute('/configuracoes').articles[0].id).toBe('modo-escuro');
     expect(ligado.search('modo escuro')[0].id).toBe('modo-escuro');
   });
 
-  it('as dicas: o artigo só existe com a flag, e aparece em Configurações', () => {
-    const desligado = helpCatalog({});
-    expect(desligado.search('dicas seta').map((a) => a.id)).not.toContain('dicas');
-    expect(desligado.faq().map((f) => f.id)).not.toContain('dicas');
-    const ligado = helpCatalog({ guided_tips: true });
+  it('as dicas: o artigo aparece em Configurações', () => {
+    const ligado = helpCatalog({});
     expect(ligado.getArticle(HELP_SECTION.START, 'dicas')).not.toBeNull();
     expect(ligado.forRoute('/configuracoes').articles.map((a) => a.id)).toContain('dicas');
     expect(ligado.faq().map((f) => f.id)).toContain('dicas');
@@ -595,12 +546,10 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
 });
 
 describe('o Americano aprimorado em etapas na ajuda', () => {
-  it('o artigo só existe com a flag; o de 2 turnos vale sempre', () => {
-    const desligado = helpCatalog({});
-    const ids = desligado.all().map((a) => a.id);
-    expect(ids).not.toContain('americano-etapas');
+  it('os artigos das etapas e dos 2 turnos valem sempre', () => {
+    const ids = helpCatalog({}).all().map((a) => a.id);
+    expect(ids).toContain('americano-etapas');
     expect(ids).toContain('dois-turnos');
-    expect(helpCatalog({ tournament_americano_etapas: true }).all().map((a) => a.id)).toContain('americano-etapas');
   });
 
   it('o check-in é explicado como OPCIONAL, sem mexer no sorteio', () => {
@@ -619,15 +568,11 @@ describe('⭐ a ajuda da gamificação', () => {
     .flatMap((s) => s.articles.map((a) => ({ ...a, section: s.id })))
     .filter((a) => a.id.startsWith('gamificacao-'));
 
-  it('os artigos só existem com a flag ligada — e todos têm a flag', () => {
-    expect(gam({})).toEqual([]);
-    const ligados = gam(COM).map((a) => a.id);
+  it('os artigos existem sempre (a gamificação é permanente desde 2026-10-10)', () => {
+    const ligados = gam({}).map((a) => a.id);
     ['gamificacao-jornada', 'gamificacao-xp', 'gamificacao-missoes', 'gamificacao-sequencia', 'gamificacao-competir',
       'gamificacao-social', 'gamificacao-recompensas', 'gamificacao-privacidade', 'gamificacao-clube',
       'gamificacao-engajamento-arena', 'gamificacao-engajamento-professor'].forEach((id) => expect(ligados, id).toContain(id));
-    artigos.filter((a) => a.id.startsWith('gamificacao-')).forEach((a) => {
-      expect(a.flags, a.id).toContain('gamification_v2');
-    });
   });
 
   it('cobre as três pessoas que a gamificação atende: atleta, arena e professor', () => {
@@ -645,9 +590,8 @@ describe('⭐ a ajuda da gamificação', () => {
     expect(texto).toContain(`${STREAK_VACATION_COOLDOWN_DAYS} dias depois`);
   });
 
-  it('as perguntas da gamificação somem com a flag desligada', () => {
+  it('as perguntas da gamificação estão no catálogo', () => {
     const perguntas = (flags) => helpCatalog(flags).faq().map((f) => f.question);
-    expect(perguntas({})).not.toContain('Como o meu XP é calculado?');
     expect(perguntas(COM)).toEqual(expect.arrayContaining([
       'Como o meu XP é calculado?', 'Perdi a minha sequência. E agora?',
       'Quem vê o meu nome no Hall da Fama?', 'Como peço uma recompensa?',
@@ -664,10 +608,9 @@ describe('⭐ a ajuda da gamificação', () => {
     expect(helpCatalog(COM).forRoute('/gamification/configuracoes').articles.map((a) => a.id)).toContain('gamificacao-privacidade');
   });
 
-  it('sem a flag, a pista da gamificação não sugere artigo nenhum', () => {
-    expect(helpCatalog({}).forRoute('/gamification')).toBeNull();
-    expect(helpCatalog({}).forRoute('/hall-da-fama')).toBeNull();
-    expect(helpCatalog({}).forRoute('/vinculos')).toBeNull();
+  it('a pista da gamificação sugere artigo (a gamificação é permanente)', () => {
+    expect(helpCatalog({}).forRoute('/gamification')).not.toBeNull();
+    expect(helpCatalog({}).forRoute('/hall-da-fama')).not.toBeNull();
   });
 
   it('nenhum artigo da gamificação promete o que a regra não faz (XP não é moeda, antifarm não pune)', () => {
@@ -685,14 +628,8 @@ describe('⭐ a ajuda da gamificação', () => {
 });
 
 describe('os grupos do Play na ajuda', () => {
-  it('⭐ o artigo só existe com a flag — busca, link direto e "Ajuda para esta tela"', () => {
-    const desligado = helpCatalog({});
-    expect(desligado.all().map((a) => a.id)).not.toContain('play-grupos');
-    expect(desligado.getArticle(HELP_SECTION.ATHLETE, 'play-grupos')).toBeNull();
-    expect(desligado.search('dividir o play em grupos').map((a) => a.id)).not.toContain('play-grupos');
-    expect(desligado.forRoute('/dia-de-jogo/abc').articles.map((a) => a.id)).not.toContain('play-grupos');
-
-    const ligado = helpCatalog({ play_groups: true });
+  it('⭐ o artigo dos grupos: busca, link direto e "Ajuda para esta tela"', () => {
+    const ligado = helpCatalog({});
     expect(ligado.getArticle(HELP_SECTION.ATHLETE, 'play-grupos')).not.toBeNull();
     expect(ligado.search('grupos nível convidado').map((a) => a.id)).toContain('play-grupos');
     expect(ligado.forRoute('/dia-de-jogo/abc').articles.map((a) => a.id)).toContain('play-grupos');

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
@@ -52,7 +52,7 @@ const papelDe = (q, sim) => (q.isError ? 'erro' : q.isSuccess ? sim : undefined)
 export default function UserArea() {
   const { user, userProfile, isPlatformAdmin } = useAuth();
   const uid = user?.uid || null;
-  const trainingOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
   const [params, setParams] = useSearchParams();
 
   // Papéis: as mesmas consultas da barra lateral.

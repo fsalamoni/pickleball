@@ -19,7 +19,7 @@ import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -40,7 +40,7 @@ export default function V2ClubDetail() {
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
   const clubRankingOn = true;
-  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
   const inviteLinkOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
