@@ -96,7 +96,7 @@ function TournamentGroup({ group }) {
   const place = [tournament?.city, tournament?.state].filter(Boolean).join(' / ');
 
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper p-3 sm:p-4">
+    <V2Surface variant="plano" className="p-3 sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ function TournamentGroup({ group }) {
       <div className="mt-3 space-y-2">
         {entries.map((entry) => <EntryRow key={entry.registration.id} entry={entry} />)}
       </div>
-    </div>
+    </V2Surface>
   );
 }
 
@@ -131,7 +131,7 @@ export default function V2ParticipationHistoryCard() {
   const totalRegistrations = history.reduce((sum, g) => sum + g.entries.length, 0);
 
   return (
-    <V2Surface className="p-0">
+    <V2Surface className="p-0 sm:p-0">
       <div className="border-b border-gray-100 p-5 sm:p-6">
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
           <History className="h-5 w-5 text-ink" /> Histórico de participações

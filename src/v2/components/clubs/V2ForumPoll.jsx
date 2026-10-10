@@ -4,7 +4,7 @@ import { BarChart3, Check, Clock, Lock } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { tallyVotes, isPollClosed, toggleOption } from '@/modules/clubs/domain/forumPoll';
 import { usePollVotes, useMyPollVote, useSetPollVote } from '@/modules/clubs/hooks/useClubForum';
-import { V2Badge, V2Button } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 
 function closesLabel(ms) {
   if (!ms) return null;
@@ -64,7 +64,7 @@ export default function V2ForumPoll({ thread }) {
   };
 
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper p-5">
+    <V2Surface variant="plano" className="p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-ink" />
@@ -135,6 +135,6 @@ export default function V2ForumPoll({ thread }) {
           )}
         </div>
       </div>
-    </div>
+    </V2Surface>
   );
 }

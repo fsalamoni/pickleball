@@ -6,7 +6,7 @@ import { usePlayerMatchDates, useGoals } from '@/modules/progression/hooks/usePr
 import { computeXp, levelFromXp, computeWeekStreak } from '@/modules/progression/domain/progression';
 import { computeAchievements } from '@/modules/achievements/domain/achievements';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -57,7 +57,7 @@ export function EvolutionStrip({ uid, className }) {
           </MiniCard>
 
           {/* Nível / XP */}
-          <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+          <V2Surface className="p-5 sm:p-5">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">Nível de perfil</span>
               <Sparkles className="h-4 w-4 text-acid" />
@@ -67,7 +67,7 @@ export function EvolutionStrip({ uid, className }) {
               <div className="h-full rounded-full bg-acid" style={{ width: `${Math.round((level.progress || 0) * 100)}%` }} />
             </div>
             <p className="mt-1.5 text-xs text-gray-500">{level.xpIntoLevel} / {level.xpForNext} XP para o próximo</p>
-          </div>
+          </V2Surface>
 
           {/* Próxima conquista */}
           <MiniCard icon={Award} accent="ink" label="Próxima conquista">
@@ -106,13 +106,13 @@ export function EvolutionStrip({ uid, className }) {
 
 function MiniCard({ icon: Icon, accent = 'ink', label, children }) {
   return (
-    <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+    <V2Surface className="p-5 sm:p-5">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{label}</span>
         <Icon className={cn('h-4 w-4', accent === 'acid' ? 'text-acid' : 'text-ink')} />
       </div>
       <div>{children}</div>
-    </div>
+    </V2Surface>
   );
 }
 

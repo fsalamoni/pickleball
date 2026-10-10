@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import InstallAppButton from '@/components/InstallAppButton';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 
 const HERO_STATS = [
   { value: '500+', label: 'inscritos por modalidade com lista de espera e fluxo claro' },
@@ -196,7 +196,7 @@ export default function Landing() {
         {/* Journey */}
         <section className="mx-auto max-w-7xl px-6 pb-20">
           <div className="grid gap-6 lg:grid-cols-[1fr,0.92fr]">
-            <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 shadow-organic-sm lg:p-10">
+            <V2Surface className="p-8 lg:p-10 sm:p-8">
               <span className="inline-flex items-center rounded-full border border-gray-200 bg-paper px-3 py-1 text-xs font-bold uppercase tracking-widest text-gray-500">Jornada do evento</span>
               <h2 className="mt-5 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl lg:text-4xl">
                 Como a plataforma acompanha cada etapa do torneio.
@@ -211,9 +211,9 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-            </div>
+            </V2Surface>
 
-            <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 shadow-organic-sm lg:p-10">
+            <V2Surface className="p-8 lg:p-10 sm:p-8">
               <div className="flex h-full flex-col justify-center rounded-3xl border border-acid/30 bg-acid/10 p-6">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-acid">
                   <BookOpen className="h-7 w-7" />
@@ -223,7 +223,7 @@ export default function Landing() {
                   Conheça as <Link to="/regras" className="font-bold text-ink underline-offset-4 hover:underline">regras oficiais</Link>, descubra seu nível com o <Link to="/nivelamento" className="font-bold text-ink underline-offset-4 hover:underline">formulário de nivelamento</Link> e depois encontre torneios, clubes e arenas para transformar interesse em presença real na comunidade.
                 </p>
               </div>
-            </div>
+            </V2Surface>
           </div>
         </section>
 
@@ -270,13 +270,13 @@ export default function Landing() {
 
 function FeatureCard({ icon: Icon, title, desc }) {
   return (
-    <div className="h-full rounded-4xl border border-gray-100 bg-paper-pure p-7 shadow-organic-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-organic">
+    <V2Surface className="h-full p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-organic sm:p-7">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-acid">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-gray-500">{desc}</p>
-    </div>
+    </V2Surface>
   );
 }
 

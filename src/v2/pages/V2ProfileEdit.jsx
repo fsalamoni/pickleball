@@ -422,17 +422,17 @@ export default function V2ProfileEdit() {
             <V2Input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={160} />
           </V2Field>
 
-          <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-5">
+          <V2Surface variant="plano" className="mt-5 p-5">
             <div className="flex items-center gap-2 text-sm font-bold text-ink"><Shield className="h-4 w-4" /> Visibilidade dos contatos</div>
             <div className="mt-4 space-y-4">
               <V2Toggle id="phone_public" label="Telefone público" hint="Outros atletas veem seu telefone" checked={phonePublic} onChange={setPhonePublic} />
               <V2Toggle id="email_public" label="E-mail público" hint="Outros atletas veem seu e-mail" checked={emailPublic} onChange={setEmailPublic} />
               <V2Toggle id="address_public" label="Endereço público" hint="Outros atletas veem seu endereço" checked={addressPublic} onChange={setAddressPublic} />
             </div>
-          </div>
-          <div className="mt-4 rounded-3xl border border-gray-100 bg-paper p-5">
+          </V2Surface>
+          <V2Surface variant="plano" className="mt-4 p-5">
             <V2Toggle id="directory_listed" label="Aparecer no diretório de atletas" hint="Se desativado, seu perfil não é listado" checked={directoryListed} onChange={setDirectoryListed} />
-          </div>
+          </V2Surface>
 
           <div className="mt-5 flex justify-end">
             <V2Button onClick={saveCommunity} disabled={communityBusy}>{communityBusy ? 'Salvando…' : 'Salvar comunidade e privacidade'}</V2Button>
@@ -477,9 +477,9 @@ export default function V2ProfileEdit() {
         {coachDirectoryOn && (
           <V2Surface collapsible collapseId="perfil-professor" eyebrow="Professor" title="Perfil de aulas e clínicas"
             description="Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas.">
-            <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-5">
+            <V2Surface variant="plano" className="mt-5 p-5">
               <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer na busca de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
-            </div>
+            </V2Surface>
             {isCoach && (
               <div className="mt-4 space-y-4">
                 {myCoach && (

@@ -9,7 +9,7 @@ import {
   useUpdateEventMessage,
   useDeleteEventMessage,
 } from '@/modules/clubs/hooks/useClubs';
-import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function dayLabel(ms) {
   if (!ms) return '';
@@ -48,7 +48,7 @@ export default function V2EventChat({ eventId }) {
   const handleDelete = (message) => remove.mutateAsync(message.id);
 
   return (
-    <div className="flex h-[60vh] flex-col overflow-hidden rounded-4xl border border-gray-100 bg-paper">
+    <V2Surface variant="plano" className="flex h-[60vh] flex-col overflow-hidden rounded-4xl">
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-12 w-2/3 rounded-2xl" />)}</div>
@@ -101,6 +101,6 @@ export default function V2EventChat({ eventId }) {
           <Send className="h-4 w-4" />
         </V2Button>
       </form>
-    </div>
+    </V2Surface>
   );
 }

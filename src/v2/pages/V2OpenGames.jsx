@@ -74,7 +74,7 @@ const lugarDe = (item) => item.place;
 function OpenGameCard({ g, distancia }) {
   const dateLabel = formatDate(g.date);
   return (
-    <div className="flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic">
+    <V2Surface className="flex h-full flex-col p-6 transition-all hover:shadow-organic sm:p-6">
       <div className="flex items-center gap-3">
         <V2Avatar name={g.creator_name} photoUrl={g.creator_photo} size="md" />
         <span className="truncate font-bold text-ink">{g.creator_name}</span>
@@ -107,7 +107,7 @@ function OpenGameCard({ g, distancia }) {
           label="Chamar para jogar"
         />
       </div>
-    </div>
+    </V2Surface>
   );
 }
 

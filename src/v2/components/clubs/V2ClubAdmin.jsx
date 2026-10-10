@@ -235,7 +235,7 @@ function V2ClubPublicPageCard({ club, updateClub, copy }) {
       <p className="mt-1 text-sm text-gray-500">
         Quando ativada, qualquer pessoa pode ver uma vitrine do clube (nome, local e descrição) sem entrar na plataforma.
       </p>
-      <div className="mt-4 rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
+      <V2Surface variant="compacto" className="mt-4 p-4">
         <V2Toggle
           id="club-is-public"
           checked={isPublic}
@@ -243,7 +243,7 @@ function V2ClubPublicPageCard({ club, updateClub, copy }) {
           label="Clube público"
           hint="Exibir vitrine para visitantes não autenticados."
         />
-      </div>
+      </V2Surface>
       {isPublic && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <code className="min-w-0 flex-1 truncate rounded-2xl border border-gray-100 bg-paper px-4 py-2 text-xs text-gray-600">

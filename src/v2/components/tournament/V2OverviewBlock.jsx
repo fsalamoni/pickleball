@@ -369,7 +369,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-3xl border border-gray-100 bg-paper p-4">
+        <V2Surface variant="plano">
           <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">Capacidade</div>
           <div className="mt-2 text-sm font-medium text-ink">
             {hasUnlimitedEntries(modality.max_entries)
@@ -400,9 +400,9 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
               </div>
             )}
           </div>
-        </div>
+        </V2Surface>
 
-        <div className="rounded-3xl border border-gray-100 bg-paper p-4">
+        <V2Surface variant="plano">
           <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">Inscrição</div>
           <div className="mt-2 flex items-center gap-2 text-sm font-medium text-ink">
             <Wallet className="h-4 w-4 text-ink" />
@@ -413,7 +413,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
               ? `Há ${pendingRegistrations} inscrição(ões) adicional(is) aguardando confirmação ou processamento.`
               : 'Sem pendências extras registradas no momento.'}
           </p>
-        </div>
+        </V2Surface>
       </div>
 
       <div className="mt-auto pt-5">

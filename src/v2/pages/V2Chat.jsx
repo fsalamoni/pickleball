@@ -8,7 +8,7 @@ import { conversationTitle } from '@/modules/chat/domain/conversations';
 import V2ConversationList from '@/v2/components/chat/V2ConversationList';
 import V2ChatWindow from '@/v2/components/chat/V2ChatWindow';
 import NewChatDialog from '@/modules/chat/components/NewChatDialog';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 export default function V2Chat() {
@@ -70,7 +70,7 @@ export default function V2Chat() {
         <p className="mt-2 font-medium text-gray-500">Converse com atletas e grupos da comunidade em tempo real.</p>
       </div>
 
-      <div className="grid h-[calc(100dvh-14rem)] min-h-[30rem] grid-cols-1 overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm lg:grid-cols-[20rem,1fr] xl:grid-cols-[22rem,1fr]">
+      <V2Surface className="grid h-[calc(100dvh-14rem)] min-h-[30rem] grid-cols-1 overflow-hidden lg:grid-cols-[20rem,1fr] xl:grid-cols-[22rem,1fr]">
         <aside className={cn('flex min-h-0 flex-col border-r border-gray-100', selectedConversation && 'hidden lg:flex')}>
           <div className="space-y-3 border-b border-gray-100 p-3">
             <div className="flex items-center justify-between gap-2">
@@ -114,7 +114,7 @@ export default function V2Chat() {
             </div>
           )}
         </section>
-      </div>
+      </V2Surface>
 
       <NewChatDialog open={newOpen} onOpenChange={setNewOpen} mode="new" busy={creating} onConfirm={handleCreate} />
     </div>

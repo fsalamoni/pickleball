@@ -156,7 +156,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           gravada em `arena_settings`, que só o gestor lê — nunca teria como
           chegar aqui. O texto por cima é escolhido por CONTRASTE: sem isso uma
           arena de cor clara ficaria com o próprio nome invisível. */}
-      <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
+      <V2Surface className="overflow-hidden">
         <div className="relative h-52 bg-ink" style={marca.on ? { backgroundColor: marca.color } : undefined}>
           {cover ? (
             <PhotoLightbox src={cover} alt={arena.name} title={arena.name}
@@ -214,7 +214,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
           {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
         </div>
-      </div>
+      </V2Surface>
 
       {/* Índice das seções que esta arena de fato tem (módulo desligado não
           aparece). Logo abaixo do cabeçalho: é daqui que se decide para onde ir. */}

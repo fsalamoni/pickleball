@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import {
@@ -286,7 +286,7 @@ export default function ArenaGameDayDialog({
           )}
 
           {/* 2 — quadras e horários ------------------------------------------ */}
-          <section className="rounded-3xl border border-gray-100 bg-paper p-4">
+          <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
               <LayoutGrid className="h-4 w-4 text-gray-400" /> Quadras e horários
             </h3>
@@ -392,10 +392,10 @@ export default function ArenaGameDayDialog({
                 {erros.arena_slots && <p className="mt-2 text-xs font-semibold text-red-500">{erros.arena_slots}</p>}
               </>
             )}
-          </section>
+          </V2Surface>
 
           {/* 3 — inscrição ---------------------------------------------------- */}
-          <section className="rounded-3xl border border-gray-100 bg-paper p-4">
+          <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
               <Users className="h-4 w-4 text-gray-400" /> Como o atleta se inscreve
             </h3>
@@ -423,11 +423,11 @@ export default function ArenaGameDayDialog({
                 </p>
               </div>
             )}
-          </section>
+          </V2Surface>
 
           {/* 4 — quem conduz --------------------------------------------------- */}
           {!editando && (
-          <section className="rounded-3xl border border-gray-100 bg-paper p-4">
+          <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
               <ShieldCheck className="h-4 w-4 text-gray-400" /> Quem conduz o dia de jogo
             </h3>
@@ -445,7 +445,7 @@ export default function ArenaGameDayDialog({
                 descricao="Os atletas inscritos também conduzem as partidas, na conta deles. Bom para um Play em que a turma se organiza sozinha."
               />
             </div>
-          </section>
+          </V2Surface>
           )}
 
           <div>

@@ -35,7 +35,7 @@ import {
   useSetThreadPinned,
 } from '@/modules/clubs/hooks/useClubForum';
 import V2ForumPoll from './V2ForumPoll';
-import { V2Badge, V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function timeAgo(ms) {
@@ -175,7 +175,7 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
         )}
       </div>
 
-      <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm sm:p-6">
+      <V2Surface className="p-5 sm:p-6">
         <div className="flex items-start gap-3">
           <UserAvatar name={thread.author_name} photoUrl={thread.author_photo} size="lg" />
           <div className="min-w-0 flex-1">
@@ -210,7 +210,7 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
             )}
           </div>
         </div>
-      </div>
+      </V2Surface>
 
       <div className="flex items-center gap-2 px-1 font-display text-sm font-bold text-ink">
         <MessageSquare className="h-4 w-4 text-ink" />
@@ -292,7 +292,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
   };
 
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
+    <V2Surface variant="compacto">
       <div className="flex items-start gap-3">
         <UserAvatar name={comment.author_name} photoUrl={comment.author_photo} size="sm" />
         <div className="min-w-0 flex-1">
@@ -349,7 +349,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
         loading={busy}
         onConfirm={handleDelete}
       />
-    </div>
+    </V2Surface>
   );
 }
 

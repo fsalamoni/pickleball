@@ -160,7 +160,7 @@ function Formulario({ atual, identity }) {
         O armazenamento recusa imagem acima de {HARD_LIMITS.imageMb} MB e vídeo acima de {HARD_LIMITS.videoMb} MB, seja qual for a configuração; aqui só dá para baixar esses tetos. Valor fora da faixa é ajustado ao salvar.
       </p>
 
-      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-3 shadow-organic-sm">
+      <V2Surface variant="compacto" className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 p-3">
         <p className="text-sm font-semibold text-ink" aria-live="polite">
           {mudancas.length ? `${mudancas.length} ${mudancas.length === 1 ? 'alteração' : 'alterações'} a salvar` : 'Nada alterado'}
         </p>
@@ -173,7 +173,7 @@ function Formulario({ atual, identity }) {
             <Save className="h-4 w-4" aria-hidden="true" /> {salvar.isPending ? 'Salvando…' : 'Salvar'}
           </V2Button>
         </div>
-      </div>
+      </V2Surface>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Mail, Lock, User as UserIcon, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -130,7 +130,7 @@ export default function Login() {
 
         {/* Cartão de login */}
         <div className="flex items-center justify-center">
-          <div className="w-full max-w-lg rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic sm:p-8">
+          <V2Surface className="w-full max-w-lg p-6 shadow-organic sm:p-8">
             <div className="text-center">
               <Link to="/" className="mx-auto mb-6 inline-flex items-center gap-3 lg:hidden">
                 <img src="/logo-claro.png" alt="PickleRush" className="h-8 w-auto object-contain" />
@@ -272,7 +272,7 @@ export default function Login() {
                 <Link to="/conduta" className="font-bold text-gray-600 underline underline-offset-4">Conduta &amp; Fair Play</Link>.
               </p>
             </div>
-          </div>
+          </V2Surface>
         </div>
       </div>
     </div>

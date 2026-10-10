@@ -39,7 +39,7 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
   const [conversa, setConversa] = useState(false);
   const carga = sessionLoad(s);
   return (
-    <li className="space-y-3 rounded-4xl border border-gray-100 bg-paper-pure p-5">
+    <V2Surface as="li" className="space-y-3 p-5 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
@@ -86,7 +86,7 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
         )}
       </div>
       {conversa && <SessionComments session={s} identity={identity} />}
-    </li>
+    </V2Surface>
   );
 }
 

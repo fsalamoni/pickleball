@@ -96,7 +96,7 @@ export default function V2AthleteProfile() {
       <V2BackLink to="/atletas" className="mb-5">Voltar aos atletas</V2BackLink>
 
       {/* Hero */}
-      <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
+      <V2Surface className="overflow-hidden">
         <div className="relative h-56 bg-mesh">
           <div className="absolute inset-0 bg-gradient-to-t from-paper-pure to-transparent" />
         </div>
@@ -161,7 +161,7 @@ export default function V2AthleteProfile() {
             )}
           </div>
         </div>
-      </div>
+      </V2Surface>
 
       {/* Stats — com o histórico sem carregar, os números são "—", nunca zero. */}
       {historicoFalhou && (
@@ -301,10 +301,10 @@ function RecentGameDayGames({ games }) {
 
 function MiniStat({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 text-center shadow-organic-sm">
+    <V2Surface className="p-5 text-center sm:p-5">
       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-paper text-ink"><Icon className="h-5 w-5" /></div>
       <p className="font-display text-2xl font-bold text-ink tabular-nums">{value}</p>
       <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-    </div>
+    </V2Surface>
   );
 }

@@ -35,10 +35,10 @@ export function V2LevelingResultCard({ result, onRestart, onPrint = () => window
           </p>
         </div>
 
-        <div className="mt-8 rounded-3xl border border-gray-100 bg-paper p-5 sm:p-6">
+        <V2Surface variant="plano" className="mt-8 p-5 sm:p-6">
           <h3 className="font-display text-base font-bold text-ink">Sobre seu nível</h3>
           <p className="mt-2 text-sm leading-6 text-gray-600">{result.explanation}</p>
-        </div>
+        </V2Surface>
 
         <div className="mt-6">
           <h3 className="font-display text-base font-bold text-ink">Análise por categoria</h3>
@@ -102,7 +102,7 @@ function getColorClass(value) {
 
 function QuestionCard({ questionNumber, question, value, showContext, onToggleContext, onChange }) {
   return (
-    <div className="rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm transition hover:shadow-md sm:p-6">
+    <V2Surface className="p-5 transition hover:shadow-md sm:p-6">
       <div className="mb-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-ink px-3 py-1 font-display text-sm font-bold text-acid">Q{questionNumber}</span>
@@ -133,7 +133,7 @@ function QuestionCard({ questionNumber, question, value, showContext, onToggleCo
           </button>
         ))}
       </div>
-    </div>
+    </V2Surface>
   );
 }
 
@@ -233,9 +233,9 @@ export function V2LevelingQuestionnaire({
 
       {activeSection && (
         <div className="space-y-5">
-          <div className="rounded-3xl border border-gray-100 bg-paper p-5 text-sm leading-6 text-gray-600">
+          <V2Surface variant="plano" className="p-5 text-sm leading-6 text-gray-600">
             <strong className="font-display text-ink">{activeSection.category}:</strong> avalie seu comportamento real em partidas competitivas e sob pressão.
-          </div>
+          </V2Surface>
           {activeSection.questions.map((question, index) => (
             <QuestionCard
               key={question.id}

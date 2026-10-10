@@ -11,16 +11,16 @@ import { Link } from 'react-router-dom';
 import { Award, Hash, MapPin, Medal, Pencil, User } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { genderLabel } from '@/modules/athletes/domain/constants';
-import { V2Avatar, V2Button } from '@/v2/ui/primitives';
+import { V2Avatar, V2Button, V2Surface } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { memberSince } from '@/modules/athletes/domain/userArea';
 
 export function MiniStat({ label, value }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper-pure p-5 text-center shadow-organic-sm">
+    <V2Surface variant="compacto" className="p-5 text-center">
       <p className="font-display text-3xl font-bold text-ink">{value}</p>
       <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-    </div>
+    </V2Surface>
   );
 }
 
@@ -43,7 +43,7 @@ export default function ProfileShowcase({ me, editDica }) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
+      <V2Surface className="overflow-hidden">
         <div className="relative h-56 bg-mesh">
           <div className="absolute inset-0 bg-gradient-to-t from-paper-pure to-transparent" />
         </div>
@@ -93,7 +93,7 @@ export default function ProfileShowcase({ me, editDica }) {
             )}
           </div>
         </div>
-      </div>
+      </V2Surface>
 
       {me && (
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
