@@ -149,6 +149,15 @@ export function userAreaPending(fontes = {}) {
     });
   }
 
+  // Só chega aqui quem ligou o balanço do jogo para si (flag `game_debrief`).
+  const balancos = numero(fontes.balancosPendentes);
+  if (balancos) {
+    itens.push({
+      id: 'balancos', count: balancos, to: '/treino?aba=balanco',
+      label: plural(balancos, 'jogo esperando o seu balanço', 'jogos esperando o seu balanço'),
+    });
+  }
+
   return itens;
 }
 

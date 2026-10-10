@@ -30,6 +30,7 @@ import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
 import GamificationSettingsCard from '@/v2/components/gamification/GamificationSettingsCard';
+import DebriefSettingsCard from '@/v2/components/training/debrief/DebriefSettingsCard';
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
@@ -159,6 +160,9 @@ export default function V2Settings() {
         {/* Gamificação: privacidade, interação e avisos (flag gamification_v2). */}
         {gamificacaoOn && <GamificationSettingsCard />}
 
+        {/* Balanço do jogo: cada pessoa liga para si (flags training_center + game_debrief). */}
+        <DebriefSettingsCard />
+
         {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
         <V2Surface id="notificacoes" data-dica="config-notificacoes" className="scroll-mt-4">
           <div className="flex items-center gap-2">
@@ -209,7 +213,7 @@ export default function V2Settings() {
           </div>
           <p className="mt-1 text-sm text-gray-500">
             {treinoOn
-              ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios e dúvidas) em formato JSON.'
+              ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.'
               : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
           </p>
           <div className="mt-3">

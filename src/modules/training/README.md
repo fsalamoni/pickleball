@@ -16,6 +16,8 @@ training/
 │   ├── media.js         # link de vídeo (YouTube/Vimeo), limites e permissão de envio
 │   ├── share.js         # indicação × envio de professor, caixa de entrada
 │   ├── session.js · plan.js · today.js · treinar.js · evolution.js · question.js
+│   ├── debrief.js       # BALANÇO DO JOGO (flag `game_debrief`): perguntas, focos, semana sugerida
+│   ├── debriefEvents.js # dia de jogo / torneio / reserva → "jogo que pede balanço"
 │   ├── settings.js      # padrões de `platform_settings/training` (os MESMOS da regra)
 │   ├── aiTemplate.js    # pedido para IA + validação local do JSON
 │   └── dates.js         # todayLocal (nunca `toISOString().slice(0, 10)`)

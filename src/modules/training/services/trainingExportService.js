@@ -14,6 +14,7 @@
 import { listMyItems } from './trainingItemService.js';
 import { listComments, listMySessions } from './sessionService.js';
 import { listMyPlans } from './planService.js';
+import { listMyDebriefs } from './debriefService.js';
 import { getMeta } from './metaService.js';
 import { listInbox, listSent } from './shareService.js';
 import { listCoachQuestions, listMessages, listMyQuestions } from './questionService.js';
@@ -41,6 +42,7 @@ export async function collectTrainingExport(uid) {
     ['items', 'Itens de treino que você criou', () => listMyItems(uid)],
     ['sessions', 'Diário de treino', () => listMySessions(uid)],
     ['plans', 'Planos de treino', () => listMyPlans(uid)],
+    ['debriefs', 'Balanços dos jogos', () => listMyDebriefs(uid)],
     ['meta', 'Rotina e preferências do treino', () => getMeta(uid)],
     ['sent', 'Treinos que você enviou', () => listSent(uid)],
     ['received', 'Treinos que você recebeu', () => listInbox(uid)],
@@ -68,6 +70,7 @@ export async function collectTrainingExport(uid) {
       items: v.items || [],
       sessions: sessoes.lista,
       plans: v.plans || [],
+      debriefs: v.debriefs || [],
       meta: v.meta || null,
       shares: { sent: v.sent || [], received: v.received || [] },
       questions: duvidas.lista,

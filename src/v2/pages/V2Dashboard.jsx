@@ -28,6 +28,9 @@ import {
   TOURNAMENT_PHASE, hojeLocal, isTournamentCurrent, isTournamentOpen, tournamentPhase,
 } from '@/modules/home/domain/freshness';
 
+// O balanço do jogo, sob demanda: só quem ligou para si, e só com jogo esperando.
+const HomeDebriefPrompt = lazy(() => import('@/v2/components/training/debrief/HomeDebriefPrompt'));
+
 // Sob demanda: a chave-mestra `arena_modules` nasce desligada, e quem não a
 // tem não precisa baixar o carrossel junto com a tela inicial.
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
@@ -121,6 +124,8 @@ function DashboardClassico() {
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
   const treinoOn = useFeatureFlag(FEATURE_FLAG.TRAINING_CENTER);
+  // O balanço do jogo só existe com o treino E a própria flag; ligado por pessoa.
+  const balancoOn = useFeatureFlag(FEATURE_FLAG.GAME_DEBRIEF) && treinoOn;
   const {
     data: myTournaments = [], isLoading: loadingMine, isError: mineFailed, refetch: refetchMine,
   } = useMyTournaments();
@@ -202,6 +207,7 @@ function DashboardClassico() {
       {/* A chamada da fila tem prazo de 1 hora: vem antes de tudo, onde todo
           mundo abre o aplicativo. Só aparece quando há chamada. */}
       {arenaModulesOn && <HomeWaitlistCalls />}
+      {balancoOn && <Suspense fallback={null}><HomeDebriefPrompt /></Suspense>}
 
       {/* As promoções DA REGIÃO da pessoa, em banners: das arenas (Onda BZ) e
           da plataforma e dos professores (Onda CG). Depois da chamada da fila

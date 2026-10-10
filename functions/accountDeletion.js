@@ -173,6 +173,7 @@ const DELETE_BY_QUERY = Object.freeze([
   // Centro de Treino: o plano e os envios são só da pessoa (o envio é uma
   // mensagem entre duas pessoas — some dos dois lados, como a notificação).
   { col: 'training_plans', field: 'uid', label: 'Planos de treino' },
+  { col: 'training_debriefs', field: 'uid', label: 'Balanços dos jogos' },
   // A caixa de entrada da pessoa. O que ela ENVIOU fica (RETAINED_AS_IS).
   { col: 'training_shares', field: 'to_uid', label: 'Treinos recebidos' },
 ]);

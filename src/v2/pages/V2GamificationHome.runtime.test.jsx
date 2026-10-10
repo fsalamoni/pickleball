@@ -67,6 +67,7 @@ const mockMissions = {
     { id: 'm2', title: 'Dê 2 kudos', description: 'Dê 2 kudos', metric: 'kudos_given', target: 2, current: 1, xp: 20 },
   ],
 };
+vi.mock('@/modules/training/hooks/useDebriefs', () => ({ useDebriefSettings: () => ({ enabled: false, isLoading: false }) }));
 vi.mock('@/modules/progression/hooks/useScopedMissions', () => ({ useScopedMissions: () => mockMissions }));
 vi.mock('@/modules/progression/hooks/useGameRecords', () => ({ useGameRecords: () => ({ records: [], isLoading: false, isError: false, incomplete: [], refetch: () => {} }) }));
 vi.mock('@/modules/progression/hooks/usePeriodReview', () => ({ usePeriodReview: () => ({ review: null, isLoading: false, isError: false, refetch: () => {} }) }));

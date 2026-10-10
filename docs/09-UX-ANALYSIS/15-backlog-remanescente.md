@@ -307,6 +307,11 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
 - ✅ **TRV-35** **Minha área** (flag `user_hub`): o perfil vira a central da
   pessoa, com "Precisa de você" e as seções por papel. Zero banco. Ver
   `docs/41-MINHA-AREA.md`.
+- ✅ **TRV-37** **Balanço do jogo** (flag `game_debrief`, ligado por cada
+  pessoa): depois do dia de jogo, torneio ou reserva, a plataforma pergunta como
+  foi, o que funcionou e o que faltou, e sugere a semana de drills, que a pessoa
+  escolhe pôr nos treinos; missões opcionais na gamificação. Uma coleção
+  (`training_debriefs`, só do dono), zero índice. Ver `docs/42-BALANCO-DO-JOGO.md`.
 - ⏳ **TRV-36** (sugestão, do Treino) excluir a própria conta pela Minha área
   (hoje é pedido ao encarregado, executado pelo admin); validar e limpar no
   SERVIDOR o envio de mídia (hoje o Storage limita tamanho e tipo, e a duração

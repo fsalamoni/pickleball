@@ -34,6 +34,7 @@ const EXPORTADA_POR = {
   training_items: ['listMyItems'],
   training_sessions: ['listMySessions', 'listComments'],
   training_plans: ['listMyPlans'],
+  training_debriefs: ['listMyDebriefs'],
   training_meta: ['getMeta'],
   training_shares: ['listSent', 'listInbox'],
   training_questions: ['listMyQuestions', 'listCoachQuestions', 'listMessages'],

@@ -3,7 +3,7 @@
  *
  * Três grupos de abas, com a aba na URL (`?aba=`) para recarregar, voltar e
  * mandar link sem perder o lugar:
- *  - Treinar: Hoje · Planos · Diário · Evolução
+ *  - Treinar: Hoje · Planos · Diário · Evolução · Balanço (flag `game_debrief`)
  *  - Conteúdo: Biblioteca · Meus · Recebidos
  *  - Conversa: Dúvidas · Alunos (só professor)
  *
@@ -14,11 +14,12 @@
 import React, { Suspense, lazy, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  CalendarRange, Inbox, Library, MessageCircleQuestion, NotebookPen, PenLine, Plus, TrendingUp, Users, Zap,
+  CalendarRange, ClipboardCheck, Inbox, Library, MessageCircleQuestion, NotebookPen, PenLine, Plus, TrendingUp, Users, Zap,
 } from 'lucide-react';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import { useTrainingSettings } from '@/modules/training/hooks/useTrainingSettings';
 import { useTrainingInbox } from '@/modules/training/hooks/useTrainingShares';
+import { useGameDebriefAvailable } from '@/modules/training/hooks/useDebriefs';
 import { unreadCount } from '@/modules/training/domain/share';
 import { V2Button, V2PageIntro, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
@@ -29,6 +30,7 @@ const TABS = {
   planos: lazy(() => import('@/v2/components/training/tabs/PlansTab')),
   diario: lazy(() => import('@/v2/components/training/tabs/DiaryTab')),
   evolucao: lazy(() => import('@/v2/components/training/tabs/EvolutionTab')),
+  balanco: lazy(() => import('@/v2/components/training/tabs/DebriefTab')),
   biblioteca: lazy(() => import('@/v2/components/training/tabs/LibraryTab')),
   meus: lazy(() => import('@/v2/components/training/tabs/MyItemsTab')),
   recebidos: lazy(() => import('@/v2/components/training/tabs/ReceivedTab')),
@@ -42,13 +44,14 @@ const GRUPOS = [
   { id: 'conversa', label: 'Conversa' },
 ];
 
-/** As abas que esta pessoa vê (a de alunos só para professor). */
-export function trainingSections({ isCoach = false, recebidosNovos = 0 } = {}) {
+/** As abas que esta pessoa vê (a de alunos só para professor; a de balanço só com a flag). */
+export function trainingSections({ isCoach = false, recebidosNovos = 0, balanco = false } = {}) {
   return [
     { id: 'hoje', label: 'Hoje', icon: Zap, grupo: 'treinar', dica: 'treino-aba-hoje' },
     { id: 'planos', label: 'Planos', icon: CalendarRange, grupo: 'treinar', dica: 'treino-aba-planos' },
     { id: 'diario', label: 'Diário', icon: NotebookPen, grupo: 'treinar', dica: 'treino-aba-diario' },
     { id: 'evolucao', label: 'Evolução', icon: TrendingUp, grupo: 'treinar', dica: 'treino-aba-evolucao' },
+    ...(balanco ? [{ id: 'balanco', label: 'Balanço', icon: ClipboardCheck, grupo: 'treinar', dica: 'treino-aba-balanco' }] : []),
     { id: 'biblioteca', label: 'Biblioteca', icon: Library, grupo: 'conteudo', dica: 'treino-aba-biblioteca' },
     { id: 'meus', label: 'Meus', icon: PenLine, grupo: 'conteudo', dica: 'treino-aba-meus' },
     {
@@ -67,11 +70,12 @@ function TrainingHub() {
   const identity = useTrainingIdentity();
   const { settings } = useTrainingSettings();
   const inbox = useTrainingInbox(identity.uid);
+  const balanco = useGameDebriefAvailable();
   const [params, setParams] = useSearchParams();
 
   const sections = useMemo(
-    () => trainingSections({ isCoach: identity.isCoach, recebidosNovos: unreadCount(inbox.data || []) }),
-    [identity.isCoach, inbox.data],
+    () => trainingSections({ isCoach: identity.isCoach, recebidosNovos: unreadCount(inbox.data || []), balanco }),
+    [identity.isCoach, inbox.data, balanco],
   );
   const pedida = params.get('aba');
   // Aba de professor pedida por quem não é (ou antes de saber): cai em "Hoje".

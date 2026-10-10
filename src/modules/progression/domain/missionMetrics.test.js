@@ -283,4 +283,11 @@ describe('métricas vindas dos fatos de atividade', () => {
     }, { scope: 'weekly', now: NOW });
     expect(m).toMatchObject({ booking_attended: 1, lesson_attended: 1, arena_reviewed: 1, review_given: 2, letter_sent: 1 });
   });
+
+  it('balanços do jogo entram pelas datas dos fatos, só na semana e no mês', () => {
+    const fontes = { facts: { dates: { debriefs: [hoje, semanaPassada] } } };
+    expect(computeMissionMetrics(fontes, { scope: 'weekly', now: NOW }).debrief_done).toBe(1);
+    expect(isMeasurableMetric('debrief_done', 'weekly')).toBe(true);
+    expect(isMeasurableMetric('debrief_done', 'daily')).toBe(false);
+  });
 });

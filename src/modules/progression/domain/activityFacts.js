@@ -37,7 +37,7 @@ export const FACT_SOURCES = Object.freeze([
   'following', 'followers', 'bookings', 'lessons', 'clinicSignups', 'packageSales',
   'clubs', 'clubEventsCreated', 'gameDaysCreated', 'arenaReviews', 'kudosIndex',
   'sentKudos', 'referral', 'consents', 'matchReviews', 'partnerLetters', 'reputation',
-  'challengeEntries', 'registrations',
+  'challengeEntries', 'registrations', 'debriefs',
 ]);
 
 /** Quanto tempo depois de acabar a reserva ela vale como "jogada". */
@@ -95,6 +95,8 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date() 
   const partnerLetters = lista(src.partnerLetters) || [];
   const challengeEntries = lista(src.challengeEntries) || [];
   const registrations = lista(src.registrations) || [];
+  // Balanço do jogo: só o RESPONDIDO conta ("agora não" fica gravado e não é ato).
+  const debriefs = (lista(src.debriefs) || []).filter((d) => d?.status === 'respondido');
 
   const reservasFeitas = bookings.filter((b) => STATUS_RESERVA_FEITA.has(b?.status));
   // Reserva "jogada": concluída, ou confirmada cujo horário já passou e que não
@@ -158,6 +160,7 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date() 
       lettersSent: partnerLetters.length,
       challengesJoined: challengeEntries.length,
       tournamentRegistrations: registrations.length,
+      debriefs: debriefs.length,
     },
     /** Datas (ms) de cada tipo de ato — o que permite recortar semana e mês. */
     dates: {
@@ -171,6 +174,7 @@ export function buildActivityFacts(src = {}, { profile = null, now = new Date() 
       matchReviews: datasDe(matchReviews, 'createdAt', 'created_at_ms'),
       letters: datasDe(partnerLetters, 'createdAt', 'created_at_ms'),
       challengesJoined: datasDe(challengeEntries, 'joinedAt'),
+      debriefs: datasDe(debriefs, 'created_at_ms', 'created_at'),
     },
   };
 }

@@ -35,6 +35,17 @@ describe('buildActivityFacts', () => {
     expect(f.unknown).toEqual([]);
   });
 
+  it('balanço do jogo: só o respondido conta ("agora não" não é ato)', () => {
+    const f = buildActivityFacts(completo({
+      debriefs: [
+        { status: 'respondido', created_at: ts('2026-10-01T12:00:00Z') },
+        { status: 'dispensado', created_at: ts('2026-10-01T13:00:00Z') },
+      ],
+    }), { now: NOW });
+    expect(f.counts.debriefs).toBe(1);
+    expect(f.dates.debriefs).toEqual([ts('2026-10-01T12:00:00Z').toMillis()]);
+  });
+
   it('reserva só vale como jogada se concluída ou confirmada que já passou, e sem falta', () => {
     const f = buildActivityFacts(completo({
       bookings: [

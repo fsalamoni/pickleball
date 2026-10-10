@@ -87,6 +87,8 @@ export async function fetchActivitySources(uid) {
     reputation: () => umDoc('user_reputation', uid),
     challengeEntries: () => lista('challenge_entries', 'uid', uid, 100),
     registrations: () => minhasInscricoes(uid),
+    // Só da pessoa (a regra confere `uid`); vazio para quem nunca ligou o balanço.
+    debriefs: () => lista('training_debriefs', 'uid', uid, 300),
   };
   const nomes = Object.keys(tarefas);
   const resultados = await Promise.allSettled(nomes.map((n) => tarefas[n]()));
