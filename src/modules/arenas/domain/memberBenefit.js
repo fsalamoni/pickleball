@@ -211,7 +211,11 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   //    mais comum (trazer gente nova).
   //    Hora grátis abate a proporção das horas que SOBRARAM depois do pacote:
   //    a hora já coberta pelo pacote não pode ser "dada" de novo.
-  const valorCupom = coupon ? couponDiscount(aposDesconto, coupon, { hours: Math.max(0, horas - horasPacote) }) : 0;
+  //    O valor mínimo do cupom é conferido contra a TABELA (o valor da conta
+  //    antes de qualquer benefício), que é o número que a arena anunciou.
+  const minimoCupom = Number(coupon?.min_amount) || 0;
+  const cupomVale = coupon && !(minimoCupom > 0 && tabela < minimoCupom);
+  const valorCupom = cupomVale ? couponDiscount(aposDesconto, coupon, { hours: Math.max(0, horas - horasPacote) }) : 0;
   if (valorCupom > 0) {
     lines.push({ label: couponLabel(coupon) || 'Cupom', value: -valorCupom });
   }

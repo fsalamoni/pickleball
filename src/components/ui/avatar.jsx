@@ -12,7 +12,7 @@ export const Avatar = React.forwardRef(({ className, ...props }, ref) => (
 Avatar.displayName = 'Avatar';
 
 export const AvatarImage = React.forwardRef(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn('aspect-square h-full w-full', className)} {...props} />
+  <AvatarPrimitive.Image ref={ref} loading="lazy" decoding="async" className={cn('aspect-square h-full w-full', className)} {...props} />
 ));
 AvatarImage.displayName = 'AvatarImage';
 

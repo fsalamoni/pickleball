@@ -383,6 +383,11 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
   const draw = { stageType: stage.type, matches: buildGroupMatches(reshuffled) };
 
   const tournament = await getTournament(tournamentId);
+  // Torneio com alterações bloqueadas: refazer jogos apagaria os placares da
+  // fase — o mesmo bloqueio do "Sortear".
+  if (tournament?.results_locked) {
+    throw new Error('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.');
+  }
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,
     fallbackDate: tournament?.starts_at || null,
@@ -433,6 +438,11 @@ export async function moveParticipantBetweenGroups(params, actor) {
   // regenera os jogos da fase, em lote.
   const draw = { stageType: stage.type, groups: newGroups, matches: buildGroupMatches(newGroups) };
   const tournament = await getTournament(tournamentId);
+  // Torneio com alterações bloqueadas: refazer jogos apagaria os placares da
+  // fase — o mesmo bloqueio do "Sortear".
+  if (tournament?.results_locked) {
+    throw new Error('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.');
+  }
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,
     fallbackDate: tournament?.starts_at || null,

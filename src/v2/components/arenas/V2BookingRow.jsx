@@ -109,8 +109,13 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
     act(() => proposePrice.mutateAsync({ booking, price, options }), 'Proposta enviada.');
   };
 
+  // O atleta confirma ACEITANDO a proposta da arena — pelo valor proposto,
+  // não pelo que digitou (a regra confere). Pedido sem proposta da arena
+  // espera a arena.
+  const atletaPodeConfirmar = booking.status === BOOKING_STATUS.NEGOTIATING
+    && (booking.proposed_by || 'arena') === 'arena';
   const handleConfirm = () => {
-    const agreedPrice = price || precoInfo.value || booking.proposed_price;
+    const agreedPrice = isArena ? (price || precoInfo.value || booking.proposed_price) : booking.proposed_price;
     act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CONFIRMED, options: { ...options, agreedPrice } }), 'Reserva confirmada.');
   };
 
@@ -189,9 +194,11 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
           <V2Button size="sm" variant="ghost" onClick={handlePropose}>
             <DollarSign className="h-4 w-4" /> Propor
           </V2Button>
-          <V2Button size="sm" onClick={handleConfirm} data-dica="reserva-confirmar-pedido">
-            <CheckCircle2 className="h-4 w-4" /> Confirmar
-          </V2Button>
+          {(isArena || atletaPodeConfirmar) && (
+            <V2Button size="sm" onClick={handleConfirm} data-dica="reserva-confirmar-pedido">
+              <CheckCircle2 className="h-4 w-4" /> {isArena ? 'Confirmar' : 'Aceitar proposta'}
+            </V2Button>
+          )}
           {editable && (
             <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               <Pencil className="h-4 w-4" /> Alterar

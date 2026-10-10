@@ -41,7 +41,7 @@ import { buildParticipants, ownerIds, invitedIds } from '../domain/shared_bookin
 import { totalBookingPrice } from '../domain/pricing.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { arenaOccupancy } from './arenaOccupancy.js';
-import { memberBookingPrice, planPackageConsumption, pointsForBooking } from '../domain/memberBenefit.js';
+import { memberBookingPrice, planPackageConsumption, pointsForBooking, applyPackageUse } from '../domain/memberBenefit.js';
 import { getMemberContext, consumeMemberBenefit } from './membersService.js';
 import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
 import { applyBookingReferral } from './bookingReferralService.js';
@@ -142,10 +142,31 @@ async function contextoDeMembro(arenaId, uid, couponCode) {
     // palpite. Conferir só no navegador deixaria qualquer pessoa gravar um
     // desconto que a arena não criou.
     couponCode
-      ? validateCouponCode(arenaId, couponCode, { userId: uid }).then((r) => r.coupon && !r.error ? r.coupon : null).catch(() => null)
+      // O valor mínimo do cupom é conferido depois, contra o preço de tabela de
+      // cada reserva (`memberBookingPrice`): aqui ainda não há valor.
+      ? validateCouponCode(arenaId, couponCode, { userId: uid, amount: Number.MAX_SAFE_INTEGER }).then((r) => r.coupon && !r.error ? r.coupon : null).catch(() => null)
       : Promise.resolve(null),
   ]);
   return { ...(ctx || { member: null, tiers: undefined, packages: [], wallet: null }), coupon: cupom };
+}
+
+/**
+ * O que sobra do contexto depois de uma reserva do pedido. Um pedido de várias
+ * quadras grava vários documentos: sem descontar, cada um abateria as MESMAS
+ * horas de pacote, o MESMO saldo e o MESMO cupom (que vale uma vez).
+ */
+export function contextoDepoisDe(ctx, benefit) {
+  if (!ctx || !benefit) return ctx;
+  const horas = Number(benefit.package_hours) || 0;
+  const usado = Number(benefit.wallet_value) || 0;
+  return {
+    ...ctx,
+    packages: horas > 0 ? applyPackageUse(ctx.packages, horas).packages : ctx.packages,
+    wallet: ctx.wallet && usado > 0
+      ? { ...ctx.wallet, balance: Math.max(0, (Number(ctx.wallet.balance) || 0) - usado) }
+      : ctx.wallet,
+    coupon: benefit.coupon_value > 0 ? null : ctx.coupon,
+  };
 }
 
 /**
@@ -345,7 +366,7 @@ export async function createBooking(arena, user, profile, input) {
   const createdIds = [];
   const nowMs = Date.now();
   // Uma leitura só do contexto de membro, para todas as quadras do pedido.
-  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
+  let ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
   // A indicação vai na PRIMEIRA reserva do pedido, e só nela.
   let indicacao = indicacaoDoPedido(input, user.uid);
   for (const cid of targetCourtIds) {
@@ -388,6 +409,7 @@ export async function createBooking(arena, user, profile, input) {
     });
     createdIds.push(id);
     indicacao = null;
+    ctxMembro = contextoDepoisDe(ctxMembro, benefit);
   }
   await batch.commit();
 
@@ -574,7 +596,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const batch = writeBatch(db);
   const createdIds = [];
   const nowMs = Date.now();
-  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
+  let ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
   // A indicação vai na PRIMEIRA reserva do pedido, e só nela.
   let indicacao = indicacaoDoPedido(input, user.uid);
 
@@ -618,6 +640,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
       });
       createdIds.push(id);
       indicacao = null;
+      ctxMembro = contextoDepoisDe(ctxMembro, benefit);
     });
   });
   await batch.commit();
@@ -884,6 +907,9 @@ export async function proposeBookingPrice(booking, price, actor, { byManager = t
   const value = num(price);
   const patch = {
     proposed_price: value,
+    // Quem propôs: o atleta só confirma a reserva aceitando a proposta da
+    // ARENA (a regra confere) — nunca a própria.
+    proposed_by: byManager ? 'arena' : 'athlete',
     updated_at: serverTimestamp(),
   };
   if (booking.status === BOOKING_STATUS.REQUESTED) patch.status = BOOKING_STATUS.NEGOTIATING;

@@ -89,6 +89,9 @@ export function buildStartAtISO(dateStr, timeStr, fallbackDate = null) {
   if (!time) return null;
 
   let baseDate = normalizeDateString(dateStr);
+  // 'AAAA-MM-DD' é um DIA local: `new Date('2026-10-20')` seria meia-noite UTC,
+  // 21h do dia ANTERIOR no Brasil, e os jogos sairiam um dia antes.
+  if (!baseDate && typeof fallbackDate === 'string') baseDate = normalizeDateString(fallbackDate);
   if (!baseDate && fallbackDate) {
     const f = new Date(fallbackDate);
     if (!Number.isNaN(f.getTime())) {

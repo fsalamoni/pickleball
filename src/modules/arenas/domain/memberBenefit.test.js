@@ -412,6 +412,13 @@ describe('⭐ cupom na conta', () => {
     expect(r.couponCode).toBe('VERAO10');
   });
 
+  it('🐞 o valor mínimo é conferido contra a tabela da reserva', () => {
+    expect(memberBookingPrice(ARENA, DUAS_HORAS, { coupon: cupom({ min_amount: 150 }) }).couponValue).toBe(20);
+    const abaixo = memberBookingPrice(ARENA, DUAS_HORAS, { coupon: cupom({ min_amount: 300 }) });
+    expect(abaixo.couponValue).toBe(0);
+    expect(abaixo.total).toBe(200);
+  });
+
   it('sem cupom, o campo fica nulo (e não "sem cupom")', () => {
     expect(memberBookingPrice(ARENA, DUAS_HORAS, {}).couponCode).toBeNull();
   });

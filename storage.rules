@@ -36,7 +36,10 @@ service firebase.storage {
     // anexo de chat, logo de arena). Comportamento INALTERADO, exceto por não
     // alcançar mais a pasta `private`.
     match /uploads/{uid}/{folder}/{allPaths=**} {
-      allow read: if isAuthed() && folder != 'private';
+      // `get` (abrir pelo link) para quem tem conta; `list` (enumerar a pasta)
+      // só do dono — senão qualquer conta listava os anexos de chat alheios.
+      allow get: if isAuthed() && folder != 'private';
+      allow list: if isAuthed() && request.auth.uid == uid && folder != 'private';
       allow write: if isAuthed() && request.auth.uid == uid && sizeOk()
         && folder != 'private';
       allow delete: if isAuthed() && request.auth.uid == uid && folder != 'private';
@@ -46,7 +49,8 @@ service firebase.storage {
     // pasta. O código atual sempre usa uma pasta, mas arquivos antigos podem
     // existir nesse formato e não podem perder acesso.
     match /uploads/{uid}/{fileName} {
-      allow read: if isAuthed();
+      allow get: if isAuthed();
+      allow list: if isAuthed() && request.auth.uid == uid;
       allow write: if isAuthed() && request.auth.uid == uid && sizeOk();
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
