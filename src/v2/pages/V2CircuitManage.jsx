@@ -12,7 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Trophy, Plus, Award, Users, Calendar, Trash2, Edit3 } from 'lucide-react';
+import { Trophy, Plus, Award, Users, Calendar, Trash2, Edit3 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import {
@@ -24,7 +24,7 @@ import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
-  V2Skeleton,
+  V2Skeleton, V2BackLink,
 } from '@/v2/ui/primitives';
 
 const athleteLabel = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
@@ -421,9 +421,7 @@ export default function V2CircuitManage() {
 
   return (
     <div className="space-y-4 p-4">
-      <Link to="/circuits" className="inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Circuitos
-      </Link>
+      <V2BackLink to="/circuits">Circuitos</V2BackLink>
       <CircuitInfo circuit={circuit} isAdmin={isAdmin} onEdit={() => setEditing(true)} />
       <TournamentList circuitId={circuitId} isAdmin={isAdmin} />
       {isAdmin && <CircuitResultsEntry circuit={circuit} circuitId={circuitId} />}

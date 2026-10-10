@@ -13,7 +13,7 @@ import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowDown, ArrowLeft, ArrowUp, CalendarRange, Check, CheckCircle2, NotebookPen, Pause, Pencil, Play, Plus, Trash2, X,
+  ArrowDown, ArrowUp, CalendarRange, Check, CheckCircle2, NotebookPen, Pause, Pencil, Play, Plus, Trash2, X,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
@@ -31,7 +31,7 @@ import {
 } from '@/modules/training/domain/treinar';
 import { WEEKDAY_LONG, formatDayLabel, todayLocal, addDays } from '@/modules/training/domain/dates';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea, V2BackLink,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
@@ -52,9 +52,7 @@ const ESTADO_DIA = {
 
 function Voltar() {
   return (
-    <Link to={VOLTAR} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Planos
-    </Link>
+    <V2BackLink to={VOLTAR}>Planos</V2BackLink>
   );
 }
 

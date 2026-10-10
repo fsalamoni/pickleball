@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, Globe, Info, Lock, MapPin, MessageSquare, Pencil, Repeat, Users } from 'lucide-react';
+import { CalendarDays, Globe, Info, Lock, MapPin, MessageSquare, Pencil, Repeat, Users } from 'lucide-react';
 import { useMyMembership, useClubEvent } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_EVENT_TYPE, eventTypeLabel, isGameDayEvent, isPrivateEvent } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
 import V2EventDatesPanel from '@/v2/components/clubs/V2EventDatesPanel';
 import V2EventParticipantsPanel from '@/v2/components/clubs/V2EventParticipantsPanel';
 import V2EventChat from '@/v2/components/clubs/V2EventChat';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function formatDateTime(value) {
@@ -63,9 +63,7 @@ export default function V2EventDetail() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to={`/clubes/${clubId}?tab=events`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar para eventos
-      </Link>
+      <V2BackLink to={`/clubes/${clubId}?tab=events`} className="mb-5">Voltar para eventos</V2BackLink>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

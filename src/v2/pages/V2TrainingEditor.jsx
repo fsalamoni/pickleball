@@ -14,7 +14,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Eye, History, Save, Sparkles } from 'lucide-react';
+import { Eye, History, Save, Sparkles } from 'lucide-react';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import { useTrainingSettings } from '@/modules/training/hooks/useTrainingSettings';
 import { useCreateTrainingItem, useTrainingItem, useUpdateTrainingItem } from '@/modules/training/hooks/useTrainingItems';
@@ -28,7 +28,7 @@ import { buildCopyInput, canCopyItem, derivedFromFor } from '@/modules/training/
 import { cn } from '@/core/lib/utils';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import {
-  V2Button, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Button, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import KindPicker from '@/v2/components/training/editor/KindPicker';
@@ -53,9 +53,7 @@ export default function V2TrainingEditor() {
 
 function Voltar({ to = '/treino', children = 'Voltar ao treino' }) {
   return (
-    <Link to={to} className="mb-4 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {children}
-    </Link>
+    <V2BackLink to={to} className="mb-4">{children}</V2BackLink>
   );
 }
 

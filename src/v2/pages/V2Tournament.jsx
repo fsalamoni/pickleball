@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, ArrowLeft, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy,
+  Archive, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy,
 } from 'lucide-react';
 import { buildICS, icsFilename } from '@/modules/tournament/domain/ics';
 import { useClipboard } from '@/core/lib/useClipboard';
@@ -18,7 +18,7 @@ import { V2TournamentOverview } from '@/v2/components/tournament/V2OverviewBlock
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2TournamentRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
-import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function parseDate(value) {
@@ -152,9 +152,7 @@ export default function V2Tournament() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
-      </Link>
+      <V2BackLink to="/torneios" className="mb-5">Voltar aos torneios</V2BackLink>
 
       {tournament.archived && (
         <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

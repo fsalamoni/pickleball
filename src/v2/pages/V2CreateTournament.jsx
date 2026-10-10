@@ -13,7 +13,7 @@ import {
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
 import {
-  V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea,
+  V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2BackLink,
 } from '@/v2/ui/primitives';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
@@ -92,9 +92,7 @@ export default function V2CreateTournament() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
-      </Link>
+      <V2BackLink to="/torneios" className="mb-5">Voltar aos torneios</V2BackLink>
 
       <TemplatePicker />
 

@@ -23,7 +23,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ShoppingBag, Sparkles, Store } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Sparkles, Store } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useShopProducts, useMySales, useMyPayments } from '@/modules/arenas/hooks/useArenaV3';
@@ -35,7 +35,7 @@ import ShopCart from '@/v2/components/arenas/shop/ShopCart';
 import MyOrderCard from '@/v2/components/arenas/shop/MyOrderCard';
 import ArenaPixKey from '@/v2/components/arenas/shop/ArenaPixKey';
 import {
-  V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
+  V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 
 /** As minhas compras nesta arena: as que pedem algo de mim em cima. */
@@ -134,12 +134,7 @@ export default function V2ArenaPDV() {
   return (
     <div className="mx-auto max-w-[900px]">
       <div className="mb-6">
-        <Link
-          to={`/arenas/${arena.id}`}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Loja da {arena.name}</h1>
         <p className="mt-2 font-medium text-gray-500">Peça pelo aplicativo e retire no balcão, sem fila.</p>
       </div>

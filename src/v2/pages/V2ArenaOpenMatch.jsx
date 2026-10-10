@@ -19,7 +19,7 @@
 
 import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useArenaOpenSlots, useUserWaitlist } from '@/modules/arenas/hooks/useArenaV3';
@@ -30,7 +30,7 @@ import { todayISO } from '@/modules/arenas/domain/calendar';
 import { WAITLIST_STATUS } from '@/modules/arenas/domain/waitlist';
 import { OpenSlotCard as VagaCard, WaitlistCallCard as ChamadaDaFila } from '@/v2/components/arenas/openMatch/OpenSlotCard';
 import { useOpenSlotActions } from '@/v2/components/arenas/openMatch/useOpenSlotActions';
-import { V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 
 export default function V2ArenaOpenMatch() {
   const { arenaId } = useParams();
@@ -79,12 +79,7 @@ export default function V2ArenaOpenMatch() {
 
   return (
     <div className="mx-auto max-w-[820px]">
-      <Link
-        to={`/arenas/${arena.id}`}
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-      </Link>
+      <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Jogos abertos</h1>
       <p className="mt-1 text-sm text-gray-500">
         Horários que a arena abriu para quem quiser entrar. Não precisa levar dupla.

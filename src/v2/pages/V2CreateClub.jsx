@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateClub } from '@/modules/clubs/hooks/useClubs';
-import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea, V2BackLink } from '@/v2/ui/primitives';
 
 const INITIAL = {
   name: '', description: '', city: '', state: '', home_venue: '',
@@ -45,9 +45,7 @@ export default function V2CreateClub() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to="/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar para clubes
-      </Link>
+      <V2BackLink to="/clubes" className="mb-5">Voltar para clubes</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Novo clube</span>

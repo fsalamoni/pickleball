@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
+  Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
   MessageCircle, Phone, Settings, Star, Trophy, Users,
   GraduationCap, CreditCard, ClipboardList,
 } from 'lucide-react';
@@ -41,7 +41,7 @@ import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ArenaPageIndex from '@/v2/components/arenas/ArenaPageIndex';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
 
 
 // O banner de campanha (desenho, modelos, especificação) pesa ~25 kB: vem sob
@@ -149,9 +149,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
   return (
     <div ref={paginaRef} className="mx-auto max-w-[900px]">
-      <Link to="/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar às arenas
-      </Link>
+      <V2BackLink to="/arenas" className="mb-5">Voltar às arenas</V2BackLink>
 
       {/* Hero — com a MARCA da arena, quando ela tem uma.
           A cor vem de `arenas.branding` (documento público); antes ela era

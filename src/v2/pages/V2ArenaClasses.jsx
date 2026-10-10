@@ -27,7 +27,7 @@
 
 import React, { useMemo } from 'react';
 import { Link, Navigate, useMatch, useParams } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, Settings2 } from 'lucide-react';
+import { GraduationCap, Settings2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaCoaches, useMyCoachProfiles } from '@/modules/arenas/hooks/useArenaV3';
@@ -37,7 +37,7 @@ import { COACH_LEVEL, COACH_LEVEL_META } from '@/modules/arenas/domain/classes';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import ArenaClassesPanel from '@/v2/components/arenas/classes/ArenaClassesPanel';
 import {
-  V2Avatar, V2Badge, V2Button, V2Skeleton, V2Surface,
+  V2Avatar, V2Badge, V2Button, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 
 /** A vitrine dos professores da arena (módulo `classes_catalog`). */
@@ -116,12 +116,7 @@ export default function V2ArenaClasses() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
-        <Link
-          to={`/arenas/${arena.id}`}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{titulo}</h1>
         <p className="mt-2 font-medium text-gray-500">
           {souProfessor

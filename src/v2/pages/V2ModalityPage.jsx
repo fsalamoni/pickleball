@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, Layers, Plus, ShieldCheck, Target, Trophy, Users, Wallet } from 'lucide-react';
+import { Calendar, Layers, Plus, ShieldCheck, Target, Trophy, Users, Wallet } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useTournament, useIsTournamentAdmin, useModalities, useRegistrations } from '@/modules/tournament/hooks/useTournament';
 import {
@@ -15,7 +15,7 @@ import { V2ModalityGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2ModalityMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState} from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
@@ -121,9 +121,7 @@ export default function V2ModalityPage() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to={`/torneios/${tournamentId}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> {tournament.name}
-      </Link>
+      <V2BackLink to={`/torneios/${tournamentId}`} className="mb-5">{tournament.name}</V2BackLink>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

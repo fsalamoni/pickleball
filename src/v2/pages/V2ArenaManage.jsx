@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-r
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
-  AlertTriangle, ArrowLeft, Building2, Trash2, UserPlus, Users, CalendarClock, Puzzle, Crown,
+  AlertTriangle, Building2, Trash2, UserPlus, Users, CalendarClock, Puzzle, Crown,
 } from 'lucide-react';
 /**
  * As abas chegam SOB DEMANDA.
@@ -77,7 +77,7 @@ import { computeTier } from '@/modules/arenas/domain/members';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { useArenaMembers, useAddArenaMember } from '@/modules/arenas/hooks/useArenaV3';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -312,9 +312,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-5 flex items-center justify-between gap-2">
-        <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-4 w-4" /> {arena.name}
-        </Link>
+        <V2BackLink to={`/arenas/${arena.id}`}>{arena.name}</V2BackLink>
         {isOwner && (
           <ConfirmDialog
             title="Excluir arena?"

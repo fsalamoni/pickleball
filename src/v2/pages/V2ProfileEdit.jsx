@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { ArrowLeft, Printer, Shield } from 'lucide-react';
+import { Printer, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   birthDateToBrtDate, validateRequiredProfile, normalizeFullName, isRequiredProfileComplete, parseDuprRating,
@@ -28,7 +28,7 @@ import {
 } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
-  V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
+  V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle, V2BackLink,
 } from '@/v2/ui/primitives';
 
 export default function V2ProfileEdit() {
@@ -311,9 +311,7 @@ export default function V2ProfileEdit() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <Link to="/perfil" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar ao perfil
-      </Link>
+      <V2BackLink to="/perfil" className="mb-5">Voltar ao perfil</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Seu perfil</span>

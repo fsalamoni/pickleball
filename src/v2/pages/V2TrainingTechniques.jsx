@@ -9,7 +9,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Route } from 'lucide-react';
+import { ArrowRight, Check, Route } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useTrainingIdentity } from '@/modules/training/hooks/useTrainingIdentity';
 import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingItems';
@@ -18,7 +18,7 @@ import { MASTERY, MASTERY_LABELS } from '@/modules/training/domain/evolution';
 import { buildTechniqueTrail } from '@/modules/training/domain/techniqueTrail';
 import { itemMetaLine } from '@/modules/training/domain/trainingItem';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { rolarAte } from '@/v2/ui/rolarAte';
@@ -29,9 +29,7 @@ const TOM = { [MASTERY.DOMINADO]: 'green', [MASTERY.CONSISTENTE]: 'acid', [MASTE
 
 function Voltar() {
   return (
-    <Link to="/treino?aba=biblioteca" className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Biblioteca
-    </Link>
+    <V2BackLink to="/treino?aba=biblioteca">Biblioteca</V2BackLink>
   );
 }
 

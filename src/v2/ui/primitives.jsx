@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Slot } from '@radix-ui/react-slot';
-import { ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -129,6 +130,32 @@ export function V2PageIntro({ title, subtitle, action, className }) {
         {subtitle && <p className="mt-2 font-medium text-gray-500">{subtitle}</p>}
       </div>
       {action && <div className="flex flex-wrap items-center gap-3">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * Link de "voltar" único (plano de UX §5.6). Antes, 28 telas desenhavam o seu
+ * com `ArrowLeft` e classes próprias; a altura de 44 px é o alvo de toque.
+ */
+export function V2BackLink({ to, className, children, ...props }) {
+  return (
+    <Link
+      to={to}
+      className={cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink', className)}
+      {...props}
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {children}
+    </Link>
+  );
+}
+
+/** Cabeçalho de página: o "voltar" (opcional) em cima do título e das ações. */
+export function V2PageHeader({ voltarPara, voltarLabel = 'Voltar', className, ...intro }) {
+  return (
+    <div className={className}>
+      {voltarPara && <V2BackLink to={voltarPara} className="mb-3">{voltarLabel}</V2BackLink>}
+      <V2PageIntro {...intro} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Hash, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
+import { Award, Building2, ChevronRight, GraduationCap, Hash, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -15,7 +15,7 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
-import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 
@@ -93,9 +93,7 @@ export default function V2AthleteProfile() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to="/atletas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
-        <ArrowLeft className="h-4 w-4" /> Voltar aos atletas
-      </Link>
+      <V2BackLink to="/atletas" className="mb-5">Voltar aos atletas</V2BackLink>
 
       {/* Hero */}
       <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">

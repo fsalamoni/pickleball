@@ -14,7 +14,7 @@
  */
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CalendarClock, GraduationCap, Tag } from 'lucide-react';
+import { ArrowRight, CalendarClock, GraduationCap, Tag } from 'lucide-react';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { PERMANENT_FEATURE } from '@/core/featureFlags';
 import { BANNER_STATE, campaignBannerState } from '@/modules/arenas/domain/campaignBanner';
@@ -24,16 +24,14 @@ import {
   PROMO_DESTINATION, PROMO_ISSUER, promoDestinationCta, promoDestinationLink,
 } from '@/modules/promo/domain/promo';
 import { usePromoCampaign } from '@/modules/promo/hooks/usePromo';
-import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import { issuerDisplayName } from '@/v2/components/promo/promoUi';
 
 function Voltar() {
   return (
-    <Link to="/promocoes" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-4 w-4" aria-hidden /> Promoções
-    </Link>
+    <V2BackLink to="/promocoes">Promoções</V2BackLink>
   );
 }
 
