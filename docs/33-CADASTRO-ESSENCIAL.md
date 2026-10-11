@@ -18,6 +18,15 @@ O assistente de cadastro (`V2OnboardingWizard`, montado em todo `V2Layout`)
 abre para quem tem o cadastro incompleto e **não pode ser fechado**. A regra é
 `missingRegistrationFields` (`src/core/lib/profileValidation.js`):
 
+> **Fase 3.5 do plano de UX (2026-10-11)** — o passo dos **interesses** ganhou
+> "Continuar depois": ele só personaliza o início (que já se vira sem ele), então
+> pode ficar para depois por **7 dias**, no navegador por uid
+> (`v2:view:<uid>:onboarding:adiado`, zero banco). Nível, categoria e dados
+> pessoais seguem sem adiar. O assistente mostra "Passo X de Y", e quem volta
+> por uma coisa só lê "Falta só o seu nível" no título. Domínio em
+> `src/modules/athletes/domain/onboardingSteps.js` (`passosPara`, `deveAbrir`,
+> `tituloDoRetorno`).
+
 | Campo | Para quê | Antes | Com a flag |
 |---|---|---|---|
 | Nome de exibição | rankings, listas | obrigatório | obrigatório |
