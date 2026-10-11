@@ -21,7 +21,7 @@ import {
  *    aberto, membros, aulas, torneios, loja e a rotina da casa.
  *  - **Gerir** — como a arena é: perfil, estrutura e preços, marketing,
  *    desempenho, equipe e o que ela liga para si.
- * Atender vem em cima porque é por onde se entra (a aba padrão é Reservas).
+ * Atender vem em cima porque é por onde se entra (a aba padrão é Hoje).
  */
 export const ARENA_SECTION_GROUPS = Object.freeze([
   { id: 'atender', label: 'Atender' },
@@ -41,6 +41,9 @@ export function buildArenaSections({
   coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, engajamentoOn = false, modulos = {},
 }) {
   return [
+    // Hoje (Fase 3.3): a abertura da Central — a agenda do dia e, com o módulo
+    // de operação, a rotina. É por onde se entra; "Precisa de você" fica acima.
+    { id: 'hoje', grupo: 'atender', label: 'Hoje', icon: Sun, tabs: [{ value: 'hoje', label: 'Hoje', icon: Sun }] },
     {
       id: 'perfil',
       grupo: 'gerir',
@@ -177,7 +180,7 @@ export function buildArenaSections({
       label: 'Operação',
       icon: ClipboardCheck,
       tabs: [
-        ...(modulos.operacao ? [{ value: 'operacao', label: 'Hoje', icon: Sun }] : []),
+        ...(modulos.operacao ? [{ value: 'operacao', label: 'Rotina do dia', icon: Sun }] : []),
         ...(modulos.checklists ? [{ value: 'checklists', label: 'Rotinas', icon: ClipboardList }] : []),
         ...(modulos.manutencao ? [{ value: 'manutencao', label: 'Manutenção', icon: Wrench }] : []),
         ...(modulos.equipamentos ? [{ value: 'equipamentos', label: 'Equipamentos', icon: Cpu }] : []),
