@@ -29,6 +29,7 @@ import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { saveRegion } from '@/core/lib/regionPreference';
 
 // Sábado, 26/09/2026, 15:00.
 const AGORA = new Date(2026, 8, 26, 15, 0).getTime();
@@ -186,21 +187,12 @@ const render = async () => {
 const secoes = () => [...container.querySelectorAll('[data-secao-inicio]')].map((s) => s.getAttribute('data-secao-inicio'));
 const atalhos = () => [...container.querySelectorAll('nav[aria-label="Atalhos para você"] a')].map((a) => a.getAttribute('href'));
 const texto = () => container.textContent;
+/** A escolha dos cards do início, como a pessoa a guardaria. */
+const escolher = (cards) => window.localStorage.setItem('v2:view:u1:inicio:cards', JSON.stringify({ v: 1, cards }));
 
-describe('⭐ cada pessoa vê a SUA tela inicial', () => {
-  it('quem gere arena e dá aula: arena e professor primeiro, com as portas diretas', async () => {
-    estado.arenas = [{ id: 'a1', name: 'Arena Sul', city: 'Porto Alegre', state: 'RS', my_role: 'owner' }];
-    estado.pendentes = { a1: 2 };
-    estado.coach = ok({ id: 'u1', display_name: 'Ana', active: true });
-    await render();
-    expect(secoes().slice(0, 3)).toEqual(['agenda', 'arena', 'professor']);
-    expect(atalhos().slice(0, 2)).toEqual(['/arenas/a1/gerir', '/aulas']);
-    expect(texto()).toContain('2 pedidos esperando');
-    expect(texto()).toContain('1 pedido de aula esperando a sua resposta');
-    expect(texto()).toContain('Porque você faz isso na plataforma');
-  });
-
+describe('⭐ o conteúdo de cada card', () => {
   it('quem organiza: "criar torneio" primeiro e o torneio esquecido pede encerramento; o encerrado some', async () => {
+    escolher(['organizar', 'atalhos']);
     estado.perfil.interests = ['organize_tournaments'];
     estado.meus = ok([
       { id: 't1', name: 'Open da Primavera', my_role: 'owner', status: 'in_progress', ends_at: '2026-09-10' },
@@ -217,6 +209,8 @@ describe('⭐ cada pessoa vê a SUA tela inicial', () => {
   });
 
   it('quem compete: torneios abertos perto primeiro, sem encerrado nem prazo vencido, e o último resultado', async () => {
+    saveRegion('u1', { modo: 'todos' }); // a região é outro assunto: aqui se testa a ordem por cidade
+    escolher(['torneios', 'resultado']);
     estado.perfil.interests = ['play_tournaments'];
     estado.publicos = ok([
       { id: 'p1', name: 'Torneio de Curitiba', status: 'registrations_open', city: 'Curitiba', state: 'PR', registration_deadline: '2026-10-01' },
@@ -232,7 +226,7 @@ describe('⭐ cada pessoa vê a SUA tela inicial', () => {
     await render();
     const t = texto();
     expect(t.indexOf('Torneio de POA')).toBeLessThan(t.indexOf('Torneio de Curitiba'));
-    expect(t).toContain('Na sua cidade');
+    expect(t).toContain('na sua cidade');
     expect(t).not.toContain('Torneio Vencido');
     expect(t).not.toContain('Torneio Encerrado');
     expect(t).toContain('Open de Inverno');
@@ -242,6 +236,8 @@ describe('⭐ cada pessoa vê a SUA tela inicial', () => {
 
 describe('🐞 o torneio que eu criei e em que me inscrevi', () => {
   it('⭐ aparece em "Seus torneios" como meu (organizo e jogo) — e não em "inscreva-se"', async () => {
+    saveRegion('u1', { modo: 'todos' }); // a região é outro assunto: aqui se testa a ordem por cidade
+    escolher(['torneios']);
     estado.perfil.interests = ['play_tournaments'];
     const meu = {
       id: 'meu', name: 'Aberto da Ana', my_role: 'owner', is_player: true, my_registration_status: 'confirmed',
@@ -261,6 +257,7 @@ describe('🐞 o torneio que eu criei e em que me inscrevi', () => {
   });
 
   it('organizo sem jogar: entra em "Seus torneios" levando à gestão', async () => {
+    escolher(['torneios']);
     estado.perfil.interests = ['play_tournaments'];
     estado.meus = ok([{ id: 'org', name: 'Copa do Clube', my_role: 'admin', is_player: false, status: 'registrations_open', registration_deadline: '2026-10-01' }]);
     estado.publicos = ok([]);
@@ -274,6 +271,7 @@ describe('🐞 o torneio que eu criei e em que me inscrevi', () => {
 
 describe('⭐ falha não é vazio', () => {
   it('torneios que não carregaram: diz que falhou, nunca "nenhum torneio"', async () => {
+    escolher(['torneios']);
     estado.perfil.interests = ['play_tournaments'];
     estado.publicos = falha();
     await render();
@@ -283,6 +281,7 @@ describe('⭐ falha não é vazio', () => {
   });
 
   it('arenas que não carregaram: nunca oferece "cadastrar minha arena" (seria duplicar)', async () => {
+    escolher(['arena', 'atalhos']);
     estado.perfil.interests = ['arena_manage'];
     estado.arenasQ = falha();
     await render();
@@ -292,6 +291,7 @@ describe('⭐ falha não é vazio', () => {
   });
 
   it('agenda incompleta: diz o que não carregou e não afirma "agenda livre"', async () => {
+    escolher(['agenda']);
     estado.agenda = { ...estado.agenda, completa: false, falhas: ['reservas'] };
     await render();
     expect(texto()).toContain('Não carregou: reservas');
@@ -299,6 +299,7 @@ describe('⭐ falha não é vazio', () => {
   });
 
   it('agenda completa e vazia: diz que está livre e oferece o próximo passo', async () => {
+    escolher(['agenda']);
     await render();
     expect(texto()).toContain('sua agenda está livre');
   });
@@ -306,6 +307,7 @@ describe('⭐ falha não é vazio', () => {
 
 describe('agenda', () => {
   it('agrupa por dia, com "Hoje" e o que pede ação destacado', async () => {
+    escolher(['agenda']);
     estado.agenda = {
       ...estado.agenda,
       itens: [
@@ -325,6 +327,7 @@ describe('agenda', () => {
 
 describe('⭐ uma seção quebrada não derruba a tela', () => {
   it('o ranking com defeito vira um aviso; o resto segue de pé', async () => {
+    escolher(['ranking', 'agenda', 'torneios']);
     estado.perfil.interests = ['ranking', 'play_tournaments'];
     estado.quebrarRanking = true;
     const erroOriginal = console.error;
@@ -340,26 +343,11 @@ describe('⭐ uma seção quebrada não derruba a tela', () => {
   });
 });
 
-describe('Personalizar', () => {
-  it('salva os interesses pelo mesmo caminho do perfil', async () => {
-    estado.perfil.interests = ['ranking'];
-    await render();
-    const botao = [...container.querySelectorAll('button')].find((b) => b.textContent.includes('Personalizar'));
-    await act(async () => { botao.click(); });
-    const opcao = [...document.querySelectorAll('button[aria-pressed]')].find((b) => b.textContent.includes('Organizar torneios'));
-    await act(async () => { opcao.click(); });
-    const salvar = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Salvar');
-    await act(async () => { salvar.click(); });
-    expect(estado.updateUserProfile).toHaveBeenCalledWith({ interests: ['ranking', 'organize_tournaments'] });
-  });
-});
-
 // ---------------------------------------------------------------------------
 // Início sob medida (flag `home_cards`)
 // ---------------------------------------------------------------------------
 
 const SOB_MEDIDA = { personalized_home: true, home_cards: true };
-const escolher = (cards) => window.localStorage.setItem('v2:view:u1:inicio:cards', JSON.stringify({ v: 1, cards }));
 /** A ordem na grade: seções e os cards que não são seção, como aparecem. */
 const ordem = () => [...container.querySelectorAll('[data-secao-inicio], [data-extra-inicio], nav[aria-label="Atalhos para você"]')]
   .map((el) => el.getAttribute('data-secao-inicio') || el.getAttribute('data-extra-inicio') || 'atalhos')
@@ -410,17 +398,6 @@ describe('⭐ início sob medida', () => {
     await render();
     expect(ordem()).toEqual(['jogar', 'reservar']);
     expect(estado.consultasRanking).toBe(0);
-  });
-
-  it('card que depende de funcionalidade desligada fica guardado e não aparece', async () => {
-    escolher(['destaques', 'evolucao', 'ranking']);
-    await render();
-    expect(ordem()).toEqual(['ranking']);
-    act(() => root.unmount());
-    root = createRoot(container);
-    estado.flags = { ...SOB_MEDIDA, arena_modules: true, action_home: true };
-    await render();
-    expect(ordem()).toEqual(['destaques', 'evolucao', 'ranking']);
   });
 
   it('⭐ o card do treino só existe com o Centro de Treino ligado — desligado, nem consulta', async () => {
@@ -565,18 +542,23 @@ describe('⭐ Jogar: os dias de jogo com vaga', () => {
 });
 
 describe('Horários da arena, para quem ainda não tem arena de sempre', () => {
-  it('mostra as arenas da cidade e do estado do perfil, a da cidade primeiro', async () => {
+  it('mostra as arenas da região (o estado do perfil), a mais perto primeiro', async () => {
+    saveRegion('u1', { modo: 'estado' });
     estado.todasArenas = ok([
       { id: 'sp', name: 'Arena Paulista', city: 'São Paulo', state: 'SP' },
       { id: 'pel', name: 'Arena Pelotas', city: 'Pelotas', state: 'RS' },
       { id: 'poa', name: 'Arena Moinhos', city: 'Porto Alegre', state: 'RS' },
     ]);
     await render();
-    const secao = container.querySelector('[data-secao-inicio="reservar"]');
-    expect(secao.textContent).toContain('Arenas perto de você');
-    const links = [...secao.querySelectorAll('a[href^="/arenas/"]')].map((a) => a.getAttribute('href'));
-    expect(links.slice(0, 2)).toEqual(['/arenas/poa#arena-reservar', '/arenas/pel#arena-reservar']);
-    expect(links).not.toContain('/arenas/sp#arena-reservar');
+    const secao = () => container.querySelector('[data-secao-inicio="reservar"]');
+    const links = () => [...secao().querySelectorAll('a[href^="/arenas/"]')].map((a) => a.getAttribute('href'));
+    // A distância chega com o mapa das cidades (import dinâmico).
+    for (let i = 0; i < 30 && links()[0] !== '/arenas/poa#arena-reservar'; i += 1) {
+      await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
+    }
+    expect(secao().textContent).toContain('Arenas perto de você');
+    expect(links().slice(0, 2)).toEqual(['/arenas/poa#arena-reservar', '/arenas/pel#arena-reservar']);
+    expect(links()).not.toContain('/arenas/sp#arena-reservar');
   });
 
   it('com a lista falhando, só o convite — sem afirmar que não há arena perto', async () => {

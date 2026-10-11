@@ -24,8 +24,7 @@ import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
 import MyCoachLinks from '@/v2/components/coach/MyCoachLinks';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import {
   V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -108,8 +107,8 @@ function V2StudentLessonsContent() {
   const { data: sales = [] } = useStudentSales(user?.uid);
   const respond = useRespondLesson();
   // Aceitar, recusar e deixar de ser aluno chegam com o Centro de Treino ou a Minha área.
-  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const trainingOn = true;
+  const userHubOn = true;
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
 

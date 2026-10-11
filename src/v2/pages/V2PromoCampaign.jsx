@@ -13,10 +13,9 @@
  * foi pausada (mostra o que era e diz que não está mais valendo).
  */
 import React from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, CalendarClock, GraduationCap, Tag } from 'lucide-react';
-import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { BANNER_STATE, campaignBannerState } from '@/modules/arenas/domain/campaignBanner';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
@@ -37,15 +36,11 @@ function Voltar() {
 
 export default function V2PromoCampaign() {
   const { campaignId } = useParams();
-  const { flags, isLoading: flagsCarregando } = useFeatureFlags();
-  const ligado = Boolean(flags?.[PERMANENT_FEATURE.PLATFORM_MARKETING] || flags?.[PERMANENT_FEATURE.COACH_MARKETING]);
-  const q = usePromoCampaign(ligado ? campaignId : null);
+  const q = usePromoCampaign(campaignId);
   const campanha = q.data;
   const today = todayISO();
 
-  if (!flagsCarregando && !ligado) return <Navigate to="/" replace />;
-
-  if (flagsCarregando || q.isLoading) {
+  if (q.isLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <V2Skeleton lines={1} />

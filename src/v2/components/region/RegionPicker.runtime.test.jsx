@@ -107,11 +107,6 @@ describe('RegionPicker', () => {
 });
 
 describe('RegionSettingsCard', () => {
-  it('some com a flag desligada — nenhuma opção que não faz nada', async () => {
-    estado.flags = {};
-    await render(<RegionSettingsCard />);
-    expect(container.textContent).toBe('');
-  });
   it('com a flag, aparece com a âncora de Configurações', async () => {
     await render(<RegionSettingsCard />);
     expect(container.querySelector('#minha-regiao')).not.toBeNull();

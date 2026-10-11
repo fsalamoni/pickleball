@@ -114,11 +114,6 @@ const botao = (texto) => [...container.querySelectorAll('button')]
 /* =============================================================== guardas === */
 
 describe('quem entra aqui', () => {
-  it('⭐ flag desligada: vai para a página pública da arena', async () => {
-    flags.on = false;
-    await render();
-    expect(container.textContent).toContain('PÁGINA PÚBLICA');
-  });
 
   it('⭐ quem não gerencia a arena não entra, nem sabendo a URL', async () => {
     auth.user = { uid: 'curioso' };

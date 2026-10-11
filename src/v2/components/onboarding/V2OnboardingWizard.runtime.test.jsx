@@ -82,15 +82,6 @@ describe('V2OnboardingWizard', () => {
     expect(texto()).not.toContain('Qual é o seu nível');
   });
 
-  it('sem a flag, conta nova vê o assistente de sempre (sem a categoria)', async () => {
-    estado.essencial = false;
-    estado.perfil = { uid: 'novo' };
-    await render();
-    expect(texto()).toContain('Bem-vindo(a) à PickleRush!');
-    expect(body().querySelector('#onb_uf').tagName).toBe('INPUT');
-    expect(texto()).not.toContain('Categoria em que você joga');
-  });
-
   it('⭐ com a flag, quem já tinha cadastro vê SÓ o que falta, com o porquê', async () => {
     estado.essencial = true;
     estado.perfil = COMPLETO_ANTIGO;

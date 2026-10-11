@@ -9,8 +9,7 @@
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import {
   chosenHomeCards, isDefaultHomeCards, moveHomeCard, toggleHomeCard,
 } from '../domain/homeCards.js';
@@ -20,18 +19,18 @@ import {
 
 /** O início sob medida está valendo? (as duas flags) */
 export function useHomeCardsOn() {
-  const personalizada = useFeatureFlag(PERMANENT_FEATURE.PERSONALIZED_HOME);
-  const sobMedida = useFeatureFlag(PERMANENT_FEATURE.HOME_CARDS);
+  const personalizada = true;
+  const sobMedida = true;
   return personalizada && sobMedida;
 }
 
 /** O que está ligado agora e muda o que cada card oferece. */
 export function useHomeCardsContext() {
-  const arenas = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
-  const plataforma = useFeatureFlag(PERMANENT_FEATURE.PLATFORM_MARKETING);
-  const professores = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
-  const evolucao = useFeatureFlag(PERMANENT_FEATURE.ACTION_HOME);
-  const treino = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
+  const arenas = true;
+  const plataforma = true;
+  const professores = true;
+  const evolucao = true;
+  const treino = true;
   return useMemo(() => ({
     promocoes: arenas || plataforma || professores,
     evolucao,

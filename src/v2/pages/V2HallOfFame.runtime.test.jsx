@@ -67,11 +67,6 @@ const abrirAba = async (rotulo) => {
 };
 
 describe('V2HallOfFame · flag OFF / módulo desligado', () => {
-  it('flag OFF mostra empty state', async () => {
-    mockFlagState.value = false;
-    await render();
-    expect(container.textContent).toContain('Hall da Fama em construção');
-  });
 
   it('módulo desligado pelo admin: a página diz isso, sem fingir que o placar está vazio', async () => {
     mod.hallOn = false;

@@ -34,8 +34,7 @@ const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').th
 const ArenaOperationsPanel = lazy(() => import('@/v2/pages/V2ArenaOperations').then((m) => ({ default: m.ArenaOperationsPanel })));
 const ArenaAdvancedPanel = lazy(() => import('@/v2/pages/V2ArenaAdvanced').then((m) => ({ default: m.ArenaAdvancedPanel })));
 const ArenaAttendancePanel = lazy(() => import('@/v2/pages/V2ArenaAttendance').then((m) => ({ default: m.ArenaAttendancePanel })));
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -211,16 +210,16 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const coachResidentOn = true;
   const linkedClubsOn = true;
   const crmOn = true;
-  const opsKpisOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_OPS_KPIS);
-  const engajamentoOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const opsKpisOn = true;
+  const engajamentoOn = true;
   // Dia de jogo da arena: rota própria (como Módulos e Open Match), por isso
   // entra como atalho no topo e não como aba — aba que navega para fora quebra
   // a promessa das outras.
-  const gameDayOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
+  const gameDayOn = true;
   // Módulos adicionais: a seção Configurações só existe com a chave-mestra
   // ligada. Desligada, não há o que configurar — e aba vazia é pior que aba
   // nenhuma.
-  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const arenaModulesOn = true;
   const { isOn: moduloLigado, isLoading: modulosCarregando } = useArenaModules(arenaId);
   const { data: torneiosDaPlataforma = [], isLoading: torneiosCarregando } = useArenaPlatformTournaments(arenaId, { includePending: true });
   const modulos = {

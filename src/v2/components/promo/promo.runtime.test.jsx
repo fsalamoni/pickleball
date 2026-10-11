@@ -206,25 +206,6 @@ describe('⭐ vitrine de promoções', () => {
     expect(texto()).toContain('Dos professores');
   });
 
-  it('a flag do emissor desligada tira os itens dele', async () => {
-    estado.flags = { platform_marketing: true, coach_marketing: false };
-    estado.vitrine = { coupons: [cupom('aula10'), cupom('open', { issuer_type: 'platform', issuer_id: 'platform' })], campaigns: [] };
-    await render(<V2Promotions />);
-    expect(container.querySelector('button[aria-label="Copiar o código AULA10"]')).toBeNull();
-    expect(container.querySelector('button[aria-label="Copiar o código OPEN"]')).toBeTruthy();
-  });
-
-  it('as duas flags desligadas: volta ao início', async () => {
-    estado.flags = {};
-    await render(
-      <Routes>
-        <Route path="/" element={<p>início</p>} />
-        <Route path="/promocoes" element={<V2Promotions />} />
-      </Routes>,
-      '/promocoes',
-    );
-    expect(texto()).toBe('início');
-  });
 });
 
 describe('página da campanha', () => {
@@ -288,10 +269,4 @@ describe('perfil do professor', () => {
     expect(usar).toHaveBeenCalledWith('AULA10');
   });
 
-  it('com a flag desligada, nada', async () => {
-    estado.flags = {};
-    estado.doProfessor = { coupons: [cupom('aula10')], campaigns: [] };
-    await render(<CoachPromosSection coachId="prof" />);
-    expect(container.innerHTML).toBe('');
-  });
 });

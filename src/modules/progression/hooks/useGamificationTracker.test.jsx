@@ -69,15 +69,6 @@ describe('useGamificationTracker', () => {
     });
   });
 
-  it('quando flag OFF: enabled=false e track é noop (não chama dispatcher)', async () => {
-    mockFlagState.value = false;
-    const dispatcher = vi.fn();
-    const r = await capture(dispatcher);
-    expect(r.enabled).toBe(false);
-    r.track(GAMIFICATION_EVENT.XP_GAINED, { amount: 30 });
-    expect(dispatcher).not.toHaveBeenCalled();
-  });
-
   it('erro no dispatcher não quebra a app', async () => {
     const dispatcher = vi.fn().mockImplementation(() => {
       throw new Error('boom');

@@ -68,8 +68,7 @@ import {
 import {
   buildPlayHistory, forecastPlayByCourtBalanced, applyPlayEntryOrder,
 } from '@/modules/games/domain/playRotation.js';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
 import {
   useCreateNextPlayGame, useCreatePlayRound, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
@@ -754,7 +753,7 @@ export default function V2GameDayTelao() {
   // Rodízio equilibrado (flag `play_smart_rotation`). Declarado ANTES de
   // `playView` de propósito: o useMemo dele lê esta constante durante a
   // renderização — declarar depois dá ReferenceError (zona morta temporal).
-  const rodizioEquilibrado = useFeatureFlag(PERMANENT_FEATURE.PLAY_SMART_ROTATION);
+  const rodizioEquilibrado = true;
   // GRUPOS do Play (flag `play_groups`). É o MESMO hook do painel de quem
   // organiza: participantes com o nível resolvido e o sorteador que a previsão
   // e o serviço compartilham. Sem grupos devolve os participantes intactos e

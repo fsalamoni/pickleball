@@ -6,8 +6,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { debriefEnabledFor, debriefSince, pendingDebriefs } from '../domain/debrief.js';
 import {
@@ -19,8 +18,8 @@ import { useTrainingMeta } from './useTrainingMeta';
 
 /** A funcionalidade existe na plataforma (as duas flags). */
 export function useGameDebriefAvailable() {
-  const treino = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
-  const balanco = useFeatureFlag(PERMANENT_FEATURE.GAME_DEBRIEF);
+  const treino = true;
+  const balanco = true;
   return treino && balanco;
 }
 

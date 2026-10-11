@@ -132,15 +132,6 @@ function render(url = '/gamification') {
   });
 }
 
-describe('V2GamificationHome · flag OFF', () => {
-  it('mostra empty state amigável', async () => {
-    mockFlagState.value = false;
-    await render();
-    expect(container.textContent).toContain('Gamificação V2 em construção');
-    expect(container.querySelector('a[href="/meu-desempenho"]')).toBeTruthy();
-  });
-});
-
 describe('V2GamificationHome · flag ON · Jornada', () => {
   it('renderiza título + subtítulo', async () => {
     await render();

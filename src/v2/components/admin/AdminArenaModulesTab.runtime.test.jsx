@@ -109,20 +109,6 @@ describe('⭐ liberar não é ativar', () => {
   });
 });
 
-describe('⭐ chave-mestra desligada', () => {
-  it('avisa que nada disso vale ainda', async () => {
-    estado.masterOn = false;
-    await render();
-    expect(container.textContent).toMatch(/chave geral está desligada/i);
-    expect(container.textContent).toContain('arena_modules');
-  });
-
-  it('ligada, o aviso some', async () => {
-    await render();
-    expect(container.textContent).not.toMatch(/chave geral está desligada/i);
-  });
-});
-
 /* =========================================================== liberação ==== */
 
 describe('liberar um módulo', () => {

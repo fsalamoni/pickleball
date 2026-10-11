@@ -250,12 +250,6 @@ describe('falha, carregamento, vazio e flag', () => {
     expect(botao('Marcar todas como lidas')).toBeUndefined();
   });
 
-  it('sem a flag: a página não existe (volta ao início)', async () => {
-    flagsCtx.flags = {};
-    await render();
-    expect(texto()).toContain('INICIO');
-  });
-
   it('enquanto as flags carregam, não expulsa ninguém', async () => {
     flagsCtx.flags = {};
     flagsCtx.isLoading = true;

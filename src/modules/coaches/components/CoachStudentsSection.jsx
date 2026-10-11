@@ -24,8 +24,7 @@ import {
 } from '../hooks/useStudents.js';
 import { useCoachValidations, useUpsertValidation } from '../hooks/useValidations.js';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
@@ -284,10 +283,10 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
 export default function CoachStudentsSection({ coachId, lessons = [] }) {
   const { user } = useAuth();
   const levelingOn = true;
-  const progressOn = useFeatureFlag(PERMANENT_FEATURE.COACH_STUDENT_PROGRESS);
+  const progressOn = true;
   // Encerrar e reconvidar chegam com as funcionalidades novas do vínculo.
-  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const trainingOn = true;
+  const userHubOn = true;
   const vinculoOn = trainingOn || userHubOn;
   const {
     data: students = [], isLoading, isError: alunosFalharam, refetch: recarregarAlunos,

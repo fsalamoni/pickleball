@@ -20,8 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import {
   ARENA_MODULE_STATUS,
   ARENA_MODULE_STATUS_META,
@@ -261,7 +260,7 @@ function FamilyCard({ node, platformModules, adoption, busyId, onRelease, onMode
 export default function AdminArenaModulesTab() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const masterOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
+  const masterOn = true;
   const { data: platformModules = {}, isLoading, isError, refetch } = usePlatformArenaModules();
   const [busyId, setBusyId] = useState(null);
   const [q, setQ] = useState('');

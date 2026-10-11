@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { MapPin, Medal, Sparkles, Swords } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { rankMatchmakingCandidates, DEFAULT_MAX_RATING_DIFF } from '@/modules/rating/domain/matchmaking';
 import { rankSmartMatchmaking } from '@/modules/rating/domain/smartMatchmaking';
@@ -34,7 +34,7 @@ function compatTone(score) {
 export default function V2FindPlayers() {
   const { user, userProfile } = useAuth();
   const rotulos = useNavRotulos();
-  const smartOn = useFeatureFlag(PERMANENT_FEATURE.SMART_MATCHMAKING);
+  const smartOn = true;
   const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
   // Diretório (lado da quadra + interesses) só é buscado no modo inteligente.
   const { data: directory = [] } = useAthletes(smartOn);
@@ -42,7 +42,7 @@ export default function V2FindPlayers() {
   const [closeLevelOnly, setCloseLevelOnly] = useState(true);
   // Com a MINHA REGIÃO, o recorte de lugar é a região (cidade + raio, estado…),
   // ligado por padrão — é quem pode, de fato, jogar com você.
-  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
+  const regiaoOn = true;
   const [soRegiao, setSoRegiao] = useState(true);
 
   const me = useMemo(() => players.find((p) => p.id === user?.uid || p.uid === user?.uid) || null, [players, user?.uid]);

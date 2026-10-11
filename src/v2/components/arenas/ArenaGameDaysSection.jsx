@@ -21,8 +21,7 @@
 
 import React, { useMemo } from 'react';
 import { CalendarClock } from 'lucide-react';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
 import { V2Surface } from '@/v2/ui/primitives';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
@@ -35,7 +34,7 @@ function hojeISO() {
 }
 
 export default function ArenaGameDaysSection({ arenaId }) {
-  const ligado = useFeatureFlag(PERMANENT_FEATURE.ARENA_GAME_DAY);
+  const ligado = true;
   // `null` desliga a consulta: com a flag desligada esta seção não deve custar
   // nem uma leitura na página pública da arena, que é das mais visitadas.
   const { data: dias = [] } = useArenaGameDays(ligado ? arenaId : null);

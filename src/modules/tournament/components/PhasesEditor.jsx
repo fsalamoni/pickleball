@@ -30,8 +30,6 @@ import { compatibleStageTypes } from '@/modules/tournament/domain/formatExplain'
 import {
   ETAPAS_MIN, ETAPAS_MAX, TAMANHOS_DE_GRUPO,
 } from '@/modules/tournament/domain/americanoEtapasConfig';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
 
 const ROTATION_TYPES = [
   TOURNAMENT_STAGE_TYPE.AMERICANO, TOURNAMENT_STAGE_TYPE.MEXICANO, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS,
@@ -177,7 +175,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
   const DIVISION_HELP = divisionHelp(unit);
   // Americano em etapas: só se OFERECE com a flag. A fase que já está nele
   // continua com ele no seletor (flag tira a opção de escolher, não a de manter).
-  const etapasOn = useFeatureFlag(PERMANENT_FEATURE.TOURNAMENT_AMERICANO_ETAPAS);
+  const etapasOn = true;
   const ofertados = availableStageTypes(format, true, { americanoEtapas: etapasOn });
   const stageOptionsFor = (atual) => Object.fromEntries(
     [...ofertados, ...(atual && !ofertados.includes(atual) && compatibleStageTypes(format).includes(atual) ? [atual] : [])]

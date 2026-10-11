@@ -87,19 +87,6 @@ describe('⭐ não decide antes da hora', () => {
 });
 
 describe('⭐ quando o escuro não pode valer', () => {
-  it('flag desligada: claro e espelho apagado, mesmo com o escuro escolhido', () => {
-    window.localStorage.setItem(pref('ana'), 'escuro');
-    window.localStorage.setItem(ESPELHO, 'escuro');
-    document.documentElement.classList.add('dark');
-    estado.flags = { flags: { dark_mode: false }, isLoading: false };
-    montar();
-    expect(escuro()).toBe(false);
-    expect(window.localStorage.getItem(ESPELHO)).toBeNull();
-    expect(tema.disponivel).toBe(false);
-    // A escolha da pessoa NÃO é apagada: religada a flag, ela volta.
-    expect(window.localStorage.getItem(pref('ana'))).toBe('escuro');
-  });
-
   it('visitante: claro, e o seletor não aparece', () => {
     window.localStorage.setItem(ESPELHO, 'escuro');
     document.documentElement.classList.add('dark');

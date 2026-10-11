@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { logger } from '@/core/lib/logger';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import {
   GAMIFICATION_EVENT,
   createTracker,
@@ -25,7 +24,7 @@ import {
  * @returns {{ track, enabled, GAMIFICATION_EVENT }}
  */
 export function useGamificationTracker(options = {}) {
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const gamificationOn = true;
   const { user } = useAuth();
   const trackRef = useRef(options.track);
 

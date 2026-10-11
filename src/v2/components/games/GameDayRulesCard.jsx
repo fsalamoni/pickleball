@@ -4,8 +4,7 @@ import { Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { V2Badge } from '@/v2/ui/primitives';
 import { describeGameDayRules } from '@/modules/games/domain/gameDayRules';
 import { isPlayGroupsActive, normalizePlayGroupsConfig } from '@/modules/games/domain/playGroups';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
 import { useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
 
 /**
@@ -37,7 +36,7 @@ export default function GameDayRulesCard({ gameDay, podeGerenciar = false }) {
   // Os grupos do Play só entram no resumo com a flag ligada: desligada, os
   // grupos gravados no dia são ignorados em toda a plataforma, inclusive aqui.
   // Só a flag e o domínio — nada que puxe o sorteio para o pacote do resumo.
-  const flagGrupos = useFeatureFlag(PERMANENT_FEATURE.PLAY_GROUPS);
+  const flagGrupos = true;
   const { rows } = useMemo(
     () => describeGameDayRules(gameDay, {
       podeGerenciar,

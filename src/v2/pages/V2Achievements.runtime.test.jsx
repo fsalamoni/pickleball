@@ -75,17 +75,6 @@ function render() {
   });
 }
 
-describe('V2Achievements · flag OFF', () => {
-  it('mostra empty state amigável quando GAMIFICATION_V2 OFF', async () => {
-    mockFlag = false;
-    await render();
-    expect(container.textContent).toContain('Conquistas em breve');
-    // tem link para /meu-desempenho
-    const link = container.querySelector('a[href="/meu-desempenho"]');
-    expect(link).toBeTruthy();
-  });
-});
-
 describe('V2Achievements · flag ON', () => {
   it('renderiza header com contagem de conquistas', async () => {
     await render();

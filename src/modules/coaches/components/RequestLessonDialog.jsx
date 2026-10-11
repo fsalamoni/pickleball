@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { generateWeekSlots } from '../domain/availability.js';
 import { LESSON_FORMAT, LESSON_FORMAT_LABELS, isValidSlot } from '../domain/lesson.js';
 import { useCoachAvailability, useCoachBusySlots, useRequestLesson } from '../hooks/useLessons.js';
@@ -50,7 +49,7 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
   const { data: residencies = [] } = useCoachResidencies(coachId);
   const { data: allArenas = [] } = useArenas();
   const request = useRequestLesson();
-  const cuponsOn = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
+  const cuponsOn = true;
   const [cupom, setCupom] = useState(null);
 
   const [mode, setMode] = useState('slots'); // 'slots' | 'custom'

@@ -87,11 +87,6 @@ async function render(url = '/ajuda') {
 }
 
 describe('central de ajuda — a flag', () => {
-  it('⭐ desligada, a página não existe (vai para a Home)', async () => {
-    flags.help = false;
-    await render();
-    expect(container.textContent).toBe('HOME');
-  });
 
   it('ligada, a página abre', async () => {
     await render();

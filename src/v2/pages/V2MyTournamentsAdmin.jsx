@@ -10,8 +10,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { Trophy, Settings2, Eye, Plus } from 'lucide-react';
 import { useMyManagedTournaments } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function whenText(t) {
@@ -25,7 +24,7 @@ export default function V2MyTournamentsAdmin() {
   const consoleOn = true;
   // Minha área (flag `user_hub`): os torneios em que JOGO estão lá; aqui fica
   // o que eu organizo, e o título diz isso.
-  const userHubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
+  const userHubOn = true;
   const { data: tournaments = [], isLoading, isError, isSuccess, refetch } = useMyManagedTournaments({ includeArchived: true });
 
   if (!consoleOn) return <Navigate to="/perfil" replace />;

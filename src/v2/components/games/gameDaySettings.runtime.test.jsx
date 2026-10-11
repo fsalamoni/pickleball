@@ -233,10 +233,10 @@ describe('⭐ trocar o formato: só enquanto não houver partidas', () => {
     expect(texto).toContain('não carregou');
   });
 
-  it('⭐ o Americano aprimorado só aparece com a flag ligada', () => {
+  it('Americano, Play e Americano aprimorado aparecem sempre (os formatos permanentes)', () => {
     abrir(doClube());
     const valores = Array.from(seletorFormato().querySelectorAll('option')).map((o) => o.value);
-    expect(valores).not.toContain('americano_live');
+    expect(valores).toContain('americano_live');
     expect(valores).toContain('americano');
     expect(valores).toContain('play');
   });

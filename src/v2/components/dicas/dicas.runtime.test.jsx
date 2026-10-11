@@ -147,28 +147,6 @@ afterEach(() => {
 
 /* ======================================================= a flag manda === */
 
-describe('⭐ flag desligada: nada muda', () => {
-  it('nem o botão "Dicas" aparece', async () => {
-    flags.guided_tips = false;
-    await montar({ em: '/arenas' });
-    expect(botaoPorRotulo('Dicas (desligadas)')).toBeNull();
-    expect(document.body.querySelector('[aria-label="Dicas desta tela"]')).toBeNull();
-  });
-
-  it('o tutorial volta a abrir sozinho, como sempre', async () => {
-    flags.guided_tips = false;
-    await montar({ extra: <V2TutorialLauncher tutorialId={TUTORIAL_ID.GAME_DAY_PLAY} /> });
-    expect(document.body.querySelector('[role="dialog"][data-state="open"]')).not.toBeNull();
-  });
-
-  it('o cartão de Configurações e o "Mostre na tela" somem', async () => {
-    flags.guided_tips = false;
-    await montar({ extra: <><DicasSettingsCard /><GuiasDoArtigo ids={['reservar-quadra']} /></> });
-    expect(texto()).not.toContain('Mostre na tela');
-    expect(document.body.querySelector('#dicas')).toBeNull();
-  });
-});
-
 /* =================================================== ligar e desligar === */
 
 describe('⭐ ligar as dicas é escolha da pessoa', () => {

@@ -79,17 +79,6 @@ describe('a caixa cabe na tela e a lista rola', () => {
   });
 });
 
-describe('sem a central (flag desligada)', () => {
-  it('mostra a lista INTEIRA — nada fica inalcançável — e o atalho das preferências', async () => {
-    estado.notifications = Array.from({ length: 30 }, (_, i) => aviso(i));
-    estado.unreadCount = 30;
-    await render();
-    expect(itens()).toHaveLength(30);
-    expect(texto()).not.toContain('Ver todas as notificações');
-    expect(container.querySelector('a[href="/configuracoes#notificacoes"]')).not.toBeNull();
-  });
-});
-
 describe('com a central (flag ligada)', () => {
   it('⭐ os 20 mais novos + "Ver todas", dizendo quantos ficaram de fora e quantos não foram lidos', async () => {
     flags.notifications_center = true;

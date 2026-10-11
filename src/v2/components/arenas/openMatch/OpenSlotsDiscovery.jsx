@@ -17,8 +17,7 @@ import React, { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Building2 } from 'lucide-react';
 import { arenaQueries } from '@/modules/arenas/hooks/arenaQueries';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { RegionForaNote } from '@/v2/components/region/RegionBar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -50,7 +49,7 @@ export default function OpenSlotsDiscovery() {
   // A vaga não guarda a cidade: ela vem da arena (mesma chave de cache da
   // página da arena). Só com a Minha região ligada — senão não há o que medir.
   const idsUnicos = useMemo(() => [...new Set(arenaIds.filter(Boolean))].sort(), [arenaIds]);
-  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
+  const regiaoOn = true;
   const arenasQ = useQueries({
     queries: (regiaoOn ? idsUnicos : []).map((id) => ({ ...arenaQueries.arena(id), staleTime: 5 * 60_000 })),
   });
