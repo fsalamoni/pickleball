@@ -47,9 +47,6 @@ const V2CoachProfile = lazy(() => import('@/v2/pages/V2CoachProfile'));
 const V2CoachAgenda = lazy(() => import('@/v2/pages/V2CoachAgenda'));
 const V2StudentLessons = lazy(() => import('@/v2/pages/V2StudentLessons'));
 const V2ProfileEdit = lazy(() => import('@/v2/pages/V2ProfileEdit'));
-const V2AdminMetrics = lazy(() => import('@/v2/pages/V2AdminMetrics'));
-const V2AdminTournaments = lazy(() => import('@/v2/pages/V2AdminTournaments'));
-const V2AdminPartners = lazy(() => import('@/v2/pages/V2AdminPartners'));
 
 const V2AdminConsole = lazy(() => import('@/v2/pages/V2AdminConsole'));
 const V2AdminOwnerRestore = lazy(() => import('@/v2/pages/V2AdminOwnerRestore'));
@@ -270,9 +267,10 @@ export default function V2App() {
           <Route path="politica-uso" element={<V2Privacy />} />
 
           {/* Admin geral */}
-          <Route path="admin/torneios" element={<V2AdminTournaments />} />
-          <Route path="admin/metricas" element={<V2AdminMetrics />} />
-          <Route path="admin/parceiros" element={<V2AdminPartners />} />
+          {/* As páginas admin paralelas às abas viraram as abas (Fase 3.4). */}
+          <Route path="admin/torneios" element={<Navigate to="/admin/painel?tab=tournaments" replace />} />
+          <Route path="admin/metricas" element={<Navigate to="/admin/painel?tab=overview" replace />} />
+          <Route path="admin/parceiros" element={<Navigate to="/admin/painel?tab=partners" replace />} />
           <Route path="admin/perfis" element={<Navigate to="/admin/painel?tab=profiles" replace />} />
           <Route path="admin/painel" element={<V2AdminConsole />} />
           <Route path="admin/owner-restore" element={<V2AdminOwnerRestore />} />
