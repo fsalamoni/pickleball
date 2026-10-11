@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import {
   UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical, GitMerge,
+  Ban, PauseCircle, PlayCircle, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,11 +26,16 @@ import {
   deletionBlockedReason, testAccountSignals, DELETION_BATCH_MAX,
 } from '@/modules/admin/domain/accountDeletion';
 import { PLATFORM_OWNER_EMAILS } from '@/core/config/owners';
+import { accountStatusOf, accountStatusActions, STATUS_ACTION_META } from '@/modules/admin/domain/accountStatus';
+import { SENSITIVE_FIELDS, maskValue } from '@/modules/admin/domain/supportAccess';
 
 // O diálogo de exclusão só baixa quando alguém vai excluir.
 const AdminAccountDeletionDialog = lazy(() => import('./AdminAccountDeletionDialog'));
 // Idem para a unificação de uma conta excluída.
 const AdminAccountMergeDialog = lazy(() => import('./AdminAccountMergeDialog'));
+// Suspender/bloquear/reativar e revelar contato: também sob demanda.
+const AdminAccountStatusDialog = lazy(() => import('./AdminAccountStatusDialog'));
+const AdminSupportRevealDialog = lazy(() => import('./AdminSupportRevealDialog'));
 
 const GRUPOS = [
   { id: 'identidade', label: 'Identidade' },
@@ -61,6 +67,7 @@ export default function AdminUserRecordsTab() {
   const [alvo, setAlvo] = useState(null);
   const [selecionados, setSelecionados] = useState(() => new Set());
   const [paraExcluir, setParaExcluir] = useState(null);
+  const [paraStatus, setParaStatus] = useState(null); // { user, action }
 
   const ctxExclusao = useMemo(
     () => ({ actorUid: user?.uid || null, ownerEmails: PLATFORM_OWNER_EMAILS }),
@@ -75,6 +82,8 @@ export default function AdminUserRecordsTab() {
     _status: userRecordStatus(u, { essencial }),
     _teste: testAccountSignals(u),
     _bloqueio: deletionBlockedReason(u, ctxExclusao),
+    _conta: accountStatusOf(u),
+    _acoes: accountStatusActions(u, ctxExclusao),
   })), [users, ctxExclusao, essencial]);
 
   const listados = useMemo(() => {
@@ -84,6 +93,7 @@ export default function AdminUserRecordsTab() {
         if (filtro === 'incompletos' && u._status.missingCount === 0) return false;
         if (filtro === 'pendentes' && u._status.complete) return false;
         if (filtro === 'teste' && u._teste.length === 0) return false;
+        if (filtro === 'fechadas' && u._conta.status === 'active') return false;
         if (!q) return true;
         return [u.platform_name, u.full_name, u.email, u.uid, u.city]
           .some((v) => String(v || '').toLowerCase().includes(q));
@@ -100,6 +110,8 @@ export default function AdminUserRecordsTab() {
     incompletos: comStatus.filter((u) => u._status.missingCount > 0).length,
     pendentes: comStatus.filter((u) => !u._status.complete).length,
     teste: comStatus.filter((u) => u._teste.length > 0).length,
+    fechadas: comStatus.filter((u) => u._conta.status !== 'active').length,
+    vencidas: comStatus.filter((u) => u._conta.vencida).length,
   }), [comStatus]);
 
   const alternar = (u) => {
@@ -176,7 +188,19 @@ export default function AdminUserRecordsTab() {
             <FlaskConical className="mr-1 inline h-3.5 w-3.5" />
             Parecem de teste ({totais.teste})
           </V2FilterChip>
+          <V2FilterChip active={filtro === 'fechadas'} onClick={() => setFiltro('fechadas')}>
+            <Ban className="mr-1 inline h-3.5 w-3.5" />
+            Suspensas e bloqueadas ({totais.fechadas})
+          </V2FilterChip>
         </div>
+
+        {filtro === 'fechadas' && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
+            Suspensa tem prazo; bloqueada não. <strong>Nada reativa sozinho</strong>: quando a suspensão vence,
+            a conta aparece aqui como vencida{totais.vencidas > 0 ? ` (${totais.vencidas} agora)` : ''} e o admin
+            decide se reativa. Reativar devolve o acesso como era; nada foi apagado.
+          </p>
+        )}
 
         {filtro === 'teste' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
@@ -223,6 +247,7 @@ export default function AdminUserRecordsTab() {
               selected={selecionados.has(u.uid)}
               onToggle={() => alternar(u)}
               onDelete={() => abrirExclusao([u])}
+              onStatus={(action) => setParaStatus({ user: u, action })}
             />
           ))}
           {listados.length > 100 && (
@@ -237,6 +262,12 @@ export default function AdminUserRecordsTab() {
 
       {alvo && (
         <RecordEditDialog user={alvo} onClose={() => setAlvo(null)} />
+      )}
+
+      {paraStatus && (
+        <Suspense fallback={null}>
+          <AdminAccountStatusDialog user={paraStatus.user} action={paraStatus.action} onClose={() => setParaStatus(null)} />
+        </Suspense>
       )}
 
       {paraExcluir && (
@@ -327,9 +358,12 @@ function DeletedAccountsPanel({ users, enabled }) {
   );
 }
 
-function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
+const ICONE_ACAO = { suspend: PauseCircle, block: Ban, reactivate: PlayCircle };
+
+function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
   const s = u._status;
   const bloqueio = u._bloqueio;
+  const conta = u._conta;
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${
       selected ? 'border-red-300 bg-red-50/40' : s.complete ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'
@@ -348,6 +382,11 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
           <span className="font-semibold text-ink">
             {u.platform_name || u.full_name || '(sem nome)'}
           </span>
+          {conta.status !== 'active' && (
+            <V2Badge tone={conta.tone}>
+              <Ban className="h-3 w-3" /> {conta.label}{conta.vencida ? ' · prazo vencido' : ''}
+            </V2Badge>
+          )}
           {s.complete ? (
             <V2Badge tone="green">
               <CheckCircle2 className="h-3 w-3" /> completo
@@ -358,7 +397,11 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
             </V2Badge>
           )}
         </div>
-        <div className="mt-0.5 truncate text-xs text-gray-500">{u.email || '(sem e-mail)'}</div>
+        {/* Mascarado: o e-mail inteiro só com registro de leitura (ficha → Revelar). */}
+        <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || '(sem e-mail)'}</div>
+        {conta.status !== 'active' && conta.reason && (
+          <div className="mt-1 text-2xs text-gray-500">Motivo: {conta.reason}</div>
+        )}
         {s.missingCount > 0 && (
           <div className="mt-1 text-2xs text-gray-500">
             Falta preencher: {s.missing.map((f) => f.label).join(', ')}
@@ -377,10 +420,19 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
           </div>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <V2Button size="sm" variant="secondary" onClick={onEdit}>
           <Pencil className="mr-1 h-3.5 w-3.5" /> Editar cadastro
         </V2Button>
+        {u._acoes.actions.map((a) => {
+          const I = ICONE_ACAO[a];
+          return (
+            <V2Button key={a} size="sm" variant="ghost" onClick={() => onStatus(a)}
+              className={a === 'block' ? 'text-red-600 hover:bg-red-50' : a === 'suspend' ? 'text-amber-700 hover:bg-amber-50' : ''}>
+              <I className="h-3.5 w-3.5" /> {STATUS_ACTION_META[a].label}
+            </V2Button>
+          );
+        })}
         {bloqueio.ok ? (
           <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={`Excluir ${u.platform_name || u.full_name || u.uid}`}>
             <Trash2 className="h-3.5 w-3.5" /> Excluir
@@ -393,11 +445,17 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
   );
 }
 
+const SENSIVEL = new Set(SENSITIVE_FIELDS);
+
 function RecordEditDialog({ user, onClose }) {
   const salvar = useUpdateUserRecordAsAdmin();
+  // Os campos de contato entram no formulário SÓ depois de revelados (com
+  // registro de leitura): fora dele, não mudam e não aparecem.
   const [form, setForm] = useState(() => Object.fromEntries(
-    ADMIN_EDITABLE_FIELDS.map((f) => [f.key, user[f.key] ?? '']),
+    ADMIN_EDITABLE_FIELDS.filter((f) => !SENSIVEL.has(f.key)).map((f) => [f.key, user[f.key] ?? '']),
   ));
+  const [revelado, setRevelado] = useState(null);
+  const [revelando, setRevelando] = useState(false);
   const [motivo, setMotivo] = useState('');
 
   const { patch } = sanitizeAdminUserPatch(form);
@@ -424,11 +482,19 @@ function RecordEditDialog({ user, onClose }) {
         <DialogHeader>
           <DialogTitle>{user.platform_name || user.full_name || 'Cadastro'}</DialogTitle>
           <DialogDescription>
-            {user.email || '(sem e-mail)'} · <span className="font-mono text-2xs">{user.uid}</span>
+            {(revelado ? revelado.email : maskValue('email', user.email)) || '(sem e-mail)'} · <span className="font-mono text-2xs">{user.uid}</span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {!revelado && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-paper p-3 text-xs text-gray-600">
+              <span>E-mail, telefone, nascimento e endereço estão mascarados. Revelar registra o acesso e avisa a pessoa.</span>
+              <V2Button size="sm" variant="secondary" onClick={() => setRevelando(true)}>
+                <Eye className="h-3.5 w-3.5" /> Revelar dados de contato
+              </V2Button>
+            </div>
+          )}
           {GRUPOS.map((g) => (
             <div key={g.id}>
               <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</h4>
@@ -444,7 +510,13 @@ function RecordEditDialog({ user, onClose }) {
                         </span>
                       )}
                     </span>
-                    <CampoDeEdicao field={f} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                    {SENSIVEL.has(f.key) && !revelado ? (
+                      <span className="mt-1 block h-12 rounded-2xl border border-dashed border-gray-200 px-4 py-3 font-mono text-sm font-normal text-gray-500">
+                        {maskValue(f.key, user[f.key]) || '(vazio)'}
+                      </span>
+                    ) : (
+                      <CampoDeEdicao field={f} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                    )}
                   </label>
                 ))}
               </div>
@@ -486,6 +558,19 @@ function RecordEditDialog({ user, onClose }) {
             </span>
           </label>
         </div>
+
+        {revelando && (
+          <Suspense fallback={null}>
+            <AdminSupportRevealDialog
+              user={user}
+              onClose={() => setRevelando(false)}
+              onRevealed={(values) => {
+                setRevelado(values);
+                setForm((f) => ({ ...f, ...Object.fromEntries(ADMIN_EDITABLE_FIELDS.filter((c) => SENSIVEL.has(c.key)).map((c) => [c.key, values[c.key] ?? user[c.key] ?? ''])) }));
+              }}
+            />
+          </Suspense>
+        )}
 
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>

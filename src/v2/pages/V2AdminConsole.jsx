@@ -44,6 +44,7 @@ import {
   Dumbbell,
   ClipboardCheck,
   BookOpenCheck,
+  Bell,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -84,6 +85,7 @@ import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 
 // Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
+const AdminBroadcastTab = lazy(() => import('@/v2/components/admin/AdminBroadcastTab'));
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -114,7 +116,7 @@ const SECTIONS = Object.freeze([
   { id: 'people', label: 'Pessoas', icon: Users, tabs: [
     // Cadastros + Perfis: uma pessoa, um lugar. As ferramentas do diretório
     // (perfis públicos, moderação, migração) abrem dentro de Cadastros.
-    { id: 'records', label: 'Cadastros', icon: UserCog, keywords: ['usuários', 'perfis', 'excluir conta', 'contas excluídas', 'unificar', 'moderação'] },
+    { id: 'records', label: 'Cadastros', icon: UserCog, keywords: ['usuários', 'perfis', 'excluir conta', 'contas excluídas', 'unificar', 'moderação', 'suspender', 'bloquear', 'suporte'] },
     { id: 'access', label: 'Acessos', icon: KeyRound, keywords: ['admin', 'poderes', 'permissões'] },
   ] },
   { id: 'competition', label: 'Torneios', icon: Trophy, tabs: [
@@ -144,6 +146,7 @@ const SECTIONS = Object.freeze([
   // A voz da plataforma e dos parceiros falando com todos.
   { id: 'outreach', label: 'Divulgação', icon: Megaphone, tabs: [
     { id: 'promo', label: 'Cupons e campanhas', icon: Megaphone, keywords: ['divulgação', 'banner'] },
+    { id: 'broadcast', label: 'Aviso em massa', icon: Bell, keywords: ['notificação', 'sino', 'comunicado', 'todos'] },
     { id: 'partners', label: 'Parceiros', icon: Handshake, keywords: ['afiliados', 'logos'] },
   ] },
   { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
@@ -220,6 +223,11 @@ export default function V2AdminConsole() {
         {tab === 'promo' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <PlatformPromoConsole />
+          </Suspense>
+        )}
+        {tab === 'broadcast' && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminBroadcastTab />
           </Suspense>
         )}
       </div>

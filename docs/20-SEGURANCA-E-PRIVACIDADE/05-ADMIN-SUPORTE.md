@@ -14,6 +14,19 @@
 > especificação (quebra-vidro, mascaramento, log de revelação, notificação ao
 > titular, detecção de abuso, leitura via Cloud Function) segue **desenhado e
 > não implementado**.
+>
+> **Atualização (2026-10-11):** chegaram ao código o **mascaramento** (a ficha
+> em Cadastros abre com e-mail, telefone, nascimento e endereço mascarados), o
+> **log de revelação** (`admin_access_logs`, escrito só pela função
+> `adminSupportReveal`, hash do valor e nunca o valor; regra: lê o titular e o
+> admin, ninguém escreve pelo cliente — `tests/rules/adminAccessLogs.rules.test.js`),
+> a **notificação ao titular** (aviso no sino → Configurações → "Acessos do
+> suporte") e o motivo obrigatório (categoria + texto ≥ 20). Também
+> **suspender/bloquear/reativar** (`adminSetAccountStatus`, §5 "ações de
+> segurança"). Segue de fora: sessão de 30 min com reautenticação/MFA
+> (P1-08), impersonação, acesso a conversas, detecção de abuso — e a regra de
+> `users` ainda deixa o admin LER o documento: a máscara é da tela, fechar a
+> leitura exige mover a lista de cadastros para o servidor.
 
 ---
 

@@ -312,10 +312,12 @@ describe('público do aviso', () => {
     { uid: 'c', city: 'Pelotas', state: 'RS' },
     { uid: 'd', city: 'São Paulo', state: 'SP', hidden: true, interests: ['competir'] },
     { id: 'e', city: 'Porto Alegre', state: 'SC' },
+    { uid: 'f', state: 'RS', account_status: 'suspended' },
+    { uid: 'g', state: 'RS', account_status: 'blocked' },
     null,
   ];
 
-  it('⭐ conta oculta pela moderação nunca recebe', () => {
+  it('⭐ conta oculta pela moderação, suspensa ou bloqueada nunca recebe', () => {
     expect(platformRecipients(PROMO_AUDIENCE.ALL, { users })).toEqual(['a', 'b', 'c', 'e']);
     expect(platformRecipients(PROMO_AUDIENCE.INTEREST, { users, interest: 'competir' })).toEqual(['a']);
   });

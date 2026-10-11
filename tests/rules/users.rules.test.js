@@ -432,3 +432,36 @@ describe('users/{uid} — CORREÇÃO DE CADASTRO pelo admin', () => {
       { email_public: true, directory_listed: false, updated_at: serverTimestamp() }, { merge: true }));
   });
 });
+
+describe('users/{uid} — SUSPENSÃO/BLOQUEIO (account_status*: só o servidor escreve)', () => {
+  const STATUS = { account_status: 'active', status_reason: null, status_until: null, updated_at: serverTimestamp() };
+  it('51. 🔴 o titular suspenso NÃO se reativa', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', USER_UID),
+        { account_status: 'suspended', status_reason: 'teste' }, { merge: true });
+    });
+    await assertFails(setDoc(doc(asUser(), 'users', USER_UID), STATUS, { merge: true }));
+  });
+  it('52. 🔴 nem apagando o campo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', USER_UID), { account_status: 'blocked' }, { merge: true });
+    });
+    await assertFails(setDoc(doc(asUser(), 'users', USER_UID),
+      baseProfile({ uid: USER_UID, email: 'user@x.com' })));
+  });
+  it('53. 🔴 conta nova não nasce com account_status', async () => {
+    await assertFails(setDoc(doc(asNew(), 'users', NEW_UID),
+      baseProfile({ uid: NEW_UID, email: 'new@x.com', account_status: 'active' })));
+  });
+  it('54. 🔴 o admin (pelo cliente) também não escreve o status — é o servidor', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+      { account_status: 'blocked', updated_at: serverTimestamp() }, { merge: true }));
+  });
+  it('55. o titular suspenso ainda edita o resto do perfil (o app o desloga, mas a regra não precisa punir)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', USER_UID), { account_status: 'suspended' }, { merge: true });
+    });
+    await assertSucceeds(setDoc(doc(asUser(), 'users', USER_UID),
+      { city: 'Canoas', updated_at: serverTimestamp() }, { merge: true }));
+  });
+});

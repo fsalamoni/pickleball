@@ -22,6 +22,15 @@ const AuthContext = createContext(null);
 const isPlatformOwnerEmail = isOwnerEmail;
 
 /** Traduz os códigos de erro do Firebase Auth em mensagens claras (pt-BR). */
+/** O que a pessoa suspensa/bloqueada lê ao ser deslogada. */
+function mensagemDeContaFechada(perfil) {
+  const ate = Number(perfil?.status_until);
+  const prazo = perfil?.account_status === 'suspended' && ate
+    ? ` até ${new Date(ate).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : '';
+  const motivo = perfil?.status_reason ? ` Motivo: ${perfil.status_reason}.` : '';
+  return `${perfil?.account_status === 'blocked' ? 'Esta conta foi bloqueada' : `Esta conta está suspensa${prazo}`}.${motivo} Fale com o suporte se achar que é um engano.`;
+}
+
 function mapAuthError(error, fallback = 'Não foi possível entrar. Tente novamente.') {
   switch (error?.code) {
     case 'auth/popup-closed-by-user':
@@ -40,7 +49,7 @@ function mapAuthError(error, fallback = 'Não foi possível entrar. Tente novame
     case 'auth/invalid-email':
       return 'E-mail inválido.';
     case 'auth/user-disabled':
-      return 'Esta conta foi desativada.';
+      return 'Esta conta está suspensa ou bloqueada. Fale com o suporte para saber o motivo.';
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
@@ -130,6 +139,21 @@ export const AuthProvider = ({ children }) => {
 
           if (userDoc.exists()) {
             const existingProfile = userDoc.data();
+            // Conta suspensa/bloqueada pelo admin: o login já está desligado no
+            // Firebase Auth, mas uma sessão aberta ainda vale até o token vencer.
+            // Aqui ela acaba agora, com o motivo que o admin escreveu.
+            if (['suspended', 'blocked'].includes(existingProfile.account_status)) {
+              await firebaseSignOut(auth);
+              setUser(null);
+              setUserProfile(null);
+              setIsAuthenticated(false);
+              setAuthError({
+                type: 'signin_error',
+                code: 'auth/user-disabled',
+                message: mensagemDeContaFechada(existingProfile),
+              });
+              return;
+            }
             const autoAdminUpdates = isPlatformOwnerEmail(firebaseUser.email)
               ? { role: 'platform_admin', can_create_pools: true }
               : {};

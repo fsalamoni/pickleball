@@ -21,6 +21,13 @@ Perfil privado/operacional do usuário autenticado.
 - `email`, `platform_name` (nome de exibição), `full_name`, `phone`,
   `birth_date`, `pickleball_experience`.
 - `role`: `'platform_admin' | 'user'`. `can_create_pools: bool`.
+- **`account_status`** (2026-10-11, opcional): `'active' | 'suspended' | 'blocked'`;
+  ausente vale `active`. Com `status_reason`, `status_until` (ms, só na
+  suspensão — informativo: nada reativa sozinho), `status_set_at`,
+  `status_set_by`. Só o servidor escreve (`adminSetAccountStatus`, que também
+  desliga o login no Firebase Auth); a regra recusa o titular e o admin pelo
+  cliente. Conta suspensa/bloqueada é deslogada ao abrir o app e não recebe
+  aviso em massa nem campanha.
 - `leveling_level`, `leveling_method` (`'form' | 'manual'`),
   `leveling_manual_level`, `leveling_assessment` (objeto do questionário).
 - **`dupr_id`** (PR #90, Sprint 27): ID DUPR (Dynamic Universal
@@ -398,6 +405,13 @@ Trilha de auditoria. `action` (ex.: `tournament_created`,
 `booking_cancelled`, `booking_transferred`, `booking_responsibles_changed`,
 `coach_lesson_created`, `clinic_signup`, `club_recurring_event_added`…),
 `actor`, `details`, `created_at`. Escrita por `auditService.createAuditLog`.
+
+### `admin_access_logs/{id}` (2026-10-11)
+Registro de leitura do suporte (`05-ADMIN-SUPORTE.md` §7). Escrito SÓ pela
+função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field'`,
+`fields[]`, `value_hashes` (hash, nunca o valor), `reason_category`,
+`reason_text`, `ticket_ref`, `ip_hash`, `at`, `at_ms`. Regra: lê o titular
+(`target_uid`) e o admin; `create/update/delete: false`.
 
 ### `platform_settings/{docId}`
 Singletons: `feature_flags/{key}` (defaults de `FEATURE_FLAG`),

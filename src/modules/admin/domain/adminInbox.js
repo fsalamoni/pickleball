@@ -12,7 +12,7 @@ const lida = (f) => f && f.ok === true && Number.isFinite(f.count);
 
 /**
  * @param {Record<string, { ok: boolean, count?: number }>} fontes
- *   revisao, denuncias, sinais, cartas, ranking (ranking: count 1 = problema na última passada)
+ *   revisao, denuncias, sinais, cartas, ranking (ranking: count 1 = problema na última passada), suspensoes
  * @returns {Array<{ id: string, tab: string, label: string, count: number|null, atencao: boolean, detalhe: string }>}
  */
 export function buildInbox(fontes = {}) {
@@ -22,6 +22,7 @@ export function buildInbox(fontes = {}) {
     { id: 'sinais', tab: 'gam-integrity', label: 'Sinais de integridade na gamificação', um: 'sinal', varios: 'sinais' },
     { id: 'cartas', tab: 'gam-integrity', label: 'Cartas denunciadas', um: 'carta', varios: 'cartas' },
     { id: 'ranking', tab: 'overview', label: 'Recálculo do ranking com erro', um: 'erro', varios: 'erros' },
+    { id: 'suspensoes', tab: 'records', label: 'Suspensões com prazo vencido (reativar ou bloquear)', um: 'conta', varios: 'contas' },
   ];
   return defs.map((d) => {
     const f = fontes[d.id];
