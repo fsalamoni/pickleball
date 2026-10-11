@@ -41,6 +41,9 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ArenaPendencias from '@/v2/components/arenas/ArenaPendencias';
+import ArenaTodayPanel from '@/v2/components/arenas/ArenaTodayPanel';
+import ArenaFavoriteTabs from '@/v2/components/arenas/ArenaFavoriteTabs';
+import { recordEvent } from '@/core/services/observabilityService';
 import { ARENA_SECTION_GROUPS, buildArenaSections, resolveArenaTabAlias } from '@/v2/components/arenas/arenaManageSections';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
@@ -197,7 +200,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     const hash = location.hash?.replace('#', '').toLowerCase();
     if (!hash) return;
     const target = hash === 'horarios' ? 'info' : hash;
-    const valid = ['reservas', 'precos', 'fotos', 'info', 'admins', 'retornos'].includes(target);
+    const valid = ['hoje', 'reservas', 'precos', 'fotos', 'info', 'admins', 'retornos'].includes(target);
     if (!valid) return;
     setTab(target);
     // Espera o próximo frame pra garantir que o panel está montado
@@ -292,7 +295,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // por meio segundo e trocar.
   const abasValidas = sections.flatMap((sec) => sec.tabs.map((t) => t.value));
   const abaDaSecao = sections.find((sec) => sec.id === secao)?.tabs[0]?.value;
-  const tab = abasValidas.includes(tabPedida) ? tabPedida : (abaDaSecao || 'reservas');
+  const tab = abasValidas.includes(tabPedida) ? tabPedida : (abaDaSecao || 'hoje');
   const esperandoModulo = Boolean(tabPedida) && !abasValidas.includes(tabPedida)
     && (modulosCarregando || torneiosCarregando);
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
@@ -301,6 +304,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
 
   const selectTab = (sectionId, value) => {
     setTab(value);
+    // Para saber quais abas ninguém abre (plano de UX §7).
+    recordEvent('arena_tab_open', { aba: value });
     setSectionMemory((m) => ({ ...m, [sectionId]: value }));
   };
   const selectSection = (section) => {
@@ -381,6 +386,18 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           onSelect={selectSection}
         />
 
+        {/* As favoritas da pessoa nesta arena: um toque para a aba de sempre. */}
+        <ArenaFavoriteTabs
+          uid={user?.uid}
+          arenaId={arena.id}
+          sections={sections}
+          activeTab={tab}
+          onOpen={(aba) => {
+            const secaoDaAba = sections.find((sec) => sec.tabs.some((t) => t.value === aba));
+            if (secaoDaAba) selectTab(secaoDaAba.id, aba);
+          }}
+        />
+
         {/* Nível 2: sub-abas da seção ativa (só quando há mais de uma) */}
         {activeSection.tabs.length > 1 && (
           <V2SubTabs
@@ -399,6 +416,17 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         <Suspense fallback={<V2Skeleton lines={6} />}>
         {esperandoModulo ? <V2Skeleton lines={6} /> : (
         <>
+        {tab === 'hoje' && (
+          <ArenaTodayPanel
+            arena={arena}
+            onIrParaAba={(aba) => {
+              const secaoDaAba = sections.find((sec) => sec.tabs.some((t) => t.value === aba));
+              if (secaoDaAba) selectTab(secaoDaAba.id, aba);
+            }}
+          >
+            {modulos.operacao && <ArenaOperationsPanel arena={arena} view="operacao" />}
+          </ArenaTodayPanel>
+        )}
         {tab === 'jogo-aberto' && modulos.jogoAberto && <ArenaOpenMatchAdminPanel arena={arena} />}
         {tab === 'membros' && modulos.membros && <ArenaMembersPanel arena={arena} view="membros" />}
         {tab === 'planos' && modulos.pacotes && <ArenaMembersPanel arena={arena} view="planos" />}

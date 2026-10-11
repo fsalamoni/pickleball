@@ -41,7 +41,7 @@ describe('buildArenaSections', () => {
 
   it('⭐ sem módulos, a Central é a de antes', () => {
     const ids = buildArenaSections(BASE).map((s) => s.id);
-    expect(ids).toEqual(['perfil', 'estrutura', 'reservas', 'comercial', 'desempenho', 'equipe', 'configuracoes']);
+    expect(ids).toEqual(['hoje', 'perfil', 'estrutura', 'reservas', 'comercial', 'desempenho', 'equipe', 'configuracoes']);
     expect(valores(buildArenaSections(BASE))).not.toContain('membros');
   });
 
@@ -194,7 +194,7 @@ describe('as duas linhas da barra: Atender e Gerir', () => {
 
   it('⭐ Atender: o trabalho do dia, com o cliente na frente', () => {
     const atender = buildArenaSections(TUDO_LIGADO).filter((s) => s.grupo === 'atender').map((s) => s.id);
-    expect(atender).toEqual(['reservas', 'jogo-aberto', 'membros', 'aulas', 'torneios', 'comercial', 'operacao']);
+    expect(atender).toEqual(['hoje', 'reservas', 'jogo-aberto', 'membros', 'aulas', 'torneios', 'comercial', 'operacao']);
   });
 
   it('Gerir: como a arena é configurada', () => {

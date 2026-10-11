@@ -47,6 +47,7 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaCourts: () => ({ data: [] }),
   useArenaCourtSchedules: () => ({ data: [] }),
 }));
+vi.mock('@/core/services/observabilityService', () => ({ recordEvent: vi.fn(), recordClientError: vi.fn() }));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
   useArenaBookings: () => ({ data: estado.reservas, isLoading: false }),
 }));
@@ -141,9 +142,31 @@ const reserva = (athlete_id, athlete_name, over = {}) => ({
 });
 
 describe('abas pela URL', () => {
-  it('sem aba na URL, abre Reservas', async () => {
+  it('⭐ sem aba na URL, abre Hoje (a agenda do dia)', async () => {
     await render('/arenas/a1/gerir');
-    expect(container.textContent).toContain('Nenhuma solicitação de reserva ainda');
+    expect(container.textContent).toContain('Agenda de hoje');
+    expect(container.textContent).toContain('Nenhuma reserva confirmada para hoje');
+  });
+
+  it('⭐ Hoje lista quem joga hoje, por horário, e deixa favoritar a aba aberta', async () => {
+    const hoje = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    const iso = `${hoje.getFullYear()}-${p(hoje.getMonth() + 1)}-${p(hoje.getDate())}`;
+    estado.reservas = [
+      reserva('u1', 'Tarde', { slots: [{ date: iso, start: '21:00', end: '22:00' }] }),
+      reserva('u2', 'Cedo', { slots: [{ date: iso, start: '19:00', end: '20:00' }] }),
+      reserva('u3', 'Pedido', { status: 'requested', slots: [{ date: iso, start: '08:00', end: '09:00' }] }),
+    ];
+    await render('/arenas/a1/gerir?aba=info');
+    expect(botao('Favoritar esta aba')).toBeTruthy();
+    await clicar(botao('Favoritar esta aba'));
+    expect(botao('Tirar das favoritas')).toBeTruthy();
+    expect(window.localStorage.getItem('v2:view:eu:arena:a1:favoritas')).toContain('info');
+    await clicar(botao('Hoje'));
+    const texto = container.textContent;
+    expect(texto.indexOf('Cedo')).toBeLessThan(texto.indexOf('Tarde'));
+    expect(texto).not.toContain('Pedido');
+    window.localStorage.removeItem('v2:view:eu:arena:a1:favoritas');
   });
 
   it('⭐ o link antigo "?secao=configuracoes&aba=modulos" abre Módulos', async () => {
@@ -163,9 +186,9 @@ describe('abas pela URL', () => {
     expect(container.textContent).toContain('PAINEL MODULOS');
   });
 
-  it('⭐ aba de módulo desligado cai em Reservas — nunca tela em branco', async () => {
+  it('⭐ aba de módulo desligado cai em Hoje — nunca tela em branco', async () => {
     await render('/arenas/a1/gerir?aba=membros');
-    expect(container.textContent).toContain('Nenhuma solicitação de reserva ainda');
+    expect(container.textContent).toContain('Agenda de hoje');
     expect(container.textContent).not.toContain('PAINEL MEMBROS');
   });
 });
@@ -241,10 +264,10 @@ describe('⭐ Aulas dentro da Central', () => {
     expect(botao('Aulas')).toBeFalsy();
   });
 
-  it('sem o módulo, `?aba=aulas` cai em Reservas', async () => {
+  it('sem o módulo, `?aba=aulas` cai em Hoje', async () => {
     await render('/arenas/a1/gerir?aba=aulas');
     expect(container.textContent).not.toContain('AGENDA DE AULAS');
-    expect(container.textContent).toContain('Nenhuma solicitação de reserva ainda');
+    expect(container.textContent).toContain('Agenda de hoje');
   });
 });
 

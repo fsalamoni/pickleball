@@ -133,7 +133,7 @@ Duas regras que a navegação depende:
 - **O valor de cada aba é único em toda a Central.** A seção ativa é achada
   pela aba; um valor repetido tornaria a segunda inalcançável. A estrutura
   mora em `v2/components/arenas/arenaManageSections.js` e há teste travando.
-- **Aba de módulo desligado cai em Reservas** — nunca tela em branco. Enquanto
+- **Aba de módulo desligado cai em Hoje** (a abertura da Central desde a Fase 3.3) — nunca tela em branco. Enquanto
   os módulos ainda CARREGAM, a aba pedida espera (esqueleto) em vez de mostrar
   Reservas por meio segundo e trocar.
 
