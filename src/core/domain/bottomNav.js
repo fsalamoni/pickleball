@@ -1,5 +1,5 @@
 /**
- * A barra inferior do celular (flag `nav_v3`): cinco itens, e o quarto muda
+ * A barra inferior do celular: cinco itens, e o quarto muda
  * com a pessoa. Puro: recebe o que se sabe dela e devolve a lista.
  *
  * `Início · Jogar · Arenas · [contextual] · Minha área`, onde o contextual é,
@@ -22,7 +22,7 @@ const INICIO = Object.freeze({ id: 'inicio', to: '/', label: 'Início', icon: 'i
 const JOGAR = Object.freeze({ id: 'jogar', to: '/dia-de-jogo', label: 'Jogar', icon: 'jogar' });
 const ARENAS = Object.freeze({ id: 'arenas', to: '/arenas', label: 'Arenas', icon: 'arenas' });
 const MINHA_AREA = Object.freeze({ id: 'minha-area', to: '/perfil', label: 'Minha área', icon: 'minha-area' });
-const TORNEIOS = Object.freeze({ id: 'torneios', to: '/torneios', label: 'Torneios', icon: 'torneios' });
+const TORNEIOS = Object.freeze({ id: 'torneios', to: '/torneios', label: 'Torneios', icon: 'torneios', dica: 'nav-inferior-torneios' });
 const TREINO = Object.freeze({ id: 'treino', to: '/treino', label: 'Treino', icon: 'treino' });
 const PAINEL = Object.freeze({ id: 'painel', to: '/aulas', label: 'Painel', icon: 'painel' });
 

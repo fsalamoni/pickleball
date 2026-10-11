@@ -7,7 +7,9 @@
  *
  * NOTA (2026-10-10): as 33 funcionalidades que estavam LIGADAS em produção
  * foram incorporadas — deixaram de ser flags e vivem em `PERMANENT_FEATURE`,
- * sempre `true`. Restam as 3 flags abaixo, DESLIGADAS por padrão. O documento
+ * sempre `true`. Restam as 3 flags abaixo, DESLIGADAS por padrão. A navegação
+ * v3 (`nav_v3`, Fase 1 do plano de UX) foi ligada para todos e virou código
+ * em 2026-10-11 — o ramo antigo foi apagado, não há mais flag. O documento
  * do Firestore ainda contém as chaves antigas: `normalizeFeatureFlags` as
  * ignora (só lê chaves conhecidas), então nada precisa ser alterado no banco.
  */
@@ -46,18 +48,6 @@ export const FEATURE_FLAG = Object.freeze({
    */
   GAMEDAY_KING_OF_COURT: 'gameday_king_of_court',
 
-  /**
-   * Navegação v3 (plano de UX/UI, Fase 1 — 2026-10-10).
-   *
-   * Ligada, muda SÓ a casca: a barra inferior do celular passa a ser
-   * `Início · Jogar · Arenas · [o que importa para a pessoa] · Minha área`
-   * (`core/domain/bottomNav.js`), o cabeçalho do celular encolhe para 56 px e
-   * ganha o atalho de Mensagens, e quem gere arena ou dá aula ganha o próprio
-   * hub no 1º nível do menu ("Minha arena", "Painel do professor"). Nenhuma
-   * rota muda, nenhum dado é lido de outro jeito. Desligada, a navegação é a
-   * de sempre, bit a bit. Prazo: incorporar (ou apagar) até 2026-11-30.
-   */
-  NAV_V3: 'nav_v3',
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -440,15 +430,6 @@ export const PERMANENT_FEATURES_ON = Object.freeze(
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
-  [FEATURE_FLAG.NAV_V3]: {
-    label: 'Navegação v3 (celular e menu por papel)',
-    description:
-      'Barra inferior do celular com Jogar e Arenas a um toque e um 4º item '
-      + 'que muda com a pessoa (Treino, Torneios, Painel do professor ou a '
-      + 'Central da arena); cabeçalho menor com atalho de Mensagens; hubs '
-      + '"Minha arena" e "Painel do professor" no menu. Só muda a casca: '
-      + 'nenhuma rota ou dado muda. Desligada, a navegação é a de sempre.',
-  },
   [FEATURE_FLAG.GAMEDAY_MEXICANO]: {
     label: 'Dia de jogo — Mexicano',
     description:

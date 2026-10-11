@@ -117,7 +117,7 @@ const GUIAS_BASE = [
         target: ['menu-principal', 'menu-celular'],
         title: 'O menu da plataforma',
         body: [
-          'Tudo o que dá para fazer aqui está organizado em temas: Início, Competir, Jogar, Comunidade, Arenas, Aulas, Pickleball e Perfil.',
+          'Tudo o que dá para fazer aqui está organizado em temas: Início, Competir, Jogar, Comunidade, Arenas, Aulas e Minha área. Regras e nivelamento ficam na Ajuda.',
           'Ao entrar num tema, as páginas dele aparecem numa barra logo acima do conteúdo.',
         ],
         tip: 'No celular, o menu abre no botão de três linhas, no canto de cima.',
