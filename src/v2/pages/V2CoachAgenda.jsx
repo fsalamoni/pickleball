@@ -1,11 +1,8 @@
 /**
- * V2CoachAgenda — Hub do professor: disponibilidade semanal + agenda de aulas.
+ * V2CoachAgenda — Painel do professor. Abre em "Hoje" (o que depende dele
+ * agora); Agenda, Alunos, Treinos e Negócio na barra; Configurar no cabeçalho.
  *
- * Rota: /aulas
- * Acesso: usuário com perfil de professor (Sistema A). Gated pela flag
- * coach_lessons.
- *
- * Aditivo — não altera o diretório/perfil existente.
+ * Rota: /aulas (`?aba=` ou `?secao=`, inclusive os ids antigos).
  */
 
 import React, { Suspense, lazy, useMemo, useState } from 'react';
@@ -15,7 +12,7 @@ import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
   UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
-  Sparkles, Megaphone, Tag, Trophy,
+  Sparkles, Megaphone, Tag, Trophy, Sun, Settings, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -38,6 +35,10 @@ import CoachPartnersSection from '@/modules/coaches/components/CoachPartnersSect
 import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBookingsSection';
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
+import CoachTodaySection from '@/modules/coaches/components/CoachTodaySection';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import {
@@ -45,83 +46,75 @@ import {
   V2ErrorState,
 } from '@/v2/ui/primitives';
 
-// Navegação em dois níveis do hub do professor (espelha o admin da arena).
-// Ordem lógica: perfil → agenda → alunos → comercial → conteúdo → parceiros.
+// Navegação em dois níveis do painel do professor (Fase 3.2 do plano de UX):
+// cinco grupos pelo que o professor FAZ — Hoje · Agenda · Alunos · Treinos ·
+// Negócio — e, fora da barra, "Configurar" (perfil, fotos, parceiros), que
+// muda pouco e abre pelo menu do cabeçalho.
 const COACH_SECTIONS = [
+  { id: 'hoje', label: 'Hoje', icon: Sun, tabs: [{ value: 'hoje', label: 'Hoje', icon: Sun }] },
+  { id: 'agenda', label: 'Agenda', icon: CalendarDays, tabs: [{ value: 'agenda', label: 'Calendário', icon: CalendarDays }] },
+  { id: 'alunos', label: 'Alunos', icon: Users, tabs: [{ value: 'alunos', label: 'Alunos', icon: Users }] },
   {
-    id: 'perfil',
-    label: 'Perfil',
-    icon: UserCircle,
+    id: 'treinos',
+    label: 'Treinos',
+    icon: BookOpen,
     tabs: [
-      { value: 'info', label: 'Informações', icon: UserCircle },
-      { value: 'fotos', label: 'Fotos', icon: ImageIcon },
+      { value: 'conteudo', label: 'Conteúdo', icon: BookOpen },
+      { value: 'clinicas', label: 'Clínicas', icon: Sparkles },
     ],
   },
   {
-    id: 'agenda',
-    label: 'Agenda',
-    icon: CalendarDays,
-    tabs: [{ value: 'agenda', label: 'Calendário', icon: CalendarDays }],
-  },
-  {
-    id: 'alunos',
-    label: 'Alunos',
-    icon: Users,
-    tabs: [{ value: 'alunos', label: 'Alunos', icon: Users }],
-  },
-  {
-    id: 'comercial',
-    label: 'Comercial',
+    id: 'negocio',
+    label: 'Negócio',
     icon: Wallet,
     tabs: [
       { value: 'pacotes', label: 'Pacotes', icon: Package },
       { value: 'loja', label: 'Loja', icon: Store },
+      { value: 'divulgacao', label: 'Divulgação', icon: Megaphone },
+      { value: 'engajamento', label: 'Engajamento', icon: Trophy, dica: 'professor-aba-engajamento' },
     ],
   },
-  {
-    id: 'conteudo',
-    label: 'Conteúdo',
-    icon: BookOpen,
-    tabs: [{ value: 'conteudo', label: 'Conteúdo', icon: BookOpen }],
-  },
-  {
-    id: 'parceiros',
-    label: 'Parceiros',
-    icon: Handshake,
-    tabs: [{ value: 'parceiros', label: 'Parceiros', icon: Handshake }],
-  },
 ];
+const SECAO_CONFIGURAR = {
+  id: 'configurar',
+  label: 'Configurar',
+  icon: Settings,
+  tabs: [
+    { value: 'info', label: 'Informações', icon: UserCircle },
+    { value: 'fotos', label: 'Fotos', icon: ImageIcon },
+    { value: 'parceiros', label: 'Parceiros', icon: Handshake },
+  ],
+};
+const TODAS_SECOES = [...COACH_SECTIONS, SECAO_CONFIGURAR];
+// Os `?secao=` antigos (avisos, guias e atalhos já gravados) seguem abrindo
+// o lugar certo.
+const SECAO_ANTIGA = {
+  perfil: 'info', comercial: 'pacotes', conteudo: 'conteudo', parceiros: 'parceiros',
+  clinicas: 'clinicas', divulgacao: 'divulgacao', engajamento: 'engajamento',
+};
 
-// Cupons e campanhas DO PROFESSOR (Onda CG, flag `coach_marketing`). Sob
-// demanda: o console de divulgação só baixa quando a seção abre.
+// Cupons e campanhas DO PROFESSOR (Onda CG). Sob demanda: o console de
+// divulgação só baixa quando a aba abre.
 const CoachPromoConsole = lazy(() => import('@/v2/components/promo/CoachPromoConsole'));
-// Engajamento (gamificação V2, flag `gamification_v2`): saúde do trabalho, metas, desafios e
+// Engajamento (gamificação V2): saúde do trabalho, metas, desafios e
 // recompensas do professor — também sob demanda.
 const CoachEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/CoachEngagementPanel'));
-const SECAO_ENGAJAMENTO = {
-  id: 'engajamento',
-  label: 'Engajamento',
-  icon: Trophy,
-  dica: 'professor-aba-engajamento',
-  tabs: [{ value: 'engajamento', label: 'Saúde, desafios e recompensas', icon: Trophy }],
-};
-const SECAO_DIVULGACAO = {
-  id: 'divulgacao',
-  label: 'Divulgação',
-  icon: Megaphone,
-  tabs: [{ value: 'divulgacao', label: 'Cupons e campanhas', icon: Megaphone }],
-};
 
 /**
  * A aba que abre, pela URL: `?aba=<valor>` (uma aba) ou `?secao=<id>` (a
- * primeira aba da seção) — é assim que a tela inicial leva direto à
- * divulgação. Valor desconhecido cai na Agenda, nunca em branco.
+ * primeira aba da seção, inclusive os ids antigos) — é assim que a tela
+ * inicial leva direto à divulgação. Valor desconhecido cai em Hoje, nunca
+ * em branco.
  */
-export function coachTabFromUrl(params, sections) {
+export function coachTabFromUrl(params, sections = TODAS_SECOES) {
   const aba = params.get('aba');
   if (aba && sections.some((s) => s.tabs.some((t) => t.value === aba))) return aba;
-  const secao = sections.find((s) => s.id === params.get('secao'));
-  return secao ? secao.tabs[0].value : 'agenda';
+  const secaoId = params.get('secao');
+  const secao = sections.find((s) => s.id === secaoId);
+  if (secao) return secao.tabs[0].value;
+  const antiga = SECAO_ANTIGA[secaoId];
+  if (antiga && sections.some((s) => s.tabs.some((t) => t.value === antiga))) return antiga;
+  return 'hoje';
 }
 
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -338,32 +331,7 @@ function V2CoachAgendaContent() {
   const respond = useRespondLesson();
   // Aula que o aluno cancelou com o cupom já contado: o uso volta para ele.
   useReturnPendingCouponUses(lessons, user?.uid);
-  const sharedBookingsOn = true;
-  const linkedClubsOn = true;
-  const clinicsOn = true;
-  const marketingOn = true;
-  const gamificationOn = true;
-
-  const sections = useMemo(() => {
-    const out = [...COACH_SECTIONS];
-    if (clinicsOn) {
-      const extra = { id: 'clinicas', label: 'Clínicas', icon: Sparkles, tabs: [{ value: 'clinicas', label: 'Clínicas', icon: Sparkles }] };
-      // Insere logo após "Alunos".
-      const idx = out.findIndex((s) => s.id === 'alunos');
-      out.splice(idx >= 0 ? idx + 1 : out.length, 0, extra);
-    }
-    // Divulgação logo depois de Comercial: é o que faz o comercial vender.
-    if (marketingOn) {
-      const idx = out.findIndex((s) => s.id === 'comercial');
-      out.splice(idx >= 0 ? idx + 1 : out.length, 0, SECAO_DIVULGACAO);
-    }
-    // Engajamento depois de Conteúdo: é o retrato de como o trabalho vai.
-    if (gamificationOn) {
-      const idx = out.findIndex((s) => s.id === 'conteudo');
-      out.splice(idx >= 0 ? idx + 1 : out.length, 0, SECAO_ENGAJAMENTO);
-    }
-    return out;
-  }, [clinicsOn, marketingOn, gamificationOn]);
+  const sections = TODAS_SECOES;
 
   const [params, setParams] = useSearchParams();
   const [tabEscolhida, setTabEscolhida] = useState(null);
@@ -436,18 +404,34 @@ function V2CoachAgendaContent() {
 
   return (
     <div className="mx-auto max-w-[900px] p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Painel do professor</h1>
-        <Link to={`/coaches/${coachId}`} className="text-xs font-bold text-ink hover:underline">Ver perfil público →</Link>
+        <div className="flex items-center gap-2">
+          <Link to={`/coaches/${coachId}`} className="text-xs font-bold text-ink hover:underline">Ver perfil público →</Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <V2Button size="sm" variant={activeSection.id === 'configurar' ? 'primary' : 'secondary'} aria-label="Configurar o perfil de professor">
+                <Settings className="h-4 w-4" aria-hidden /> Configurar <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </V2Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SECAO_CONFIGURAR.tabs.map((t) => (
+                <DropdownMenuItem key={t.value} onSelect={() => setTab(t.value)}>
+                  <t.icon className="mr-2 h-4 w-4" aria-hidden /> {t.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-      <p className="mb-5 font-medium text-gray-500">Gerencie perfil, agenda, alunos, comercial, conteúdo e parcerias.</p>
+      <p className="mb-5 font-medium text-gray-500">O que depende de você hoje, a agenda, os alunos, os treinos e o seu negócio.</p>
 
       {/* Navegação em dois níveis — quebra em linhas, nunca rola para o lado */}
       <div className="space-y-3">
         <V2SectionNav
           ariaLabel="Seções do painel do professor"
           dica="professor-secoes"
-          sections={sections}
+          sections={COACH_SECTIONS}
           activeId={activeSection.id}
           onSelect={(section) => setTab(section.tabs[0].value)}
         />
@@ -462,6 +446,18 @@ function V2CoachAgendaContent() {
       </div>
 
       <div className="mt-6 space-y-6">
+        {tab === 'hoje' && (
+          <CoachTodaySection
+            coachId={coachId}
+            coach={coach}
+            lessons={lessons}
+            lessonsLoading={lessonsLoading}
+            lessonsFailed={aulasFalharam}
+            onRetryLessons={() => recarregarAulas()}
+            renderLesson={(l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />}
+            onAbrir={setTab}
+          />
+        )}
         {tab === 'info' && <CoachInfoSection coach={coach} />}
         {tab === 'fotos' && <CoachPhotosSection coach={coach} />}
         {tab === 'agenda' && (
@@ -499,7 +495,7 @@ function V2CoachAgendaContent() {
             {/* As aulas que ele dá na agenda das ARENAS (módulo de aulas). */}
             <MyTaughtArenaClasses />
             <AvailabilityEditor coachId={coachId} />
-            {sharedBookingsOn && <CoachCourtBookingsSection coach={coach} />}
+            <CoachCourtBookingsSection coach={coach} />
             {history.length > 0 && (
               <V2Surface>
                 <h2 className="mb-4 font-display text-lg font-bold text-ink">Histórico</h2>
@@ -511,16 +507,16 @@ function V2CoachAgendaContent() {
           </>
         )}
         {tab === 'alunos' && <CoachStudentsSection coachId={coachId} lessons={lessons} />}
-        {tab === 'clinicas' && clinicsOn && <CoachClinicsSection coachId={coachId} coachName={coach.display_name || user?.displayName || ''} />}
+        {tab === 'clinicas' && <CoachClinicsSection coachId={coachId} coachName={coach.display_name || user?.displayName || ''} />}
         {tab === 'pacotes' && <CoachPackagesSection coachId={coachId} />}
         {tab === 'loja' && <CoachStoreSection coachId={coachId} />}
         {tab === 'conteudo' && <CoachContentSection coachId={coachId} />}
-        {tab === 'divulgacao' && marketingOn && (
+        {tab === 'divulgacao' && (
           <Suspense fallback={<V2Skeleton lines={4} />}>
             <CoachPromoConsole coachId={coachId} coach={coach} />
           </Suspense>
         )}
-        {tab === 'engajamento' && gamificationOn && (
+        {tab === 'engajamento' && (
           <Suspense fallback={<V2Skeleton lines={4} />}>
             <CoachEngagementPanel coach={{ id: coachId, name: coach.display_name || user?.displayName || '' }} />
           </Suspense>
@@ -528,7 +524,7 @@ function V2CoachAgendaContent() {
         {tab === 'parceiros' && (
           <>
             <CoachPartnersSection coachId={coachId} />
-            {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} canManage title="Meus clubes" />}
+            <LinkedClubsSection ownerType="coach" ownerId={coachId} canManage title="Meus clubes" />
           </>
         )}
       </div>

@@ -14,7 +14,7 @@ import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const estado = { consulta: null, coach: null, aulas: [] };
+const estado = { consulta: null, coach: null, aulas: [], duvidas: null, alunos: null };
 const salvar = vi.fn(() => Promise.resolve());
 const recarregar = vi.fn();
 
@@ -39,6 +39,8 @@ vi.mock('@/modules/coaches/components/CoachStoreSection', () => ({ default: Nada
 vi.mock('@/modules/coaches/components/CoachPartnersSection', () => ({ default: Nada }));
 vi.mock('@/modules/coaches/components/CoachCourtBookingsSection', () => ({ default: Nada }));
 vi.mock('@/modules/clubs/components/LinkedClubsSection', () => ({ default: Nada }));
+vi.mock('@/modules/training/hooks/useTrainingQuestions', () => ({ useCoachTrainingQuestions: () => estado.duvidas }));
+vi.mock('@/modules/coaches/hooks/useStudents', () => ({ useCoachStudents: () => estado.alunos }));
 vi.mock('@/modules/coaches/components/CoachProfileSections', () => ({ CoachInfoSection: Nada, CoachPhotosSection: Nada }));
 
 const { AvailabilityEditor, default: V2CoachAgenda } = await import('./V2CoachAgenda.jsx');
@@ -50,6 +52,8 @@ beforeEach(() => {
   estado.consulta = ok(null);
   estado.coach = null;
   estado.aulas = [];
+  estado.duvidas = ok([]);
+  estado.alunos = ok([]);
   salvar.mockClear();
   recarregar.mockClear();
   container = document.createElement('div');
@@ -114,8 +118,8 @@ describe('⭐ a aba Agenda começa pelo que depende do professor', () => {
     id, status, student_name: nome, format: 'private', slots: [{ date: futuro(dias), start: '18:00', end: '19:00' }],
   });
 
-  async function renderPagina() {
-    await act(async () => { root.render(<MemoryRouter><V2CoachAgenda /></MemoryRouter>); });
+  async function renderPagina(url = '/aulas?aba=agenda') {
+    await act(async () => { root.render(<MemoryRouter initialEntries={[url]}><V2CoachAgenda /></MemoryRouter>); });
   }
 
   it('⭐ próximas aulas ANTES da disponibilidade, com os pedidos no topo e o selo de quantos', async () => {
@@ -136,5 +140,42 @@ describe('⭐ a aba Agenda começa pelo que depende do professor', () => {
     estado.aulas = [aula('l1', 'confirmed', 1, 'Confirmada')];
     await renderPagina();
     expect(container.textContent).not.toMatch(/esperando a sua resposta/);
+  });
+
+  describe('⭐ o painel abre em Hoje (Fase 3.2)', () => {
+    it('sem URL, abre em Hoje com os pedidos, as aulas de hoje e os primeiros passos', async () => {
+      estado.coach = { id: 'c1', display_name: 'Prof', bio: 'x', hourly_rate: 100 };
+      estado.aulas = [aula('l1', 'confirmed', 0, 'Aluno De Hoje'), aula('l2', 'requested', 3, 'Pedido Novo'), aula('l3', 'confirmed', 2, 'Depois')];
+      await renderPagina('/aulas');
+      const texto = container.textContent;
+      expect(texto).toContain('Esperando a sua resposta');
+      expect(texto).toContain('Pedido Novo');
+      expect(texto).toContain('Aulas de hoje');
+      expect(texto).toContain('Aluno De Hoje');
+      expect(texto).not.toContain('Depois');
+      expect(texto).toContain('Primeiros passos');
+      expect(texto).not.toContain('Disponibilidade semanal');
+    });
+
+    it('🐞 dúvidas falhando: diz que não deu para conferir, nunca "nenhuma"', async () => {
+      estado.coach = { id: 'c1', display_name: 'Prof' };
+      estado.duvidas = { data: undefined, isLoading: false, isError: true, refetch: recarregar };
+      await renderPagina('/aulas');
+      expect(container.textContent).toContain('Não deu para conferir agora');
+      expect(container.textContent).not.toContain('Nenhuma esperando resposta');
+    });
+
+    it('os ?secao= antigos seguem abrindo o lugar certo', async () => {
+      estado.coach = { id: 'c1', display_name: 'Prof' };
+      await renderPagina('/aulas?secao=perfil');
+      expect(container.querySelector('[data-dica="professor-aba-engajamento"]')).toBeNull();
+      // "Configurar" aparece como abas quando ativo.
+      expect(container.textContent).toContain('Informações');
+      // Um router novo: o MemoryRouter não troca de histórico ao re-renderizar.
+      act(() => root.unmount());
+      root = createRoot(container);
+      await renderPagina('/aulas?secao=engajamento');
+      expect(container.querySelector('[data-dica="professor-aba-engajamento"]')).toBeTruthy();
+    });
   });
 });
