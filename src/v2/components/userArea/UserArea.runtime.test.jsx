@@ -61,10 +61,12 @@ vi.mock('@/modules/rating/hooks/useMyUnifiedLevel', () => ({ useMyUnifiedLevel: 
 vi.mock('@/modules/rating/hooks/useRating', () => ({
   useMyPlayerRating: () => ok(null),
   useNationalRanking: () => ({ data: [] }),
+  useRatingHistory: () => ok([]),
 }));
-vi.mock('@/modules/tournament/hooks/useTournament', () => ({ useMyTournaments: () => ok([]) }));
+vi.mock('@/modules/tournament/hooks/useTournament', () => ({ useMyTournaments: () => ok([]), useMyTournamentHistory: () => ok([]) }));
 vi.mock('@/v2/components/rating/V2DuprRatingBadge', () => ({ default: () => null }));
 vi.mock('@/v2/components/arenas/marketing/MyReferralCodes', () => ({ default: () => null }));
+vi.mock('@/v2/components/profile/ProfileProgressionSection', () => ({ default: () => null }));
 
 import V2Profile from '@/v2/pages/V2Profile.jsx';
 import UserArea from './UserArea.jsx';
@@ -95,7 +97,7 @@ describe('Minha área ligada', () => {
 
   it('quem só joga vê as seções de todos — nada de gestão', async () => {
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Treino', 'Jogo', 'Agenda', 'Torneios', 'Conta']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios']);
     expect(container.querySelector('[data-dica="minha-area-pendencias"]')).toBeNull();
   });
 
@@ -105,7 +107,7 @@ describe('Minha área ligada', () => {
     estado.clubes = ok([{ id: 'c1', name: 'Clube', my_role: 'member' }]);
     estado.admin = true;
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Treino', 'Jogo', 'Agenda', 'Torneios', 'Clubes', 'Conta', 'Professor', 'Arenas', 'Admin']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios', 'Clubes', 'Professor', 'Arenas', 'Admin']);
   });
 
   it('pedido de reserva conhecido vira pendência que leva à Central', async () => {
@@ -156,5 +158,21 @@ describe('Minha área ligada', () => {
     expect(secoes()).toContain('Clubes');
     expect(container.textContent).toContain('Pickle Sul');
     expect(container.textContent).toContain('1 convite para entrar num clube');
+  });
+
+  it('⭐ Meus jogos (Jogo + Agenda): um link por destino, nenhum repetido', async () => {
+    await render(<UserArea />, '/perfil?secao=jogos');
+    const links = [...container.querySelectorAll('section[aria-labelledby="minha-area-jogos-titulo"] a')].map((a) => a.getAttribute('href'));
+    expect(links.length).toBeGreaterThan(0);
+    expect(new Set(links).size).toBe(links.length);
+    expect(links).toContain('/minhas-reservas');
+    expect(links).toContain('/meu-desempenho');
+  });
+
+  it('⭐ link antigo `?secao=conta` cai em Perfil e conta', async () => {
+    await render(<UserArea />, '/perfil?secao=conta');
+    const ativa = container.querySelector('nav[aria-label="Seções da Minha área"] [aria-current="page"]');
+    expect(ativa.textContent.trim()).toBe('Perfil e conta');
+    expect(container.querySelector('a[href="/configuracoes"]')).not.toBeNull();
   });
 });

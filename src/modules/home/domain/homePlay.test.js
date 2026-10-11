@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  openGamesForMe, pickHomeArena, upcomingFreeTimes, arenaFreeTimesForDays,
+  openGamesForMe, pickHomeArena, upcomingFreeTimes, arenaFreeTimesForDays, jogarAgora,
 } from './homePlay.js';
 
 const HOJE = '2026-09-26';
@@ -84,5 +84,24 @@ describe('arenaFreeTimesForDays — a mesma conta do calendário da arena', () =
     }];
     const [dia] = arenaFreeTimesForDays([HOJE], { courts, schedules, diasDeJogo });
     expect(dia.times.map((t) => t.time)).not.toContain('20:00');
+  });
+});
+
+describe('jogarAgora', () => {
+  const agora = Date.UTC(2026, 8, 26, 15);
+  const h = (n) => agora + n * 60 * 60 * 1000;
+  it('só o que cabe, ainda não começou e está nas próximas 48 h — do mais cedo ao mais tarde', () => {
+    const itens = [
+      { id: 'tarde', inicio: h(30) },
+      { id: 'cedo', inicio: h(2) },
+      { id: 'passou', inicio: h(-1) },
+      { id: 'longe', inicio: h(49) },
+      { id: 'meu', inicio: h(3), estou: true },
+      { id: 'nao-cabe', inicio: h(4), cabe: false },
+      { id: 'sem-data', inicio: null },
+    ];
+    expect(jogarAgora(itens, { agora }).map((i) => i.id)).toEqual(['cedo', 'tarde']);
+    expect(jogarAgora(itens, { agora, horas: 24 }).map((i) => i.id)).toEqual(['cedo']);
+    expect(jogarAgora([], { agora })).toEqual([]);
   });
 });

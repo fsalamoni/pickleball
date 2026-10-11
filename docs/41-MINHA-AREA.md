@@ -30,11 +30,10 @@ Centro de Treino (`docs/40-CENTRO-DE-TREINO.md`) entra por aqui.
 | Linha | Seção (`?secao=`) | Quem vê |
 |---|---|---|
 | **Você** | `resumo` (padrão: a chamada da fila do jogo aberto, se houver; o treino da semana; os atalhos) | todos |
-| | `perfil` (a vitrine e os números do ranking) | todos |
-| | `treino` (a semana de treino e o que chegou) | com `training_center` |
-| | `jogo`, `agenda`, `torneios` (os que eu jogo) | todos |
+| | `perfil` — **Perfil e conta** (os números do ranking, o editor, a progressão, as configurações e os códigos de indicação) | todos |
+| | `treino` (a semana de treino e o que chegou) | todos |
+| | `jogos` — **Meus jogos** (o que vem: reservas, aulas, dias de jogo; o que foi: desempenho e ranking — um link por destino), `torneios` (os que eu jogo) | todos |
 | | `clubes` (meus clubes e convites para responder) | membro de clube **ou** quem tem convite pendente |
-| | `conta` | todos |
 | **Gerencio** | `professor` | quem tem `coaches/{uid}` |
 | | `arenas` | quem gere arena |
 | | `admin` | administrador da plataforma |
@@ -76,3 +75,8 @@ não tinha (falha não é lista vazia).
   (e-mail na Política de Privacidade) que o admin executa em Painel admin →
   Comunidade → Cadastros (decisão do dono, 2026-10-08).
 - Aprovações de entrada em clube na faixa "Precisa de você".
+
+> **2026-10-11 (plano de UX, Fase 3.1)**: de 11 para **9 seções** — `jogo` + `agenda`
+> viraram `jogos` (Meus jogos) e `conta` entrou em `perfil` (Perfil e conta); o
+> Treino é de todos (a flag virou permanente). Os links antigos `?secao=jogo`,
+> `agenda` e `conta` caem na seção que os absorveu (`resolveUserAreaSection`).

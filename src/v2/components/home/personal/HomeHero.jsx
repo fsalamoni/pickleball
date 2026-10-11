@@ -17,6 +17,7 @@ import { HOME_FOCUS_LABEL, focusReasonText } from '@/modules/home/domain/homePro
 import { countToday, mergeAgenda } from '@/modules/home/domain/homeAgenda';
 import { diasAte } from '@/modules/home/domain/freshness';
 import { frasePrincipal, saudacao } from '@/modules/home/domain/homeShortcuts';
+import { recordEvent } from '@/core/services/observabilityService';
 import PersonalizeHomeDialog from './PersonalizeHomeDialog';
 
 function Contador({ label, value, destaque = false }) {
@@ -39,7 +40,10 @@ export default function HomeHero({
     ? cards.map((c) => ({ key: c.id, label: c.label, title: undefined }))
     : foci.map((f) => ({ key: f.focus, label: HOME_FOCUS_LABEL[f.focus] || f.focus, title: focusReasonText(f.reason) }));
   const sobra = Math.max(0, chips.length - MAX_CHIPS);
-  const abrir = () => (onPersonalizar ? onPersonalizar() : setPersonalizar(true));
+  const abrir = () => {
+    recordEvent('home_personalize_open', { sobMedida });
+    if (onPersonalizar) onPersonalizar(); else setPersonalizar(true);
+  };
   const itens = useMemo(() => mergeAgenda([agenda?.itens || []]), [agenda?.itens]);
   const acoes = itens.filter((i) => i.acao).length + (pendenciasExtras || 0);
   const frase = frasePrincipal({ agenda: itens, hoje, completa: !!agenda?.completa, acoes });

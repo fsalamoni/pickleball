@@ -107,3 +107,21 @@ export function arenaFreeTimesForDays(datas = [], {
     }),
   }));
 }
+
+const HORA_MS = 60 * 60 * 1000;
+
+/**
+ * "Jogar agora": os jogos com vaga em que a pessoa CABE e que começam nas
+ * próximas `horas` (48 por padrão), do mais cedo ao mais tarde — sem os que
+ * ela já tem e sem o que já começou. É o que vai para a faixa do topo do
+ * início quando o card Dias de jogo não está escolhido.
+ *
+ * @param {Array<{ inicio?: number, estou?: boolean, cabe?: boolean }>} itens `buildPlayList`
+ * @param {{ agora: number, horas?: number }} ctx
+ */
+export function jogarAgora(itens = [], { agora, horas = 48 } = {}) {
+  const limite = agora + horas * HORA_MS;
+  return (itens || [])
+    .filter((i) => !i.estou && i.cabe !== false && Number.isFinite(i.inicio) && i.inicio >= agora && i.inicio <= limite)
+    .sort((a, b) => a.inicio - b.inicio);
+}

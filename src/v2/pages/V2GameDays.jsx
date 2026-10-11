@@ -128,7 +128,7 @@ function GameDayList() {
   }, [gameDays, today]);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <div className="mx-auto max-w-[1000px] pb-16 lg:pb-0">
       <V2PageIntro
         title="Dia de jogo"
         subtitle="Os seus dias de jogo, os com vaga para você entrar — e o seu, se quiser organizar a rodada."
@@ -198,6 +198,19 @@ function GameDayList() {
       {!isLoading && (isError || gameDays.length > 0) && (
         <div className="mt-10">
           <OpenGameDaysForMe />
+        </div>
+      )}
+
+      {/* No celular, criar fica sempre à mão, acima da barra inferior — o
+          botão do topo rola para fora da tela com a lista. */}
+      {!isLoading && !isError && gameDays.length > 0 && (
+        <div
+          className="pointer-events-none fixed inset-x-0 z-20 flex justify-center px-4 lg:hidden"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+        >
+          <V2Button className="pointer-events-auto shadow-organic" onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar-fixo">
+            <Plus className="h-4 w-4" aria-hidden="true" /> Criar dia de jogo
+          </V2Button>
         </div>
       )}
 
