@@ -7,6 +7,7 @@
  * item. Falha ≠ vazio: "nenhum treino registrado" só com a lista carregada.
  */
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useDesfazivel } from '@/v2/ui/useDesfazivel';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -100,6 +101,7 @@ export default function DiaryTab({ identity, params, irPara }) {
   const [semanas, setSemanas] = useState(SEMANAS_POR_VEZ);
   const [registro, setRegistro] = useState(null); // { initial } | { session }
   const [apagar, setApagar] = useState(null);
+  const desfazivel = useDesfazivel();
   const registrar = params.get('registrar');
 
   // Vindo da ficha de um item: abre o registro uma vez e limpa a URL ao fechar.
@@ -107,7 +109,10 @@ export default function DiaryTab({ identity, params, irPara }) {
     if (registrar) setRegistro({ initial: { item_ids: [registrar] }, daUrl: true });
   }, [registrar]);
 
-  const lista = useMemo(() => sortSessions(sessoes.data || []), [sessoes.data]);
+  const lista = useMemo(
+    () => sortSessions(sessoes.data || []).filter((s) => !desfazivel.ocultos.has(s.id)),
+    [sessoes.data, desfazivel.ocultos],
+  );
   const porSemana = useMemo(() => sessionsByWeek(lista), [lista]);
   const ativo = (planos.data || []).find((p) => p.status === PLAN_STATUS.ATIVO) || null;
   const resumo = sessoes.isSuccess
@@ -205,10 +210,14 @@ export default function DiaryTab({ identity, params, irPara }) {
         description="Ele sai do diário e da evolução. A conversa com o professor sobre ele também é apagada."
         confirmLabel="Apagar"
         pending={acoes.remove.isPending}
-        onConfirm={() => acoes.remove.mutate(apagar, {
-          onSuccess: () => { toast.success('Registro apagado.'); setApagar(null); },
-          onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível apagar agora.')),
-        })}
+        onConfirm={() => {
+          // Apagar com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
+          const alvo = apagar;
+          setApagar(null);
+          desfazivel.agendar(alvo.id, 'Registro apagado.', () => acoes.remove.mutateAsync(alvo), {
+            aoFalhar: (err) => toast.error(mensagemDeErro(err, 'Não foi possível apagar agora.')),
+          });
+        }}
       />
       <Suspense fallback={null}>
         {registro && (

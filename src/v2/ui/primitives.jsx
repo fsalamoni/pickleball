@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Slot } from '@radix-ui/react-slot';
-import { ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -370,15 +370,41 @@ export function V2EmptyState({ icon: Icon, title, description, action, className
  * `inline` serve para uma SEÇÃO que falhou dentro de uma tela que carregou:
  * ali um bloco de tela inteira roubaria a página de quem só perdeu um pedaço.
  */
+/** Texto próprio por tipo de falha (Fase 4.1): rede × servidor. */
+const ERRO_POR_TIPO = {
+  rede: {
+    title: 'Sem conexão',
+    description: 'Não deu para falar com o servidor. Confira a sua internet e tente de novo.',
+    Icone: WifiOff,
+  },
+  servidor: {
+    title: 'Algo deu errado do nosso lado',
+    description: 'A falha não é da sua conexão. Tente de novo em instantes; se continuar, avise a gente.',
+    Icone: AlertTriangle,
+  },
+};
+
+/**
+ * @param {object} p
+ * @param {'rede'|'servidor'} [p.tipo] — com ele, título e texto próprios
+ *   (os `title`/`description` passados continuam vencendo). Sem ele, o
+ *   genérico de sempre.
+ */
 export function V2ErrorState({
-  title = 'Não foi possível carregar',
-  description = 'A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.',
+  tipo,
+  title: titleProp,
+  description: descriptionProp,
   detail,
   onRetry,
   retryLabel = 'Tentar de novo',
   inline = false,
   className,
 }) {
+  const porTipo = ERRO_POR_TIPO[tipo];
+  const title = titleProp ?? porTipo?.title ?? 'Não foi possível carregar';
+  const description = descriptionProp ?? porTipo?.description
+    ?? 'A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.';
+  const Icone = porTipo?.Icone ?? WifiOff;
   const botao = onRetry ? (
     <V2Button variant={inline ? 'ghost' : 'primary'} size="sm" onClick={onRetry}>
       <RefreshCw className="mr-1.5 h-4 w-4" /> {retryLabel}
@@ -395,7 +421,7 @@ export function V2ErrorState({
         )}
       >
         <span className="inline-flex min-w-0 items-center gap-1.5">
-          <WifiOff className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <Icone className="h-3.5 w-3.5 shrink-0 text-amber-600" />
           <span className="min-w-0">
             <span className="font-semibold">{title}.</span>{' '}
             <span className="opacity-90">{description}</span>
@@ -410,7 +436,7 @@ export function V2ErrorState({
   return (
     <div role="alert" className={cn('flex flex-col items-center px-6 py-14 text-center', className)}>
       <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-        <WifiOff className="h-9 w-9" />
+        <Icone className="h-9 w-9" />
       </div>
       <h3 className="font-display text-2xl font-bold text-ink">{title}</h3>
       <p className="mt-3 max-w-lg font-medium leading-7 text-gray-500">{description}</p>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useDesfazivel } from '@/v2/ui/useDesfazivel';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, Trophy, BarChart3,
@@ -95,6 +96,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
   const [guestName, setGuestName] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [alvoDupla, setAlvoDupla] = useState(null);
+  const desfazivel = useDesfazivel();
 
   const addedUserIds = useMemo(
     () => new Set(participants.map((p) => p.user_id).filter(Boolean)),
@@ -135,12 +137,12 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
     }
   };
 
-  const handleRemove = async (id) => {
-    try {
-      await removeParticipant.mutateAsync(id);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
-    }
+  // Remover com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
+  const handleRemove = (id) => {
+    const p = participants.find((x) => x.id === id);
+    desfazivel.agendar(id, `${p?.name || 'Participante'} removido do dia de jogo.`, () => removeParticipant.mutateAsync(id), {
+      aoFalhar: (err) => toast.error(err.message || 'Não foi possível remover.'),
+    });
   };
 
   const porId = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
@@ -181,7 +183,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
           <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar." />
         ) : (
           <div className="flex flex-wrap gap-2">
-            {participants.map((p) => (
+            {participants.filter((p) => !desfazivel.ocultos.has(p.id)).map((p) => (
               <div key={p.id} className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-2 text-sm">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
                 <span className="font-medium text-ink">{p.name}</span>
