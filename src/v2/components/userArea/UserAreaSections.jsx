@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, GraduationCap,
-  HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, Search, Settings, ShieldCheck,
+  HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Search, Settings, ShieldCheck,
   Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -165,6 +165,7 @@ function PerfilSecao() {
             { to: '/notificacoes', label: 'Notificações', descricao: 'Todos os avisos, inclusive os antigos', icon: Inbox },
             { to: '/configuracoes#minha-regiao', label: 'Minha região', descricao: 'Cidade e raio das buscas', icon: MapPin },
             inicioOn && { to: '/configuracoes#pagina-inicial', label: 'Página inicial', descricao: 'Os cards do seu início', icon: LayoutGrid },
+            { to: '/configuracoes#menu-lateral', label: 'Menu', descricao: 'O que aparece na barra lateral, e a ordem', icon: PanelLeft },
             { to: '/legal', label: 'Privacidade e documentos', descricao: 'Termos, LGPD e os seus dados', icon: ShieldCheck },
             { to: helpLinkFor('/perfil'), label: 'Ajuda', descricao: 'O manual da plataforma', icon: HelpCircle },
           ]}

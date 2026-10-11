@@ -28,6 +28,7 @@ import V2PushCard from '@/v2/components/settings/V2PushCard';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
+import SidebarSettingsCard from '@/v2/components/settings/SidebarSettingsCard';
 import GamificationSettingsCard from '@/v2/components/gamification/GamificationSettingsCard';
 import DebriefSettingsCard from '@/v2/components/training/debrief/DebriefSettingsCard';
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
@@ -130,7 +131,7 @@ export default function V2Settings() {
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title="Configurações"
-        subtitle={`Conta, ${[aparenciaOn && 'aparência', regiaoOn && 'região', inicioOn && 'página inicial', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
+        subtitle={`Conta, ${[aparenciaOn && 'aparência', regiaoOn && 'região', inicioOn && 'página inicial', 'menu', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
       />
 
       <div className="space-y-4">
@@ -153,6 +154,9 @@ export default function V2Settings() {
 
         {/* Página inicial: os cards do início e a ordem (flag home_cards). */}
         <HomeCardsSettingsCard />
+
+        {/* Menu: os hubs da barra lateral e a ordem — padrão por papel, editável. */}
+        <SidebarSettingsCard />
 
         {/* Dicas: ligar, desligar e abrir os guias (flag guided_tips). */}
         <DicasSettingsCard />

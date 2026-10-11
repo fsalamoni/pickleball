@@ -39,10 +39,12 @@ import {
   ShieldCheck,
   LifeBuoy,
   Dumbbell,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { bottomNavItems } from '@/core/domain/bottomNav';
 import { navRotulos } from '@/core/domain/navRotulos';
+import { useSidebarNav } from '@/core/lib/useSidebarNav';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { recordEvent } from '@/core/services/observabilityService';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -338,7 +340,18 @@ function useV2Nav() {
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
   }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos]);
 
-  return { sections, hubs, myArenas, pendingByArena, isCoach };
+  // A barra lateral e a gaveta mostram só os hubs que a pessoa escolheu
+  // (core/domain/sidebarNav.js — padrão por papel, editável em Configurações
+  // → Menu). `hubs` continua completo: é o que a busca indexa e o que diz em
+  // que hub a pessoa está, mesmo num hub escondido.
+  const papeis = useMemo(() => ({ arenas: showMyArenas, professor: isCoach, admin: !!isPlatformAdmin }), [showMyArenas, isCoach, isPlatformAdmin]);
+  const { itens: escolhidos } = useSidebarNav(papeis);
+  const hubsVisiveis = useMemo(
+    () => escolhidos.map((id) => hubs.find((h) => h.id === id)).filter(Boolean),
+    [escolhidos, hubs],
+  );
+
+  return { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach };
 }
 
 /** Hub ativo: o que contém a subpágina mais específica que casa com o path. */
@@ -600,7 +613,7 @@ export default function V2Layout({ children }) {
   const navigate = useNavigate();
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
-  const { sections, hubs, myArenas, pendingByArena, isCoach } = useV2Nav();
+  const { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach } = useV2Nav();
   const bottomItems = useBottomNav({
     uid: user?.uid, pathname: location.pathname, arenas: myArenas, pendingByArena, ehProfessor: isCoach,
   });
@@ -723,7 +736,7 @@ export default function V2Layout({ children }) {
             ) : <BrandLockup />}
           </div>
           <nav data-dica="menu-principal" aria-label="Menu principal" className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
-            {hubs.map((hub) => (
+            {hubsVisiveis.map((hub) => (
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
           </nav>
@@ -761,6 +774,20 @@ export default function V2Layout({ children }) {
           >
             <FileText className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: legalDocsPath }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
             {!collapsed && <span className="ml-3">Termos e Documentos</span>}
+          </Link>
+          {/* O menu é da pessoa: o que aparece aqui se escolhe em Configurações → Menu. */}
+          <Link
+            to="/configuracoes#menu-lateral"
+            data-dica="menu-personalizar"
+            title={collapsed ? 'Personalizar o menu' : undefined}
+            aria-label={collapsed ? 'Personalizar o menu' : undefined}
+            className={cn(
+              'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-ink',
+              collapsed ? 'justify-center px-0' : 'px-3.5',
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4 shrink-0 text-gray-500 group-hover:text-acid" />
+            {!collapsed && <span className="ml-3">Personalizar o menu</span>}
           </Link>
           <button
             type="button"
@@ -979,7 +1006,7 @@ export default function V2Layout({ children }) {
             /* Hubs: lista enxuta (nível 1). As subpáginas aparecem na barra
                superior ao entrar no hub — igual ao desktop. */
             <div className="space-y-1">
-              {hubs.map((hub) => {
+              {hubsVisiveis.map((hub) => {
                 const Icon = hub.icon;
                 const active = activeHub?.id === hub.id;
                 const badge = typeof hub.badge === 'number' && hub.badge > 0 ? hub.badge : 0;
@@ -1034,6 +1061,13 @@ export default function V2Layout({ children }) {
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
             {/* No celular não há o menu do avatar: a aparência mora aqui. */}
             <ThemeDrawerSwitcher />
+            <Link
+              to="/configuracoes#menu-lateral"
+              onClick={closeMobile}
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
+            >
+              <SlidersHorizontal className="h-5 w-5" /> Personalizar o menu
+            </Link>
             {centralAvisosOn && (
               <Link
                 to={NOTIFICATIONS_PATH}

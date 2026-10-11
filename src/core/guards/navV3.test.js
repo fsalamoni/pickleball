@@ -49,6 +49,14 @@ describe('navegação v3 (incorporada)', () => {
     expect(paleta).toMatch(/role="combobox"/);
   });
 
+  it('⭐ a barra lateral e a gaveta mostram os hubs ESCOLHIDOS (useSidebarNav); a busca indexa todos', () => {
+    expect(src).toMatch(/import \{ useSidebarNav \} from '@\/core\/lib\/useSidebarNav'/);
+    expect((src.match(/hubsVisiveis\.map\(/g) || []).length).toBe(2);
+    expect(src).toMatch(/hubs=\{hubs\}/);
+    expect(src).toMatch(/findActiveHub\(location\.pathname, hubs\)/);
+    expect(src).toContain('/configuracoes#menu-lateral');
+  });
+
   it('o toque na barra e nos hubs é medido (nav_bottom_click / nav_hub_click)', () => {
     expect(src).toMatch(/recordEvent\('nav_bottom_click'/);
     expect((src.match(/recordEvent\('nav_hub_click'/g) || []).length).toBeGreaterThanOrEqual(2);
