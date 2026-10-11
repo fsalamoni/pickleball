@@ -42,6 +42,7 @@ let root;
 
 beforeEach(() => {
   updateUserProfile.mockClear();
+  window.localStorage.clear();
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -120,7 +121,7 @@ describe('V2OnboardingWizard', () => {
     estado.essencial = true;
     estado.perfil = { ...COMPLETO_ANTIGO, competition_gender: 'male' };
     await render();
-    expect(texto()).toContain('Qual é o seu nível de jogo?');
+    expect(texto()).toContain('Falta só o seu nível');
     const rating = body().querySelector('#onb_dupr_rating');
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     React.act(() => {
@@ -139,5 +140,54 @@ describe('V2OnboardingWizard', () => {
     await render();
     expect(body().querySelector('#onb_uf').tagName).toBe('SELECT');
     expect(body().querySelectorAll('#onb_uf option')).toHaveLength(28); // "UF" + 27
+  });
+
+  describe('⭐ "Continuar depois" (Fase 3.5)', () => {
+    const SEM_INTERESSES = { ...COMPLETO_ANTIGO, competition_gender: 'female', leveling_level: 'iniciante_2', interests: [] };
+
+    it('o passo dos interesses pode ficar para depois; o do nível não', async () => {
+      estado.essencial = true;
+      estado.perfil = { ...SEM_INTERESSES, leveling_level: '' };
+      await render();
+      expect(texto()).toContain('Passo 1 de 2');
+      expect(botao('Continuar depois')).toBeTruthy();
+      await clicar(botao('Continuar depois'));
+      expect(texto()).toContain('Qual é o seu nível de jogo?');
+      expect(botao('Continuar depois')).toBeFalsy();
+      expect(updateUserProfile).not.toHaveBeenCalled();
+      expect(window.localStorage.getItem('v2:view:u1:onboarding:adiado')).toBeTruthy();
+    });
+
+    it('só interesses faltando: "Falta só…", adiar conclui, e por uma semana o assistente não volta', async () => {
+      estado.essencial = true;
+      estado.perfil = SEM_INTERESSES;
+      await render();
+      expect(texto()).toContain('Falta só dizer o que você quer fazer por aqui');
+      expect(texto()).not.toContain('Passo 1 de');
+      await clicar(botao('Continuar depois'));
+      expect(updateUserProfile).toHaveBeenCalledTimes(1);
+      expect(updateUserProfile.mock.calls[0][0].onboarding_completed_at).toBeTruthy();
+      expect(texto()).not.toContain('Falta só');
+
+      // próxima entrada, dentro da semana: não abre
+      React.act(() => root.unmount());
+      root = createRoot(host);
+      await render();
+      expect(texto()).not.toContain('Falta só');
+
+      // adiamento vencido: volta a pedir
+      window.localStorage.setItem('v2:view:u1:onboarding:adiado', new Date(Date.now() - 8 * 86400000).toISOString());
+      React.act(() => root.unmount());
+      root = createRoot(host);
+      await render();
+      expect(texto()).toContain('Falta só dizer o que você quer fazer por aqui');
+    });
+
+    it('falta só o nível: o título diz isso', async () => {
+      estado.essencial = true;
+      estado.perfil = { ...COMPLETO_ANTIGO, competition_gender: 'female' };
+      await render();
+      expect(texto()).toContain('Falta só o seu nível');
+    });
   });
 });

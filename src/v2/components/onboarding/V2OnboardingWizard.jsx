@@ -23,20 +23,19 @@ import {
   COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, platformInterestMeta, sanitizeInterests,
 } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
+import {
+  PASSOS, deveAbrir, passosPara as passosDoDominio, podeAdiar, tituloDoRetorno,
+} from '@/modules/athletes/domain/onboardingSteps';
+import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+
+/** Quando a pessoa adiou os interesses — no navegador, por uid (zero banco). */
+const PREF_ADIADO = 'onboarding:adiado';
 
 // Mantido por compatibilidade de import (agora derivado dos metadados ricos).
 export const ONBOARDING_INTERESTS = PLATFORM_INTEREST_META;
 
-/** Os passos do assistente, na ordem, e os campos que cada um preenche. */
-const PASSOS = ['pessoal', 'jogo', 'interesses', 'nivel'];
-const CAMPOS_DO_PASSO = {
-  pessoal: ['platform_name', 'birth_date', 'phone', 'gender', 'city', 'state'],
-  jogo: ['pickleball_experience', 'court_side', 'competition_gender'],
-  interesses: ['interests'],
-  nivel: ['level'],
-};
 
 /** A categoria em que se joga — a pergunta que o sorteio faz. */
 const CATEGORIAS = [
@@ -53,9 +52,8 @@ const CATEGORIAS = [
  * como sempre: todos os passos, com o nível opcional no fim.
  */
 function passosPara(faltando, essencial) {
-  if (!essencial) return PASSOS;
-  const passos = PASSOS.filter((id) => CAMPOS_DO_PASSO[id].some((c) => faltando.includes(c)));
-  return passos.length > 0 ? passos : PASSOS;
+  if (!essencial) return [...PASSOS];
+  return passosDoDominio(faltando);
 }
 
 /**
@@ -123,7 +121,9 @@ export default function V2OnboardingWizard() {
     // Quem já tinha concluído o cadastro e agora vê o assistente de novo precisa
     // saber POR QUÊ — senão parece que o aplicativo perdeu os dados dele.
     setRetorno(Boolean(essencial && userProfile?.onboarding_completed_at));
-    setOpenLatch(Boolean(userProfile && faltando.length > 0));
+    // "Continuar depois" nos interesses vale uma semana (Fase 3.5): com só
+    // eles faltando e o adiamento em dia, o assistente não volta a cada entrada.
+    setOpenLatch(Boolean(userProfile) && deveAbrir(faltando, readViewPreference(userProfile?.uid, PREF_ADIADO)));
   }, [userProfile?.uid, essencial]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!openLatch) return null;
@@ -217,6 +217,13 @@ export default function V2OnboardingWizard() {
     }
   }
 
+  /** Deixa o passo adiável para depois: grava o adiamento e segue (ou conclui). */
+  async function adiarPasso() {
+    writeViewPreference(userProfile?.uid, PREF_ADIADO, new Date().toISOString());
+    if (ultimo) await finish();
+    else avancar();
+  }
+
   const selectedLevelInfo = getLevelByCode(levelCode);
 
   async function saveLevelAndFinish() {
@@ -289,10 +296,10 @@ export default function V2OnboardingWizard() {
   }
 
   const titulo = {
-    pessoal: retorno ? 'Faltam alguns dados no seu cadastro' : 'Bem-vindo(a) à PickleRush!',
+    pessoal: retorno ? tituloDoRetorno(passos) : 'Bem-vindo(a) à PickleRush!',
     jogo: 'Suas preferências de jogo',
-    interesses: 'O que você quer fazer por aqui?',
-    nivel: 'Qual é o seu nível de jogo?',
+    interesses: retorno && passos.length === 1 ? tituloDoRetorno(passos) : 'O que você quer fazer por aqui?',
+    nivel: retorno && passos.length === 1 ? tituloDoRetorno(passos) : 'Qual é o seu nível de jogo?',
   }[passo];
   const descricao = {
     pessoal: retorno
@@ -336,10 +343,13 @@ export default function V2OnboardingWizard() {
         )}
 
         {passos.length > 1 && (
-          <div className="mb-1 flex items-center gap-1.5" aria-label={`Passo ${indice + 1} de ${passos.length}`}>
-            {passos.map((id, i) => (
-              <span key={id} className={cn('h-1.5 flex-1 rounded-full', i <= indice ? 'bg-acid' : 'bg-gray-100')} />
-            ))}
+          <div className="mb-1 space-y-1">
+            <div className="flex items-center gap-1.5" aria-hidden>
+              {passos.map((id, i) => (
+                <span key={id} className={cn('h-1.5 flex-1 rounded-full', i <= indice ? 'bg-acid' : 'bg-gray-100')} />
+              ))}
+            </div>
+            <p className="text-xs font-semibold text-gray-500">Passo {indice + 1} de {passos.length}</p>
           </div>
         )}
 
@@ -476,11 +486,16 @@ export default function V2OnboardingWizard() {
                 );
               })}
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               {voltar}
-              <V2Button onClick={handleInterests} disabled={busy || interests.length === 0}>
-                {busy ? 'Salvando…' : rotuloSeguir} <ChevronRight className="h-4 w-4" />
-              </V2Button>
+              <div className="flex items-center gap-2">
+                {podeAdiar(passo) && (
+                  <V2Button variant="ghost" onClick={adiarPasso} disabled={busy}>Continuar depois</V2Button>
+                )}
+                <V2Button onClick={handleInterests} disabled={busy || interests.length === 0}>
+                  {busy ? 'Salvando…' : rotuloSeguir} <ChevronRight className="h-4 w-4" />
+                </V2Button>
+              </div>
             </div>
           </div>
         )}
