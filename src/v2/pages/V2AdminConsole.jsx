@@ -1,27 +1,13 @@
 /**
- * V2AdminConsole — Painel Admin centralizado (hub).
+ * V2AdminConsole — Painel Admin (hub em /admin/painel).
  *
- * Página única em /admin/painel que reúne tudo que um admin master precisa
- * para administrar a plataforma. Substitui a navegação entre as três rotas
- * independentes (Métricas / Torneios / Parceiros) por um hub com 7 abas.
+ * Navegação por tarefa do admin (ver `SECTIONS`): Hoje (com "Precisa de você"),
+ * Pessoas, Torneios, Arenas, Treino, Gamificação, Divulgação, Funcionalidades e,
+ * no fim, Sistema (auditoria, exportação DUPR, diagnóstico). A aba mora na URL
+ * (`?tab=`), então links e avisos antigos continuam abrindo.
  *
- * A página inteira vive atrás de uma feature flag (`ADMIN_CONSOLE`). Enquanto
- * a flag está desligada, o item do menu e a rota simplesmente não existem —
- * nada muda no comportamento atual. Ver `src/core/featureFlags.js`.
- *
- * Abas:
- *   1. Visão geral — escala, contagens, ações rápidas
- *   2. Torneios    — reusa o motor de V2AdminTournaments (sem Navigate duplo)
- *   3. Parceiros   — reusa o motor de V2AdminPartners
- *   4. Funcionalidades (flags) — todas as feature flags com toggle
- *   5. Branding    — nome/logo/cor primária persistidos em platform_settings
- *   6. Conteúdo    — textos da plataforma (read-only por enquanto)
- *   7. Auditoria   — audit log + atalho para /admin/owner-debug
- *
- * Cuidadoso: zero mudanças em regras Firestore, índices ou service code.
- * Tudo é puramente aditivo. As páginas V2AdminMetrics/Tournaments/Partners
- * seguem funcionando exatamente como antes — esta é uma alternativa, não
- * uma substituição.
+ * Branding e Conteúdo saíram: gravavam em `platform_settings/global` campos que
+ * nenhuma tela da plataforma lê.
  */
 
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
@@ -32,22 +18,15 @@ import {
   Archive,
   CheckCircle2,
   ExternalLink,
-  FileText,
   Flag,
   Handshake,
-  Image as ImageIcon,
   LayoutDashboard,
   ListChecks,
   Loader2,
-  Medal,
-  Palette,
   Pencil,
   Plus,
   Puzzle,
-  Search,
-  Settings as SettingsIcon,
   Stethoscope,
-  Text as TextIcon,
   Trash2,
   Trophy,
   Users,
@@ -69,16 +48,12 @@ import {
 import { toast } from 'sonner';
 import {
   collection,
-  doc,
   getCountFromServer,
-  getDoc,
-  serverTimestamp,
-  setDoc,
 } from 'firebase/firestore';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, Settings, FileDown } from 'lucide-react';
+import { UserCog, Wrench, FileDown } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -89,9 +64,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
 import {
-  getPlatformSettings,
   setFeatureFlag,
-  subscribePlatformSettings,
 } from '@/core/services/platformSettingsService';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import RankingAutomatico from '@/modules/admin/components/RankingAutomatico';
@@ -107,6 +80,7 @@ import AdminAccessTab from '@/v2/components/admin/AdminAccessTab';
 import AdminUserRecordsTab from '@/v2/components/admin/AdminUserRecordsTab';
 import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
 import AdminArenaModulesTab from '@/v2/components/admin/AdminArenaModulesTab';
+import { useAdminInbox } from '@/v2/components/admin/useAdminInbox';
 
 // Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
 const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
@@ -127,147 +101,72 @@ import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2PageIntro, V2Skele
 import AdminConsoleNav from '@/v2/components/admin/AdminConsoleNav';
 import { flagsQueMudam, resolveAdminTab } from '@/modules/admin/domain/consoleNav';
 
-// Navegação em dois níveis: seções amplas por tema, cada uma com sub-abas.
+// Navegação em dois níveis, por TAREFA do admin: o que se usa todo dia vem
+// primeiro, o que é raro (auditoria, exportação, diagnóstico) fica em Sistema.
+// Os ids das abas são contrato (links, avisos, dicas guiadas): nunca renomeie.
+const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
+const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
+
 const SECTIONS = Object.freeze([
-  { id: 'overview', label: 'Visão geral', icon: LayoutDashboard, tabs: [
-    { id: 'overview', label: 'Resumo', icon: LayoutDashboard },
+  { id: 'today', label: 'Hoje', icon: LayoutDashboard, tabs: [
+    { id: 'overview', label: 'Resumo', icon: LayoutDashboard, keywords: ['precisa de você', 'pendências', 'fila', 'ranking', 'métricas'] },
   ] },
-  { id: 'community', label: 'Comunidade', icon: Users, tabs: [
-    { id: 'tournaments', label: 'Torneios', icon: Trophy },
-    // Cadastros + Perfis (Fase 3.4): uma pessoa, um lugar. As ferramentas do
-    // diretório (perfis públicos, moderação, migração) abrem dentro de Cadastros.
+  { id: 'people', label: 'Pessoas', icon: Users, tabs: [
+    // Cadastros + Perfis: uma pessoa, um lugar. As ferramentas do diretório
+    // (perfis públicos, moderação, migração) abrem dentro de Cadastros.
     { id: 'records', label: 'Cadastros', icon: UserCog, keywords: ['usuários', 'perfis', 'excluir conta', 'contas excluídas', 'unificar', 'moderação'] },
-    { id: 'partners', label: 'Parceiros', icon: Handshake },
+    { id: 'access', label: 'Acessos', icon: KeyRound, keywords: ['admin', 'poderes', 'permissões'] },
+  ] },
+  { id: 'competition', label: 'Torneios', icon: Trophy, tabs: [
+    { id: 'tournaments', label: 'Torneios', icon: Trophy },
   ] },
   { id: 'arenasSection', label: 'Arenas', icon: Building2, tabs: [
     { id: 'arenas', label: 'Arenas', icon: Building2 },
     { id: 'catalog', label: 'Catálogo', icon: ShoppingBasket },
+    // A camada em que o admin LIBERA os módulos adicionais às arenas.
+    { id: 'arena-modules', label: 'Módulos de arena', icon: Puzzle, keywords: ['liberar'] },
   ] },
-  { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
-    { id: 'flags', label: 'Flags por assunto', icon: Flag, keywords: ['funcionalidades', 'ligar', 'desligar'] },
-  ] },
-  { id: 'platform', label: 'Plataforma', icon: Palette, tabs: [
-    { id: 'branding', label: 'Branding', icon: Palette },
-    { id: 'content', label: 'Conteúdo', icon: TextIcon },
-  ] },
-  { id: 'governance', label: 'Governança', icon: ListChecks, tabs: [
-    { id: 'access', label: 'Acessos', icon: KeyRound },
-    { id: 'audit', label: 'Auditoria', icon: ListChecks },
-    { id: 'tools', label: 'Avançado', icon: Wrench, keywords: ['ferramentas', 'diagnóstico'] },
-  ] },
-]);
-
-/**
- * Injeta a aba "Exportar DUPR" na seção Governança quando a flag
- * `dupr_match_export` está ligada. Mantém `SECTIONS` intacto (base) e devolve
- * uma cópia aditiva — nada muda quando a flag está desligada.
- */
-// A gamificação V2 (flag `gamification_v2`): cinco telas numa seção só, sob demanda.
-const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
-const SECAO_GAMIFICACAO = {
-  id: 'gamification', label: 'Gamificação', icon: Sparkles, dica: 'admin-secao-gamificacao', tabs: [
-    { id: 'gam-config', label: 'Configuração', icon: SlidersHorizontal },
-    { id: 'gam-challenges', label: 'Desafios', icon: Trophy },
-    { id: 'gam-rewards', label: 'Recompensas', icon: Gift },
-    { id: 'gam-integrity', label: 'Integridade', icon: ShieldAlert },
-    { id: 'gam-metrics', label: 'Métricas', icon: BarChart3 },
-  ],
-};
-
-// O Centro de Treino (flag `training_center`): conteúdo, revisão, denúncias,
-// biblioteca inicial e configuração, numa seção só, sob demanda.
-const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
-const SECAO_TREINO = {
-  id: 'training', label: 'Treino', icon: Dumbbell, dica: 'admin-secao-treino', tabs: [
+  // O Centro de Treino: conteúdo, revisão, denúncias, biblioteca inicial e configuração.
+  { id: 'training', label: 'Treino', icon: Dumbbell, dica: 'admin-secao-treino', tabs: [
     { id: 'treino-conteudo', label: 'Conteúdo', icon: Dumbbell },
     { id: 'treino-revisao', label: 'Revisão', icon: ClipboardCheck },
     { id: 'treino-denuncias', label: 'Denúncias', icon: Flag },
     { id: 'treino-biblioteca', label: 'Biblioteca inicial', icon: BookOpenCheck },
     { id: 'treino-config', label: 'Configurações', icon: SlidersHorizontal },
-  ],
-};
+  ] },
+  { id: 'gamification', label: 'Gamificação', icon: Sparkles, dica: 'admin-secao-gamificacao', tabs: [
+    { id: 'gam-config', label: 'Configuração', icon: SlidersHorizontal },
+    { id: 'gam-challenges', label: 'Desafios', icon: Trophy },
+    { id: 'gam-rewards', label: 'Recompensas', icon: Gift },
+    { id: 'gam-integrity', label: 'Integridade', icon: ShieldAlert, keywords: ['sinais', 'cartas', 'moderação'] },
+    { id: 'gam-metrics', label: 'Métricas', icon: BarChart3 },
+  ] },
+  // A voz da plataforma e dos parceiros falando com todos.
+  { id: 'outreach', label: 'Divulgação', icon: Megaphone, tabs: [
+    { id: 'promo', label: 'Cupons e campanhas', icon: Megaphone, keywords: ['divulgação', 'banner'] },
+    { id: 'partners', label: 'Parceiros', icon: Handshake, keywords: ['afiliados', 'logos'] },
+  ] },
+  { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
+    { id: 'flags', label: 'Funcionalidades', icon: Flag, keywords: ['flags', 'ligar', 'desligar', 'opcionais'] },
+  ] },
+  { id: 'system', label: 'Sistema', icon: ListChecks, quieta: true, tabs: [
+    { id: 'audit', label: 'Auditoria', icon: ListChecks },
+    { id: 'dupr', label: 'Exportar DUPR', icon: FileDown },
+    { id: 'tools', label: 'Diagnóstico', icon: Wrench, keywords: ['ferramentas', 'avançado', 'restaurar'] },
+  ] },
+]);
 
-function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false, gamificationOn = false, trainingOn = false) {
-  let out = SECTIONS;
-  // O treino é conteúdo da comunidade: vem logo depois de Comunidade e some
-  // junto com a flag.
-  if (trainingOn) {
-    const idx = out.findIndex((section) => section.id === 'community');
-    out = [...out.slice(0, idx + 1), SECAO_TREINO, ...out.slice(idx + 1)];
-  }
-  // A seção da gamificação vem logo depois de Funcionalidades (é onde se decide
-  // o que existe) e some junto com a flag mestra.
-  if (gamificationOn) {
-    const idx = out.findIndex((section) => section.id === 'features');
-    out = [...out.slice(0, idx + 1), SECAO_GAMIFICACAO, ...out.slice(idx + 1)];
-  }
-  // Cupons e campanhas DA PLATAFORMA (Onda CG): moram em Plataforma, ao lado
-  // do branding e do conteúdo — é a voz da plataforma falando com todos.
-  if (platformMarketingOn) {
-    out = out.map((section) => (
-      section.id === 'platform'
-        ? { ...section, tabs: [...section.tabs, { id: 'promo', label: 'Divulgação', icon: Megaphone }] }
-        : section
-    ));
-  }
-  if (duprExportOn) {
-    out = out.map((section) => (
-      section.id === 'governance'
-        ? { ...section, tabs: [...section.tabs, { id: 'dupr', label: 'Exportar DUPR', icon: FileDown }] }
-        : section
-    ));
-  }
-  // A aba onde o admin LIBERA os módulos adicionais às arenas. Mora em
-  // Funcionalidades porque é ali que se decide o que existe na plataforma —
-  // e some junto com a chave-mestra, para não sobrar porta sem sala.
-  if (arenaModulesOn) {
-    out = out.map((section) => (
-      section.id === 'features'
-        ? { ...section, tabs: [...section.tabs, { id: 'arena-modules', label: 'Módulos de arena', icon: Puzzle }] }
-        : section
-    ));
-  }
-  return out;
-}
-
-const DEFAULT_BRANDING = Object.freeze({
-  platform_name: 'PickleRush',
-  tagline: 'A plataforma do pickleball brasileiro',
-  logo_url: '',
-  primary_color: '#0F1115',
-  accent_color: '#C8FF3D',
-});
-
-const DEFAULT_CONTENT = Object.freeze({
-  hero_eyebrow: 'Plataforma',
-  hero_title: 'Encontre torneios, jogue, evolua.',
-  hero_subtitle: 'Acompanhe seu ranking, dispute partidas e conecte-se com a comunidade do pickleball.',
-  hero_cta_label: 'Criar torneio',
-  empty_state_message: 'Ainda não há torneios por aqui. Que tal criar o primeiro?',
-  footer_text: 'PickleRush — feito com amor para a comunidade do pickleball.',
-  legal_link_label: 'Termos e privacidade',
-});
+const ALL_TABS = SECTIONS.flatMap((s) => s.tabs);
 
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
-  const duprExportOn = true;
-  const arenaModulesOn = true;
-  const platformMarketingOn = true;
-  const gamificationOn = true;
-  const trainingOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
-  const sections = useMemo(
-    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn, trainingOn),
-    [duprExportOn, arenaModulesOn, platformMarketingOn, gamificationOn, trainingOn],
-  );
-  const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
+  const inbox = useAdminInbox(isPlatformAdmin);
 
   // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra
-  // allTabs; ids antigos (`profiles`) seguem abrindo o lugar certo.
-  const tab = resolveAdminTab(searchParams.get('tab'), allTabs);
+  // ALL_TABS; ids antigos (`profiles`, `branding`) seguem abrindo um lugar válido.
+  const tab = resolveAdminTab(searchParams.get('tab'), ALL_TABS);
   const setTab = (id) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
@@ -280,7 +179,7 @@ export default function V2AdminConsole() {
     <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title="Painel Admin"
-        subtitle="Hub completo para administrar a plataforma — escala, identidade, conteúdo e governança."
+        subtitle="Administre pessoas, torneios, arenas e o que a plataforma oferece."
         action={
           <Link
             to="/admin/owner-debug"
@@ -293,34 +192,32 @@ export default function V2AdminConsole() {
       />
 
       <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-6">
-      <AdminConsoleNav sections={sections} tab={tab} onTab={setTab} />
+      <AdminConsoleNav sections={SECTIONS} tab={tab} onTab={setTab} badges={inbox.badges} />
 
       <div className="mt-6 min-w-0 lg:mt-0">
-        {tab === 'overview'   && <OverviewTab />}
+        {tab === 'overview'   && <OverviewTab inbox={inbox} onTab={setTab} />}
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
         {tab === 'catalog'    && <AdminCatalogTab />}
         {tab === 'records'    && <RecordsTab />}
         {tab === 'flags'      && <FlagsTab />}
-        {tab === 'branding'   && <BrandingTab />}
-        {tab === 'content'    && <ContentTab />}
         {tab === 'access'     && <AdminAccessTab />}
         {tab === 'audit'      && <AuditTab />}
-        {tab === 'tools'      && <ToolsTab navigate={navigate} onTab={setTab} />}
-        {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
-        {tab === 'arena-modules' && arenaModulesOn && <AdminArenaModulesTab />}
-        {tab.startsWith('gam-') && gamificationOn && (
+        {tab === 'tools'      && <ToolsTab navigate={navigate} />}
+        {tab === 'dupr'       && <AdminDuprExportTab />}
+        {tab === 'arena-modules' && <AdminArenaModulesTab />}
+        {tab.startsWith('gam-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminGamificationPanel tab={tab} />
           </Suspense>
         )}
-        {tab.startsWith('treino-') && trainingOn && (
+        {tab.startsWith('treino-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminTrainingPanel tab={tab} onTab={setTab} />
           </Suspense>
         )}
-        {tab === 'promo' && platformMarketingOn && (
+        {tab === 'promo' && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <PlatformPromoConsole />
           </Suspense>
@@ -360,24 +257,57 @@ function RecordsTab() {
 
 /* ---------------------- 1. Visão geral ------------------------------ */
 
-function OverviewTab() {
+/** "Precisa de você": cada linha leva à aba que resolve. Fonte sem resposta não vira "nada pendente". */
+function PrecisaDeVoce({ inbox, onTab }) {
+  const { itens, total, incompleto } = inbox;
+  const pendentes = itens.filter((i) => i.atencao);
+  return (
+    <V2Surface data-dica="admin-precisa-de-voce">
+      <div className="flex items-center gap-2">
+        <Activity className="h-5 w-5 text-ink" aria-hidden />
+        <h2 className="font-display text-lg font-bold text-ink">Precisa de você</h2>
+        {total > 0 && <V2Badge variant="warning">{total}</V2Badge>}
+      </div>
+      {pendentes.length === 0 ? (
+        <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+          {incompleto
+            ? 'Nada pendente nas filas que carregaram; algumas não deu para verificar agora.'
+            : <><CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden /> Tudo em dia: nenhuma fila esperando decisão.</>}
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-gray-100">
+          {pendentes.map((i) => (
+            <li key={i.id}>
+              <button type="button" onClick={() => onTab(i.tab)} className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm hover:text-ink coarse:min-h-11">
+                <span className="font-semibold text-ink">{i.label}</span>
+                <span className="shrink-0 text-xs text-gray-500">{i.detalhe} ›</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pendentes.length > 0 && incompleto && <p className="mt-2 text-xs text-gray-500">Algumas filas não deu para verificar agora.</p>}
+    </V2Surface>
+  );
+}
+
+function OverviewTab({ inbox, onTab }) {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
-  const { flags } = useFeatureFlags();
-  const { data: links = [] } = useAffiliateLinks();
 
   useEffect(() => {
     if (!firebaseServicesEnabled || !db) return undefined;
     let active = true;
     (async () => {
       try {
-        const [u, t, m, r, ta, ra] = await Promise.all([
+        const [u, t, m, r, ta, ra, ar] = await Promise.all([
           getCountFromServer(collection(db, 'users')),
           getCountFromServer(collection(db, 'tournaments')),
           getCountFromServer(collection(db, 'tournament_matches')),
           getCountFromServer(collection(db, 'tournament_registrations')),
           getCountFromServer(collection(db, 'tournament_admins')),
           getCountFromServer(collection(db, 'athlete_profiles')),
+          getCountFromServer(collection(db, 'arenas')),
         ]);
         if (!active) return;
         setStats({
@@ -387,6 +317,7 @@ function OverviewTab() {
           registrations: r.data().count,
           tournament_admins: ta.data().count,
           athlete_profiles: ra.data().count,
+          arenas: ar.data().count,
         });
       } catch (e) {
         if (active) setError(e.message);
@@ -395,11 +326,9 @@ function OverviewTab() {
     return () => { active = false; };
   }, []);
 
-  const { total: flagsTotal, active: flagsOn } = useMemo(() => countFlags(flags), [flags]);
-  const activePartners = links.filter((l) => l.active !== false).length;
-
   return (
     <div className="space-y-6">
+      <PrecisaDeVoce inbox={inbox} onTab={onTab} />
       {!firebaseServicesEnabled ? (
         <V2Surface className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-800">
@@ -425,108 +354,16 @@ function OverviewTab() {
               <V2StatCard icon={ListChecks} accent="blue" label="Inscrições"        value={stats.registrations} />
               <V2StatCard icon={Trophy}    accent="green" label="Jogos"            value={stats.matches} />
               <V2StatCard icon={Users}     accent="ink"   label="Perfis de atleta" value={stats.athlete_profiles} />
-              <V2StatCard icon={Flag}      accent="acid"  label="Flags ativas"      value={`${flagsOn} / ${flagsTotal}`} />
+              <V2StatCard icon={Building2} accent="acid"  label="Arenas"            value={stats.arenas} />
             </div>
           )}
         </>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <QuickActions />
-        <GovernanceSummary activePartners={activePartners} flagsOn={flagsOn} flagsTotal={flagsTotal} />
-      </div>
-
       <div className="mt-6">
         <RankingAutomatico />
       </div>
     </div>
-  );
-}
-
-function QuickActions() {
-  return (
-    <V2Surface>
-      <div className="flex items-center gap-2">
-        <Activity className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Ações rápidas</h2>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">Operações que normalmente exigiriam várias telas, todas em um clique.</p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {/* O "Recalcular ratings" saiu daqui: ranking e rating são atualizados
-            pelo SERVIDOR a cada resultado que entra. Ver `RankingAutomatico`. */}
-        <Link
-          to="/admin/owner-debug"
-          className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-ink"
-        >
-          <Stethoscope className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-ink">Diagnóstico profundo</div>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Lê o Firestore bruto e mostra contagens, erros e documentos de qualquer user.
-            </p>
-          </div>
-        </Link>
-
-        <Link
-          to="/admin/owner-restore"
-          className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-ink"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-ink">Restaurar conta</div>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Auto-restauração do perfil quando o usuário aparece zerado.
-            </p>
-          </div>
-        </Link>
-
-        <a
-          href="https://console.firebase.google.com/project/pickletour/firestore/databases/-/data/panel/users"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-ink"
-        >
-          <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-ink">Abrir Firestore (console)</div>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Acessa direto o banco no console do Firebase (read-only recomendado).
-            </p>
-          </div>
-        </a>
-      </div>
-
-    </V2Surface>
-  );
-}
-
-function GovernanceSummary({ activePartners, flagsOn, flagsTotal }) {
-  return (
-    <V2Surface>
-      <div className="flex items-center gap-2">
-        <SettingsIcon className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Governança</h2>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">Estado atual das alavancas da plataforma.</p>
-
-      <ul className="mt-4 divide-y divide-gray-100 text-sm">
-        <li className="flex items-center justify-between py-2.5">
-          <span className="text-gray-600">Funcionalidades (flags) ativas</span>
-          <span className="font-semibold text-ink">{flagsOn} / {flagsTotal}</span>
-        </li>
-        <li className="flex items-center justify-between py-2.5">
-          <span className="text-gray-600">Parceiros / afiliados ativos</span>
-          <span className="font-semibold text-ink">{activePartners}</span>
-        </li>
-        <li className="flex items-center justify-between py-2.5">
-          <span className="text-gray-600">Ambiente Firebase</span>
-          <span className="font-semibold text-ink">
-            {firebaseServicesEnabled ? 'Conectado' : 'Desconectado'}
-          </span>
-        </li>
-      </ul>
-    </V2Surface>
   );
 }
 
@@ -999,254 +836,6 @@ function FlagsTab() {
   );
 }
 
-/* ---------------------- 5. Branding ------------------------------ */
-
-function BrandingTab() {
-  const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(DEFAULT_BRANDING);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!firebaseServicesEnabled || !db) { setLoading(false); return undefined; }
-    setLoading(true);
-    const unsub = subscribePlatformSettings((s) => {
-      const b = s?.branding || {};
-      setSettings(s);
-      setForm({ ...DEFAULT_BRANDING, ...b });
-      setDirty(false);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
-
-  const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); };
-
-  async function save() {
-    if (!db) return;
-    setSaving(true);
-    try {
-      const ref = doc(db, 'platform_settings', 'global');
-      await setDoc(ref, { branding: form, updated_at: serverTimestamp() }, { merge: true });
-      toast.success('Branding salvo.');
-      setDirty(false);
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function reset() {
-    setForm(DEFAULT_BRANDING);
-    setDirty(true);
-  }
-
-  if (loading) return <V2Skeleton className="h-64 rounded-4xl" />;
-
-  return (
-    <V2Surface>
-      <div className="flex items-center gap-2">
-        <Palette className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Identidade visual</h2>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">
-        Nome, slogan, logo e cores principais da plataforma. Os valores ficam em <code>platform_settings/global</code>
-        e podem ser lidos pelos componentes que quiserem respeitar a identidade customizada.
-      </p>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <form
-          onSubmit={(e) => { e.preventDefault(); save(); }}
-          className="space-y-4"
-        >
-          <V2Field label="Nome da plataforma">
-            <V2Input value={form.platform_name} onChange={(e) => set({ platform_name: e.target.value })} />
-          </V2Field>
-          <V2Field label="Slogan / tagline">
-            <V2Input value={form.tagline} onChange={(e) => set({ tagline: e.target.value })} maxLength={120} />
-          </V2Field>
-          <V2Field label="URL do logo" hint="PNG/SVG com fundo transparente. Recomendado: 256x256.">
-            <V2Input value={form.logo_url} onChange={(e) => set({ logo_url: e.target.value })} placeholder="https://..." />
-          </V2Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <V2Field label="Cor primária" hint="Hex (#RRGGBB) — usada em textos, botões e headers.">
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.primary_color}
-                  onChange={(e) => set({ primary_color: e.target.value })}
-                  className="h-11 w-12 cursor-pointer rounded-2xl border border-gray-200 bg-paper-pure p-1"
-                />
-                <V2Input value={form.primary_color} onChange={(e) => set({ primary_color: e.target.value })} className="flex-1" />
-              </div>
-            </V2Field>
-            <V2Field label="Cor de destaque" hint="Hex (#RRGGBB) — usada em CTAs e elementos de ação.">
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.accent_color}
-                  onChange={(e) => set({ accent_color: e.target.value })}
-                  className="h-11 w-12 cursor-pointer rounded-2xl border border-gray-200 bg-paper-pure p-1"
-                />
-                <V2Input value={form.accent_color} onChange={(e) => set({ accent_color: e.target.value })} className="flex-1" />
-              </div>
-            </V2Field>
-          </div>
-
-          <div className="flex items-center gap-2 pt-2">
-            <V2Button type="submit" disabled={!dirty || saving}>
-              {saving ? 'Salvando…' : 'Salvar branding'}
-            </V2Button>
-            <V2Button type="button" variant="ghost" onClick={reset} disabled={!dirty || saving}>
-              Restaurar padrão
-            </V2Button>
-            {dirty && <span className="text-xs text-amber-600">Alterações não salvas</span>}
-          </div>
-        </form>
-
-        <div className="rounded-2xl border border-gray-100 bg-paper p-4">
-          <h3 className="text-sm font-semibold text-ink">Pré-visualização</h3>
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm" style={{ borderTop: `4px solid ${form.accent_color}` }}>
-              {form.logo_url ? (
-                <img src={form.logo_url} alt="logo" className="h-8 w-8 rounded-lg object-contain" />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ background: form.primary_color }}>
-                  {(form.platform_name || 'PR').slice(0, 2).toUpperCase()}
-                </div>
-              )}
-              <div>
-                <div className="text-sm font-bold" style={{ color: form.primary_color }}>{form.platform_name || 'Plataforma'}</div>
-                <div className="text-2xs text-gray-500">{form.tagline || '—'}</div>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="w-full rounded-full px-4 py-2 text-xs font-bold"
-              style={{ background: form.accent_color, color: form.primary_color }}
-            >
-              Botão de destaque
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-full px-4 py-2 text-xs font-bold text-white"
-              style={{ background: form.primary_color }}
-            >
-              Botão primário
-            </button>
-            <p className="text-2xs text-gray-500">
-              Pré-visualização aproximada. A aplicação das cores nos componentes existentes
-              é progressiva — só os novos componentes lidos de platform_settings respeitam
-              o branding customizado por enquanto.
-            </p>
-          </div>
-        </div>
-      </div>
-    </V2Surface>
-  );
-}
-
-/* ---------------------- 6. Conteúdo ------------------------------ */
-
-function ContentTab() {
-  const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState(DEFAULT_CONTENT);
-  const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!firebaseServicesEnabled || !db) { setLoading(false); return undefined; }
-    setLoading(true);
-    const unsub = subscribePlatformSettings((s) => {
-      const c = s?.content || {};
-      setSettings(s);
-      setForm({ ...DEFAULT_CONTENT, ...c });
-      setDirty(false);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
-
-  const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); };
-
-  async function save() {
-    if (!db) return;
-    setSaving(true);
-    try {
-      const ref = doc(db, 'platform_settings', 'global');
-      await setDoc(ref, { content: form, updated_at: serverTimestamp() }, { merge: true });
-      toast.success('Conteúdo salvo.');
-      setDirty(false);
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function reset() {
-    setForm(DEFAULT_CONTENT);
-    setDirty(true);
-  }
-
-  if (loading) return <V2Skeleton className="h-64 rounded-4xl" />;
-
-  return (
-    <V2Surface>
-      <div className="flex items-center gap-2">
-        <TextIcon className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Textos da plataforma</h2>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">
-        Hero, CTAs, mensagens e textos institucionais. Os valores ficam em <code>platform_settings/global</code>
-        — esta tela é <strong>read-write</strong> (você pode editar), mas os componentes atuais ainda
-        usam os valores hardcoded. Migração dos componentes para ler do Firestore é um próximo passo.
-      </p>
-
-      <form onSubmit={(e) => { e.preventDefault(); save(); }} className="mt-6 space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <V2Field label="Hero — eyebrow" hint="Pequeno texto acima do título">
-            <V2Input value={form.hero_eyebrow} onChange={(e) => set({ hero_eyebrow: e.target.value })} />
-          </V2Field>
-          <V2Field label="Botão principal do hero">
-            <V2Input value={form.hero_cta_label} onChange={(e) => set({ hero_cta_label: e.target.value })} />
-          </V2Field>
-        </div>
-        <V2Field label="Hero — título">
-          <V2Input value={form.hero_title} onChange={(e) => set({ hero_title: e.target.value })} maxLength={120} />
-        </V2Field>
-        <V2Field label="Hero — subtítulo">
-          <V2Textarea value={form.hero_subtitle} onChange={(e) => set({ hero_subtitle: e.target.value })} maxLength={300} />
-        </V2Field>
-        <V2Field label="Empty state — mensagem padrão">
-          <V2Textarea value={form.empty_state_message} onChange={(e) => set({ empty_state_message: e.target.value })} maxLength={300} />
-        </V2Field>
-        <div className="grid gap-4 md:grid-cols-2">
-          <V2Field label="Rodapé — texto">
-            <V2Input value={form.footer_text} onChange={(e) => set({ footer_text: e.target.value })} maxLength={200} />
-          </V2Field>
-          <V2Field label="Rodapé — link legal">
-            <V2Input value={form.legal_link_label} onChange={(e) => set({ legal_link_label: e.target.value })} maxLength={60} />
-          </V2Field>
-        </div>
-
-        <div className="flex items-center gap-2 pt-2">
-          <V2Button type="submit" disabled={!dirty || saving}>
-            {saving ? 'Salvando…' : 'Salvar conteúdo'}
-          </V2Button>
-          <V2Button type="button" variant="ghost" onClick={reset} disabled={!dirty || saving}>
-            Restaurar padrão
-          </V2Button>
-          {dirty && <span className="text-xs text-amber-600">Alterações não salvas</span>}
-        </div>
-      </form>
-    </V2Surface>
-  );
-}
-
 /* ---------------------- 7. Auditoria ------------------------------ */
 
 function AuditTab() {
@@ -1266,112 +855,40 @@ function AuditTab() {
 
       <AuditLogTable />
 
-      <V2Surface>
-        <div className="flex items-center gap-2">
-          <Stethoscope className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Diagnóstico</h2>
-        </div>
-        <p className="mt-1 text-xs text-gray-500">
-          Para &quot;user sumiu&quot;, &quot;perfil zerado&quot; ou &quot;useMyTournaments retorna vazio&quot;. Lê o Firestore
-          bruto (sem hooks/cache) e mostra contagens + erros por seção.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link to="/admin/owner-debug" className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white">
-            <Stethoscope className="h-3.5 w-3.5" /> Abrir /admin/owner-debug
-          </Link>
-          <Link to="/admin/owner-restore" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-xs font-bold text-ink">
-            <AlertTriangle className="h-3.5 w-3.5" /> Abrir /admin/owner-restore
-          </Link>
-        </div>
-      </V2Surface>
     </div>
   );
 }
 
 /* ----------------------------- Tools tab -------------------------------- */
 
-function ToolsTab({ navigate, onTab }) {
+/** Sistema → Diagnóstico: as ferramentas de suporte do dono (não são o dia a dia). */
+function ToolsTab({ navigate }) {
+  const itens = [
+    { icon: Stethoscope, titulo: 'Diagnóstico profundo', texto: 'Lê o Firestore bruto, sem cache: contagens, erros e documentos de qualquer usuário.', ir: () => navigate('/admin/owner-debug') },
+    { icon: AlertTriangle, aviso: true, titulo: 'Restaurar meu admin', texto: 'Força o papel platform_admin na sua conta (emergência).', ir: () => navigate('/admin/owner-restore') },
+  ];
   return (
-    <div className="space-y-4">
-      <V2Surface>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
-            <Wrench className="h-4.5 w-4.5" />
-          </div>
-          <div className="flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Ferramentas avançadas</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-500">
-              Atalhos para as abas do painel e ferramentas de diagnóstico do owner. As páginas
-              de admin antigas (/admin/metricas, /admin/torneios, /admin/parceiros) agora levam
-              para cá.
-            </p>
-          </div>
+    <V2Surface>
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid"><Wrench className="h-4.5 w-4.5" /></div>
+        <div className="flex-1">
+          <h2 className="font-display text-xl font-bold text-ink">Diagnóstico e suporte</h2>
+          <p className="mt-1 text-sm leading-6 text-gray-500">Ferramentas para quando algo deu errado, como &quot;usuário sumiu&quot; ou &quot;perfil zerado&quot;. No dia a dia você não precisa delas.</p>
         </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => onTab('overview')}
-            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
-          >
-            <Settings className="h-4 w-4 text-gray-400" />
-            <div className="flex-1">
-              <div className="font-semibold text-ink">Métricas</div>
-              <div className="text-xs text-gray-500">O resumo da plataforma (Visão geral)</div>
-            </div>
-            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {itens.map((i) => (
+          <button key={i.titulo} type="button" onClick={i.ir} className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink">
+            <i.icon className={cn('h-4 w-4', i.aviso ? 'text-amber-500' : 'text-gray-500')} />
+            <div className="flex-1"><div className="font-semibold text-ink">{i.titulo}</div><div className="text-xs text-gray-500">{i.texto}</div></div>
           </button>
-          <button
-            type="button"
-            onClick={() => onTab('tournaments')}
-            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
-          >
-            <Trophy className="h-4 w-4 text-gray-400" />
-            <div className="flex-1">
-              <div className="font-semibold text-ink">Torneios</div>
-              <div className="text-xs text-gray-500">Todos os torneios da plataforma</div>
-            </div>
-            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onTab('partners')}
-            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
-          >
-            <Handshake className="h-4 w-4 text-gray-400" />
-            <div className="flex-1">
-              <div className="font-semibold text-ink">Parceiros</div>
-              <div className="text-xs text-gray-500">Logos, banners e links</div>
-            </div>
-            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/owner-debug')}
-            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
-          >
-            <Stethoscope className="h-4 w-4 text-gray-400" />
-            <div className="flex-1">
-              <div className="font-semibold text-ink">Diagnóstico profundo</div>
-              <div className="text-xs text-gray-500">Lê Firestore bruto (sem cache)</div>
-            </div>
-            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/owner-restore')}
-            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
-          >
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <div className="flex-1">
-              <div className="font-semibold text-ink">Restaurar meu admin</div>
-              <div className="text-xs text-gray-500">Force role platform_admin (emergência)</div>
-            </div>
-            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
-          </button>
-        </div>
-      </V2Surface>
-    </div>
+        ))}
+        <a href="https://console.firebase.google.com/project/pickletour/firestore/databases/-/data/panel/users" target="_blank" rel="noopener noreferrer" className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink">
+          <ExternalLink className="h-4 w-4 text-gray-500" />
+          <div className="flex-1"><div className="font-semibold text-ink">Console do Firestore</div><div className="text-xs text-gray-500">Abre o banco no Firebase (use só para leitura).</div></div>
+        </a>
+      </div>
+    </V2Surface>
   );
 }
 
