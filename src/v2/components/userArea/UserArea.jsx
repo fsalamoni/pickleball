@@ -14,8 +14,8 @@
 import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, BarChart3, Building2, CalendarDays, Dumbbell, Eye, GraduationCap, LayoutDashboard,
-  LayoutGrid, Pencil, Settings, Trophy, User, Users,
+  ArrowRight, Building2, Dumbbell, Eye, GraduationCap, LayoutDashboard,
+  LayoutGrid, Pencil, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -42,7 +42,7 @@ import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { SECOES } from './UserAreaSections';
 
 const ICONES = {
-  LayoutGrid, User, Dumbbell, BarChart3, CalendarDays, Trophy, Users, GraduationCap, Building2, Settings, LayoutDashboard,
+  LayoutGrid, User, Dumbbell, Swords, Trophy, Users, GraduationCap, Building2, LayoutDashboard,
 };
 
 /** `true`/`false` quando a leitura respondeu, `'erro'` quando falhou, `undefined` carregando. */
@@ -78,8 +78,8 @@ export default function UserArea() {
     // Convite pendente também abre a seção: é nela que a pessoa responde.
     clubes: temConvite ? true : papelDe(clubsQ, (clubsQ.data || []).length > 0),
     admin: !!isPlatformAdmin,
-  }, { training_center: trainingOn }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
-  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, trainingOn]);
+  }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
+  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin]);
 
   const ativa = resolveUserAreaSection(params.get('secao'), secoes);
   const Secao = SECOES[ativa];

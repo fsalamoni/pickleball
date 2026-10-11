@@ -118,9 +118,11 @@ function ResumoSecao({ ctx }) {
   );
 }
 
+/** Perfil E conta: os números, o editor, a progressão e as configurações — uma seção só. */
 function PerfilSecao() {
   const { user } = useAuth();
   const gamificationOn = true;
+  const inicioOn = useHomeCardsOn();
   const rating = useMyPlayerRating();
   const me = rating.data;
   return (
@@ -154,6 +156,21 @@ function PerfilSecao() {
       </div>
 
       {gamificationOn && user && <ProfileProgressionSection uid={user.uid} />}
+
+      <Bloco id="conta" icon={Settings} title="Conta">
+        <Atalhos
+          itens={[
+            { to: '/configuracoes', label: 'Configurações', descricao: 'Aparência, dicas e preferências', icon: Settings },
+            { to: '/configuracoes#notificacoes', label: 'Avisos', descricao: 'O que chega para você', icon: Bell },
+            { to: '/notificacoes', label: 'Notificações', descricao: 'Todos os avisos, inclusive os antigos', icon: Inbox },
+            { to: '/configuracoes#minha-regiao', label: 'Minha região', descricao: 'Cidade e raio das buscas', icon: MapPin },
+            inicioOn && { to: '/configuracoes#pagina-inicial', label: 'Página inicial', descricao: 'Os cards do seu início', icon: LayoutGrid },
+            { to: '/legal', label: 'Privacidade e documentos', descricao: 'Termos, LGPD e os seus dados', icon: ShieldCheck },
+            { to: helpLinkFor('/perfil'), label: 'Ajuda', descricao: 'O manual da plataforma', icon: HelpCircle },
+          ]}
+        />
+      </Bloco>
+      <MyReferralCodes />
     </div>
   );
 }
@@ -223,43 +240,25 @@ function TreinoSecao({ ctx }) {
   return <TreinoDaSemana uid={ctx.uid} />;
 }
 
-function JogoSecao() {
-  const gamificationOn = true;
+/** Meus jogos: o que vem (reservas, aulas, dias de jogo) e o que foi (desempenho, ranking) — um link por destino. */
+function JogosSecao() {
   const rotulos = useNavRotulos();
   return (
-    <Bloco id="jogo" icon={BarChart3} title="Jogo">
-      <Atalhos
-        itens={[
-          { to: '/meu-desempenho', label: 'Meu desempenho', descricao: 'Jogos, evolução e o que conta no ranking', icon: BarChart3 },
-          { to: '/ranking', label: 'Ranking', descricao: 'Nacional, duplas e 2.0–8.0', icon: Trophy },
-          { to: '/meus-jogos', label: 'Meus jogos', descricao: 'As partidas que você tem marcadas', icon: Swords },
-          { to: '/dia-de-jogo', label: 'Dia de jogo', descricao: 'Os seus dias e os com vaga', icon: CalendarDays },
-          { to: '/procura-jogo', label: rotulos.vagas, descricao: 'Jogos abertos e convites', icon: Search },
-          gamificationOn && { to: '/conquistas', label: 'Conquistas', descricao: 'Medalhas e progresso', icon: Award },
-        ]}
-      />
-    </Bloco>
-  );
-}
-
-function AgendaSecao() {
-  const arenaModulesOn = true;
-  return (
     <div className="space-y-6">
-      {arenaModulesOn && (
-        <>
-          <MyArenaEnrollments />
-          <MyArenaPlans />
-          <MyShopPurchases />
-        </>
-      )}
-      <Bloco id="agenda" icon={CalendarDays} title="Agenda">
+      <MyArenaEnrollments />
+      <MyArenaPlans />
+      <MyShopPurchases />
+      <Bloco id="jogos" icon={Swords} title="Meus jogos">
         <Atalhos
           itens={[
-            { to: '/minhas-reservas', label: 'Minhas reservas', descricao: 'Quadras, jogos abertos e compras nas arenas', icon: CalendarDays },
-            { to: '/minhas-aulas', label: 'Minhas aulas', descricao: 'Aulas com professores e nas arenas', icon: GraduationCap },
             { to: '/meus-jogos', label: 'Meus jogos', descricao: 'As partidas que você tem marcadas', icon: Swords },
-            { to: '/dia-de-jogo', label: 'Dia de jogo', descricao: 'Os seus dias de jogo', icon: Users },
+            { to: '/dia-de-jogo', label: 'Dia de jogo', descricao: 'Os seus dias e os com vaga', icon: CalendarDays },
+            { to: '/procura-jogo', label: rotulos.vagas, descricao: 'Jogos abertos e convites', icon: Search },
+            { to: '/minhas-reservas', label: 'Minhas reservas', descricao: 'Quadras, jogos abertos e compras nas arenas', icon: Users },
+            { to: '/minhas-aulas', label: 'Minhas aulas', descricao: 'Aulas com professores e nas arenas', icon: GraduationCap },
+            { to: '/meu-desempenho', label: 'Meu desempenho', descricao: 'Jogos, evolução e o que conta no ranking', icon: BarChart3 },
+            { to: '/ranking', label: 'Ranking', descricao: 'Nacional, duplas e 2.0–8.0', icon: Trophy },
+            { to: '/conquistas', label: 'Conquistas', descricao: 'Medalhas e progresso', icon: Award },
           ]}
         />
       </Bloco>
@@ -466,33 +465,6 @@ function ArenasSecao({ ctx }) {
   );
 }
 
-function ContaSecao() {
-  const arenaModulesOn = true;
-  const notificacoesOn = true;
-  const regiaoOn = true;
-  const ajudaOn = true;
-  const inicioOn = useHomeCardsOn();
-  return (
-    <div className="space-y-6">
-      <Bloco id="conta" icon={Settings} title="Conta">
-        <Atalhos
-          itens={[
-            { to: '/perfil/editar', label: 'Editar perfil', descricao: 'Dados, nível e privacidade', icon: User },
-            { to: '/configuracoes', label: 'Configurações', descricao: 'Aparência, dicas e preferências', icon: Settings },
-            { to: '/configuracoes#notificacoes', label: 'Avisos', descricao: 'O que chega para você', icon: Bell },
-            notificacoesOn && { to: '/notificacoes', label: 'Notificações', descricao: 'Todos os avisos, inclusive os antigos', icon: Inbox },
-            regiaoOn && { to: '/configuracoes#minha-regiao', label: 'Minha região', descricao: 'Cidade e raio das buscas', icon: MapPin },
-            inicioOn && { to: '/configuracoes#pagina-inicial', label: 'Página inicial', descricao: 'Os cards do seu início', icon: LayoutGrid },
-            { to: '/legal', label: 'Privacidade e documentos', descricao: 'Termos, LGPD e os seus dados', icon: ShieldCheck },
-            ajudaOn && { to: helpLinkFor('/perfil'), label: 'Ajuda', descricao: 'O manual da plataforma', icon: HelpCircle },
-          ]}
-        />
-      </Bloco>
-      {arenaModulesOn && <MyReferralCodes />}
-    </div>
-  );
-}
-
 function AdminSecao() {
   const trainingOn = true;
   return (
@@ -512,12 +484,10 @@ export const SECOES = Object.freeze({
   [S.RESUMO]: ResumoSecao,
   [S.PERFIL]: PerfilSecao,
   [S.TREINO]: TreinoSecao,
-  [S.JOGO]: JogoSecao,
-  [S.AGENDA]: AgendaSecao,
+  [S.JOGOS]: JogosSecao,
   [S.TORNEIOS]: TorneiosSecao,
   [S.CLUBES]: ClubesSecao,
   [S.PROFESSOR]: ProfessorSecao,
   [S.ARENAS]: ArenasSecao,
-  [S.CONTA]: ContaSecao,
   [S.ADMIN]: AdminSecao,
 });

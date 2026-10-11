@@ -7,14 +7,15 @@ const ids = (secoes) => secoes.map((s) => s.id);
 
 describe('userAreaSections', () => {
   it('quem não tem papel vê as seções de todos, na ordem do plano', () => {
-    expect(ids(userAreaSections({}, {}))).toEqual([S.RESUMO, S.PERFIL, S.JOGO, S.AGENDA, S.TORNEIOS, S.CONTA]);
+    expect(ids(userAreaSections({}))).toEqual([S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS]);
   });
 
-  it('cada papel traz a sua seção; o treino vem com a flag', () => {
-    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true }, { training_center: true });
+  it('cada papel traz a sua seção — nove no total, nunca mais', () => {
+    const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true });
     expect(ids(tudo)).toEqual([
-      S.RESUMO, S.PERFIL, S.TREINO, S.JOGO, S.AGENDA, S.TORNEIOS, S.CLUBES, S.PROFESSOR, S.ARENAS, S.CONTA, S.ADMIN,
+      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
     ]);
+    expect(tudo).toHaveLength(9);
     expect(tudo.find((s) => s.id === S.ARENAS)).toMatchObject({ grupo: 'gestao', dica: 'minha-area-arenas' });
   });
 
@@ -25,10 +26,17 @@ describe('userAreaSections', () => {
   });
 
   it('seção pedida que a pessoa não vê cai no resumo', () => {
-    const secoes = userAreaSections({}, {});
+    const secoes = userAreaSections({});
     expect(resolveUserAreaSection('arenas', secoes)).toBe(S.RESUMO);
-    expect(resolveUserAreaSection('conta', secoes)).toBe(S.CONTA);
+    expect(resolveUserAreaSection('jogos', secoes)).toBe(S.JOGOS);
     expect(resolveUserAreaSection(null, secoes)).toBe(S.RESUMO);
+  });
+
+  it('⭐ link antigo (`?secao=conta`, `jogo`, `agenda`) cai na seção que o absorveu', () => {
+    const secoes = userAreaSections({});
+    expect(resolveUserAreaSection('conta', secoes)).toBe(S.PERFIL);
+    expect(resolveUserAreaSection('jogo', secoes)).toBe(S.JOGOS);
+    expect(resolveUserAreaSection('agenda', secoes)).toBe(S.JOGOS);
   });
 });
 

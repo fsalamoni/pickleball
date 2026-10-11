@@ -71,7 +71,7 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
 }));
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: (k) => Boolean(estado.flags[k]) }));
 vi.mock('@/core/lib/useRelogio', () => ({ useRelogio: () => ({ ms: AGORA, hora: '15:00' }) }));
-vi.mock('@/core/services/observabilityService', () => ({ recordClientError: vi.fn() }));
+vi.mock('@/core/services/observabilityService', () => ({ recordClientError: vi.fn(), recordEvent: vi.fn() }));
 vi.mock('@/modules/arenas/hooks/useMyArenaSummary', () => ({
   useMyArenaSummary: () => ({
     arenas: estado.arenas,
@@ -567,5 +567,40 @@ describe('Horários da arena, para quem ainda não tem arena de sempre', () => {
     const secao = container.querySelector('[data-secao-inicio="reservar"]');
     expect(secao.textContent).toContain('Encontrar uma arena');
     expect(secao.textContent).not.toContain('Arenas perto de você');
+  });
+});
+
+describe('⭐ Jogar agora (vaga nas próximas 48 h)', () => {
+  const jogo = (id, horas, extra = {}) => ({
+    key: id, id, kind: 'dia', origem: 'atleta', link: `/dia-de-jogo/${id}`, title: `Dia ${id}`, subtitle: '',
+    inicio: AGORA + horas * 3600 * 1000, place: { city: 'Porto Alegre', state: 'RS' }, estou: false, cabe: true, ...extra,
+  });
+
+  it('sem o card Dias de jogo na tela, a faixa aparece com a contagem e leva ao Jogar', async () => {
+    saveRegion('u1', { modo: 'todos' });
+    escolher(['ranking']);
+    estado.jogar = { ...estado.jogar, itens: [jogo('a', 2), jogo('b', 30), jogo('c', 60), jogo('d', 3, { estou: true })] };
+    await render();
+    const faixa = container.querySelector('[data-secao-inicio="jogar-agora"]');
+    expect(faixa).not.toBeNull();
+    expect(faixa.getAttribute('href')).toBe('/dia-de-jogo');
+    expect(faixa.textContent).toContain('2 jogos com vaga nas próximas 48 h');
+    expect(faixa.textContent).toContain('Dia a');
+  });
+
+  it('com o card Dias de jogo escolhido, a faixa não é montada (a lista já está logo abaixo)', async () => {
+    saveRegion('u1', { modo: 'todos' });
+    estado.jogar = { ...estado.jogar, itens: [jogo('a', 2)] };
+    await render();
+    expect(container.querySelector('[data-secao-inicio="jogar-agora"]')).toBeNull();
+    expect(container.querySelector('[data-secao-inicio="jogar"]')).not.toBeNull();
+  });
+
+  it('sem jogo nas próximas 48 h, ou carregando, nada aparece', async () => {
+    saveRegion('u1', { modo: 'todos' });
+    escolher(['ranking']);
+    estado.jogar = { ...estado.jogar, itens: [jogo('c', 60)] };
+    await render();
+    expect(container.querySelector('[data-secao-inicio="jogar-agora"]')).toBeNull();
   });
 });

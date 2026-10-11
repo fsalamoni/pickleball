@@ -578,7 +578,7 @@ const ATLETA = {
         p('Arenas com o marketing ligado podem ter vantagens para quem joga lá. Tudo aparece na própria página da arena:'),
         list(
           'PROMOÇÕES — descontos e vales que a arena divulgou, cada um num tíquete com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). TOQUE NO CÓDIGO para copiar. O desconto aparece no pedido de reserva com um toque para aplicar (ou cole o código); o VALE (uma bebida, uma aula, um brinde) você mostra na recepção.',
-          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação" (com a Minha área, na seção Conta).',
+          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação" (com a Minha área, na seção Perfil e conta).',
           'PONTOS — para quem é membro da arena, cada reserva concluída soma pontos, que a recepção troca por crédito. Seus pontos ficam em "Você nesta arena".',
           'PESQUISA — depois de jogar, a arena pode perguntar de 0 a 10 o quanto você a recomendaria. A nota vai no toque; o comentário é opcional.',
         ),

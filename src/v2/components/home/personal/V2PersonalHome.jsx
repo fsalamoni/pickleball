@@ -57,6 +57,7 @@ import { managedTournamentsForHome, myCurrentTournaments } from '@/modules/home/
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
 import { EvolutionStrip } from '@/v2/components/home/EvolutionStrip';
 import HomeHero from './HomeHero';
+import HomePlayNow from './HomePlayNow';
 import HomeShortcuts from './HomeShortcuts';
 import { HomeSectionBoundary } from './HomeSection';
 import { HomeWideCards } from './homeWideCards';
@@ -254,6 +255,8 @@ export default function V2PersonalHome() {
         {/* O que tem PRAZO não é card: a chamada da fila vence em 1 hora. */}
         {arenaModulesOn && <HomeWaitlistCalls />}
         {balancoOn && <Suspense fallback={null}><HomeDebriefPrompt /></Suspense>}
+        {/* Jogo com vaga nas próximas 48 h: só quando o card Dias de jogo não está na tela. */}
+        {!cards.includes(HOME_CARD.JOGAR) && <HomePlayNow hoje={hoje} agora={agora} />}
 
         {cards.length === 0 ? (
           <HomeCardsEmpty onEscolher={() => setEscolhendo(true)} />

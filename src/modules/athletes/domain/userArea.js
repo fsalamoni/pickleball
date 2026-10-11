@@ -17,17 +17,20 @@
 
 export const USER_AREA_SECTION = Object.freeze({
   RESUMO: 'resumo',
+  /** Perfil e conta (eram duas seções até a Fase 3 do plano de UX, 2026-10-11). */
   PERFIL: 'perfil',
   TREINO: 'treino',
-  JOGO: 'jogo',
-  AGENDA: 'agenda',
+  /** Meus jogos: o que vem e o que foi (eram "Jogo" e "Agenda"). */
+  JOGOS: 'jogos',
   TORNEIOS: 'torneios',
   CLUBES: 'clubes',
   PROFESSOR: 'professor',
   ARENAS: 'arenas',
-  CONTA: 'conta',
   ADMIN: 'admin',
 });
+
+/** Ids antigos nos links guardados (`?secao=`): caem na seção que os absorveu. */
+const SECAO_ANTIGA = Object.freeze({ jogo: 'jogos', agenda: 'jogos', conta: 'perfil' });
 
 /** As duas linhas da barra: o que é da pessoa e o que ela gere. */
 export const USER_AREA_GROUPS = Object.freeze([
@@ -38,20 +41,18 @@ export const USER_AREA_GROUPS = Object.freeze([
 const S = USER_AREA_SECTION;
 
 /**
- * Ordem = a do plano. `quem`: 'todos', um papel (`professor`, `arenas`,
- * `clubes`, `admin`) ou uma flag (`flag:training_center`).
+ * Ordem = a do plano. `quem`: 'todos' ou um papel (`professor`, `arenas`,
+ * `clubes`, `admin`).
  */
 const META = Object.freeze([
   { id: S.RESUMO, label: 'Resumo', icone: 'LayoutGrid', grupo: 'voce', quem: 'todos' },
-  { id: S.PERFIL, label: 'Perfil', icone: 'User', grupo: 'voce', quem: 'todos' },
-  { id: S.TREINO, label: 'Treino', icone: 'Dumbbell', grupo: 'voce', quem: 'flag:training_center' },
-  { id: S.JOGO, label: 'Jogo', icone: 'BarChart3', grupo: 'voce', quem: 'todos' },
-  { id: S.AGENDA, label: 'Agenda', icone: 'CalendarDays', grupo: 'voce', quem: 'todos' },
+  { id: S.PERFIL, label: 'Perfil e conta', icone: 'User', grupo: 'voce', quem: 'todos' },
+  { id: S.TREINO, label: 'Treino', icone: 'Dumbbell', grupo: 'voce', quem: 'todos' },
+  { id: S.JOGOS, label: 'Meus jogos', icone: 'Swords', grupo: 'voce', quem: 'todos' },
   { id: S.TORNEIOS, label: 'Torneios', icone: 'Trophy', grupo: 'voce', quem: 'todos' },
   { id: S.CLUBES, label: 'Clubes', icone: 'Users', grupo: 'voce', quem: 'clubes' },
   { id: S.PROFESSOR, label: 'Professor', icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
   { id: S.ARENAS, label: 'Arenas', icone: 'Building2', grupo: 'gestao', quem: 'arenas' },
-  { id: S.CONTA, label: 'Conta', icone: 'Settings', grupo: 'voce', quem: 'todos' },
   { id: S.ADMIN, label: 'Admin', icone: 'LayoutDashboard', grupo: 'gestao', quem: 'admin' },
 ]);
 
@@ -59,22 +60,18 @@ const temPapel = (v) => v === true || v === 'erro';
 
 /**
  * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean }} papeis
- * @param {Record<string, boolean>} flags pelo valor da flag (ex.: `{ training_center: true }`)
  * @returns {Array<{ id: string, label: string, icone: string, grupo: string, dica: string }>}
  */
-export function userAreaSections(papeis = {}, flags = {}) {
+export function userAreaSections(papeis = {}) {
   return META
-    .filter((s) => {
-      if (s.quem === 'todos') return true;
-      if (s.quem.startsWith('flag:')) return flags[s.quem.slice(5)] === true;
-      return temPapel(papeis[s.quem]);
-    })
+    .filter((s) => s.quem === 'todos' || temPapel(papeis[s.quem]))
     .map(({ id, label, icone, grupo }) => ({ id, label, icone, grupo, dica: `minha-area-${id}` }));
 }
 
-/** A seção pedida na URL, se esta pessoa a vê; senão o resumo. */
+/** A seção pedida na URL (ou a que absorveu um id antigo), se esta pessoa a vê; senão o resumo. */
 export function resolveUserAreaSection(pedida, secoes = []) {
-  return secoes.some((s) => s.id === pedida) ? pedida : S.RESUMO;
+  const id = SECAO_ANTIGA[pedida] || pedida;
+  return secoes.some((s) => s.id === id) ? id : S.RESUMO;
 }
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
