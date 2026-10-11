@@ -50,7 +50,7 @@ export const PONTOS_DE_DICA = Object.freeze([
     route: '/',
     target: 'menu-principal',
     title: 'O menu',
-    body: 'Cada tema leva às páginas dele: Competir, Jogar, Arenas, Aulas…',
+    body: 'Cada tema leva às páginas dele: Jogar, Competir, Arenas… O que aparece aqui é escolha sua, em Configurações → Menu.',
     guide: 'conhecer-a-plataforma',
   },
 
@@ -332,6 +332,14 @@ export const PONTOS_DE_DICA = Object.freeze([
     target: 'config-notificacoes',
     title: 'Notificações',
     body: 'Liga e desliga cada tipo de aviso.',
+  },
+  {
+    id: 'config:menu',
+    route: '/configuracoes',
+    target: 'config-menu',
+    title: 'Menu',
+    body: 'Escolhe o que aparece na barra lateral e a ordem. Padrões para atleta, arena e professor.',
+    guide: 'personalizar-menu',
   },
   {
     id: 'notificacoes:filtros',

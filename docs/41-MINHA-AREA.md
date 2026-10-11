@@ -61,6 +61,36 @@ se chamar **"Torneios que organizo"** (os que a pessoa JOGA estão na seção
 Torneios daqui). A tela de torneios que organizo ganhou o estado de erro que
 não tinha (falha não é lista vazia).
 
+### 4.1 A barra lateral enxuta e configurável (2026-10-11)
+
+Pedido do dono: *"a minha arena deve entrar dentro de minha área… mesma coisa
+para o painel do professor… o slide bar precisa ser mais enxuto… o usuário
+deveria poder configurar seu sidebar… um padrão para o atleta, um para a
+arena, um para o professor"*.
+
+- **Domínio puro** em `src/core/domain/sidebarNav.js`: os 11 hubs
+  (`SIDEBAR_ITEM_META`, com `requer` para os de papel e `fixo` para Início,
+  Minha área e Admin), os três padrões (`SIDEBAR_PRESET_ITEMS`), o padrão de
+  quem nunca escolheu (`defaultSidebarPreset`: arena > professor > atleta — a
+  mesma prioridade da barra inferior) e as operações (`visibleSidebarItems`,
+  `toggleSidebarItem`, `moveSidebarItem`, `chosenSidebar`).
+- **A escolha mora no navegador**, por uid (`v2:view:<uid>:menu:lateral`,
+  `core/lib/sidebarNavPreference.js`, mesmo desenho do início sob medida).
+  **Zero banco.** Hook `useSidebarNav(papeis)`.
+- **A barra lateral e a gaveta** (`V2Layout`) mostram `hubsVisiveis`; a
+  árvore completa `hubs` segue alimentando a busca (Ctrl/⌘+K) e o hub ativo —
+  quem está numa tela de hub escondido continua vendo a barra de subpáginas.
+- **Cartão Menu** em Configurações (`SidebarSettingsCard`, âncora
+  `#menu-lateral`, `data-dica="config-menu"`): padrões, lista com
+  interruptor e setas, "Para acrescentar", restaurar. Atalho "Personalizar o
+  menu" no rodapé da barra, na gaveta e na seção Conta da Minha área.
+- **O que não pode regredir**: Início fica em 1º e Minha área nunca sai (é
+  onde moram a Central da arena, o Painel do professor e as configurações —
+  sem ela a pessoa esconderia o caminho de volta); item de papel que a pessoa
+  perdeu some sozinho; a barra inferior do celular segue `bottomNav.js` (não é
+  configurável, de propósito: cinco lugares, e o quarto já é contextual).
+  Guarda em `src/core/guards/navV3.test.js`.
+
 ## 5. Ajuda e dicas
 
 - Artigo "Minha área: tudo o que é seu, num lugar só" (`helpCenter.js`,
@@ -68,6 +98,9 @@ não tinha (falha não é lista vazia).
 - Guia `minha-area` (`guias.js`) e o ponto `minha-area:pendencias`
   (`pontosDeDica.js`), ambos atrás da flag. Âncoras: `minha-area-pendencias`,
   `minha-area-secoes` e `perfil-editar`.
+- Menu configurável: guia `personalizar-menu` (`config-menu`,
+  `menu-personalizar`), ponto `config:menu`, e o artigo "Como a plataforma é
+  organizada" explica os padrões e onde a arena e o professor moram.
 
 ## 6. Fica para depois
 
