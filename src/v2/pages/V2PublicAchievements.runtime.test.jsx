@@ -95,14 +95,6 @@ function render() {
   });
 }
 
-describe('V2PublicAchievements · flag OFF', () => {
-  it('mostra empty state', async () => {
-    mockFlagState.value = false;
-    await render();
-    expect(container.textContent).toContain('Conquistas V2 em construção');
-  });
-});
-
 describe('V2PublicAchievements · flag ON · outro user', () => {
   it('identifica o atleta pelo NOME, não pelo uid cru', async () => {
     await render();

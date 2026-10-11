@@ -79,22 +79,9 @@ describe('useHomeCards', () => {
 });
 
 describe('flags', () => {
-  it('⭐ só vale com o início personalizado E o sob medida', () => {
-    montar(<Flags />);
-    expect(vistos.on).toBe(false);
-    estado.flags = { home_cards: true };
-    montar(<Flags />);
-    expect(vistos.on).toBe(false);
-    estado.flags = { home_cards: true, personalized_home: true };
+  it('o início sob medida vale sempre, e o contexto oferece todos os cards (funcionalidades permanentes)', () => {
     montar(<Flags />);
     expect(vistos.on).toBe(true);
-  });
-
-  it('o contexto diz o que cada card pode oferecer', () => {
-    montar(<Flags />);
-    expect(vistos.ctx).toEqual({ promocoes: false, evolucao: false, treino: false });
-    estado.flags = { coach_marketing: true, action_home: true, training_center: true };
-    montar(<Flags />);
     expect(vistos.ctx).toEqual({ promocoes: true, evolucao: true, treino: true });
   });
 });

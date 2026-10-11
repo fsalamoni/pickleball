@@ -216,14 +216,4 @@ describe('telão do Play — com grupos', () => {
     expect(botaoPorTexto('Sortear todas as quadras')).toBeUndefined();
   });
 
-  it('⭐ com a flag DESLIGADA o telão é o de sempre, mesmo com grupos gravados no dia', async () => {
-    flags.play_groups = false;
-    await render();
-    const txt = container.textContent;
-    expect(fila('Alfa')).toBeNull();
-    expect(container.querySelector('[title^="Grupo "]')).toBeNull();
-    // Uma fila só: a previsão volta a pôr os quatro primeiros na quadra livre.
-    expect(txt).toContain('Ana · Bia · Caio · Davi');
-    expect(txt).not.toContain('Nenhum grupo tem partida pronta');
-  });
 });

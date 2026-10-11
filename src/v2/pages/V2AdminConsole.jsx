@@ -86,8 +86,8 @@ import {
 } from '@/core/featureFlagGroups';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG_META, countFlags, PERMANENT_FEATURE } from '@/core/featureFlags';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
 import {
   getPlatformSettings,
   setFeatureFlag,
@@ -249,11 +249,11 @@ const DEFAULT_CONTENT = Object.freeze({
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const enabled = true;
-  const duprExportOn = useFeatureFlag(PERMANENT_FEATURE.DUPR_MATCH_EXPORT);
-  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
-  const platformMarketingOn = useFeatureFlag(PERMANENT_FEATURE.PLATFORM_MARKETING);
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
-  const trainingOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
+  const duprExportOn = true;
+  const arenaModulesOn = true;
+  const platformMarketingOn = true;
+  const gamificationOn = true;
+  const trainingOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 

@@ -5,13 +5,12 @@
  */
 import React from 'react';
 import { MapPin } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { V2Surface } from '@/v2/ui/primitives';
 import RegionPicker from './RegionPicker';
 
 export default function RegionSettingsCard() {
-  const on = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
+  const on = true;
   // Desligada, nenhuma opção que não faz nada.
   if (!on) return null;
   return (

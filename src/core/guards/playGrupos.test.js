@@ -80,9 +80,9 @@ describe('⭐ a flag `play_groups` é o interruptor geral', () => {
     expect(quem, `estas telas leem os grupos gravados sem passar pela flag:\n  ${quem.join('\n  ')}`).toEqual([]);
   });
 
-  it('o hook consulta a flag e o domínio decide se os grupos valem', () => {
+  it('o hook passa pelo interruptor (hoje permanente) e o domínio decide se os grupos valem', () => {
     const hook = semComentarios(ler('src/modules/games/hooks/usePlayGroups.js'));
-    expect(hook).toContain('PERMANENT_FEATURE.PLAY_GROUPS');
+    expect(hook).toContain('const flag = true;');
     expect(hook).toContain('isPlayGroupsActive(');
   });
 

@@ -18,10 +18,8 @@ import { useArenaBookings, useMyBookings } from '@/modules/arenas/hooks/useBooki
 import {
   useArena, useArenaCourts, useArenaCourtSchedules, useArenaUnavailabilities, useArenas, useMyFavoriteArenas,
 } from '@/modules/arenas/hooks/useArenas';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
-import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { useArenaClasses, useArenaInternalTournaments, useArenaOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 import { addDaysISO } from '@/modules/arenas/domain/calendar';
@@ -104,25 +102,17 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
 
 /**
  * Sem arena de sempre (nunca reservou nem favoritou): as arenas mais PERTO,
- * em vez de só "encontre uma arena". Com a Minha região, as da região, da
- * mais perto à mais longe; sem ela, as da cidade e do estado do perfil.
+ * em vez de só "encontre uma arena" — as da Minha região, da mais perto à
+ * mais longe.
  */
 function ArenasPerto() {
-  const { userProfile } = useAuth();
-  const perfil = { city: userProfile?.city, state: userProfile?.state };
   const arenasQ = useArenas();
   const regional = useRegionalList(arenasQ.data || [], (a) => ({ city: a.city, state: a.state }));
-  const lista = useMemo(() => {
-    if (regional.ativa) {
-      return [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity));
-    }
-    return regional.itens
-      .map((a) => ({ a, perto: proximidade(a, perfil) }))
-      .filter((x) => x.perto > 0)
-      .sort((x, y) => y.perto - x.perto || String(x.a.name || '').localeCompare(String(y.a.name || ''), 'pt-BR'))
-      .map((x) => x.a);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regional, perfil.city, perfil.state]);
+  // A região (permanente desde 2026-10-10) decide quem entra; aqui só a ordem, pela distância.
+  const lista = useMemo(
+    () => [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity)),
+    [regional],
+  );
 
   if (arenasQ.isLoading || regional.carregando) return <V2Skeleton lines={2} />;
   // Falhou: o convite de sempre, sem afirmar que não há arena perto.

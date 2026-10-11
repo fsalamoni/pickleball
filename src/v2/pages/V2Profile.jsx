@@ -1,69 +1,17 @@
-import React, { Suspense, lazy, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import ProfileProgressionSection from '@/v2/components/profile/ProfileProgressionSection';
+import React, { Suspense, lazy } from 'react';
 import { V2Skeleton } from '@/v2/ui/primitives';
-import MyReferralCodes from '@/v2/components/arenas/marketing/MyReferralCodes';
-import ProfileShowcase from '@/v2/components/userArea/ProfileShowcase';
 
-// A Minha área (flag `user_hub`) só baixa para quem a tem ligada.
+// A Minha área baixa só quando a pessoa abre o perfil.
 const UserArea = lazy(() => import('@/v2/components/userArea/UserArea'));
 
 /**
- * `/perfil`. Com a flag `user_hub` ligada, vira a MINHA ÁREA (a central da
- * pessoa); desligada, é o perfil de sempre, sem mudança nenhuma.
+ * `/perfil` É a Minha área (a central da pessoa). O perfil clássico saiu em
+ * 2026-10-10, quando a flag `user_hub` virou permanente — ver docs/41-MINHA-AREA.md.
  */
 export default function V2Profile() {
-  const hubOn = useFeatureFlag(PERMANENT_FEATURE.USER_HUB);
-  const { isLoading } = useFeatureFlags();
-  const esqueleto = <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
-  // Sem esperar as flags, quem tem a Minha área via o perfil antigo piscar antes.
-  if (isLoading) return esqueleto;
-  if (hubOn) {
-    return (
-      <Suspense fallback={esqueleto}>
-        <UserArea />
-      </Suspense>
-    );
-  }
-  return <ClassicProfile />;
-}
-
-function ClassicProfile() {
-  const { user } = useAuth();
-  const { data: ranking = [] } = useNationalRanking();
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
-  // Os códigos de indicação vivem nos módulos de arena (chave-mestra).
-  const arenaModulesOn = useFeatureFlag(PERMANENT_FEATURE.ARENA_MODULES);
-
-  const me = useMemo(
-    () => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null,
-    [ranking, user?.uid],
-  );
-
   return (
-    <div className="mx-auto max-w-[1000px]">
-      <ProfileShowcase me={me} editDica="perfil-editar" />
-
-      {/* Quem joga e ainda não está no ranking via só o perfil vazio, sem saber
-          por quê. Todos os jogos (e o porquê de cada um fora do ranking) moram
-          em "Meu desempenho". */}
-      <div className="mt-4 text-center text-sm text-gray-500 sm:text-left">
-        Todos os seus jogos — e, se algum não contar no ranking, o porquê — estão em{' '}
-        <Link to="/meu-desempenho" className="font-bold text-ink underline">Meu desempenho</Link>.
-      </div>
-
-      {arenaModulesOn && user && <MyReferralCodes />}
-
-      <div className="mt-8 rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">
-        Edite seus dados, nivelamento e privacidade no editor de perfil.{' '}
-        <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor de perfil</Link>
-      </div>
-
-      {gamificationOn && user && <ProfileProgressionSection uid={user.uid} />}
-    </div>
+    <Suspense fallback={<div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>}>
+      <UserArea />
+    </Suspense>
   );
 }

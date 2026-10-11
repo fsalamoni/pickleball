@@ -16,8 +16,7 @@ import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { platformInterestMeta, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -27,7 +26,7 @@ import { cn } from '@/core/lib/utils';
 
 export default function PersonalizeHomeDialog({ open, onOpenChange }) {
   const { userProfile, updateUserProfile } = useAuth();
-  const interesses = platformInterestMeta({ treino: useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER) });
+  const interesses = platformInterestMeta({ treino: true });
   const [escolhidos, setEscolhidos] = useState(() => sanitizeInterests(userProfile?.interests));
   const [salvando, setSalvando] = useState(false);
 

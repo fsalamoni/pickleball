@@ -125,18 +125,6 @@ describe('sugestões e disponibilidade', () => {
     expect(ligados()).toEqual(['jogar', 'reservar', 'ranking', 'arena']);
   });
 
-  it('card de funcionalidade desligada não é oferecido', async () => {
-    await montar(<HomeCardsPicker />);
-    expect(linha('destaques')).toBeNull();
-    expect(linha('evolucao')).toBeNull();
-    act(() => root.unmount());
-    root = createRoot(container);
-    estado.flags = { ...estado.flags, platform_marketing: true, action_home: true };
-    await montar(<HomeCardsPicker />);
-    expect(linha('destaques')).toBeTruthy();
-    expect(linha('evolucao')).toBeTruthy();
-  });
-
   it('cada interruptor tem nome acessível (o título do card)', async () => {
     await montar(<HomeCardsPicker />);
     for (const sw of container.querySelectorAll('[role="switch"]')) {
@@ -147,12 +135,6 @@ describe('sugestões e disponibilidade', () => {
 });
 
 describe('Configurações → Página inicial', () => {
-  it('some com o início sob medida desligado', async () => {
-    estado.flags = { personalized_home: true };
-    await montar(<HomeCardsSettingsCard />);
-    expect(container.textContent).toBe('');
-  });
-
   it('com a flag: título, resumo do que está no início e o seletor; o link leva ao início', async () => {
     await montar(<HomeCardsSettingsCard />);
     expect(container.querySelector('#pagina-inicial')).toBeTruthy();

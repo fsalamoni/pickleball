@@ -23,13 +23,6 @@ const render = () => act(async () => { root.render(<MemoryRouter><V2Gamification
 const monta = (over = {}) => buildPeriodReview({ kind: 'week', records: [{ at: Date.now() - 1000, won: true, partner: 'Bia', opponents: ['X'] }, { at: Date.now() - 2000, won: true, opponents: ['Y'] }, { at: Date.now() - 3000, won: false, opponents: ['Z'] }], now: new Date(), ...over });
 
 describe('V2GamificationReview', () => {
-  it('flag desligada: empty state, e o motor nem é chamado (não custa consulta)', async () => {
-    flag.value = false;
-    rev.value = { review: null, isLoading: false, isError: false, refetch: vi.fn() };
-    await render();
-    expect(container.textContent).toContain('Disponível em breve');
-    expect(engineSpy).not.toHaveBeenCalled();
-  });
 
   it('mostra a manchete, os números e os destaques da semana — sem cobrança', async () => {
     rev.value = { review: monta(), isLoading: false, isError: false, refetch: vi.fn() };

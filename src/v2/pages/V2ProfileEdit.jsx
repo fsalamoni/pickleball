@@ -8,8 +8,7 @@ import {
   birthDateToBrtDate, validateRequiredProfile, normalizeFullName, isRequiredProfileComplete, parseDuprRating,
 } from '@/core/lib/profileValidation';
 import { cn } from '@/core/lib/utils';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { BR_UFS, isBrazilUF } from '@/core/domain/ufs';
 import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
 import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
@@ -73,9 +72,9 @@ export default function V2ProfileEdit() {
   const [busy, setBusy] = useState(false);
   const [communityBusy, setCommunityBusy] = useState(false);
   const [communityErrors, setCommunityErrors] = useState({});
-  const essencial = useFeatureFlag(PERMANENT_FEATURE.ESSENTIAL_PROFILE);
-  const regiaoOn = useFeatureFlag(PERMANENT_FEATURE.MY_REGION);
-  const treinoOn = useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER);
+  const essencial = true;
+  const regiaoOn = true;
+  const treinoOn = true;
   const [coachBusy, setCoachBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
   const [formMode, setFormMode] = useState(null);

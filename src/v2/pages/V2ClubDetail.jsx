@@ -18,8 +18,7 @@ import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
 import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -40,7 +39,7 @@ export default function V2ClubDetail() {
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
   const clubRankingOn = true;
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const gamificationOn = true;
   const inviteLinkOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
@@ -262,9 +261,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
   const [includeExternal, setIncludeExternal] = useState(false);
   const { data, isLoading } = useClubInternalRanking(clubId, { includeExternal });
 
-
   if (isLoading) return <V2Skeleton className="h-48 rounded-4xl" />;
-
 
   return (
     <V2Surface className="overflow-hidden p-0">

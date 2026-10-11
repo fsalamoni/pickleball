@@ -10,8 +10,7 @@
  */
 import React, { useMemo } from 'react';
 import { CalendarPlus, Tag } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { couponKind } from '@/modules/arenas/domain/marketing';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
@@ -27,7 +26,7 @@ import PromoCouponCard from './PromoCouponCard';
  *   `onUseInLesson` só vem quando a pessoa pode pedir aula a este professor.
  */
 export default function CoachPromosSection({ coachId, onUseInLesson }) {
-  const ligado = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
+  const ligado = true;
   const q = useCoachPublicPromos(ligado ? coachId : null);
   const quem = usePromoViewer({ enabled: ligado });
   const today = todayISO();

@@ -15,8 +15,7 @@ import { courtKindsFromGames } from '@/modules/games/domain/gameKind';
 import { groupIdOf } from '@/modules/games/domain/playGroups';
 import { buildGroupedPlayView } from '@/modules/games/domain/playGroupsDraw';
 import { usePlayGroupsContext } from '@/modules/games/hooks/usePlayGroups';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
 import {
   useGameDayParticipants, useGameDayGames, useJoinPublicGameDay, useLeaveGameDay,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
@@ -43,7 +42,7 @@ export default function AthletePlayParticipant({ gameDay }) {
   // GRUPOS (flag `play_groups`): a mesma visão do organizador, pelo mesmo lugar
   // — quem joga lê a posição que o organizador lê.
   const grupos = usePlayGroupsContext({ gameDay, participants, games });
-  const rodizioEquilibrado = useFeatureFlag(PERMANENT_FEATURE.PLAY_SMART_ROTATION);
+  const rodizioEquilibrado = true;
   const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
   const view = useMemo(() => {
     if (grupos.ativo) {
@@ -166,8 +165,6 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
       : '';
     return `Você está na fila${onde}, na posição #${myView.groupNo ?? myView.orderNo}. Fique por perto para entrar em quadra.`;
   };
-
-
 
   return (
     <V2CollapsibleCard

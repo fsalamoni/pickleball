@@ -86,15 +86,6 @@ async function clicar(sel) {
   await act(async () => { container.querySelector(sel).click(); });
 }
 
-describe('V2SocialBonds · flag OFF', () => {
-  it('mostra estado vazio amigável e não vaza a seção', async () => {
-    flag.value = false;
-    await render();
-    expect(container.textContent).toContain('em construção');
-    expect(container.querySelector('[data-testid="bonds-tab-rivais"]')).toBeNull();
-  });
-});
-
 describe('V2SocialBonds · flag ON', () => {
   it('abre em Rivais, derivados dos confrontos reais', async () => {
     await render();

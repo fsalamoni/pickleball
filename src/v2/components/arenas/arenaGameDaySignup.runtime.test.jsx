@@ -96,12 +96,6 @@ const botaoQueContem = (texto) => [...container.querySelectorAll('button')]
 /* ================================================================ flag === */
 
 describe('a flag manda', () => {
-  it('⭐ desligada, a seção não existe', async () => {
-    flags.on = false;
-    await render();
-    expect(container.textContent).toBe('');
-  });
-
   it('ligada e sem dia marcado, também não existe (seção vazia é ruído)', async () => {
     estado.dias = [];
     await render();

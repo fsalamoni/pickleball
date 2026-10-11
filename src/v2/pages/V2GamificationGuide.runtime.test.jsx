@@ -25,12 +25,6 @@ const render = (url = '/gamification/como-funciona') => act(async () => { root.r
 const ids = () => Array.from(container.querySelectorAll('article[data-term]')).map((a) => a.getAttribute('data-term'));
 
 describe('V2GamificationGuide', () => {
-  it('flag desligada: empty state (nada de guia sobre o que não existe)', async () => {
-    state.flag = false;
-    await render();
-    expect(container.textContent).toContain('Disponível em breve');
-    expect(container.querySelector('article')).toBeNull();
-  });
 
   it('abre no atleta, com o ciclo em um minuto, os grupos e as perguntas frequentes', async () => {
     await render();
@@ -104,14 +98,4 @@ describe('V2GamificationGuide', () => {
     expect(ids()).toContain('temporada');
   });
 
-  it('rodapé: preferências sempre; Central de ajuda só com a flag dela', async () => {
-    await render();
-    expect(container.querySelector('a[href="/gamification/configuracoes"]')).toBeTruthy();
-    expect(Array.from(container.querySelectorAll('a')).some((a) => a.getAttribute('href').startsWith('/ajuda'))).toBe(true);
-    act(() => root.unmount());
-    state.help = false;
-    root = createRoot(container);
-    await render();
-    expect(Array.from(container.querySelectorAll('a')).some((a) => a.getAttribute('href').startsWith('/ajuda'))).toBe(false);
-  });
 });

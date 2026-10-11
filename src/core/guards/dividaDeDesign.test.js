@@ -20,7 +20,7 @@ const TETOS = {
   'cartão à mão': 68,
   'campo cru': 0,
   '<button> sem type': 250,
-  'PERMANENT_FEATURE.': 116,
+  'PERMANENT_FEATURE.': 6,
 };
 
 function arquivos(dir, saida = []) {

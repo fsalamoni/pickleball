@@ -2,8 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { useGamificationGuide } from '@/modules/progression/hooks/useGamificationGuide';
 import {
   GUIDE_AUDIENCE, GUIDE_AUDIENCE_META, TERM_GROUP, TERM_GROUP_META, searchTerms, termsForAudience,
@@ -31,7 +30,7 @@ function publicoDoTermo(guide, termoId, podeAdmin) {
  * lê as mesmas constantes que o código usa e a configuração do admin.
  */
 export default function V2GamificationGuide() {
-  const on = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const on = true;
   if (!on) {
     return (
       <div className="mx-auto max-w-[760px]">
@@ -45,7 +44,7 @@ export default function V2GamificationGuide() {
 
 function V2GamificationGuideOn() {
   const { isPlatformAdmin } = useAuth();
-  const helpOn = useFeatureFlag(PERMANENT_FEATURE.HELP_CENTER);
+  const helpOn = true;
   const { guide, isModuleOn } = useGamificationGuide();
   const [params, setParams] = useSearchParams();
   const termoUrl = params.get('termo') || '';

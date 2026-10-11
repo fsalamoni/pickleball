@@ -68,14 +68,6 @@ describe('V2ReferralLanding · visitante', () => {
   });
 });
 
-describe('V2ReferralLanding · flag desligada', () => {
-  it('não guarda nada quando a gamificação está OFF', async () => {
-    flag.value = false;
-    await render();
-    expect(guardado()).toBeNull();
-  });
-});
-
 describe('V2ReferralLanding · já autenticado', () => {
   it('não fica preso: redireciona quem já tem conta', async () => {
     auth.isAuthenticated = true;

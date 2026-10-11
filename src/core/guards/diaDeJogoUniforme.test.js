@@ -333,9 +333,9 @@ describe('⭐ os formatos que se pode escolher têm UMA fonte', () => {
     });
   });
 
-  it('⭐ o hook lê as TRÊS flags e delega à fonte única', () => {
+  it('⭐ o hook lê as DUAS flags opcionais (o Americano aprimorado é permanente) e delega à fonte única', () => {
     const src = semComentarios(ler('src/modules/games/hooks/useGameDayFormatChoices.js'));
-    ['GAMEDAY_AMERICANO_LIVE', 'GAMEDAY_MEXICANO', 'GAMEDAY_KING_OF_COURT', 'gameDayFormatChoices('].forEach((t) => {
+    ['americanoLive', 'GAMEDAY_MEXICANO', 'GAMEDAY_KING_OF_COURT', 'gameDayFormatChoices('].forEach((t) => {
       expect(src).toContain(t);
     });
   });

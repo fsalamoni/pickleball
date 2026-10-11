@@ -112,12 +112,3 @@ describe('Treino → Configurações', () => {
   });
 });
 
-describe('Painel admin', () => {
-  it('a seção Treino só existe com a flag', () => {
-    const fonte = readFileSync('src/v2/pages/V2AdminConsole.jsx', 'utf8');
-    expect(fonte).toContain("if (trainingOn) {");
-    expect(fonte).toContain("tab.startsWith('treino-') && trainingOn");
-    expect(fonte).toContain('useFeatureFlag(PERMANENT_FEATURE.TRAINING_CENTER)');
-    ['treino-conteudo', 'treino-revisao', 'treino-denuncias', 'treino-biblioteca', 'treino-config'].forEach((id) => expect(fonte).toContain(`id: '${id}'`));
-  });
-});

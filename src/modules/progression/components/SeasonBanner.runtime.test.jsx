@@ -60,12 +60,6 @@ function render(node) {
 }
 
 describe('SeasonBanner', () => {
-  it('não renderiza se flag OFF', async () => {
-    mockFlagState.value = false;
-    await render(<SeasonBanner />);
-    expect(container.querySelector('[data-testid="season-banner"]')).toBeNull();
-  });
-
   it('renderiza quando flag ON', async () => {
     mockFlagState.value = true;
     await render(<SeasonBanner />);

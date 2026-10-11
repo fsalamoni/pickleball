@@ -81,21 +81,21 @@ const opcoes = () => {
 };
 
 describe('⭐ criar um dia de jogo: o que se pode escolher', () => {
-  it('sem as flags: Americano e Play — nada de Mexicano nem Rei da Quadra', async () => {
+  it('sem as flags: Americano, Play e Americano aprimorado — nada de Mexicano nem Rei da Quadra', async () => {
     await abrir();
-    expect(opcoes()).toEqual(['americano', 'play']);
+    expect(opcoes()).toEqual(['americano', 'play', 'americano_live']);
   });
 
   it('⭐ só o Mexicano ligado: ele aparece, o Rei da Quadra não', async () => {
     flags.valores = { [FEATURE_FLAG.GAMEDAY_MEXICANO]: true };
     await abrir();
-    expect(opcoes()).toEqual(['americano', 'mexicano', 'play']);
+    expect(opcoes()).toEqual(['americano', 'mexicano', 'play', 'americano_live']);
   });
 
   it('⭐ só o Rei da Quadra ligado: ele aparece, o Mexicano não', async () => {
     flags.valores = { [FEATURE_FLAG.GAMEDAY_KING_OF_COURT]: true };
     await abrir();
-    expect(opcoes()).toEqual(['americano', 'king_of_court', 'play']);
+    expect(opcoes()).toEqual(['americano', 'king_of_court', 'play', 'americano_live']);
   });
 
   it('as três flags ligadas: os cinco formatos, na ordem de sempre', async () => {

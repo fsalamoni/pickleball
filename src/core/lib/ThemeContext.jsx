@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import {
   MIDIA_SISTEMA_ESCURO, TEMA_PADRAO, espelhoDoDispositivo, lerEscolhaDeTema, normalizarTema,
   salvarEscolhaDeTema, temaDisponivel, temaEfetivo,
@@ -75,7 +75,7 @@ export function ThemeProvider({ children }) {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const { flags, isLoading: carregandoFlags } = useFeatureFlags();
   const uid = user?.uid || null;
-  const ligado = Boolean(flags?.[PERMANENT_FEATURE.DARK_MODE]);
+  const ligado = Boolean(true);
   const autenticado = Boolean(isAuthenticated && uid);
   const sistemaEscuro = useSistemaEscuro();
 

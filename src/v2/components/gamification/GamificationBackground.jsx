@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import { useGamificationPrefs } from '@/modules/progression/hooks/useGamificationPrefs';
@@ -41,7 +40,7 @@ function BackgroundEngine({ uid }) {
  * Não desenha nada.
  */
 export default function GamificationBackground() {
-  const on = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const on = true;
   const { user } = useAuth();
   const uid = on ? user?.uid : null;
   const { pathname } = useLocation();

@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -76,19 +77,10 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 
 const render = (el, url = '/perfil') => act(async () => {
-  root.render(<MemoryRouter initialEntries={[url]}>{el}</MemoryRouter>);
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  root.render(<QueryClientProvider client={qc}><MemoryRouter initialEntries={[url]}>{el}</MemoryRouter></QueryClientProvider>);
 });
 const secoes = () => Array.from(container.querySelectorAll('nav[aria-label="Seções da Minha área"] button')).map((b) => b.textContent.trim());
-
-describe('Minha área desligada', () => {
-  it('o perfil é o de sempre, com a âncora das dicas', async () => {
-    estado.flags = {};
-    await render(<V2Profile />);
-    expect(container.querySelectorAll('[data-dica="perfil-editar"]')).toHaveLength(1);
-    expect(container.textContent).toContain('Abrir editor de perfil');
-    expect(container.textContent).not.toContain('Minha área');
-  });
-});
 
 describe('Minha área ligada', () => {
   it('o /perfil vira a Minha área', async () => {
@@ -103,7 +95,7 @@ describe('Minha área ligada', () => {
 
   it('quem só joga vê as seções de todos — nada de gestão', async () => {
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Jogo', 'Agenda', 'Torneios', 'Conta']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Treino', 'Jogo', 'Agenda', 'Torneios', 'Conta']);
     expect(container.querySelector('[data-dica="minha-area-pendencias"]')).toBeNull();
   });
 
@@ -113,7 +105,7 @@ describe('Minha área ligada', () => {
     estado.clubes = ok([{ id: 'c1', name: 'Clube', my_role: 'member' }]);
     estado.admin = true;
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Jogo', 'Agenda', 'Torneios', 'Clubes', 'Conta', 'Professor', 'Arenas', 'Admin']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil', 'Treino', 'Jogo', 'Agenda', 'Torneios', 'Clubes', 'Conta', 'Professor', 'Arenas', 'Admin']);
   });
 
   it('pedido de reserva conhecido vira pendência que leva à Central', async () => {

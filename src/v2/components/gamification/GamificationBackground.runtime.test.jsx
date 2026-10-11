@@ -78,12 +78,8 @@ describe('GamificationBackground', () => {
     expect(engineSpy).not.toHaveBeenCalled();
   });
 
-  it('flag desligada ou sem conta: nada acontece', async () => {
-    flag.value = false;
-    await render('/ranking');
-    expect(engineSpy).not.toHaveBeenCalled();
-    expect(prefs.update).not.toHaveBeenCalled();
-    flag.value = true; auth.user = null;
+  it('sem conta: nada acontece', async () => {
+    auth.user = null;
     await render('/ranking');
     expect(engineSpy).not.toHaveBeenCalled();
   });

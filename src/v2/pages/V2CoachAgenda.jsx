@@ -18,8 +18,7 @@ import {
   Sparkles, Megaphone, Tag, Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { PERMANENT_FEATURE } from '@/core/featureFlags';
+
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import {
   useCoachAvailability, useSaveAvailability, useCoachLessons, useRespondLesson, useReturnPendingCouponUses,
@@ -342,8 +341,8 @@ function V2CoachAgendaContent() {
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const clinicsOn = true;
-  const marketingOn = useFeatureFlag(PERMANENT_FEATURE.COACH_MARKETING);
-  const gamificationOn = useFeatureFlag(PERMANENT_FEATURE.GAMIFICATION_V2);
+  const marketingOn = true;
+  const gamificationOn = true;
 
   const sections = useMemo(() => {
     const out = [...COACH_SECTIONS];
