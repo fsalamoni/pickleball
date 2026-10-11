@@ -3,8 +3,9 @@
  * recolhível no celular, com a busca de configuração no topo ("flags",
  * "cadastros", "biblioteca" — toda aba em até 3 letras).
  *
- * Antes eram 8 seções e 26 abas numa barra horizontal em duas linhas; quem
- * procurava "onde ligo X?" varria tudo. A âncora `data-dica` de cada seção
+ * Uma linha por tarefa do admin (9 seções); só a seção aberta mostra as abas,
+ * com o selo de pendências ("Precisa de você") nas que esperam decisão. Antes
+ * eram 25 itens sempre visíveis; quem procurava "onde ligo X?" varria tudo. A âncora `data-dica` de cada seção
  * continua (as dicas guiadas apontam para ela).
  */
 import React, { useMemo, useState } from 'react';
@@ -48,42 +49,77 @@ function Busca({ sections, onTab }) {
   );
 }
 
-function Lista({ sections, tab, onTab, onEscolheu }) {
+function Selo({ n, className }) {
+  if (!n) return null;
   return (
-    <nav aria-label="Seções do painel" data-dica="admin-secoes" className="space-y-3">
-      {sections.map((s) => {
-        const ativa = s.tabs.some((t) => t.id === tab);
-        return (
-          <div key={s.id} data-dica={s.dica}>
-            <p className={cn('mb-1 flex items-center gap-1.5 px-2 text-2xs font-bold uppercase tracking-widest', ativa ? 'text-ink' : 'text-gray-500')}>
-              {s.icon && <s.icon className="h-3.5 w-3.5" aria-hidden />} {s.label}
-            </p>
-            <ul className="space-y-0.5">
-              {s.tabs.map((t) => (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    aria-current={t.id === tab ? 'page' : undefined}
-                    onClick={() => { onTab(t.id); onEscolheu?.(); }}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm coarse:min-h-11',
-                      t.id === tab ? 'bg-ink font-bold text-white' : 'text-ink hover:bg-paper',
-                    )}
-                  >
-                    {t.icon && <t.icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />}
-                    {t.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+    <span className={cn('ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-2xs font-bold text-amber-800', className)}>
+      <span className="sr-only">{n} pendente{n === 1 ? '' : 's'}</span>
+      <span aria-hidden>{n > 99 ? '99+' : n}</span>
+    </span>
+  );
+}
+
+/**
+ * Uma linha por seção. Só a seção ATIVA mostra as abas; seção de uma aba só é
+ * link direto. Tocar numa seção fechada abre a primeira aba dela.
+ */
+function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
+  const ir = (id) => { onTab(id); onEscolheu?.(); };
+  return (
+    <nav aria-label="Seções do painel" data-dica="admin-secoes">
+      <ul className="space-y-0.5">
+        {sections.map((s) => {
+          const ativa = s.tabs.some((t) => t.id === tab);
+          const unica = s.tabs.length === 1;
+          const pendentes = s.tabs.reduce((a, t) => a + (badges[t.id] || 0), 0);
+          return (
+            <li key={s.id} data-dica={s.dica} className={cn(s.quieta && 'mt-3 border-t border-gray-100 pt-3')}>
+              <button
+                type="button"
+                aria-current={unica && ativa ? 'page' : undefined}
+                aria-expanded={unica ? undefined : ativa}
+                onClick={() => { if (!ativa) ir(s.tabs[0].id); }}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm coarse:min-h-11',
+                  unica && ativa ? 'bg-ink font-bold text-white'
+                    : ativa ? 'font-bold text-ink'
+                      : cn('font-semibold hover:bg-paper', s.quieta ? 'text-gray-500' : 'text-ink'),
+                )}
+              >
+                {s.icon && <s.icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />}
+                {s.label}
+                <Selo n={pendentes} />
+                {!unica && <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-50 transition-transform', pendentes ? 'ml-1' : 'ml-auto', ativa && 'rotate-180')} aria-hidden />}
+              </button>
+              {!unica && ativa && (
+                <ul className="mb-1 ml-5 mt-0.5 space-y-0.5 border-l border-gray-100 pl-2">
+                  {s.tabs.map((t) => (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        aria-current={t.id === tab ? 'page' : undefined}
+                        onClick={() => ir(t.id)}
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm coarse:min-h-11',
+                          t.id === tab ? 'bg-ink font-bold text-white' : 'text-ink hover:bg-paper',
+                        )}
+                      >
+                        {t.label}
+                        <Selo n={badges[t.id]} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
 
-export default function AdminConsoleNav({ sections, tab, onTab }) {
+export default function AdminConsoleNav({ sections, tab, onTab, badges }) {
   const [aberta, setAberta] = useState(false);
   const atual = sections.find((s) => s.tabs.some((t) => t.id === tab));
   const abaAtual = atual?.tabs.find((t) => t.id === tab);
@@ -93,7 +129,7 @@ export default function AdminConsoleNav({ sections, tab, onTab }) {
       <aside className="hidden lg:block">
         <div className="sticky top-4 space-y-4">
           <Busca sections={sections} onTab={onTab} />
-          <Lista sections={sections} tab={tab} onTab={onTab} />
+          <Lista sections={sections} tab={tab} onTab={onTab} badges={badges} />
         </div>
       </aside>
       {/* Celular: a busca e uma lista que recolhe, com onde a pessoa está no resumo. */}
@@ -105,7 +141,7 @@ export default function AdminConsoleNav({ sections, tab, onTab }) {
             <ChevronDown className={cn('h-4 w-4 transition-transform', aberta && 'rotate-180')} aria-hidden />
           </summary>
           <div className="border-t border-gray-100 p-3">
-            <Lista sections={sections} tab={tab} onTab={onTab} onEscolheu={() => setAberta(false)} />
+            <Lista sections={sections} tab={tab} onTab={onTab} onEscolheu={() => setAberta(false)} badges={badges} />
           </div>
         </details>
       </div>
