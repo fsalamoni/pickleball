@@ -39,7 +39,7 @@ export function UserAvatar({
   const label = title || name || '';
 
   if (photoUrl) {
-    const avatar = <img src={photoUrl} alt="" title={label} className={cn(dim, base, className)} />;
+    const avatar = <img src={photoUrl} alt="" title={label} loading="lazy" decoding="async" className={cn(dim, base, className)} />;
     if (!zoomable) return avatar;
 
     return (

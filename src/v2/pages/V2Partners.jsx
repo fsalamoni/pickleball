@@ -51,7 +51,7 @@ export default function V2Partners() {
             >
               <div className="h-32 overflow-hidden bg-paper">
                 {link.image_url ? (
-                  <img src={link.image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img src={link.image_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-ink/20"><Handshake className="h-10 w-10" /></div>
                 )}

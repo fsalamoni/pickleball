@@ -390,7 +390,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
               const url = arenaPhotoUrl(p);
               return (
                 <PhotoLightbox key={p.path || i} src={url} alt={`Foto ${i + 1} da arena`}
-                  trigger={<img src={url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
+                  trigger={<img src={url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
               );
             })}
           </div>

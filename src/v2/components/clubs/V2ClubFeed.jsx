@@ -111,7 +111,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {pendingImages.map((image) => (
                 <div key={image.path} className="group relative aspect-square overflow-hidden rounded-2xl border border-gray-100">
-                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                  <img src={image.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removePending(image)}

@@ -72,7 +72,7 @@ export default function HomeClubsSection({ reason, hoje }) {
                   className="btn-press inline-flex items-center gap-2 rounded-full border border-gray-200 bg-paper-pure px-3.5 py-1.5 text-sm font-semibold text-ink hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
                 >
                   {c.logo_url
-                    ? <img src={c.logo_url} alt="" className="h-5 w-5 rounded-full object-cover" />
+                    ? <img src={c.logo_url} alt="" loading="lazy" decoding="async" className="h-5 w-5 rounded-full object-cover" />
                     : <Users className="h-4 w-4 text-gray-400" aria-hidden="true" />}
                   {c.name}
                 </Link>

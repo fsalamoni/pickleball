@@ -675,7 +675,7 @@ function PhotosTab({ arena }) {
           {photos.map((p, i) => (
             <div key={p.path || i} className="group relative">
               <PhotoLightbox src={p.url} alt={`Foto ${i + 1} da arena`}
-                trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
+                trigger={<img src={p.url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
               {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-2xs font-bold text-ink">Capa</span>}
               <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remover foto">
                 <Trash2 className="h-3.5 w-3.5" />

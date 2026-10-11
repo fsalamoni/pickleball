@@ -130,7 +130,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
             <PhotoLightbox
               src={item.url}
               alt={item.name || 'Imagem'}
-              trigger={<img src={item.url} alt="" className="h-16 w-16 cursor-zoom-in object-cover" />}
+              trigger={<img src={item.url} alt="" loading="lazy" decoding="async" className="h-16 w-16 cursor-zoom-in object-cover" />}
             />
           ) : (
             <div className="flex h-16 w-44 items-center gap-2 px-3">
