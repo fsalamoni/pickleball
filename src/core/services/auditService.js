@@ -112,6 +112,7 @@ export const AUDIT_ACTION_LABELS = {
   training_professor_unverified: 'Professor deixou de ser verificado no Centro de Treino (admin)',
   training_seed_installed: 'Biblioteca inicial do treino instalada/atualizada (admin)',
   training_items_imported: 'Treinos/drills importados em lote (admin)',
+  admin_broadcast_sent: 'Aviso em massa enviado pelo admin',
 };
 
 export async function createAuditLog({

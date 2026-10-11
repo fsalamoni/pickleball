@@ -1089,3 +1089,59 @@ exports.adminMergeAccountHistory = onCall(
     }
   },
 );
+
+// =====================================================================
+// SUSPENDER / BLOQUEAR / REATIVAR uma conta, e o ACESSO DE SUPORTE com
+// registro de leitura. Só o admin da plataforma; as travas da exclusão (a
+// própria conta, outro admin, e-mail de dono) valem de novo no servidor.
+// Ver `functions/accountStatus.js` e `functions/supportAccess.js`.
+// =====================================================================
+const accountStatus = require('./accountStatus');
+const supportAccess = require('./supportAccess');
+
+exports.adminSetAccountStatus = onCall(
+  { region: REGION, timeoutSeconds: 60 },
+  async (req) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    if (!(await isPlatformAdminUser(req, db))) {
+      throw new HttpsError('permission-denied', 'Só o admin da plataforma suspende ou bloqueia contas.');
+    }
+    const pedido = accountStatus.validateStatusRequest(req.data || {});
+    if (pedido.error) throw new HttpsError('invalid-argument', pedido.error);
+    const token = (req.auth && req.auth.token) || {};
+    const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '' };
+    try {
+      const res = await accountStatus.applyAccountStatus({ db, auth: getAuth() }, pedido, { actor });
+      if (res.status === 'error') throw new HttpsError('failed-precondition', res.error);
+      logger.info(`adminSetAccountStatus ${pedido.action} ${pedido.uid} por ${actor.uid}`);
+      return res;
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error('adminSetAccountStatus falhou', err);
+      throw new HttpsError('internal', 'Falha inesperada. Rodar de novo é seguro.');
+    }
+  },
+);
+
+exports.adminSupportReveal = onCall(
+  { region: REGION, timeoutSeconds: 60 },
+  async (req) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    if (!(await isPlatformAdminUser(req, db))) {
+      throw new HttpsError('permission-denied', 'Só o admin da plataforma acessa dados de contato.');
+    }
+    const pedido = supportAccess.validateRevealRequest(req.data || {});
+    if (pedido.error) throw new HttpsError('invalid-argument', pedido.error);
+    const token = (req.auth && req.auth.token) || {};
+    const actor = { uid: req.auth.uid, email: token.email || '' };
+    const raw = req.rawRequest || {};
+    try {
+      return await supportAccess.revealFields({ db }, pedido, {
+        actor, ip: raw.ip || '', userAgent: (raw.headers && raw.headers['user-agent']) || '',
+      });
+    } catch (err) {
+      logger.error('adminSupportReveal falhou', err);
+      throw new HttpsError('internal', err && err.message ? err.message : 'Falha inesperada.');
+    }
+  },
+);

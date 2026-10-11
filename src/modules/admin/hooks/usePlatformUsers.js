@@ -7,6 +7,7 @@ import { previewAccountDeletion, deleteAccounts } from '../services/accountDelet
 import {
   listAccountLifecycleLogs, previewAccountMerge, mergeAccountHistory,
 } from '../services/accountMergeService';
+import { setAccountStatus, supportReveal, listMyAccessLogs } from '../services/accountStatusService';
 
 /**
  * Lista todos os usuários da plataforma (coleção `users`). Só o admin da
@@ -107,5 +108,29 @@ export function useMergeAccountHistory() {
         .forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
       queryClient.invalidateQueries({ queryKey: ['game-days', 'published-games'] });
     },
+  });
+}
+
+/** Suspende, bloqueia ou reativa uma conta (servidor). */
+export function useSetAccountStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (p) => setAccountStatus(p),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform-users-all'] }),
+  });
+}
+
+/** Revela dados de contato com registro de leitura (servidor). */
+export function useSupportReveal() {
+  return useMutation({ mutationFn: (p) => supportReveal(p) });
+}
+
+/** Os acessos do suporte aos dados da pessoa logada (Configurações). */
+export function useMyAccessLogs(uid) {
+  return useQuery({
+    queryKey: ['my-access-logs', uid],
+    queryFn: () => listMyAccessLogs(uid),
+    enabled: Boolean(uid),
+    staleTime: 60_000,
   });
 }

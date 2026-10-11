@@ -29,6 +29,25 @@ existem e põe o selo na barra; fonte que não respondeu é "desconhecida", nunc
 Fila nova que espera decisão do admin entra em `buildInbox`. Branding e Conteúdo
 saíram (nada lia o que gravavam).
 
+## Suspender/bloquear, acesso de suporte e aviso em massa (2026-10-11)
+- **Suspender · Bloquear · Reativar** (Cadastros): `domain/accountStatus.js` decide
+  a ação e valida; `services/accountStatusService.js` chama `adminSetAccountStatus`
+  (`functions/accountStatus.js`: desliga o login no Auth, revoga tokens, grava
+  `users.account_status*`, audita). As três portas da exclusão valem (nunca a
+  própria conta, outro admin, e-mail de dono). Suspensão vencida entra em
+  "Precisa de você" — **nada reativa sozinho**. `FirebaseAuthContext` desloga a
+  conta fechada com o motivo.
+- **Acesso de suporte**: a ficha abre mascarada (`domain/supportAccess.js`,
+  `maskValue`); "Revelar dados de contato" pede categoria + motivo ≥ 20 e passa
+  por `adminSupportReveal` (`functions/supportAccess.js`), que grava
+  `admin_access_logs` (hash, nunca o valor) e avisa o titular; a pessoa vê em
+  Configurações → "Acessos do suporte" (`SupportAccessCard`). Paridade
+  cliente×servidor com teste.
+- **Aviso em massa** (Divulgação → Aviso em massa): `AdminBroadcastTab` com o
+  público das campanhas da plataforma (`platformRecipients`, contado antes;
+  conta oculta/suspensa/bloqueada fora), `notifyUsers` + auditoria
+  `admin_broadcast_sent`. Zero coleção.
+
 ## Hooks
 ```js
 import { useAdminTournaments } from '@/modules/admin/hooks/useAdminTournaments';
@@ -40,6 +59,8 @@ import { usePlatformSettings } from '@/modules/admin/hooks/usePlatformSettings';
 - `platform_delete_tournament`
 - `platform_unarchive_tournament`
 - `feature_flag_changed`
+- `admin_account_suspended` / `admin_account_blocked` / `admin_account_reactivated` (servidor)
+- `admin_broadcast_sent`
 
 ## Onde achar mais
 - `docs/06-MODULES.md` § admin

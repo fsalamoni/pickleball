@@ -35,6 +35,7 @@ import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
 import { useDicas } from '@/v2/components/dicas/DicasContext';
+import SupportAccessCard from '@/v2/components/settings/SupportAccessCard';
 
 export default function V2Settings() {
   const enabled = true;
@@ -221,6 +222,9 @@ export default function V2Settings() {
             </V2Button>
           </div>
         </V2Surface>
+
+        {/* `/configuracoes#acessos-do-suporte`: o aviso "o suporte acessou seus dados" leva para cá. */}
+        <SupportAccessCard uid={user?.uid} />
       </div>
     </div>
   );

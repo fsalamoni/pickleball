@@ -1231,6 +1231,8 @@ service cloud.firestore {
           request.resource.data.get('role', 'user') == 'user'
           && request.resource.data.get('can_create_pools', false) == false
           && !request.resource.data.keys().hasAny(['hidden', 'hidden_at', 'hidden_by'])
+          // Ninguém nasce suspenso nem "se reativa" criando o documento de novo.
+          && !request.resource.data.keys().hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
         )
       );
 
@@ -1248,6 +1250,10 @@ service cloud.firestore {
                == resource.data.get('can_create_pools', false)
           && !request.resource.data.diff(resource.data).affectedKeys()
                 .hasAny(['hidden', 'hidden_at', 'hidden_by'])
+          // SUSPENSÃO/BLOQUEIO (`account_status*`): só o servidor escreve
+          // (`adminSetAccountStatus`). O titular suspenso não se reativa.
+          && !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
         )
         || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
@@ -1623,6 +1629,16 @@ service cloud.firestore {
         // Nasce sempre não lida — ninguém cria já marcada para escapar do sino.
         && request.resource.data.get('read', false) == false;
       allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Acessos do suporte (05-ADMIN-SUPORTE §7) ------------------------
+    // Escrito SÓ pelo servidor (`adminSupportReveal`), imutável. O TITULAR lê
+    // os acessos aos próprios dados (Configurações → "Acessos do suporte");
+    // o admin lê todos. Guarda hash do valor, nunca o valor.
+    match /admin_access_logs/{aid} {
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.target_uid == request.auth.uid);
+      allow create, update, delete: if false;
     }
 
     // ---- Audit logs (read by platform admin only) ------------------------

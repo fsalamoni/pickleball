@@ -525,14 +525,16 @@ const uniq = (lista) => [...new Set((lista || []).filter(Boolean))];
 
 /**
  * Quem recebe o aviso da PLATAFORMA — a partir da lista de contas que o admin
- * já lê (`users`). Conta ocultada pela moderação não recebe.
+ * já lê (`users`). Conta ocultada pela moderação, suspensa ou bloqueada não recebe.
  *
  * @param {string} audience
  * @param {{ users?: object[], interest?: string, state?: string, city?: string }} ctx
  * @returns {string[]} uids
  */
 export function platformRecipients(audience, { users = [], interest = '', state = '', city = '' } = {}) {
-  const vivos = (users || []).filter((u) => u && (u.uid || u.id) && u.hidden !== true);
+  // Conta suspensa ou bloqueada não recebe: não tem como entrar para ler.
+  const vivos = (users || []).filter((u) => u && (u.uid || u.id) && u.hidden !== true
+    && !['suspended', 'blocked'].includes(u.account_status));
   const id = (u) => u.uid || u.id;
   switch (audience) {
     case A.ALL: return uniq(vivos.map(id));

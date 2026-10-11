@@ -5,6 +5,8 @@ import { useRankingWorkerStatus } from '@/modules/rating/hooks/useRating';
 import { describeRankingWorker } from '@/modules/rating/domain/rankingWorkerStatus';
 import { isPendingReview } from '@/v2/components/admin/training/adminTrainingView';
 import { buildInbox, inboxBadges, inboxTotals } from '@/modules/admin/domain/adminInbox';
+import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
+import { expiredSuspensions } from '@/modules/admin/domain/accountStatus';
 
 /** Uma fonte só vale quando a consulta respondeu; carregando ou falha = desconhecida. */
 const fonte = (ok, count) => (ok ? { ok: true, count } : { ok: false });
@@ -20,6 +22,7 @@ export function useAdminInbox(enabled = true) {
   const sinais = useAdminFlags(enabled);
   const cartas = useReportedLetters(enabled);
   const ranking = useRankingWorkerStatus(enabled);
+  const usuarios = useAllPlatformUsers({ enabled });
 
   const lista = useMemo(() => buildInbox({
     revisao: fonte(itens.isSuccess, (itens.data || []).filter(isPendingReview).length),
@@ -27,7 +30,8 @@ export function useAdminInbox(enabled = true) {
     sinais: fonte(!sinais.isLoading && !sinais.isError, sinais.flags.filter((f) => f.status === 'open').length),
     cartas: fonte(!cartas.isLoading && !cartas.isError, cartas.letters.length),
     ranking: fonte(ranking.isSuccess, describeRankingWorker(ranking.data).erro ? 1 : 0),
-  }), [itens.isSuccess, itens.data, denuncias.isSuccess, denuncias.data, sinais.isLoading, sinais.isError, sinais.flags,
+    suspensoes: fonte(usuarios.isSuccess, expiredSuspensions(usuarios.data || []).length),
+  }), [usuarios.isSuccess, usuarios.data, itens.isSuccess, itens.data, denuncias.isSuccess, denuncias.data, sinais.isLoading, sinais.isError, sinais.flags,
     cartas.isLoading, cartas.isError, cartas.letters, ranking.isSuccess, ranking.data]);
 
   return { itens: lista, badges: inboxBadges(lista), ...inboxTotals(lista) };
