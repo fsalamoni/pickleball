@@ -9,7 +9,7 @@ const mutacoes = {
 };
 const semMutacao = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => { const toast = vi.fn(); toast.success = vi.fn(); toast.error = vi.fn(); return { toast }; });
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({ useAthletes: () => ({ data: [] }) }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
@@ -86,14 +86,23 @@ async function renderSection() {
 }
 
 describe('PlayParticipantsSection', () => {
-  it('mostra a lixeira também para o participante organizador e permite removê-lo', async () => {
-    await renderSection();
+  it('mostra a lixeira também para o participante organizador e permite removê-lo (com "Desfazer")', async () => {
+    vi.useFakeTimers();
+    try {
+      await renderSection();
 
-    const botoesRemover = [...container.querySelectorAll('button')]
-      .filter((b) => b.title === 'Remover');
-    expect(botoesRemover).toHaveLength(4);
+      const botoesRemover = [...container.querySelectorAll('button')]
+        .filter((b) => b.title === 'Remover');
+      expect(botoesRemover).toHaveLength(4);
 
-    click(botoesRemover[0]);
-    expect(mutacoes.remover).toHaveBeenCalledWith('p1');
+      // Fase 4.2: some na hora, e a escrita só sai depois da janela de desfazer.
+      click(botoesRemover[0]);
+      expect(container.textContent).not.toContain('Flavio');
+      expect(mutacoes.remover).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(6000); });
+      expect(mutacoes.remover).toHaveBeenCalledWith('p1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

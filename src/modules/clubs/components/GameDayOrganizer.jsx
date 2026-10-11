@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useDesfazivel } from '@/v2/ui/useDesfazivel';
 import { toast } from 'sonner';
 import { Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, BarChart3, Link2, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,7 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
 
 function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading, falhou, recarregar }) {
   const [alvoDupla, setAlvoDupla] = useState(null);
+  const desfazivel = useDesfazivel();
   const addParticipant = useAddEventParticipant(eventId);
   const removeParticipant = useRemoveEventParticipant(eventId);
   // DUPLA VINCULADA: o mesmo diálogo do dia de jogo do atleta, sobre o
@@ -194,12 +196,12 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading,
     setGuestName('');
   };
 
-  const handleRemove = async (id) => {
-    try {
-      await removeParticipant.mutateAsync(id);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
-    }
+  // Remover com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
+  const handleRemove = (id) => {
+    const p = participants.find((x) => x.id === id);
+    desfazivel.agendar(id, `${p?.name || 'Participante'} removido do dia de jogo.`, () => removeParticipant.mutateAsync(id), {
+      aoFalhar: (err) => toast.error(err.message || 'Não foi possível remover.'),
+    });
   };
 
   const atLimit = participants.length >= GAME_DAY_LIMITS.MAX_PARTICIPANTS;
@@ -235,7 +237,7 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading,
           <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar hoje." />
         ) : (
           <div className="flex flex-wrap gap-2">
-            {participants.map((p) => (
+            {participants.filter((p) => !desfazivel.ocultos.has(p.id)).map((p) => (
               <div key={p.id} className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-2 text-sm">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
                 <span className="font-medium text-ink">{p.name}</span>

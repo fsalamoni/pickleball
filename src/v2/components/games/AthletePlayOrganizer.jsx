@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useDesfazivel } from '@/v2/ui/useDesfazivel';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
@@ -252,6 +253,7 @@ export function PlayParticipantsSection({
   const comGrupos = !!grupos?.ativo;
   const configGrupos = grupos?.config;
   const [guestName, setGuestName] = useState('');
+  const desfazivel = useDesfazivel();
   const [guestLevel, setGuestLevel] = useState('');
   const [guestGender, setGuestGender] = useState('');
   const [guestGroup, setGuestGroup] = useState(undefined); // undefined = automático
@@ -318,8 +320,12 @@ export function PlayParticipantsSection({
     }
   };
 
-  const handleRemove = async (id) => {
-    try { await removeParticipant.mutateAsync(id); } catch (err) { toast.error(err.message || 'Não foi possível remover.'); }
+  // Remover com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
+  const handleRemove = (id) => {
+    const p = participants.find((x) => x.id === id);
+    desfazivel.agendar(id, `${p?.name || 'Participante'} removido do dia de jogo.`, () => removeParticipant.mutateAsync(id), {
+      aoFalhar: (err) => toast.error(err.message || 'Não foi possível remover.'),
+    });
   };
 
   const canEditRow = (p) => isOwner || (p.user_id && p.user_id === me?.uid);
@@ -354,7 +360,7 @@ export function PlayParticipantsSection({
           <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar." />
         ) : (
           <div className="space-y-2">
-            {participants.map((p) => {
+            {participants.filter((p) => !desfazivel.ocultos.has(p.id)).map((p) => {
               const st = statusById.get(p.id) || p;
               const partnerName = partnerNameOf(p);
               const editable = canEditRow(p);
