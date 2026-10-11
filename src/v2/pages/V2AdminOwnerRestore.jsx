@@ -220,14 +220,14 @@ export default function V2AdminOwnerRestore() {
               recarregar.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <V2Button variant="outline" onClick={() => navigate('/admin/torneios')}>
-                Ir para /admin/torneios
+              <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=tournaments')}>
+                Ir para Painel › Torneios
               </V2Button>
-              <V2Button variant="outline" onClick={() => navigate('/admin/perfis')}>
-                Ir para /admin/perfis
+              <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=records')}>
+                Ir para Painel › Cadastros
               </V2Button>
-              <V2Button variant="outline" onClick={() => navigate('/admin/metricas')}>
-                Ir para /admin/metricas
+              <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=overview')}>
+                Ir para Painel › Visão geral
               </V2Button>
             </div>
           </div>

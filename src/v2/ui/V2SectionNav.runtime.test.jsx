@@ -9,7 +9,8 @@
  *  4. a seção e a aba ativas são anunciadas (`aria-current`);
  *  5. tocar numa seção ou numa aba devolve o item tocado;
  *  6. ⭐ as centrais usam esta peça (guarda de fonte): arena, professor,
- *     gestão do torneio e o painel do admin;
+ *     gestão do torneio; o painel do admin usa a navegação lateral
+ *     (`AdminConsoleNav`, Fase 3.4 do plano de UX) — nunca o trilho antigo;
  *  7. as setas do teclado movem o foco entre as seções (Home/End às pontas),
  *     sem trocar de seção sozinhas.
  */
@@ -147,7 +148,6 @@ describe('⭐ as centrais usam a navegação que quebra em linhas', () => {
     ['src/v2/pages/V2ArenaManage.jsx', 'Central da arena'],
     ['src/v2/pages/V2CoachAgenda.jsx', 'painel do professor'],
     ['src/v2/components/tournament/V2TournamentAdminPanel.jsx', 'gestão do torneio'],
-    ['src/v2/pages/V2AdminConsole.jsx', 'painel do admin'],
   ];
   for (const [arquivo, nome] of telas) {
     it(`${nome}`, () => {
@@ -157,6 +157,12 @@ describe('⭐ as centrais usam a navegação que quebra em linhas', () => {
       expect(src).not.toMatch(/overflow-x-auto">\s*<div className="inline-flex gap-1\.5 rounded-full/);
     });
   }
+
+  it('painel do admin: navegação lateral, sem o trilho antigo', () => {
+    const src = readFileSync('src/v2/pages/V2AdminConsole.jsx', 'utf8');
+    expect(src).toContain('<AdminConsoleNav');
+    expect(src).not.toMatch(/overflow-x-auto">\s*<div className="inline-flex gap-1\.5 rounded-full/);
+  });
 
   it('a Central da arena monta as duas linhas (Atender e Gerir)', () => {
     const src = readFileSync('src/v2/pages/V2ArenaManage.jsx', 'utf8');

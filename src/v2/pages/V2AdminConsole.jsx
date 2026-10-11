@@ -124,7 +124,8 @@ import {
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Textarea, V2Toggle, V2Select } from '@/v2/ui/primitives';
-import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
+import AdminConsoleNav from '@/v2/components/admin/AdminConsoleNav';
+import { flagsQueMudam, resolveAdminTab } from '@/modules/admin/domain/consoleNav';
 
 // Navegação em dois níveis: seções amplas por tema, cada uma com sub-abas.
 const SECTIONS = Object.freeze([
@@ -133,8 +134,9 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'community', label: 'Comunidade', icon: Users, tabs: [
     { id: 'tournaments', label: 'Torneios', icon: Trophy },
-    { id: 'records', label: 'Cadastros', icon: UserCog },
-    { id: 'profiles', label: 'Perfis', icon: UserCog },
+    // Cadastros + Perfis (Fase 3.4): uma pessoa, um lugar. As ferramentas do
+    // diretório (perfis públicos, moderação, migração) abrem dentro de Cadastros.
+    { id: 'records', label: 'Cadastros', icon: UserCog, keywords: ['usuários', 'perfis', 'excluir conta', 'contas excluídas', 'unificar', 'moderação'] },
     { id: 'partners', label: 'Parceiros', icon: Handshake },
   ] },
   { id: 'arenasSection', label: 'Arenas', icon: Building2, tabs: [
@@ -142,7 +144,7 @@ const SECTIONS = Object.freeze([
     { id: 'catalog', label: 'Catálogo', icon: ShoppingBasket },
   ] },
   { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
-    { id: 'flags', label: 'Flags por assunto', icon: Flag },
+    { id: 'flags', label: 'Flags por assunto', icon: Flag, keywords: ['funcionalidades', 'ligar', 'desligar'] },
   ] },
   { id: 'platform', label: 'Plataforma', icon: Palette, tabs: [
     { id: 'branding', label: 'Branding', icon: Palette },
@@ -151,7 +153,7 @@ const SECTIONS = Object.freeze([
   { id: 'governance', label: 'Governança', icon: ListChecks, tabs: [
     { id: 'access', label: 'Acessos', icon: KeyRound },
     { id: 'audit', label: 'Auditoria', icon: ListChecks },
-    { id: 'tools', label: 'Avançado', icon: Wrench },
+    { id: 'tools', label: 'Avançado', icon: Wrench, keywords: ['ferramentas', 'diagnóstico'] },
   ] },
 ]);
 
@@ -248,7 +250,6 @@ const DEFAULT_CONTENT = Object.freeze({
 
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
-  const enabled = true;
   const duprExportOn = true;
   const arenaModulesOn = true;
   const platformMarketingOn = true;
@@ -264,9 +265,9 @@ export default function V2AdminConsole() {
   );
   const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
-  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra allTabs.
-  const tabFromUrl = searchParams.get('tab');
-  const tab = allTabs.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
+  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra
+  // allTabs; ids antigos (`profiles`) seguem abrindo o lugar certo.
+  const tab = resolveAdminTab(searchParams.get('tab'), allTabs);
   const setTab = (id) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
@@ -274,9 +275,6 @@ export default function V2AdminConsole() {
   };
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
-  if (!enabled) return <Navigate to="/admin/metricas" replace />;
-
-  const activeSection = sections.find((s) => s.tabs.some((t) => t.id === tab)) || sections[0];
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -294,22 +292,22 @@ export default function V2AdminConsole() {
         }
       />
 
-      <ConsoleTabs tab={tab} setTab={setTab} activeSection={activeSection} sections={sections} />
+      <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <AdminConsoleNav sections={sections} tab={tab} onTab={setTab} />
 
-      <div className="mt-6">
+      <div className="mt-6 min-w-0 lg:mt-0">
         {tab === 'overview'   && <OverviewTab />}
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
         {tab === 'catalog'    && <AdminCatalogTab />}
-        {tab === 'records'    && <AdminUserRecordsTab />}
-        {tab === 'profiles'   && <ProfilesTab embedded />}
+        {tab === 'records'    && <RecordsTab />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
         {tab === 'content'    && <ContentTab />}
         {tab === 'access'     && <AdminAccessTab />}
         {tab === 'audit'      && <AuditTab />}
-        {tab === 'tools'      && <ToolsTab navigate={navigate} />}
+        {tab === 'tools'      && <ToolsTab navigate={navigate} onTab={setTab} />}
         {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
         {tab === 'arena-modules' && arenaModulesOn && <AdminArenaModulesTab />}
         {tab.startsWith('gam-') && gamificationOn && (
@@ -328,34 +326,37 @@ export default function V2AdminConsole() {
           </Suspense>
         )}
       </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- Cadastros + Perfis --------------------------- */
+
+/**
+ * Cadastros (corrigir, excluir, unificar) e, embaixo, as ferramentas do
+ * diretório que eram a aba Perfis — só montadas quando a pessoa pede, porque
+ * elas leem a coleção de perfis inteira ao abrir.
+ */
+function RecordsTab() {
+  const [perfis, setPerfis] = useState(false);
+  return (
+    <div className="space-y-6">
+      <AdminUserRecordsTab />
+      {perfis ? <ProfilesTab embedded /> : (
+        <V2Surface variant="compacto" className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">Ferramentas do diretório de perfis</h2>
+            <p className="text-sm text-gray-500">Restaurar perfil público, re-sincronizar o diretório, ocultar conta e migrar dados provisórios.</p>
+          </div>
+          <V2Button variant="secondary" size="sm" onClick={() => setPerfis(true)}>Abrir ferramentas</V2Button>
+        </V2Surface>
+      )}
     </div>
   );
 }
 
 /* ----------------------------- Tabs nav -------------------------------- */
-
-function ConsoleTabs({ tab, setTab, activeSection, sections = SECTIONS }) {
-  // A mesma barra das centrais (arena, professor, torneio): quebra em linhas,
-  // nunca rola para o lado — era o único lugar que ainda rolava.
-  return (
-    <div className="sticky top-2 z-20 -mx-4 mb-2 space-y-2 bg-paper-pure/80 px-4 py-2 backdrop-blur sm:top-3">
-      <V2SectionNav
-        sections={sections}
-        activeId={activeSection.id}
-        onSelect={(section) => setTab(section.tabs[0].id)}
-        ariaLabel="Seções do painel"
-      />
-      {activeSection.tabs.length > 1 && (
-        <V2SubTabs
-          tabs={activeSection.tabs.map((t) => ({ value: t.id, label: t.label, icon: t.icon }))}
-          activeValue={tab}
-          onSelect={(t) => setTab(t.value)}
-          ariaLabel={`Abas de ${activeSection.label}`}
-        />
-      )}
-    </div>
-  );
-}
 
 /* ---------------------- 1. Visão geral ------------------------------ */
 
@@ -851,15 +852,29 @@ function FlagRow({ flagKey, checked, disabled, onToggle }) {
 }
 
 /** Cabeçalho de grupo com contagem e ações em massa (ligar/desligar todas). */
-function FlagGroupHeader({ label, on, total, onBulk, busy }) {
+function FlagGroupHeader({ label, on, total, onBulk, busy, mudamAoLigar = [], mudamAoDesligar = [] }) {
+  // Nenhuma ação em massa sem confirmação — e a confirmação diz o QUE muda.
+  const [pedido, setPedido] = useState(null); // true = ligar, false = desligar
+  const mudam = pedido ? mudamAoLigar : mudamAoDesligar;
+  const verbo = pedido ? 'Ligar' : 'Desligar';
+  const nomes = mudam.map((k) => FEATURE_FLAG_META[k]?.label || humanizeFlagKey(k)).join(', ');
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <h3 className="font-display text-base font-bold text-ink">{label}</h3>
       <V2Badge tone="neutral">{on} / {total}</V2Badge>
       <div className="ml-auto flex items-center gap-1.5">
-        <V2Button variant="ghost" size="sm" disabled={busy || on === total} onClick={() => onBulk(true)}>Ligar todas</V2Button>
-        <V2Button variant="ghost" size="sm" disabled={busy || on === 0} onClick={() => onBulk(false)}>Desligar todas</V2Button>
+        <V2Button variant="ghost" size="sm" disabled={busy || mudamAoLigar.length === 0} onClick={() => setPedido(true)}>Ligar todas</V2Button>
+        <V2Button variant="ghost" size="sm" disabled={busy || mudamAoDesligar.length === 0} onClick={() => setPedido(false)}>Desligar todas</V2Button>
       </div>
+      <ConfirmDialog
+        open={pedido !== null}
+        onOpenChange={(v) => !v && setPedido(null)}
+        title={`${verbo} ${mudam.length === 1 ? '1 funcionalidade' : `${mudam.length} funcionalidades`} de ${label}?`}
+        description={`${pedido ? 'Vão ligar' : 'Vão desligar'}, para todo mundo: ${nomes}.`}
+        confirmLabel={`${verbo} todas`}
+        destructive={!pedido}
+        onConfirm={() => { onBulk(pedido); setPedido(null); }}
+      />
     </div>
   );
 }
@@ -958,7 +973,9 @@ function FlagsTab() {
               on={on}
               total={keys.length}
               busy={bulkBusy}
-              onBulk={(v) => bulkToggle(keys, v)}
+              mudamAoLigar={flagsQueMudam(keys, flags, true)}
+              mudamAoDesligar={flagsQueMudam(keys, flags, false)}
+              onBulk={(v) => bulkToggle(flagsQueMudam(keys, flags, v), v)}
             />
             {isArena ? (
               <div className="space-y-4">
@@ -1273,7 +1290,7 @@ function AuditTab() {
 
 /* ----------------------------- Tools tab -------------------------------- */
 
-function ToolsTab({ navigate }) {
+function ToolsTab({ navigate, onTab }) {
   return (
     <div className="space-y-4">
       <V2Surface>
@@ -1284,9 +1301,9 @@ function ToolsTab({ navigate }) {
           <div className="flex-1">
             <h2 className="font-display text-xl font-bold text-ink">Ferramentas avançadas</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Páginas de admin legadas (Métricas / Torneios / Parceiros) e ferramentas de diagnóstico
-              do owner. Mantidas por compatibilidade — a partir de agora, a entrada principal é
-              este Painel.
+              Atalhos para as abas do painel e ferramentas de diagnóstico do owner. As páginas
+              de admin antigas (/admin/metricas, /admin/torneios, /admin/parceiros) agora levam
+              para cá.
             </p>
           </div>
         </div>
@@ -1294,37 +1311,37 @@ function ToolsTab({ navigate }) {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"
-            onClick={() => navigate('/admin/metricas')}
+            onClick={() => onTab('overview')}
             className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
           >
             <Settings className="h-4 w-4 text-gray-400" />
             <div className="flex-1">
-              <div className="font-semibold text-ink">Métricas (legado)</div>
-              <div className="text-xs text-gray-500">Dashboard de métricas em página cheia</div>
+              <div className="font-semibold text-ink">Métricas</div>
+              <div className="text-xs text-gray-500">O resumo da plataforma (Visão geral)</div>
             </div>
             <ExternalLink className="h-3.5 w-3.5 opacity-40" />
           </button>
           <button
             type="button"
-            onClick={() => navigate('/admin/torneios')}
+            onClick={() => onTab('tournaments')}
             className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
           >
             <Trophy className="h-4 w-4 text-gray-400" />
             <div className="flex-1">
-              <div className="font-semibold text-ink">Torneios (legado)</div>
-              <div className="text-xs text-gray-500">Lista cheia de todos os torneios</div>
+              <div className="font-semibold text-ink">Torneios</div>
+              <div className="text-xs text-gray-500">Todos os torneios da plataforma</div>
             </div>
             <ExternalLink className="h-3.5 w-3.5 opacity-40" />
           </button>
           <button
             type="button"
-            onClick={() => navigate('/admin/parceiros')}
+            onClick={() => onTab('partners')}
             className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
           >
             <Handshake className="h-4 w-4 text-gray-400" />
             <div className="flex-1">
-              <div className="font-semibold text-ink">Parceiros (legado)</div>
-              <div className="text-xs text-gray-500">Lista cheia de todos os parceiros</div>
+              <div className="font-semibold text-ink">Parceiros</div>
+              <div className="text-xs text-gray-500">Logos, banners e links</div>
             </div>
             <ExternalLink className="h-3.5 w-3.5 opacity-40" />
           </button>

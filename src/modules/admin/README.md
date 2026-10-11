@@ -3,10 +3,11 @@
 Painel exclusivo de `platform_admin` (`/admin/*`).
 
 ## Status
-- **Páginas V2**: `V2AdminTournaments` (arquivar/excluir/desarquivar),
-  `V2AdminMetrics`, `V2AdminPartners`, `V2AdminConsole` (feature flags
-  1-click), `V2AdminProfiles`, `V2AdminBootstrap`, `V2AdminOwnerDebug`,
-  `V2AdminOwnerRestore`
+- **Páginas V2**: `V2AdminConsole` (`/admin/painel`, navegação lateral com
+  busca; abas Torneios, Parceiros, Cadastros+Perfis, flags…), `V2AdminProfiles`
+  (só embutido em Cadastros), `V2AdminOwnerDebug`, `V2AdminOwnerRestore`.
+  `/admin/torneios`, `/admin/metricas`, `/admin/parceiros` e `/admin/perfis`
+  redirecionam para a aba (Fase 3.4 do plano de UX, 2026-10-11)
 - **Services**: `adminService`, `platformSettingsService` (feature flags)
 - **Tests**: 30+
 

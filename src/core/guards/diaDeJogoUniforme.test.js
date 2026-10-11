@@ -186,7 +186,6 @@ describe('⭐ o miolo do dia de jogo tem UMA fonte', () => {
 describe('⭐ ranking e rating não dependem de botão', () => {
   const TELAS = [
     'src/v2/pages/V2AdminConsole.jsx',
-    'src/v2/pages/V2AdminMetrics.jsx',
     'src/v2/pages/V2AdminProfiles.jsx',
     'src/v2/pages/V2ClubDetail.jsx',
     'src/v2/components/rating/V2DuprRankingView.jsx',
