@@ -368,7 +368,7 @@ export function hexToHslTriplet(hex) {
 
 /**
  * As variáveis do shadcn (diálogos, menus, toasts, campos do V1) no escuro —
- * retunadas para a paleta ink/acid. O claro fica como está em `index.css`.
+ * retunadas para a paleta ink/acid. O claro está em SHADCN_LIGHT, logo abaixo.
  */
 export const SHADCN_DARK = Object.freeze({
   '--background': hexToHslTriplet(DARK.surface),
@@ -377,8 +377,8 @@ export const SHADCN_DARK = Object.freeze({
   '--card-foreground': hexToHslTriplet(DARK.text),
   '--popover': hexToHslTriplet(DARK.raised),
   '--popover-foreground': hexToHslTriplet(DARK.text),
-  '--primary': '155 72% 50%',
-  '--primary-foreground': '205 52% 12%',
+  '--primary': hexToHslTriplet(BRAND.acid.DEFAULT),
+  '--primary-foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
   '--secondary': hexToHslTriplet(DARK.raised2),
   '--secondary-foreground': hexToHslTriplet(DARK.text),
   '--muted': hexToHslTriplet(DARK.raised2),
@@ -389,7 +389,7 @@ export const SHADCN_DARK = Object.freeze({
   '--destructive-foreground': '0 0% 100%',
   '--border': hexToHslTriplet(DARK_NEUTRAL_LINE[200]),
   '--input': hexToHslTriplet(DARK_NEUTRAL_LINE[200]),
-  '--ring': '155 72% 50%',
+  '--ring': hexToHslTriplet(BRAND.acid.DEFAULT),
   '--sidebar-background': hexToHslTriplet(DARK.surface),
   '--sidebar-foreground': hexToHslTriplet(DARK.text),
   '--sidebar-primary': '155 72% 50%',
@@ -400,27 +400,34 @@ export const SHADCN_DARK = Object.freeze({
   '--sidebar-ring': '155 72% 50%',
 });
 
-/** As variáveis do shadcn no CLARO — cópia exata do `:root` de `index.css`. */
+/**
+ * As variáveis do shadcn no CLARO — a MESMA marca das telas V2 (ink/acid/paper),
+ * no lugar da esmeralda do tema padrão (DS-03 do plano de UX). O `:root` de
+ * `index.css` é cópia exata destes valores (há teste); quem muda, muda os dois.
+ * As `--sidebar-*` ficam como vieram: nenhuma tela as usa.
+ */
 export const SHADCN_LIGHT = Object.freeze({
-  '--background': '48 45% 97%',
-  '--foreground': '214 39% 16%',
+  '--background': hexToHslTriplet(BRAND.paper.DEFAULT),
+  '--foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
   '--card': '0 0% 100%',
-  '--card-foreground': '214 39% 16%',
+  '--card-foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
   '--popover': '0 0% 100%',
-  '--popover-foreground': '214 39% 16%',
-  '--primary': '161 78% 28%',
-  '--primary-foreground': '54 100% 97%',
-  '--secondary': '50 85% 91%',
-  '--secondary-foreground': '191 52% 19%',
-  '--muted': '154 24% 91%',
-  '--muted-foreground': '214 18% 38%',
-  '--accent': '152 59% 91%',
-  '--accent-foreground': '164 78% 18%',
-  '--destructive': '4 79% 57%',
+  '--popover-foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
+  // `primary` é ink (não acid): `text-primary` ainda aparece solto em telas
+  // antigas, e acid sobre branco não passa no contraste; ink passa em tudo.
+  '--primary': hexToHslTriplet(BRAND.ink.DEFAULT),
+  '--primary-foreground': '0 0% 100%',
+  '--secondary': hexToHslTriplet(BRAND.paper.dark),
+  '--secondary-foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
+  '--muted': hexToHslTriplet(twColors.gray[100]),
+  '--muted-foreground': hexToHslTriplet(twColors.gray[500]),
+  '--accent': hexToHslTriplet(twColors.gray[100]),
+  '--accent-foreground': hexToHslTriplet(BRAND.ink.DEFAULT),
+  '--destructive': hexToHslTriplet(twColors.red[500]),
   '--destructive-foreground': '0 0% 100%',
-  '--border': '156 16% 82%',
-  '--input': '156 16% 82%',
-  '--ring': '161 78% 28%',
+  '--border': hexToHslTriplet(twColors.gray[200]),
+  '--input': hexToHslTriplet(twColors.gray[200]),
+  '--ring': hexToHslTriplet(BRAND.ink.DEFAULT),
   '--sidebar-background': '205 52% 12%',
   '--sidebar-foreground': '148 36% 93%',
   '--sidebar-primary': '155 72% 50%',
