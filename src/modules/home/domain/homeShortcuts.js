@@ -12,7 +12,7 @@
  * importantes nunca ficam sem porta por causa de uma frente com muitos atalhos.
  */
 import { HOME_FOCUS } from './homeProfile.js';
-import { ROTULOS_ANTIGOS } from '../../../core/domain/navRotulos.js';
+import { NAV_ROTULOS } from '../../../core/domain/navRotulos.js';
 import { agendaDayLabel } from './homeAgenda.js';
 
 /** Quantos atalhos cabem sem virar um menu. */
@@ -34,8 +34,8 @@ export const SHORTCUTS_MAX = 8;
  * @returns {Array<{ id, label, hint, to, icon, badge? }>}
  */
 export function homeShortcuts(foci = [], ctx = {}) {
-  // Vocabulário da navegação (nav_v3): a tela passa `rotulos`; sem ele, os de sempre.
-  const rotulos = { ...ROTULOS_ANTIGOS, ...(ctx.rotulos || {}) };
+  // Vocabulário da navegação: a tela pode passar `rotulos`; sem ele, o padrão.
+  const rotulos = { ...NAV_ROTULOS, ...(ctx.rotulos || {}) };
   const arenas = (ctx.arenas || []).filter((a) => a?.id).slice(0, 2);
   const porFrente = {
     [HOME_FOCUS.ARENA]: arenas.length > 0

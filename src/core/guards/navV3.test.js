@@ -2,25 +2,29 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// Navegação v3 (flag nav_v3): o caminho ANTIGO precisa continuar intacto com a
-// flag desligada, e o novo tem de sair do domínio (bottomNavItems), nunca de
-// uma lista escrita na tela.
+// Navegação v3: nasceu atrás da flag `nav_v3` e virou código em 2026-10-11. O
+// que não pode regredir: a barra inferior sai do domínio (bottomNavItems), o
+// vocabulário sai de navRotulos, e nenhum ramo da flag volta.
 const src = readFileSync(resolve(process.cwd(), 'src/v2/components/V2Layout.jsx'), 'utf8');
 
-describe('navegação v3 (nav_v3)', () => {
-  it('a barra inferior v3 sai de bottomNavItems e a antiga segue como padrão', () => {
-    expect(src).toMatch(/items=\{navV3 \? bottomItemsV3 : BOTTOM_NAV_ITEMS\}/);
-    expect(src).toMatch(/import \{ bottomNavItems \} from '@\/core\/domain\/bottomNav'/);
-    expect(src).toMatch(/items = BOTTOM_NAV_ITEMS/);
+describe('navegação v3 (incorporada)', () => {
+  it('a flag nav_v3 não existe mais no layout', () => {
+    expect(src).not.toMatch(/navV3|NAV_V3|nav_v3|BOTTOM_NAV_ITEMS/);
   });
 
-  it('o cabeçalho só encolhe para 56 px com a flag ligada', () => {
-    expect(src).toMatch(/navV3 \? 'h-14 lg:h-20' : 'h-20'/);
+  it('a barra inferior sai de bottomNavItems, nunca de uma lista na tela', () => {
+    expect(src).toMatch(/import \{ bottomNavItems \} from '@\/core\/domain\/bottomNav'/);
+    expect(src).toMatch(/items=\{bottomItems\}/);
+  });
+
+  it('o cabeçalho do celular tem 56 px e respeita a área segura', () => {
+    expect(src).toMatch(/'h-14 lg:h-20'/);
+    expect(src).toMatch(/paddingTop: 'env\(safe-area-inset-top\)'/);
   });
 
   it('as âncoras de dica do menu continuam no lugar', () => {
     for (const a of ['botao-procuro-jogo', 'menu-principal', 'menu-celular', 'menu-arenas', 'menu-jogar']) {
-      expect(src, a).toContain(`'${a}'`.replace(/'/g, '') );
+      expect(src, a).toContain(a);
     }
   });
 
@@ -29,15 +33,14 @@ describe('navegação v3 (nav_v3)', () => {
     for (const chave of ['abaDiaDeJogo', 'vagas', 'pessoas', 'reservar', 'gamificacao', 'meusTorneios']) {
       expect(src, chave).toContain(`rotulos.${chave}`);
     }
-    // Os nomes antigos não voltam escritos à mão no menu.
-    expect(src).not.toMatch(/label: 'Procura-se jogo'|label: 'Encontrar jogadores'|label: 'Explorar quadras'/);
-    // "Pickleball" sai do 1º nível só com a flag.
-    expect(src).toMatch(/!navV3 && hub\(\{\n\s+id: 'aprender'/);
+    expect(src).not.toMatch(/label: 'Procura-se jogo'|label: 'Encontrar jogadores'|label: 'Explorar quadras'|label: 'Procuro jogo'/);
+    // "Pickleball" (regras, nivelamento) não volta ao 1º nível do menu.
+    expect(src).not.toMatch(/id: 'aprender'/);
   });
 
-  it('a paleta de comandos é lazy, só com a flag, e abre por Ctrl/⌘+K, campo e ícone', () => {
+  it('a paleta de comandos é lazy e abre por Ctrl/⌘+K, campo e ícone', () => {
     expect(src).toMatch(/const V2CommandPalette = lazy\(\(\) => import\('@\/v2\/components\/search\/V2CommandPalette'\)\)/);
-    expect(src).toMatch(/\{navV3 && paletaAberta && \(/);
+    expect(src).toMatch(/\{paletaAberta && \(/);
     for (const origem of ['teclado', 'cabecalho', 'icone']) expect(src, origem).toContain(`abrirPaleta('${origem}')`);
     expect(src).toMatch(/recordEvent\('search_open'/);
     const paleta = readFileSync(resolve(process.cwd(), 'src/v2/components/search/V2CommandPalette.jsx'), 'utf8');

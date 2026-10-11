@@ -41,8 +41,6 @@ import {
   Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { bottomNavItems } from '@/core/domain/bottomNav';
 import { navRotulos } from '@/core/domain/navRotulos';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
@@ -79,7 +77,7 @@ import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
 // Gamificação V2 em segundo plano: só baixa o código com a flag ligada e uma conta logada.
 const GamificationBackground = lazy(() => import('@/v2/components/gamification/GamificationBackground'));
-// Paleta de comandos (nav_v3): só baixa quando a pessoa abre.
+// Paleta de comandos: só baixa quando a pessoa abre.
 const V2CommandPalette = lazy(() => import('@/v2/components/search/V2CommandPalette'));
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
@@ -134,17 +132,17 @@ function jogarHubTo({ gameDayOn, openGamesOn }) {
   return openGamesOn ? '/procura-jogo' : '/encontrar-jogadores';
 }
 
-function resolvePageTitle(pathname, { userHubOn = false, navV3 = false } = {}) {
+function resolvePageTitle(pathname, { userHubOn = false } = {}) {
   if (pathname === '/') return 'Visão Geral';
   const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
   // Minha área (flag `user_hub`): o `/perfil` é a central da pessoa.
   if (match && userHubOn && match[0] === '/perfil') return 'Minha área';
   if (!match) return null;
-  // Rótulo que muda com o vocabulário da navegação (nav_v3) é função.
-  return typeof match[1] === 'function' ? match[1](navRotulos(navV3)) : match[1];
+  // Rótulo que vem do vocabulário da navegação é função.
+  return typeof match[1] === 'function' ? match[1](navRotulos()) : match[1];
 }
 
-function useV2Nav({ navV3 = false } = {}) {
+function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
   const performanceOn = true;
   const ratingOn = true;
@@ -164,7 +162,7 @@ function useV2Nav({ navV3 = false } = {}) {
   const settingsPageOn = true;
   const tournamentAdminConsoleOn = true;
   const { arenas: myArenas, pendingByArena, totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
-  const rotulos = navRotulos(navV3);
+  const rotulos = navRotulos();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
   const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
@@ -222,7 +220,7 @@ function useV2Nav({ navV3 = false } = {}) {
         coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu Perfil', icon: User },
         trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
-        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: navV3 ? rotulos.meusTorneios : (userHubOn ? 'Torneios que organizo' : 'Meus torneios'), icon: Trophy },
+        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },
         settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
       ].filter(Boolean),
     },
@@ -242,7 +240,7 @@ function useV2Nav({ navV3 = false } = {}) {
         { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, rotulos]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, rotulos]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -285,9 +283,9 @@ function useV2Nav({ navV3 = false } = {}) {
           { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         ],
       }),
-      // Navegação v3: quem GERE arena tem a porta dela no 1º nível, acima de
-      // "Arenas" (que é a lista para quem reserva). Com 2+ arenas, uma aba cada.
-      navV3 && showMyArenas && hub({
+      // Quem GERE arena tem a porta dela no 1º nível, acima de "Arenas" (que é
+      // a lista para quem reserva). Com 2+ arenas, uma aba cada.
+      showMyArenas && hub({
         id: 'minha-arena', label: myArenas.length === 1 ? (myArenas[0].name || 'Minha arena') : 'Minhas arenas',
         icon: LayoutDashboard, to: `/arenas/${myArenas[0].id}/gerir`,
         badge: myPendingBookings,
@@ -298,8 +296,6 @@ function useV2Nav({ navV3 = false } = {}) {
       }),
       (arenasOn || isPlatformAdmin) && hub({
         id: 'arenas', dica: 'menu-arenas', label: 'Arenas', icon: Building2, to: '/arenas',
-        badge: !navV3 && showMyArenas ? myPendingBookings : 0,
-        badgeHint: !navV3 && showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
         children: [
           { to: '/arenas', label: rotulos.reservar, icon: MapPin },
           arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
@@ -310,26 +306,15 @@ function useV2Nav({ navV3 = false } = {}) {
         children: [
           coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
           coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
-          // Na navegação v3 o painel do professor é hub próprio (abaixo).
-          isCoach && !navV3 && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
+          // O painel do professor é hub próprio (abaixo).
         ],
       }),
-      navV3 && isCoach && hub({
+      isCoach && hub({
         id: 'professor', label: 'Painel do professor', icon: GraduationCap, to: '/aulas',
         children: [{ to: '/aulas', label: 'Painel do professor', icon: GraduationCap }],
       }),
-      // Navegação v3 (§5.1): "Pickleball" sai do 1º nível — regras, nivelamento e
-      // história continuam na Ajuda (artigo "Pickleball — regras, nivelamento…")
-      // e nas rotas de sempre; o menu fica com o que a pessoa FAZ.
-      !navV3 && hub({
-        id: 'aprender', dica: 'menu-pickleball', label: 'Pickleball', icon: BookOpen, to: '/regras',
-        children: [
-          { to: '/regras', label: 'Regras', icon: BookOpen },
-          { to: '/nivelamento', label: 'Nivelamento', icon: Award },
-          sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
-          { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-        ],
-      }),
+      // "Pickleball" (regras, nivelamento, história) não fica no 1º nível (§5.1):
+      // continua na Ajuda e nas rotas de sempre; o menu fica com o que a pessoa FAZ.
       hub({
         id: 'perfil', dica: 'menu-perfil', label: userHubOn ? 'Minha área' : 'Perfil', icon: User, to: '/perfil',
         children: [
@@ -337,7 +322,7 @@ function useV2Nav({ navV3 = false } = {}) {
           trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           gamificationOn && { to: '/conquistas', label: 'Conquistas', icon: Award },
-          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: navV3 ? rotulos.meusTorneios : (userHubOn ? 'Torneios que organizo' : 'Meus torneios'), icon: Trophy },
+          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
       }),
@@ -351,7 +336,7 @@ function useV2Nav({ navV3 = false } = {}) {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, navV3, myArenas, pendingByArena, rotulos]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos]);
 
   return { sections, hubs, myArenas, pendingByArena, isCoach };
 }
@@ -418,24 +403,16 @@ function NavItem({ item, active, onClick }) {
   );
 }
 
-const BOTTOM_NAV_ITEMS = [
-  { to: '/', label: 'Início', icon: LayoutGrid, exact: true },
-  { to: '/torneios', label: 'Torneios', icon: Trophy, dica: 'nav-inferior-torneios' },
-  { to: '/atletas', label: 'Atletas', icon: Users },
-  { to: '/chat', label: 'Chat', icon: MessageSquare },
-  { to: '/perfil', label: 'Perfil', icon: User },
-];
-
 const BOTTOM_NAV_ICONS = {
   inicio: LayoutGrid, jogar: Swords, arenas: Building2, torneios: Trophy, treino: Dumbbell,
   painel: GraduationCap, central: LayoutDashboard, 'minha-area': User,
 };
 
 /**
- * O quarto item da barra v3 muda com a pessoa (core/domain/bottomNav.js). O
+ * O quarto item da barra muda com a pessoa (core/domain/bottomNav.js). O
  * Treino "recente" é preferência do navegador, por uid — zero banco.
  */
-function useBottomNavV3({ uid, pathname, arenas, pendingByArena, ehProfessor }) {
+function useBottomNav({ uid, pathname, arenas, pendingByArena, ehProfessor }) {
   const { data: meusTorneios = [] } = useMyTournaments();
   useEffect(() => {
     if (uid && pathname.startsWith('/treino')) writeViewPreference(uid, 'treino:ultimo-acesso', String(Date.now()));
@@ -448,7 +425,7 @@ function useBottomNavV3({ uid, pathname, arenas, pendingByArena, ehProfessor }) 
   }).map((i) => ({ ...i, icon: BOTTOM_NAV_ICONS[i.icon] || LayoutGrid })), [arenas, pendingByArena, ehProfessor, meusTorneios, uid]);
 }
 
-function MobileBottomNav({ pathname, userHubOn = false, items = BOTTOM_NAV_ITEMS }) {
+function MobileBottomNav({ pathname, userHubOn = false, items }) {
   return (
     <nav
       aria-label="Navegação principal"
@@ -623,26 +600,24 @@ export default function V2Layout({ children }) {
   const navigate = useNavigate();
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
-  const navV3 = useFeatureFlag(FEATURE_FLAG.NAV_V3);
-  const { sections, hubs, myArenas, pendingByArena, isCoach } = useV2Nav({ navV3 });
-  const bottomItemsV3 = useBottomNavV3({
+  const { sections, hubs, myArenas, pendingByArena, isCoach } = useV2Nav();
+  const bottomItems = useBottomNav({
     uid: user?.uid, pathname: location.pathname, arenas: myArenas, pendingByArena, ehProfessor: isCoach,
   });
   const userHubOn = true;
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // Paleta de comandos (nav_v3): ícone de busca, campo do cabeçalho e Ctrl/⌘+K.
+  // Paleta de comandos: ícone de busca, campo do cabeçalho e Ctrl/⌘+K.
   const [paletaAberta, setPaletaAberta] = useState(false);
   const abrirPaleta = (origem) => { recordEvent('search_open', { origem }); setPaletaAberta(true); };
   useEffect(() => {
-    if (!navV3) return undefined;
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); abrirPaleta('teclado'); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navV3]);
+  }, []);
   const userMenuOn = true;
   const bottomNavOn = true;
   const navHubsOn = true;
@@ -697,9 +672,9 @@ export default function V2Layout({ children }) {
   const globalSearchOn = true;
   useEffect(() => {
     if (!pageTitlesOn) return;
-    const title = resolvePageTitle(location.pathname, { userHubOn, navV3 });
+    const title = resolvePageTitle(location.pathname, { userHubOn });
     document.title = title ? `${title} · ${BRAND}` : BRAND;
-  }, [pageTitlesOn, location.pathname, userHubOn, navV3]);
+  }, [pageTitlesOn, location.pathname, userHubOn]);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -851,10 +826,10 @@ export default function V2Layout({ children }) {
         <header
           className={cn(
             'glass z-20 flex w-full items-center justify-between px-4 sm:px-6 lg:px-10',
-            navV3 ? 'h-14 lg:h-20' : 'h-20',
+            'h-14 lg:h-20',
             navHubsOn ? 'flex-shrink-0 border-b border-gray-100' : 'absolute top-0',
           )}
-          style={navV3 ? { paddingTop: 'env(safe-area-inset-top)', boxSizing: 'content-box' } : undefined}
+          style={{ paddingTop: 'env(safe-area-inset-top)', boxSizing: 'content-box' }}
         >
           <button
             onClick={() => setMobileOpen(true)}
@@ -865,30 +840,15 @@ export default function V2Layout({ children }) {
             <Menu className="h-5 w-5" />
           </button>
 
-          {navV3 ? (
-            <button type="button"
-              onClick={() => abrirPaleta('cabecalho')}
-              className="hidden max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 md:flex"
-              aria-label="Buscar ou ir para (Ctrl K)"
-            >
-              <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="flex-1 truncate">Buscar ou ir para…</span>
-              <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
-            </button>
-          ) : (
-          <form onSubmit={handleSearch} className="hidden max-w-md flex-1 md:block">
-            <div className="relative">
-              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full rounded-full border border-transparent bg-white py-3 pl-11 pr-4 text-sm text-ink shadow-sm transition-colors placeholder:text-gray-400 focus:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100"
-                placeholder="Buscar atletas..."
-              />
-            </div>
-          </form>
-          )}
+          <button type="button"
+            onClick={() => abrirPaleta('cabecalho')}
+            className="hidden max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 md:flex"
+            aria-label="Buscar ou ir para (Ctrl K)"
+          >
+            <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1 truncate">Buscar ou ir para…</span>
+            <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
+          </button>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
             {isRealPlatformAdmin && (
@@ -909,27 +869,23 @@ export default function V2Layout({ children }) {
             {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
                 elas desligadas — é por ele que a pessoa liga. */}
             <BotaoDicas />
-            {navV3 && (
-              <button type="button"
-                onClick={() => abrirPaleta('icone')}
-                aria-label="Buscar ou ir para"
-                title="Buscar"
-                className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper md:hidden"
-              >
-                <SearchIcon className="h-5 w-5" />
-              </button>
-            )}
-            {/* Navegação v3: Mensagens saiu da barra inferior e mora aqui, ao lado do sino. */}
-            {navV3 && (
-              <Link
-                to="/chat"
-                aria-label="Mensagens"
-                title="Mensagens"
-                className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper"
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Link>
-            )}
+            <button type="button"
+              onClick={() => abrirPaleta('icone')}
+              aria-label="Buscar ou ir para"
+              title="Buscar"
+              className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper md:hidden"
+            >
+              <SearchIcon className="h-5 w-5" />
+            </button>
+            {/* Mensagens saiu da barra inferior e mora aqui, ao lado do sino. */}
+            <Link
+              to="/chat"
+              aria-label="Mensagens"
+              title="Mensagens"
+              className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper"
+            >
+              <MessageSquare className="h-5 w-5" />
+            </Link>
             <NotificationsBell />
             {userMenuOn && (
               <UserMenu
@@ -942,10 +898,10 @@ export default function V2Layout({ children }) {
             <Link
               to="/procura-jogo"
               data-dica="botao-procuro-jogo"
-              aria-label={navV3 ? 'Entrar num jogo' : 'Procuro jogo'}
+              aria-label="Entrar num jogo"
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
             >
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{navV3 ? 'Entrar num jogo' : 'Procuro jogo'}</span>
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Entrar num jogo</span>
             </Link>
           </div>
         </header>
@@ -968,7 +924,7 @@ export default function V2Layout({ children }) {
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>
         )}
-        {navV3 && paletaAberta && (
+        {paletaAberta && (
           <Suspense fallback={null}>
             <V2CommandPalette
               open={paletaAberta}
@@ -981,7 +937,7 @@ export default function V2Layout({ children }) {
           </Suspense>
         )}
         {bottomNavOn && (
-          <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} items={navV3 ? bottomItemsV3 : BOTTOM_NAV_ITEMS} />
+          <MobileBottomNav pathname={location.pathname} userHubOn={userHubOn} items={bottomItems} />
         )}
       </div>
 
@@ -1005,22 +961,20 @@ export default function V2Layout({ children }) {
           </button>
         </div>
         <div className="hide-scrollbar flex-1 overflow-y-auto px-6 pb-10">
-          {navV3 && (
-            <form onSubmit={handleSearch} className="mb-4">
-              <label htmlFor="busca-gaveta" className="sr-only">Buscar</label>
-              <div className="relative">
-                <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
-                <input
-                  id="busca-gaveta"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full rounded-full border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-base text-white placeholder:text-white/60 focus:border-acid focus:outline-none"
-                  placeholder="Buscar atletas, torneios, arenas…"
-                />
-              </div>
-            </form>
-          )}
+          <form onSubmit={handleSearch} className="mb-4">
+            <label htmlFor="busca-gaveta" className="sr-only">Buscar</label>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
+              <input
+                id="busca-gaveta"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full rounded-full border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-base text-white placeholder:text-white/60 focus:border-acid focus:outline-none"
+                placeholder="Buscar atletas, torneios, arenas…"
+              />
+            </div>
+          </form>
           {navHubsOn ? (
             /* Hubs: lista enxuta (nível 1). As subpáginas aparecem na barra
                superior ao entrar no hub — igual ao desktop. */

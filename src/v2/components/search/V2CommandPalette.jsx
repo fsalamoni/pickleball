@@ -1,5 +1,5 @@
 /**
- * Paleta de comandos (plano de UX §5.4, atrás de `nav_v3`).
+ * Paleta de comandos (plano de UX §5.4).
  *
  * Um campo, uma lista: ações por papel, telas do menu (o mesmo rótulo), atletas,
  * torneios, arenas e clubes (as consultas do `/buscar` — nenhuma nova) e os
