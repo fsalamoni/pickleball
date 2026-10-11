@@ -29,7 +29,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   V2Badge, V2Button, V2Surface,
-  V2ErrorState, V2BackLink,
+  V2ErrorState, V2BackLink, V2Skeleton,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -103,7 +103,12 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
   }, [arenaId, arena, hydrated]);
 
   if (isLoading) {
-    return <div className="mx-auto max-w-3xl p-6 text-sm text-gray-500">Carregando…</div>;
+    return (
+      <div className="mx-auto max-w-3xl space-y-4 p-6" aria-busy="true" aria-label="Carregando a arena">
+        <V2Skeleton className="h-8 w-2/3" />
+        <V2Skeleton lines={4} />
+      </div>
+    );
   }
   if (!arena && arenaFalhou) {
     return (

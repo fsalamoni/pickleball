@@ -20,7 +20,12 @@ export const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => 
 ));
 DialogOverlay.displayName = 'DialogOverlay';
 
-export const DialogContent = React.forwardRef(({ className, children, hideClose = false, ...props }, ref) => (
+/**
+ * `sheet`: no celular o diálogo vira uma folha presa embaixo (cantos de cima
+ * arredondados, largura toda, até 92dvh) — diálogo longo centrado numa tela
+ * pequena deixa o rodapé longe do polegar. No `sm` para cima, nada muda.
+ */
+export const DialogContent = React.forwardRef(({ className, children, hideClose = false, sheet = false, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -30,6 +35,7 @@ export const DialogContent = React.forwardRef(({ className, children, hideClose 
         // deitado) o diálogo pode ser mais alto que a viewport; sem isso o topo
         // e o rodapé (campos e botão salvar) ficam cortados e inacessíveis.
         'fixed left-[50%] top-[50%] z-50 grid max-h-[90dvh] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto overscroll-contain border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out sm:rounded-lg',
+        sheet && 'max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:max-h-[92dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-2xl max-sm:border-b-0',
         className,
       )}
       {...props}

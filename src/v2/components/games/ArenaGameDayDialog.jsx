@@ -228,7 +228,7 @@ export default function ArenaGameDayDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+      <DialogContent sheet className="max-h-[90dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editando ? 'Editar dia de jogo' : 'Novo dia de jogo da arena'}</DialogTitle>
           <DialogDescription>

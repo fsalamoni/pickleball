@@ -70,6 +70,7 @@ import BrandMark from '@/v2/ui/BrandMark';
 import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import V2OfflineBanner from '@/v2/components/V2OfflineBanner';
+import InstallInviteBar from '@/v2/components/InstallInviteBar';
 // De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
 // do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
@@ -950,6 +951,7 @@ export default function V2Layout({ children }) {
         </header>
 
         <V2OfflineBanner />
+        <InstallInviteBar />
         {subnavHub && <SubnavBar hub={subnavHub} pathname={location.pathname} />}
 
         <main
