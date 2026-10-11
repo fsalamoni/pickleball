@@ -82,6 +82,6 @@ describe('flags', () => {
   it('o início sob medida vale sempre, e o contexto oferece todos os cards (funcionalidades permanentes)', () => {
     montar(<Flags />);
     expect(vistos.on).toBe(true);
-    expect(vistos.ctx).toEqual({ promocoes: true, evolucao: true, treino: true });
+    expect(vistos.ctx).toEqual({ evolucao: true, treino: true });
   });
 });

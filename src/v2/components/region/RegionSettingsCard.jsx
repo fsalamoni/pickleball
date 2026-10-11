@@ -6,24 +6,22 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 
-import { V2Surface } from '@/v2/ui/primitives';
+import { useMyRegion } from '@/core/lib/useMyRegion';
+import SettingsSection from '@/v2/components/settings/SettingsSection';
 import RegionPicker from './RegionPicker';
 
 export default function RegionSettingsCard() {
   const on = true;
   // Desligada, nenhuma opção que não faz nada.
+  const { rotulo } = useMyRegion();
   if (!on) return null;
   return (
-    <V2Surface id="minha-regiao" className="scroll-mt-6" data-dica="config-regiao">
-      <div className="flex items-center gap-2">
-        <MapPin className="h-5 w-5 text-ink" aria-hidden="true" />
-        <h2 className="font-display text-lg font-bold text-ink">Minha região</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="minha-regiao" dica="config-regiao" icon={MapPin} title="Minha região" summary={rotulo}>
+      <p className="text-sm text-gray-500">
         A plataforma mostra primeiro o que acontece aqui: dias de jogo e jogos com vaga, torneios, arenas,
         professores, clubes e promoções. O que fica de fora não some — cada tela diz quantos são e deixa ver também.
       </p>
       <RegionPicker className="mt-4" />
-    </V2Surface>
+    </SettingsSection>
   );
 }

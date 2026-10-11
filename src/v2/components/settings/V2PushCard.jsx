@@ -5,7 +5,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   enablePush, disablePush, isPushConfigured, getPermissionState,
 } from '@/core/services/pushService';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button } from '@/v2/ui/primitives';
+import SettingsSection from './SettingsSection';
 
 /**
  * Card de opt-in de notificações push (flag push_notifications).
@@ -46,13 +47,14 @@ export default function V2PushCard() {
     toast.success('Notificações push desativadas neste aparelho.');
   }
 
+  const resumo = !configured ? 'Em configuração na plataforma'
+    : state === 'unsupported' ? 'Sem suporte neste navegador'
+      : state === 'denied' ? 'Bloqueadas no navegador'
+        : granted ? 'Ativas neste aparelho' : 'Desativadas neste aparelho';
+
   return (
-    <V2Surface data-dica="config-push">
-      <div className="flex items-center gap-2">
-        <BellRing className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Notificações push</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="notificacoes-push" dica="config-push" icon={BellRing} title="Notificações push" summary={resumo}>
+      <p className="text-sm text-gray-500">
         Receba avisos no seu aparelho, mesmo com o app fechado: jogo chegando, novidades do
         torneio, convites de dupla e mensagens.
       </p>
@@ -82,6 +84,6 @@ export default function V2PushCard() {
           )}
         </div>
       )}
-    </V2Surface>
+    </SettingsSection>
   );
 }

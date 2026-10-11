@@ -20,7 +20,7 @@ import {
   SIDEBAR_ITEM_META, SIDEBAR_PRESET, SIDEBAR_PRESET_META, hiddenSidebarItems, sidebarPresetAvailable,
 } from '@/core/domain/sidebarNav';
 import { useSidebarNav } from '@/core/lib/useSidebarNav';
-import { V2Surface } from '@/v2/ui/primitives';
+import SettingsSection from './SettingsSection';
 
 const ICONES = {
   inicio: LayoutGrid, jogar: Swords, competir: Trophy, comunidade: Users, arenas: Building2, ensino: GraduationCap,
@@ -215,18 +215,17 @@ export default function SidebarSettingsCard() {
   }), [arenas.length, coach, isPlatformAdmin]);
   const nomes = useMemo(() => (arenas.length === 1 ? { 'minha-arena': arenas[0].name || 'Minha arena' } : {}), [arenas]);
 
+  const { itens, preset, padrao } = useSidebarNav(papeis);
+  const resumo = `${itens.length} ${itens.length === 1 ? 'item' : 'itens'} · ${padrao ? `padrão ${SIDEBAR_PRESET_META[preset]?.label || ''}`.trim() : 'personalizado'}`;
+
   return (
-    <V2Surface id="menu-lateral" data-dica="config-menu" className="scroll-mt-6">
-      <div className="flex items-center gap-2">
-        <PanelLeft className="h-5 w-5 text-ink" aria-hidden="true" />
-        <h2 className="font-display text-lg font-bold text-ink">Menu</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="menu-lateral" dica="config-menu" icon={PanelLeft} title="Menu" summary={resumo}>
+      <p className="text-sm text-gray-500">
         O que aparece na barra lateral e na gaveta do celular, e em que ordem. Padrões para atleta, arena e professor — e o seu, por cima.
       </p>
       <div className="mt-5">
         <SidebarPicker papeis={papeis} nomes={nomes} />
       </div>
-    </V2Surface>
+    </SettingsSection>
   );
 }

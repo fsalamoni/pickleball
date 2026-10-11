@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useState } from 'react';
+import React, { useCallback, useEffect, useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -35,6 +35,10 @@ import { readCollapsePreference, writeCollapsePreference } from '@/core/lib/coll
  * @param {string} [props.className] classes do card
  * @param {string} [props.bodyClassName] classes do corpo
  * @param {string} [props.dica] âncora `data-dica` do cartão (guias e pontos de dica)
+ * @param {string} [props.id] id do cartão (âncora de link, `/configuracoes#notificacoes`)
+ * @param {boolean} [props.forceOpen] verdadeiro ⇒ ABRE, por cima da preferência
+ *   (é o que faz um link direto cair num cartão aberto, e não num cabeçalho fechado)
+ * @param {string} [props.iconClassName] cor do ícone (o padrão é o verde do dia de jogo)
  */
 export default function V2CollapsibleCard({
   icon: Icon,
@@ -47,6 +51,9 @@ export default function V2CollapsibleCard({
   className,
   bodyClassName,
   dica,
+  id,
+  forceOpen = false,
+  iconClassName = 'text-green-600',
   children,
 }) {
   const { user } = useAuth();
@@ -55,9 +62,13 @@ export default function V2CollapsibleCard({
 
   // Lê a preferência UMA vez, na montagem. `null` = nunca salva → usa o padrão.
   const [collapsed, setCollapsed] = useState(() => {
+    if (forceOpen) return false;
     const saved = readCollapsePreference(uid, sectionId);
     return saved === null ? defaultCollapsed : saved;
   });
+  // Abrir por fora (o link mudou com o cartão já montado) não grava preferência:
+  // foi o link que abriu, não a pessoa.
+  useEffect(() => { if (forceOpen) setCollapsed(false); }, [forceOpen]);
 
   const toggle = useCallback(() => {
     setCollapsed((prev) => {
@@ -69,6 +80,7 @@ export default function V2CollapsibleCard({
 
   return (
     <div
+      id={id}
       data-dica={dica}
       className={cn(
         'overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm',
@@ -94,7 +106,7 @@ export default function V2CollapsibleCard({
               collapsed ? '-rotate-90' : '',
             )}
           />
-          {Icon && <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-green-600" />}
+          {Icon && <Icon aria-hidden="true" className={cn('h-5 w-5 shrink-0', iconClassName)} />}
           <span className="min-w-0">
             <span className="block truncate text-base font-semibold text-ink">
               {title}

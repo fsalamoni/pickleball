@@ -138,8 +138,12 @@ describe('Configurações → Página inicial', () => {
   it('com a flag: título, resumo do que está no início e o seletor; o link leva ao início', async () => {
     await montar(<HomeCardsSettingsCard />);
     expect(container.querySelector('#pagina-inicial')).toBeTruthy();
-    expect(container.textContent).toContain('Hoje: 3 cards: Dias de jogo, Horários da arena e Ranking.');
+    // Recolhido (2026-10-11): o cabeçalho já diz o que está no início.
+    expect(container.textContent).toContain('3 cards: Dias de jogo, Horários da arena e Ranking');
+    expect(ligados()).toEqual([]);
     expect(container.querySelector('a[href="/"]').textContent).toContain('Ver o início');
+    await clicar(container.querySelector('button[aria-expanded="false"]'));
+    expect(container.textContent).toContain('Hoje: 3 cards: Dias de jogo, Horários da arena e Ranking.');
     await clicar(linha('ranking').querySelector('[role="switch"]'));
     expect(container.textContent).toContain('Hoje: 2 cards: Dias de jogo e Horários da arena.');
   });
@@ -147,6 +151,7 @@ describe('Configurações → Página inicial', () => {
   it('sugere a arena para quem gere uma (do que já está em cache)', async () => {
     estado.arenas = [{ id: 'a1', name: 'Arena Sul' }];
     await montar(<HomeCardsSettingsCard />);
+    await clicar(container.querySelector('button[aria-expanded="false"]'));
     expect(container.textContent).toContain('Sugeridos para você');
     expect(linha('arena').querySelector('button').textContent).toContain('Adicionar');
   });

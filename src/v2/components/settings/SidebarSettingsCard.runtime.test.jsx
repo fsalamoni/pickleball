@@ -18,7 +18,11 @@ vi.mock('@/modules/coaches/hooks/useCoaches', () => ({ useCoach: () => ({ data: 
 import SidebarSettingsCard from './SidebarSettingsCard';
 
 let container; let root;
-const montar = () => act(() => { root.render(<SidebarSettingsCard />); });
+// O cartão nasce RECOLHIDO (2026-10-11), com o resumo no cabeçalho; os testes o abrem.
+const montar = () => {
+  act(() => { root.render(<SidebarSettingsCard />); });
+  act(() => { container.querySelector('button[aria-expanded="false"]').click(); });
+};
 const ordem = () => [...container.querySelectorAll('ol [data-item-menu]')].map((li) => li.dataset.itemMenu);
 const clicar = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 const botao = (texto) => [...container.querySelectorAll('button')].find((b) => b.textContent.includes(texto));
@@ -33,6 +37,16 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 
 describe('SidebarSettingsCard', () => {
+  it('⭐ recolhido, o cabeçalho diz quantos itens e o padrão; personalizado, diz isso', () => {
+    act(() => { root.render(<SidebarSettingsCard />); });
+    expect(ordem()).toEqual([]);
+    expect(container.textContent).toContain('7 itens · padrão Atleta');
+    act(() => { container.querySelector('button[aria-expanded="false"]').click(); });
+    clicar(container.querySelector('ul [data-item-menu="parceiros"] [role="switch"]'));
+    act(() => { container.querySelector('button[aria-expanded="true"]').click(); });
+    expect(container.textContent).toContain('8 itens · personalizado');
+  });
+
   it('atleta: padrão Atleta, Início primeiro e Minha área por último; os dois sem interruptor', () => {
     montar();
     expect(ordem()).toEqual(['inicio', 'jogar', 'competir', 'arenas', 'comunidade', 'ensino', 'perfil']);

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_FEATURE_FLAGS } from '@/core/featureFlags';
-import { subscribePlatformSettings } from '@/core/services/platformSettingsService';
+import { DEFAULT_PLATFORM_HOME, subscribePlatformSettings } from '@/core/services/platformSettingsService';
 
 const FeatureFlagsContext = createContext({
   flags: DEFAULT_FEATURE_FLAGS,
+  inicio: DEFAULT_PLATFORM_HOME,
   isLoading: true,
 });
 
@@ -14,11 +15,13 @@ const FeatureFlagsContext = createContext({
  */
 export function FeatureFlagsProvider({ children }) {
   const [flags, setFlags] = useState(DEFAULT_FEATURE_FLAGS);
+  const [inicio, setInicio] = useState(DEFAULT_PLATFORM_HOME);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = subscribePlatformSettings((settings) => {
       setFlags(settings.feature_flags);
+      setInicio(settings.inicio || DEFAULT_PLATFORM_HOME);
       setIsLoading(false);
     });
     return () => {
@@ -26,7 +29,7 @@ export function FeatureFlagsProvider({ children }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ flags, isLoading }), [flags, isLoading]);
+  const value = useMemo(() => ({ flags, inicio, isLoading }), [flags, inicio, isLoading]);
 
   return (
     <FeatureFlagsContext.Provider value={value}>
@@ -48,4 +51,13 @@ export function useFeatureFlags() {
 export function useFeatureFlag(flagKey) {
   const { flags } = useContext(FeatureFlagsContext);
   return Boolean(flags?.[flagKey]);
+}
+
+/**
+ * O que o admin decidiu mostrar a todo mundo no início (`{ promocoes }`).
+ * Vem do MESMO documento das flags — nenhuma assinatura a mais.
+ */
+export function usePlatformHome() {
+  const { inicio } = useContext(FeatureFlagsContext);
+  return inicio || DEFAULT_PLATFORM_HOME;
 }

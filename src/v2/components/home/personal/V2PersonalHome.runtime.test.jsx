@@ -16,7 +16,7 @@
  *  6. ⭐ o padrão é Dias de jogo, Horários da arena e Ranking — mesmo para
  *     quem gere arena e dá aula (o que a pessoa faz vira SUGESTÃO, não enche
  *     a tela);
- *  7. ⭐ a ordem é a da pessoa, e atalhos/destaques/evolução são cards como
+ *  7. ⭐ a ordem é a da pessoa, e atalhos/evolução são cards como
  *     os outros;
  *  8. ⭐ card escondido não é montado — e por isso não consulta nada;
  *  9. desligar tudo é escolha: a tela diz "enxuto" e oferece os dois caminhos;
@@ -41,6 +41,7 @@ function reset() {
   Object.assign(estado, {
     perfil: { platform_name: 'Ana Souza', city: 'Porto Alegre', state: 'RS', interests: [] },
     flags: {},
+    promocoes: undefined,
     arenas: [],
     pendentes: {},
     arenasQ: null,
@@ -69,7 +70,10 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
     updateUserProfile: estado.updateUserProfile,
   }),
 }));
-vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: (k) => Boolean(estado.flags[k]) }));
+vi.mock('@/core/lib/FeatureFlagsContext', () => ({
+  useFeatureFlag: (k) => Boolean(estado.flags[k]),
+  usePlatformHome: () => ({ promocoes: estado.promocoes !== false }),
+}));
 vi.mock('@/core/lib/useRelogio', () => ({ useRelogio: () => ({ ms: AGORA, hora: '15:00' }) }));
 vi.mock('@/core/services/observabilityService', () => ({ recordClientError: vi.fn(), recordEvent: vi.fn() }));
 vi.mock('@/modules/arenas/hooks/useMyArenaSummary', () => ({
@@ -351,7 +355,7 @@ const SOB_MEDIDA = { personalized_home: true, home_cards: true };
 /** A ordem na grade: seções e os cards que não são seção, como aparecem. */
 const ordem = () => [...container.querySelectorAll('[data-secao-inicio], [data-extra-inicio], nav[aria-label="Atalhos para você"]')]
   .map((el) => el.getAttribute('data-secao-inicio') || el.getAttribute('data-extra-inicio') || 'atalhos')
-  .filter((id) => id !== 'fila');
+  .filter((id) => id !== 'fila' && id !== 'destaques');
 const chipsDoTopo = () => {
   const rotulo = [...container.querySelectorAll('span')].find((s) => s.textContent === 'Seu início mostra');
   return [...rotulo.parentElement.querySelectorAll(':scope > span')].slice(1).map((s) => s.textContent);
@@ -416,6 +420,27 @@ describe('⭐ início sob medida', () => {
     expect(ordem()).toEqual(['jogar', 'treino']);
     expect(texto()).toContain('Treino sugerido');
     expect(container.querySelector('[data-secao-inicio="treino"]').className).not.toContain('xl:col-span-2');
+  });
+
+  it('⭐ promoções e destaques não são card: aparecem com qualquer escolha, fora da grade', async () => {
+    escolher([]);
+    await render();
+    const promos = container.querySelector('[data-extra-inicio="destaques"]');
+    expect(promos).toBeTruthy();
+    expect(promos.closest('.grid')).toBeNull();
+    // Uma escolha antiga com o card não quebra nem duplica.
+    act(() => root.unmount());
+    root = createRoot(container);
+    escolher(['jogar', 'destaques']);
+    await render();
+    expect(ordem()).toEqual(['jogar']);
+    expect(container.querySelectorAll('[data-extra-inicio="destaques"]').length).toBe(1);
+  });
+
+  it('⭐ o admin da plataforma desliga a área para todo mundo', async () => {
+    estado.promocoes = false;
+    await render();
+    expect(container.querySelector('[data-extra-inicio="destaques"]')).toBeNull();
   });
 
   it('⭐ o que tem prazo aparece com qualquer escolha (mesmo sem card nenhum)', async () => {

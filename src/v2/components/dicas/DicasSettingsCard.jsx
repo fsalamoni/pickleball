@@ -6,7 +6,8 @@
  */
 import React from 'react';
 import { Lightbulb, PlayCircle, RotateCcw } from 'lucide-react';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button } from '@/v2/ui/primitives';
+import SettingsSection from '@/v2/components/settings/SettingsSection';
 import { useDicas } from './DicasContext';
 import InterruptorDicas from './InterruptorDicas';
 
@@ -15,19 +16,13 @@ export default function DicasSettingsCard() {
   if (!d.on) return null;
   const feitos = d.feitos.length;
   return (
-    <V2Surface id="dicas" data-dica="config-dicas" className="scroll-mt-6">
+    <SettingsSection id="dicas" dica="config-dicas" icon={Lightbulb} title="Dicas" summary={d.ligadas ? 'Ligadas' : 'Desligadas'}>
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-ink" aria-hidden="true" />
-            <h2 className="font-display text-lg font-bold text-ink">Dicas</h2>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">
-            {d.ligadas
-              ? 'Ligadas: pontos pulsando nas telas mostram o que cada botão faz.'
-              : 'Desligadas: nada aparece sozinho. Os guias continuam a um toque no botão "Dicas" do topo.'}
-          </p>
-        </div>
+        <p className="text-sm text-gray-500">
+          {d.ligadas
+            ? 'Ligadas: pontos pulsando nas telas mostram o que cada botão faz.'
+            : 'Desligadas: nada aparece sozinho. Os guias continuam a um toque no botão "Dicas" do topo.'}
+        </p>
         <InterruptorDicas ligadas={d.ligadas} onAlternar={d.alternar} />
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -46,6 +41,6 @@ export default function DicasSettingsCard() {
         )}
       </div>
       <p className="mt-3 text-xs text-gray-500">A escolha fica salva neste aparelho, na sua conta.</p>
-    </V2Surface>
+    </SettingsSection>
   );
 }

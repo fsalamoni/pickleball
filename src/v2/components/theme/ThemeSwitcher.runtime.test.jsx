@@ -16,11 +16,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const tema = { disponivel: true, escolha: 'claro', efetivo: 'claro', setEscolha: vi.fn() };
 vi.mock('@/core/lib/ThemeContext', () => ({ useTheme: () => tema }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'ana' } }) }));
 
 import { ThemeDrawerSwitcher, ThemeSettingsCard } from './ThemeSwitcher';
 
 let container; let root;
 beforeEach(() => {
+  window.localStorage.clear();
   Object.assign(tema, { disponivel: true, escolha: 'claro', efetivo: 'claro', setEscolha: vi.fn() });
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -32,6 +34,10 @@ afterEach(() => {
 });
 
 const render = (el) => act(() => { root.render(el); });
+// Em Configurações o cartão nasce RECOLHIDO (2026-10-11): o cabeçalho diz a
+// escolha ("Claro") e abrir é para mudar.
+const abrir = () => act(() => { container.querySelector('button[aria-expanded="false"]').click(); });
+const renderAberto = (el) => { render(el); abrir(); };
 const radios = () => [...container.querySelectorAll('[role="radio"]')];
 const tecla = (el, key) => act(() => {
   el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
@@ -82,8 +88,21 @@ describe('a gaveta do celular', () => {
 });
 
 describe('Configurações', () => {
-  it('três cartões com miniatura, cada uma no seu modo', () => {
+  it('⭐ nasce recolhido, com a escolha no cabeçalho; abrir mostra as três', () => {
     render(<ThemeSettingsCard />);
+    expect(container.textContent).toContain('Aparência');
+    expect(container.textContent).toContain('Claro');
+    expect(radios()).toHaveLength(0);
+    abrir();
+    expect(radios()).toHaveLength(3);
+    act(() => { container.querySelector('button[aria-expanded="true"]').click(); });
+    Object.assign(tema, { escolha: 'automatico', efetivo: 'escuro' });
+    render(<ThemeSettingsCard />);
+    expect(container.textContent).toContain('Automático · agora no escuro');
+  });
+
+  it('três cartões com miniatura, cada uma no seu modo', () => {
+    renderAberto(<ThemeSettingsCard />);
     expect(container.textContent).toContain('Aparência');
     const [claro, escuro, auto] = radios();
     expect(claro.querySelector('.tema-claro')).toBeTruthy();
@@ -96,7 +115,7 @@ describe('Configurações', () => {
   });
 
   it('cada cartão tem descrição ligada a ele', () => {
-    render(<ThemeSettingsCard />);
+    renderAberto(<ThemeSettingsCard />);
     radios().forEach((r) => {
       const d = document.getElementById(r.getAttribute('aria-describedby'));
       expect(d.textContent.length).toBeGreaterThan(10);
@@ -105,7 +124,7 @@ describe('Configurações', () => {
 
   it('no automático, diz em que modo o aparelho está agora', () => {
     Object.assign(tema, { escolha: 'automatico', efetivo: 'escuro' });
-    render(<ThemeSettingsCard />);
+    renderAberto(<ThemeSettingsCard />);
     expect(container.textContent).toContain('Agora o aparelho está no escuro.');
     Object.assign(tema, { escolha: 'escuro', efetivo: 'escuro' });
     render(<ThemeSettingsCard />);
@@ -113,7 +132,7 @@ describe('Configurações', () => {
   });
 
   it('avisa que telão, totem e impressão continuam claros', () => {
-    render(<ThemeSettingsCard />);
+    renderAberto(<ThemeSettingsCard />);
     expect(container.textContent).toMatch(/telão, o totem da arena e a impressão continuam claros/);
   });
 });

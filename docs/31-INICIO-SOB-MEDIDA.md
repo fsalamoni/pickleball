@@ -20,7 +20,7 @@
 | Antes (Onda CG) | Com o início sob medida |
 |---|---|
 | A tela decidia as seções: papel real → atividade → interesses → padrão. Quem gere arena, dá aula e organiza torneio via **tudo** empilhado | A pessoa decide: **Dias de jogo, Horários da arena e Ranking** de começo; qualquer um sai, qualquer outro entra |
-| Atalhos, destaques e evolução sempre na tela (fora das seções) | São **cards como os outros**, na posição que a pessoa quiser |
+| Atalhos e evolução sempre na tela (fora das seções) | São **cards como os outros**, na posição que a pessoa quiser. Promoções e destaques ficaram fora dos cards (ver abaixo) |
 | "Personalizar" mudava os **interesses** do perfil (escrita no banco) | "Personalizar" abre o **seletor dos cards** (nenhuma escrita no banco) |
 | — | O que a pessoa FAZ na plataforma vira **sugestão** no seletor ("Porque você faz isso na plataforma"), não enche a tela |
 
@@ -75,7 +75,6 @@ cards novos cobrem o que ficava fora delas:
 | Ranking | `ranking` | ⭐ padrão |
 | Sua agenda | `agenda` | largo |
 | Atalhos | `atalhos` | largo |
-| Promoções e destaques | `destaques` | largo · só com uma fonte de promoção ligada (`arena_modules`, `platform_marketing` ou `coach_marketing`) |
 | Sua evolução | `evolucao` | largo · só com `action_home` |
 | Torneios | `torneios` | |
 | Seu último torneio | `resultado` | escolhido e sem resultado, diz que ainda não há (não some) |
@@ -86,6 +85,16 @@ cards novos cobrem o que ficava fora delas:
 | Sua arena | `arena` | |
 | Suas aulas (professor) | `professor` | |
 
+**Promoções e destaques NÃO são card** (desde 2026-10-11, a pedido do dono):
+a área aparece para todo mundo, acima da grade, sempre que houver cupom ou
+campanha na região da pessoa (o nacional conta) — e **some** quando não há
+nada para mostrar (`HomePromoBanners` devolve `null` com zero banners). O
+admin da plataforma liga ou desliga a área para todos em **Painel admin →
+Funcionalidades → Início de todo mundo** (`platform_settings/global.inicio.promocoes`;
+ausente ⇒ ligada; zero regra nova — o documento já era lido por todos e
+escrito só pelo admin). O id `destaques` guardado numa escolha antiga é
+descartado por `normalizeHomeCards`, como qualquer id desconhecido.
+
 **Card de funcionalidade desligada** (`homeCardAvailable`): não é oferecido e
 não aparece, mas **continua guardado** na escolha — volta sozinho no dia em
 que a funcionalidade for ligada.
@@ -93,7 +102,7 @@ que a funcionalidade for ligada.
 ## 4. A grade não deixa buraco
 
 A grade tem duas colunas a partir de `xl`. Os cards **largos** (agenda,
-atalhos, destaques, evolução) ocupam a linha inteira; e, entre dois largos ou
+atalhos, evolução) ocupam a linha inteira; e, entre dois largos ou
 no fim, o card que ficaria **sozinho** numa linha também se estica
 (`wideHomeCards`). É o caso do próprio padrão: três cards — dois numa linha e
 o Ranking na linha de baixo inteira, em vez de sozinho com um buraco ao lado.

@@ -26,16 +26,9 @@ export function useHomeCardsOn() {
 
 /** O que está ligado agora e muda o que cada card oferece. */
 export function useHomeCardsContext() {
-  const arenas = true;
-  const plataforma = true;
-  const professores = true;
   const evolucao = true;
   const treino = true;
-  return useMemo(() => ({
-    promocoes: arenas || plataforma || professores,
-    evolucao,
-    treino,
-  }), [arenas, plataforma, professores, evolucao, treino]);
+  return useMemo(() => ({ evolucao, treino }), [evolucao, treino]);
 }
 
 /**

@@ -19,7 +19,7 @@ import {
 } from './homeCards.js';
 import { FOCUS_REASON, HOME_FOCUS, HOME_SECTION, resolveHomeFoci } from './homeProfile.js';
 
-const TUDO = { promocoes: true, evolucao: true, treino: true };
+const TUDO = { evolucao: true, treino: true };
 
 describe('⭐ o padrão', () => {
   it('são três cards: Dias de jogo, Horários da arena e Ranking — nessa ordem', () => {
@@ -52,7 +52,7 @@ describe('o catálogo', () => {
       expect(HOME_CARD_META[s], `seção ${s} sem card`).toBeTruthy();
       expect(isSectionCard(s)).toBe(true);
     });
-    ['atalhos', 'destaques', 'evolucao'].forEach((c) => expect(isSectionCard(c)).toBe(false));
+    ['atalhos', 'evolucao'].forEach((c) => expect(isSectionCard(c)).toBe(false));
   });
 
   it('todo card tem rótulo, descrição e grupo em pt-BR', () => {
@@ -101,9 +101,7 @@ describe('a escolha', () => {
 });
 
 describe('o que depende de outra funcionalidade', () => {
-  it('destaques precisam de alguma fonte de promoção; evolução, da sua flag', () => {
-    expect(homeCardAvailable('destaques', {})).toBe(false);
-    expect(homeCardAvailable('destaques', { promocoes: true })).toBe(true);
+  it('evolução depende da sua flag; o inventado nunca entra', () => {
     expect(homeCardAvailable('evolucao', {})).toBe(false);
     expect(homeCardAvailable('evolucao', { evolucao: true })).toBe(true);
     expect(homeCardAvailable('jogar', {})).toBe(true);
@@ -118,10 +116,17 @@ describe('o que depende de outra funcionalidade', () => {
   });
 
   it('⭐ fica de fora da tela, mas não é esquecido na escolha', () => {
-    const escolha = ['jogar', 'destaques', 'ranking'];
+    const escolha = ['jogar', 'evolucao', 'ranking'];
     expect(visibleHomeCards(escolha, {})).toEqual(['jogar', 'ranking']);
     expect(visibleHomeCards(escolha, TUDO)).toEqual(escolha);
-    expect(homeCardsOfGroup(HOME_CARD_GROUP.ROTINA, {})).not.toContain('destaques');
+    expect(homeCardsOfGroup(HOME_CARD_GROUP.ROTINA, {})).not.toContain('evolucao');
+  });
+
+  it('⭐ "Promoções e destaques" deixou de ser card (2026-10-11): a escolha antiga é esquecida', () => {
+    // A área aparece para todo mundo, fora dos cards, quando há algo na região;
+    // quem a tinha escolhido não ganha um buraco nem um card desconhecido.
+    expect(HOME_CARD_META.destaques).toBeUndefined();
+    expect(visibleHomeCards(['jogar', 'destaques'], TUDO)).toEqual(['jogar']);
   });
 });
 
@@ -162,7 +167,7 @@ describe('o resumo', () => {
     expect(homeCardsSummary(DEFAULT_HOME_CARDS)).toBe('3 cards: Dias de jogo, Horários da arena e Ranking');
     expect(homeCardsSummary(['ranking'])).toBe('1 card: Ranking');
     expect(homeCardsSummary([])).toBe('Nenhum card escolhido');
-    expect(homeCardsSummary(['destaques'], {})).toBe('Nenhum card escolhido');
+    expect(homeCardsSummary(['evolucao'], {})).toBe('Nenhum card escolhido');
   });
 });
 
@@ -177,10 +182,10 @@ describe('⭐ a grade não deixa buraco', () => {
     expect(largos(['jogar', 'reservar', 'ranking', 'torneios'])).toEqual([]);
   });
 
-  it('agenda, atalhos, destaques e evolução são sempre largos, e quebram a sequência', () => {
+  it('agenda, atalhos e evolução são sempre largos, e quebram a sequência', () => {
     // jogar sobra antes da agenda; reservar e ranking fecham a linha depois dela.
     expect(largos(['jogar', 'agenda', 'reservar', 'ranking'])).toEqual(['jogar', 'agenda']);
-    expect(largos(['atalhos', 'ranking', 'evolucao', 'destaques'])).toEqual(['atalhos', 'ranking', 'evolucao', 'destaques']);
+    expect(largos(['atalhos', 'ranking', 'evolucao'])).toEqual(['atalhos', 'ranking', 'evolucao']);
   });
 
   it('o que sobra é o ÚLTIMO da sequência — a ordem da pessoa não muda', () => {
