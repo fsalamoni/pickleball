@@ -19,7 +19,7 @@ function PhotoGrid({ photos, canManage, onRemove, alt, emptyText, removeText }) 
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
       {photos.map((p) => (
         <div key={p.id} className="group relative overflow-hidden rounded-2xl">
-          <PhotoLightbox src={p.url} alt={alt} trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in object-cover" />} />
+          <PhotoLightbox src={p.url} alt={alt} trigger={<img src={p.url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in object-cover" />} />
           {canManage && (
             <ConfirmDialog
               title="Remover foto?"

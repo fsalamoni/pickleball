@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogoImg } from '@/v2/ui/BrandMark';
 import { Link } from 'react-router-dom';
 import {
   Trophy,
@@ -94,7 +95,7 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b border-gray-100 bg-paper/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/logo-claro.png" alt="PickleRush" className="h-9 w-9 object-contain" />
+            <LogoImg versao="claro" className="h-9 w-9" />
             <span className="font-display text-2xl font-bold tracking-tight text-ink">PickleRush</span>
           </Link>
 
@@ -253,7 +254,7 @@ export default function Landing() {
       <footer className="border-t border-gray-100 bg-paper-pure py-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-gray-500">
           <div className="flex items-center gap-2">
-            <img src="/logo-claro.png" alt="PickleRush" className="h-6 w-6 object-contain" />
+            <LogoImg versao="claro" className="h-6 w-6" />
             <span>© {new Date().getFullYear()} PickleRush</span>
           </div>
           <div className="flex flex-wrap gap-4">

@@ -42,7 +42,7 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
     <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-paper-pure p-4 transition hover:border-gray-200">
       <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
         {candidate.photo_url ? (
-          <img src={candidate.photo_url} alt={candidate.platform_name || 'Atleta'} className="h-full w-full object-cover" />
+          <img src={candidate.photo_url} alt={candidate.platform_name || 'Atleta'} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <span className="font-display text-base font-bold text-ink">
             {(candidate.platform_name || candidate.full_name || 'A').slice(0, 1).toUpperCase()}

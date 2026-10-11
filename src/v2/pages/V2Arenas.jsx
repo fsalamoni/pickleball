@@ -174,7 +174,7 @@ function ArenaCard({ arena, onIntencao, distancia = null }) {
     >
       <div className="relative h-48 overflow-hidden bg-ink">
         {cover ? (
-          <img src={cover} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-white/30"><Building2 className="h-12 w-12" /></div>
         )}

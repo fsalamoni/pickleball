@@ -237,7 +237,7 @@ export default function V2CoachProfile() {
                 key={url || i}
                 src={url}
                 alt={`Foto ${i + 1} de ${coach.display_name}`}
-                trigger={<img src={url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />}
+                trigger={<img src={url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />}
               />
             ))}
           </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LogoImg } from '@/v2/ui/BrandMark';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Mail, Lock, User as UserIcon, Sparkles, Trophy } from 'lucide-react';
@@ -99,7 +100,7 @@ export default function Login() {
           <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
           <div className="relative z-10">
             <Link to="/" className="inline-flex items-center gap-3">
-              <img src="/logo-escuro.png" alt="PickleRush" className="h-11 w-auto object-contain object-left" />
+              <LogoImg versao="escuro" className="h-11 w-auto object-left" />
               <span className="font-display text-2xl font-bold tracking-tight text-white">PickleRush</span>
             </Link>
           </div>
@@ -133,7 +134,7 @@ export default function Login() {
           <V2Surface className="w-full max-w-lg p-6 shadow-organic sm:p-8">
             <div className="text-center">
               <Link to="/" className="mx-auto mb-6 inline-flex items-center gap-3 lg:hidden">
-                <img src="/logo-claro.png" alt="PickleRush" className="h-8 w-auto object-contain" />
+                <LogoImg versao="claro" className="h-8 w-auto" />
                 <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
               </Link>
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-acid shadow-glow">

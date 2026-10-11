@@ -64,7 +64,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
-import BrandMark from '@/v2/ui/BrandMark';
+import BrandMark, { LogoImg } from '@/v2/ui/BrandMark';
 import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import V2OfflineBanner from '@/v2/components/V2OfflineBanner';
@@ -949,7 +949,7 @@ export default function V2Layout({ children }) {
       >
         <div className="flex items-center justify-between p-6">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/logo-escuro.png" alt={BRAND} className="h-8 object-contain" />
+            <LogoImg versao="escuro" alt={BRAND} className="h-8" />
             <span className="font-display text-xl font-bold tracking-tight text-white">{BRAND}</span>
           </Link>
           <button
