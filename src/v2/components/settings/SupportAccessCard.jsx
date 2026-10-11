@@ -5,7 +5,8 @@
  */
 import React from 'react';
 import { Eye } from 'lucide-react';
-import { V2Surface, V2Skeleton, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Skeleton, V2ErrorState } from '@/v2/ui/primitives';
+import SettingsSection from './SettingsSection';
 import { useMyAccessLogs } from '@/modules/admin/hooks/usePlatformUsers';
 import { REVEAL_REASON_META } from '@/modules/admin/domain/supportAccess';
 
@@ -16,13 +17,13 @@ const quando = (ms) => (ms
 
 export default function SupportAccessCard({ uid }) {
   const { data = [], isLoading, isError, refetch, isSuccess } = useMyAccessLogs(uid);
+  // Falha não é vazio: sem resposta, o cabeçalho não afirma "nenhum acesso".
+  const resumo = !isSuccess ? undefined
+    : data.length === 0 ? 'Nenhum acesso registrado'
+      : `${data.length} ${data.length === 1 ? 'acesso registrado' : 'acessos registrados'}`;
   return (
-    <V2Surface id="acessos-do-suporte" className="scroll-mt-4">
-      <div className="flex items-center gap-2">
-        <Eye className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Acessos do suporte</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="acessos-do-suporte" icon={Eye} title="Acessos do suporte" summary={resumo}>
+      <p className="text-sm text-gray-500">
         Seus dados de contato ficam mascarados para o suporte da plataforma. Cada vez que alguém os revela,
         o acesso é registrado aqui, com o motivo, e você é avisado.
       </p>
@@ -46,6 +47,6 @@ export default function SupportAccessCard({ uid }) {
           </ul>
         )}
       </div>
-    </V2Surface>
+    </SettingsSection>
   );
 }

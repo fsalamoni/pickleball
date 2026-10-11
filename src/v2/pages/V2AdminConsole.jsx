@@ -62,11 +62,9 @@ import {
 } from '@/core/featureFlagGroups';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { useFeatureFlags, usePlatformHome } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
-import {
-  setFeatureFlag,
-} from '@/core/services/platformSettingsService';
+import { setFeatureFlag, setHomePromosEnabled } from '@/core/services/platformSettingsService';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import RankingAutomatico from '@/modules/admin/components/RankingAutomatico';
 import {
@@ -724,6 +722,49 @@ function FlagGroupHeader({ label, on, total, onBulk, busy, mudamAoLigar = [], mu
   );
 }
 
+/**
+ * O que TODO MUNDO vê no início, decidido pelo admin: hoje, a área
+ * "Promoções e destaques" (cupons e campanhas da região da pessoa). Nasce
+ * ligada; some sozinha quando não há nada para mostrar na região.
+ */
+function HomeAreasCard() {
+  const { user } = useAuth();
+  const { promocoes } = usePlatformHome();
+  const [busy, setBusy] = useState(false);
+  async function alternar(on) {
+    setBusy(true);
+    try {
+      await setHomePromosEnabled(on, user);
+      toast.success(on ? 'Promoções e destaques ligados no início de todo mundo.' : 'Promoções e destaques desligados do início.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível salvar.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <V2Surface>
+      <div className="flex items-center gap-2">
+        <Megaphone className="h-5 w-5 text-ink" aria-hidden="true" />
+        <h2 className="font-display text-lg font-bold text-ink">Início de todo mundo</h2>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        Áreas que a plataforma mostra a todas as pessoas, fora dos cards que cada uma escolhe.
+      </p>
+      <div className="mt-3 rounded-3xl border border-gray-100 bg-paper-pure p-4">
+        <V2Toggle
+          id="inicio-promocoes"
+          checked={promocoes}
+          disabled={busy}
+          onChange={alternar}
+          label="Promoções e destaques"
+          hint="Cupons e campanhas das arenas, da plataforma e dos professores, na região de cada pessoa. Sem nada na região, a área nem aparece."
+        />
+      </div>
+    </V2Surface>
+  );
+}
+
 function FlagsTab() {
   const { user } = useAuth();
   const { flags, isLoading, refresh } = useFeatureFlags();
@@ -798,6 +839,8 @@ function FlagsTab() {
           />
         </div>
       </V2Surface>
+
+      <HomeAreasCard />
 
       {groupsToRender.map((group) => {
         const keys = (buckets[group.id] || []).filter(matches);

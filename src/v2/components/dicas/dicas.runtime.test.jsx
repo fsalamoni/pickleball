@@ -306,6 +306,9 @@ describe('Configurações → Dicas e o "Mostre na tela" dos artigos', () => {
     await montar({ extra: <DicasSettingsCard /> });
     const cartao = document.body.querySelector('#dicas');
     expect(cartao).not.toBeNull();
+    // Nasce recolhido, dizendo como está; abrir é para mudar.
+    expect(cartao.textContent).toContain('Desligadas');
+    await clicar(cartao.querySelector('button[aria-expanded="false"]'));
     await clicar(cartao.querySelector('[role="switch"]'));
     expect(window.localStorage.getItem('v2:view:ana:dicas:ligadas')).toBe('1');
   });

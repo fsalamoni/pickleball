@@ -18,11 +18,11 @@ import React, { useId, useRef } from 'react';
 import { Check, Moon, Palette, Sun, SunMoon } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useTheme } from '@/core/lib/ThemeContext';
+import SettingsSection from '@/v2/components/settings/SettingsSection';
 import { OPCOES_DE_TEMA, TEMA } from '@/core/theme/themePreference';
 import {
   DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { V2Surface } from '@/v2/ui/primitives';
 
 /** O ícone de cada aparência. */
 export const ICONE_DO_TEMA = Object.freeze({
@@ -195,18 +195,15 @@ export function ThemeSettingsCard() {
   const { refs, aoTeclar } = useTecladoDoGrupo(escolha, setEscolha);
   if (!disponivel) return null;
   const atual = OPCOES_DE_TEMA.find((o) => o.valor === escolha) || OPCOES_DE_TEMA[0];
+  const agora = escolha === TEMA.AUTOMATICO ? ` · agora no ${efetivo === TEMA.ESCURO ? 'escuro' : 'claro'}` : '';
 
   return (
-    <V2Surface data-dica="config-aparencia">
-      <div className="flex items-center gap-2">
-        <Palette className="h-5 w-5 text-ink" aria-hidden />
-        <h2 id={rotuloId} className="font-display text-lg font-bold text-ink">Aparência</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="aparencia" dica="config-aparencia" icon={Palette} title="Aparência" summary={`${atual.rotulo}${agora}`}>
+      <p className="text-sm text-gray-500">
         Escolha como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.
       </p>
 
-      <div role="radiogroup" aria-labelledby={rotuloId} className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+      <div role="radiogroup" aria-label="Aparência" className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
         {OPCOES_DE_TEMA.map(({ valor, rotulo, descricao }, i) => {
           const Icone = ICONE_DO_TEMA[valor];
           const marcado = escolha === valor;
@@ -258,6 +255,6 @@ export function ThemeSettingsCard() {
       <p className="mt-3 text-xs text-gray-500">
         O telão, o totem da arena e a impressão continuam claros, para quem está na quadra e no papel.
       </p>
-    </V2Surface>
+    </SettingsSection>
   );
 }

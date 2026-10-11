@@ -8,20 +8,18 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ClipboardCheck } from 'lucide-react';
 import { useDebriefActions, useDebriefSettings } from '@/modules/training/hooks/useDebriefs';
-import { V2Button, V2ErrorState, V2Surface, V2Toggle } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Toggle } from '@/v2/ui/primitives';
+import SettingsSection from '@/v2/components/settings/SettingsSection';
 
 export default function DebriefSettingsCard() {
   const s = useDebriefSettings();
   const { setEnabled } = useDebriefActions(s.uid);
   if (!s.available) return null;
 
+  const resumo = s.isError || s.isLoading ? undefined : (s.enabled ? 'Ligado para mim' : 'Desligado');
   return (
-    <V2Surface id="balanco-do-jogo" data-dica="config-balanco" className="scroll-mt-4">
-      <div className="flex items-center gap-2">
-        <ClipboardCheck className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Balanço do jogo</h2>
-      </div>
-      <p className="mt-1 text-sm text-gray-500">
+    <SettingsSection id="balanco-do-jogo" dica="config-balanco" icon={ClipboardCheck} title="Balanço do jogo" summary={resumo}>
+      <p className="text-sm text-gray-500">
         Depois de um dia de jogo, torneio ou jogo na arena, a plataforma pergunta como foi e sugere drills para a semana.
         Você decide se eles entram nos seus treinos. Só você vê as respostas.
       </p>
@@ -49,6 +47,6 @@ export default function DebriefSettingsCard() {
           <V2Button asChild variant="secondary" size="sm"><Link to="/treino?aba=balanco">Abrir os balanços</Link></V2Button>
         </div>
       )}
-    </V2Surface>
+    </SettingsSection>
   );
 }

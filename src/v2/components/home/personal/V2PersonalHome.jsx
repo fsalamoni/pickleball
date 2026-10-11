@@ -37,6 +37,7 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { usePlatformHome } from '@/core/lib/FeatureFlagsContext';
 import { useRelogio } from '@/core/lib/useRelogio';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -102,6 +103,7 @@ export default function V2PersonalHome() {
   const actionHomeOn = true;
   const coachMarketingOn = true;
   const platformMarketingOn = true;
+  const { promocoes: promocoesOn } = usePlatformHome();
   const treinoOn = true;
   const balancoOn = true;
 
@@ -209,21 +211,12 @@ export default function V2PersonalHome() {
     }
   };
 
-  // Um card que não é seção (atalhos, destaques, evolução, treino), na posição
+  // Um card que não é seção (atalhos, evolução, treino), na posição
   // que a pessoa escolheu. O treino ocupa meia linha, como as seções.
   const renderCardExtra = (id) => {
     switch (id) {
       case HOME_CARD.ATALHOS:
         return <HomeShortcuts atalhos={atalhos} className="xl:col-span-2" />;
-      case HOME_CARD.DESTAQUES:
-        return (
-          <Suspense fallback={null}>
-            <HomePromoBanners
-              arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn}
-              className="xl:col-span-2"
-            />
-          </Suspense>
-        );
       case HOME_CARD.EVOLUCAO:
         return (
           <EvolutionStrip uid={uid} className="min-w-0 xl:col-span-2" />
@@ -257,6 +250,15 @@ export default function V2PersonalHome() {
         {balancoOn && <Suspense fallback={null}><HomeDebriefPrompt /></Suspense>}
         {/* Jogo com vaga nas próximas 48 h: só quando o card Dias de jogo não está na tela. */}
         {!cards.includes(HOME_CARD.JOGAR) && <HomePlayNow hoje={hoje} agora={agora} />}
+
+        {/* Promoções e destaques da região NÃO são card: aparecem para todo
+            mundo sempre que existir algo para mostrar (e somem sem nada). O
+            admin da plataforma liga ou desliga a área para todos. */}
+        {promocoesOn && (arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
+          <Suspense fallback={null}>
+            <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} className="mb-8" />
+          </Suspense>
+        )}
 
         {cards.length === 0 ? (
           <HomeCardsEmpty onEscolher={() => setEscolhendo(true)} />
@@ -311,9 +313,9 @@ export default function V2PersonalHome() {
 
       {/* Destaques da região — das arenas, da plataforma e dos professores
           (cupons e campanhas). Vitrine: some sem nada. */}
-      {(arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
+      {promocoesOn && (arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
         <Suspense fallback={null}>
-          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} />
+          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} className="mb-8" />
         </Suspense>
       )}
 

@@ -349,11 +349,12 @@ export default function HomePromoBanners({
 
   const carregando = cupons.isLoading || campanhas.isLoading || arenasQ.some((q) => q.isLoading)
     || cuponsLigados.isLoading || campanhasLigadas.isLoading || marketingLigado.isLoading || promos.isLoading;
-  const algumaFalhou = (arenasOn && (cupons.isError || campanhas.isError))
-    || (promosOn && promos.isError) || (coachesOn && quem.falhou);
   const todasFalharam = (!arenasOn || (cupons.isError && campanhas.isError)) && (!promosOn || promos.isError);
   // Convite, não informação: tudo falhando ou sem banner em lugar nenhum, não aparece.
   if (todasFalharam || carregando || (cidades.length === 0 && promoItens.length === 0)) return null;
+  // E sem nada NA REGIÃO da pessoa também não: a área só existe quando há o
+  // que mostrar (o nacional conta — aparece para todo mundo).
+  if (banners.length === 0) return null;
   const temCampanha = banners.some((b) => b.campaign || b.promo === 'campaign');
   // Sem região: os itens NACIONAIS aparecem, e o convite a escolher a cidade
   // só vem se houver algo regional para ver.
@@ -410,49 +411,31 @@ export default function HomePromoBanners({
       </div>
 
       {semRegiao && temRegional && (
-        <p className={cn('rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600', banners.length > 0 && 'mb-3')}>
+        <p className="mb-3 rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
           Escolha a sua cidade acima para ver as promoções {promosOn ? 'da sua região' : 'das arenas perto de você'} — ou{' '}
           <Link to="/perfil/editar" className="font-bold text-ink underline">informe a cidade no seu perfil</Link>.
         </p>
       )}
-      {semRegiao && banners.length === 0 ? null : banners.length === 0 ? (
-        // Com uma das fontes falhando, "não divulgaram" pode ser mentira: aí
-        // o carrossel fica vazio sem afirmar nada — só o convite de trocar.
-        algumaFalhou ? (
-          <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-            Troque a região acima para ver as promoções de outros lugares.
-          </p>
-        ) : (
-        <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-          {promosOn
-            ? `Nenhuma promoção ${regionLabel(region)} agora. Troque a região acima para ver as de outros lugares.`
-            : `As arenas ${regionLabel(region)} não divulgaram promoção agora. Troque a região acima para ver as de outros lugares.`}
-        </p>
-        )
-      ) : (
-        <>
-          <div
-            ref={trilho}
-            onScroll={aoRolar}
-            className="hide-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1"
-          >
-            {banners.map((b, i) => <Banner key={b.id} banner={b} posicao={i + 1} total={banners.length} />)}
-          </div>
-          {banners.length > 1 && (
-            <div className="mt-2 flex justify-center gap-1.5">
-              {banners.map((b, i) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => irPara(i)}
-                  aria-label={`Ir para a promoção ${i + 1} de ${banners.length}`}
-                  aria-current={i === atual ? 'true' : undefined}
-                  className={cn('h-1.5 rounded-full transition-all', i === atual ? 'w-5 bg-ink' : 'w-1.5 bg-gray-300 hover:bg-gray-400')}
-                />
-              ))}
-            </div>
-          )}
-        </>
+      <div
+        ref={trilho}
+        onScroll={aoRolar}
+        className="hide-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1"
+      >
+        {banners.map((b, i) => <Banner key={b.id} banner={b} posicao={i + 1} total={banners.length} />)}
+      </div>
+      {banners.length > 1 && (
+        <div className="mt-2 flex justify-center gap-1.5">
+          {banners.map((b, i) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => irPara(i)}
+              aria-label={`Ir para a promoção ${i + 1} de ${banners.length}`}
+              aria-current={i === atual ? 'true' : undefined}
+              className={cn('h-1.5 rounded-full transition-all', i === atual ? 'w-5 bg-ink' : 'w-1.5 bg-gray-300 hover:bg-gray-400')}
+            />
+          ))}
+        </div>
       )}
     </section>
   );

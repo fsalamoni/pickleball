@@ -1,17 +1,23 @@
 /**
- * V2Settings — Configurações da conta (flag settings_page).
+ * V2Settings — Configurações da conta. Rota /configuracoes.
  *
- * Reúne atalhos de conta, a aparência (modo escuro, atrás da flag
- * `dark_mode`), a minha região (flag `my_region`), os cards da página inicial
- * (flag `home_cards`) e a exportação
- * de dados pessoais (LGPD) em JSON.
- * Rota /configuracoes. Aditivo — desligada a flag, redireciona ao perfil.
+ * Desde 2026-10-11 a tela é feita de GRUPOS com nome (Conta e privacidade ·
+ * Tela e navegação · Região e avisos · Jogo e treino) e cada cartão é
+ * COLAPSÁVEL (`SettingsSection`): nasce recolhido, e o cabeçalho diz como está
+ * ("Automático", "3 cards: …", "2 categorias silenciadas") — abrir é para
+ * mudar. Antes eram onze cartões abertos em sequência, cada um com o próprio
+ * texto, e a tela lia como um paredão.
+ *
+ * Os links diretos continuam valendo e ABREM o cartão: `#notificacoes` (o
+ * sino), `#pagina-inicial` (o "Personalizar" do início), `#menu-lateral`,
+ * `#minha-regiao`, `#balanco-do-jogo`, `#acessos-do-suporte`. Toda âncora
+ * `data-dica` ficou no cartão.
  */
 
 import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Settings, User, Download, ShieldCheck, Bell } from 'lucide-react';
+import { User, Download, ShieldCheck, Bell, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
@@ -25,17 +31,15 @@ import {
 } from '@/v2/ui/primitives';
 
 import V2PushCard from '@/v2/components/settings/V2PushCard';
+import SettingsSection, { SettingsGroup } from '@/v2/components/settings/SettingsSection';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
-import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
 import SidebarSettingsCard from '@/v2/components/settings/SidebarSettingsCard';
 import GamificationSettingsCard from '@/v2/components/gamification/GamificationSettingsCard';
 import DebriefSettingsCard from '@/v2/components/training/debrief/DebriefSettingsCard';
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
-import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
-import { useDicas } from '@/v2/components/dicas/DicasContext';
 import SupportAccessCard from '@/v2/components/settings/SupportAccessCard';
 
 export default function V2Settings() {
@@ -45,10 +49,6 @@ export default function V2Settings() {
   const centralAvisosOn = true;
   const gamificacaoOn = true;
   const treinoOn = true;
-  const { disponivel: aparenciaOn } = useTheme();
-  const inicioOn = useHomeCardsOn();
-  const regiaoOn = true;
-  const { on: dicasOn } = useDicas();
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
   // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();
@@ -127,108 +127,111 @@ export default function V2Settings() {
     }
   }
 
+  const silenciadas = NOTIFICATION_CATEGORIES
+    .filter((cat) => cat.id !== 'training' || treinoOn)
+    .filter((cat) => prefs[cat.id] === false).length;
+  const resumoAvisos = silenciadas === 0
+    ? 'Todas as categorias ligadas'
+    : `${silenciadas} ${silenciadas === 1 ? 'categoria silenciada' : 'categorias silenciadas'}`;
+
   return (
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title="Configurações"
-        subtitle={`Conta, ${[aparenciaOn && 'aparência', regiaoOn && 'região', inicioOn && 'página inicial', 'menu', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
+        subtitle="Cada cartão diz como está. Abra só o que você quer mudar."
       />
 
-      <div className="space-y-4">
-        <V2Surface>
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5 text-ink" />
-            <h2 className="font-display text-lg font-bold text-ink">Conta</h2>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">Edite seu perfil, foto e informações de contato.</p>
-          <div className="mt-3">
-            <V2Button asChild variant="secondary" size="sm"><Link to="/perfil/editar">Editar perfil</Link></V2Button>
-          </div>
-        </V2Surface>
+      <div className="space-y-8">
+        <SettingsGroup title="Conta e privacidade" description="Quem você é na plataforma e o que ela guarda de você.">
+          <V2Surface variant="compacto">
+            <Link to="/perfil/editar" className="flex items-center gap-3">
+              <User className="h-5 w-5 shrink-0 text-ink" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold text-ink">Conta</span>
+                <span className="block text-xs text-gray-500">Perfil, foto, contato, nível e privacidade do contato.</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
+            </Link>
+          </V2Surface>
 
-        {/* Aparência: Claro, Escuro ou Automático (flag dark_mode). */}
-        <ThemeSettingsCard />
-
-        {/* Minha região: de onde a plataforma mostra o que acontece (flag my_region). */}
-        <RegionSettingsCard />
-
-        {/* Página inicial: os cards do início e a ordem (flag home_cards). */}
-        <HomeCardsSettingsCard />
-
-        {/* Menu: os hubs da barra lateral e a ordem — padrão por papel, editável. */}
-        <SidebarSettingsCard />
-
-        {/* Dicas: ligar, desligar e abrir os guias (flag guided_tips). */}
-        <DicasSettingsCard />
-
-        {/* Gamificação: privacidade, interação e avisos (flag gamification_v2). */}
-        {gamificacaoOn && <GamificationSettingsCard />}
-
-        {/* Balanço do jogo: cada pessoa liga para si (flags training_center + game_debrief). */}
-        <DebriefSettingsCard />
-
-        {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
-        <V2Surface id="notificacoes" data-dica="config-notificacoes" className="scroll-mt-4">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-ink" />
-            <h2 className="font-display text-lg font-bold text-ink">Notificações</h2>
-          </div>
-          {notifPrefsOn ? (
-            <>
-              <p className="mt-1 text-sm text-gray-500">
-                Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino
-                {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
-              </p>
-              <div className="mt-4 space-y-3">
-                {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
-                  <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
-                    <V2Toggle
-                      id={`notif-${cat.id}`}
-                      checked={prefs[cat.id] !== false}
-                      onChange={(next) => toggleCategory(cat.id, next)}
-                      label={cat.label}
-                      hint={cat.description}
-                    />
-                  </div>
-                ))}
-              </div>
-              {savingPrefs && <p className="mt-3 text-xs text-gray-500">Salvando…</p>}
-              {centralAvisosOn && (
-                <div className="mt-4">
-                  <V2Button asChild variant="secondary" size="sm">
-                    <Link to="/notificacoes">Ver todas as notificações</Link>
-                  </V2Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="mt-1 text-sm text-gray-500">
-              As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.
+          <SettingsSection id="privacidade-e-dados" dica="config-dados" icon={ShieldCheck} title="Privacidade e dados (LGPD)" summary="Baixe uma cópia de tudo o que é seu">
+            <p className="text-sm text-gray-500">
+              {treinoOn
+                ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.'
+                : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
             </p>
-          )}
-        </V2Surface>
+            <div className="mt-3">
+              <V2Button size="sm" onClick={exportData} disabled={busy}>
+                <Download className="h-4 w-4" /> {busy ? 'Gerando…' : 'Baixar meus dados'}
+              </V2Button>
+            </div>
+          </SettingsSection>
 
-        {pushOn && <V2PushCard />}
+          {/* `/configuracoes#acessos-do-suporte`: o aviso "o suporte acessou seus dados" leva para cá. */}
+          <SupportAccessCard uid={user?.uid} />
+        </SettingsGroup>
 
-        <V2Surface data-dica="config-dados">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-ink" />
-            <h2 className="font-display text-lg font-bold text-ink">Privacidade e dados (LGPD)</h2>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">
-            {treinoOn
-              ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.'
-              : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
-          </p>
-          <div className="mt-3">
-            <V2Button size="sm" onClick={exportData} disabled={busy}>
-              <Download className="h-4 w-4" /> {busy ? 'Gerando…' : 'Baixar meus dados'}
-            </V2Button>
-          </div>
-        </V2Surface>
+        <SettingsGroup title="Tela e navegação" description="Como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.">
+          {/* Aparência: Claro, Escuro ou Automático. */}
+          <ThemeSettingsCard />
+          {/* Página inicial: os cards do início e a ordem. */}
+          <HomeCardsSettingsCard />
+          {/* Menu: os hubs da barra lateral e a ordem — padrão por papel, editável. */}
+          <SidebarSettingsCard />
+          {/* Dicas: ligar, desligar e abrir os guias. */}
+          <DicasSettingsCard />
+        </SettingsGroup>
 
-        {/* `/configuracoes#acessos-do-suporte`: o aviso "o suporte acessou seus dados" leva para cá. */}
-        <SupportAccessCard uid={user?.uid} />
+        <SettingsGroup title="Região e avisos" description="De onde vem o que você vê, e por onde a plataforma fala com você.">
+          {/* Minha região: de onde a plataforma mostra o que acontece. */}
+          <RegionSettingsCard />
+
+          {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
+          <SettingsSection id="notificacoes" dica="config-notificacoes" icon={Bell} title="Notificações" summary={notifPrefsOn ? resumoAvisos : undefined}>
+            {notifPrefsOn ? (
+              <>
+                <p className="text-sm text-gray-500">
+                  Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino
+                  {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
+                    <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
+                      <V2Toggle
+                        id={`notif-${cat.id}`}
+                        checked={prefs[cat.id] !== false}
+                        onChange={(next) => toggleCategory(cat.id, next)}
+                        label={cat.label}
+                        hint={cat.description}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {savingPrefs && <p className="mt-3 text-xs text-gray-500">Salvando…</p>}
+                {centralAvisosOn && (
+                  <div className="mt-4">
+                    <V2Button asChild variant="secondary" size="sm">
+                      <Link to="/notificacoes">Ver todas as notificações</Link>
+                    </V2Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">
+                As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.
+              </p>
+            )}
+          </SettingsSection>
+
+          {pushOn && <V2PushCard />}
+        </SettingsGroup>
+
+        <SettingsGroup title="Jogo e treino">
+          {/* Gamificação: privacidade, interação e avisos, numa página própria. */}
+          {gamificacaoOn && <GamificationSettingsCard />}
+          {/* Balanço do jogo: cada pessoa liga para si. */}
+          <DebriefSettingsCard />
+        </SettingsGroup>
       </div>
     </div>
   );

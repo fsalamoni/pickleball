@@ -41,7 +41,6 @@ export const HOME_CARD = Object.freeze({
   ARENA: HOME_SECTION.ARENA,
   PROFESSOR: HOME_SECTION.PROFESSOR,
   ATALHOS: 'atalhos',
-  DESTAQUES: 'destaques',
   EVOLUCAO: 'evolucao',
   TREINO: 'treino',
 });
@@ -107,14 +106,6 @@ export const HOME_CARD_META = Object.freeze({
     icon: 'Zap',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
-  }),
-  [HOME_CARD.DESTAQUES]: Object.freeze({
-    label: 'Promoções e destaques',
-    description: 'Cupons e campanhas das arenas, da plataforma e dos professores da sua região.',
-    icon: 'Megaphone',
-    group: HOME_CARD_GROUP.ROTINA,
-    focos: [],
-    requer: 'promocoes',
   }),
   [HOME_CARD.EVOLUCAO]: Object.freeze({
     label: 'Sua evolução',
@@ -238,7 +229,7 @@ export function isDefaultHomeCards(lista) {
 /**
  * O card pode aparecer agora? Depende da funcionalidade de que ele precisa.
  * @param {string} id
- * @param {{ promocoes?: boolean, evolucao?: boolean, treino?: boolean }} [ctx] o que está ligado
+ * @param {{ evolucao?: boolean, treino?: boolean }} [ctx] o que está ligado
  */
 export function homeCardAvailable(id, ctx = {}) {
   const meta = HOME_CARD_META[id];
@@ -306,7 +297,7 @@ export function suggestedHomeCards(foci = [], escolhidos = [], ctx = {}) {
 }
 
 /** Os cards que ocupam SEMPRE a linha inteira da grade (listas e faixas). */
-export const WIDE_HOME_CARDS = Object.freeze([HOME_CARD.AGENDA, HOME_CARD.ATALHOS, HOME_CARD.DESTAQUES, HOME_CARD.EVOLUCAO]);
+export const WIDE_HOME_CARDS = Object.freeze([HOME_CARD.AGENDA, HOME_CARD.ATALHOS, HOME_CARD.EVOLUCAO]);
 
 /**
  * Quais cards ocupam a linha inteira, na grade de duas colunas.

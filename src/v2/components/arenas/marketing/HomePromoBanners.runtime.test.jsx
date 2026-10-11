@@ -129,17 +129,18 @@ describe('promoções na tela inicial', () => {
     expect(container.textContent).not.toContain('Arena Sol');
   });
 
-  it('⭐ sem cidade nem estado no perfil: pede a cidade', async () => {
+  it('⭐ sem cidade nem estado no perfil e só promoção regional: nada aparece (2026-10-11)', async () => {
+    // A área só existe quando há o que mostrar; o convite a escolher a cidade
+    // vem junto do que é NACIONAL (abaixo, na Onda CG).
     estado.perfil = {};
     await render();
-    expect(container.textContent).toContain('Escolha a sua cidade acima');
-    expect(container.textContent).not.toContain('10% de desconto');
+    expect(container.innerHTML).toBe('');
   });
 
-  it('região sem promoção diz isso e oferece trocar', async () => {
+  it('⭐ região sem promoção: a área some, em vez de ocupar o início para dizer que não há', async () => {
     estado.perfil = { city: 'Pelotas', state: 'RS' };
     await render();
-    expect(container.textContent).toMatch(/As arenas em Pelotas \(RS\) e até 50 km não divulgaram promoção agora/);
+    expect(container.innerHTML).toBe('');
   });
 
   it('falhando, ou sem banner em lugar nenhum, não aparece', async () => {
@@ -212,12 +213,12 @@ describe('⭐ Onda CC — banners de campanha no carrossel', () => {
     expect(container.textContent).toContain('Arte k1');
   });
 
-  it('⭐ com uma fonte falhando, a região vazia NÃO afirma que não há promoção', async () => {
+  it('⭐ com uma fonte falhando, a região vazia NÃO afirma que não há promoção (não aparece)', async () => {
     estado.erroCampanhas = true;
     estado.perfil = { city: 'Pelotas', state: 'RS' };
     await render();
     expect(container.textContent).not.toMatch(/não divulgaram promoção/);
-    expect(container.textContent).toContain('Troque a região acima');
+    expect(container.innerHTML).toBe('');
   });
 
   it('as duas fontes falhando: a seção não aparece', async () => {
@@ -318,12 +319,12 @@ describe('⭐ Onda CG — a plataforma e os professores no carrossel', () => {
     expect(container.textContent).not.toMatch(/das arenas/);
   });
 
-  it('⭐ com a divulgação falhando, a região vazia NÃO afirma que não há promoção', async () => {
+  it('⭐ com a divulgação falhando, a região vazia NÃO afirma que não há promoção (não aparece)', async () => {
     estado.erroPromos = true;
     estado.perfil = { city: 'Pelotas', state: 'RS' };
     await render({ platformOn: true });
     expect(container.textContent).not.toMatch(/Nenhuma promoção|não divulgaram/);
-    expect(container.textContent).toContain('Troque a região acima');
+    expect(container.innerHTML).toBe('');
   });
 
   it('só a divulgação ligada e falhando: a seção não aparece', async () => {
@@ -336,10 +337,14 @@ describe('⭐ Onda CG — a plataforma e os professores no carrossel', () => {
 describe('⭐ a tela inicial monta os banners', () => {
   it('guarda de fonte', () => {
     // A tela inicial (a personalizada é a única desde 2026-10-10) monta o
-    // carrossel sob demanda, quando alguma fonte está ligada.
+    // carrossel sob demanda, FORA dos cards (não é escolha da pessoa) e só
+    // com o interruptor do admin ligado — nos dois ramos da tela.
     for (const arquivo of ['src/v2/components/home/personal/V2PersonalHome.jsx']) {
       const src = readFileSync(arquivo, 'utf8');
-      expect(src).toMatch(/\{\(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} \/>/);
+      const montagens = src.match(/\{promocoesOn && \(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} className="mb-8" \/>/g) || [];
+      expect(montagens.length).toBe(2);
+      expect(src).not.toMatch(/case HOME_CARD\.DESTAQUES/);
+      expect(src).toMatch(/usePlatformHome\(\)/);
       // Sob demanda — as chaves nascem desligadas.
       expect(src).toMatch(/const HomePromoBanners = lazy\(\(\) => import\('@\/v2\/components\/arenas\/marketing\/HomePromoBanners'\)\)/);
     }
