@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
     base: env.VITE_BASE_PATH || '/',
     plugins: [react()],
     build: {
+      // Celulares com navegador/WebView antigo (iOS 12-13, Android < 8) não
+      // entendem ?. e ??; o alvo padrão do Vite (es2020) deixava a tela em branco.
+      target: ['es2019', 'chrome64', 'safari12'],
       rollupOptions: {
         output: {
           manualChunks(id) {

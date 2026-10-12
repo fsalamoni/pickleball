@@ -67,6 +67,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>O PickleRush precisa de JavaScript ativado para funcionar.</noscript>
+    <!-- Rede de segurança de ANTES do React: navegador antigo que não entende o
+         pacote (erro de sintaxe) ou pacote que não baixou deixam a tela branca.
+         Script clássico e em ES5 de propósito, para rodar em qualquer aparelho. -->
+    <script>
+      (function () {
+        function vazio() { var r = document.getElementById('root'); return r && !r.hasChildNodes(); }
+        function avisar() {
+          if (!vazio()) return;
+          var r = document.getElementById('root');
+          r.innerHTML = '<div style="font-family:sans-serif;max-width:420px;margin:15vh auto 0;padding:24px;text-align:center">'
+            + '<h1 style="font-size:18px;margin:0 0 8px">Não conseguimos abrir o PickleRush</h1>'
+            + '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">Verifique a conexão e tente de novo. Se continuar, atualize o navegador ou abra o link no Chrome/Safari (fora do navegador de dentro de outro aplicativo).</p>'
+            + '<button onclick="location.reload()" style="font-size:14px;font-weight:600;border:0;border-radius:999px;padding:10px 20px;background:#0B0F19;color:#fff">Tentar de novo</button></div>';
+        }
+        window.addEventListener('error', function () { setTimeout(avisar, 1500); }, true);
+        window.addEventListener('unhandledrejection', function () { setTimeout(avisar, 1500); });
+        setTimeout(avisar, 20000);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
