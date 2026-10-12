@@ -34,7 +34,7 @@ pública, impressão, telão e courtside scoring.
   `TournamentRegistrationsTab`, `TournamentDrawTab`, `TournamentMatchesTab`,
   `TournamentRankingTab`, `TournamentAdminTab`/`TournamentAdminPanel`,
   + dialogs (`ModalityRegistrationDialog`, `ModalityInfoModal`),
-  `StageExplanation`, `ParticipationHistoryCard`, `CertificateButton`,
+  `StageExplanation`, `ParticipationHistoryCard`,
   `ShareCardButton`, `Gallery`.
 - **V2 (ativo)**: `src/v2/pages/V2Tournament.jsx` (componente principal
   que reusa a lógica e renderiza abas próprias) + `V2TournamentDrawTab`,
@@ -696,7 +696,7 @@ Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking,
 Componentes de compartilhamento social, geração de certificados, e
 **calendar export** (Onda 1 — `.ics` para download de aulas/torneios).
 
-- `ShareCardButton`, `CertificateButton`, `CalendarExportButton` (Onda 1).
+- `ShareCardButton`, `CalendarExportButton` (Onda 1); o certificado virou o cartão de campeões (`docs/43-TROFEUS-E-CARTOES.md`).
 - Sem página dedicada. `domain/ics.js` (puro, testado).
 
 ## social/ — feed, follows, metas

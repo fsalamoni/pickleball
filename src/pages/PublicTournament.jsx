@@ -13,7 +13,6 @@ import { listAllMatchesForModality } from '@/modules/tournament/services/matchSe
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRankingStructured } from '@/modules/tournament/services/rankingService';
 import {
-  TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
   MATCH_STATUS_LABELS,
   MODALITY_FORMAT_LABELS,
@@ -21,7 +20,7 @@ import {
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
-import CertificateButton from '@/modules/tournament/components/CertificateButton';
+import PodiumBlock from '@/v2/components/trophies/PodiumBlock';
 import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
 import { V2ErrorState } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
@@ -148,9 +147,6 @@ export default function PublicTournament() {
               <Copy className="w-4 h-4" />
               <span className="ml-1 hidden sm:inline">Copiar link</span>
             </Button>
-            {tournament.status === TOURNAMENT_STATUS.FINISHED && (
-              <CertificateButton tournament={tournament} />
-            )}
             <Badge variant="success" className="text-xs">
               <Eye className="w-3 h-3 mr-1" /> Visão pública
             </Badge>
@@ -211,7 +207,7 @@ export default function PublicTournament() {
         )}
 
         {modalities.map((m) => (
-          <PublicModalityBlock key={m.id} modality={m} />
+          <PublicModalityBlock key={m.id} tournament={tournament} modality={m} />
         ))}
 
         <TournamentGallery tournamentId={tournament.id} canManage={false} />
@@ -313,7 +309,7 @@ function PublicRankingTable({ rows }) {
   );
 }
 
-function PublicModalityBlock({ modality }) {
+function PublicModalityBlock({ tournament, modality }) {
   const {
     data: matches = [], isError: falhouJogos, refetch: recarregarJogos,
   } = useQuery({
@@ -416,6 +412,8 @@ function PublicModalityBlock({ modality }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* O pódio da categoria encerrada: cartões para a torcida e a arena. */}
+        <PodiumBlock tournament={tournament} modality={modality} />
         {partesQueFalharam.length > 0 && (
           <V2ErrorState
             inline

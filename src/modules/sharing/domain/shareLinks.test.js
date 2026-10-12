@@ -33,7 +33,7 @@ describe('buildTournamentShareText', () => {
     expect(text).toContain('São Paulo / SP');
     expect(text).toContain('XYZ');
     expect(text).toContain('https://x.com/p/1');
-    expect(text).toContain('Pickleholics');
+    expect(text).toContain('PickleRush');
   });
 
   it('omite linhas ausentes sem quebrar', () => {

@@ -97,7 +97,7 @@ describe('Minha área ligada', () => {
 
   it('quem só joga vê as seções de todos — nada de gestão', async () => {
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios', 'Troféus']);
     expect(container.querySelector('[data-dica="minha-area-pendencias"]')).toBeNull();
   });
 
@@ -107,7 +107,7 @@ describe('Minha área ligada', () => {
     estado.clubes = ok([{ id: 'c1', name: 'Clube', my_role: 'member' }]);
     estado.admin = true;
     await render(<UserArea />);
-    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios', 'Clubes', 'Professor', 'Arenas', 'Admin']);
+    expect(secoes()).toEqual(['Resumo', 'Perfil e conta', 'Treino', 'Meus jogos', 'Torneios', 'Troféus', 'Clubes', 'Professor', 'Arenas', 'Admin']);
   });
 
   it('pedido de reserva conhecido vira pendência que leva à Central', async () => {

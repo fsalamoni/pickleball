@@ -26,7 +26,7 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
   const { copied, copy } = useClipboard();
 
   const url = typeof window !== 'undefined' ? `${window.location.origin}/arenas/${arena.id}` : '';
-  const text = `Conheça a arena ${arena.name}${arena.city ? ` (${arena.city})` : ''} no Pickleholics: ${url}`;
+  const text = `Conheça a arena ${arena.name}${arena.city ? ` (${arena.city})` : ''} no PickleRush: ${url}`;
 
   useEffect(() => {
     if (!url) return;
@@ -62,7 +62,7 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
         {/* `tema-claro`: a imagem baixada é a mesma no modo escuro. */}
         <div ref={cardRef} className="tema-claro overflow-hidden rounded-2xl border border-acid/20 bg-gradient-to-br from-ink to-ink-light p-5 text-white">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-            <Building className="h-4 w-4" /> Arena · Pickleholics
+            <Building className="h-4 w-4" /> Arena · PickleRush
           </div>
           {arena.cover_url ? (
             <img src={arena.cover_url} alt="" className="mt-3 h-32 w-full rounded-xl object-cover" />

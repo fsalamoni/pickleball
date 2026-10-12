@@ -225,3 +225,39 @@
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 }
+
+/* ============================================================
+   Cartão de campeões (src/v2/components/trophies/MedalCard.jsx)
+   ============================================================ */
+/* O ÚNICO movimento autoral do cartão: o traço do degrau acende uma vez. */
+@keyframes cartao-brilho {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
+.cartao-brilho {
+  animation: cartao-brilho 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cartao-brilho { animation: none; }
+}
+
+/* Imprimir / salvar em PDF: só o cartão vai para a folha, centrado, um por
+   página. O resto da tela (diálogo, botões, menu) some. */
+@media print {
+  body.imprimindo-cartao > *:not(.cartao-folha-raiz) { display: none !important; }
+  body.imprimindo-cartao .cartao-folha-raiz { display: block !important; }
+  .cartao-folha-raiz {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+  .cartao-folha-raiz .cartao-imprimivel {
+    width: 150mm;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  @page { size: A4 portrait; margin: 14mm; }
+}

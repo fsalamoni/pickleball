@@ -1,5 +1,5 @@
 /**
- * Motor de rating ELO próprio da Pickleholics (lógica pura, sem I/O).
+ * Motor de rating ELO próprio da PickleRush (lógica pura, sem I/O).
  *
  * O rating é recalculado por um replay determinístico de todos os jogos
  * finalizados em ordem cronológica. Suporta simples (1 jogador por lado) e
