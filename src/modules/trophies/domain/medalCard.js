@@ -6,13 +6,13 @@
  * pessoas aparecem com nome e, se tiverem foto e quem gera quiser, com a foto.
  */
 import { PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
-import { instanteEmMs } from '@/core/domain/instant.js';
+import { instanteDoDiaEmMs } from '@/core/domain/instant.js';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 /** "12 de outubro de 2026" — a partir de qualquer instante do banco. */
 export function dataPorExtenso(valor) {
-  const t = instanteEmMs(valor);
+  const t = instanteDoDiaEmMs(valor);
   if (!Number.isFinite(t) || t <= 0) return '';
   const d = new Date(t);
   return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
@@ -92,8 +92,9 @@ export function buildMedalCard(input = {}) {
   const shareText = [
     degrau ? `🏆 ${headline}: ${quem}` : `🏆 Pódio — ${quem}`,
     `${event.title}${event.subtitle ? ` · ${event.subtitle}` : ''}${dateLabel ? ` · ${dateLabel}` : ''}`,
-    url ? `Veja em ${url}` : '',
-    'via PickleRush',
+    // O link vai à parte (`url`): o WhatsApp junta texto + link, e com o link
+    // também no texto ele aparecia duas vezes.
+    url ? 'Veja no PickleRush:' : 'via PickleRush',
   ].filter(Boolean).join('\n');
 
   const slug = `${event.title}-${degrau ? headline : 'podio'}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')

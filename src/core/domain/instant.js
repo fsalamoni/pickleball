@@ -49,3 +49,20 @@ export function instanteEmMs(valor) {
   }
   return NaN;
 }
+
+/**
+ * Como `instanteEmMs`, mas uma DATA SEM HORA ("2026-10-12", o formato da data
+ * do torneio) vale o dia LOCAL, ao meio-dia. `Date.parse` lê esse formato como
+ * meia-noite UTC — 21h do dia ANTERIOR no Brasil, e o cartão do torneio de 12
+ * de outubro saía com "11 de outubro".
+ *
+ * @param {*} valor
+ * @returns {number}
+ */
+export function instanteDoDiaEmMs(valor) {
+  if (typeof valor === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor.trim());
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12).getTime();
+  }
+  return instanteEmMs(valor);
+}
