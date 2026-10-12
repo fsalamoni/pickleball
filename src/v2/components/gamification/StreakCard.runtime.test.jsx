@@ -18,7 +18,8 @@ import { computeWeekStreak, mondayKeyOfWeek, weekIndexOf } from '@/modules/progr
 const DIA = 86400000;
 const AGORA = new Date();
 const CUR = weekIndexOf(AGORA.getTime());
-const jogo = (d) => new Date(`${mondayKeyOfWeek(CUR + d)}T15:00:00Z`).getTime() + DIA;
+// Nunca no futuro: às segundas, terça 15h ainda não aconteceu e o jogo seria ignorado.
+const jogo = (d) => Math.min(new Date(`${mondayKeyOfWeek(CUR + d)}T15:00:00Z`).getTime() + DIA, AGORA.getTime() - 1000);
 const calc = (deltas, opts = {}) => computeWeekStreak(deltas.map(jogo), { now: AGORA, ...opts });
 
 let container; let root;

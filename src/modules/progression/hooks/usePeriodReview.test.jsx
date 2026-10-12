@@ -57,7 +57,7 @@ describe('usePeriodReview', () => {
 
   it('o período anterior (offset -1) não conta o que aconteceu depois dele', async () => {
     const agora = Date.now();
-    s.records = [{ at: agora - 8 * DIA, won: true }, { at: agora - 1000, won: true }];
+    s.records = [{ at: agora - 7 * DIA, won: true }, { at: agora - 1000, won: true }];
     await render(engine(), 'week', -1); await aguardar();
     expect(out.review.games).toBe(1);
   });
