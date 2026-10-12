@@ -8,6 +8,9 @@ import { listAllMatchesForModality } from '@/modules/tournament/services/matchSe
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRankingStructured } from '@/modules/tournament/services/rankingService';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
+import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
+import { normalizePhases } from '@/modules/tournament/domain/phases';
+import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
 
 /**
  * Versão para impressão (A4) das chaves, grupos e ranking de um torneio.
@@ -144,13 +147,32 @@ function PrintModality({ modality }) {
     queryFn: () => listAllMatchesForModality(modality.id),
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
+  // Mata-mata sai no papel como CHAVE desenhada, não como tabela.
+  const fasesConfig = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
+  const chavesPorFase = useMemo(() => {
+    const porFase = new Map();
+    matches.forEach((m) => {
+      const k = m.stage_index ?? 0;
+      if (!porFase.has(k)) porFase.set(k, []);
+      porFase.get(k).push(m);
+    });
+    return [...porFase.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .filter(([k, lista]) => isKnockoutStage(fasesConfig[k] || { type: lista[0]?.stage_type }, lista));
+  }, [matches, fasesConfig]);
+  const fasesChave = useMemo(() => new Set(chavesPorFase.map(([k]) => Number(k))), [chavesPorFase]);
+  const jogosEmLista = useMemo(
+    () => matches.filter((m) => !fasesChave.has(Number(m.stage_index ?? 0))),
+    [matches, fasesChave],
+  );
   const { data: rankingData, isError: falhouRanking } = useQuery({
     queryKey: ['print', 'ranking-structured', modality.id],
     queryFn: () => computeModalityRankingStructured(modality.id),
   });
   const rankingPhases = useMemo(
-    () => (rankingData?.phases || []).filter((p) => p.played && p.groups.some((g) => (g.rows || []).length > 0)),
-    [rankingData],
+    () => (rankingData?.phases || []).filter((p) => p.played && !fasesChave.has(Number(p.stageIndex))
+      && p.groups.some((g) => (g.rows || []).length > 0)),
+    [rankingData, fasesChave],
   );
   const showRankingPhaseHeaders = rankingPhases.length > 1;
   const { data: registrations = [], isError: falhouInscritos } = useQuery({
@@ -178,8 +200,8 @@ function PrintModality({ modality }) {
       .join(' + ');
   }
 
-  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
-  const hasGroups = matches.some((m) => m.group);
+  const hasSchedule = jogosEmLista.some((m) => m.court || m.scheduled_at);
+  const hasGroups = jogosEmLista.some((m) => m.group);
 
   // Sem os inscritos, `renderSide` cai no `id`: a folha sairia com
   // identificadores do banco no lugar dos nomes de quem vai jogar.
@@ -268,7 +290,24 @@ function PrintModality({ modality }) {
         </div>
       )}
 
-      {matches.length > 0 && (
+      {chavesPorFase.length > 0 && (
+        <div className="mb-3 space-y-3">
+          <h3 className="text-xs font-semibold">Chave</h3>
+          {chavesPorFase.map(([stageIndex, stageMatches]) => (
+            <V2BracketTree
+              key={stageIndex}
+              matches={stageMatches}
+              labelById={labelById}
+              thirdPlace={Boolean(fasesConfig[stageIndex]?.third_place)}
+              double={fasesConfig[stageIndex]?.type === 'double_knockout'}
+              title={multiPhase ? `Fase ${Number(stageIndex) + 1}` : undefined}
+              larguraMax={700}
+            />
+          ))}
+        </div>
+      )}
+
+      {jogosEmLista.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold mb-1">Jogos</h3>
           <table className="w-full text-xs border-collapse">
@@ -285,7 +324,7 @@ function PrintModality({ modality }) {
               </tr>
             </thead>
             <tbody>
-              {matches.map((m) => (
+              {jogosEmLista.map((m) => (
                 <tr key={m.id} className="border-b">
                   {multiPhase && <td className="py-1">{(m.stage_index ?? 0) + 1}</td>}
                   <td className="py-1">{roundLabel(m)}</td>

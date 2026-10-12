@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isWinnersBracketMatch, roundLabel, buildBracketColumns, isKnockoutSet,
+  buildKnockoutDiagram, layoutBracketColumns, refLabel, winnerIdsOf,
 } from './bracketLayout.js';
 
 describe('isWinnersBracketMatch', () => {
@@ -116,5 +117,75 @@ describe('buildBracketColumns — a chave inteira desde o sorteio', () => {
     expect(columns[1].matches[1].id).toBe('s2');
     expect(columns[2].matches).toHaveLength(1);
     expect(thirdPlace.id).toBe('bronze');
+  });
+});
+
+describe('buildKnockoutDiagram — o desenho da chave', () => {
+  const r1 = [1, 2, 3, 4].map((p) => ({
+    id: `q${p}`, stage_type: 'knockout', round: 1, position: p, side_a_ids: [`a${p}`], side_b_ids: [`b${p}`],
+  }));
+
+  it('grupo e rodadas não viram diagrama (ficam em tabela)', () => {
+    expect(buildKnockoutDiagram([{ id: 'g', round: 1, position: 1, group: 'A' }])).toBeNull();
+    expect(buildKnockoutDiagram([{ id: 'r', round: 1, position: 1, stage_type: 'groups' }])).toBeNull();
+  });
+
+  it('cada vaga futura diz de onde vem e quem a alimenta', () => {
+    const d = buildKnockoutDiagram(r1);
+    const [quartas, semis, final] = d.sections[0].columns;
+    expect(quartas.cells[0].feeders).toEqual([]);
+    expect(semis.cells[1].feeders).toEqual([2, 3]);
+    expect(semis.cells[1].refs.map(refLabel)).toEqual(['Vencedor do jogo 3', 'Vencedor do jogo 4']);
+    expect(final.cells[0].refs.map(refLabel)).toEqual(['Vencedor do jogo 5', 'Vencedor do jogo 6']);
+    expect(refLabel(d.champion.ref)).toBe('Vencedor do jogo 7');
+    expect(d.champion.ids).toBeNull();
+  });
+
+  it('a vaga do 3º lugar aparece antes do jogo existir, com os perdedores das semis', () => {
+    const d = buildKnockoutDiagram(r1, { thirdPlace: true });
+    expect(d.thirdPlace).toMatchObject({ placeholder: true, number: 8 });
+    expect(d.thirdPlace.refs.map(refLabel)).toEqual(['Perdedor do jogo 5', 'Perdedor do jogo 6']);
+    expect(buildKnockoutDiagram(r1).thirdPlace).toBeNull();
+  });
+
+  it('o campeão sai do vencedor da final', () => {
+    const d = buildKnockoutDiagram([
+      { id: 'f', stage_type: 'knockout', round: 1, position: 1, side_a_ids: ['x'], side_b_ids: ['y'], winner_side: 'b' },
+    ]);
+    expect(d.sections[0].columns.map((c) => c.label)).toEqual(['Final']);
+    expect(d.champion.ids).toEqual(['y']);
+    expect(winnerIdsOf({ placeholder: true, winner_side: 'a' })).toBeNull();
+  });
+
+  it('dupla eliminação: repescagem ligada à chave principal e grande final', () => {
+    const d = buildKnockoutDiagram(r1.map((m) => ({ ...m, bracket: 'wb', stage_type: 'double_knockout' })));
+    expect(d.double).toBe(true);
+    const [principal, repescagem] = d.sections;
+    expect(principal.columns.map((c) => c.label))
+      .toEqual(['Quartas de final', 'Semifinal', 'Final da chave principal', 'Grande final']);
+    expect(repescagem.columns.map((c) => c.cells.length)).toEqual([2, 2, 1, 1]);
+    // 1ª rodada: os perdedores das quartas.
+    expect(repescagem.columns[0].cells[0].refs.map(refLabel)).toEqual(['Perdedor do jogo 1', 'Perdedor do jogo 2']);
+    // Junção: o vencedor da repescagem contra quem caiu da semifinal.
+    expect(repescagem.columns[1].cells[0].refs.map(refLabel)).toEqual(['Vencedor do jogo 8', 'Perdedor do jogo 5']);
+    expect(repescagem.columns[1].cells[0].feeders).toEqual([0]);
+    const gf = principal.columns[3].cells[0];
+    expect(gf.refs.map(refLabel)).toEqual(['Vencedor do jogo 7', 'Vencedor do jogo 13']);
+    expect(refLabel(d.champion.ref)).toBe(`Vencedor do jogo ${gf.number}`);
+  });
+});
+
+describe('layoutBracketColumns', () => {
+  it('cada jogo fica no meio dos dois que o alimentam', () => {
+    const cols = [
+      { cells: [{ feeders: [] }, { feeders: [] }, { feeders: [] }, { feeders: [] }] },
+      { cells: [{ feeders: [0, 1] }, { feeders: [2, 3] }] },
+      { cells: [{ feeders: [0, 1] }] },
+    ];
+    const { ys, height } = layoutBracketColumns(cols, { cardH: 80, gapY: 20 });
+    expect(ys[0]).toEqual([40, 140, 240, 340]);
+    expect(ys[1]).toEqual([90, 290]);
+    expect(ys[2]).toEqual([190]);
+    expect(height).toBe(380);
   });
 });

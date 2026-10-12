@@ -44,11 +44,11 @@ describe('⭐ o bye aparece como bye, não como "A definir"', () => {
       <V2BracketTree
         matches={[
           {
-            id: 'm1', round: 1, position: 1, stage_type: 'single_elimination',
+            id: 'm1', round: 1, position: 1, stage_type: 'knockout',
             side_a_ids: ['r1'], side_b_ids: [], status: 'walkover', bye: true,
           },
           {
-            id: 'm2', round: 1, position: 2, stage_type: 'single_elimination',
+            id: 'm2', round: 1, position: 2, stage_type: 'knockout',
             side_a_ids: ['r2'], side_b_ids: ['r3'], status: 'scheduled',
           },
         ]}
@@ -63,7 +63,7 @@ describe('⭐ o bye aparece como bye, não como "A definir"', () => {
     const texto = render(
       <V2BracketTree
         matches={[{
-          id: 'm1', round: 2, position: 1, stage_type: 'single_elimination',
+          id: 'm1', round: 2, position: 1, stage_type: 'knockout',
           side_a_ids: ['r1'], side_b_ids: [], status: 'scheduled',
         }]}
         labelById={rotulos}

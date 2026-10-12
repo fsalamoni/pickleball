@@ -31,7 +31,7 @@ import { V2Badge, V2Button, V2Surface, V2ErrorState, V2Select } from '@/v2/ui/pr
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
-import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
+import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { confrontationSnapshot, buildEtapaDrafts, computeEtapaResult } from '@/modules/tournament/domain/teamFormat';
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
@@ -142,7 +142,7 @@ export function TeamConfrontationScore({ match, config }) {
 }
 
 function MatchesTable({
-  matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, team = null,
+  matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, team = null, phase = null,
 }) {
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
@@ -155,6 +155,9 @@ function MatchesTable({
   // e lançar o placar das etapas.
   const [lineupMatch, setLineupMatch] = useState(null);
   const [resultMatch, setResultMatch] = useState(null);
+  // Na chave desenhada, tocar no jogo abre as MESMAS ações da lista.
+  const [acoesMatch, setAcoesMatch] = useState(null);
+  const chave = isKnockoutStage(phase, matches);
   const markInProgress = useMarkMatchInProgress(modalityId);
   const revertInProgress = useRevertMatchToScheduled(modalityId);
   const courtsideOn = true;
@@ -168,6 +171,16 @@ function MatchesTable({
 
   return (
     <>
+      {chave ? (
+        <V2BracketTree
+          matches={matches}
+          labelById={labelById}
+          thirdPlace={Boolean(phase?.third_place)}
+          double={phase?.type === 'double_knockout'}
+          onMatchClick={canEdit ? setAcoesMatch : undefined}
+        />
+      ) : (
+      <>
       {/* Desktop */}
       <div className="hidden overflow-x-auto sm:block">
         <table className="w-full text-sm">
@@ -334,6 +347,24 @@ function MatchesTable({
         })}
       </div>
 
+      </>
+      )}
+
+      {acoesMatch && (
+        <MatchActionsDialog
+          match={acoesMatch}
+          labelById={labelById}
+          team={team}
+          onClose={() => setAcoesMatch(null)}
+          onStart={() => { markInProgress.mutate(acoesMatch.id); setAcoesMatch(null); }}
+          onUndoStart={() => { undoStart(acoesMatch.id); setAcoesMatch(null); }}
+          onCourtside={() => { setCourtsideMatch(acoesMatch); setAcoesMatch(null); }}
+          onEdit={() => { setEditMatch(acoesMatch); setAcoesMatch(null); }}
+          onLineup={() => { setLineupMatch(acoesMatch); setAcoesMatch(null); }}
+          onResult={() => { setResultMatch(acoesMatch); setAcoesMatch(null); }}
+        />
+      )}
+
       {/* Lançamento/edição padrão: modal objetivo (digitar ou +/− por set).
           O placar ao vivo (courtside, tela cheia) é uma ação separada e
           opcional — não substitui mais o modal de lançamento. */}
@@ -379,6 +410,48 @@ function MatchesTable({
         />
       )}
     </>
+  );
+}
+
+/** As ações de um jogo tocado na chave: as mesmas da lista, num diálogo. */
+function MatchActionsDialog({
+  match, labelById, team, onClose, onStart, onUndoStart, onCourtside, onEdit, onLineup, onResult,
+}) {
+  const nome = (ids, raw) => (ids || []).map((id) => labelById.get(id) || id).join(' + ') || raw || 'A definir';
+  const finished = match.status === MATCH_STATUS.FINISHED || match.status === MATCH_STATUS.WALKOVER;
+  const ladoVazio = !match.side_a_ids?.length || !match.side_b_ids?.length;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{match.third_place ? 'Disputa de 3º lugar' : `Jogo ${match.number || ''}`.trim()}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-1 rounded-2xl border border-gray-100 bg-paper p-3 text-sm">
+          <div className="font-semibold text-ink">{nome(match.side_a_ids, match.side_a)}</div>
+          <div className="text-2xs font-semibold uppercase tracking-wider text-gray-500">contra</div>
+          <div className="font-semibold text-ink">{nome(match.side_b_ids, match.side_b)}</div>
+          <div className="pt-1"><V2Badge tone={statusTone(match.status)}>{MATCH_STATUS_LABELS[match.status] || match.status}</V2Badge></div>
+        </div>
+        {ladoVazio && !finished ? (
+          <p className="text-sm text-gray-500">O jogo ainda espera os dois lados. Ele fica pronto assim que os jogos anteriores terminarem.</p>
+        ) : team ? (
+          <TeamMatchActions match={match} team={team} onLineup={onLineup} onResult={onResult} />
+        ) : (
+          <div className="flex flex-col gap-2">
+            <V2Button onClick={onEdit}>
+              <Pencil className="mr-1 h-4 w-4" /> {finished ? 'Editar resultado' : 'Lançar resultado'}
+            </V2Button>
+            {match.status === MATCH_STATUS.SCHEDULED && (
+              <V2Button variant="secondary" onClick={onStart}><Play className="mr-1 h-4 w-4" /> Iniciar jogo</V2Button>
+            )}
+            {match.status === MATCH_STATUS.IN_PROGRESS && (
+              <V2Button variant="secondary" onClick={onUndoStart}><Undo2 className="mr-1 h-4 w-4" /> Desfazer início</V2Button>
+            )}
+            <V2Button variant="ghost" onClick={onCourtside}><Monitor className="mr-1 h-4 w-4" /> Placar ao vivo</V2Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -715,33 +788,10 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
     ? 'Não foi possível carregar os jogos'
     : (matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`);
 
-  const bracketTreeOn = true;
-  // A mesma visão em colunas serve para dois casos diferentes: as FASES FINAIS
-  // de uma chave (Semifinal, Final…) e as RODADAS de um grupo. O rótulo do
-  // botão segue o que as colunas realmente são.
-  const columnsView = useMemo(() => buildBracketColumns(matches), [matches]);
-  const hasBracket = columnsView.columns.length > 0;
-  const treeLabel = columnsView.kind === 'bracket' ? 'Chave (árvore)' : 'Rodadas';
-  // Mata-mata abre na CHAVE (a árvore é a forma natural de ler quem pega
-  // quem); grupos e rodadas abrem na lista. A escolha da pessoa vence.
-  const [treeChoice, setTreeView] = useState(null);
-  const soChave = phases.length > 0
-    && phases.every((ph) => ph?.type === 'knockout' || ph?.type === 'double_knockout');
-  const treeView = treeChoice ?? (columnsView.kind === 'bracket' && soChave);
-  const showTree = bracketTreeOn && hasBracket && treeView;
-
   return (
     <V2Collapsible defaultOpen={false} persistId={`result:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
       {/* O pódio (só com a categoria encerrada): cartões e parabéns. */}
       <PodiumBlock tournament={tournament} modality={modality} className="mb-4" />
-      {bracketTreeOn && hasBracket && matches.length > 0 && (
-        <div className="mb-3 inline-flex gap-1 rounded-full border border-gray-100 bg-paper-pure p-1">
-          <button type="button" onClick={() => setTreeView(false)}
-            className={cn('rounded-full px-3 py-1 text-xs font-bold', !treeView ? 'bg-ink text-white' : 'text-gray-500')}>Lista</button>
-          <button type="button" onClick={() => setTreeView(true)}
-            className={cn('rounded-full px-3 py-1 text-xs font-bold', treeView ? 'bg-ink text-white' : 'text-gray-500')}>{treeLabel}</button>
-        </div>
-      )}
       {matches.length === 0 ? (
         falhouJogos ? (
           <V2ErrorState
@@ -751,22 +801,6 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
             onRetry={recarregarJogos}
           />
         ) : <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
-      ) : showTree ? (
-        // Uma chave por FASE: duas fases de mata-mata nunca se misturam.
-        <div className="space-y-5">
-          {byStage
-            .filter(([, stageMatches]) => buildBracketColumns(stageMatches).columns.length > 0)
-            .map(([stageIndex, stageMatches]) => (
-              <V2BracketTree
-                key={stageIndex}
-                matches={stageMatches}
-                labelById={labelById}
-                title={showPhaseHeaders
-                  ? `Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`
-                  : undefined}
-              />
-            ))}
-        </div>
       ) : (
         <div className="space-y-3">
           {byStage.map(([stageIndex, stageMatches]) => {
@@ -783,6 +817,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
                   team={team}
+                  phase={phases[stageIndex]}
                 />
               );
             }
@@ -808,6 +843,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
                   team={team}
+                  phase={phases[stageIndex]}
                 />
               </V2Collapsible>
             );

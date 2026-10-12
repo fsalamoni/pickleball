@@ -547,3 +547,35 @@ de mata-mata, as duas chaves se misturavam numa árvore só.
 **Para todos**: nada foi gravado de novo. A conta sai dos jogos que já
 existem, então os torneios em andamento passam a andar sozinhos no próximo
 resultado lançado. **Banco: zero** — nenhuma coleção, campo, índice ou regra.
+
+## 14. Mata-mata é diagrama, nunca tabela (2026-10-12)
+
+Pedido: *"mata mata não deve ficar em tabela ou lista, deve ficar no formato de
+diagrama, com as chaves montadas em desenho levando para as outras etapas…
+todas as chaves da fase mata mata interligadas e preparadas"*.
+
+**O que havia.** Na aba de resultados a chave só abria sozinha quando TODAS as
+fases eram mata-mata; num torneio de grupos + mata-mata a fase final aparecia
+como lista (havia um botão "Lista | Chave"). No ranking (gestão, página pública
+e impressão) a fase de mata-mata virava tabela de vitórias e saldo. E a
+"árvore" eram colunas soltas, sem linhas.
+
+**Agora.**
+- `buildKnockoutDiagram` (`domain/bracketLayout.js`) dá a chave pronta para
+  desenhar: cada célula diz de onde vêm os lados (`refs` — "Vencedor do jogo 3",
+  "Perdedor do jogo 5") e quem a alimenta (`feeders`, que viram as linhas);
+  a vaga do 3º lugar aparece antes do jogo existir (`thirdPlace` da fase); na
+  **dupla eliminação** a repescagem vem desenhada embaixo, com a grande final;
+  e o **campeão** fecha a chave. `layoutBracketColumns` põe cada jogo no meio
+  dos dois que o alimentam.
+- `V2BracketTree` desenha: cartões de altura fixa, linhas em colchete (o
+  caminho de quem avançou fica escuro), coluna "Campeão", rolagem lateral no
+  celular. Com `onMatchClick`, cada jogo é um botão.
+- `isKnockoutStage(fase, jogos)` é a pergunta única. Fase de mata-mata vira
+  chave em TODO lugar: aba de resultados (quem organiza toca no jogo e tem as
+  mesmas ações da lista — lançar, iniciar, desfazer, placar ao vivo, equipes),
+  ranking, página pública `/p/:id` e impressão (`larguraMax` encolhe a chave
+  para caber na folha). Grupos e rodadas seguem em tabela. O botão "Lista |
+  Chave" saiu: a visão em colunas de RODADAS dos grupos saiu junto.
+
+**Banco: zero.** Só aparência; nenhuma conta de classificação mudou.
