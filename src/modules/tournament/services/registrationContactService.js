@@ -46,8 +46,14 @@ const refContato = (rid) => doc(db, COL, rid, SUB_PRIVATE, DOC_CONTACT);
 export async function saveRegistrationContact({
   registrationId, tournamentId, modalityId = null,
   playerAEmail, playerAUserId, playerBEmail, playerBUserId,
+  slots = ['a', 'b'],
 }) {
-  const payload = buildContactPayload({ playerAEmail, playerBEmail });
+  // `slots`: só os lados que esta escrita conhece. O lado de fora (ex.: o que
+  // acabou de ser ligado à conta, com o e-mail oficial gravado pelo servidor)
+  // não é sobrescrito nem ganha prova de reivindicação de volta.
+  const soLados = (obj) => Object.fromEntries(Object.entries(obj)
+    .filter(([k]) => slots.some((l) => k.startsWith(`player_${l}_`))));
+  const payload = soLados(buildContactPayload({ playerAEmail, playerBEmail }));
   const temAlgum = Boolean(payload.player_a_email || payload.player_b_email);
   if (!temAlgum) return { contact: false, claims: 0 };
 
@@ -56,7 +62,7 @@ export async function saveRegistrationContact({
   const claims = buildProvisionalClaims({
     registrationId, tournamentId, modalityId,
     playerAEmail, playerAUserId, playerBEmail, playerBUserId,
-  });
+  }).filter((c) => slots.includes(c.slot));
   if (claims.length > 0) {
     const batch = writeBatch(db);
     claims.forEach((c) => {
