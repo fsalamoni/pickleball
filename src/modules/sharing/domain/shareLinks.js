@@ -42,7 +42,7 @@ export function buildTournamentShareText(tournament, url) {
   if (t.invite_code) lines.push(`🔑 Código de convite: ${t.invite_code}`);
 
   if (url) lines.push(`\nAcompanhe ao vivo: ${url}`);
-  lines.push('\nvia Pickleholics');
+  lines.push('\nvia PickleRush');
   return lines.join('\n');
 }
 

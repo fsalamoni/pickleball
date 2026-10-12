@@ -7,15 +7,15 @@ const ids = (secoes) => secoes.map((s) => s.id);
 
 describe('userAreaSections', () => {
   it('quem não tem papel vê as seções de todos, na ordem do plano', () => {
-    expect(ids(userAreaSections({}))).toEqual([S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS]);
+    expect(ids(userAreaSections({}))).toEqual([S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS]);
   });
 
-  it('cada papel traz a sua seção — nove no total, nunca mais', () => {
+  it('cada papel traz a sua seção — dez no total, nunca mais', () => {
     const tudo = userAreaSections({ professor: true, arenas: true, clubes: true, admin: true });
     expect(ids(tudo)).toEqual([
-      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
+      S.RESUMO, S.PERFIL, S.TREINO, S.JOGOS, S.TORNEIOS, S.TROFEUS, S.CLUBES, S.PROFESSOR, S.ARENAS, S.ADMIN,
     ]);
-    expect(tudo).toHaveLength(9);
+    expect(tudo).toHaveLength(10);
     expect(tudo.find((s) => s.id === S.ARENAS)).toMatchObject({ grupo: 'gestao', dica: 'minha-area-arenas' });
   });
 

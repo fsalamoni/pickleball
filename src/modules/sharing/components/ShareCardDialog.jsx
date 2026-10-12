@@ -72,7 +72,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
-      link.download = `pickleholics-${safeName || 'torneio'}.png`;
+      link.download = `picklerush-${safeName || 'torneio'}.png`;
       link.href = dataUrl;
       link.click();
       toast.success('Card gerado! Compartilhe nos stories ou no WhatsApp.');
@@ -101,7 +101,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
         >
           <div className="flex items-center gap-2 text-acid">
             <Trophy className="h-5 w-5" />
-            <span className="text-sm font-semibold tracking-wide">Pickleholics</span>
+            <span className="text-sm font-semibold tracking-wide">PickleRush</span>
           </div>
 
           <h3 className="mt-3 text-xl font-bold leading-tight">

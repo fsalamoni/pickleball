@@ -66,10 +66,10 @@ export default function V2History() {
           <V2BulletList items={CURIOSITIES} />
         </V2ContentSection>
 
-        <V2ContentSection icon={Globe2} title="No Brasil e na Pickleholics">
+        <V2ContentSection icon={Globe2} title="No Brasil e na PickleRush">
           <p>
             Por unir baixa barreira de entrada, forte apelo social e partidas rápidas, o pickleball
-            vem formando comunidades por todo o país. Na Pickleholics você encontra torneios, clubes,
+            vem formando comunidades por todo o país. Na PickleRush você encontra torneios, clubes,
             atletas e arenas para jogar — do primeiro rali ao pódio.
           </p>
         </V2ContentSection>

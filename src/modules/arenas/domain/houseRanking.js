@@ -28,12 +28,10 @@ import {
   GAME_KIND, GAME_KIND_LABELS, gameKindsIn, splitGamesByKind,
 } from '@/modules/games/domain/gameKind.js';
 import { GAME_DAY_FORMAT, formatHasScores } from '@/modules/clubs/domain/gameDayFormats.js';
-import { buildRanking } from '@/modules/tournament/domain/ranking.js';
-import { resolveStageScoringConfig } from '@/modules/tournament/domain/scoring.js';
-import { normalizePhases } from '@/modules/tournament/domain/phases.js';
-import { isMatchDecided, matchLoserIds, matchWinnerIds } from '@/modules/tournament/domain/progression.js';
+import { modalityPlacement, registrationPeople } from '@/modules/tournament/domain/podium.js';
+import { isMatchDecided } from '@/modules/tournament/domain/progression.js';
 import {
-  MATCH_STATUS, TOURNAMENT_STATUS, TOURNAMENT_STAGE_TYPE,
+  TOURNAMENT_STATUS,
 } from '@/modules/tournament/domain/constants.js';
 import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility.js';
 import { LADDER_POINTS, LADDER_POINTS_PARTICIPATION, ladderPointsFor } from './leagues.js';
@@ -254,113 +252,10 @@ export function gameDayHouseEvents({ gameDay, participants = [], games = [] } = 
 /*  Um torneio → pontos                                               */
 /* ------------------------------------------------------------------ */
 
-function idsDoLado(m, lado) {
-  const ids = m?.[lado === 'a' ? 'side_a_ids' : 'side_b_ids'];
-  if (Array.isArray(ids) && ids.length > 0) return ids.map(String).filter(Boolean);
-  const bruto = m?.[lado === 'a' ? 'side_a' : 'side_b'];
-  if (bruto == null) return [];
-  if (Array.isArray(bruto)) return bruto.map(String).filter(Boolean);
-  return String(bruto).split('+').map((s) => s.trim()).filter(Boolean);
-}
-
-/** O jogo aconteceu de verdade (dois lados, resultado) — bye e W.O. não. */
-function jogouDeVerdade(m) {
-  return m?.status === MATCH_STATUS.FINISHED
-    && idsDoLado(m, 'a').length > 0 && idsDoLado(m, 'b').length > 0
-    && matchWinnerIds(m) != null;
-}
-
-/**
- * A colocação final de UMA categoria de torneio.
- *
- * Mata-mata: 1º quem venceu a final, 2º quem perdeu; 3º e 4º pela disputa de
- * 3º lugar, ou — sem ela — os dois semifinalistas dividem o 3º. Contar
- * vitórias no lugar da chave daria o título a quem ganhou mais jogos na fase
- * de grupos, e não a quem venceu a final.
- *
- * Qualquer outra estrutura (pontos corridos, grupos, suíço, americana,
- * mexicano, dupla eliminação): a classificação oficial da ÚLTIMA fase, com os
- * critérios de desempate da plataforma (`buildRanking`).
- *
- * @returns {Map<string, { position: number|null, played: number, won: number }>}
- *   chave = id da inscrição
- */
-export function modalityHousePlacement({ modality = null, tournament = null, matches = [] } = {}) {
-  const saida = new Map();
-  const garante = (id) => {
-    if (!saida.has(id)) saida.set(id, { position: null, played: 0, won: 0 });
-    return saida.get(id);
-  };
-
-  const daCategoria = (matches || []).filter((m) => !modality?.id || !m.modality_id || m.modality_id === modality.id);
-  daCategoria.filter(jogouDeVerdade).forEach((m) => {
-    const vencedores = new Set(matchWinnerIds(m) || []);
-    [...idsDoLado(m, 'a'), ...idsDoLado(m, 'b')].forEach((id) => {
-      const s = garante(id);
-      s.played += 1;
-      if (vencedores.has(id)) s.won += 1;
-    });
-  });
-
-  const decididos = daCategoria.filter((m) => isMatchDecided(m));
-  if (decididos.length === 0) return saida;
-
-  const ultimaFase = Math.max(...decididos.map((m) => Number(m.stage_index ?? 0) || 0));
-  const naUltima = decididos.filter((m) => (Number(m.stage_index ?? 0) || 0) === ultimaFase);
-  const fases = normalizePhases(modality?.stages);
-  const tipo = fases[ultimaFase]?.type;
-
-  const coloca = (ids, posicao) => (ids || []).forEach((id) => {
-    const s = garante(String(id));
-    if (s.position == null || posicao < s.position) s.position = posicao;
-  });
-
-  if (tipo === TOURNAMENT_STAGE_TYPE.KNOCKOUT) {
-    const principais = naUltima.filter((m) => !m.third_place);
-    const ultimaRodada = Math.max(0, ...principais.map((m) => Number(m.round) || 1));
-    const finais = principais.filter((m) => (Number(m.round) || 1) === ultimaRodada);
-    if (finais.length === 1) {
-      coloca(matchWinnerIds(finais[0]), 1);
-      coloca(matchLoserIds(finais[0]), 2);
-      const terceiro = naUltima.find((m) => m.third_place);
-      if (terceiro) {
-        coloca(matchWinnerIds(terceiro), 3);
-        coloca(matchLoserIds(terceiro), 4);
-      } else {
-        principais
-          .filter((m) => (Number(m.round) || 1) === ultimaRodada - 1)
-          .forEach((m) => coloca(matchLoserIds(m), 3));
-      }
-      return saida;
-    }
-    // Final ainda sem vencedor: cai na classificação geral da fase.
-  }
-
-  const participantes = [...new Set(naUltima.flatMap((m) => [...idsDoLado(m, 'a'), ...idsDoLado(m, 'b')]))];
-  const config = (m) => resolveStageScoringConfig(modality, tournament, m.stage_index ?? 0);
-  buildRanking(naUltima, participantes, config)
-    .filter((r) => Number(r.played) > 0)
-    .forEach((r) => coloca([String(r.participant_id)], Number(r.position)));
-  return saida;
-}
-
-/** As pessoas (com conta) de uma inscrição: A e B numa dupla, o elenco numa equipe. */
-export function registrationHousePeople(reg) {
-  if (!reg) return [];
-  if (reg.kind === 'team') {
-    return (reg.members || [])
-      .filter((m) => m?.user_id)
-      .map((m) => ({ user_id: m.user_id, name: m.name || 'Atleta', photo_url: m.photo_url || null }));
-  }
-  return [
-    reg.player_a_user_id || reg.user_id
-      ? { user_id: reg.player_a_user_id || reg.user_id, name: reg.player_a_name || 'Atleta', photo_url: reg.player_a_photo || null }
-      : null,
-    reg.player_b_user_id
-      ? { user_id: reg.player_b_user_id, name: reg.player_b_name || 'Atleta', photo_url: reg.player_b_photo || null }
-      : null,
-  ].filter(Boolean);
-}
+// A colocação de uma categoria e as pessoas de uma inscrição moram no módulo
+// do torneio (`tournament/domain/podium.js`) desde os cartões de campeões:
+// o ranking da casa e o pódio têm de concordar, então é UMA função.
+export { modalityPlacement as modalityHousePlacement, registrationPeople as registrationHousePeople };
 
 /**
  * O que um torneio da casa leva ao ranking: um evento por CATEGORIA que teve
@@ -373,13 +268,13 @@ export function tournamentHouseEvents({ tournament, modalities = [], registratio
   const status = isHouseTournamentCounted(tournament) ? 'counted' : 'waiting';
 
   return (modalities || []).filter((m) => m?.id).map((modality) => {
-    const colocacao = modalityHousePlacement({
+    const colocacao = modalityPlacement({
       modality, tournament, matches: (matches || []).filter((x) => x?.modality_id === modality.id),
     });
     const porUid = new Map();
     colocacao.forEach((c, regId) => {
       if (c.played <= 0 && c.position == null) return;
-      registrationHousePeople(regPorId.get(regId)).forEach((pessoa) => {
+      registrationPeople(regPorId.get(regId)).forEach((pessoa) => {
         const atual = porUid.get(pessoa.user_id);
         if (atual && (atual.position ?? 99) <= (c.position ?? 99)) return;
         porUid.set(pessoa.user_id, {

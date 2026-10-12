@@ -18,6 +18,7 @@ import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
+import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -238,6 +239,13 @@ export default function V2AthleteProfile() {
       {headToHeadOn && h2hData?.h2h?.length > 0 && (
         <div className="mt-8"><HeadToHeadCard records={h2hData.h2h} /></div>
       )}
+
+      {/* A estante de troféus: pódios de torneio e de dia de jogo, com o cartão
+          e o "Parabenizar" (um kudo, com XP para quem torce). */}
+      <V2Surface className="mt-8">
+        <h2 className="mb-4 inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Medal className="h-5 w-5" aria-hidden="true" /> Troféus</h2>
+        <TrophyShelf uid={uid} nome={athlete?.name || ''} compacto />
+      </V2Surface>
 
       {gameDayGames.length > 0 && <RecentGameDayGames games={gameDayGames} />}
 

@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import {
   Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, GraduationCap,
   HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Search, Settings, ShieldCheck,
-  Swords, Trophy, User, Users,
+  Medal, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -43,6 +43,7 @@ import MyReferralCodes from '@/v2/components/arenas/marketing/MyReferralCodes';
 import MyArenaPlans from '@/v2/components/arenas/members/MyArenaPlans';
 import MyShopPurchases from '@/v2/components/arenas/shop/MyShopPurchases';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
+import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
 import { MyArenaEnrollments, MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { MiniStat } from './ProfileShowcase';
 
@@ -481,12 +482,23 @@ function AdminSecao() {
   );
 }
 
+/** A estante de troféus: pódios de torneio e de dia de jogo, com o cartão. */
+function TrofeusSecao() {
+  const { user } = useAuth();
+  return (
+    <Bloco id="trofeus" icon={Medal} title="Seus troféus">
+      <TrophyShelf uid={user?.uid} nome={user?.displayName || ''} mine />
+    </Bloco>
+  );
+}
+
 export const SECOES = Object.freeze({
   [S.RESUMO]: ResumoSecao,
   [S.PERFIL]: PerfilSecao,
   [S.TREINO]: TreinoSecao,
   [S.JOGOS]: JogosSecao,
   [S.TORNEIOS]: TorneiosSecao,
+  [S.TROFEUS]: TrofeusSecao,
   [S.CLUBES]: ClubesSecao,
   [S.PROFESSOR]: ProfessorSecao,
   [S.ARENAS]: ArenasSecao,

@@ -4,7 +4,7 @@ Componentes de compartilhamento social, certificados e **calendar export**
 (`.ics` — Onda 1).
 
 ## Status
-- **Componentes**: `ShareCardButton`, `CertificateButton`,
+- **Componentes**: `ShareCardButton`,
   `CalendarExportButton` (Onda 1)
 - **Domain**: `ics.js` (puro, testado)
 

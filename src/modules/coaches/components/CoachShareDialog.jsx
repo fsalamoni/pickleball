@@ -35,7 +35,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
   const url = typeof window !== 'undefined' ? `${window.location.origin}/coaches/${coach.id}` : '';
   const displayName = coach?.display_name || coach?.name || 'Professor';
   const region = Array.isArray(coach?.regions) && coach.regions.length > 0 ? coach.regions[0] : '';
-  const text = `Conheça o professor ${displayName}${region ? ` (${region})` : ''} no Pickleholics: ${url}`;
+  const text = `Conheça o professor ${displayName}${region ? ` (${region})` : ''} no PickleRush: ${url}`;
 
   useEffect(() => {
     if (!url) return;
@@ -97,7 +97,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
             </div>
           )}
           <p className="mt-3 text-center text-[10px] uppercase tracking-widest text-gray-400">
-            Pickleholics
+            PickleRush
           </p>
         </div>
 

@@ -15,7 +15,7 @@ import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, Building2, Dumbbell, Eye, GraduationCap, LayoutDashboard,
-  LayoutGrid, Pencil, Swords, Trophy, User, Users,
+  LayoutGrid, Medal, Pencil, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -42,7 +42,7 @@ import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { SECOES } from './UserAreaSections';
 
 const ICONES = {
-  LayoutGrid, User, Dumbbell, Swords, Trophy, Users, GraduationCap, Building2, LayoutDashboard,
+  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, Users, GraduationCap, Building2, LayoutDashboard,
 };
 
 /** `true`/`false` quando a leitura respondeu, `'erro'` quando falhou, `undefined` carregando. */

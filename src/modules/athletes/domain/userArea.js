@@ -23,6 +23,7 @@ export const USER_AREA_SECTION = Object.freeze({
   /** Meus jogos: o que vem e o que foi (eram "Jogo" e "Agenda"). */
   JOGOS: 'jogos',
   TORNEIOS: 'torneios',
+  TROFEUS: 'trofeus',
   CLUBES: 'clubes',
   PROFESSOR: 'professor',
   ARENAS: 'arenas',
@@ -50,6 +51,7 @@ const META = Object.freeze([
   { id: S.TREINO, label: 'Treino', icone: 'Dumbbell', grupo: 'voce', quem: 'todos' },
   { id: S.JOGOS, label: 'Meus jogos', icone: 'Swords', grupo: 'voce', quem: 'todos' },
   { id: S.TORNEIOS, label: 'Torneios', icone: 'Trophy', grupo: 'voce', quem: 'todos' },
+  { id: S.TROFEUS, label: 'Troféus', icone: 'Medal', grupo: 'voce', quem: 'todos' },
   { id: S.CLUBES, label: 'Clubes', icone: 'Users', grupo: 'voce', quem: 'clubes' },
   { id: S.PROFESSOR, label: 'Professor', icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
   { id: S.ARENAS, label: 'Arenas', icone: 'Building2', grupo: 'gestao', quem: 'arenas' },

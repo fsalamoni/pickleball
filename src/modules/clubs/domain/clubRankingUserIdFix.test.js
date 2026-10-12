@@ -151,7 +151,7 @@ describe('Wave C.6 — fix do user_id no materializado', () => {
   });
 
   describe('pipeline completo (applyToIndividual + sideToUids)', () => {
-    it('materializado popula com user_ids reais para o cenário do Pickleholics', () => {
+    it('materializado popula com user_ids reais para o cenário do PickleRush', () => {
       const matches = [];
       const n = normalizeClubGame(gameLegado, participantById);
       if (n) matches.push(n);

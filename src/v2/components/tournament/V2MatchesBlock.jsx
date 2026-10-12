@@ -35,6 +35,7 @@ import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
 import { confrontationSnapshot, buildEtapaDrafts, computeEtapaResult } from '@/modules/tournament/domain/teamFormat';
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
+import PodiumBlock from '@/v2/components/trophies/PodiumBlock';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -731,6 +732,8 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
 
   return (
     <V2Collapsible defaultOpen={false} persistId={`result:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
+      {/* O pódio (só com a categoria encerrada): cartões e parabéns. */}
+      <PodiumBlock tournament={tournament} modality={modality} className="mb-4" />
       {bracketTreeOn && hasBracket && matches.length > 0 && (
         <div className="mb-3 inline-flex gap-1 rounded-full border border-gray-100 bg-paper-pure p-1">
           <button type="button" onClick={() => setTreeView(false)}
