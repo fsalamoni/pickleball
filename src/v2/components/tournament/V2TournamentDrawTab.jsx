@@ -217,7 +217,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         const warns = res.scheduleWarnings || [];
         toast.success(ehEtapas
           ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
-          : `Próxima rodada gerada (${res.created} jogo(s)).`);
+          : (res.created ? `${res.created} confronto(s) novo(s) na chave.` : 'Chave atualizada com os vencedores certos.'));
         if (warns.length > 0) {
           toast.warning(`${warns.length} jogo(s) sem horário — ajuste quadras/horário de término.`);
         }

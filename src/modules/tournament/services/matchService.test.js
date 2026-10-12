@@ -9,6 +9,8 @@ const h = vi.hoisted(() => ({
   batchUpdate: vi.fn(),
   batchDelete: vi.fn(),
   batchCommit: vi.fn(),
+  batchSet: vi.fn(),
+  getDoc: vi.fn(),
   serverTs: Symbol('ts'),
 }));
 
@@ -17,7 +19,7 @@ vi.mock('@/core/services/auditService', () => ({ createAuditLog: h.createAuditLo
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(() => ({})),
   doc: vi.fn((_db, col, id) => ({ col, id })),
-  getDoc: vi.fn(),
+  getDoc: h.getDoc,
   getDocs: h.getDocs,
   setDoc: vi.fn(),
   updateDoc: vi.fn(),
@@ -26,10 +28,12 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn(() => ({})),
   orderBy: vi.fn(() => ({})),
   serverTimestamp: vi.fn(() => h.serverTs),
-  writeBatch: vi.fn(() => ({ update: h.batchUpdate, delete: h.batchDelete, commit: h.batchCommit })),
+  writeBatch: vi.fn(() => ({
+    update: h.batchUpdate, delete: h.batchDelete, commit: h.batchCommit, set: h.batchSet,
+  })),
 }));
 
-const { clearStaleSingleGroupMarkers } = await import('./matchService.js');
+const { clearStaleSingleGroupMarkers, autoAdvanceBracket } = await import('./matchService.js');
 
 function snap(rows) {
   return { docs: rows.map((r) => ({ id: r.id, data: () => r })) };
@@ -158,5 +162,53 @@ describe('clearStaleSingleGroupMarkers', () => {
     expect(res).toEqual({ cleared: 0, groupsRemoved: 0 });
     expect(h.batchCommit).not.toHaveBeenCalled();
     expect(h.batchDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe('autoAdvanceBracket — a chave anda sozinha', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const exists = (data) => ({ exists: () => Boolean(data), data: () => data });
+  const jogo = (id, round, position, a, b, winner) => ({
+    id, round, position, stage_index: 0, stage_type: 'knockout',
+    side_a_ids: [a], side_b_ids: [b],
+    status: winner ? 'finished' : 'scheduled', winner_side: winner || null,
+  });
+
+  it('cria o confronto seguinte quando os dois jogos de origem terminaram', async () => {
+    h.getDoc
+      .mockResolvedValueOnce(exists({ id: 'mod1', stages: [{ type: 'knockout' }] }))
+      .mockResolvedValueOnce(exists({ id: 't1' }));
+    const rodada1 = [
+      jogo('m1', 1, 1, 'a', 'b', 'a'),
+      jogo('m2', 1, 2, 'c', 'd', 'b'),
+      jogo('m3', 1, 3, 'e', 'f'),
+      jogo('m4', 1, 4, 'g', 'h'),
+    ];
+    h.getDocs
+      .mockResolvedValueOnce(snap(rodada1))
+      .mockResolvedValueOnce(snap([...rodada1, jogo('x', 2, 1, 'a', 'd')]));
+
+    const res = await autoAdvanceBracket(
+      { tournamentId: 't1', modalityId: 'mod1', stageIndex: 0 },
+      { uid: 'admin' },
+    );
+
+    expect(res).toEqual({ created: 1, updated: 0 });
+    expect(h.batchSet).toHaveBeenCalledTimes(1);
+    expect(h.batchSet.mock.calls[0][1]).toMatchObject({
+      round: 2, position: 1, side_a_ids: ['a'], side_b_ids: ['d'], status: 'scheduled',
+    });
+  });
+
+  it('não faz nada fora do mata-mata', async () => {
+    const res = await autoAdvanceBracket(
+      { tournamentId: 't1', modalityId: 'mod1', stageIndex: 0, stageType: 'groups' },
+      { uid: 'admin' },
+    );
+    expect(res).toEqual({ created: 0, updated: 0 });
+    expect(h.getDoc).not.toHaveBeenCalled();
   });
 });

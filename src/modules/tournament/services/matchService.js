@@ -29,6 +29,8 @@ import { recommendedMexicanoRounds } from '../domain/mexicano.js';
 import { matchesWithStaleSingleGroup, groupDocsInSingleGroupStages, normalizePhase } from '../domain/phases.js';
 import { isActiveRegistration } from '../domain/checkin.js';
 import { listRegistrations } from './registrationService.js';
+import { getModality } from './modalityService.js';
+import { logger } from '@/core/lib/logger';
 
 const COL = 'tournament_matches';
 const GROUPS_COL = 'tournament_groups';
@@ -161,6 +163,11 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
       schedule_warnings: scheduleWarnings.length,
     },
   });
+  // Mata-mata: os byes já decidem confrontos da rodada seguinte (dois cabeças
+  // que passaram direto se enfrentam). Eles nascem junto com o sorteio.
+  if (BRACKET_TYPES.has(draw.stageType)) {
+    await autoAdvanceBracket({ tournamentId, modalityId, stageIndex, stageType: draw.stageType }, actor);
+  }
   return { scheduleWarnings };
 }
 
@@ -180,6 +187,62 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
  * @returns {Promise<{ created: number, complete?: boolean, championIds?: string[], scheduleWarnings: string[] }>}
  */
 export async function advanceStage(tournamentId, modalityId, stageIndex, modality, tournament, actor) {
+  const res = await applyStageAdvance(tournamentId, modalityId, stageIndex, modality, tournament, actor);
+  if (res.pending) {
+    const stageType = modality?.stages?.[stageIndex]?.type;
+    throw new Error(stageType === 'americano_etapas'
+      ? 'Conclua todos os jogos da etapa atual antes de gerar a próxima.'
+      : (BRACKET_TYPES.has(stageType)
+        ? 'A chave já está em dia: o próximo confronto nasce sozinho quando os dois jogos que o alimentam terminarem.'
+        : 'Conclua todos os jogos da rodada atual antes de avançar.'));
+  }
+  return res;
+}
+
+/** Fases em árvore: o confronto seguinte nasce sozinho, chave a chave. */
+const BRACKET_TYPES = new Set(['knockout', 'double_knockout']);
+
+/**
+ * Faz a CHAVE andar sozinha: cria (e corrige) os confrontos seguintes cujos
+ * dois jogos de origem já terminaram. Chamado depois de cada resultado e de
+ * cada sorteio de mata-mata — vale para todo torneio, inclusive os que já
+ * estavam rolando (a conta sai dos jogos gravados, não de um campo novo).
+ *
+ * Nunca derruba quem chamou: o resultado já está gravado, e se algo falhar
+ * aqui o botão "Avançar" da aba de sorteio continua fazendo o mesmo.
+ *
+ * @param {{ tournamentId: string, modalityId: string, stageIndex: number, stageType?: string }} ref
+ * @param {object} actor
+ * @returns {Promise<{ created: number, updated: number, complete?: boolean }>}
+ */
+export async function autoAdvanceBracket(ref, actor) {
+  const { tournamentId, modalityId } = ref || {};
+  const stageIndex = ref?.stageIndex ?? 0;
+  if (!tournamentId || !modalityId) return { created: 0, updated: 0 };
+  if (ref.stageType && !BRACKET_TYPES.has(ref.stageType)) return { created: 0, updated: 0 };
+  try {
+    const modality = await getModality(modalityId);
+    if (!BRACKET_TYPES.has(modality?.stages?.[stageIndex]?.type)) return { created: 0, updated: 0 };
+    const tSnap = await getDoc(doc(db, 'tournaments', tournamentId));
+    const tournament = tSnap.exists() ? tSnap.data() : null;
+    let created = 0;
+    let updated = 0;
+    // Byes em cascata podem liberar mais de um nível de uma vez.
+    for (let i = 0; i < 8; i += 1) {
+      const res = await applyStageAdvance(tournamentId, modalityId, stageIndex, modality, tournament, actor);
+      if (res.complete) return { created, updated, complete: true };
+      if (res.pending || (!res.created && !res.updated)) break;
+      created += res.created || 0;
+      updated += res.updated || 0;
+    }
+    return { created, updated };
+  } catch (err) {
+    logger.warn('Avanço automático da chave falhou', err);
+    return { created: 0, updated: 0, error: true };
+  }
+}
+
+async function applyStageAdvance(tournamentId, modalityId, stageIndex, modality, tournament, actor) {
   const stage = modality?.stages?.[stageIndex];
   const stageType = stage?.type;
   if (!stageSupportsAdvance(stageType)) {
@@ -226,16 +289,15 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
   if (result.complete) {
     return { created: 0, complete: true, championIds: result.championIds || [], scheduleWarnings: [] };
   }
-  if (result.pending || !result.matches || result.matches.length === 0) {
-    throw new Error(stageType === 'americano_etapas'
-      ? 'Conclua todos os jogos da etapa atual antes de gerar a próxima.'
-      : 'Conclua todos os jogos da rodada atual antes de avançar.');
+  const sideUpdates = result.updates || [];
+  if (result.pending || ((!result.matches || result.matches.length === 0) && sideUpdates.length === 0)) {
+    return { created: 0, pending: true, scheduleWarnings: [] };
   }
 
   // Monta os payloads dos novos jogos (ids estáveis). Numa modalidade de
   // EQUIPES, as novas rodadas também nascem marcadas como confronto.
   const isTeam = Boolean(modality?.team_config);
-  const payloads = result.matches.map((m, idx) => ({
+  const payloads = (result.matches || []).map((m, idx) => ({
     ...(isTeam
       ? {
           team_confrontation: true,
@@ -302,6 +364,14 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
 
   const batch = writeBatch(db);
   payloads.forEach((p) => batch.set(doc(db, COL, p.id), p));
+  // Resultado refeito: o confronto seguinte (ainda sem placar) troca de lado.
+  sideUpdates.forEach((u) => batch.update(doc(db, COL, u.id), {
+    side_a: serializeSide(u.side_a),
+    side_b: serializeSide(u.side_b),
+    side_a_ids: normalizeIds(u.side_a),
+    side_b_ids: normalizeIds(u.side_b),
+    updated_at: serverTimestamp(),
+  }));
   await batch.commit();
   await createAuditLog({
     action: 'stage_advanced',
@@ -312,9 +382,10 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
       stage_index: stageIndex,
       stage_type: stageType,
       created: payloads.length,
+      updated: sideUpdates.length,
     },
   });
-  return { created: payloads.length, scheduleWarnings };
+  return { created: payloads.length, updated: sideUpdates.length, scheduleWarnings };
 }
 
 function serializeSide(side) {
@@ -394,6 +465,21 @@ export async function getMatch(id) {
   return snap.exists() ? snap.data() : null;
 }
 
+/**
+ * Depois de um resultado num mata-mata, a chave anda sozinha: o confronto
+ * seguinte nasce (ou é corrigido) sem ninguém apertar botão.
+ */
+export async function advanceBracketAfterResult(matchId, actor) {
+  const m = await getMatch(matchId).catch(() => null);
+  if (!m) return null;
+  return autoAdvanceBracket({
+    tournamentId: m.tournament_id,
+    modalityId: m.modality_id,
+    stageIndex: m.stage_index ?? 0,
+    stageType: m.stage_type || undefined,
+  }, actor);
+}
+
 export async function recordMatchResult(matchId, payload, scoringConfig, actor) {
   const updates = {
     games: payload.games || [],
@@ -417,6 +503,7 @@ export async function recordMatchResult(matchId, payload, scoringConfig, actor) 
     actor,
     details: { match_id: matchId, status: updates.status, winner: updates.winner_side || null },
   });
+  if (result.finished) await advanceBracketAfterResult(matchId, actor);
   return updates;
 }
 

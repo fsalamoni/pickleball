@@ -65,60 +65,115 @@ function groupByRound(matches) {
 
 /* ------------------------------ Knockout -------------------------------- */
 
+/** Os ids de dois lados são os mesmos (ordem importa: A é A, B é B)? */
+function sameIds(x, y) {
+  const a = x || [];
+  const b = y || [];
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}
+
+/** Jogo ainda intocado: agendado, sem games, sem vencedor — pode ser refeito. */
+function isUntouched(m) {
+  return m.status === MATCH_STATUS.SCHEDULED
+    && !(m.games || []).length
+    && m.winner_side == null;
+}
+
 /**
- * Calcula a próxima rodada de um mata-mata simples.
+ * Progressão do mata-mata simples, CONFRONTO A CONFRONTO.
+ *
+ * A chave é uma árvore: o jogo `p` da rodada `r + 1` é disputado pelos
+ * vencedores dos jogos `2p − 1` e `2p` da rodada `r`. Assim que os DOIS
+ * jogos que alimentam um confronto estão decididos, ele já pode ser criado —
+ * sem esperar o resto da rodada. É o que deixa a chave andar sozinha:
+ * quem venceu cedo já sabe contra quem joga, e a quadra não fica parada
+ * esperando o último jogo da rodada.
+ *
+ * 🐞 Antes a rodada seguinte só nascia quando TODOS os jogos da rodada atual
+ * terminavam, e por um botão. Numa chave de 16, a semifinal de cima esperava
+ * a última quarta de baixo.
+ *
+ * Também corrige: se um resultado é refeito (o vencedor mudou) e o confronto
+ * seguinte ainda não começou, ele é atualizado com o vencedor certo
+ * (`updates`). Confronto que já tem placar nunca é tocado.
+ *
+ * A disputa de 3º lugar (opção da fase) nasce quando as duas semifinais estão
+ * decididas, na rodada da final, posição 2.
  *
  * @param {Array<object>} matches jogos da fase (com resultados)
- * @returns {{ pending: true } | { complete: true, championIds: string[] } | { matches: Array<object>, nextRound: number }}
+ * @param {{ thirdPlace?: boolean }} [options]
+ * @returns {{ pending: true }
+ *   | { complete: true, championIds: string[] }
+ *   | { matches: Array<object>, updates: Array<{ id: string, side_a: any, side_b: any }>, nextRound: number }}
  */
 export function knockoutNextRound(matches, options = {}) {
   if (!matches || matches.length === 0) return { pending: true };
-  const rounds = groupByRound(matches);
-  const maxRound = Math.max(...rounds.keys());
-  // A disputa de 3º lugar fica na mesma rodada da final; ignoramos esse jogo ao
-  // calcular vencedores/avanço (ele não gera próxima rodada).
-  const current = rounds
-    .get(maxRound)
-    .filter((m) => !m.third_place)
-    .slice()
-    .sort((a, b) => (a.position || 0) - (b.position || 0));
+  const main = matches.filter((m) => !m.third_place);
+  if (main.length === 0) return { pending: true };
+  const rounds = groupByRound(main);
+  const firstRound = Math.min(...rounds.keys());
+  const firstMatches = rounds.get(firstRound);
+  // Posições da 1ª rodada (os byes também são jogos gravados, como W.O.).
+  const firstSize = Math.max(firstMatches.length, ...firstMatches.map((m) => m.position || 0));
+  const finalRound = firstRound + Math.ceil(Math.log2(Math.max(1, firstSize)));
+  const at = (r, p) => (rounds.get(r) || []).find((m) => (m.position || 0) === p) || null;
 
-  if (current.length === 1 && isMatchDecided(current[0])) {
-    return { complete: true, championIds: matchWinnerIds(current[0]) };
-  }
-  if (!current.every(isMatchDecided)) return { pending: true };
-
-  const winners = current.map(matchWinnerIds);
-  const next = [];
-  for (let i = 0; i < winners.length; i += 2) {
-    const a = winners[i];
-    const b = winners[i + 1] || null;
-    next.push({
-      round: maxRound + 1,
-      position: i / 2 + 1,
-      side_a: sideFromIds(a),
-      side_b: sideFromIds(b),
-      bye: !b || b.length === 0,
-    });
-  }
-
-  // Disputa de 3º lugar: quando esta rodada são as semifinais (2 jogos → 1
-  // final) e a opção está ligada, cria também o jogo entre os 2 perdedores.
-  if (options.thirdPlace && current.length === 2 && next.length === 1) {
-    const losers = current.map(matchLoserIds);
-    if (losers.every((l) => l && l.length > 0)) {
-      next.push({
-        round: maxRound + 1,
-        position: 2,
-        side_a: sideFromIds(losers[0]),
-        side_b: sideFromIds(losers[1]),
-        bye: false,
-        third_place: true,
+  const toCreate = [];
+  const updates = [];
+  // Confronto que deve existir na posição (r, p) com os lados a/b.
+  const ensure = (round, position, a, b, extra = {}) => {
+    const existing = extra.third_place
+      ? matches.find((m) => m.third_place) || null
+      : at(round, position);
+    if (!existing) {
+      toCreate.push({
+        round,
+        position,
+        side_a: sideFromIds(a),
+        side_b: sideFromIds(b),
+        bye: !a.length || !b.length,
+        ...extra,
       });
+      return;
+    }
+    if (existing.id && isUntouched(existing)
+      && (!sameIds(existing.side_a_ids, a) || !sameIds(existing.side_b_ids, b))) {
+      updates.push({ id: existing.id, side_a: sideFromIds(a), side_b: sideFromIds(b) });
+    }
+  };
+
+  for (let r = firstRound; r < finalRound; r += 1) {
+    const count = Math.ceil(firstSize / 2 ** (r - firstRound));
+    for (let p = 1; p <= Math.ceil(count / 2); p += 1) {
+      const fa = at(r, 2 * p - 1);
+      const fb = 2 * p <= count ? at(r, 2 * p) : null;
+      if (!fa || !isMatchDecided(fa)) continue;
+      if (2 * p <= count && (!fb || !isMatchDecided(fb))) continue;
+      const a = matchWinnerIds(fa) || [];
+      const b = fb ? matchWinnerIds(fb) || [] : [];
+      if (!a.length && !b.length) continue;
+      ensure(r + 1, p, a, b);
     }
   }
 
-  return { matches: next, nextRound: maxRound + 1 };
+  // Disputa de 3º lugar: os perdedores das duas semifinais.
+  if (options.thirdPlace && finalRound - 1 >= firstRound) {
+    const s1 = at(finalRound - 1, 1);
+    const s2 = at(finalRound - 1, 2);
+    if (s1 && s2 && isMatchDecided(s1) && isMatchDecided(s2)) {
+      const l1 = matchLoserIds(s1) || [];
+      const l2 = matchLoserIds(s2) || [];
+      if (l1.length && l2.length) ensure(finalRound, 2, l1, l2, { third_place: true });
+    }
+  }
+
+  if (toCreate.length || updates.length) {
+    const nextRound = toCreate.length ? Math.max(...toCreate.map((m) => m.round)) : finalRound;
+    return { matches: toCreate, updates, nextRound };
+  }
+  const final = at(finalRound, 1);
+  if (final && isMatchDecided(final)) return { complete: true, championIds: matchWinnerIds(final) };
+  return { pending: true };
 }
 
 /* ------------------------------ Swiss ----------------------------------- */

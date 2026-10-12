@@ -67,21 +67,51 @@ export function roundLabel(round, totalRounds) {
  *   (`bracket`) ou rodadas de um grupo (`rounds`).
  */
 export function buildBracketColumns(matches = []) {
-  const ko = (matches || []).filter(isWinnersBracketMatch);
-  if (ko.length === 0) return { columns: [], totalRounds: 0, kind: 'rounds' };
+  const all = (matches || []).filter(isWinnersBracketMatch);
+  const ko = all.filter((m) => !m.third_place);
+  if (ko.length === 0) return { columns: [], totalRounds: 0, kind: 'rounds', thirdPlace: null };
 
-  const rounds = [...new Set(ko.map((m) => Number(m.round)))].sort((a, b) => a - b);
-  const totalRounds = rounds[rounds.length - 1];
+  const byPosition = (a, b) => (Number(a.position) || 0) - (Number(b.position) || 0);
   const knockout = isKnockoutSet(ko);
 
-  const columns = rounds.map((round) => ({
-    round,
-    label: knockout ? roundLabel(round, totalRounds) : `Rodada ${round}`,
-    matches: ko
-      .filter((m) => Number(m.round) === round)
-      .slice()
-      .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0)),
-  }));
+  if (!knockout) {
+    const rounds = [...new Set(ko.map((m) => Number(m.round)))].sort((a, b) => a - b);
+    const columns = rounds.map((round) => ({
+      round,
+      label: `Rodada ${round}`,
+      matches: ko.filter((m) => Number(m.round) === round).slice().sort(byPosition),
+    }));
+    return { columns, totalRounds: rounds[rounds.length - 1], kind: 'rounds', thirdPlace: null };
+  }
 
-  return { columns, totalRounds, kind: knockout ? 'bracket' : 'rounds' };
+  // ⭐ A CHAVE INTEIRA, desde o sorteio. O tamanho sai da 1ª rodada (os byes
+  // também são jogos gravados), não da última rodada que já existe.
+  // 🐞 Antes a coluna era rotulada pela maior rodada GRAVADA: logo depois do
+  // sorteio de 8, a 1ª rodada aparecia como "Final" e as próximas nem existiam
+  // na tela. Agora as fases que ainda não nasceram aparecem como vagas
+  // ("Vencedor do jogo 3"), na posição certa da árvore.
+  const firstRound = Math.min(...ko.map((m) => Number(m.round)));
+  const first = ko.filter((m) => Number(m.round) === firstRound);
+  const firstSize = Math.max(first.length, ...first.map((m) => Number(m.position) || 0));
+  const finalRound = firstRound + Math.ceil(Math.log2(Math.max(1, firstSize)));
+
+  const columns = [];
+  let numero = 0;
+  for (let round = firstRound; round <= finalRound; round += 1) {
+    const count = Math.ceil(firstSize / 2 ** (round - firstRound));
+    const prevStart = numero - (columns.length ? columns[columns.length - 1].matches.length : 0);
+    const cells = [];
+    for (let position = 1; position <= count; position += 1) {
+      numero += 1;
+      const real = ko.find((m) => Number(m.round) === round && (Number(m.position) || 0) === position);
+      const from = round === firstRound ? null : [prevStart + 2 * position - 1, prevStart + 2 * position];
+      cells.push(real
+        ? { ...real, number: numero, from }
+        : { id: `vaga-${round}-${position}`, round, position, placeholder: true, number: numero, from });
+    }
+    columns.push({ round, label: roundLabel(round, finalRound), matches: cells });
+  }
+
+  const tp = all.find((m) => m.third_place) || null;
+  return { columns, totalRounds: finalRound, kind: 'bracket', thirdPlace: tp };
 }
