@@ -25,7 +25,8 @@ import TournamentGallery from '@/modules/tournament/components/TournamentGallery
 import { V2ErrorState } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
-import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
+import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
+import { normalizePhases } from '@/modules/tournament/domain/phases';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -318,7 +319,9 @@ function PublicModalityBlock({ tournament, modality }) {
     refetchInterval: 20_000,
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
-  // A chave (árvore) de cada fase de mata-mata, separada por fase.
+  // Mata-mata é CHAVE desenhada, nunca tabela: cada fase de mata-mata vira o
+  // seu diagrama e sai do ranking e da lista de jogos.
+  const fasesConfig = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
   const chavesPorFase = useMemo(() => {
     const porFase = new Map();
     matches.forEach((m) => {
@@ -328,9 +331,13 @@ function PublicModalityBlock({ tournament, modality }) {
     });
     return [...porFase.entries()]
       .sort((a, b) => a[0] - b[0])
-      .filter(([, lista]) => buildBracketColumns(lista).kind === 'bracket'
-        && lista.some((m) => m.stage_type === 'knockout' || m.stage_type === 'double_knockout'));
-  }, [matches]);
+      .filter(([k, lista]) => isKnockoutStage(fasesConfig[k] || { type: lista[0]?.stage_type }, lista));
+  }, [matches, fasesConfig]);
+  const fasesChave = useMemo(() => new Set(chavesPorFase.map(([k]) => Number(k))), [chavesPorFase]);
+  const jogosEmLista = useMemo(
+    () => matches.filter((m) => !fasesChave.has(Number(m.stage_index ?? 0))),
+    [matches, fasesChave],
+  );
   const {
     data: rankingData, isError: falhouRanking, refetch: recarregarRanking,
   } = useQuery({
@@ -339,8 +346,9 @@ function PublicModalityBlock({ tournament, modality }) {
     refetchInterval: 30_000,
   });
   const rankingPhases = useMemo(
-    () => (rankingData?.phases || []).filter((p) => p.played && p.groups.some((g) => (g.rows || []).length > 0)),
-    [rankingData],
+    () => (rankingData?.phases || []).filter((p) => p.played && !fasesChave.has(Number(p.stageIndex))
+      && p.groups.some((g) => (g.rows || []).length > 0)),
+    [rankingData, fasesChave],
   );
   const showRankingPhaseHeaders = rankingPhases.length > 1;
   const {
@@ -453,13 +461,15 @@ function PublicModalityBlock({ tournament, modality }) {
                 key={stageIndex}
                 matches={stageMatches}
                 labelById={labelById}
+                thirdPlace={Boolean(fasesConfig[stageIndex]?.third_place)}
+                double={fasesConfig[stageIndex]?.type === 'double_knockout'}
                 title={multiPhase ? `Fase ${Number(stageIndex) + 1}` : undefined}
               />
             ))}
           </div>
         )}
 
-        {matches.length > 0 ? (
+        {jogosEmLista.length > 0 ? (
           <div>
             <h4 className="text-sm font-semibold mb-2">Jogos</h4>
             <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
@@ -468,8 +478,8 @@ function PublicModalityBlock({ tournament, modality }) {
                   <tr className="text-left">
                     {multiPhase && <th className="px-3 py-2">Fase</th>}
                     <th className="px-3 py-2">Rod.</th>
-                    {matches.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
-                    {matches.some((m) => m.court || m.scheduled_at) && (
+                    {jogosEmLista.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
+                    {jogosEmLista.some((m) => m.court || m.scheduled_at) && (
                       <>
                         <th className="px-3 py-2">Quadra</th>
                         <th className="px-3 py-2">Horário</th>
@@ -482,14 +492,14 @@ function PublicModalityBlock({ tournament, modality }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {matches.map((m) => (
+                  {jogosEmLista.map((m) => (
                     <tr key={m.id} className="border-t">
                       {multiPhase && <td className="px-3 py-2 tabular-nums">{(m.stage_index ?? 0) + 1}</td>}
                       <td className="px-3 py-2">{roundLabel(m)}</td>
-                      {matches.some((mm) => mm.group) && (
+                      {jogosEmLista.some((mm) => mm.group) && (
                         <td className="px-3 py-2">{m.group || '—'}</td>
                       )}
-                      {matches.some((mm) => mm.court || mm.scheduled_at) && (
+                      {jogosEmLista.some((mm) => mm.court || mm.scheduled_at) && (
                         <>
                           <td className="px-3 py-2">{m.court || '—'}</td>
                           <td className="px-3 py-2 tabular-nums">{formatPublicMatchTime(m.scheduled_at)}</td>
@@ -525,7 +535,7 @@ function PublicModalityBlock({ tournament, modality }) {
               </table>
             </div>
             <div className="mt-3 space-y-2.5 sm:hidden">
-              {matches.map((m) => {
+              {jogosEmLista.map((m) => {
                 const hasGroup = Boolean(m.group);
                 const hasSched = Boolean(m.court || m.scheduled_at);
                 const hasScore = (m.games || []).length > 0;
@@ -578,7 +588,7 @@ function PublicModalityBlock({ tournament, modality }) {
             </div>
           </div>
         ) : (
-          !falhouJogos && <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
+          matches.length === 0 && !falhouJogos && <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
         )}
       </CardContent>
     </Card>

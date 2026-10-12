@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Info, Medal, Trophy } from 'lucide-react';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { useModalities, useModalityRankingStructured } from '@/modules/tournament/hooks/useTournament';
+import {
+  useAllModalityMatches, useModalities, useModalityRankingStructured, useRegistrations,
+} from '@/modules/tournament/hooks/useTournament';
+import { normalizePhases } from '@/modules/tournament/domain/phases';
+import V2BracketTree from './V2BracketTree';
+import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { V2Badge, V2Surface } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
@@ -124,6 +129,15 @@ export function V2ModalityRanking({ modality }) {
   const isTeam = Boolean(modality.team_config);
   const phases = (data?.phases || []).filter((p) => p.played && p.groups.length > 0);
   const showPhaseHeaders = phases.length > 1;
+  // Mata-mata não tem "classificação em tabela": é a chave, desenhada.
+  const configPhases = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
+  const temChave = phases.some((p) => p.type === 'knockout' || p.type === 'double_knockout');
+  const { data: matches = [], isLoading: carregandoChave } = useAllModalityMatches(temChave ? modality.id : null);
+  const { data: registrations = [] } = useRegistrations(temChave ? modality.id : null);
+  const labelById = useMemo(
+    () => new Map(registrations.map((r) => [r.id, r.label || r.player_a_name])),
+    [registrations],
+  );
   const subtitle = isLoading ? 'Carregando…' : phases.length === 0 ? 'Aguardando resultados' : showPhaseHeaders ? `${phases.length} fases com resultados` : 'Classificação';
 
   return (
@@ -135,7 +149,20 @@ export function V2ModalityRanking({ modality }) {
       ) : (
         <div className="space-y-3">
           {phases.map((phase) => {
-            const body = (
+            const stageMatches = matches.filter((m) => Number(m.stage_index ?? 0) === phase.stageIndex);
+            const fase = configPhases[phase.stageIndex] || { type: phase.type };
+            const faseChave = fase.type === 'knockout' || fase.type === 'double_knockout';
+            const chave = faseChave && stageMatches.length > 0 && isKnockoutStage(fase, stageMatches);
+            const body = faseChave && carregandoChave ? (
+              <p className="text-sm text-gray-500">Carregando a chave…</p>
+            ) : chave ? (
+              <V2BracketTree
+                matches={stageMatches}
+                labelById={labelById}
+                thirdPlace={Boolean(fase.third_place)}
+                double={fase.type === 'double_knockout'}
+              />
+            ) : (
               <div className="space-y-2">
                 {phase.groups.map((group, gi) => (
                   <GroupRanking
@@ -172,7 +199,7 @@ export function V2TournamentRanking({ tournament }) {
         <div>
           <strong>Como funciona a classificação:</strong> a posição é definida pelo número de vitórias. Em caso de empate, valem na ordem:
           <strong> saldo de pontos</strong> (a favor − contra), <strong>pontos marcados</strong> e, por fim, <strong>menor número de pontos sofridos</strong>.
-          Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo.
+          Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo; no mata-mata, pela chave.
         </div>
       </div>
       {modalities.map((m) => <V2ModalityRanking key={m.id} modality={m} />)}
