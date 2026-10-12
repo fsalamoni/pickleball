@@ -25,6 +25,8 @@ import CertificateButton from '@/modules/tournament/components/CertificateButton
 import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
 import { V2ErrorState } from '@/v2/ui/primitives';
 import BrandMark from '@/v2/ui/BrandMark';
+import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -320,6 +322,19 @@ function PublicModalityBlock({ modality }) {
     refetchInterval: 20_000,
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
+  // A chave (árvore) de cada fase de mata-mata, separada por fase.
+  const chavesPorFase = useMemo(() => {
+    const porFase = new Map();
+    matches.forEach((m) => {
+      const k = m.stage_index ?? 0;
+      if (!porFase.has(k)) porFase.set(k, []);
+      porFase.get(k).push(m);
+    });
+    return [...porFase.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .filter(([, lista]) => buildBracketColumns(lista).kind === 'bracket'
+        && lista.some((m) => m.stage_type === 'knockout' || m.stage_type === 'double_knockout'));
+  }, [matches]);
   const {
     data: rankingData, isError: falhouRanking, refetch: recarregarRanking,
   } = useQuery({
@@ -428,6 +443,20 @@ function PublicModalityBlock({ modality }) {
                   </div>
                 ))}
               </div>
+            ))}
+          </div>
+        )}
+
+        {chavesPorFase.length > 0 && (
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold">Chave</h4>
+            {chavesPorFase.map(([stageIndex, stageMatches]) => (
+              <V2BracketTree
+                key={stageIndex}
+                matches={stageMatches}
+                labelById={labelById}
+                title={multiPhase ? `Fase ${Number(stageIndex) + 1}` : undefined}
+              />
             ))}
           </div>
         )}

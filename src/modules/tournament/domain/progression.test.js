@@ -98,6 +98,69 @@ describe('knockoutNextRound', () => {
   });
 });
 
+describe('knockoutNextRound — confronto a confronto', () => {
+  it('cria o confronto seguinte assim que os DOIS jogos que o alimentam terminam', () => {
+    const matches = [
+      decide(mkMatch(1, 1, 'a', 'b'), 'a'),
+      decide(mkMatch(1, 2, 'c', 'd'), 'b'),
+      mkMatch(1, 3, 'e', 'f'),
+      mkMatch(1, 4, 'g', 'h'),
+    ];
+    const res = knockoutNextRound(matches);
+    expect(res.matches).toEqual([
+      expect.objectContaining({ round: 2, position: 1, side_a: 'a', side_b: 'd', bye: false }),
+    ]);
+  });
+
+  it('não recria o que já existe; segue para o outro lado da chave', () => {
+    const matches = [
+      decide(mkMatch(1, 1, 'a', 'b'), 'a'),
+      decide(mkMatch(1, 2, 'c', 'd'), 'a'),
+      decide(mkMatch(1, 3, 'e', 'f'), 'a'),
+      decide(mkMatch(1, 4, 'g', 'h'), 'b'),
+      mkMatch(2, 1, 'a', 'c'),
+    ];
+    const res = knockoutNextRound(matches);
+    expect(res.matches).toHaveLength(1);
+    expect(res.matches[0]).toMatchObject({ round: 2, position: 2, side_a: 'e', side_b: 'h' });
+  });
+
+  it('resultado refeito atualiza o confronto seguinte que ainda não começou', () => {
+    const semi = mkMatch(2, 1, 'a', 'c');
+    const matches = [
+      decide(mkMatch(1, 1, 'a', 'b'), 'b'), // o vencedor mudou: agora é 'b'
+      decide(mkMatch(1, 2, 'c', 'd'), 'a'),
+      semi,
+    ];
+    const res = knockoutNextRound(matches);
+    expect(res.matches).toEqual([]);
+    expect(res.updates).toEqual([{ id: semi.id, side_a: 'b', side_b: 'c' }]);
+  });
+
+  it('confronto seguinte com placar nunca é tocado', () => {
+    const matches = [
+      decide(mkMatch(1, 1, 'a', 'b'), 'b'),
+      decide(mkMatch(1, 2, 'c', 'd'), 'a'),
+      decide(mkMatch(2, 1, 'a', 'c'), 'a'),
+    ];
+    expect(knockoutNextRound(matches)).toEqual({ complete: true, championIds: ['a'] });
+  });
+
+  it('byes em cascata: com 5 inscritos numa chave de 8, a semifinal entre dois byes nasce na hora', () => {
+    // Cabeças 1, 2 e 3 passam direto (posições canônicas de 8: 1-8, 4-5, 2-7, 3-6).
+    const matches = [
+      mkMatch(1, 1, 's1', null),
+      mkMatch(1, 2, 's4', 's5'),
+      mkMatch(1, 3, 's2', null),
+      mkMatch(1, 4, 's3', null),
+    ];
+    const res = knockoutNextRound(matches);
+    expect(res.matches).toEqual([
+      expect.objectContaining({ round: 2, position: 2, side_a: 's2', side_b: 's3' }),
+    ]);
+  });
+});
+
 describe('swissNextRound', () => {
   const players = ['a', 'b', 'c', 'd'];
   it('gera a 2ª rodada sem repetir confrontos e respeitando o total', () => {

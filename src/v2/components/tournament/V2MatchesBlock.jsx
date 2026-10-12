@@ -721,7 +721,12 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const columnsView = useMemo(() => buildBracketColumns(matches), [matches]);
   const hasBracket = columnsView.columns.length > 0;
   const treeLabel = columnsView.kind === 'bracket' ? 'Chave (árvore)' : 'Rodadas';
-  const [treeView, setTreeView] = useState(false);
+  // Mata-mata abre na CHAVE (a árvore é a forma natural de ler quem pega
+  // quem); grupos e rodadas abrem na lista. A escolha da pessoa vence.
+  const [treeChoice, setTreeView] = useState(null);
+  const soChave = phases.length > 0
+    && phases.every((ph) => ph?.type === 'knockout' || ph?.type === 'double_knockout');
+  const treeView = treeChoice ?? (columnsView.kind === 'bracket' && soChave);
   const showTree = bracketTreeOn && hasBracket && treeView;
 
   return (
@@ -744,7 +749,21 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
           />
         ) : <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
       ) : showTree ? (
-        <V2BracketTree matches={matches} labelById={labelById} />
+        // Uma chave por FASE: duas fases de mata-mata nunca se misturam.
+        <div className="space-y-5">
+          {byStage
+            .filter(([, stageMatches]) => buildBracketColumns(stageMatches).columns.length > 0)
+            .map(([stageIndex, stageMatches]) => (
+              <V2BracketTree
+                key={stageIndex}
+                matches={stageMatches}
+                labelById={labelById}
+                title={showPhaseHeaders
+                  ? `Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`
+                  : undefined}
+              />
+            ))}
+        </div>
       ) : (
         <div className="space-y-3">
           {byStage.map(([stageIndex, stageMatches]) => {

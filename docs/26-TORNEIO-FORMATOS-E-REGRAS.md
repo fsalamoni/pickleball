@@ -513,3 +513,37 @@ VÁRIAS fases e no Americano, e a tabela da tela passou a usar a ordem de
 desempate da fase (antes só quem avançava a usava). E há um formato novo, o
 **Americano aprimorado em etapas** (flag `tournament_americano_etapas`). Ver
 `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+
+## 13. O mata-mata anda sozinho, confronto a confronto (2026-10-12)
+
+Pedido: *"a geração do mata-mata em torneios funcione de forma perfeita, com
+as chaves separadas e organizadas e as próximas de forma automática, chave a
+chave… faça valer para todos"*.
+
+**🐞 O que havia.** A rodada seguinte só nascia quando TODOS os jogos da
+rodada atual terminavam, e só pelo botão "Avançar". E a árvore rotulava as
+colunas pela maior rodada GRAVADA: logo depois do sorteio de 8, a 1ª rodada
+aparecia como "Final" e o resto da chave não existia na tela. Com duas fases
+de mata-mata, as duas chaves se misturavam numa árvore só.
+
+**Agora.**
+- `knockoutNextRound` (`domain/progression.js`) olha a ÁRVORE: o jogo `p` da
+  rodada `r + 1` nasce quando os jogos `2p − 1` e `2p` da rodada `r` estão
+  decididos — sem esperar o resto da rodada. A disputa de 3º lugar nasce com
+  as duas semifinais. Resultado refeito atualiza o confronto seguinte que
+  ainda não começou (`updates`); confronto com placar nunca é tocado.
+- `autoAdvanceBracket` (`services/matchService.js`) roda sozinho depois de
+  cada resultado (`recordMatchResult` e o confronto de equipes) e depois de
+  cada sorteio de mata-mata (byes em cascata: dois cabeças que passaram direto
+  já se enfrentam). Falha aqui nunca derruba o resultado: o botão "Avançar"
+  faz a mesma conta. Vale para mata-mata e dupla eliminação.
+- `buildBracketColumns` (`domain/bracketLayout.js`) monta a chave INTEIRA a
+  partir do tamanho da 1ª rodada: colunas Oitavas → Final desde o sorteio,
+  cada jogo numerado ("Jogo 5"), as vagas futuras dizendo de onde vêm
+  ("Vencedor do jogo 3") e o 3º lugar separado (`thirdPlace`).
+- Uma árvore por FASE, na aba de resultados (que abre na chave quando todas
+  as fases são mata-mata) e na página pública `/p/:id`.
+
+**Para todos**: nada foi gravado de novo. A conta sai dos jogos que já
+existem, então os torneios em andamento passam a andar sozinhos no próximo
+resultado lançado. **Banco: zero** — nenhuma coleção, campo, índice ou regra.

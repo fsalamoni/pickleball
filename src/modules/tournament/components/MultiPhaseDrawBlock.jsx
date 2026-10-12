@@ -209,7 +209,7 @@ function PhaseSection({
       if (res.complete) toast.success(ehEtapas ? 'Todas as etapas foram jogadas — a classificação final está valendo. 🏆' : 'Fase concluída — definido! 🏆');
       else toast.success(ehEtapas
         ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
-        : `Próxima rodada gerada (${res.created} jogo(s)).`);
+        : (res.created ? `${res.created} confronto(s) novo(s) na chave.` : 'Chave atualizada com os vencedores certos.'));
     } catch (err) {
       toast.error(err?.message || 'Não foi possível avançar a rodada.');
     } finally {

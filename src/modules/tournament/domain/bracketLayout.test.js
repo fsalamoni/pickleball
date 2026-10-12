@@ -87,3 +87,34 @@ describe('buildBracketColumns — rodadas x fases finais', () => {
     expect(columns.map((c) => c.label)).toEqual(['Semifinal', 'Final']);
   });
 });
+
+describe('buildBracketColumns — a chave inteira desde o sorteio', () => {
+  const r1 = [1, 2, 3, 4].map((p) => ({ id: `q${p}`, stage_type: 'knockout', round: 1, position: p }));
+
+  it('⭐ só com a 1ª rodada sorteada, já mostra Quartas, Semifinal e Final', () => {
+    const { columns, totalRounds } = buildBracketColumns(r1);
+    expect(totalRounds).toBe(3);
+    expect(columns.map((c) => c.label)).toEqual(['Quartas de final', 'Semifinal', 'Final']);
+    expect(columns.map((c) => c.matches.length)).toEqual([4, 2, 1]);
+  });
+
+  it('as vagas dizem de quais jogos vêm os classificados', () => {
+    const { columns } = buildBracketColumns(r1);
+    expect(columns[0].matches.map((m) => m.number)).toEqual([1, 2, 3, 4]);
+    expect(columns[1].matches[0]).toMatchObject({ placeholder: true, number: 5, from: [1, 2] });
+    expect(columns[1].matches[1]).toMatchObject({ placeholder: true, number: 6, from: [3, 4] });
+    expect(columns[2].matches[0]).toMatchObject({ placeholder: true, number: 7, from: [5, 6] });
+  });
+
+  it('confronto já criado ocupa o lugar dele, e o 3º lugar sai separado', () => {
+    const { columns, thirdPlace } = buildBracketColumns([
+      ...r1,
+      { id: 's2', stage_type: 'knockout', round: 2, position: 2 },
+      { id: 'bronze', stage_type: 'knockout', round: 3, position: 2, third_place: true },
+    ]);
+    expect(columns[1].matches[0].placeholder).toBe(true);
+    expect(columns[1].matches[1].id).toBe('s2');
+    expect(columns[2].matches).toHaveLength(1);
+    expect(thirdPlace.id).toBe('bronze');
+  });
+});

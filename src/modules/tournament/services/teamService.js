@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
+import { advanceBracketAfterResult } from './matchService.js';
 import { REGISTRATION_STATUS, MATCH_STATUS } from '../domain/constants.js';
 import {
   validateTeamRoster, validateConfrontationLineup, computeConfrontationResult, buildTeamRanking,
@@ -203,6 +204,8 @@ export async function recordConfrontation(matchId, {
       mirrored: mirror.toWrite.length,
     },
   });
+  // Mata-mata de equipes: a chave anda sozinha como no torneio comum.
+  if (result.decided && result.winner) await advanceBracketAfterResult(matchId, actor);
   return { ...updates, result };
 }
 
