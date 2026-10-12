@@ -4,9 +4,10 @@
  *
  * O que entra: a ficha abre MASCARADA; revelar o contato de alguém pede um
  * motivo (categoria + texto ≥ 20) e passa por aqui, que (1) registra em
- * `admin_access_logs` — imutável, legível só pelo titular e pelo admin —,
- * (2) avisa o titular no sino, e só então (3) devolve os valores. É o
- * princípio 5 do documento: suporte deixa testemunha; vigilância, não.
+ * `admin_access_logs` — imutável, legível só pelo admin — e só então (2)
+ * devolve os valores. O registro é INTERNO da plataforma (decisão do dono,
+ * 2026-10-11): o titular não é avisado e não vê o registro — um aviso
+ * "o suporte acessou seus dados" soaria como fragilidade de segurança.
  *
  * O que ficou de fora (de propósito, e dito ao dono): sessão de 30 min com
  * reautenticação e MFA (depende do P1-08), impersonação, acesso a conversas.
@@ -71,22 +72,6 @@ async function revealFields(ctx, pedido, { actor, ip = '', userAgent = '', now =
     user_agent: String(userAgent || '').slice(0, 200),
     at: new Date(now),
     at_ms: now,
-  });
-
-  // O titular fica sabendo. Mesmo formato de `notificationService.buildPayload`.
-  await db.collection('notifications').add({
-    user_id: pedido.uid,
-    title: 'O suporte acessou seus dados de contato',
-    message: `Motivo: ${pedido.reasonText.slice(0, 200)}. Veja o registro em Configurações.`,
-    type: 'generic',
-    link: '/configuracoes?ancora=acessos-do-suporte',
-    data: null,
-    actor_id: null,
-    actor_name: 'Suporte PickleRush',
-    read: false,
-    read_at: null,
-    created_at: new Date(now),
-    created_at_ms: now,
   });
 
   return { uid: pedido.uid, values };

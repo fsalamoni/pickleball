@@ -489,7 +489,7 @@ function RecordEditDialog({ user, onClose }) {
         <div className="space-y-4">
           {!revelado && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-paper p-3 text-xs text-gray-600">
-              <span>E-mail, telefone, nascimento e endereço estão mascarados. Revelar registra o acesso e avisa a pessoa.</span>
+              <span>E-mail, telefone, nascimento e endereço estão mascarados. Revelar registra o acesso internamente.</span>
               <V2Button size="sm" variant="secondary" onClick={() => setRevelando(true)}>
                 <Eye className="h-3.5 w-3.5" /> Revelar dados de contato
               </V2Button>

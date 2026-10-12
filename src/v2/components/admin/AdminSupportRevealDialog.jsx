@@ -1,7 +1,7 @@
 /**
  * Revelar os dados de contato de uma conta — com motivo, registro de leitura
- * (`admin_access_logs`, pelo servidor) e aviso ao titular. É o que separa
- * suporte de vigilância: a pessoa fica sabendo.
+ * (`admin_access_logs`, pelo servidor; registro interno, sem aviso ao titular). É o que separa
+ * suporte de vigilância: fica a testemunha, para o admin.
  */
 import React, { useState } from 'react';
 import { toast } from 'sonner';
@@ -41,7 +41,7 @@ export default function AdminSupportRevealDialog({ user, onRevealed, onClose }) 
           <DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5" /> Revelar dados de contato</DialogTitle>
           <DialogDescription>
             E-mail, telefone, nascimento e endereço de {user.platform_name || user.full_name || 'esta conta'}.
-            O acesso fica registrado (quem, quando, por quê) e <strong>a pessoa é avisada</strong>.
+            O acesso fica registrado internamente (quem, quando, por quê).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

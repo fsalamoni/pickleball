@@ -40,9 +40,10 @@ saíram (nada lia o que gravavam).
 - **Acesso de suporte**: a ficha abre mascarada (`domain/supportAccess.js`,
   `maskValue`); "Revelar dados de contato" pede categoria + motivo ≥ 20 e passa
   por `adminSupportReveal` (`functions/supportAccess.js`), que grava
-  `admin_access_logs` (hash, nunca o valor) e avisa o titular; a pessoa vê em
-  Configurações → "Acessos do suporte" (`SupportAccessCard`). Paridade
-  cliente×servidor com teste.
+  `admin_access_logs` (hash, nunca o valor). O registro é INTERNO (decisão do
+  dono, 2026-10-11): o titular não é avisado, não vê o registro e a regra só
+  deixa o admin ler — um aviso "o suporte acessou seus dados" soaria como
+  fragilidade de segurança. Paridade cliente×servidor com teste.
 - **Aviso em massa** (Divulgação → Aviso em massa): `AdminBroadcastTab` com o
   público das campanhas da plataforma (`platformRecipients`, contado antes;
   conta oculta/suspensa/bloqueada fora), `notifyUsers` + auditoria

@@ -1,6 +1,6 @@
 /**
  * `admin_access_logs` — o registro de leitura do suporte (05-ADMIN-SUPORTE §7).
- * Só o servidor escreve; o titular lê o que é sobre ele; o admin lê tudo.
+ * Só o servidor escreve; só o admin lê — registro interno, o titular não vê.
  */
 import { readFileSync } from 'node:fs';
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
@@ -32,9 +32,9 @@ beforeEach(async () => {
 const as = (uid) => testEnv.authenticatedContext(uid, { email: `${uid}@x.com`, email_verified: true }).firestore();
 
 describe('admin_access_logs', () => {
-  it('o titular lê os acessos aos PRÓPRIOS dados (a consulta da tela)', async () => {
-    await assertSucceeds(getDocs(query(collection(as(USER), 'admin_access_logs'), where('target_uid', '==', USER))));
-    await assertSucceeds(getDoc(doc(as(USER), 'admin_access_logs', 'l1')));
+  it('🔴 o titular NÃO lê os acessos aos próprios dados (registro interno)', async () => {
+    await assertFails(getDocs(query(collection(as(USER), 'admin_access_logs'), where('target_uid', '==', USER))));
+    await assertFails(getDoc(doc(as(USER), 'admin_access_logs', 'l1')));
   });
   it('🔴 outra pessoa não lê', async () => {
     await assertFails(getDoc(doc(as(OTHER), 'admin_access_logs', 'l1')));

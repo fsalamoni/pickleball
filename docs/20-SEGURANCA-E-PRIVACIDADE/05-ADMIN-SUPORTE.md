@@ -18,10 +18,14 @@
 > **Atualização (2026-10-11):** chegaram ao código o **mascaramento** (a ficha
 > em Cadastros abre com e-mail, telefone, nascimento e endereço mascarados), o
 > **log de revelação** (`admin_access_logs`, escrito só pela função
-> `adminSupportReveal`, hash do valor e nunca o valor; regra: lê o titular e o
-> admin, ninguém escreve pelo cliente — `tests/rules/adminAccessLogs.rules.test.js`),
-> a **notificação ao titular** (aviso no sino → Configurações → "Acessos do
-> suporte") e o motivo obrigatório (categoria + texto ≥ 20). Também
+> `adminSupportReveal`, hash do valor e nunca o valor; regra: lê SÓ o admin,
+> ninguém escreve pelo cliente — `tests/rules/adminAccessLogs.rules.test.js`)
+> e o motivo obrigatório (categoria + texto ≥ 20). **Decisão do dono
+> (2026-10-11, mesmo dia):** o registro é INTERNO da plataforma — o titular
+> **não** é avisado e **não** vê os acessos (o cartão "Acessos do suporte" e o
+> aviso no sino, publicados horas antes, foram removidos), porque um aviso
+> desses soa como ponto de fragilidade de segurança. As seções §2.5 e "O que
+> o titular vê" abaixo descrevem o DESENHO original, não o que está no código. Também
 > **suspender/bloquear/reativar** (`adminSetAccountStatus`, §5 "ações de
 > segurança"). Segue de fora: sessão de 30 min com reautenticação/MFA
 > (P1-08), impersonação, acesso a conversas, detecção de abuso — e a regra de
@@ -127,7 +131,7 @@ precisa de leitura ampla no banco — e concentra o poder num lugar auditável.
         validação TEM de estar completa na Function)
                         │
                         ▼
-        admin_access_logs (imutável) + notificação ao titular
+        admin_access_logs (imutável; interno — sem notificação ao titular)
 ```
 
 ⚠ **Consequência que precisa estar clara**: o Admin SDK **ignora as regras

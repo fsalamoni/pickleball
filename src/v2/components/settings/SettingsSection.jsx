@@ -11,7 +11,7 @@
  * Duas coisas que não podem regredir:
  *  1. **o link direto abre o cartão.** `/configuracoes#notificacoes` (o sino),
  *     `#pagina-inicial` (o "Personalizar" do início), `#menu-lateral`,
- *     `#minha-regiao`, `#balanco-do-jogo`, `#acessos-do-suporte`: a âncora da
+ *     `#minha-regiao`, `#balanco-do-jogo`: a âncora da
  *     URL força o cartão aberto por cima da preferência — cair num cabeçalho
  *     fechado é cair em lugar nenhum;
  *  2. **`id` e `data-dica` ficam no cartão**, sempre montado: os links e os

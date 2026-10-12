@@ -10,7 +10,7 @@
  *
  * Os links diretos continuam valendo e ABREM o cartão: `#notificacoes` (o
  * sino), `#pagina-inicial` (o "Personalizar" do início), `#menu-lateral`,
- * `#minha-regiao`, `#balanco-do-jogo`, `#acessos-do-suporte`. Toda âncora
+ * `#minha-regiao`, `#balanco-do-jogo`. Toda âncora
  * `data-dica` ficou no cartão.
  */
 
@@ -40,7 +40,6 @@ import DebriefSettingsCard from '@/v2/components/training/debrief/DebriefSetting
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
-import SupportAccessCard from '@/v2/components/settings/SupportAccessCard';
 
 export default function V2Settings() {
   const enabled = true;
@@ -166,9 +165,6 @@ export default function V2Settings() {
               </V2Button>
             </div>
           </SettingsSection>
-
-          {/* `/configuracoes#acessos-do-suporte`: o aviso "o suporte acessou seus dados" leva para cá. */}
-          <SupportAccessCard uid={user?.uid} />
         </SettingsGroup>
 
         <SettingsGroup title="Tela e navegação" description="Como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.">
