@@ -9,6 +9,7 @@ import {
   PlatformSurfaceCard,
 } from '@/components/ui/platform-page';
 import { toast } from 'sonner';
+import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import {
   CalendarDays,
   CheckCircle2,
@@ -170,6 +171,20 @@ export default function TournamentAdminTab({ tournament }) {
       await addMutation.mutateAsync({ uid: data.uid, email: data.email, displayName: data.platform_name || data.full_name });
       toast.success('Admin adicionado.');
       setEmail('');
+    } catch (err) {
+      toast.error(err.message || 'Falha ao adicionar.');
+    }
+  }
+
+  async function handlePickAdmin(a) {
+    if (!a?.id) return;
+    if (admins.some((x) => x.user_id === a.id)) {
+      toast.info('Essa pessoa já administra o torneio.');
+      return;
+    }
+    try {
+      await addMutation.mutateAsync({ uid: a.id, displayName: a.platform_name || a.full_name });
+      toast.success('Admin adicionado.');
     } catch (err) {
       toast.error(err.message || 'Falha ao adicionar.');
     }
@@ -555,7 +570,11 @@ export default function TournamentAdminTab({ tournament }) {
             </ul>
 
             <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-paper p-4">
-              <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
+              <Label>Adicionar admin pela lista de usuários</Label>
+              <div className="mt-3">
+                <AthletePicker value={null} onChange={handlePickAdmin} inputId="torneio-admin-pessoa" placeholder="Buscar pelo nome…" />
+              </div>
+              <Label className="mt-4 block">Ou pelo e-mail do usuário já cadastrado</Label>
               <div className="mt-3 flex gap-2">
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
                 <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
