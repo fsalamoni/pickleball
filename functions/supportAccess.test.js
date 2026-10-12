@@ -27,7 +27,7 @@ describe('revealFields', () => {
       }),
     };
   }
-  it('⭐ registra (com hash, nunca o valor), avisa o titular e só então devolve', async () => {
+  it('⭐ registra (com hash, nunca o valor) e só então devolve — sem avisar o titular', async () => {
     const db = fakeDb({ email: 'ana@x.com', phone: '51999', platform_name: 'Ana' });
     const pedido = validateRevealRequest({ uid: 'u', fields: ['email'], reason_category: 'outro', reason_text: 'motivo longo o bastante para passar' });
     const res = await revealFields({ db }, pedido, { actor: { uid: 'admin', email: 'a@x.com' }, ip: '1.2.3.4', now: 5 });
@@ -36,8 +36,9 @@ describe('revealFields', () => {
     expect(log).toMatchObject({ admin_uid: 'admin', target_uid: 'u', fields: ['email'], action: 'reveal_field' });
     expect(JSON.stringify(log)).not.toContain('ana@x.com');
     expect(log.value_hashes.email).toHaveLength(24);
-    const aviso = db.adds.find((a) => a.col === 'notifications').d;
-    expect(aviso).toMatchObject({ user_id: 'u', read: false, link: '/configuracoes?ancora=acessos-do-suporte' });
+    // Registro interno: nenhum aviso é gravado para a pessoa.
+    expect(db.adds.filter((a) => a.col === 'notifications')).toHaveLength(0);
+    expect(db.adds).toHaveLength(1);
   });
   it('conta inexistente não registra nada', async () => {
     const db = fakeDb(null);

@@ -24,10 +24,3 @@ export const setAccountStatus = (p) => chamar('adminSetAccountStatus', p);
 
 /** Revela campos de contato de uma conta — o servidor registra ANTES de devolver. */
 export const supportReveal = (p) => chamar('adminSupportReveal', p);
-
-/** Os acessos do suporte aos dados de UMA pessoa (ela mesma lê os seus; a regra prova). */
-export async function listMyAccessLogs(uid) {
-  if (!db || !uid) return [];
-  const snap = await getDocs(query(collection(db, 'admin_access_logs'), where('target_uid', '==', uid)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.at_ms || 0) - (a.at_ms || 0));
-}

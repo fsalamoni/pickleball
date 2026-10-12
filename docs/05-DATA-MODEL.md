@@ -410,8 +410,9 @@ Trilha de auditoria. `action` (ex.: `tournament_created`,
 Registro de leitura do suporte (`05-ADMIN-SUPORTE.md` §7). Escrito SÓ pela
 função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field'`,
 `fields[]`, `value_hashes` (hash, nunca o valor), `reason_category`,
-`reason_text`, `ticket_ref`, `ip_hash`, `at`, `at_ms`. Regra: lê o titular
-(`target_uid`) e o admin; `create/update/delete: false`.
+`reason_text`, `ticket_ref`, `ip_hash`, `at`, `at_ms`. Regra: lê SÓ o admin
+(registro interno — o titular não é avisado nem lê; decisão de 2026-10-11);
+`create/update/delete: false`.
 
 ### `platform_settings/{docId}`
 Singletons: `feature_flags/{key}` (defaults de `FEATURE_FLAG`),

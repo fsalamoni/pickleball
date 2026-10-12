@@ -1633,11 +1633,10 @@ service cloud.firestore {
 
     // ---- Acessos do suporte (05-ADMIN-SUPORTE §7) ------------------------
     // Escrito SÓ pelo servidor (`adminSupportReveal`), imutável. O TITULAR lê
-    // os acessos aos próprios dados (Configurações → "Acessos do suporte");
-    // o admin lê todos. Guarda hash do valor, nunca o valor.
+    // Registro INTERNO: só o admin lê (decisão do dono, 2026-10-11 — o titular
+    // não é avisado nem vê o registro). Guarda hash do valor, nunca o valor.
     match /admin_access_logs/{aid} {
-      allow read: if isPlatformAdmin()
-        || (isAuthed() && resource.data.target_uid == request.auth.uid);
+      allow read: if isPlatformAdmin();
       allow create, update, delete: if false;
     }
 
