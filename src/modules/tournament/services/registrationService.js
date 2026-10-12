@@ -20,7 +20,8 @@ import {
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '@/core/config/firebase';
+import { db, functions } from '@/core/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { logger } from '@/core/lib/logger';
 import { publicDisplayName } from '@/core/lib/displayName';
 import { createAuditLog } from '@/core/services/auditService';
@@ -32,7 +33,7 @@ import {
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '../domain/capacity.js';
 import {
   saveRegistrationContact, findProvisionalClaims, fetchRegistrationsForClaims,
-  markClaimsClaimed,
+  markClaimsClaimed, deleteProvisionalClaim,
 } from './registrationContactService.js';
 import { hasLegacyPublicEmail } from '../domain/registrationContact.js';
 import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
@@ -330,6 +331,9 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
   allEmails.forEach((em) => {
     byEmail[em].a.forEach((docSnap) => {
       const reg = docSnap.data();
+      // Lado já ligado a OUTRA conta (o organizador escolheu o atleta certo):
+      // um e-mail antigo da inscrição não toma o lugar dele.
+      if (reg.player_a_user_id && reg.player_a_user_id !== user.uid) return;
       const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
       updates.data.player_a_user_id = user.uid;
       updates.data.user_id = user.uid;
@@ -350,6 +354,7 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
     });
     byEmail[em].b.forEach((docSnap) => {
       const reg = docSnap.data();
+      if (reg.player_b_user_id && reg.player_b_user_id !== user.uid) return;
       const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
       updates.data.player_b_user_id = user.uid;
       updates.data.player_b_name = player.name;
@@ -489,8 +494,15 @@ export async function migrateProvisionalData(options = {}, actor) {
   // documento público; as consultas acima não as alcançam. O admin as encontra
   // por `provisional_claims`. Sem isto a ferramenta diria "nada encontrado"
   // para uma inscrição que existe — pior do que não existir.
+  // O e-mail dessas inscrições está na PROVA, não no documento: ele é posto
+  // numa cópia em memória (nunca gravado no público) só para o diff casar.
+  const emailDaProva = new Map(); // id → { a?: email, b?: email }
   try {
     const provas = await findProvisionalClaims(aliasEmails);
+    provas.forEach((pv) => {
+      const lado = pv.slot === 'b' ? 'b' : 'a';
+      emailDaProva.set(pv.registration_id, { ...(emailDaProva.get(pv.registration_id) || {}), [lado]: normalizeEmail(pv.email_lc) });
+    });
     const extras = await fetchRegistrationsForClaims(provas);
     extras.forEach((r) => {
       if (seen.has(r.id)) return;
@@ -504,8 +516,18 @@ export async function migrateProvisionalData(options = {}, actor) {
   // 3) Calcula o diff puro para cada registration.
   const diffs = [];
   matched.forEach(({ id, ref, data }) => {
-    const diff = buildRegistrationMigrationDiff(data, aliasEmails, player);
+    const daProva = emailDaProva.get(id) || {};
+    const paraCasar = { ...data };
+    ['a', 'b'].forEach((lado) => {
+      if (daProva[lado] && !paraCasar[`player_${lado}_email_lc`]) paraCasar[`player_${lado}_email_lc`] = daProva[lado];
+    });
+    const diff = buildRegistrationMigrationDiff(paraCasar, aliasEmails, player);
     if (!diff) return;
+    // P0-02: só documento LEGADO (que já expõe o e-mail) recebe o e-mail no
+    // público; nos novos o oficial vai para o contato privado, logo abaixo.
+    if (!hasLegacyPublicEmail(data)) {
+      ['player_a_email', 'player_a_email_lc', 'player_b_email', 'player_b_email_lc'].forEach((k) => delete diff[k]);
+    }
     const next = { ...data, ...diff };
     const flags = recomputeRegistrationFlags(next);
     diffs.push({
@@ -539,6 +561,24 @@ export async function migrateProvisionalData(options = {}, actor) {
         });
       });
       await batch.commit();
+    }
+    // O contato privado passa a ter o e-mail OFICIAL e a prova do e-mail
+    // antigo sai — senão o e-mail provisório seguia valendo para reivindicar.
+    for (const { id, diff, tournamentId, modalityId } of diffs) {
+      const lados = ['a', 'b'].filter((l) => diff[`player_${l}_user_id`]);
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await saveRegistrationContact({
+          registrationId: id, tournamentId, modalityId,
+          playerAEmail: player.email, playerAUserId: targetUid,
+          playerBEmail: player.email, playerBUserId: targetUid,
+          slots: lados,
+        });
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all(lados.map((l) => deleteProvisionalClaim(id, l)));
+      } catch (e) {
+        logger.error('migração: falha ao atualizar o contato da inscrição', { id, erro: e?.code || e?.message });
+      }
     }
   }
 
@@ -686,33 +726,35 @@ export async function updateRegistration(id, updates, actor) {
  * @param {object} actor
  */
 export async function updateRegistrationDetails(id, input, actor) {
-  const { format, player_a = {}, player_b = null } = input;
-  const aEmail = normalizeEmail(player_a.email);
+  const { format, player_a = null, player_b = null } = input;
+  // Lado `null` não é tocado: é o que o lápis manda para o jogador que está
+  // sendo LIGADO à conta — os dados dele vêm do cadastro oficial, e regravar
+  // o nome e o e-mail provisórios do formulário desfaria a troca.
+  const lados = { a: player_a, b: format === MODALITY_FORMAT.DOUBLES ? player_b : null };
+  const updates = {};
+  const emails = {};
+  Object.entries(lados).forEach(([lado, p]) => {
+    if (!p) return;
+    updates[`player_${lado}_name`] = String(p.name || '').trim();
+    updates[`player_${lado}_level`] = p.level || null;
+    updates[`player_${lado}_competition_gender`] = p.competition_gender || null;
+    emails[lado] = normalizeEmail(p.email);
+  });
+  if (Object.keys(updates).length === 0) return;
+  const antes = await getDoc(doc(db, COL, id));
+  const dadosAntes = antes.exists() ? antes.data() : {};
+  updates.label = buildRegistrationLabel({ ...dadosAntes, ...updates }, format);
+  await updateDoc(doc(db, COL, id), { ...updates, updated_at: serverTimestamp() });
   // P0-02: e-mail NÃO volta para o documento público. Vai para a subcoleção
   // privada, junto com a prova de reivindicação se o slot for provisório.
-  const updates = {
-    player_a_name: String(player_a.name || '').trim(),
-    player_a_level: player_a.level || null,
-    player_a_competition_gender: player_a.competition_gender || null,
-  };
-  let bEmail = '';
-  if (format === MODALITY_FORMAT.DOUBLES) {
-    bEmail = normalizeEmail(player_b?.email);
-    updates.player_b_name = String(player_b?.name || '').trim();
-    updates.player_b_level = player_b?.level || null;
-    updates.player_b_competition_gender = player_b?.competition_gender || null;
-  }
-  updates.label = buildRegistrationLabel(updates, format);
-  await updateDoc(doc(db, COL, id), { ...updates, updated_at: serverTimestamp() });
-  const atual = await getDoc(doc(db, COL, id));
-  const dados = atual.exists() ? atual.data() : {};
   try {
     await saveRegistrationContact({
       registrationId: id,
-      tournamentId: dados.tournament_id || null,
-      modalityId: dados.modality_id || null,
-      playerAEmail: aEmail, playerAUserId: dados.player_a_user_id || null,
-      playerBEmail: bEmail, playerBUserId: dados.player_b_user_id || null,
+      tournamentId: dadosAntes.tournament_id || null,
+      modalityId: dadosAntes.modality_id || null,
+      playerAEmail: emails.a, playerAUserId: dadosAntes.player_a_user_id || null,
+      playerBEmail: emails.b, playerBUserId: dadosAntes.player_b_user_id || null,
+      slots: Object.keys(emails),
     });
   } catch (e) {
     logger.error('falha ao gravar o contato ao editar a inscrição', { id, erro: e?.code || e?.message });
@@ -744,56 +786,50 @@ export async function updateRegistrationDetails(id, input, actor) {
 export async function linkRegistrationPlayerToAccount(id, slot, athlete, actor) {
   const uid = athlete?.user_id;
   if (!id || !uid || (slot !== 'a' && slot !== 'b')) throw new Error('Escolha o atleta da plataforma.');
-  const reg = await getRegistration(id);
-  if (!reg) throw new Error('Inscrição não encontrada.');
-  const campo = `player_${slot}_user_id`;
-  if (reg[campo]) throw new Error('Este jogador já está ligado a uma conta.');
-  if (slot === 'b' && reg.format !== MODALITY_FORMAT.DOUBLES) throw new Error('Esta inscrição não tem jogador B.');
-  if (reg.player_a_user_id === uid || reg.player_b_user_id === uid) {
-    throw new Error('Este atleta já está nesta inscrição.');
-  }
-  const daModalidade = reg.modality_id ? await listRegistrations(reg.modality_id) : [];
-  const emOutra = daModalidade.find((r) => r.id !== id
-    && r.status !== REGISTRATION_STATUS.CANCELLED
-    && (r.player_a_user_id === uid || r.player_b_user_id === uid));
-  if (emOutra) {
-    throw new Error(`Este atleta já está inscrito nesta modalidade (${emOutra.label || 'outra inscrição'}).`);
-  }
-
-  const updates = {
-    [campo]: uid,
-    [`player_${slot}_provisional`]: false,
-    [`player_${slot}_photo`]: reg[`player_${slot}_photo`] || athlete.photo_url || null,
-    [`player_${slot}_linked_at`]: serverTimestamp(),
-    [`player_${slot}_linked_by`]: actor?.uid || null,
-    updated_at: serverTimestamp(),
-  };
-  // `user_id` é o titular — o mesmo do jogador A na criação.
-  if (slot === 'a' && !reg.user_id) updates.user_id = uid;
-  const outroLadoProvisorio = slot === 'a' ? reg.player_b_provisional : reg.player_a_provisional;
-  updates.is_provisional = Boolean(outroLadoProvisorio);
-  await updateDoc(doc(db, COL, id), updates);
+  // A troca é do SERVIDOR: o e-mail oficial mora no cadastro do atleta, que o
+  // organizador não lê. Lá a inscrição recebe conta + dados oficiais, o
+  // contato privado recebe o e-mail oficial e a prova do e-mail inventado é
+  // apagada — num lote só. Ver functions/registrationLink.js.
+  const res = await callRegistrationLink({ registrationId: id, slot, userId: uid });
 
   await createAuditLog({
-    action: 'registration_player_linked',
+    action: res.refresh ? 'registration_player_refreshed' : 'registration_player_linked',
     actor,
-    details: { registration_id: id, tournament_id: reg.tournament_id, slot, user_id: uid },
+    details: {
+      registration_id: id, tournament_id: res.tournament_id, slot, user_id: uid,
+      previous_name: res.previous_name || null, name: res.name || null,
+    },
   });
-  if (actor?.uid && uid !== actor.uid) {
+  if (!res.refresh && actor?.uid && uid !== actor.uid) {
     try {
-      const nome = reg[`player_${slot}_name`] || 'jogador';
+      const nome = res.previous_name || 'jogador';
       await notifyUsers([uid], {
         title: 'Sua inscrição foi ligada à sua conta',
-        message: `Você estava inscrito como "${nome}" num torneio. Os resultados agora são seus e entram no ranking.`,
+        message: `Você estava inscrito como "${nome}" num torneio. A inscrição agora usa os dados do seu cadastro, e os resultados são seus e entram no ranking.`,
         type: NOTIFICATION_TYPE.GENERIC,
-        link: reg.tournament_id ? `/torneios/${reg.tournament_id}` : '/torneios',
+        link: res.tournament_id ? `/torneios/${res.tournament_id}` : '/torneios',
         actor,
       });
     } catch (err) {
       logger.warn('Aviso do vínculo de inscrição falhou:', err);
     }
   }
-  return { linked: true };
+  return { linked: true, refresh: Boolean(res.refresh), name: res.name, hasEmail: Boolean(res.has_email) };
+}
+
+async function callRegistrationLink(payload) {
+  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  try {
+    const { data } = await httpsCallable(functions, 'tournamentLinkRegistrationAccount', { timeout: 60_000 })(payload);
+    return data || {};
+  } catch (err) {
+    const code = err?.code || '';
+    if (['functions/failed-precondition', 'functions/permission-denied', 'functions/invalid-argument'].includes(code)) {
+      throw new Error(err.message);
+    }
+    if (code === 'functions/not-found') throw new Error('A troca ainda não está disponível no servidor. Tente de novo em alguns minutos.');
+    throw new Error('Não foi possível ligar à conta agora. Tentar de novo é seguro.');
+  }
 }
 
 export async function confirmRegistrationPayment(id, actor) {

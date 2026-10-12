@@ -423,6 +423,31 @@ mesmo poder que o organizador já tinha ao inserir escolhendo da lista. Nenhuma
 regra do Firestore mudou: o dono do dia já atualiza participante e
 `member_uids`; o organizador do torneio já atualiza a inscrição.
 
+### 10.2a 🐞 O vínculo da inscrição gravava só a CONTA (corrigido em 2026-10-12)
+
+Relatado: *"a troca do provisório pelo que se cadastrou oficialmente, com troca
+de email, não está ocorrendo de forma precisa"*. O organizador inscreve alguém
+sem conta com um e-mail INVENTADO; a pessoa se cadastra com o e-mail DELA, e o
+reivindicar automático não acha nada. No lápis, escolher a conta gravava só o
+uid. Pior, o próprio lápis regravava ANTES o formulário: o nome provisório e o
+e-mail inventado voltavam ao contato privado e a prova de reivindicação
+(`provisional_claims/{rid}_{slot}`) era recriada — o e-mail inventado seguia
+valendo, e quem o tivesse podia tomar o lado já ligado.
+
+Agora a troca é do SERVIDOR — o e-mail oficial mora em `users/{uid}` e no
+Auth, que o organizador não lê. `tournamentLinkRegistrationAccount`
+(`functions/registrationLink.js`), num lote só: conta + nome, nível, categoria
+e foto do cadastro; e-mail oficial no contato privado; e-mail público legado do
+lado apagado; prova apagada. Mesmas travas de antes, e a MESMA conta já ligada
+vira **"Usar os dados do cadastro"** (conserta as inscrições ligadas antes
+desta correção). No lápis, o lado que recebe os dados oficiais não mostra mais
+os campos (o que se digitasse seria sobrescrito) e o formulário só regrava os
+lados digitados (`updateRegistrationDetails` com lado `null` = não toca). De
+quebra: o reivindicar automático pula o lado já ligado a OUTRA conta, e a
+migração do admin (`migrateProvisionalData`) passou a achar as inscrições
+novas (o e-mail delas está na prova, não no documento) e a gravar o e-mail
+oficial no contato privado, apagando a prova. Zero coleção, índice ou regra.
+
 ### 10.3 Meu desempenho diz POR QUE um jogo não está no ranking
 
 "Meu desempenho" sempre contou todos os jogos; o ranking, não — e a diferença

@@ -481,6 +481,25 @@ function AccountLinkField({ label, nome, athletes, ready, failed, excluded, onPi
   );
 }
 
+/**
+ * Lado que vai receber os dados OFICIAIS do cadastro (ligado agora ou
+ * atualizado): no lugar dos campos, diz o que vai acontecer. Os campos não
+ * aparecem porque o que se digitasse ali seria sobrescrito — e era exatamente
+ * o formulário regravando nome e e-mail provisórios que desfazia a troca.
+ */
+function OfficialDataNote({ prefix, nome, onUndo }) {
+  return (
+    <div className="rounded-2xl border border-green-200 bg-green-50/70 p-3 text-sm">
+      <p className="font-semibold text-ink">{prefix}: {nome}</p>
+      <p className="mt-1 text-xs leading-5 text-gray-600">
+        Ao salvar, a inscrição passa a usar os dados do cadastro: conta, nome, e-mail, nível, categoria e foto.
+        O e-mail provisório deixa de valer. Os jogos já lançados passam a contar no ranking.
+      </p>
+      <V2Button size="sm" variant="ghost" className="mt-1" onClick={onUndo}>Desfazer</V2Button>
+    </div>
+  );
+}
+
 function RegistrationEditDialog({
   registration, modality, onClose, contact = null, registrations = [], athletes = [], athletesReady = false, athletesFailed = false,
 }) {
@@ -488,6 +507,9 @@ function RegistrationEditDialog({
   const linkMutation = useLinkRegistrationPlayer(modality.id);
   const semConta = registrationSlotsWithoutAccount(registration);
   const [contas, setContas] = useState({ a: null, b: null });
+  // Lado JÁ ligado a uma conta: "Usar os dados do cadastro" conserta a
+  // inscrição ligada antes da troca completa (nome e e-mail provisórios).
+  const [atualizar, setAtualizar] = useState({ a: false, b: false });
   // Quem já está em alguma inscrição desta modalidade não pode ser escolhido
   // de novo (seria a mesma pessoa em duas inscrições).
   const jaInscritos = React.useMemo(() => {
@@ -517,80 +539,113 @@ function RegistrationEditDialog({
     level: registration.player_b_level || '',
     competition_gender: registration.player_b_competition_gender || '',
   });
+  const oficial = (lado) => Boolean(contas[lado] || atualizar[lado]);
+  const salvando = editMutation.isPending || linkMutation.isPending;
 
   async function handleSave() {
-    if (!playerA.name.trim()) {
+    if (!oficial('a') && !playerA.name.trim()) {
       toast.error('Informe o nome do jogador A.');
       return;
     }
-    if (isDoubles && !playerB.name.trim()) {
+    if (isDoubles && !oficial('b') && !playerB.name.trim()) {
       toast.error('Informe o nome do jogador B.');
       return;
     }
     try {
-      await editMutation.mutateAsync({
-        id: registration.id,
-        input: { format: modality.format, player_a: playerA, player_b: isDoubles ? playerB : null },
-      });
-      const vinculos = ['a', 'b'].filter((lado) => contas[lado]);
-      for (const lado of vinculos) {
-        // eslint-disable-next-line no-await-in-loop
-        await linkMutation.mutateAsync({ id: registration.id, slot: lado, athlete: contas[lado] });
+      // 1) Os lados digitados (nunca o que vai receber os dados oficiais).
+      const editaA = !oficial('a');
+      const editaB = isDoubles && !oficial('b');
+      if (editaA || editaB) {
+        await editMutation.mutateAsync({
+          id: registration.id,
+          input: { format: modality.format, player_a: editaA ? playerA : null, player_b: editaB ? playerB : null },
+        });
       }
-      toast.success(vinculos.length > 0
-        ? 'Inscrição atualizada e ligada à conta. As partidas dela entram no ranking em instantes.'
-        : 'Dados da inscrição atualizados.');
+      // 2) A troca completa, pelo servidor, lado a lado.
+      const lados = ['a', 'b'].filter((lado) => oficial(lado));
+      const feitos = [];
+      for (const lado of lados) {
+        const athlete = contas[lado] || { user_id: registration[`player_${lado}_user_id`] };
+        // eslint-disable-next-line no-await-in-loop
+        feitos.push(await linkMutation.mutateAsync({ id: registration.id, slot: lado, athlete }));
+      }
+      const ligou = feitos.some((f) => !f?.refresh);
+      const semEmail = feitos.some((f) => f && !f.hasEmail);
+      toast.success(feitos.length === 0
+        ? 'Dados da inscrição atualizados.'
+        : `${ligou ? 'Inscrição ligada à conta' : 'Inscrição atualizada'} com os dados do cadastro (${feitos.map((f) => f?.name).filter(Boolean).join(' e ')}).${ligou ? ' As partidas dela entram no ranking em instantes.' : ''}${semEmail ? ' Este cadastro não tem e-mail: o contato ficou vazio.' : ''}`);
       onClose();
     } catch (err) {
       toast.error(err?.message || 'Falha ao salvar os dados.');
     }
   }
 
+  const ladoComConta = (lado, prefix) => (
+    !semConta.includes(lado) && registration[`player_${lado}_user_id`] && !atualizar[lado] ? (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3 text-xs text-gray-600">
+        <span>{prefix} está ligado a uma conta da plataforma.</span>
+        <V2Button size="sm" variant="secondary" onClick={() => setAtualizar((x) => ({ ...x, [lado]: true }))}>
+          Usar os dados do cadastro
+        </V2Button>
+      </div>
+    ) : null
+  );
+
+  const blocoDoLado = (lado, prefix, value, onChange) => {
+    if (contas[lado]) {
+      return <OfficialDataNote prefix={prefix} nome={contas[lado].name} onUndo={() => setContas((c) => ({ ...c, [lado]: null }))} />;
+    }
+    if (atualizar[lado]) {
+      return (
+        <OfficialDataNote
+          prefix={prefix}
+          nome={registration[`player_${lado}_name`] || 'conta ligada'}
+          onUndo={() => setAtualizar((x) => ({ ...x, [lado]: false }))}
+        />
+      );
+    }
+    return (
+      <>
+        <PlayerFields prefix={prefix} value={value} onChange={onChange} />
+        {ladoComConta(lado, prefix)}
+        {semConta.includes(lado) && (
+          <AccountLinkField
+            label={prefix}
+            nome={registration[`player_${lado}_name`]}
+            athletes={athletes}
+            ready={athletesReady}
+            failed={athletesFailed}
+            excluded={jaInscritos}
+            picked={null}
+            onPick={(p) => setContas((c) => ({ ...c, [lado]: p }))}
+          />
+        )}
+      </>
+    );
+  };
+
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && !salvando && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar dados da inscrição</DialogTitle>
           <DialogDescription>
             Os nomes aparecem por referência nos grupos, jogos e ranking — a edição reflete em todos.
+            Para trocar um inscrito provisório pelo atleta que se cadastrou, escolha a conta dele.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <PlayerFields prefix="Jogador A" value={playerA} onChange={setPlayerA} />
-          {semConta.includes('a') && (
-            <AccountLinkField
-              label="Jogador A"
-              nome={registration.player_a_name}
-              athletes={athletes}
-              ready={athletesReady}
-              failed={athletesFailed}
-              excluded={jaInscritos}
-              picked={contas.a}
-              onPick={(p) => setContas((c) => ({ ...c, a: p }))}
-            />
-          )}
+          {blocoDoLado('a', 'Jogador A', playerA, setPlayerA)}
           {isDoubles && (
             <div className="space-y-4 border-t pt-3">
-              <PlayerFields prefix="Jogador B" value={playerB} onChange={setPlayerB} />
-              {semConta.includes('b') && (
-                <AccountLinkField
-                  label="Jogador B"
-                  nome={registration.player_b_name}
-                  athletes={athletes}
-                  ready={athletesReady}
-                  failed={athletesFailed}
-                  excluded={jaInscritos}
-                  picked={contas.b}
-                  onPick={(p) => setContas((c) => ({ ...c, b: p }))}
-                />
-              )}
+              {blocoDoLado('b', 'Jogador B', playerB, setPlayerB)}
             </div>
           )}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button onClick={handleSave} disabled={editMutation.isPending || linkMutation.isPending}>
-            {editMutation.isPending || linkMutation.isPending ? 'Salvando…' : 'Salvar'}
+          <V2Button variant="ghost" onClick={onClose} disabled={salvando}>Cancelar</V2Button>
+          <V2Button onClick={handleSave} disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar'}
           </V2Button>
         </DialogFooter>
       </DialogContent>

@@ -1145,3 +1145,34 @@ exports.adminSupportReveal = onCall(
     }
   },
 );
+
+// =====================================================================
+// Torneio: ligar o jogador provisório de uma inscrição à CONTA do atleta,
+// trocando também nome, nível, categoria, foto e o e-mail OFICIAL (que o
+// organizador não lê). Ver `functions/registrationLink.js`.
+// =====================================================================
+const registrationLink = require('./registrationLink');
+
+exports.tournamentLinkRegistrationAccount = onCall(
+  { region: REGION, timeoutSeconds: 60 },
+  async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const pedido = registrationLink.validateLinkRequest(req.data || {});
+    if (pedido.error) throw new HttpsError('invalid-argument', pedido.error);
+    const actor = { uid: req.auth.uid, isPlatformAdmin: await isPlatformAdminUser(req, db) };
+    try {
+      const res = await registrationLink.applyRegistrationLink(
+        { db, auth: getAuth(), FieldValue: FieldValueDel }, pedido, { actor },
+      );
+      if (res.status === 'denied') throw new HttpsError('permission-denied', res.error);
+      if (res.status === 'error') throw new HttpsError('failed-precondition', res.error);
+      logger.info(`tournamentLinkRegistrationAccount ${pedido.registrationId}/${pedido.slot} por ${actor.uid}`);
+      return res;
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error('tournamentLinkRegistrationAccount falhou', err);
+      throw new HttpsError('internal', 'Falha inesperada. Tentar de novo é seguro.');
+    }
+  },
+);

@@ -443,6 +443,13 @@ export function useLinkRegistrationPlayer(modalityId) {
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
       qc.invalidateQueries({ queryKey: ['athlete-profile'] });
       qc.invalidateQueries({ queryKey: ['head-to-head'] });
+      // O nome e o e-mail mudam para os oficiais: rótulos dos jogos, ranking
+      // da modalidade e o contato mostrado na lista.
+      qc.invalidateQueries({ queryKey: ['registration-contacts'] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },
   });
 }
@@ -459,6 +466,7 @@ export function useEditRegistration(modalityId) {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registration-contacts'] });
     },
   });
 }
