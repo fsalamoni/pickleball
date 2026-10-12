@@ -106,7 +106,7 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
         if (err?.name === 'AbortError') return;
       } finally { setBusy(''); }
     }
-    window.open(buildWhatsAppShareUrl(card.shareText), '_blank', 'noopener,noreferrer');
+    window.open(buildWhatsAppShareUrl([card.shareText, card.url].filter(Boolean).join(' ')), '_blank', 'noopener,noreferrer');
   }
 
   function imprimir() {

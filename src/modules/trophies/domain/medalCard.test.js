@@ -17,7 +17,10 @@ describe('buildMedalCard', () => {
     expect(c.showPhotos).toBe(true);
     expect(c.saying).toBe(placeSaying(1, 'Open de Verão|Duplas mistas 3.5|1'));
     expect(c.shareText).toContain('🏆 Campeões: Ana / Bia');
-    expect(c.shareText).toContain('Veja em https://picklerush.web.app/p/t1');
+    expect(c.shareText).toContain('Veja no PickleRush:');
+    // O link vai à parte: no texto, o WhatsApp o mostraria duas vezes.
+    expect(c.shareText).not.toContain('https://');
+    expect(c.url).toBe('https://picklerush.web.app/p/t1');
     expect(c.fileName).toBe('picklerush-open-de-verao-campeoes.png');
     expect(c.dateLabel).toBe('12 de outubro de 2026');
     expect(c.where).toBe('Curitiba · PR');
@@ -35,6 +38,10 @@ describe('buildMedalCard', () => {
     expect(c.lines.map((l) => [l.short, l.names])).toEqual([['Ouro', ['Ana / Bia']], ['Prata', ['Caio / Dudu']], ['Bronze', ['Eva', 'Fê']]]);
     expect(c.hostLine).toBe('Arena Vila Pickle');
     expect(c.shareText).toContain('Bronze: Eva e Fê');
+  });
+
+  it('⭐ data sem hora é o dia LOCAL (o torneio de 12/10 não vira 11/10)', () => {
+    expect(dataPorExtenso('2026-10-12')).toBe('12 de outubro de 2026');
   });
 
   it('dataPorExtenso aceita Timestamp e devolve vazio sem data', () => {

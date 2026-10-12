@@ -10,7 +10,7 @@
  *
  * PURO. Sem React, sem Firebase.
  */
-import { instanteEmMs } from '@/core/domain/instant.js';
+import { instanteEmMs, instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { gameDayHouseEvents } from '@/modules/arenas/domain/houseRanking.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
 import { modalityPodium, PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
@@ -24,6 +24,12 @@ export const TROPHY_KIND_LABEL = Object.freeze({
 
 const ms = (v) => {
   const n = instanteEmMs(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** Data do torneio ("2026-10-12" é o dia LOCAL, não meia-noite UTC). */
+const dia = (v) => {
+  const n = instanteDoDiaEmMs(v);
   return Number.isFinite(n) ? n : 0;
 };
 
@@ -77,7 +83,7 @@ export function tournamentTrophies(uid, ctx) {
         placeLabel: entry.people.length > 1 ? PODIUM_PLACE[place.position].varios : PODIUM_PLACE[place.position].um,
         title: tournament.name || 'Torneio',
         subtitle: modality.name || 'Categoria',
-        date: ms(tournament.ends_at) || ms(tournament.starts_at),
+        date: dia(tournament.ends_at) || dia(tournament.starts_at),
         city: tournament.city || '', state: tournament.state || '',
         link: `/torneios/${tournament.id}`,
         publicLink: `/p/${tournament.id}`,

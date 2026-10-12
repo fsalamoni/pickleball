@@ -11,7 +11,6 @@
  * `tema-claro` no elemento capturado: a imagem é a mesma no modo escuro.
  */
 import React, { forwardRef } from 'react';
-import { LogoImg } from '@/v2/ui/BrandMark';
 import { initialsFor } from '@/components/ui/user-avatar';
 import { cn } from '@/core/lib/utils';
 
@@ -61,7 +60,7 @@ function Pessoa({ pessoa, cor, size = 'lg', comFoto }) {
           ? <img src={pessoa.photo_url} alt="" crossOrigin="anonymous" className="h-full w-full object-cover object-top" />
           : <span style={{ color: cor }}>{initialsFor(pessoa.name)}</span>}
       </div>
-      <span className="min-w-0 truncate font-display font-bold leading-tight text-white">{pessoa.name}</span>
+      <span className="line-clamp-2 min-w-0 break-words font-display font-bold leading-tight text-white">{pessoa.name}</span>
     </div>
   );
 }
@@ -79,18 +78,25 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
     <div
       ref={ref}
       data-testid="medal-card"
-      className={cn('tema-claro cartao-imprimivel relative isolate w-full overflow-hidden bg-ink text-white', className)}
+      className={cn('tema-claro cartao-imprimivel relative isolate flex w-full flex-col bg-ink text-white', className)}
+      // 3:4 é o MÍNIMO, não a altura: dupla, pódio com fotos e nome comprido
+      // fazem o cartão crescer — com a altura presa, o rodapé e o QR saíam
+      // cortados (o recorte fica só na camada de enfeite).
       style={{ containerType: 'inline-size', aspectRatio: '3 / 4', fontFamily: 'Outfit, Inter, system-ui, sans-serif' }}
     >
       {/* Luz do canto e o campo riscado */}
-      <div aria-hidden="true" className="absolute inset-0" style={{ background: `radial-gradient(90% 60% at 100% 0%, ${cor}2E 0%, transparent 60%), radial-gradient(70% 50% at 0% 100%, #1A223580 0%, transparent 70%)` }} />
-      <Quadra cor={cor} />
+      <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0" style={{ background: `radial-gradient(90% 60% at 100% 0%, ${cor}2E 0%, transparent 60%), radial-gradient(70% 50% at 0% 100%, #1A223580 0%, transparent 70%)` }} />
+        <Quadra cor={cor} />
+      </div>
 
-      <div className="relative flex h-full flex-col" style={{ padding: '6cqw 7cqw 6cqw' }}>
+      <div className="relative flex flex-1 flex-col" style={{ padding: '6cqw 7cqw 6cqw' }}>
         {/* Cabeçalho: a marca e quem sediou */}
         <header className="flex items-center justify-between" style={{ gap: '1em', fontSize: F.kicker }}>
           <div className="flex items-center" style={{ gap: '0.6em' }}>
-            <LogoImg versao="escuro" className="h-[2.4em] shrink-0" />
+            {/* PNG direto, sem <picture>: a captura da imagem só embute o
+                `src` — o WebP do <source> saía como imagem quebrada. */}
+            <img src="/logo-escuro.png" alt="" width={320} height={320} className="h-[2.4em] w-auto shrink-0 object-contain" />
             <span className="font-display font-bold tracking-wide text-white">PickleRush</span>
           </div>
           {card.host ? (
