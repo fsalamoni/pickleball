@@ -1340,6 +1340,55 @@ o professor só convida de novo e não apaga. As mensagens de uma dúvida exigem
 vínculo ativo. `coach_content`: "só alunos" exige vínculo
 ATIVO. Campos novos, opcionais: `coach_students.ended_by` e `ended_reason`.
 
+## Mercado (flag `marketplace`, default OFF)
+
+Dez coleções NOVAS `market_*` e um documento de configuração
+(`platform_settings/marketplace`, legível por todos, escrito pelo admin). Tudo
+aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
+`firestore.rules` (escrita de catálogo só com a flag ligada), provadas em
+`tests/rules/marketplace.rules.test.js`. Módulo: `src/modules/marketplace/README.md`.
+
+- `market_sellers/{key}` — a ficha pública de quem vende. `key` =
+  `athlete_{uid}` | `coach_{uid}` | `arena_{arenaId}` | `store_{uid}`.
+  `seller_type`, `entity_id`, `owner_uid`, `status`
+  (`active|pending|rejected|suspended`; loja nasce `pending`), `display_name`,
+  `slug`, `bio`, `city`, `state`, `logo_url`, `banner_url`, `website`,
+  `cnpj_masked`, `policies { return_days, ship_within_hours }`. Só o servidor
+  ou o admin: `verified`, `rating_avg`, `rating_count`, `sales_count`,
+  `reviewed_by`, `reviewed_at`, `reject_reason`.
+  - `private/data` — Pix (`pix_key_type`, `pix_key`, `receiver_name`,
+    `instructions`) e, da loja, `legal_name`, `cnpj`, `phone`. Só quem opera o
+    vendedor e o admin.
+- `market_listings/{id}` — o anúncio: `seller_key`, `seller_name`,
+  `seller_type`, `created_by`, `status`
+  (`draft|active|paused|sold_out|closed|removed`), `title`, `description`,
+  `category_slug`, `category_path[]`, `type` (`new|used`), `condition`,
+  `brand`, `attributes`, `price_cents`, `compare_at_cents`, `quantity`,
+  `accepts_offers`, `fulfillment[]` (`pickup|meetup|shipping`),
+  `shipping_cents`, `shipping_to_agree`, `pickup_note`, `media[]` (≤ 11),
+  `video_link`, `city`, `state`, `search_terms[]`, `published_at`. Só o
+  servidor ou o admin: `moderation`, `quantity_sold`, `favorite_count`,
+  `seller_rating_avg`, `seller_rating_count`, `seller_verified`, `source`.
+- `market_questions/{id}` — pergunta pública e resposta (`listing_id`,
+  `seller_key`, `asker_uid`, `asker_name`, `text`, `status`
+  `open|answered|hidden`, `answer`, `answered_by`).
+- `market_favorites/{uid}_{listingId}`, `market_saved_searches/{id}` (`uid`,
+  `label`, `params`, `notify`), `market_carts/{uid}` (`items[]`, `saved[]`,
+  ≤ 50) — só do dono.
+- Escritos SÓ pelo servidor: `market_orders/{id}` (`code`, `status`, comprador,
+  vendedor, `seller_manager_uids`, `items[]` com a foto e o preço do momento,
+  `fulfillment`, totais, `payment` (Pix copiado no aceite), `tracking`,
+  prazos `deadline_at_ms`; + `events/{id}` e `private/shipping`, que o
+  vendedor só lê com `shipping_visible`), `market_offers/{id}` (rodadas e
+  `history[]`), `market_reviews/{orderId}_{buyer|seller}` (cega até
+  `visible`), `market_disputes/{orderId}`.
+- Storage: `mercado/{uid}/{arquivo}` (foto < 3 MB, vídeo < 60 MB, PDF < 3 MB).
+
+Na exclusão de conta: carrinho, favoritos, buscas, Pix e endereços somem;
+pedidos, ofertas, perguntas e avaliações ficam sem o nome; a ficha pessoal
+fica "Vendedor removido", suspensa, com os anúncios encerrados; pedido em
+andamento impede a exclusão.
+
 ## Relacionamentos (resumo)
 
 ```

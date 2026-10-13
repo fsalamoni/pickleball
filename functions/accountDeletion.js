@@ -122,6 +122,7 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'training_meta', label: 'Rotina e preferências do treino' },
   // Modelos de banner/cupom e custo interno dos vales do professor (id = uid).
   { col: 'promo_settings', label: 'Configurações de divulgação (professor)' },
+  { col: 'market_carts', label: 'Carrinho do Mercado' },
 ]);
 
 /**
@@ -178,6 +179,9 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'training_debriefs', field: 'uid', label: 'Balanços dos jogos' },
   // A caixa de entrada da pessoa. O que ela ENVIOU fica (RETAINED_AS_IS).
   { col: 'training_shares', field: 'to_uid', label: 'Treinos recebidos' },
+  // Mercado: o que é só da pessoa.
+  { col: 'market_favorites', field: 'uid', label: 'Favoritos do Mercado' },
+  { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
 ]);
 
 /**
@@ -204,6 +208,8 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'coach_content', field: 'coach_id', label: 'Conteúdo publicado como professor' },
   { col: 'coach_packages', field: 'coach_id', label: 'Pacotes de aula oferecidos' },
   { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
+  // A disputa é do pedido (o pedido fica, sem o nome) e não guarda nome.
+  { col: 'market_disputes', field: 'buyer_uid', label: 'Problemas relatados em pedidos do Mercado' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -214,6 +220,13 @@ const RETAINED_AS_IS = Object.freeze([
  * deixou um rascunho para trás não pode ficar impossível de excluir.
  */
 const TOURNAMENT_LIVE = Object.freeze(['registrations_open', 'registrations_closed', 'in_progress']);
+
+/** Pedido do Mercado nesses estados acabou (cópia de `ORDER_FINAL_STATUSES`). */
+const MARKET_ORDER_FINAL = Object.freeze(['completed', 'cancelled', 'expired']);
+const REMOVED_SELLER = 'Vendedor removido';
+
+/** As chaves de vendedor PESSOAIS da conta (a da arena é da arena, fica). */
+const marketPersonalKeys = (uid) => ['athlete_', 'coach_', 'store_'].map((p) => `${p}${uid}`);
 
 /**
  * O que IMPEDE a exclusão — puro.
@@ -252,6 +265,10 @@ function evaluateBlockers(found = {}, uid, hojeISO) {
     if (outros.length === 0) return;
     out.push({ label: `Criou o dia de jogo "${texto(g.title || g.name) || g.id}", marcado para ${g.date}, com ${outros.length} inscrito(s)`, detail: 'Arquive ou exclua o dia de jogo antes.' });
   });
+  const abertos = (found.marketOrders || []).filter((o) => !MARKET_ORDER_FINAL.includes(o.status));
+  if (abertos.length > 0) {
+    out.push({ label: `Tem ${abertos.length} pedido(s) do Mercado em andamento`, detail: 'Espere concluir ou cancele os pedidos antes.' });
+  }
   (found.wallets || []).forEach((w) => {
     const saldo = Number(w.balance) || 0;
     if (saldo <= 0) return;
@@ -894,6 +911,58 @@ function patchCoachStudentLink(d, uid) {
 }
 
 /**
+ * Mercado, como VENDEDOR pessoal (atleta, professor, loja): a ficha fica
+ * (pedidos e avaliações apontam para ela), sem o nome e suspensa; o Pix
+ * (`private/data`) some; os anúncios saem do ar. Os pedidos VENDIDOS ficam
+ * (histórico do comprador) sem o nome do vendedor. Os COMPRADOS ficam sem o
+ * nome e sem o endereço (`private/shipping`) — nenhum está em andamento: o
+ * impedimento cuida disso.
+ */
+async function coletarMercado(db, uid) {
+  const itens = [];
+  const deletes = [];
+  let truncated = false;
+  for (const key of marketPersonalKeys(uid)) {
+    // eslint-disable-next-line no-await-in-loop
+    const seller = await db.collection('market_sellers').doc(key).get();
+    if (seller.exists) {
+      const s = seller.data() || {};
+      if (s.display_name !== REMOVED_SELLER || s.status !== 'suspended') {
+        itens.push({ ref: seller.ref, patch: { display_name: REMOVED_SELLER, status: 'suspended', bio: null, logo_url: null, banner_url: null } });
+      }
+      // eslint-disable-next-line no-await-in-loop
+      const pix = await seller.ref.collection('private').doc('data').get();
+      if (pix.exists) deletes.push(pix.ref);
+    }
+    // eslint-disable-next-line no-await-in-loop
+    const [anuncios, vendas] = await Promise.all([
+      consultar(db, 'market_listings', 'seller_key', '==', key),
+      consultar(db, 'market_orders', 'seller_key', '==', key),
+    ]);
+    truncated = truncated || anuncios.truncated || vendas.truncated;
+    anuncios.docs.forEach((d) => {
+      const l = d.data() || {};
+      const patch = {};
+      if (l.seller_name !== REMOVED_SELLER) patch.seller_name = REMOVED_SELLER;
+      if (!['closed', 'removed'].includes(l.status)) patch.status = 'closed';
+      if (Object.keys(patch).length) itens.push({ ref: d.ref, patch });
+    });
+    vendas.docs.forEach((d) => {
+      if ((d.data() || {}).seller_name !== REMOVED_SELLER) itens.push({ ref: d.ref, patch: { seller_name: REMOVED_SELLER } });
+    });
+  }
+  const compras = await consultar(db, 'market_orders', 'buyer_uid', '==', uid);
+  truncated = truncated || compras.truncated;
+  for (const d of compras.docs) {
+    if ((d.data() || {}).buyer_name !== REMOVED_USER) itens.push({ ref: d.ref, patch: { buyer_name: REMOVED_USER } });
+    // eslint-disable-next-line no-await-in-loop
+    const endereco = await d.ref.collection('private').doc('shipping').get();
+    if (endereco.exists) deletes.push(endereco.ref);
+  }
+  return { itens, deletes, truncated, count: itens.length };
+}
+
+/**
  * O que é PSEUDONIMIZADO (o uid fica, o nome sai) ou RETIDO com o nome
  * minimizado. Cada campo abaixo foi conferido no código que ESCREVE a
  * coleção. Duas formas:
@@ -935,6 +1004,11 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Dúvidas de treino que fez', collect: coletarDuvidas, deleteLabel: 'Dúvidas de treino que fez e mensagens', cols: ['training_questions'] },
   { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
   { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: patchCoachCampaign, countAll: true },
+  // Mercado
+  { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders'] },
+  { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
+  { label: 'Perguntas feitas no Mercado', col: 'market_questions', wheres: [['asker_uid', '==']], patch: campos('asker_uid', ['asker_name'], [], REMOVED_USER) },
+  { label: 'Avaliações no Mercado', col: 'market_reviews', wheres: [['author_uid', '==']], patch: campos('author_uid', ['author_name'], [], REMOVED_USER) },
   // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
   { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
   { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
@@ -1023,7 +1097,7 @@ async function contaDeLoginExiste(auth, uid) {
  * vídeos do treino (`treino/`, fora de `uploads/` porque tem regra própria de
  * tipo e tamanho).
  */
-const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`]);
+const STORAGE_PREFIXES = Object.freeze([(uid) => `uploads/${uid}/`, (uid) => `treino/${uid}/`, (uid) => `mercado/${uid}/`]);
 
 /** Os links de arquivo dentro de um campo (a arte do cupom, o banner). */
 function linksEm(valor, acc = []) {
@@ -1127,14 +1201,19 @@ async function buscarImpedimentos(db, uid, hojeISO) {
   const docs = async (col, field) => (await consultar(db, col, field, '==', uid)).docs
     .map((d) => ({ id: d.id, ...d.data() }));
 
-  const [arenas, networks, tournaments, gameDays, wallets, clubes] = await Promise.all([
+  const pedidosVenda = async () => (await Promise.all(marketPersonalKeys(uid).map((k) => consultar(db, 'market_orders', 'seller_key', '==', k))))
+    .flatMap((r) => r.docs.map((d) => ({ id: d.id, ...d.data() })));
+  const [arenas, networks, tournaments, gameDays, wallets, clubes, comprados, vendidos] = await Promise.all([
     docs('arenas', 'owner_id'),
     docs('arena_networks', 'owner_id'),
     docs('tournaments', 'creator_uid'),
     docs('game_days', 'created_by'),
     docs('arena_wallets', 'user_id'),
     docs('club_members', 'user_id'),
+    docs('market_orders', 'buyer_uid'),
+    pedidosVenda(),
   ]);
+  const marketOrders = [...comprados, ...vendidos];
 
   const clubAdminships = [];
   for (const m of clubes.filter((c) => c.role === 'admin' && c.club_id)) {
@@ -1150,7 +1229,7 @@ async function buscarImpedimentos(db, uid, hojeISO) {
     });
   }
 
-  return evaluateBlockers({ arenas, networks, clubAdminships, tournaments, gameDays, wallets }, uid, hojeISO);
+  return evaluateBlockers({ arenas, networks, clubAdminships, tournaments, gameDays, wallets, marketOrders }, uid, hojeISO);
 }
 
 /**

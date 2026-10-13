@@ -1176,3 +1176,71 @@ exports.tournamentLinkRegistrationAccount = onCall(
     }
   },
 );
+
+// =====================================================================
+// MERCADO (flag `marketplace`): pedido, oferta, avaliação e a rotina. A regra
+// não deixa o navegador escrever nada disso — ver `functions/marketplace.js`.
+// =====================================================================
+const marketplace = require('./marketplace');
+
+/** Chamada do Mercado: confere a conta e traduz o erro para a tela. */
+function marketCallable(nome, fn) {
+  return onCall({ region: REGION, timeoutSeconds: 60 }, async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const actor = { uid: req.auth.uid, isPlatformAdmin: await isPlatformAdminUser(req, db) };
+    try {
+      return await fn({ db, FieldValue: FieldValueDel, now: Date.now(), logger }, actor, req.data || {});
+    } catch (err) {
+      if (err instanceof marketplace.MarketError) throw new HttpsError(err.code, err.message);
+      if (err instanceof HttpsError) throw err;
+      logger.error(`${nome} falhou`, err);
+      throw new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+    }
+  });
+}
+
+exports.marketPlaceOrders = marketCallable('marketPlaceOrders', (ctx, actor, data) => marketplace.placeOrders(ctx, actor.uid, data));
+exports.marketOrderAction = marketCallable('marketOrderAction', marketplace.orderAction);
+exports.marketOfferAction = marketCallable('marketOfferAction', marketplace.offerAction);
+exports.marketSubmitReview = marketCallable('marketSubmitReview', marketplace.submitReview);
+
+exports.marketHousekeeping = onSchedule(
+  { schedule: 'every 60 minutes', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 300 },
+  async () => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    await marketplace.housekeeping({ db, FieldValue: FieldValueDel, now: Date.now(), logger });
+  },
+);
+
+// Favorito entra/sai → contador do anúncio (o navegador não escreve o contador).
+exports.marketFavoriteCount = onDocumentWritten(
+  { document: 'market_favorites/{favId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    const delta = (d ? 1 : 0) - (a ? 1 : 0);
+    const listingId = (d || a || {}).listing_id;
+    if (!delta || !listingId) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const ref = db.collection('market_listings').doc(listingId);
+    try {
+      await ref.update({ favorite_count: FieldValueDel.increment(delta) });
+    } catch (err) {
+      logger.debug('Mercado: favorito de anúncio que não existe mais.', { listingId });
+    }
+  },
+);
+
+// Anúncio publicado ou editado → moderação automática por termo proibido.
+exports.marketModerateListing = onDocumentWritten(
+  { document: 'market_listings/{listingId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const d = depois(event);
+    const a = antes(event);
+    if (!d) return;
+    if (a && a.title === d.title && a.description === d.description && a.status === d.status) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    await marketplace.moderateListing({ db, now: Date.now() }, event.params.listingId, d);
+  },
+);

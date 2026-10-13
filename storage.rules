@@ -78,6 +78,25 @@ service firebase.storage {
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
 
+    // Mercado (flag `marketplace`): fotos e vídeos dos anúncios e o
+    // comprovante do Pix. Mesmo desenho do `treino/`: `get` para conta logada
+    // (o anúncio é público; o comprovante tem nome aleatório e só o pedido
+    // guarda o caminho), `list` só do dono, envio só do dono com tipo e
+    // tamanho conferidos, sem sobrescrever. ADITIVO.
+    match /mercado/{uid}/{fileName} {
+      allow get: if isAuthed();
+      allow list: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid && resource == null && (
+        (request.resource.contentType.matches('image/(webp|jpeg|png)')
+          && request.resource.size < 3 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/(mp4|webm|quicktime)')
+          && request.resource.size < 60 * 1024 * 1024)
+        || (request.resource.contentType == 'application/pdf'
+          && request.resource.size < 3 * 1024 * 1024)
+      );
+      allow delete: if isAuthed() && request.auth.uid == uid;
+    }
+
     // Bloqueia qualquer outro caminho por padrão.
     match /{allPaths=**} {
       allow read, write: if false;

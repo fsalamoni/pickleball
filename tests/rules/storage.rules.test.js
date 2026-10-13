@@ -146,3 +146,22 @@ describe('treino/ — mídia do Centro de Treino', () => {
     await assertSucceeds(deleteObject(ref(asDono(), 'treino/dono_uid/1-a.webp')));
   });
 });
+
+describe('mercado/ — fotos, vídeos e comprovante do Mercado', () => {
+  it('25. o dono envia foto, vídeo e comprovante em PDF', async () => {
+    await assertSucceeds(uploadBytes(ref(asDono(), 'mercado/dono_uid/a.webp'), bytes(), { contentType: 'image/webp' }));
+    await assertSucceeds(uploadBytes(ref(asDono(), 'mercado/dono_uid/b.mp4'), bytes(), { contentType: 'video/mp4' }));
+    await assertSucceeds(uploadBytes(ref(asDono(), 'mercado/dono_uid/c.pdf'), bytes(), { contentType: 'application/pdf' }));
+  });
+  it('26. 🔴 tipo fora da lista, pasta alheia e imagem grande são recusados', async () => {
+    await assertFails(uploadBytes(ref(asDono(), 'mercado/dono_uid/d.svg'), bytes(), { contentType: 'image/svg+xml' }));
+    await assertFails(uploadBytes(ref(asOutro(), 'mercado/dono_uid/e.webp'), bytes(), { contentType: 'image/webp' }));
+    await assertFails(uploadBytes(ref(asDono(), 'mercado/dono_uid/f.jpg'), new Uint8Array(3 * 1024 * 1024 + 1), { contentType: 'image/jpeg' }));
+  });
+  it('27. conta logada lê; só o dono lista', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      uploadBytes(ref(ctx.storage(), 'mercado/dono_uid/g.webp'), bytes(), { contentType: 'image/webp' }));
+    await assertSucceeds(getBytes(ref(asOutro(), 'mercado/dono_uid/g.webp')));
+    await assertFails(listAll(ref(asOutro(), 'mercado/dono_uid')));
+  });
+});

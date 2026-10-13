@@ -90,11 +90,21 @@ export default function V2Settings() {
           extra = { incomplete: ['Centro de Treino e metas'] };
         }
       }
+      // O Mercado entra sempre (com a flag desligada, o que já foi vendido ou
+      // comprado continua sendo da pessoa).
+      let mercado = { market: undefined, incomplete: [] };
+      try {
+        const { collectMarketExport } = await import('@/modules/marketplace/services/marketExportService');
+        mercado = await collectMarketExport(user?.uid);
+      } catch (_) {
+        mercado = { market: undefined, incomplete: ['Mercado'] };
+      }
       // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
       const incomplete = [
         ...(inscricoes.isSuccess ? [] : ['Inscrições em torneio']),
         ...(reservas.isSuccess ? [] : ['Reservas de quadra']),
         ...extra.incomplete,
+        ...mercado.incomplete,
       ];
       const pkg = buildDataExport({
         uid: user?.uid,
@@ -103,6 +113,7 @@ export default function V2Settings() {
         bookings: reservas.data || [],
         goals: extra.goals,
         training: extra.training,
+        market: mercado.market,
         incomplete,
       });
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });

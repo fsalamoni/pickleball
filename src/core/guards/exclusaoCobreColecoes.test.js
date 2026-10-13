@@ -101,3 +101,46 @@ describe('a exclusão e a exportação cobrem o treino', () => {
     expect(arquivoDe('listMyUploadPaths')).toBeTruthy();
   });
 });
+
+/* ------------------------------------------------------------- Mercado -- */
+
+const DO_MERCADO = [...REGRAS.matchAll(/^\s{4}match \/(market_[a-z_]+)\//gm)].map((m) => m[1]);
+const EXPORTA_MERCADO_ARQ = 'src/modules/marketplace/services/marketExportService.js';
+const EXPORTA_MERCADO = readFileSync(EXPORTA_MERCADO_ARQ, 'utf8');
+/** Como cada coleção do Mercado chega à exportação (a função lida pelo serviço). */
+const MERCADO_EXPORTADO_POR = {
+  market_sellers: ['getSeller', 'getSellerPrivate'],
+  market_listings: ['listSellerListings'],
+  market_questions: ['listMyQuestions'],
+  market_favorites: ['listMyFavorites'],
+  market_saved_searches: ['listSavedSearches'],
+  market_carts: ['getCart'],
+  market_offers: ['listMyOffers'],
+  market_orders: ['listMyOrders', 'listSellerOrders'],
+  market_reviews: ['listMyReviews'],
+};
+const MERCADO_FORA_DA_EXPORTACAO = {
+  market_disputes: 'A disputa é do pedido e não guarda nada que o pedido exportado já não diga; a decisão é da moderação.',
+};
+
+describe('a exclusão e a exportação cobrem o Mercado', () => {
+  it('o rules tem as coleções do Mercado', () => {
+    expect(DO_MERCADO).toEqual(expect.arrayContaining(['market_sellers', 'market_orders', 'market_carts']));
+  });
+
+  it('⭐ toda coleção do Mercado entra na exclusão de conta', () => {
+    const cobre = colecoesDaExclusao();
+    expect(DO_MERCADO.filter((c) => !cobre.has(c)), 'coleção do Mercado sem tratamento na exclusão').toEqual([]);
+    expect(exclusao.STORAGE_PREFIXES.map((f) => f('u1'))).toContain('mercado/u1/');
+  });
+
+  it('⭐ toda coleção do Mercado tem caminho para a exportação (ou isenção com motivo)', () => {
+    expect(DO_MERCADO.filter((c) => !MERCADO_EXPORTADO_POR[c] && !MERCADO_FORA_DA_EXPORTACAO[c])).toEqual([]);
+    Object.entries(MERCADO_EXPORTADO_POR).forEach(([col, fns]) => fns.forEach((fn) => {
+      expect(EXPORTA_MERCADO, `${fn} não é usada pela exportação do Mercado`).toMatch(new RegExp(`\\b${fn}\\b`));
+      const arq = ['marketService.js', 'marketOrderService.js'].map((f) => `src/modules/marketplace/services/${f}`)
+        .find((f) => new RegExp(`export async function ${fn}\\b`).test(readFileSync(f, 'utf8')));
+      expect(arq, `${fn} não está nos serviços do Mercado`).toBeTruthy();
+    }));
+  });
+});
