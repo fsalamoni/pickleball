@@ -5,6 +5,7 @@
  */
 
 import { normalizeArenaRules } from './arena_rules.js';
+import { t } from '@/core/i18n';
 
 function str(value) {
   return String(value ?? '').trim();
@@ -33,8 +34,8 @@ export function normalizeInstagram(value) {
 export function normalizeArenaInput(input = {}) {
   const errors = {};
   const name = str(input.name);
-  if (!name) errors.name = 'Informe o nome da arena.';
-  if (name.length > 120) errors.name = 'Nome muito longo (máx. 120).';
+  if (!name) errors.name = t('Informe o nome da arena.');
+  if (name.length > 120) errors.name = t('Nome muito longo (máx. 120).');
 
   const website = normalizeUrl(input.website);
 

@@ -290,7 +290,7 @@ export function livePromoCoupons(coupons = [], now = Date.now()) {
 export function promoBenefitText(coupon) {
   if (!coupon) return '';
   const txt = couponBenefitText(coupon);
-  if (couponKind(coupon) === K.DISCOUNT && coupon.issuer_type === PROMO_ISSUER.COACH) return `${txt} na aula`;
+  if (couponKind(coupon) === K.DISCOUNT && coupon.issuer_type === PROMO_ISSUER.COACH) return t('{beneficio} na aula', { beneficio: txt });
   return txt;
 }
 

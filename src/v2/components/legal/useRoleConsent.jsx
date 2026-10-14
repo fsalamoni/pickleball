@@ -18,6 +18,7 @@ import { ExternalLink, CheckCircle2 } from 'lucide-react';
 import { getLegalDocument } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
+import { t } from '@/core/i18n';
 
 export function useRoleConsent(docKey) {
   const doc = getLegalDocument(docKey);
@@ -31,7 +32,7 @@ export function useRoleConsent(docKey) {
   const guardBeforeSubmit = () => {
     if (!active) return true;
     if (!checked) {
-      toast.error(`Você precisa aceitar os "${doc.title}" para continuar.`);
+      toast.error(t('Você precisa aceitar os “{documento}” para continuar.', { documento: doc.title }));
       return false;
     }
     return true;
@@ -51,7 +52,7 @@ export function useRoleConsent(docKey) {
     field = alreadyAccepted ? (
       <div className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
         <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span>Você já aceitou os <strong>{doc.title}</strong>.</span>
+        <span>{t('Você já aceitou os')} <strong>{doc.title}</strong>.</span>
       </div>
     ) : (
       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 bg-paper p-3 text-sm">
@@ -62,7 +63,7 @@ export function useRoleConsent(docKey) {
           className="mt-0.5 h-4 w-4 shrink-0 accent-ink"
         />
         <span className="text-gray-600">
-          Li e aceito os <strong className="text-ink">{doc.title}</strong>.{' '}
+          {t('Li e aceito os')} <strong className="text-ink">{doc.title}</strong>.{' '}
           <a
             href={`/legal/${doc.route}`}
             target="_blank"
@@ -70,7 +71,7 @@ export function useRoleConsent(docKey) {
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-0.5 font-semibold text-ink underline"
           >
-            Ler <ExternalLink className="h-3 w-3" />
+            {t('Ler')} <ExternalLink className="h-3 w-3" />
           </a>
         </span>
       </label>

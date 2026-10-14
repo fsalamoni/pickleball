@@ -78,7 +78,7 @@ export async function updateArenaSettings(arenaId, updates, actor) {
 
   const { valid, errors, value } = normalizeArenaSettings(updates);
   if (!valid) {
-    const firstError = Object.values(errors)[0] || 'Dados inválidos.';
+    const firstError = Object.values(errors)[0] || t('Dados inválidos.');
     throw new Error(firstError);
   }
 

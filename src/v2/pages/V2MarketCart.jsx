@@ -422,7 +422,7 @@ function CartPage() {
                 <V2Button type="button" size="lg" className="w-full" disabled={place.isPending} onClick={confirmar}>
                   {place.isPending ? t('Fazendo o pedido…') : escolhidos.length > 1 ? t('Confirmar {n} pedidos', { n: escolhidos.length }) : t('Confirmar pedido')}
                 </V2Button>
-                <p className="text-xs text-gray-500">Ao confirmar, você concorda com os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos Gerais do Mercado</Link> e os <Link to="/legal/termos-comprador-mercado" className="font-bold text-ink underline">Termos do Comprador</Link>. A compra é feita direto com o vendedor: a PickleRush não recebe o pagamento nem entrega o produto.</p>
+                <p className="text-xs text-gray-500">{t('Ao confirmar, você concorda com os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos Gerais do Mercado')}</Link> {t('e os')} <Link to="/legal/termos-comprador-mercado" className="font-bold text-ink underline">{t('Termos do Comprador')}</Link>. {t('A compra é feita direto com o vendedor: a PickleRush não recebe o pagamento nem entrega o produto.')}</p>
               </>
             ) : (
               <V2Button type="button" size="lg" className="w-full" disabled={!escolhidos.length} onClick={() => setParams({ fechar: '1' })}>

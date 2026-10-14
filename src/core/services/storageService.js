@@ -18,6 +18,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebas
 import { storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { stripImageMetadata } from '@/core/lib/imageMetadata';
+import { t } from '@/core/i18n';
 
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 export const ACCEPTED_IMAGE_ATTR = 'image/*';
@@ -41,9 +42,9 @@ function sanitizeName(name) {
 
 /** Valida um arquivo de imagem. Retorna mensagem de erro ou null. */
 export function validateImageFile(file) {
-  if (!file) return 'Selecione um arquivo.';
-  if (!String(file.type || '').startsWith('image/')) return 'O arquivo precisa ser uma imagem.';
-  if (file.size > MAX_IMAGE_BYTES) return `Imagem muito grande (máximo ${maxImageMb()} MB).`;
+  if (!file) return t('Selecione um arquivo.');
+  if (!String(file.type || '').startsWith('image/')) return t('O arquivo precisa ser uma imagem.');
+  if (file.size > MAX_IMAGE_BYTES) return t('Imagem muito grande (máximo {n} MB).', { n: maxImageMb() });
   return null;
 }
 
@@ -54,11 +55,11 @@ export function validateImageFile(file) {
 export function uploadImage(file, { uid, folder = 'misc', onProgress } = {}) {
   return new Promise((resolve, reject) => {
     if (!storage) {
-      reject(new Error('Armazenamento de imagens indisponível neste ambiente.'));
+      reject(new Error(t('Armazenamento de imagens indisponível neste ambiente.')));
       return;
     }
     if (!uid) {
-      reject(new Error('Usuário não autenticado.'));
+      reject(new Error(t('Usuário não autenticado.')));
       return;
     }
     const validationError = validateImageFile(file);
@@ -85,7 +86,7 @@ export function uploadImage(file, { uid, folder = 'misc', onProgress } = {}) {
         },
         (error) => {
           logger.error('Falha no upload de imagem:', error);
-          reject(new Error('Não foi possível enviar a imagem. Tente novamente.'));
+          reject(new Error(t('Não foi possível enviar a imagem. Tente novamente.')));
         },
         async () => {
           try {
@@ -99,7 +100,7 @@ export function uploadImage(file, { uid, folder = 'misc', onProgress } = {}) {
             });
           } catch (error) {
             logger.error('Falha ao obter URL da imagem:', error);
-            reject(new Error('Imagem enviada, mas não foi possível obter o link.'));
+            reject(new Error(t('Imagem enviada, mas não foi possível obter o link.')));
           }
         },
       );
@@ -171,8 +172,8 @@ export function isImageContentType(contentType) {
 
 /** Valida um arquivo genérico (qualquer tipo). Retorna mensagem de erro ou null. */
 export function validateUploadFile(file) {
-  if (!file) return 'Selecione um arquivo.';
-  if (file.size > MAX_FILE_BYTES) return `Arquivo muito grande (máximo ${maxFileMb()} MB).`;
+  if (!file) return t('Selecione um arquivo.');
+  if (file.size > MAX_FILE_BYTES) return t('Arquivo muito grande (máximo {n} MB).', { n: maxFileMb() });
   return null;
 }
 
@@ -184,11 +185,11 @@ export function validateUploadFile(file) {
 export function uploadAttachment(file, { uid, folder = 'attachments', onProgress } = {}) {
   return new Promise((resolve, reject) => {
     if (!storage) {
-      reject(new Error('Armazenamento de arquivos indisponível neste ambiente.'));
+      reject(new Error(t('Armazenamento de arquivos indisponível neste ambiente.')));
       return;
     }
     if (!uid) {
-      reject(new Error('Usuário não autenticado.'));
+      reject(new Error(t('Usuário não autenticado.')));
       return;
     }
     const validationError = validateUploadFile(file);
@@ -215,7 +216,7 @@ export function uploadAttachment(file, { uid, folder = 'attachments', onProgress
         },
         (error) => {
           logger.error('Falha no upload de anexo:', error);
-          reject(new Error('Não foi possível enviar o arquivo. Tente novamente.'));
+          reject(new Error(t('Não foi possível enviar o arquivo. Tente novamente.')));
         },
         async () => {
           try {
@@ -230,7 +231,7 @@ export function uploadAttachment(file, { uid, folder = 'attachments', onProgress
             });
           } catch (error) {
             logger.error('Falha ao obter URL do anexo:', error);
-            reject(new Error('Arquivo enviado, mas não foi possível obter o link.'));
+            reject(new Error(t('Arquivo enviado, mas não foi possível obter o link.')));
           }
         },
       );

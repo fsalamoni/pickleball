@@ -2,6 +2,8 @@
  * Domínio: PDV (Arena V3 — sprint 3).
  */
 
+import { t } from '@/core/i18n';
+
 export const PRODUCT_CATEGORIES = Object.freeze({
   BEBIDAS: 'bebidas',
   EQUIPAMENTOS: 'equipamentos',
@@ -31,11 +33,11 @@ export const PAYMENT_METHOD = Object.freeze({
 export function normalizeProductInput(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim();
-  if (!name) errors.name = 'Nome obrigatório.';
-  if (name.length > 80) errors.name = 'Máx. 80 chars.';
+  if (!name) errors.name = t('Nome obrigatório.');
+  if (name.length > 80) errors.name = t('Máx. 80 chars.');
 
   const price = Number(input.price);
-  if (!Number.isFinite(price) || price < 0) errors.price = 'Preço inválido.';
+  if (!Number.isFinite(price) || price < 0) errors.price = t('Preço inválido.');
 
   const stock = Number(input.stock);
   const stockOk = !Number.isFinite(stock) || stock >= 0;

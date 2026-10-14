@@ -193,8 +193,8 @@ export function normalizeCampaignBanner(input) {
   if (input.source === BANNER_SOURCE.UPLOAD) {
     const url = String(input.image_url || '').trim();
     const alt = String(input.alt || '').replace(/\s+/g, ' ').trim().slice(0, BANNER_ALT_MAX);
-    if (!isAllowedImageUrl(url)) errors.image_url = 'Envie a imagem do banner.';
-    if (!alt) errors.alt = 'Descreva a imagem — é o que o leitor de tela lê, e o que aparece se ela não carregar.';
+    if (!isAllowedImageUrl(url)) errors.image_url = t('Envie a imagem do banner.');
+    if (!alt) errors.alt = t('Descreva a imagem — é o que o leitor de tela lê, e o que aparece se ela não carregar.');
     return {
       valid: Object.keys(errors).length === 0,
       errors,
@@ -270,12 +270,12 @@ export function normalizeBannerPlacement(input = {}, { today } = {}) {
   const show_home = input.show_home === true;
   let until = String(input.banner_until || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) until = today ? defaultBannerUntil(today) : '';
-  if (today && until < today) errors.banner_until = 'A data final já passou.';
+  if (today && until < today) errors.banner_until = t('A data final já passou.');
   if (today && until > somaDias(today, BANNER_MAX_DAYS)) {
-    errors.banner_until = `O banner fica no ar por até ${BANNER_MAX_DAYS} dias.`;
+    errors.banner_until = t('O banner fica no ar por até {n} dias.', { n: BANNER_MAX_DAYS });
   }
   if (!show_on_arena && !show_home) {
-    errors.placement = 'Escolha pelo menos um lugar para o banner aparecer.';
+    errors.placement = t('Escolha pelo menos um lugar para o banner aparecer.');
   }
   return { valid: Object.keys(errors).length === 0, errors, value: { show_on_arena, show_home, banner_until: until } };
 }
@@ -331,10 +331,10 @@ export function homeCampaignBanners({ campaigns = [], arenas = [], isOnIn = () =
 export function campaignPlacementText(campaign) {
   if (!campaign?.banner) return '';
   const onde = [
-    campaign.show_on_arena !== false ? 'página da arena' : null,
-    campaign.show_home ? 'tela inicial' : null,
+    campaign.show_on_arena !== false ? t('página da arena') : null,
+    campaign.show_home ? t('tela inicial') : null,
   ].filter(Boolean);
   const destino = t(CAMPAIGN_DESTINATION_META[campaign.destination?.type]?.label || CAMPAIGN_DESTINATION_META.details.label);
   const alvo = campaign.destination?.target_label ? ` (${campaign.destination.target_label})` : '';
-  return t('Banner na {valor} · leva a: {destino}{alvo}', { valor: onde.join(' e na '), destino, alvo });
+  return t('Banner na {valor} · leva a: {destino}{alvo}', { valor: onde.join(` ${t('e na')} `), destino, alvo });
 }

@@ -1,4 +1,4 @@
-import { tk } from '@/core/i18n';
+import { tk, t } from '@/core/i18n';
 /**
  * Domínio: aulas e professores da arena.
  *
@@ -43,7 +43,7 @@ export const CLASS_STATUS = Object.freeze({
 export function normalizeCoachInput(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim();
-  if (!name) errors.name = 'Nome obrigatório.';
+  if (!name) errors.name = t('Nome obrigatório.');
   const level = Object.values(COACH_LEVEL).includes(input.level) ? input.level : COACH_LEVEL.INTERMEDIATE;
   const pricePerHour = Number(input.price_per_hour);
   const bio = String(input.bio || '').trim().slice(0, 1000);
@@ -81,18 +81,18 @@ export function normalizeCoachInput(input = {}) {
 export function normalizeClassInput(input = {}) {
   const errors = {};
   const date = String(input.date || '').trim();
-  if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) errors.date = 'Data inválida.';
+  if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) errors.date = t('Data inválida.');
   const start = String(input.start || '').trim();
-  if (!start.match(/^\d{2}:\d{2}$/)) errors.start = 'Horário inválido.';
+  if (!start.match(/^\d{2}:\d{2}$/)) errors.start = t('Horário inválido.');
   const end = String(input.end || '').trim();
-  if (!end.match(/^\d{2}:\d{2}$/)) errors.end = 'Horário inválido.';
+  if (!end.match(/^\d{2}:\d{2}$/)) errors.end = t('Horário inválido.');
   const maxStudents = Number(input.max_students);
-  if (!Number.isFinite(maxStudents) || maxStudents < 1 || maxStudents > 50) errors.max_students = '1-50 alunos.';
+  if (!Number.isFinite(maxStudents) || maxStudents < 1 || maxStudents > 50) errors.max_students = t('1-50 alunos.');
   const price = Number(input.price) || 0;
-  if (price < 0) errors.price = 'Preço inválido.';
+  if (price < 0) errors.price = t('Preço inválido.');
   // Fim antes do início passava batido e virava uma aula de duração negativa,
   // que bloquearia a quadra por nada (ou por tudo, dependendo de quem lê).
-  if (!errors.start && !errors.end && end <= start) errors.end = 'A aula termina depois de começar.';
+  if (!errors.start && !errors.end && end <= start) errors.end = t('A aula termina depois de começar.');
   // Aula sem professor era o padrão: a agenda dizia "grupo, iniciante, 19h" e
   // ninguém sabia com quem. Ainda é opcional (a arena pode marcar antes de
   // saber quem dá), mas agora o campo existe e a tela cobra.

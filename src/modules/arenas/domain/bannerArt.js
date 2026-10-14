@@ -197,16 +197,16 @@ export function bannerUploadGuide(spec = BANNER_UPLOAD_SPEC) {
   const mb = (b) => t('{valor} MB', { valor: Math.round(b / (1024 * 1024)) });
   return [
     { label: t('Tamanho ideal'), value: `${spec.recommended.width} × ${spec.recommended.height} px` },
-    { label: t('Proporção'), value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
-    { label: t('Mínimo'), value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
+    { label: t('Proporção'), value: t('{proporcao} (a largura é o dobro da altura)', { proporcao: spec.ratioLabel }) },
+    { label: t('Mínimo'), value: t('{largura} × {altura} px — menor que isso fica borrado', { largura: spec.minimum.width, altura: spec.minimum.height }) },
     { label: t('Formatos'), value: spec.formats.join(', ') },
-    { label: t('Peso'), value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)}) — pesado demora a abrir no 4G` },
+    { label: t('Peso'), value: t('até {ideal} (máximo {maximo}) — pesado demora a abrir no 4G', { ideal: mb(spec.idealBytes), maximo: mb(spec.maxBytes) }) },
     {
       label: t('Área segura'),
-      value: `texto e logo dentro dos ${Math.round(spec.safeArea.width * 100)}% centrais da largura e ${Math.round(spec.safeArea.height * 100)}% da altura — no celular as laterais são cortadas`,
+      value: t('texto e logo dentro dos {largura}% centrais da largura e {altura}% da altura — no celular as laterais são cortadas', { largura: Math.round(spec.safeArea.width * 100), altura: Math.round(spec.safeArea.height * 100) }),
     },
-    { label: t('Botão'), value: 'não desenhe botão: o banner inteiro já é clicável e leva ao destino escolhido' },
-    { label: t('Texto'), value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição (para quem usa leitor de tela)' },
+    { label: t('Botão'), value: t('não desenhe botão: o banner inteiro já é clicável e leva ao destino escolhido') },
+    { label: t('Texto'), value: t('pouco e grande; o que estiver escrito na imagem precisa ir também na descrição (para quem usa leitor de tela)') },
   ];
 }
 
@@ -222,22 +222,22 @@ export function checkBannerImage({ width, height, bytes, type } = {}, spec = BAN
   const mb = (b) => (b / (1024 * 1024)).toFixed(1).replace('.', ',');
 
   if (type && !spec.mimeTypes.includes(String(type).toLowerCase())) {
-    errors.push(`Formato não aceito. Use ${spec.formats.join(', ')}.`);
+    errors.push(t('Formato não aceito. Use {formatos}.', { formatos: spec.formats.join(', ') }));
   }
   const b = Number(bytes) || 0;
-  if (b > spec.maxBytes) errors.push(`A imagem tem ${mb(b)} MB; o máximo é ${mb(spec.maxBytes)} MB.`);
-  else if (b > spec.idealBytes) warnings.push(`A imagem tem ${mb(b)} MB. Até ${mb(spec.idealBytes)} MB ela abre mais rápido.`);
+  if (b > spec.maxBytes) errors.push(t('A imagem tem {mb} MB; o máximo é {max} MB.', { mb: mb(b), max: mb(spec.maxBytes) }));
+  else if (b > spec.idealBytes) warnings.push(t('A imagem tem {mb} MB. Até {ideal} MB ela abre mais rápido.', { mb: mb(b), ideal: mb(spec.idealBytes) }));
 
   const w = Number(width) || 0;
   const h = Number(height) || 0;
   if (w > 0 && h > 0) {
     if (w < spec.minimum.width || h < spec.minimum.height) {
-      errors.push(`A imagem tem ${w} × ${h} px; o mínimo é ${spec.minimum.width} × ${spec.minimum.height} px.`);
+      errors.push(t('A imagem tem {w} × {h} px; o mínimo é {minW} × {minH} px.', { w, h, minW: spec.minimum.width, minH: spec.minimum.height }));
     }
     const proporcao = w / h;
     if (Math.abs(proporcao - spec.ratio) / spec.ratio > spec.ratioTolerance) {
       const txt = proporcao.toFixed(2).replace('.', ',');
-      warnings.push(`A proporção é ${txt}:1; ${spec.noun || 'o banner'} é ${spec.ratioLabel}. Parte da imagem vai ser cortada.`);
+      warnings.push(t('A proporção é {txt}:1; {nome} é {proporcao}. Parte da imagem vai ser cortada.', { txt, nome: t(spec.noun || 'o banner'), proporcao: spec.ratioLabel }));
     }
   }
   return { ok: errors.length === 0, errors, warnings };
@@ -287,18 +287,18 @@ export function normalizeBannerDesign(input = {}) {
     image_path: isAllowedImageUrl(input.image_url) ? String(input.image_path || '').slice(0, 300) : '',
   };
 
-  if (!value.title) errors.title = 'O banner precisa de um título.';
+  if (!value.title) errors.title = t('O banner precisa de um título.');
   if (input.image_url && !value.image_url) {
-    warnings.push('A imagem precisa ser enviada pela plataforma — o endereço colado foi ignorado.');
+    warnings.push(t('A imagem precisa ser enviada pela plataforma — o endereço colado foi ignorado.'));
   }
   if (contrastRatio(value.fg, value.bg) < MIN_TEXT_CONTRAST) {
-    warnings.push('O texto tem pouco contraste com o fundo e vai ficar difícil de ler. Troque uma das cores.');
+    warnings.push(t('O texto tem pouco contraste com o fundo e vai ficar difícil de ler. Troque uma das cores.'));
   }
   if (layout === ART_LAYOUT.OFERTA && !value.highlight) {
-    warnings.push('O modelo Oferta pede o número em destaque (ex.: "20% OFF").');
+    warnings.push(t('O modelo Oferta pede o número em destaque (ex.: “20% OFF”).'));
   }
   if (layout === ART_LAYOUT.EVENTO && !value.highlight) {
-    warnings.push('O modelo Evento pede a data em destaque (ex.: "18 OUT").');
+    warnings.push(t('O modelo Evento pede a data em destaque (ex.: “18 OUT”).'));
   }
   return { valid: Object.keys(errors).length === 0, errors, warnings, value };
 }

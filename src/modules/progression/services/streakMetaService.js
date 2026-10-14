@@ -18,6 +18,7 @@ import {
 
 import { canStartVacation, vacationPeriodsOf, withVacationEnded, withVacationStarted } from '@/modules/progression/domain/weekStreak';
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 function db() { return gamificationDb(); }
 
@@ -97,8 +98,8 @@ export async function enableVacation(uid) {
   const pode = canStartVacation(periodos);
   if (!pode.ok) {
     throw new Error(pode.reason === 'open'
-      ? 'Suas férias já estão em andamento.'
-      : 'Você já tirou férias há menos de 90 dias. Dá para começar outras depois disso.');
+      ? t('Suas férias já estão em andamento.')
+      : t('Você já tirou férias há menos de 90 dias. Dá para começar outras depois disso.'));
   }
   const updated = {
     ...meta,

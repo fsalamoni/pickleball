@@ -13,6 +13,7 @@ import {
   validateReward, generateClaimCode, claimDocId, rewardAvailability, canTransitionClaim,
 } from '@/modules/progression/domain/rewards';
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 const db = () => gamificationDb();
 
@@ -34,7 +35,7 @@ export async function listRewardsByIssuer(issuerType, issuerId) {
 export async function createReward(input, issuer, actor) {
   const v = validateReward({ ...input, approvedCount: 0 }, { ...issuer, uid: actor.uid });
   if (!v.ok) {
-    const e = new Error(Object.values(v.errors)[0] || 'Recompensa inválida.');
+    const e = new Error(Object.values(v.errors)[0] || t('Recompensa inválida.'));
     e.errors = v.errors;
     throw e;
   }
@@ -47,7 +48,7 @@ export async function createReward(input, issuer, actor) {
 export async function updateReward(id, atual, patch, issuer, actor) {
   const v = validateReward({ ...atual, ...patch }, { ...issuer, uid: atual.createdBy });
   if (!v.ok) {
-    const e = new Error(Object.values(v.errors)[0] || 'Recompensa inválida.');
+    const e = new Error(Object.values(v.errors)[0] || t('Recompensa inválida.'));
     e.errors = v.errors;
     throw e;
   }
@@ -152,14 +153,14 @@ export async function cancelClaim(claimId) {
  */
 export async function decideClaim(claim, next, actor, note = '') {
   if (!canTransitionClaim(claim.status, next, 'issuer')) {
-    throw new Error('Este pedido não pode ir para esse estado.');
+    throw new Error(t('Este pedido não pode ir para esse estado.'));
   }
   const claimRef = doc(db(), 'reward_claims', claim.id);
   const rewardRef = doc(db(), 'gamification_rewards', claim.rewardId);
   await runTransaction(db(), async (tx) => {
     if (next === 'approved') {
       const r = await tx.get(rewardRef);
-      if (!r.exists()) throw new Error('A recompensa não existe mais.');
+      if (!r.exists()) throw new Error(t('A recompensa não existe mais.'));
       const dados = r.data();
       const disp = rewardAvailability({ ...dados, id: r.id });
       if (!disp.available) throw new Error(disp.reason);

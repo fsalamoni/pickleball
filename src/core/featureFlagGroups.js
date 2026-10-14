@@ -10,42 +10,43 @@
  */
 
 import { FEATURE_FLAG, PERMANENT_FEATURE } from './featureFlags.js';
+import { tk } from './i18n/engine.js';
 
 /** Grupos "normais" (fora Arena V3), na ordem de exibição. */
 export const FLAG_GROUPS = Object.freeze([
   {
     id: 'athlete',
-    label: 'Atleta, rating e social',
+    label: tk('Atleta, rating e social'),
     keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],
   },
   {
     id: 'game_day',
-    label: 'Dia de jogo',
+    label: tk('Dia de jogo'),
     // Os formatos opcionais do dia de jogo ficam juntos, no grupo em que o
     // admin procura por eles.
     keys: [FEATURE_FLAG.GAMEDAY_MEXICANO, FEATURE_FLAG.GAMEDAY_KING_OF_COURT],
   },
   {
     id: 'marketplace',
-    label: 'Mercado',
+    label: tk('Mercado'),
     keys: [FEATURE_FLAG.MARKETPLACE],
   },
   {
     id: 'languages',
-    label: 'Idiomas',
+    label: tk('Idiomas'),
     keys: [FEATURE_FLAG.MULTI_LANGUAGE],
   },
 ]);
 
-export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });
-export const FLAG_GROUP_ARENA_V3 = Object.freeze({ id: 'arena_v3', label: 'Arena V3 (módulos)' });
+export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: tk('Outras') });
+export const FLAG_GROUP_ARENA_V3 = Object.freeze({ id: 'arena_v3', label: tk('Arena V3 (módulos)') });
 
 /** Famílias das flags da Arena V3, para subdividir o grupo na página. */
 export const ARENA_FAMILY_LABEL = Object.freeze({
-  master: 'Master (chave geral)', matchmaking: 'Matchmaking', members: 'Membros',
-  pdv: 'PDV / vendas', classes: 'Aulas', leagues: 'Torneios e ligas',
-  marketing: 'Marketing', operations: 'Operações', iot: 'IoT / sensores',
-  multi: 'Multi-unidade', white: 'White label', ai: 'IA', other: 'Outros',
+  master: tk('Master (chave geral)'), matchmaking: tk('Matchmaking'), members: tk('Membros'),
+  pdv: tk('PDV / vendas'), classes: tk('Aulas'), leagues: tk('Torneios e ligas'),
+  marketing: tk('Marketing'), operations: tk('Operações'), iot: tk('IoT / sensores'),
+  multi: tk('Multi-unidade'), white: tk('White label'), ai: tk('IA'), other: tk('Outros'),
 });
 
 /** Retorna a família de uma flag de arena (ex.: 'matchmaking'), ou null. */

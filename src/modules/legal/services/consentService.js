@@ -12,6 +12,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { consentDocId } from '../domain/consent.js';
+import { t } from '@/core/i18n';
 
 const COL = 'legal_consents';
 
@@ -28,8 +29,8 @@ export async function listMyConsents(uid) {
  * @param {{ key: string, version: number, title?: string }} docMeta
  */
 export async function recordConsent(actor, docMeta) {
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
-  if (!docMeta?.key) throw new Error('Documento inválido.');
+  if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
+  if (!docMeta?.key) throw new Error(t('Documento inválido.'));
   const id = consentDocId(actor.uid, docMeta.key);
   await setDoc(doc(db, COL, id), {
     id,

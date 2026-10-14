@@ -1,15 +1,16 @@
 import React from 'react';
 import { Database, Eye, FileText, RefreshCw, ShieldCheck, UserCheck } from 'lucide-react';
 import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 export default function V2Privacy() {
-  const meta = `Versão 1.0 — ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}. Ao usar a plataforma, você declara ciência e aceitação destas condições.`;
+  const meta = t('Versão 1.0 — {data}. Ao usar a plataforma, você declara ciência e aceitação destas condições.', { data: fmtData(new Date(), { month: 'long', year: 'numeric' }) });
 
   return (
     <div className="mx-auto max-w-[900px]">
       <V2ContentHero
-        eyebrow="Termos de uso e privacidade"
-        title="Política de Uso e Privacidade"
+        eyebrow={t('Termos de uso e privacidade')}
+        title={t('Política de Uso e Privacidade')}
         description="Condições de uso da plataforma PickleRush, natureza esportiva da ferramenta e diretrizes de tratamento de dados pessoais."
         meta={meta}
       />

@@ -74,17 +74,17 @@ export function dueDateForMonth(mes, dia) {
 export function normalizeSubscriptionInput(input = {}) {
   const errors = {};
   const planName = String(input.plan_name || '').trim();
-  if (!planName) errors.plan_name = 'Dê um nome ao plano.';
-  if (planName.length > 80) errors.plan_name = 'No máximo 80 caracteres.';
+  if (!planName) errors.plan_name = t('Dê um nome ao plano.');
+  if (planName.length > 80) errors.plan_name = t('No máximo 80 caracteres.');
 
   const price = Number(input.price);
-  if (!Number.isFinite(price) || price <= 0) errors.price = 'O valor deve ser maior que zero.';
+  if (!Number.isFinite(price) || price <= 0) errors.price = t('O valor deve ser maior que zero.');
 
   const billingDay = Math.trunc(Number(input.billing_day));
   if (!Number.isFinite(billingDay) || billingDay < 1 || billingDay > 28) {
     // Até 28 de propósito: 29, 30 e 31 não existem em todo mês, e um plano
     // cujo vencimento muda de dia conforme o mês confunde os dois lados.
-    errors.billing_day = 'O dia de vencimento deve ser entre 1 e 28.';
+    errors.billing_day = t('O dia de vencimento deve ser entre 1 e 28.');
   }
 
   return {

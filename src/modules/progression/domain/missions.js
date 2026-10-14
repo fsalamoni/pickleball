@@ -21,6 +21,7 @@
 
 import { isMeasurableMetric } from './missionMetrics.js';
 import { missionDateKey } from './missionDay.js';
+import { t, tk } from '@/core/i18n';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -212,85 +213,97 @@ const REQUIRED_BY_SCOPE = Object.freeze({
  * @param {{ metric: string, target: number }} t
  * @returns {{ title: string, description: string }}
  */
-export function missionLabel({ metric, target = 1 } = {}) {
+export function missionLabel({ metric, target = 1 } = {}, { traduzir = false } = {}) {
+  const tx = traduzir ? t : (k, p) => k.replace(/\{(\w+)\}/g, (m, v) => (p?.[v] ?? m));
   const n = Math.max(1, Number(target) || 1);
   const plural = n > 1;
   const textos = {
     game_played: {
-      title: plural ? `Jogue ${n} partidas` : 'Jogue 1 partida',
+      title: plural ? tx(tk('Jogue {n} partidas'), { n }) : tx(tk('Jogue 1 partida')),
       description: plural
-        ? `Dispute ${n} partidas — de torneio ou de dia de jogo.`
-        : 'Dispute uma partida — de torneio ou de dia de jogo.',
+        ? tx(tk('Dispute {n} partidas — de torneio ou de dia de jogo.'), { n })
+        : tx(tk('Dispute uma partida — de torneio ou de dia de jogo.')),
     },
     game_day_attended: {
-      title: plural ? `Participe de ${n} dias de jogo` : 'Participe de um dia de jogo',
+      title: plural ? tx(tk('Participe de {n} dias de jogo'), { n }) : tx(tk('Participe de um dia de jogo')),
       description: plural
-        ? `Entre em quadra em ${n} dias de jogo.`
-        : 'Entre em quadra num dia de jogo.',
+        ? tx(tk('Entre em quadra em {n} dias de jogo.'), { n })
+        : tx(tk('Entre em quadra num dia de jogo.')),
     },
     tournament_attended: {
-      title: plural ? `Dispute ${n} torneios` : 'Dispute um torneio',
+      title: plural ? tx(tk('Dispute {n} torneios'), { n }) : tx(tk('Dispute um torneio')),
       description: plural
-        ? `Participe de ${n} torneios.`
-        : 'Participe de um torneio.',
+        ? tx(tk('Participe de {n} torneios.'), { n })
+        : tx(tk('Participe de um torneio.')),
     },
     kudos_given: {
-      title: plural ? `Dê ${n} kudos` : 'Dê 1 kudo',
+      title: plural ? tx(tk('Dê {n} kudos'), { n }) : tx(tk('Dê 1 kudo')),
       description: plural
-        ? `Reconheça ${n} atletas com um 👏.`
-        : 'Reconheça um atleta com um 👏.',
+        ? tx(tk('Reconheça {n} atletas com um 👏.'), { n })
+        : tx(tk('Reconheça um atleta com um 👏.')),
     },
     referral_signed_up: {
-      title: plural ? `Convide ${n} amigos` : 'Convide um amigo',
+      title: plural ? tx(tk('Convide {n} amigos'), { n }) : tx(tk('Convide um amigo')),
       description: plural
-        ? `${n} amigos entram na plataforma pelo seu convite.`
-        : 'Um amigo entra na plataforma pelo seu convite.',
+        ? tx(tk('{n} amigos entram na plataforma pelo seu convite.'), { n })
+        : tx(tk('Um amigo entra na plataforma pelo seu convite.')),
     },
     active_days: {
-      title: `Jogue em ${n} dias diferentes`,
-      description: `Entre em quadra em ${n} dias diferentes — constância vale mais que maratona.`,
+      title: tx(tk('Jogue em {n} dias diferentes'), { n }),
+      description: tx(tk('Entre em quadra em {n} dias diferentes — constância vale mais que maratona.'), { n }),
     },
     follow_made: {
-      title: plural ? `Siga ${n} atletas` : 'Siga 1 atleta',
-      description: 'Descubra atletas na lista e comece a seguir quem joga perto de você.',
+      title: plural ? tx(tk('Siga {n} atletas'), { n }) : tx(tk('Siga 1 atleta')),
+      description: tx(tk('Descubra atletas na lista e comece a seguir quem joga perto de você.')),
     },
     booking_attended: {
-      title: plural ? `Jogue em ${n} reservas de quadra` : 'Jogue numa reserva de quadra',
-      description: 'Reserve uma quadra numa arena e vá jogar — reserva concluída conta.',
+      title: plural ? tx(tk('Jogue em {n} reservas de quadra'), { n }) : tx(tk('Jogue numa reserva de quadra')),
+      description: tx(tk('Reserve uma quadra numa arena e vá jogar — reserva concluída conta.')),
     },
     lesson_attended: {
-      title: plural ? `Faça ${n} aulas` : 'Faça uma aula',
-      description: 'Uma aula com um professor da plataforma, marcada como concluída.',
+      title: plural ? tx(tk('Faça {n} aulas'), { n }) : tx(tk('Faça uma aula')),
+      description: tx(tk('Uma aula com um professor da plataforma, marcada como concluída.')),
     },
     arena_reviewed: {
-      title: plural ? `Avalie ${n} arenas` : 'Avalie uma arena',
-      description: 'Conte como foi jogar numa arena — a avaliação ajuda quem vem depois.',
+      title: plural ? tx(tk('Avalie {n} arenas'), { n }) : tx(tk('Avalie uma arena')),
+      description: tx(tk('Conte como foi jogar numa arena — a avaliação ajuda quem vem depois.')),
     },
     clinic_attended: {
-      title: plural ? `Participe de ${n} clínicas` : 'Participe de uma clínica',
-      description: 'Inscreva-se numa clínica ou workshop de um professor.',
+      title: plural ? tx(tk('Participe de {n} clínicas'), { n }) : tx(tk('Participe de uma clínica')),
+      description: tx(tk('Inscreva-se numa clínica ou workshop de um professor.')),
     },
     review_given: {
-      title: plural ? `Avalie ${n} jogos` : 'Avalie um jogo',
-      description: 'Depois do jogo, avalie o companheiro e os adversários — é rápido.',
+      title: plural ? tx(tk('Avalie {n} jogos'), { n }) : tx(tk('Avalie um jogo')),
+      description: tx(tk('Depois do jogo, avalie o companheiro e os adversários — é rápido.')),
     },
     letter_sent: {
-      title: plural ? `Escreva ${n} cartas ao companheiro` : 'Escreva uma carta ao companheiro',
-      description: 'Uma frase para o parceiro de dupla depois do jogo. Anônima por padrão.',
+      title: plural ? tx(tk('Escreva {n} cartas ao companheiro'), { n }) : tx(tk('Escreva uma carta ao companheiro')),
+      description: tx(tk('Uma frase para o parceiro de dupla depois do jogo. Anônima por padrão.')),
     },
     challenge_joined: {
-      title: plural ? `Entre em ${n} desafios` : 'Entre num desafio',
-      description: 'Participe de um desafio da plataforma, de um clube ou de uma arena.',
+      title: plural ? tx(tk('Entre em {n} desafios'), { n }) : tx(tk('Entre num desafio')),
+      description: tx(tk('Participe de um desafio da plataforma, de um clube ou de uma arena.')),
     },
     debrief_done: {
-      title: plural ? `Faça ${n} balanços de jogo` : 'Faça o balanço de um jogo',
-      description: 'Depois de jogar, conte como foi no Treino → Balanço. A semana de treino sai sugerida.',
+      title: plural ? tx(tk('Faça {n} balanços de jogo'), { n }) : tx(tk('Faça o balanço de um jogo')),
+      description: tx(tk('Depois de jogar, conte como foi no Treino → Balanço. A semana de treino sai sugerida.')),
     },
   };
   return textos[metric] || {
-    title: `Complete ${n}`,
-    description: `Chegue a ${n} nesta missão.`,
+    title: tx(tk('Complete {n}'), { n }),
+    description: tx(tk('Chegue a {n} nesta missão.'), { n }),
   };
+}
+
+/**
+ * O texto da missão para a TELA, no idioma ativo. O documento guarda o texto em
+ * português; quando ele é o rótulo gerado pela métrica, a tela mostra a versão
+ * traduzida — texto próprio (de quem criou a missão) segue como veio.
+ */
+export function missionDescriptionShown(m = {}) {
+  if (!m.metric) return m.description;
+  if (m.description !== missionLabel(m).description) return m.description;
+  return missionLabel(m, { traduzir: true }).description;
 }
 
 function instantiateMissions(templates, options = {}) {

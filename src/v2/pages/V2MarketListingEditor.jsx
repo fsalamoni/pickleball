@@ -123,13 +123,13 @@ function PhotoAdjustDialog({ foto, numero, onSave, onClose }) {
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Ajustar a foto {numero}</DialogTitle>
-          <DialogDescription>Arraste a foto para escolher o que aparece no card. Quem abrir o anúncio e ampliar a foto vê a foto inteira.</DialogDescription>
+          <DialogTitle>{t('Ajustar a foto {n}', { n: numero })}</DialogTitle>
+          <DialogDescription>{t('Arraste a foto para escolher o que aparece no card. Quem abrir o anúncio e ampliar a foto vê a foto inteira.')}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-[1fr_9rem]">
           <div
             role="application"
-            aria-label="Enquadramento da foto no card. Use as setas para mover."
+            aria-label={t('Enquadramento da foto no card. Use as setas para mover.')}
             tabIndex={0}
             className="relative aspect-square touch-none select-none overflow-hidden rounded-2xl border border-gray-100 bg-paper focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40"
             style={{ cursor: pronto ? 'grab' : 'wait' }}
@@ -154,18 +154,18 @@ function PhotoAdjustDialog({ foto, numero, onSave, onClose }) {
           >
             {pronto
               ? <MarketPhoto src={foto.url} alt={foto.alt || ''} aspect={aspect} frame={frame} />
-              : <span className="flex h-full items-center justify-center text-sm text-gray-500">Carregando a foto…</span>}
+              : <span className="flex h-full items-center justify-center text-sm text-gray-500">{t('Carregando a foto…')}</span>}
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-bold text-gray-500">Ao ampliar</p>
+            <p className="text-xs font-bold text-gray-500">{t('Ao ampliar')}</p>
             <div className="relative aspect-square overflow-hidden rounded-xl bg-ink/90">
               {pronto && <MarketPhoto src={foto.url} aspect={aspect} frame={frame} mode="contain" />}
             </div>
-            <p className="text-xs text-gray-500">A foto inteira, como foi enviada{frame.rotate ? ', girada' : ''}.</p>
+            <p className="text-xs text-gray-500">{frame.rotate ? t('A foto inteira, como foi enviada, girada.') : t('A foto inteira, como foi enviada.')}</p>
           </div>
         </div>
         <div className="space-y-3">
-          <label className="block text-sm font-bold text-ink" htmlFor="foto-zoom">Tamanho no card</label>
+          <label className="block text-sm font-bold text-ink" htmlFor="foto-zoom">{t('Tamanho no card')}</label>
           <input
             id="foto-zoom"
             type="range"
@@ -178,14 +178,14 @@ function PhotoAdjustDialog({ foto, numero, onSave, onClose }) {
             className="w-full accent-ink"
           />
           <div className="flex flex-wrap gap-2">
-            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, -1))}><RotateCcw className="h-4 w-4" /> Girar para a esquerda</V2Button>
-            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, 1))}><RotateCw className="h-4 w-4" /> Girar para a direita</V2Button>
-            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => ({ ...DEFAULT_FRAME, rotate: f.rotate }))}>Centralizar</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, -1))}><RotateCcw className="h-4 w-4" /> {t('Girar para a esquerda')}</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, 1))}><RotateCw className="h-4 w-4" /> {t('Girar para a direita')}</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => ({ ...DEFAULT_FRAME, rotate: f.rotate }))}>{t('Centralizar')}</V2Button>
           </div>
         </div>
         <DialogFooter>
-          <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button type="button" disabled={!pronto} onClick={() => onSave({ aspect, frame: clampFrame(aspect, frame) })}>Salvar ajuste</V2Button>
+          <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button type="button" disabled={!pronto} onClick={() => onSave({ aspect, frame: clampFrame(aspect, frame) })}>{t('Salvar ajuste')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -242,7 +242,7 @@ function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
   const subir = async (files, { asVideo = false } = {}) => {
     const escolhidos = [...files].filter((f) => (asVideo ? true : !f.type || f.type.startsWith('image/')));
     const lista = escolhidos.slice(0, asVideo ? 1 : Math.max(0, MEDIA_LIMITS.maxPhotos - fotos.length - envios.length));
-    if (!asVideo && escolhidos.length > lista.length) toast.info(`Cabem até ${MEDIA_LIMITS.maxPhotos} fotos; ${escolhidos.length - lista.length} ficaram de fora.`);
+    if (!asVideo && escolhidos.length > lista.length) toast.info(t('Cabem até {max} fotos; {n} ficaram de fora.', { max: MEDIA_LIMITS.maxPhotos, n: escolhidos.length - lista.length }));
     const novos = (await Promise.all(lista.map((f) => enviarUm(f, asVideo)))).filter(Boolean);
     if (!novos.length) return;
     onChange((atual) => (asVideo
@@ -301,14 +301,14 @@ function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
                     <button type="button" onClick={() => reordenar(i, i + 1)} disabled={i === fotos.length - 1} aria-label={t('Mover a foto {n} para a direita', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
                   </span>
                   <span className="flex gap-1">
-                    <button type="button" onClick={() => setAjustando(i)} aria-label={`Ajustar a foto ${i + 1}: tamanho, enquadramento e rotação`} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink"><Crop className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => setAjustando(i)} aria-label={t('Ajustar a foto {n}: tamanho, enquadramento e rotação', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink"><Crop className="h-4 w-4" /></button>
                     <button type="button" onClick={() => tirar(m)} aria-label={t('Tirar a foto {n}', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-red-600"><Trash2 className="h-4 w-4" /></button>
                   </span>
                 </div>
               </div>
               <label className="sr-only" htmlFor={`alt-${i}`}>{t('Descrição da foto {n}', { n: i + 1 })}</label>
               <input id={`alt-${i}`} value={m.alt || ''} maxLength={140} onChange={(e) => mudar(m, { alt: e.target.value })} placeholder={t('Descreva a foto (opcional)')} className="w-full rounded-xl border border-gray-200 bg-paper-pure px-2 py-1.5 text-xs text-ink" />
-              <AiCheck id={`ia-${i}`} checked={m.ai_generated} onChange={(v) => mudar(m, { ai_generated: v })}>Gerada ou alterada por IA</AiCheck>
+              <AiCheck id={`ia-${i}`} checked={m.ai_generated} onChange={(v) => mudar(m, { ai_generated: v })}>{t('Gerada ou alterada por IA')}</AiCheck>
             </li>
           ))}
           {envios.map((e) => (
@@ -322,7 +322,7 @@ function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
               <button type="button" onClick={() => inputRef.current?.click()} className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 px-2 text-center text-sm font-bold text-gray-500 hover:border-ink hover:text-ink">
                 <ImagePlus className="h-7 w-7" />
                 {t('Adicionar fotos')}
-                <span className="text-xs font-normal">ou arraste para cá</span>
+                <span className="text-xs font-normal">{t('ou arraste para cá')}</span>
               </button>
             </li>
           )}
@@ -330,14 +330,14 @@ function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
       </div>
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files); e.target.value = ''; }} />
       <p className="text-xs text-gray-500">
-        Até {MEDIA_LIMITS.maxPhotos} fotos, escolhidas ou arrastadas várias de uma vez. A primeira é a capa; arraste uma foto sobre a outra (ou use as setas) para mudar a ordem, e toque em <Crop className="inline h-3.5 w-3.5" aria-label="ajustar" /> para escolher o tamanho, o enquadramento no card e girar. Ao ampliar, o comprador vê a foto inteira.
+        {t('Até {n} fotos, escolhidas ou arrastadas várias de uma vez. A primeira é a capa; arraste uma foto sobre a outra (ou use as setas) para mudar a ordem, e toque em', { n: MEDIA_LIMITS.maxPhotos })} <Crop className="inline h-3.5 w-3.5" aria-label={t('ajustar')} /> {t('para escolher o tamanho, o enquadramento no card e girar. Ao ampliar, o comprador vê a foto inteira.')}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {video ? (
           <span className="inline-flex flex-wrap items-center gap-2 rounded-2xl bg-paper px-3 py-1.5 text-sm text-ink">
             <Video className="h-4 w-4" /> {t('Vídeo enviado')}
             <button type="button" onClick={() => tirar(video)} className="font-bold text-red-600 underline">{t('Tirar')}</button>
-            <AiCheck id="ia-video" checked={video.ai_generated} onChange={(v) => mudar(video, { ai_generated: v })}>Gerado ou alterado por IA</AiCheck>
+            <AiCheck id="ia-video" checked={video.ai_generated} onChange={(v) => mudar(video, { ai_generated: v })}>{t('Gerado ou alterado por IA')}</AiCheck>
           </span>
         ) : (
           <V2Button type="button" size="sm" variant="ghost" onClick={() => videoRef.current?.click()}><Video className="h-4 w-4" /> {t('Enviar um vídeo (até {n} s)', { n: MEDIA_LIMITS.maxVideoSeconds })}</V2Button>
@@ -345,11 +345,11 @@ function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
         <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files, { asVideo: true }); e.target.value = ''; }} />
       </div>
       <div className="rounded-2xl bg-paper p-3 text-xs text-gray-600">
-        <p className="flex items-center gap-1.5 font-bold text-ink"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Imagem ou vídeo feito com inteligência artificial</p>
+        <p className="flex items-center gap-1.5 font-bold text-ink"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {t('Imagem ou vídeo feito com inteligência artificial')}</p>
         <p className="mt-1">
-          Se uma foto ou o vídeo foi criado ou alterado por IA de um jeito que muda o que se vê (produto montado, cor, fundo com o produto trocado, detalhe apagado), marque “Gerada ou alterada por IA”. O comprador vê o selo <strong>Gerado por IA</strong>. Ajustes simples de luz e corte não precisam.
-          Você responde pelas fotos e vídeos que publica: eles precisam mostrar o produto que será entregue, e o anúncio pode ser retirado se enganar quem compra.{' '}
-          {aiPolicyRoute && <Link to={`/legal/${aiPolicyRoute}`} className="font-bold text-ink underline">Ler a política de imagens e IA</Link>}
+          {t('Se uma foto ou o vídeo foi criado ou alterado por IA de um jeito que muda o que se vê (produto montado, cor, fundo com o produto trocado, detalhe apagado), marque “Gerada ou alterada por IA”. O comprador vê o selo')} <strong>{t('Gerado por IA')}</strong>. {t('Ajustes simples de luz e corte não precisam.')}{' '}
+          {t('Você responde pelas fotos e vídeos que publica: eles precisam mostrar o produto que será entregue, e o anúncio pode ser retirado se enganar quem compra.')}{' '}
+          {aiPolicyRoute && <Link to={`/legal/${aiPolicyRoute}`} className="font-bold text-ink underline">{t('Ler a política de imagens e IA')}</Link>}
         </p>
       </div>
       {error && <p role="alert" className="text-sm font-medium text-red-500">{error}</p>}

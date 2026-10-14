@@ -12,6 +12,7 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { innerImageSize, normalizeAspect, normalizeFrame, photoBox } from '@/modules/marketplace/domain/mediaFrame';
+import { t } from '@/core/i18n';
 
 export default function MarketPhoto({
   src, alt = '', aspect, frame, mode = 'cover', boxAspect = 1, loading, className, imgClassName,
@@ -64,7 +65,7 @@ export function AiStamp({ className, size = 'sm' }) {
       )}
     >
       <Sparkles className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} aria-hidden="true" />
-      Gerado por IA
+      {t('Gerado por IA')}
     </span>
   );
 }

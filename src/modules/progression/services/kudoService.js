@@ -24,6 +24,7 @@ import { missionDateKey } from '@/modules/progression/domain/missionDay';
 import { createAuditLog } from '@/core/services/auditService';
 
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 function db() { return gamificationDb(); }
 
@@ -66,7 +67,7 @@ function parseIndex(data) {
  */
 export async function giveKudo({ fromUid, toUid, type, scope, message, contextId }) {
   if (!fromUid || !toUid) return null;
-  if (fromUid === toUid) throw new Error('não pode dar kudo pra si mesmo');
+  if (fromUid === toUid) throw new Error(t('não pode dar kudo pra si mesmo'));
   const today = missionDateKey();
   const kudoId = `k_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const kudoRef = doc(db(), kudoPath(kudoId));
@@ -84,10 +85,10 @@ export async function giveKudo({ fromUid, toUid, type, scope, message, contextId
     const fromToday = fromIdx.lastKudoDay === today ? fromIdx.givenToday : 0;
     const toToday = toIdx.lastKudoDay === today ? toIdx.receivedToday : 0;
     if (fromToday >= GIVE_DAILY_CAP) {
-      throw new Error(`limite diário de ${GIVE_DAILY_CAP} kudos dados atingido`);
+      throw new Error(t('limite diário de {n} kudos dados atingido', { n: GIVE_DAILY_CAP }));
     }
     if (toToday >= RECEIVE_DAILY_CAP) {
-      throw new Error(`limite diário de ${RECEIVE_DAILY_CAP} kudos recebidos atingido`);
+      throw new Error(t('limite diário de {n} kudos recebidos atingido', { n: RECEIVE_DAILY_CAP }));
     }
 
     const now = Date.now();
