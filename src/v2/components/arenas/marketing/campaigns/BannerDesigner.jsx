@@ -25,10 +25,11 @@ import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input } from '@/v2/ui/primi
 import { cn } from '@/core/lib/utils';
 import BannerArt from './BannerArt';
 import BannerThumb from './BannerThumb';
+import { t, tk } from '@/core/i18n';
 
 const ROTULO_DESTAQUE = {
-  [ART_LAYOUT.OFERTA]: { label: 'Número em destaque', placeholder: '20% OFF' },
-  [ART_LAYOUT.EVENTO]: { label: 'Data em destaque', placeholder: '18 OUT' },
+  [ART_LAYOUT.OFERTA]: { label: tk('Número em destaque'), placeholder: '20% OFF' },
+  [ART_LAYOUT.EVENTO]: { label: tk('Data em destaque'), placeholder: tk('18 OUT') },
 };
 
 function Contador({ valor, max }) {
@@ -73,7 +74,7 @@ function Miniatura({ id, nome, design, ativo, seu, onClick }) {
       type="button"
       onClick={onClick}
       aria-pressed={ativo}
-      aria-label={`Modelo ${nome}`}
+      aria-label={t('Modelo {nome}', { nome })}
       className={cn(
         'shrink-0 snap-start rounded-2xl border-2 p-1 text-left transition',
         ativo ? 'border-ink' : 'border-transparent hover:border-gray-300',
@@ -83,7 +84,7 @@ function Miniatura({ id, nome, design, ativo, seu, onClick }) {
       <BannerThumb banner={{ source: 'design', design }} cta={design.cta} width={176} />
       <span className="mt-1 flex w-[176px] items-center gap-1 px-1 text-xs font-bold text-ink">
         <span className="truncate">{nome}</span>
-        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-2xs">seu</V2Badge>}
+        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-2xs">{t('seu')}</V2Badge>}
       </span>
     </button>
   );
@@ -122,10 +123,10 @@ export default function BannerDesigner({
 
   const verif = normalizeBannerDesign(design);
   const corDaMarca = brand ? (brand.color || '') : (arena?.branding?.primary_color || '');
-  const rotuloDaCor = brand?.label || 'Usar a cor da arena';
+  const rotuloDaCor = brand?.label || t('Usar a cor da arena');
   const nomeDoDono = brand ? (brand.name || '') : (arena?.name || '');
   const modeloAtual = isArenaTemplateId(templateId)
-    ? meus.find((t) => t.id === templateId)?.design || null
+    ? meus.find((m) => m.id === templateId)?.design || null
     : platformTemplate(templateId)?.design || null;
 
   const escolher = (id, desenhoDoModelo) => {
@@ -139,7 +140,7 @@ export default function BannerDesigner({
       toast.success(msg);
       return true;
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o modelo.');
+      toast.error(err?.message || t('Não foi possível salvar o modelo.'));
       return false;
     }
   };
@@ -147,23 +148,23 @@ export default function BannerDesigner({
   const salvarComoNovo = async () => {
     const r = saveArenaTemplate(meus, { name: nomeNovo, design: verif.value });
     if (r.error) { toast.error(r.error); return; }
-    if (await gravar(r.list, `Modelo "${r.saved.name}" salvo. Os modelos da plataforma continuam lá.`)) {
+    if (await gravar(r.list, t('Modelo "{nome}" salvo. Os modelos da plataforma continuam lá.', { nome: r.saved.name }))) {
       onChange({ template_id: r.saved.id, design: r.saved.design });
       setNomeNovo('');
       setSalvandoComo(false);
     }
   };
   const atualizar = async () => {
-    const atual = meus.find((t) => t.id === templateId);
+    const atual = meus.find((m) => m.id === templateId);
     if (!atual) return;
     const r = saveArenaTemplate(meus, { id: atual.id, name: atual.name, design: verif.value });
     if (r.error) { toast.error(r.error); return; }
-    await gravar(r.list, `Modelo "${atual.name}" atualizado.`);
+    await gravar(r.list, t('Modelo "{nome}" atualizado.', { nome: atual.name }));
   };
   const apagar = async () => {
-    const atual = meus.find((t) => t.id === templateId);
+    const atual = meus.find((m) => m.id === templateId);
     if (!atual) return;
-    if (await gravar(removeArenaTemplate(meus, atual.id), `Modelo "${atual.name}" apagado.`)) {
+    if (await gravar(removeArenaTemplate(meus, atual.id), t('Modelo "{nome}" apagado.', { nome: atual.name }))) {
       onChange({ template_id: null, design: verif.value });
     }
   };
@@ -173,23 +174,23 @@ export default function BannerDesigner({
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Modelos da plataforma</p>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">{t('Modelos da plataforma')}</p>
         <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
-          {BANNER_TEMPLATES.map((t) => (
-            <Miniatura key={t.id} id={t.id} nome={t.name} design={t.design} ativo={templateId === t.id}
-              onClick={() => escolher(t.id, t.design)} />
+          {BANNER_TEMPLATES.map((m) => (
+            <Miniatura key={m.id} id={m.id} nome={t(m.name)} design={m.design} ativo={templateId === m.id}
+              onClick={() => escolher(m.id, m.design)} />
           ))}
         </div>
         {modelosQ.isError ? (
-          <V2ErrorState inline className="mt-2" title="Não foi possível carregar os seus modelos"
-            description="Os da plataforma continuam aqui." onRetry={() => modelosQ.refetch()} />
+          <V2ErrorState inline className="mt-2" title={t('Não foi possível carregar os seus modelos')}
+            description={t('Os da plataforma continuam aqui.')} onRetry={() => modelosQ.refetch()} />
         ) : meus.length > 0 && (
           <>
-            <p className="mb-2 mt-3 text-xs font-bold uppercase tracking-widest text-gray-500">Meus modelos</p>
+            <p className="mb-2 mt-3 text-xs font-bold uppercase tracking-widest text-gray-500">{t('Meus modelos')}</p>
             <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
-              {meus.map((t) => (
-                <Miniatura key={t.id} id={t.id} nome={t.name} design={t.design} seu ativo={templateId === t.id}
-                  onClick={() => escolher(t.id, t.design)} />
+              {meus.map((m) => (
+                <Miniatura key={m.id} id={m.id} nome={m.name} design={m.design} seu ativo={templateId === m.id}
+                  onClick={() => escolher(m.id, m.design)} />
               ))}
             </div>
           </>
@@ -198,22 +199,22 @@ export default function BannerDesigner({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-3">
-          <CampoTexto id="ban-chamada" label="Chamada" campo="kicker" design={design} onCampo={muda}
-            placeholder="Nesta semana" hint="Uma linha curta em cima do título." />
-          <CampoTexto id="ban-titulo" label="Título" campo="title" design={design} onCampo={muda} required
-            placeholder="Quadra livre à noite" />
-          <CampoTexto id="ban-texto" label="Texto" campo="subtitle" design={design} onCampo={muda}
-            placeholder="O que é, quando vale e o que fazer." />
+          <CampoTexto id="ban-chamada" label={t('Chamada')} campo="kicker" design={design} onCampo={muda}
+            placeholder={t('Nesta semana')} hint={t('Uma linha curta em cima do título.')} />
+          <CampoTexto id="ban-titulo" label={t('Título')} campo="title" design={design} onCampo={muda} required
+            placeholder={t('Quadra livre à noite')} />
+          <CampoTexto id="ban-texto" label={t('Texto')} campo="subtitle" design={design} onCampo={muda}
+            placeholder={t('O que é, quando vale e o que fazer.')} />
           {destaque && (
-            <CampoTexto id="ban-destaque" label={destaque.label} campo="highlight" design={design} onCampo={muda}
-              placeholder={destaque.placeholder} />
+            <CampoTexto id="ban-destaque" label={t(destaque.label)} campo="highlight" design={design} onCampo={muda}
+              placeholder={t(destaque.placeholder)} />
           )}
-          <CampoTexto id="ban-botao" label="Texto do botão" campo="cta" design={design} onCampo={muda}
-            placeholder={cta} hint="Em branco, usa o do destino escolhido." />
+          <CampoTexto id="ban-botao" label={t('Texto do botão')} campo="cta" design={design} onCampo={muda}
+            placeholder={cta} hint={t('Em branco, usa o do destino escolhido.')} />
 
           <div>
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-ink">Cores</span>
+              <span className="text-sm font-semibold text-ink">{t('Cores')}</span>
               {corDaMarca && (
                 <button type="button" onClick={() => onChange({ template_id: templateId, design: withArenaColors(design, corDaMarca) })}
                   className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
@@ -222,20 +223,20 @@ export default function BannerDesigner({
               )}
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <CampoCor id="ban-fundo" label="Fundo" valor={verif.value.bg} onChange={(v) => muda('bg', v)} />
-              <CampoCor id="ban-letra" label="Texto" valor={verif.value.fg} onChange={(v) => muda('fg', v)} />
-              <CampoCor id="ban-acento" label="Destaque e botão" valor={verif.value.accent} onChange={(v) => muda('accent', v)} />
+              <CampoCor id="ban-fundo" label={t('Fundo')} valor={verif.value.bg} onChange={(v) => muda('bg', v)} />
+              <CampoCor id="ban-letra" label={t('Texto')} valor={verif.value.fg} onChange={(v) => muda('fg', v)} />
+              <CampoCor id="ban-acento" label={t('Destaque e botão')} valor={verif.value.accent} onChange={(v) => muda('accent', v)} />
             </div>
           </div>
 
           {design.layout === ART_LAYOUT.VITRINE && (
             <div>
-              <span className="text-sm font-semibold text-ink">Foto</span>
-              <p className="mb-2 text-xs text-gray-500">Aparece à direita. Uma foto quadrada ou em pé funciona melhor.</p>
+              <span className="text-sm font-semibold text-ink">{t('Foto')}</span>
+              <p className="mb-2 text-xs text-gray-500">{t('Aparece à direita. Uma foto quadrada ou em pé funciona melhor.')}</p>
               <ImageUpload
                 value={design.image_url || ''}
                 folder={uploadFolder}
-                label="Enviar foto"
+                label={t('Enviar foto')}
                 onChange={(url, meta) => onChange({
                   template_id: templateId,
                   design: { ...design, image_url: url || '', image_path: meta?.path || '' },
@@ -247,9 +248,9 @@ export default function BannerDesigner({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-ink">Como fica</span>
-            <div className="inline-flex rounded-full border border-gray-200 bg-paper-pure p-0.5" role="group" aria-label="Pré-visualização">
-              {[['wide', Monitor, 'Computador'], ['phone', Smartphone, 'Celular']].map(([k, Icone, rotulo]) => (
+            <span className="text-sm font-semibold text-ink">{t('Como fica')}</span>
+            <div className="inline-flex rounded-full border border-gray-200 bg-paper-pure p-0.5" role="group" aria-label={t('Pré-visualização')}>
+              {[['wide', Monitor, t('Computador')], ['phone', Smartphone, t('Celular')]].map(([k, Icone, rotulo]) => (
                 <button key={k} type="button" aria-pressed={previa === k} onClick={() => setPrevia(k)}
                   className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold',
                     previa === k ? 'bg-ink text-white' : 'text-gray-500')}>
@@ -271,34 +272,34 @@ export default function BannerDesigner({
           )}
 
           <div className="rounded-2xl border border-dashed border-gray-200 p-3">
-            {isArenaTemplateId(templateId) && meus.some((t) => t.id === templateId) ? (
+            {isArenaTemplateId(templateId) && meus.some((m) => m.id === templateId) ? (
               <div className="flex flex-wrap items-center gap-2">
                 <V2Button size="sm" variant="secondary" disabled={salvando || !verif.valid} onClick={atualizar}>
-                  <Save className="h-4 w-4" /> Atualizar o modelo
+                  <Save className="h-4 w-4" /> {t('Atualizar o modelo')}
                 </V2Button>
                 <V2Button size="sm" variant="ghost" disabled={salvando} onClick={() => setConfirmarApagar(true)}>
-                  <Trash2 className="h-4 w-4" /> Apagar o modelo
+                  <Trash2 className="h-4 w-4" /> {t('Apagar o modelo')}
                 </V2Button>
               </div>
             ) : null}
             {salvandoComo ? (
               <div className="mt-2 flex flex-wrap items-end gap-2 first:mt-0">
-                <V2Field label="Nome do modelo" htmlFor="ban-modelo-nome" className="min-w-[12rem] flex-1">
+                <V2Field label={t('Nome do modelo')} htmlFor="ban-modelo-nome" className="min-w-[12rem] flex-1">
                   <V2Input id="ban-modelo-nome" maxLength={40} value={nomeNovo} autoFocus
-                    placeholder="Terças de promoção" onChange={(e) => setNomeNovo(e.target.value)} />
+                    placeholder={t('Terças de promoção')} onChange={(e) => setNomeNovo(e.target.value)} />
                 </V2Field>
                 <V2Button size="sm" disabled={!nomeNovo.trim() || salvando || !verif.valid} onClick={salvarComoNovo}>
-                  Salvar
+                  {t('Salvar')}
                 </V2Button>
-                <V2Button size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>Cancelar</V2Button>
+                <V2Button size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>{t('Cancelar')}</V2Button>
               </div>
             ) : (
               <button type="button" onClick={() => setSalvandoComo(true)} disabled={!verif.valid}
                 className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline disabled:opacity-50 first:mt-0">
-                <Save className="h-3.5 w-3.5" /> Salvar como meu modelo
+                <Save className="h-3.5 w-3.5" /> {t('Salvar como meu modelo')}
               </button>
             )}
-            <p className="mt-1 text-2xs text-gray-500">Os modelos da plataforma nunca mudam — salvar cria um modelo seu.</p>
+            <p className="mt-1 text-2xs text-gray-500">{t('Os modelos da plataforma nunca mudam — salvar cria um modelo seu.')}</p>
           </div>
         </div>
       </div>
@@ -306,9 +307,9 @@ export default function BannerDesigner({
       <ConfirmDialog
         open={confirmarApagar}
         onOpenChange={setConfirmarApagar}
-        title="Apagar este modelo?"
-        description="Some da lista “Meus modelos”. Os banners já publicados com ele continuam no ar, e o desenho aberto aqui não se perde."
-        confirmLabel="Apagar o modelo"
+        title={t('Apagar este modelo?')}
+        description={t('Some da lista “Meus modelos”. Os banners já publicados com ele continuam no ar, e o desenho aberto aqui não se perde.')}
+        confirmLabel={t('Apagar o modelo')}
         destructive
         onConfirm={async () => { await apagar(); setConfirmarApagar(false); }}
       />

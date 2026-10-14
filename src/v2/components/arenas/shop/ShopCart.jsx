@@ -15,8 +15,9 @@ import { useCreateSale } from '@/modules/arenas/hooks/useArenaV3';
 import { splitAmount } from '@/modules/arenas/domain/pdv';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Avatar, V2Button, V2Input, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
-const nomeDe = (a) => a?.platform_name || a?.full_name || 'Atleta';
+const nomeDe = (a) => a?.platform_name || a?.full_name || t('Atleta');
 
 export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido }) {
   const { user } = useAuth();
@@ -53,12 +54,12 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
         splitWith: participantes.length > 1 ? participantes : [],
       });
       toast.success(participantes.length > 1
-        ? 'Pedido feito! A arena já foi avisada, e a turma recebeu a parte dela.'
-        : 'Pedido feito! A arena já foi avisada — é só retirar no balcão.');
+        ? t('Pedido feito! A arena já foi avisada, e a turma recebeu a parte dela.')
+        : t('Pedido feito! A arena já foi avisada — é só retirar no balcão.'));
       setDividirCom([]);
       onPedido?.();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível fazer o pedido.');
+      toast.error(err?.message || t('Não foi possível fazer o pedido.'));
     }
   };
 
@@ -68,9 +69,9 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
     <V2Surface className="sticky bottom-4 z-10 border-ink/20 shadow-organic">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <ShoppingBag className="h-4 w-4" /> Seu pedido
+          <ShoppingBag className="h-4 w-4" /> {t('Seu pedido')}
         </h2>
-        <V2Button size="sm" variant="ghost" onClick={onLimpar}>Limpar</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={onLimpar}>{t('Limpar')}</V2Button>
       </div>
 
       <ul className="space-y-1">
@@ -85,7 +86,7 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
       {temSplit && (
         <div className="mt-3 border-t border-gray-100 pt-3">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
-            <Users className="h-3.5 w-3.5" /> Dividir com
+            <Users className="h-3.5 w-3.5" /> {t('Dividir com')}
           </p>
           {dividirCom.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -95,7 +96,7 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
                   <span key={uid} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper py-0.5 pl-0.5 pr-1 text-xs text-ink">
                     <V2Avatar photoUrl={a?.photo_url} name={nomeDe(a)} size="xs" />
                     {nomeDe(a)}
-                    <button type="button" aria-label={`Tirar ${nomeDe(a)} da divisão`}
+                    <button type="button" aria-label={t('Tirar {nome} da divisão', { nome: nomeDe(a) })}
                       onClick={() => setDividirCom((d) => d.filter((x) => x !== uid))}
                       className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
                       <X className="h-3 w-3" />
@@ -106,7 +107,7 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
             </div>
           )}
           <V2Input value={busca} onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar quem divide a conta…" aria-label="Buscar quem divide a conta" />
+            placeholder={t('Buscar quem divide a conta…')} aria-label={t('Buscar quem divide a conta')} />
           {resultados.length > 0 && (
             <div className="mt-1.5 space-y-1">
               {resultados.map((a) => (
@@ -125,20 +126,20 @@ export default function ShopCart({ arena, itens, temSplit, onLimpar, onPedido })
       <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-gray-100 pt-3">
         <div>
           <p className="text-xs text-gray-500">
-            {partes ? `Total ${formatPrice(total)} entre ${partes.length} pessoas` : 'Total'}
+            {partes ? t('Total {valor} entre {n} pessoas', { valor: formatPrice(total), n: partes.length }) : t('Total')}
           </p>
           <p className="font-display text-2xl font-bold text-ink">
             {formatPrice(minhaParte)}
-            {partes && <span className="ml-1 text-sm font-medium text-gray-500">a sua parte</span>}
+            {partes && <span className="ml-1 text-sm font-medium text-gray-500">{t('a sua parte')}</span>}
           </p>
         </div>
         <V2Button disabled={comprar.isPending} onClick={finalizar}>
-          {comprar.isPending ? 'Enviando…' : 'Fazer o pedido'}
+          {comprar.isPending ? t('Enviando…') : t('Fazer o pedido')}
         </V2Button>
       </div>
 
       <p className="mt-2 text-xs text-gray-500">
-        A arena é avisada na hora e entrega no balcão. Vale o preço da arena no momento do pedido.
+        {t('A arena é avisada na hora e entrega no balcão. Vale o preço da arena no momento do pedido.')}
       </p>
     </V2Surface>
   );

@@ -39,6 +39,7 @@ import { cn } from '@/core/lib/utils';
 import BannerDesigner from './BannerDesigner';
 import BannerUploader from './BannerUploader';
 import DestinationPicker from './DestinationPicker';
+import { t, tn } from '@/core/i18n';
 
 const SEM_BANNER = 'none';
 
@@ -122,23 +123,26 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
   const cta = destinationCta(f.destination, f.design);
 
   const falta = [
-    ...(!editando && !f.name.trim() ? ['o nome da campanha'] : []),
+    ...(!editando && !f.name.trim() ? [t('o nome da campanha')] : []),
     ...Object.values(vDestino.errors),
     ...Object.values(vBanner.errors),
     ...Object.values(vLugar.errors),
-    ...(!editando && f.notify && !f.message.trim() ? ['a mensagem do aviso'] : []),
-    ...(!editando && f.notify && !publicoFalhou && destinatarios.length === 0 ? ['alguém no público do aviso'] : []),
-    ...(!editando && f.notify && publicoFalhou ? ['carregar o público do aviso'] : []),
-    ...(!editando && !f.notify && !banner ? ['um banner ou um aviso — a campanha precisa aparecer em algum lugar'] : []),
-    ...(editando && !banner ? ['o banner'] : []),
+    ...(!editando && f.notify && !f.message.trim() ? [t('a mensagem do aviso')] : []),
+    ...(!editando && f.notify && !publicoFalhou && destinatarios.length === 0 ? [t('alguém no público do aviso')] : []),
+    ...(!editando && f.notify && publicoFalhou ? [t('carregar o público do aviso')] : []),
+    ...(!editando && !f.notify && !banner ? [t('um banner ou um aviso — a campanha precisa aparecer em algum lugar')] : []),
+    ...(editando && !banner ? [t('o banner')] : []),
   ];
 
   const resumo = [
     banner
-      ? `Banner ${[f.show_on_arena ? 'na página da arena' : null, f.show_home ? 'na tela inicial' : null].filter(Boolean).join(' e ')} até ${formatDateShortBR(f.banner_until)}.`
+      ? t('Banner {lugares} até {data}.', {
+        lugares: [f.show_on_arena ? t('na página da arena') : null, f.show_home ? t('na tela inicial') : null].filter(Boolean).join(t(' e ')),
+        data: formatDateShortBR(f.banner_until),
+      })
       : null,
-    `Leva a: ${CAMPAIGN_DESTINATION_META[vDestino.value.type].label}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}.`,
-    !editando && f.notify ? `Aviso no aplicativo para ${destinatarios.length} ${destinatarios.length === 1 ? 'pessoa' : 'pessoas'} — não dá para cancelar depois.` : null,
+    `${t('Leva a: {destino}', { destino: t(CAMPAIGN_DESTINATION_META[vDestino.value.type].label) })}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}.`,
+    !editando && f.notify ? tn(destinatarios.length, 'Aviso no aplicativo para {n} pessoa — não dá para cancelar depois.', 'Aviso no aplicativo para {n} pessoas — não dá para cancelar depois.') : null,
   ].filter(Boolean);
 
   const enviar = async () => {
@@ -155,7 +159,7 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
             banner_until: f.banner_until,
           },
         });
-        toast.success('Banner atualizado.');
+        toast.success(t('Banner atualizado.'));
       } else {
         const { sent } = await publicar.mutateAsync({
           arenaId,
@@ -172,47 +176,47 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
           },
           recipients: f.notify ? destinatarios : [],
         });
-        toast.success(f.notify ? `Campanha publicada. Aviso enviado para ${sent} pessoa(s).` : 'Campanha publicada.');
+        toast.success(f.notify ? t('Campanha publicada. Aviso enviado para {n} pessoa(s).', { n: sent }) : t('Campanha publicada.'));
       }
       setConfirmar(false);
       onClose?.();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível publicar.');
+      toast.error(err?.message || t('Não foi possível publicar.'));
       setConfirmar(false);
     }
   };
 
   const FONTES = [
-    [BANNER_SOURCE.DESIGN, Paintbrush, 'Criar na plataforma'],
-    [BANNER_SOURCE.UPLOAD, ImagePlus, 'Enviar a minha imagem'],
-    [SEM_BANNER, Ban, 'Sem banner'],
+    [BANNER_SOURCE.DESIGN, Paintbrush, t('Criar na plataforma')],
+    [BANNER_SOURCE.UPLOAD, ImagePlus, t('Enviar a minha imagem')],
+    [SEM_BANNER, Ban, t('Sem banner')],
   ];
 
   return (
     <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="font-display text-lg font-bold text-ink">{editando ? `Banner de “${campaign.name}”` : 'Nova campanha'}</h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <h3 className="font-display text-lg font-bold text-ink">{editando ? t('Banner de “{nome}”', { nome: campaign.name }) : t('Nova campanha')}</h3>
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="space-y-5">
         {!editando && (
-          <Secao n={1} titulo="O que é" descricao="O nome aparece para você na lista e é o título do aviso.">
-            <V2Field label="Nome da campanha" htmlFor="camp-nome" required>
-              <V2Input id="camp-nome" maxLength={80} placeholder="Terça com 20% de desconto"
+          <Secao n={1} titulo={t('O que é')} descricao={t('O nome aparece para você na lista e é o título do aviso.')}>
+            <V2Field label={t('Nome da campanha')} htmlFor="camp-nome" required>
+              <V2Input id="camp-nome" maxLength={80} placeholder={t('Terça com 20% de desconto')}
                 value={f.name} onChange={(e) => set({ name: e.target.value })} />
             </V2Field>
           </Secao>
         )}
 
-        <Secao n={editando ? 1 : 2} titulo="Para onde leva" descricao="O que a pessoa vai fazer ao tocar no banner (ou no aviso).">
+        <Secao n={editando ? 1 : 2} titulo={t('Para onde leva')} descricao={t('O que a pessoa vai fazer ao tocar no banner (ou no aviso).')}>
           <DestinationPicker arenaId={arenaId} value={f.destination} onChange={(destination) => set({ destination })} />
         </Secao>
 
-        <Secao n={editando ? 2 : 3} titulo="Banner">
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="De onde vem o banner">
+        <Secao n={editando ? 2 : 3} titulo={t('Banner')}>
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('De onde vem o banner')}>
             {FONTES.filter(([k]) => !(editando && k === SEM_BANNER)).map(([k, Icone, rotulo]) => (
               <button key={k} type="button" role="radio" aria-checked={f.source === k} onClick={() => set({ source: k })}
                 className={cn('inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-bold transition',
@@ -229,32 +233,32 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
             <BannerUploader value={f.upload} onChange={(patch) => set({ upload: { ...f.upload, ...patch } })} />
           )}
           {f.source === SEM_BANNER && (
-            <p className="rounded-2xl bg-paper px-3 py-2 text-sm text-gray-600">A campanha vai só como aviso no aplicativo.</p>
+            <p className="rounded-2xl bg-paper px-3 py-2 text-sm text-gray-600">{t('A campanha vai só como aviso no aplicativo.')}</p>
           )}
         </Secao>
 
         {banner && (
-          <Secao n={editando ? 3 : 4} titulo="Onde aparece e até quando">
+          <Secao n={editando ? 3 : 4} titulo={t('Onde aparece e até quando')}>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex cursor-pointer items-start gap-2 rounded-2xl border border-gray-200 p-3">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_on_arena}
                   onChange={(e) => set({ show_on_arena: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">Na página da arena</span>
-                  <span className="block text-xs text-gray-500">No topo, em “Em destaque” — quem já te procura.</span>
+                  <span className="block text-sm font-bold text-ink">{t('Na página da arena')}</span>
+                  <span className="block text-xs text-gray-500">{t('No topo, em “Em destaque” — quem já te procura.')}</span>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-2 rounded-2xl border border-gray-200 p-3">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_home}
                   onChange={(e) => set({ show_home: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">Também na tela inicial</span>
-                  <span className="block text-xs text-gray-500">No carrossel de quem está na cidade ou no estado da arena.</span>
+                  <span className="block text-sm font-bold text-ink">{t('Também na tela inicial')}</span>
+                  <span className="block text-xs text-gray-500">{t('No carrossel de quem está na cidade ou no estado da arena.')}</span>
                 </span>
               </label>
             </div>
-            <V2Field label="No ar até" htmlFor="camp-ate" error={vLugar.errors.banner_until}
-              hint="Depois dessa data o banner sai sozinho.">
+            <V2Field label={t('No ar até')} htmlFor="camp-ate" error={vLugar.errors.banner_until}
+              hint={t('Depois dessa data o banner sai sozinho.')}>
               <V2Input id="camp-ate" type="date" min={today} value={f.banner_until}
                 onChange={(e) => set({ banner_until: e.target.value })} className="max-w-[12rem]" />
             </V2Field>
@@ -262,17 +266,17 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
         )}
 
         {!editando && (
-          <Secao n={banner ? 5 : 4} titulo="Aviso no aplicativo" descricao="Chega na hora para o público escolhido, e leva ao mesmo destino do banner.">
+          <Secao n={banner ? 5 : 4} titulo={t('Aviso no aplicativo')} descricao={t('Chega na hora para o público escolhido, e leva ao mesmo destino do banner.')}>
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.notify}
                 onChange={(e) => set({ notify: e.target.checked })} />
-              <span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><Bell className="h-4 w-4" aria-hidden /> Avisar pelo aplicativo</span>
+              <span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><Bell className="h-4 w-4" aria-hidden /> {t('Avisar pelo aplicativo')}</span>
             </label>
             {f.notify && (
               <>
                 {publicoFalhou ? (
-                  <V2ErrorState inline title="Não foi possível carregar o público"
-                    description="Sem ele não dá para saber quem recebe o aviso."
+                  <V2ErrorState inline title={t('Não foi possível carregar o público')}
+                    description={t('Sem ele não dá para saber quem recebe o aviso.')}
                     onRetry={() => { membrosQ.refetch(); reservasQ.refetch(); }} />
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -285,18 +289,18 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
                           className={cn('rounded-2xl border p-3 text-left transition',
                             marcado ? 'border-ink bg-ink/5' : 'border-gray-200 bg-paper-pure hover:border-gray-300')}>
                           <span className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-ink">{meta.label}</span>
-                            <V2Badge tone={quantos > 0 ? 'green' : 'neutral'}>{quantos} {quantos === 1 ? 'pessoa' : 'pessoas'}</V2Badge>
+                            <span className="font-bold text-ink">{t(meta.label)}</span>
+                            <V2Badge tone={quantos > 0 ? 'green' : 'neutral'}>{tn(quantos, '{n} pessoa', '{n} pessoas')}</V2Badge>
                           </span>
-                          <span className="mt-1 block text-xs text-gray-500">{meta.hint}</span>
+                          <span className="mt-1 block text-xs text-gray-500">{t(meta.hint)}</span>
                         </button>
                       );
                     })}
                   </div>
                 )}
-                <V2Field label="Mensagem" htmlFor="camp-msg" required>
+                <V2Field label={t('Mensagem')} htmlFor="camp-msg" required>
                   <V2Textarea id="camp-msg" rows={3} maxLength={1000}
-                    placeholder="Escreva como falaria no balcão. Diga o que é, quando vale e o que a pessoa precisa fazer."
+                    placeholder={t('Escreva como falaria no balcão. Diga o que é, quando vale e o que a pessoa precisa fazer.')}
                     value={f.message} onChange={(e) => set({ message: e.target.value })} />
                 </V2Field>
               </>
@@ -307,15 +311,15 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
         <div className="flex flex-wrap items-end justify-between gap-3 border-t border-gray-100 pt-4">
           <div className="min-w-0 text-xs text-gray-600">
             {falta.length > 0 ? (
-              <p><strong className="text-amber-700">Falta:</strong> {falta.join('; ')}.</p>
+              <p><strong className="text-amber-700">{t('Falta:')}</strong> {falta.join('; ')}.</p>
             ) : (
               <ul className="space-y-0.5">{resumo.map((l) => <li key={l}>{l}</li>)}</ul>
             )}
           </div>
           <div className="flex gap-2">
-            <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+            <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
             <V2Button disabled={falta.length > 0 || salvando} onClick={() => setConfirmar(true)}>
-              <Send className="mr-1.5 h-4 w-4" /> {editando ? 'Salvar o banner' : 'Publicar campanha'}
+              <Send className="mr-1.5 h-4 w-4" /> {editando ? t('Salvar o banner') : t('Publicar campanha')}
             </V2Button>
           </div>
         </div>
@@ -324,9 +328,9 @@ export default function CampaignForm({ arena, campaign = null, onClose }) {
       <ConfirmDialog
         open={confirmar}
         onOpenChange={setConfirmar}
-        title={editando ? 'Salvar o banner?' : 'Publicar esta campanha?'}
+        title={editando ? t('Salvar o banner?') : t('Publicar esta campanha?')}
         description={resumo.join(' ')}
-        confirmLabel={editando ? 'Salvar' : 'Publicar agora'}
+        confirmLabel={editando ? t('Salvar') : t('Publicar agora')}
         loading={salvando}
         destructive={false}
         onConfirm={enviar}

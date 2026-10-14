@@ -13,10 +13,11 @@ import { Search, Check, X } from 'lucide-react';
 import { searchProducts } from '@/modules/arenas/domain/inventory';
 import { cn } from '@/core/lib/utils';
 import { V2Input } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function ProductTypeahead({
-  products = [], value, onSelect, placeholder = 'Digite para buscar o produto…',
-  metaFor, emptyHint = 'Nenhum produto encontrado.', autoFocus = false,
+  products = [], value, onSelect, placeholder = t('Digite para buscar o produto…'),
+  metaFor, emptyHint = t('Nenhum produto encontrado.'), autoFocus = false,
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -57,7 +58,7 @@ export default function ProductTypeahead({
           <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
           <span className="min-w-0 flex-1 truncate font-semibold text-ink">{selected.name}</span>
           {metaFor && <span className="shrink-0 text-xs text-gray-500">{metaFor(selected)}</span>}
-          <button type="button" onMouseDown={(e) => { e.preventDefault(); clear(); }} className="shrink-0 text-gray-400 hover:text-ink" aria-label="Trocar produto">
+          <button type="button" onMouseDown={(e) => { e.preventDefault(); clear(); }} className="shrink-0 text-gray-400 hover:text-ink" aria-label={t('Trocar produto')}>
             <X className="h-4 w-4" />
           </button>
         </div>

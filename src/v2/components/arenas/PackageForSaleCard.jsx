@@ -6,6 +6,7 @@
 import React from 'react';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function PackageForSaleCard({ pkg, onComprar, ocupado }) {
   const porHora = pkg.hours > 0 ? pkg.price / pkg.hours : 0;
@@ -22,10 +23,10 @@ export default function PackageForSaleCard({ pkg, onComprar, ocupado }) {
         <span className="font-display text-2xl font-bold text-ink">{formatPrice(pkg.price)}</span>
         <span className="pb-1 text-xs text-gray-500">{formatPrice(porHora)}/h</span>
       </div>
-      <p className="mt-1 text-xs text-gray-500">Vale por {pkg.validity_days} dias após a compra</p>
+      <p className="mt-1 text-xs text-gray-500">{t('Vale por {n} dias após a compra', { n: pkg.validity_days })}</p>
       <div className="mt-auto pt-4">
         <V2Button size="sm" className="w-full" disabled={ocupado} onClick={() => onComprar(pkg)}>
-          Quero este pacote
+          {t('Quero este pacote')}
         </V2Button>
       </div>
     </div>

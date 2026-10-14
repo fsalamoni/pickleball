@@ -31,16 +31,17 @@ import {
   getSlotStatus, generateTimeSlots, isSlotSelectable, slotEndTime,
   SLOT_STATUS, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS,
 } from '@/modules/arenas/domain/slot_status';
+import { t, tk } from '@/core/i18n';
 
 const PASSO = 60;
 
 /** Rótulo curtinho — na célula não cabe "Solicitação em andamento". */
 const CURTO = {
-  [SLOT_STATUS.AVAILABLE]: 'livre',
-  [SLOT_STATUS.PENDING]: 'pedido',
-  [SLOT_STATUS.CONFIRMED]: 'ocupado',
-  [SLOT_STATUS.COMPLETED]: 'concluído',
-  [SLOT_STATUS.UNAVAILABLE]: 'indisp.',
+  [SLOT_STATUS.AVAILABLE]: tk('livre'),
+  [SLOT_STATUS.PENDING]: tk('pedido'),
+  [SLOT_STATUS.CONFIRMED]: tk('ocupado'),
+  [SLOT_STATUS.COMPLETED]: tk('concluído'),
+  [SLOT_STATUS.UNAVAILABLE]: tk('indisp.'),
   [SLOT_STATUS.CLOSED]: '—',
 };
 
@@ -72,7 +73,7 @@ export default function CourtTimePicker({
 
   const horarios = useMemo(() => {
     const set = new Set();
-    janelasDoDia.forEach((s) => generateTimeSlots(s.start_time, s.end_time, PASSO).forEach((t) => set.add(t)));
+    janelasDoDia.forEach((s) => generateTimeSlots(s.start_time, s.end_time, PASSO).forEach((hora) => set.add(hora)));
     return Array.from(set).sort();
   }, [janelasDoDia]);
 
@@ -109,16 +110,16 @@ export default function CourtTimePicker({
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
         <table className="w-full border-collapse text-center text-xs">
           <caption className="sr-only">
-            Horários disponíveis por quadra em {formatDateLongBR(date)}. Escolha um horário livre na quadra em que quer jogar.
+            {t('Horários disponíveis por quadra em {data}. Escolha um horário livre na quadra em que quer jogar.', { data: formatDateLongBR(date) })}
           </caption>
           <thead>
             <tr className="bg-paper">
               <th scope="col" className="sticky left-0 z-10 bg-paper px-2 py-2 text-left font-bold text-gray-500">
-                Hora
+                {t('Hora')}
               </th>
               {quadras.map((c) => (
                 <th key={c.id} scope="col" className="min-w-[84px] px-2 py-2 font-bold text-ink">
-                  {c.name || 'Quadra'}
+                  {c.name || t('Quadra')}
                 </th>
               ))}
             </tr>
@@ -141,7 +142,7 @@ export default function CourtTimePicker({
                         disabled={!livre}
                         onClick={() => onPick?.(court.id, time, celula.end)}
                         aria-pressed={marcado}
-                        title={`${court.name || 'Quadra'} · ${time}${celula.end ? `–${celula.end}` : ''} · ${SLOT_STATUS_LABELS[celula.status]}`}
+                        title={`${court.name || t('Quadra')} · ${time}${celula.end ? `–${celula.end}` : ''} · ${t(SLOT_STATUS_LABELS[celula.status])}`}
                         className={cn(
                           'flex h-10 w-full items-center justify-center rounded-lg border text-2xs font-semibold transition-all',
                           cor.bg, cor.border, cor.text,
@@ -150,7 +151,7 @@ export default function CourtTimePicker({
                           marcado && 'ring-2 ring-green-600 ring-offset-1',
                         )}
                       >
-                        {marcado ? 'escolhido' : (CURTO[celula.status] || SLOT_STATUS_LABELS[celula.status])}
+                        {marcado ? t('escolhido') : t(CURTO[celula.status] || SLOT_STATUS_LABELS[celula.status])}
                       </button>
                     </td>
                   );
@@ -161,8 +162,8 @@ export default function CourtTimePicker({
         </table>
       </div>
       <p className="text-2xs leading-5 text-gray-500">
-        Toque nos horários <strong>livres</strong> que quiser — pode marcar
-        <strong> mais de uma quadra</strong> e mais de um horário no mesmo dia.
+        {t('Toque nos horários')} <strong>{t('livres')}</strong> {t('que quiser — pode marcar')}
+        <strong> {t('mais de uma quadra')}</strong> {t('e mais de um horário no mesmo dia.')}
       </p>
     </div>
   );

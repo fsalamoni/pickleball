@@ -47,6 +47,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import CourtDayGrid from '@/v2/components/arenas/CourtDayGrid';
+import { t, fmtData } from '@/core/i18n';
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -56,7 +57,7 @@ function addDays(dateStr, days) {
 
 function formatDateBR(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+  return fmtData(d, { weekday: 'long', day: '2-digit', month: 'short' });
 }
 
 const STEP = 60;
@@ -141,9 +142,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     const maxEnd = ranges.length > 0 ? Math.max(...ranges.map((r) => parseInt(r.end.split(':')[0]))) : 23;
     const extended = [];
     for (let h = 0; h < 24; h += STEP / 60) {
-      const t = `${String(h).padStart(2, '0')}:00`;
+      const hora = `${String(h).padStart(2, '0')}:00`;
       const isForced = h < minStart || h >= maxEnd;
-      extended.push({ time: t, forcedClosed: isForced });
+      extended.push({ time: hora, forcedClosed: isForced });
     }
     return extended;
   }, [date, filtered.schedules]);
@@ -182,7 +183,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   async function handleCreateManual() {
     if (!selectedSlot || !arena) return;
     if (courtId === 'all') {
-      toast.error('Escolha uma quadra específica no filtro acima para criar a reserva.');
+      toast.error(t('Escolha uma quadra específica no filtro acima para criar a reserva.'));
       return;
     }
     try {
@@ -198,7 +199,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           paid: manualForm.paid,
         },
       });
-      toast.success('Reserva criada e confirmada.');
+      toast.success(t('Reserva criada e confirmada.'));
       setSelectedSlot(null);
       setManualOpen(false);
       setManualForm({ client_name: '', price: '', paid: false });
@@ -217,7 +218,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
         end_time: `${String(parseInt(selectedSlot.time.split(':')[0]) + 1).padStart(2, '0')}:00`,
         notes: unavForm.notes,
       });
-      toast.success('Horário marcado como indisponível.');
+      toast.success(t('Horário marcado como indisponível.'));
       setSelectedSlot(null);
     } catch (err) {
       toast.error(err.message);
@@ -230,12 +231,12 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     // tem, e apagar a cópia gravada abriria a quadra com o dia de jogo ainda
     // marcado nela. A saída é o próprio dia de jogo.
     if (selectedSlot.unavailability.game_day_id) {
-      toast.error('Este horário está tomado por um dia de jogo. Edite ou arquive o dia de jogo para liberar a quadra.');
+      toast.error(t('Este horário está tomado por um dia de jogo. Edite ou arquive o dia de jogo para liberar a quadra.'));
       return;
     }
     try {
       await removeUnav.mutateAsync(selectedSlot.unavailability.id);
-      toast.success('Indisponibilidade removida.');
+      toast.success(t('Indisponibilidade removida.'));
       setSelectedSlot(null);
     } catch (err) {
       toast.error(err.message);
@@ -246,7 +247,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     if (!selectedSlot?.booking) return;
     try {
       await updateStatus.mutateAsync({ booking: selectedSlot.booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: true } });
-      toast.success('Reserva cancelada.');
+      toast.success(t('Reserva cancelada.'));
       setCancelConfirm(false);
       setSelectedSlot(null);
     } catch (err) {
@@ -258,7 +259,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     if (!selectedSlot?.booking) return;
     try {
       await setNoShow.mutateAsync({ booking: selectedSlot.booking, isNoShow: !selectedSlot.booking.no_show });
-      toast.success(selectedSlot.booking.no_show ? 'No-show removido.' : 'Marcado como não compareceu.');
+      toast.success(selectedSlot.booking.no_show ? t('No-show removido.') : t('Marcado como não compareceu.'));
       setSelectedSlot(null);
     } catch (err) {
       toast.error(err.message);
@@ -284,7 +285,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     if (!selectedSlot?.booking) return;
     try {
       await updateStatus.mutateAsync({ booking: selectedSlot.booking, status: BOOKING_STATUS.CONFIRMED });
-      toast.success('Reserva confirmada.');
+      toast.success(t('Reserva confirmada.'));
       setSelectedSlot(null);
     } catch (err) {
       toast.error(err.message);
@@ -298,18 +299,18 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2">
         <V2Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, -1))}>
-          <ChevronLeft className="h-4 w-4" /> Anterior
+          <ChevronLeft className="h-4 w-4" /> {t('Anterior')}
         </V2Button>
         <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-paper px-3 py-1.5 text-sm font-bold text-ink">
           <Calendar className="h-4 w-4 text-green-700" />
           {formatDateBR(date)}
         </div>
         <V2Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, 1))}>
-          Próximo <ChevronRight className="h-4 w-4" />
+          {t('Próximo')} <ChevronRight className="h-4 w-4" />
         </V2Button>
         <select value={courtId} onChange={(e) => setCourtId(e.target.value)}
           className="rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm">
-          <option value="all">Todas as quadras</option>
+          <option value="all">{t('Todas as quadras')}</option>
           {courts.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <div className="ml-auto flex items-center gap-1 rounded-2xl border border-gray-200 bg-paper p-1">
@@ -318,18 +319,18 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
             onClick={() => setViewMode('grid')}
             className={cn('flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all',
               viewMode === 'grid' ? 'bg-ink text-acid' : 'text-gray-500 hover:text-ink')}
-            title="Grade por quadra"
+            title={t('Grade por quadra')}
           >
-            <LayoutGrid className="h-3.5 w-3.5" /> Quadras
+            <LayoutGrid className="h-3.5 w-3.5" /> {t('Quadras')}
           </button>
           <button
             type="button"
             onClick={() => setViewMode('list')}
             className={cn('flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all',
               viewMode === 'list' ? 'bg-ink text-acid' : 'text-gray-500 hover:text-ink')}
-            title="Lista de horários"
+            title={t('Lista de horários')}
           >
-            <List className="h-3.5 w-3.5" /> Lista
+            <List className="h-3.5 w-3.5" /> {t('Lista')}
           </button>
         </div>
       </div>
@@ -365,7 +366,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
               return (
                 <div key={k} className="flex items-center gap-1">
                   <span className={cn('h-3 w-3 rounded-full', c.dot)} />
-                  <span className="text-gray-600">{v}</span>
+                  <span className="text-gray-600">{t(v)}</span>
                 </div>
               );
             })}
@@ -394,7 +395,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                 >
                   <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
                   <div className={cn('text-2xs uppercase tracking-widest', c.text)}>
-                    {SLOT_STATUS_LABELS[status]}
+                    {t(SLOT_STATUS_LABELS[status] || '')}
                   </div>
                   {booking?.athlete_name && (
                     <div className="mt-0.5 truncate text-2xs text-gray-600 max-w-full">
@@ -414,11 +415,11 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-display text-base font-bold text-ink">
-                {selectedSlot.time} · {SLOT_STATUS_LABELS[selectedSlot.status]}
+                {selectedSlot.time} · {t(SLOT_STATUS_LABELS[selectedSlot.status] || '')}
               </h3>
               <p className="text-xs text-gray-500">{formatDateBR(date)}</p>
             </div>
-            <button onClick={() => setSelectedSlot(null)} className="text-gray-500 hover:text-ink">
+            <button type="button" onClick={() => setSelectedSlot(null)} aria-label={t('Fechar')} className="text-gray-500 hover:text-ink">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -432,9 +433,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                     {selectedSlot.booking.athlete_name?.[0] || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-ink">{selectedSlot.booking.athlete_name || 'Atleta'}</div>
+                    <div className="font-bold text-ink">{selectedSlot.booking.athlete_name || t('Atleta')}</div>
                     <div className="text-xs text-gray-500">
-                      Status: {BOOKING_STATUS_LABELS[selectedSlot.booking.status] || selectedSlot.booking.status}
+                      {t('Status:')} {t(BOOKING_STATUS_LABELS[selectedSlot.booking.status] || selectedSlot.booking.status)}
                       {precoDoSlot?.value != null && ` · ${precoDoSlot.text}`}
                     </div>
                   </div>
@@ -447,8 +448,8 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                     {selectedSlot.booking.participants.map((p, i) => (
                       <span key={p.athlete_id || `m-${i}`}
                         className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2 py-0.5 text-2xs text-ink">
-                        {p.name || 'Responsável'}
-                        <span className="text-gray-400">· {participantStatusLabel(p.status)}</span>
+                        {p.name || t('Responsável')}
+                        <span className="text-gray-400">· {t(participantStatusLabel(p.status))}</span>
                       </span>
                     ))}
                   </div>
@@ -458,40 +459,40 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {selectedSlot.booking.athlete_id && (
                   <V2Button size="sm" variant="secondary" onClick={() => navigate(`/chat?with=${selectedSlot.booking.athlete_id}`)}>
-                    <MessageCircle className="h-3.5 w-3.5" /> Chat
+                    <MessageCircle className="h-3.5 w-3.5" /> {t('Chat')}
                   </V2Button>
                 )}
                 <V2Button size="sm" variant="secondary" onClick={() => setTransferOpen(true)}>
-                  <UserCog className="h-3.5 w-3.5" /> Responsáveis
+                  <UserCog className="h-3.5 w-3.5" /> {t('Responsáveis')}
                 </V2Button>
                 <V2Button size="sm" variant="secondary" onClick={() => setRescheduleOpen(true)}>
-                  <Edit3 className="h-3.5 w-3.5" /> Remarcar
+                  <Edit3 className="h-3.5 w-3.5" /> {t('Remarcar')}
                 </V2Button>
                 {selectedSlot.booking.status !== BOOKING_STATUS.CONFIRMED && (
                   <V2Button size="sm" onClick={handleConfirmBooking} disabled={updateStatus.isPending}>
-                    <CheckCircle className="h-3.5 w-3.5" /> Confirmar
+                    <CheckCircle className="h-3.5 w-3.5" /> {t('Confirmar')}
                   </V2Button>
                 )}
                 {noShowOn && (
                   <V2Button size="sm" variant={selectedSlot.booking.no_show ? 'secondary' : 'ghost'} onClick={handleToggleNoShow} disabled={setNoShow.isPending}>
-                    <UserX className="h-3.5 w-3.5" /> {selectedSlot.booking.no_show ? 'Desfazer no-show' : 'No-show'}
+                    <UserX className="h-3.5 w-3.5" /> {selectedSlot.booking.no_show ? t('Desfazer no-show') : t('No-show')}
                   </V2Button>
                 )}
                 <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setCancelConfirm(true)}>
-                  <X className="h-3.5 w-3.5" /> Cancelar
+                  <X className="h-3.5 w-3.5" /> {t('Cancelar')}
                 </V2Button>
               </div>
               {noShowOn && selectedSlot.booking.no_show && (
-                <V2Badge tone="amber"><UserX className="mr-1 inline h-3 w-3" /> Não compareceu</V2Badge>
+                <V2Badge tone="amber"><UserX className="mr-1 inline h-3 w-3" /> {t('Não compareceu')}</V2Badge>
               )}
               <ConfirmDialog
                 open={cancelConfirm}
                 onOpenChange={setCancelConfirm}
-                title="Cancelar reserva?"
+                title={t('Cancelar reserva?')}
                 description={cancelInfo.late
-                  ? `${lateCancellationMessage(normalizeCancellationPolicy(arena))} A reserva será cancelada e o horário ficará disponível.`
-                  : 'A reserva será marcada como cancelada e o horário ficará disponível.'}
-                confirmLabel="Cancelar reserva"
+                  ? `${t(lateCancellationMessage(normalizeCancellationPolicy(arena)))} ${t('A reserva será cancelada e o horário ficará disponível.')}`
+                  : t('A reserva será marcada como cancelada e o horário ficará disponível.')}
+                confirmLabel={t('Cancelar reserva')}
                 onConfirm={handleCancelBooking}
                 loading={updateStatus.isPending}
               />
@@ -508,24 +509,24 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
             <div className="mt-3 space-y-2">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-xs font-bold uppercase text-amber-700">
-                  {selectedSlot.unavailability.game_day_id ? 'Dia de jogo da arena' : 'Indisponibilidade'}
+                  {selectedSlot.unavailability.game_day_id ? t('Dia de jogo da arena') : t('Indisponibilidade')}
                 </p>
                 {selectedSlot.unavailability.notes && <p className="mt-1 text-sm text-amber-900">{selectedSlot.unavailability.notes}</p>}
                 {selectedSlot.unavailability.game_day_id && (
                   <p className="mt-1 text-xs text-amber-800">
-                    A quadra está tomada por um dia de jogo. Para liberar este horário, edite ou arquive o dia de jogo.
+                    {t('A quadra está tomada por um dia de jogo. Para liberar este horário, edite ou arquive o dia de jogo.')}
                   </p>
                 )}
               </div>
               {selectedSlot.unavailability.game_day_id ? (
                 <V2Button asChild size="sm" variant="secondary">
                   <Link to={`/arenas/${arenaId}/gerir/dia-de-jogo/${selectedSlot.unavailability.game_day_id}`}>
-                    Ver o dia de jogo
+                    {t('Ver o dia de jogo')}
                   </Link>
                 </V2Button>
               ) : (
                 <V2Button size="sm" variant="ghost" onClick={handleRemoveUnavailability}>
-                  <Trash2 className="h-3.5 w-3.5 text-red-500" /> Remover indisponibilidade
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" /> {t('Remover indisponibilidade')}
                 </V2Button>
               )}
             </div>
@@ -534,22 +535,22 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           {/* Slot vazio (disponível): admin pode marcar indisponibilidade */}
           {selectedSlot.status === SLOT_STATUS.AVAILABLE && !selectedSlot.booking && !selectedSlot.unavailability && (
             <div className="mt-3 space-y-2">
-              <p className="text-sm text-gray-500">Slot livre. O que deseja fazer?</p>
-              <V2Field label="Observação (opcional)">
+              <p className="text-sm text-gray-500">{t('Horário livre. O que deseja fazer?')}</p>
+              <V2Field label={t('Observação (opcional)')}>
                 <V2Textarea
                   value={unavForm.notes}
                   onChange={(e) => setUnavForm({ notes: e.target.value })}
                   rows={2}
                   maxLength={500}
-                  placeholder="Ex: Manutenção, evento privado..."
+                  placeholder={t('Ex: Manutenção, evento privado...')}
                 />
               </V2Field>
               <div className="flex flex-wrap gap-2">
                 <V2Button size="sm" onClick={handleMarkUnavailable} disabled={addUnav.isPending}>
-                  <Ban className="h-3.5 w-3.5" /> Marcar indisponível
+                  <Ban className="h-3.5 w-3.5" /> {t('Marcar indisponível')}
                 </V2Button>
                 <V2Button size="sm" variant="secondary" onClick={() => setManualOpen((v) => !v)}>
-                  <Plus className="h-3.5 w-3.5" /> Criar reserva
+                  <Plus className="h-3.5 w-3.5" /> {t('Criar reserva')}
                 </V2Button>
               </div>
 
@@ -557,19 +558,19 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                 <div className="mt-2 space-y-2 rounded-2xl border border-gray-100 bg-paper p-3">
                   {courtId === 'all' ? (
                     <p className="text-sm text-amber-700">
-                      Escolha uma quadra específica no filtro acima para criar a reserva neste horário.
+                      {t('Escolha uma quadra específica no filtro acima para criar a reserva neste horário.')}
                     </p>
                   ) : (
                     <>
-                      <V2Field label="Nome do cliente" required>
+                      <V2Field label={t('Nome do cliente')} required>
                         <V2Input
                           value={manualForm.client_name}
                           onChange={(e) => setManualForm((f) => ({ ...f, client_name: e.target.value }))}
                           maxLength={80}
-                          placeholder="Ex: João (telefone)"
+                          placeholder={t('Ex: João (telefone)')}
                         />
                       </V2Field>
-                      <V2Field label="Valor (R$, opcional)">
+                      <V2Field label={t('Valor (R$, opcional)')}>
                         <V2Input
                           type="number"
                           min="0"
@@ -586,14 +587,14 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                           onChange={(e) => setManualForm((f) => ({ ...f, paid: e.target.checked }))}
                           className="h-4 w-4 rounded border-gray-300"
                         />
-                        Já está pago
+                        {t('Já está pago')}
                       </label>
                       <p className="text-xs text-gray-500">
-                        {formatDateShortBR(date)} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · a reserva já entra como confirmada.
+                        {formatDateShortBR(date)} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · {t('a reserva já entra como confirmada.')}
                       </p>
                       <V2Button size="sm" onClick={handleCreateManual} disabled={createManual.isPending || !manualForm.client_name.trim()}>
                         <CheckCircle className="h-3.5 w-3.5" />
-                        {createManual.isPending ? 'Criando…' : 'Confirmar reserva'}
+                        {createManual.isPending ? t('Criando…') : t('Confirmar reserva')}
                       </V2Button>
                     </>
                   )}
@@ -654,27 +655,27 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
     const invites = picked.map((a) => ({ athlete_id: a.athlete_id, name: a.name, photo: a.photo }));
     const names = freeName.trim() ? [freeName.trim()] : [];
     if (invites.length === 0 && names.length === 0) {
-      toast.error('Escolha atletas ou informe um nome.');
+      toast.error(t('Escolha atletas ou informe um nome.'));
       return;
     }
     try {
       await addResp.mutateAsync({ booking, invites, names, byManager: true });
       toast.success(invites.length > 0
-        ? 'Responsáveis convidados. Eles confirmam a participação.'
-        : 'Responsável adicionado.');
+        ? t('Responsáveis convidados. Eles confirmam a participação.')
+        : t('Responsável adicionado.'));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível adicionar responsáveis.');
+      toast.error(err?.message || t('Não foi possível adicionar responsáveis.'));
     }
   }
 
   async function removeOne(p, index) {
     try {
       await removeResp.mutateAsync({ booking, athlete_id: p.athlete_id || null, index, byManager: true });
-      toast.success('Responsável removido.');
+      toast.success(t('Responsável removido.'));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover.');
+      toast.error(err?.message || t('Não foi possível remover.'));
     }
   }
 
@@ -682,10 +683,10 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
     if (!p.athlete_id && !p.name) return;
     try {
       await transfer.mutateAsync({ booking, target: { athlete_id: p.athlete_id || null, athlete_name: p.name, athlete_photo: p.photo || '' } });
-      toast.success('Titular atualizado.');
+      toast.success(t('Titular atualizado.'));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar o titular.');
+      toast.error(err?.message || t('Não foi possível atualizar o titular.'));
     }
   }
 
@@ -695,9 +696,9 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Responsáveis da reserva</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> {t('Responsáveis da reserva')}</DialogTitle>
           <DialogDescription>
-            Uma reserva pode ter vários responsáveis, todos com os mesmos poderes. Atletas da plataforma recebem um convite e confirmam a vinculação; avulsos entram já confirmados.
+            {t('Uma reserva pode ter vários responsáveis, todos com os mesmos poderes. Atletas da plataforma recebem um convite e confirmam a vinculação; avulsos entram já confirmados.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -705,7 +706,7 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
           {/* Responsáveis atuais */}
           {currentList.length > 0 && (
             <div>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">Atuais</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">{t('Atuais')}</p>
               <div className="space-y-1.5">
                 {currentList.map((p, i) => {
                   const isTitular = (p.athlete_id && p.athlete_id === booking.athlete_id)
@@ -716,20 +717,20 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
                         {p.name?.[0] || '?'}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-bold text-ink">{p.name || 'Responsável'}</div>
+                        <div className="truncate text-sm font-bold text-ink">{p.name || t('Responsável')}</div>
                         <div className="text-2xs text-gray-500">
-                          {participantStatusLabel(p.status)}{isTitular ? ' · titular' : ''}{p.athlete_id ? '' : ' · avulso'}
+                          {t(participantStatusLabel(p.status))}{isTitular ? ` · ${t('titular')}` : ''}{p.athlete_id ? '' : ` · ${t('avulso')}`}
                         </div>
                       </div>
                       {!isTitular && (p.athlete_id || p.name) && (
                         <button type="button" onClick={() => makePrimary(p)} disabled={busy}
                           className="rounded-lg px-2 py-1 text-2xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink">
-                          Tornar titular
+                          {t('Tornar titular')}
                         </button>
                       )}
                       {(currentList.length > 1) && (
                         <button type="button" onClick={() => removeOne(p, i)} disabled={busy}
-                          title="Remover responsável"
+                          title={t('Remover responsável')}
                           className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600">
                           <X className="h-4 w-4" />
                         </button>
@@ -743,21 +744,21 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
 
           {/* Adicionar novos */}
           <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper-pure p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Adicionar responsáveis</p>
-            <V2Field label="Atletas da plataforma (convite)">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Adicionar responsáveis')}</p>
+            <V2Field label={t('Atletas da plataforma (convite)')}>
               <AthleteMultiPicker value={picked} onChange={setPicked} />
             </V2Field>
-            <V2Field label="Ou responsável avulso (nome)">
-              <V2Input value={freeName} onChange={(e) => setFreeName(e.target.value)} maxLength={80} placeholder="Ex.: João (telefone)" />
+            <V2Field label={t('Ou responsável avulso (nome)')}>
+              <V2Input value={freeName} onChange={(e) => setFreeName(e.target.value)} maxLength={80} placeholder={t('Ex.: João (telefone)')} />
             </V2Field>
             <V2Button size="sm" onClick={addResponsibles} disabled={busy}>
-              {addResp.isPending ? 'Adicionando…' : 'Adicionar'}
+              {addResp.isPending ? t('Adicionando…') : t('Adicionar')}
             </V2Button>
           </div>
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <V2Button variant="ghost" size="sm" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" size="sm" onClick={onClose}>{t('Fechar')}</V2Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -778,8 +779,8 @@ function ArenaWaitlistPanel({ arenaId }) {
   const groups = groupWaitlistBySlot(entries);
   return (
     <V2Surface className="mt-4">
-      <h3 className="font-display text-base font-bold text-ink">Lista de espera ({entries.length})</h3>
-      <p className="text-xs text-gray-500">Atletas que pediram para ser avisados se um horário vagar.</p>
+      <h3 className="font-display text-base font-bold text-ink">{t('Lista de espera ({n})', { n: entries.length })}</h3>
+      <p className="text-xs text-gray-500">{t('Atletas que pediram para ser avisados se um horário vagar.')}</p>
       <div className="mt-3 space-y-3">
         {groups.map((g) => (
           <div key={g.key} className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -788,10 +789,10 @@ function ArenaWaitlistPanel({ arenaId }) {
               {g.entries.map((e) => (
                 <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-xs text-ink">
                   {e.user_name}
-                  <button type="button" title="Remover da lista"
+                  <button type="button" title={t('Remover da lista')} aria-label={t('Remover da lista')}
                     onClick={async () => {
-                      try { await remove.mutateAsync({ entryId: e.id }); toast.success('Removido da lista de espera.'); }
-                      catch (err) { toast.error(err?.message || 'Não foi possível remover.'); }
+                      try { await remove.mutateAsync({ entryId: e.id }); toast.success(t('Removido da lista de espera.')); }
+                      catch (err) { toast.error(err?.message || t('Não foi possível remover.')); }
                     }}
                     className="text-gray-400 hover:text-red-600">
                     <X className="h-3 w-3" />

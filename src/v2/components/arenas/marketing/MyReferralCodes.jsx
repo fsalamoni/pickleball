@@ -22,6 +22,7 @@ import { useArenaCoupons, useMyReferralCodes } from '@/modules/arenas/hooks/useA
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { referralInviteText, referralProgram, referralRulesText } from '@/modules/arenas/domain/marketing';
 import { V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 function CodigoNaArena({ referral }) {
   const arenaId = referral.arena_id;
@@ -33,16 +34,16 @@ function CodigoNaArena({ referral }) {
 
   if (isLoading || !ligado) return null;
 
-  const nome = arena?.name || 'Arena';
+  const nome = arena?.name || t('Arena');
   const codigo = referral.code;
   const usos = Number(referral.redeemed_count) || 0;
 
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(codigo);
-      toast.success('Código copiado.');
+      toast.success(t('Código copiado.'));
     } catch {
-      toast.error(`Não foi possível copiar. Anote: ${codigo}`);
+      toast.error(t('Não foi possível copiar. Anote: {codigo}', { codigo }));
     }
   };
   const convidar = async () => {
@@ -51,7 +52,7 @@ function CodigoNaArena({ referral }) {
       if (navigator.share) await navigator.share({ text: texto });
       else {
         await navigator.clipboard.writeText(texto);
-        toast.success('Convite copiado.');
+        toast.success(t('Convite copiado.'));
       }
     } catch {
       /* a pessoa cancelou o compartilhamento — não é erro */
@@ -64,18 +65,18 @@ function CodigoNaArena({ referral }) {
         <div className="min-w-0">
           <Link to={`/arenas/${arenaId}`} className="font-display text-sm font-bold text-ink hover:underline">{nome}</Link>
           <p className="text-xs text-gray-500">
-            {programa ? referralRulesText(programa) : 'A arena ainda não publicou as regras.'}
-            {usos > 0 ? ` · ${usos} ${usos === 1 ? 'pessoa usou' : 'pessoas usaram'}` : ''}
+            {programa ? referralRulesText(programa) : t('A arena ainda não publicou as regras.')}
+            {usos > 0 ? ` · ${tn(usos, '{n} pessoa usou', '{n} pessoas usaram')}` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="rounded-xl border border-dashed border-gray-300 bg-paper-pure px-3 py-1.5 font-display text-sm font-bold tracking-widest text-ink">
             {codigo}
           </span>
-          <V2Button size="sm" variant="ghost" onClick={copiar} aria-label={`Copiar o código ${codigo}`}>
+          <V2Button size="sm" variant="ghost" onClick={copiar} aria-label={t('Copiar o código {codigo}', { codigo })}>
             <Copy className="h-4 w-4" />
           </V2Button>
-          <V2Button size="sm" variant="ghost" onClick={convidar} aria-label={`Convidar alguém para a ${nome}`}>
+          <V2Button size="sm" variant="ghost" onClick={convidar} aria-label={t('Convidar alguém para a {nome}', { nome })}>
             <Share2 className="h-4 w-4" />
           </V2Button>
         </div>
@@ -92,7 +93,7 @@ export default function MyReferralCodes() {
       <V2ErrorState
         inline
         className="mt-8"
-        title="Não foi possível carregar os seus códigos de indicação"
+        title={t('Não foi possível carregar os seus códigos de indicação')}
         onRetry={() => refetch()}
       />
     );
@@ -103,10 +104,10 @@ export default function MyReferralCodes() {
     <V2Surface className="mt-8">
       <div className="mb-1 flex items-center gap-2">
         <Gift className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Meus códigos de indicação</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Meus códigos de indicação')}</h2>
       </div>
       <p className="mb-3 text-sm text-gray-500">
-        Um código por arena. Quem você indicar digita o código ao pedir a primeira reserva, e a arena credita quando confirmar.
+        {t('Um código por arena. Quem você indicar digita o código ao pedir a primeira reserva, e a arena credita quando confirmar.')}
       </p>
       <ul className="space-y-2">
         {codigos.map((r) => <CodigoNaArena key={r.id} referral={r} />)}

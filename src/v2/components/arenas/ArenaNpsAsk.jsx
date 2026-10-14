@@ -39,6 +39,7 @@ import { useMyNpsAnswers, useSubmitNps } from '@/modules/arenas/hooks/useArenaV3
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { shouldAskNps } from '@/modules/arenas/domain/marketing';
 import { V2Button, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** `Timestamp | Date | number` → ms. */
 function ms(v) {
@@ -57,7 +58,7 @@ export function lastVisitAt(bookings = [], arenaId, hojeISO) {
   return datas[datas.length - 1] || null;
 }
 
-export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
+export default function ArenaNpsAsk({ arenaId, arenaName = t('esta arena') }) {
   const { user } = useAuth();
   const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
   const { data: reservas = [], isLoading: reservasCarregando } = useMyBookings();
@@ -100,7 +101,7 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
       setEnviado(true);
     } catch (err) {
       setNota(null);
-      toast.error(err?.message || 'Não foi possível registrar sua nota.');
+      toast.error(err?.message || t('Não foi possível registrar sua nota.'));
     }
   };
 
@@ -111,10 +112,10 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
       // pessoa): o painel da arena mostra as duas linhas, e a de baixo tem o
       // motivo. Reenviar é mais simples — e mais honesto — do que editar.
       await enviar.mutateAsync({ arenaId, score: nota, comment: comentario.trim() });
-      toast.success('Obrigado! Sua opinião chega direto à arena.');
+      toast.success(t('Obrigado! Sua opinião chega direto à arena.'));
       setDispensado(true);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar o comentário.');
+      toast.error(err?.message || t('Não foi possível enviar o comentário.'));
     }
   };
 
@@ -124,27 +125,27 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="font-display text-base font-bold text-ink">
-              Obrigado! Sua nota {nota} foi registrada.
+              {t('Obrigado! Sua nota {nota} foi registrada.', { nota })}
             </p>
             <p className="mt-0.5 text-sm text-gray-600">
-              Quer contar o motivo? A arena lê — é o que faz a nota virar mudança.
+              {t('Quer contar o motivo? A arena lê — é o que faz a nota virar mudança.')}
             </p>
           </div>
-          <button type="button" onClick={() => setDispensado(true)} aria-label="Fechar"
+          <button type="button" onClick={() => setDispensado(true)} aria-label={t('Fechar')}
             className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
             <X className="h-4 w-4" />
           </button>
         </div>
         <V2Textarea
           className="mt-3" rows={2} maxLength={500}
-          placeholder="O que foi bom, o que dava para melhorar…"
+          placeholder={t('O que foi bom, o que dava para melhorar…')}
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
         />
         <div className="mt-2 flex justify-end gap-2">
-          <V2Button variant="ghost" size="sm" onClick={() => setDispensado(true)}>Agora não</V2Button>
+          <V2Button variant="ghost" size="sm" onClick={() => setDispensado(true)}>{t('Agora não')}</V2Button>
           <V2Button size="sm" disabled={enviar.isPending} onClick={completar}>
-            <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar comentário
+            <MessageSquare className="mr-1.5 h-4 w-4" /> {t('Enviar comentário')}
           </V2Button>
         </div>
       </V2Surface>
@@ -158,14 +159,14 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
           <Star className="mt-0.5 h-5 w-5 shrink-0 text-acid" />
           <div>
             <p className="font-display text-base font-bold text-ink">
-              Como foi sua última partida na {arenaName}?
+              {t('Como foi sua última partida na {arena}?', { arena: arenaName })}
             </p>
             <p className="mt-0.5 text-sm text-gray-500">
-              De 0 a 10, qual a chance de você indicar a amigos? Um toque e pronto.
+              {t('De 0 a 10, qual a chance de você indicar a amigos? Um toque e pronto.')}
             </p>
           </div>
         </div>
-        <button type="button" onClick={() => setDispensado(true)} aria-label="Dispensar"
+        <button type="button" onClick={() => setDispensado(true)} aria-label={t('Dispensar')}
           className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
@@ -178,7 +179,7 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
             type="button"
             disabled={enviar.isPending}
             onClick={() => registrar(i)}
-            aria-label={`Nota ${i}`}
+            aria-label={t('Nota {n}', { n: i })}
             className="h-10 w-10 rounded-2xl border border-gray-200 bg-paper-pure text-sm font-bold text-ink transition hover:border-ink hover:bg-ink hover:text-acid disabled:opacity-50"
           >
             {i}
@@ -186,8 +187,8 @@ export default function ArenaNpsAsk({ arenaId, arenaName = 'esta arena' }) {
         ))}
       </div>
       <div className="mt-1.5 flex justify-between text-2xs text-gray-500">
-        <span>Não indicaria</span>
-        <span>Indicaria com certeza</span>
+        <span>{t('Não indicaria')}</span>
+        <span>{t('Indicaria com certeza')}</span>
       </div>
     </V2Surface>
   );

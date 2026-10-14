@@ -22,6 +22,7 @@ import { useArenaSales, useArenaSubscriptions } from '@/modules/arenas/hooks/use
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { arenaPendingItems } from '@/modules/arenas/domain/arenaPending';
 import { todayISO } from '@/modules/arenas/domain/subscription';
+import { t } from '@/core/i18n';
 
 export default function ArenaPendencias({ arena, onIrParaAba }) {
   const arenaId = arena?.id;
@@ -52,8 +53,8 @@ export default function ArenaPendencias({ arena, onIrParaAba }) {
   if (itens.length === 0) return null;
 
   return (
-    <section aria-label="Precisa de você" data-dica="arena-pendencias" className="mt-5 rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-sm">
-      <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Precisa de você</p>
+    <section aria-label={t('Precisa de você')} data-dica="arena-pendencias" className="mt-5 rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-sm">
+      <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Precisa de você')}</p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {itens.map((i) => (
           <li key={i.id}>
@@ -62,7 +63,7 @@ export default function ArenaPendencias({ arena, onIrParaAba }) {
               onClick={() => onIrParaAba?.(i.aba)}
               className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper px-3 py-1.5 text-sm text-ink hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
-              <strong className="tabular-nums">{i.count}</strong> {i.label}
+              <strong className="tabular-nums">{i.count}</strong> {t(i.label)}
               <ChevronRight className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
             </button>
           </li>

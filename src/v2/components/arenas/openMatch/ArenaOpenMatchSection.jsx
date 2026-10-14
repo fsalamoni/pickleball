@@ -30,6 +30,7 @@ import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { OpenSlotRow, WaitlistCallCard } from './OpenSlotCard';
 import { useOpenSlotActions } from './useOpenSlotActions';
 import { V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function ArenaOpenMatchSection({ arena }) {
   const arenaId = arena?.id;
@@ -72,23 +73,23 @@ export default function ArenaOpenMatchSection({ arena }) {
     <V2Surface className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <Users className="h-4 w-4" /> {jogoAberto ? 'Jogos abertos' : 'Parceiros para jogar aqui'}
+          <Users className="h-4 w-4" /> {jogoAberto ? t('Jogos abertos') : t('Parceiros para jogar aqui')}
         </h3>
         {jogoAberto && modelo.total > 0 && (
           <Link to={todos} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-            Ver todos ({modelo.total}) <ArrowRight className="h-3.5 w-3.5" />
+            {t('Ver todos ({n})', { n: modelo.total })} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}
       </div>
       {jogoAberto && (
         <p className="mt-1 text-xs text-gray-500">
-          Horários que a arena abriu para quem quiser entrar — não precisa levar dupla.
+          {t('Horários que a arena abriu para quem quiser entrar — não precisa levar dupla.')}
         </p>
       )}
 
       {falhou && (
-        <V2ErrorState inline className="mt-3" title="Não foi possível carregar os jogos abertos"
-          description="Os jogos continuam lá — tente de novo." onRetry={() => slotsQ.refetch()} />
+        <V2ErrorState inline className="mt-3" title={t('Não foi possível carregar os jogos abertos')}
+          description={t('Os jogos continuam lá — tente de novo.')} onRetry={() => slotsQ.refetch()} />
       )}
       {carregando && <V2Skeleton className="mt-3 h-20 rounded-2xl" />}
 
@@ -103,7 +104,7 @@ export default function ArenaOpenMatchSection({ arena }) {
 
       {modelo.meus.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">Você vai jogar</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Você vai jogar')}</p>
           <ul className="mt-2 space-y-2">{modelo.meus.map((s) => linha(s, true))}</ul>
         </>
       )}
@@ -111,7 +112,7 @@ export default function ArenaOpenMatchSection({ arena }) {
       {modelo.destaque.length > 0 && (
         <>
           <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-            {modelo.meus.length > 0 ? 'Outros jogos' : 'Com vaga'}
+            {modelo.meus.length > 0 ? t('Outros jogos') : t('Com vaga')}
           </p>
           <ul className="mt-2 space-y-2">{modelo.destaque.map((s) => linha(s, false))}</ul>
         </>
@@ -124,7 +125,7 @@ export default function ArenaOpenMatchSection({ arena }) {
         >
           <span className="inline-flex items-center gap-2">
             <Swords className="h-4 w-4" />
-            {temJogo ? 'Prefere montar o seu jogo? Veja quem joga aqui no seu nível' : 'Veja quem joga aqui no seu nível e combine um jogo'}
+            {temJogo ? t('Prefere montar o seu jogo? Veja quem joga aqui no seu nível') : t('Veja quem joga aqui no seu nível e combine um jogo')}
           </span>
           <ArrowRight className="h-4 w-4 shrink-0" />
         </Link>

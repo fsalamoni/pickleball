@@ -19,6 +19,7 @@ import {
 import { contrastRatio } from '@/modules/arenas/domain/bannerArt';
 import { cn } from '@/core/lib/utils';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
+import { t } from '@/core/i18n';
 
 const FONTE = {
   kicker: 'clamp(10px, 2.6cqw, 13px)',
@@ -82,7 +83,7 @@ export default function CouponArt({
   const a = couponArtOf(coupon, art);
   const imagem = a.source === COUPON_ART_SOURCE.UPLOAD && a.image_url;
   const d = a.design || {};
-  const t = couponArtTexts(d, { benefit, description, kicker });
+  const txt = couponArtTexts(d, { benefit, description, kicker });
   const bg = imagem ? '#0b0b0c' : d.bg;
   const fg = imagem ? '#ffffff' : d.fg;
   const accent = d.accent || '#0f766e';
@@ -98,21 +99,21 @@ export default function CouponArt({
         {/* A parte principal */}
         <div className="relative min-w-0 flex-1 overflow-hidden" style={{ background: bg, color: fg }}>
           {imagem ? (
-            <img src={a.image_url} alt={a.alt || t.title} className="block aspect-[2/1] h-full w-full object-cover" loading="lazy" />
+            <img src={a.image_url} alt={a.alt || txt.title} className="block aspect-[2/1] h-full w-full object-cover" loading="lazy" />
           ) : a.source === COUPON_ART_SOURCE.UPLOAD ? (
             <div className="flex aspect-[2/1] items-center justify-center opacity-60"><ImageIcon className="h-8 w-8" aria-hidden /></div>
           ) : (
             <>
               <Padrao style={d.style} accent={accent} fg={fg} />
               <div className="relative flex h-full min-h-[7.5rem] flex-col justify-center gap-1 p-[clamp(14px,4.5cqw,26px)]">
-                {t.kicker && (
+                {txt.kicker && (
                   <p className="font-bold uppercase tracking-widest" style={{ fontSize: FONTE.kicker, color: corDaChamada }}>
-                    {t.kicker}
+                    {txt.kicker}
                   </p>
                 )}
-                <p className="line-clamp-2 font-display font-black leading-[1.05]" style={{ fontSize: FONTE.title }}>{t.title}</p>
-                {t.subtitle && (
-                  <p className="line-clamp-2 opacity-90" style={{ fontSize: FONTE.subtitle, lineHeight: 1.3 }}>{t.subtitle}</p>
+                <p className="line-clamp-2 font-display font-black leading-[1.05]" style={{ fontSize: FONTE.title }}>{txt.title}</p>
+                {txt.subtitle && (
+                  <p className="line-clamp-2 opacity-90" style={{ fontSize: FONTE.subtitle, lineHeight: 1.3 }}>{txt.subtitle}</p>
                 )}
                 {rodape && (
                   <p className="mt-1 truncate font-semibold opacity-75" style={{ fontSize: FONTE.rodape }}>{rodape}</p>
@@ -133,7 +134,7 @@ export default function CouponArt({
           {/* Os dois furos do picote */}
           <span aria-hidden className={cn('absolute -left-[9px] -top-[9px] h-4 w-4 rounded-full', notch, `${ESTREITO}:-left-[9px] ${ESTREITO}:-top-[9px]`)} />
           <span aria-hidden className={cn('absolute -bottom-[9px] -left-[9px] h-4 w-4 rounded-full', notch, `${ESTREITO}:-right-[9px] ${ESTREITO}:bottom-auto ${ESTREITO}:left-auto ${ESTREITO}:-top-[9px]`)} />
-          <span className="text-2xs font-bold uppercase tracking-widest opacity-80">Código</span>
+          <span className="text-2xs font-bold uppercase tracking-widest opacity-80">{t('Código')}</span>
           {copyable ? (
             <CopyCodeButton code={code} size="sm" tone="clear" className="max-w-full" successMessage={copyMessage} />
           ) : (

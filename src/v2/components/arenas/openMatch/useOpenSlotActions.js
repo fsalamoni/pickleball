@@ -10,6 +10,7 @@ import {
   useJoinOpenSlot, useLeaveOpenSlot, useJoinWaitlist, useLeaveWaitlist, useAcceptWaitlist,
   useDeclineWaitlist,
 } from '@/modules/arenas/hooks/useArenaV3';
+import { t } from '@/core/i18n';
 
 export function useOpenSlotActions() {
   const entrar = useJoinOpenSlot();
@@ -25,22 +26,22 @@ export function useOpenSlotActions() {
   return {
     ocupado,
     onEntrar: (slot) => entrar.mutateAsync(slot.id)
-      .then(() => toast.success('Pronto! Você está no jogo.'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível entrar.')),
+      .then(() => toast.success(t('Pronto! Você está no jogo.')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível entrar.'))),
     onSair: (slot) => sair.mutateAsync(slot.id)
-      .then(() => toast.success('Você saiu do jogo. A vaga voltou para a lista.'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível sair.')),
+      .then(() => toast.success(t('Você saiu do jogo. A vaga voltou para a lista.')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível sair.'))),
     onFila: (slot) => fila.mutateAsync(slot.id)
-      .then(() => toast.success('Você está na fila. Avisamos assim que vagar.'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível entrar na fila.')),
+      .then(() => toast.success(t('Você está na fila. Avisamos assim que vagar.')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível entrar na fila.'))),
     onSairDaFila: (slotId) => sairDaFila.mutateAsync(slotId)
-      .then(() => toast.success('Você saiu da fila de espera.'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível sair da fila.')),
+      .then(() => toast.success(t('Você saiu da fila de espera.')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível sair da fila.'))),
     onAceitar: ({ slot_id: slotId }) => aceitar.mutateAsync(slotId)
-      .then(() => toast.success('Vaga confirmada. Bom jogo!'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível confirmar.')),
+      .then(() => toast.success(t('Vaga confirmada. Bom jogo!')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível confirmar.'))),
     onRecusar: ({ slot_id: slotId }) => recusar.mutateAsync(slotId)
-      .then(() => toast.success('Tudo bem — a vaga passou para o próximo.'))
-      .catch((e) => toast.error(e?.message || 'Não foi possível recusar.')),
+      .then(() => toast.success(t('Tudo bem — a vaga passou para o próximo.')))
+      .catch((e) => toast.error(e?.message || t('Não foi possível recusar.'))),
   };
 }

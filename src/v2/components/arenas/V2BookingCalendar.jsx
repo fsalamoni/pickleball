@@ -85,8 +85,9 @@ import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
 import { useArenaOpenSlots, useArenaClasses, useArenaInternalTournaments } from '@/modules/arenas/hooks/useArenaV3';
 import { todayISO } from '@/modules/arenas/domain/calendar';
+import { t, tn, tk, fmtData } from '@/core/i18n';
 
-const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_LABELS_PT = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
 
 function addMonths(yearMonth, delta) {
   const d = new Date(yearMonth + '-01T12:00:00');
@@ -100,19 +101,19 @@ function isSameMonth(dateStr, yearMonth) {
 
 /** A legenda possível, na ordem em que faz sentido ler. */
 const LEGENDA = [
-  { status: 'available', cor: 'bg-green-500', texto: 'Tem horário livre' },
-  { status: 'pending', cor: 'bg-amber-500', texto: 'Reservas pendentes' },
-  { status: 'confirmed', cor: 'bg-red-500', texto: 'Reservado' },
-  { status: 'completed', cor: 'bg-green-400', texto: 'Concluído' },
-  { status: 'unavailable', cor: 'bg-amber-500', texto: 'Indisponível (admin)' },
-  { status: 'closed', cor: 'bg-gray-300', texto: 'Fechado (sem horário)' },
+  { status: 'available', cor: 'bg-green-500', texto: tk('Tem horário livre') },
+  { status: 'pending', cor: 'bg-amber-500', texto: tk('Reservas pendentes') },
+  { status: 'confirmed', cor: 'bg-red-500', texto: tk('Reservado') },
+  { status: 'completed', cor: 'bg-green-400', texto: tk('Concluído') },
+  { status: 'unavailable', cor: 'bg-amber-500', texto: tk('Indisponível (admin)') },
+  { status: 'closed', cor: 'bg-gray-300', texto: tk('Fechado (sem horário)') },
 ];
 
 /** 'sex., 3 de out.' — sem o ano, que já está no cabeçalho do mês. */
 function labelDoDia(dateStr) {
   const [y, m, d] = String(dateStr).split('-').map(Number);
   if (!y || !m || !d) return dateStr;
-  return new Date(y, m - 1, d, 12).toLocaleDateString('pt-BR', {
+  return fmtData(new Date(y, m - 1, d, 12), {
     weekday: 'short', day: 'numeric', month: 'short',
   });
 }
@@ -330,7 +331,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
 
   function handleDayClick(date) {
     if (!isAuthenticated) {
-      toast.error('Faça login para reservar.');
+      toast.error(t('Faça login para reservar.'));
       return;
     }
     const meta = dayStatusMap.get(date);
@@ -350,22 +351,22 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   if (!arena) return <V2Skeleton lines={4} />;
 
   const [year, month] = yearMonth.split('-').map(Number);
-  const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  const mesLabel = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
+  const monthLabel = fmtData(new Date(year, month - 1, 1), { month: 'long', year: 'numeric' });
+  const mesLabel = fmtData(new Date(year, month - 1, 1), { month: 'long' });
 
   return (
     <div className="space-y-3">
       {/* Header: navegação de mês + filtro de quadra */}
       <div className="flex flex-wrap items-center gap-2">
         <V2Button size="sm" variant="ghost" onClick={() => setYearMonth(addMonths(yearMonth, -1))}>
-          <ChevronLeft className="h-4 w-4" /> Mês anterior
+          <ChevronLeft className="h-4 w-4" /> {t('Mês anterior')}
         </V2Button>
         <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-paper px-3 py-1.5 text-sm font-bold text-ink capitalize">
           <Calendar className="h-4 w-4 text-green-700" />
           {monthLabel}
         </div>
         <V2Button size="sm" variant="ghost" onClick={() => setYearMonth(addMonths(yearMonth, 1))}>
-          Próximo mês <ChevronRight className="h-4 w-4" />
+          {t('Próximo mês')} <ChevronRight className="h-4 w-4" />
         </V2Button>
         {showCourtFilter && (
           <select
@@ -373,7 +374,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
             onChange={(e) => setCourtId(e.target.value)}
             className="rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm"
           >
-            <option value="all">Todas as quadras</option>
+            <option value="all">{t('Todas as quadras')}</option>
             {activeCourts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
@@ -385,13 +386,13 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         {LEGENDA.filter(({ status }) => coresDoMes.has(status)).map(({ status, cor, texto }) => (
           <div key={status} className="flex items-center gap-1">
             <span className={cn('h-3 w-3 rounded-full', cor)} />
-            <span className="text-gray-600">{texto}</span>
+            <span className="text-gray-600">{t(texto)}</span>
           </div>
         ))}
         {gameDayOn && arenaGameDays.length > 0 && (
           <div className="flex items-center gap-1">
             <span className="h-3 w-3 rounded-full bg-acid" />
-            <span className="text-gray-600">Dia de jogo da arena</span>
+            <span className="text-gray-600">{t('Dia de jogo da arena')}</span>
           </div>
         )}
       </div>
@@ -402,70 +403,68 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       {!loadingEstrutura && activeCourts.length > 0 && !semHorarioPublicado && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
           {carregandoOcupacao ? (
-            <span className="text-gray-500">Carregando a ocupação do mês…</span>
+            <span className="text-gray-500">{t('Carregando a ocupação do mês…')}</span>
           ) : falhouOcupacao ? (
-            <span className="text-gray-500">Abra um dia para ver os horários — a ocupação do mês não pôde ser calculada.</span>
+            <span className="text-gray-500">{t('Abra um dia para ver os horários — a ocupação do mês não pôde ser calculada.')}</span>
           ) : resumoDoMes.comVaga > 0 ? (
             <span className="text-gray-700">
-              <strong className="text-ink">{resumoDoMes.comVaga}</strong>
-              {resumoDoMes.comVaga === 1 ? ' dia com horário livre' : ' dias com horário livre'}
-              {resumoDoMes.abertos > resumoDoMes.comVaga && ` (de ${resumoDoMes.abertos} abertos)`}
-              {' '}em <span className="capitalize">{mesLabel}</span>.
+              {tn(resumoDoMes.comVaga, '{n} dia com horário livre', '{n} dias com horário livre')}
+              {resumoDoMes.abertos > resumoDoMes.comVaga && ` ${t('(de {n} abertos)', { n: resumoDoMes.abertos })}`}
+              {' '}{t('em')} <span className="capitalize">{mesLabel}</span>.
             </span>
           ) : (
             <span className="font-bold text-ink">
               {resumoDoMes.abertos > 0
-                ? <>Nenhum horário livre em <span className="capitalize">{mesLabel}</span>.</>
-                : <>Nenhum dia aberto em <span className="capitalize">{mesLabel}</span>.</>}
+                ? <>{t('Nenhum horário livre em')} <span className="capitalize">{mesLabel}</span>.</>
+                : <>{t('Nenhum dia aberto em')} <span className="capitalize">{mesLabel}</span>.</>}
             </span>
           )}
           {proximoLivre && (
             <V2Button size="sm" variant="secondary" onClick={() => setYearMonth(proximoLivre.slice(0, 7))}>
-              Próximo dia livre: {labelDoDia(proximoLivre)}
+              {t('Próximo dia livre: {dia}', { dia: labelDoDia(proximoLivre) })}
             </V2Button>
           )}
           {resumoDoMes.abertos > 0 && !ocupacaoDesconhecida && (
-            <span className="text-gray-500">A barra de cada dia mostra a ocupação — verde é o que está livre.</span>
+            <span className="text-gray-500">{t('A barra de cada dia mostra a ocupação — verde é o que está livre.')}</span>
           )}
         </div>
       )}
 
       {activeCourts.length === 0 && !loadingEstrutura && !falhouEstrutura && (
         <div className="rounded-2xl border border-gray-200 bg-paper p-4 text-sm text-gray-600">
-          <p className="font-bold text-ink">Esta arena ainda não cadastrou quadras.</p>
-          <p className="mt-0.5 text-xs">Assim que ela cadastrar, os horários aparecem aqui para reserva.</p>
+          <p className="font-bold text-ink">{t('Esta arena ainda não cadastrou quadras.')}</p>
+          <p className="mt-0.5 text-xs">{t('Assim que ela cadastrar, os horários aparecem aqui para reserva.')}</p>
         </div>
       )}
       {falhouEstrutura && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <div className="min-w-0">
-            <p className="font-bold">Não foi possível carregar os horários desta arena.</p>
-            <p className="mt-0.5 text-xs">Pode ser a conexão. Os dias abaixo não refletem a agenda real.</p>
+            <p className="font-bold">{t('Não foi possível carregar os horários desta arena.')}</p>
+            <p className="mt-0.5 text-xs">{t('Pode ser a conexão. Os dias abaixo não refletem a agenda real.')}</p>
           </div>
           <V2Button size="sm" variant="secondary" onClick={() => { recarregarQuadras(); recarregarJanelas(); }}>
-            Tentar de novo
+            {t('Tentar de novo')}
           </V2Button>
         </div>
       )}
       {!falhouEstrutura && falhouOcupacao && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <div className="min-w-0">
-            <p className="font-bold">Não foi possível carregar a ocupação dos dias.</p>
+            <p className="font-bold">{t('Não foi possível carregar a ocupação dos dias.')}</p>
             <p className="mt-0.5 text-xs">
-              Os horários de funcionamento aparecem abaixo, mas o que já está reservado pode não estar refletido.
+              {t('Os horários de funcionamento aparecem abaixo, mas o que já está reservado pode não estar refletido.')}
             </p>
           </div>
           <V2Button size="sm" variant="secondary" onClick={() => { recarregarReservas(); recarregarBloqueios(); }}>
-            Tentar de novo
+            {t('Tentar de novo')}
           </V2Button>
         </div>
       )}
       {semHorarioPublicado && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          <p className="font-bold">Esta arena ainda não publicou os horários de funcionamento.</p>
+          <p className="font-bold">{t('Esta arena ainda não publicou os horários de funcionamento.')}</p>
           <p className="mt-0.5 text-xs">
-            Enquanto isso, nenhum dia fica disponível para reserva. Fale com a arena pelo contato
-            abaixo, ou volte depois.
+            {t('Enquanto isso, nenhum dia fica disponível para reserva. Fale com a arena pelo contato abaixo, ou volte depois.')}
           </p>
         </div>
       )}
@@ -476,7 +475,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
           {WEEKDAY_LABELS_PT.map((wd) => (
             <div key={wd} className="px-2 py-2 text-center text-2xs font-bold uppercase tracking-widest text-gray-500">
-              {wd}
+              {t(wd)}
             </div>
           ))}
         </div>
@@ -500,11 +499,11 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
             const livres = meta.freeTimes || 0;
             const ocupadoPct = Math.round((meta.occupancy || 0) * 100);
             const rotulo = (() => {
-              if (livres > 0) return { texto: `${livres}h ${livres === 1 ? 'livre' : 'livres'}`, cls: 'text-green-700' };
+              if (livres > 0) return { texto: tn(livres, '{n}h livre', '{n}h livres'), cls: 'text-green-700' };
               if ((meta.count?.pending || 0) + (meta.count?.confirmed || 0) > 0) {
-                return { texto: 'Lotado', cls: 'text-red-600' };
+                return { texto: t('Lotado'), cls: 'text-red-600' };
               }
-              if (meta.count?.unavailable) return { texto: 'Bloqueado', cls: 'text-amber-600' };
+              if (meta.count?.unavailable) return { texto: t('Bloqueado'), cls: 'text-amber-600' };
               return null;
             })();
             // Tooltip (e aria-label): o mesmo que a barra diz, por extenso —
@@ -512,18 +511,18 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
             const tooltip = (() => {
               if (!inMonth) return '';
               const dia = labelDoDia(date);
-              if (past) return `${dia} · já passou`;
-              if (closed) return `${dia} · sem horários abertos`;
-              if (carregandoOcupacao) return `${dia} · carregando a ocupação`;
-              if (falhouOcupacao) return `${dia} · ocupação indisponível agora`;
+              if (past) return `${dia} · ${t('já passou')}`;
+              if (closed) return `${dia} · ${t('sem horários abertos')}`;
+              if (carregandoOcupacao) return `${dia} · ${t('carregando a ocupação')}`;
+              if (falhouOcupacao) return `${dia} · ${t('ocupação indisponível agora')}`;
               const parts = [dia];
               parts.push(livres > 0
-                ? `${livres} ${livres === 1 ? 'horário' : 'horários'} com quadra livre`
-                : 'sem horário livre');
-              if (totalHoras > 0) parts.push(`${ocupadoPct}% ocupado`);
+                ? tn(livres, '{n} horário com quadra livre', '{n} horários com quadra livre')
+                : t('sem horário livre'));
+              if (totalHoras > 0) parts.push(t('{n}% ocupado', { n: ocupadoPct }));
               diasDeJogo.forEach((g) => {
                 const faixa = arenaGameDayTimeRange(g);
-                parts.push(`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`);
+                parts.push(`${t('Dia de jogo:')} ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`);
               });
               return parts.join(' · ');
             })();
@@ -554,7 +553,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                     {Number(date.slice(-2))}
                   </span>
                   {inMonth && !past && !closed && !ocupacaoDesconhecida && (
-                    <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={SLOT_STATUS_LABELS[meta.dayStatus]} />
+                    <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={t(SLOT_STATUS_LABELS[meta.dayStatus] || '')} />
                   )}
                 </div>
                 {inMonth && !past && totalHoras > 0 && (
@@ -576,11 +575,11 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                 )}
                 {inMonth && !past && gameDayOn && diasDeJogo.length > 0 && (
                   <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-2xs font-bold leading-none text-ink">
-                    Dia de jogo
+                    {t('Dia de jogo')}
                   </span>
                 )}
                 {inMonth && past && (
-                  <span className="text-2xs text-gray-300">passou</span>
+                  <span className="text-2xs text-gray-300">{t('passou')}</span>
                 )}
               </button>
             );
@@ -590,7 +589,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
 
       {!isAuthenticated && (
         <p className="text-center text-xs text-gray-500">
-          <Link to="/login" className="text-green-700 underline">Faça login</Link> para reservar.
+          <Link to="/login" className="text-green-700 underline">{t('Faça login')}</Link> {t('para reservar.')}
         </p>
       )}
 

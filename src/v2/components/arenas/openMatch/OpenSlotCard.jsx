@@ -18,6 +18,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { OPEN_SLOT_FORMAT_LABEL, slotActionState, waitlistCallDeadline } from '@/modules/arenas/domain/openMatchView';
 import { isLinkedOpenSlot, openMatchFormatLabel } from '@/modules/arenas/domain/openMatchGameDay';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 /**
  * O caminho para o DIA DE JOGO deste jogo aberto (Onda CA): formato, regras,
@@ -29,7 +30,7 @@ function LinkDoDiaDeJogo({ slot, semConta }) {
   return (
     <Link to={`/dia-de-jogo/${slot.game_day_id}`}
       className="inline-flex items-center gap-1 text-xs font-bold text-ink underline-offset-2 hover:underline">
-      Ver o jogo: regras e quem vai <ArrowRight className="h-3.5 w-3.5" />
+      {t('Ver o jogo: regras e quem vai')} <ArrowRight className="h-3.5 w-3.5" />
     </Link>
   );
 }
@@ -42,27 +43,27 @@ export function SlotAction({ estado, semConta, ocupado, onEntrar, onSair, onFila
   if (semConta) {
     return (
       <span className="text-xs text-gray-500">
-        <Link to="/entrar" className="font-bold text-ink underline">Entre na sua conta</Link> para jogar.
+        <Link to="/entrar" className="font-bold text-ink underline">{t('Entre na sua conta')}</Link> {t('para jogar.')}
       </span>
     );
   }
   switch (estado) {
     case 'sair':
-      return <V2Button variant="ghost" size={size} disabled={ocupado} onClick={onSair}>Sair deste jogo</V2Button>;
+      return <V2Button variant="ghost" size={size} disabled={ocupado} onClick={onSair}>{t('Sair deste jogo')}</V2Button>;
     case 'encerrado':
       return (
         <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-          <Clock className="h-3.5 w-3.5" /> Inscrições encerradas
+          <Clock className="h-3.5 w-3.5" /> {t('Inscrições encerradas')}
         </span>
       );
     case 'na-fila':
-      return <V2Badge tone="blue">Você está na fila de espera</V2Badge>;
+      return <V2Badge tone="blue">{t('Você está na fila de espera')}</V2Badge>;
     case 'fila':
-      return <V2Button variant="secondary" size={size} disabled={ocupado} onClick={onFila}>Entrar na fila de espera</V2Button>;
+      return <V2Button variant="secondary" size={size} disabled={ocupado} onClick={onFila}>{t('Entrar na fila de espera')}</V2Button>;
     case 'fora-da-faixa':
-      return <V2Button size={size} disabled>Fora da sua faixa</V2Button>;
+      return <V2Button size={size} disabled>{t('Fora da sua faixa')}</V2Button>;
     default:
-      return <V2Button size={size} disabled={ocupado} onClick={onEntrar}>Quero jogar</V2Button>;
+      return <V2Button size={size} disabled={ocupado} onClick={onEntrar}>{t('Quero jogar')}</V2Button>;
   }
 }
 
@@ -86,17 +87,17 @@ export function OpenSlotRow({
         <p className="text-sm font-bold text-ink">{formatSlotLabel(slot)}</p>
         <p className="mt-0.5 text-xs text-gray-500">
           {[
-            slot.game_format ? openMatchFormatLabel(slot.game_format) : null,
+            slot.game_format ? t(openMatchFormatLabel(slot.game_format)) : null,
             slot.court,
-            slot.format ? (OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format) : null,
-            faixa ? `nível ${faixa}` : null,
-            Number(slot.price) > 0 ? `${formatPrice(Number(slot.price))} por atleta` : null,
+            slot.format ? t(OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format) : null,
+            faixa ? t('nível {faixa}', { faixa }) : null,
+            Number(slot.price) > 0 ? t('{valor} por atleta', { valor: formatPrice(Number(slot.price)) }) : null,
           ].filter(Boolean).join(' · ')}
         </p>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
           <Users className="h-3 w-3" />
-          {vagas > 0 ? `${vagas} vaga${vagas === 1 ? '' : 's'}` : 'lotado'}
-          {motivo && <span className="text-amber-700"> · {motivo}</span>}
+          {vagas > 0 ? tn(vagas, '{n} vaga', '{n} vagas') : t('lotado')}
+          {motivo && <span className="text-amber-700"> · {t(motivo)}</span>}
         </p>
         <div className="mt-1"><LinkDoDiaDeJogo slot={slot} semConta={semConta} /></div>
       </div>
@@ -142,21 +143,21 @@ export function OpenSlotCard({
                 <MapPin className="h-3.5 w-3.5" /> {slot.court}
               </span>
             )}
-            {slot.format && <span>{OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format}</span>}
+            {slot.format && <span>{t(OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format)}</span>}
             {Number.isFinite(Number(slot.price)) && Number(slot.price) > 0 && (
-              <span>{formatPrice(Number(slot.price))} por atleta</span>
+              <span>{t('{valor} por atleta', { valor: formatPrice(Number(slot.price)) })}</span>
             )}
             {slot.game_format && (
               <span className="inline-flex items-center gap-1 font-semibold text-ink">
-                <Swords className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" /> {openMatchFormatLabel(slot.game_format)}
+                <Swords className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" /> {t(openMatchFormatLabel(slot.game_format))}
               </span>
             )}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          {jaEstou && <V2Badge tone="green"><Check className="h-3 w-3" /> Você está dentro</V2Badge>}
+          {jaEstou && <V2Badge tone="green"><Check className="h-3 w-3" /> {t('Você está dentro')}</V2Badge>}
           <V2Badge tone={lotado ? 'amber' : 'green'}>
-            {lotado ? 'Lotado' : `${vagas} vaga${vagas === 1 ? '' : 's'}`}
+            {lotado ? t('Lotado') : tn(vagas, '{n} vaga', '{n} vagas')}
           </V2Badge>
         </div>
       </div>
@@ -176,11 +177,11 @@ export function OpenSlotCard({
         >
           <Info className="mt-px h-3.5 w-3.5 shrink-0" />
           <span>
-            Nível <strong>{faixa}</strong>
+            {t('Nível')} <strong>{faixa}</strong>
             {Number.isFinite(meuNivel)
-              ? ` · o seu é ${formatLevel(meuNivel)}`
-              : ' · ainda não temos o seu nível, então você pode entrar'}
-            {!encaixe.ok && ' — fora da faixa desta vaga.'}
+              ? ` · ${t('o seu é {nivel}', { nivel: formatLevel(meuNivel) })}`
+              : ` · ${t('ainda não temos o seu nível, então você pode entrar')}`}
+            {!encaixe.ok && ` — ${t('fora da faixa desta vaga.')}`}
           </span>
         </p>
       )}
@@ -216,27 +217,27 @@ export function WaitlistCallCard({
           <BellRing className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-base font-bold text-ink">Vagou um lugar para você</p>
+          <p className="font-display text-base font-bold text-ink">{t('Vagou um lugar para você')}</p>
           <p className="mt-0.5 text-sm text-gray-700">
-            {slot ? formatSlotLabel(slot) : 'Jogo aberto'}
+            {slot ? formatSlotLabel(slot) : t('Jogo aberto')}
             {mostrarArena && slot?.arena_name ? ` · ${slot.arena_name}` : ''}
             {slot?.court ? ` · ${slot.court}` : ''}
           </p>
           <p className="mt-1 text-xs text-gray-500">
             {prazo?.vencida
-              ? 'O prazo para confirmar acabou — a vaga está passando para o próximo da fila.'
+              ? t('O prazo para confirmar acabou — a vaga está passando para o próximo da fila.')
               : prazo
-                ? <>Confirme até <strong className="text-ink">{prazo.label}</strong> para garantir a vaga. Depois disso, ela passa para o próximo da fila.</>
-                : 'Confirme para garantir a vaga. Se não confirmar, ela passa para o próximo da fila.'}
+                ? <>{t('Confirme até')} <strong className="text-ink">{prazo.label}</strong> {t('para garantir a vaga. Depois disso, ela passa para o próximo da fila.')}</>
+                : t('Confirme para garantir a vaga. Se não confirmar, ela passa para o próximo da fila.')}
           </p>
           {/* Vencida, o serviço recusaria o "Confirmar" — a tela não oferece. */}
           {!prazo?.vencida && (
             <div className="mt-3 flex flex-wrap gap-2">
               <V2Button size="sm" disabled={ocupado} onClick={() => onAceitar?.(entrada)}>
-                Confirmar minha vaga
+                {t('Confirmar minha vaga')}
               </V2Button>
               <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onRecusar?.(entrada)}>
-                Não vou poder
+                {t('Não vou poder')}
               </V2Button>
             </div>
           )}

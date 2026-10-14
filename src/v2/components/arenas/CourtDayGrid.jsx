@@ -11,6 +11,7 @@ import React, { useMemo } from 'react';
 import { cn } from '@/core/lib/utils';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { getSlotStatus, SLOT_STATUS, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS } from '@/modules/arenas/domain/slot_status';
+import { t } from '@/core/i18n';
 
 function hourRange(schedules, date) {
   const weekday = weekdayOf(date);
@@ -37,7 +38,7 @@ export default function CourtDayGrid({
   }, [schedules, date]);
 
   if (cols.length === 0) {
-    return <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-sm text-gray-500">Cadastre quadras (aba Estrutura → Quadras) para ver o calendário por quadra.</p>;
+    return <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-sm text-gray-500">{t('Cadastre quadras (aba Estrutura → Quadras) para ver o calendário por quadra.')}</p>;
   }
 
   return (
@@ -45,7 +46,7 @@ export default function CourtDayGrid({
       <table className="w-full border-collapse text-center text-xs">
         <thead>
           <tr className="bg-paper">
-            <th className="sticky left-0 z-10 bg-paper px-2 py-2 text-left font-bold text-gray-500">Horário</th>
+            <th className="sticky left-0 z-10 bg-paper px-2 py-2 text-left font-bold text-gray-500">{t('Horário')}</th>
             {cols.map((c) => (
               <th key={c.id} className="min-w-[92px] px-2 py-2 font-bold text-ink">{c.name}</th>
             ))}
@@ -64,13 +65,13 @@ export default function CourtDayGrid({
                 const isSel = selected && selected.time === time && selected.courtId === court.id;
                 const label = slot.booking?.athlete_name
                   ? slot.booking.athlete_name.split(' ')[0]
-                  : SLOT_STATUS_LABELS[slot.status];
+                  : t(SLOT_STATUS_LABELS[slot.status]);
                 return (
                   <td key={court.id} className="p-0.5">
                     <button
                       type="button"
                       onClick={() => onSelectCell?.(court, { time, ...slot })}
-                      title={`${court.name} · ${time} · ${SLOT_STATUS_LABELS[slot.status]}${slot.booking?.athlete_name ? ` — ${slot.booking.athlete_name}` : ''}`}
+                      title={`${court.name} · ${time} · ${t(SLOT_STATUS_LABELS[slot.status])}${slot.booking?.athlete_name ? ` — ${slot.booking.athlete_name}` : ''}`}
                       className={cn(
                         'flex h-11 w-full flex-col items-center justify-center rounded-lg border transition-all',
                         color.bg, color.border, color.text,
@@ -91,7 +92,7 @@ export default function CourtDayGrid({
         {Object.entries(SLOT_STATUS_LABELS).map(([k, v]) => (
           <span key={k} className="inline-flex items-center gap-1">
             <span className={cn('h-2.5 w-2.5 rounded-full', SLOT_STATUS_COLORS[k].dot)} />
-            <span className="text-gray-600">{v}</span>
+            <span className="text-gray-600">{t(v)}</span>
           </span>
         ))}
       </div>

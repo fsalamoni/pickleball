@@ -25,6 +25,7 @@ import {
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2EmptyState, V2ErrorState, V2Input, V2Skeleton } from '@/v2/ui/primitives';
 import { COUPON_KIND_ICON } from './couponKindUi';
+import { t, tn } from '@/core/i18n';
 
 const dinheiro = (v) => (v == null ? '—' : formatPrice(v));
 const TOM_DO_ESTADO = { ativo: 'green', desligado: 'neutral', esgotado: 'amber', vencido: 'amber' };
@@ -32,7 +33,7 @@ const TOM_DO_ESTADO = { ativo: 'green', desligado: 'neutral', esgotado: 'amber',
 function Resumo({ label, valor, dica }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper-pure p-4">
-      <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t(label)}</p>
       <p className="mt-1 font-display text-2xl font-bold text-ink">{valor}</p>
       {dica && <p className="mt-0.5 text-xs text-gray-500">{dica}</p>}
     </div>
@@ -49,8 +50,8 @@ function CustoUnitario({ arenaId, row }) {
     return (
       <button type="button" onClick={() => { setValor(row.unitCost ?? ''); setEditando(true); }}
         className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold text-ink hover:bg-paper"
-        aria-label={`Editar o custo unitário de ${row.code}`}>
-        {row.unitCost == null ? <span className="text-amber-700">Informar</span> : formatPrice(row.unitCost)}
+        aria-label={t('Editar o custo unitário de {codigo}', { codigo: row.code })}>
+        {row.unitCost == null ? <span className="text-amber-700">{t('Informar')}</span> : formatPrice(row.unitCost)}
         <Pencil className="h-3 w-3 text-gray-400" />
       </button>
     );
@@ -58,18 +59,18 @@ function CustoUnitario({ arenaId, row }) {
   const gravar = async () => {
     try {
       await salvar.mutateAsync({ arenaId, couponId: row.id, cost: valor });
-      toast.success('Custo unitário salvo.');
+      toast.success(t('Custo unitário salvo.'));
       setEditando(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o custo.');
+      toast.error(err?.message || t('Não foi possível salvar o custo.'));
     }
   };
   return (
     <span className="inline-flex items-center gap-1">
-      <label htmlFor={`custo-${row.id}`} className="sr-only">Custo unitário de {row.code} (R$)</label>
+      <label htmlFor={`custo-${row.id}`} className="sr-only">{t('Custo unitário de {codigo} (R$)', { codigo: row.code })}</label>
       <V2Input id={`custo-${row.id}`} type="number" min="0" step="0.01" className="h-8 w-24 px-2 text-xs"
         value={valor} onChange={(e) => setValor(e.target.value)} />
-      <button type="button" onClick={gravar} disabled={salvar.isPending} aria-label="Salvar custo"
+      <button type="button" onClick={gravar} disabled={salvar.isPending} aria-label={t('Salvar custo')}
         className="rounded-full p-1.5 text-ink hover:bg-paper disabled:opacity-50">
         <Check className="h-4 w-4" />
       </button>
@@ -100,8 +101,8 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
   if (falhou) {
     return (
       <V2ErrorState
-        title="Não foi possível montar o controle de uso"
-        description="A conta precisa dos cupons, das reservas e dos custos informados. Sem um deles, os números sairiam pela metade — por isso não mostramos nada até carregar tudo."
+        title={t('Não foi possível montar o controle de uso')}
+        description={t('A conta precisa dos cupons, das reservas e dos custos informados. Sem um deles, os números sairiam pela metade — por isso não mostramos nada até carregar tudo.')}
         onRetry={() => consultas.filter((q) => q.isError).forEach((q) => q.refetch())}
       />
     );
@@ -112,8 +113,8 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
     return (
       <V2EmptyState
         icon={BarChart3}
-        title="Nenhum cupom criado ainda"
-        description="Quando a arena criar o primeiro cupom, aqui aparecem os usos, o que custou e o que trouxe — tipo a tipo."
+        title={t('Nenhum cupom criado ainda')}
+        description={t('Quando a arena criar o primeiro cupom, aqui aparecem os usos, o que custou e o que trouxe — tipo a tipo.')}
       />
     );
   }
@@ -124,25 +125,25 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Resumo label="Usos" valor={totals.uses} dica={`${totals.coupons} ${totals.coupons === 1 ? 'cupom' : 'cupons'}`} />
+        <Resumo label="Usos" valor={totals.uses} dica={tn(totals.coupons, '{n} cupom', '{n} cupons')} />
         <Resumo label="Custo" valor={totals.costKnown ? formatPrice(totals.cost) : `${formatPrice(totals.cost)}+`}
-          dica={totals.costKnown ? 'Descontos, vales e créditos' : 'Falta o custo de algum vale'} />
-        <Resumo label="Receita trazida" valor={formatPrice(totals.revenue)} dica="Reservas que usaram cupom ou indicação" />
+          dica={totals.costKnown ? t('Descontos, vales e créditos') : t('Falta o custo de algum vale')} />
+        <Resumo label="Receita trazida" valor={formatPrice(totals.revenue)} dica={t('Reservas que usaram cupom ou indicação')} />
         <Resumo label="Retorno" valor={retorno == null ? '—' : `${formatPrice(retorno)}`}
-          dica={retorno == null ? 'Sem custo conhecido para comparar' : 'de receita por R$ 1 dado'} />
+          dica={retorno == null ? t('Sem custo conhecido para comparar') : t('de receita por R$ 1 dado')} />
       </div>
 
       <section aria-labelledby="uso-por-tipo">
-        <h3 id="uso-por-tipo" className="mb-2 font-display text-base font-bold text-ink">Por tipo de cupom</h3>
+        <h3 id="uso-por-tipo" className="mb-2 font-display text-base font-bold text-ink">{t('Por tipo de cupom')}</h3>
         <div className="overflow-x-auto rounded-2xl border border-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-3 py-2.5">Tipo</th>
-                <th className="px-3 py-2.5 text-center">Cupons</th>
-                <th className="px-3 py-2.5 text-center">Usos</th>
-                <th className="px-3 py-2.5 text-right">Custo</th>
-                <th className="px-3 py-2.5 text-right">Receita</th>
+                <th className="px-3 py-2.5">{t('Tipo')}</th>
+                <th className="px-3 py-2.5 text-center">{t('Cupons')}</th>
+                <th className="px-3 py-2.5 text-center">{t('Usos')}</th>
+                <th className="px-3 py-2.5 text-right">{t('Custo')}</th>
+                <th className="px-3 py-2.5 text-right">{t('Receita')}</th>
               </tr>
             </thead>
             <tbody>
@@ -152,7 +153,7 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
                   <tr key={k.kind} className="border-t border-gray-100">
                     <td className="px-3 py-2.5">
                       <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
-                        {Icone && <Icone className="h-3.5 w-3.5 text-gray-400" />}{k.label}
+                        {Icone && <Icone className="h-3.5 w-3.5 text-gray-400" />}{t(k.label)}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-center">{k.coupons}</td>
@@ -168,18 +169,18 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
       </section>
 
       <section aria-labelledby="uso-por-cupom">
-        <h3 id="uso-por-cupom" className="mb-2 font-display text-base font-bold text-ink">Cupom a cupom</h3>
+        <h3 id="uso-por-cupom" className="mb-2 font-display text-base font-bold text-ink">{t('Cupom a cupom')}</h3>
         <div className="overflow-x-auto rounded-2xl border border-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-3 py-2.5">Cupom</th>
-                <th className="px-3 py-2.5">Estado</th>
-                <th className="px-3 py-2.5 text-center">Usos</th>
-                <th className="px-3 py-2.5 text-right">Custo</th>
-                <th className="px-3 py-2.5 text-right">Receita</th>
+                <th className="px-3 py-2.5">{t('Cupom')}</th>
+                <th className="px-3 py-2.5">{t('Estado')}</th>
+                <th className="px-3 py-2.5 text-center">{t('Usos')}</th>
+                <th className="px-3 py-2.5 text-right">{t('Custo')}</th>
+                <th className="px-3 py-2.5 text-right">{t('Receita')}</th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-right">
-                  <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" /> Custo unitário</span>
+                  <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" /> {t('Custo unitário')}</span>
                 </th>
               </tr>
             </thead>
@@ -192,12 +193,12 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
                       <p className="inline-flex items-center gap-1.5 font-display font-bold tracking-wide text-ink">
                         {Icone && <Icone className="h-3.5 w-3.5 text-gray-400" />}{r.code}
                       </p>
-                      <p className="text-xs text-gray-500">{r.kindLabel} · {r.benefit}</p>
+                      <p className="text-xs text-gray-500">{t(r.kindLabel)} · {t(r.benefit)}</p>
                     </td>
-                    <td className="px-3 py-2.5"><V2Badge tone={TOM_DO_ESTADO[r.status]}>{COUPON_STATUS_LABEL[r.status]}</V2Badge></td>
+                    <td className="px-3 py-2.5"><V2Badge tone={TOM_DO_ESTADO[r.status]}>{t(COUPON_STATUS_LABEL[r.status])}</V2Badge></td>
                     <td className="px-3 py-2.5 text-center">
                       {r.uses}{r.maxUses ? <span className="text-gray-400"> / {r.maxUses}</span> : null}
-                      {r.newCustomers ? <span className="block text-2xs text-gray-500">{r.newCustomers} novos</span> : null}
+                      {r.newCustomers ? <span className="block text-2xs text-gray-500">{t('{n} novos', { n: r.newCustomers })}</span> : null}
                     </td>
                     <td className="px-3 py-2.5 text-right">{dinheiro(r.cost)}</td>
                     <td className="px-3 py-2.5 text-right">{r.revenue == null ? '—' : formatPrice(r.revenue)}</td>
@@ -213,14 +214,11 @@ export default function CouponUsageReport({ arenaId, referralOn = false }) {
       </section>
 
       <p className="text-xs leading-5 text-gray-500">
-        <strong>Custo</strong> é o que a arena deu: o desconto abatido nas reservas confirmadas, os vales entregues
-        (usos × custo unitário) e os créditos de indicação. <strong>Receita</strong> é o que pagaram as reservas que
-        usaram o cupom (ou chegaram por indicação). Pedido recusado ou cancelado não entra. <strong>—</strong> quer dizer
-        que o número não é conhecido — por exemplo, um vale sem custo informado —, nunca que foi zero.
+        <strong>{t('Custo')}</strong> {t('é o que a arena deu: o desconto abatido nas reservas confirmadas, os vales entregues (usos × custo unitário) e os créditos de indicação.')} <strong>{t('Receita')}</strong> {t('é o que pagaram as reservas que usaram o cupom (ou chegaram por indicação). Pedido recusado ou cancelado não entra.')} <strong>—</strong> {t('quer dizer que o número não é conhecido — por exemplo, um vale sem custo informado —, nunca que foi zero.')}
       </p>
       {rows.some((r) => r.family === COUPON_FAMILY.VOUCHER && r.unitCost == null) && (
         <p className="rounded-2xl bg-amber-50 p-3 text-xs text-amber-900">
-          Há vale sem custo informado — toque em <strong>Informar</strong>, na última coluna, para o custo entrar na conta.
+          {t('Há vale sem custo informado — toque em')} <strong>{t('Informar')}</strong>{t(', na última coluna, para o custo entrar na conta.')}
         </p>
       )}
     </div>

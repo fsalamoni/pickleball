@@ -32,6 +32,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { t, tk } from '@/core/i18n';
 
 const MOTIVOS = ['Acabou o produto', 'Não veio retirar', 'Pedido duplicado'];
 
@@ -41,12 +42,12 @@ function CancelOrderDialog({ open, onOpenChange, onConfirm, entregue, pending })
     <Dialog open={open} onOpenChange={(v) => { if (!v) setMotivo(''); onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cancelar este pedido?</DialogTitle>
+          <DialogTitle>{t('Cancelar este pedido?')}</DialogTitle>
           <DialogDescription>
             {entregue
-              ? 'O que saiu do estoque volta para o Mercado.'
-              : 'Nada saiu do estoque ainda.'}{' '}
-            Quem pediu é avisado, com o motivo. Se alguém já pagou, combine a devolução.
+              ? t('O que saiu do estoque volta para o Mercado.')
+              : t('Nada saiu do estoque ainda.')}{' '}
+            {t('Quem pediu é avisado, com o motivo. Se alguém já pagou, combine a devolução.')}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-1.5">
@@ -58,10 +59,10 @@ function CancelOrderDialog({ open, onOpenChange, onConfirm, entregue, pending })
           ))}
         </div>
         <V2Textarea rows={2} maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)}
-          placeholder="Motivo (opcional) — quem pediu vai ler" aria-label="Motivo do cancelamento" />
+          placeholder={t('Motivo (opcional) — quem pediu vai ler')} aria-label={t('Motivo do cancelamento')} />
         <DialogFooter>
-          <V2Button variant="ghost" onClick={() => onOpenChange(false)}>Voltar</V2Button>
-          <V2Button variant="danger" disabled={pending} onClick={() => onConfirm(motivo)}>Cancelar o pedido</V2Button>
+          <V2Button variant="ghost" onClick={() => onOpenChange(false)}>{t('Voltar')}</V2Button>
+          <V2Button variant="danger" disabled={pending} onClick={() => onConfirm(motivo)}>{t('Cancelar o pedido')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -69,10 +70,10 @@ function CancelOrderDialog({ open, onOpenChange, onConfirm, entregue, pending })
 }
 
 const PARTE_LABEL = {
-  none: { tone: 'neutral', label: 'Não registrou' },
-  pending: { tone: 'amber', label: 'Diz que pagou' },
-  paid: { tone: 'green', label: 'Pago' },
-  cancelled: { tone: 'neutral', label: 'Cancelado' },
+  none: { tone: 'neutral', label: tk('Não registrou') },
+  pending: { tone: 'amber', label: tk('Diz que pagou') },
+  paid: { tone: 'green', label: tk('Pago') },
+  cancelled: { tone: 'neutral', label: tk('Cancelado') },
 };
 
 function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
@@ -88,27 +89,27 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
   const pelaTabela = sale.catalog === SHOP_CATALOG ? saleTotalMismatch(sale, produtosPorId) : null;
   const ocupado = entregar.isPending || cancelar.isPending || confirmarPg.isPending || receber.isPending;
 
-  const acao = (promessa, ok) => promessa.then(() => toast.success(ok)).catch((e) => toast.error(e?.message || 'Não foi possível.'));
+  const acao = (promessa, ok) => promessa.then(() => toast.success(ok)).catch((e) => toast.error(e?.message || t('Não foi possível.')));
 
   return (
     <div className={`rounded-2xl border p-3 ${!cancelado && !sale.stock_applied ? 'border-amber-200 bg-amber-50/40' : 'border-gray-100 bg-paper'}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-ink">{sale.buyer_name || 'Atleta'}</p>
+          <p className="font-bold text-ink">{sale.buyer_name || t('Atleta')}</p>
           <p className="text-sm text-gray-600">{(sale.items || []).map((i) => `${i.quantity}× ${i.name}`).join(', ')}</p>
           <p className="mt-0.5 text-xs text-gray-500">
-            {saleWhenLabel(sale)}{dividida ? ` · dividido entre ${sale.split_with.length}` : ''}
+            {t(saleWhenLabel(sale))}{dividida ? ` · ${t('dividido entre {n}', { n: sale.split_with.length })}` : ''}
           </p>
         </div>
         <div className="text-right">
           <p className="font-display text-lg font-bold text-ink">{formatPrice(sale.total)}</p>
           <div className="mt-1 flex flex-wrap justify-end gap-1">
             <V2Badge tone={cancelado ? 'neutral' : sale.stock_applied ? 'green' : 'amber'}>
-              {cancelado ? 'Cancelado' : sale.stock_applied ? 'Entregue' : 'A entregar'}
+              {cancelado ? t('Cancelado') : sale.stock_applied ? t('Entregue') : t('A entregar')}
             </V2Badge>
             {!cancelado && (
               <V2Badge tone={sale.status === 'paid' ? 'green' : 'neutral'}>
-                {sale.status === 'paid' ? 'Pago' : 'Pagamento em aberto'}
+                {sale.status === 'paid' ? t('Pago') : t('Pagamento em aberto')}
               </V2Badge>
             )}
           </div>
@@ -118,10 +119,10 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
       {pelaTabela != null && !cancelado && (
         <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-amber-100/70 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Pela tabela de hoje este pedido dá <strong className="mx-0.5">{formatPrice(pelaTabela)}</strong>. Confira antes de entregar.
+          {t('Pela tabela de hoje este pedido dá')} <strong className="mx-0.5">{formatPrice(pelaTabela)}</strong>{t('. Confira antes de entregar.')}
         </p>
       )}
-      {cancelado && sale.cancel_reason && <p className="mt-2 text-xs text-gray-500">Motivo: {sale.cancel_reason}</p>}
+      {cancelado && sale.cancel_reason && <p className="mt-2 text-xs text-gray-500">{t('Motivo: {motivo}', { motivo: sale.cancel_reason })}</p>}
 
       {!cancelado && sale.status !== 'paid' && (
         <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
@@ -131,17 +132,17 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
                 {nomeDe(p.user_id, sale)} · <strong className="text-ink">{formatPrice(p.amount)}</strong>
               </span>
               <span className="flex items-center gap-1.5">
-                <V2Badge tone={PARTE_LABEL[p.status]?.tone || 'neutral'}>{PARTE_LABEL[p.status]?.label || p.status}</V2Badge>
+                <V2Badge tone={PARTE_LABEL[p.status]?.tone || 'neutral'}>{t(PARTE_LABEL[p.status]?.label || p.status)}</V2Badge>
                 {p.status === 'pending' && (
                   <V2Button size="sm" variant="ghost" disabled={ocupado}
-                    onClick={() => acao(confirmarPg.mutateAsync({ arenaId, paymentId: p.payment_id }), 'Pagamento confirmado.')}>
-                    Confirmar recebimento
+                    onClick={() => acao(confirmarPg.mutateAsync({ arenaId, paymentId: p.payment_id }), t('Pagamento confirmado.'))}>
+                    {t('Confirmar recebimento')}
                   </V2Button>
                 )}
                 {(p.status === 'none' || p.status === 'cancelled') && (
                   <V2Button size="sm" variant="ghost" disabled={ocupado}
-                    onClick={() => acao(receber.mutateAsync({ arenaId, saleId: sale.id, payerId: p.user_id }), 'Recebido no balcão.')}>
-                    Recebi no balcão
+                    onClick={() => acao(receber.mutateAsync({ arenaId, saleId: sale.id, payerId: p.user_id }), t('Recebido no balcão.'))}>
+                    {t('Recebi no balcão')}
                   </V2Button>
                 )}
               </span>
@@ -154,12 +155,12 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {!sale.stock_applied && (
             <V2Button size="sm" disabled={ocupado}
-              onClick={() => acao(entregar.mutateAsync({ arenaId, saleId: sale.id }), 'Entregue — saiu do estoque do Mercado.')}>
-              <Check className="mr-1 h-3.5 w-3.5" /> Entreguei
+              onClick={() => acao(entregar.mutateAsync({ arenaId, saleId: sale.id }), t('Entregue — saiu do estoque do Mercado.'))}>
+              <Check className="mr-1 h-3.5 w-3.5" /> {t('Entreguei')}
             </V2Button>
           )}
           <V2Button size="sm" variant="ghost" className="text-red-600" disabled={ocupado} onClick={() => setCancelando(true)}>
-            Cancelar
+            {t('Cancelar')}
           </V2Button>
         </div>
       )}
@@ -171,7 +172,7 @@ function OrderCard({ arenaId, sale, pagamentos, produtosPorId, nomeDe }) {
         pending={cancelar.isPending}
         onConfirm={(motivo) => acao(
           cancelar.mutateAsync({ arenaId, saleId: sale.id, motivo }).then(() => setCancelando(false)),
-          'Pedido cancelado. Quem pediu foi avisado.',
+          t('Pedido cancelado. Quem pediu foi avisado.'),
         )}
       />
     </div>
@@ -199,7 +200,7 @@ export default function ArenaShopOrdersPanel({ arena, onIrAoMercado }) {
   const produtos = useMemo(() => produtosQ.data || [], [produtosQ.data]);
   const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
   const nomes = useMemo(() => new Map(atletas.map((a) => [a.id, a.platform_name || a.full_name])), [atletas]);
-  const nomeDe = (uid, sale) => nomes.get(uid) || (uid === sale.buyer_id ? sale.buyer_name : null) || 'Atleta';
+  const nomeDe = (uid, sale) => nomes.get(uid) || (uid === sale.buyer_id ? sale.buyer_name : null) || t('Atleta');
 
   const vendas = vendasQ.data || [];
   const resumo = counterSummary(vendas, todayISO(), saleDateISO);
@@ -212,43 +213,42 @@ export default function ArenaShopOrdersPanel({ arena, onIrAoMercado }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink">
-              <ShoppingBag className="h-5 w-5" /> Pedidos do app
+              <ShoppingBag className="h-5 w-5" /> {t('Pedidos do app')}
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              O que os atletas pediram pelo aplicativo. Ao entregar, a venda sai do estoque do Mercado.
+              {t('O que os atletas pediram pelo aplicativo. Ao entregar, a venda sai do estoque do Mercado.')}
             </p>
           </div>
           {onIrAoMercado && (
             <V2Button size="sm" variant="secondary" onClick={onIrAoMercado}>
-              <Package className="h-4 w-4" /> Produtos e estoque
+              <Package className="h-4 w-4" /> {t('Produtos e estoque')}
             </V2Button>
           )}
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">A entregar</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">{t('A entregar')}</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? resumo.aEntregar.length : '–'}</p>
           </div>
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">Pedidos hoje</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">{t('Pedidos hoje')}</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? resumo.doDia.length : '–'}</p>
           </div>
           <div className="rounded-2xl bg-paper p-3">
-            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">Vendido hoje</p>
+            <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">{t('Vendido hoje')}</p>
             <p className="font-display text-2xl font-bold text-ink">{vendasQ.isSuccess ? formatPrice(resumo.caixa) : '–'}</p>
           </div>
         </div>
 
         {produtosQ.isSuccess && aVendaNoApp === 0 && (
           <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-paper p-4">
-            <p className="font-bold text-ink">Nenhum produto à venda pelo app ainda</p>
+            <p className="font-bold text-ink">{t('Nenhum produto à venda pelo app ainda')}</p>
             <p className="mt-1 text-sm text-gray-500">
-              No Mercado, edite o produto e marque <strong className="text-ink">Vender pelo app</strong>. Ele entra
-              na loja com o preço de venda que já está lá — sem cadastrar de novo.
+              {t('No Mercado, edite o produto e marque')} <strong className="text-ink">{t('Vender pelo app')}</strong>{t('. Ele entra na loja com o preço de venda que já está lá — sem cadastrar de novo.')}
             </p>
             {onIrAoMercado && (
-              <V2Button size="sm" className="mt-3" onClick={onIrAoMercado}>Abrir o Mercado</V2Button>
+              <V2Button size="sm" className="mt-3" onClick={onIrAoMercado}>{t('Abrir o Mercado')}</V2Button>
             )}
           </div>
         )}
@@ -256,23 +256,23 @@ export default function ArenaShopOrdersPanel({ arena, onIrAoMercado }) {
 
       <V2Surface>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-base font-bold text-ink">{verTudo ? 'Todos os pedidos' : 'A entregar'}</h3>
+          <h3 className="font-display text-base font-bold text-ink">{verTudo ? t('Todos os pedidos') : t('A entregar')}</h3>
           {vendasQ.isSuccess && vendas.length > 0 && (
             <V2Button size="sm" variant="ghost" onClick={() => setVerTudo((v) => !v)}>
-              {verTudo ? `Só a entregar (${resumo.aEntregar.length})` : `Ver todos (${vendas.length})`}
+              {verTudo ? t('Só a entregar ({n})', { n: resumo.aEntregar.length }) : t('Ver todos ({n})', { n: vendas.length })}
             </V2Button>
           )}
         </div>
 
         {vendasQ.isError && (
-          <V2ErrorState inline title="Não foi possível carregar os pedidos"
-            description="Os pedidos continuam registrados — tente de novo." onRetry={() => vendasQ.refetch()} />
+          <V2ErrorState inline title={t('Não foi possível carregar os pedidos')}
+            description={t('Os pedidos continuam registrados — tente de novo.')} onRetry={() => vendasQ.refetch()} />
         )}
         {vendasQ.isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
         {vendasQ.isSuccess && lista.length === 0 && (
           <p className="flex items-center gap-2 text-sm text-green-700">
             <Check className="h-4 w-4" />
-            {verTudo ? 'Nenhum pedido pelo app ainda.' : 'Nada a entregar. Balcão em dia.'}
+            {verTudo ? t('Nenhum pedido pelo app ainda.') : t('Nada a entregar. Balcão em dia.')}
           </p>
         )}
 

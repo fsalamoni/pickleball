@@ -22,6 +22,7 @@ import { arenaCampaignBanners } from '@/modules/arenas/domain/campaignBanner';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import { cn } from '@/core/lib/utils';
 import CampaignBanner from './CampaignBanner';
+import { t } from '@/core/i18n';
 
 export default function ArenaCampaignsSection({ arena }) {
   const arenaId = arena?.id;
@@ -35,9 +36,9 @@ export default function ArenaCampaignsSection({ arena }) {
 
   const varios = banners.length > 1;
   return (
-    <section className="mt-6" aria-label={`Em destaque na ${arena?.name || 'arena'}`}>
+    <section className="mt-6" aria-label={t('Em destaque na {nome}', { nome: arena?.name || t('arena') })}>
       <h3 className="mb-2 flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Sparkles className="h-4 w-4" aria-hidden /> Em destaque
+        <Sparkles className="h-4 w-4" aria-hidden /> {t('Em destaque')}
       </h3>
       <ul
         className={cn(

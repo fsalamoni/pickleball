@@ -27,6 +27,7 @@ import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
 import ArenaGameDaySignupCard from './ArenaGameDaySignupCard';
+import { t } from '@/core/i18n';
 
 function hojeISO() {
   const d = new Date();
@@ -62,9 +63,9 @@ export default function ArenaGameDaysSection({ arenaId }) {
       <div className="mb-3 flex items-start gap-3">
         <CalendarClock aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-acid-dark" />
         <div>
-          <h2 className="font-display text-xl font-bold text-ink">Dias de jogo</h2>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Dias de jogo')}</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            Rodadas organizadas pela arena. Marque presença e apareça para jogar.
+            {t('Rodadas organizadas pela arena. Marque presença e apareça para jogar.')}
           </p>
         </div>
       </div>

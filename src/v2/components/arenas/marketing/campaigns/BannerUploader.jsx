@@ -24,6 +24,7 @@ import { BANNER_ALT_MAX } from '@/modules/arenas/domain/campaignBanner';
 import { V2Button, V2Field, V2Textarea } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import BannerArt from './BannerArt';
+import { t } from '@/core/i18n';
 
 /** Largura e altura de uma imagem local, sem subir nada. */
 function medir(file) {
@@ -55,10 +56,10 @@ function DiagramaAreaSegura() {
           bottom: `${((1 - safeArea.height) / 2) * 100}%`,
         }}
       >
-        área segura: texto e logo aqui
+        {t('área segura: texto e logo aqui')}
       </div>
       <span className="absolute -bottom-5 left-0 right-0 text-center text-2xs text-gray-500">
-        pontilhado: o que o celular mostra (16:9)
+        {t('pontilhado: o que o celular mostra (16:9)')}
       </span>
     </div>
   );
@@ -76,7 +77,7 @@ function DiagramaAreaSegura() {
  */
 export default function BannerUploader({
   value = {}, onChange, spec = BANNER_UPLOAD_SPEC, guide, folder = 'arena-banners', preview, diagram = true,
-  altPlaceholder = 'Terça e quinta com 20% de desconto na reserva, das 7h às 17h.',
+  altPlaceholder = t('Terça e quinta com 20% de desconto na reserva, das 7h às 17h.'),
 }) {
   const { user } = useAuth();
   const inputRef = useRef(null);
@@ -97,9 +98,9 @@ export default function BannerUploader({
     try {
       const meta = await uploadImage(file, { uid: user?.uid, folder, onProgress: setProgresso });
       onChange({ image_url: meta.url, image_path: meta.path, width, height });
-      toast.success('Imagem enviada. Confira o recorte abaixo.');
+      toast.success(t('Imagem enviada. Confira o recorte abaixo.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar a imagem.');
+      toast.error(err?.message || t('Não foi possível enviar a imagem.'));
     } finally {
       setEnviando(false);
     }
@@ -112,13 +113,13 @@ export default function BannerUploader({
       <div className={cn('grid gap-4 rounded-2xl border border-gray-100 bg-paper p-4', diagram && 'sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]')}>
         <div>
           <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
-            <Info className="h-4 w-4 shrink-0" aria-hidden /> Antes de enviar: como a imagem deve ser
+            <Info className="h-4 w-4 shrink-0" aria-hidden /> {t('Antes de enviar: como a imagem deve ser')}
           </p>
           <dl className="mt-2 space-y-1.5 text-xs">
             {(guide || bannerUploadGuide(spec)).map((l) => (
               <div key={l.label} className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2">
-                <dt className="font-bold text-ink">{l.label}</dt>
-                <dd className="text-gray-600">{l.value}</dd>
+                <dt className="font-bold text-ink">{t(l.label)}</dt>
+                <dd className="text-gray-600">{t(l.value)}</dd>
               </div>
             ))}
           </dl>
@@ -132,24 +133,24 @@ export default function BannerUploader({
 
       <div className="flex flex-wrap items-center gap-3">
         <input ref={inputRef} type="file" accept={spec.mimeTypes.join(',')} className="hidden"
-          onChange={escolher} aria-label="Escolher a imagem do banner" />
+          onChange={escolher} aria-label={t('Escolher a imagem do banner')} />
         <V2Button type="button" variant="secondary" disabled={enviando} onClick={() => inputRef.current?.click()}>
           {enviando
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando {progresso}%</>
-            : <><ImagePlus className="h-4 w-4" /> {value.image_url ? 'Trocar a imagem' : 'Escolher a imagem'}</>}
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('Enviando {n}%', { n: progresso })}</>
+            : <><ImagePlus className="h-4 w-4" /> {value.image_url ? t('Trocar a imagem') : t('Escolher a imagem')}</>}
         </V2Button>
         {value.width && value.height ? (
-          <span className="text-xs text-gray-500">Imagem atual: {value.width} × {value.height} px</span>
+          <span className="text-xs text-gray-500">{t('Imagem atual: {largura} × {altura} px', { largura: value.width, altura: value.height })}</span>
         ) : null}
       </div>
 
       {conferencia && (conferencia.errors.length > 0 || conferencia.warnings.length > 0) && (
         <ul className="space-y-1" aria-live="polite">
           {conferencia.errors.map((m) => (
-            <li key={m} className="rounded-xl bg-red-50 px-3 py-1.5 text-xs text-red-700">{m} A imagem não foi enviada.</li>
+            <li key={m} className="rounded-xl bg-red-50 px-3 py-1.5 text-xs text-red-700">{t(m)} {t('A imagem não foi enviada.')}</li>
           ))}
           {conferencia.warnings.map((m) => (
-            <li key={m} className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{m}</li>
+            <li key={m} className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{t(m)}</li>
           ))}
         </ul>
       )}
@@ -158,18 +159,18 @@ export default function BannerUploader({
       {value.image_url && !preview && (
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div>
-            <p className="mb-1 flex items-center gap-1 text-xs font-bold text-gray-500"><Monitor className="h-3.5 w-3.5" /> No computador (2:1)</p>
+            <p className="mb-1 flex items-center gap-1 text-xs font-bold text-gray-500"><Monitor className="h-3.5 w-3.5" /> {t('No computador (2:1)')}</p>
             <BannerArt banner={banner} ratio="wide" safeArea />
           </div>
           <div>
-            <p className="mb-1 flex items-center gap-1 text-xs font-bold text-gray-500"><Smartphone className="h-3.5 w-3.5" /> No celular (16:9)</p>
+            <p className="mb-1 flex items-center gap-1 text-xs font-bold text-gray-500"><Smartphone className="h-3.5 w-3.5" /> {t('No celular (16:9)')}</p>
             <BannerArt banner={banner} ratio="phone" safeArea />
           </div>
         </div>
       )}
 
-      <V2Field label="Descrição da imagem" htmlFor="ban-alt" required
-        hint="Escreva o que a imagem diz — é o que o leitor de tela lê, e o que aparece se ela não carregar.">
+      <V2Field label={t('Descrição da imagem')} htmlFor="ban-alt" required
+        hint={t('Escreva o que a imagem diz — é o que o leitor de tela lê, e o que aparece se ela não carregar.')}>
         <V2Textarea id="ban-alt" rows={2} maxLength={BANNER_ALT_MAX} value={value.alt || ''}
           placeholder={altPlaceholder}
           onChange={(e) => onChange({ alt: e.target.value })} />

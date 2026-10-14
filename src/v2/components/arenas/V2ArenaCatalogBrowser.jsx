@@ -30,6 +30,7 @@ import {
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { todayISO } from '@/modules/arenas/domain/calendar';
+import { t } from '@/core/i18n';
 
 const todayStr = () => todayISO();
 
@@ -100,10 +101,10 @@ export default function V2ArenaCatalogBrowser() {
     if (products.length === 0) return;
     try {
       const r = await adoptMany.mutateAsync(products);
-      toast.success(`${r.created} produto(s) adicionado(s) ao seu mercado${r.skipped ? ` · ${r.skipped} já existiam` : ''}. Defina preço e quantidade na aba Mercado.`);
+      toast.success(`${t('{n} produto(s) adicionado(s) ao seu mercado', { n: r.created })}${r.skipped ? ` · ${t('{n} já existiam', { n: r.skipped })}` : ''}. ${t('Defina preço e quantidade na aba Mercado.')}`);
       clearSelection();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível adicionar em lote.');
+      toast.error(err.message || t('Não foi possível adicionar em lote.'));
     }
   }
 
@@ -112,28 +113,25 @@ export default function V2ArenaCatalogBrowser() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShoppingBasket className="h-5 w-5 text-green-700" />
-          <h2 className="font-display text-xl font-bold text-ink">Catálogo de produtos</h2>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Catálogo de produtos')}</h2>
         </div>
         {/* Sugerir exige conferir duplicidade contra o catálogo — sem ele na
             mão, "não há parecido" seria afirmado sobre uma lista vazia. */}
         {!catalogoFalhou && (
           <V2Button size="sm" variant="secondary" onClick={() => setSuggesting((s) => !s)}>
-            <PackagePlus className="h-4 w-4" /> Sugerir produto novo
+            <PackagePlus className="h-4 w-4" /> {t('Sugerir produto novo')}
           </V2Button>
         )}
       </div>
       <p className="text-sm text-gray-500">
-        Esta é a <strong>lista geral</strong> da plataforma (não é o seu estoque). Marque os produtos que a
-        sua arena vende e clique em <strong>Adicionar ao meu mercado</strong> — pode selecionar vários (ou
-        todos) de uma vez. Depois é só definir preço e quantidade na aba Mercado. Não achou? Sugira um
-        produto novo (a plataforma verifica se ele já não existe com outro nome).
+        {t('Esta é a lista geral da plataforma (não é o seu estoque). Marque os produtos que a sua arena vende e clique em "Adicionar ao meu mercado" — pode selecionar vários (ou todos) de uma vez. Depois é só definir preço e quantidade na aba Mercado. Não achou? Sugira um produto novo (a plataforma verifica se ele já não existe com outro nome).')}
       </p>
 
       {meusFalharam && (
         <V2ErrorState
           inline
-          title="Não foi possível conferir o que já está no seu mercado"
-          description="Enquanto isso, adicionar fica desligado — senão um produto que você já tem entraria de novo."
+          title={t('Não foi possível conferir o que já está no seu mercado')}
+          description={t('Enquanto isso, adicionar fica desligado — senão um produto que você já tem entraria de novo.')}
           onRetry={() => recarregarMeus()}
         />
       )}
@@ -151,24 +149,24 @@ export default function V2ArenaCatalogBrowser() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome, marca, sabor..." className="pl-9" />
+            <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('Buscar por nome, marca, sabor...')} className="pl-9" />
           </div>
           <V2Select
             value={category}
             onChange={(e) => { setCategory(e.target.value); setSubcategory('all'); }}
-            aria-label="Categoria"
+            aria-label={t('Categoria')}
           >
-            <option value="all">Todas categorias</option>
+            <option value="all">{t('Todas categorias')}</option>
             {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
           </V2Select>
-          <V2Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} aria-label="Subcategoria">
-            <option value="all">Todas subcategorias</option>
+          <V2Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} aria-label={t('Subcategoria')}>
+            <option value="all">{t('Todas subcategorias')}</option>
             {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </V2Select>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-gray-500">
-            {filtered.length} no catálogo · {selectableFiltered.length} fora do seu mercado
+            {t('{n} no catálogo · {fora} fora do seu mercado', { n: filtered.length, fora: selectableFiltered.length })}
           </p>
           {selectableFiltered.length > 0 && (
             <button
@@ -176,7 +174,7 @@ export default function V2ArenaCatalogBrowser() {
               onClick={allFilteredSelected ? clearSelection : selectAllFiltered}
               className="text-xs font-bold text-green-700 hover:underline"
             >
-              {allFilteredSelected ? 'Limpar seleção' : `Selecionar todos (${selectableFiltered.length})`}
+              {allFilteredSelected ? t('Limpar seleção') : t('Selecionar todos ({n})', { n: selectableFiltered.length })}
             </button>
           )}
         </div>
@@ -186,13 +184,13 @@ export default function V2ArenaCatalogBrowser() {
       {selectedCount > 0 && (
         <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-green-300 bg-green-50 p-3 shadow-organic-sm">
           <span className="text-sm font-bold text-ink">
-            {selectedCount} produto(s) selecionado(s)
+            {t('{n} produto(s) selecionado(s)', { n: selectedCount })}
           </span>
           <div className="flex items-center gap-2">
-            <V2Button size="sm" variant="ghost" onClick={clearSelection}>Limpar</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={clearSelection}>{t('Limpar')}</V2Button>
             <V2Button size="sm" onClick={handleBulkAdd} disabled={adoptMany.isPending}>
               <Plus className="h-4 w-4" />
-              {adoptMany.isPending ? 'Adicionando…' : `Adicionar ${selectedCount} ao meu mercado`}
+              {adoptMany.isPending ? t('Adicionando…') : t('Adicionar {n} ao meu mercado', { n: selectedCount })}
             </V2Button>
           </div>
         </div>
@@ -202,18 +200,18 @@ export default function V2ArenaCatalogBrowser() {
         <V2Skeleton lines={4} />
       ) : catalogoFalhou ? (
         <V2ErrorState
-          title="Não foi possível carregar o catálogo"
-          description="Você já pode cadastrar produtos próprios na aba Mercado — ou tentar de novo."
+          title={t('Não foi possível carregar o catálogo')}
+          description={t('Você já pode cadastrar produtos próprios na aba Mercado — ou tentar de novo.')}
           onRetry={() => recarregarCatalogo()}
         />
       ) : catalog.length === 0 ? (
         <V2EmptyState
           icon={Database}
-          title="O catálogo da plataforma ainda está vazio"
-          description="Cadastre produtos próprios na aba Mercado, ou sugira um produto novo para o catálogo."
+          title={t('O catálogo da plataforma ainda está vazio')}
+          description={t('Cadastre produtos próprios na aba Mercado, ou sugira um produto novo para o catálogo.')}
         />
       ) : filtered.length === 0 ? (
-        <V2EmptyState icon={Search} title="Nada encontrado" description="Ajuste a busca ou os filtros — ou sugira um produto novo." />
+        <V2EmptyState icon={Search} title={t('Nada encontrado')} description={t('Ajuste a busca ou os filtros — ou sugira um produto novo.')} />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           {filtered.slice(0, 400).map((p) => {
@@ -228,13 +226,13 @@ export default function V2ArenaCatalogBrowser() {
                       <Package className="h-4 w-4" />
                     </div>
                   ) : (
-                    <label className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-gray-200 bg-paper-pure" title="Selecionar para adicionar em lote">
+                    <label className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-gray-200 bg-paper-pure" title={t('Selecionar para adicionar em lote')}>
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(p.id)}
                         className="h-4 w-4 accent-ink"
-                        aria-label={`Selecionar ${p.name}`}
+                        aria-label={t('Selecionar {nome}', { nome: p.name })}
                       />
                     </label>
                   )}
@@ -245,13 +243,13 @@ export default function V2ArenaCatalogBrowser() {
                       {p.subcategory && <V2Badge tone="neutral">{p.subcategory}</V2Badge>}
                       {p.packaging && <span>{p.packaging}{p.size ? ` · ${p.size}` : ''}</span>}
                     </div>
-                    {p.brand && <div className="mt-0.5 text-xs text-gray-500">Marca: {p.brand}</div>}
+                    {p.brand && <div className="mt-0.5 text-xs text-gray-500">{t('Marca:')} {p.brand}</div>}
                   </div>
                   {adopted ? (
-                    <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> No seu mercado</V2Badge>
+                    <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> {t('No seu mercado')}</V2Badge>
                   ) : !podeAdotar ? null : (
                     <V2Button size="sm" variant={isAdopting ? 'ghost' : 'secondary'} onClick={() => setAdopting(isAdopting ? null : p)}>
-                      {isAdopting ? 'Fechar' : <><Plus className="h-4 w-4" /> Adicionar</>}
+                      {isAdopting ? t('Fechar') : <><Plus className="h-4 w-4" /> {t('Adicionar')}</>}
                     </V2Button>
                   )}
                 </div>
@@ -267,8 +265,7 @@ export default function V2ArenaCatalogBrowser() {
           })}
           {filtered.length > 400 && (
             <p className="sm:col-span-2 py-2 text-center text-xs text-gray-500">
-              Mostrando 400 de {filtered.length}. Refine os filtros para ver os demais — ou use
-              &quot;Selecionar todos&quot; para adicioná-los em lote de uma vez.
+              {t('Mostrando 400 de {n}. Refine os filtros para ver os demais — ou use "Selecionar todos" para adicioná-los em lote de uma vez.', { n: filtered.length })}
             </p>
           )}
         </div>
@@ -299,42 +296,42 @@ function AdoptForm({ arenaId, product, onDone }) {
           supplier: form.supplier,
         },
       });
-      toast.success(`"${product.name}" adicionado ao seu mercado!`);
+      toast.success(t('"{nome}" adicionado ao seu mercado!', { nome: product.name }));
       onDone?.();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível adicionar.');
+      toast.error(err.message || t('Não foi possível adicionar.'));
     }
   }
 
   return (
     <form onSubmit={submit} className="mt-3 space-y-2 border-t border-green-200 pt-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <V2Field label="Preço de venda (R$)">
-          <V2Input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="bg-paper px-3 py-2" placeholder="Ex: 6,00" />
+        <V2Field label={t('Preço de venda (R$)')}>
+          <V2Input type="number" min="0" step="0.01" value={form.sale_price} onChange={set('sale_price')} className="bg-paper px-3 py-2" placeholder={t('Ex: 6,00')} />
         </V2Field>
-        <V2Field label="Preço de compra (R$)">
-          <V2Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={set('purchase_price')} className="bg-paper px-3 py-2" placeholder="Ex: 3,50" />
+        <V2Field label={t('Preço de compra (R$)')}>
+          <V2Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={set('purchase_price')} className="bg-paper px-3 py-2" placeholder={t('Ex: 3,50')} />
         </V2Field>
-        <V2Field label="Qtd. inicial">
-          <V2Input type="number" min="0" value={form.initial_quantity} onChange={set('initial_quantity')} className="bg-paper px-3 py-2" placeholder="Ex: 24" />
+        <V2Field label={t('Qtd. inicial')}>
+          <V2Input type="number" min="0" value={form.initial_quantity} onChange={set('initial_quantity')} className="bg-paper px-3 py-2" placeholder={t('Ex: 24')} />
         </V2Field>
-        <V2Field label="Estoque mínimo">
-          <V2Input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="bg-paper px-3 py-2" placeholder="Ex: 6" />
+        <V2Field label={t('Estoque mínimo')}>
+          <V2Input type="number" min="0" value={form.min_stock} onChange={set('min_stock')} className="bg-paper px-3 py-2" placeholder={t('Ex: 6')} />
         </V2Field>
-        <V2Field label="Validade">
+        <V2Field label={t('Validade')}>
           <V2Input type="date" value={form.expiry_date} onChange={set('expiry_date')} min={todayStr()} className="bg-paper px-3 py-2" />
         </V2Field>
-        <V2Field label="Fornecedor">
-          <V2Input value={form.supplier} onChange={set('supplier')} maxLength={120} placeholder="Opcional" />
+        <V2Field label={t('Fornecedor')}>
+          <V2Input value={form.supplier} onChange={set('supplier')} maxLength={120} placeholder={t('Opcional')} />
         </V2Field>
       </div>
       <p className="text-2xs text-gray-500">
-        Só o preço de venda é recomendado para vender no PDV. A quantidade inicial registra uma entrada de estoque.
+        {t('Só o preço de venda é recomendado para vender no PDV. A quantidade inicial registra uma entrada de estoque.')}
       </p>
       <div className="flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" size="sm" onClick={onDone}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" size="sm" onClick={onDone}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" size="sm" disabled={adopt.isPending}>
-          <Plus className="h-4 w-4" /> {adopt.isPending ? 'Adicionando…' : 'Adicionar ao mercado'}
+          <Plus className="h-4 w-4" /> {adopt.isPending ? t('Adicionando…') : t('Adicionar ao mercado')}
         </V2Button>
       </div>
     </form>
@@ -361,7 +358,7 @@ function SuggestForm({ arenaId, catalog, onClose }) {
     try {
       const { matches } = await checkCatalogDuplicates(form, catalog);
       setDupes(matches);
-      if (matches.length === 0) toast.success('Nenhum parecido encontrado. Pode cadastrar!');
+      if (matches.length === 0) toast.success(t('Nenhum parecido encontrado. Pode cadastrar!'));
     } catch {
       setDupes(localMatches);
     } finally {
@@ -372,14 +369,14 @@ function SuggestForm({ arenaId, catalog, onClose }) {
   async function submit(force) {
     try {
       await propose.mutateAsync({ input: form, existing: catalog, force });
-      toast.success('Produto adicionado ao catálogo geral. Obrigado por contribuir!');
+      toast.success(t('Produto adicionado ao catálogo geral. Obrigado por contribuir!'));
       onClose?.();
     } catch (err) {
       if (err.code === 'duplicate') {
         setDupes(findDuplicates(form, catalog, { threshold: 0.5 }));
-        toast.error('Esse produto parece já existir. Confira os parecidos abaixo.');
+        toast.error(t('Esse produto parece já existir. Confira os parecidos abaixo.'));
       } else {
-        toast.error(err.message || 'Não foi possível cadastrar.');
+        toast.error(err.message || t('Não foi possível cadastrar.'));
       }
     }
   }
@@ -391,57 +388,57 @@ function SuggestForm({ arenaId, catalog, onClose }) {
     <V2Surface className="border-green-200 bg-green-50/30">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <PackagePlus className="h-4 w-4 text-green-700" /> Sugerir produto ao catálogo
+          <PackagePlus className="h-4 w-4 text-green-700" /> {t('Sugerir produto ao catálogo')}
         </h3>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-ink" aria-label="Fechar">
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-ink" aria-label={t('Fechar')}>
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="space-y-2">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <V2Field label="Nome do produto" required>
-            <V2Input value={form.name} onChange={set('name')} maxLength={100} placeholder="Ex: Coca-Cola 350ml" />
+          <V2Field label={t('Nome do produto')} required>
+            <V2Input value={form.name} onChange={set('name')} maxLength={100} placeholder={t('Ex: Coca-Cola 350ml')} />
           </V2Field>
-          <V2Field label="Marca">
-            <V2Input value={form.brand} onChange={set('brand')} maxLength={60} placeholder="Ex: Coca-Cola" />
+          <V2Field label={t('Marca')}>
+            <V2Input value={form.brand} onChange={set('brand')} maxLength={60} placeholder={t('Ex: Coca-Cola')} />
           </V2Field>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <V2Field label="Categoria" required>
+          <V2Field label={t('Categoria')} required>
             <V2Select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))}>
               {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
             </V2Select>
           </V2Field>
-          <V2Field label="Subcategoria" required>
-            <V2Input list="catalog-sub-options" value={form.subcategory} onChange={set('subcategory')} maxLength={50} placeholder="Ex: Refrigerante" />
+          <V2Field label={t('Subcategoria')} required>
+            <V2Input list="catalog-sub-options" value={form.subcategory} onChange={set('subcategory')} maxLength={50} placeholder={t('Ex: Refrigerante')} />
             <datalist id="catalog-sub-options">
               {subList.map((s) => <option key={s} value={s} />)}
             </datalist>
           </V2Field>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <V2Field label="Embalagem">
-            <V2Input list="catalog-pack-options" value={form.packaging} onChange={set('packaging')} maxLength={40} placeholder="Ex: Lata" />
+          <V2Field label={t('Embalagem')}>
+            <V2Input list="catalog-pack-options" value={form.packaging} onChange={set('packaging')} maxLength={40} placeholder={t('Ex: Lata')} />
             <datalist id="catalog-pack-options">
               {CATALOG_PACKAGINGS.map((s) => <option key={s} value={s} />)}
             </datalist>
           </V2Field>
-          <V2Field label="Tamanho/volume">
-            <V2Input value={form.size} onChange={set('size')} maxLength={30} placeholder="Ex: 350ml, 100g" />
+          <V2Field label={t('Tamanho/volume')}>
+            <V2Input value={form.size} onChange={set('size')} maxLength={30} placeholder={t('Ex: 350ml, 100g')} />
           </V2Field>
-          <V2Field label="Sabor/variante">
-            <V2Input value={form.flavor} onChange={set('flavor')} maxLength={40} placeholder="Ex: Zero, Uva" />
+          <V2Field label={t('Sabor/variante')}>
+            <V2Input value={form.flavor} onChange={set('flavor')} maxLength={40} placeholder={t('Ex: Zero, Uva')} />
           </V2Field>
         </div>
-        <V2Field label="Descrição">
+        <V2Field label={t('Descrição')}>
           <V2Textarea value={form.description} onChange={set('description')} maxLength={500} rows={2} />
         </V2Field>
 
         {/* Aviso de possíveis duplicatas (verificação local em tempo real) */}
         {canSubmit && localMatches.length > 0 && dupes === null && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Talvez já exista:</div>
+            <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> {t('Talvez já exista:')}</div>
             <ul className="mt-1 list-disc pl-5 text-xs">
               {localMatches.slice(0, 4).map((m) => <li key={m.product.id}>{catalogProductLabel(m.product)}</li>)}
             </ul>
@@ -451,37 +448,37 @@ function SuggestForm({ arenaId, catalog, onClose }) {
         {dupes !== null && (
           dupes.length > 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Produtos parecidos no catálogo:</div>
+              <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> {t('Produtos parecidos no catálogo:')}</div>
               <ul className="mt-1 space-y-0.5 text-xs">
                 {dupes.slice(0, 6).map((m) => (
                   <li key={m.product.id} className="flex items-center justify-between gap-2">
                     <span>{catalogProductLabel(m.product)}</span>
-                    <span className="text-amber-600">{m.exact ? 'idêntico' : `${Math.round(m.score * 100)}%`}</span>
+                    <span className="text-amber-600">{m.exact ? t('idêntico') : `${Math.round(m.score * 100)}%`}</span>
                   </li>
                 ))}
               </ul>
               <p className="mt-2 text-xs">
-                Se algum for o mesmo produto, use-o direto no catálogo. Se o seu é realmente diferente, confirme abaixo.
+                {t('Se algum for o mesmo produto, use-o direto no catálogo. Se o seu é realmente diferente, confirme abaixo.')}
               </p>
             </div>
           ) : (
             <div className="rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              Nenhum produto parecido encontrado — pode cadastrar com segurança.
+              {t('Nenhum produto parecido encontrado — pode cadastrar com segurança.')}
             </div>
           )
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
           <V2Button type="button" variant="secondary" size="sm" onClick={runCheck} disabled={!canSubmit || checking}>
-            <Search className="h-4 w-4" /> {checking ? 'Verificando…' : 'Verificar duplicidade'}
+            <Search className="h-4 w-4" /> {checking ? t('Verificando…') : t('Verificar duplicidade')}
           </V2Button>
           {dupes !== null && dupes.length > 0 ? (
             <V2Button type="button" size="sm" onClick={() => submit(true)} disabled={propose.isPending}>
-              É diferente — cadastrar mesmo assim
+              {t('É diferente — cadastrar mesmo assim')}
             </V2Button>
           ) : (
             <V2Button type="button" size="sm" onClick={() => submit(false)} disabled={!canSubmit || propose.isPending}>
-              <Plus className="h-4 w-4" /> {propose.isPending ? 'Cadastrando…' : 'Cadastrar no catálogo'}
+              <Plus className="h-4 w-4" /> {propose.isPending ? t('Cadastrando…') : t('Cadastrar no catálogo')}
             </V2Button>
           )}
         </div>

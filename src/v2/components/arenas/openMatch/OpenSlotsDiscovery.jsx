@@ -29,6 +29,7 @@ import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { OpenSlotCard } from './OpenSlotCard';
 import { useOpenSlotActions } from './useOpenSlotActions';
 import { V2ErrorState } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const LIMITE = 6;
 
@@ -59,8 +60,8 @@ export default function OpenSlotsDiscovery() {
   if (vagasQ.isError) {
     return (
       <div className="mb-8">
-        <V2ErrorState inline title="Não foi possível carregar os jogos das arenas"
-          description="Tente de novo em instantes." onRetry={() => vagasQ.refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar os jogos das arenas')}
+          description={t('Tente de novo em instantes.')} onRetry={() => vagasQ.refetch()} />
       </div>
     );
   }
@@ -70,12 +71,12 @@ export default function OpenSlotsDiscovery() {
   return (
     <section className="mb-8" data-dica="procura-arenas">
       <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-        <Building2 className="h-3.5 w-3.5" /> Jogos abertos nas arenas
+        <Building2 className="h-3.5 w-3.5" /> {t('Jogos abertos nas arenas')}
       </p>
       <p className="mt-1 text-sm text-gray-500">
-        Horários com vaga que as arenas publicaram. Entre direto — não precisa de convite nem de dupla.
+        {t('Horários com vaga que as arenas publicaram. Entre direto — não precisa de convite nem de dupla.')}
       </p>
-      <RegionForaNote regional={regional} nomeItens={['jogo', 'jogos']} className="mt-1 block text-sm" />
+      <RegionForaNote regional={regional} nomeItens={[t('jogo'), t('jogos')]} className="mt-1 block text-sm" />
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {visiveis.slice(0, LIMITE).map((s) => (
           <OpenSlotCard

@@ -30,6 +30,7 @@ import {
 } from '@/modules/arenas/hooks/useArenas';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const WEEKDAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ value: d, label: WEEKDAY_SHORT_PT[d] }));
 
@@ -67,7 +68,7 @@ function ScheduleForm({ initial, onCancel, onSubmit, busy }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
-      <V2Field label="Dias da semana" required error={errors.weekdays}>
+      <V2Field label={t('Dias da semana')} required error={errors.weekdays}>
         <div className="flex flex-wrap items-center gap-1.5">
           {WEEKDAY_OPTIONS.map((d) => {
             const active = form.weekdays.includes(d.value);
@@ -83,27 +84,27 @@ function ScheduleForm({ initial, onCancel, onSubmit, busy }) {
                 }`}
                 aria-pressed={active}
               >
-                {d.label}
+                {t(d.label)}
               </button>
             );
           })}
         </div>
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
-          <button type="button" onClick={() => setWeekdays([1, 2, 3, 4, 5])} className="text-gray-500 underline hover:text-ink">Seg–Sex</button>
-          <button type="button" onClick={() => setWeekdays([0, 6])} className="text-gray-500 underline hover:text-ink">Fim de semana</button>
-          <button type="button" onClick={setAllWeekdays} className="text-gray-500 underline hover:text-ink">Todos</button>
-          <button type="button" onClick={clearWeekdays} className="text-gray-500 underline hover:text-ink">Limpar</button>
+          <button type="button" onClick={() => setWeekdays([1, 2, 3, 4, 5])} className="text-gray-500 underline hover:text-ink">{t('Seg–Sex')}</button>
+          <button type="button" onClick={() => setWeekdays([0, 6])} className="text-gray-500 underline hover:text-ink">{t('Fim de semana')}</button>
+          <button type="button" onClick={setAllWeekdays} className="text-gray-500 underline hover:text-ink">{t('Todos')}</button>
+          <button type="button" onClick={clearWeekdays} className="text-gray-500 underline hover:text-ink">{t('Limpar')}</button>
         </div>
       </V2Field>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <V2Field label="Início" required error={errors.start_time}>
+        <V2Field label={t('Início')} required error={errors.start_time}>
           <V2Input type="time" value={form.start_time} onChange={setField('start_time')} />
         </V2Field>
-        <V2Field label="Fim" required error={errors.end_time}>
+        <V2Field label={t('Fim')} required error={errors.end_time}>
           <V2Input type="time" value={form.end_time} onChange={setField('end_time')} />
         </V2Field>
-        <V2Field label="Rótulo" hint="Opcional, ex: 'Comercial'">
-          <V2Input value={form.label} onChange={setField('label')} maxLength={60} placeholder="Comercial, Nobre, …" />
+        <V2Field label={t('Rótulo')} hint={t('Opcional, ex.: “Comercial”')}>
+          <V2Input value={form.label} onChange={setField('label')} maxLength={60} placeholder={t('Comercial, Nobre, …')} />
         </V2Field>
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -113,15 +114,15 @@ function ScheduleForm({ initial, onCancel, onSubmit, busy }) {
           onChange={(e) => setField('is_active')(e.target.checked)}
           className="h-4 w-4 rounded border-gray-300 text-ink focus:ring-ink"
         />
-        Janela ativa
+        {t('Janela ativa')}
       </label>
       {Object.keys(errors).length > 0 && (
         <p className="text-xs text-red-600">{Object.values(errors)[0]}</p>
       )}
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={busy}>
-          {busy ? 'Salvando…' : (initial.id ? 'Salvar' : 'Adicionar janela')}
+          {busy ? t('Salvando…') : (initial.id ? t('Salvar') : t('Adicionar janela'))}
         </V2Button>
       </div>
     </form>
@@ -147,10 +148,10 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
   async function handleAdd(value) {
     try {
       await createSchedule.mutateAsync(value);
-      toast.success('Janela adicionada.');
+      toast.success(t('Janela adicionada.'));
       setAdding(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível adicionar a janela.');
+      toast.error(err?.message || t('Não foi possível adicionar a janela.'));
     }
   }
 
@@ -161,10 +162,10 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
         scheduleId: editing.id,
         input: { ...value, arena_id: arenaId, court_id: court.id },
       });
-      toast.success('Janela atualizada.');
+      toast.success(t('Janela atualizada.'));
       setEditing(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar a janela.');
+      toast.error(err?.message || t('Não foi possível atualizar a janela.'));
     }
   }
 
@@ -172,10 +173,10 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
     if (!deleting) return;
     try {
       await deleteSchedule.mutateAsync(deleting.id);
-      toast.success('Janela removida.');
+      toast.success(t('Janela removida.'));
       setDeleting(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover a janela.');
+      toast.error(err?.message || t('Não foi possível remover a janela.'));
     }
   }
 
@@ -196,38 +197,38 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
           <div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-gray-500" />
-              <h3 id="horarios-quadra-titulo" className="font-display text-lg font-bold text-ink">Horários — {court.name}</h3>
+              <h3 id="horarios-quadra-titulo" className="font-display text-lg font-bold text-ink">{t('Horários — {nome}', { nome: court.name })}</h3>
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Janelas recorrentes em que esta quadra está disponível para reservas. Atletas veem o resumo em cards.
+              {t('Janelas recorrentes em que esta quadra está disponível para reservas. Atletas veem o resumo em cards.')}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
-            aria-label="Fechar"
+            aria-label={t('Fechar')}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">Carregando janelas…</p>
+          <p className="text-sm text-gray-500">{t('Carregando janelas…')}</p>
         ) : isError ? (
           // Falha não é "nenhuma janela": o convite a adicionar a primeira
           // duplicaria as que já existem — e janela duplicada vira horário
           // oferecido duas vezes no calendário.
           <V2ErrorState
             inline
-            title="Não foi possível carregar os horários desta quadra"
-            description="Tente de novo antes de adicionar uma janela."
+            title={t('Não foi possível carregar os horários desta quadra')}
+            description={t('Tente de novo antes de adicionar uma janela.')}
             onRetry={() => refetch()}
           />
         ) : list.length === 0 && !adding ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-paper p-6 text-center">
             <p className="text-sm text-gray-500">
-              Nenhuma janela cadastrada. Adicione a primeira abaixo.
+              {t('Nenhuma janela cadastrada. Adicione a primeira abaixo.')}
             </p>
             <V2Button size="sm" onClick={() => setAdding(true)} className="mt-3">
               <Plus className="mr-1 h-4 w-4" /> Adicionar janela
@@ -237,7 +238,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
           <div className="space-y-4">
             <div className="grid grid-cols-7 gap-1 text-center text-2xs font-bold uppercase tracking-widest text-gray-500">
               {Object.values(WEEKDAY_SHORT_PT).map((d) => (
-                <div key={d} className="rounded bg-gray-50 py-1">{d}</div>
+                <div key={d} className="rounded bg-gray-50 py-1">{t(d)}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -291,14 +292,14 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
                           <div className={cn('font-semibold text-ink', inactive && 'text-gray-400 line-through')}>
                             {summarizeSchedules([s]) || '—'}
                           </div>
-                          {s.label && <div className="text-xs text-gray-500">Rótulo: {s.label}</div>}
+                          {s.label && <div className="text-xs text-gray-500">{t('Rótulo: {rotulo}', { rotulo: s.label })}</div>}
                         </div>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => setEditing(s)}
                             className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
-                            aria-label="Editar janela"
+                            aria-label={t('Editar janela')}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -306,7 +307,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
                             type="button"
                             onClick={() => setDeleting(s)}
                             className="flex h-8 w-8 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
-                            aria-label="Excluir janela"
+                            aria-label={t('Excluir janela')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -327,7 +328,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
           onClick={() => setEditing(null)}
         >
           <div className="w-full max-w-xl rounded-3xl bg-paper-pure p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-display text-lg font-bold text-ink">Editar janela</h3>
+            <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('Editar janela')}</h3>
             <ScheduleForm
               initial={editing}
               onCancel={() => setEditing(null)}
@@ -341,9 +342,9 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={deleting ? 'Excluir janela?' : ''}
-        description="A janela de horário será removida permanentemente. Reservas existentes permanecem."
-        confirmLabel="Excluir"
+        title={deleting ? t('Excluir janela?') : ''}
+        description={t('A janela de horário será removida permanentemente. Reservas existentes permanecem.')}
+        confirmLabel={t('Excluir')}
         onConfirm={handleDelete}
         loading={deleteSchedule.isPending}
       />

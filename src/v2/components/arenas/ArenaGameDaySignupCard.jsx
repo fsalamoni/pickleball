@@ -27,6 +27,7 @@ import {
 } from '@/modules/games/domain/arenaGameDay';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
+import { t } from '@/core/i18n';
 
 export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false, as: Tag = 'li' }) {
   const { user } = useAuth();
@@ -50,18 +51,18 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
   const marcar = async () => {
     try {
       await inscrever.mutateAsync({ gameDay, courtId: porQuadra ? quadraEscolhida : null });
-      toast.success('Presença confirmada. Bom jogo!');
+      toast.success(t('Presença confirmada. Bom jogo!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível marcar presença.');
+      toast.error(err?.message || t('Não foi possível marcar presença.'));
     }
   };
 
   const desmarcar = async () => {
     try {
       await sair.mutateAsync({ gameDayId: gameDay.id, uid: user?.uid, arenaId: gameDay.arena_id });
-      toast.success('Presença desmarcada.');
+      toast.success(t('Presença desmarcada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível desmarcar.');
+      toast.error(err?.message || t('Não foi possível desmarcar.'));
     }
   };
 
@@ -75,8 +76,8 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
               <p className="mt-0.5 text-sm text-gray-500">{arenaGameDayWhenText(gameDay)}</p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-1.5">
-              <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
-              {jaEstou && <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> Inscrito</V2Badge>}
+              <V2Badge tone="neutral">{t(GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format)}</V2Badge>
+              {jaEstou && <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> {t('Inscrito')}</V2Badge>}
             </div>
           </div>
           {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
@@ -84,7 +85,7 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
       )}
       {naPaginaDoDia && jaEstou && (
         <p className="flex items-center gap-1.5 text-sm font-semibold text-green-700">
-          <Check className="h-4 w-4" aria-hidden="true" /> Você está inscrito neste dia de jogo.
+          <Check className="h-4 w-4" aria-hidden="true" /> {t('Você está inscrito neste dia de jogo.')}
         </p>
       )}
 
@@ -92,7 +93,7 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
         {arenaGameDaySlots(gameDay).map((s) => (
           <li key={`${s.court_id}-${s.start_time}`} className="rounded-full border border-gray-200 bg-paper px-2.5 py-1 text-xs font-semibold text-gray-600">
             <LayoutGrid className="mr-1 inline h-3 w-3 text-gray-400" />
-            {s.court_name || 'Quadra'} · {s.start_time}–{s.end_time}
+            {s.court_name || t('Quadra')} · {s.start_time}–{s.end_time}
           </li>
         ))}
       </ul>
@@ -102,8 +103,8 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
         <div className="mt-3">
           <V2ErrorState
             inline
-            title="Não carregou a lista de inscritos"
-            description="Sem ela não dá para saber quantas vagas sobram."
+            title={t('Não carregou a lista de inscritos')}
+            description={t('Sem ela não dá para saber quantas vagas sobram.')}
             onRetry={() => inscritosQ.refetch()}
           />
         </div>
@@ -111,10 +112,10 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
         <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-600">
           <Users className="h-4 w-4 text-gray-400" />
           {porQuadra
-            ? `${vagas.byCourt.reduce((a, c) => a + c.used, 0)} inscrito(s)`
+            ? t('{n} inscrito(s)', { n: vagas.byCourt.reduce((a, c) => a + c.used, 0) })
             : (vagas.limit == null
-              ? `${vagas.used} inscrito(s) · sem limite de vagas`
-              : `${vagas.used} de ${vagas.limit} vagas preenchidas`)}
+              ? t('{n} inscrito(s) · sem limite de vagas', { n: vagas.used })
+              : t('{n} de {limite} vagas preenchidas', { n: vagas.used, limite: vagas.limit }))}
         </p>
       )}
 
@@ -122,7 +123,7 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
           quem ainda não entrou. */}
       {porQuadra && !jaEstou && !semLista && (
         <div className="mt-3">
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Escolha a quadra</p>
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Escolha a quadra')}</p>
           <div className="flex flex-wrap gap-2">
             {vagas.byCourt.map((c) => (
               <button
@@ -136,10 +137,10 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
                   quadraEscolhida === c.court_id ? 'border-ink bg-ink/5' : 'border-gray-200 hover:border-ink/40',
                 )}
               >
-                <span className="block font-bold text-ink">{c.court_name || 'Quadra'}</span>
+                <span className="block font-bold text-ink">{c.court_name || t('Quadra')}</span>
                 <span className="block text-gray-500">{c.start_time}–{c.end_time}</span>
                 <span className="block text-gray-500">
-                  {c.full ? 'lotada' : (c.limit == null ? `${c.used} inscrito(s)` : `${c.left} vaga(s)`)}
+                  {c.full ? t('lotada') : (c.limit == null ? t('{n} inscrito(s)', { n: c.used }) : t('{n} vaga(s)', { n: c.left }))}
                 </span>
               </button>
             ))}
@@ -154,21 +155,21 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
               {!naPaginaDoDia && (
                 <V2Button asChild size="sm">
                   <Link to={`/dia-de-jogo/${gameDay.id}`}>
-                    Abrir dia de jogo <ArrowRight className="h-3.5 w-3.5" />
+                    {t('Abrir dia de jogo')} <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </V2Button>
               )}
               <V2Button variant="ghost" size="sm" onClick={desmarcar} disabled={sair.isPending}>
-                {sair.isPending ? 'Saindo…' : 'Desmarcar presença'}
+                {sair.isPending ? t('Saindo…') : t('Desmarcar presença')}
               </V2Button>
             </>
           ) : (
             <V2Button size="sm" onClick={marcar} disabled={!veredito.ok || inscrever.isPending}>
-              {inscrever.isPending ? 'Confirmando…' : 'Marcar presença'}
+              {inscrever.isPending ? t('Confirmando…') : t('Marcar presença')}
             </V2Button>
           )}
           {isGameDayOpenToParticipants(gameDay) && (
-            <span className="text-xs text-gray-500">Os inscritos também conduzem as partidas.</span>
+            <span className="text-xs text-gray-500">{t('Os inscritos também conduzem as partidas.')}</span>
           )}
         </div>
       )}
@@ -178,7 +179,7 @@ export default function ArenaGameDaySignupCard({ gameDay, naPaginaDoDia = false,
       {!semLista && !jaEstou && !veredito.ok && veredito.message && (
         <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-gray-500">
           <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-          <span>{veredito.message}</span>
+          <span>{t(veredito.message)}</span>
         </p>
       )}
     </Tag>

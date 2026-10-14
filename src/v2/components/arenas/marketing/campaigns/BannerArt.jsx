@@ -17,6 +17,7 @@ import { normalizeHex, readableInk } from '@/modules/arenas/domain/whiteLabel';
 import { ART_LAYOUT } from '@/modules/arenas/domain/bannerArt';
 import { BANNER_SOURCE } from '@/modules/arenas/domain/campaignBanner';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 const RATIO = {
   auto: 'aspect-[16/9] sm:aspect-[2/1]',
@@ -62,7 +63,7 @@ function Chamada({ d }) {
 function Titulo({ d, className, fontSize = FONTE.title }) {
   return (
     <p className={cn('line-clamp-3 font-display font-black leading-[1.05]', className)} style={{ fontSize }}>
-      {d.title || 'Título do banner'}
+      {d.title || t('Título do banner')}
     </p>
   );
 }
@@ -90,7 +91,7 @@ function Rodape({ d, cta, arenaName }) {
             padding: '0.55em 1.2em',
           }}
         >
-          {cta}
+          {t(cta)}
         </span>
       )}
       {arenaName && (
@@ -222,7 +223,7 @@ export default function BannerArt({ banner, cta = '', arenaName = '', ratio = 'a
         )}
         {safeArea && (
           <div className="pointer-events-none absolute inset-y-[15%] inset-x-[10%] rounded-lg border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]">
-            <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-2xs font-bold text-white">área segura</span>
+            <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-2xs font-bold text-white">{t('área segura')}</span>
           </div>
         )}
       </div>

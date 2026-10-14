@@ -71,6 +71,7 @@ import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/booki
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
+import { t, tn, tk, fmtData } from '@/core/i18n';
 
 const STEP = 60;
 
@@ -84,14 +85,14 @@ const STATUS_PRIORITY = {
 };
 
 const BOOKING_STATUS_LABELS = {
-  requested: 'Solicitação em andamento',
-  negotiating: 'Em negociação',
-  confirmed: 'Reservado',
-  pending_payment: 'Aguardando pagamento',
-  checked_in: 'Check-in feito',
-  cancelled: 'Cancelada',
-  withdrawn: 'Desistência',
-  completed: 'Concluída',
+  requested: tk('Solicitação em andamento'),
+  negotiating: tk('Em negociação'),
+  confirmed: tk('Reservado'),
+  pending_payment: tk('Aguardando pagamento'),
+  checked_in: tk('Check-in feito'),
+  cancelled: tk('Cancelada'),
+  withdrawn: tk('Desistência'),
+  completed: tk('Concluída'),
 };
 
 function statusBadgeTone(status) {
@@ -104,8 +105,8 @@ function statusBadgeTone(status) {
 function timeOverlap(slotA, slotB) {
   // slot: { date, start, end } (HH:MM)
   if (slotA.date !== slotB.date) return false;
-  const toMin = (t) => {
-    const [h, m] = t.split(':').map(Number);
+  const toMin = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number);
     return h * 60 + m;
   };
   const aS = toMin(slotA.start), aE = toMin(slotA.end);
@@ -155,7 +156,7 @@ export default function V2DaySlotsDialog({
   const weekday = weekdayOf(date);
   const dateLabel = useMemo(() => {
     const d = new Date(date + 'T12:00:00');
-    return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    return fmtData(d, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   }, [date]);
 
   // Reservas ATIVAS do dia (REQUESTED, NEGOTIATING, CONFIRMED, PENDING_PAYMENT)
@@ -211,7 +212,7 @@ export default function V2DaySlotsDialog({
     const allTimes = new Set();
     for (const r of ranges) {
       const slots = generateTimeSlots(r.start, r.end, STEP);
-      slots.forEach((t) => allTimes.add(t));
+      slots.forEach((hora) => allTimes.add(hora));
     }
     const times = Array.from(allTimes).sort();
 
@@ -348,7 +349,7 @@ export default function V2DaySlotsDialog({
       const r = totalBookingPrice(arena, { courtId: cid || courtId || null, slots: slotsDaQuadra });
       total += r.total;
       minutos += r.minutes;
-      r.hourlyRates.forEach((t) => taxas.add(t));
+      r.hourlyRates.forEach((taxa) => taxas.add(taxa));
     });
     return {
       total: Math.round(total * 100) / 100,
@@ -406,9 +407,9 @@ export default function V2DaySlotsDialog({
     try {
       await cancelBooking.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: false } });
       setSelectedCancel((prev) => prev.filter((x) => x !== booking.id));
-      toast.success('Reserva cancelada.');
+      toast.success(t('Reserva cancelada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível cancelar a reserva.');
+      toast.error(err?.message || t('Não foi possível cancelar a reserva.'));
     }
   }
 
@@ -424,19 +425,19 @@ export default function V2DaySlotsDialog({
       } catch { /* segue cancelando as demais */ }
     }
     setSelectedCancel([]);
-    if (ok > 0) toast.success(`${ok} reserva(s) cancelada(s).`);
-    else toast.error('Não foi possível cancelar as reservas selecionadas.');
+    if (ok > 0) toast.success(t('{n} reserva(s) cancelada(s).', { n: ok }));
+    else toast.error(t('Não foi possível cancelar as reservas selecionadas.'));
   }
 
   async function sendInvites() {
     if (!inviteFor || inviteSel.length === 0) { setInviteFor(null); return; }
     try {
       await inviteToBooking.mutateAsync({ booking: inviteFor, invitees: inviteSel });
-      toast.success('Convite(s) enviado(s).');
+      toast.success(t('Convite(s) enviado(s).'));
       setInviteFor(null);
       setInviteSel([]);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível convidar.');
+      toast.error(err?.message || t('Não foi possível convidar.'));
     }
   }
 
@@ -461,7 +462,7 @@ export default function V2DaySlotsDialog({
               type="button"
               onClick={onClose}
               className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-ink"
-              aria-label="Fechar"
+              aria-label={t('Fechar')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -472,7 +473,7 @@ export default function V2DaySlotsDialog({
               "indisponível" e conclui que a arena fechou sem motivo. */}
           {gameDays.length > 0 && (
             <div className="border-b border-acid/40 bg-acid/10 p-4">
-              <p className="text-2xs font-bold uppercase tracking-widest text-ink/60">Dia de jogo na arena</p>
+              <p className="text-2xs font-bold uppercase tracking-widest text-ink/60">{t('Dia de jogo na arena')}</p>
               <ul className="mt-1.5 space-y-1.5">
                 {gameDays.map((g) => (
                   <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink">
@@ -485,8 +486,8 @@ export default function V2DaySlotsDialog({
                         dizia onde procurar o botão. Já terminado, não oferece. */}
                     {gameDayEndsAt(g) > Date.now() && (
                       <V2Button asChild size="sm">
-                        <Link to={`/dia-de-jogo/${g.id}`} aria-label={`Participar de ${g.title}`}>
-                          <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Participar
+                        <Link to={`/dia-de-jogo/${g.id}`} aria-label={t('Participar de {nome}', { nome: g.title })}>
+                          <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> {t('Participar')}
                         </Link>
                       </V2Button>
                     )}
@@ -494,8 +495,7 @@ export default function V2DaySlotsDialog({
                 ))}
               </ul>
               <p className="mt-1.5 text-xs text-gray-600">
-                As quadras usadas ficam fechadas para reserva neste horário. Para jogar, entre no
-                dia de jogo: lá estão as vagas e a inscrição.
+                {t('As quadras usadas ficam fechadas para reserva neste horário. Para jogar, entre no dia de jogo: lá estão as vagas e a inscrição.')}
               </p>
             </div>
           )}
@@ -503,13 +503,13 @@ export default function V2DaySlotsDialog({
           {/* Filtro de quadra */}
           {courts.length > 1 && (
             <div className="border-b border-gray-100 p-4">
-              <label className="block text-xs font-bold text-gray-500">Filtrar por quadra</label>
+              <label className="block text-xs font-bold text-gray-500">{t('Filtrar por quadra')}</label>
               <select
                 value={courtId}
                 onChange={(e) => { setCourtId(e.target.value); setSelectedSlots([]); }}
                 className="mt-1 w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2 text-sm"
               >
-                <option value="">Todas as quadras</option>
+                <option value="">{t('Todas as quadras')}</option>
                 {courts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
@@ -519,40 +519,41 @@ export default function V2DaySlotsDialog({
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center gap-2 p-8 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t('Carregando…')}
               </div>
             ) : (
               <>
                 {/* Resumo do dia */}
                 <div className="border-b border-gray-100 bg-paper-pure p-4">
-                  <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Resumo do dia</p>
+                  <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Resumo do dia')}</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {/* Tudo aqui é contado em HORÁRIOS — e é o que o texto diz.
                         Antes o mesmo número saía como "2 solicitações em
                         andamento", o que fazia contar reservas; com várias
                         quadras, um horário ocupado não é uma reserva. */}
                     <V2Badge tone="green">
-                      <Check className="h-3 w-3" /> {summary.available} {summary.available === 1 ? 'horário' : 'horários'}
-                      {podeVerPorQuadra ? ' com quadra livre' : (summary.available === 1 ? ' disponível' : ' disponíveis')}
+                      <Check className="h-3 w-3" /> {podeVerPorQuadra
+                        ? tn(summary.available, '{n} horário com quadra livre', '{n} horários com quadra livre')
+                        : tn(summary.available, '{n} horário disponível', '{n} horários disponíveis')}
                     </V2Badge>
                     {summary.pending > 0 && (
                       <V2Badge tone="amber">
-                        <AlertCircle className="h-3 w-3" /> {summary.pending} {summary.pending === 1 ? 'horário' : 'horários'} com solicitação em andamento
+                        <AlertCircle className="h-3 w-3" /> {tn(summary.pending, '{n} horário com solicitação em andamento', '{n} horários com solicitação em andamento')}
                       </V2Badge>
                     )}
                     {summary.confirmed > 0 && (
                       <V2Badge tone="red">
-                        <Check className="h-3 w-3" /> {summary.confirmed} {summary.confirmed === 1 ? 'horário já reservado' : 'horários já reservados'}
+                        <Check className="h-3 w-3" /> {tn(summary.confirmed, '{n} horário já reservado', '{n} horários já reservados')}
                       </V2Badge>
                     )}
                     {summary.unavailable > 0 && (
                       <V2Badge tone="amber">
-                        <Ban className="h-3 w-3" /> {summary.unavailable} {summary.unavailable === 1 ? 'horário indisponível' : 'horários indisponíveis'}
+                        <Ban className="h-3 w-3" /> {tn(summary.unavailable, '{n} horário indisponível', '{n} horários indisponíveis')}
                       </V2Badge>
                     )}
                     {summary.closed > 0 && (
                       <V2Badge tone="neutral">
-                        <X className="h-3 w-3" /> {summary.closed} {summary.closed === 1 ? 'horário fechado' : 'horários fechados'} (sem horário de funcionamento)
+                        <X className="h-3 w-3" /> {tn(summary.closed, '{n} horário fechado', '{n} horários fechados')} {t('(sem horário de funcionamento)')}
                       </V2Badge>
                     )}
                   </div>
@@ -565,11 +566,11 @@ export default function V2DaySlotsDialog({
                   {noSchedule ? (
                     <V2EmptyState
                       icon={Calendar}
-                      title="Arena fechada neste dia"
+                      title={t('Arena fechada neste dia')}
                       description={
                         courtId
-                          ? 'Esta arena não definiu horários abertos para esta quadra neste dia da semana.'
-                          : 'A arena não definiu horários abertos para este dia da semana. Tente outro dia ou outra quadra.'
+                          ? t('Esta arena não definiu horários abertos para esta quadra neste dia da semana.')
+                          : t('A arena não definiu horários abertos para este dia da semana. Tente outro dia ou outra quadra.')
                       }
                     />
                   ) : (
@@ -581,10 +582,9 @@ export default function V2DaySlotsDialog({
                           escolher outro dia com consciência. */}
                       {!hasAvailable && (
                         <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                          <p className="font-bold">Sem horários livres neste dia.</p>
+                          <p className="font-bold">{t('Sem horários livres neste dia.')}</p>
                           <p className="mt-0.5 text-xs">
-                            Está tudo reservado, em negociação ou bloqueado pela arena. Veja abaixo
-                            como o dia está, e tente outro dia — ou outra quadra no filtro acima.
+                            {t('Está tudo reservado, em negociação ou bloqueado pela arena. Veja abaixo como o dia está, e tente outro dia — ou outra quadra no filtro acima.')}
                           </p>
                         </div>
                       )}
@@ -595,7 +595,7 @@ export default function V2DaySlotsDialog({
                           quadras livres" sem saber quais. */}
                       {podeVerPorQuadra && (
                         <div className="mb-3 inline-flex rounded-full border border-gray-200 bg-paper p-1">
-                          {[['horario', 'Por horário'], ['quadra', 'Por quadra']].map(([v, label]) => (
+                          {[['horario', t('Por horário')], ['quadra', t('Por quadra')]].map(([v, label]) => (
                             <button
                               key={v}
                               type="button"
@@ -621,7 +621,7 @@ export default function V2DaySlotsDialog({
                           return (
                             <div key={k} className="flex items-center gap-1">
                               <span className={cn('h-2.5 w-2.5 rounded-full', c.dot)} />
-                              <span className="text-gray-600">{SLOT_STATUS_LABELS[k]}</span>
+                              <span className="text-gray-600">{t(SLOT_STATUS_LABELS[k] || '')}</span>
                             </div>
                           );
                         })}
@@ -645,25 +645,25 @@ export default function V2DaySlotsDialog({
                           const showCourts = freeCourts != null && status === SLOT_STATUS.AVAILABLE;
                           const tooltip = (() => {
                             if (status === SLOT_STATUS.UNAVAILABLE) {
-                              const reason = unavailability?.notes || 'Indisponível';
-                              return `${time} · Indisponível: ${reason}`;
+                              const reason = unavailability?.notes || t('Indisponível');
+                              return `${time} · ${t('Indisponível:')} ${reason}`;
                             }
                             if (status === SLOT_STATUS.PENDING) {
-                              return `${time} · Solicitação: ${booking?.athlete_name || 'outro atleta'}`;
+                              return `${time} · ${t('Solicitação:')} ${booking?.athlete_name || t('outro atleta')}`;
                             }
                             if (status === SLOT_STATUS.CONFIRMED) {
-                              return `${time} · Reservado: ${booking?.athlete_name || 'outro atleta'}`;
+                              return `${time} · ${t('Reservado:')} ${booking?.athlete_name || t('outro atleta')}`;
                             }
                             if (status === SLOT_STATUS.COMPLETED) {
-                              return `${time} · Concluído`;
+                              return `${time} · ${t('Concluído')}`;
                             }
                             if (status === SLOT_STATUS.CLOSED) {
-                              return `${time} · Fechado (sem horário)`;
+                              return `${time} · ${t('Fechado (sem horário)')}`;
                             }
                             if (showCourts) {
-                              return `${time} · ${freeCourts} de ${totalCourts} quadra(s) livre(s)`;
+                              return `${time} · ${t('{livres} de {total} quadra(s) livre(s)', { livres: freeCourts, total: totalCourts })}`;
                             }
-                            return `${time} · ${SLOT_STATUS_LABELS[status]}`;
+                            return `${time} · ${t(SLOT_STATUS_LABELS[status] || '')}`;
                           })();
                           return (
                             <button
@@ -681,7 +681,7 @@ export default function V2DaySlotsDialog({
                             >
                               <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
                               <div className={cn('text-2xs uppercase tracking-widest', c.text)}>
-                                {SLOT_STATUS_LABELS[status]}
+                                {t(SLOT_STATUS_LABELS[status] || '')}
                               </div>
                               {(status === SLOT_STATUS.PENDING || status === SLOT_STATUS.CONFIRMED) && booking?.athlete_name && (
                                 <div className="mt-1 truncate text-2xs italic text-gray-600">
@@ -690,10 +690,10 @@ export default function V2DaySlotsDialog({
                               )}
                               {showCourts && !isSelected && (
                                 <div className="mt-1 text-2xs font-semibold text-green-700">
-                                  {freeCourts}/{totalCourts} quadra{totalCourts === 1 ? '' : 's'}
+                                  {freeCourts}/{tn(totalCourts, '{n} quadra', '{n} quadras')}
                                 </div>
                               )}
-                              {isSelected && <div className="mt-1 flex items-center gap-1 text-2xs font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
+                              {isSelected && <div className="mt-1 flex items-center gap-1 text-2xs font-bold text-green-700"><Check className="h-3 w-3" /> {t('Selecionado')}</div>}
                             </button>
                           );
                         })}
@@ -708,7 +708,7 @@ export default function V2DaySlotsDialog({
                   <div className="border-b border-gray-100 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
-                        <Users className="mr-1 inline h-3 w-3" /> Reservas neste dia ({activeBookingsOfDay.length})
+                        <Users className="mr-1 inline h-3 w-3" /> {t('Reservas neste dia ({n})', { n: activeBookingsOfDay.length })}
                       </p>
                       {selectedCancel.length > 0 && (
                         <button
@@ -717,13 +717,13 @@ export default function V2DaySlotsDialog({
                           disabled={cancelBooking.isPending}
                           className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
                         >
-                          <Trash2 className="h-3 w-3" /> Cancelar selecionadas ({selectedCancel.length})
+                          <Trash2 className="h-3 w-3" /> {t('Cancelar selecionadas ({n})', { n: selectedCancel.length })}
                         </button>
                       )}
                     </div>
                     {myBookingsOfDay.length > 0 && (
                       <p className="mt-1 text-2xs text-gray-500">
-                        Marque suas reservas para cancelar em conjunto, ou cancele/convide em cada uma.
+                        {t('Marque suas reservas para cancelar em conjunto, ou cancele/convide em cada uma.')}
                       </p>
                     )}
                     <ul className="mt-2 space-y-2">
@@ -740,8 +740,8 @@ export default function V2DaySlotsDialog({
                             .map((s) => `${s.start}–${s.end}`)
                             .join(', ');
                           const courtName = b.court_id
-                            ? courts.find((c) => c.id === b.court_id)?.name || 'Quadra'
-                            : 'Qualquer quadra';
+                            ? courts.find((c) => c.id === b.court_id)?.name || t('Quadra')
+                            : t('Qualquer quadra');
                           const mine = isAuthenticated && b.athlete_id === user?.uid;
                           const canCancel = mine && b.status !== BOOKING_STATUS.CANCELLED && b.status !== BOOKING_STATUS.COMPLETED;
                           const acceptedCount = Array.isArray(b.participants)
@@ -761,13 +761,13 @@ export default function V2DaySlotsDialog({
                                     checked={selectedCancel.includes(b.id)}
                                     onChange={() => toggleCancelSelect(b.id)}
                                     className="h-4 w-4 rounded border-gray-300"
-                                    aria-label="Selecionar reserva para cancelar"
+                                    aria-label={t('Selecionar reserva para cancelar')}
                                   />
                                 )}
-                                <span className="font-bold text-ink">{b.athlete_name || 'Atleta'}</span>
-                                {mine && <V2Badge tone="blue">Sua reserva</V2Badge>}
+                                <span className="font-bold text-ink">{b.athlete_name || t('Atleta')}</span>
+                                {mine && <V2Badge tone="blue">{t('Sua reserva')}</V2Badge>}
                                 <V2Badge tone={statusBadgeTone(b.status)}>
-                                  {BOOKING_STATUS_LABELS[b.status] || b.status}
+                                  {t(BOOKING_STATUS_LABELS[b.status] || b.status)}
                                 </V2Badge>
                                 {acceptedCount > 1 && (
                                   <V2Badge tone="neutral"><Users className="h-3 w-3" /> {acceptedCount}</V2Badge>
@@ -791,7 +791,7 @@ export default function V2DaySlotsDialog({
                                 return (
                                   <div className="mt-1 text-xs font-bold text-green-700">
                                     {info.text}
-                                    {info.agreed && <span className="ml-1 font-normal text-gray-500">acordado</span>}
+                                    {info.agreed && <span className="ml-1 font-normal text-gray-500">{t('acordado')}</span>}
                                   </div>
                                 );
                               })()}
@@ -803,7 +803,7 @@ export default function V2DaySlotsDialog({
                                       onClick={() => { setInviteFor(inviteFor?.id === b.id ? null : b); setInviteSel([]); }}
                                       className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-ink hover:bg-paper"
                                     >
-                                      <UserPlus className="h-3 w-3" /> Convidar participantes
+                                      <UserPlus className="h-3 w-3" /> {t('Convidar participantes')}
                                     </button>
                                     {canCancel && (
                                       <button
@@ -812,7 +812,7 @@ export default function V2DaySlotsDialog({
                                         disabled={cancelBooking.isPending}
                                         className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
                                       >
-                                        <Trash2 className="h-3 w-3" /> Cancelar
+                                        <Trash2 className="h-3 w-3" /> {t('Cancelar')}
                                       </button>
                                     )}
                                   </div>
@@ -822,12 +822,12 @@ export default function V2DaySlotsDialog({
                                         value={inviteSel}
                                         onChange={setInviteSel}
                                         exclude={[user?.uid, ...(b.participant_ids || []), ...(b.invited_ids || [])]}
-                                        placeholder="Buscar atleta para convidar…"
+                                        placeholder={t('Buscar atleta para convidar…')}
                                       />
                                       <div className="mt-2 flex justify-end gap-2">
-                                        <V2Button size="sm" variant="ghost" onClick={() => { setInviteFor(null); setInviteSel([]); }}>Fechar</V2Button>
+                                        <V2Button size="sm" variant="ghost" onClick={() => { setInviteFor(null); setInviteSel([]); }}>{t('Fechar')}</V2Button>
                                         <V2Button size="sm" onClick={sendInvites} disabled={inviteToBooking.isPending || inviteSel.length === 0}>
-                                          {inviteToBooking.isPending ? 'Enviando…' : `Convidar (${inviteSel.length})`}
+                                          {inviteToBooking.isPending ? t('Enviando…') : t('Convidar ({n})', { n: inviteSel.length })}
                                         </V2Button>
                                       </div>
                                     </div>
@@ -851,13 +851,13 @@ export default function V2DaySlotsDialog({
                 {unavailabilitiesOfDay.length > 0 && (
                   <div className="border-b border-gray-100 p-4">
                     <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
-                      <Ban className="mr-1 inline h-3 w-3" /> Indisponibilidades ({unavailabilitiesOfDay.length})
+                      <Ban className="mr-1 inline h-3 w-3" /> {t('Indisponibilidades ({n})', { n: unavailabilitiesOfDay.length })}
                     </p>
                     <ul className="mt-2 space-y-1 text-xs text-gray-600">
                       {unavailabilitiesOfDay.map((u) => {
                         const courtName = u.court_id
-                          ? courts.find((c) => c.id === u.court_id)?.name || 'Quadra'
-                          : 'Todas as quadras';
+                          ? courts.find((c) => c.id === u.court_id)?.name || t('Quadra')
+                          : t('Todas as quadras');
                         return (
                           <li key={u.id} className="flex items-center gap-2">
                             <Ban className="h-3 w-3 shrink-0 text-amber-500" />
@@ -881,10 +881,10 @@ export default function V2DaySlotsDialog({
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="h-4 w-4 text-green-700" />
                     <span className="text-sm font-bold text-ink">
-                      {selectedSlots.length} horário{selectedSlots.length > 1 ? 's' : ''} selecionado{selectedSlots.length > 1 ? 's' : ''}
+                      {tn(selectedSlots.length, '{n} horário selecionado', '{n} horários selecionados')}
                     </span>
-                    <button onClick={clearSelection} className="text-xs text-gray-500 underline">
-                      Limpar
+                    <button type="button" onClick={clearSelection} className="text-xs text-gray-500 underline">
+                      {t('Limpar')}
                     </button>
                   </div>
                   {/* O resumo diz QUADRA e HORÁRIOS, agrupado — é o que a
@@ -893,7 +893,7 @@ export default function V2DaySlotsDialog({
                   <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
                     {resumo.porQuadra.map((q) => (
                       <li key={q.court_id || 'qualquer'}>
-                        <strong className="text-ink">{q.nome}</strong>
+                        <strong className="text-ink">{t(q.nome)}</strong>
                         {' · '}
                         {q.slots.map((sl) => `${sl.start}–${sl.end}`).join(', ')}
                       </li>
@@ -901,7 +901,7 @@ export default function V2DaySlotsDialog({
                   </ul>
                   {preco.total > 0 && (
                     <div className="mt-1 text-base font-bold text-green-700">
-                      Total: {formatPrice(preco.total)}
+                      {t('Total:')} {formatPrice(preco.total)}
                       <span className="ml-1 text-xs font-normal text-gray-500">
                         · {priceWithDurationText(preco.total, preco.horas, preco.taxas).replace(`${formatPrice(preco.total)} · `, '')}
                       </span>
@@ -909,14 +909,14 @@ export default function V2DaySlotsDialog({
                   )}
                 </div>
                 <V2Button onClick={handleConfirm} data-dica="arena-continuar">
-                  Continuar
+                  {t('Continuar')}
                 </V2Button>
               </div>
             ) : (
               <p className="text-center text-xs text-gray-500">
                 {hasAvailable
-                  ? 'Toque nos horários que quiser — pode ser mais de uma quadra e mais de um horário.'
-                  : 'Sem horários disponíveis para selecionar neste dia.'}
+                  ? t('Toque nos horários que quiser — pode ser mais de uma quadra e mais de um horário.')
+                  : t('Sem horários disponíveis para selecionar neste dia.')}
               </p>
             )}
           </div>
@@ -953,19 +953,19 @@ function WaitlistButton({ arena, slot }) {
   const already = isOnWaitlist(myWaitlist, user?.uid, { ...slot, court_id: slot.court_id || null });
 
   if (already) {
-    return <V2Badge tone="blue">Na lista de espera</V2Badge>;
+    return <V2Badge tone="blue">{t('Na lista de espera')}</V2Badge>;
   }
   return (
     <V2Button size="sm" variant="secondary" disabled={join.isPending}
       onClick={async () => {
         try {
           await join.mutateAsync({ arena_id: arena.id, date: slot.date, start: slot.start, end: slot.end, court_id: slot.court_id || null });
-          toast.success('Você entrou na lista de espera. Avisaremos se vagar.');
+          toast.success(t('Você entrou na lista de espera. Avisaremos se vagar.'));
         } catch (err) {
-          toast.error(err?.message || 'Não foi possível entrar na lista.');
+          toast.error(err?.message || t('Não foi possível entrar na lista.'));
         }
       }}>
-      Avise-me se vagar
+      {t('Avise-me se vagar')}
     </V2Button>
   );
 }

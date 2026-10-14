@@ -33,6 +33,7 @@ import CouponForm from './CouponForm';
 import CouponUsageReport from './CouponUsageReport';
 import VoucherReception from './VoucherReception';
 import { COUPON_KIND_ICON } from './couponKindUi';
+import { t } from '@/core/i18n';
 
 const TOM_DO_ESTADO = { ativo: 'green', desligado: 'neutral', esgotado: 'amber', vencido: 'amber' };
 
@@ -47,11 +48,11 @@ function diaIso(v) {
 /** Duas abas internas, num seletor compacto — distinto das abas da Central. */
 function Alternador({ valor, onChange }) {
   const opcoes = [
-    { v: 'cupons', label: 'Cupons', icon: Tag },
-    { v: 'uso', label: 'Controle de uso', icon: BarChart3 },
+    { v: 'cupons', label: t('Cupons'), icon: Tag },
+    { v: 'uso', label: t('Controle de uso'), icon: BarChart3 },
   ];
   return (
-    <div role="tablist" aria-label="Cupons" className="inline-flex rounded-full bg-paper p-1">
+    <div role="tablist" aria-label={t('Cupons')} className="inline-flex rounded-full bg-paper p-1">
       {opcoes.map(({ v, label, icon: Icon }) => (
         <button key={v} type="button" role="tab" aria-selected={valor === v} onClick={() => onChange(v)}
           className={cn(
@@ -77,71 +78,75 @@ function CartaoCupom({ cupom, arenaName, onEditar, onRegistrar, onAlternar, onAp
     <div data-cupom={cupom.code} className={cn('rounded-2xl border p-3', desligado ? 'border-gray-100 bg-gray-50 opacity-75' : 'border-gray-100 bg-paper')}>
       <div className="flex items-start justify-between gap-2">
         <p className="inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-2xs font-bold text-gray-600">
-          {Icone && <Icone className="h-3 w-3" />} {COUPON_KIND_META[kind].label}
+          {Icone && <Icone className="h-3 w-3" />} {t(COUPON_KIND_META[kind].label)}
         </p>
-        <V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge>
+        <V2Badge tone={TOM_DO_ESTADO[estado]}>{t(COUPON_STATUS_LABEL[estado])}</V2Badge>
       </div>
 
       {familia !== COUPON_FAMILY.REFERRAL ? (
         // O cupom como o atleta vê — a arte, com o código copiável no canhoto
         // (a arena também copia para mandar a alguém). Onda CD.
         <div className="mt-2">
-          <CouponArt coupon={cupom} code={cupom.code} benefit={couponBenefitText(cupom)} description={cupom.description}
-            footer={ate ? `até ${formatDateShortBR(ate)}` : ''} arenaName={arenaName} copyable
+          <CouponArt coupon={cupom} code={cupom.code} benefit={t(couponBenefitText(cupom))} description={cupom.description}
+            footer={ate ? t('até {data}', { data: formatDateShortBR(ate) }) : ''} arenaName={arenaName} copyable
             notch={desligado ? 'bg-gray-50' : 'bg-paper'} />
         </div>
       ) : (
         <div className="mt-1">
-          <p className="text-sm text-gray-700">{couponBenefitText(cupom)}</p>
+          <p className="text-sm text-gray-700">{t(couponBenefitText(cupom))}</p>
           {cupom.description && <p className="mt-0.5 text-xs text-gray-500">{cupom.description}</p>}
         </div>
       )}
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {cupom.show_public === true && (
-          <span className="inline-flex items-center gap-1 font-bold text-ink"><Eye className="h-3.5 w-3.5" /> Na página da arena</span>
+          <span className="inline-flex items-center gap-1 font-bold text-ink"><Eye className="h-3.5 w-3.5" /> {t('Na página da arena')}</span>
         )}
         {cupom.show_public === true && cupom.show_home === true && (
-          <span className="inline-flex items-center gap-1 font-bold text-ink"><Megaphone className="h-3.5 w-3.5" /> Banner na tela inicial</span>
+          <span className="inline-flex items-center gap-1 font-bold text-ink"><Megaphone className="h-3.5 w-3.5" /> {t('Banner na tela inicial')}</span>
         )}
         {familia !== COUPON_FAMILY.REFERRAL && (
-          <span>{Number(cupom.used_count) || 0}{cupom.max_uses ? ` de ${cupom.max_uses}` : ''} usos</span>
+          <span>{cupom.max_uses
+            ? t('{n} de {max} usos', { n: Number(cupom.used_count) || 0, max: cupom.max_uses })
+            : t('{n} usos', { n: Number(cupom.used_count) || 0 })}</span>
         )}
-        {cupom.min_amount ? <span>{familia === COUPON_FAMILY.REFERRAL ? '1ª reserva' : 'mín.'} a partir de {formatPrice(cupom.min_amount)}</span> : null}
-        {ate ? <span>até {formatDateShortBR(ate)}</span> : null}
+        {cupom.min_amount ? <span>{familia === COUPON_FAMILY.REFERRAL
+          ? t('1ª reserva a partir de {valor}', { valor: formatPrice(cupom.min_amount) })
+          : t('mín. a partir de {valor}', { valor: formatPrice(cupom.min_amount) })}</span> : null}
+        {ate ? <span>{t('até {data}', { data: formatDateShortBR(ate) })}</span> : null}
         {familia === COUPON_FAMILY.REFERRAL
           ? (
             <>
-              {cupom.first_booking_only !== false && <span>só quem nunca reservou aqui</span>}
-              {cupom.max_per_referrer ? <span>até {cupom.max_per_referrer} por pessoa</span> : null}
+              {cupom.first_booking_only !== false && <span>{t('só quem nunca reservou aqui')}</span>}
+              {cupom.max_per_referrer ? <span>{t('até {n} por pessoa', { n: cupom.max_per_referrer })}</span> : null}
             </>
           )
-          : cupom.once_per_user !== false && <span>1 por pessoa</span>}
+          : cupom.once_per_user !== false && <span>{t('1 por pessoa')}</span>}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {familia === COUPON_FAMILY.VOUCHER && !desligado && (
           <V2Button size="sm" variant="secondary" onClick={() => onRegistrar(cupom)}>
-            <ScanLine className="mr-1 h-3.5 w-3.5" /> Registrar uso
+            <ScanLine className="mr-1 h-3.5 w-3.5" /> {t('Registrar uso')}
           </V2Button>
         )}
         <V2Button size="sm" variant="ghost" onClick={() => onEditar(cupom)}>
-          <Pencil className="mr-1 h-3.5 w-3.5" /> {familia === COUPON_FAMILY.REFERRAL ? 'Editar regras' : 'Editar'}
+          <Pencil className="mr-1 h-3.5 w-3.5" /> {familia === COUPON_FAMILY.REFERRAL ? t('Editar regras') : t('Editar')}
         </V2Button>
         <V2Button size="sm" variant="ghost" onClick={() => onAlternar(cupom)}>
-          {desligado ? 'Religar' : 'Desligar'}
+          {desligado ? t('Religar') : t('Desligar')}
         </V2Button>
         <ConfirmDialog
-          title={familia === COUPON_FAMILY.REFERRAL ? 'Apagar as regras do indique e ganhe?' : `Apagar o cupom ${cupom.code}?`}
+          title={familia === COUPON_FAMILY.REFERRAL ? t('Apagar as regras do indique e ganhe?') : t('Apagar o cupom {codigo}?', { codigo: cupom.code })}
           description={familia === COUPON_FAMILY.REFERRAL
-            ? 'Os códigos dos atletas continuam existindo, mas o programa fica sem regras até você criar outras. Se a ideia é pausar, use "Desligar".'
-            : `Apagar leva junto a contagem de ${Number(cupom.used_count) || 0} uso(s) — depois não dá para saber quanto essa promoção rendeu. Se a ideia é só parar de aceitar o código, use "Desligar".`}
-          confirmLabel="Apagar mesmo assim"
+            ? t('Os códigos dos atletas continuam existindo, mas o programa fica sem regras até você criar outras. Se a ideia é pausar, use "Desligar".')
+            : t('Apagar leva junto a contagem de {n} uso(s) — depois não dá para saber quanto essa promoção rendeu. Se a ideia é só parar de aceitar o código, use "Desligar".', { n: Number(cupom.used_count) || 0 })}
+          confirmLabel={t('Apagar mesmo assim')}
           destructive
           onConfirm={() => onApagar(cupom)}
           trigger={(
             <V2Button size="sm" variant="ghost" className="text-red-600">
-              <Trash2 className="mr-1 h-3.5 w-3.5" /> Apagar
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> {t('Apagar')}
             </V2Button>
           )}
         />
@@ -180,25 +185,25 @@ export default function CouponsPanel({ arenaId, arena = null, referralOn = false
   const alternar = async (c) => {
     try {
       await ligar.mutateAsync({ arenaId, couponId: c.id, active: c.active === false });
-      toast.success(c.active === false ? 'Cupom religado.' : 'Cupom desligado.');
+      toast.success(c.active === false ? t('Cupom religado.') : t('Cupom desligado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar o cupom.');
+      toast.error(err?.message || t('Não foi possível alterar o cupom.'));
     }
   };
   const remover = async (c) => {
     try {
       await apagar.mutateAsync({ arenaId, couponId: c.id });
-      toast.success('Cupom apagado.');
+      toast.success(t('Cupom apagado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível apagar.');
+      toast.error(err?.message || t('Não foi possível apagar.'));
     }
   };
 
   const filtros = [
-    { v: 'todas', label: 'Todos' },
+    { v: 'todas', label: t('Todos') },
     ...[COUPON_FAMILY.BOOKING, COUPON_FAMILY.VOUCHER, COUPON_FAMILY.REFERRAL]
       .filter((f) => contagem[f])
-      .map((f) => ({ v: f, label: COUPON_FAMILY_META[f].label })),
+      .map((f) => ({ v: f, label: t(COUPON_FAMILY_META[f].label) })),
   ];
 
   return (
@@ -206,7 +211,7 @@ export default function CouponsPanel({ arenaId, arena = null, referralOn = false
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Tag className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Cupons</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Cupons')}</h2>
         </div>
         <Alternador valor={aba} onChange={setAba} />
       </div>
@@ -219,8 +224,8 @@ export default function CouponsPanel({ arenaId, arena = null, referralOn = false
 
           {isError && (
             <V2ErrorState
-              title="Não foi possível carregar os cupons"
-              description="Isto é uma falha de leitura — não quer dizer que a arena não tenha cupons. Criar um agora poderia repetir um código que já existe."
+              title={t('Não foi possível carregar os cupons')}
+              description={t('Isto é uma falha de leitura — não quer dizer que a arena não tenha cupons. Criar um agora poderia repetir um código que já existe.')}
               onRetry={() => refetch()}
             />
           )}
@@ -230,12 +235,12 @@ export default function CouponsPanel({ arenaId, arena = null, referralOn = false
               <div className="mb-4 flex flex-wrap gap-2">
                 {!form && (
                   <V2Button size="sm" onClick={() => { setForm('novo'); setRecepcao(null); }}>
-                    <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
+                    <Plus className="mr-1.5 h-4 w-4" /> {t('Novo cupom')}
                   </V2Button>
                 )}
                 {temVale && recepcao == null && (
                   <V2Button size="sm" variant="secondary" onClick={() => { setRecepcao('codigo'); setForm(null); }}>
-                    <ScanLine className="mr-1.5 h-4 w-4" /> Registrar uso de vale
+                    <ScanLine className="mr-1.5 h-4 w-4" /> {t('Registrar uso de vale')}
                   </V2Button>
                 )}
               </div>
@@ -267,14 +272,14 @@ export default function CouponsPanel({ arenaId, arena = null, referralOn = false
               {lista.length === 0 && !form && (
                 <V2EmptyState
                   icon={Tag}
-                  title="Nenhum cupom ainda"
-                  description="Desconto, hora grátis, aula, bebida, brinde — um cupom é a forma mais direta de trazer gente numa semana fraca. Comece escolhendo o que ele dá."
-                  action={<V2Button size="sm" onClick={() => setForm('novo')}>Criar o primeiro</V2Button>}
+                  title={t('Nenhum cupom ainda')}
+                  description={t('Desconto, hora grátis, aula, bebida, brinde — um cupom é a forma mais direta de trazer gente numa semana fraca. Comece escolhendo o que ele dá.')}
+                  action={<V2Button size="sm" onClick={() => setForm('novo')}>{t('Criar o primeiro')}</V2Button>}
                 />
               )}
 
               {lista.length > 0 && filtros.length > 2 && (
-                <div role="group" aria-label="Filtrar por tipo" className="mb-3 flex flex-wrap gap-1.5">
+                <div role="group" aria-label={t('Filtrar por tipo')} className="mb-3 flex flex-wrap gap-1.5">
                   {filtros.map((f) => (
                     <button key={f.v} type="button" onClick={() => setFamilia(f.v)} aria-pressed={familia === f.v}
                       className={cn(

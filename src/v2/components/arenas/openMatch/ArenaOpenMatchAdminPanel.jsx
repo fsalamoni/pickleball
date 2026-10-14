@@ -52,6 +52,7 @@ import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import OpenMatchForm from './OpenMatchForm';
+import { t } from '@/core/i18n';
 
 const FORMATO_LABEL = OPEN_SLOT_FORMAT_LABEL;
 
@@ -65,8 +66,8 @@ function EditarJogo({ arenaId, courts, slot, onClose }) {
   if (isError) {
     return (
       <V2Surface>
-        <V2ErrorState title="Não foi possível abrir o dia de jogo deste jogo aberto"
-          description="Ele continua lá — tente de novo." onRetry={() => refetch()} />
+        <V2ErrorState title={t('Não foi possível abrir o dia de jogo deste jogo aberto')}
+          description={t('Ele continua lá — tente de novo.')} onRetry={() => refetch()} />
       </V2Surface>
     );
   }
@@ -86,10 +87,10 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
   const tom = cancelada ? 'red'
     : situacao === 'full' ? 'amber'
       : situacao === 'completed' ? 'neutral' : 'green';
-  const rotulo = cancelada ? 'Cancelado'
-    : situacao === 'full' ? 'Lotado'
-      : situacao === 'completed' ? 'Encerrado'
-        : `${inscritos} de ${total}`;
+  const rotulo = cancelada ? t('Cancelado')
+    : situacao === 'full' ? t('Lotado')
+      : situacao === 'completed' ? t('Encerrado')
+        : t('{n} de {total}', { n: inscritos, total });
 
   const ligado = isLinkedOpenSlot(slot);
   const ativo = !cancelada && situacao !== 'completed';
@@ -103,13 +104,13 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
         <div className="min-w-0">
           <p className="font-display text-base font-bold text-ink">{formatSlotLabel(slot)}</p>
           <p className="mt-0.5 text-xs text-gray-500">
-            {slot.court || 'Sem quadra definida'}
-            {slot.format ? ` · ${FORMATO_LABEL[slot.format] || slot.format}` : ''}
+            {slot.court || t('Sem quadra definida')}
+            {slot.format ? ` · ${t(FORMATO_LABEL[slot.format] || slot.format)}` : ''}
           </p>
           {ligado && (
             <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-ink">
               <Swords className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-              Dia de jogo{slot.game_format ? ` · ${openMatchFormatLabel(slot.game_format)}` : ''}
+              {t('Dia de jogo')}{slot.game_format ? ` · ${t(openMatchFormatLabel(slot.game_format))}` : ''}
             </p>
           )}
         </div>
@@ -126,13 +127,13 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-        {faixa && <V2Badge tone="blue">Nível {faixa}</V2Badge>}
+        {faixa && <V2Badge tone="blue">{t('Nível {faixa}', { faixa })}</V2Badge>}
         {Number.isFinite(slot.price) && slot.price > 0 && (
-          <V2Badge tone="neutral">{formatPrice(Number(slot.price))} por atleta</V2Badge>
+          <V2Badge tone="neutral">{t('{valor} por atleta', { valor: formatPrice(Number(slot.price)) })}</V2Badge>
         )}
         {!slot.court_id && (
           <span className="inline-flex items-center gap-1 text-amber-700">
-            <AlertTriangle className="h-3 w-3" /> não ocupa a quadra
+            <AlertTriangle className="h-3 w-3" /> {t('não ocupa a quadra')}
           </span>
         )}
       </div>
@@ -143,7 +144,7 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
           eram os três. Quem não está no diretório aparece como "Atleta". */}
       {pessoas.length > 0 && (
         <div className="mt-3">
-          <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">Quem vem</p>
+          <p className="text-2xs font-bold uppercase tracking-wider text-gray-500">{t('Quem vem')}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {pessoas.map((p) => (
               <span key={p.uid} className="inline-flex items-center gap-1.5 rounded-full border border-gray-100 bg-paper py-0.5 pl-0.5 pr-2.5 text-xs text-ink">
@@ -159,11 +160,11 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
           <BellRing className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
           <span>
             {fila.esperando > 0 && (
-              <>Fila de espera: <strong className="text-ink">{fila.esperando}</strong>
+              <>{t('Fila de espera:')} <strong className="text-ink">{fila.esperando}</strong>
                 {fila.nomes.length > 0 ? ` (${fila.nomes.slice(0, 3).join(', ')}${fila.nomes.length > 3 ? '…' : ''})` : ''}. </>
             )}
             {fila.chamado && (
-              <>Chamado agora: <strong className="text-ink">{fila.chamado.athlete_name || 'Atleta'}</strong> — tem até o prazo para confirmar.</>
+              <>{t('Chamado agora:')} <strong className="text-ink">{fila.chamado.athlete_name || t('Atleta')}</strong> {t('— tem até o prazo para confirmar.')}</>
             )}
           </span>
         </p>
@@ -173,43 +174,43 @@ function VagaCard({ slot, onCancel, onDelete, onEdit, onLink, pessoas = [], fila
         {ligado && !cancelada && (
           <V2Button asChild size="sm">
             <Link to={`/dia-de-jogo/${slot.game_day_id}`}>
-              Organizar o jogo <ArrowRight className="h-4 w-4" />
+              {t('Organizar o jogo')} <ArrowRight className="h-4 w-4" />
             </Link>
           </V2Button>
         )}
         {ligado && ativo && onEdit && (
           <V2Button variant="ghost" size="sm" onClick={() => onEdit(slot)}>
-            <Pencil className="h-4 w-4" /> Editar
+            <Pencil className="h-4 w-4" /> {t('Editar')}
           </V2Button>
         )}
         {podeLigar && onLink && (
           <V2Button variant="secondary" size="sm" onClick={() => onLink(slot)}>
-            <Swords className="h-4 w-4" /> Criar o dia de jogo
+            <Swords className="h-4 w-4" /> {t('Criar o dia de jogo')}
           </V2Button>
         )}
         {!cancelada && situacao !== 'completed' && (
           <ConfirmDialog
-            title="Cancelar este jogo aberto?"
+            title={t('Cancelar este jogo aberto?')}
             description={
-              `${inscritos > 0 ? `${inscritos} atleta(s) já estão inscritos e serão avisados. ` : ''}`
-              + `${ligado ? 'O dia de jogo é encerrado junto, e as quadras voltam a ficar livres para reserva.' : 'A quadra volta a ficar livre para reserva.'}`
+              `${inscritos > 0 ? `${t('{n} atleta(s) já estão inscritos e serão avisados.', { n: inscritos })} ` : ''}`
+              + `${ligado ? t('O dia de jogo é encerrado junto, e as quadras voltam a ficar livres para reserva.') : t('A quadra volta a ficar livre para reserva.')}`
             }
-            confirmLabel="Cancelar jogo"
+            confirmLabel={t('Cancelar jogo')}
             onConfirm={() => onCancel(slot.id)}
-            trigger={<V2Button variant="ghost" size="sm">Cancelar jogo</V2Button>}
+            trigger={<V2Button variant="ghost" size="sm">{t('Cancelar jogo')}</V2Button>}
           />
         )}
         <ConfirmDialog
-          title="Excluir definitivamente?"
+          title={t('Excluir definitivamente?')}
           description={ligado
-            ? 'O jogo aberto some do histórico e o dia de jogo é encerrado (o que já se jogou nele continua registrado). Para apenas tirar do ar, prefira cancelar.'
-            : 'O registro some do histórico. Para apenas tirar do ar, prefira cancelar.'}
-          confirmLabel="Excluir"
+            ? t('O jogo aberto some do histórico e o dia de jogo é encerrado (o que já se jogou nele continua registrado). Para apenas tirar do ar, prefira cancelar.')
+            : t('O registro some do histórico. Para apenas tirar do ar, prefira cancelar.')}
+          confirmLabel={t('Excluir')}
           destructive
           onConfirm={() => onDelete(slot.id)}
           trigger={(
             <V2Button variant="ghost" size="sm" className="text-red-600">
-              <Trash2 className="h-4 w-4" /> Excluir
+              <Trash2 className="h-4 w-4" /> {t('Excluir')}
             </V2Button>
           )}
         />
@@ -259,44 +260,41 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
   const abrirLigacao = (slot) => setFormulario({ mode: 'link', slot });
 
   const aoCancelar = (id) => cancelar.mutateAsync({ slotId: id })
-    .then(() => toast.success('Jogo cancelado. A quadra voltou a ficar livre.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível cancelar.'));
+    .then(() => toast.success(t('Jogo cancelado. A quadra voltou a ficar livre.')))
+    .catch((e) => toast.error(e?.message || t('Não foi possível cancelar.')));
   const aoExcluir = (id) => excluir.mutateAsync(id)
-    .then(() => toast.success('Excluído.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível excluir.'));
+    .then(() => toast.success(t('Excluído.')))
+    .catch((e) => toast.error(e?.message || t('Não foi possível excluir.')));
 
   return (
     <div className="space-y-4">
       <V2Surface>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-bold text-ink">Jogo aberto</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Jogo aberto')}</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Publique um horário com vagas e deixe os atletas do nível certo preencherem — sem
-              ninguém precisar montar o grupo. O jogo aparece na página da arena e vira um dia de
-              jogo: sorteio, placar, ranking do dia e telão.
+              {t('Publique um horário com vagas e deixe os atletas do nível certo preencherem — sem ninguém precisar montar o grupo. O jogo aparece na página da arena e vira um dia de jogo: sorteio, placar, ranking do dia e telão.')}
             </p>
           </div>
           {!formulario && !falhouQuadras && (
             <V2Button onClick={() => setFormulario({ mode: 'create' })}>
-              <Plus className="h-4 w-4" /> Publicar jogo
+              <Plus className="h-4 w-4" /> {t('Publicar jogo')}
             </V2Button>
           )}
         </div>
 
         {falhouQuadras && (
-          <V2ErrorState inline className="mt-4" title="Não foi possível carregar as quadras"
-            description="Sem elas não dá para publicar nem editar um jogo — tente de novo." onRetry={() => recarregarQuadras()} />
+          <V2ErrorState inline className="mt-4" title={t('Não foi possível carregar as quadras')}
+            description={t('Sem elas não dá para publicar nem editar um jogo — tente de novo.')} onRetry={() => recarregarQuadras()} />
         )}
 
         {!falhouQuadras && !carregandoQuadras && quadrasAtivas.length === 0 && (
           <p className="mt-4 flex gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Esta arena ainda não tem quadras ativas. O jogo aberto acontece em quadras — cadastre
-              ao menos uma para publicar.{' '}
+              {t('Esta arena ainda não tem quadras ativas. O jogo aberto acontece em quadras — cadastre ao menos uma para publicar.')}{' '}
               <Link to={`/arenas/${arenaId}/gerir?aba=quadras`} className="font-bold underline">
-                Cadastrar quadras
+                {t('Cadastrar quadras')}
               </Link>
             </span>
           </p>
@@ -319,8 +317,8 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
 
       {isError ? (
         <V2Surface>
-          <V2ErrorState title="Não foi possível carregar os jogos abertos"
-            description="Os jogos publicados continuam lá — tente de novo." onRetry={() => refetch()} />
+          <V2ErrorState title={t('Não foi possível carregar os jogos abertos')}
+            description={t('Os jogos publicados continuam lá — tente de novo.')} onRetry={() => refetch()} />
         </V2Surface>
       ) : carregandoVagas ? (
         <V2Skeleton className="h-48" />
@@ -329,9 +327,9 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
           <V2Surface>
             <V2EmptyState
               icon={CalendarDays}
-              title="Nenhum jogo aberto ainda"
-              description="Escolha um horário que costuma ficar vazio e publique. Quem estiver no nível certo entra sozinho."
-              action={<V2Button onClick={() => setFormulario({ mode: 'create' })}><Plus className="h-4 w-4" /> Publicar o primeiro</V2Button>}
+              title={t('Nenhum jogo aberto ainda')}
+              description={t('Escolha um horário que costuma ficar vazio e publique. Quem estiver no nível certo entra sozinho.')}
+              action={<V2Button onClick={() => setFormulario({ mode: 'create' })}><Plus className="h-4 w-4" /> {t('Publicar o primeiro')}</V2Button>}
             />
           </V2Surface>
         )
@@ -339,10 +337,10 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
         <>
           <V2Surface>
             <h3 className="mb-3 font-display text-base font-bold text-ink">
-              Próximos <V2Badge tone="neutral">{futuras.length}</V2Badge>
+              {t('Próximos')} <V2Badge tone="neutral">{futuras.length}</V2Badge>
             </h3>
             {futuras.length === 0 ? (
-              <p className="text-sm text-gray-500">Nada marcado daqui para a frente.</p>
+              <p className="text-sm text-gray-500">{t('Nada marcado daqui para a frente.')}</p>
             ) : (
               <div className="space-y-2">
                 {futuras.map((s) => (
@@ -356,7 +354,7 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
           {passadas.length > 0 && (
             <V2Surface>
               <h3 className="mb-3 font-display text-base font-bold text-gray-500">
-                Já aconteceram <V2Badge tone="neutral">{passadas.length}</V2Badge>
+                {t('Já aconteceram')} <V2Badge tone="neutral">{passadas.length}</V2Badge>
               </h3>
               <div className="space-y-2">
                 {passadas.slice(0, 10).map((s) => (
@@ -371,9 +369,7 @@ export default function ArenaOpenMatchAdminPanel({ arena }) {
 
       <p className="flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        O jogo aberto ocupa as quadras no calendário, como uma reserva, e cada um é um dia de jogo —
-        em &quot;Organizar o jogo&quot; você sorteia, lança os resultados e abre o telão. Quando alguém
-        sai de um jogo lotado, o próximo da fila é chamado sozinho e tem um prazo para confirmar.
+        {t('O jogo aberto ocupa as quadras no calendário, como uma reserva, e cada um é um dia de jogo — em "Organizar o jogo" você sorteia, lança os resultados e abre o telão. Quando alguém sai de um jogo lotado, o próximo da fila é chamado sozinho e tem um prazo para confirmar.')}
       </p>
     </div>
   );

@@ -25,6 +25,7 @@ import { myOrderView, shopAvailable } from '@/modules/arenas/domain/shop';
 import ShopProductCard from './ShopProductCard';
 import MyOrderCard from './MyOrderCard';
 import { V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const VITRINE = 6;
 
@@ -56,25 +57,25 @@ export default function ArenaShopSection({ arena }) {
     <V2Surface className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <ShoppingBag className="h-4 w-4" /> Loja
+          <ShoppingBag className="h-4 w-4" /> {t('Loja')}
         </h3>
         {produtos.length > 0 && (
           <Link to={lojaUrl} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-            {vitrine && produtos.length > VITRINE ? `Ver tudo (${produtos.length})` : 'Abrir a loja'} <ArrowRight className="h-3.5 w-3.5" />
+            {vitrine && produtos.length > VITRINE ? t('Ver tudo ({n})', { n: produtos.length }) : t('Abrir a loja')} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}
       </div>
-      <p className="mt-1 text-xs text-gray-500">Peça pelo aplicativo e retire no balcão, sem fila.</p>
+      <p className="mt-1 text-xs text-gray-500">{t('Peça pelo aplicativo e retire no balcão, sem fila.')}</p>
 
       {falhou && (
-        <V2ErrorState inline className="mt-3" title="Não foi possível carregar a loja"
-          description="Tente de novo em instantes." onRetry={() => produtosQ.refetch()} />
+        <V2ErrorState inline className="mt-3" title={t('Não foi possível carregar a loja')}
+          description={t('Tente de novo em instantes.')} onRetry={() => produtosQ.refetch()} />
       )}
       {produtosQ.isLoading && <V2Skeleton className="mt-3 h-20 rounded-2xl" />}
 
       {meusAbertos.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">Seus pedidos aqui</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Seus pedidos aqui')}</p>
           <div className="mt-2 space-y-2">
             {meusAbertos.map((s) => <MyOrderCard key={s.id} sale={s} uid={user?.uid} myPayments={pagamentos} />)}
           </div>
@@ -94,7 +95,7 @@ export default function ArenaShopSection({ arena }) {
         >
           <span className="inline-flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" />
-            {vitrine ? 'Fazer um pedido' : 'Ver o que a arena vende e fazer um pedido'}
+            {vitrine ? t('Fazer um pedido') : t('Ver o que a arena vende e fazer um pedido')}
           </span>
           <ArrowRight className="h-4 w-4 shrink-0" />
         </Link>

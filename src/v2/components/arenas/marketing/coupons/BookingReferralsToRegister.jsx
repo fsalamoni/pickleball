@@ -19,6 +19,7 @@ import { normalizeReferralCode, pendingBookingReferrals } from '@/modules/arenas
 import { bookingSlots } from '@/modules/arenas/domain/booking';
 import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 export default function BookingReferralsToRegister({ arenaId }) {
   const { data: reservas, isError, refetch } = useArenaBookings(arenaId);
@@ -26,7 +27,7 @@ export default function BookingReferralsToRegister({ arenaId }) {
 
   if (isError) {
     return (
-      <V2ErrorState inline className="mt-5" title="Não foi possível carregar as indicações das reservas" onRetry={() => refetch()} />
+      <V2ErrorState inline className="mt-5" title={t('Não foi possível carregar as indicações das reservas')} onRetry={() => refetch()} />
     );
   }
   if (!Array.isArray(reservas)) return null;
@@ -36,18 +37,18 @@ export default function BookingReferralsToRegister({ arenaId }) {
   const registrar = async (booking) => {
     try {
       const r = await aplicar.mutateAsync({ booking });
-      if (r?.status === 'aplicada') toast.success('Indicação registrada e creditada.');
-      else if (r?.status === 'recusada') toast.error(`Indicação não aplicada: ${r.reason}`);
-      else toast.error('As regras do programa não carregaram. Tente de novo.');
+      if (r?.status === 'aplicada') toast.success(t('Indicação registrada e creditada.'));
+      else if (r?.status === 'recusada') toast.error(t('Indicação não aplicada: {motivo}', { motivo: r.reason }));
+      else toast.error(t('As regras do programa não carregaram. Tente de novo.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar a indicação.');
+      toast.error(err?.message || t('Não foi possível registrar a indicação.'));
     }
   };
 
   return (
     <section aria-labelledby="indicacoes-reservas" className="mt-5">
       <h3 id="indicacoes-reservas" className="mb-2 flex items-center gap-2 font-display text-base font-bold text-ink">
-        <Handshake className="h-4 w-4" /> Indicações que chegaram com reservas
+        <Handshake className="h-4 w-4" /> {t('Indicações que chegaram com reservas')}
       </h3>
       {toRegister.length > 0 && (
         <ul className="space-y-2">
@@ -56,14 +57,14 @@ export default function BookingReferralsToRegister({ arenaId }) {
             return (
               <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
                 <div className="min-w-0 text-sm">
-                  <p className="font-bold text-ink">{b.athlete_name || 'Atleta'}</p>
+                  <p className="font-bold text-ink">{b.athlete_name || t('Atleta')}</p>
                   <p className="text-xs text-amber-900">
-                    Código {normalizeReferralCode(b.referral.code)}
-                    {primeiro ? ` · reserva de ${formatSlotLabel(primeiro)}` : ''} · reserva já confirmada
+                    {t('Código {codigo}', { codigo: normalizeReferralCode(b.referral.code) })}
+                    {primeiro ? ` · ${t('reserva de {quando}', { quando: formatSlotLabel(primeiro) })}` : ''} · {t('reserva já confirmada')}
                   </p>
                 </div>
                 <V2Button size="sm" disabled={aplicar.isPending} onClick={() => registrar(b)}>
-                  Conferir e registrar
+                  {t('Conferir e registrar')}
                 </V2Button>
               </li>
             );
@@ -72,10 +73,8 @@ export default function BookingReferralsToRegister({ arenaId }) {
       )}
       {awaitingConfirmation.length > 0 && (
         <p className="mt-2 text-xs text-gray-500">
-          {awaitingConfirmation.length === 1
-            ? '1 pedido de reserva chegou com código de indicação'
-            : `${awaitingConfirmation.length} pedidos de reserva chegaram com código de indicação`}
-          {' '}— ele é conferido e creditado quando você confirmar a reserva, em Reservas.
+          {tn(awaitingConfirmation.length, '{n} pedido de reserva chegou com código de indicação', '{n} pedidos de reserva chegaram com código de indicação')}
+          {' '}{t('— ele é conferido e creditado quando você confirmar a reserva, em Reservas.')}
         </p>
       )}
     </section>

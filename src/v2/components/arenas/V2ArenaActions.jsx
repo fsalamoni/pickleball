@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { V2Button } from '@/v2/ui/primitives';
 import { useMyFavoriteArenas, useToggleFavorite } from '@/modules/arenas/hooks/useArenas';
+import { t } from '@/core/i18n';
 
 const ArenaShareDialog = lazy(() => import('@/modules/arenas/components/ArenaShareDialog'));
 
@@ -18,7 +19,7 @@ export function V2FavoriteArenaButton({ arena, className }) {
     try {
       await toggle.mutateAsync({ arena, isFavorite });
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar os favoritos.');
+      toast.error(err?.message || t('Não foi possível atualizar os favoritos.'));
     }
   }
 
@@ -30,8 +31,8 @@ export function V2FavoriteArenaButton({ arena, className }) {
       onClick={handleClick}
       disabled={toggle.isPending}
       aria-pressed={isFavorite}
-      aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-      title={isFavorite ? 'Remover dos favoritos' : 'Favoritar'}
+      aria-label={isFavorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')}
+      title={isFavorite ? t('Remover dos favoritos') : t('Favoritar')}
     >
       <Heart className={cn('h-4 w-4', isFavorite && 'fill-red-500 text-red-500')} />
     </V2Button>
@@ -45,7 +46,7 @@ export function V2ArenaShareButton({ arena, className }) {
     <>
       <V2Button size="sm" variant="ghost" className={className} onClick={() => setOpen(true)}>
         <Share2 className="h-4 w-4" />
-        <span className="hidden sm:inline">Compartilhar</span>
+        <span className="hidden sm:inline">{t('Compartilhar')}</span>
       </V2Button>
       {open && (
         <Suspense fallback={null}>

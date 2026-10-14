@@ -47,6 +47,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
   V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 
 function AulaForm({ arenaId, aula, coaches, courts, onClose }) {
@@ -81,10 +82,10 @@ function AulaForm({ arenaId, aula, coaches, courts, onClose }) {
     try {
       if (aula) await editar.mutateAsync({ arenaId, classId: aula.id, input });
       else await criar.mutateAsync({ arenaId, input });
-      toast.success(aula ? 'Aula atualizada.' : 'Aula publicada na agenda.');
+      toast.success(aula ? t('Aula atualizada.') : t('Aula publicada na agenda.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar a aula.');
+      toast.error(err?.message || t('Não foi possível salvar a aula.'));
     }
   };
 
@@ -92,75 +93,75 @@ function AulaForm({ arenaId, aula, coaches, courts, onClose }) {
     <form onSubmit={submit} className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink">
-          {aula ? 'Editar aula' : 'Nova aula na agenda'}
+          {aula ? t('Editar aula') : t('Nova aula na agenda')}
         </h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <V2Field label="Professor" htmlFor="au-prof">
+        <V2Field label={t('Professor')} htmlFor="au-prof">
           <select id="au-prof" value={form.coach_id} onChange={(e) => set({ coach_id: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            <option value="">A definir</option>
+            <option value="">{t('A definir')}</option>
             {coaches.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </V2Field>
         <V2Field
-          label="Quadra" htmlFor="au-quadra"
-          hint={form.court_id ? 'A quadra sai da venda neste horário.' : 'Vazio = não ocupa quadra.'}
+          label={t('Quadra')} htmlFor="au-quadra"
+          hint={form.court_id ? t('A quadra sai da venda neste horário.') : t('Vazio = não ocupa quadra.')}
         >
           <select id="au-quadra" value={form.court_id} onChange={(e) => set({ court_id: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            <option value="">Nenhuma</option>
+            <option value="">{t('Nenhuma')}</option>
             {courts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </V2Field>
-        <V2Field label="Data" htmlFor="au-data">
+        <V2Field label={t('Data')} htmlFor="au-data">
           <V2Input id="au-data" type="date" required value={form.date}
             onChange={(e) => set({ date: e.target.value })} />
         </V2Field>
-        <V2Field label="Começa" htmlFor="au-ini">
+        <V2Field label={t('Começa')} htmlFor="au-ini">
           <V2Input id="au-ini" type="time" required value={form.start}
             onChange={(e) => set({ start: e.target.value })} />
         </V2Field>
-        <V2Field label="Termina" htmlFor="au-fim">
+        <V2Field label={t('Termina')} htmlFor="au-fim">
           <V2Input id="au-fim" type="time" required value={form.end}
             onChange={(e) => set({ end: e.target.value })} />
         </V2Field>
-        <V2Field label="Formato" htmlFor="au-formato" hint={CLASS_FORMAT_META[form.format]?.hint}>
+        <V2Field label={t('Formato')} htmlFor="au-formato" hint={CLASS_FORMAT_META[form.format]?.hint ? t(CLASS_FORMAT_META[form.format].hint) : undefined}>
           <select id="au-formato" value={form.format} onChange={(e) => set({ format: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            {Object.entries(CLASS_FORMAT_META).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+            {Object.entries(CLASS_FORMAT_META).map(([k, m]) => <option key={k} value={k}>{t(m.label)}</option>)}
           </select>
         </V2Field>
-        <V2Field label="Nível" htmlFor="au-nivel">
+        <V2Field label={t('Nível')} htmlFor="au-nivel">
           <select id="au-nivel" value={form.level} onChange={(e) => set({ level: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            {Object.entries(COACH_LEVEL_META).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+            {Object.entries(COACH_LEVEL_META).map(([k, m]) => <option key={k} value={k}>{t(m.label)}</option>)}
           </select>
         </V2Field>
-        <V2Field label="Vagas" htmlFor="au-vagas">
+        <V2Field label={t('Vagas')} htmlFor="au-vagas">
           <V2Input id="au-vagas" type="number" min="1" max="50" required value={form.max_students}
             onChange={(e) => set({ max_students: e.target.value })} />
         </V2Field>
-        <V2Field label="Preço por aluno (R$)" htmlFor="au-preco">
+        <V2Field label={t('Preço por aluno (R$)')} htmlFor="au-preco">
           <V2Input id="au-preco" type="number" min="0" step="0.01" required value={form.price}
             onChange={(e) => set({ price: e.target.value })} />
         </V2Field>
       </div>
 
-      <V2Field label="Observações" htmlFor="au-obs" className="mt-3">
+      <V2Field label={t('Observações')} htmlFor="au-obs" className="mt-3">
         <V2Textarea id="au-obs" rows={2} maxLength={500}
-          placeholder="O que levar, o que vai ser trabalhado…"
+          placeholder={t('O que levar, o que vai ser trabalhado…')}
           value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
       </V2Field>
 
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={criar.isPending || editar.isPending}>
-          {aula ? 'Salvar' : 'Publicar aula'}
+          {aula ? t('Salvar') : t('Publicar aula')}
         </V2Button>
       </div>
     </form>
@@ -192,39 +193,39 @@ function AlunosDaAula({ classId, arenaId, podeGerir, coachId }) {
   if (consulta.isError) {
     return (
       <p className="mt-2 text-xs text-red-700">
-        Não foi possível carregar os alunos agora.{' '}
-        <button type="button" className="font-bold underline" onClick={() => consulta.refetch()}>Tentar de novo</button>
+        {t('Não foi possível carregar os alunos agora.')}{' '}
+        <button type="button" className="font-bold underline" onClick={() => consulta.refetch()}>{t('Tentar de novo')}</button>
       </p>
     );
   }
   if (alunos.length === 0) {
-    return <p className="mt-2 text-xs text-gray-500">Ninguém matriculado ainda.</p>;
+    return <p className="mt-2 text-xs text-gray-500">{t('Ninguém matriculado ainda.')}</p>;
   }
 
   return (
     <ul className="mt-2 space-y-1.5">
       {alunos.map((a) => (
         <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-paper-pure p-2">
-          <span className="text-sm text-ink">{a.athlete_name || 'Aluno'}</span>
+          <span className="text-sm text-ink">{a.athlete_name || t('Aluno')}</span>
           <div className="flex items-center gap-1.5">
-            <V2Badge tone={a.paid ? 'green' : 'amber'}>{a.paid ? 'Pago' : 'A receber'}</V2Badge>
+            <V2Badge tone={a.paid ? 'green' : 'amber'}>{a.paid ? t('Pago') : t('A receber')}</V2Badge>
             {podeGerir && (<>
             <V2Button size="sm" variant="ghost" disabled={marcarPago.isPending}
               onClick={() => marcarPago.mutateAsync({ bookingId: a.id, paid: !a.paid })
-                .then(() => toast.success(a.paid ? 'Pagamento desfeito.' : 'Pagamento registrado.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível.'))}>
-              {a.paid ? 'Desfazer' : 'Recebi'}
+                .then(() => toast.success(a.paid ? t('Pagamento desfeito.') : t('Pagamento registrado.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível.')))}>
+              {a.paid ? t('Desfazer') : t('Recebi')}
             </V2Button>
             <ConfirmDialog
-              title={`Tirar ${a.athlete_name || 'o aluno'} da aula?`}
-              description="A vaga volta a ficar disponível."
-              confirmLabel="Tirar da aula"
+              title={a.athlete_name ? t('Tirar {nome} da aula?', { nome: a.athlete_name }) : t('Tirar o aluno da aula?')}
+              description={t('A vaga volta a ficar disponível.')}
+              confirmLabel={t('Tirar da aula')}
               destructive
               onConfirm={() => cancelar.mutateAsync({ arenaId, bookingId: a.id })
-                .then(() => toast.success('Matrícula cancelada.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível.'))}
+                .then(() => toast.success(t('Matrícula cancelada.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível.')))}
               trigger={(
-                <button type="button" aria-label="Tirar da aula"
+                <button type="button" aria-label={t('Tirar da aula')}
                   className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
                   <X className="h-3 w-3" />
                 </button>
@@ -266,21 +267,21 @@ function CartaoDaAula({
             {formatDateShortBR(aula.date)} · {aula.start}–{aula.end}
           </p>
           <p className="mt-0.5 text-sm text-gray-600">
-            {aula.coach_name || 'Professor a definir'}
+            {aula.coach_name || t('Professor a definir')}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-          <V2Badge tone="neutral">{formato.label}</V2Badge>
-          <V2Badge tone="neutral">{nivel.label}</V2Badge>
-          {aula.status === CLASS_STATUS.CANCELLED && <V2Badge tone="red">Cancelada</V2Badge>}
-          {aula.status === CLASS_STATUS.COMPLETED && <V2Badge tone="green">Dada</V2Badge>}
+          <V2Badge tone="neutral">{t(formato.label)}</V2Badge>
+          <V2Badge tone="neutral">{t(nivel.label)}</V2Badge>
+          {aula.status === CLASS_STATUS.CANCELLED && <V2Badge tone="red">{t('Cancelada')}</V2Badge>}
+          {aula.status === CLASS_STATUS.COMPLETED && <V2Badge tone="green">{t('Dada')}</V2Badge>}
         </div>
       </div>
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {quadra && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {quadra.name}</span>}
         <span className="inline-flex items-center gap-1">
-          <Users className="h-3.5 w-3.5" /> {aula.enrolled || 0}/{aula.max_students} {vagas > 0 ? `· ${vagas} vaga(s)` : '· lotada'}
+          <Users className="h-3.5 w-3.5" /> {aula.enrolled || 0}/{aula.max_students} {vagas > 0 ? `· ${t('{n} vaga(s)', { n: vagas })}` : `· ${t('lotada')}`}
         </span>
         <span className="font-bold text-ink">{formatPrice(aula.price)}</span>
       </div>
@@ -296,7 +297,7 @@ function CartaoDaAula({
       {/* A divisão só interessa a quem recebe. Para o aluno é ruído. */}
       {(podeGerir || souOProfessor) && aberta && Number(aula.price) > 0 && (
         <p className="mt-1.5 text-xs text-gray-500">
-          Divisão por aluno: arena {formatPrice(divisao.arena)} · professor {formatPrice(divisao.coach)}
+          {t('Divisão por aluno: arena {arena} · professor {professor}', { arena: formatPrice(divisao.arena), professor: formatPrice(divisao.coach) })}
           {divisao.pct > 0 ? ` (${divisao.pct}%)` : ''}
         </p>
       )}
@@ -306,55 +307,55 @@ function CartaoDaAula({
         {!podeGerir && !souOProfessor && isAuthenticated && aberta && !passou && (
           minhaMatricula ? (
             <ConfirmDialog
-              title="Desmarcar esta aula?"
-              description="A sua vaga volta para a arena. Dá para se matricular de novo se sobrar lugar."
-              confirmLabel="Desmarcar"
+              title={t('Desmarcar esta aula?')}
+              description={t('A sua vaga volta para a arena. Dá para se matricular de novo se sobrar lugar.')}
+              confirmLabel={t('Desmarcar')}
               destructive
               onConfirm={() => cancelarMatricula.mutateAsync({ arenaId, bookingId: minhaMatricula.id })
-                .then(() => toast.success('Matrícula cancelada.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível cancelar.'))}
-              trigger={<V2Button size="sm" variant="ghost">Desmarcar</V2Button>}
+                .then(() => toast.success(t('Matrícula cancelada.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível cancelar.')))}
+              trigger={<V2Button size="sm" variant="ghost">{t('Desmarcar')}</V2Button>}
             />
           ) : (
             <V2Button
               size="sm"
               disabled={vagas <= 0 || matricular.isPending}
               onClick={() => matricular.mutateAsync({ arenaId, classId: aula.id })
-                .then(() => toast.success('Matrícula feita! Combine o pagamento com a arena.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível matricular.'))}
+                .then(() => toast.success(t('Matrícula feita! Combine o pagamento com a arena.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível matricular.')))}
             >
-              {vagas <= 0 ? 'Lotada' : 'Matricular-me'}
+              {vagas <= 0 ? t('Lotada') : t('Matricular-me')}
             </V2Button>
           )
         )}
-        {minhaMatricula && <V2Badge tone="green">Você está nesta aula</V2Badge>}
+        {minhaMatricula && <V2Badge tone="green">{t('Você está nesta aula')}</V2Badge>}
 
         {/* ---- arena e professor ---- */}
         {(podeGerir || souOProfessor) && (
           <V2Button size="sm" variant="ghost" onClick={() => setVerAlunos((v) => !v)}>
-            <Users className="mr-1 h-3.5 w-3.5" /> {verAlunos ? 'Esconder alunos' : `Alunos (${aula.enrolled || 0})`}
+            <Users className="mr-1 h-3.5 w-3.5" /> {verAlunos ? t('Esconder alunos') : t('Alunos ({n})', { n: aula.enrolled || 0 })}
           </V2Button>
         )}
         {podeGerir && aberta && (
           <>
             <V2Button size="sm" variant="ghost" onClick={() => onEditar(aula)}>
-              <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+              <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar')}
             </V2Button>
             <V2Button size="sm" variant="ghost" disabled={concluir.isPending}
               onClick={() => concluir.mutateAsync({ arenaId, classId: aula.id })
-                .then(() => toast.success('Aula marcada como dada.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível.'))}>
-              <Check className="mr-1 h-3.5 w-3.5" /> Marcar como dada
+                .then(() => toast.success(t('Aula marcada como dada.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível.')))}>
+              <Check className="mr-1 h-3.5 w-3.5" /> {t('Marcar como dada')}
             </V2Button>
             <ConfirmDialog
-              title="Cancelar esta aula?"
-              description="Quem estava matriculado é avisado, e a quadra volta à venda. A aula fica registrada como cancelada."
-              confirmLabel="Cancelar a aula"
+              title={t('Cancelar esta aula?')}
+              description={t('Quem estava matriculado é avisado, e a quadra volta à venda. A aula fica registrada como cancelada.')}
+              confirmLabel={t('Cancelar a aula')}
               destructive
               onConfirm={() => cancelarAula.mutateAsync({ arenaId, classId: aula.id, motivo: '' })
-                .then(() => toast.success('Aula cancelada e alunos avisados.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível cancelar.'))}
-              trigger={<V2Button size="sm" variant="ghost" className="text-red-600">Cancelar</V2Button>}
+                .then(() => toast.success(t('Aula cancelada e alunos avisados.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível cancelar.')))}
+              trigger={<V2Button size="sm" variant="ghost" className="text-red-600">{t('Cancelar')}</V2Button>}
             />
           </>
         )}
@@ -417,15 +418,15 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
       <V2Surface>
         <V2EmptyState
           icon={Calendar}
-          title="Entre para ver as aulas"
-          description="A agenda de aulas da arena aparece para quem tem conta — e é com ela que você se matricula."
-          action={<V2Button asChild size="sm"><Link to="/entrar">Entrar</Link></V2Button>}
+          title={t('Entre para ver as aulas')}
+          description={t('A agenda de aulas da arena aparece para quem tem conta — e é com ela que você se matricula.')}
+          action={<V2Button asChild size="sm"><Link to="/entrar">{t('Entrar')}</Link></V2Button>}
         />
       </V2Surface>
     );
   }
 
-  const tituloPassadas = papel === AGENDA_ROLE.ATHLETE ? 'Suas aulas passadas' : 'Aulas passadas';
+  const tituloPassadas = papel === AGENDA_ROLE.ATHLETE ? t('Suas aulas passadas') : t('Aulas passadas');
 
   return (
     <div className="space-y-4">
@@ -434,18 +435,18 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">
-              {verPassadas ? tituloPassadas : 'Próximas aulas'}
+              {verPassadas ? tituloPassadas : t('Próximas aulas')}
             </h2>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(passadas.length > 0 || verPassadas) && (
               <V2Button size="sm" variant="ghost" onClick={() => setVerPassadas((v) => !v)}>
-                {verPassadas ? `Próximas (${futuras.length})` : `Passadas (${passadas.length})`}
+                {verPassadas ? t('Próximas ({n})', { n: futuras.length }) : t('Passadas ({n})', { n: passadas.length })}
               </V2Button>
             )}
             {podeGerir && !formAula && (
               <V2Button size="sm" onClick={() => setFormAula('nova')}>
-                <Plus className="mr-1.5 h-4 w-4" /> Nova aula
+                <Plus className="mr-1.5 h-4 w-4" /> {t('Nova aula')}
               </V2Button>
             )}
           </div>
@@ -462,23 +463,23 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
         {aulasQ.isError && (
           <V2EmptyState
             icon={AlertTriangle}
-            title="Não foi possível carregar a agenda"
-            description="Pode ser a conexão. Nenhuma aula foi alterada."
-            action={<V2Button size="sm" onClick={() => aulasQ.refetch()}>Tentar de novo</V2Button>}
+            title={t('Não foi possível carregar a agenda')}
+            description={t('Pode ser a conexão. Nenhuma aula foi alterada.')}
+            action={<V2Button size="sm" onClick={() => aulasQ.refetch()}>{t('Tentar de novo')}</V2Button>}
           />
         )}
 
         {!aulasQ.isLoading && !aulasQ.isError && lista.length === 0 && !formAula && (
           <V2EmptyState
             icon={Clock}
-            title={verPassadas ? 'Nenhuma aula passada' : 'Nenhuma aula marcada'}
+            title={verPassadas ? t('Nenhuma aula passada') : t('Nenhuma aula marcada')}
             description={podeGerir
-              ? 'Publique um horário e ele aparece para os atletas — e sai da venda no calendário, se você escolher uma quadra.'
+              ? t('Publique um horário e ele aparece para os atletas — e sai da venda no calendário, se você escolher uma quadra.')
               : papel === AGENDA_ROLE.COACH
-                ? 'Quando a arena marcar uma aula com você, ela aparece aqui.'
-                : 'Quando a arena publicar horários, eles aparecem aqui.'}
+                ? t('Quando a arena marcar uma aula com você, ela aparece aqui.')
+                : t('Quando a arena publicar horários, eles aparecem aqui.')}
             action={podeGerir && !verPassadas
-              ? <V2Button size="sm" onClick={() => setFormAula('nova')}>Publicar a primeira</V2Button>
+              ? <V2Button size="sm" onClick={() => setFormAula('nova')}>{t('Publicar a primeira')}</V2Button>
               : null}
           />
         )}
@@ -504,7 +505,7 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
 
         {!isAuthenticated && (
           <p className="mt-4 text-sm text-gray-500">
-            <Link to="/entrar" className="font-bold text-ink underline">Entre</Link> para se matricular.
+            <Link to="/entrar" className="font-bold text-ink underline">{t('Entre')}</Link> {t('para se matricular.')}
           </p>
         )}
       </V2Surface>
@@ -512,9 +513,7 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
       {podeGerir && (
         <p className="flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Aula com <strong className="text-ink">quadra escolhida</strong> tira aquele horário da
-          venda — no calendário do atleta, na grade do dia e no pedido de reserva. Aula sem
-          quadra não bloqueia nada, e serve para o que acontece fora dela.
+          {t('Aula com quadra escolhida tira aquele horário da venda — no calendário do atleta, na grade do dia e no pedido de reserva. Aula sem quadra não bloqueia nada, e serve para o que acontece fora dela.')}
         </p>
       )}
     </div>

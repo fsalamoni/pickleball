@@ -22,6 +22,7 @@ import { arenaCoachFromPartner } from '@/modules/arenas/domain/coachRoster';
 import {
   V2Avatar, V2Button, V2Field, V2Input, V2Textarea,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{
@@ -74,10 +75,10 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
     try {
       if (coach) await editar.mutateAsync({ arenaId, coachId: coach.id, input });
       else await criar.mutateAsync({ arenaId, input });
-      toast.success(coach ? 'Professor atualizado.' : 'Professor cadastrado.');
+      toast.success(coach ? t('Professor atualizado.') : t('Professor cadastrado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -85,17 +86,17 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
     <form onSubmit={submit} className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink">
-          {coach ? `Editar ${coach.name}` : 'Novo professor'}
+          {coach ? t('Editar {nome}', { nome: coach.name }) : t('Novo professor')}
         </h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {!coach && !form.user_id && partners.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Parceiros da plataforma</p>
-          <p className="mt-0.5 text-xs text-gray-500">Já trabalham com a arena. Um toque preenche o cadastro.</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Parceiros da plataforma')}</p>
+          <p className="mt-0.5 text-xs text-gray-500">{t('Já trabalham com a arena. Um toque preenche o cadastro.')}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {partners.map((p) => (
               <button key={p.id} type="button" onClick={() => usarParceiro(p)}
@@ -109,35 +110,35 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
       )}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <V2Field label="Nome" htmlFor="pf-nome">
+        <V2Field label={t('Nome')} htmlFor="pf-nome">
           <V2Input id="pf-nome" required maxLength={80} value={form.name}
             onChange={(e) => set({ name: e.target.value })} />
         </V2Field>
-        <V2Field label="Nível que atende" htmlFor="pf-nivel">
+        <V2Field label={t('Nível que atende')} htmlFor="pf-nivel">
           <select id="pf-nivel" value={form.level} onChange={(e) => set({ level: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            {Object.entries(COACH_LEVEL_META).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+            {Object.entries(COACH_LEVEL_META).map(([k, m]) => <option key={k} value={k}>{t(m.label)}</option>)}
           </select>
         </V2Field>
-        <V2Field label="Preço por hora (R$)" htmlFor="pf-preco">
+        <V2Field label={t('Preço por hora (R$)')} htmlFor="pf-preco">
           <V2Input id="pf-preco" type="number" min="0" step="0.01" value={form.price_per_hour}
             onChange={(e) => set({ price_per_hour: e.target.value })} />
         </V2Field>
       </div>
 
-      <V2Field label="Sobre" htmlFor="pf-bio" className="mt-3">
+      <V2Field label={t('Sobre')} htmlFor="pf-bio" className="mt-3">
         <V2Textarea id="pf-bio" rows={2} maxLength={1000}
-          placeholder="Experiência, método, com quem trabalha melhor…"
+          placeholder={t('Experiência, método, com quem trabalha melhor…')}
           value={form.bio} onChange={(e) => set({ bio: e.target.value })} />
       </V2Field>
 
       {/* O vínculo é o que faz o professor ver a própria agenda e os alunos.
           Sem ele o cadastro é um nome solto — que era o estado anterior. */}
       <V2Field
-        label="Conta na plataforma"
+        label={t('Conta na plataforma')}
         htmlFor="pf-conta"
         className="mt-3"
-        hint="Vinculando, o professor passa a ver a agenda dele e os alunos de cada aula."
+        hint={t('Vinculando, o professor passa a ver a agenda dele e os alunos de cada aula.')}
       >
         {form.user_id ? (
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-paper-pure p-2.5">
@@ -145,14 +146,14 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
               <V2Avatar photoUrl={vinculado?.photo_url || form.photo_url} name={nomeVinculado} size="sm" />
               <span className="text-sm font-bold text-ink">{nomeVinculado}</span>
             </div>
-            <button type="button" onClick={() => set({ user_id: '' })} aria-label="Desvincular"
+            <button type="button" onClick={() => set({ user_id: '' })} aria-label={t('Desvincular')}
               className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
               <X className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <V2Input id="pf-conta" value={busca} onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar pelo nome… (opcional)" />
+            placeholder={t('Buscar pelo nome… (opcional)')} />
         )}
       </V2Field>
       {!form.user_id && resultados.length > 0 && (
@@ -171,19 +172,19 @@ export default function ProfessorForm({ arenaId, coach, partners = [], onClose }
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={form.partner} className="h-4 w-4 rounded border-gray-300"
             onChange={(e) => set({ partner: e.target.checked })} />
-          Professor parceiro (paga comissão à arena)
+          {t('Professor parceiro (paga comissão à arena)')}
         </label>
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={form.active} className="h-4 w-4 rounded border-gray-300"
             onChange={(e) => set({ active: e.target.checked })} />
-          Ativo
+          {t('Ativo')}
         </label>
       </div>
 
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={criar.isPending || editar.isPending}>
-          {coach ? 'Salvar' : 'Cadastrar'}
+          {coach ? t('Salvar') : t('Cadastrar')}
         </V2Button>
       </div>
     </form>
