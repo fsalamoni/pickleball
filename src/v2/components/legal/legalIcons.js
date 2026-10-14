@@ -5,13 +5,13 @@
 import {
   FileText, ShieldCheck, Database, Eye, UserCheck, RefreshCw, HeartHandshake,
   AlertTriangle, Cookie, CreditCard, CalendarX, Trophy, Building2, GraduationCap,
-  Scale, Lock, Users, Ban, Landmark, Gavel,
+  Scale, Lock, Users, Ban, Landmark, Gavel, ShoppingBag, RotateCcw, Star,
 } from 'lucide-react';
 
 const ICONS = {
   FileText, ShieldCheck, Database, Eye, UserCheck, RefreshCw, HeartHandshake,
   AlertTriangle, Cookie, CreditCard, CalendarX, Trophy, Building2, GraduationCap,
-  Scale, Lock, Users, Ban, Landmark, Gavel,
+  Scale, Lock, Users, Ban, Landmark, Gavel, ShoppingBag, RotateCcw, Star,
 };
 
 export function legalIcon(name) {

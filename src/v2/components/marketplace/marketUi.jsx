@@ -161,13 +161,13 @@ export function ListingCard({ listing, className, showFavorite = true }) {
   const cover = coverOf(listing);
   const sold = listing.status === 'sold_out' || !(listing.quantity > 0);
   const ship = (listing.fulfillment || []).includes('shipping');
+  // O coração fica FORA do link: botão dentro de link é dois controles num só
+  // para o leitor de tela e o teclado.
   return (
+    <div className={cn('relative min-w-0', className)}>
     <Link
       to={`/mercado/anuncio/${listing.id}`}
-      className={cn(
-        'group relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40',
-        className,
-      )}
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40"
     >
       <div className="relative aspect-square overflow-hidden bg-paper">
         {cover ? (
@@ -186,7 +186,6 @@ export function ListingCard({ listing, className, showFavorite = true }) {
             {CONDITION_SHORT[listing.condition] || 'Usado'}
           </span>
         )}
-        {showFavorite && <FavoriteButton listingId={listing.id} size="sm" className="absolute right-3 top-3" />}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <Price cents={listing.price_cents} compareAt={listing.compare_at_cents} size="sm" />
@@ -209,6 +208,8 @@ export function ListingCard({ listing, className, showFavorite = true }) {
         </div>
       </div>
     </Link>
+    {showFavorite && <FavoriteButton listingId={listing.id} size="sm" className="absolute right-3 top-3" />}
+    </div>
   );
 }
 

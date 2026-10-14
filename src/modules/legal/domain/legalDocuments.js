@@ -21,6 +21,8 @@
  *  - audience     'all' | 'organizer' | 'arena_owner' | 'coach'
  *  - gate         true → entra no portão de consentimento bloqueante
  *  - icon         nome do ícone lucide (mapeado na view)
+ *  - flag         (opcional) chave de FEATURE_FLAG: com a flag desligada o
+ *                 documento não aparece (a funcionalidade não existe ainda)
  *  - sections     [{ icon, title, description?, paragraphs?, bullets? }]
  */
 
@@ -426,6 +428,98 @@ export const LEGAL_DOCUMENTS = [
   },
 
   /* ------------------------------ Por papel ----------------------------- */
+  {
+    key: 'termos-mercado',
+    route: 'termos-mercado',
+    title: 'Termos do Mercado',
+    eyebrow: 'Complementar · Mercado',
+    description: 'Regras de quem compra e de quem vende no Mercado PickleRush.',
+    version: 1,
+    effectiveDate: '2026-10-14',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    flag: 'marketplace',
+    icon: 'ShoppingBag',
+    sections: [
+      {
+        icon: 'ShoppingBag',
+        title: 'O que é o Mercado',
+        description: 'Uma vitrine que aproxima quem compra de quem vende.',
+        paragraphs: [
+          'O Mercado é a área da PickleRush em que atletas, professores, arenas e lojas anunciam produtos de pickleball. A compra e venda é um contrato entre comprador e vendedor: a PickleRush não é vendedora, não guarda estoque, não recebe o pagamento e não faz a entrega.',
+          'A PickleRush não cobra comissão das vendas. O pagamento é feito por Pix diretamente na conta do vendedor, que aparece para o comprador depois que o vendedor aceita o pedido.',
+        ],
+      },
+      {
+        icon: 'UserCheck',
+        title: 'Quem pode comprar e vender',
+        bullets: [
+          'Comprar e vender exige uma conta na PickleRush com dados verdadeiros.',
+          'Lojas (empresas) entram com cadastro próprio, com CNPJ, e só vendem depois da aprovação da PickleRush.',
+          'Arenas vendem pela equipe que as gere; professores vendem produtos físicos (aulas seguem pelo painel do professor).',
+          'Menores de 18 anos só compram ou vendem com autorização do responsável legal.',
+          'A PickleRush pode recusar, suspender ou encerrar o cadastro de quem descumprir estes Termos.',
+        ],
+      },
+      {
+        icon: 'FileText',
+        title: 'Anúncios',
+        description: 'O anúncio é a promessa do vendedor.',
+        bullets: [
+          'Fotos e descrição devem mostrar o produto real. Produto usado precisa dizer o estado e os defeitos.',
+          'O preço anunciado é o preço cobrado; o frete, quando houver, aparece antes da compra.',
+          'É proibido anunciar falsificação ou réplica, produto roubado, produto ilegal ou perigoso, e qualquer coisa que não seja do universo do esporte.',
+          'A moderação pode tirar um anúncio do ar e explica o motivo ao vendedor. Denúncias de qualquer pessoa são analisadas.',
+        ],
+      },
+      {
+        icon: 'CreditCard',
+        title: 'Pedido, pagamento e entrega',
+        bullets: [
+          'O pedido reserva o produto. O vendedor aceita ou recusa dentro do prazo mostrado no pedido; sem resposta, o pedido é cancelado sozinho e o produto volta à vitrine.',
+          'Depois do aceite, o comprador paga por Pix ao vendedor dentro do prazo e avisa no pedido, com o comprovante se quiser. Sem pagamento no prazo, o pedido é cancelado.',
+          'O vendedor confirma o pagamento e envia, deixa para retirada ou combina a entrega, conforme o pedido. O comprador confirma quando recebe.',
+          'Ofertas aceitas viram pedido com o valor combinado.',
+          'Endereço e telefone do comprador só aparecem para o vendedor depois do aceite, e só podem ser usados para a entrega.',
+        ],
+      },
+      {
+        icon: 'RotateCcw',
+        title: 'Arrependimento, troca e devolução',
+        paragraphs: [
+          'Quando o vendedor for fornecedor (loja, arena ou quem vende com habitualidade), o comprador tem os direitos do Código de Defesa do Consumidor, inclusive o arrependimento em até 7 dias do recebimento nas compras feitas pela internet (art. 49), e a garantia contra defeitos.',
+          'Entre particulares (por exemplo, um atleta vendendo a raquete que usou), valem o combinado no anúncio e a lei civil. A política de devolução de cada vendedor aparece na página dele.',
+        ],
+      },
+      {
+        icon: 'AlertTriangle',
+        title: 'Problemas no pedido',
+        bullets: [
+          'Se algo der errado (produto que não chegou, diferente do anúncio, com defeito), o comprador relata o problema no próprio pedido, dentro do prazo mostrado nele.',
+          'A moderação ouve os dois lados e decide se o pedido é concluído ou cancelado. Como o dinheiro foi direto ao vendedor, a devolução de valores é feita por ele; quem se recusa pode ter as vendas suspensas.',
+          'Comprador e vendedor devem manter a conversa e as combinações dentro da PickleRush: é o que permite à moderação ajudar.',
+        ],
+      },
+      {
+        icon: 'Star',
+        title: 'Avaliações e conduta',
+        bullets: [
+          'Depois do pedido concluído, comprador e vendedor podem se avaliar. A avaliação deve ser honesta e sobre a compra.',
+          'É proibido criar avaliações falsas, combinar notas ou ameaçar alguém para mudar uma avaliação.',
+          'Valem as Diretrizes da Comunidade em perguntas, respostas e mensagens.',
+        ],
+      },
+      {
+        icon: 'Scale',
+        title: 'Impostos, responsabilidade e alterações',
+        paragraphs: [
+          'Cada vendedor responde pelo que vende: qualidade, garantia, entrega, nota fiscal e impostos, quando exigidos.',
+          'A PickleRush responde pelo funcionamento da ferramenta e age para tirar do ar o que descumpre estes Termos, mas não é parte da compra e venda. Estes Termos complementam os Termos de Uso e a Política de Privacidade, e podem ser atualizados; mudanças relevantes pedem novo aceite.',
+        ],
+      },
+    ],
+  },
   {
     key: 'termos-organizador',
     route: 'termos-organizador',

@@ -82,7 +82,7 @@ function StartSelling({ identity, defaults }) {
         <V2Field label="Nome que aparece para os compradores" htmlFor="nome-vend">
           <V2Input id="nome-vend" maxLength={60} value={nome} onChange={(e) => setNome(e.target.value)} />
         </V2Field>
-        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">termos de uso</Link>, inclusive as regras do Mercado.</p>
+        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link> e os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos do Mercado</Link>.</p>
         <V2Button type="submit" className="w-full" disabled={m.isPending || nome.trim().length < 2}>{m.isPending ? 'Abrindo…' : 'Começar a vender'}</V2Button>
       </form>
     </V2Surface>
