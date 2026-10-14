@@ -111,7 +111,8 @@ export default function VoucherReception({ arenaId, cupom: cupomDado = null, onD
       : couponError(achado, {
         anyFamily: true,
         usedByUser: Boolean(quem?.id) && (achado.used_by || []).includes(quem.id),
-      })?.replace('Você já usou', 'Esta pessoa já usou'))
+        byOther: true,
+      }))
     : null;
 
   const confirmar = async () => {

@@ -139,8 +139,9 @@ export async function redeemVoucher(arenaId, couponId, { userId = null, userName
     const erro = couponError(c, {
       anyFamily: true,
       usedByUser: Boolean(userId) && (c.used_by || []).includes(userId),
+      byOther: true,
     });
-    if (erro) throw new Error(erro.replace('Você já usou', 'Esta pessoa já usou'));
+    if (erro) throw new Error(erro);
     const patch = { used_count: increment(1), last_used_at: serverTimestamp(), updated_at: serverTimestamp() };
     if (userId) patch.used_by = arrayUnion(userId);
     tx.update(ref, patch);
