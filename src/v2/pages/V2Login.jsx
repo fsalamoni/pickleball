@@ -7,6 +7,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LanguageSelect } from '@/v2/components/idioma/LanguageSwitcher';
 
 const LOGIN_HIGHLIGHTS = [
   'Acesse torneios, ranking e ferramentas com menos atrito.',
@@ -148,6 +149,8 @@ export default function Login() {
                 as inscrições e resultados registrados provisoriamente com o mesmo e-mail.
               </p>
             </div>
+
+            <LanguageSelect className="mt-4" />
 
             <div className="mt-8 space-y-5">
               {/* Provedores sociais */}

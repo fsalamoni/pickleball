@@ -4,6 +4,7 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { registerPwa } from '@core/pwa/registerPwa';
 import { firebaseReady, firebaseServicesEnabled, firebaseDisabledReason } from '@/core/config/firebase';
+import { iniciarIdiomas } from '@/core/i18n/loader';
 import './index.css';
 
 function BootFallback() {
@@ -73,7 +74,9 @@ function FirebaseUnavailable({ reason }) {
 // Espera Firebase inicializar ANTES de renderizar. Sem isso, o App.jsx
 // tenta usar auth/db/etc que são null até o init.json fetch completar
 // (quando as env vars não estão baked no build).
-firebaseReady.then(() => {
+// O catálogo do idioma escolhido chega ANTES do primeiro desenho (pt-BR não baixa nada).
+firebaseReady.then(async () => {
+  await iniciarIdiomas();
   if (!firebaseServicesEnabled) {
     ReactDOM.createRoot(document.getElementById('root')).render(
       <FirebaseUnavailable reason={firebaseDisabledReason} />,

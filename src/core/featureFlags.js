@@ -64,6 +64,21 @@ export const FEATURE_FLAG = Object.freeze({
    */
   MARKETPLACE: 'marketplace',
 
+  /**
+   * VÁRIOS IDIOMAS — português (padrão), inglês e espanhol.
+   *
+   * Cada pessoa escolhe o idioma em Configurações (e na tela de entrada); na
+   * primeira visita vale o idioma do navegador, se for um dos suportados. O
+   * texto em português continua sendo o código: sem catálogo ou sem tradução,
+   * aparece em português. Catálogos por módulo, carregados só do idioma
+   * escolhido (`src/core/i18n`, plano em docs/44-IDIOMAS.md).
+   *
+   * Zero banco: a escolha fica no aparelho (`picklerush:idioma`). Desligada,
+   * tudo em português e nenhum seletor aparece — inclusive para quem tinha
+   * escolhido outro idioma (a escolha é apagada ao abrir).
+   */
+  MULTI_LANGUAGE: 'multi_language',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -374,6 +389,7 @@ export const PERMANENT_FEATURE = Object.freeze({
    */
   GUIDED_TIPS: 'guided_tips',
 
+
   /**
    * CADASTRO ESSENCIAL — o que o sorteio e a busca por perto precisam.
    *
@@ -469,6 +485,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'lojas, com busca, filtros, carrinho, favoritos, perguntas, ofertas, '
       + 'pedidos com Pix direto ao vendedor e avaliações. Desligada, o Mercado '
       + 'some de todo lugar e nada é lido; anúncios e pedidos ficam guardados.',
+  },
+  [FEATURE_FLAG.MULTI_LANGUAGE]: {
+    label: 'Vários idiomas (português, inglês, espanhol)',
+    description:
+      'Mostra o seletor de idioma (Configurações e tela de entrada) e, na '
+      + 'primeira visita, adota o idioma do navegador. O que ainda não foi '
+      + 'traduzido aparece em português. Desligada, tudo em português e a '
+      + 'escolha antiga é apagada. A escolha fica no aparelho.',
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: 'DUPR oficial (fase 2 — reservado)',

@@ -30,6 +30,11 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Mercado',
     keys: [FEATURE_FLAG.MARKETPLACE],
   },
+  {
+    id: 'languages',
+    label: 'Idiomas',
+    keys: [FEATURE_FLAG.MULTI_LANGUAGE],
+  },
 ]);
 
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });
