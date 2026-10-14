@@ -161,11 +161,15 @@ function QuickEdit({ listing, onClose }) {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ l: listing, p: parseBRL(preco), q: Number(qtd) }, { onSuccess: () => { toast.success('Atualizado.'); onClose(); }, onError: (er) => toast.error(er.message) });
+            m.mutate({ l: listing, p: parseBRL(preco), q: listing.source?.tracked ? null : Number(qtd) }, { onSuccess: () => { toast.success('Atualizado.'); onClose(); }, onError: (er) => toast.error(er.message) });
           }}
         >
           <V2Field label="Preço (R$)" htmlFor="qe-preco"><V2Input id="qe-preco" inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} autoFocus /></V2Field>
-          <V2Field label="Quantidade" htmlFor="qe-qtd" hint="Com 0, o anúncio aparece como esgotado."><V2Input id="qe-qtd" type="number" min={0} max={9999} value={qtd} onChange={(e) => setQtd(e.target.value)} /></V2Field>
+          {listing.source?.tracked ? (
+            <p className="text-sm text-gray-600">Quantidade: {listing.quantity ?? 0}. Ela acompanha o estoque da arena; para mudar, registre a compra no estoque.</p>
+          ) : (
+            <V2Field label="Quantidade" htmlFor="qe-qtd" hint="Com 0, o anúncio aparece como esgotado."><V2Input id="qe-qtd" type="number" min={0} max={9999} value={qtd} onChange={(e) => setQtd(e.target.value)} /></V2Field>
+          )}
           <div className="flex justify-end gap-2">
             <V2Button type="button" variant="ghost" onClick={onClose}>Voltar</V2Button>
             <V2Button type="submit" disabled={m.isPending}>Salvar</V2Button>

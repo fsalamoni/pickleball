@@ -1253,3 +1253,23 @@ exports.marketModerateListing = onDocumentWritten(
     await marketplace.moderateListing({ db, now: Date.now() }, event.params.listingId, d);
   },
 );
+
+// Estoque único da arena: liga um anúncio a um produto do estoque, e cada
+// mudança do produto refaz a quantidade do anúncio (ver `marketplace.js`).
+exports.marketLinkArenaProduct = marketCallable('marketLinkArenaProduct', marketplace.linkArenaProduct);
+
+exports.marketArenaStockSync = onDocumentWritten(
+  { document: 'arena_inventory_products/{productId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    if (!(a && a.market_listing_id) && !(d && d.market_listing_id)) return;
+    if (a && d && a.stock_qty === d.stock_qty && a.market_listing_id === d.market_listing_id) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    try {
+      await marketplace.syncArenaListing({ db, now: Date.now() }, event.params.productId, a, d);
+    } catch (err) {
+      logger.warn('Mercado: estoque da arena não refletido no anúncio agora.', { productId: event.params.productId, err: err && err.message });
+    }
+  },
+);

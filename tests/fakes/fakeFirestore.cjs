@@ -37,7 +37,10 @@ class FakeQuery {
   constructor(store, colPath, filters = [], lim = Infinity) {
     this.store = store; this.colPath = colPath; this.filters = filters; this.lim = lim;
   }
-  doc(id) { return new FakeDocRef(this.store, `${this.colPath}/${id}`); }
+  doc(id) {
+    const novo = id || `auto${(this.store.seq = (this.store.seq || 0) + 1)}`;
+    return new FakeDocRef(this.store, `${this.colPath}/${novo}`);
+  }
   where(field, op, value) { return new FakeQuery(this.store, this.colPath, [...this.filters, [field, op, value]], this.lim); }
   limit(n) { return new FakeQuery(this.store, this.colPath, this.filters, n); }
   async add(data) {
@@ -82,7 +85,13 @@ function createFakeDb(seed = {}) {
       const escritas = [];
       const tx = {
         get: (alvo) => alvo.get(),
+        getAll: (...refs) => Promise.all(refs.map((r) => r.get())),
         update: (ref, data) => escritas.push(() => aplicarUpdate(store, ref, data)),
+        set: (ref, data, opts) => escritas.push(() => {
+          store.log.push(['set', ref.path]);
+          store.docs.set(ref.path, opts && opts.merge ? { ...(store.docs.get(ref.path) || {}), ...data } : data);
+        }),
+        delete: (ref) => escritas.push(() => { store.log.push(['delete', ref.path]); store.docs.delete(ref.path); }),
       };
       const r = await fn(tx);
       escritas.forEach((w) => w());
@@ -92,11 +101,13 @@ function createFakeDb(seed = {}) {
       const ops = [];
       return {
         update: (ref, data) => ops.push(['update', ref, data]),
+        set: (ref, data) => ops.push(['set', ref, data]),
         delete: (ref) => ops.push(['delete', ref]),
         async commit() {
           ops.forEach(([tipo, ref, data]) => {
             store.log.push([tipo, ref.path]);
             if (tipo === 'delete') { store.docs.delete(ref.path); return; }
+            if (tipo === 'set') { store.docs.set(ref.path, data); return; }
             const atual = store.docs.get(ref.path);
             if (atual === undefined) throw new Error(`update em documento ausente: ${ref.path}`);
             const novo = { ...atual };

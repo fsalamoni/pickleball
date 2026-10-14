@@ -113,6 +113,11 @@ describe('stockDriftFixes — a cópia do estoque fica certa', () => {
     expect(stockDriftFixes([agua], entradas, saidas)).toEqual([]);
   });
 
+  it('produto ligado a um anúncio do Mercado PickleRush também tem a cópia acertada', () => {
+    const bolaNoMercado = { ...bola, market_listing_id: 'L1' };
+    expect(stockDriftFixes([bolaNoMercado], [{ product_id: bola.id, quantity: 4 }], [])).toEqual([{ id: bola.id, stock_qty: 4 }]);
+  });
+
   it('estoque que ficou negativo é gravado como está (a arena precisa ver)', () => {
     expect(stockDriftFixes(
       [{ ...agua, stock_qty: 0 }],

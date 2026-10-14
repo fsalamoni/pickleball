@@ -51,6 +51,9 @@ export const offerAction = (p) => chamar('marketOfferAction', p);
 
 export const submitReview = (p) => chamar('marketSubmitReview', p);
 
+/** Liga o anúncio da arena a um produto do estoque dela (`productId: null` desliga). */
+export const linkArenaProduct = (p) => chamar('marketLinkArenaProduct', p);
+
 /* ------------------------------------------------------------- leituras -- */
 
 export async function listMyOrders(uid) {

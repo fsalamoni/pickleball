@@ -703,7 +703,8 @@ export async function refreshShopStock(arenaId, productId) {
     const snap = await getDoc(ref);
     if (!snap.exists()) return;
     const p = snap.data();
-    if (p.arena_id !== arenaId || p.sell_online !== true) return;
+    // Quem lê a cópia: a loja do app e o anúncio ligado no Mercado PickleRush.
+    if (p.arena_id !== arenaId || (p.sell_online !== true && !p.market_listing_id)) return;
     const [entries, exits] = await Promise.all([
       listInventoryEntries(arenaId, { productId }),
       listInventoryExits(arenaId, { productId }),

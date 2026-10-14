@@ -200,7 +200,8 @@ export function exitsForSale(sale, date) {
 
 /**
  * Onde a cópia do estoque (`stock_qty`) está diferente da conta verdadeira
- * (`trackedStock`). Só olha produtos à venda pelo app — os outros não têm
+ * (`trackedStock`). Só olha produtos à venda pelo app ou ligados a um
+ * anúncio do Mercado PickleRush (`market_listing_id`) — os outros não têm
  * quem leia a cópia.
  *
  * Quem roda isto é a ARENA, com entradas e saídas na mão (a regra só deixa a
@@ -211,7 +212,7 @@ export function exitsForSale(sale, date) {
  */
 export function stockDriftFixes(products = [], entries = [], exits = []) {
   return products
-    .filter((p) => p?.sell_online === true)
+    .filter((p) => p?.sell_online === true || Boolean(p?.market_listing_id))
     .map((p) => ({ id: p.id, atual: numero(p.stock_qty), real: trackedStock(p.id, entries, exits) }))
     .filter((x) => x.atual !== x.real)
     .map((x) => ({ id: x.id, stock_qty: x.real }));

@@ -1222,7 +1222,8 @@ const ARENA = {
           'Crie os anúncios. Para retirada no balcão, marque "Retirar no local" e diga onde.',
         ),
         link('/mercado/vender', 'Vender no Mercado'),
-        tip('A página da arena ganha "Também no Mercado" com os produtos que estão no ar, e a vitrine da arena no Mercado leva de volta para a página dela.'),
+        p('ESTOQUE ÚNICO: na Central da arena → Mercado → Estoque, cada produto tem "Anunciar no Mercado". O anúncio nasce preenchido com o produto e passa a usar o MESMO estoque do balcão e da loja do app. A quantidade do anúncio é o que está na prateleira menos o que já foi pedido e ainda não foi pago. Quando você confirma o pagamento, a venda entra no estoque como saída (marcada "Mercado PickleRush"); se o pedido for cancelado, ela volta.'),
+        tip('A página da arena ganha "Também no Mercado" com os produtos que estão no ar, e a vitrine da arena no Mercado leva de volta para a página dela. Produto sem nenhuma compra registrada não tem estoque controlado: aí a quantidade do anúncio é você quem ajusta.'),
       ],
     },
     {
