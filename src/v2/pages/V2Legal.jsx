@@ -7,6 +7,7 @@ import React from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, ScrollText, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { LEGAL_DOCUMENTS, LEGAL_CATEGORY } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
@@ -29,6 +30,9 @@ export default function V2Legal() {
   const enabled = true;
   const { user } = useAuth();
   const { consentMap } = useMyConsents();
+  const { flags } = useFeatureFlags();
+  // Documento de funcionalidade desligada não aparece (`flag` no registro).
+  const visiveis = LEGAL_DOCUMENTS.filter((d) => !d.flag || flags?.[d.flag]);
 
   if (!enabled) return <Navigate to="/politica-uso" replace />;
 
@@ -60,7 +64,7 @@ export default function V2Legal() {
 
       <div className="space-y-8">
         {CATEGORY_ORDER.map((cat) => {
-          const docs = LEGAL_DOCUMENTS.filter((d) => d.category === cat);
+          const docs = visiveis.filter((d) => d.category === cat);
           if (docs.length === 0) return null;
           return (
             <section key={cat}>

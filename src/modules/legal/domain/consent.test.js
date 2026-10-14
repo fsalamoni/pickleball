@@ -106,3 +106,14 @@ describe('integridade do registro', () => {
     expect(new Set(routes).size).toBe(routes.length);
   });
 });
+
+describe('documento de funcionalidade atrás de flag', () => {
+  it('a flag citada existe (senão o documento sumiria para sempre)', async () => {
+    const { FEATURE_FLAG } = await import('@/core/featureFlags');
+    const { LEGAL_DOCUMENTS } = await import('./legalDocuments.js');
+    const chaves = new Set(Object.values(FEATURE_FLAG));
+    const comFlag = LEGAL_DOCUMENTS.filter((d) => d.flag);
+    expect(comFlag.map((d) => d.key)).toContain('termos-mercado');
+    comFlag.forEach((d) => expect(chaves.has(d.flag)).toBe(true));
+  });
+});

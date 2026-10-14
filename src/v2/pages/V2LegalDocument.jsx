@@ -9,6 +9,7 @@ import { Navigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChevronLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { getLegalDocumentByRoute } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
@@ -19,7 +20,9 @@ export default function V2LegalDocument() {
   const enabled = true;
   const { docRoute } = useParams();
   const { user } = useAuth();
-  const doc = getLegalDocumentByRoute(docRoute);
+  const { flags, isLoading: flagsCarregando } = useFeatureFlags();
+  const registrado = getLegalDocumentByRoute(docRoute);
+  const doc = registrado && registrado.flag && !flagsCarregando && !flags?.[registrado.flag] ? null : registrado;
   const { consentMap } = useMyConsents();
   const accept = useAcceptConsent();
 

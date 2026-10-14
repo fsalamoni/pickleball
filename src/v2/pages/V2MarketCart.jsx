@@ -365,9 +365,12 @@ function CartPage() {
             {!comprasAbertas ? (
               <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">As compras no Mercado estão pausadas no momento.</p>
             ) : step === 'fechar' && escolhidos.length > 0 ? (
-              <V2Button type="button" size="lg" className="w-full" disabled={place.isPending} onClick={confirmar}>
-                {place.isPending ? 'Fazendo o pedido…' : escolhidos.length > 1 ? `Confirmar ${escolhidos.length} pedidos` : 'Confirmar pedido'}
-              </V2Button>
+              <>
+                <V2Button type="button" size="lg" className="w-full" disabled={place.isPending} onClick={confirmar}>
+                  {place.isPending ? 'Fazendo o pedido…' : escolhidos.length > 1 ? `Confirmar ${escolhidos.length} pedidos` : 'Confirmar pedido'}
+                </V2Button>
+                <p className="text-xs text-gray-500">Ao confirmar, você concorda com os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos do Mercado</Link>.</p>
+              </>
             ) : (
               <V2Button type="button" size="lg" className="w-full" disabled={!escolhidos.length} onClick={() => setParams({ fechar: '1' })}>
                 <PackageCheck className="h-4 w-4" /> Fechar pedido
