@@ -8,11 +8,12 @@ import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageSelect } from '@/v2/components/idioma/LanguageSwitcher';
+import { t, tk } from '@/core/i18n';
 
 const LOGIN_HIGHLIGHTS = [
-  'Acesse torneios, ranking e ferramentas com menos atrito.',
-  'Mantenha a identidade do evento consistente do convite ao resultado final.',
-  'Use uma interface mais clara para operar no balcão, no desktop e na quadra.',
+  tk('Acesse torneios, ranking e ferramentas com menos atrito.'),
+  tk('Mantenha a identidade do evento consistente do convite ao resultado final.'),
+  tk('Use uma interface mais clara para operar no balcão, no desktop e na quadra.'),
 ];
 
 export default function Login() {
@@ -62,17 +63,17 @@ export default function Login() {
   const onEmailSubmit = (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      toast.error('Informe e-mail e senha.');
+      toast.error(t('Informe e-mail e senha.'));
       return;
     }
     if (mode === 'signup' && password.length < 6) {
-      toast.error('A senha precisa ter ao menos 6 caracteres.');
+      toast.error(t('A senha precisa ter ao menos 6 caracteres.'));
       return;
     }
     return runBusy(async () => {
       if (mode === 'signup') {
         await registerWithEmailPassword(email, password, name);
-        toast.success('Conta criada! Bem-vindo(a).');
+        toast.success(t('Conta criada! Bem-vindo(a).'));
       } else {
         await signInWithEmailPassword(email, password);
       }
@@ -82,12 +83,12 @@ export default function Login() {
 
   const onForgotPassword = async () => {
     if (!email.trim()) {
-      toast.error('Digite seu e-mail acima para receber o link de redefinição.');
+      toast.error(t('Digite seu e-mail acima para receber o link de redefinição.'));
       return;
     }
     await runBusy(async () => {
       await sendPasswordReset(email);
-      toast.success('Enviamos um e-mail para redefinir sua senha.');
+      toast.success(t('Enviamos um e-mail para redefinir sua senha.'));
     });
   };
 
@@ -108,25 +109,25 @@ export default function Login() {
 
           <div className="relative z-10">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-acid">
-              <Sparkles className="h-3.5 w-3.5" /> Entrada principal da plataforma
+              <Sparkles className="h-3.5 w-3.5" /> {t('Entrada principal da plataforma')}
             </span>
             <h1 className="mt-6 font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-              Entre para criar, administrar e acompanhar cada modalidade do seu torneio.
+              {t('Entre para criar, administrar e acompanhar cada modalidade do seu torneio.')}
             </h1>
 
             <div className="mt-8 grid gap-3">
               {LOGIN_HIGHLIGHTS.map((item) => (
                 <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/70 backdrop-blur-sm">
-                  {item}
+                  {t(item)}
                 </div>
               ))}
             </div>
           </div>
 
           <div className="relative z-10 flex flex-wrap gap-4 text-sm text-white/60">
-            <Link to="/regras" className="transition-colors hover:text-acid">Regras oficiais</Link>
-            <Link to="/nivelamento" className="transition-colors hover:text-acid">Nivelamento</Link>
-            <Link to="/conduta" className="transition-colors hover:text-acid">Fair Play</Link>
+            <Link to="/regras" className="transition-colors hover:text-acid">{t('Regras oficiais')}</Link>
+            <Link to="/nivelamento" className="transition-colors hover:text-acid">{t('Nivelamento')}</Link>
+            <Link to="/conduta" className="transition-colors hover:text-acid">{t('Fair Play')}</Link>
           </div>
         </div>
 
@@ -142,11 +143,10 @@ export default function Login() {
                 <Trophy className="h-6 w-6" />
               </div>
               <h2 className="mt-6 font-display text-3xl font-bold leading-tight text-ink">
-                {mode === 'signup' ? 'Crie sua conta para começar.' : 'Entre para publicar e operar torneios.'}
+                {mode === 'signup' ? t('Crie sua conta para começar.') : t('Entre para publicar e operar torneios.')}
               </h2>
               <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-gray-500">
-                Use e-mail e senha, sua conta Google ou Apple. O e-mail da sua conta vincula automaticamente
-                as inscrições e resultados registrados provisoriamente com o mesmo e-mail.
+                {t('Use e-mail e senha, sua conta Google ou Apple. O e-mail da sua conta vincula automaticamente as inscrições e resultados registrados provisoriamente com o mesmo e-mail.')}
               </p>
             </div>
 
@@ -158,20 +158,20 @@ export default function Login() {
                 {isGoogleAvailable && (
                   <V2Button onClick={onGoogle} disabled={busy || !isAuthAvailable} variant="ghost" size="lg" className="w-full">
                     <GoogleIcon className="h-4 w-4" />
-                    <span>Continuar com Google</span>
+                    <span>{t('Continuar com Google')}</span>
                   </V2Button>
                 )}
                 {isAppleAvailable && (
                   <V2Button onClick={onApple} disabled={busy || !isAuthAvailable} variant="ghost" size="lg" className="w-full">
                     <AppleIcon className="h-4 w-4" />
-                    <span>Continuar com Apple</span>
+                    <span>{t('Continuar com Apple')}</span>
                   </V2Button>
                 )}
               </div>
 
               {(isGoogleAvailable || isAppleAvailable) && isAuthAvailable && (
                 <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-gray-300">
-                  <span className="h-px flex-1 bg-gray-100" />ou<span className="h-px flex-1 bg-gray-100" />
+                  <span className="h-px flex-1 bg-gray-100" />{t('ou')}<span className="h-px flex-1 bg-gray-100" />
                 </div>
               )}
 
@@ -179,14 +179,14 @@ export default function Login() {
               <form onSubmit={onEmailSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="login-name">Nome</Label>
+                    <Label htmlFor="login-name">{t('Nome')}</Label>
                     <div className="relative">
                       <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <Input
                         id="login-name"
                         type="text"
                         autoComplete="name"
-                        placeholder="Seu nome"
+                        placeholder={t('Seu nome')}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="pl-9"
@@ -197,14 +197,14 @@ export default function Login() {
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="login-email">E-mail</Label>
+                  <Label htmlFor="login-email">{t('E-mail')}</Label>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <Input
                       id="login-email"
                       type="email"
                       autoComplete="email"
-                      placeholder="voce@email.com"
+                      placeholder={t('voce@email.com')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-9"
@@ -216,7 +216,7 @@ export default function Login() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <Label htmlFor="login-password">{t('Senha')}</Label>
                     {mode === 'signin' && (
                       <button
                         type="button"
@@ -224,7 +224,7 @@ export default function Login() {
                         disabled={busy || !isAuthAvailable}
                         className="text-xs font-bold text-ink transition-colors hover:text-acid-dark disabled:opacity-50"
                       >
-                        Esqueci minha senha
+                        {t('Esqueci minha senha')}
                       </button>
                     )}
                   </div>
@@ -234,7 +234,7 @@ export default function Login() {
                       id="login-password"
                       type="password"
                       autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                      placeholder={mode === 'signup' ? 'Mínimo de 6 caracteres' : 'Sua senha'}
+                      placeholder={mode === 'signup' ? t('Mínimo de 6 caracteres') : t('Sua senha')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-9"
@@ -246,34 +246,34 @@ export default function Login() {
 
                 <V2Button type="submit" disabled={busy || !isAuthAvailable} size="lg" className="w-full">
                   {busy
-                    ? 'Conectando…'
-                    : mode === 'signup' ? 'Criar conta' : 'Entrar'}
+                    ? t('Conectando…')
+                    : mode === 'signup' ? t('Criar conta') : t('Entrar')}
                   <ArrowRight className="h-4 w-4" />
                 </V2Button>
               </form>
 
               {!isAuthAvailable && (
                 <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-                  {authUnavailableReason || 'Configure o Firebase para habilitar autenticação e dados em tempo real.'}
+                  {authUnavailableReason || t('Configure o Firebase para habilitar autenticação e dados em tempo real.')}
                 </p>
               )}
 
               <p className="text-center text-sm text-gray-500">
-                {mode === 'signup' ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
+                {mode === 'signup' ? t('Já tem conta?') : t('Ainda não tem conta?')}{' '}
                 <button
                   type="button"
                   onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
                   className="font-bold text-ink transition-colors hover:text-acid-dark"
                 >
-                  {mode === 'signup' ? 'Entrar' : 'Criar conta'}
+                  {mode === 'signup' ? t('Entrar') : t('Criar conta')}
                 </button>
               </p>
 
               <p className="text-center text-xs leading-6 text-gray-500">
-                Ao continuar você aceita nossa{' '}
-                <Link to="/politica-uso" className="font-bold text-gray-600 underline underline-offset-4">Política de Uso</Link>
-                {' '}e o{' '}
-                <Link to="/conduta" className="font-bold text-gray-600 underline underline-offset-4">Conduta &amp; Fair Play</Link>.
+                {t('Ao continuar você aceita nossa')}{' '}
+                <Link to="/politica-uso" className="font-bold text-gray-600 underline underline-offset-4">{t('Política de Uso')}</Link>
+                {' '}{t('e o')}{' '}
+                <Link to="/conduta" className="font-bold text-gray-600 underline underline-offset-4">{t('Conduta & Fair Play')}</Link>.
               </p>
             </div>
           </V2Surface>

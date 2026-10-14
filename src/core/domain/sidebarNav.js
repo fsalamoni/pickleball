@@ -14,6 +14,7 @@
  *  - um item escondido continua alcançável: pela Minha área, pela busca
  *    (Ctrl/⌘+K, que indexa TODOS os hubs) e pelas rotas de sempre.
  */
+import { tk } from '@/core/i18n';
 
 export const SIDEBAR_ITEM = Object.freeze({
   INICIO: 'inicio',
@@ -38,18 +39,18 @@ const I = SIDEBAR_ITEM;
  * `fixo`: não sai da barra. Os rótulos são os do menu (o da arena é o nome dela).
  */
 export const SIDEBAR_ITEM_META = Object.freeze({
-  [I.INICIO]: { label: 'Início', description: 'O que pede ação hoje.', fixo: true },
-  [I.JOGAR]: { label: 'Jogar', description: 'Dia de jogo, vagas e pessoas do seu nível.' },
-  [I.COMPETIR]: { label: 'Competir', description: 'Torneios, circuitos e rankings.' },
-  [I.COMUNIDADE]: { label: 'Comunidade', description: 'Atletas, clubes, novidades e mensagens.' },
-  [I.ARENAS]: { label: 'Arenas', description: 'Reservar quadra e as suas reservas.' },
-  [I.AULAS]: { label: 'Aulas', description: 'Professores e as aulas que você faz.' },
-  [I.PERFIL]: { label: 'Minha área', description: 'Tudo o que é seu, inclusive o que você gere.', fixo: true },
-  [I.PARCEIROS]: { label: 'Parceiros', description: 'Os parceiros da plataforma.' },
-  [I.MERCADO]: { label: 'Mercado', description: 'Comprar e vender produtos de pickleball.', requer: 'mercado' },
-  [I.MINHA_ARENA]: { label: 'Minha arena', description: 'A Central da arena que você gere, com as pendências.', requer: 'arenas' },
-  [I.PROFESSOR]: { label: 'Painel do professor', description: 'Agenda, alunos, clínicas e horários.', requer: 'professor' },
-  [I.ADMIN]: { label: 'Admin', description: 'O painel da plataforma.', requer: 'admin', fixo: true },
+  [I.INICIO]: { label: tk('Início'), description: tk('O que pede ação hoje.'), fixo: true },
+  [I.JOGAR]: { label: tk('Jogar'), description: tk('Dia de jogo, vagas e pessoas do seu nível.') },
+  [I.COMPETIR]: { label: tk('Competir'), description: tk('Torneios, circuitos e rankings.') },
+  [I.COMUNIDADE]: { label: tk('Comunidade'), description: tk('Atletas, clubes, novidades e mensagens.') },
+  [I.ARENAS]: { label: tk('Arenas'), description: tk('Reservar quadra e as suas reservas.') },
+  [I.AULAS]: { label: tk('Aulas'), description: tk('Professores e as aulas que você faz.') },
+  [I.PERFIL]: { label: tk('Minha área'), description: tk('Tudo o que é seu, inclusive o que você gere.'), fixo: true },
+  [I.PARCEIROS]: { label: tk('Parceiros'), description: tk('Os parceiros da plataforma.') },
+  [I.MERCADO]: { label: tk('Mercado'), description: tk('Comprar e vender produtos de pickleball.'), requer: 'mercado' },
+  [I.MINHA_ARENA]: { label: tk('Minha arena'), description: tk('A Central da arena que você gere, com as pendências.'), requer: 'arenas' },
+  [I.PROFESSOR]: { label: tk('Painel do professor'), description: tk('Agenda, alunos, clínicas e horários.'), requer: 'professor' },
+  [I.ADMIN]: { label: tk('Admin'), description: tk('O painel da plataforma.'), requer: 'admin', fixo: true },
 });
 
 export const ALL_SIDEBAR_ITEMS = Object.freeze(Object.keys(SIDEBAR_ITEM_META));
@@ -58,9 +59,9 @@ const CONHECIDOS = new Set(ALL_SIDEBAR_ITEMS);
 export const SIDEBAR_PRESET = Object.freeze({ ATLETA: 'atleta', ARENA: 'arena', PROFESSOR: 'professor' });
 
 export const SIDEBAR_PRESET_META = Object.freeze({
-  [SIDEBAR_PRESET.ATLETA]: { label: 'Atleta', description: 'Jogar, competir, reservar e a comunidade.' },
-  [SIDEBAR_PRESET.ARENA]: { label: 'Arena', description: 'A Central da sua arena logo depois do Início.', requer: 'arenas' },
-  [SIDEBAR_PRESET.PROFESSOR]: { label: 'Professor', description: 'O Painel do professor logo depois do Início.', requer: 'professor' },
+  [SIDEBAR_PRESET.ATLETA]: { label: tk('Atleta'), description: tk('Jogar, competir, reservar e a comunidade.') },
+  [SIDEBAR_PRESET.ARENA]: { label: tk('Arena'), description: tk('A Central da sua arena logo depois do Início.'), requer: 'arenas' },
+  [SIDEBAR_PRESET.PROFESSOR]: { label: tk('Professor'), description: tk('O Painel do professor logo depois do Início.'), requer: 'professor' },
 });
 
 /** Os itens de cada padrão, na ordem. Admin entra sozinho para quem é (fixo). */

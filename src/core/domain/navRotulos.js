@@ -9,16 +9,17 @@
  * Fonte ÚNICA: menu, títulos, atalhos do início e Minha área leem daqui.
  * Nasceu atrás da flag `nav_v3`; ligada para todos em 2026-10-11, virou código.
  */
+import { t, tk } from '@/core/i18n';
 export const NAV_ROTULOS = Object.freeze({
-  abaDiaDeJogo: 'Hoje',
-  vagas: 'Vagas',
-  pessoas: 'Pessoas',
-  meusTorneios: 'Meus torneios',
-  gamificacao: 'Temporada e desafios',
-  reservar: 'Reservar quadra',
+  abaDiaDeJogo: tk('Hoje'),
+  vagas: tk('Vagas'),
+  pessoas: tk('Pessoas'),
+  meusTorneios: tk('Meus torneios'),
+  gamificacao: tk('Temporada e desafios'),
+  reservar: tk('Reservar quadra'),
 });
 
 /** @returns {typeof NAV_ROTULOS} */
 export function navRotulos() {
-  return NAV_ROTULOS;
+  return Object.fromEntries(Object.entries(NAV_ROTULOS).map(([k, v]) => [k, t(v)]));
 }

@@ -13,18 +13,19 @@
  * Quem gere arena E dá aula vê a Central: a arena tem gente esperando resposta
  * (reserva pedida), a aula não trava ninguém.
  */
+import { tk } from '@/core/i18n';
 
 export const TREINO_RECENTE_DIAS = 14;
 const DIA_MS = 24 * 60 * 60 * 1000;
 
 /** Itens fixos; `icon` é só um nome — a tela escolhe o desenho. */
-const INICIO = Object.freeze({ id: 'inicio', to: '/', label: 'Início', icon: 'inicio', exact: true });
-const JOGAR = Object.freeze({ id: 'jogar', to: '/dia-de-jogo', label: 'Jogar', icon: 'jogar' });
-const ARENAS = Object.freeze({ id: 'arenas', to: '/arenas', label: 'Arenas', icon: 'arenas' });
-const MINHA_AREA = Object.freeze({ id: 'minha-area', to: '/perfil', label: 'Minha área', icon: 'minha-area' });
-const TORNEIOS = Object.freeze({ id: 'torneios', to: '/torneios', label: 'Torneios', icon: 'torneios', dica: 'nav-inferior-torneios' });
-const TREINO = Object.freeze({ id: 'treino', to: '/treino', label: 'Treino', icon: 'treino' });
-const PAINEL = Object.freeze({ id: 'painel', to: '/aulas', label: 'Painel', icon: 'painel' });
+const INICIO = Object.freeze({ id: 'inicio', to: '/', label: tk('Início'), icon: 'inicio', exact: true });
+const JOGAR = Object.freeze({ id: 'jogar', to: '/dia-de-jogo', label: tk('Jogar'), icon: 'jogar' });
+const ARENAS = Object.freeze({ id: 'arenas', to: '/arenas', label: tk('Arenas'), icon: 'arenas' });
+const MINHA_AREA = Object.freeze({ id: 'minha-area', to: '/perfil', label: tk('Minha área'), icon: 'minha-area' });
+const TORNEIOS = Object.freeze({ id: 'torneios', to: '/torneios', label: tk('Torneios'), icon: 'torneios', dica: 'nav-inferior-torneios' });
+const TREINO = Object.freeze({ id: 'treino', to: '/treino', label: tk('Treino'), icon: 'treino' });
+const PAINEL = Object.freeze({ id: 'painel', to: '/aulas', label: tk('Painel'), icon: 'painel' });
 
 /**
  * @param {{ arenaId?: string|null, pendencias?: number }[]} [arenas] as que a pessoa gere
@@ -61,7 +62,7 @@ export function bottomNavItems(pessoa = {}) {
   let contextual = TORNEIOS;
   if (arena) {
     contextual = {
-      id: 'central', to: `/arenas/${arena.id}/gerir`, label: 'Central', icon: 'central',
+      id: 'central', to: `/arenas/${arena.id}/gerir`, label: tk('Central'), icon: 'central',
       badge: arena.pendencias || 0,
     };
   } else if (pessoa.ehProfessor) {
