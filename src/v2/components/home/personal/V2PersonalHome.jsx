@@ -77,6 +77,7 @@ import HomeCommunitySection from './HomeCommunitySection';
 import HomeCardsEmpty from '../cards/HomeCardsEmpty';
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { V2Skeleton } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 // O seletor dos cards só baixa quando a pessoa abre "Personalizar".
 const HomeCardsDialog = lazy(() => import('../cards/HomeCardsDialog'));
@@ -291,7 +292,7 @@ export default function V2PersonalHome() {
               aria-haspopup="dialog"
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-gray-500 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
             >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Escolher o que aparece aqui
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> {t('Escolher o que aparece aqui')}
             </button>
           </div>
         )}

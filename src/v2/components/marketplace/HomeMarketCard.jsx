@@ -14,11 +14,12 @@ import { marketHomeSummary } from '@/modules/marketplace/domain/home';
 import { coverOf } from '@/modules/marketplace/domain/listing';
 import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { t, tk, tn } from '@/core/i18n';
 import {
   HomeAction, HomeEmpty, HomeRow, HomeSection,
 } from '@/v2/components/home/personal/HomeSection';
 
-const ACAO = { to: '/mercado', label: 'Abrir o Mercado' };
+const ACAO = { to: '/mercado', label: tk('Abrir o Mercado') };
 
 function Novidade({ listing }) {
   const cover = coverOf(listing);
@@ -51,7 +52,7 @@ export default function HomeMarketCard() {
   }), [pedidos.data, vitrine.data, uid]);
 
   const moldura = (conteudo) => (
-    <HomeSection id="mercado" icon={Store} title="Mercado" action={ACAO}>{conteudo}</HomeSection>
+    <HomeSection id="mercado" icon={Store} title={t('Mercado')} action={{ ...ACAO, label: t(ACAO.label) }}>{conteudo}</HomeSection>
   );
 
   if (pedidos.isLoading || vitrine.isLoading) return moldura(<V2Skeleton lines={3} />);
@@ -59,7 +60,7 @@ export default function HomeMarketCard() {
   return moldura(
     <div className="space-y-4">
       {pedidos.isError ? (
-        <V2ErrorState inline title="As suas compras não carregaram" onRetry={() => pedidos.refetch()} />
+        <V2ErrorState inline title={t('As suas compras não carregaram')} onRetry={() => pedidos.refetch()} />
       ) : resumo.pendentes.length > 0 && (
         <div className="space-y-1">
           {resumo.pendentes.slice(0, 3).map(({ order, texto }) => (
@@ -68,8 +69,8 @@ export default function HomeMarketCard() {
               to={`/mercado/pedidos/${order.id}`}
               icon={Package}
               title={texto}
-              subtitle={`Pedido ${order.code || ''} · ${order.seller_name || 'vendedor'}`.trim()}
-              badge="Sua vez"
+              subtitle={t('Pedido {codigo} · {vendedor}', { codigo: order.code || '', vendedor: order.seller_name || t('vendedor') }).trim()}
+              badge={t('Sua vez')}
               badgeTone="amber"
               highlight
             />
@@ -78,10 +79,10 @@ export default function HomeMarketCard() {
       )}
 
       {vitrine.isError ? (
-        <V2ErrorState inline title="A vitrine não carregou" onRetry={() => vitrine.refetch()} />
+        <V2ErrorState inline title={t('A vitrine não carregou')} onRetry={() => vitrine.refetch()} />
       ) : resumo.novidades.length > 0 ? (
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Chegou agora</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">{t('Chegou agora')}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {resumo.novidades.map((l) => <Novidade key={l.id} listing={l} />)}
           </div>
@@ -89,15 +90,15 @@ export default function HomeMarketCard() {
       ) : (
         <HomeEmpty
           icon={Store}
-          actions={<HomeAction to="/mercado/vender" primary>Anunciar</HomeAction>}
+          actions={<HomeAction to="/mercado/vender" primary>{t('Anunciar')}</HomeAction>}
         >
-          Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa?
+          {t('Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa?')}
         </HomeEmpty>
       )}
 
       {!pedidos.isError && resumo.emAndamento > resumo.pendentes.length && (
         <Link to="/mercado/pedidos" className="block text-sm font-semibold text-gray-500 hover:text-ink">
-          {resumo.emAndamento} compra{resumo.emAndamento === 1 ? '' : 's'} em andamento
+          {tn(resumo.emAndamento, '{n} compra em andamento', '{n} compras em andamento')}
         </Link>
       )}
     </div>,

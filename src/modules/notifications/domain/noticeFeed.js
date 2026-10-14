@@ -23,6 +23,7 @@
  *    do que já está gravado;
  *  - **os filtros** (não lidas, área, busca) e o estado deles na URL.
  */
+import { t, tn, tk } from '@/core/i18n';
 import { instanteEmMs } from '@/core/domain/instant';
 
 /** Quantos avisos o sino mostra antes do "Ver todas". */
@@ -48,18 +49,18 @@ export const NOTICE_AREA = Object.freeze({
 
 /** As áreas, na ordem em que aparecem nos filtros. */
 export const NOTICE_AREAS = Object.freeze([
-  { id: NOTICE_AREA.JOGOS, label: 'Dias de jogo e jogos', curto: 'Jogos' },
-  { id: NOTICE_AREA.TORNEIOS, label: 'Torneios', curto: 'Torneios' },
-  { id: NOTICE_AREA.ARENAS, label: 'Arenas e reservas', curto: 'Arenas' },
-  { id: NOTICE_AREA.CLUBES, label: 'Clubes', curto: 'Clubes' },
-  { id: NOTICE_AREA.AULAS, label: 'Aulas', curto: 'Aulas' },
-  { id: NOTICE_AREA.TREINO, label: 'Treino', curto: 'Treino' },
-  { id: NOTICE_AREA.MERCADO, label: 'Mercado', curto: 'Mercado' },
-  { id: NOTICE_AREA.SOCIAL, label: 'Mensagens e comunidade', curto: 'Mensagens' },
-  { id: NOTICE_AREA.PROMOCOES, label: 'Promoções e campanhas', curto: 'Promoções' },
-  { id: NOTICE_AREA.GAMIFICACAO, label: 'Gamificação', curto: 'Gamificação' },
-  { id: NOTICE_AREA.CONTA, label: 'Sua conta', curto: 'Conta' },
-  { id: NOTICE_AREA.OUTROS, label: 'Outros avisos', curto: 'Outros' },
+  { id: NOTICE_AREA.JOGOS, label: tk('Dias de jogo e jogos'), curto: tk('Jogos') },
+  { id: NOTICE_AREA.TORNEIOS, label: tk('Torneios'), curto: tk('Torneios') },
+  { id: NOTICE_AREA.ARENAS, label: tk('Arenas e reservas'), curto: tk('Arenas') },
+  { id: NOTICE_AREA.CLUBES, label: tk('Clubes'), curto: tk('Clubes') },
+  { id: NOTICE_AREA.AULAS, label: tk('Aulas'), curto: tk('Aulas') },
+  { id: NOTICE_AREA.TREINO, label: tk('Treino'), curto: tk('Treino') },
+  { id: NOTICE_AREA.MERCADO, label: tk('Mercado'), curto: tk('Mercado') },
+  { id: NOTICE_AREA.SOCIAL, label: tk('Mensagens e comunidade'), curto: tk('Mensagens') },
+  { id: NOTICE_AREA.PROMOCOES, label: tk('Promoções e campanhas'), curto: tk('Promoções') },
+  { id: NOTICE_AREA.GAMIFICACAO, label: tk('Gamificação'), curto: tk('Gamificação') },
+  { id: NOTICE_AREA.CONTA, label: tk('Sua conta'), curto: tk('Conta') },
+  { id: NOTICE_AREA.OUTROS, label: tk('Outros avisos'), curto: tk('Outros') },
 ]);
 
 const AREA_IDS = new Set(NOTICE_AREAS.map((a) => a.id));
@@ -198,11 +199,11 @@ export function sortNotices(list = []) {
     .map((x) => x.n);
 }
 
-const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-const DIAS_LONGOS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+const DIAS_CURTOS = [tk('dom'), tk('seg'), tk('ter'), tk('qua'), tk('qui'), tk('sex'), tk('sáb')];
+const DIAS_LONGOS = [tk('domingo'), tk('segunda-feira'), tk('terça-feira'), tk('quarta-feira'), tk('quinta-feira'), tk('sexta-feira'), tk('sábado')];
 const MESES = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+  tk('janeiro'), tk('fevereiro'), tk('março'), tk('abril'), tk('maio'), tk('junho'),
+  tk('julho'), tk('agosto'), tk('setembro'), tk('outubro'), tk('novembro'), tk('dezembro'),
 ];
 
 const dois = (n) => String(n).padStart(2, '0');
@@ -224,15 +225,15 @@ export function noticeTimeLabel(ms, agora = Date.now()) {
   if (!Number.isFinite(ms)) return '';
   const diff = agora - ms;
   // Relógio do aparelho atrasado: alguns minutos "no futuro" são "agora".
-  if (diff < 60_000 && diff > -5 * 60_000) return 'agora';
+  if (diff < 60_000 && diff > -5 * 60_000) return t('agora');
   const d = new Date(ms);
   const dias = diasAtras(ms, agora);
   if (diff > 0 && dias === 0) {
-    if (diff < 3_600_000) return `há ${Math.floor(diff / 60_000)} min`;
-    return `há ${Math.floor(diff / 3_600_000)} h`;
+    if (diff < 3_600_000) return t('há {n} min', { n: Math.floor(diff / 60_000) });
+    return t('há {n} h', { n: Math.floor(diff / 3_600_000) });
   }
-  if (dias === 1) return `ontem, ${hora(d)}`;
-  if (dias > 1 && dias <= 6) return `${DIAS_CURTOS[d.getDay()]}, ${hora(d)}`;
+  if (dias === 1) return t('ontem, {hora}', { hora: hora(d) });
+  if (dias > 1 && dias <= 6) return `${t(DIAS_CURTOS[d.getDay()])}, ${hora(d)}`;
   const data = `${dois(d.getDate())}/${dois(d.getMonth() + 1)}`;
   return d.getFullYear() === new Date(agora).getFullYear() ? data : `${data}/${d.getFullYear()}`;
 }
@@ -241,21 +242,23 @@ export function noticeTimeLabel(ms, agora = Date.now()) {
 export function noticeFullDate(ms) {
   if (!Number.isFinite(ms)) return '';
   const d = new Date(ms);
-  return `${DIAS_LONGOS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}, ${hora(d)}`;
+  return t('{semana}, {dia} de {mes} de {ano}, {hora}', {
+    semana: t(DIAS_LONGOS[d.getDay()]), dia: d.getDate(), mes: t(MESES[d.getMonth()]), ano: d.getFullYear(), hora: hora(d),
+  });
 }
 
 /** O grupo do dia em que o aviso cai na central. */
 export function noticeGroupOf(ms, agora = Date.now()) {
-  if (!Number.isFinite(ms)) return { key: 'sem-data', label: 'Sem data' };
+  if (!Number.isFinite(ms)) return { key: 'sem-data', label: t('Sem data') };
   const dias = diasAtras(ms, agora);
-  if (dias <= 0) return { key: 'hoje', label: 'Hoje' };
-  if (dias === 1) return { key: 'ontem', label: 'Ontem' };
-  if (dias <= 6) return { key: 'semana', label: 'Nos últimos 7 dias' };
+  if (dias <= 0) return { key: 'hoje', label: t('Hoje') };
+  if (dias === 1) return { key: 'ontem', label: t('Ontem') };
+  if (dias <= 6) return { key: 'semana', label: t('Nos últimos 7 dias') };
   const d = new Date(ms);
-  const mes = MESES[d.getMonth()];
+  const mes = t(MESES[d.getMonth()]);
   return {
     key: `mes-${d.getFullYear()}-${dois(d.getMonth() + 1)}`,
-    label: `${mes.charAt(0).toUpperCase()}${mes.slice(1)} de ${d.getFullYear()}`,
+    label: t('{mes} de {ano}', { mes: `${mes.charAt(0).toUpperCase()}${mes.slice(1)}`, ano: d.getFullYear() }),
   };
 }
 
@@ -299,7 +302,7 @@ export function filterNotices(list = [], { somenteNaoLidas = false, area = null,
     if (area && noticeArea(n) !== area) return false;
     if (termos.length > 0) {
       const texto = textoDoAviso(n);
-      if (!termos.every((t) => texto.includes(t))) return false;
+      if (!termos.every((termo) => texto.includes(termo))) return false;
     }
     return true;
   });
@@ -333,8 +336,8 @@ export function formatUnreadBadge(count) {
 /** O nome acessível do sino, com a contagem por extenso. */
 export function bellAccessibleLabel(count) {
   const n = Math.trunc(Number(count) || 0);
-  if (n <= 0) return 'Notificações';
-  return `Notificações (${n} não ${n === 1 ? 'lida' : 'lidas'})`;
+  if (n <= 0) return t('Notificações');
+  return tn(n, 'Notificações ({n} não lida)', 'Notificações ({n} não lidas)');
 }
 
 /**

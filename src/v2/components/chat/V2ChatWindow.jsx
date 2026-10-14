@@ -36,6 +36,7 @@ import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import V2MessageBubble from './V2MessageBubble';
 import V2ChatComposer from './V2ChatComposer';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function dayLabel(ms) {
   if (!ms) return '';
@@ -44,9 +45,9 @@ function dayLabel(ms) {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   const sameDay = (a, b) => a.toDateString() === b.toDateString();
-  if (sameDay(d, today)) return 'Hoje';
-  if (sameDay(d, yesterday)) return 'Ontem';
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+  if (sameDay(d, today)) return t('Hoje');
+  if (sameDay(d, yesterday)) return t('Ontem');
+  return fmtData(d, { day: '2-digit', month: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
 export default function V2ChatWindow({ conversation, currentUserId, onBack, onClose, onOpenConversation }) {
@@ -94,7 +95,7 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
     setBusy(true);
     try {
       const newId = await actions.startGroupFrom(conversation, people);
-      toast.success('Novo grupo criado.');
+      toast.success(t('Novo grupo criado.'));
       setAddOpen(false);
       if (newId && newId !== conversation.id) onOpenConversation?.(newId);
     } finally {
@@ -106,10 +107,10 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
     setBusy(true);
     try {
       await actions.rename(conversation.id, renameValue);
-      toast.success('Grupo renomeado.');
+      toast.success(t('Grupo renomeado.'));
       setRenameOpen(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível renomear.');
+      toast.error(err.message || t('Não foi possível renomear.'));
     } finally {
       setBusy(false);
     }
@@ -120,15 +121,15 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
     try {
       if (isGroup) {
         await actions.leave(conversation);
-        toast.success('Você saiu do grupo.');
+        toast.success(t('Você saiu do grupo.'));
       } else {
         await actions.hide(conversation);
-        toast.success('Conversa excluída.');
+        toast.success(t('Conversa excluída.'));
       }
       setConfirmLeave(false);
       onClose?.();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível concluir a ação.');
+      toast.error(err.message || t('Não foi possível concluir a ação.'));
     } finally {
       setBusy(false);
     }
@@ -141,7 +142,7 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-gray-100 bg-paper-pure px-3 py-2.5">
         {onBack && (
-          <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink lg:hidden" onClick={onBack} aria-label="Voltar">
+          <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink lg:hidden" onClick={onBack} aria-label={t('Voltar')}>
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
@@ -154,31 +155,31 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
         )}
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-ink">{title}</div>
-          <div className="truncate text-xs text-gray-500">{isGroup ? `${memberCount} participantes` : 'Conversa direta'}</div>
+          <div className="truncate text-xs text-gray-500">{isGroup ? tn(memberCount, '{n} participante', '{n} participantes') : t('Conversa direta')}</div>
         </div>
 
         <V2Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setAddOpen(true)}>
-          <UserPlus className="h-4 w-4" /> Chamar atletas
+          <UserPlus className="h-4 w-4" /> {t('Chamar atletas')}
         </V2Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button aria-label="Mais opções da conversa" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink">
+            <button aria-label={t('Mais opções da conversa')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink">
               <MoreVertical className="h-5 w-5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => setAddOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Chamar atletas
+              <UserPlus className="mr-2 h-4 w-4" /> {t('Chamar atletas')}
             </DropdownMenuItem>
             {isGroup && (
               <DropdownMenuItem onClick={() => { setRenameValue(conversation.title || ''); setRenameOpen(true); }}>
-                <Pencil className="mr-2 h-4 w-4" /> Renomear grupo
+                <Pencil className="mr-2 h-4 w-4" /> {t('Renomear grupo')}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setConfirmLeave(true)}>
-              {isGroup ? <><LogOut className="mr-2 h-4 w-4" /> Sair do grupo</> : <><Trash2 className="mr-2 h-4 w-4" /> Excluir conversa</>}
+              {isGroup ? <><LogOut className="mr-2 h-4 w-4" /> {t('Sair do grupo')}</> : <><Trash2 className="mr-2 h-4 w-4" /> {t('Excluir conversa')}</>}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -193,14 +194,14 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
         ) : mensagensFalharam ? (
           // Falha não é "nenhuma mensagem ainda. Diga olá!".
           <V2ErrorState
-            title="Não foi possível carregar as mensagens"
-            description="A conversa continua lá — só não conseguimos buscá-la agora."
+            title={t('Não foi possível carregar as mensagens')}
+            description={t('A conversa continua lá — só não conseguimos buscá-la agora.')}
             onRetry={tentarMensagensDeNovo}
           />
         ) : rendered.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
             <MessagesSquare className="mb-3 h-10 w-10 text-gray-300" />
-            <p className="text-sm">Nenhuma mensagem ainda. Diga olá! 👋</p>
+            <p className="text-sm">{t('Nenhuma mensagem ainda. Diga olá! 👋')}</p>
           </div>
         ) : (
           rendered.map((item) =>
@@ -238,19 +239,19 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-ink" /> Renomear grupo</DialogTitle>
-            <DialogDescription>Escolha um nome para identificar o grupo.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-ink" /> {t('Renomear grupo')}</DialogTitle>
+            <DialogDescription>{t('Escolha um nome para identificar o grupo.')}</DialogDescription>
           </DialogHeader>
           <input
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             maxLength={80}
-            placeholder="Nome do grupo"
+            placeholder={t('Nome do grupo')}
             className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
           />
           <DialogFooter>
-            <V2Button variant="ghost" onClick={() => setRenameOpen(false)} disabled={busy}>Cancelar</V2Button>
-            <V2Button onClick={handleRename} disabled={busy}>Salvar</V2Button>
+            <V2Button variant="ghost" onClick={() => setRenameOpen(false)} disabled={busy}>{t('Cancelar')}</V2Button>
+            <V2Button onClick={handleRename} disabled={busy}>{t('Salvar')}</V2Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -258,11 +259,11 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
-        title={isGroup ? 'Sair do grupo' : 'Excluir conversa'}
+        title={isGroup ? t('Sair do grupo') : t('Excluir conversa')}
         description={isGroup
-          ? 'Você deixará de receber as mensagens deste grupo. Esta ação pode ser desfeita apenas sendo chamado novamente.'
-          : 'A conversa será removida da sua lista. Ela reaparece se você receber uma nova mensagem.'}
-        confirmLabel={isGroup ? 'Sair' : 'Excluir'}
+          ? t('Você deixará de receber as mensagens deste grupo. Esta ação pode ser desfeita apenas sendo chamado novamente.')
+          : t('A conversa será removida da sua lista. Ela reaparece se você receber uma nova mensagem.')}
+        confirmLabel={isGroup ? t('Sair') : t('Excluir')}
         destructive
         loading={busy}
         onConfirm={handleLeaveOrDelete}

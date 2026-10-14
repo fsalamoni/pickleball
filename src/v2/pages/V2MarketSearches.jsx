@@ -17,6 +17,7 @@ import { usePublicListings, useSavedSearchActions, useSavedSearches } from '@/mo
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ListingCard, ListingGrid, ListingGridSkeleton, MarketGate } from '@/v2/components/marketplace/marketUi';
+import { t, tn } from '@/core/i18n';
 
 const linkDe = (b) => `/mercado${b.params ? `?${b.params}` : ''}`;
 
@@ -27,30 +28,30 @@ function SearchRow({ busca, novos, feedOk, actions }) {
     navigate(linkDe(busca));
   };
   const alternar = () => actions.notify.mutate({ id: busca.id, on: !busca.notify }, {
-    onError: () => toast.error('Não foi possível mudar o aviso. Tente de novo.'),
+    onError: () => toast.error(t('Não foi possível mudar o aviso. Tente de novo.')),
   });
   const apagar = () => actions.remove.mutate(busca.id, {
-    onSuccess: () => toast.success('Busca apagada.'),
-    onError: () => toast.error('Não foi possível apagar. Tente de novo.'),
+    onSuccess: () => toast.success(t('Busca apagada.')),
+    onError: () => toast.error(t('Não foi possível apagar. Tente de novo.')),
   });
   return (
     <V2Surface as="li" className="space-y-4" id={`busca-${busca.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-display text-lg font-bold text-ink">{busca.label || 'Minha busca'}</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{busca.label || t('Minha busca')}</h2>
           <p className="text-sm text-gray-500">
-            {!feedOk ? 'Não deu para conferir as novidades agora.'
-              : novos.length ? `${novos.length} anúncio${novos.length > 1 ? 's' : ''} novo${novos.length > 1 ? 's' : ''} desde a última vez`
-                : 'Nada novo desde a última vez.'}
+            {!feedOk ? t('Não deu para conferir as novidades agora.')
+              : novos.length ? tn(novos.length, '{n} anúncio novo desde a última vez', '{n} anúncios novos desde a última vez')
+                : t('Nada novo desde a última vez.')}
           </p>
         </div>
-        {feedOk && novos.length > 0 && <V2Badge tone="acid">{novos.length > 99 ? '99+' : novos.length} novo{novos.length > 1 ? 's' : ''}</V2Badge>}
+        {feedOk && novos.length > 0 && <V2Badge tone="acid">{tn(novos.length, '{n} novo', '{n} novos', { n: novos.length > 99 ? '99+' : novos.length })}</V2Badge>}
       </div>
       {novos.length > 0 && (
         <ListingGrid>{novos.slice(0, 4).map((l) => <ListingCard key={l.id} listing={l} />)}</ListingGrid>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <V2Button type="button" size="sm" onClick={abrir}><Search className="h-4 w-4" /> Ver resultados</V2Button>
+        <V2Button type="button" size="sm" onClick={abrir}><Search className="h-4 w-4" /> {t('Ver resultados')}</V2Button>
         <V2Button
           type="button"
           size="sm"
@@ -58,10 +59,10 @@ function SearchRow({ busca, novos, feedOk, actions }) {
           onClick={alternar}
           aria-pressed={Boolean(busca.notify)}
         >
-          {busca.notify ? <><Bell className="h-4 w-4" /> Aviso ligado</> : <><BellOff className="h-4 w-4" /> Aviso desligado</>}
+          {busca.notify ? <><Bell className="h-4 w-4" /> {t('Aviso ligado')}</> : <><BellOff className="h-4 w-4" /> {t('Aviso desligado')}</>}
         </V2Button>
-        <V2Button type="button" size="sm" variant="ghost" onClick={apagar} disabled={actions.remove.isPending} aria-label={`Apagar a busca ${busca.label || ''}`}>
-          <Trash2 className="h-4 w-4" /> Apagar
+        <V2Button type="button" size="sm" variant="ghost" onClick={apagar} disabled={actions.remove.isPending} aria-label={t('Apagar a busca {nome}', { nome: busca.label || '' })}>
+          <Trash2 className="h-4 w-4" /> {t('Apagar')}
         </V2Button>
       </div>
     </V2Surface>
@@ -101,9 +102,9 @@ function SearchesPage() {
     corpo = (
       <V2EmptyState
         icon={Bell}
-        title="Nenhuma busca salva"
-        description="Busque algo no Mercado e toque em “Salvar busca”. Avisamos quando chegar anúncio novo que combine."
-        action={<V2Button asChild><Link to="/mercado">Buscar no Mercado</Link></V2Button>}
+        title={t('Nenhuma busca salva')}
+        description={t('Busque algo no Mercado e toque em “Salvar busca”. Avisamos quando chegar anúncio novo que combine.')}
+        action={<V2Button asChild><Link to="/mercado">{t('Buscar no Mercado')}</Link></V2Button>}
       />
     );
   } else {
@@ -114,7 +115,7 @@ function SearchesPage() {
           {lista.map((b) => <SearchRow key={b.id} busca={b} novos={novosDe(b)} feedOk={Boolean(feed.data)} actions={actions} />)}
         </ul>
         <p className="text-sm text-gray-500">
-          Com o aviso ligado, mandamos no máximo um aviso por dia para cada busca. Você pode guardar até {SAVED_SEARCH_LIMIT} buscas.
+          {t('Com o aviso ligado, mandamos no máximo um aviso por dia para cada busca. Você pode guardar até {n} buscas.', { n: SAVED_SEARCH_LIMIT })}
         </p>
       </div>
     );
@@ -123,7 +124,7 @@ function SearchesPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-16">
       <MarketHeader />
-      <V2PageIntro title="Buscas salvas" subtitle={lista.length ? `${lista.length} de ${SAVED_SEARCH_LIMIT}` : undefined} />
+      <V2PageIntro title={t('Buscas salvas')} subtitle={lista.length ? t('{n} de {total}', { n: lista.length, total: SAVED_SEARCH_LIMIT }) : undefined} />
       {corpo}
     </div>
   );

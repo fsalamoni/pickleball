@@ -9,6 +9,7 @@ import { MapPin } from 'lucide-react';
 import { useMyRegion } from '@/core/lib/useMyRegion';
 import SettingsSection from '@/v2/components/settings/SettingsSection';
 import RegionPicker from './RegionPicker';
+import { t } from '@/core/i18n';
 
 export default function RegionSettingsCard() {
   const on = true;
@@ -16,10 +17,9 @@ export default function RegionSettingsCard() {
   const { rotulo } = useMyRegion();
   if (!on) return null;
   return (
-    <SettingsSection id="minha-regiao" dica="config-regiao" icon={MapPin} title="Minha região" summary={rotulo}>
+    <SettingsSection id="minha-regiao" dica="config-regiao" icon={MapPin} title={t('Minha região')} summary={rotulo}>
       <p className="text-sm text-gray-500">
-        A plataforma mostra primeiro o que acontece aqui: dias de jogo e jogos com vaga, torneios, arenas,
-        professores, clubes e promoções. O que fica de fora não some — cada tela diz quantos são e deixa ver também.
+        {t('A plataforma mostra primeiro o que acontece aqui: dias de jogo e jogos com vaga, torneios, arenas, professores, clubes e promoções. O que fica de fora não some — cada tela diz quantos são e deixa ver também.')}
       </p>
       <RegionPicker className="mt-4" />
     </SettingsSection>

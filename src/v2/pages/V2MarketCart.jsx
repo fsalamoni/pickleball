@@ -33,25 +33,26 @@ import {
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, SellerTypeTag, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
+import { t } from '@/core/i18n';
 
 const ADDRESS_FIELDS = ['name', 'cep', 'street', 'number', 'complement', 'district', 'city', 'state', 'phone'];
 
 function addressError(a) {
-  if (String(a.name || '').trim().length < 3) return 'Diga o nome de quem recebe.';
-  if (String(a.cep || '').replace(/\D/g, '').length !== 8) return 'O CEP tem 8 números.';
-  if (!String(a.street || '').trim() || !String(a.number || '').trim()) return 'Preencha a rua e o número.';
-  if (!String(a.city || '').trim() || !BR_UFS.includes(a.state)) return 'Preencha a cidade e o estado.';
+  if (String(a.name || '').trim().length < 3) return t('Diga o nome de quem recebe.');
+  if (String(a.cep || '').replace(/\D/g, '').length !== 8) return t('O CEP tem 8 números.');
+  if (!String(a.street || '').trim() || !String(a.number || '').trim()) return t('Preencha a rua e o número.');
+  if (!String(a.city || '').trim() || !BR_UFS.includes(a.state)) return t('Preencha a cidade e o estado.');
   return '';
 }
 
 function Qty({ value, max, onChange, disabled }) {
   return (
     <div className="inline-flex items-center rounded-full border border-gray-200">
-      <button type="button" aria-label="Menos um" disabled={disabled || value <= 1} onClick={() => onChange(value - 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40">
+      <button type="button" aria-label={t('Menos um')} disabled={disabled || value <= 1} onClick={() => onChange(value - 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40">
         <Minus className="h-4 w-4" />
       </button>
       <span className="w-8 text-center text-sm font-bold" aria-live="polite">{value}</span>
-      <button type="button" aria-label="Mais um" disabled={disabled || value >= max} onClick={() => onChange(value + 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40">
+      <button type="button" aria-label={t('Mais um')} disabled={disabled || value >= max} onClick={() => onChange(value + 1)} className="flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-40">
         <Plus className="h-4 w-4" />
       </button>
     </div>
@@ -60,7 +61,7 @@ function Qty({ value, max, onChange, disabled }) {
 
 function Line({ line, cart, editable }) {
   const { check } = line;
-  const run = (p) => p.catch(() => toast.error('Não foi possível atualizar o carrinho. Tente de novo.'));
+  const run = (p) => p.catch(() => toast.error(t('Não foi possível atualizar o carrinho. Tente de novo.')));
   return (
     <li className="flex gap-3 py-4">
       <Link to={`/mercado/anuncio/${line.listing_id}`} className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-paper">
@@ -76,18 +77,18 @@ function Line({ line, cart, editable }) {
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {check.problem}
           </p>
         )}
-        {line.quantity > 1 && check.ok && <p className="text-xs text-gray-500">{formatBRL(check.unit_price_cents)} cada</p>}
+        {line.quantity > 1 && check.ok && <p className="text-xs text-gray-500">{t('{valor} cada', { valor: formatBRL(check.unit_price_cents) })}</p>}
         {editable && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
             {check.max > 0 && <Qty value={Math.min(line.quantity, check.max)} max={Math.min(check.max, 99)} disabled={cart.saving} onChange={(q) => run(cart.setQuantity(line.listing_id, q))} />}
             {check.ok && line.quantity > check.max && check.max > 0 && (
-              <button type="button" onClick={() => run(cart.setQuantity(line.listing_id, check.max))} className="text-xs font-bold text-ink underline">Ajustar para {check.max}</button>
+              <button type="button" onClick={() => run(cart.setQuantity(line.listing_id, check.max))} className="text-xs font-bold text-ink underline">{t('Ajustar para {n}', { n: check.max })}</button>
             )}
             <button type="button" onClick={() => run(cart.later(line.listing_id))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-ink">
-              <Bookmark className="h-3.5 w-3.5" /> Salvar para depois
+              <Bookmark className="h-3.5 w-3.5" /> {t('Salvar para depois')}
             </button>
             <button type="button" onClick={() => run(cart.remove(line.listing_id))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-red-600">
-              <Trash2 className="h-3.5 w-3.5" /> Remover
+              <Trash2 className="h-3.5 w-3.5" /> {t('Remover')}
             </button>
           </div>
         )}
@@ -97,8 +98,8 @@ function Line({ line, cart, editable }) {
 }
 
 function shipText(cost) {
-  if (cost.shipping_to_agree) return 'Frete a combinar';
-  return cost.shipping_cents ? `Frete ${formatBRL(cost.shipping_cents)}` : 'Frete grátis';
+  if (cost.shipping_to_agree) return t('Frete a combinar');
+  return cost.shipping_cents ? t('Frete {valor}', { valor: formatBRL(cost.shipping_cents) }) : t('Frete grátis');
 }
 
 function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
@@ -107,7 +108,7 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
   const cost = groupShippingCost(listings, choice.fulfillment);
   const { pricing } = promo;
   return (
-    <V2Surface variant="compacto" as="section" aria-label={`Pedido de ${g.seller_name}`} className="p-5">
+    <V2Surface variant="compacto" as="section" aria-label={t('Pedido de {nome}', { nome: g.seller_name })} className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-3">
           {editable && (
@@ -120,8 +121,8 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
             />
           )}
           <span>
-            <span className="block text-xs text-gray-500">Vendido por</span>
-            <Link to={`/mercado/vendedor/${g.seller_key}`} className="font-bold text-ink hover:underline">{g.seller_name || 'Vendedor'}</Link>
+            <span className="block text-xs text-gray-500">{t('Vendido por')}</span>
+            <Link to={`/mercado/vendedor/${g.seller_key}`} className="font-bold text-ink hover:underline">{g.seller_name || t('Vendedor')}</Link>
           </span>
         </label>
         <SellerTypeTag type={g.seller_type} />
@@ -130,10 +131,10 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
       {g.buyable > 0 && (
         <div className="space-y-3 border-t border-gray-100 pt-4">
           {opcoes.length === 0 ? (
-            <p className="text-sm text-amber-800">Estes itens não têm uma forma de entrega em comum. Compre um de cada vez (salve o outro para depois).</p>
+            <p className="text-sm text-amber-800">{t('Estes itens não têm uma forma de entrega em comum. Compre um de cada vez (salve o outro para depois).')}</p>
           ) : (
             <fieldset>
-              <legend className="mb-2 text-sm font-bold text-ink">Como você quer receber</legend>
+              <legend className="mb-2 text-sm font-bold text-ink">{t('Como você quer receber')}</legend>
               <div className="flex flex-wrap gap-2">
                 {opcoes.map((f) => (
                   <label key={f} className={cn('flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm', choice.fulfillment === f ? 'border-ink bg-ink text-white' : 'border-gray-200 text-ink')}>
@@ -143,23 +144,23 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
                 ))}
               </div>
               {choice.fulfillment === 'shipping' && <p className="mt-2 text-xs text-gray-500">{shipText(cost)}</p>}
-              {choice.fulfillment === 'meetup' && <p className="mt-2 text-xs text-gray-500">Vocês combinam o local pelo pedido, depois do pagamento.</p>}
-              {choice.fulfillment === 'pickup' && <p className="mt-2 text-xs text-gray-500">O endereço de retirada aparece no pedido.</p>}
+              {choice.fulfillment === 'meetup' && <p className="mt-2 text-xs text-gray-500">{t('Vocês combinam o local pelo pedido, depois do pagamento.')}</p>}
+              {choice.fulfillment === 'pickup' && <p className="mt-2 text-xs text-gray-500">{t('O endereço de retirada aparece no pedido.')}</p>}
             </fieldset>
           )}
           {editable && (
-            <V2Field label="Recado para o vendedor (opcional)" htmlFor={`nota-${g.seller_key}`}>
-              <V2Textarea id={`nota-${g.seller_key}`} rows={2} maxLength={300} value={choice.note} onChange={(e) => setChoice({ ...choice, note: e.target.value })} placeholder="Ex.: prefiro retirar à noite" className="min-h-0" />
+            <V2Field label={t('Recado para o vendedor (opcional)')} htmlFor={`nota-${g.seller_key}`}>
+              <V2Textarea id={`nota-${g.seller_key}`} rows={2} maxLength={300} value={choice.note} onChange={(e) => setChoice({ ...choice, note: e.target.value })} placeholder={t('Ex.: prefiro retirar à noite')} className="min-h-0" />
             </V2Field>
           )}
           {opcoes.length > 0 && (
             <CheckoutPromos sellerKey={g.seller_key} choice={choice} patch={patch} giftCards={promo.giftCards} pricing={pricing} couponError={promo.couponError} publicCoupons={promo.publicCoupons} />
           )}
           {g.savings_cents > 0 && (
-            <p className="text-xs font-medium text-green-700">Você economiza {formatBRL(g.savings_cents)} nos preços “de/por”.</p>
+            <p className="text-xs font-medium text-green-700">{t('Você economiza {valor} nos preços “de/por”.', { valor: formatBRL(g.savings_cents) })}</p>
           )}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Total deste vendedor</span>
+            <span className="text-gray-500">{t('Total deste vendedor')}</span>
             <span className="font-bold text-ink">{formatBRL(pricing.total_cents)}</span>
           </div>
         </div>
@@ -173,24 +174,24 @@ function AddressForm({ value, onChange, error }) {
   return (
     <V2Surface variant="compacto" as="section" aria-labelledby="endereco-titulo" className="space-y-4 p-5">
       <div>
-        <h2 id="endereco-titulo" className="font-display text-lg font-bold text-ink">Endereço de entrega</h2>
-        <p className="text-xs text-gray-500">Só o vendedor que aceitar o pedido vê o endereço.</p>
+        <h2 id="endereco-titulo" className="font-display text-lg font-bold text-ink">{t('Endereço de entrega')}</h2>
+        <p className="text-xs text-gray-500">{t('Só o vendedor que aceitar o pedido vê o endereço.')}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-6">
-        <V2Field label="Quem recebe" htmlFor="end-name" className="sm:col-span-4"><V2Input id="end-name" autoComplete="name" value={value.name} onChange={set('name')} /></V2Field>
-        <V2Field label="CEP" htmlFor="end-cep" className="sm:col-span-2"><V2Input id="end-cep" inputMode="numeric" autoComplete="postal-code" maxLength={9} value={value.cep} onChange={set('cep')} /></V2Field>
-        <V2Field label="Rua" htmlFor="end-street" className="sm:col-span-4"><V2Input id="end-street" autoComplete="address-line1" value={value.street} onChange={set('street')} /></V2Field>
-        <V2Field label="Número" htmlFor="end-number" className="sm:col-span-2"><V2Input id="end-number" value={value.number} onChange={set('number')} /></V2Field>
-        <V2Field label="Complemento" htmlFor="end-complement" className="sm:col-span-3"><V2Input id="end-complement" autoComplete="address-line2" value={value.complement} onChange={set('complement')} /></V2Field>
-        <V2Field label="Bairro" htmlFor="end-district" className="sm:col-span-3"><V2Input id="end-district" value={value.district} onChange={set('district')} /></V2Field>
-        <V2Field label="Cidade" htmlFor="end-city" className="sm:col-span-3"><V2Input id="end-city" autoComplete="address-level2" value={value.city} onChange={set('city')} /></V2Field>
-        <V2Field label="Estado" htmlFor="end-state" className="sm:col-span-1">
+        <V2Field label={t('Quem recebe')} htmlFor="end-name" className="sm:col-span-4"><V2Input id="end-name" autoComplete="name" value={value.name} onChange={set('name')} /></V2Field>
+        <V2Field label={t('CEP')} htmlFor="end-cep" className="sm:col-span-2"><V2Input id="end-cep" inputMode="numeric" autoComplete="postal-code" maxLength={9} value={value.cep} onChange={set('cep')} /></V2Field>
+        <V2Field label={t('Rua')} htmlFor="end-street" className="sm:col-span-4"><V2Input id="end-street" autoComplete="address-line1" value={value.street} onChange={set('street')} /></V2Field>
+        <V2Field label={t('Número')} htmlFor="end-number" className="sm:col-span-2"><V2Input id="end-number" value={value.number} onChange={set('number')} /></V2Field>
+        <V2Field label={t('Complemento')} htmlFor="end-complement" className="sm:col-span-3"><V2Input id="end-complement" autoComplete="address-line2" value={value.complement} onChange={set('complement')} /></V2Field>
+        <V2Field label={t('Bairro')} htmlFor="end-district" className="sm:col-span-3"><V2Input id="end-district" value={value.district} onChange={set('district')} /></V2Field>
+        <V2Field label={t('Cidade')} htmlFor="end-city" className="sm:col-span-3"><V2Input id="end-city" autoComplete="address-level2" value={value.city} onChange={set('city')} /></V2Field>
+        <V2Field label={t('Estado')} htmlFor="end-state" className="sm:col-span-1">
           <V2Select id="end-state" value={value.state} onChange={set('state')}>
-            <option value="">UF</option>
+            <option value="">{t('UF')}</option>
             {BR_UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
           </V2Select>
         </V2Field>
-        <V2Field label="Telefone (opcional)" htmlFor="end-phone" hint="Para a transportadora." className="sm:col-span-2"><V2Input id="end-phone" type="tel" autoComplete="tel" value={value.phone} onChange={set('phone')} /></V2Field>
+        <V2Field label={t('Telefone (opcional)')} htmlFor="end-phone" hint={t('Para a transportadora.')} className="sm:col-span-2"><V2Input id="end-phone" type="tel" autoComplete="tel" value={value.phone} onChange={set('phone')} /></V2Field>
       </div>
       {error && <p role="alert" className="text-sm font-medium text-red-500">{error}</p>}
     </V2Surface>
@@ -204,14 +205,14 @@ function Done({ result }) {
         <V2Surface className="space-y-4 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
           <h1 className="font-display text-2xl font-bold text-ink">
-            {result.orders.length > 1 ? `${result.orders.length} pedidos feitos` : 'Pedido feito'}
+            {result.orders.length > 1 ? t('{n} pedidos feitos', { n: result.orders.length }) : t('Pedido feito')}
           </h1>
-          <p className="text-gray-600">Agora o vendedor aceita o pedido. Aí aparece a chave Pix para você pagar — você recebe um aviso.</p>
+          <p className="text-gray-600">{t('Agora o vendedor aceita o pedido. Aí aparece a chave Pix para você pagar — você recebe um aviso.')}</p>
           <ul className="space-y-2 text-left">
             {result.orders.map((o) => (
               <li key={o.id}>
                 <Link to={`/mercado/pedidos/${o.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 p-4 hover:border-ink">
-                  <span><span className="block font-bold text-ink">{o.seller_name}</span><span className="text-xs text-gray-500">Pedido {o.code}</span></span>
+                  <span><span className="block font-bold text-ink">{o.seller_name}</span><span className="text-xs text-gray-500">{t('Pedido {codigo}', { codigo: o.code })}</span></span>
                   <span className="font-bold text-ink">{formatBRL(o.total_cents)}</span>
                 </Link>
               </li>
@@ -221,16 +222,16 @@ function Done({ result }) {
       )}
       {result.failures.length > 0 && (
         <V2Surface variant="compacto" className="space-y-2 p-5">
-          <h2 className="flex items-center gap-2 font-bold text-red-600"><XCircle className="h-5 w-5" /> {result.failures.length > 1 ? 'Alguns pedidos não foram feitos' : 'Um pedido não foi feito'}</h2>
+          <h2 className="flex items-center gap-2 font-bold text-red-600"><XCircle className="h-5 w-5" /> {result.failures.length > 1 ? t('Alguns pedidos não foram feitos') : t('Um pedido não foi feito')}</h2>
           <ul className="space-y-1 text-sm text-gray-700">
-            {result.failures.map((f) => <li key={f.seller_key}>{f.seller_name || 'Vendedor'}: {f.error}</li>)}
+            {result.failures.map((f) => <li key={f.seller_key}>{f.seller_name || t('Vendedor')}: {f.error}</li>)}
           </ul>
-          <p className="text-xs text-gray-500">Esses itens continuam no carrinho.</p>
+          <p className="text-xs text-gray-500">{t('Esses itens continuam no carrinho.')}</p>
         </V2Surface>
       )}
       <div className="flex flex-wrap justify-center gap-3">
-        <V2Button asChild><Link to="/mercado/pedidos">Ver minhas compras</Link></V2Button>
-        <V2Button asChild variant="ghost"><Link to="/mercado">Continuar comprando</Link></V2Button>
+        <V2Button asChild><Link to="/mercado/pedidos">{t('Ver minhas compras')}</Link></V2Button>
+        <V2Button asChild variant="ghost"><Link to="/mercado">{t('Continuar comprando')}</Link></V2Button>
       </div>
     </div>
   );
@@ -352,9 +353,9 @@ function CartPage() {
     corpo = (
       <V2EmptyState
         icon={ShoppingCart}
-        title="Seu carrinho está vazio"
-        description="Encontre raquetes, bolas e tudo de pickleball de quem joga com você."
-        action={<V2Button asChild><Link to="/mercado">Ir às compras</Link></V2Button>}
+        title={t('Seu carrinho está vazio')}
+        description={t('Encontre raquetes, bolas e tudo de pickleball de quem joga com você.')}
+        action={<V2Button asChild><Link to="/mercado">{t('Ir às compras')}</Link></V2Button>}
       />
     );
   } else {
@@ -364,10 +365,10 @@ function CartPage() {
         <div className="space-y-4 lg:col-span-8">
           {fechar && (
             <button type="button" onClick={() => setParams({})} className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
-              <ChevronLeft className="h-4 w-4" /> Voltar ao carrinho
+              <ChevronLeft className="h-4 w-4" /> {t('Voltar ao carrinho')}
             </button>
           )}
-          {grupos.groups.length === 0 && <p className="text-sm text-gray-500">Nada no carrinho agora — só itens salvos para depois.</p>}
+          {grupos.groups.length === 0 && <p className="text-sm text-gray-500">{t('Nada no carrinho agora — só itens salvos para depois.')}</p>}
           {(fechar ? escolhidos : grupos.groups).map((g) => (
             <SellerGroup
               key={g.seller_key}
@@ -383,7 +384,7 @@ function CartPage() {
           {fechar && precisaEndereco && <AddressForm value={address} onChange={(a) => { setAddress(a); setAddrErr(''); }} error={addrErr} />}
           {!fechar && cart.cart.saved.length > 0 && (
             <V2Surface variant="plano" as="section" aria-labelledby="salvos-titulo" className="p-5">
-              <h2 id="salvos-titulo" className="font-display text-lg font-bold text-ink">Salvos para depois ({cart.cart.saved.length})</h2>
+              <h2 id="salvos-titulo" className="font-display text-lg font-bold text-ink">{t('Salvos para depois ({n})', { n: cart.cart.saved.length })}</h2>
               <ul className="divide-y divide-gray-100">
                 {cart.cart.saved.map((s) => {
                   const l = mapa[s.listing_id];
@@ -393,8 +394,8 @@ function CartPage() {
                       <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-paper-pure">{s.cover_url && <img src={s.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" />}</span>
                       <Link to={`/mercado/anuncio/${s.listing_id}`} className="min-w-0 flex-1 truncate text-sm text-ink hover:underline">{s.title}</Link>
                       {ok ? (
-                        <V2Button type="button" size="sm" variant="ghost" onClick={() => cart.back(s.listing_id).catch(() => toast.error('Não foi possível mover. Tente de novo.'))}>Mover para o carrinho</V2Button>
-                      ) : <span className="text-xs text-gray-500">Indisponível</span>}
+                        <V2Button type="button" size="sm" variant="ghost" onClick={() => cart.back(s.listing_id).catch(() => toast.error(t('Não foi possível mover. Tente de novo.')))}>{t('Mover para o carrinho')}</V2Button>
+                      ) : <span className="text-xs text-gray-500">{t('Indisponível')}</span>}
                     </li>
                   );
                 })}
@@ -404,31 +405,31 @@ function CartPage() {
         </div>
         <aside className="lg:col-span-4">
           <V2Surface variant="compacto" className="space-y-4 p-5 lg:sticky lg:top-4">
-            <h2 className="font-display text-lg font-bold text-ink">Resumo</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Resumo')}</h2>
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-gray-500">Produtos ({unidades})</dt><dd className="font-medium text-ink">{formatBRL(subtotal)}</dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Frete</dt><dd className="font-medium text-ink">{freteCombinar ? `${formatBRL(frete)} + a combinar` : frete ? formatBRL(frete) : 'Grátis'}</dd></div>
-              {descontos > 0 && <div className="flex justify-between"><dt className="text-gray-500">Cupons</dt><dd className="font-medium text-green-700">−{formatBRL(descontos)}</dd></div>}
-              {emVales > 0 && <div className="flex justify-between"><dt className="text-gray-500">Vale-presente</dt><dd className="font-medium text-green-700">−{formatBRL(emVales)}</dd></div>}
-              <div className="flex justify-between border-t border-gray-100 pt-2 text-base"><dt className="font-bold text-ink">Total</dt><dd className="font-display text-xl font-bold text-ink">{formatBRL(total)}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">{t('Produtos ({n})', { n: unidades })}</dt><dd className="font-medium text-ink">{formatBRL(subtotal)}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">{t('Frete')}</dt><dd className="font-medium text-ink">{freteCombinar ? t('{valor} + a combinar', { valor: formatBRL(frete) }) : frete ? formatBRL(frete) : t('Grátis')}</dd></div>
+              {descontos > 0 && <div className="flex justify-between"><dt className="text-gray-500">{t('Cupons')}</dt><dd className="font-medium text-green-700">−{formatBRL(descontos)}</dd></div>}
+              {emVales > 0 && <div className="flex justify-between"><dt className="text-gray-500">{t('Vale-presente')}</dt><dd className="font-medium text-green-700">−{formatBRL(emVales)}</dd></div>}
+              <div className="flex justify-between border-t border-gray-100 pt-2 text-base"><dt className="font-bold text-ink">{t('Total')}</dt><dd className="font-display text-xl font-bold text-ink">{formatBRL(total)}</dd></div>
             </dl>
-            {escolhidos.length > 1 && <p className="text-xs text-gray-500">{escolhidos.length} vendedores: vira um pedido para cada um, e você paga cada um pelo Pix dele.</p>}
+            {escolhidos.length > 1 && <p className="text-xs text-gray-500">{t('{n} vendedores: vira um pedido para cada um, e você paga cada um pelo Pix dele.', { n: escolhidos.length })}</p>}
             {!comprasAbertas ? (
-              <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">As compras no Mercado estão pausadas no momento.</p>
+              <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">{t('As compras no Mercado estão pausadas no momento.')}</p>
             ) : step === 'fechar' && escolhidos.length > 0 ? (
               <>
                 <V2Button type="button" size="lg" className="w-full" disabled={place.isPending} onClick={confirmar}>
-                  {place.isPending ? 'Fazendo o pedido…' : escolhidos.length > 1 ? `Confirmar ${escolhidos.length} pedidos` : 'Confirmar pedido'}
+                  {place.isPending ? t('Fazendo o pedido…') : escolhidos.length > 1 ? t('Confirmar {n} pedidos', { n: escolhidos.length }) : t('Confirmar pedido')}
                 </V2Button>
-                <p className="text-xs text-gray-500">Ao confirmar, você concorda com os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos do Mercado</Link>.</p>
+                <p className="text-xs text-gray-500">{t('Ao confirmar, você concorda com os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos do Mercado')}</Link>.</p>
               </>
             ) : (
               <V2Button type="button" size="lg" className="w-full" disabled={!escolhidos.length} onClick={() => setParams({ fechar: '1' })}>
-                <PackageCheck className="h-4 w-4" /> Fechar pedido
+                <PackageCheck className="h-4 w-4" /> {t('Fechar pedido')}
               </V2Button>
             )}
-            {!escolhidos.length && grupos.groups.length > 0 && <p className="text-xs text-gray-500">Marque ao menos um vendedor com itens disponíveis.</p>}
-            <p className="flex items-start gap-2 text-xs text-gray-500"><ShieldCheck className="h-4 w-4 shrink-0 text-ink" /> Nada é cobrado agora. Você paga pelo Pix direto ao vendedor depois que ele aceitar.</p>
+            {!escolhidos.length && grupos.groups.length > 0 && <p className="text-xs text-gray-500">{t('Marque ao menos um vendedor com itens disponíveis.')}</p>}
+            <p className="flex items-start gap-2 text-xs text-gray-500"><ShieldCheck className="h-4 w-4 shrink-0 text-ink" /> {t('Nada é cobrado agora. Você paga pelo Pix direto ao vendedor depois que ele aceitar.')}</p>
           </V2Surface>
         </aside>
       </div>
@@ -438,7 +439,7 @@ function CartPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-16">
       <MarketHeader />
-      {!result && <V2PageIntro title={step === 'fechar' ? 'Fechar pedido' : 'Carrinho'} />}
+      {!result && <V2PageIntro title={step === 'fechar' ? t('Fechar pedido') : t('Carrinho')} />}
       {corpo}
     </div>
   );

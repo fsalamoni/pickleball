@@ -12,12 +12,13 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AttachmentGallery } from '@/components/ui/attachments';
 import { cn } from '@/core/lib/utils';
 import { V2Button } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function formatTime(ms) {
   if (!ms) return '';
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, onDelete }) {
@@ -34,7 +35,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
   const saveEdit = async () => {
     const next = draft.trim();
     if (!next) {
-      toast.error('A mensagem não pode ficar vazia. Para remover, exclua a mensagem.');
+      toast.error(t('A mensagem não pode ficar vazia. Para remover, exclua a mensagem.'));
       return;
     }
     if (next === (message.text || '').trim()) {
@@ -46,7 +47,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
       await onEdit?.(message, next);
       setEditing(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível editar a mensagem.');
+      toast.error(err.message || t('Não foi possível editar a mensagem.'));
     } finally {
       setBusy(false);
     }
@@ -58,7 +59,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
       await onDelete?.(message);
       setConfirmDelete(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível excluir a mensagem.');
+      toast.error(err.message || t('Não foi possível excluir a mensagem.'));
     } finally {
       setBusy(false);
     }
@@ -97,10 +98,10 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
               />
               <div className="flex justify-end gap-1.5">
                 <V2Button size="sm" variant="ghost" className={cn('px-3 py-1.5', isOwn && 'border-white/20 bg-white/10 text-white hover:border-white/40')} onClick={() => setEditing(false)} disabled={busy}>
-                  <X className="h-3.5 w-3.5" /> Cancelar
+                  <X className="h-3.5 w-3.5" /> {t('Cancelar')}
                 </V2Button>
                 <V2Button size="sm" className="px-3 py-1.5" onClick={saveEdit} disabled={busy}>
-                  <Check className="h-3.5 w-3.5" /> Salvar
+                  <Check className="h-3.5 w-3.5" /> {t('Salvar')}
                 </V2Button>
               </div>
             </div>
@@ -114,7 +115,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
                 />
               )}
               <div className={cn('mt-1 flex items-center justify-end gap-1 text-2xs', isOwn ? 'text-white/60' : 'text-gray-500')}>
-                {message.edited && <span>editada</span>}
+                {message.edited && <span>{t('editada')}</span>}
                 <span>{formatTime(message.created_at_ms)}</span>
               </div>
             </>
@@ -126,18 +127,18 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
         <div className="self-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button aria-label="Mais opções da mensagem" className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
+              <button aria-label={t('Mais opções da mensagem')} className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
                 <MoreVertical className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {hasText && (
                 <DropdownMenuItem onClick={startEdit}>
-                  <Pencil className="mr-2 h-4 w-4" /> Editar
+                  <Pencil className="mr-2 h-4 w-4" /> {t('Editar')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setConfirmDelete(true)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                <Trash2 className="mr-2 h-4 w-4" /> {t('Excluir')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -147,9 +148,9 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Excluir mensagem"
-        description="A mensagem será removida para todos os participantes. Esta ação não pode ser desfeita."
-        confirmLabel="Excluir"
+        title={t('Excluir mensagem')}
+        description={t('A mensagem será removida para todos os participantes. Esta ação não pode ser desfeita.')}
+        confirmLabel={t('Excluir')}
         destructive
         loading={busy}
         onConfirm={handleDelete}

@@ -7,6 +7,8 @@
  * início já se vira sem eles (o que a pessoa FAZ vence o que ela DISSE), então
  * esse passo pode ser adiado: o assistente volta a pedir depois de uma semana.
  */
+
+import { t } from '@/core/i18n';
 export const PASSOS = Object.freeze(['pessoal', 'jogo', 'interesses', 'nivel']);
 export const CAMPOS_DO_PASSO = Object.freeze({
   pessoal: ['platform_name', 'birth_date', 'phone', 'gender', 'city', 'state'],
@@ -36,9 +38,9 @@ export function soFaltaAdiavel(faltando = []) {
 
 /** O adiamento gravado (ISO) ainda vale? */
 export function adiamentoVale(iso, agora = Date.now()) {
-  const t = Date.parse(iso || '');
-  if (!Number.isFinite(t)) return false;
-  return agora - t < ADIAMENTO_DIAS * 24 * 60 * 60 * 1000;
+  const ms = Date.parse(iso || '');
+  if (!Number.isFinite(ms)) return false;
+  return agora - ms < ADIAMENTO_DIAS * 24 * 60 * 60 * 1000;
 }
 
 /** O assistente deve abrir para quem tem isto faltando e este adiamento? */
@@ -49,7 +51,7 @@ export function deveAbrir(faltando = [], adiadoEm, agora = Date.now()) {
 
 /** O título de quem volta: diz logo o que falta quando é uma coisa só. */
 export function tituloDoRetorno(passos = []) {
-  if (passos.length === 1 && passos[0] === 'nivel') return 'Falta só o seu nível';
-  if (passos.length === 1 && passos[0] === 'interesses') return 'Falta só dizer o que você quer fazer por aqui';
-  return 'Faltam alguns dados no seu cadastro';
+  if (passos.length === 1 && passos[0] === 'nivel') return t('Falta só o seu nível');
+  if (passos.length === 1 && passos[0] === 'interesses') return t('Falta só dizer o que você quer fazer por aqui');
+  return t('Faltam alguns dados no seu cadastro');
 }

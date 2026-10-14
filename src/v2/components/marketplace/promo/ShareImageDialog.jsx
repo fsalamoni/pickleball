@@ -15,6 +15,7 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
 import { formatBRL, discountPercent } from '@/modules/marketplace/domain/money';
 import { V2Button } from '@/v2/ui/primitives';
+import { t, tk } from '@/core/i18n';
 
 const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
@@ -31,7 +32,7 @@ function useQr(url) {
 }
 
 /** O cartão de um anúncio, de uma loja ou de um cupom (1080 × 1350 depois do 3×). */
-const EYEBROW = { store: 'Loja no Mercado PickleRush', coupon: 'Cupom no Mercado PickleRush' };
+const EYEBROW = { store: tk('Loja no Mercado PickleRush'), coupon: tk('Cupom no Mercado PickleRush') };
 const ICONE = { store: Store, coupon: TicketPercent };
 export const MarketShareCard = forwardRef(function MarketShareCard({ kind = 'listing', image, title, subtitle, priceCents, compareAtCents, highlight, code, qr, showImage = true }, ref) {
   const Icone = ICONE[kind] || Gift;
@@ -50,7 +51,7 @@ export const MarketShareCard = forwardRef(function MarketShareCard({ kind = 'lis
       </div>
       <div className="flex items-end gap-3 p-5">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-widest text-acid">{EYEBROW[kind] || 'Mercado PickleRush'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-acid">{t(EYEBROW[kind] || 'Mercado PickleRush')}</p>
           <p className="mt-1 line-clamp-2 font-display text-xl font-bold leading-tight">{title}</p>
           {subtitle && <p className="mt-1 line-clamp-1 text-sm text-white/80">{subtitle}</p>}
           {priceCents > 0 && (
@@ -87,7 +88,7 @@ export default function ShareImageDialog({ open, onOpenChange, title, descriptio
       setShowImage(false);
       await new Promise((r) => setTimeout(r, 50));
       const png = await toPng(ref.current, opts);
-      toast.message('A foto não pôde entrar na imagem. O cartão saiu sem ela.');
+      toast.message(t('A foto não pôde entrar na imagem. O cartão saiu sem ela.'));
       return png;
     }
   }
@@ -100,9 +101,9 @@ export default function ShareImageDialog({ open, onOpenChange, title, descriptio
       a.download = fileName;
       a.href = await gerar();
       a.click();
-      toast.success('Imagem salva. Poste nos stories ou mande no grupo.');
+      toast.success(t('Imagem salva. Poste nos stories ou mande no grupo.'));
     } catch {
-      toast.error('Não foi possível gerar a imagem. Tente de novo.');
+      toast.error(t('Não foi possível gerar a imagem. Tente de novo.'));
     } finally { setBusy(''); }
   }
 
@@ -130,13 +131,13 @@ export default function ShareImageDialog({ open, onOpenChange, title, descriptio
       <DialogContent className="max-w-md" sheet>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description || 'Uma imagem para os stories e o grupo, com o link junto.'}</DialogDescription>
+          <DialogDescription>{description || t('Uma imagem para os stories e o grupo, com o link junto.')}</DialogDescription>
         </DialogHeader>
         {renderCard({ ref, qr, showImage })}
         <div className="grid grid-cols-3 gap-2">
-          <V2Button type="button" onClick={compartilhar} disabled={!!busy}><Share2 className="h-4 w-4" /> {busy === 'share' ? '…' : 'Enviar'}</V2Button>
-          <V2Button type="button" variant="ghost" onClick={baixar} disabled={!!busy}><Download className="h-4 w-4" /> {busy === 'png' ? '…' : 'Imagem'}</V2Button>
-          <V2Button type="button" variant="ghost" onClick={() => copy(url, 'Link copiado.')}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Link</V2Button>
+          <V2Button type="button" onClick={compartilhar} disabled={!!busy}><Share2 className="h-4 w-4" /> {busy === 'share' ? '…' : t('Enviar')}</V2Button>
+          <V2Button type="button" variant="ghost" onClick={baixar} disabled={!!busy}><Download className="h-4 w-4" /> {busy === 'png' ? '…' : t('Imagem')}</V2Button>
+          <V2Button type="button" variant="ghost" onClick={() => copy(url, t('Link copiado.'))}>{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {t('Link')}</V2Button>
         </div>
       </DialogContent>
     </Dialog>

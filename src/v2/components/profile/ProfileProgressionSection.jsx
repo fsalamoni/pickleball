@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import ProgressionCardV2 from '@/modules/progression/components/ProgressionCardV2';
+import { t } from '@/core/i18n';
 
 /**
  * Bloco "Sua progressão" do perfil (gamificação V2).
@@ -24,7 +25,7 @@ export default function ProfileProgressionSection({ uid }) {
     <section className="mt-8" data-testid="profile-progression-v2">
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-amber-500" aria-hidden="true" />
-        <h2 className="font-display text-lg font-bold text-ink">Sua progressão</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Sua progressão')}</h2>
       </div>
       <ProgressionCardV2 summary={stats} xpTotal={xp.total} trees={skillTrees} matchDates={matchDates} streak={streak} />
       <div className="mt-3 text-center text-sm">
@@ -32,7 +33,7 @@ export default function ProfileProgressionSection({ uid }) {
           to="/gamification"
           className="inline-flex items-center gap-1 font-bold text-ink hover:underline"
         >
-          Ver missões e mais conquistas →
+          {t('Ver missões e mais conquistas →')}
         </Link>
       </div>
     </section>

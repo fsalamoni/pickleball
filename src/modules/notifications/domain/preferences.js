@@ -10,18 +10,20 @@
  * para manter este módulo puro (sem importar o serviço, que carrega o Firebase).
  */
 
+import { t, tk } from '@/core/i18n';
+
 /** Categorias de preferência, na ordem de exibição. */
 export const NOTIFICATION_CATEGORIES = Object.freeze([
   {
     id: 'social',
-    label: 'Mensagens e fórum',
-    description: 'Mensagens de chat, convites de conversa e respostas ou menções no fórum.',
+    label: tk('Mensagens e fórum'),
+    description: tk('Mensagens de chat, convites de conversa e respostas ou menções no fórum.'),
     types: ['chat_message', 'chat_invite', 'forum_reply', 'forum_mention'],
   },
   {
     id: 'clubs',
-    label: 'Clubes e eventos',
-    description: 'Convites, pedidos de ingresso, aprovações e novos eventos de clube.',
+    label: tk('Clubes e eventos'),
+    description: tk('Convites, pedidos de ingresso, aprovações e novos eventos de clube.'),
     types: [
       'event_invite', 'club_join_request', 'club_join_approved',
       'club_join_rejected', 'club_invite', 'club_invite_accepted',
@@ -30,38 +32,38 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
   },
   {
     id: 'tournaments',
-    label: 'Torneios',
-    description: 'Abertura de inscrições e avisos dos organizadores.',
+    label: tk('Torneios'),
+    description: tk('Abertura de inscrições e avisos dos organizadores.'),
     types: ['tournament_open', 'tournament_announcement'],
   },
   {
     id: 'partners',
-    label: 'Parcerias de dupla',
-    description: 'Convites de dupla e respostas dos parceiros.',
+    label: tk('Parcerias de dupla'),
+    description: tk('Convites de dupla e respostas dos parceiros.'),
     types: ['partner_invite', 'partner_response'],
   },
   {
     id: 'training',
-    label: 'Treino',
-    description: 'Treinos indicados e enviados pelo professor, revisão do que você publicou, comentários e dúvidas.',
+    label: tk('Treino'),
+    description: tk('Treinos indicados e enviados pelo professor, revisão do que você publicou, comentários e dúvidas.'),
     types: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
   },
   {
     id: 'market',
-    label: 'Mercado',
-    description: 'Pedidos, perguntas, ofertas e avaliações do Mercado.',
+    label: tk('Mercado'),
+    description: tk('Pedidos, perguntas, ofertas e avaliações do Mercado.'),
     types: ['market'],
   },
   {
     id: 'gamification',
-    label: 'Gamificação',
-    description: 'Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.',
+    label: tk('Gamificação'),
+    description: tk('Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.'),
     types: ['gamification'],
   },
   {
     id: 'reminders',
-    label: 'Lembretes',
-    description: 'Lembretes para completar o perfil e o nivelamento.',
+    label: tk('Lembretes'),
+    description: tk('Lembretes para completar o perfil e o nivelamento.'),
     types: ['profile_reminder', 'leveling_reminder'],
   },
 ]);
@@ -70,7 +72,7 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
 const TYPE_TO_CATEGORY = (() => {
   const map = {};
   NOTIFICATION_CATEGORIES.forEach((cat) => {
-    cat.types.forEach((t) => { map[t] = cat.id; });
+    cat.types.forEach((tipo) => { map[tipo] = cat.id; });
   });
   return map;
 })();
@@ -133,6 +135,6 @@ export function mutedNotificationsSummary(notifications = [], prefs) {
     if (!n.read) naoLidas += 1;
     porCategoria.set(catId, true);
   });
-  const categorias = NOTIFICATION_CATEGORIES.filter((c) => porCategoria.has(c.id)).map((c) => c.label);
+  const categorias = NOTIFICATION_CATEGORIES.filter((c) => porCategoria.has(c.id)).map((c) => t(c.label));
   return { total, naoLidas, categorias };
 }

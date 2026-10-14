@@ -6,6 +6,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { capturePendingReferral } from '@/modules/progression/domain/referralCapture';
 import { REFERRAL_REWARDS } from '@/modules/progression/domain/referrals';
 import { V2Button, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * V2ReferralLanding — `/r/:code`, o destino do link de convite.
@@ -48,8 +49,8 @@ export default function V2ReferralLanding() {
   return (
     <div className="mx-auto max-w-[640px] px-4 py-10">
       <V2PageIntro
-        title="Você foi convidado"
-        subtitle="Entre no PickleRush e comece com XP na conta."
+        title={t('Você foi convidado')}
+        subtitle={t('Entre no PickleRush e comece com XP na conta.')}
       />
       <V2Surface>
         <div className="flex flex-col items-center gap-4 text-center">
@@ -59,26 +60,25 @@ export default function V2ReferralLanding() {
           {guardado ? (
             <>
               <p className="text-sm text-gray-600">
-                Convite <span className="font-mono font-bold text-ink">{guardado}</span> aplicado.
-                Crie sua conta para receber o bônus.
+                {t('Convite')} <span className="font-mono font-bold text-ink">{guardado}</span> {t('aplicado.')}
+                {t('Crie sua conta para receber o bônus.')}
               </p>
               {recompensa > 0 && (
                 <p className="inline-flex items-center gap-1 text-sm font-bold text-amber-700">
-                  <Sparkles className="h-4 w-4" aria-hidden="true" /> +{recompensa} XP de boas-vindas
+                  <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('+{n} XP de boas-vindas', { n: recompensa })}
                 </p>
               )}
             </>
           ) : (
             <p className="text-sm text-gray-600">
-              Este convite não é válido, mas você ainda pode criar sua conta e
-              começar a jogar.
+              {t('Este convite não é válido, mas você ainda pode criar sua conta e começar a jogar.')}
             </p>
           )}
           <V2Button asChild className="w-full sm:w-auto">
-            <Link to="/login">Criar minha conta</Link>
+            <Link to="/login">{t('Criar minha conta')}</Link>
           </V2Button>
           <Link to="/" className="text-xs text-gray-500 underline">
-            Conhecer a plataforma primeiro
+            {t('Conhecer a plataforma primeiro')}
           </Link>
         </div>
       </V2Surface>

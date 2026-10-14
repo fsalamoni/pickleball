@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/attachments';
 import { CHAT_LIMITS } from '@/modules/chat/domain/constants';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ChatComposer({ onSend, disabled = false }) {
   const [text, setText] = useState('');
@@ -26,7 +27,7 @@ export default function V2ChatComposer({ onSend, disabled = false }) {
       reset();
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (err) {
-      toast.error(err.message || 'Não foi possível enviar a mensagem.');
+      toast.error(err.message || t('Não foi possível enviar a mensagem.'));
     } finally {
       setSending(false);
     }
@@ -43,7 +44,7 @@ export default function V2ChatComposer({ onSend, disabled = false }) {
     <div className="border-t border-gray-100 bg-paper-pure p-3">
       <PendingAttachmentList items={items} onRemove={remove} className="mb-2" />
       <div className="flex items-end gap-2">
-        <AttachmentAddButton onFiles={pick} uploading={uploading} disabled={disabled} iconOnly label="Anexar arquivo ou imagem" />
+        <AttachmentAddButton onFiles={pick} uploading={uploading} disabled={disabled} iconOnly label={t('Anexar arquivo ou imagem')} />
         <textarea
           ref={textareaRef}
           value={text}
@@ -51,10 +52,10 @@ export default function V2ChatComposer({ onSend, disabled = false }) {
           onKeyDown={handleKeyDown}
           rows={1}
           disabled={disabled}
-          placeholder="Escreva uma mensagem…"
+          placeholder={t('Escreva uma mensagem…')}
           className="max-h-40 min-h-[2.5rem] flex-1 resize-none rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
         />
-        <V2Button type="button" size="icon" className="shrink-0" onClick={submit} disabled={!canSend} aria-label="Enviar">
+        <V2Button type="button" size="icon" className="shrink-0" onClick={submit} disabled={!canSend} aria-label={t('Enviar')}>
           <Send className="h-4 w-4" />
         </V2Button>
       </div>

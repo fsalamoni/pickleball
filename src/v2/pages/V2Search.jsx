@@ -17,6 +17,7 @@ import { searchAll } from '@/modules/athletes/domain/globalSearch';
 import {
   V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Referência estável: `[]` novo a cada render refaria a busca inteira. */
 const SEM_ITENS = [];
@@ -57,41 +58,41 @@ export default function V2Search() {
 
   return (
     <div className="mx-auto max-w-[820px]">
-      <V2PageIntro title="Buscar" subtitle="Atletas, torneios, arenas e clubes num só lugar." />
+      <V2PageIntro title={t('Buscar')} subtitle={t('Atletas, torneios, arenas e clubes num só lugar.')} />
 
       <div className="mb-5 max-w-lg">
         <V2SearchInput
           value={q}
           onChange={(e) => setParams(e.target.value ? { q: e.target.value } : {}, { replace: true })}
-          placeholder="Buscar em toda a plataforma…"
+          placeholder={t('Buscar em toda a plataforma…')}
           icon={Search}
           autoFocus
         />
       </div>
 
       {q.trim().length < 2 ? (
-        <V2Surface><V2EmptyState icon={Search} title="Digite para buscar" description="Busque por nome de atleta, torneio, arena ou clube (mínimo 2 letras)." /></V2Surface>
+        <V2Surface><V2EmptyState icon={Search} title={t('Digite para buscar')} description={t('Busque por nome de atleta, torneio, arena ou clube (mínimo 2 letras).')} /></V2Surface>
       ) : total === 0 && carregando ? (
-        <div className="space-y-3" aria-busy="true" aria-label="Buscando">
+        <div className="space-y-3" aria-busy="true" aria-label={t('Buscando')}>
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-16 rounded-3xl" />)}
         </div>
       ) : total === 0 && isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível buscar agora"
-            description={`A busca em ${falharam.map(([nome]) => nome).join(', ')} falhou — tente de novo.`}
+            title={t('Não foi possível buscar agora')}
+            description={t('A busca em {lista} falhou — tente de novo.', { lista: falharam.map(([nome]) => t(nome)).join(', ') })}
             onRetry={tentarDeNovo}
           />
         </V2Surface>
       ) : total === 0 ? (
-        <V2Surface><V2EmptyState icon={Search} title="Nada encontrado" description={`Nenhum resultado para “${q}”.`} /></V2Surface>
+        <V2Surface><V2EmptyState icon={Search} title={t('Nada encontrado')} description={t('Nenhum resultado para “{q}”.', { q })} /></V2Surface>
       ) : (
         <div className="space-y-6">
           {isError && (
             <V2ErrorState
               inline
-              title="Resultados incompletos"
-              description={`Não conseguimos buscar em ${falharam.map(([nome]) => nome).join(', ')}.`}
+              title={t('Resultados incompletos')}
+              description={t('Não conseguimos buscar em {lista}.', { lista: falharam.map(([nome]) => t(nome)).join(', ') })}
               onRetry={tentarDeNovo}
             />
           )}

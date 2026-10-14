@@ -18,6 +18,7 @@
  * termina hoje sumiria às 21h de ontem. Por isso texto de data nunca passa por
  * `Date.parse` aqui.
  */
+import { t, tk } from '@/core/i18n';
 import { formatDateISO } from '../../arenas/domain/calendar.js';
 import { instanteEmMs } from '../../../core/domain/instant.js';
 import { TOURNAMENT_STATUS } from '../../tournament/domain/constants.js';
@@ -134,12 +135,12 @@ export function isTournamentCurrent(t, hoje) {
 
 /** Rótulo curto da fase, para o selo do cartão. */
 export const TOURNAMENT_PHASE_LABEL = Object.freeze({
-  [TOURNAMENT_PHASE.DRAFT]: 'Rascunho',
-  [TOURNAMENT_PHASE.OPEN]: 'Inscrições abertas',
-  [TOURNAMENT_PHASE.UPCOMING]: 'Em breve',
-  [TOURNAMENT_PHASE.LIVE]: 'Acontecendo',
-  [TOURNAMENT_PHASE.STALE]: 'Aguardando encerramento',
-  [TOURNAMENT_PHASE.OVER]: 'Encerrado',
+  [TOURNAMENT_PHASE.DRAFT]: tk('Rascunho'),
+  [TOURNAMENT_PHASE.OPEN]: tk('Inscrições abertas'),
+  [TOURNAMENT_PHASE.UPCOMING]: tk('Em breve'),
+  [TOURNAMENT_PHASE.LIVE]: tk('Acontecendo'),
+  [TOURNAMENT_PHASE.STALE]: tk('Aguardando encerramento'),
+  [TOURNAMENT_PHASE.OVER]: tk('Encerrado'),
 });
 
 /** Quantos dias faltam até `dia` (0 = hoje; negativo = passou; null = sem data). */
@@ -159,8 +160,8 @@ export function diasAte(dia, hoje) {
 export function prazoRelativo(dia, hoje) {
   const n = diasAte(dia, hoje);
   if (n == null || n < 0) return null;
-  if (n === 0) return 'hoje';
-  if (n === 1) return 'amanhã';
-  if (n <= 7) return `em ${n} dias`;
+  if (n === 0) return t('hoje');
+  if (n === 1) return t('amanhã');
+  if (n <= 7) return t('em {n} dias', { n });
   return null;
 }

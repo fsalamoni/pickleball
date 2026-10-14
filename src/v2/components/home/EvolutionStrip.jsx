@@ -8,6 +8,7 @@ import { computeAchievements } from '@/modules/achievements/domain/achievements'
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /**
  * Faixa de gamificação: streak, nível/XP, próxima conquista e metas.
@@ -37,10 +38,10 @@ export function EvolutionStrip({ uid, className }) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <TrendingUpIcon />
-          <h2 className="font-display text-xl font-bold text-ink">Sua evolução</h2>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Sua evolução')}</h2>
         </div>
         <Link to="/meu-desempenho" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-ink">
-          Ver desempenho <ArrowRight className="h-4 w-4" />
+          {t('Ver desempenho')} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -51,7 +52,7 @@ export function EvolutionStrip({ uid, className }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Streak */}
-          <MiniCard icon={Flame} accent="acid" label="Sequência ativa">
+          <MiniCard icon={Flame} accent="acid" label={t('Sequência ativa')}>
             <span className="font-display text-2xl font-black text-ink">{streak}</span>
             <span className="text-sm text-gray-500"> {streak === 1 ? 'semana' : 'semanas'}</span>
           </MiniCard>
@@ -59,42 +60,42 @@ export function EvolutionStrip({ uid, className }) {
           {/* Nível / XP */}
           <V2Surface className="p-5 sm:p-5">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">Nível de perfil</span>
+              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{t('Nível de perfil')}</span>
               <Sparkles className="h-4 w-4 text-acid" />
             </div>
-            <div className="font-display text-2xl font-black text-ink">Nível {level.level}</div>
+            <div className="font-display text-2xl font-black text-ink">{t('Nível {n}', { n: level.level })}</div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-paper">
               <div className="h-full rounded-full bg-acid" style={{ width: `${Math.round((level.progress || 0) * 100)}%` }} />
             </div>
-            <p className="mt-1.5 text-xs text-gray-500">{level.xpIntoLevel} / {level.xpForNext} XP para o próximo</p>
+            <p className="mt-1.5 text-xs text-gray-500">{t('{atual} / {proximo} XP para o próximo', { atual: level.xpIntoLevel, proximo: level.xpForNext })}</p>
           </V2Surface>
 
           {/* Próxima conquista */}
-          <MiniCard icon={Award} accent="ink" label="Próxima conquista">
+          <MiniCard icon={Award} accent="ink" label={t('Próxima conquista')}>
             {nextAchievement ? (
               <>
                 <span className="block truncate font-display text-base font-bold text-ink">{nextAchievement.name}</span>
                 <span className="block truncate text-xs text-gray-500">{nextAchievement.description}</span>
               </>
             ) : (
-              <span className="text-sm font-semibold text-ink">Tudo desbloqueado! 🏆</span>
+              <span className="text-sm font-semibold text-ink">{t('Tudo desbloqueado! 🏆')}</span>
             )}
           </MiniCard>
 
           {/* Metas */}
           <Link to="/meu-desempenho" className="group rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm transition-colors hover:border-gray-300">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">Metas</span>
+              <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{t('Metas')}</span>
               <Target className="h-4 w-4 text-ink" />
             </div>
             {activeGoals > 0 ? (
               <>
                 <span className="font-display text-2xl font-black text-ink">{activeGoals}</span>
-                <span className="text-sm text-gray-500"> ativa{activeGoals > 1 ? 's' : ''}</span>
+                <span className="text-sm text-gray-500"> {activeGoals > 1 ? t('ativas') : t('ativa')}</span>
               </>
             ) : (
               <span className="inline-flex items-center gap-1 text-sm font-semibold text-ink">
-                Definir uma meta <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                {t('Definir uma meta')} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </span>
             )}
           </Link>

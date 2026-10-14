@@ -14,6 +14,7 @@ import { genderLabel } from '@/modules/athletes/domain/constants';
 import { V2Avatar, V2Button, V2Surface } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { memberSince } from '@/modules/athletes/domain/userArea';
+import { t } from '@/core/i18n';
 
 export function MiniStat({ label, value }) {
   return (
@@ -38,7 +39,7 @@ export default function ProfileShowcase({ me, editDica }) {
     genderLabel(userProfile?.gender) ? { icon: User, label: genderLabel(userProfile.gender) } : null,
     location ? { icon: MapPin, label: location } : null,
     userProfile?.dupr_id ? { icon: Hash, label: `DUPR ${userProfile.dupr_id}` } : null,
-    me ? { icon: Medal, label: `Rating ${me.rating}`, tone: 'acid' } : (userProfile?.level ? { icon: Award, label: userProfile.level } : null),
+    me ? { icon: Medal, label: t('Rating {n}', { n: me.rating }), tone: 'acid' } : (userProfile?.level ? { icon: Award, label: userProfile.level } : null),
   ].filter(Boolean);
 
   return (
@@ -55,11 +56,11 @@ export default function ProfileShowcase({ me, editDica }) {
             </div>
             <div className="flex w-full gap-3 sm:w-auto">
               <V2Button asChild variant="subtle" className="flex-1 sm:flex-none">
-                <Link to="/perfil/editar" data-dica={editDica}><Pencil className="h-4 w-4" /> Editar perfil</Link>
+                <Link to="/perfil/editar" data-dica={editDica}><Pencil className="h-4 w-4" /> {t('Editar perfil')}</Link>
               </V2Button>
               {me && (
                 <V2Button asChild className="flex-1 sm:flex-none">
-                  <Link to="/ranking">Ver no ranking</Link>
+                  <Link to="/ranking">{t('Ver no ranking')}</Link>
                 </V2Button>
               )}
             </div>
@@ -68,7 +69,7 @@ export default function ProfileShowcase({ me, editDica }) {
           <div className="text-center sm:text-left">
             <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{name}</h1>
             <p className="mt-1 font-medium text-gray-500">
-              {[location, year ? `Membro desde ${year}` : null].filter(Boolean).join(' • ') || 'Complete seu perfil para aparecer no diretório'}
+              {[location, year ? t('Membro desde {ano}', { ano: year }) : null].filter(Boolean).join(' • ') || t('Complete seu perfil para aparecer no diretório')}
             </p>
 
             {chips.length > 0 && (
@@ -97,10 +98,10 @@ export default function ProfileShowcase({ me, editDica }) {
 
       {me && (
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <MiniStat label="Posição" value={`${me.position}º`} />
-          <MiniStat label="Rating" value={me.rating} />
-          <MiniStat label="Vitórias" value={me.wins} />
-          <MiniStat label="Jogos" value={me.games} />
+          <MiniStat label={t('Posição')} value={`${me.position}º`} />
+          <MiniStat label={t('Rating')} value={me.rating} />
+          <MiniStat label={t('Vitórias')} value={me.wins} />
+          <MiniStat label={t('Jogos')} value={me.games} />
         </div>
       )}
     </>

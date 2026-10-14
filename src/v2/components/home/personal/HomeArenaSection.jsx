@@ -22,6 +22,7 @@ import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
+import { t, tn } from '@/core/i18n';
 
 function Porta({ to, icon: Icon, children }) {
   return (
@@ -40,19 +41,19 @@ export default function HomeArenaSection({ reason }) {
   const geridas = useMyManagedArenas();
 
   return (
-    <HomeSection id="arena" icon={Building2} title={arenas.length > 1 ? 'Suas arenas' : 'Sua arena'} reason={reason}>
+    <HomeSection id="arena" icon={Building2} title={arenas.length > 1 ? t('Suas arenas') : t('Sua arena')} reason={reason}>
       {isLoading ? (
         <V2Skeleton className="h-32 rounded-3xl" />
       ) : geridas.isError ? (
         <V2ErrorState
           inline
-          title="Não carregou as suas arenas"
-          description="A sua arena continua lá — isso quase sempre se resolve tentando de novo."
+          title={t('Não carregou as suas arenas')}
+          description={t('A sua arena continua lá — isso quase sempre se resolve tentando de novo.')}
           onRetry={geridas.refetch}
         />
       ) : arenas.length === 0 ? (
-        <HomeEmpty icon={Building2} actions={<HomeAction to="/arenas/criar" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> Cadastrar minha arena</HomeAction>}>
-          Cadastre a sua arena para receber reservas, montar dias de jogo e divulgar promoções.
+        <HomeEmpty icon={Building2} actions={<HomeAction to="/arenas/criar" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t('Cadastrar minha arena')}</HomeAction>}>
+          {t('Cadastre a sua arena para receber reservas, montar dias de jogo e divulgar promoções.')}
         </HomeEmpty>
       ) : (
         <ul className="grid gap-3">
@@ -65,8 +66,8 @@ export default function HomeArenaSection({ reason }) {
                   <Link to={central} className="group min-w-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40">
                     <span className="block truncate font-display text-lg font-bold">{a.name || 'Arena'}</span>
                     <span className="block text-xs text-gray-300">
-                      {[a.city, a.state].filter(Boolean).join(' / ') || 'Central da arena'}
-                      {a.my_role === 'owner' ? ' · dona' : ''}
+                      {[a.city, a.state].filter(Boolean).join(' / ') || t('Central da arena')}
+                      {a.my_role === 'owner' ? ` · ${t('dona')}` : ''}
                     </span>
                   </Link>
                   {pedidos > 0 && (
@@ -74,15 +75,15 @@ export default function HomeArenaSection({ reason }) {
                       to={`${central}?aba=reservas`}
                       className="shrink-0 rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"
                     >
-                      {`${pedidos} ${pedidos === 1 ? 'pedido esperando' : 'pedidos esperando'}`}
+                      {tn(pedidos, '{n} pedido esperando', '{n} pedidos esperando')}
                     </Link>
                   )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Porta to={`${central}?aba=reservas`} icon={CalendarClock}>Solicitações</Porta>
-                  <Porta to={`${central}?aba=calendario`} icon={CalendarDays}>Calendário</Porta>
-                  <Porta to={`${central}?aba=quadras`} icon={LayoutGrid}>Quadras</Porta>
-                  <Porta to={central} icon={ArrowRight}>Abrir a Central</Porta>
+                  <Porta to={`${central}?aba=reservas`} icon={CalendarClock}>{t('Solicitações')}</Porta>
+                  <Porta to={`${central}?aba=calendario`} icon={CalendarDays}>{t('Calendário')}</Porta>
+                  <Porta to={`${central}?aba=quadras`} icon={LayoutGrid}>{t('Quadras')}</Porta>
+                  <Porta to={central} icon={ArrowRight}>{t('Abrir a Central')}</Porta>
                 </div>
               </li>
             );

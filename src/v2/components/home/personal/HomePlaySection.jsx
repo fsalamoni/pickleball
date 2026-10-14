@@ -43,6 +43,7 @@ import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import PlayItemAction from '@/v2/components/games/play/PlayItemAction';
 import { cn } from '@/core/lib/utils';
 import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
+import { t } from '@/core/i18n';
 
 /** Quantos jogos a tela inicial mostra (o resto está em Procura-se jogo). */
 const NO_INICIO = 5;
@@ -123,29 +124,29 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
   const resto = lista.length - mostrados.length;
 
   return (
-    <HomeSection id="jogar" icon={Swords} title="Jogar" reason={reason} action={{ to: '/procura-jogo', label: rotulos.vagas }}>
+    <HomeSection id="jogar" icon={Swords} title={t('Jogar')} reason={reason} action={{ to: '/procura-jogo', label: rotulos.vagas }}>
       <div className="space-y-4">
         <RegionBar regional={regional} compacta nomeItens={['jogo', 'jogos']} />
         {jogos.falhas.dias && (
-          <V2ErrorState inline title="Não carregou os dias de jogo" description="Pode haver dia de jogo esperando gente." onRetry={jogos.recarregar.dias} />
+          <V2ErrorState inline title={t('Não carregou os dias de jogo')} description={t('Pode haver dia de jogo esperando gente.')} onRetry={jogos.recarregar.dias} />
         )}
         {jogos.falhas.clubes && (
-          <V2ErrorState inline title="Não carregou os dias de jogo dos seus clubes" description="Pode haver dia marcado no seu clube." onRetry={jogos.recarregar.clubes} />
+          <V2ErrorState inline title={t('Não carregou os dias de jogo dos seus clubes')} description={t('Pode haver dia marcado no seu clube.')} onRetry={jogos.recarregar.clubes} />
         )}
         {jogos.falhas.convites && (
-          <V2ErrorState inline title="Não carregou os convites" description="Pode haver jogo esperando gente." onRetry={jogos.recarregar.convites} />
+          <V2ErrorState inline title={t('Não carregou os convites')} description={t('Pode haver jogo esperando gente.')} onRetry={jogos.recarregar.convites} />
         )}
         {jogos.falhas.vagas && (
-          <V2ErrorState inline title="Não carregou os jogos das arenas" description="Tente de novo em instantes." onRetry={jogos.recarregar.vagas} />
+          <V2ErrorState inline title={t('Não carregou os jogos das arenas')} description={t('Tente de novo em instantes.')} onRetry={jogos.recarregar.vagas} />
         )}
         {carregando ? (
           <V2Skeleton lines={3} />
         ) : nada ? (
           <>
-            <RegionEmptyHint regional={regional} oque="Nenhum jogo com vaga" />
+            <RegionEmptyHint regional={regional} oque={t('Nenhum jogo com vaga')} />
             {!(regional.ativa && regional.fora > 0) && (
-              <HomeEmpty icon={Dices} actions={<HomeAction to="/dia-de-jogo?criar=1" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>}>
-                Nenhum jogo com vaga nos próximos dias{regional.limita ? ` ${regional.frase}` : ''}. Monte o seu — público, ele aparece para quem procura jogo.
+              <HomeEmpty icon={Dices} actions={<HomeAction to="/dia-de-jogo?criar=1" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t('Criar dia de jogo')}</HomeAction>}>
+                {t('Nenhum jogo com vaga nos próximos dias{regiao}. Monte o seu — público, ele aparece para quem procura jogo.', { regiao: regional.limita ? ` ${regional.frase}` : '' })}
               </HomeEmpty>
             )}
           </>
@@ -154,7 +155,7 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
             {mostrados.map((item) => {
               const km = regional.ativa ? distanceLabel(regional.infoDe(item)?.km) : null;
               const perto = !regional.ativa
-                ? (proximidade(item.place, perfil) === 2 ? 'Na sua cidade' : proximidade(item.place, perfil) === 1 ? 'No seu estado' : null)
+                ? (proximidade(item.place, perfil) === 2 ? t('Na sua cidade') : proximidade(item.place, perfil) === 1 ? t('No seu estado') : null)
                 : null;
               return (
                 <PlayRow
@@ -170,10 +171,10 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
         ) : null}
         <div className="flex flex-wrap gap-2">
           {resto > 0 && (
-            <HomeAction to="/procura-jogo" primary>Ver todos os {lista.length} jogos</HomeAction>
+            <HomeAction to="/procura-jogo" primary>{t('Ver todos os {n} jogos', { n: lista.length })}</HomeAction>
           )}
           {!nada && (
-            <HomeAction to="/dia-de-jogo?criar=1"><Dices className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>
+            <HomeAction to="/dia-de-jogo?criar=1"><Dices className="h-3.5 w-3.5" aria-hidden="true" /> {t('Criar dia de jogo')}</HomeAction>
           )}
           <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {rotulos.pessoas}</HomeAction>
         </div>

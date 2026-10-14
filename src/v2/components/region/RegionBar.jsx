@@ -15,10 +15,11 @@ import { Link } from 'react-router-dom';
 import { ChevronDown, MapPin } from 'lucide-react';
 import { REGION_MISSING, REGION_MODE } from '@/core/domain/region';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 const RegionDialog = lazy(() => import('./RegionDialog'));
 
-const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+const plural = (n, um, varios) => `${n} ${t(n === 1 ? um : varios)}`;
 
 export default function RegionBar({
   regional, className, compacta = false, nomeItens = ['item', 'itens'], mostrarFora = true,
@@ -40,8 +41,8 @@ export default function RegionBar({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        aria-label={`Região: ${rotulo}. Alterar`}
-        title="Alterar a minha região"
+        aria-label={t('Região: {rotulo}. Alterar', { rotulo })}
+        title={t('Alterar a minha região')}
         data-dica="regiao-alterar"
         className={cn(
           'btn-press inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure font-semibold text-ink shadow-sm transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30',
@@ -54,19 +55,19 @@ export default function RegionBar({
       </button>
 
       {buscando ? (
-        <span className="text-gray-500">Buscando em todo lugar</span>
+        <span className="text-gray-500">{t('Buscando em todo lugar')}</span>
       ) : mostrarFora ? (
         <RegionForaNote regional={regional} nomeItens={nomeItens} />
       ) : null}
 
       {region?.falta === REGION_MISSING.CIDADE && (
         <span className="text-gray-500">
-          <Link to="/perfil/editar" className="font-semibold text-ink underline underline-offset-2">Informe a sua cidade</Link>
-          {' '}para ver primeiro o que está perto.
+          <Link to="/perfil/editar" className="font-semibold text-ink underline underline-offset-2">{t('Informe a sua cidade')}</Link>
+          {' '}{t('para ver primeiro o que está perto.')}
         </span>
       )}
       {mapaFalhou && region?.modo === REGION_MODE.RAIO && (
-        <span className="text-amber-700">Sem o mapa das cidades agora — valendo só {region.cidade}.</span>
+        <span className="text-amber-700">{t('Sem o mapa das cidades agora — valendo só {cidade}.', { cidade: region.cidade })}</span>
       )}
 
       {aberto && (
@@ -89,7 +90,7 @@ export function RegionEmptyHint({ regional, oque = 'nada', className }) {
   return (
     <div className={cn('rounded-3xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600', className)}>
       <p>
-        {oque === 'nada' ? 'Nada' : oque} {regional.frase} agora — mas há {regional.fora} em outras regiões.
+        {t('{oque} {regiao} agora — mas há {n} em outras regiões.', { oque: oque === 'nada' ? t('Nada') : oque, regiao: regional.frase, n: regional.fora })}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button
@@ -97,14 +98,14 @@ export function RegionEmptyHint({ regional, oque = 'nada', className }) {
           onClick={regional.ampliar}
           className="btn-press rounded-full bg-ink px-3.5 py-1.5 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
-          Ver os de outras regiões
+          {t('Ver os de outras regiões')}
         </button>
         <button
           type="button"
           onClick={() => setAberto(true)}
           className="btn-press rounded-full border border-gray-200 bg-paper-pure px-3.5 py-1.5 text-xs font-semibold text-ink hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
-          Aumentar a região
+          {t('Aumentar a região')}
         </button>
       </div>
       {aberto && (
@@ -127,9 +128,9 @@ export function RegionForaNote({ regional, nomeItens = ['item', 'itens'], classN
   if (fora > 0) {
     return (
       <span className={cn('text-gray-500', className)}>
-        {plural(fora, nomeItens[0], nomeItens[1])} em outras regiões ·{' '}
+        {t('{qtd} em outras regiões', { qtd: plural(fora, nomeItens[0], nomeItens[1]) })} ·{' '}
         <button type="button" onClick={ampliar} className="font-semibold text-ink underline underline-offset-2 hover:text-acid-dark">
-          Ver também
+          {t('Ver também')}
         </button>
       </span>
     );
@@ -137,9 +138,9 @@ export function RegionForaNote({ regional, nomeItens = ['item', 'itens'], classN
   if (ampliado && ampliadoCom > 0) {
     return (
       <span className={cn('text-gray-500', className)}>
-        Incluindo outras regiões ·{' '}
+        {t('Incluindo outras regiões')} ·{' '}
         <button type="button" onClick={recolher} className="font-semibold text-ink underline underline-offset-2 hover:text-acid-dark">
-          Só a minha região
+          {t('Só a minha região')}
         </button>
       </span>
     );

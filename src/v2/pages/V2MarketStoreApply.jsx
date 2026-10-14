@@ -22,11 +22,12 @@ import {
 import { rolarAte } from '@/v2/ui/rolarAte';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate } from '@/v2/components/marketplace/marketUi';
+import { t, tk } from '@/core/i18n';
 
 const VANTAGENS = [
-  { icon: Store, title: 'Vitrine própria', text: 'Logo, capa, políticas e todos os seus produtos numa página.' },
-  { icon: BadgeCheck, title: 'Selo de verificada', text: 'A equipe confere o CNPJ e pode dar o selo que o comprador vê.' },
-  { icon: PackageCheck, title: 'Sem comissão', text: 'O Pix vai direto para a sua conta, pedido a pedido.' },
+  { icon: Store, title: tk('Vitrine própria'), text: tk('Logo, capa, políticas e todos os seus produtos numa página.') },
+  { icon: BadgeCheck, title: tk('Selo de verificada'), text: tk('A equipe confere o CNPJ e pode dar o selo que o comprador vê.') },
+  { icon: PackageCheck, title: tk('Sem comissão'), text: tk('O Pix vai direto para a sua conta, pedido a pedido.') },
 ];
 
 function StoreForm({ uid, inicial }) {
@@ -43,75 +44,75 @@ function StoreForm({ uid, inicial }) {
       return;
     }
     m.mutate({ input: f }, {
-      onSuccess: () => { toast.success('Cadastro enviado. A equipe avisa assim que analisar.'); window.scrollTo?.(0, 0); },
+      onSuccess: () => { toast.success(t('Cadastro enviado. A equipe avisa assim que analisar.')); window.scrollTo?.(0, 0); },
       onError: (er) => { setErros(er.fieldErrors || {}); toast.error(er.message); },
     });
   };
   return (
     <form id="form-loja" onSubmit={enviar} className="space-y-6" noValidate>
       <V2Surface className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-ink">A loja</h2>
-        <V2Field label="Nome da loja" htmlFor="l-nome" error={erros.display_name} hint="Como aparece para os compradores.">
+        <h2 className="font-display text-lg font-bold text-ink">{t('A loja')}</h2>
+        <V2Field label={t('Nome da loja')} htmlFor="l-nome" error={erros.display_name} hint={t('Como aparece para os compradores.')}>
           <V2Input id="l-nome" maxLength={60} value={f.display_name} onChange={(e) => set({ display_name: e.target.value })} />
         </V2Field>
-        <V2Field label="Sobre a loja" htmlFor="l-bio" hint="O que vende, há quanto tempo, onde fica. Até 600 caracteres.">
+        <V2Field label={t('Sobre a loja')} htmlFor="l-bio" hint={t('O que vende, há quanto tempo, onde fica. Até 600 caracteres.')}>
           <V2Textarea id="l-bio" rows={4} maxLength={600} value={f.bio} onChange={(e) => set({ bio: e.target.value })} />
         </V2Field>
         <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
-          <V2Field label="Cidade" htmlFor="l-cidade" error={erros.city}>
+          <V2Field label={t('Cidade')} htmlFor="l-cidade" error={erros.city}>
             <V2Input id="l-cidade" maxLength={60} value={f.city} onChange={(e) => set({ city: e.target.value })} />
           </V2Field>
-          <V2Field label="UF" htmlFor="l-uf">
+          <V2Field label={t('UF')} htmlFor="l-uf">
             <V2Select id="l-uf" value={f.state} onChange={(e) => set({ state: e.target.value })}>
               <option value="">—</option>
               {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
             </V2Select>
           </V2Field>
         </div>
-        <V2Field label="Site (opcional)" htmlFor="l-site" error={erros.website}>
-          <V2Input id="l-site" type="url" placeholder="https://" value={f.website} onChange={(e) => set({ website: e.target.value })} />
+        <V2Field label={t('Site (opcional)')} htmlFor="l-site" error={erros.website}>
+          <V2Input id="l-site" type="url" placeholder={t('https://')} value={f.website} onChange={(e) => set({ website: e.target.value })} />
         </V2Field>
       </V2Surface>
 
       <V2Surface className="space-y-4">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Dados da empresa</h2>
-          <p className="text-sm text-gray-500">Só a equipe do PickleRush vê. Em público aparece o CNPJ pela metade.</p>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Dados da empresa')}</h2>
+          <p className="text-sm text-gray-500">{t('Só a equipe do PickleRush vê. Em público aparece o CNPJ pela metade.')}</p>
         </div>
-        <V2Field label="Razão social" htmlFor="l-razao" error={erros.legal_name}>
+        <V2Field label={t('Razão social')} htmlFor="l-razao" error={erros.legal_name}>
           <V2Input id="l-razao" maxLength={120} value={f.legal_name} onChange={(e) => set({ legal_name: e.target.value })} />
         </V2Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <V2Field label="CNPJ" htmlFor="l-cnpj" error={erros.cnpj}>
+          <V2Field label={t('CNPJ')} htmlFor="l-cnpj" error={erros.cnpj}>
             <V2Input id="l-cnpj" inputMode="numeric" placeholder="00.000.000/0000-00" value={f.cnpj} onChange={(e) => set({ cnpj: e.target.value })} />
           </V2Field>
-          <V2Field label="Telefone" htmlFor="l-tel" error={erros.phone}>
+          <V2Field label={t('Telefone')} htmlFor="l-tel" error={erros.phone}>
             <V2Input id="l-tel" type="tel" inputMode="tel" placeholder="(00) 00000-0000" value={f.phone} onChange={(e) => set({ phone: e.target.value })} />
           </V2Field>
         </div>
       </V2Surface>
 
       <V2Surface className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-ink">Políticas</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Políticas')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <V2Field label="Dias para devolução" htmlFor="l-dev" error={erros.return_days} hint="Mínimo de 7 dias (Código de Defesa do Consumidor).">
+          <V2Field label={t('Dias para devolução')} htmlFor="l-dev" error={erros.return_days} hint={t('Mínimo de 7 dias (Código de Defesa do Consumidor).')}>
             <V2Input id="l-dev" type="number" min={7} max={90} value={f.return_days} onChange={(e) => set({ return_days: e.target.value })} />
           </V2Field>
-          <V2Field label="Despacha em até" htmlFor="l-desp" hint="Horas depois do pagamento confirmado.">
+          <V2Field label={t('Despacha em até')} htmlFor="l-desp" hint={t('Horas depois do pagamento confirmado.')}>
             <V2Select id="l-desp" value={String(f.ship_within_hours)} onChange={(e) => set({ ship_within_hours: e.target.value })}>
-              {[24, 48, 72, 120].map((h) => <option key={h} value={h}>{h < 48 ? '24 horas' : `${h / 24} dias`}</option>)}
+              {[24, 48, 72, 120].map((h) => <option key={h} value={h}>{h < 48 ? t('24 horas') : t('{n} dias', { n: h / 24 })}</option>)}
             </V2Select>
           </V2Field>
         </div>
         <label htmlFor="l-termos" className="flex items-start gap-3 text-sm text-gray-700">
           <input id="l-termos" type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={Boolean(f.accept_terms)} onChange={(e) => set({ accept_terms: e.target.checked })} />
-          <span>Li e aceito os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link> e os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos do Mercado</Link>, e respondo pelos produtos que vendo.</span>
+          <span>{t('Li e aceito os')} <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">{t('Termos de Uso')}</Link> {t('e os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos do Mercado')}</Link>{t(', e respondo pelos produtos que vendo.')}</span>
         </label>
         {erros.accept_terms && <p className="text-sm font-medium text-red-500">{erros.accept_terms}</p>}
       </V2Surface>
 
       <div className="sticky bottom-0 z-10 -mx-4 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
-        <V2Button type="submit" className="w-full sm:w-auto" disabled={m.isPending}>{m.isPending ? 'Enviando…' : 'Enviar para análise'}</V2Button>
+        <V2Button type="submit" className="w-full sm:w-auto" disabled={m.isPending}>{m.isPending ? t('Enviando…') : t('Enviar para análise')}</V2Button>
       </div>
     </form>
   );
@@ -133,9 +134,9 @@ function ApplyPage() {
       <V2Surface className="flex items-start gap-4">
         <Clock className="h-6 w-6 shrink-0 text-amber-600" />
         <div>
-          <h2 className="font-display text-xl font-bold text-ink">{loja.display_name} está em análise</h2>
-          <p className="mt-1 text-sm text-gray-600">A equipe do PickleRush confere os dados e avisa pelo sino. Enquanto isso, você pode vender como pessoa.</p>
-          <V2Button asChild variant="secondary" className="mt-4"><Link to="/mercado/vender">Ir para o painel de vendas</Link></V2Button>
+          <h2 className="font-display text-xl font-bold text-ink">{t('{loja} está em análise', { loja: loja.display_name })}</h2>
+          <p className="mt-1 text-sm text-gray-600">{t('A equipe do PickleRush confere os dados e avisa pelo sino. Enquanto isso, você pode vender como pessoa.')}</p>
+          <V2Button asChild variant="secondary" className="mt-4"><Link to="/mercado/vender">{t('Ir para o painel de vendas')}</Link></V2Button>
         </div>
       </V2Surface>
     );
@@ -144,21 +145,21 @@ function ApplyPage() {
       <V2Surface className="flex items-start gap-4">
         <ShieldCheck className="h-6 w-6 shrink-0 text-green-600" />
         <div>
-          <h2 className="font-display text-xl font-bold text-ink">{loja.display_name} está aberta</h2>
-          <p className="mt-1 text-sm text-gray-600">Anuncie, responda e acompanhe as vendas pelo painel.</p>
-          <V2Button asChild className="mt-4"><Link to={`/mercado/vender?como=${key}`}>Abrir o painel da loja</Link></V2Button>
+          <h2 className="font-display text-xl font-bold text-ink">{t('{loja} está aberta', { loja: loja.display_name })}</h2>
+          <p className="mt-1 text-sm text-gray-600">{t('Anuncie, responda e acompanhe as vendas pelo painel.')}</p>
+          <V2Button asChild className="mt-4"><Link to={`/mercado/vender?como=${key}`}>{t('Abrir o painel da loja')}</Link></V2Button>
         </div>
       </V2Surface>
     );
   } else if (loja?.status === 'suspended') {
     corpo = (
       <V2Surface>
-        <h2 className="font-display text-xl font-bold text-ink">As vendas de {loja.display_name} estão suspensas</h2>
-        <p className="mt-1 text-sm text-gray-600">{loja.reject_reason || 'Fale com o suporte para entender o motivo.'}</p>
+        <h2 className="font-display text-xl font-bold text-ink">{t('As vendas de {loja} estão suspensas', { loja: loja.display_name })}</h2>
+        <p className="mt-1 text-sm text-gray-600">{loja.reject_reason || t('Fale com o suporte para entender o motivo.')}</p>
       </V2Surface>
     );
   } else if (!settings.data?.stores_enabled) {
-    corpo = <V2Surface><p className="text-gray-600">O cadastro de lojas está fechado no momento. Você pode vender como pessoa pelo <Link to="/mercado/vender" className="font-bold text-ink underline">painel de vendas</Link>.</p></V2Surface>;
+    corpo = <V2Surface><p className="text-gray-600">{t('O cadastro de lojas está fechado no momento. Você pode vender como pessoa pelo')} <Link to="/mercado/vender" className="font-bold text-ink underline">{t('painel de vendas')}</Link>.</p></V2Surface>;
   } else {
     const p = priv.data || {};
     const inicial = {
@@ -171,8 +172,8 @@ function ApplyPage() {
         <div className="space-y-4 lg:col-span-8">
           {loja?.status === 'rejected' && (
             <V2Surface variant="compacto" className="border-red-200 p-4">
-              <p className="font-bold text-ink">O cadastro anterior não foi aprovado</p>
-              <p className="text-sm text-gray-600">Motivo: {loja.reject_reason || 'não informado'}. Corrija e envie de novo.</p>
+              <p className="font-bold text-ink">{t('O cadastro anterior não foi aprovado')}</p>
+              <p className="text-sm text-gray-600">{t('Motivo: {motivo}. Corrija e envie de novo.', { motivo: loja.reject_reason || t('não informado') })}</p>
             </V2Surface>
           )}
           <StoreForm uid={user.uid} inicial={inicial} />
@@ -181,10 +182,10 @@ function ApplyPage() {
           {VANTAGENS.map((v) => (
             <V2Surface key={v.title} variant="compacto" className="flex gap-3 p-4">
               <v.icon className="h-5 w-5 shrink-0 text-ink" />
-              <div><p className="font-bold text-ink">{v.title}</p><p className="text-sm text-gray-600">{v.text}</p></div>
+              <div><p className="font-bold text-ink">{t(v.title)}</p><p className="text-sm text-gray-600">{t(v.text)}</p></div>
             </V2Surface>
           ))}
-          <p className="px-1 text-xs text-gray-500">Vende como pessoa ou professor? Não precisa de loja: use o <Link to="/mercado/vender" className="font-bold underline">painel de vendas</Link>.</p>
+          <p className="px-1 text-xs text-gray-500">{t('Vende como pessoa ou professor? Não precisa de loja: use o')} <Link to="/mercado/vender" className="font-bold underline">{t('painel de vendas')}</Link>.</p>
         </aside>
       </div>
     );
@@ -193,8 +194,8 @@ function ApplyPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-16">
       <MarketHeader />
-      <V2BackLink to="/mercado/vender">Painel de vendas</V2BackLink>
-      <V2PageIntro title="Abrir minha loja" subtitle="Para quem vende como empresa, com CNPJ. A equipe analisa antes de abrir." />
+      <V2BackLink to="/mercado/vender">{t('Painel de vendas')}</V2BackLink>
+      <V2PageIntro title={t('Abrir minha loja')} subtitle={t('Para quem vende como empresa, com CNPJ. A equipe analisa antes de abrir.')} />
       {corpo}
     </div>
   );

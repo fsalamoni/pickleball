@@ -41,6 +41,7 @@ import MarketFilters from '@/v2/components/marketplace/MarketFilters';
 import {
   CategoryIcon, ListingCard, ListingGrid, ListingGridSkeleton, MarketGate, Stars, VerifiedMark,
 } from '@/v2/components/marketplace/marketUi';
+import { t, tn } from '@/core/i18n';
 
 const PAGE = 24;
 
@@ -55,7 +56,7 @@ function Rail({ title, to, items, hint }) {
         </div>
         {to && (
           <Link to={to} className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-ink hover:underline">
-            Ver tudo <ArrowRight className="h-4 w-4" />
+            {t('Ver tudo')} <ArrowRight className="h-4 w-4" />
           </Link>
         )}
       </div>
@@ -68,24 +69,24 @@ function Rail({ title, to, items, hint }) {
 
 function Hero() {
   const pontos = [
-    { Icon: HandCoins, t: 'Pix direto ao vendedor', d: 'Sem taxa da plataforma. A chave só aparece depois que o vendedor aceita.' },
-    { Icon: MessageCircleQuestion, t: 'Pergunte antes de comprar', d: 'As respostas ficam no anúncio, para todo mundo ver.' },
-    { Icon: ShieldCheck, t: 'Avaliações e mediação', d: 'Quem compra avalia, e a moderação analisa qualquer problema.' },
+    { Icon: HandCoins, titulo: t('Pix direto ao vendedor'), d: t('Sem taxa da plataforma. A chave só aparece depois que o vendedor aceita.') },
+    { Icon: MessageCircleQuestion, titulo: t('Pergunte antes de comprar'), d: t('As respostas ficam no anúncio, para todo mundo ver.') },
+    { Icon: ShieldCheck, titulo: t('Avaliações e mediação'), d: t('Quem compra avalia, e a moderação analisa qualquer problema.') },
   ];
   return (
     <section className="overflow-hidden rounded-[2rem] bg-ink p-6 text-white sm:p-10">
-      <p className="text-sm font-bold uppercase tracking-widest text-acid">Mercado PickleRush</p>
+      <p className="text-sm font-bold uppercase tracking-widest text-acid">{t('Mercado PickleRush')}</p>
       <h1 className="mt-2 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-5xl">
-        Tudo de pickleball, de quem joga com você.
+        {t('Tudo de pickleball, de quem joga com você.')}
       </h1>
       <p className="mt-3 max-w-xl text-base text-white/80">
-        Raquetes novas e usadas, bolas, roupas e acessórios de atletas, professores, arenas e lojas.
+        {t('Raquetes novas e usadas, bolas, roupas e acessórios de atletas, professores, arenas e lojas.')}
       </p>
       <ul className="mt-6 grid gap-3 sm:grid-cols-3">
-        {pontos.map(({ Icon, t, d }) => (
-          <li key={t} className="rounded-2xl bg-white/10 p-4">
+        {pontos.map(({ Icon, titulo, d }) => (
+          <li key={titulo} className="rounded-2xl bg-white/10 p-4">
             <Icon className="h-5 w-5 text-acid" />
-            <p className="mt-2 font-bold">{t}</p>
+            <p className="mt-2 font-bold">{titulo}</p>
             <p className="mt-1 text-sm text-white/70">{d}</p>
           </li>
         ))}
@@ -97,8 +98,8 @@ function Hero() {
 function Departments({ counts, disabled }) {
   const cats = MARKET_CATEGORIES.filter((c) => !disabled.has(c.slug));
   return (
-    <section aria-label="Departamentos" className="space-y-3">
-      <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Departamentos</h2>
+    <section aria-label={t('Departamentos')} className="space-y-3">
+      <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">{t('Departamentos')}</h2>
       <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
         {cats.map((c) => (
           <li key={c.slug}>
@@ -109,8 +110,8 @@ function Departments({ counts, disabled }) {
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-acid/20 text-ink">
                 <CategoryIcon icon={c.icon} className="h-6 w-6" />
               </span>
-              <span className="text-xs font-bold leading-tight text-ink">{c.label}</span>
-              <span className="text-2xs text-gray-500">{counts[c.slug] || 0} anúncio{counts[c.slug] === 1 ? '' : 's'}</span>
+              <span className="text-xs font-bold leading-tight text-ink">{t(c.label)}</span>
+              <span className="text-2xs text-gray-500">{tn(counts[c.slug] || 0, '{n} anúncio', '{n} anúncios')}</span>
             </Link>
           </li>
         ))}
@@ -122,8 +123,8 @@ function Departments({ counts, disabled }) {
 function StoresRail({ stores }) {
   if (!stores.length) return null;
   return (
-    <section aria-label="Lojas" className="space-y-3">
-      <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Lojas no Mercado</h2>
+    <section aria-label={t('Lojas')} className="space-y-3">
+      <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">{t('Lojas no Mercado')}</h2>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stores.slice(0, 8).map((s) => (
           <li key={s.id}>
@@ -155,7 +156,7 @@ function useNearby(ativos) {
   let to = null;
   if (region.modo === REGION_MODE.CIDADE) to = `/mercado?cidade=${encodeURIComponent(region.cidade)}`;
   else if (region.modo === REGION_MODE.ESTADO && region.uf) to = `/mercado?uf=${region.uf}`;
-  return { items, title: `Perto de você · ${regional.rotuloCurto}`, to };
+  return { items, title: t('Perto de você · {regiao}', { regiao: regional.rotuloCurto }), to };
 }
 
 function Showcase({ listings, stores, settings, uid }) {
@@ -177,17 +178,17 @@ function Showcase({ listings, stores, settings, uid }) {
       {!ativos.length ? (
         <V2EmptyState
           icon={Sparkles}
-          title="O Mercado acabou de abrir"
-          description="Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie pela Minha área."
-          action={<V2Button asChild><Link to="/perfil">Ir para a Minha área</Link></V2Button>}
+          title={t('O Mercado acabou de abrir')}
+          description={t('Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie pela Minha área.')}
+          action={<V2Button asChild><Link to="/perfil">{t('Ir para a Minha área')}</Link></V2Button>}
         />
       ) : (
         <>
-          <Rail title="Vistos recentemente" hint="Para voltar onde você parou" items={vistos} />
-          <Rail title="Chegou agora" hint="Os anúncios mais novos" to="/mercado?ordem=recent" items={recentes} />
-          <Rail title="Ofertas" hint="Com preço abaixo do anterior" to="/mercado?ordem=discount" items={ofertas} />
-          <Rail title={perto.title} hint="Dá para combinar a entrega em mãos" to={perto.to} items={perto.items} />
-          <Rail title="Usados em bom estado" hint="Equipamento de quem joga, com preço de usado" to="/mercado?estado=used" items={usados} />
+          <Rail title={t('Vistos recentemente')} hint={t('Para voltar onde você parou')} items={vistos} />
+          <Rail title={t('Chegou agora')} hint={t('Os anúncios mais novos')} to="/mercado?ordem=recent" items={recentes} />
+          <Rail title={t('Ofertas')} hint={t('Com preço abaixo do anterior')} to="/mercado?ordem=discount" items={ofertas} />
+          <Rail title={perto.title} hint={t('Dá para combinar a entrega em mãos')} to={perto.to} items={perto.items} />
+          <Rail title={t('Usados em bom estado')} hint={t('Equipamento de quem joga, com preço de usado')} to="/mercado?estado=used" items={usados} />
           <StoresRail stores={stores} />
         </>
       )}
@@ -211,23 +212,23 @@ function SaveSearchButton({ filters }) {
   if (ja) {
     return (
       <Link to="/mercado/buscas" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-paper px-4 text-sm font-bold text-ink hover:bg-paper-dark">
-        <BellRing className="h-4 w-4" /> Busca salva
+        <BellRing className="h-4 w-4" /> {t('Busca salva')}
       </Link>
     );
   }
   const salvar = () => {
     if (lista.length >= SAVED_SEARCH_LIMIT) {
-      toast.error(`Você já tem ${SAVED_SEARCH_LIMIT} buscas salvas. Apague alguma em Buscas salvas.`);
+      toast.error(t('Você já tem {n} buscas salvas. Apague alguma em Buscas salvas.', { n: SAVED_SEARCH_LIMIT }));
       return;
     }
     save.mutate({ label: savedSearchLabel(filters), params, notify: true }, {
-      onSuccess: () => toast.success('Busca salva. Avisamos quando chegar anúncio novo.', { action: { label: 'Ver buscas', onClick: () => navigate('/mercado/buscas') } }),
-      onError: () => toast.error('Não foi possível salvar a busca. Tente de novo.'),
+      onSuccess: () => toast.success(t('Busca salva. Avisamos quando chegar anúncio novo.'), { action: { label: t('Ver buscas'), onClick: () => navigate('/mercado/buscas') } }),
+      onError: () => toast.error(t('Não foi possível salvar a busca. Tente de novo.')),
     });
   };
   return (
     <V2Button type="button" variant="ghost" size="sm" onClick={salvar} disabled={buscas.isLoading || save.isPending}>
-      <Bell className="h-4 w-4" /> {save.isPending ? 'Salvando…' : 'Salvar busca'}
+      <Bell className="h-4 w-4" /> {save.isPending ? t('Salvando…') : t('Salvar busca')}
     </V2Button>
   );
 }
@@ -241,20 +242,20 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
   const facets = useMemo(() => facetCounts(base, filters), [base, filters]);
   const cat = findCategory(filters.cat);
   const labels = {
-    cat: Object.fromEntries((filters.cat ? [[filters.cat, cat?.label]] : [])),
-    sellers: { store: 'Lojas', arena: 'Arenas', coach: 'Professores', athlete: 'Atletas' },
-    ship: FULFILLMENT_LABELS,
+    cat: Object.fromEntries((filters.cat ? [[filters.cat, t(cat?.label || '')]] : [])),
+    sellers: { store: t('Lojas'), arena: t('Arenas'), coach: t('Professores'), athlete: t('Atletas') },
+    ship: Object.fromEntries(Object.entries(FULFILLMENT_LABELS).map(([k, v]) => [k, t(v)])),
   };
   const chips = activeFilterChips(filters, labels);
-  const titulo = filters.q ? `“${filters.q}”` : (cat?.label || (filters.cond === 'used' ? 'Usados' : 'Todos os anúncios'));
+  const titulo = filters.q ? `“${filters.q}”` : (cat ? t(cat.label) : (filters.cond === 'used' ? t('Usados') : t('Todos os anúncios')));
   const trilha = filters.cat ? categoryBreadcrumb(filters.cat) : [];
   const nFiltros = chips.filter((c) => c.key !== 'q').length;
 
   return (
     <div className="space-y-4">
       {trilha.length > 0 && (
-        <nav aria-label="Caminho" className="text-sm text-gray-500">
-          <Link to="/mercado" className="hover:underline">Mercado</Link>
+        <nav aria-label={t('Caminho')} className="text-sm text-gray-500">
+          <Link to="/mercado" className="hover:underline">{t('Mercado')}</Link>
           {trilha.map((c) => (
             <span key={c.slug}> › <Link to={`/mercado?cat=${c.slug}`} className="hover:underline">{c.label}</Link></span>
           ))}
@@ -263,34 +264,34 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{titulo}</h1>
-          <p className="text-sm text-gray-500" aria-live="polite">{total} resultado{total === 1 ? '' : 's'}</p>
+          <p className="text-sm text-gray-500" aria-live="polite">{tn(total, '{n} resultado', '{n} resultados')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SaveSearchButton filters={filters} />
           <V2Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setAbertos(true)} type="button">
-            <SlidersHorizontal className="h-4 w-4" /> Filtros{nFiltros ? ` (${nFiltros})` : ''}
+            <SlidersHorizontal className="h-4 w-4" /> {t('Filtros')}{nFiltros ? ` (${nFiltros})` : ''}
           </V2Button>
-          <label htmlFor="ordem" className="sr-only">Ordenar por</label>
+          <label htmlFor="ordem" className="sr-only">{t('Ordenar por')}</label>
           <select
             id="ordem"
             value={filters.sort}
             onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             className="h-11 rounded-full border border-gray-200 bg-paper-pure px-4 text-sm font-medium text-ink"
           >
-            {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{t(o.label)}</option>)}
           </select>
         </div>
       </div>
 
       {chips.length > 0 && (
-        <ul className="flex flex-wrap gap-2" aria-label="Filtros aplicados">
+        <ul className="flex flex-wrap gap-2" aria-label={t('Filtros aplicados')}>
           {chips.map((c) => (
             <li key={c.key}>
               <button
                 type="button"
                 onClick={() => setFilters(clearChip(filters, c.key))}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full bg-paper px-3 text-sm font-medium text-ink hover:bg-paper-dark"
-                aria-label={`Tirar o filtro ${c.label}`}
+                aria-label={t('Tirar o filtro {filtro}', { filtro: c.label })}
               >
                 {c.label} <X className="h-3.5 w-3.5" />
               </button>
@@ -298,23 +299,23 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
           ))}
           <li>
             <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })} className="h-9 px-2 text-sm font-bold text-ink underline">
-              Limpar filtros
+              {t('Limpar filtros')}
             </button>
           </li>
         </ul>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="hidden lg:block" aria-label="Filtros">
+        <aside className="hidden lg:block" aria-label={t('Filtros')}>
           <MarketFilters filters={filters} facets={facets} onChange={setFilters} />
         </aside>
         <div className="min-w-0 space-y-6">
           {!items.length ? (
             <V2EmptyState
               icon={SlidersHorizontal}
-              title="Nada encontrado com esses filtros"
-              description={filters.q ? 'Tente outras palavras ou tire algum filtro.' : 'Tire algum filtro para ver mais anúncios.'}
-              action={<V2Button variant="ghost" onClick={() => setFilters({ ...EMPTY_FILTERS })} type="button">Ver todos os anúncios</V2Button>}
+              title={t('Nada encontrado com esses filtros')}
+              description={filters.q ? t('Tente outras palavras ou tire algum filtro.') : t('Tire algum filtro para ver mais anúncios.')}
+              action={<V2Button variant="ghost" onClick={() => setFilters({ ...EMPTY_FILTERS })} type="button">{t('Ver todos os anúncios')}</V2Button>}
             />
           ) : (
             <>
@@ -324,7 +325,7 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
               {items.length > limite && (
                 <div className="flex justify-center">
                   <V2Button variant="ghost" type="button" onClick={() => setLimite((n) => n + PAGE)}>
-                    Ver mais ({items.length - limite})
+                    {t('Ver mais ({n})', { n: items.length - limite })}
                   </V2Button>
                 </div>
               )}
@@ -335,10 +336,10 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
 
       <Dialog open={abertos} onOpenChange={setAbertos}>
         <DialogContent sheet className="max-h-[90dvh] overflow-y-auto">
-          <DialogTitle>Filtros</DialogTitle>
+          <DialogTitle>{t('Filtros')}</DialogTitle>
           <MarketFilters filters={filters} facets={facets} onChange={setFilters} />
           <V2Button type="button" className="sticky bottom-0 w-full" onClick={() => setAbertos(false)}>
-            Ver {total} resultado{total === 1 ? '' : 's'}
+            {tn(total, 'Ver {n} resultado', 'Ver {n} resultados')}
           </V2Button>
         </DialogContent>
       </Dialog>

@@ -15,6 +15,8 @@
  * pessoa achar que perdeu a arena.
  */
 
+import { t, tn, tk } from '@/core/i18n';
+
 export const USER_AREA_SECTION = Object.freeze({
   RESUMO: 'resumo',
   /** Perfil e conta (eram duas seções até a Fase 3 do plano de UX, 2026-10-11). */
@@ -35,8 +37,8 @@ const SECAO_ANTIGA = Object.freeze({ jogo: 'jogos', agenda: 'jogos', conta: 'per
 
 /** As duas linhas da barra: o que é da pessoa e o que ela gere. */
 export const USER_AREA_GROUPS = Object.freeze([
-  { id: 'voce', label: 'Você' },
-  { id: 'gestao', label: 'Gerencio' },
+  { id: 'voce', label: tk('Você') },
+  { id: 'gestao', label: tk('Gerencio') },
 ]);
 
 const S = USER_AREA_SECTION;
@@ -46,16 +48,16 @@ const S = USER_AREA_SECTION;
  * `clubes`, `admin`).
  */
 const META = Object.freeze([
-  { id: S.RESUMO, label: 'Resumo', icone: 'LayoutGrid', grupo: 'voce', quem: 'todos' },
-  { id: S.PERFIL, label: 'Perfil e conta', icone: 'User', grupo: 'voce', quem: 'todos' },
-  { id: S.TREINO, label: 'Treino', icone: 'Dumbbell', grupo: 'voce', quem: 'todos' },
-  { id: S.JOGOS, label: 'Meus jogos', icone: 'Swords', grupo: 'voce', quem: 'todos' },
-  { id: S.TORNEIOS, label: 'Torneios', icone: 'Trophy', grupo: 'voce', quem: 'todos' },
-  { id: S.TROFEUS, label: 'Troféus', icone: 'Medal', grupo: 'voce', quem: 'todos' },
-  { id: S.CLUBES, label: 'Clubes', icone: 'Users', grupo: 'voce', quem: 'clubes' },
-  { id: S.PROFESSOR, label: 'Professor', icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
-  { id: S.ARENAS, label: 'Arenas', icone: 'Building2', grupo: 'gestao', quem: 'arenas' },
-  { id: S.ADMIN, label: 'Admin', icone: 'LayoutDashboard', grupo: 'gestao', quem: 'admin' },
+  { id: S.RESUMO, label: tk('Resumo'), icone: 'LayoutGrid', grupo: 'voce', quem: 'todos' },
+  { id: S.PERFIL, label: tk('Perfil e conta'), icone: 'User', grupo: 'voce', quem: 'todos' },
+  { id: S.TREINO, label: tk('Treino'), icone: 'Dumbbell', grupo: 'voce', quem: 'todos' },
+  { id: S.JOGOS, label: tk('Meus jogos'), icone: 'Swords', grupo: 'voce', quem: 'todos' },
+  { id: S.TORNEIOS, label: tk('Torneios'), icone: 'Trophy', grupo: 'voce', quem: 'todos' },
+  { id: S.TROFEUS, label: tk('Troféus'), icone: 'Medal', grupo: 'voce', quem: 'todos' },
+  { id: S.CLUBES, label: tk('Clubes'), icone: 'Users', grupo: 'voce', quem: 'clubes' },
+  { id: S.PROFESSOR, label: tk('Professor'), icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
+  { id: S.ARENAS, label: tk('Arenas'), icone: 'Building2', grupo: 'gestao', quem: 'arenas' },
+  { id: S.ADMIN, label: tk('Admin'), icone: 'LayoutDashboard', grupo: 'gestao', quem: 'admin' },
 ]);
 
 const temPapel = (v) => v === true || v === 'erro';
@@ -76,7 +78,6 @@ export function resolveUserAreaSection(pedida, secoes = []) {
   return secoes.some((s) => s.id === id) ? id : S.RESUMO;
 }
 
-const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 const lista = (x) => (Array.isArray(x) ? x : undefined);
 const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
 
@@ -101,8 +102,8 @@ export function userAreaPending(fontes = {}) {
     const n = numero(a?.pendentes);
     if (!a?.id || !n) continue;
     itens.push({
-      id: `arena:${a.id}`, count: n, detalhe: a.name || 'Arena',
-      label: plural(n, 'pedido de reserva esperando resposta', 'pedidos de reserva esperando resposta'),
+      id: `arena:${a.id}`, count: n, detalhe: a.name || t('Arena'),
+      label: tn(n, '{n} pedido de reserva esperando resposta', '{n} pedidos de reserva esperando resposta'),
       to: `/arenas/${a.id}/gerir?aba=reservas`,
     });
   }
@@ -111,7 +112,7 @@ export function userAreaPending(fontes = {}) {
   if (aulas) {
     itens.push({
       id: 'aulas', count: aulas, to: '/aulas?aba=agenda',
-      label: plural(aulas, 'pedido de aula esperando resposta', 'pedidos de aula esperando resposta'),
+      label: tn(aulas, '{n} pedido de aula esperando resposta', '{n} pedidos de aula esperando resposta'),
     });
   }
 
@@ -119,7 +120,7 @@ export function userAreaPending(fontes = {}) {
   if (convites?.length) {
     itens.push({
       id: 'convites-clube', count: convites.length, secao: S.CLUBES,
-      label: plural(convites.length, 'convite para entrar num clube', 'convites para entrar em clubes'),
+      label: tn(convites.length, '{n} convite para entrar num clube', '{n} convites para entrar em clubes'),
     });
   }
 
@@ -128,7 +129,7 @@ export function userAreaPending(fontes = {}) {
   if (eventos?.length) {
     itens.push({
       id: 'convites-evento', count: eventos.length, secao: S.CLUBES,
-      label: plural(eventos.length, 'convite para evento de clube', 'convites para eventos de clube'),
+      label: tn(eventos.length, '{n} convite para evento de clube', '{n} convites para eventos de clube'),
     });
   }
 
@@ -136,7 +137,7 @@ export function userAreaPending(fontes = {}) {
   if (duvidas) {
     itens.push({
       id: 'duvidas', count: duvidas, to: '/treino?aba=duvidas',
-      label: plural(duvidas, 'dúvida de treino esperando você', 'dúvidas de treino esperando você'),
+      label: tn(duvidas, '{n} dúvida de treino esperando você', '{n} dúvidas de treino esperando você'),
     });
   }
 
@@ -144,7 +145,7 @@ export function userAreaPending(fontes = {}) {
   if (treinos) {
     itens.push({
       id: 'treinos', count: treinos, to: '/treino?aba=recebidos',
-      label: plural(treinos, 'treino recebido para ver', 'treinos recebidos para ver'),
+      label: tn(treinos, '{n} treino recebido para ver', '{n} treinos recebidos para ver'),
     });
   }
 
@@ -153,7 +154,7 @@ export function userAreaPending(fontes = {}) {
   if (balancos) {
     itens.push({
       id: 'balancos', count: balancos, to: '/treino?aba=balanco',
-      label: plural(balancos, 'jogo esperando o seu balanço', 'jogos esperando o seu balanço'),
+      label: tn(balancos, '{n} jogo esperando o seu balanço', '{n} jogos esperando o seu balanço'),
     });
   }
 

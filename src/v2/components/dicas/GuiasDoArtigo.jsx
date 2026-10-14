@@ -13,6 +13,7 @@ import { V2Button } from '@/v2/ui/primitives';
 import { dicaVisivel, guiaPorId } from '@/modules/help/domain/guias';
 import { useDicas } from './DicasContext';
 import { useContextoDasDicas } from './useContextoDasDicas';
+import { t } from '@/core/i18n';
 
 function Botoes({ ids }) {
   const { iniciarGuia } = useDicas();
@@ -24,11 +25,11 @@ function Botoes({ ids }) {
   if (guias.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-acid/10 px-3 py-2.5">
-      <span className="text-xs font-semibold text-ink">Quer fazer agora?</span>
+      <span className="text-xs font-semibold text-ink">{t('Quer fazer agora?')}</span>
       {guias.map((g) => (
         <V2Button key={g.id} type="button" size="sm" variant="secondary" onClick={() => iniciarGuia(g.id)}>
           <PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />
-          {guias.length === 1 ? 'Mostre na tela' : g.title}
+          {guias.length === 1 ? t('Mostre na tela') : t(g.title)}
         </V2Button>
       ))}
     </div>

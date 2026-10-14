@@ -9,6 +9,7 @@
  * Valores gravados no banco: nunca renomeie, só acrescente.
  */
 import { formatBRL } from './money.js';
+import { t, tk, tn } from '@/core/i18n';
 
 /* ------------------------------------------------------------- cupons -- */
 
@@ -19,9 +20,9 @@ export const COUPON_KIND = Object.freeze({
 });
 
 export const COUPON_KIND_LABELS = Object.freeze({
-  percent: 'Porcentagem de desconto',
-  amount: 'Valor de desconto',
-  free_shipping: 'Frete grátis',
+  percent: tk('Porcentagem de desconto'),
+  amount: tk('Valor de desconto'),
+  free_shipping: tk('Frete grátis'),
 });
 
 export const COUPON_LIMITS = Object.freeze({
@@ -51,26 +52,26 @@ const intOr = (v, d = null) => (v === '' || v == null || !Number.isFinite(Number
 export function validateCouponInput(input = {}) {
   const errors = {};
   const code = normalizeCouponCode(input.code);
-  if (!CODE_RE.test(code)) errors.code = 'Use de 3 a 20 letras e números.';
+  if (!CODE_RE.test(code)) errors.code = t('Use de 3 a 20 letras e números.');
   const kind = Object.values(COUPON_KIND).includes(input.kind) ? input.kind : null;
-  if (!kind) errors.kind = 'Escolha o tipo do cupom.';
+  if (!kind) errors.kind = t('Escolha o tipo do cupom.');
   let value = 0;
   if (kind === COUPON_KIND.PERCENT) {
     value = intOr(input.value, 0);
-    if (!(value >= 1 && value <= COUPON_LIMITS.maxPercent)) errors.value = `De 1% a ${COUPON_LIMITS.maxPercent}%.`;
+    if (!(value >= 1 && value <= COUPON_LIMITS.maxPercent)) errors.value = t('De 1% a {max}%.', { max: COUPON_LIMITS.maxPercent });
   } else if (kind === COUPON_KIND.AMOUNT) {
     value = intOr(input.value, 0);
-    if (!(value >= 100 && value <= COUPON_LIMITS.maxAmountCents)) errors.value = 'Informe o valor do desconto (mínimo R$ 1,00).';
+    if (!(value >= 100 && value <= COUPON_LIMITS.maxAmountCents)) errors.value = t('Informe o valor do desconto (mínimo R$ 1,00).');
   }
   const min = Math.max(0, intOr(input.min_subtotal_cents, 0));
-  if (kind === COUPON_KIND.AMOUNT && min && value >= min) errors.min_subtotal_cents = 'O pedido mínimo precisa ser maior que o desconto.';
+  if (kind === COUPON_KIND.AMOUNT && min && value >= min) errors.min_subtotal_cents = t('O pedido mínimo precisa ser maior que o desconto.');
   const starts = intOr(input.starts_at_ms);
   const ends = intOr(input.ends_at_ms);
-  if (starts && ends && ends <= starts) errors.ends_at_ms = 'O fim precisa ser depois do começo.';
+  if (starts && ends && ends <= starts) errors.ends_at_ms = t('O fim precisa ser depois do começo.');
   const maxUses = intOr(input.max_uses);
-  if (maxUses != null && !(maxUses >= 1 && maxUses <= COUPON_LIMITS.maxUses)) errors.max_uses = 'Entre 1 e 100.000 usos, ou sem limite.';
+  if (maxUses != null && !(maxUses >= 1 && maxUses <= COUPON_LIMITS.maxUses)) errors.max_uses = t('Entre 1 e 100.000 usos, ou sem limite.');
   const listingIds = [...new Set((Array.isArray(input.listing_ids) ? input.listing_ids : []).filter((x) => typeof x === 'string' && x))];
-  if (listingIds.length > COUPON_LIMITS.maxListings) errors.listing_ids = `Até ${COUPON_LIMITS.maxListings} anúncios.`;
+  if (listingIds.length > COUPON_LIMITS.maxListings) errors.listing_ids = t('Até {n} anúncios.', { n: COUPON_LIMITS.maxListings });
   const out = {
     code,
     kind: kind || COUPON_KIND.PERCENT,
@@ -92,9 +93,9 @@ export function validateCouponInput(input = {}) {
 /** "10% de desconto" · "R$ 20,00 de desconto" · "Frete grátis". */
 export function couponBenefitLabel(c) {
   if (!c) return '';
-  if (c.kind === COUPON_KIND.PERCENT) return `${c.value}% de desconto`;
-  if (c.kind === COUPON_KIND.AMOUNT) return `${formatBRL(c.value)} de desconto`;
-  return 'Frete grátis';
+  if (c.kind === COUPON_KIND.PERCENT) return t('{pct}% de desconto', { pct: c.value });
+  if (c.kind === COUPON_KIND.AMOUNT) return t('{valor} de desconto', { valor: formatBRL(c.value) });
+  return t('Frete grátis');
 }
 
 // Dia em Brasília (sem horário de verão desde 2019): igual no navegador e no servidor.
@@ -107,14 +108,14 @@ const dataBR = (ms) => {
 export function couponConditionsLabel(c) {
   if (!c) return '';
   const p = [];
-  if (c.min_subtotal_cents > 0) p.push(`acima de ${formatBRL(c.min_subtotal_cents)}`);
-  if ((c.listing_ids || []).length) p.push(`em ${c.listing_ids.length} anúncio${c.listing_ids.length > 1 ? 's' : ''}`);
-  if (c.ends_at_ms) p.push(`até ${dataBR(c.ends_at_ms)}`);
-  if (c.once_per_buyer) p.push('1 por pessoa');
-  if (c.first_purchase_only) p.push('na 1ª compra na loja');
+  if (c.min_subtotal_cents > 0) p.push(t('acima de {valor}', { valor: formatBRL(c.min_subtotal_cents) }));
+  if ((c.listing_ids || []).length) p.push(tn(c.listing_ids.length, 'em {n} anúncio', 'em {n} anúncios'));
+  if (c.ends_at_ms) p.push(t('até {data}', { data: dataBR(c.ends_at_ms) }));
+  if (c.once_per_buyer) p.push(t('1 por pessoa'));
+  if (c.first_purchase_only) p.push(t('na 1ª compra na loja'));
   if (c.max_uses) {
     const resta = Math.max(0, c.max_uses - (Number(c.uses_count) || 0));
-    p.push(resta <= 20 ? `restam ${resta}` : `${c.max_uses} usos`);
+    p.push(resta <= 20 ? t('restam {n}', { n: resta }) : tn(c.max_uses, '{n} uso', '{n} usos'));
   }
   return p.join(' · ');
 }
@@ -144,19 +145,19 @@ export function couponEligibleSubtotal(c, items = []) {
  */
 export function couponProblem(c, ctx = {}) {
   const { sellerKey, items = [], fulfillment, shippingToAgree = false, now = Date.now(), buyerUses = 0, hasBoughtBefore = false } = ctx;
-  if (!c || c.seller_key !== sellerKey) return 'Este cupom não existe nesta loja.';
-  if (c.active === false) return 'Este cupom foi desativado pela loja.';
-  if (c.starts_at_ms && now < c.starts_at_ms) return `Este cupom começa a valer em ${dataBR(c.starts_at_ms)}.`;
-  if (c.ends_at_ms && now > c.ends_at_ms) return 'Este cupom venceu.';
-  if (c.max_uses && (Number(c.uses_count) || 0) >= c.max_uses) return 'Os usos deste cupom acabaram.';
-  if (c.once_per_buyer && buyerUses > 0) return 'Você já usou este cupom.';
-  if (c.first_purchase_only && hasBoughtBefore) return 'Este cupom é só para a primeira compra na loja.';
+  if (!c || c.seller_key !== sellerKey) return t('Este cupom não existe nesta loja.');
+  if (c.active === false) return t('Este cupom foi desativado pela loja.');
+  if (c.starts_at_ms && now < c.starts_at_ms) return t('Este cupom começa a valer em {data}.', { data: dataBR(c.starts_at_ms) });
+  if (c.ends_at_ms && now > c.ends_at_ms) return t('Este cupom venceu.');
+  if (c.max_uses && (Number(c.uses_count) || 0) >= c.max_uses) return t('Os usos deste cupom acabaram.');
+  if (c.once_per_buyer && buyerUses > 0) return t('Você já usou este cupom.');
+  if (c.first_purchase_only && hasBoughtBefore) return t('Este cupom é só para a primeira compra na loja.');
   const subtotal = couponEligibleSubtotal({ listing_ids: [] }, items);
-  if (c.min_subtotal_cents && subtotal < c.min_subtotal_cents) return `Vale a partir de ${formatBRL(c.min_subtotal_cents)} nesta loja.`;
-  if ((c.listing_ids || []).length && couponEligibleSubtotal(c, items) <= 0) return 'Este cupom vale para outros anúncios da loja.';
+  if (c.min_subtotal_cents && subtotal < c.min_subtotal_cents) return t('Vale a partir de {valor} nesta loja.', { valor: formatBRL(c.min_subtotal_cents) });
+  if ((c.listing_ids || []).length && couponEligibleSubtotal(c, items) <= 0) return t('Este cupom vale para outros anúncios da loja.');
   if (c.kind === COUPON_KIND.FREE_SHIPPING) {
-    if (fulfillment !== 'shipping') return 'Este cupom é de frete grátis: escolha receber por envio.';
-    if (shippingToAgree) return 'O frete deste pedido é a combinar: o cupom de frete grátis não se aplica.';
+    if (fulfillment !== 'shipping') return t('Este cupom é de frete grátis: escolha receber por envio.');
+    if (shippingToAgree) return t('O frete deste pedido é a combinar: o cupom de frete grátis não se aplica.');
   }
   return null;
 }
@@ -213,11 +214,11 @@ export const GIFT_CARD_VALIDITY_OPTIONS = Object.freeze(VALIDITY_OPTIONS);
 /** O valor escolhido pode ser vendido? (`null` = pode) */
 export function giftCardAmountProblem(config, cents) {
   const v = Math.round(Number(cents));
-  if (!config?.enabled) return 'Esta loja não vende vale-presente.';
+  if (!config?.enabled) return t('Esta loja não vende vale-presente.');
   if (config.amounts_cents.includes(v)) return null;
-  if (!config.allow_custom) return 'Escolha um dos valores da loja.';
+  if (!config.allow_custom) return t('Escolha um dos valores da loja.');
   if (!(v >= GIFT_CARD_LIMITS.minCents && v <= GIFT_CARD_LIMITS.maxCents)) {
-    return `Escolha um valor entre ${formatBRL(GIFT_CARD_LIMITS.minCents)} e ${formatBRL(GIFT_CARD_LIMITS.maxCents)}.`;
+    return t('Escolha um valor entre {min} e {max}.', { min: formatBRL(GIFT_CARD_LIMITS.minCents), max: formatBRL(GIFT_CARD_LIMITS.maxCents) });
   }
   return null;
 }
@@ -231,12 +232,12 @@ export function giftCardExpiry(nowMs, months) {
 
 /** O vale serve para esta compra, nesta loja, desta pessoa? (`null` = serve) */
 export function giftCardProblem(card, { sellerKey, uid, now = Date.now() } = {}) {
-  if (!card) return 'Vale não encontrado.';
-  if (card.seller_key !== sellerKey) return 'Este vale é de outra loja.';
-  if (card.holder_uid !== uid) return 'Resgate o vale na sua conta antes de usar.';
-  if (card.status === GIFT_CARD_STATUS.CANCELLED) return 'Este vale foi cancelado pela loja.';
-  if (card.expires_at_ms && now > card.expires_at_ms) return 'Este vale venceu.';
-  if (!((Number(card.balance_cents) || 0) > 0)) return 'Este vale não tem mais saldo.';
+  if (!card) return t('Vale não encontrado.');
+  if (card.seller_key !== sellerKey) return t('Este vale é de outra loja.');
+  if (card.holder_uid !== uid) return t('Resgate o vale na sua conta antes de usar.');
+  if (card.status === GIFT_CARD_STATUS.CANCELLED) return t('Este vale foi cancelado pela loja.');
+  if (card.expires_at_ms && now > card.expires_at_ms) return t('Este vale venceu.');
+  if (!((Number(card.balance_cents) || 0) > 0)) return t('Este vale não tem mais saldo.');
   return null;
 }
 

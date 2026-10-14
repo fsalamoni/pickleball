@@ -14,6 +14,7 @@
  * ligadas carregadas sem erro. A tela não diz "agenda livre" sem isso, e diz
  * QUAL parte não carregou.
  */
+import { t } from '@/core/i18n';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -63,14 +64,14 @@ export function useHomeAgenda({
   const eventos = useAvailableEvents({ enabled: comClubes });
 
   const fontes = useMemo(() => [
-    { id: 'dias', label: 'dias de jogo', q: diasDeJogo, ligada: !!uid },
-    { id: 'reservas', label: 'reservas', q: reservas, ligada: !!uid },
-    { id: 'aulas', label: 'aulas', q: aulasAluno, ligada: !!uid },
-    { id: 'aulas-professor', label: 'aulas que você dá', q: aulasProfessor, ligada: !!uid && ehProfessor },
-    { id: 'torneios', label: 'jogos de torneio', q: jogosTorneio, ligada: !!uid && competindo },
-    { id: 'aulas-arena', label: 'aulas nas arenas', q: matriculas, ligada: !!uid && arenaModulesOn },
-    { id: 'jogos-abertos', label: 'jogos abertos', q: vagas, ligada: !!uid && arenaModulesOn },
-    { id: 'clubes', label: 'eventos dos clubes', q: eventos, ligada: !!uid && comClubes },
+    { id: 'dias', label: t('dias de jogo'), q: diasDeJogo, ligada: !!uid },
+    { id: 'reservas', label: t('reservas'), q: reservas, ligada: !!uid },
+    { id: 'aulas', label: t('aulas'), q: aulasAluno, ligada: !!uid },
+    { id: 'aulas-professor', label: t('aulas que você dá'), q: aulasProfessor, ligada: !!uid && ehProfessor },
+    { id: 'torneios', label: t('jogos de torneio'), q: jogosTorneio, ligada: !!uid && competindo },
+    { id: 'aulas-arena', label: t('aulas nas arenas'), q: matriculas, ligada: !!uid && arenaModulesOn },
+    { id: 'jogos-abertos', label: t('jogos abertos'), q: vagas, ligada: !!uid && arenaModulesOn },
+    { id: 'clubes', label: t('eventos dos clubes'), q: eventos, ligada: !!uid && comClubes },
   ], [uid, ehProfessor, competindo, arenaModulesOn, comClubes,
     diasDeJogo, reservas, aulasAluno, aulasProfessor, jogosTorneio, matriculas, vagas, eventos]);
 

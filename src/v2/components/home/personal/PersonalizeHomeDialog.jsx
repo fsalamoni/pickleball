@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 export default function PersonalizeHomeDialog({ open, onOpenChange }) {
   const { userProfile, updateUserProfile } = useAuth();
@@ -41,16 +42,16 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
 
   const salvar = async () => {
     if (escolhidos.length === 0) {
-      toast.error('Escolha ao menos um interesse.');
+      toast.error(t('Escolha ao menos um interesse.'));
       return;
     }
     setSalvando(true);
     try {
       await updateUserProfile({ interests: sanitizeInterests(escolhidos) });
-      toast.success('Pronto — o seu início foi atualizado.');
+      toast.success(t('Pronto — o seu início foi atualizado.'));
       onOpenChange(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar os interesses.');
+      toast.error(err?.message || t('Não foi possível salvar os interesses.'));
     } finally {
       setSalvando(false);
     }
@@ -60,13 +61,12 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl rounded-4xl bg-paper-pure">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-bold text-ink">O que você quer ver no início?</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-bold text-ink">{t('O que você quer ver no início?')}</DialogTitle>
           <DialogDescription className="text-gray-500">
-            Marque o que você faz ou quer fazer por aqui. A tela inicial passa a mostrar isso primeiro.
-            O que você já faz — gerir uma arena, dar aulas, organizar um torneio — aparece de qualquer jeito.
+            {t('Marque o que você faz ou quer fazer por aqui. A tela inicial passa a mostrar isso primeiro. O que você já faz — gerir uma arena, dar aulas, organizar um torneio — aparece de qualquer jeito.')}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Interesses">
+        <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={t('Interesses')}>
           {interesses.map(({ value, label, hint, icon }) => {
             const Icon = interestIcon(icon);
             const ativo = escolhidos.includes(value);
@@ -83,8 +83,8 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
               >
                 <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', ativo ? 'text-acid' : 'text-gray-400')} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
-                  {label}
-                  {hint && <span className={cn('mt-0.5 block text-xs font-normal', ativo ? 'text-white/70' : 'text-gray-500')}>{hint}</span>}
+                  {t(label)}
+                  {hint && <span className={cn('mt-0.5 block text-xs font-normal', ativo ? 'text-white/70' : 'text-gray-500')}>{t(hint)}</span>}
                 </span>
                 {ativo && <Check className="h-4 w-4 shrink-0 text-acid" aria-hidden="true" />}
               </button>
@@ -93,12 +93,12 @@ export default function PersonalizeHomeDialog({ open, onOpenChange }) {
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link to="/perfil/editar" className="text-sm font-semibold text-gray-500 hover:text-ink" onClick={() => onOpenChange(false)}>
-            Editar o perfil completo
+            {t('Editar o perfil completo')}
           </Link>
           <div className="flex gap-2">
-            <V2Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancelar</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>{t('Cancelar')}</V2Button>
             <V2Button size="sm" onClick={salvar} disabled={salvando || escolhidos.length === 0}>
-              {salvando ? 'Salvando…' : 'Salvar'}
+              {salvando ? t('Salvando…') : t('Salvar')}
             </V2Button>
           </div>
         </div>

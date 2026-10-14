@@ -10,6 +10,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function itemIcon(type) {
   if (type === 'open_game') return Megaphone;
@@ -37,7 +38,7 @@ export default function V2Community() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <V2PageIntro title="Comunidade" subtitle="Movimentos recentes de torneios e convites de jogo na plataforma." />
+      <V2PageIntro title={t('Comunidade')} subtitle={t('Movimentos recentes de torneios e convites de jogo na plataforma.')} />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -46,8 +47,8 @@ export default function V2Community() {
       ) : isError || (incompleto && items.length === 0) ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar a comunidade"
-            description="As novidades continuam lá — só não conseguimos buscá-las agora."
+            title={t('Não foi possível carregar a comunidade')}
+            description={t('As novidades continuam lá — só não conseguimos buscá-las agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -55,8 +56,8 @@ export default function V2Community() {
         <V2Surface>
           <V2EmptyState
             icon={Newspaper}
-            title="Nenhuma atividade recente"
-            description="Assim que novos torneios e convites forem publicados, eles aparecerão aqui em ordem de relevância."
+            title={t('Nenhuma atividade recente')}
+            description={t('Assim que novos torneios e convites forem publicados, eles aparecerão aqui em ordem de relevância.')}
           />
         </V2Surface>
       ) : (
@@ -64,8 +65,8 @@ export default function V2Community() {
           {incompleto && (
             <V2ErrorState
               inline
-              title="Parte das novidades não carregou"
-              description="Mostramos o que chegou — tente de novo para ver o resto."
+              title={t('Parte das novidades não carregou')}
+              description={t('Mostramos o que chegou — tente de novo para ver o resto.')}
               onRetry={() => refetch()}
             />
           )}
@@ -82,7 +83,7 @@ export default function V2Community() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <V2Badge tone={itemTone(item.type)}>{item.type === 'open_game' ? 'Convite' : 'Torneio'}</V2Badge>
+                    <V2Badge tone={itemTone(item.type)}>{item.type === 'open_game' ? t('Convite') : t('Torneio')}</V2Badge>
                   </div>
                   <p className="mt-1.5 truncate font-bold text-ink">{item.title}</p>
                   {item.subtitle && <p className="truncate text-sm text-gray-500">{item.subtitle}</p>}

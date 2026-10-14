@@ -6,6 +6,7 @@
  */
 import React from 'react';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 export default function InterruptorDicas({ ligadas, onAlternar, id }) {
   return (
@@ -14,7 +15,7 @@ export default function InterruptorDicas({ ligadas, onAlternar, id }) {
       role="switch"
       id={id}
       aria-checked={ligadas}
-      aria-label="Dicas na tela"
+      aria-label={t('Dicas na tela')}
       onClick={() => onAlternar(!ligadas)}
       className={cn(
         'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors',
