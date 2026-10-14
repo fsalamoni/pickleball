@@ -44,7 +44,7 @@ import {
   MEMBER_INVITE_STATUS,
 } from '../domain/constants.js';
 import { sealParticipantUidIntoGames } from '../domain/rankingPublishing.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -418,8 +418,8 @@ export async function requestToJoinClub(club, user, profile) {
 
   const adminIds = await listClubAdminIds(club.id);
   notifyUsers(adminIds, {
-    title: `${requesterName} pediu para entrar em "${trimmed(club.name).slice(0, 50)}"`,
-    message: 'Toque para aprovar ou recusar o pedido na administração do clube.',
+    title: tx('{nome} pediu para entrar em "{clube}"', { nome: requesterName, clube: trimmed(club.name).slice(0, 50) }),
+    message: tx('Toque para aprovar ou recusar o pedido na administração do clube.'),
     type: NOTIFICATION_TYPE.CLUB_JOIN_REQUEST,
     link: `/clubes/${club.id}?tab=admin`,
     actor: { uid: user.uid, displayName: requesterName },
@@ -470,8 +470,8 @@ export async function approveJoinRequest(request, actor) {
   }).catch(() => {});
   await updateDoc(doc(db, COL.clubs, request.club_id), { member_count: increment(1), updated_at: serverTimestamp() }).catch(() => {});
   notifyUsers([request.user_id], {
-    title: `Pedido aprovado: você agora é membro de "${trimmed(request.club_name).slice(0, 50)}"`,
-    message: 'Toque para abrir o clube e ver eventos, mural e fórum.',
+    title: tx('Pedido aprovado: você agora é membro de "{clube}"', { clube: trimmed(request.club_name).slice(0, 50) }),
+    message: tx('Toque para abrir o clube e ver eventos, mural e fórum.'),
     type: NOTIFICATION_TYPE.CLUB_JOIN_APPROVED,
     link: `/clubes/${request.club_id}`,
     actor,
@@ -487,8 +487,8 @@ export async function rejectJoinRequest(request, actor) {
     updated_at: serverTimestamp(),
   });
   notifyUsers([request.user_id], {
-    title: `Seu pedido para "${trimmed(request.club_name).slice(0, 50)}" não foi aprovado`,
-    message: 'Você pode falar com um administrador do clube para mais informações.',
+    title: tx('Seu pedido para "{clube}" não foi aprovado', { clube: trimmed(request.club_name).slice(0, 50) }),
+    message: tx('Você pode falar com um administrador do clube para mais informações.'),
     type: NOTIFICATION_TYPE.CLUB_JOIN_REJECTED,
     link: `/clubes/${request.club_id}`,
     actor,
@@ -524,8 +524,8 @@ export async function inviteMemberToClub(club, target, inviter, profile) {
     updated_at: serverTimestamp(),
   });
   notifyUsers([target.user_id], {
-    title: `${inviterName} convidou você para o clube "${trimmed(club.name).slice(0, 50)}"`,
-    message: 'Toque para aceitar ou recusar o convite.',
+    title: tx('{nome} convidou você para o clube "{clube}"', { nome: inviterName, clube: trimmed(club.name).slice(0, 50) }),
+    message: tx('Toque para aceitar ou recusar o convite.'),
     type: NOTIFICATION_TYPE.CLUB_INVITE,
     link: `/clubes/${club.id}`,
     actor: { uid: inviter.uid, displayName: inviterName },
@@ -573,8 +573,8 @@ export async function acceptClubInvite(invite, user, profile) {
   const me = profile?.platform_name || user.displayName || user.email || 'Um atleta';
   if (invite.invited_by) {
     notifyUsers([invite.invited_by], {
-      title: `${me} aceitou o convite e entrou em "${trimmed(invite.club_name).slice(0, 50)}"`,
-      message: 'O atleta agora faz parte do clube.',
+      title: tx('{nome} aceitou o convite e entrou em "{clube}"', { nome: me, clube: trimmed(invite.club_name).slice(0, 50) }),
+      message: tx('O atleta agora faz parte do clube.'),
       type: NOTIFICATION_TYPE.CLUB_INVITE_ACCEPTED,
       link: `/clubes/${invite.club_id}?tab=members`,
       actor: { uid: user.uid, displayName: me },
@@ -718,8 +718,8 @@ export async function createClubEvent(clubId, data, user) {
       const memberIds = (await listClubMembers(clubId)).map((m) => m.user_id).filter(Boolean);
       const creatorName = data.created_by_name || user.displayName || user.email || 'Um membro';
       notifyUsers(memberIds, {
-        title: `Novo evento no clube: "${trimmed(data.title).slice(0, 60)}"`,
-        message: `${creatorName} criou um evento. Toque para ver e responder.`,
+        title: tx('Novo evento no clube: "{evento}"', { evento: trimmed(data.title).slice(0, 60) }),
+        message: tx('{nome} criou um evento. Toque para ver e responder.', { nome: creatorName }),
         type: NOTIFICATION_TYPE.CLUB_EVENT_PUBLISHED,
         link: `/clubes/${clubId}/eventos/${id}`,
         actor: { uid: user.uid, displayName: creatorName },
@@ -838,8 +838,8 @@ export async function inviteToEvent(event, target, inviter, profile) {
 
   const inviterName = profile?.platform_name || inviter.displayName || inviter.email || 'Um atleta';
   notifyUsers([target.user_id], {
-    title: `${inviterName} convidou você para "${trimmed(event.title).slice(0, 60)}"`,
-    message: 'Toque para ver o evento e responder: Vou, Talvez ou Não vou.',
+    title: tx('{nome} convidou você para "{evento}"', { nome: inviterName, evento: trimmed(event.title).slice(0, 60) }),
+    message: tx('Toque para ver o evento e responder: Vou, Talvez ou Não vou.'),
     type: NOTIFICATION_TYPE.EVENT_INVITE,
     link: `/clubes/${event.club_id}/eventos/${event.id}`,
     actor: { uid: inviter.uid, displayName: inviterName },

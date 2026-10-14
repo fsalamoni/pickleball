@@ -29,7 +29,7 @@ import {
 } from '../domain/subscription.js';
 import { redeemPoints, DEFAULT_POINTS_PER_REAL } from '../domain/marketing.js';
 import { applyPackageUse } from '../domain/memberBenefit.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL_MEMBERS = 'arena_members';
 const COL_PACKAGES = 'arena_packages';
@@ -126,8 +126,8 @@ export async function addArenaMember(arenaId, target, actor) {
   }
   try {
     notifyUsers([target.user_id], {
-      title: 'Você é membro!',
-      message: `Agora você faz parte do programa de membros da arena.`,
+      title: tx('Você é membro!'),
+      message: tx('Agora você faz parte do programa de membros da arena.'),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arenaId}/membros`,
       actor,
@@ -590,8 +590,8 @@ export async function setSubscriptionMonthPaid(arenaId, userId, month, paid, act
   if (paid) {
     try {
       notifyUsers([userId], {
-        title: 'Mensalidade recebida',
-        message: `A arena registrou o pagamento de ${month}.`,
+        title: tx('Mensalidade recebida'),
+        message: tx('A arena registrou o pagamento de {mes}.', { mes: month }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/arenas/${arenaId}/membros`,
         actor,
@@ -702,8 +702,8 @@ export async function requestPackagePurchase(arenaId, pkgId, user, profile) {
   if (gestores.length === 0) throw new Error(t('A arena ainda não tem quem receba o pedido. Fale com ela.'));
   const nome = displayName(user, profile);
   await notifyUsers(gestores, {
-    title: 'Pedido de pacote de horas',
-    message: `${nome} quer o pacote "${str(pkg.name).slice(0, 60)}" (${pkg.hours}h · R$ ${Number(pkg.price || 0).toFixed(2).replace('.', ',')}). Confirme quando receber o pagamento.`,
+    title: tx('Pedido de pacote de horas'),
+    message: tx('{nome} quer o pacote "{pacote}" ({horas}h · R$ {valor}). Confirme quando receber o pagamento.', { nome, pacote: str(pkg.name).slice(0, 60), horas: pkg.hours, valor: Number(pkg.price || 0).toFixed(2).replace('.', ',') }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arenaId}/gerir?aba=membros&pacote=${encodeURIComponent(pkgId)}&para=${encodeURIComponent(user.uid)}`,
     actor: user,
@@ -777,8 +777,8 @@ export async function sellPackageToMember(arenaId, pkgId, target, actor) {
 
   try {
     notifyUsers([target.user_id], {
-      title: 'Pacote de horas creditado',
-      message: `${compra.total_hours}h do pacote "${str(pkg.name).slice(0, 60)}" já estão na sua carteira.`,
+      title: tx('Pacote de horas creditado'),
+      message: tx('{horas}h do pacote "{pacote}" já estão na sua carteira.', { horas: compra.total_hours, pacote: str(pkg.name).slice(0, 60) }),
       type: NOTIFICATION_TYPE.GENERIC,
       // Direto em "Planos" na página da arena, onde as horas aparecem.
       link: `/arenas/${arenaId}#arena-planos`,

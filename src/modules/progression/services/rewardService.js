@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { tx } from '@/core/i18n';
 import {
   validateReward, generateClaimCode, claimDocId, rewardAvailability, canTransitionClaim,
 } from '@/modules/progression/domain/rewards';
@@ -128,8 +129,8 @@ export async function requestReward({ reward, user, snapshot }) {
   const alvos = await issuerRecipients(reward);
   if (alvos.length > 0) {
     await notifyUsers(alvos, {
-      title: 'Novo pedido de recompensa',
-      message: `${user.displayName || 'Um atleta'} pediu "${reward.title}". Confira e libere.`,
+      title: tx('Novo pedido de recompensa'),
+      message: tx('{nome} pediu "{recompensa}". Confira e libere.', { nome: user.displayName || 'Um atleta', recompensa: reward.title }),
       type: NOTIFICATION_TYPE.GAMIFICATION,
       link: '/gamification',
       actor: user,
@@ -172,12 +173,14 @@ export async function decideClaim(claim, next, actor, note = '') {
   });
   await createAuditLog({ action: 'gamification_claim_decided', actor, details: { claimId: claim.id, status: next } });
   const textos = {
-    approved: `Seu pedido de "${claim.rewardTitle}" foi liberado. Apresente o código ${claim.code}.`,
-    rejected: `Seu pedido de "${claim.rewardTitle}" não foi liberado.${note ? ` Motivo: ${note}` : ''}`,
-    redeemed: `"${claim.rewardTitle}" foi marcada como usada. Aproveite!`,
+    approved: tx('Seu pedido de "{recompensa}" foi liberado. Apresente o código {codigo}.', { recompensa: claim.rewardTitle, codigo: claim.code }),
+    rejected: note
+      ? tx('Seu pedido de "{recompensa}" não foi liberado. Motivo: {motivo}', { recompensa: claim.rewardTitle, motivo: note })
+      : tx('Seu pedido de "{recompensa}" não foi liberado.', { recompensa: claim.rewardTitle }),
+    redeemed: tx('"{recompensa}" foi marcada como usada. Aproveite!', { recompensa: claim.rewardTitle }),
   };
   await notifyUsers([claim.uid], {
-    title: next === 'rejected' ? 'Pedido de recompensa' : 'Recompensa',
+    title: next === 'rejected' ? tx('Pedido de recompensa') : tx('Recompensa'),
     message: textos[next],
     type: NOTIFICATION_TYPE.GAMIFICATION,
     link: '/gamification?aba=recompensas',

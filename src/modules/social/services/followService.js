@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createNotification } from '@/core/services/notificationService';
+import { tx } from '@/core/i18n';
 
 const COL = 'follows';
 
@@ -37,8 +38,8 @@ export async function followAthlete(targetUid, actor, followerName) {
   });
   await createNotification({
     userId: targetUid,
-    title: 'Novo seguidor',
-    message: `${followerName || 'Um atleta'} começou a seguir você.`,
+    title: tx('Novo seguidor'),
+    message: tx('{nome} começou a seguir você.', { nome: followerName || 'Um atleta' }),
     type: 'new_follower',
     link: `/atleta/${actor.uid}`,
     actor,

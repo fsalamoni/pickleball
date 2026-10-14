@@ -23,9 +23,13 @@ const snap = (path) => ({
 vi.mock('@/core/config/firebase', () => ({ db: {} }));
 vi.mock('@/core/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/services/auditService', () => ({ createAuditLog: vi.fn(() => Promise.resolve()) }));
-vi.mock('@/core/services/notificationService', () => ({
-  notifyUsers: vi.fn(() => Promise.resolve()), NOTIFICATION_TYPE: { GENERIC: 'generic' },
-}));
+vi.mock('@/core/services/notificationService', async () => {
+  const { textoDoAviso } = await import('@/core/i18n/avisos');
+  const pt = (a) => { if (a) { a.title = textoDoAviso(a.title); a.message = textoDoAviso(a.message); } return a; };
+  return {
+    notifyUsers: vi.fn((_uids, aviso) => { pt(aviso); return Promise.resolve(); }), NOTIFICATION_TYPE: { GENERIC: 'generic' },
+  };
+});
 vi.mock('firebase/firestore', () => ({
   collection: (_db, nome) => ({ _col: nome }),
   doc: (_db, col, id) => ({ _path: `${col?._col || col}/${id}` }),

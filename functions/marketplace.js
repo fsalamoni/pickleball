@@ -27,6 +27,7 @@
  */
 
 const promo = require('./marketPromo.js');
+const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n.js');
 
 /* ------------------------------------------------------------ tabelas -- */
 
@@ -249,11 +250,13 @@ function coverFrame(listing) {
 /** Escreve avisos (fora da transação: aviso que falha não desfaz o pedido). */
 async function notify(db, uids, { title, message, link }, now) {
   const alvos = [...new Set((uids || []).filter(Boolean))];
+  const i18n = i18nDoAviso({ title, message });
   const batch = db.batch();
   alvos.forEach((uid) => {
     batch.set(db.collection('notifications').doc(), {
-      user_id: uid, title: texto(title, 120), message: texto(message, 300), type: 'market',
+      user_id: uid, title: texto(textoDoAviso(title), 120), message: texto(textoDoAviso(message), 300), type: 'market',
       link, read: false, archived: false, created_at: new Date(now), created_at_ms: now,
+      ...(i18n ? { i18n } : {}),
     });
   });
   if (alvos.length) await batch.commit();
@@ -487,8 +490,8 @@ async function placeOrders(ctx, uid, data) {
     for (const o of orders) {
       // eslint-disable-next-line no-await-in-loop
       await notify(db, o.managers, {
-        title: `Novo pedido ${o.code}`,
-        message: `${name} comprou no Mercado. Aceite ou recuse em até ${settings.seller_answer_hours} h.`,
+        title: tx('Novo pedido {codigo}', { codigo: o.code }),
+        message: tx('{nome} comprou no Mercado. Aceite ou recuse em até {horas} h.', { nome: name, horas: settings.seller_answer_hours }),
         link: `/mercado/vendas/${o.id}`,
       }, now);
     }
@@ -829,7 +832,7 @@ async function offerAction(ctx, actor, data = {}) {
       expires_at_ms: now + settings.offer_ttl_hours * 3600000,
       created_at: new Date(now), updated_at: new Date(now),
     });
-    await notify(db, ops, { title: 'Nova oferta', message: `${name} ofereceu por "${l.title}".`, link: `/mercado/ofertas/${ref.id}` }, now);
+    await notify(db, ops, { title: tx('Nova oferta'), message: tx('{nome} ofereceu por "{anuncio}".', { nome: name, anuncio: l.title }), link: `/mercado/ofertas/${ref.id}` }, now);
     return { id: ref.id, status: O.PENDING };
   }
 
@@ -885,7 +888,7 @@ async function offerAction(ctx, actor, data = {}) {
   const opsAgora = await operatorUids(db, o.seller_key);
   await notify(db, toBuyer ? [o.buyer_uid] : opsAgora, { title, message, link }, now);
   if (res.orderId && !toBuyer) {
-    await notify(db, opsAgora, { title: 'Venda combinada', message: `Pedido criado pelo valor combinado de "${o.listing_title}".`, link: `/mercado/vendas/${res.orderId}` }, now);
+    await notify(db, opsAgora, { title: tx('Venda combinada'), message: tx('Pedido criado pelo valor combinado de "{anuncio}".', { anuncio: o.listing_title }), link: `/mercado/vendas/${res.orderId}` }, now);
   }
   return { status: o.status, orderId: res.orderId };
 }
@@ -998,8 +1001,8 @@ async function housekeeping(ctx) {
       const of = d.data();
       // eslint-disable-next-line no-await-in-loop
       await notify(db, [of.buyer_uid], {
-        title: 'Oferta expirou',
-        message: `A negociação por "${of.listing_title || 'um anúncio'}" passou do prazo sem resposta. Você pode fazer outra oferta.`,
+        title: tx('Oferta expirou'),
+        message: tx('A negociação por "{anuncio}" passou do prazo sem resposta. Você pode fazer outra oferta.', { anuncio: of.listing_title || 'um anúncio' }),
         link: `/mercado/ofertas/${d.id}`,
       }, now);
       feitos.offers += 1;
@@ -1022,12 +1025,12 @@ async function housekeeping(ctx) {
     await d.ref.update({ expiry_reminded_at_ms: now, updated_at: new Date(now) });
     // eslint-disable-next-line no-await-in-loop
     await notify(db, [alvo], !paraDar ? {
-      title: 'Seu vale-presente vence logo',
-      message: `Restam ${promo.formatBRL(v.balance_cents)} para usar em ${loja} até ${quando}.`,
+      title: tx('Seu vale-presente vence logo'),
+      message: tx('Restam {valor} para usar em {loja} até {quando}.', { valor: promo.formatBRL(v.balance_cents), loja, quando }),
       link: '/mercado/vales',
     } : {
-      title: 'O vale que você deu ainda não foi usado',
-      message: `O vale de ${promo.formatBRL(v.balance_cents)} de ${loja} vence em ${quando} e ninguém resgatou. Mande o código de novo a quem ganhou.`,
+      title: tx('O vale que você deu ainda não foi usado'),
+      message: tx('O vale de {valor} de {loja} vence em {quando} e ninguém resgatou. Mande o código de novo a quem ganhou.', { valor: promo.formatBRL(v.balance_cents), loja, quando }),
       link: '/mercado/vales',
     }, now);
     feitos.giftCards += 1;
@@ -1070,8 +1073,8 @@ async function moderateListing(ctx, listingId, listing) {
     moderation: { status: 'flagged', reason: `Termo não permitido: "${termo}"`, auto: true, at_ms: now },
   });
   await notify(db, [...new Set([listing.created_by, ...(await operatorUids(db, listing.seller_key))])], {
-    title: 'Anúncio pausado',
-    message: `"${String(listing.title || '').slice(0, 60)}" tem um termo não permitido ("${termo}"). Edite e publique de novo.`,
+    title: tx('Anúncio pausado'),
+    message: tx('"{anuncio}" tem um termo não permitido ("{termo}"). Edite e publique de novo.', { anuncio: String(listing.title || '').slice(0, 60), termo }),
     link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}`,
   }, now);
   return termo;
@@ -1092,11 +1095,11 @@ async function notifyQuestion(ctx, questionId, before, after) {
   if (!before && after.status === 'open') {
     const ops = await operatorUids(db, after.seller_key);
     const alvos = ops.filter((u) => u !== after.asker_uid);
-    await notify(db, alvos, { title: 'Nova pergunta no Mercado', message: `Perguntaram sobre "${titulo}": ${texto(after.text, 140)}`, link }, now);
+    await notify(db, alvos, { title: tx('Nova pergunta no Mercado'), message: tx('Perguntaram sobre "{anuncio}": {pergunta}', { anuncio: titulo, pergunta: texto(after.text, 140) }), link }, now);
     return 'seller';
   }
   if (before && before.status !== 'answered' && after.status === 'answered' && after.asker_uid) {
-    await notify(db, [after.asker_uid], { title: 'O vendedor respondeu', message: `Sua pergunta sobre "${titulo}" tem resposta.`, link }, now);
+    await notify(db, [after.asker_uid], { title: tx('O vendedor respondeu'), message: tx('Sua pergunta sobre "{anuncio}" tem resposta.', { anuncio: titulo }), link }, now);
     return 'asker';
   }
   return null;
@@ -1135,8 +1138,8 @@ async function savedSearchAlerts(ctx) {
     const primeiro = texto(novos[0].title, 60);
     // eslint-disable-next-line no-await-in-loop
     await notify(db, [b.uid], {
-      title: `Novidade na sua busca "${texto(b.label, 40)}"`,
-      message: n === 1 ? `Chegou "${primeiro}".` : `${n} anúncios novos, como "${primeiro}".`,
+      title: tx('Novidade na sua busca "{busca}"', { busca: texto(b.label, 40) }),
+      message: n === 1 ? tx('Chegou "{anuncio}".', { anuncio: primeiro }) : tx('{n} anúncios novos, como "{anuncio}".', { n, anuncio: primeiro }),
       link: `/mercado/buscas?abrir=${d.id}`,
     }, now);
     // eslint-disable-next-line no-await-in-loop
@@ -1171,8 +1174,8 @@ async function notifyPriceDrop(ctx, listingId, before, after) {
   const pct = Math.round(((antes - depois) / antes) * 100);
   const brl = (c) => `R$ ${(c / 100).toFixed(2).replace('.', ',')}`;
   await notify(db, alvos, {
-    title: `Baixou ${pct}%: ${texto(after.title, 60)}`,
-    message: `O anúncio que você favoritou foi de ${brl(antes)} para ${brl(depois)}.`,
+    title: tx('Baixou {pct}%: {anuncio}', { pct, anuncio: texto(after.title, 60) }),
+    message: tx('O anúncio que você favoritou foi de {antes} para {depois}.', { antes: brl(antes), depois: brl(depois) }),
     link: `/mercado/anuncio/${listingId}`,
   }, now);
   return alvos.length;
@@ -1427,8 +1430,8 @@ async function buyGiftCard(ctx, actor, data) {
     return { id: orderRef.id, code: order.code, seller_name: order.seller_name };
   });
   await notify(db, ops, {
-    title: `Vale-presente vendido · ${res.code}`,
-    message: `${nome} comprou um vale-presente de ${promo.formatBRL(valor)}. Confira o Pix e confirme o pagamento.`,
+    title: tx('Vale-presente vendido · {codigo}', { codigo: res.code }),
+    message: tx('{nome} comprou um vale-presente de {valor}. Confira o Pix e confirme o pagamento.', { nome, valor: promo.formatBRL(valor) }),
     link: `/mercado/vendas/${res.id}`,
   }, now);
   return res;
@@ -1468,8 +1471,8 @@ async function claimGiftCard(ctx, actor, data) {
   if (!res.already && card.buyer_uid && card.buyer_uid !== actor.uid) {
     const nome = await buyerName(db, actor.uid);
     await notify(db, [card.buyer_uid], {
-      title: 'Seu presente chegou',
-      message: `${nome} resgatou o vale-presente de ${promo.formatBRL(card.initial_cents)} de ${card.seller_name || 'uma loja'}.`,
+      title: tx('Seu presente chegou'),
+      message: tx('{nome} resgatou o vale-presente de {valor} de {loja}.', { nome, valor: promo.formatBRL(card.initial_cents), loja: card.seller_name || 'uma loja' }),
       link: '/mercado/vales',
     }, now);
   }
@@ -1526,8 +1529,8 @@ async function cancelGiftCard(ctx, actor, data) {
   });
   if (card.holder_uid) {
     await notify(db, [card.holder_uid], {
-      title: 'Vale-presente cancelado',
-      message: `${card.seller_name || 'A loja'} cancelou o vale ${promo.maskGiftCardCode(card.code)}: ${motivo}`,
+      title: tx('Vale-presente cancelado'),
+      message: tx('{loja} cancelou o vale {codigo}: {motivo}', { loja: card.seller_name || 'A loja', codigo: promo.maskGiftCardCode(card.code), motivo }),
       link: '/mercado/vales',
     }, now);
   }

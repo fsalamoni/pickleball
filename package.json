@@ -14,6 +14,7 @@
     "lint:fix": "eslint . --fix",
     "privacy:legacy-email-cleanup": "node scripts/privacy-legacy-email-cleanup.mjs",
     "security:secrets": "node scripts/check-no-secrets.mjs",
+    "i18n:avisos": "node scripts/i18n-avisos.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

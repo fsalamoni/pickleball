@@ -29,7 +29,8 @@ export const idiomaAtivo = () => codigoAtivo;
 /** O locale do `Intl` do idioma ativo (ex.: 'en-US'). */
 export const localeAtivo = () => idiomaPorCodigo(codigoAtivo).locale;
 
-function interpolar(texto, params) {
+/** Troca `{nome}` pelo parâmetro; o que não veio fica como está. */
+export function interpolar(texto, params) {
   if (!params) return texto;
   return texto.replace(/\{(\w+)\}/g, (inteiro, nome) => (params[nome] === undefined ? inteiro : String(params[nome])));
 }

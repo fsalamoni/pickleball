@@ -16,7 +16,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { logger } from '@/core/lib/logger';
 import { V2Button } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const PREF = (contextId) => `parabens:${contextId}`;
 
@@ -46,8 +46,8 @@ export default function CongratulateButton({ contextId, toUids = [], scope = 'to
       if (ok.length === 0) throw resultados[0]?.reason || new Error(t('Não foi possível parabenizar.'));
       await notifyUsers(ok, {
         type: NOTIFICATION_TYPE.GAMIFICATION,
-        title: 'Você recebeu parabéns',
-        message: `${user.displayName || 'Alguém'} parabenizou você pelo ${placeLabel} em ${eventTitle}.`,
+        title: tx('Você recebeu parabéns'),
+        message: tx('{nome} parabenizou você pelo {colocacao} em {evento}.', { nome: user.displayName || 'Alguém', colocacao: placeLabel, evento: eventTitle }),
         link: '/perfil?secao=trofeus',
         actor: user,
       }).catch((err) => logger.warn('Parabéns: aviso não gravado', err));

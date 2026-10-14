@@ -26,6 +26,7 @@ const { FieldValue } = require('firebase-admin/firestore');
 const { normalizeMatches } = require('./platformRankings');
 const { isEligible, FINISHED_STATUSES, toMillis } = require('./ranking');
 const core = require('./gamificationCore');
+const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n');
 
 const MAX_DOCS = 20000;
 const BATCH = 400;
@@ -121,13 +122,26 @@ async function lerColecao(db, colecao, consulta = (q) => q) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/** "3 jogos e 1 vitória na semana…" — uma chave por combinação de singular/plural. */
+function resumoDaSemana(j, v) {
+  const p = { j, v };
+  if (j === 1 && v === 1) return tx('{j} jogo e {v} vitória na semana. Veja o resumo completo.', p);
+  if (j === 1) return tx('{j} jogo e {v} vitórias na semana. Veja o resumo completo.', p);
+  if (v === 1) return tx('{j} jogos e {v} vitória na semana. Veja o resumo completo.', p);
+  return tx('{j} jogos e {v} vitórias na semana. Veja o resumo completo.', p);
+}
+
 /** Aviso na central de notificações. `create`: o mesmo id nunca duplica. */
 async function avisar(db, id, { userId, title, message, link, type = 'gamification' }) {
   try {
+    // `title`/`message` aceitam `tx(…)`: o português de sempre + `i18n` para
+    // o sino e o push saírem no idioma de quem recebe.
+    const i18n = i18nDoAviso({ title, message });
     await db.collection('notifications').doc(id).create({
-      user_id: userId, title, message, type, link: link || null, data: null,
+      user_id: userId, title: textoDoAviso(title), message: textoDoAviso(message), type, link: link || null, data: null,
       actor_id: null, actor_name: null, read: false, read_at: null,
       created_at: FieldValue.serverTimestamp(), created_at_ms: Date.now(),
+      ...(i18n ? { i18n } : {}),
     });
     return true;
   } catch (err) {
@@ -298,8 +312,10 @@ async function processarDesafio(db, def, { agora, jogosPorUid, cfg, logger }) {
         // eslint-disable-next-line no-await-in-loop
         await avisar(db, `chres_${def.id}_${e.subjectId}`, {
           userId: e.subjectId,
-          title: `Resultado: ${def.title}`,
-          message: `Você terminou em ${e.position}º de ${ranqueadas.length}${prem && prem.label ? ` — ${prem.label}` : ''}.`,
+          title: tx('Resultado: {desafio}', { desafio: def.title }),
+          message: prem && prem.label
+            ? tx('Você terminou em {posicao}º de {total} — {premio}.', { posicao: e.position, total: ranqueadas.length, premio: prem.label })
+            : tx('Você terminou em {posicao}º de {total}.', { posicao: e.position, total: ranqueadas.length }),
           link: `/gamification?aba=desafios&desafio=${encodeURIComponent(def.id)}`,
         });
       }
@@ -366,10 +382,14 @@ async function fecharDuelos(db, semana, { cfg, jogosPorUid, agora, logger }) {
       // eslint-disable-next-line no-await-in-loop
       await conceder(db, { uid: lado.uid, kind: 'duel', ref: `${semana}_${d.id}`, xp, label: venceu ? 'Duelo da semana — vitória' : 'Duelo da semana' });
       if (cfg.notifications.duels && quer(lado.uid)) {
-        const msg = r.outcome === 'tie' ? 'Empate no duelo da semana.' : venceu ? 'Você venceu o duelo da semana!' : 'O duelo da semana ficou com o adversário. Revanche na próxima!';
+        const placar = { meu: lado.wins, dele: outro.wins };
+        let msg;
+        if (r.outcome === 'tie') msg = tx('Empate no duelo da semana. ({meu} × {dele} vitórias)', placar);
+        else if (venceu) msg = tx('Você venceu o duelo da semana! ({meu} × {dele} vitórias)', placar);
+        else msg = tx('O duelo da semana ficou com o adversário. Revanche na próxima! ({meu} × {dele} vitórias)', placar);
         // eslint-disable-next-line no-await-in-loop
         await avisar(db, `duelres_${d.id}_${quem}`, {
-          userId: lado.uid, title: 'Duelo da semana', message: `${msg} (${lado.wins} × ${outro.wins} vitórias)`, link: '/gamification?aba=duelo',
+          userId: lado.uid, title: tx('Duelo da semana'), message: msg, link: '/gamification?aba=duelo',
         });
       }
     }
@@ -448,7 +468,7 @@ async function runWeeklyDuels(db, { now = Date.now(), logger = console } = {}) {
         if (p && p.notifications && p.notifications.duels === false) continue;
         // eslint-disable-next-line no-await-in-loop
         await avisar(db, `duelnew_${id}_${uid}`, {
-          userId: uid, title: 'Duelo da semana', message: `Você foi emparelhado com ${outro}. Quem vencer mais jogos até domingo leva.`, link: '/gamification?aba=duelo',
+          userId: uid, title: tx('Duelo da semana'), message: tx('Você foi emparelhado com {nome}. Quem vencer mais jogos até domingo leva.', { nome: outro }), link: '/gamification?aba=duelo',
         });
       }
     }
@@ -625,8 +645,8 @@ async function runWeeklyDigest(db, { now = Date.now(), logger = console } = {}) 
     // eslint-disable-next-line no-await-in-loop
     const ok = await avisar(db, `weekly_${uid}_${passada}`, {
       userId: uid,
-      title: 'Sua semana em revisão',
-      message: `${lista.length} ${lista.length === 1 ? 'jogo' : 'jogos'} e ${vit} ${vit === 1 ? 'vitória' : 'vitórias'} na semana. Veja o resumo completo.`,
+      title: tx('Sua semana em revisão'),
+      message: resumoDaSemana(lista.length, vit),
       link: '/gamification/revisao',
     });
     if (ok) enviados += 1;

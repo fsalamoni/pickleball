@@ -16,6 +16,7 @@ import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { linkDeAviso } from '@/core/domain/internalLink';
+import { i18nDoAviso, textoDoAviso, tx } from '@/core/i18n/avisos';
 
 export const NOTIFICATION_COLLECTION = 'notifications';
 
@@ -94,11 +95,18 @@ function normalizeRecipients(userIds, actorId) {
   return Array.from(set);
 }
 
+/**
+ * `title`/`message` aceitam texto ou a marca `tx('chave pt', params)`: grava o
+ * português de sempre E, só quando há marca, `i18n` (a chave e os parâmetros)
+ * — é por ele que o sino e o push mostram o aviso no idioma de quem recebe.
+ */
 function buildPayload({ userId, title, message, type, link, actor, data }) {
+  const titulo = trimText(textoDoAviso(title), 140) ? title : tx('Nova atividade');
+  const i18n = i18nDoAviso({ title: titulo, message });
   return {
     user_id: userId,
-    title: trimText(title, 140) || 'Nova atividade',
-    message: trimText(message, 300),
+    title: trimText(textoDoAviso(titulo), 140),
+    message: trimText(textoDoAviso(message), 300),
     type: type || NOTIFICATION_TYPE.GENERIC,
     // A mesma régua da regra (`isInternalLink`): link que ela recusaria
     // derrubaria o LOTE inteiro em silêncio. Ver core/domain/internalLink.js.
@@ -112,6 +120,7 @@ function buildPayload({ userId, title, message, type, link, actor, data }) {
     read_at: null,
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
+    ...(i18n ? { i18n } : {}),
   };
 }
 

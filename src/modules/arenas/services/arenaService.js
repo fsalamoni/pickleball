@@ -34,7 +34,7 @@ import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js
 import { normalizeReviewResponse } from '../domain/review_response.js';
 import { normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit } from '../domain/inventory.js';
 import { trackedStock } from '../domain/shop.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -228,8 +228,8 @@ export async function addArenaManager(arena, target, actor) {
     created_at: serverTimestamp(),
   });
   notifyUsers([target.user_id], {
-    title: `Você agora administra a arena "${str(arena.name).slice(0, 50)}"`,
-    message: 'Toque para gerenciar reservas, preços e informações da arena.',
+    title: tx('Você agora administra a arena "{arena}"', { arena: str(arena.name).slice(0, 50) }),
+    message: tx('Toque para gerenciar reservas, preços e informações da arena.'),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
     actor,

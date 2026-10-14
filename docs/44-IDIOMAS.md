@@ -16,6 +16,16 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 3. Conteúdo escrito por pessoas não é traduzido.
 4. Cada pasta `locales/` precisa de TODOS os idiomas do registro.
 
+## Avisos e push no idioma da pessoa
+- Quem cria o aviso não sabe o idioma de quem recebe. Por isso o aviso marca o texto com `tx('Texto pt {nome}', { nome })` (de `@/core/i18n`; no servidor, `functions/avisoI18n.js`) em `title`/`message`.
+- `notifyUsers`/`createNotification` gravam o português em `title`/`message` (como sempre) e, só quando há marca, `i18n: { title: {key, params}, message: {key, params} }`. Texto solto continua valendo. Parâmetro que não é texto/número descarta o `i18n` do campo (senão sobraria `{variavel}`).
+- O que a pessoa escreveu (nome, texto de campanha, motivo) vai como **parâmetro**, nunca dentro da chave. Frase com pedaço opcional vira **duas chaves** (ex.: com e sem motivo).
+- Mostrar: sempre `noticeText(n, 'title' | 'message')` (sino, central, busca da central) — nunca `n.title` cru.
+- Idioma da pessoa: `users/{uid}.language`, gravado ao trocar o idioma (e lido no login, para a escolha seguir a pessoa em outro aparelho).
+- Push: `pushOnNotificationCreate` lê `users.language` (na mesma leitura das preferências; falhou ⇒ português) e traduz por `functions/i18n/avisos.json`, **gerado** com `npm run i18n:avisos` a partir dos `tx('…')` de `src` e `functions` e dos catálogos. A guarda `src/core/guards/i18nAvisos.test.js` reprova o arquivo desatualizado; `functions/avisoI18n.parity.test.js` trava cliente × servidor.
+- Os textos dos avisos moram em `src/modules/notifications/i18n/locales/` (ou no catálogo do módulo, se a chave já existir lá).
+- Ainda em português (texto montado no domínio ou escrito por pessoas): campanhas e cupons de arena/professor/plataforma, aviso em massa do admin, mudança de status de aula, vínculo professor-aluno (`statusNotice`), cadastro de vendedor do Mercado (`sellerReviewNotice`), transições de pedido do Mercado.
+
 ## Incluir um idioma novo
 1. Uma linha em `src/core/i18n/languages.js`.
 2. Copiar cada `locales/en.js` para `locales/<codigo>.js` e traduzir os valores.

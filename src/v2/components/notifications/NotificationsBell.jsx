@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { NoticeIcon, NoticeTime } from '@/v2/components/notifications/noticeParts';
-import { t, tn } from '@/core/i18n';
+import { t, tn, noticeText } from '@/core/i18n';
 
 export const NOTIFICATIONS_PATH = '/notificacoes';
 export const NOTIFICATION_PREFS_PATH = '/configuracoes#notificacoes';
@@ -135,9 +135,9 @@ export default function NotificationsBell() {
         <NoticeIcon notice={n} />
         <div className="min-w-0 flex-1">
           <p className={cn('line-clamp-2 text-sm leading-snug text-ink', n.read ? 'font-semibold' : 'font-bold')}>
-            {n.title}
+            {noticeText(n, 'title')}
           </p>
-          {n.message && <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-gray-500">{n.message}</p>}
+          {n.message && <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-gray-500">{noticeText(n, 'message')}</p>}
           <PartnerInviteNotificationAction
             notification={n}
             onResolved={() => { if (!n.read) markAsRead(n.id).catch(() => {}); }}

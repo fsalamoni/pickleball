@@ -22,7 +22,7 @@ import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplica
 import { createAuditLog } from '@/core/services/auditService';
 import { couponDocId, giftCardConfig, normalizeCouponCode, validateCouponInput } from '../domain/promotions.js';
 import { notifyUsers } from '@/core/services/notificationService';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 
@@ -333,8 +333,8 @@ export async function moderateListing(listing, { action, reason = '' }, { uid, a
       details: { listing_id: listing.id, title: listing.title, seller_key: listing.seller_key, reason: motivo },
     }),
     listing.created_by ? notifyUsers([listing.created_by], action === 'remove'
-      ? { title: 'Anúncio retirado pela moderação', message: `"${String(listing.title || '').slice(0, 60)}" saiu do Mercado. Motivo: ${motivo}`, type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }
-      : { title: 'Anúncio liberado', message: `"${String(listing.title || '').slice(0, 60)}" foi liberado pela moderação. Ele está pausado: retome quando quiser.`, type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }) : null,
+      ? { title: tx('Anúncio retirado pela moderação'), message: tx('"{titulo}" saiu do Mercado. Motivo: {motivo}', { titulo: String(listing.title || '').slice(0, 60), motivo }), type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }
+      : { title: tx('Anúncio liberado'), message: tx('"{titulo}" foi liberado pela moderação. Ele está pausado: retome quando quiser.', { titulo: String(listing.title || '').slice(0, 60) }), type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }) : null,
   ]);
   return { warnings: extras.filter((r) => r.status === 'rejected').length };
 }
@@ -538,8 +538,8 @@ export async function adminDisableCoupon(coupon, { reason = '', actor } = {}) {
       details: { coupon_id: coupon.id, seller_key: coupon.seller_key, code: coupon.code, reason: motivo },
     }),
     coupon.created_by ? notifyUsers([coupon.created_by], {
-      title: 'Cupom desligado pela moderação',
-      message: `O cupom ${coupon.code} foi desligado. Motivo: ${motivo}`,
+      title: tx('Cupom desligado pela moderação'),
+      message: tx('O cupom {codigo} foi desligado. Motivo: {motivo}', { codigo: coupon.code, motivo }),
       type: 'market', link: `/mercado/vender?aba=divulgar&como=${encodeURIComponent(coupon.seller_key || '')}`,
     }) : null,
   ]);

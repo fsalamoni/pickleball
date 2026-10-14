@@ -398,6 +398,10 @@ Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
 Notificações do sino. `userId`, `title`, `message`, `type`
 (ver `NOTIFICATION_TYPE` em `01-AI-CONTEXT.md` §7), `link`, `read`, `actor`,
 `created_at`. Escrita por `createNotification` / `notifyUsers` (lote ≤400).
+`i18n` (opcional, 2026-10-14): `{ title?: {key, params}, message?: {key, params} }`
+— a chave em português e os parâmetros simples de um `tx('…')`; o sino e o push
+mostram o aviso no idioma de quem recebe. Ausente ⇒ vale `title`/`message`
+(o português, sempre gravado). Ver `docs/44-IDIOMAS.md`.
 
 ### `audit_logs/{id}`
 Trilha de auditoria. `action` (ex.: `tournament_created`,
@@ -857,6 +861,13 @@ Registro de ações admin (moderação, etc.).
 ### `users/{uid}.notification_prefs: object` (Onda 9b)
 Preferências por categoria: `{booking_confirmed: bool, tournament_*: bool,
 chat_*: bool, forum_*: bool, ...}`. Default todas ON.
+
+### `users/{uid}.language: string` (2026-10-14, flag `multi_language`)
+Idioma escolhido pela pessoa (`'pt-BR' | 'en' | 'es'`, os códigos de
+`src/core/i18n/languages.js`). Escrito pelo titular ao trocar de idioma (e uma
+vez, se ele já tinha escolhido antes); lido no login de outro aparelho e pelo
+`pushOnNotificationCreate` para o push sair no idioma dela. Opcional: ausente ⇒
+português. A regra de `users` já deixa o dono escrevê-lo (não é campo de poder).
 
 ### `users/{uid}.data_export_request: object` (Onda 9)
 LGPD: request de export de dados (`{requested_at, status}`).

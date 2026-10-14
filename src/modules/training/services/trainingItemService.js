@@ -28,7 +28,7 @@ import {
 import { derivedFromFor } from '../domain/copy.js';
 import { deleteTrainingMedia } from './mediaUploadService.js';
 import { markSeed } from './settingsService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const TRAINING_ITEMS = 'training_items';
 const SHARES = 'training_shares';
@@ -352,8 +352,20 @@ export async function reviewItem(item, decision, note, { identity }) {
     details: { item_id: item.id, title: item.title, author_uid: item.author_uid, note: review_note },
   });
   await notifyAuthor(item, decision === REVIEW.APROVADO
-    ? { title: 'Seu item foi publicado', message: `"${item.title}" está na biblioteca de treinos.${review_note ? ` Nota da equipe: ${review_note}` : ''}`, link: `/treino/item/${item.id}` }
-    : { title: 'Seu item não foi aprovado', message: `"${item.title}" não entrou na biblioteca.${review_note ? ` Motivo: ${review_note}` : ''} Você pode editar e enviar de novo.`, link: `/treino/item/${item.id}` },
+    ? {
+      title: tx('Seu item foi publicado'),
+      message: review_note
+        ? tx('"{titulo}" está na biblioteca de treinos. Nota da equipe: {nota}', { titulo: item.title, nota: review_note })
+        : tx('"{titulo}" está na biblioteca de treinos.', { titulo: item.title }),
+      link: `/treino/item/${item.id}`,
+    }
+    : {
+      title: tx('Seu item não foi aprovado'),
+      message: review_note
+        ? tx('"{titulo}" não entrou na biblioteca. Motivo: {motivo} Você pode editar e enviar de novo.', { titulo: item.title, motivo: review_note })
+        : tx('"{titulo}" não entrou na biblioteca. Você pode editar e enviar de novo.', { titulo: item.title }),
+      link: `/treino/item/${item.id}`,
+    },
   identity);
 }
 
@@ -369,8 +381,8 @@ export async function setItemHidden(item, hidden, reason, { identity }) {
     details: { item_id: item.id, title: item.title, author_uid: item.author_uid, reason: hidden_reason },
   });
   await notifyAuthor(item, hidden
-    ? { title: 'Seu item foi ocultado', message: `"${item.title}" saiu da biblioteca. Motivo: ${hidden_reason}`, link: `/treino/item/${item.id}` }
-    : { title: 'Seu item voltou a aparecer', message: `"${item.title}" está visível de novo.`, link: `/treino/item/${item.id}` },
+    ? { title: tx('Seu item foi ocultado'), message: tx('"{titulo}" saiu da biblioteca. Motivo: {motivo}', { titulo: item.title, motivo: hidden_reason }), link: `/treino/item/${item.id}` }
+    : { title: tx('Seu item voltou a aparecer'), message: tx('"{titulo}" está visível de novo.', { titulo: item.title }), link: `/treino/item/${item.id}` },
   identity);
 }
 

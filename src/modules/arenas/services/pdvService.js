@@ -70,7 +70,7 @@ import { formatPrice } from '../domain/pricing.js';
 import {
   listInventoryProducts, listInventoryEntries, listInventoryExits, listArenaManagerIds,
 } from './arenaService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL_PRODUCTS = 'arena_products';
 const COL_SALES = 'arena_sales';
@@ -243,8 +243,8 @@ export async function createSale(arenaId, items, paymentMethod, splitWith, user,
   try {
     const gestores = await listArenaManagerIds(arenaId);
     await notifyUsers(gestores, {
-      title: 'Novo pedido na loja',
-      message: `${nome} pediu ${resumoDosItens(itens)} (${formatPrice(total)}). Separe para entregar no balcão.`,
+      title: tx('Novo pedido na loja'),
+      message: tx('{nome} pediu {itens} ({valor}). Separe para entregar no balcão.', { nome, itens: resumoDosItens(itens), valor: formatPrice(total) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arenaId}/gerir?aba=pedidos`,
       actor: user,
@@ -260,8 +260,10 @@ export async function createSale(arenaId, items, paymentMethod, splitWith, user,
   if (outros.length > 0) {
     try {
       await notifyUsers(outros, {
-        title: 'Sua parte da conta',
-        message: `${nome} dividiu uma compra${arenaName ? ` na ${arenaName}` : ''} com você. Toque para registrar a sua parte.`,
+        title: tx('Sua parte da conta'),
+        message: arenaName
+          ? tx('{nome} dividiu uma compra na {arena} com você. Toque para registrar a sua parte.', { nome, arena: arenaName })
+          : tx('{nome} dividiu uma compra com você. Toque para registrar a sua parte.', { nome }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: '/minhas-reservas',
         actor: user,
@@ -525,7 +527,7 @@ export async function cancelSale(saleId, motivo, actor) {
   const avisar = [sale.buyer_id, ...(Array.isArray(sale.split_with) ? sale.split_with : [])];
   try {
     await notifyUsers(avisar, {
-      title: 'Pedido cancelado',
+      title: tx('Pedido cancelado'),
       message: `${sale.arena_name ? `A ${sale.arena_name}` : 'A arena'} cancelou o pedido de ${resumoDosItens(sale.items)}.${str(motivo) ? ` Motivo: ${str(motivo).slice(0, 120)}` : ''}`,
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
@@ -578,8 +580,8 @@ export async function cancelMyOrder(saleId, user, profile) {
   try {
     const gestores = await listArenaManagerIds(sale.arena_id);
     await notifyUsers(gestores, {
-      title: 'Pedido cancelado por quem pediu',
-      message: `${displayName(user, profile)} desistiu de ${resumoDosItens(sale.items)}. Não precisa separar.`,
+      title: tx('Pedido cancelado por quem pediu'),
+      message: tx('{nome} desistiu de {itens}. Não precisa separar.', { nome: displayName(user, profile), itens: resumoDosItens(sale.items) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${sale.arena_id}/gerir?aba=pedidos`,
       actor: user,

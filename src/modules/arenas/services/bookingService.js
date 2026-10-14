@@ -47,7 +47,7 @@ import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
 import { applyBookingReferral } from './bookingReferralService.js';
 import { BOOKING_REFERRAL_STATUS, normalizeReferralCode, referralCodeProblem } from '../domain/marketing.js';
 import { listArenaManagerIds } from './arenaService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -417,7 +417,7 @@ export async function createBooking(arena, user, profile, input) {
   const courtCountLabel = targetCourtIds.length > 1 ? ` (${targetCourtIds.length} quadras)` : '';
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
-    title: `Nova solicitação de reserva em "${str(arena.name).slice(0, 50)}"`,
+    title: tx('Nova solicitação de reserva em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
     message: `${athleteName} solicitou ${kind === BOOKING_KIND.RECURRING ? `${slots.length} horários (recorrente)` : `${slots[0].date} ${slots[0].start}`}${courtCountLabel}. Toque para responder.`,
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
@@ -427,8 +427,8 @@ export async function createBooking(arena, user, profile, input) {
     const inviteeIds = invitedIds(participants);
     if (inviteeIds.length > 0) {
       notifyUsers(inviteeIds, {
-        title: 'Convite para dividir uma quadra',
-        message: `${athleteName} convidou você para ${slots[0].date} ${slots[0].start}–${slots[0].end} em ${str(arena.name).slice(0, 40)}.`,
+        title: tx('Convite para dividir uma quadra'),
+        message: tx('{nome} convidou você para {data} {inicio}–{fim} em {arena}.', { nome: athleteName, data: slots[0].date, inicio: slots[0].start, fim: slots[0].end, arena: str(arena.name).slice(0, 40) }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: '/minhas-reservas',
         actor: { uid: user.uid, displayName: athleteName },
@@ -649,7 +649,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const primeiro = resolvidos[0].slots[0];
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
-    title: `Nova solicitação de reserva em "${str(arena.name).slice(0, 50)}"`,
+    title: tx('Nova solicitação de reserva em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
     message: `${athleteName} solicitou ${primeiro.date} ${primeiro.start}${totalDocs > 1 ? ` e mais ${totalDocs - 1} reserva(s)` : ''}. Toque para responder.`,
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
@@ -659,8 +659,8 @@ export async function createBookingsForSelection(arena, user, profile, input) {
     const inviteeIds = invitedIds(participants);
     if (inviteeIds.length > 0) {
       notifyUsers(inviteeIds, {
-        title: 'Convite para dividir uma quadra',
-        message: `${athleteName} convidou você para ${primeiro.date} ${primeiro.start}–${primeiro.end} em ${str(arena.name).slice(0, 40)}.`,
+        title: tx('Convite para dividir uma quadra'),
+        message: tx('{nome} convidou você para {data} {inicio}–{fim} em {arena}.', { nome: athleteName, data: primeiro.date, inicio: primeiro.start, fim: primeiro.end, arena: str(arena.name).slice(0, 40) }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: '/minhas-reservas',
         actor: { uid: user.uid, displayName: athleteName },
@@ -842,8 +842,8 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
   notifyUsers(recipient, {
     title: `Reserva ${BOOKING_STATUS_LABELS[nextStatus].toLowerCase()} — "${str(booking.arena_name).slice(0, 40)}"`,
     message: byManager
-      ? 'A arena atualizou sua solicitação de reserva. Toque para ver.'
-      : `${booking.athlete_name} atualizou a reserva.`,
+      ? tx('A arena atualizou sua solicitação de reserva. Toque para ver.')
+      : tx('{nome} atualizou a reserva.', { nome: booking.athlete_name }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: byManager ? '/minhas-reservas' : `/arenas/${booking.arena_id}/gerir`,
     actor,
@@ -918,8 +918,8 @@ export async function proposeBookingPrice(booking, price, actor, { byManager = t
 
   const recipient = byManager ? [booking.athlete_id] : (await listArenaManagerIds(booking.arena_id).catch(() => []));
   notifyUsers(recipient, {
-    title: `Proposta de valor — "${str(booking.arena_name).slice(0, 40)}"`,
-    message: 'Há uma nova proposta de valor para a reserva. Toque para ver.',
+    title: tx('Proposta de valor — "{arena}"', { arena: str(booking.arena_name).slice(0, 40) }),
+    message: tx('Há uma nova proposta de valor para a reserva. Toque para ver.'),
     type: NOTIFICATION_TYPE.GENERIC,
     link: byManager ? '/minhas-reservas' : `/arenas/${booking.arena_id}/gerir`,
     actor,
@@ -932,8 +932,8 @@ export async function setBookingPayment(booking, paymentStatus, actor) {
   const status = Object.values(PAYMENT_STATUS).includes(paymentStatus) ? paymentStatus : PAYMENT_STATUS.PENDING;
   await updateDoc(doc(db, COL.bookings, booking.id), { payment_status: status, updated_at: serverTimestamp() });
   notifyUsers([booking.athlete_id], {
-    title: `Pagamento atualizado — "${str(booking.arena_name).slice(0, 40)}"`,
-    message: status === PAYMENT_STATUS.PAID ? 'A arena confirmou o pagamento da sua reserva.' : 'O status de pagamento da sua reserva mudou.',
+    title: tx('Pagamento atualizado — "{arena}"', { arena: str(booking.arena_name).slice(0, 40) }),
+    message: status === PAYMENT_STATUS.PAID ? tx('A arena confirmou o pagamento da sua reserva.') : tx('O status de pagamento da sua reserva mudou.'),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/minhas-reservas',
     actor,
@@ -1021,8 +1021,10 @@ export async function editBookingSlot(booking, actor, input, { byManager = false
     ? [booking.athlete_id, booking.coach_id].filter(Boolean)
     : (await listArenaManagerIds(booking.arena_id).catch(() => []));
   notifyUsers(recipients, {
-    title: `Reserva alterada — "${str(booking.arena_name).slice(0, 40)}"`,
-    message: `Novo horário: ${slot.date} ${slot.start}–${slot.end}.${patch.status === BOOKING_STATUS.REQUESTED ? ' Aguarda reconfirmação da arena.' : ''}`,
+    title: tx('Reserva alterada — "{arena}"', { arena: str(booking.arena_name).slice(0, 40) }),
+    message: patch.status === BOOKING_STATUS.REQUESTED
+      ? tx('Novo horário: {data} {inicio}–{fim}. Aguarda reconfirmação da arena.', { data: slot.date, inicio: slot.start, fim: slot.end })
+      : tx('Novo horário: {data} {inicio}–{fim}.', { data: slot.date, inicio: slot.start, fim: slot.end }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: byManager ? '/minhas-reservas' : `/arenas/${booking.arena_id}/gerir`,
     actor,
@@ -1055,8 +1057,8 @@ export async function transferBooking(booking, actor, target) {
   if (previousAthleteId && previousAthleteId !== target.athlete_id) recipients.push(previousAthleteId);
   if (recipients.length > 0) {
     notifyUsers(recipients, {
-      title: `Responsável da reserva atualizado — "${str(booking.arena_name).slice(0, 40)}"`,
-      message: `A reserva agora está no nome de ${name}.`,
+      title: tx('Responsável da reserva atualizado — "{arena}"', { arena: str(booking.arena_name).slice(0, 40) }),
+      message: tx('A reserva agora está no nome de {nome}.', { nome: name }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor,

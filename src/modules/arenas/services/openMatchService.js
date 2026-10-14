@@ -56,7 +56,7 @@ import {
 import {
   buildArenaGameDayPayload, syncArenaGameDayBlocks, archiveArenaGameDay,
 } from '@/modules/games/services/arenaGameDayService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = 'arena_open_slots';
 const COL_GAME_DAYS = 'game_days';
@@ -450,8 +450,10 @@ export async function cancelOpenSlot(slotId, reason, actor) {
   if (avisar.length > 0) {
     try {
       notifyUsers(avisar, {
-        title: 'Jogo aberto cancelado',
-        message: `O jogo de ${formatSlotLabel(atual)}${atual.arena_name ? ` em ${str(atual.arena_name).slice(0, 50)}` : ''} foi cancelado pela arena.`,
+        title: tx('Jogo aberto cancelado'),
+        message: atual.arena_name
+          ? tx('O jogo de {quando} em {arena} foi cancelado pela arena.', { quando: formatSlotLabel(atual), arena: str(atual.arena_name).slice(0, 50) })
+          : tx('O jogo de {quando} foi cancelado pela arena.', { quando: formatSlotLabel(atual) }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: atual.arena_id ? `/arenas/${atual.arena_id}#arena-jogos-abertos` : '/arenas',
         actor: actor?.uid ? { uid: actor.uid } : undefined,
@@ -561,8 +563,8 @@ export async function joinOpenSlot(slotId, user, profile) {
     // "[object Object]" e a arena nunca sabia de quem entrou.
     const managerIds = await listArenaManagerIds(slot.arena_id);
     notifyUsers(managerIds, {
-      title: `Novo inscrito em "${str(slot.arena_name).slice(0, 50)}"`,
-      message: `${displayName(user, profile)} entrou no jogo aberto de ${formatSlotLabel(slot)}`,
+      title: tx('Novo inscrito em "{arena}"', { arena: str(slot.arena_name).slice(0, 50) }),
+      message: tx('{nome} entrou no jogo aberto de {quando}', { nome: displayName(user, profile), quando: formatSlotLabel(slot) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${slot.arena_id}/gerir?aba=jogo-aberto`,
       actor: { uid: user.uid, displayName: displayName(user, profile) },

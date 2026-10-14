@@ -41,7 +41,7 @@ import {
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { AREA_ICON, NoticeIcon, NoticeTime } from '@/v2/components/notifications/noticeParts';
 import { NOTIFICATION_PREFS_PATH } from '@/v2/components/notifications/NotificationsBell';
-import { t, tn } from '@/core/i18n';
+import { t, tn, noticeText } from '@/core/i18n';
 
 
 function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
@@ -49,7 +49,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
   const area = noticeAreaMeta(noticeArea(n));
   const titulo = (
     <span className={cn('text-base leading-snug text-ink', n.read ? 'font-semibold' : 'font-bold')}>
-      {n.title}
+      {noticeText(n, 'title')}
     </span>
   );
   return (
@@ -69,7 +69,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
         ) : (
           <p>{titulo}</p>
         )}
-        {n.message && <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-gray-600">{n.message}</p>}
+        {n.message && <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-gray-600">{noticeText(n, 'message')}</p>}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs font-medium text-gray-500">
           <NoticeTime notice={n} agora={agora} />
           <span aria-hidden="true">·</span>
@@ -92,7 +92,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
         <button
           type="button"
           onClick={() => onAlternarLida(n, !n.read)}
-          aria-label={n.read ? t('Marcar como não lida: {titulo}', { titulo: n.title }) : t('Marcar como lida: {titulo}', { titulo: n.title })}
+          aria-label={n.read ? t('Marcar como não lida: {titulo}', { titulo: noticeText(n, 'title') }) : t('Marcar como lida: {titulo}', { titulo: noticeText(n, 'title') })}
           title={n.read ? t('Marcar como não lida') : t('Marcar como lida')}
           className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >

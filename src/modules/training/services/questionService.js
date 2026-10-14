@@ -14,7 +14,7 @@ import { db } from '@/core/config/firebase';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { MESSAGE_MAX, normalizeQuestion, QUESTION_STATUS, statusAfterMessage } from '../domain/question.js';
 import { TrainingItemError } from './trainingItemService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const TRAINING_QUESTIONS = 'training_questions';
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -65,7 +65,7 @@ export async function createQuestion(input, { identity }) {
   }
   await notifyUsers([value.coach_uid], {
     type: NOTIFICATION_TYPE.TRAINING_QUESTION,
-    title: 'Nova dúvida de aluno',
+    title: tx('Nova dúvida de aluno'),
     message: `${identity.name || 'Seu aluno'}: ${value.subject}`,
     link: `/treino?aba=duvidas&q=${ref.id}`,
     actor: { uid: identity.uid, name: identity.name },
@@ -87,7 +87,7 @@ export async function sendMessage(question, text, { identity }) {
   const to = from === 'professor' ? question.asker_uid : question.coach_uid;
   await notifyUsers([to], {
     type: from === 'professor' ? NOTIFICATION_TYPE.TRAINING_ANSWER : NOTIFICATION_TYPE.TRAINING_QUESTION,
-    title: from === 'professor' ? 'Seu professor respondeu' : 'Seu aluno escreveu de novo',
+    title: from === 'professor' ? tx('Seu professor respondeu') : tx('Seu aluno escreveu de novo'),
     message: `${question.subject}: ${texto.slice(0, 120)}`,
     link: `/treino?aba=duvidas&q=${question.id}`,
     actor: { uid: identity.uid, name: identity.name },

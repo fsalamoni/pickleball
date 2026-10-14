@@ -21,7 +21,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizeStudent, studentDocId, canSetStudentStatus, canCoachRemoveStudent, isLinkEndedHistory, STUDENT_STATUS,
 } from '../domain/student.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_STUDENT_COLLECTION = 'coach_students';
 /**
@@ -126,8 +126,8 @@ export async function upsertStudent(coachId, input, actor) {
 
   if (isNew && value.student_id) {
     notifyUsers([value.student_id], {
-      title: 'Você foi adicionado por um professor',
-      message: `${str(actor.displayName) || 'Um professor'} adicionou você como aluno. Toque para ver.`,
+      title: tx('Você foi adicionado por um professor'),
+      message: tx('{nome} adicionou você como aluno. Toque para ver.', { nome: str(actor.displayName) || 'Um professor' }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-aulas',
       actor: { uid: actor.uid },

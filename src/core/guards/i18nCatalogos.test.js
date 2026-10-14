@@ -53,11 +53,11 @@ describe('catálogos de idioma', () => {
     }
   });
 
-  it('todo t/tn/tk(\'…\') literal do código existe nos catálogos', async () => {
+  it('todo t/tn/tk/tx(\'…\') literal do código existe nos catálogos', async () => {
     const todas = new Set();
     for (const p of pastas) Object.keys(await ler(p, alvos[0])).forEach((k) => todas.add(k));
     const faltando = [];
-    const re = /(?<![\w.$])t[k]?\(\s*'((?:[^'\\\n])+)'/g;
+    const re = /(?<![\w.$])t[kx]?\(\s*'((?:[^'\\\n])+)'/g;
     // tn(n, 'singular', 'plural'): a chave é o PLURAL.
     const rePlural = /(?<![\w.$])tn\(\s*[^,]+,\s*'(?:[^'\\\n])+'\s*,\s*'((?:[^'\\\n])+)'/g;
     for (const f of arquivos) {
