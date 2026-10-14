@@ -22,6 +22,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { isValidModuleId, moduleStateDocId } from '../domain/modules.js';
+import { t } from '@/core/i18n';
 
 const COL = 'arena_module_states';
 
@@ -37,8 +38,8 @@ const COL = 'arena_module_states';
  * @param {Object} [actor] - user que está fazendo
  */
 export async function setArenaModuleState(arenaId, moduleId, enabled, config = {}, actor = null) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
-  if (!isValidModuleId(moduleId)) throw new Error(`Módulo inválido: ${moduleId}`);
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
+  if (!isValidModuleId(moduleId)) throw new Error(t('Módulo inválido: {moduleId}', { moduleId }));
 
   const id = moduleStateDocId(arenaId, moduleId);
   const ref = doc(db, COL, id);
@@ -90,7 +91,7 @@ export async function setArenaModuleState(arenaId, moduleId, enabled, config = {
  * @param {{ reason?: string }} [meta] — por que a mudança aconteceu (auditoria)
  */
 export async function setArenaModuleStates(arenaId, entries = [], actor = null, meta = {}) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
   const valid = entries.filter((e) => e?.moduleId && isValidModuleId(e.moduleId));
   if (valid.length === 0) return;
 

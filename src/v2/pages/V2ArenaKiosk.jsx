@@ -45,6 +45,7 @@ import { useRotateKioskToken, useMarkKioskOffline } from '@/modules/arenas/hooks
 import { KIOSK_TOKEN_TTL_MS, isoDay } from '@/modules/arenas/domain/checkin';
 import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
 import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** De quanto em quanto tempo o código é trocado. Antes de vencer, com folga. */
 const ROTACAO_MS = Math.round(KIOSK_TOKEN_TTL_MS * 0.7);
@@ -72,12 +73,12 @@ function FalhaNoTotem({ onRetry }) {
   return (
     <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-6 text-center text-white">
       <WifiOff className="h-12 w-12 opacity-60" />
-      <h1 className="font-display text-2xl font-bold">Não foi possível carregar o totem</h1>
+      <h1 className="font-display text-2xl font-bold">{t('Não foi possível carregar o totem')}</h1>
       <p className="max-w-md text-sm text-white/70">
-        A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.
+        {t('A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.')}
       </p>
       <V2Button onClick={onRetry}>
-        <RefreshCw className="h-4 w-4" /> Tentar de novo
+        <RefreshCw className="h-4 w-4" /> {t('Tentar de novo')}
       </V2Button>
     </div>
   );
@@ -118,7 +119,7 @@ export default function V2ArenaKiosk() {
       // Rede caiu: o código antigo continua na tela até vencer, e o aviso
       // aparece. Apagar a tela porque uma rotação falhou deixaria a recepção
       // sem nada justamente quando ninguém pode ajudar.
-      setErro('Sem conexão. O código pode estar vencido.');
+      setErro(t('Sem conexão. O código pode estar vencido.'));
     }
   }, [totem?.id, rotate]);
 
@@ -213,10 +214,9 @@ export default function V2ArenaKiosk() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-6 text-center text-white">
         <QrCode className="h-12 w-12 opacity-60" />
-        <h1 className="font-display text-2xl font-bold">Nenhum totem cadastrado</h1>
+        <h1 className="font-display text-2xl font-bold">{t('Nenhum totem cadastrado')}</h1>
         <p className="max-w-md text-sm text-white/70">
-          O totem é um equipamento desta arena. Criamos um agora e esta tela passa a
-          funcionar — depois ele aparece em Gestão → Operação → Equipamentos.
+          {t('O totem é um equipamento desta arena. Criamos um agora e esta tela passa a funcionar — depois ele aparece em Gestão → Operação → Equipamentos.')}
         </p>
         <V2Button
           disabled={criar.isPending}
@@ -234,10 +234,10 @@ export default function V2ArenaKiosk() {
           }}
         >
           {criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-          Criar o totem desta arena
+          {t('Criar o totem desta arena')}
         </V2Button>
         <Link to={`/arenas/${arenaId}/gerir?aba=presenca`} className="text-xs text-white/60 underline">
-          Voltar para a presença
+          {t('Voltar para a presença')}
         </Link>
       </div>
     );
@@ -254,7 +254,7 @@ export default function V2ArenaKiosk() {
             ) : null}
             <div>
               <p className="font-display text-xl font-bold leading-tight">{arena.name}</p>
-              <p className="text-sm opacity-70">{marca.tagline || 'Confirme sua chegada'}</p>
+              <p className="text-sm opacity-70">{marca.tagline || t('Confirme sua chegada')}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -263,7 +263,7 @@ export default function V2ArenaKiosk() {
               type="button"
               onClick={alternarTelaCheia}
               className="rounded-full border border-current/20 p-2 opacity-60 transition hover:opacity-100"
-              aria-label={cheio ? 'Sair da tela cheia' : 'Tela cheia'}
+              aria-label={cheio ? t('Sair da tela cheia') : t('Tela cheia')}
             >
               {cheio ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
@@ -274,7 +274,7 @@ export default function V2ArenaKiosk() {
         <main className="flex flex-1 flex-col items-center justify-center gap-8 py-8 sm:flex-row sm:gap-14">
           <div className="rounded-3xl bg-white p-4 shadow-2xl">
             {qr ? (
-              <img src={qr} alt="QR de chegada" className="h-56 w-56 sm:h-72 sm:w-72" />
+              <img src={qr} alt={t('QR de chegada')} className="h-56 w-56 sm:h-72 sm:w-72" />
             ) : (
               <div className="flex h-56 w-56 items-center justify-center sm:h-72 sm:w-72">
                 <Loader2 className="h-8 w-8 animate-spin text-ink/40" />
@@ -284,16 +284,16 @@ export default function V2ArenaKiosk() {
 
           <div className="text-center sm:text-left">
             <p className="text-sm font-bold uppercase tracking-[0.2em] opacity-70">
-              Aponte a câmera
+              {t('Aponte a câmera')}
             </p>
             <p className="mt-2 max-w-sm text-lg leading-6 opacity-80">
-              ou digite este código no aplicativo, em <strong>Chegada</strong>:
+              {t('ou digite este código no aplicativo, em')} <strong>{t('Chegada')}</strong>:
             </p>
             <p className="mt-4 font-display text-[3.5rem] font-black leading-none tracking-[0.35em] tabular-nums sm:text-[5rem]">
               {codigo || '·····'}
             </p>
             <p className="mt-3 text-sm opacity-60">
-              O código muda a cada minuto e meio.
+              {t('O código muda a cada minuto e meio.')}
             </p>
             {erro && (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/20 px-3 py-1.5 text-sm">
@@ -307,14 +307,14 @@ export default function V2ArenaKiosk() {
         <footer className="flex min-h-[4.5rem] items-center justify-center">
           {saudacao ? (
             <p className="animate-in fade-in font-display text-2xl font-bold sm:text-3xl">
-              Bem-vindo, {saudacao.nome}! Bom jogo. 🎾
+              {t('Bem-vindo, {nome}! Bom jogo. 🎾', { nome: saudacao.nome })}
             </p>
           ) : (
             <Link
               to={`/arenas/${arenaId}/gerir?aba=presenca`}
               className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider opacity-40 transition hover:opacity-80"
             >
-              <ArrowLeft className="h-3 w-3" /> Painel de presença
+              <ArrowLeft className="h-3 w-3" /> {t('Painel de presença')}
             </Link>
           )}
         </footer>

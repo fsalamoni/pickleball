@@ -42,6 +42,7 @@ import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import PackageForSaleCard from '@/v2/components/arenas/PackageForSaleCard';
 import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
+import { t } from '@/core/i18n';
 
 const TIER_CLASS = {
   bronze: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -73,23 +74,23 @@ function MeuNivel({ member }) {
     <V2Surface>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Seu nível aqui</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Seu nível aqui')}</p>
           <div className="mt-1.5 flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${TIER_CLASS[current?.id] || TIER_CLASS.bronze}`}>
-              <Trophy className="h-3.5 w-3.5" /> {current?.name || 'Bronze'}
+              <Trophy className="h-3.5 w-3.5" /> {current?.name || t('Bronze')}
             </span>
-            <span className="text-sm text-gray-500">{pontos} pontos</span>
+            <span className="text-sm text-gray-500">{t('{n} pontos', { n: pontos })}</span>
           </div>
         </div>
         {Number(current?.discount_pct) > 0 && (
-          <V2Badge tone="green">{current.discount_pct}% de desconto nas reservas</V2Badge>
+          <V2Badge tone="green">{t('{pct}% de desconto nas reservas', { pct: current.discount_pct })}</V2Badge>
         )}
       </div>
 
       {next && (
         <div className="mt-4">
           <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
-            <span>Faltam <strong className="text-ink">{missing}</strong> pontos para {next.name}</span>
+            <span>{t('Faltam')} <strong className="text-ink">{missing}</strong> {t('pontos para {name}', { name: next.name })}</span>
             <span>{progress}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
@@ -109,8 +110,7 @@ function MeuNivel({ member }) {
       )}
 
       <p className="mt-4 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
-        Você ganha pontos a cada reserva concluída — pelo valor e pelas horas jogadas.
-        Usar pacote também pontua.
+        {t('Você ganha pontos a cada reserva concluída — pelo valor e pelas horas jogadas. Usar pacote também pontua.')}
       </p>
     </V2Surface>
   );
@@ -141,21 +141,21 @@ function MeusPontos({ member }) {
         <div className="flex items-start gap-2">
           <Star className="mt-0.5 h-5 w-5 shrink-0 text-acid" />
           <div>
-            <h2 className="font-display text-base font-bold text-ink">Seus pontos valem crédito</h2>
+            <h2 className="font-display text-base font-bold text-ink">{t('Seus pontos valem crédito')}</h2>
             <p className="mt-0.5 text-sm text-gray-500">
-              A cada {DEFAULT_POINTS_PER_REAL} pontos você troca por R$ 1,00 na sua carteira desta arena.
+              {t('A cada {DEFAULT_POINTS_PER_REAL} pontos você troca por R$ 1,00 na sua carteira desta arena.', { DEFAULT_POINTS_PER_REAL })}
             </p>
           </div>
         </div>
         <div className="text-right">
           <p className="font-display text-2xl font-bold text-ink">{formatPrice(credit)}</p>
-          <p className="text-xs text-gray-500">{pontos} pontos</p>
+          <p className="text-xs text-gray-500">{t('{n} pontos', { n: pontos })}</p>
         </div>
       </div>
       <p className="mt-3 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
         {error && falta > 0
-          ? `Faltam ${falta} pontos para o primeiro resgate.`
-          : 'Para resgatar, peça na recepção da arena — o crédito entra na sua carteira na hora.'}
+          ? t('Faltam {falta} pontos para o primeiro resgate.', { falta })
+          : t('Para resgatar, peça na recepção da arena — o crédito entra na sua carteira na hora.')}
       </p>
     </V2Surface>
   );
@@ -187,8 +187,8 @@ function MeusPacotes({ packages }) {
   return (
     <V2Surface>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-base font-bold text-ink">Suas horas</h2>
-        <V2Badge tone="green">{total}h disponíveis</V2Badge>
+        <h2 className="font-display text-base font-bold text-ink">{t('Suas horas')}</h2>
+        <V2Badge tone="green">{t('{total}h disponíveis', { total })}</V2Badge>
       </div>
       <div className="space-y-2">
         {uteis.map((p, i) => {
@@ -196,12 +196,12 @@ function MeusPacotes({ packages }) {
           return (
             <div key={`${p.pkg_id}-${i}`} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-ink">{p.pkg_name || 'Pacote'}</p>
+                <p className="text-sm font-bold text-ink">{p.pkg_name || t('Pacote')}</p>
                 <p className="text-xs text-gray-500">
                   {venceEm
-                    ? <>Vence em {formatDateShortBR(venceEm)}</>
-                    : 'Sem prazo de validade'}
-                  {i === 0 && uteis.length > 1 && ' · é o primeiro a ser usado'}
+                    ? <>{t('Vence em {venceEm}', { venceEm: formatDateShortBR(venceEm) })}</>
+                    : t('Sem prazo de validade')}
+                  {i === 0 && uteis.length > 1 && t(' · é o primeiro a ser usado')}
                 </p>
               </div>
               <V2Badge tone="neutral">{p.restam}h</V2Badge>
@@ -211,8 +211,7 @@ function MeusPacotes({ packages }) {
       </div>
       <p className="mt-3 flex gap-1.5 text-xs leading-5 text-gray-500">
         <Clock className="mt-px h-3.5 w-3.5 shrink-0" />
-        As horas são abatidas quando a arena confirma a reserva — e sempre do
-        pacote que vence primeiro.
+        {t('As horas são abatidas quando a arena confirma a reserva — e sempre do pacote que vence primeiro.')}
       </p>
     </V2Surface>
   );
@@ -225,24 +224,23 @@ function MinhaCarteira({ wallet }) {
   return (
     <V2Surface>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-base font-bold text-ink">Sua carteira</h2>
+        <h2 className="font-display text-base font-bold text-ink">{t('Sua carteira')}</h2>
         <span className="font-display text-2xl font-bold text-ink">{formatPrice(saldo)}</span>
       </div>
       {lancamentos.length === 0 ? (
         <p className="text-sm text-gray-500">
-          Sem lançamentos ainda. O saldo aparece aqui quando a arena credita algo
-          (cashback, estorno ou cortesia).
+          {t('Sem lançamentos ainda. O saldo aparece aqui quando a arena credita algo (cashback, estorno ou cortesia).')}
         </p>
       ) : (
         <ul className="divide-y divide-gray-100">
-          {lancamentos.map((t, i) => {
-            const credito = t.type === 'credit' || t.type === 'cashback';
-            const rotulo = t.type === 'package_use'
-              ? `${t.hours}h de pacote`
-              : formatPrice(Number(t.amount) || 0);
+          {lancamentos.map((lanc, i) => {
+            const credito = lanc.type === 'credit' || lanc.type === 'cashback';
+            const rotulo = lanc.type === 'package_use'
+              ? `${lanc.hours}h de pacote`
+              : formatPrice(Number(lanc.amount) || 0);
             return (
               <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <span className="min-w-0 truncate text-gray-600">{t.source || 'Lançamento'}</span>
+                <span className="min-w-0 truncate text-gray-600">{lanc.source || t('Lançamento')}</span>
                 <span className={credito ? 'font-bold text-green-700' : 'font-bold text-gray-700'}>
                   {credito ? '+' : '−'} {rotulo}
                 </span>
@@ -267,10 +265,10 @@ function MinhaMensalidade({ sub }) {
     <V2Surface className={devendo ? 'border-amber-200 bg-amber-50' : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Sua mensalidade</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Sua mensalidade')}</p>
           <p className="mt-1 font-display text-base font-bold text-ink">{sub.plan_name}</p>
           <p className="text-sm text-gray-600">
-            {formatPrice(sub.price)} por mês · vence todo dia {sub.billing_day}
+            {t('{price} por mês · vence todo dia {billing_day}', { price: formatPrice(sub.price), billing_day: sub.billing_day })}
           </p>
         </div>
         <V2Badge tone={devendo ? 'amber' : 'green'}>{estado.label}</V2Badge>
@@ -281,16 +279,16 @@ function MinhaMensalidade({ sub }) {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {estado.monthsLate === 1
-              ? 'Há 1 mês em aberto'
-              : `Há ${estado.monthsLate} meses em aberto`}
-            {' '}({estado.unpaidMonths.join(', ')}) — <strong>{formatPrice(devido)}</strong>.
-            Combine o pagamento com a arena; ela registra aqui assim que cair.
+              ? t('Há 1 mês em aberto')
+              : t('Há {monthsLate} meses em aberto', { monthsLate: estado.monthsLate })}
+            {' '}({estado.unpaidMonths.join(', ')}) — <strong>{formatPrice(devido)}</strong>.{' '}
+            {t('Combine o pagamento com a arena; ela registra aqui assim que cair.')}
           </span>
         </p>
       ) : (
         <p className="mt-3 flex gap-1.5 text-sm text-gray-600">
           <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
-          Tudo em dia. O próximo vencimento é {formatDateShortBR(estado.dueDate)}.
+          {t('Tudo em dia. O próximo vencimento é {dueDate}', { dueDate: formatDateShortBR(estado.dueDate) })}.
         </p>
       )}
     </V2Surface>
@@ -325,26 +323,26 @@ export default function V2ArenaMembers() {
   if (!temMembros) return <Navigate to={`/arenas/${arena.id}`} replace />;
 
   const aoComprar = (pkg) => comprar.mutateAsync({ arenaId: arena.id, pkgId: pkg.id })
-    .then(() => toast.success('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível enviar o pedido.'));
+    .then(() => toast.success(t('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.')))
+    .catch((e) => toast.error(e?.message || t('Não foi possível enviar o pedido.')));
 
   const meusPacotes = Array.isArray(wallet?.packages) ? wallet.packages : [];
 
   return (
     <div className="mx-auto max-w-[820px]">
       <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Você nesta arena</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Você nesta arena')}</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Seu nível, suas horas e seu saldo na {arena.name}.
+        {t('Seu nível, suas horas e seu saldo na {name}', { name: arena.name })}.
       </p>
 
       {!isAuthenticated ? (
         <V2Surface className="mt-5">
           <V2EmptyState
             icon={Sparkles}
-            title="Entre para ver a sua relação com esta arena"
-            description="Nível, pontos, horas de pacote e saldo aparecem depois do login."
-            action={<V2Button asChild><Link to="/entrar">Entrar</Link></V2Button>}
+            title={t('Entre para ver a sua relação com esta arena')}
+            description={t('Nível, pontos, horas de pacote e saldo aparecem depois do login.')}
+            action={<V2Button asChild><Link to="/entrar">{t('Entrar')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -356,8 +354,7 @@ export default function V2ArenaMembers() {
               <p className="flex gap-2 text-sm text-amber-900">
                 <Gift className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  Você ainda não é membro da {arena.name}. Fale com a arena para entrar —
-                  membros têm desconto, pacotes de horas e prioridade.
+                  {t('Você ainda não é membro da {name}. Fale com a arena para entrar — membros têm desconto, pacotes de horas e prioridade.', { name: arena.name })}
                 </span>
               </p>
             </V2Surface>
@@ -372,23 +369,22 @@ export default function V2ArenaMembers() {
 
           {temPacotes && (
             <V2Surface>
-              <h2 className="mb-1 font-display text-base font-bold text-ink">Pacotes de horas</h2>
+              <h2 className="mb-1 font-display text-base font-bold text-ink">{t('Pacotes de horas')}</h2>
               <p className="mb-4 text-xs text-gray-500">
-                Comprando adiantado sai mais barato — e as horas são abatidas
-                automaticamente na reserva.
+                {t('Comprando adiantado sai mais barato — e as horas são abatidas automaticamente na reserva.')}
               </p>
               {isError ? (
                 <p className="text-sm text-red-700">
-                  Não foi possível carregar os pacotes.{' '}
+                  {t('Não foi possível carregar os pacotes. ')}
                   <button type="button" className="font-bold underline" onClick={() => refetch()}>
-                    Tentar de novo
+                    {t('Tentar de novo')}
                   </button>
                 </p>
               ) : catalogo.length === 0 ? (
                 <V2EmptyState
                   icon={Package}
-                  title="Esta arena ainda não vende pacotes"
-                  description="Quando ela publicar, os pacotes aparecem aqui."
+                  title={t('Esta arena ainda não vende pacotes')}
+                  description={t('Quando ela publicar, os pacotes aparecem aqui.')}
                 />
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -407,8 +403,8 @@ export default function V2ArenaMembers() {
             <V2Surface>
               <V2EmptyState
                 icon={Wallet}
-                title="Nada por aqui ainda"
-                description="Esta arena ativou os membros, mas ainda não ligou níveis, pacotes ou carteira."
+                title={t('Nada por aqui ainda')}
+                description={t('Esta arena ativou os membros, mas ainda não ligou níveis, pacotes ou carteira.')}
               />
             </V2Surface>
           )}

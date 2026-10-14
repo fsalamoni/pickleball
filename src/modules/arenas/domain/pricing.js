@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Domínio puro de preços da arena.
  *
@@ -113,7 +114,7 @@ export function resolveArenaPrice(arena = {}, slot = {}) {
     return false;
   });
   if (override) {
-    return { price: num(override.price), source: 'override', label: override.label || 'Exceção' };
+    return { price: num(override.price), source: 'override', label: override.label || t('Exceção') };
   }
 
   // 2) Regra por dia da semana + faixa de horário. Mesma lógica de prioridade court.
@@ -141,20 +142,20 @@ export function resolveArenaPrice(arena = {}, slot = {}) {
         && minutes >= s && minutes < e
         && !r.court_id; // só regras sem court_id no fallback
     });
-    if (rule) return { price: num(rule.price), source: 'rule', label: rule.label || 'Preço padrão' };
+    if (rule) return { price: num(rule.price), source: 'rule', label: rule.label || t('Preço padrão') };
   }
 
   // 3) Preço base.
   const base = num(arena.base_price);
-  if (base != null) return { price: base, source: 'base', label: 'Preço base' };
+  if (base != null) return { price: base, source: 'base', label: t('Preço base') };
 
-  return { price: null, source: 'none', label: 'Sob consulta' };
+  return { price: null, source: 'none', label: t('Sob consulta') };
 }
 
 /** Formata um valor em BRL (ou "Sob consulta"). */
 export function formatPrice(value) {
   const n = num(value);
-  if (n == null) return 'Sob consulta';
+  if (n == null) return t('Sob consulta');
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
@@ -292,6 +293,6 @@ export function bookingPriceInfo(booking, { arena = null } = {}) {
     hours,
     agreed: false,
     recalculado: false,
-    text: proposto == null ? 'Sob consulta' : priceWithDurationText(proposto, hours, []),
+    text: proposto == null ? t('Sob consulta') : priceWithDurationText(proposto, hours, []),
   };
 }

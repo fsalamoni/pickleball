@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Domínio puro de regras estruturadas da arena (Sprint 5).
  *
@@ -21,13 +22,13 @@ export const ARENA_RULE_DESCRIPTION_MAX = 500;
 export const ARENA_RULE_CATEGORY_MAX = 40;
 export const ARENA_RULES_MAX = 50;
 export const ARENA_RULE_CATEGORIES = Object.freeze({
-  GENERAL: 'Geral',
-  CANCELLATION: 'Cancelamento',
-  PAYMENT: 'Pagamento',
-  CONDUCT: 'Conduta',
-  EQUIPMENT: 'Equipamento',
-  SAFETY: 'Segurança',
-  OTHER: 'Outro',
+  GENERAL: tk('Geral'),
+  CANCELLATION: tk('Cancelamento'),
+  PAYMENT: tk('Pagamento'),
+  CONDUCT: tk('Conduta'),
+  EQUIPMENT: tk('Equipamento'),
+  SAFETY: tk('Segurança'),
+  OTHER: tk('Outro'),
 });
 
 const str = (v) => String(v ?? '').trim();
@@ -44,10 +45,10 @@ export function genRuleId() {
 export function normalizeArenaRule(input = {}, index = 0) {
   const title = str(input.title);
   if (!title) {
-    return { valid: false, error: `Regra #${index + 1}: título é obrigatório.`, value: {} };
+    return { valid: false, error: t('Regra #{valor}: título é obrigatório.', { valor: index + 1 }), value: {} };
   }
   if (title.length > ARENA_RULE_TITLE_MAX) {
-    return { valid: false, error: `Regra #${index + 1}: título muito longo (max ${ARENA_RULE_TITLE_MAX}).`, value: { title: title.slice(0, ARENA_RULE_TITLE_MAX) } };
+    return { valid: false, error: t('Regra #{valor}: título muito longo (max {ARENA_RULE_TITLE_MAX}).', { valor: index + 1, ARENA_RULE_TITLE_MAX }), value: { title: title.slice(0, ARENA_RULE_TITLE_MAX) } };
   }
   const description = str(input.description).slice(0, ARENA_RULE_DESCRIPTION_MAX);
   const category = str(input.category).slice(0, ARENA_RULE_CATEGORY_MAX);

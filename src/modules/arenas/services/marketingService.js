@@ -17,6 +17,7 @@ import {
 } from '../domain/marketing.js';
 import { getOrCreateArenaSettings } from './v3SettingsService.js';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { t, tn } from '@/core/i18n';
 
 const COL_COUPONS = 'arena_coupons';
 const COL_CAMPAIGNS = 'arena_campaigns';
@@ -44,9 +45,9 @@ export async function listArenaCoupons(arenaId, { onlyActive = true, lim = 100 }
  * só o gestor lê (`setCouponUnitCost`).
  */
 export async function createArenaCoupon(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeCouponInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   if (value.kind === COUPON_KIND.REFERRAL && value.active) await garantirUmProgramaSo(arenaId);
   const id = doc(collection(db, COL_COUPONS)).id;
   await setDoc(doc(db, COL_COUPONS, id), {
@@ -71,7 +72,7 @@ async function garantirUmProgramaSo(arenaId, exceptId = null) {
   const ativos = await listArenaCoupons(arenaId, { onlyActive: true });
   const outro = ativos.find((c) => c.id !== exceptId && couponKind(c) === COUPON_KIND.REFERRAL);
   if (outro) {
-    throw new Error('Já existe um programa de indicação ativo nesta arena. Edite as regras dele — ou desligue-o antes de criar outro.');
+    throw new Error(t('Já existe um programa de indicação ativo nesta arena. Edite as regras dele — ou desligue-o antes de criar outro.'));
   }
 }
 
@@ -121,19 +122,19 @@ export async function findArenaCouponByCode(arenaId, code) {
  * @param {object|null} [actor]
  */
 export async function redeemVoucher(arenaId, couponId, { userId = null, userName = '' } = {}, actor = null) {
-  if (!db || !arenaId || !couponId) throw new Error('Cupom não informado.');
+  if (!db || !arenaId || !couponId) throw new Error(t('Cupom não informado.'));
   const ref = doc(db, COL_COUPONS, couponId);
   const cupom = await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists()) throw new Error('Cupom não encontrado.');
+    if (!snap.exists()) throw new Error(t('Cupom não encontrado.'));
     const c = { id: snap.id, ...snap.data() };
-    if (c.arena_id !== arenaId) throw new Error('Este cupom é de outra arena.');
+    if (c.arena_id !== arenaId) throw new Error(t('Este cupom é de outra arena.'));
     const familia = couponFamily(c);
     if (familia === COUPON_FAMILY.BOOKING) {
-      throw new Error('Este cupom é desconto na reserva: ele entra sozinho no preço quando a pessoa digita o código ao reservar.');
+      throw new Error(t('Este cupom é desconto na reserva: ele entra sozinho no preço quando a pessoa digita o código ao reservar.'));
     }
     if (familia === COUPON_FAMILY.REFERRAL) {
-      throw new Error('Este é o programa de indicação: registre a indicação na aba Indicações.');
+      throw new Error(t('Este é o programa de indicação: registre a indicação na aba Indicações.'));
     }
     const erro = couponError(c, {
       anyFamily: true,
@@ -224,7 +225,7 @@ export async function listArenaCampaigns(arenaId, { lim = 50 } = {}) {
 }
 
 export async function createCampaign(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const id = doc(collection(db, COL_CAMPAIGNS)).id;
   await setDoc(doc(db, COL_CAMPAIGNS, id), {
     id, arena_id: arenaId,
@@ -244,8 +245,8 @@ export async function createCampaign(arenaId, input, actor) {
 /* --------------------- NPS -------------------- */
 
 export async function submitNps(arenaId, userId, score, comment) {
-  if (!arenaId || !userId) throw new Error('Parâmetros obrigatórios.');
-  if (!Number.isFinite(score) || score < 0 || score > 10) throw new Error('Score 0-10.');
+  if (!arenaId || !userId) throw new Error(t('Parâmetros obrigatórios.'));
+  if (!Number.isFinite(score) || score < 0 || score > 10) throw new Error(t('Score 0-10.'));
   const id = `${arenaId}_${userId}_${Date.now()}`;
   await setDoc(doc(db, COL_NPS, id), {
     id, arena_id: arenaId, user_id: userId, score, classification: classifyNps(score),
@@ -330,14 +331,14 @@ export async function listArenaReferrals(arenaId) {
  * @returns {Promise<{ id: string, sent: number }>}
  */
 export async function sendCampaign(arenaId, input, recipients = [], actor = null) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
   const nome = str(input?.name).slice(0, 120);
   const mensagem = str(input?.message).slice(0, 1000);
-  if (!nome) throw new Error('Dê um nome à campanha.');
-  if (!mensagem) throw new Error('Escreva a mensagem.');
+  if (!nome) throw new Error(t('Dê um nome à campanha.'));
+  if (!mensagem) throw new Error(t('Escreva a mensagem.'));
 
   const destinatarios = [...new Set((recipients || []).filter(Boolean))];
-  if (destinatarios.length === 0) throw new Error('Não há ninguém neste público.');
+  if (destinatarios.length === 0) throw new Error(t('Não há ninguém neste público.'));
 
   const id = doc(collection(db, COL_CAMPAIGNS)).id;
   await setDoc(doc(db, COL_CAMPAIGNS, id), {
@@ -503,23 +504,23 @@ export async function redeemReferral(arenaId, input, actor) {
   // O desconto na primeira reserva também é prêmio: uma indicação que dá SÓ
   // desconto a quem chega (e nada a quem indica) é válida.
   const descontoChegada = Math.max(0, Number(referredDiscount) || 0);
-  if (!arenaId || !referredId) throw new Error('Informe quem foi indicado.');
-  if (paraQuemIndica + paraQuemChega + descontoChegada <= 0) throw new Error('Informe o prêmio de pelo menos um dos lados.');
+  if (!arenaId || !referredId) throw new Error(t('Informe quem foi indicado.'));
+  if (paraQuemIndica + paraQuemChega + descontoChegada <= 0) throw new Error(t('Informe o prêmio de pelo menos um dos lados.'));
 
   const indicacao = await findReferralByCode(arenaId, code);
-  if (!indicacao) throw new Error('Código de indicação não encontrado nesta arena.');
+  if (!indicacao) throw new Error(t('Código de indicação não encontrado nesta arena.'));
   if (indicacao.referrer_id === referredId) {
-    throw new Error('Ninguém pode indicar a si mesmo.');
+    throw new Error(t('Ninguém pode indicar a si mesmo.'));
   }
   if ((indicacao.redeemed_by || []).includes(referredId)) {
-    throw new Error('Esta pessoa já foi creditada com este código.');
+    throw new Error(t('Esta pessoa já foi creditada com este código.'));
   }
   const limite = Number(program?.max_per_referrer) || 0;
   if (limite > 0 && (Number(indicacao.redeemed_count) || 0) >= limite) {
-    throw new Error(`Este código já chegou ao limite de ${limite} ${limite === 1 ? 'indicação' : 'indicações'}.`);
+    throw new Error(tn(limite, 'Este código já chegou ao limite de {n} indicação.', 'Este código já chegou ao limite de {n} indicações.'));
   }
   if (program?.first_booking_only && await hasPriorArenaBooking(arenaId, referredId, { exceptBookingId })) {
-    throw new Error('A indicação vale só para quem nunca reservou nesta arena — e esta pessoa já reservou.');
+    throw new Error(t('A indicação vale só para quem nunca reservou nesta arena — e esta pessoa já reservou.'));
   }
 
   await updateDoc(doc(db, COL_REFERRALS, indicacao.id), {
@@ -586,9 +587,9 @@ export async function listMyNpsAnswers(arenaId, userId) {
  * @param {object|null} actor
  */
 export async function updateArenaCoupon(couponId, input, actor, { arenaId = null } = {}) {
-  if (!couponId) throw new Error('couponId obrigatório.');
+  if (!couponId) throw new Error(t('couponId obrigatório.'));
   const { valid, errors, value } = normalizeCouponInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   if (arenaId && value.kind === COUPON_KIND.REFERRAL && value.active) await garantirUmProgramaSo(arenaId, couponId);
   await updateDoc(doc(db, COL_COUPONS, couponId), { ...value, updated_at: serverTimestamp() });
   if (arenaId && input?.unit_cost !== undefined) {

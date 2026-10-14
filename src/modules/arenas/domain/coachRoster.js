@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * A lista ÚNICA de professores de uma arena.
  *
@@ -19,9 +20,9 @@
 
 /** Estado da parceria, em pt-BR. `pending` é convite ainda não aceito. */
 export const PARTNERSHIP_LABEL = Object.freeze({
-  active: 'Ativo',
-  paused: 'Pausado',
-  pending: 'Aguardando o professor aceitar',
+  active: tk('Ativo'),
+  paused: tk('Pausado'),
+  pending: tk('Aguardando o professor aceitar'),
 });
 
 /** A parceria sem status (documento antigo) vale como ativa. */

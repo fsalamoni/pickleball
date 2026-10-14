@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Domínio puro de resposta de review (Sprint 3 ARE-09).
  *
@@ -24,10 +25,10 @@ function str(v) { return String(v ?? '').trim(); }
 export function normalizeReviewResponse(input = {}) {
   const response = str(input.response);
   if (!response) {
-    return { valid: false, error: 'Resposta não pode estar vazia.', value: '' };
+    return { valid: false, error: t('Resposta não pode estar vazia.'), value: '' };
   }
   if (response.length > REVIEW_RESPONSE_MAX) {
-    return { valid: false, error: `Resposta muito longa (máx. ${REVIEW_RESPONSE_MAX} chars).`, value: response.slice(0, REVIEW_RESPONSE_MAX) };
+    return { valid: false, error: t('Resposta muito longa (máx. {REVIEW_RESPONSE_MAX} chars).', { REVIEW_RESPONSE_MAX }), value: response.slice(0, REVIEW_RESPONSE_MAX) };
   }
   return { valid: true, error: null, value: response };
 }

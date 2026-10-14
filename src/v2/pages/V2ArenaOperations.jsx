@@ -76,6 +76,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface,
   V2Textarea,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 /* ========================================================== 1. HOJE ====== */
 
@@ -97,11 +98,11 @@ function ResumoDoDia({
   return (
     <V2Surface className="mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-bold text-ink">Hoje</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Hoje')}</h2>
         {temEquipe && plantao.length > 0 && (
           <Link to={aba('plantao')} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-ink">
             <Users className="h-3.5 w-3.5" />
-            De plantão agora: <strong className="text-ink">{plantao.map((p) => p.name).join(', ')}</strong>
+            {t('De plantão agora:')} <strong className="text-ink">{plantao.map((p) => p.name).join(', ')}</strong>
           </Link>
         )}
       </div>
@@ -111,24 +112,24 @@ function ResumoDoDia({
       {falhou ? (
         <V2ErrorState
           inline
-          title="Não foi possível carregar a rotina de hoje"
-          description="Sem isso não dá para dizer o que está pendente. Tente de novo antes de conferir a arena."
+          title={t('Não foi possível carregar a rotina de hoje')}
+          description={t('Sem isso não dá para dizer o que está pendente. Tente de novo antes de conferir a arena.')}
           onRetry={onRetry}
         />
       ) : nada ? (
         <p className="flex items-center gap-2 text-sm text-green-700">
-          <Check className="h-4 w-4" /> Nada pendente. A rotina do dia está em dia.
+          <Check className="h-4 w-4" /> {t('Nada pendente. A rotina do dia está em dia.')}
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           {temChecklist && pendencias.total > 0 && (
             <Link to={aba('checklists')} className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 hover:border-amber-400">
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-                <ClipboardList className="h-3.5 w-3.5" /> Rotina
+                <ClipboardList className="h-3.5 w-3.5" /> {t('Rotina')}
               </p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{pendencias.total}</p>
               <p className="text-xs text-gray-600">
-                {pendencias.total === 1 ? 'item pendente' : 'itens pendentes'} em{' '}
+                {pendencias.total === 1 ? t('item pendente') : t('itens pendentes')} {t('em')}{' '}
                 {pendencias.pendentes.map((p) => p.title).join(', ')}
               </p>
             </Link>
@@ -136,24 +137,24 @@ function ResumoDoDia({
           {temManutencao && abertas.length > 0 && (
             <Link to={aba('manutencao')} className={`block rounded-2xl border p-3 hover:border-gray-300 ${urgentes.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-paper'}`}>
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-                <Wrench className="h-3.5 w-3.5" /> Manutenção
+                <Wrench className="h-3.5 w-3.5" /> {t('Manutenção')}
               </p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{abertas.length}</p>
               <p className="text-xs text-gray-600">
-                {abertas.length === 1 ? 'ordem aberta' : 'ordens abertas'}
-                {urgentes.length > 0 && <strong className="text-red-700"> · {urgentes.length} urgente(s)</strong>}
+                {abertas.length === 1 ? t('ordem aberta') : t('ordens abertas')}
+                {urgentes.length > 0 && <strong className="text-red-700"> · {t('{n} urgente(s)', { n: urgentes.length })}</strong>}
               </p>
             </Link>
           )}
           {temEstoque && estoqueAlerta.length > 0 && (
             <Link to={aba('mercado')} className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 hover:border-amber-400">
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-                <Boxes className="h-3.5 w-3.5" /> Estoque
+                <Boxes className="h-3.5 w-3.5" /> {t('Estoque')}
               </p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{estoqueAlerta.length}</p>
               <p className="text-xs text-gray-600">
                 {estoqueAlerta.slice(0, 3).map((p) => p.name).join(', ')}
-                {estoqueAlerta.length > 3 ? ` e mais ${estoqueAlerta.length - 3}` : ''}
+                {estoqueAlerta.length > 3 ? t(' e mais {n}', { n: estoqueAlerta.length - 3 }) : ''}
               </p>
             </Link>
           )}
@@ -180,7 +181,7 @@ function ChecklistForm({ arenaId, checklist, onClose }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (itens.length === 0) { toast.error('Escreva pelo menos um item.'); return; }
+    if (itens.length === 0) { toast.error(t('Escreva pelo menos um item.')); return; }
     const input = {
       title: form.title,
       kind: form.kind,
@@ -190,10 +191,10 @@ function ChecklistForm({ arenaId, checklist, onClose }) {
     try {
       if (checklist) await editar.mutateAsync({ checklistId: checklist.id, input });
       else await criar.mutateAsync({ arenaId, input });
-      toast.success(checklist ? 'Rotina atualizada.' : 'Rotina criada.');
+      toast.success(checklist ? t('Rotina atualizada.') : t('Rotina criada.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -201,29 +202,29 @@ function ChecklistForm({ arenaId, checklist, onClose }) {
     <form onSubmit={submit} className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink">
-          {checklist ? 'Editar rotina' : 'Nova rotina'}
+          {checklist ? t('Editar rotina') : t('Nova rotina')}
         </h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Nome" htmlFor="cl-nome">
-          <V2Input id="cl-nome" required maxLength={120} placeholder="Ex.: Abertura da manhã"
+        <V2Field label={t('Nome')} htmlFor="cl-nome">
+          <V2Input id="cl-nome" required maxLength={120} placeholder={t('Ex.: Abertura da manhã')}
             value={form.title} onChange={(e) => set({ title: e.target.value })} />
         </V2Field>
-        <V2Field label="Tipo" htmlFor="cl-tipo" hint={CHECKLIST_KIND_META[form.kind]?.hint}>
+        <V2Field label={t('Tipo')} htmlFor="cl-tipo" hint={CHECKLIST_KIND_META[form.kind]?.hint ? t(CHECKLIST_KIND_META[form.kind].hint) : undefined}>
           <select id="cl-tipo" value={form.kind} onChange={(e) => set({ kind: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
             {Object.entries(CHECKLIST_KIND_META).map(([k, m]) => (
-              <option key={k} value={k}>{m.label}</option>
+              <option key={k} value={k}>{t(m.label)}</option>
             ))}
           </select>
         </V2Field>
       </div>
       <V2Field
-        label="Itens" htmlFor="cl-itens" className="mt-3"
-        hint={`Um por linha. ${itens.length} ${itens.length === 1 ? 'item' : 'itens'}.`}
+        label={t('Itens')} htmlFor="cl-itens" className="mt-3"
+        hint={tn(itens.length, 'Um por linha. {n} item.', 'Um por linha. {n} itens.')}
       >
         <V2Textarea id="cl-itens" rows={6}
           placeholder={'Ligar as luzes\nConferir as redes\nAbrir os vestiários'}
@@ -233,14 +234,13 @@ function ChecklistForm({ arenaId, checklist, onClose }) {
         <input type="checkbox" checked={form.recurring} className="mt-0.5 h-4 w-4 rounded border-gray-300"
           onChange={(e) => set({ recurring: e.target.checked })} />
         <span>
-          <strong className="text-ink">Recomeça todo dia.</strong> Desmarcado, vira uma lista
-          de tarefas comum — o que for marcado fica marcado.
+          <strong className="text-ink">{t('Recomeça todo dia.')}</strong> {t('Desmarcado, vira uma lista de tarefas comum — o que for marcado fica marcado.')}
         </span>
       </label>
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={criar.isPending || editar.isPending}>
-          {checklist ? 'Salvar' : 'Criar rotina'}
+          {checklist ? t('Salvar') : t('Criar rotina')}
         </V2Button>
       </div>
     </form>
@@ -258,10 +258,10 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
     <div className="rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-display text-base font-bold text-ink">{checklist.title || 'Rotina'}</p>
+          <p className="font-display text-base font-bold text-ink">{checklist.title || t('Rotina')}</p>
           <p className="text-xs text-gray-500">
-            {meta.label}
-            {estado.recurring ? ' · recomeça todo dia' : ' · lista fixa'}
+            {t(meta.label)}
+            {estado.recurring ? t(' · recomeça todo dia') : t(' · lista fixa')}
             {estado.recurring && ` · ${formatDateShortBR(hoje)}`}
           </p>
         </div>
@@ -282,7 +282,7 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
               type="button"
               disabled={toggle.isPending}
               onClick={() => toggle.mutateAsync({ checklistId: checklist.id, itemIdx: idx })
-                .catch((e) => toast.error(e?.message || 'Não foi possível marcar.'))}
+                .catch((e) => toast.error(e?.message || t('Não foi possível marcar.')))}
               className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-paper-pure"
             >
               <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${item.completed ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-paper-pure'}`}>
@@ -299,7 +299,7 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
       {historico.length > 0 && (
         <div className="mt-3 border-t border-gray-100 pt-3">
           <p className="mb-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-            Últimos dias
+            {t('Últimos dias')}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {historico.map((h) => (
@@ -315,19 +315,19 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
 
       <div className="mt-3 flex flex-wrap justify-end gap-1.5">
         <V2Button size="sm" variant="ghost" onClick={() => onEditar(checklist)}>
-          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+          <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar')}
         </V2Button>
         <ConfirmDialog
-          title={`Apagar "${checklist.title || 'esta rotina'}"?`}
-          description="O histórico dos últimos dias vai junto. Se a rotina só está fora de uso, edite e deixe sem itens em vez de apagar."
-          confirmLabel="Apagar"
+          title={t('Apagar "{valor}"?', { valor: checklist.title || 'esta rotina' })}
+          description={t('O histórico dos últimos dias vai junto. Se a rotina só está fora de uso, edite e deixe sem itens em vez de apagar.')}
+          confirmLabel={t('Apagar')}
           destructive
           onConfirm={() => apagar.mutateAsync({ checklistId: checklist.id })
-            .then(() => toast.success('Rotina apagada.'))
-            .catch((e) => toast.error(e?.message || 'Não foi possível apagar.'))}
+            .then(() => toast.success(t('Rotina apagada.')))
+            .catch((e) => toast.error(e?.message || t('Não foi possível apagar.')))}
           trigger={(
             <V2Button size="sm" variant="ghost" className="text-red-600">
-              <Trash2 className="mr-1 h-3.5 w-3.5" /> Apagar
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> {t('Apagar')}
             </V2Button>
           )}
         />
@@ -365,11 +365,11 @@ function ChecklistSecao({ arenaId, checklists, hoje, isLoading, isError = false,
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Rotinas do dia</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Rotinas do dia')}</h2>
         </div>
         {!form && !isError && (
           <V2Button size="sm" onClick={() => setForm('novo')}>
-            <Plus className="mr-1.5 h-4 w-4" /> Nova rotina
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Nova rotina')}
           </V2Button>
         )}
       </div>
@@ -383,15 +383,15 @@ function ChecklistSecao({ arenaId, checklists, hoje, isLoading, isError = false,
       {/* Falha não é "nenhuma rotina": o convite a criar a primeira duplicaria
           as que já existem. */}
       {isError && (
-        <V2ErrorState inline title="Não foi possível carregar as rotinas" onRetry={onRetry} />
+        <V2ErrorState inline title={t('Não foi possível carregar as rotinas')} onRetry={onRetry} />
       )}
 
       {!isLoading && !isError && checklists.length === 0 && !form && (
         <V2EmptyState
           icon={ClipboardCheck}
-          title="Nenhuma rotina ainda"
-          description="Abertura e fechamento escritos uma vez, cumpridos todo dia, com registro de quem cumpriu. É o que tira a rotina do grupo de WhatsApp."
-          action={<V2Button size="sm" onClick={() => setForm('novo')}>Criar a primeira</V2Button>}
+          title={t('Nenhuma rotina ainda')}
+          description={t('Abertura e fechamento escritos uma vez, cumpridos todo dia, com registro de quem cumpriu. É o que tira a rotina do grupo de WhatsApp.')}
+          action={<V2Button size="sm" onClick={() => setForm('novo')}>{t('Criar a primeira')}</V2Button>}
         />
       )}
 
@@ -435,10 +435,10 @@ function ManutencaoForm({ arenaId, courts, ordem, onClose }) {
     try {
       if (ordem) await editar.mutateAsync({ arenaId, orderId: ordem.id, input });
       else await criar.mutateAsync({ arenaId, input });
-      toast.success(ordem ? 'Ordem atualizada.' : 'Ordem criada.');
+      toast.success(ordem ? t('Ordem atualizada.') : t('Ordem criada.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar a ordem.');
+      toast.error(err?.message || t('Não foi possível salvar a ordem.'));
     }
   };
 
@@ -446,39 +446,39 @@ function ManutencaoForm({ arenaId, courts, ordem, onClose }) {
     <form onSubmit={submit} className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink">
-          {ordem ? 'Editar ordem' : 'Nova ordem de manutenção'}
+          {ordem ? t('Editar ordem') : t('Nova ordem de manutenção')}
         </h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <V2Field label="O que precisa ser feito" htmlFor="mn-titulo">
-        <V2Input id="mn-titulo" required maxLength={200} placeholder="Ex.: Trocar a rede da quadra 2"
+      <V2Field label={t('O que precisa ser feito')} htmlFor="mn-titulo">
+        <V2Input id="mn-titulo" required maxLength={200} placeholder={t('Ex.: Trocar a rede da quadra 2')}
           value={form.title} onChange={(e) => set({ title: e.target.value })} />
       </V2Field>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <V2Field label="Prioridade" htmlFor="mn-prio">
+        <V2Field label={t('Prioridade')} htmlFor="mn-prio">
           <select id="mn-prio" value={form.priority} onChange={(e) => set({ priority: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
             {Object.entries(MAINTENANCE_PRIORITY_META).map(([k, m]) => (
-              <option key={k} value={k}>{m.label}</option>
+              <option key={k} value={k}>{t(m.label)}</option>
             ))}
           </select>
         </V2Field>
-        <V2Field label="Quadra" htmlFor="mn-quadra" hint="Vazio = a arena inteira.">
+        <V2Field label={t('Quadra')} htmlFor="mn-quadra" hint={t('Vazio = a arena inteira.')}>
           <select id="mn-quadra" value={form.court_id} onChange={(e) => set({ court_id: e.target.value })}
             className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            <option value="">A arena inteira</option>
+            <option value="">{t('A arena inteira')}</option>
             {courts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </V2Field>
       </div>
 
-      <V2Field label="Detalhes" htmlFor="mn-desc" className="mt-3">
+      <V2Field label={t('Detalhes')} htmlFor="mn-desc" className="mt-3">
         <V2Textarea id="mn-desc" rows={2} maxLength={1000}
-          placeholder="O que foi combinado, com quem, o que precisa comprar…"
+          placeholder={t('O que foi combinado, com quem, o que precisa comprar…')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
 
@@ -486,47 +486,45 @@ function ManutencaoForm({ arenaId, courts, ordem, onClose }) {
         <input type="checkbox" checked={form.blocks_court} className="mt-0.5 h-4 w-4 rounded border-amber-300"
           onChange={(e) => set({ blocks_court: e.target.checked })} />
         <span>
-          <strong>Tirar da venda enquanto durar.</strong> O horário sai do calendário e
-          ninguém consegue reservar. Concluir a ordem devolve a quadra automaticamente.
+          <strong>{t('Tirar da venda enquanto durar.')}</strong> {t('O horário sai do calendário e ninguém consegue reservar. Concluir a ordem devolve a quadra automaticamente.')}
         </span>
       </label>
 
       {form.blocks_court && (
         <>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <V2Field label="A partir de" htmlFor="mn-de">
+            <V2Field label={t('A partir de')} htmlFor="mn-de">
               <V2Input id="mn-de" type="date" required value={form.starts_on}
                 onChange={(e) => set({ starts_on: e.target.value })} />
             </V2Field>
-            <V2Field label="Até" htmlFor="mn-ate" hint="Vazio = um dia só.">
+            <V2Field label={t('Até')} htmlFor="mn-ate" hint={t('Vazio = um dia só.')}>
               <V2Input id="mn-ate" type="date" value={form.ends_on}
                 onChange={(e) => set({ ends_on: e.target.value })} />
             </V2Field>
-            <V2Field label="Das" htmlFor="mn-h1">
+            <V2Field label={t('Das')} htmlFor="mn-h1">
               <V2Input id="mn-h1" type="time" value={form.start_time}
                 onChange={(e) => set({ start_time: e.target.value })} />
             </V2Field>
-            <V2Field label="Às" htmlFor="mn-h2">
+            <V2Field label={t('Às')} htmlFor="mn-h2">
               <V2Input id="mn-h2" type="time" value={form.end_time}
                 onChange={(e) => set({ end_time: e.target.value })} />
             </V2Field>
           </div>
           {dias.length > 0 && (
             <p className="mt-2 rounded-2xl bg-paper-pure p-3 text-xs text-gray-600">
-              Vai fechar <strong className="text-ink">{quadra ? quadra.name : 'todas as quadras'}</strong>{' '}
-              em <strong className="text-ink">{dias.length}</strong> {dias.length === 1 ? 'dia' : 'dias'}
+              {t('Vai fechar')} <strong className="text-ink">{quadra ? quadra.name : t('todas as quadras')}</strong>{' '}
+              {t('em')} <strong className="text-ink">{dias.length}</strong> {dias.length === 1 ? t('dia') : t('dias')}
               {' '}({formatDateShortBR(dias[0])}
-              {dias.length > 1 ? ` a ${formatDateShortBR(dias[dias.length - 1])}` : ''}),
-              das {form.start_time} às {form.end_time}.
+              {dias.length > 1 ? t(' a {fim}', { fim: formatDateShortBR(dias[dias.length - 1]) }) : ''}{t('), das {start_time} às {end_time}', { start_time: form.start_time, end_time: form.end_time })}.
             </p>
           )}
         </>
       )}
 
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={criar.isPending || editar.isPending}>
-          {ordem ? 'Salvar' : 'Criar ordem'}
+          {ordem ? t('Salvar') : t('Criar ordem')}
         </V2Button>
       </div>
     </form>
@@ -553,15 +551,15 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading, isError = false, 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Manutenção</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Manutenção')}</h2>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <V2Button size="sm" variant="ghost" onClick={() => setVerFechadas((v) => !v)}>
-            {verFechadas ? `Abertas (${abertas.length})` : `Encerradas (${fechadas.length})`}
+            {verFechadas ? t('Abertas ({length})', { length: abertas.length }) : t('Encerradas ({length})', { length: fechadas.length })}
           </V2Button>
           {!form && (
             <V2Button size="sm" onClick={() => setForm('nova')}>
-              <Plus className="mr-1.5 h-4 w-4" /> Nova ordem
+              <Plus className="mr-1.5 h-4 w-4" /> {t('Nova ordem')}
             </V2Button>
           )}
         </div>
@@ -575,16 +573,16 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading, isError = false, 
       {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
 
       {isError && (
-        <V2ErrorState inline title="Não foi possível carregar as ordens de manutenção" onRetry={onRetry} />
+        <V2ErrorState inline title={t('Não foi possível carregar as ordens de manutenção')} onRetry={onRetry} />
       )}
 
       {!isLoading && !isError && lista.length === 0 && !form && (
         <V2EmptyState
           icon={Wrench}
-          title={verFechadas ? 'Nenhuma ordem encerrada' : 'Nenhuma ordem aberta'}
+          title={verFechadas ? t('Nenhuma ordem encerrada') : t('Nenhuma ordem aberta')}
           description={verFechadas
-            ? 'As ordens concluídas e canceladas ficam guardadas aqui.'
-            : 'Conserto que vira ordem tem prazo, dono e — quando precisa — fecha a quadra no calendário.'}
+            ? t('As ordens concluídas e canceladas ficam guardadas aqui.')
+            : t('Conserto que vira ordem tem prazo, dono e — quando precisa — fecha a quadra no calendário.')}
         />
       )}
 
@@ -601,21 +599,21 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading, isError = false, 
                   {o.description && <p className="mt-0.5 text-xs text-gray-500">{o.description}</p>}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1.5">
-                  <V2Badge tone={prio.tone}>{prio.label}</V2Badge>
-                  <V2Badge tone={meta.tone}>{meta.label}</V2Badge>
+                  <V2Badge tone={prio.tone}>{t(prio.label)}</V2Badge>
+                  <V2Badge tone={meta.tone}>{t(meta.label)}</V2Badge>
                 </div>
               </div>
 
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                <span>{o.court_id ? (nomeQuadra.get(o.court_id) || 'Quadra removida') : 'Arena inteira'}</span>
+                <span>{o.court_id ? (nomeQuadra.get(o.court_id) || t('Quadra removida')) : t('Arena inteira')}</span>
                 {o.blocks_court && dias.length > 0 && (
                   <span className="font-bold text-amber-700">
-                    Fecha {formatDateShortBR(dias[0])}
+                    {t('Fecha {valor}', { valor: formatDateShortBR(dias[0]) })}
                     {dias.length > 1 ? ` a ${formatDateShortBR(dias[dias.length - 1])}` : ''}
                     {' '}· {o.start_time}–{o.end_time}
                   </span>
                 )}
-                {!o.blocks_court && isMaintenanceOpen(o) && <span>Não tira nada da venda</span>}
+                {!o.blocks_court && isMaintenanceOpen(o) && <span>{t('Não tira nada da venda')}</span>}
               </div>
 
               <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -624,46 +622,46 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading, isError = false, 
                     {o.status === MAINTENANCE_STATUS.PENDING && (
                       <V2Button size="sm" variant="ghost" disabled={mudarStatus.isPending}
                         onClick={() => mudarStatus.mutateAsync({ arenaId, orderId: o.id, status: MAINTENANCE_STATUS.IN_PROGRESS })
-                          .then(() => toast.success('Em andamento.'))
-                          .catch((e) => toast.error(e?.message || 'Não foi possível.'))}>
-                        Começar
+                          .then(() => toast.success(t('Em andamento.')))
+                          .catch((e) => toast.error(e?.message || t('Não foi possível.')))}>
+                        {t('Começar')}
                       </V2Button>
                     )}
                     <V2Button size="sm" disabled={mudarStatus.isPending}
                       onClick={() => mudarStatus.mutateAsync({ arenaId, orderId: o.id, status: MAINTENANCE_STATUS.DONE })
-                        .then(() => toast.success(o.blocks_court ? 'Concluída — a quadra voltou à venda.' : 'Concluída.'))
-                        .catch((e) => toast.error(e?.message || 'Não foi possível.'))}>
-                      <Check className="mr-1 h-3.5 w-3.5" /> Concluir
+                        .then(() => toast.success(o.blocks_court ? t('Concluída — a quadra voltou à venda.') : t('Concluída.')))
+                        .catch((e) => toast.error(e?.message || t('Não foi possível.')))}>
+                      <Check className="mr-1 h-3.5 w-3.5" /> {t('Concluir')}
                     </V2Button>
                     <V2Button size="sm" variant="ghost" onClick={() => setForm(o)}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
+                      <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar')}
                     </V2Button>
                     <ConfirmDialog
-                      title="Cancelar esta ordem?"
+                      title={t('Cancelar esta ordem?')}
                       description={o.blocks_court
-                        ? 'A ordem fica registrada como cancelada e a quadra volta à venda.'
-                        : 'A ordem fica registrada como cancelada.'}
-                      confirmLabel="Cancelar a ordem"
+                        ? t('A ordem fica registrada como cancelada e a quadra volta à venda.')
+                        : t('A ordem fica registrada como cancelada.')}
+                      confirmLabel={t('Cancelar a ordem')}
                       destructive
                       onConfirm={() => mudarStatus.mutateAsync({ arenaId, orderId: o.id, status: MAINTENANCE_STATUS.CANCELLED })
-                        .then(() => toast.success('Ordem cancelada.'))
-                        .catch((e) => toast.error(e?.message || 'Não foi possível.'))}
-                      trigger={<V2Button size="sm" variant="ghost" className="text-red-600">Cancelar</V2Button>}
+                        .then(() => toast.success(t('Ordem cancelada.')))
+                        .catch((e) => toast.error(e?.message || t('Não foi possível.')))}
+                      trigger={<V2Button size="sm" variant="ghost" className="text-red-600">{t('Cancelar')}</V2Button>}
                     />
                   </>
                 )}
                 {!isMaintenanceOpen(o) && (
                   <ConfirmDialog
-                    title="Apagar do histórico?"
-                    description="A ordem some de vez. O registro em auditoria permanece."
-                    confirmLabel="Apagar"
+                    title={t('Apagar do histórico?')}
+                    description={t('A ordem some de vez. O registro em auditoria permanece.')}
+                    confirmLabel={t('Apagar')}
                     destructive
                     onConfirm={() => apagar.mutateAsync({ arenaId, orderId: o.id })
-                      .then(() => toast.success('Ordem apagada.'))
-                      .catch((e) => toast.error(e?.message || 'Não foi possível apagar.'))}
+                      .then(() => toast.success(t('Ordem apagada.')))
+                      .catch((e) => toast.error(e?.message || t('Não foi possível apagar.')))}
                     trigger={(
                       <V2Button size="sm" variant="ghost" className="text-red-600">
-                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Apagar
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> {t('Apagar')}
                       </V2Button>
                     )}
                   />
@@ -685,40 +683,39 @@ function EstoqueSecao({ arenaId, alertas, isError = false, onRetry }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Boxes className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Estoque</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Estoque')}</h2>
         </div>
         <V2Button asChild size="sm" variant="ghost">
-          <Link to={`/arenas/${arenaId}/gerir?aba=mercado`}>Abrir o mercado</Link>
+          <Link to={`/arenas/${arenaId}/gerir?aba=mercado`}>{t('Abrir o mercado')}</Link>
         </V2Button>
       </div>
 
       {isError ? (
-        <V2ErrorState inline title="Não foi possível conferir o estoque" onRetry={onRetry} />
+        <V2ErrorState inline title={t('Não foi possível conferir o estoque')} onRetry={onRetry} />
       ) : alertas.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-green-700">
-          <Check className="h-4 w-4" /> Nenhum produto abaixo do mínimo nem perto de vencer.
+          <Check className="h-4 w-4" /> {t('Nenhum produto abaixo do mínimo nem perto de vencer.')}
         </p>
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-gray-500">
-            O que precisa de atenção. O estoque completo fica no mercado da arena — aqui
-            está só o que não pode esperar.
+            {t('O que precisa de atenção. O estoque completo fica no mercado da arena — aqui está só o que não pode esperar.')}
           </p>
           {alertas.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-ink">{p.name}</p>
                 <p className="text-xs text-gray-500">
-                  {p.quantity} {p.unit || 'un'} em estoque
-                  {p.min_stock ? ` · mínimo ${p.min_stock}` : ''}
-                  {p.expiry_date ? ` · vence em ${formatDateShortBR(p.expiry_date)}` : ''}
+                  {p.quantity} {p.unit || 'un'} {t('em estoque')}
+                  {p.min_stock ? t(' · mínimo {min_stock}', { min_stock: p.min_stock }) : ''}
+                  {p.expiry_date ? t(' · vence em {data}', { data: formatDateShortBR(p.expiry_date) }) : ''}
                 </p>
               </div>
               <div className="flex shrink-0 gap-1.5">
-                {p.estoque === 'out' && <V2Badge tone="red">Esgotado</V2Badge>}
-                {p.estoque === 'low' && <V2Badge tone="amber">Acabando</V2Badge>}
-                {p.validade === 'expired' && <V2Badge tone="red">Vencido</V2Badge>}
-                {p.validade === 'soon' && <V2Badge tone="amber">Vence em breve</V2Badge>}
+                {p.estoque === 'out' && <V2Badge tone="red">{t('Esgotado')}</V2Badge>}
+                {p.estoque === 'low' && <V2Badge tone="amber">{t('Acabando')}</V2Badge>}
+                {p.validade === 'expired' && <V2Badge tone="red">{t('Vencido')}</V2Badge>}
+                {p.validade === 'soon' && <V2Badge tone="amber">{t('Vence em breve')}</V2Badge>}
               </div>
             </div>
           ))}
@@ -746,13 +743,13 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
 
   const gravar = async () => {
     const invalido = lista.find((m) => !normalizeStaffMember(m).valid);
-    if (invalido) { toast.error('Toda pessoa precisa de um nome.'); return; }
+    if (invalido) { toast.error(t('Toda pessoa precisa de um nome.')); return; }
     try {
       await salvar.mutateAsync({ arenaId, staff: lista });
-      toast.success('Equipe salva.');
+      toast.success(t('Equipe salva.'));
       setRascunho(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -761,19 +758,19 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Equipe</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Equipe')}</h2>
         </div>
         {rascunho === null ? (
           !isError && !isLoading && (
             <V2Button size="sm" variant="ghost" onClick={() => setRascunho(staff.length > 0 ? [...staff] : [{ ...STAFF_NOVO }])}>
-              <Pencil className="mr-1.5 h-4 w-4" /> Editar
+              <Pencil className="mr-1.5 h-4 w-4" /> {t('Editar')}
             </V2Button>
           )
         ) : (
           <div className="flex gap-1.5">
-            <V2Button size="sm" variant="ghost" onClick={() => setRascunho(null)}>Cancelar</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={() => setRascunho(null)}>{t('Cancelar')}</V2Button>
             <V2Button size="sm" disabled={salvar.isPending} onClick={gravar}>
-              {salvar.isPending ? 'Salvando…' : 'Salvar equipe'}
+              {salvar.isPending ? t('Salvando…') : t('Salvar equipe')}
             </V2Button>
           </div>
         )}
@@ -785,22 +782,22 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
           tela dizia "Ninguém cadastrado" e oferecia cadastrar — e salvar
           regravaria a lista só com a pessoa nova, apagando a equipe. */}
       {isError ? (
-        <V2ErrorState inline title="Não foi possível carregar a equipe" onRetry={onRetry} />
+        <V2ErrorState inline title={t('Não foi possível carregar a equipe')} onRetry={onRetry} />
       ) : isLoading ? null : rascunho === null ? (
         <>
           {staff.length === 0 ? (
             <V2EmptyState
               icon={Users}
-              title="Ninguém cadastrado"
-              description="Nome, função e turno. Serve para responder quem estava aqui quando alguma coisa aconteceu — e por isso não pede telefone nem documento."
-              action={<V2Button size="sm" onClick={() => setRascunho([{ ...STAFF_NOVO }])}>Cadastrar a equipe</V2Button>}
+              title={t('Ninguém cadastrado')}
+              description={t('Nome, função e turno. Serve para responder quem estava aqui quando alguma coisa aconteceu — e por isso não pede telefone nem documento.')}
+              action={<V2Button size="sm" onClick={() => setRascunho([{ ...STAFF_NOVO }])}>{t('Cadastrar a equipe')}</V2Button>}
             />
           ) : (
             <>
               {plantao.length > 0 && (
                 <p className="mb-3 flex items-center gap-1.5 rounded-2xl bg-paper p-3 text-sm text-gray-600">
                   <Clock className="h-4 w-4 shrink-0 text-ink" />
-                  De plantão agora: <strong className="text-ink">{plantao.map((p) => p.name).join(', ')}</strong>
+                  {t('De plantão agora:')} <strong className="text-ink">{plantao.map((p) => p.name).join(', ')}</strong>
                 </p>
               )}
               <div className="space-y-3">
@@ -813,9 +810,9 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
                           className={`rounded-2xl border px-3 py-1.5 text-sm ${m.active === false ? 'border-gray-100 bg-gray-50 text-gray-400' : 'border-gray-200 bg-paper text-ink'}`}>
                           {m.name}
                           <span className="ml-1.5 text-xs text-gray-500">
-                            {(STAFF_SHIFT_META[m.shift] || STAFF_SHIFT_META[STAFF_SHIFT.FULL]).label}
+                            {t((STAFF_SHIFT_META[m.shift] || STAFF_SHIFT_META[STAFF_SHIFT.FULL]).label)}
                           </span>
-                          {m.active === false && <span className="ml-1.5 text-xs">· inativo</span>}
+                          {m.active === false && <span className="ml-1.5 text-xs">· {t('inativo')}</span>}
                         </span>
                       ))}
                     </div>
@@ -829,17 +826,17 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
         <div className="space-y-2">
           {lista.map((m, i) => (
             <div key={m.id || `novo-${i}`} className="grid gap-2 rounded-2xl border border-gray-100 bg-paper p-3 sm:grid-cols-[1fr_auto_auto_auto]">
-              <V2Input value={m.name} maxLength={80} placeholder="Nome"
+              <V2Input value={m.name} maxLength={80} placeholder={t('Nome')}
                 onChange={(e) => editar(i, { name: e.target.value })} />
               <select value={m.role} onChange={(e) => editar(i, { role: e.target.value })}
                 className="h-11 rounded-2xl border border-gray-200 bg-paper-pure px-3 text-sm">
-                {Object.entries(STAFF_ROLE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {Object.entries(STAFF_ROLE_META).map(([k, v]) => <option key={k} value={k}>{t(v.label)}</option>)}
               </select>
               <select value={m.shift} onChange={(e) => editar(i, { shift: e.target.value })}
                 className="h-11 rounded-2xl border border-gray-200 bg-paper-pure px-3 text-sm">
-                {Object.entries(STAFF_SHIFT_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {Object.entries(STAFF_SHIFT_META).map(([k, v]) => <option key={k} value={k}>{t(v.label)}</option>)}
               </select>
-              <button type="button" onClick={() => remover(i)} aria-label={`Remover ${m.name || 'pessoa'}`}
+              <button type="button" onClick={() => remover(i)} aria-label={t('Remover {valor}', { valor: m.name || 'pessoa' })}
                 className="justify-self-end rounded-full border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100">
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -847,12 +844,11 @@ function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
           ))}
           {lista.length < STAFF_MAX && (
             <V2Button variant="ghost" size="sm" onClick={incluir}>
-              <Plus className="mr-1.5 h-4 w-4" /> Incluir pessoa
+              <Plus className="mr-1.5 h-4 w-4" /> {t('Incluir pessoa')}
             </V2Button>
           )}
           <p className="pt-1 text-xs text-gray-500">
-            Só nome, função e turno. Telefone e e-mail não entram aqui — quem trabalha na
-            arena e tem conta na plataforma já tem esses dados no próprio perfil.
+            {t('Só nome, função e turno. Telefone e e-mail não entram aqui — quem trabalha na arena e tem conta na plataforma já tem esses dados no próprio perfil.')}
           </p>
         </div>
       )}
@@ -946,10 +942,7 @@ export function ArenaOperationsPanel({ arena, view }) {
         <p className="flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Ordem que <strong className="text-ink">tira a quadra da venda</strong> aparece no
-            calendário como &ldquo;Manutenção programada&rdquo;, sem o motivo — quem vai jogar
-            não precisa saber que a fechadura do vestiário quebrou. Concluir ou cancelar a
-            ordem devolve o horário à venda na hora.
+            {t('Ordem que')} <strong className="text-ink">{t('tira a quadra da venda')}</strong> {t('aparece no calendário como “Manutenção programada”, sem o motivo — quem vai jogar não precisa saber que a fechadura do vestiário quebrou. Concluir ou cancelar a ordem devolve o horário à venda na hora.')}
           </span>
         </p>
       </div>
@@ -969,11 +962,11 @@ export function ArenaOperationsPanel({ arena, view }) {
       <V2Surface>
         <V2EmptyState
           icon={Package}
-          title="Nenhuma ferramenta de operação ativa"
-          description="Rotinas, manutenção, estoque e plantão ligam separadamente, em Configurações → Módulos. Cada uma ligada aparece aqui."
+          title={t('Nenhuma ferramenta de operação ativa')}
+          description={t('Rotinas, manutenção, estoque e plantão ligam separadamente, em Configurações → Módulos. Cada uma ligada aparece aqui.')}
           action={(
             <Link to={`/arenas/${arenaId}/gerir?aba=modulos`} className="text-sm font-bold text-ink underline">
-              Abrir os módulos
+              {t('Abrir os módulos')}
             </Link>
           )}
         />

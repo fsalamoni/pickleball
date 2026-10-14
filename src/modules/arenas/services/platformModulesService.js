@@ -22,6 +22,7 @@ import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { isModuleReleasable } from '../domain/moduleCatalog.js';
 import { MODULE_RELEASE_MODE, normalizePlatformModules } from '../domain/moduleAccess.js';
+import { t } from '@/core/i18n';
 
 const COL = 'platform_settings';
 const DOC_ID = 'arena_modules';
@@ -80,10 +81,10 @@ export function subscribePlatformArenaModules(cb) {
  * @param {Object|null} actor
  */
 export async function setArenaModuleRelease(moduleId, patch = {}, actor = null) {
-  if (!moduleId) throw new Error('moduleId é obrigatório.');
+  if (!moduleId) throw new Error(t('moduleId é obrigatório.'));
   const released = Boolean(patch.released);
   if (released && !isModuleReleasable(moduleId)) {
-    throw new Error('Este módulo ainda está em construção e não pode ser liberado.');
+    throw new Error(t('Este módulo ainda está em construção e não pode ser liberado.'));
   }
   const mode = patch.mode === MODULE_RELEASE_MODE.FORCED
     ? MODULE_RELEASE_MODE.FORCED

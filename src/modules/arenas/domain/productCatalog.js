@@ -28,6 +28,7 @@
  */
 
 import { INVENTORY_CATEGORIES } from './inventory.js';
+import { t, tk } from '@/core/i18n';
 
 /** Categorias que participam do catálogo (subconjunto de INVENTORY_CATEGORIES). */
 export const CATALOG_CATEGORIES = Object.freeze({
@@ -51,29 +52,29 @@ export const CATALOG_CATEGORIES_LIST = Object.values(CATALOG_CATEGORIES);
  */
 export const CATALOG_SUBCATEGORIES = Object.freeze({
   [CATALOG_CATEGORIES.BEBIDA]: [
-    'Refrigerante', 'Suco', 'Água', 'Água com gás', 'Água saborizada',
-    'Energético', 'Isotônico', 'Chá gelado', 'Cerveja', 'Cerveja sem álcool',
-    'Café', 'Achocolatado', 'Leite', 'Coco',
+    tk('Refrigerante'), tk('Suco'), tk('Água'), tk('Água com gás'), tk('Água saborizada'),
+    tk('Energético'), tk('Isotônico'), tk('Chá gelado'), tk('Cerveja'), tk('Cerveja sem álcool'),
+    tk('Café'), tk('Achocolatado'), tk('Leite'), tk('Coco'),
   ],
   [CATALOG_CATEGORIES.COMIDA]: [
-    'Salgadinho', 'Salgado', 'Lanche', 'Sanduíche', 'Pizza', 'Porção',
-    'Chocolate', 'Doce', 'Bala/Goma', 'Biscoito', 'Barra de cereal',
-    'Sorvete', 'Açaí', 'Fruta', 'Amendoim/Castanha',
+    tk('Salgadinho'), tk('Salgado'), tk('Lanche'), tk('Sanduíche'), tk('Pizza'), tk('Porção'),
+    tk('Chocolate'), tk('Doce'), tk('Bala/Goma'), tk('Biscoito'), tk('Barra de cereal'),
+    tk('Sorvete'), tk('Açaí'), tk('Fruta'), tk('Amendoim/Castanha'),
   ],
-  [CATALOG_CATEGORIES.ACESSORIOS]: ['Grip', 'Overgrip', 'Toalha', 'Munhequeira', 'Boné', 'Meia', 'Elástico'],
-  [CATALOG_CATEGORIES.RAQUETE]: ['Raquete', 'Case', 'Kit'],
-  [CATALOG_CATEGORIES.BOLA]: ['Bola indoor', 'Bola outdoor', 'Pack de bolas'],
-  [CATALOG_CATEGORIES.VESTUARIO]: ['Camiseta', 'Short', 'Regata', 'Viseira', 'Agasalho'],
-  [CATALOG_CATEGORIES.EQUIPAMENTO]: ['Rede', 'Marcador de placar', 'Cone', 'Fita de quadra'],
-  [CATALOG_CATEGORIES.BRINDES]: ['Chaveiro', 'Adesivo', 'Squeeze'],
-  [CATALOG_CATEGORIES.OUTROS]: ['Diversos'],
+  [CATALOG_CATEGORIES.ACESSORIOS]: [tk('Grip'), tk('Overgrip'), tk('Toalha'), tk('Munhequeira'), tk('Boné'), tk('Meia'), tk('Elástico')],
+  [CATALOG_CATEGORIES.RAQUETE]: [tk('Raquete'), tk('Case'), tk('Kit')],
+  [CATALOG_CATEGORIES.BOLA]: [tk('Bola indoor'), tk('Bola outdoor'), tk('Pack de bolas')],
+  [CATALOG_CATEGORIES.VESTUARIO]: [tk('Camiseta'), tk('Short'), tk('Regata'), tk('Viseira'), tk('Agasalho')],
+  [CATALOG_CATEGORIES.EQUIPAMENTO]: [tk('Rede'), tk('Marcador de placar'), tk('Cone'), tk('Fita de quadra')],
+  [CATALOG_CATEGORIES.BRINDES]: [tk('Chaveiro'), tk('Adesivo'), tk('Squeeze')],
+  [CATALOG_CATEGORIES.OUTROS]: [tk('Diversos')],
 });
 
 /** Embalagens comuns (apoio à UI; texto livre também é aceito). */
 export const CATALOG_PACKAGINGS = Object.freeze([
-  'Lata', 'Latão', 'Long neck', 'Garrafa PET', 'Garrafa de vidro', 'Garrafa',
-  'Caixinha (Tetra Pak)', 'Copo', 'Pacote', 'Saco', 'Caixa', 'Pote', 'Sachê',
-  'Bandeja', 'Fatia', 'Barra', 'Unidade', 'Fardo', 'Dupla', 'Kit',
+  tk('Lata'), tk('Latão'), tk('Long neck'), tk('Garrafa PET'), tk('Garrafa de vidro'), tk('Garrafa'),
+  tk('Caixinha (Tetra Pak)'), tk('Copo'), tk('Pacote'), tk('Saco'), tk('Caixa'), tk('Pote'), tk('Sachê'),
+  tk('Bandeja'), tk('Fatia'), tk('Barra'), tk('Unidade'), tk('Fardo'), tk('Dupla'), tk('Kit'),
 ]);
 
 /** Unidades de medida padrão. */
@@ -187,17 +188,17 @@ export function jaccard(a = [], b = []) {
  */
 export function normalizeCatalogProduct(input = {}) {
   const name = str(input.name);
-  if (!name) return { valid: false, error: 'Nome do produto é obrigatório.', value: {} };
+  if (!name) return { valid: false, error: t('Nome do produto é obrigatório.'), value: {} };
   if (name.length > CATALOG_NAME_MAX) {
-    return { valid: false, error: `Nome muito longo (máx ${CATALOG_NAME_MAX}).`, value: {} };
+    return { valid: false, error: t('Nome muito longo (máx {CATALOG_NAME_MAX}).', { CATALOG_NAME_MAX }), value: {} };
   }
   const category = str(input.category);
   if (!CATALOG_CATEGORIES_LIST.includes(category)) {
-    return { valid: false, error: 'Categoria inválida.', value: { name } };
+    return { valid: false, error: t('Categoria inválida.'), value: { name } };
   }
   const subcategory = str(input.subcategory).slice(0, CATALOG_SUBCATEGORY_MAX);
   if (!subcategory) {
-    return { valid: false, error: 'Subcategoria é obrigatória.', value: { name, category } };
+    return { valid: false, error: t('Subcategoria é obrigatória.'), value: { name, category } };
   }
   const value = {
     name,

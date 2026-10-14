@@ -23,6 +23,7 @@
  */
 import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import { luminance, normalizeHex, readableInk } from './whiteLabel.js';
+import { t, tk } from '@/core/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Os layouts                                                        */
@@ -52,15 +53,15 @@ export const BANNER_TEXT_LIMITS = Object.freeze({
 export const BANNER_TEMPLATES = Object.freeze([
   Object.freeze({
     id: 'destaque',
-    name: 'Destaque',
-    description: 'Título forte e um botão. Serve para quase tudo.',
+    name: tk('Destaque'),
+    description: tk('Título forte e um botão. Serve para quase tudo.'),
     design: Object.freeze({
       layout: ART_LAYOUT.DESTAQUE,
-      kicker: 'Nesta semana',
-      title: 'Quadra livre à noite',
-      subtitle: 'Horários das 19h às 22h com vaga. Reserve pelo aplicativo em dois toques.',
+      kicker: tk('Nesta semana'),
+      title: tk('Quadra livre à noite'),
+      subtitle: tk('Horários das 19h às 22h com vaga. Reserve pelo aplicativo em dois toques.'),
       highlight: '',
-      cta: 'Reservar agora',
+      cta: tk('Reservar agora'),
       bg: '#0b0b0c',
       fg: '#ffffff',
       accent: '#d4f631',
@@ -69,15 +70,15 @@ export const BANNER_TEMPLATES = Object.freeze([
   }),
   Object.freeze({
     id: 'oferta',
-    name: 'Oferta',
-    description: 'Um número grande: desconto, preço ou brinde.',
+    name: tk('Oferta'),
+    description: tk('Um número grande: desconto, preço ou brinde.'),
     design: Object.freeze({
       layout: ART_LAYOUT.OFERTA,
-      kicker: 'Só até domingo',
-      title: 'Na reserva de terça e quinta',
-      subtitle: 'Vale para qualquer quadra, das 7h às 17h.',
+      kicker: tk('Só até domingo'),
+      title: tk('Na reserva de terça e quinta'),
+      subtitle: tk('Vale para qualquer quadra, das 7h às 17h.'),
       highlight: '20% OFF',
-      cta: 'Quero o desconto',
+      cta: tk('Quero o desconto'),
       bg: '#d4f631',
       fg: '#0b0b0c',
       accent: '#0b0b0c',
@@ -86,15 +87,15 @@ export const BANNER_TEMPLATES = Object.freeze([
   }),
   Object.freeze({
     id: 'evento',
-    name: 'Evento',
-    description: 'Data em destaque: torneio, jogo aberto, clínica.',
+    name: tk('Evento'),
+    description: tk('Data em destaque: torneio, jogo aberto, clínica.'),
     design: Object.freeze({
       layout: ART_LAYOUT.EVENTO,
-      kicker: 'Sábado · 14h',
-      title: 'Americano da casa',
-      subtitle: 'Todos os níveis. Inscrição pelo aplicativo — as vagas são limitadas.',
+      kicker: tk('Sábado · 14h'),
+      title: tk('Americano da casa'),
+      subtitle: tk('Todos os níveis. Inscrição pelo aplicativo — as vagas são limitadas.'),
       highlight: '18 OUT',
-      cta: 'Garantir a vaga',
+      cta: tk('Garantir a vaga'),
       bg: '#1d3a8a',
       fg: '#ffffff',
       accent: '#fbbf24',
@@ -103,15 +104,15 @@ export const BANNER_TEMPLATES = Object.freeze([
   }),
   Object.freeze({
     id: 'vitrine',
-    name: 'Vitrine',
-    description: 'Texto e uma foto: produto, estrutura, novidade.',
+    name: tk('Vitrine'),
+    description: tk('Texto e uma foto: produto, estrutura, novidade.'),
     design: Object.freeze({
       layout: ART_LAYOUT.VITRINE,
-      kicker: 'Chegou na loja',
-      title: 'Raquetes para testar',
-      subtitle: 'Experimente antes de comprar. Peça no balcão ou pelo aplicativo.',
+      kicker: tk('Chegou na loja'),
+      title: tk('Raquetes para testar'),
+      subtitle: tk('Experimente antes de comprar. Peça no balcão ou pelo aplicativo.'),
       highlight: '',
-      cta: 'Ver na loja',
+      cta: tk('Ver na loja'),
       bg: '#f4f1ea',
       fg: '#0b0b0c',
       accent: '#0f766e',
@@ -120,15 +121,15 @@ export const BANNER_TEMPLATES = Object.freeze([
   }),
   Object.freeze({
     id: 'chamado',
-    name: 'Chamado',
-    description: 'Mensagem curta e central, para convidar a comunidade.',
+    name: tk('Chamado'),
+    description: tk('Mensagem curta e central, para convidar a comunidade.'),
     design: Object.freeze({
       layout: ART_LAYOUT.CHAMADO,
-      kicker: 'Seja membro',
-      title: 'Jogue mais pagando menos',
-      subtitle: 'Planos com horas de quadra, desconto e prioridade na reserva.',
+      kicker: tk('Seja membro'),
+      title: tk('Jogue mais pagando menos'),
+      subtitle: tk('Planos com horas de quadra, desconto e prioridade na reserva.'),
       highlight: '',
-      cta: 'Conhecer os planos',
+      cta: tk('Conhecer os planos'),
       bg: '#5b21b6',
       fg: '#ffffff',
       accent: '#f0abfc',
@@ -182,7 +183,7 @@ export const BANNER_UPLOAD_SPEC = Object.freeze({
   ratioLabel: '2:1',
   recommended: Object.freeze({ width: 1600, height: 800 }),
   minimum: Object.freeze({ width: 1200, height: 600 }),
-  formats: Object.freeze(['JPG', 'PNG', 'WebP']),
+  formats: Object.freeze([tk('JPG'), tk('PNG'), tk('WebP')]),
   mimeTypes: Object.freeze(['image/jpeg', 'image/png', 'image/webp']),
   idealBytes: 2 * 1024 * 1024,
   maxBytes: 5 * 1024 * 1024,
@@ -193,19 +194,19 @@ export const BANNER_UPLOAD_SPEC = Object.freeze({
 
 /** As instruções do envio, na ordem em que a pessoa precisa delas. */
 export function bannerUploadGuide(spec = BANNER_UPLOAD_SPEC) {
-  const mb = (b) => `${Math.round(b / (1024 * 1024))} MB`;
+  const mb = (b) => t('{valor} MB', { valor: Math.round(b / (1024 * 1024)) });
   return [
-    { label: 'Tamanho ideal', value: `${spec.recommended.width} × ${spec.recommended.height} px` },
-    { label: 'Proporção', value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
-    { label: 'Mínimo', value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
-    { label: 'Formatos', value: spec.formats.join(', ') },
-    { label: 'Peso', value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)}) — pesado demora a abrir no 4G` },
+    { label: t('Tamanho ideal'), value: `${spec.recommended.width} × ${spec.recommended.height} px` },
+    { label: t('Proporção'), value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
+    { label: t('Mínimo'), value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
+    { label: t('Formatos'), value: spec.formats.join(', ') },
+    { label: t('Peso'), value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)}) — pesado demora a abrir no 4G` },
     {
-      label: 'Área segura',
+      label: t('Área segura'),
       value: `texto e logo dentro dos ${Math.round(spec.safeArea.width * 100)}% centrais da largura e ${Math.round(spec.safeArea.height * 100)}% da altura — no celular as laterais são cortadas`,
     },
-    { label: 'Botão', value: 'não desenhe botão: o banner inteiro já é clicável e leva ao destino escolhido' },
-    { label: 'Texto', value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição (para quem usa leitor de tela)' },
+    { label: t('Botão'), value: 'não desenhe botão: o banner inteiro já é clicável e leva ao destino escolhido' },
+    { label: t('Texto'), value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição (para quem usa leitor de tela)' },
   ];
 }
 
@@ -347,17 +348,17 @@ export function saveArenaTemplate(lista = [], modelo = {}, {
   now = Date.now(), newId, normalize = normalizeBannerDesign,
 } = {}) {
   const nome = texto(modelo.name, 40);
-  if (!nome) return { list: lista, saved: null, error: 'Dê um nome ao modelo.' };
+  if (!nome) return { list: lista, saved: null, error: t('Dê um nome ao modelo.') };
   // `normalize` troca o desenho conferido: o do banner por padrão; o cupom
   // (Onda CD) passa o dele, e a regra de nome, limite e ids é a mesma.
   const { value: design, valid } = normalize(modelo.design || {});
-  if (!valid) return { list: lista, saved: null, error: 'O modelo precisa de um título.' };
+  if (!valid) return { list: lista, saved: null, error: t('O modelo precisa de um título.') };
 
   const atuais = (Array.isArray(lista) ? lista : []).filter((t) => isArenaTemplateId(t?.id));
   const existente = isArenaTemplateId(modelo.id) ? atuais.find((t) => t.id === modelo.id) : null;
 
   if (!existente && atuais.length >= ARENA_TEMPLATES_MAX) {
-    return { list: lista, saved: null, error: `Cabem ${ARENA_TEMPLATES_MAX} modelos. Apague um para salvar outro.` };
+    return { list: lista, saved: null, error: t('Cabem {ARENA_TEMPLATES_MAX} modelos. Apague um para salvar outro.', { ARENA_TEMPLATES_MAX }) };
   }
   const id = existente ? existente.id : `arena:${newId ? newId() : now.toString(36)}`;
   const salvo = { id, name: nome, design, updated_at_ms: now, created_at_ms: existente?.created_at_ms ?? now };

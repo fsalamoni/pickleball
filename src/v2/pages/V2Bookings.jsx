@@ -28,6 +28,7 @@ import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import MyOpenMatches from '@/v2/components/arenas/openMatch/MyOpenMatches';
 import MyShopPurchases from '@/v2/components/arenas/shop/MyShopPurchases';
 import MyArenaPlans from '@/v2/components/arenas/members/MyArenaPlans';
+import { t } from '@/core/i18n';
 
 const ACTIVE = new Set([BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED]);
 
@@ -43,10 +44,10 @@ const STATUS_TONE = {
 function whenLabel(booking) {
   const slots = bookingSlots(booking);
   if (booking.kind === BOOKING_KIND.RECURRING && slots.length > 0) {
-    return `${slots.length} horário(s) recorrentes`;
+    return t('{length} horário(s) recorrentes', { length: slots.length });
   }
   const s = slots[0];
-  return s ? formatSlotLabel(s) : 'Horário a combinar';
+  return s ? formatSlotLabel(s) : t('Horário a combinar');
 }
 
 export default function V2Bookings() {
@@ -78,17 +79,17 @@ export default function V2Bookings() {
   return (
     <div className="mx-auto max-w-[900px]">
       <V2PageIntro
-        title="Minhas reservas"
-        subtitle="Acompanhe suas solicitações, valores e pagamentos nas arenas."
-        action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas" data-dica="reservas-ver-arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
+        title={t('Minhas reservas')}
+        subtitle={t('Acompanhe suas solicitações, valores e pagamentos nas arenas.')}
+        action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas" data-dica="reservas-ver-arenas"><Building2 className="h-4 w-4" /> {t('Ver arenas')}</Link></V2Button>}
       />
 
       {sharedOn && (convitesFalharam || compartilhadasFalharam) && !reservasFalharam && (
         <V2ErrorState
           inline
           className="mb-6"
-          title={convitesFalharam ? 'Não foi possível carregar os convites de reserva' : 'Não foi possível carregar as reservas compartilhadas com você'}
-          description="As suas próprias reservas estão abaixo; esta parte volta assim que carregar."
+          title={convitesFalharam ? t('Não foi possível carregar os convites de reserva') : t('Não foi possível carregar as reservas compartilhadas com você')}
+          description={t('As suas próprias reservas estão abaixo; esta parte volta assim que carregar.')}
           onRetry={() => {
             if (convitesFalharam) recarregarConvites();
             if (compartilhadasFalharam) recarregarCompartilhadas();
@@ -98,7 +99,7 @@ export default function V2Bookings() {
 
       {sharedOn && pendingInvites.length > 0 && (
         <div className="mb-8">
-          <p className="mb-3 text-2xs font-bold uppercase tracking-widest text-amber-500">Convites de reserva</p>
+          <p className="mb-3 text-2xs font-bold uppercase tracking-widest text-amber-500">{t('Convites de reserva')}</p>
           <div className="space-y-3">
             {pendingInvites.map((b) => (
               <V2Surface key={b.id}>
@@ -133,23 +134,23 @@ export default function V2Bookings() {
         // Falha não é "você ainda não reservou": quem tem jogo hoje à noite e lê
         // isso conclui que a reserva sumiu.
         <V2ErrorState
-          title="Não foi possível carregar as suas reservas"
-          description="Elas continuam feitas — a lista só não chegou. Tente de novo."
+          title={t('Não foi possível carregar as suas reservas')}
+          description={t('Elas continuam feitas — a lista só não chegou. Tente de novo.')}
           onRetry={() => recarregarReservas()}
         />
       ) : bookings.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
-            title="Você ainda não solicitou reservas"
-            description="Explore as arenas, compare horários e faça seu primeiro pedido de reserva."
-            action={<V2Button asChild><Link to="/arenas">Explorar arenas</Link></V2Button>}
+            title={t('Você ainda não solicitou reservas')}
+            description={t('Explore as arenas, compare horários e faça seu primeiro pedido de reserva.')}
+            action={<V2Button asChild><Link to="/arenas">{t('Explorar arenas')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
         <div className="space-y-8" data-dica="reservas-lista">
-          <BookingsGroup title="Ativas" bookings={active} emptyText="Nenhuma reserva ativa." sharedOn={sharedOn} />
-          {past.length > 0 && <BookingsGroup title="Histórico" bookings={past} sharedOn={sharedOn} />}
+          <BookingsGroup title={t('Ativas')} bookings={active} emptyText={t('Nenhuma reserva ativa.')} sharedOn={sharedOn} />
+          {past.length > 0 && <BookingsGroup title={t('Histórico')} bookings={past} sharedOn={sharedOn} />}
         </div>
       )}
     </div>

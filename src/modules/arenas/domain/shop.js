@@ -43,6 +43,7 @@
 
 import { calculateStock, expiryStatus } from './inventory.js';
 import { formatDateShortBR, todayISO } from './calendar.js';
+import { t } from '@/core/i18n';
 
 /** Marca da venda feita a partir do Mercado. */
 export const SHOP_CATALOG = 'mercado';
@@ -153,21 +154,21 @@ export function shopHasStock(product, quantity = 1) {
  */
 export function priceCartFromCatalog(items = [], productsById = new Map(), { today } = {}) {
   if (!Array.isArray(items) || items.length === 0) {
-    return { ok: false, error: 'Carrinho vazio.', items: [], total: 0 };
+    return { ok: false, error: t('Carrinho vazio.'), items: [], total: 0 };
   }
   const saida = [];
   for (const item of items) {
     const quantity = Math.round(Number(item?.quantity) || 0);
-    if (quantity <= 0) return { ok: false, error: 'Quantidade inválida.', items: [], total: 0 };
+    if (quantity <= 0) return { ok: false, error: t('Quantidade inválida.'), items: [], total: 0 };
     const p = productsById.get(item?.product_id);
     if (!p || !isSoldOnline(p)) {
-      return { ok: false, error: 'Um dos produtos saiu de venda. Atualize a loja e tente de novo.', items: [], total: 0 };
+      return { ok: false, error: t('Um dos produtos saiu de venda. Atualize a loja e tente de novo.'), items: [], total: 0 };
     }
     if (!shopHasStock(p, quantity)) {
-      return { ok: false, error: `Estoque insuficiente de ${p.name}.`, items: [], total: 0 };
+      return { ok: false, error: t('Estoque insuficiente de {name}.', { name: p.name }), items: [], total: 0 };
     }
     if (expiryStatus(p.expiry_date, { today }) === 'expired') {
-      return { ok: false, error: `${p.name} saiu da loja (validade vencida). Atualize a loja e tente de novo.`, items: [], total: 0 };
+      return { ok: false, error: t('{name} saiu da loja (validade vencida). Atualize a loja e tente de novo.', { name: p.name }), items: [], total: 0 };
     }
     const price = numero(p.sale_price);
     saida.push({ product_id: p.id, name: p.name, price, quantity });
@@ -402,7 +403,7 @@ export function saleWhenLabel(sale, hoje = todayISO()) {
   if (!dia) return '';
   if (dia !== hoje) return formatDateShortBR(dia);
   const hora = saleTimeHHMM(sale);
-  return hora ? `Hoje, ${hora}` : 'Hoje';
+  return hora ? t('Hoje, {hora}', { hora }) : t('Hoje');
 }
 
 /**

@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Domínio puro de pagamento PIX (Sprint 5 ARE-12 pagto).
  *
@@ -18,11 +19,11 @@ export const PIX_KEY_TYPES = Object.freeze({
 });
 
 export const PIX_KEY_TYPE_LABELS = Object.freeze({
-  cpf: 'CPF',
-  cnpj: 'CNPJ',
-  email: 'E-mail',
-  phone: 'Telefone',
-  random: 'Chave aleatória',
+  cpf: tk('CPF'),
+  cnpj: tk('CNPJ'),
+  email: tk('E-mail'),
+  phone: tk('Telefone'),
+  random: tk('Chave aleatória'),
 });
 
 export const PIX_KEY_MAX = 120;
@@ -49,28 +50,28 @@ function normalizePixKey(value, type) {
 /** Validação simples de chave PIX por tipo. */
 export function validatePixKey(key, type) {
   const k = normalizePixKey(key, type);
-  if (!k) return { valid: false, error: 'Chave PIX é obrigatória.' };
+  if (!k) return { valid: false, error: t('Chave PIX é obrigatória.') };
   if (type === PIX_KEY_TYPES.CPF) {
-    if (k.length !== 11) return { valid: false, error: 'CPF deve ter 11 dígitos.' };
+    if (k.length !== 11) return { valid: false, error: t('CPF deve ter 11 dígitos.') };
     return { valid: true, value: k };
   }
   if (type === PIX_KEY_TYPES.CNPJ) {
-    if (k.length !== 14) return { valid: false, error: 'CNPJ deve ter 14 dígitos.' };
+    if (k.length !== 14) return { valid: false, error: t('CNPJ deve ter 14 dígitos.') };
     return { valid: true, value: k };
   }
   if (type === PIX_KEY_TYPES.PHONE) {
-    if (k.length < 10 || k.length > 13) return { valid: false, error: 'Telefone deve ter 10-13 dígitos (com DDD).' };
+    if (k.length < 10 || k.length > 13) return { valid: false, error: t('Telefone deve ter 10-13 dígitos (com DDD).') };
     return { valid: true, value: k };
   }
   if (type === PIX_KEY_TYPES.EMAIL) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(k)) return { valid: false, error: 'E-mail inválido.' };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(k)) return { valid: false, error: t('E-mail inválido.') };
     return { valid: true, value: k.toLowerCase() };
   }
   if (type === PIX_KEY_TYPES.RANDOM) {
-    if (k.length < 32) return { valid: false, error: 'Chave aleatória deve ter pelo menos 32 caracteres.' };
+    if (k.length < 32) return { valid: false, error: t('Chave aleatória deve ter pelo menos 32 caracteres.') };
     return { valid: true, value: k };
   }
-  return { valid: false, error: 'Tipo de chave inválido.' };
+  return { valid: false, error: t('Tipo de chave inválido.') };
 }
 
 /**
@@ -80,7 +81,7 @@ export function validatePixKey(key, type) {
 export function normalizePixPayment(input = {}) {
   const pix_key_type = str(input.pix_key_type) || PIX_KEY_TYPES.RANDOM;
   if (!Object.values(PIX_KEY_TYPES).includes(pix_key_type)) {
-    return { valid: false, error: 'Tipo de chave PIX inválido.', value: {} };
+    return { valid: false, error: t('Tipo de chave PIX inválido.'), value: {} };
   }
   const pix_key_raw = str(input.pix_key);
   if (!pix_key_raw) {

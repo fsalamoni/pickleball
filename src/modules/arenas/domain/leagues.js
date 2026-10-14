@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Domínio: o torneio interno da arena — a competição da casa.
  *
@@ -139,17 +140,17 @@ export function calculateLadderPosition(participants, sortBy = 'points') {
 /* ================================================================== */
 
 export const INTERNAL_TOURNAMENT_STATUS_META = Object.freeze({
-  [INTERNAL_TOURNAMENT_STATUS.SCHEDULED]: { label: 'Inscrições abertas', tone: 'acid' },
-  [INTERNAL_TOURNAMENT_STATUS.RUNNING]: { label: 'Em andamento', tone: 'blue' },
-  [INTERNAL_TOURNAMENT_STATUS.FINISHED]: { label: 'Encerrado', tone: 'green' },
-  [INTERNAL_TOURNAMENT_STATUS.CANCELLED]: { label: 'Cancelado', tone: 'neutral' },
+  [INTERNAL_TOURNAMENT_STATUS.SCHEDULED]: { label: tk('Inscrições abertas'), tone: 'acid' },
+  [INTERNAL_TOURNAMENT_STATUS.RUNNING]: { label: tk('Em andamento'), tone: 'blue' },
+  [INTERNAL_TOURNAMENT_STATUS.FINISHED]: { label: tk('Encerrado'), tone: 'green' },
+  [INTERNAL_TOURNAMENT_STATUS.CANCELLED]: { label: tk('Cancelado'), tone: 'neutral' },
 });
 
 export const PRIZE_TYPE_META = Object.freeze({
-  [PRIZE_TYPE.CASH]: { label: 'Dinheiro' },
-  [PRIZE_TYPE.CREDIT]: { label: 'Crédito na arena' },
-  [PRIZE_TYPE.GIFT]: { label: 'Brinde' },
-  [PRIZE_TYPE.TROPHY]: { label: 'Troféu' },
+  [PRIZE_TYPE.CASH]: { label: tk('Dinheiro') },
+  [PRIZE_TYPE.CREDIT]: { label: tk('Crédito na arena') },
+  [PRIZE_TYPE.GIFT]: { label: tk('Brinde') },
+  [PRIZE_TYPE.TROPHY]: { label: tk('Troféu') },
 });
 
 /** Formatos que o dia de jogo sabe conduzir. É o que o torneio pode ser. */
@@ -163,24 +164,24 @@ export const INTERNAL_TOURNAMENT_FORMAT = Object.freeze({
 
 export const INTERNAL_TOURNAMENT_FORMAT_META = Object.freeze({
   [INTERNAL_TOURNAMENT_FORMAT.AMERICANO]: {
-    label: 'Americano',
-    hint: 'Todos jogam com todos, rodada a rodada, com placar e ranking do dia.',
+    label: tk('Americano'),
+    hint: tk('Todos jogam com todos, rodada a rodada, com placar e ranking do dia.'),
   },
   [INTERNAL_TOURNAMENT_FORMAT.AMERICANO_LIVE]: {
-    label: 'Americano aprimorado',
-    hint: 'Quadra a quadra, com fila — dá para entrar e sair no meio, e conta placar.',
+    label: tk('Americano aprimorado'),
+    hint: tk('Quadra a quadra, com fila — dá para entrar e sair no meio, e conta placar.'),
   },
   [INTERNAL_TOURNAMENT_FORMAT.MEXICANO]: {
-    label: 'Mexicano',
-    hint: 'Duplas por classificação: quem vai bem joga com quem vai bem.',
+    label: tk('Mexicano'),
+    hint: tk('Duplas por classificação: quem vai bem joga com quem vai bem.'),
   },
   [INTERNAL_TOURNAMENT_FORMAT.KING]: {
-    label: 'Rei da Quadra',
-    hint: 'Quem vence fica na quadra.',
+    label: tk('Rei da Quadra'),
+    hint: tk('Quem vence fica na quadra.'),
   },
   [INTERNAL_TOURNAMENT_FORMAT.PLAY]: {
-    label: 'Open Play',
-    hint: 'Sem placar: rodízio equilibrado, para jogar por jogar.',
+    label: tk('Open Play'),
+    hint: tk('Sem placar: rodízio equilibrado, para jogar por jogar.'),
   },
 });
 

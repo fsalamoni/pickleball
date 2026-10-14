@@ -9,18 +9,19 @@
  * prometer um prêmio que ainda não foi conferido.
  */
 import React from 'react';
+import { t } from '@/core/i18n';
 
 export default function BookingReferralField({ value, onChange, problem, friendReward }) {
   return (
     <div className="rounded-lg border border-dashed border-ink/20 bg-paper-pure p-3 text-sm">
       <label htmlFor="indicacao-reserva" className="text-xs font-bold uppercase tracking-wider text-ink/60">
-        Foi indicado por alguém?
+        {t('Foi indicado por alguém?')}
       </label>
       <input
         id="indicacao-reserva"
         value={value}
         onChange={(e) => onChange(e.target.value.toUpperCase().replace(/\s+/g, ''))}
-        placeholder="CÓDIGO DE QUEM INDICOU"
+        placeholder={t('CÓDIGO DE QUEM INDICOU')}
         maxLength={20}
         aria-invalid={Boolean(problem)}
         aria-describedby="indicacao-reserva-ajuda"
@@ -30,8 +31,8 @@ export default function BookingReferralField({ value, onChange, problem, friendR
         <p id="indicacao-reserva-ajuda" className="mt-1 text-xs text-red-700">{problem}</p>
       ) : (
         <p id="indicacao-reserva-ajuda" className="mt-1 text-xs text-ink/60">
-          {friendReward ? `Quem chega por indicação ganha ${friendReward}. ` : ''}
-          A arena confere o código quando confirmar a sua reserva.
+          {friendReward ? t('Quem chega por indicação ganha {friendReward}. ', { friendReward }) : ''}
+          {t('A arena confere o código quando confirmar a sua reserva.')}
         </p>
       )}
     </div>

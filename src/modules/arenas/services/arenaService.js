@@ -34,6 +34,7 @@ import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js
 import { normalizeReviewResponse } from '../domain/review_response.js';
 import { normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit } from '../domain/inventory.js';
 import { trackedStock } from '../domain/shop.js';
+import { t } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -54,9 +55,9 @@ function displayName(user, profile) {
 /* -------------------------------- Arenas -------------------------------- */
 
 export async function createArena(user, profile, input) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const { valid, errors, value } = normalizeArenaInput(input);
-  if (!valid) throw new Error(errors.name || 'Dados inválidos.');
+  if (!valid) throw new Error(errors.name || t('Dados inválidos.'));
 
   const id = doc(collection(db, COL.arenas)).id;
   const payload = {
@@ -216,7 +217,7 @@ export async function listArenaManagerIds(arenaId) {
 }
 
 export async function addArenaManager(arena, target, actor) {
-  if (!target?.user_id) throw new Error('Selecione um atleta para adicionar.');
+  if (!target?.user_id) throw new Error(t('Selecione um atleta para adicionar.'));
   await setDoc(doc(db, COL.managers, managerId(arena.id, target.user_id)), {
     id: managerId(arena.id, target.user_id),
     arena_id: arena.id,
@@ -250,7 +251,7 @@ export async function listMyFavoriteArenas(userId) {
 }
 
 export async function favoriteArena(user, arena) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   await setDoc(doc(db, COL.favorites, favoriteId(user.uid, arena.id)), {
     id: favoriteId(user.uid, arena.id),
     user_id: user.uid,
@@ -275,12 +276,12 @@ export async function listArenaReviews(arenaId) {
 }
 
 export async function addArenaReview(arena, user, profile, input) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const type = Object.values(REVIEW_TYPE).includes(input.type) ? input.type : REVIEW_TYPE.REVIEW;
   const comment = str(input.comment).slice(0, 1000);
   const rating = type === REVIEW_TYPE.REVIEW ? Math.max(1, Math.min(5, Math.round(Number(input.rating) || 0))) : null;
-  if (type === REVIEW_TYPE.REVIEW && !rating) throw new Error('Escolha uma nota de 1 a 5.');
-  if (type !== REVIEW_TYPE.REVIEW && !comment) throw new Error('Escreva sua mensagem.');
+  if (type === REVIEW_TYPE.REVIEW && !rating) throw new Error(t('Escolha uma nota de 1 a 5.'));
+  if (type !== REVIEW_TYPE.REVIEW && !comment) throw new Error(t('Escreva sua mensagem.'));
 
   const id = doc(collection(db, COL.reviews)).id;
   await setDoc(doc(db, COL.reviews, id), {
@@ -334,7 +335,7 @@ export async function deleteArenaReview(review, actor) {
  * `response` + `responded_at` + `responded_by`. Audit log best-effort.
  */
 export async function respondToArenaReview(reviewId, responseText, actor) {
-  if (!db || !reviewId) throw new Error('Review inválida.');
+  if (!db || !reviewId) throw new Error(t('Review inválida.'));
   const { valid, error, value } = normalizeReviewResponse({ response: responseText });
   if (!valid) throw new Error(error);
   await updateDoc(doc(db, COL.reviews, reviewId), {
@@ -352,7 +353,7 @@ export async function respondToArenaReview(reviewId, responseText, actor) {
 
 /** Manager remove sua resposta (volta o review ao estado sem response). */
 export async function deleteArenaReviewResponse(reviewId, actor) {
-  if (!db || !reviewId) throw new Error('Review inválida.');
+  if (!db || !reviewId) throw new Error(t('Review inválida.'));
   await updateDoc(doc(db, COL.reviews, reviewId), {
     response: null,
     responded_at: null,
@@ -383,11 +384,11 @@ export async function listArenaCourts(arenaId) {
  * automático (max+1), faz audit log. Lança erro se input inválido.
  */
 export async function createArenaCourt(arenaId, input, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   const { valid, errors, value } = normalizeCourtInput(input);
   if (!valid) {
     const first = Object.values(errors)[0];
-    throw new Error(first || 'Dados da quadra inválidos.');
+    throw new Error(first || t('Dados da quadra inválidos.'));
   }
   const existing = await listArenaCourts(arenaId);
   const ref = doc(collection(db, COL.courts));
@@ -411,11 +412,11 @@ export async function createArenaCourt(arenaId, input, actor) {
  * Atualiza uma quadra. Merge com normalização. Audit log best-effort.
  */
 export async function updateArenaCourt(courtId, input, actor) {
-  if (!db || !courtId) throw new Error('Quadra inválida.');
+  if (!db || !courtId) throw new Error(t('Quadra inválida.'));
   const { valid, errors, value } = normalizeCourtInput(input);
   if (!valid) {
     const first = Object.values(errors)[0];
-    throw new Error(first || 'Dados da quadra inválidos.');
+    throw new Error(first || t('Dados da quadra inválidos.'));
   }
   await updateDoc(doc(db, COL.courts, courtId), { ...value, updated_at: serverTimestamp() });
   await createAuditLog({
@@ -431,7 +432,7 @@ export async function updateArenaCourt(courtId, input, actor) {
  * histórico, o que é OK porque UI mostra o nome congelado).
  */
 export async function deleteArenaCourt(courtId, actor) {
-  if (!db || !courtId) throw new Error('Quadra inválida.');
+  if (!db || !courtId) throw new Error(t('Quadra inválida.'));
   const ref = doc(db, COL.courts, courtId);
   const snap = await getDoc(ref);
   const arenaId = snap.exists() ? snap.data().arena_id : null;
@@ -448,13 +449,13 @@ export async function deleteArenaCourt(courtId, actor) {
  * Usa batch write (all-or-nothing) pra evitar estado intermediário.
  */
 export async function reorderArenaCourts(arenaId, orderedIds, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) return;
   // Valida que todos os IDs são strings não-vazias e sem duplicatas
   const seen = new Set();
   for (const id of orderedIds) {
-    if (typeof id !== 'string' || !id) throw new Error('IDs de quadra inválidos.');
-    if (seen.has(id)) throw new Error('IDs de quadra duplicados.');
+    if (typeof id !== 'string' || !id) throw new Error(t('IDs de quadra inválidos.'));
+    if (seen.has(id)) throw new Error(t('IDs de quadra duplicados.'));
     seen.add(id);
   }
   // Aplica via setDoc merge (Firestore não tem batch.updateDoc no Web SDK
@@ -480,7 +481,7 @@ export async function reorderArenaCourts(arenaId, orderedIds, actor) {
  * idempotente, útil pra "normalizar" depois de várias edições manuais).
  */
 export async function normalizeArenaCourtsOrder(arenaId, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   const courts = await listArenaCourts(arenaId);
   const renumbered = renumberSortOrder(courts);
   const orderedIds = renumbered.map((c) => c.id);
@@ -517,11 +518,11 @@ export async function listCourtSchedules(courtId) {
  * Cria uma janela de horário recorrente. Audit log best-effort.
  */
 export async function createCourtSchedule(arenaId, courtId, input, actor) {
-  if (!db || !arenaId || !courtId) throw new Error('Arena ou quadra inválida.');
+  if (!db || !arenaId || !courtId) throw new Error(t('Arena ou quadra inválida.'));
   const { valid, errors, value } = normalizeScheduleInput(input);
   if (!valid) {
     const first = Object.values(errors)[0];
-    throw new Error(first || 'Dados do horário inválidos.');
+    throw new Error(first || t('Dados do horário inválidos.'));
   }
   const ref = doc(collection(db, COL.court_schedules));
   await setDoc(ref, {
@@ -543,11 +544,11 @@ export async function createCourtSchedule(arenaId, courtId, input, actor) {
  * Atualiza uma janela de horário. Audit log best-effort.
  */
 export async function updateCourtSchedule(scheduleId, input, actor) {
-  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  if (!db || !scheduleId) throw new Error(t('Horário inválido.'));
   const { valid, errors, value } = normalizeScheduleInput(input);
   if (!valid) {
     const first = Object.values(errors)[0];
-    throw new Error(first || 'Dados do horário inválidos.');
+    throw new Error(first || t('Dados do horário inválidos.'));
   }
   await updateDoc(doc(db, COL.court_schedules, scheduleId), {
     ...value,
@@ -566,7 +567,7 @@ export async function updateCourtSchedule(scheduleId, input, actor) {
  * arena_id+court_id+date, não por schedule_id).
  */
 export async function deleteCourtSchedule(scheduleId, actor) {
-  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  if (!db || !scheduleId) throw new Error(t('Horário inválido.'));
   const ref = doc(db, COL.court_schedules, scheduleId);
   const snap = await getDoc(ref);
   const meta = snap.exists() ? snap.data() : null;
@@ -582,9 +583,9 @@ export async function deleteCourtSchedule(scheduleId, actor) {
 /* ---------------------- Unavailabilities (Sprint 5) ----------------- */
 
 export async function addArenaUnavailability(arenaId, input, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   if (!input.date || !input.start_time || !input.end_time) {
-    throw new Error('Data, hora início e fim são obrigatórios.');
+    throw new Error(t('Data, hora início e fim são obrigatórios.'));
   }
   const ref = await addDoc(collection(db, COL.unavailabilities), {
     arena_id: arenaId,
@@ -606,7 +607,7 @@ export async function addArenaUnavailability(arenaId, input, actor) {
 }
 
 export async function deleteArenaUnavailability(unavId, actor) {
-  if (!db || !unavId) throw new Error('Indisponibilidade inválida.');
+  if (!db || !unavId) throw new Error(t('Indisponibilidade inválida.'));
   const snap = await getDoc(doc(db, COL.unavailabilities, unavId));
   const meta = snap.exists() ? snap.data() : null;
   await deleteDoc(doc(db, COL.unavailabilities, unavId));
@@ -648,7 +649,7 @@ export async function listArenaUnavailabilities(arenaId, { from, to } = {}) {
 /* ---------------------- Inventory (Mercado - Sprint 5) ------------ */
 
 export async function createInventoryProduct(arenaId, input, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   const { valid, error, value } = normalizeInventoryProduct(input);
   if (!valid) throw new Error(error);
   const ref = await addDoc(collection(db, COL.inventory_products), {
@@ -672,7 +673,7 @@ export async function listInventoryProducts(arenaId, { activeOnly = false } = {}
 }
 
 export async function updateInventoryProduct(productId, updates, actor) {
-  if (!db || !productId) throw new Error('Produto inválido.');
+  if (!db || !productId) throw new Error(t('Produto inválido.'));
   await updateDoc(doc(db, COL.inventory_products, productId), {
     ...updates, updated_at: serverTimestamp(), updated_by: actor?.uid || null,
   });
@@ -721,13 +722,13 @@ export async function refreshShopStock(arenaId, productId) {
 }
 
 export async function deleteInventoryProduct(productId, actor) {
-  if (!db || !productId) throw new Error('Produto inválido.');
+  if (!db || !productId) throw new Error(t('Produto inválido.'));
   await deleteDoc(doc(db, COL.inventory_products, productId));
   await createAuditLog({ action: 'arena_inventory_product_deleted', actor, details: { product_id: productId } });
 }
 
 export async function addInventoryEntry(arenaId, input, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   const { valid, error, value } = normalizeInventoryEntry(input);
   if (!valid) throw new Error(error);
   const ref = await addDoc(collection(db, COL.inventory_entries), {
@@ -753,7 +754,7 @@ export async function listInventoryEntries(arenaId, { from, to, productId } = {}
 }
 
 export async function addInventoryExit(arenaId, input, actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   const { valid, error, value } = normalizeInventoryExit(input);
   if (!valid) throw new Error(error);
   const ref = await addDoc(collection(db, COL.inventory_exits), {

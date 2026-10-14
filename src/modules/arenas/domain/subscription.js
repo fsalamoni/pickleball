@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Mensalidade da arena — domínio puro, sem I/O.
  *
@@ -29,9 +30,9 @@ export const SUBSCRIPTION_STATUS = Object.freeze({
 });
 
 export const SUBSCRIPTION_STATUS_LABEL = Object.freeze({
-  [SUBSCRIPTION_STATUS.ACTIVE]: 'Em dia',
-  [SUBSCRIPTION_STATUS.OVERDUE]: 'Em atraso',
-  [SUBSCRIPTION_STATUS.CANCELLED]: 'Encerrada',
+  [SUBSCRIPTION_STATUS.ACTIVE]: tk('Em dia'),
+  [SUBSCRIPTION_STATUS.OVERDUE]: tk('Em atraso'),
+  [SUBSCRIPTION_STATUS.CANCELLED]: tk('Encerrada'),
 });
 
 /** 'YYYY-MM' de uma data ISO ('2026-08-13' → '2026-08'). */
@@ -133,7 +134,7 @@ export function subscriptionState(sub, hoje = todayISO()) {
   const mesAtual = monthKey(hoje);
   const vazio = {
     status: SUBSCRIPTION_STATUS.CANCELLED,
-    label: SUBSCRIPTION_STATUS_LABEL[SUBSCRIPTION_STATUS.CANCELLED],
+    label: t(SUBSCRIPTION_STATUS_LABEL[SUBSCRIPTION_STATUS.CANCELLED]),
     currentMonth: mesAtual,
     dueDate: '',
     paidCurrent: false,
@@ -158,7 +159,7 @@ export function subscriptionState(sub, hoje = todayISO()) {
   const status = emAberto.length === 0 ? SUBSCRIPTION_STATUS.ACTIVE : SUBSCRIPTION_STATUS.OVERDUE;
   return {
     status,
-    label: SUBSCRIPTION_STATUS_LABEL[status],
+    label: t(SUBSCRIPTION_STATUS_LABEL[status]),
     currentMonth: mesAtual,
     dueDate: vencimentoAtual,
     paidCurrent: pagos.has(mesAtual),

@@ -21,6 +21,7 @@
  */
 
 import { ARENA_MODULE_ID, ARENA_MODULE_META } from './modules.js';
+import { tk } from '@/core/i18n';
 
 /**
  * Estágio de cada módulo. Governa o que o admin da plataforma pode liberar.
@@ -45,33 +46,33 @@ export const ARENA_MODULE_STATUS = Object.freeze({
 
 export const ARENA_MODULE_STATUS_META = Object.freeze({
   [ARENA_MODULE_STATUS.READY]: {
-    label: 'Disponível',
+    label: tk('Disponível'),
     tone: 'green',
-    hint: 'Pronto para liberar às arenas.',
+    hint: tk('Pronto para liberar às arenas.'),
     releasable: true,
   },
   [ARENA_MODULE_STATUS.BETA]: {
-    label: 'Novo',
+    label: tk('Novo'),
     tone: 'amber',
-    hint: 'Funciona, mas é recente — libere para poucas arenas primeiro.',
+    hint: tk('Funciona, mas é recente — libere para poucas arenas primeiro.'),
     releasable: true,
   },
   [ARENA_MODULE_STATUS.PLANNED]: {
-    label: 'Em construção',
+    label: tk('Em construção'),
     tone: 'neutral',
-    hint: 'Ainda não existe no código. Não pode ser liberado.',
+    hint: tk('Ainda não existe no código. Não pode ser liberado.'),
     releasable: false,
   },
   [ARENA_MODULE_STATUS.EXTERNAL]: {
-    label: 'Depende de terceiro',
+    label: tk('Depende de terceiro'),
     tone: 'purple',
-    hint: 'Exige hardware ou infraestrutura fora da plataforma.',
+    hint: tk('Exige hardware ou infraestrutura fora da plataforma.'),
     releasable: true,
   },
   [ARENA_MODULE_STATUS.RETIRED]: {
-    label: 'Aposentado',
+    label: tk('Aposentado'),
     tone: 'neutral',
-    hint: 'Foi substituído por outra funcionalidade. Não pode mais ser liberado.',
+    hint: tk('Foi substituído por outra funcionalidade. Não pode mais ser liberado.'),
     releasable: false,
   },
 });
@@ -99,20 +100,20 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MATCHMAKING]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Encher horário vago juntando gente do mesmo nível.',
+    summary: tk('Encher horário vago juntando gente do mesmo nível.'),
     benefit: {
-      [ARENA]: 'Transforma quadra parada em receita, sem ninguém precisar organizar o grupo.',
-      [ATHLETE]: 'Acha jogo do seu nível na arena, mesmo sem ter com quem ir.',
+      [ARENA]: tk('Transforma quadra parada em receita, sem ninguém precisar organizar o grupo.'),
+      [ATHLETE]: tk('Acha jogo do seu nível na arena, mesmo sem ter com quem ir.'),
     },
     collections: ['arena_open_slots', 'arena_waitlist', 'arena_matches'],
   },
   [ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'A arena publica um horário com vagas; os atletas do nível entram.',
+    summary: tk('A arena publica um horário com vagas; os atletas do nível entram.'),
     benefit: {
-      [ARENA]: 'Publique o horário ocioso e deixe os atletas preencherem sozinhos.',
-      [ATHLETE]: 'Entre em jogos abertos na sua faixa de nível, um clique.',
+      [ARENA]: tk('Publique o horário ocioso e deixe os atletas preencherem sozinhos.'),
+      [ATHLETE]: tk('Entre em jogos abertos na sua faixa de nível, um clique.'),
     },
     manage: '/arenas/:arenaId/gerir/open-match',
     public: '/arenas/:arenaId/open-match',
@@ -123,20 +124,20 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     config: [
       {
         key: 'level_tolerance',
-        label: 'Diferença de nível aceita',
+        label: tk('Diferença de nível aceita'),
         type: 'number',
         default: 1,
         min: 0.25,
         max: 3,
         step: 0.25,
-        hint: 'Na régua 2.0–8.0. Quanto menor, mais parelho o jogo.',
+        hint: tk('Na régua 2.0–8.0. Quanto menor, mais parelho o jogo.'),
       },
       {
         key: 'auto_confirm',
-        label: 'Confirmar sem aprovação da arena',
+        label: tk('Confirmar sem aprovação da arena'),
         type: 'boolean',
         default: true,
-        hint: 'Desligado, cada inscrição espera o aval da arena.',
+        hint: tk('Desligado, cada inscrição espera o aval da arena.'),
       },
     ],
     collections: ['arena_open_slots'],
@@ -144,10 +145,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MATCHMAKING_PARTNER_FINDER]: {
     status: READY,
     audience: [ATHLETE],
-    summary: 'O atleta procura parceiro ou adversário dentro da arena.',
+    summary: tk('O atleta procura parceiro ou adversário dentro da arena.'),
     benefit: {
-      [ARENA]: 'Quem não tem dupla deixa de desistir da reserva.',
-      [ATHLETE]: 'Encontre alguém do seu nível que também joga aqui.',
+      [ARENA]: tk('Quem não tem dupla deixa de desistir da reserva.'),
+      [ATHLETE]: tk('Encontre alguém do seu nível que também joga aqui.'),
     },
     public: '/arenas/:arenaId/matchmaking',
     // A porta fica DENTRO da seção "Jogos abertos" da página da arena ("veja
@@ -158,21 +159,21 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MATCHMAKING_WAITLIST]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Horário lotado vira fila: quem desiste libera para o próximo.',
+    summary: tk('Horário lotado vira fila: quem desiste libera para o próximo.'),
     benefit: {
-      [ARENA]: 'Cancelamento deixa de virar buraco na grade.',
-      [ATHLETE]: 'Entre na fila e seja avisado assim que vagar.',
+      [ARENA]: tk('Cancelamento deixa de virar buraco na grade.'),
+      [ATHLETE]: tk('Entre na fila e seja avisado assim que vagar.'),
     },
     config: [
       {
         key: 'hold_minutes',
-        label: 'Tempo para aceitar a vaga',
+        label: tk('Tempo para aceitar a vaga'),
         type: 'number',
         default: 60,
         min: 5,
         max: 1440,
         step: 5,
-        hint: 'Depois disso a vaga passa para o próximo da fila.',
+        hint: tk('Depois disso a vaga passa para o próximo da fila.'),
       },
     ],
     collections: ['arena_waitlist'],
@@ -182,10 +183,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MEMBERS]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Uma relação contínua com quem joga sempre aqui.',
+    summary: tk('Uma relação contínua com quem joga sempre aqui.'),
     benefit: {
-      [ARENA]: 'Saia da venda avulsa: quem é de casa tem cadastro, histórico e benefício.',
-      [ATHLETE]: 'Seja reconhecido na arena em que você joga sempre.',
+      [ARENA]: tk('Saia da venda avulsa: quem é de casa tem cadastro, histórico e benefício.'),
+      [ATHLETE]: tk('Seja reconhecido na arena em que você joga sempre.'),
     },
     manage: '/arenas/:arenaId/gerir/membros',
     public: '/arenas/:arenaId/membros',
@@ -199,10 +200,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MEMBERS_TIERS]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Níveis de membro (Bronze a Platina) com benefício em cada um.',
+    summary: tk('Níveis de membro (Bronze a Platina) com benefício em cada um.'),
     benefit: {
-      [ARENA]: 'Premie quem joga mais, automaticamente, pelo histórico de reservas.',
-      [ATHLETE]: 'Suba de nível na arena e ganhe desconto e prioridade.',
+      [ARENA]: tk('Premie quem joga mais, automaticamente, pelo histórico de reservas.'),
+      [ATHLETE]: tk('Suba de nível na arena e ganhe desconto e prioridade.'),
     },
     requires: [ARENA_MODULE_ID.MEMBERS],
     collections: ['arena_members', 'arena_tier_configs'],
@@ -210,10 +211,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MEMBERS_PACKAGES]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Pacote pré-pago de horas, com validade.',
+    summary: tk('Pacote pré-pago de horas, com validade.'),
     benefit: {
-      [ARENA]: 'Receba antes de o atleta jogar e garanta a frequência.',
-      [ATHLETE]: 'Compre horas com desconto e use quando quiser.',
+      [ARENA]: tk('Receba antes de o atleta jogar e garanta a frequência.'),
+      [ATHLETE]: tk('Compre horas com desconto e use quando quiser.'),
     },
     requires: [ARENA_MODULE_ID.MEMBERS],
     collections: ['arena_packages', 'arena_wallets'],
@@ -221,10 +222,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Mensalidade com renovação e cobrança por Pix.',
+    summary: tk('Mensalidade com renovação e cobrança por Pix.'),
     benefit: {
-      [ARENA]: 'Receita previsível todo mês, com controle de quem está em dia.',
-      [ATHLETE]: 'Pague uma vez por mês e jogue sem se preocupar.',
+      [ARENA]: tk('Receita previsível todo mês, com controle de quem está em dia.'),
+      [ATHLETE]: tk('Pague uma vez por mês e jogue sem se preocupar.'),
     },
     requires: [ARENA_MODULE_ID.MEMBERS],
     collections: ['arena_subscriptions'],
@@ -232,10 +233,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MEMBERS_WALLET]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Saldo do atleta na arena, com extrato.',
+    summary: tk('Saldo do atleta na arena, com extrato.'),
     benefit: {
-      [ARENA]: 'Crédito, estorno e cashback sem dinheiro trocando de mão.',
-      [ATHLETE]: 'Veja seu saldo e cada lançamento, sem discussão.',
+      [ARENA]: tk('Crédito, estorno e cashback sem dinheiro trocando de mão.'),
+      [ATHLETE]: tk('Veja seu saldo e cada lançamento, sem discussão.'),
     },
     requires: [ARENA_MODULE_ID.MEMBERS],
     collections: ['arena_wallets'],
@@ -245,10 +246,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.PDV]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Vender na arena o que já se vende no balcão.',
+    summary: tk('Vender na arena o que já se vende no balcão.'),
     benefit: {
-      [ARENA]: 'Água, grip e aluguel de raquete entram no caixa junto com a reserva.',
-      [ATHLETE]: 'Compre na arena pelo aplicativo, sem fila.',
+      [ARENA]: tk('Água, grip e aluguel de raquete entram no caixa junto com a reserva.'),
+      [ATHLETE]: tk('Compre na arena pelo aplicativo, sem fila.'),
     },
     manage: '/arenas/:arenaId/gerir/pdv',
     public: '/arenas/:arenaId/loja',
@@ -261,10 +262,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.PDV_CATALOG]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'A vitrine da loja na página da arena, com preço e estoque.',
+    summary: tk('A vitrine da loja na página da arena, com preço e estoque.'),
     benefit: {
-      [ARENA]: 'Cadastre uma vez no Mercado, venda sempre — e o estoque baixa sozinho na entrega.',
-      [ATHLETE]: 'Veja o que a arena vende antes de chegar.',
+      [ARENA]: tk('Cadastre uma vez no Mercado, venda sempre — e o estoque baixa sozinho na entrega.'),
+      [ATHLETE]: tk('Veja o que a arena vende antes de chegar.'),
     },
     requires: [ARENA_MODULE_ID.PDV],
     collections: ['arena_inventory_products'],
@@ -272,10 +273,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.PDV_PIX_NATIVE]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'QR Pix gerado no aplicativo, sem maquininha.',
+    summary: tk('QR Pix gerado no aplicativo, sem maquininha.'),
     benefit: {
-      [ARENA]: 'Receba por Pix com a chave da arena, sem taxa de adquirente.',
-      [ATHLETE]: 'Pague pelo celular, na hora.',
+      [ARENA]: tk('Receba por Pix com a chave da arena, sem taxa de adquirente.'),
+      [ATHLETE]: tk('Pague pelo celular, na hora.'),
     },
     requires: [ARENA_MODULE_ID.PDV],
     collections: ['arena_payments'],
@@ -283,10 +284,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.PDV_SPLIT]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Dividir a conta entre os jogadores da partida.',
+    summary: tk('Dividir a conta entre os jogadores da partida.'),
     benefit: {
-      [ARENA]: 'A conta fecha sozinha, sem alguém ficar devendo ao grupo.',
-      [ATHLETE]: 'Divida a quadra com a turma sem calculadora no vestiário.',
+      [ARENA]: tk('A conta fecha sozinha, sem alguém ficar devendo ao grupo.'),
+      [ATHLETE]: tk('Divida a quadra com a turma sem calculadora no vestiário.'),
     },
     requires: [ARENA_MODULE_ID.PDV],
     collections: ['arena_sales', 'arena_payments'],
@@ -296,11 +297,11 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.CLASSES]: {
     status: READY,
     audience: [ATHLETE, COACH, ARENA],
-    summary: 'A agenda de aulas da arena, com os professores dela.',
+    summary: tk('A agenda de aulas da arena, com os professores dela.'),
     benefit: {
-      [ARENA]: 'A aula deixa de ser combinada por fora e passa a ocupar a grade.',
-      [COACH]: 'Sua agenda na arena, com os alunos e o histórico no mesmo lugar.',
-      [ATHLETE]: 'Marque aula com o professor da arena direto pelo aplicativo.',
+      [ARENA]: tk('A aula deixa de ser combinada por fora e passa a ocupar a grade.'),
+      [COACH]: tk('Sua agenda na arena, com os alunos e o histórico no mesmo lugar.'),
+      [ATHLETE]: tk('Marque aula com o professor da arena direto pelo aplicativo.'),
     },
     manage: '/arenas/:arenaId/gerir/aulas',
     public: '/arenas/:arenaId/aulas',
@@ -312,11 +313,11 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.CLASSES_CATALOG]: {
     status: READY,
     audience: [ATHLETE, COACH],
-    summary: 'Vitrine dos professores da arena, com nível, preço e horários.',
+    summary: tk('Vitrine dos professores da arena, com nível, preço e horários.'),
     benefit: {
-      [ARENA]: 'Quem chega novo encontra com quem aprender, sem perguntar no balcão.',
-      [COACH]: 'Um perfil na arena que traz aluno.',
-      [ATHLETE]: 'Compare professores por preço, nível e horário.',
+      [ARENA]: tk('Quem chega novo encontra com quem aprender, sem perguntar no balcão.'),
+      [COACH]: tk('Um perfil na arena que traz aluno.'),
+      [ATHLETE]: tk('Compare professores por preço, nível e horário.'),
     },
     requires: [ARENA_MODULE_ID.CLASSES],
     collections: ['arena_coaches'],
@@ -324,11 +325,11 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.CLASSES_PACKAGES]: {
     status: READY,
     audience: [ATHLETE, COACH],
-    summary: 'Pacotes de aula (4 aulas por um valor).',
+    summary: tk('Pacotes de aula (4 aulas por um valor).'),
     benefit: {
-      [ARENA]: 'O aluno se compromete com o ciclo, e a quadra fica reservada.',
-      [COACH]: 'Venda o acompanhamento, não a aula avulsa.',
-      [ATHLETE]: 'Feche um pacote e economize.',
+      [ARENA]: tk('O aluno se compromete com o ciclo, e a quadra fica reservada.'),
+      [COACH]: tk('Venda o acompanhamento, não a aula avulsa.'),
+      [ATHLETE]: tk('Feche um pacote e economize.'),
     },
     requires: [ARENA_MODULE_ID.CLASSES],
     collections: ['arena_classes', 'arena_class_bookings'],
@@ -336,22 +337,22 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.CLASSES_MARKETPLACE]: {
     status: READY,
     audience: [COACH, ARENA],
-    summary: 'Professor de fora se candidata a dar aula na arena.',
+    summary: tk('Professor de fora se candidata a dar aula na arena.'),
     benefit: {
-      [ARENA]: 'Amplie a oferta de aulas sem contratar, com comissão definida.',
-      [COACH]: 'Ofereça suas aulas em arenas onde você ainda não dá aula.',
+      [ARENA]: tk('Amplie a oferta de aulas sem contratar, com comissão definida.'),
+      [COACH]: tk('Ofereça suas aulas em arenas onde você ainda não dá aula.'),
     },
     requires: [ARENA_MODULE_ID.CLASSES],
     config: [
       {
         key: 'commission_pct',
-        label: 'Comissão da arena (%)',
+        label: tk('Comissão da arena (%)'),
         type: 'number',
         default: 20,
         min: 0,
         max: 90,
         step: 1,
-        hint: 'Percentual que fica com a arena em cada aula do professor parceiro.',
+        hint: tk('Percentual que fica com a arena em cada aula do professor parceiro.'),
       },
     ],
     collections: ['arena_coaches'],
@@ -366,10 +367,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.LEAGUES]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'O ranking da casa: jogos abertos e torneios da casa somados por temporada.',
+    summary: tk('O ranking da casa: jogos abertos e torneios da casa somados por temporada.'),
     benefit: {
-      [ARENA]: 'Dê motivo para voltar toda semana — cada jogo aberto com placar vale pontos.',
-      [ATHLETE]: 'Veja quem lidera a sua arena e onde você está, jogo a jogo.',
+      [ARENA]: tk('Dê motivo para voltar toda semana — cada jogo aberto com placar vale pontos.'),
+      [ATHLETE]: tk('Veja quem lidera a sua arena e onde você está, jogo a jogo.'),
     },
     manage: '/arenas/:arenaId/gerir/torneios',
     public: '/arenas/:arenaId/torneios',
@@ -382,10 +383,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.LEAGUES_INTERNAL]: {
     status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Aposentado: o jogo aberto faz o que o torneio interno fazia, e os torneios da casa passaram a ser os da plataforma.',
+    summary: tk('Aposentado: o jogo aberto faz o que o torneio interno fazia, e os torneios da casa passaram a ser os da plataforma.'),
     benefit: {
-      [ARENA]: 'Use o jogo aberto (com placar) e os torneios da plataforma sediados aqui.',
-      [ATHLETE]: 'Os jogos abertos e os torneios da casa contam no ranking da casa.',
+      [ARENA]: tk('Use o jogo aberto (com placar) e os torneios da plataforma sediados aqui.'),
+      [ATHLETE]: tk('Os jogos abertos e os torneios da casa contam no ranking da casa.'),
     },
     requires: [ARENA_MODULE_ID.LEAGUES],
     collections: ['arena_internal_tournaments'],
@@ -393,10 +394,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.LEAGUES_LADDER]: {
     status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Aposentado: o ladder virou o próprio Ranking da casa.',
+    summary: tk('Aposentado: o ladder virou o próprio Ranking da casa.'),
     benefit: {
-      [ARENA]: 'O ranking da casa soma cada resultado sozinho.',
-      [ATHLETE]: 'Suba no ranking da casa jogando.',
+      [ARENA]: tk('O ranking da casa soma cada resultado sozinho.'),
+      [ATHLETE]: tk('Suba no ranking da casa jogando.'),
     },
     requires: [ARENA_MODULE_ID.LEAGUES],
     collections: ['arena_ladders'],
@@ -404,10 +405,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.LEAGUES_OPEN_PLAY]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Sessões de jogo livre por categoria e dia.',
+    summary: tk('Sessões de jogo livre por categoria e dia.'),
     benefit: {
-      [ARENA]: 'Grade fixa de open play, com inscrição e presença controladas.',
-      [ATHLETE]: 'Chegue e jogue: já existe uma sessão do seu nível.',
+      [ARENA]: tk('Grade fixa de open play, com inscrição e presença controladas.'),
+      [ATHLETE]: tk('Chegue e jogue: já existe uma sessão do seu nível.'),
     },
     requires: [ARENA_MODULE_ID.LEAGUES],
     collections: ['game_days'],
@@ -415,10 +416,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.LEAGUES_PRIZING]: {
     status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Aposentado junto com o torneio interno.',
+    summary: tk('Aposentado junto com o torneio interno.'),
     benefit: {
-      [ARENA]: 'A premiação dos torneios da casa é configurada no próprio torneio da plataforma.',
-      [ATHLETE]: 'Veja o que está em jogo na página do torneio.',
+      [ARENA]: tk('A premiação dos torneios da casa é configurada no próprio torneio da plataforma.'),
+      [ATHLETE]: tk('Veja o que está em jogo na página do torneio.'),
     },
     requires: [ARENA_MODULE_ID.LEAGUES, ARENA_MODULE_ID.LEAGUES_INTERNAL],
     collections: ['arena_internal_tournaments'],
@@ -428,10 +429,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Trazer de volta quem já veio.',
+    summary: tk('Trazer de volta quem já veio.'),
     benefit: {
-      [ARENA]: 'Falar com quem já joga aqui custa menos do que buscar gente nova.',
-      [ATHLETE]: 'Receba as promoções da arena que você frequenta.',
+      [ARENA]: tk('Falar com quem já joga aqui custa menos do que buscar gente nova.'),
+      [ATHLETE]: tk('Receba as promoções da arena que você frequenta.'),
     },
     manage: '/arenas/:arenaId/gerir/marketing',
     // Integrado à arena (2026-09-24): a gestão é a seção Marketing da Central
@@ -443,10 +444,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING_CAMPAIGNS]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Avisos segmentados para grupos de atletas.',
+    summary: tk('Avisos segmentados para grupos de atletas.'),
     benefit: {
-      [ARENA]: 'Fale só com quem interessa: sumidos, membros, gente de um nível.',
-      [ATHLETE]: 'Só recebe o que tem a ver com você.',
+      [ARENA]: tk('Fale só com quem interessa: sumidos, membros, gente de um nível.'),
+      [ATHLETE]: tk('Só recebe o que tem a ver com você.'),
     },
     requires: [ARENA_MODULE_ID.MARKETING],
     collections: ['arena_campaigns', 'notifications'],
@@ -454,10 +455,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING_LOYALTY]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Programa de pontos por reserva e por consumo.',
+    summary: tk('Programa de pontos por reserva e por consumo.'),
     benefit: {
-      [ARENA]: 'A décima reserva sai de graça — e é por isso que existe a nona.',
-      [ATHLETE]: 'Acumule pontos jogando e troque por hora de quadra.',
+      [ARENA]: tk('A décima reserva sai de graça — e é por isso que existe a nona.'),
+      [ATHLETE]: tk('Acumule pontos jogando e troque por hora de quadra.'),
     },
     requires: [ARENA_MODULE_ID.MARKETING],
     collections: ['arena_members'],
@@ -465,10 +466,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING_COUPONS]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Cupons de desconto com validade e limite de uso.',
+    summary: tk('Cupons de desconto com validade e limite de uso.'),
     benefit: {
-      [ARENA]: 'Encha o horário fraco com um desconto que você controla.',
-      [ATHLETE]: 'Use o cupom da arena direto na reserva.',
+      [ARENA]: tk('Encha o horário fraco com um desconto que você controla.'),
+      [ATHLETE]: tk('Use o cupom da arena direto na reserva.'),
     },
     requires: [ARENA_MODULE_ID.MARKETING],
     collections: ['arena_coupons'],
@@ -476,10 +477,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING_REFERRAL]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Indique e ganhe: crédito para quem indica e para quem chega.',
+    summary: tk('Indique e ganhe: crédito para quem indica e para quem chega.'),
     benefit: {
-      [ARENA]: 'Cliente novo trazido por quem já confia em você.',
-      [ATHLETE]: 'Chame um amigo e os dois ganham crédito.',
+      [ARENA]: tk('Cliente novo trazido por quem já confia em você.'),
+      [ATHLETE]: tk('Chame um amigo e os dois ganham crédito.'),
     },
     requires: [ARENA_MODULE_ID.MARKETING],
     collections: ['arena_referrals'],
@@ -487,10 +488,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MARKETING_NPS]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Pergunta de satisfação depois da visita.',
+    summary: tk('Pergunta de satisfação depois da visita.'),
     benefit: {
-      [ARENA]: 'Descubra o problema antes de virar avaliação pública ruim.',
-      [ATHLETE]: 'Uma pergunta só, e a arena escuta.',
+      [ARENA]: tk('Descubra o problema antes de virar avaliação pública ruim.'),
+      [ATHLETE]: tk('Uma pergunta só, e a arena escuta.'),
     },
     requires: [ARENA_MODULE_ID.MARKETING],
     collections: ['arena_nps_responses'],
@@ -500,9 +501,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.OPERATIONS]: {
     status: READY,
     audience: [ARENA],
-    summary: 'O dia a dia de quem toca a arena.',
+    summary: tk('O dia a dia de quem toca a arena.'),
     benefit: {
-      [ARENA]: 'Abertura, fechamento, conserto e estoque deixam de morar no WhatsApp.',
+      [ARENA]: tk('Abertura, fechamento, conserto e estoque deixam de morar no WhatsApp.'),
     },
     manage: '/arenas/:arenaId/gerir/operacoes',
     // Seção Operação da Central (Hoje · Rotinas · Manutenção) e o plantão em
@@ -513,9 +514,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.OPERATIONS_CHECKLIST]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Checklist de abertura e fechamento, com responsável.',
+    summary: tk('Checklist de abertura e fechamento, com responsável.'),
     benefit: {
-      [ARENA]: 'Todo turno cumpre a mesma rotina, e fica registrado quem cumpriu.',
+      [ARENA]: tk('Todo turno cumpre a mesma rotina, e fica registrado quem cumpriu.'),
     },
     requires: [ARENA_MODULE_ID.OPERATIONS],
     collections: ['arena_checklists'],
@@ -523,9 +524,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.OPERATIONS_MAINTENANCE]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Ordens de manutenção ligadas à quadra.',
+    summary: tk('Ordens de manutenção ligadas à quadra.'),
     benefit: {
-      [ARENA]: 'Conserto vira tarefa com prazo — e pode fechar a quadra no calendário.',
+      [ARENA]: tk('Conserto vira tarefa com prazo — e pode fechar a quadra no calendário.'),
     },
     requires: [ARENA_MODULE_ID.OPERATIONS],
     collections: ['arena_maintenance_orders', 'arena_unavailabilities'],
@@ -533,9 +534,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.OPERATIONS_INVENTORY]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Estoque com alerta de mínimo.',
+    summary: tk('Estoque com alerta de mínimo.'),
     benefit: {
-      [ARENA]: 'Nunca mais acabar a água no sábado à tarde.',
+      [ARENA]: tk('Nunca mais acabar a água no sábado à tarde.'),
     },
     requires: [ARENA_MODULE_ID.OPERATIONS],
     collections: ['arena_inventory_products', 'arena_inventory_entries', 'arena_inventory_exits'],
@@ -543,9 +544,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.OPERATIONS_STAFF]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Equipe da arena com turno e função.',
+    summary: tk('Equipe da arena com turno e função.'),
     benefit: {
-      [ARENA]: 'Saiba quem estava de plantão quando algo aconteceu.',
+      [ARENA]: tk('Saiba quem estava de plantão quando algo aconteceu.'),
     },
     requires: [ARENA_MODULE_ID.OPERATIONS],
     collections: ['arena_settings'],
@@ -555,9 +556,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.IOT]: {
     status: BETA,
     audience: [ARENA],
-    summary: 'Equipamentos da arena conectados ao sistema.',
+    summary: tk('Equipamentos da arena conectados ao sistema.'),
     benefit: {
-      [ARENA]: 'Totem, luz e sensor no mesmo cadastro, ligados às quadras.',
+      [ARENA]: tk('Totem, luz e sensor no mesmo cadastro, ligados às quadras.'),
     },
     manage: '/arenas/:arenaId/gerir/avancado',
     // Aba Equipamentos da seção Operação.
@@ -567,10 +568,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.IOT_QR_KIOSK]: {
     status: BETA,
     audience: [ATHLETE, ARENA],
-    summary: 'Totem de check-in por QR na entrada.',
+    summary: tk('Totem de check-in por QR na entrada.'),
     benefit: {
-      [ARENA]: 'Presença confirmada sem ninguém no balcão — e no-show medido de verdade.',
-      [ATHLETE]: 'Chegou, apontou a câmera, entrou.',
+      [ARENA]: tk('Presença confirmada sem ninguém no balcão — e no-show medido de verdade.'),
+      [ATHLETE]: tk('Chegou, apontou a câmera, entrou.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
     manage: '/arenas/:arenaId/gerir/presenca',
@@ -583,9 +584,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.IOT_LIGHTING]: {
     status: EXTERNAL,
     audience: [ARENA],
-    summary: 'Acender e apagar a quadra pelo aplicativo.',
+    summary: tk('Acender e apagar a quadra pelo aplicativo.'),
     benefit: {
-      [ARENA]: 'A luz acompanha a reserva. Exige o controlador do fabricante.',
+      [ARENA]: tk('A luz acompanha a reserva. Exige o controlador do fabricante.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
     externalNote:
@@ -596,21 +597,21 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.IOT_SENSORS]: {
     status: EXTERNAL,
     audience: [ARENA],
-    summary: 'Sensor de presença: uso real contra uso reservado.',
+    summary: tk('Sensor de presença: uso real contra uso reservado.'),
     benefit: {
-      [ARENA]: 'Descubra o horário que é reservado e não é usado. Exige o sensor instalado.',
+      [ARENA]: tk('Descubra o horário que é reservado e não é usado. Exige o sensor instalado.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
-    externalNote: 'Depende de sensor físico que envie leitura para a plataforma.',
+    externalNote: tk('Depende de sensor físico que envie leitura para a plataforma.'),
     collections: ['arena_devices'],
   },
   [ARENA_MODULE_ID.IOT_VIDEO_REPLAY]: {
     status: EXTERNAL,
     audience: [ATHLETE, ARENA],
-    summary: 'Câmera na quadra com replay do ponto.',
+    summary: tk('Câmera na quadra com replay do ponto.'),
     benefit: {
-      [ARENA]: 'Serviço a mais para vender. Exige câmera e armazenamento de vídeo.',
-      [ATHLETE]: 'Reveja o ponto depois do jogo.',
+      [ARENA]: tk('Serviço a mais para vender. Exige câmera e armazenamento de vídeo.'),
+      [ATHLETE]: tk('Reveja o ponto depois do jogo.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
     externalNote:
@@ -623,9 +624,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MULTI_UNIT]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Várias arenas sob a mesma rede.',
+    summary: tk('Várias arenas sob a mesma rede.'),
     benefit: {
-      [ARENA]: 'Uma rede com várias unidades, olhada como um negócio só.',
+      [ARENA]: tk('Uma rede com várias unidades, olhada como um negócio só.'),
     },
     manage: '/arenas/:arenaId/gerir/avancado',
     // Aba Rede de Desempenho.
@@ -635,9 +636,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MULTI_UNIT_NETWORK]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Cadastro da rede e das unidades que fazem parte.',
+    summary: tk('Cadastro da rede e das unidades que fazem parte.'),
     benefit: {
-      [ARENA]: 'As unidades passam a se reconhecer como parte do mesmo grupo.',
+      [ARENA]: tk('As unidades passam a se reconhecer como parte do mesmo grupo.'),
     },
     requires: [ARENA_MODULE_ID.MULTI_UNIT],
     collections: ['arena_networks', 'arena_network_memberships'],
@@ -645,9 +646,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MULTI_UNIT_CONSOLIDATED_BI]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Números somados de todas as unidades.',
+    summary: tk('Números somados de todas as unidades.'),
     benefit: {
-      [ARENA]: 'Ocupação e receita da rede inteira, e a comparação entre unidades.',
+      [ARENA]: tk('Ocupação e receita da rede inteira, e a comparação entre unidades.'),
     },
     requires: [ARENA_MODULE_ID.MULTI_UNIT, ARENA_MODULE_ID.MULTI_UNIT_NETWORK],
     collections: ['arena_networks'],
@@ -655,10 +656,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.MULTI_UNIT_CROSS_BOOKING]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'O membro de uma unidade joga em qualquer outra.',
+    summary: tk('O membro de uma unidade joga em qualquer outra.'),
     benefit: {
-      [ARENA]: 'O benefício vale na rede toda, o que segura o membro.',
-      [ATHLETE]: 'Seu plano vale em todas as unidades.',
+      [ARENA]: tk('O benefício vale na rede toda, o que segura o membro.'),
+      [ATHLETE]: tk('Seu plano vale em todas as unidades.'),
     },
     requires: [ARENA_MODULE_ID.MULTI_UNIT, ARENA_MODULE_ID.MULTI_UNIT_NETWORK, ARENA_MODULE_ID.MEMBERS],
     collections: ['arena_network_memberships', 'arena_members'],
@@ -668,10 +669,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.WHITE_LABEL]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'A arena com a cara dela.',
+    summary: tk('A arena com a cara dela.'),
     benefit: {
-      [ARENA]: 'Sua marca nas telas que os seus atletas usam.',
-      [ATHLETE]: 'A página da arena com a identidade dela.',
+      [ARENA]: tk('Sua marca nas telas que os seus atletas usam.'),
+      [ATHLETE]: tk('A página da arena com a identidade dela.'),
     },
     manage: '/arenas/:arenaId/gerir/avancado',
     // Aba Marca de Perfil; a cor e o logo aparecem na página da arena.
@@ -681,10 +682,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.WHITE_LABEL_BRANDING]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Cor e logo da arena nas telas dela.',
+    summary: tk('Cor e logo da arena nas telas dela.'),
     benefit: {
-      [ARENA]: 'A página pública e o telão saem com a sua cor e o seu logo.',
-      [ATHLETE]: 'Você reconhece a arena de longe.',
+      [ARENA]: tk('A página pública e o telão saem com a sua cor e o seu logo.'),
+      [ATHLETE]: tk('Você reconhece a arena de longe.'),
     },
     requires: [ARENA_MODULE_ID.WHITE_LABEL],
     collections: ['arena_settings'],
@@ -692,9 +693,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.WHITE_LABEL_DOMAIN]: {
     status: EXTERNAL,
     audience: [ARENA],
-    summary: 'Endereço próprio (app.suaarena.com.br).',
+    summary: tk('Endereço próprio (app.suaarena.com.br).'),
     benefit: {
-      [ARENA]: 'Um endereço seu. Exige apontar o DNS e configurar o hosting.',
+      [ARENA]: tk('Um endereço seu. Exige apontar o DNS e configurar o hosting.'),
     },
     requires: [ARENA_MODULE_ID.WHITE_LABEL],
     externalNote:
@@ -706,9 +707,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.WHITE_LABEL_APP]: {
     status: PLANNED,
     audience: [ARENA],
-    summary: 'Aplicativo próprio da arena nas lojas.',
+    summary: tk('Aplicativo próprio da arena nas lojas.'),
     benefit: {
-      [ARENA]: 'Um aplicativo com o nome da arena — outro produto, não uma chave.',
+      [ARENA]: tk('Um aplicativo com o nome da arena — outro produto, não uma chave.'),
     },
     requires: [ARENA_MODULE_ID.WHITE_LABEL],
     externalNote:
@@ -721,9 +722,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.AI]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Leitura automática dos números da arena.',
+    summary: tk('Leitura automática dos números da arena.'),
     benefit: {
-      [ARENA]: 'O sistema olha o seu histórico e sugere preço e previsão.',
+      [ARENA]: tk('O sistema olha o seu histórico e sugere preço e previsão.'),
     },
     manage: '/arenas/:arenaId/gerir/avancado',
     // Aba Inteligência de Desempenho.
@@ -733,10 +734,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.AI_PRICING]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Preço sugerido por demanda de cada horário.',
+    summary: tk('Preço sugerido por demanda de cada horário.'),
     benefit: {
-      [ARENA]: 'Desconto onde sobra quadra, preço cheio onde falta — com base no seu histórico.',
-      [ATHLETE]: 'Horário vazio fica mais barato.',
+      [ARENA]: tk('Desconto onde sobra quadra, preço cheio onde falta — com base no seu histórico.'),
+      [ATHLETE]: tk('Horário vazio fica mais barato.'),
     },
     requires: [ARENA_MODULE_ID.AI],
     collections: ['bookings'],
@@ -744,10 +745,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.AI_MATCHMAKING]: {
     status: READY,
     audience: [ATHLETE],
-    summary: 'Sugestão de parceiro por afinidade de jogo.',
+    summary: tk('Sugestão de parceiro por afinidade de jogo.'),
     benefit: {
-      [ARENA]: 'Menos jogo desequilibrado, menos gente desistindo.',
-      [ATHLETE]: 'Sugestões de quem combina com o seu jogo e o seu horário.',
+      [ARENA]: tk('Menos jogo desequilibrado, menos gente desistindo.'),
+      [ATHLETE]: tk('Sugestões de quem combina com o seu jogo e o seu horário.'),
     },
     requires: [ARENA_MODULE_ID.AI, ARENA_MODULE_ID.MATCHMAKING],
     collections: ['arena_matches'],
@@ -755,9 +756,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
   [ARENA_MODULE_ID.AI_FORECAST]: {
     status: READY,
     audience: [ARENA],
-    summary: 'Previsão de ocupação e receita das próximas semanas.',
+    summary: tk('Previsão de ocupação e receita das próximas semanas.'),
     benefit: {
-      [ARENA]: 'Enxergue a semana que vem antes de ela chegar.',
+      [ARENA]: tk('Enxergue a semana que vem antes de ela chegar.'),
     },
     requires: [ARENA_MODULE_ID.AI],
     collections: ['bookings'],

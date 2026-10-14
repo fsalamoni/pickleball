@@ -33,6 +33,7 @@ import {
   ARENA_TEMPLATES_MAX, arenaTemplatesFrom, contrastRatio, isAllowedImageUrl, isArenaTemplateId,
   MIN_TEXT_CONTRAST, removeArenaTemplate, saveArenaTemplate,
 } from './bannerArt.js';
+import { t, tk } from '@/core/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Os estilos e os modelos                                           */
@@ -60,46 +61,46 @@ export const COUPON_TEXT_LIMITS = Object.freeze({
 export const COUPON_ART_TEMPLATES = Object.freeze([
   Object.freeze({
     id: 'classico',
-    name: 'Clássico',
-    description: 'Papel e tinta, como um vale de verdade. Serve para tudo.',
+    name: tk('Clássico'),
+    description: tk('Papel e tinta, como um vale de verdade. Serve para tudo.'),
     design: Object.freeze({
-      style: COUPON_ART_STYLE.CLASSICO, kicker: 'Cupom', title: '', subtitle: '',
+      style: COUPON_ART_STYLE.CLASSICO, kicker: tk('Cupom'), title: '', subtitle: '',
       bg: '#f4f1ea', fg: '#0b0b0c', accent: '#0f766e',
     }),
   }),
   Object.freeze({
     id: 'neon',
-    name: 'Neon',
-    description: 'Escuro com o verde-limão. Chama atenção em qualquer lista.',
+    name: tk('Neon'),
+    description: tk('Escuro com o verde-limão. Chama atenção em qualquer lista.'),
     design: Object.freeze({
-      style: COUPON_ART_STYLE.NEON, kicker: 'Só pelo app', title: '', subtitle: '',
+      style: COUPON_ART_STYLE.NEON, kicker: tk('Só pelo app'), title: '', subtitle: '',
       bg: '#0b0b0c', fg: '#ffffff', accent: '#d4f631',
     }),
   }),
   Object.freeze({
     id: 'quadra',
-    name: 'Quadra',
-    description: 'O verde da quadra com as linhas. Para reserva e hora grátis.',
+    name: tk('Quadra'),
+    description: tk('O verde da quadra com as linhas. Para reserva e hora grátis.'),
     design: Object.freeze({
-      style: COUPON_ART_STYLE.QUADRA, kicker: 'Para jogar mais', title: '', subtitle: '',
+      style: COUPON_ART_STYLE.QUADRA, kicker: tk('Para jogar mais'), title: '', subtitle: '',
       bg: '#0f766e', fg: '#ffffff', accent: '#fde047',
     }),
   }),
   Object.freeze({
     id: 'festa',
-    name: 'Festa',
-    description: 'Para data especial, aniversário e evento.',
+    name: tk('Festa'),
+    description: tk('Para data especial, aniversário e evento.'),
     design: Object.freeze({
-      style: COUPON_ART_STYLE.FESTA, kicker: 'Presente da casa', title: '', subtitle: '',
+      style: COUPON_ART_STYLE.FESTA, kicker: tk('Presente da casa'), title: '', subtitle: '',
       bg: '#5b21b6', fg: '#ffffff', accent: '#f0abfc',
     }),
   }),
   Object.freeze({
     id: 'sol',
-    name: 'Sol',
-    description: 'Quente: happy hour, bebida e comida.',
+    name: tk('Sol'),
+    description: tk('Quente: happy hour, bebida e comida.'),
     design: Object.freeze({
-      style: COUPON_ART_STYLE.SOL, kicker: 'Happy hour', title: '', subtitle: '',
+      style: COUPON_ART_STYLE.SOL, kicker: tk('Happy hour'), title: '', subtitle: '',
       bg: '#f97316', fg: '#0b0b0c', accent: '#fff7ed',
     }),
   }),
@@ -269,7 +270,7 @@ export function couponArtOf(coupon, override) {
 export function couponArtTexts(design = {}, doCupom = {}) {
   return {
     kicker: design.kicker || doCupom.kicker || '',
-    title: design.title || doCupom.benefit || 'Cupom',
+    title: design.title || doCupom.benefit || t('Cupom'),
     subtitle: design.subtitle || doCupom.description || '',
   };
 }
@@ -279,12 +280,12 @@ export function couponArtTexts(design = {}, doCupom = {}) {
 /* ------------------------------------------------------------------ */
 
 export const COUPON_UPLOAD_SPEC = Object.freeze({
-  noun: 'a arte do cupom',
+  noun: tk('a arte do cupom'),
   ratio: 2,
   ratioLabel: '2:1',
   recommended: Object.freeze({ width: 1200, height: 600 }),
   minimum: Object.freeze({ width: 800, height: 400 }),
-  formats: Object.freeze(['JPG', 'PNG', 'WebP']),
+  formats: Object.freeze([tk('JPG'), tk('PNG'), tk('WebP')]),
   mimeTypes: Object.freeze(['image/jpeg', 'image/png', 'image/webp']),
   idealBytes: 1 * 1024 * 1024,
   maxBytes: 5 * 1024 * 1024,
@@ -295,19 +296,19 @@ export const COUPON_UPLOAD_SPEC = Object.freeze({
 
 /** A especificação da imagem do cupom, em linhas para a tela. */
 export function couponUploadGuide(spec = COUPON_UPLOAD_SPEC) {
-  const mb = (b) => `${Math.round(b / (1024 * 1024))} MB`;
+  const mb = (b) => t('{valor} MB', { valor: Math.round(b / (1024 * 1024)) });
   return [
-    { label: 'Tamanho ideal', value: `${spec.recommended.width} × ${spec.recommended.height} px` },
-    { label: 'Proporção', value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
-    { label: 'Mínimo', value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
-    { label: 'Formatos', value: spec.formats.join(', ') },
-    { label: 'Peso', value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)})` },
-    { label: 'Código', value: 'NÃO escreva o código na imagem: a plataforma mostra o código ao lado, e quem vê toca para copiar. Assim ele nunca fica errado.' },
+    { label: t('Tamanho ideal'), value: `${spec.recommended.width} × ${spec.recommended.height} px` },
+    { label: t('Proporção'), value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
+    { label: t('Mínimo'), value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
+    { label: t('Formatos'), value: spec.formats.join(', ') },
+    { label: t('Peso'), value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)})` },
+    { label: t('Código'), value: 'NÃO escreva o código na imagem: a plataforma mostra o código ao lado, e quem vê toca para copiar. Assim ele nunca fica errado.' },
     {
-      label: 'Margem',
+      label: t('Margem'),
       value: `texto e logo dentro dos ${Math.round(spec.safeArea.width * 100)}% centrais — os cantos são arredondados`,
     },
-    { label: 'Texto', value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição' },
+    { label: t('Texto'), value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição' },
   ];
 }
 

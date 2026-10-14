@@ -35,6 +35,7 @@ import {
   normalizeMatchmakingCriteria,
 } from '@/modules/arenas/domain/matchmaking';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 function MatchCard({ candidate, score, arenaId, onChat }) {
   const tone = scoreTone(score);
@@ -42,7 +43,7 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
     <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-paper-pure p-4 transition hover:border-gray-200">
       <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
         {candidate.photo_url ? (
-          <img src={candidate.photo_url} alt={candidate.platform_name || 'Atleta'} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={candidate.photo_url} alt={candidate.platform_name || t('Atleta')} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <span className="font-display text-base font-bold text-ink">
             {(candidate.platform_name || candidate.full_name || 'A').slice(0, 1).toUpperCase()}
@@ -52,10 +53,10 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h3 className="truncate font-display text-base font-bold text-ink">
-            {candidate.platform_name || candidate.full_name || 'Atleta'}
+            {candidate.platform_name || candidate.full_name || t('Atleta')}
           </h3>
           {Number.isFinite(candidate.level) && (
-            <V2Badge tone="neutral">Nível {formatLevel(candidate.level)}</V2Badge>
+            <V2Badge tone="neutral">{t('Nível {level}', { level: formatLevel(candidate.level) })}</V2Badge>
           )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
@@ -69,7 +70,7 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
           type="button"
           onClick={() => onChat(candidate)}
           className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-ink"
-          aria-label="Abrir chat"
+          aria-label={t('Abrir chat')}
         >
           <MessageCircle className="h-4 w-4" />
         </button>
@@ -134,9 +135,9 @@ export default function V2ArenaMatchmaking() {
       <div className="mx-auto max-w-[500px]">
         <V2Surface>
           <V2EmptyState
-            title="Faça login"
-            description="Você precisa estar logado para buscar parceiros."
-            action={<V2Button asChild><Link to="/login">Entrar</Link></V2Button>}
+            title={t('Faça login')}
+            description={t('Você precisa estar logado para buscar parceiros.')}
+            action={<V2Button asChild><Link to="/login">{t('Entrar')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -152,8 +153,8 @@ export default function V2ArenaMatchmaking() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar a arena"
-            description="A conexão falhou no meio do caminho."
+            title={t('Não foi possível carregar a arena')}
+            description={t('A conexão falhou no meio do caminho.')}
             onRetry={() => recarregarArena()}
           />
         </V2Surface>
@@ -166,8 +167,8 @@ export default function V2ArenaMatchmaking() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
           <V2EmptyState
-            title="Arena não encontrada"
-            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar ao diretório</Link>}
+            title={t('Arena não encontrada')}
+            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">{t('← Voltar ao diretório')}</Link>}
           />
         </V2Surface>
       </div>
@@ -178,14 +179,14 @@ export default function V2ArenaMatchmaking() {
     return (
       <div className="mx-auto max-w-[700px]">
         <div className="mb-4">
-          <V2BackLink to={`/arenas/${arena.id}`}>Voltar à arena</V2BackLink>
+          <V2BackLink to={`/arenas/${arena.id}`}>{t('Voltar à arena')}</V2BackLink>
         </div>
         <V2Surface>
           <V2EmptyState
             icon={Users}
-            title="Busca de parceiro não está ativa nesta arena"
-            description="Esta arena ainda não ativou o recurso. Você pode procurar parceiros em outras arenas."
-            action={<V2Button asChild variant="secondary"><Link to="/arenas">Ver outras arenas</Link></V2Button>}
+            title={t('Busca de parceiro não está ativa nesta arena')}
+            description={t('Esta arena ainda não ativou o recurso. Você pode procurar parceiros em outras arenas.')}
+            action={<V2Button asChild variant="secondary"><Link to="/arenas">{t('Ver outras arenas')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -199,15 +200,15 @@ export default function V2ArenaMatchmaking() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
-        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">Voltar à arena</V2BackLink>
+        <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{t('Voltar à arena')}</V2BackLink>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-              Encontrar parceiro · {arena.name}
+              {t('Encontrar parceiro · {name}', { name: arena.name })}
             </h1>
             <p className="mt-2 font-medium text-gray-500">
-              Atletas com nível próximo do seu
-              {Number.isFinite(meuNivel) ? ` (${formatLevel(meuNivel)})` : ''}. Toque para conversar.
+              {t('Atletas com nível próximo do seu')}
+              {Number.isFinite(meuNivel) ? ` (${formatLevel(meuNivel)})` : ''}{t('. Toque para conversar.')}
             </p>
           </div>
         </div>
@@ -215,10 +216,10 @@ export default function V2ArenaMatchmaking() {
 
       {/* Filtros */}
       <V2Surface className="mb-6">
-        <h3 className="mb-3 font-display text-base font-bold text-ink">Filtros</h3>
+        <h3 className="mb-3 font-display text-base font-bold text-ink">{t('Filtros')}</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block">
-            <span className="text-xs font-bold text-gray-500">Diferença mínima de nível</span>
+            <span className="text-xs font-bold text-gray-500">{t('Diferença mínima de nível')}</span>
             <input
               type="number"
               min="0"
@@ -230,7 +231,7 @@ export default function V2ArenaMatchmaking() {
             />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-gray-500">Diferença máxima de nível</span>
+            <span className="text-xs font-bold text-gray-500">{t('Diferença máxima de nível')}</span>
             <input
               type="number"
               min="0"
@@ -242,14 +243,14 @@ export default function V2ArenaMatchmaking() {
             />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-gray-500">Preferir mesma cidade</span>
+            <span className="text-xs font-bold text-gray-500">{t('Preferir mesma cidade')}</span>
             <select
               value={criteriaInput.prefer_same_city ? 'sim' : 'nao'}
               onChange={(e) => setCriteriaInput({ ...criteriaInput, prefer_same_city: e.target.value === 'sim' })}
               className="mt-1 h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm text-ink"
             >
-              <option value="sim">Sim</option>
-              <option value="nao">Não</option>
+              <option value="sim">{t('Sim')}</option>
+              <option value="nao">{t('Não')}</option>
             </select>
           </label>
         </div>
@@ -268,19 +269,19 @@ export default function V2ArenaMatchmaking() {
         <V2Surface>
           <V2EmptyState
             icon={Search}
-            title={falhouAtletas ? 'A lista de atletas não carregou' : 'Nenhum match encontrado'}
+            title={falhouAtletas ? t('A lista de atletas não carregou') : t('Nenhum match encontrado')}
             description={falhouAtletas
-              ? 'Ninguém sumiu — o que falhou foi a consulta. Tente de novo.'
-              : 'Tente aumentar a diferença máxima de nível ou desmarcar a preferência por cidade.'}
+              ? t('Ninguém sumiu — o que falhou foi a consulta. Tente de novo.')
+              : t('Tente aumentar a diferença máxima de nível ou desmarcar a preferência por cidade.')}
             action={falhouAtletas
-              ? <button type="button" onClick={() => recarregarAtletas()} className="text-sm font-bold text-ink underline">Tentar de novo</button>
+              ? <button type="button" onClick={() => recarregarAtletas()} className="text-sm font-bold text-ink underline">{t('Tentar de novo')}</button>
               : undefined}
           />
         </V2Surface>
       ) : (
         <div>
           <p className="mb-3 text-sm text-gray-500">
-            {matches.length} sugestão{matches.length === 1 ? '' : 'ões'} para você
+            {tn(matches.length, '{n} sugestão para você', '{n} sugestões para você')}
           </p>
           <div className="space-y-2">
             {matches.map((m) => (

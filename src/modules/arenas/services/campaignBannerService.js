@@ -25,6 +25,7 @@ import {
 import { ARENA_TEMPLATES_MAX, arenaTemplatesFrom } from '../domain/bannerArt.js';
 import { todayISO } from '../domain/subscription.js';
 import { getOrCreateArenaSettings } from './v3SettingsService.js';
+import { t } from '@/core/i18n';
 
 const COL_CAMPAIGNS = 'arena_campaigns';
 const COL_SETTINGS = 'arena_settings';
@@ -69,24 +70,24 @@ export function linkDoAviso(link, { arenaId, campaignId } = {}) {
  * @returns {Promise<{ id: string, sent: number, link: string }>}
  */
 export async function publishCampaign(arenaId, input = {}, recipients = [], actor = null, { today = todayISO() } = {}) {
-  if (!db || !arenaId) throw new Error('arenaId é obrigatório.');
+  if (!db || !arenaId) throw new Error(t('arenaId é obrigatório.'));
   const nome = str(input.name).slice(0, 120);
   const mensagem = str(input.message).slice(0, 1000);
   const avisar = input.notify !== false;
-  if (!nome) throw new Error('Dê um nome à campanha.');
-  if (avisar && !mensagem) throw new Error('Escreva a mensagem do aviso.');
+  if (!nome) throw new Error(t('Dê um nome à campanha.'));
+  if (avisar && !mensagem) throw new Error(t('Escreva a mensagem do aviso.'));
 
   const banner = normalizeCampaignBanner(input.banner || null);
-  if (!banner.valid) throw new Error(primeiroErro(banner.errors) || 'Confira o banner.');
+  if (!banner.valid) throw new Error(primeiroErro(banner.errors) || t('Confira o banner.'));
   const destino = normalizeDestination(input.destination || {});
   if (!destino.valid) throw new Error(primeiroErro(destino.errors));
   const lugar = banner.value ? normalizeBannerPlacement(input, { today }) : null;
   if (lugar && !lugar.valid) throw new Error(primeiroErro(lugar.errors));
 
   const destinatarios = avisar ? [...new Set((recipients || []).filter(Boolean))] : [];
-  if (avisar && destinatarios.length === 0) throw new Error('Não há ninguém neste público.');
+  if (avisar && destinatarios.length === 0) throw new Error(t('Não há ninguém neste público.'));
   if (!avisar && !banner.value) {
-    throw new Error('Escolha um banner ou um aviso — a campanha precisa aparecer em algum lugar.');
+    throw new Error(t('Escolha um banner ou um aviso — a campanha precisa aparecer em algum lugar.'));
   }
 
   const id = doc(collection(db, COL_CAMPAIGNS)).id;
@@ -158,14 +159,14 @@ export async function getCampaign(campaignId) {
  * tocado (não há como "desenviar" uma notificação).
  */
 export async function updateCampaignBanner(campaignId, patch = {}, actor = null, { today = todayISO() } = {}) {
-  if (!db || !campaignId) throw new Error('Campanha inválida.');
+  if (!db || !campaignId) throw new Error(t('Campanha inválida.'));
   const atual = await getCampaign(campaignId);
-  if (!atual) throw new Error('Campanha não encontrada.');
+  if (!atual) throw new Error(t('Campanha não encontrada.'));
 
   const mudancas = {};
   if ('banner' in patch) {
     const banner = normalizeCampaignBanner(patch.banner || null);
-    if (!banner.valid) throw new Error(primeiroErro(banner.errors) || 'Confira o banner.');
+    if (!banner.valid) throw new Error(primeiroErro(banner.errors) || t('Confira o banner.'));
     mudancas.banner = banner.value;
   }
   if ('destination' in patch) {
@@ -254,7 +255,7 @@ export async function getArenaBannerTemplates(arenaId) {
  * `removeArenaTemplate`). A lista é conferida de novo aqui.
  */
 export async function saveArenaBannerTemplates(arenaId, lista = [], actor = null) {
-  if (!db || !arenaId) throw new Error('arenaId é obrigatório.');
+  if (!db || !arenaId) throw new Error(t('arenaId é obrigatório.'));
   const limpa = arenaTemplatesFrom({ banner_templates: lista }).slice(0, ARENA_TEMPLATES_MAX).map((t) => ({
     id: t.id,
     name: str(t.name).slice(0, 40),

@@ -56,6 +56,7 @@ import {
 import {
   buildArenaGameDayPayload, syncArenaGameDayBlocks, archiveArenaGameDay,
 } from '@/modules/games/services/arenaGameDayService.js';
+import { t } from '@/core/i18n';
 
 const COL = 'arena_open_slots';
 const COL_GAME_DAYS = 'game_days';
@@ -120,7 +121,7 @@ function recusarSeHaReserva(gameDayValue, bookings) {
   );
   if (hasConflict) {
     const c = conflicts[0];
-    throw new Error(`Já existe uma reserva nessa quadra das ${c.conflict_with.start} às ${c.conflict_with.end}. Cancele a reserva ou escolha outro horário.`);
+    throw new Error(t('Já existe uma reserva nessa quadra das {start} às {end}. Cancele a reserva ou escolha outro horário.', { start: c.conflict_with.start, end: c.conflict_with.end }));
   }
 }
 
@@ -144,16 +145,16 @@ function recusarSeHaReserva(gameDayValue, bookings) {
  * @returns {Promise<{ slotId: string, gameDayId: string }>}
  */
 export async function createOpenMatch(arenaId, input, actor, { courts = [], formats = OPEN_MATCH_GAME_FORMATS, bookings = null } = {}) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
 
   const norm = normalizeOpenMatchInput(input, { courts, formats });
-  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || 'Dados inválidos.');
+  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || t('Dados inválidos.'));
   const dia = normalizeArenaGameDayInput(norm.gameDay, { courts });
-  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || 'Dados inválidos.');
+  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || t('Dados inválidos.'));
 
   const arena = await getArena(arenaId);
-  if (!arena) throw new Error('Arena não encontrada.');
+  if (!arena) throw new Error(t('Arena não encontrada.'));
 
   await recusarSeQuadraOcupada(arenaId, norm.slot);
   recusarSeHaReserva(dia.value, bookings);
@@ -214,32 +215,32 @@ export async function createOpenMatch(arenaId, input, actor, { courts = [], form
  *    depois não é edição, é perda.
  */
 export async function updateOpenMatch(slotId, input, actor, { courts = [], formats = OPEN_MATCH_GAME_FORMATS, bookings = null } = {}) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
   const atual = await getOpenSlot(slotId);
-  if (!atual) throw new Error('Jogo aberto não encontrado.');
+  if (!atual) throw new Error(t('Jogo aberto não encontrado.'));
   if (!isLinkedOpenSlot(atual)) return updateOpenSlot(slotId, input, actor);
 
   const gameDayId = atual.game_day_id;
   const gdAtual = await getGameDay(gameDayId);
-  if (!gdAtual) throw new Error('O dia de jogo deste jogo aberto não foi encontrado.');
+  if (!gdAtual) throw new Error(t('O dia de jogo deste jogo aberto não foi encontrado.'));
 
   // O formato que o dia JÁ tem vale mesmo com a flag desligada: desligar uma
   // flag tira a opção de CRIAR, nunca pode travar uma edição.
   const formatosValidos = formats.includes(gdAtual.format) ? formats : [...formats, gdAtual.format];
   const norm = normalizeOpenMatchInput(input, { courts, formats: formatosValidos });
-  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || 'Dados inválidos.');
+  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || t('Dados inválidos.'));
   const dia = normalizeArenaGameDayInput(norm.gameDay, { courts });
-  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || 'Dados inválidos.');
+  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || t('Dados inválidos.'));
 
   const participants = await listGameDayParticipants(gameDayId);
   const inscritos = Math.max((atual.participants || []).length, participants.length);
   if (norm.slot.total_spots < inscritos) {
-    throw new Error(`Já há ${inscritos} inscrito(s). Para diminuir as vagas, tire alguém da lista antes.`);
+    throw new Error(t('Já há {inscritos} inscrito(s). Para diminuir as vagas, tire alguém da lista antes.', { inscritos }));
   }
   if (dia.value.format !== gdAtual.format) {
     const jogos = await listGameDayGames(gameDayId);
     if (jogos.length > 0) {
-      throw new Error('O jogo já tem partidas — o formato não muda mais. Encerre e publique outro jogo aberto, se preciso.');
+      throw new Error(t('O jogo já tem partidas — o formato não muda mais. Encerre e publique outro jogo aberto, se preciso.'));
     }
   }
 
@@ -294,9 +295,9 @@ export async function updateOpenMatch(slotId, input, actor, { courts = [], forma
  */
 export async function linkOpenSlotToGameDay(slotId, input, actor, { courts = [], formats = OPEN_MATCH_GAME_FORMATS, names = {} } = {}) {
   const atual = await getOpenSlot(slotId);
-  if (!atual) throw new Error('Jogo aberto não encontrado.');
+  if (!atual) throw new Error(t('Jogo aberto não encontrado.'));
   if (isLinkedOpenSlot(atual)) return { slotId, gameDayId: atual.game_day_id };
-  if (!['open', 'full'].includes(atual.status || 'open')) throw new Error('Este jogo aberto já foi encerrado.');
+  if (!['open', 'full'].includes(atual.status || 'open')) throw new Error(t('Este jogo aberto já foi encerrado.'));
 
   const norm = normalizeOpenMatchInput({
     date: atual.date, start: atual.start, end: atual.end, total_spots: atual.total_spots,
@@ -304,9 +305,9 @@ export async function linkOpenSlotToGameDay(slotId, input, actor, { courts = [],
     notes: atual.notes, court_ids: atual.court_id ? [atual.court_id] : [],
     ...input,
   }, { courts, formats });
-  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || 'Dados inválidos.');
+  if (!norm.valid) throw new Error(Object.values(norm.errors)[0] || t('Dados inválidos.'));
   const dia = normalizeArenaGameDayInput(norm.gameDay, { courts });
-  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || 'Dados inválidos.');
+  if (!dia.valid) throw new Error(Object.values(dia.errors)[0] || t('Dados inválidos.'));
 
   const arena = await getArena(atual.arena_id);
   const gameDayId = doc(collection(db, COL_GAME_DAYS)).id;
@@ -352,8 +353,8 @@ export async function linkOpenSlotToGameDay(slotId, input, actor, { courts = [],
  * @returns {Promise<string>} slotId
  */
 export async function createOpenSlot(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
 
   const { valid, errors, value } = normalizeOpenSlotInput(input);
   if (!valid) {
@@ -362,7 +363,7 @@ export async function createOpenSlot(arenaId, input, actor) {
   }
 
   const arena = await getArena(arenaId);
-  if (!arena) throw new Error('Arena não encontrada.');
+  if (!arena) throw new Error(t('Arena não encontrada.'));
 
   // Publicar em cima de uma reserva, de um dia de jogo ou de outra vaga é
   // criar um conflito que só aparece no dia — com gente na porta da arena.
@@ -396,7 +397,7 @@ export async function createOpenSlot(arenaId, input, actor) {
  * Atualiza um slot.
  */
 export async function updateOpenSlot(slotId, updates, actor) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
   const { valid, errors, value } = normalizeOpenSlotInput(updates);
   if (!valid) {
     const firstError = Object.values(errors)[0] || 'Dados inválidos.';
@@ -423,7 +424,7 @@ export async function updateOpenSlot(slotId, updates, actor) {
  * Cancela um slot.
  */
 export async function cancelOpenSlot(slotId, reason, actor) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
   const atual = await getOpenSlot(slotId);
   await updateDoc(doc(db, COL, slotId), {
     status: OPEN_SLOT_STATUS.CANCELLED,
@@ -537,11 +538,11 @@ export async function getOpenSlot(slotId) {
  * Notifica a arena.
  */
 export async function joinOpenSlot(slotId, user, profile) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
-  if (!user?.uid) throw new Error('Faça login para se inscrever.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
+  if (!user?.uid) throw new Error(t('Faça login para se inscrever.'));
 
   const slot = await getOpenSlot(slotId);
-  if (!slot) throw new Error('Slot não encontrado.');
+  if (!slot) throw new Error(t('Slot não encontrado.'));
 
   // A peneira de nível usa a RÉGUA ÚNICA, não o campo do perfil.
   const level = await nivelDoAtleta(user.uid);
@@ -649,8 +650,8 @@ async function entrarNoJogoLigado(slot, user, profile) {
  * Atleta sai de um slot.
  */
 export async function leaveOpenSlot(slotId, userId) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
-  if (!userId) throw new Error('userId é obrigatório.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
+  if (!userId) throw new Error(t('userId é obrigatório.'));
 
   const slot = await getOpenSlot(slotId);
   if (!slot) return;
@@ -738,7 +739,7 @@ async function sairDoJogoLigado(slot, userId, wasInSlot) {
  * Deleta slot (apenas criador ou platform admin).
  */
 export async function deleteOpenSlot(slotId, actor) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
   // O dia de jogo NÃO é apagado: é arquivado, como qualquer outro — o que se
   // jogou ali pode estar no ranking de alguém (Onda CA).
   try {

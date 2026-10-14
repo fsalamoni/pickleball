@@ -37,6 +37,7 @@ import ArenaPixKey from '@/v2/components/arenas/shop/ArenaPixKey';
 import {
   V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** As minhas compras nesta arena: as que pedem algo de mim em cima. */
 function MinhasCompras({ arena, temPix }) {
@@ -47,8 +48,8 @@ function MinhasCompras({ arena, temPix }) {
   if (comprasQ.isLoading) return <V2Skeleton className="mb-6 h-24 rounded-4xl" />;
   if (comprasQ.isError) {
     return (
-      <V2ErrorState inline className="mb-6" title="Não foi possível carregar as suas compras aqui"
-        description="Os pedidos continuam registrados — tente de novo." onRetry={() => comprasQ.refetch()} />
+      <V2ErrorState inline className="mb-6" title={t('Não foi possível carregar as suas compras aqui')}
+        description={t('Os pedidos continuam registrados — tente de novo.')} onRetry={() => comprasQ.refetch()} />
     );
   }
   const compras = comprasQ.data || [];
@@ -60,7 +61,7 @@ function MinhasCompras({ arena, temPix }) {
 
   return (
     <V2Surface className="mb-6">
-      <h2 className="mb-3 font-display text-base font-bold text-ink">Suas compras aqui</h2>
+      <h2 className="mb-3 font-display text-base font-bold text-ink">{t('Suas compras aqui')}</h2>
       <div className="space-y-2">
         {compras.slice(0, 8).map((v) => (
           <MyOrderCard key={v.id} sale={v} uid={user?.uid} myPayments={pagamentos} />
@@ -135,8 +136,8 @@ export default function V2ArenaPDV() {
     <div className="mx-auto max-w-[900px]">
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Loja da {arena.name}</h1>
-        <p className="mt-2 font-medium text-gray-500">Peça pelo aplicativo e retire no balcão, sem fila.</p>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Loja da {name}', { name: arena.name })}</h1>
+        <p className="mt-2 font-medium text-gray-500">{t('Peça pelo aplicativo e retire no balcão, sem fila.')}</p>
       </div>
 
       {podeGerir && (
@@ -147,8 +148,7 @@ export default function V2ArenaPDV() {
           <span className="inline-flex items-center gap-2">
             <Store className="h-4 w-4 shrink-0" />
             <span>
-              <strong>Você gere esta arena.</strong> Os pedidos chegam na Central → Pedidos do app; os produtos
-              e o estoque ficam no Mercado.
+              <strong>{t('Você gere esta arena.')}</strong> {t('Os pedidos chegam na Central → Pedidos do app; os produtos e o estoque ficam no Mercado.')}
             </span>
           </span>
           <ArrowRight className="h-4 w-4 shrink-0" />
@@ -159,16 +159,16 @@ export default function V2ArenaPDV() {
 
       {destaqueIndisponivel && (
         <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>{destaqueIndisponivel.name}</strong>, o produto desta campanha,{' '}
-          {destaqueIndisponivel.motivo === 'vencido' ? 'saiu da loja por enquanto.' : 'esgotou por enquanto.'}
-          {' '}O resto do que a arena vende está logo abaixo.
+          <strong>{destaqueIndisponivel.name}</strong>{t(', o produto desta campanha,')}{' '}
+          {destaqueIndisponivel.motivo === 'vencido' ? t('saiu da loja por enquanto.') : t('esgotou por enquanto.')}
+          {t(' O resto do que a arena vende está logo abaixo.')}
         </p>
       )}
 
       {destaque && (
         <V2Surface className="mb-4 ring-2 ring-acid">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Sparkles className="h-5 w-5" /> Em destaque
+            <Sparkles className="h-5 w-5" /> {t('Em destaque')}
           </h2>
           <div className="sm:max-w-[calc(50%-0.375rem)]">
             <ShopProductCard product={destaque}
@@ -178,35 +178,35 @@ export default function V2ArenaPDV() {
       )}
       {produtoDaCampanha && produtosQ.isSuccess && !destaque && (
         <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          O produto da campanha saiu da loja do app. Veja abaixo o que a arena vende agora.
+          {t('O produto da campanha saiu da loja do app. Veja abaixo o que a arena vende agora.')}
         </p>
       )}
 
       <V2Surface className="mb-4">
         <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <ShoppingBag className="h-5 w-5" /> O que a arena vende
+          <ShoppingBag className="h-5 w-5" /> {t('O que a arena vende')}
         </h2>
 
         {produtosQ.isError && (
-          <V2ErrorState inline title="Não foi possível carregar os produtos"
-            description="Tente de novo em instantes." onRetry={() => produtosQ.refetch()} />
+          <V2ErrorState inline title={t('Não foi possível carregar os produtos')}
+            description={t('Tente de novo em instantes.')} onRetry={() => produtosQ.refetch()} />
         )}
         {produtosQ.isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
         {produtosQ.isSuccess && produtos.length === 0 && (marcados.length > 0 ? (
           <V2EmptyState
             icon={ShoppingBag}
-            title="Tudo o que a arena vende pelo app esgotou por enquanto"
+            title={t('Tudo o que a arena vende pelo app esgotou por enquanto')}
             description={podeGerir
-              ? 'Registre a compra no Mercado (aba Compras) e o produto volta para a loja na hora.'
-              : 'Quando a arena repuser, os produtos voltam a aparecer aqui.'}
+              ? t('Registre a compra no Mercado (aba Compras) e o produto volta para a loja na hora.')
+              : t('Quando a arena repuser, os produtos voltam a aparecer aqui.')}
           />
         ) : (
           <V2EmptyState
             icon={ShoppingBag}
-            title="A arena ainda não colocou produtos à venda pelo app"
+            title={t('A arena ainda não colocou produtos à venda pelo app')}
             description={podeGerir
-              ? 'No Mercado, edite o produto e marque "Vender pelo app".'
-              : 'Quando ela colocar, o que estiver à venda aparece aqui.'}
+              ? t('No Mercado, edite o produto e marque "Vender pelo app".')
+              : t('Quando ela colocar, o que estiver à venda aparece aqui.')}
           />
         ))}
 

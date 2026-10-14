@@ -22,6 +22,7 @@ import { ARENA_COLLECTIONS } from '../domain/constants.js';
 import {
   newKioskToken, kioskCodeMatches, checkinState, checkinBlockedReason,
 } from '../domain/checkin.js';
+import { t } from '@/core/i18n';
 
 const COL_DEVICES = 'arena_devices';
 const COL_BOOKINGS = ARENA_COLLECTIONS.bookings || 'arena_bookings';
@@ -98,13 +99,13 @@ export async function markKioskOffline(deviceId) {
  * @param {{ deviceId?: string, code?: string }} opts
  */
 export async function checkInBooking(booking, user, { deviceId, code } = {}) {
-  if (!booking?.id) throw new Error('Reserva inválida.');
-  if (!user?.uid) throw new Error('Faça login para confirmar sua chegada.');
+  if (!booking?.id) throw new Error(t('Reserva inválida.'));
+  if (!user?.uid) throw new Error(t('Faça login para confirmar sua chegada.'));
   if (booking.checked_in_at) return booking.checked_in_at;
 
   const { state, minutesToStart } = checkinState(booking, new Date());
   if (state !== 'open') {
-    throw new Error(checkinBlockedReason(state, minutesToStart) || 'Não é possível confirmar a chegada agora.');
+    throw new Error(checkinBlockedReason(state, minutesToStart) || t('Não é possível confirmar a chegada agora.'));
   }
 
   const candidatos = deviceId
@@ -112,11 +113,11 @@ export async function checkInBooking(booking, user, { deviceId, code } = {}) {
     : await listKioskDevices(booking.arena_id);
   const daArena = candidatos.filter((d) => String(d.arena_id) === String(booking.arena_id));
   if (daArena.length === 0) {
-    throw new Error('Esta arena não tem totem de chegada ativo. Fale com a recepção.');
+    throw new Error(t('Esta arena não tem totem de chegada ativo. Fale com a recepção.'));
   }
   const device = daArena.find((d) => kioskCodeMatches(d, code));
   if (!device) {
-    throw new Error('Código inválido ou vencido. Confira o que está na tela do totem.');
+    throw new Error(t('Código inválido ou vencido. Confira o que está na tela do totem.'));
   }
 
   await updateDoc(doc(db, COL_BOOKINGS, booking.id), {

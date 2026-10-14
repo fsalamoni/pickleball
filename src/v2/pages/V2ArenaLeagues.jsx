@@ -36,6 +36,7 @@ import { sortHouseTournaments } from '@/modules/arenas/domain/houseTournaments';
 import HouseRankingPanel from '@/v2/components/arenas/houseRanking/HouseRankingPanel';
 import { HouseTournamentRow } from '@/v2/components/arenas/tournaments/HouseTournamentsSection';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function TorneiosDaCasa({ arena, podeGerir }) {
   const q = useArenaTournaments(arena.id);
@@ -44,29 +45,29 @@ function TorneiosDaCasa({ arena, podeGerir }) {
     <V2Surface>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Trophy className="h-5 w-5 shrink-0" /> Torneios da casa
+          <Trophy className="h-5 w-5 shrink-0" /> {t('Torneios da casa')}
         </h2>
         {podeGerir && (
           <V2Button asChild size="sm" variant="secondary">
-            <Link to={`/torneios/criar?arena=${arena.id}`}><Plus className="h-4 w-4" /> Criar torneio aqui</Link>
+            <Link to={`/torneios/criar?arena=${arena.id}`}><Plus className="h-4 w-4" /> {t('Criar torneio aqui')}</Link>
           </V2Button>
         )}
       </div>
       <p className="-mt-1 mb-4 text-sm text-gray-500">
-        Torneios da plataforma sediados nesta arena: inscrição, chaves e resultados pelas regras da plataforma.
+        {t('Torneios da plataforma sediados nesta arena: inscrição, chaves e resultados pelas regras da plataforma.')}
       </p>
       {q.isLoading ? (
         <V2Skeleton lines={3} />
       ) : q.isError ? (
         <V2ErrorState
           inline
-          title="Não foi possível carregar os torneios"
-          description="A conexão falhou. Os torneios continuam lá."
+          title={t('Não foi possível carregar os torneios')}
+          description={t('A conexão falhou. Os torneios continuam lá.')}
           onRetry={() => q.refetch()}
         />
       ) : torneios.length === 0 ? (
         <p className="rounded-2xl bg-paper px-3 py-3 text-sm text-gray-500">
-          Nenhum torneio sediado aqui por enquanto. Quando houver, ele aparece aqui e na página da arena.
+          {t('Nenhum torneio sediado aqui por enquanto. Quando houver, ele aparece aqui e na página da arena.')}
         </p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -95,8 +96,8 @@ export default function V2ArenaLeagues() {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2ErrorState
-          title="Não foi possível abrir os torneios da arena"
-          description="A conexão falhou no meio do caminho. A arena continua lá — tente de novo."
+          title={t('Não foi possível abrir os torneios da arena')}
+          description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -114,17 +115,17 @@ export default function V2ArenaLeagues() {
       <div className="mb-2">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-          {comRanking ? 'Torneios e ranking da casa' : 'Torneios da casa'}
+          {comRanking ? t('Torneios e ranking da casa') : t('Torneios da casa')}
         </h1>
         <p className="mt-2 font-medium text-gray-500">
           {arena.name} · {comRanking
-            ? 'os torneios sediados aqui e a classificação da comunidade da arena.'
-            : 'os torneios da plataforma sediados aqui.'}
+            ? t('os torneios sediados aqui e a classificação da comunidade da arena.')
+            : t('os torneios da plataforma sediados aqui.')}
         </p>
         {podeGerir && (
           <V2Button asChild size="sm" variant="secondary" className="mt-3">
             <Link to={`/arenas/${arena.id}/gerir?aba=torneios`}>
-              <Settings2 className="h-4 w-4" /> Gerir na Central
+              <Settings2 className="h-4 w-4" /> {t('Gerir na Central')}
             </Link>
           </V2Button>
         )}

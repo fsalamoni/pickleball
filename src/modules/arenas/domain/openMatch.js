@@ -23,6 +23,7 @@
 
 import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale.js';
 import { instanteEmMs } from '@/core/domain/instant';
+import { t } from '@/core/i18n';
 
 export const OPEN_SLOT_STATUS = Object.freeze({
   OPEN: 'open',
@@ -117,27 +118,27 @@ export function getSlotFillPct(slot) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 export function canJoinOpenSlot(slot, user, athlete, now = Date.now()) {
-  if (!slot) return { ok: false, reason: 'Slot não encontrado.' };
-  if (!user?.uid) return { ok: false, reason: 'Faça login para se inscrever.' };
+  if (!slot) return { ok: false, reason: t('Slot não encontrado.') };
+  if (!user?.uid) return { ok: false, reason: t('Faça login para se inscrever.') };
 
   if (slot.status === OPEN_SLOT_STATUS.CANCELLED) {
-    return { ok: false, reason: 'Slot cancelado.' };
+    return { ok: false, reason: t('Slot cancelado.') };
   }
   if (slot.status === OPEN_SLOT_STATUS.COMPLETED) {
-    return { ok: false, reason: 'Slot já encerrado.' };
+    return { ok: false, reason: t('Slot já encerrado.') };
   }
   if (!isSlotOpenForJoin(slot, now)) {
-    return { ok: false, reason: 'Inscrições encerradas para este slot.' };
+    return { ok: false, reason: t('Inscrições encerradas para este slot.') };
   }
 
   // Já está inscrito?
   if (Array.isArray(slot.participants) && slot.participants.includes(user.uid)) {
-    return { ok: false, reason: 'Você já está inscrito neste slot.' };
+    return { ok: false, reason: t('Você já está inscrito neste slot.') };
   }
 
   // Sem vagas?
   if (getAvailableSpots(slot) <= 0) {
-    return { ok: false, reason: 'Não há vagas disponíveis.' };
+    return { ok: false, reason: t('Não há vagas disponíveis.') };
   }
 
   // Peneira de nível, na régua única.
@@ -180,14 +181,14 @@ export function slotLevelFit(slot, level) {
     return {
       ok: false,
       known: true,
-      reason: `Esta vaga é a partir do nível ${formatLevel(min)} — o seu é ${formatLevel(n)}.`,
+      reason: t('Esta vaga é a partir do nível {min} — o seu é {n}.', { min: formatLevel(min), n: formatLevel(n) }),
     };
   }
   if (max != null && n > max) {
     return {
       ok: false,
       known: true,
-      reason: `Esta vaga vai até o nível ${formatLevel(max)} — o seu é ${formatLevel(n)}.`,
+      reason: t('Esta vaga vai até o nível {max} — o seu é {n}.', { max: formatLevel(max), n: formatLevel(n) }),
     };
   }
   return { ok: true, known: true };
@@ -208,8 +209,8 @@ export function slotLevelRangeLabel(slot) {
   const min = nivelValido(slot?.min_level);
   const max = nivelValido(slot?.max_level);
   if (min != null && max != null) return `${formatLevel(min)} a ${formatLevel(max)}`;
-  if (min != null) return `a partir de ${formatLevel(min)}`;
-  if (max != null) return `até ${formatLevel(max)}`;
+  if (min != null) return t('a partir de {min}', { min: formatLevel(min) });
+  if (max != null) return t('até {max}', { max: formatLevel(max) });
   return null;
 }
 
@@ -468,10 +469,10 @@ export function openSlotConflict(vaga, blocks = [], bookedSlots = []) {
     return {
       hasConflict: true,
       reason: bloqueio.source === 'game_day'
-        ? 'Já existe um dia de jogo nesta quadra e horário.'
+        ? t('Já existe um dia de jogo nesta quadra e horário.')
         : bloqueio.source === 'open_match'
-          ? 'Já existe outro jogo aberto nesta quadra e horário.'
-          : 'Esta quadra está bloqueada neste horário.',
+          ? t('Já existe outro jogo aberto nesta quadra e horário.')
+          : t('Esta quadra está bloqueada neste horário.'),
     };
   }
 
@@ -481,7 +482,7 @@ export function openSlotConflict(vaga, blocks = [], bookedSlots = []) {
     && sobrepoe(timeToMinutes(b.start), timeToMinutes(b.end))
   ));
   if (reserva) {
-    return { hasConflict: true, reason: 'Já existe uma reserva nesta quadra e horário.' };
+    return { hasConflict: true, reason: t('Já existe uma reserva nesta quadra e horário.') };
   }
 
   return { hasConflict: false, reason: null };

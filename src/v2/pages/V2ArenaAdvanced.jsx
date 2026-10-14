@@ -62,13 +62,14 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tn, tk } from '@/core/i18n';
 
 const DEVICE_LABEL = {
-  [DEVICE_KIND.QR_KIOSK]: 'Totem QR',
-  [DEVICE_KIND.LIGHTING]: 'Iluminação',
-  [DEVICE_KIND.PRESENCE_SENSOR]: 'Sensor de presença',
-  [DEVICE_KIND.VIDEO_CAMERA]: 'Câmera',
-  [DEVICE_KIND.HVAC]: 'Climatização',
+  [DEVICE_KIND.QR_KIOSK]: tk('Totem QR'),
+  [DEVICE_KIND.LIGHTING]: tk('Iluminação'),
+  [DEVICE_KIND.PRESENCE_SENSOR]: tk('Sensor de presença'),
+  [DEVICE_KIND.VIDEO_CAMERA]: tk('Câmera'),
+  [DEVICE_KIND.HVAC]: tk('Climatização'),
 };
 const STATUS_TONE = { online: 'green', offline: 'neutral', fault: 'red', maintenance: 'amber' };
 
@@ -94,9 +95,9 @@ function MarcaSecao({ arena }) {
     e.preventDefault();
     try {
       await salvar.mutateAsync({ arenaId: arena.id, branding: form });
-      toast.success('Marca salva. Ela já aparece na página da arena.');
+      toast.success(t('Marca salva. Ela já aparece na página da arena.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -104,7 +105,7 @@ function MarcaSecao({ arena }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Palette className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">A marca da arena</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('A marca da arena')}</h2>
       </div>
 
       {/* A prévia é a parte que importa: escolher cor sem ver o resultado é
@@ -126,9 +127,9 @@ function MarcaSecao({ arena }) {
 
       <form onSubmit={submit}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="Cor da marca" htmlFor="wl-cor" hint="Em hexadecimal, como #1D4ED8.">
+          <V2Field label={t('Cor da marca')} htmlFor="wl-cor" hint={t('Em hexadecimal, como #1D4ED8.')}>
             <div className="flex gap-2">
-              <input type="color" aria-label="Escolher a cor"
+              <input type="color" aria-label={t('Escolher a cor')}
                 value={previa.value.primary_color}
                 onChange={(e) => set({ primary_color: e.target.value })}
                 className="h-11 w-14 shrink-0 cursor-pointer rounded-2xl border border-gray-200 bg-paper-pure p-1" />
@@ -136,13 +137,13 @@ function MarcaSecao({ arena }) {
                 onChange={(e) => set({ primary_color: e.target.value })} />
             </div>
           </V2Field>
-          <V2Field label="Assinatura" htmlFor="wl-tag" hint="Uma linha, embaixo do nome.">
-            <V2Input id="wl-tag" maxLength={60} placeholder="Ex.: pickleball todo dia"
+          <V2Field label={t('Assinatura')} htmlFor="wl-tag" hint={t('Uma linha, embaixo do nome.')}>
+            <V2Input id="wl-tag" maxLength={60} placeholder={t('Ex.: pickleball todo dia')}
               value={form.tagline} onChange={(e) => set({ tagline: e.target.value })} />
           </V2Field>
         </div>
-        <V2Field label="Endereço do logo" htmlFor="wl-logo" className="mt-3"
-          hint="Precisa começar com https://">
+        <V2Field label={t('Endereço do logo')} htmlFor="wl-logo" className="mt-3"
+          hint={t('Precisa começar com https://')}>
           <V2Input id="wl-logo" maxLength={500} placeholder="https://…/logo.png"
             value={form.logo_url} onChange={(e) => set({ logo_url: e.target.value })} />
         </V2Field>
@@ -150,7 +151,7 @@ function MarcaSecao({ arena }) {
         <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={form.active} className="h-4 w-4 rounded border-gray-300"
             onChange={(e) => set({ active: e.target.checked })} />
-          Usar a minha marca nas telas desta arena
+          {t('Usar a minha marca nas telas desta arena')}
         </label>
 
         {!previa.valid && (
@@ -159,10 +160,10 @@ function MarcaSecao({ arena }) {
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-gray-500">
-            {atual.on ? 'A marca está no ar.' : 'A página da arena está com a cor da plataforma.'}
+            {atual.on ? t('A marca está no ar.') : t('A página da arena está com a cor da plataforma.')}
           </p>
           <V2Button type="submit" disabled={salvar.isPending || !previa.valid}>
-            {salvar.isPending ? 'Salvando…' : 'Salvar a marca'}
+            {salvar.isPending ? t('Salvando…') : t('Salvar a marca')}
           </V2Button>
         </div>
       </form>
@@ -192,51 +193,51 @@ function RedeSecao({ arena }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Network className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Rede de unidades</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Rede de unidades')}</h2>
       </div>
 
       {isLoading && <V2Skeleton className="h-20 rounded-2xl" />}
 
       {/* Falha não é "sem rede": o convite a criar uma duplicaria a que existe. */}
       {isError && (
-        <V2ErrorState inline title="Não foi possível carregar a rede desta arena" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar a rede desta arena')} onRetry={() => refetch()} />
       )}
 
       {!isLoading && !isError && !rede && (
         <>
           <V2EmptyState
             icon={Network}
-            title="Esta arena não faz parte de uma rede"
-            description="Uma rede junta várias unidades sob o mesmo grupo, com os números somados. Você cria a sua, e só entram unidades que você administra."
+            title={t('Esta arena não faz parte de uma rede')}
+            description={t('Uma rede junta várias unidades sob o mesmo grupo, com os números somados. Você cria a sua, e só entram unidades que você administra.')}
           />
           <form
             className="mt-3 flex flex-wrap items-end gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               criar.mutateAsync({ arenaId: arena.id, name: nome })
-                .then(() => { toast.success('Rede criada com esta unidade dentro.'); setNome(''); })
-                .catch((err) => toast.error(err?.message || 'Não foi possível criar a rede.'));
+                .then(() => { toast.success(t('Rede criada com esta unidade dentro.')); setNome(''); })
+                .catch((err) => toast.error(err?.message || t('Não foi possível criar a rede.')));
             }}
           >
-            <V2Field label="Nome da rede" htmlFor="rd-nome" className="min-w-[220px] flex-1">
-              <V2Input id="rd-nome" required maxLength={80} placeholder="Ex.: Rede Pickle SP"
+            <V2Field label={t('Nome da rede')} htmlFor="rd-nome" className="min-w-[220px] flex-1">
+              <V2Input id="rd-nome" required maxLength={80} placeholder={t('Ex.: Rede Pickle SP')}
                 value={nome} onChange={(e) => setNome(e.target.value)} />
             </V2Field>
             <V2Button type="submit" disabled={criar.isPending}>
-              <Plus className="mr-1.5 h-4 w-4" /> Criar rede
+              <Plus className="mr-1.5 h-4 w-4" /> {t('Criar rede')}
             </V2Button>
           </form>
           {minhasRedes.length > 0 && (
             <div className="mt-3">
               <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
-                Ou entrar numa rede sua
+                {t('Ou entrar numa rede sua')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {minhasRedes.map((r) => (
                   <V2Button key={r.id} size="sm" variant="ghost" disabled={incluir.isPending}
                     onClick={() => incluir.mutateAsync({ arenaId: arena.id, networkId: r.id })
-                      .then(() => toast.success(`Entrou na ${r.name}.`))
-                      .catch((e) => toast.error(e?.message || 'Não foi possível.'))}>
+                      .then(() => toast.success(t('Entrou na {name}.', { name: r.name })))
+                      .catch((e) => toast.error(e?.message || t('Não foi possível.')))}>
                     {r.name}
                   </V2Button>
                 ))}
@@ -250,7 +251,7 @@ function RedeSecao({ arena }) {
         <>
           <p className="font-display text-base font-bold text-ink">{rede.name}</p>
           <p className="mt-0.5 text-xs text-gray-500">
-            {unidades.length} {unidades.length === 1 ? 'unidade' : 'unidades'}
+            {tn(unidades.length, '{n} unidade', '{n} unidades')}
           </p>
 
           <ul className="mt-3 space-y-1.5">
@@ -258,18 +259,18 @@ function RedeSecao({ arena }) {
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-2.5">
                 <span className="text-sm text-ink">
                   {u.name}
-                  {u.id === arena.id && <span className="ml-1.5 text-xs text-gray-500">(esta)</span>}
+                  {u.id === arena.id && <span className="ml-1.5 text-xs text-gray-500">{t('(esta)')}</span>}
                 </span>
                 {u.id === arena.id && (
                   <ConfirmDialog
-                    title="Sair da rede?"
-                    description="A unidade deixa de aparecer nos números somados. A rede continua existindo."
-                    confirmLabel="Sair da rede"
+                    title={t('Sair da rede?')}
+                    description={t('A unidade deixa de aparecer nos números somados. A rede continua existindo.')}
+                    confirmLabel={t('Sair da rede')}
                     destructive
                     onConfirm={() => remover.mutateAsync({ arenaId: arena.id, networkId: rede.id })
-                      .then(() => toast.success('Saiu da rede.'))
-                      .catch((e) => toast.error(e?.message || 'Não foi possível sair.'))}
-                    trigger={<V2Button size="sm" variant="ghost" className="text-red-600">Sair</V2Button>}
+                      .then(() => toast.success(t('Saiu da rede.')))
+                      .catch((e) => toast.error(e?.message || t('Não foi possível sair.')))}
+                    trigger={<V2Button size="sm" variant="ghost" className="text-red-600">{t('Sair')}</V2Button>}
                   />
                 )}
               </li>
@@ -279,14 +280,14 @@ function RedeSecao({ arena }) {
           {podemEntrar.length > 0 && (
             <div className="mt-3 border-t border-gray-100 pt-3">
               <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
-                Incluir outra unidade sua
+                {t('Incluir outra unidade sua')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {podemEntrar.map((a) => (
                   <V2Button key={a.id} size="sm" variant="ghost" disabled={incluir.isPending}
                     onClick={() => incluir.mutateAsync({ arenaId: a.id, networkId: rede.id })
-                      .then(() => toast.success(`${a.name} entrou na rede.`))
-                      .catch((e) => toast.error(e?.message || 'Não foi possível incluir.'))}>
+                      .then(() => toast.success(t('{name} entrou na rede.', { name: a.name })))
+                      .catch((e) => toast.error(e?.message || t('Não foi possível incluir.')))}>
                     <Plus className="mr-1 h-3.5 w-3.5" /> {a.name}
                   </V2Button>
                 ))}
@@ -295,8 +296,7 @@ function RedeSecao({ arena }) {
           )}
 
           <p className="mt-3 text-xs text-gray-500">
-            Só entram unidades que <strong className="text-ink">você administra</strong>. Rede
-            entre donos diferentes é combinada com a plataforma.
+            {t('Só entram unidades que')} <strong className="text-ink">{t('você administra')}</strong>{t('. Rede entre donos diferentes é combinada com a plataforma.')}
           </p>
         </>
       )}
@@ -328,9 +328,9 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
   // nunca aparecer (foi o que aconteceu na primeira versão desta tela).
   const base = Number(resolveArenaPrice(arena, {})?.price) || Number(arena?.base_price) || 0;
   const sugestoes = [
-    { rotulo: 'Manhã de semana', hour: 9, isWeekend: false },
-    { rotulo: 'Pico de semana (19h)', hour: 19, isWeekend: false },
-    { rotulo: 'Sábado à tarde', hour: 15, isWeekend: true },
+    { rotulo: t('Manhã de semana'), hour: 9, isWeekend: false },
+    { rotulo: t('Pico de semana (19h)'), hour: 19, isWeekend: false },
+    { rotulo: t('Sábado à tarde'), hour: 15, isWeekend: true },
   ].map((c) => ({
     ...c,
     preco: calculateDynamicPrice({ basePrice: base, occupancyPct: ocupacao, hour: c.hour, isWeekend: c.isWeekend }),
@@ -340,20 +340,20 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Leitura dos seus números</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Leitura dos seus números')}</h2>
       </div>
 
       {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
 
       {isError && (
-        <V2ErrorState inline title="Não foi possível ler o histórico de reservas" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível ler o histórico de reservas')} onRetry={() => refetch()} />
       )}
 
       {!isLoading && !isError && historico.length === 0 && (
         <V2EmptyState
           icon={TrendingUp}
-          title="Ainda não há histórico para ler"
-          description="A leitura usa as reservas confirmadas dos últimos 30 dias. Com o primeiro mês de movimento, a previsão e o preço sugerido aparecem aqui."
+          title={t('Ainda não há histórico para ler')}
+          description={t('A leitura usa as reservas confirmadas dos últimos 30 dias. Com o primeiro mês de movimento, a previsão e o preço sugerido aparecem aqui.')}
         />
       )}
 
@@ -361,33 +361,32 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-100 bg-paper p-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Dias com movimento</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Dias com movimento')}</p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{historico.length}</p>
-              <p className="text-xs text-gray-500">nos últimos 30</p>
+              <p className="text-xs text-gray-500">{t('nos últimos 30')}</p>
             </div>
             <div className="rounded-2xl border border-gray-100 bg-paper p-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Média por dia</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Média por dia')}</p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{mediaDia}</p>
-              <p className="text-xs text-gray-500">horas-quadra · {ocupacao}% de ocupação</p>
+              <p className="text-xs text-gray-500">{t('horas-quadra · {ocupacao}% de ocupação', { ocupacao })}</p>
             </div>
             <div className="rounded-2xl border border-gray-100 bg-paper p-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Receita no período</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Receita no período')}</p>
               <p className="mt-1 font-display text-2xl font-bold text-ink">{formatPrice(receita)}</p>
-              <p className="text-xs text-gray-500">reservas confirmadas</p>
+              <p className="text-xs text-gray-500">{t('reservas confirmadas')}</p>
             </div>
           </div>
 
           {temPrevisao && (
             <div className="mt-3 rounded-2xl bg-paper p-3">
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
-                <TrendingUp className="h-3.5 w-3.5" /> Próximos 7 dias
+                <TrendingUp className="h-3.5 w-3.5" /> {t('Próximos 7 dias')}
               </p>
               <p className="mt-1 font-display text-xl font-bold text-ink">
-                ~{previsao} horas-quadra
+                {t('~{previsao} horas-quadra', { previsao })}
               </p>
               <p className="text-xs text-gray-500">
-                Média móvel ponderada dos {historico.length} dias com movimento — os mais
-                recentes pesam mais. É estimativa, não promessa.
+                {t('Média móvel ponderada dos {length} dias com movimento — os mais recentes pesam mais. É estimativa, não promessa.', { length: historico.length })}
               </p>
             </div>
           )}
@@ -395,7 +394,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
           {temPreco && base > 0 && (
             <div className="mt-3">
               <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-500">
-                Preço sugerido (sua tabela: {formatPrice(base)}/h)
+                {t('Preço sugerido (sua tabela: {base}/h)', { base: formatPrice(base) })}
               </p>
               <div className="space-y-1.5">
                 {sugestoes.map((s) => (
@@ -415,17 +414,14 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-gray-500">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Isto é <strong className="text-ink">sugestão</strong>. Nada muda de preço
-                  sozinho — quem aplica é você, nas faixas de preço da quadra. Um sistema que
-                  muda o preço sem a arena ver é o tipo de automação que se descobre pelo
-                  cliente reclamando.
+                  {t('Isto é')} <strong className="text-ink">{t('sugestão')}</strong>{t('. Nada muda de preço sozinho — quem aplica é você, nas faixas de preço da quadra. Um sistema que muda o preço sem a arena ver é o tipo de automação que se descobre pelo cliente reclamando.')}
                 </span>
               </p>
             </div>
           )}
 
           <p className="mt-3 text-2xs text-gray-500">
-            Último dia lido: {formatDateShortBR(historico[historico.length - 1].date)}
+            {t('Último dia lido: {date}', { date: formatDateShortBR(historico[historico.length - 1].date) })}
           </p>
         </>
       )}
@@ -445,11 +441,11 @@ function DispositivosSecao({ arenaId }) {
     e.preventDefault();
     try {
       await criar.mutateAsync({ arenaId, input: form });
-      toast.success('Dispositivo cadastrado.');
+      toast.success(t('Dispositivo cadastrado.'));
       setForm({ name: '', kind: DEVICE_KIND.QR_KIOSK, location: '' });
       setAberto(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível cadastrar.');
+      toast.error(err?.message || t('Não foi possível cadastrar.'));
     }
   };
 
@@ -458,11 +454,11 @@ function DispositivosSecao({ arenaId }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Cpu className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Equipamentos</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Equipamentos')}</h2>
         </div>
         {!aberto && (
           <V2Button size="sm" onClick={() => setAberto(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Cadastrar
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Cadastrar')}
           </V2Button>
         )}
       </div>
@@ -470,32 +466,32 @@ function DispositivosSecao({ arenaId }) {
       {aberto && (
         <form onSubmit={submit} className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-base font-bold text-ink">Novo equipamento</h3>
-            <button type="button" onClick={() => setAberto(false)} aria-label="Fechar"
+            <h3 className="font-display text-base font-bold text-ink">{t('Novo equipamento')}</h3>
+            <button type="button" onClick={() => setAberto(false)} aria-label={t('Fechar')}
               className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
               <X className="h-4 w-4" />
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <V2Field label="Nome" htmlFor="dv-nome">
-              <V2Input id="dv-nome" required maxLength={120} placeholder="Ex.: Totem da entrada"
+            <V2Field label={t('Nome')} htmlFor="dv-nome">
+              <V2Input id="dv-nome" required maxLength={120} placeholder={t('Ex.: Totem da entrada')}
                 value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </V2Field>
-            <V2Field label="Tipo" htmlFor="dv-tipo">
+            <V2Field label={t('Tipo')} htmlFor="dv-tipo">
               <select id="dv-tipo" value={form.kind}
                 onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
                 className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-                {Object.entries(DEVICE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {Object.entries(DEVICE_LABEL).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
               </select>
             </V2Field>
-            <V2Field label="Onde fica" htmlFor="dv-local">
-              <V2Input id="dv-local" maxLength={120} placeholder="Ex.: recepção"
+            <V2Field label={t('Onde fica')} htmlFor="dv-local">
+              <V2Input id="dv-local" maxLength={120} placeholder={t('Ex.: recepção')}
                 value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
             </V2Field>
           </div>
           <div className="mt-3 flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={() => setAberto(false)}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={criar.isPending}>Cadastrar</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => setAberto(false)}>{t('Cancelar')}</V2Button>
+            <V2Button type="submit" disabled={criar.isPending}>{t('Cadastrar')}</V2Button>
           </div>
         </form>
       )}
@@ -503,12 +499,12 @@ function DispositivosSecao({ arenaId }) {
       {isLoading ? (
         <V2Skeleton className="h-20 rounded-2xl" />
       ) : isError ? (
-        <V2ErrorState inline title="Não foi possível carregar os equipamentos" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar os equipamentos')} onRetry={() => refetch()} />
       ) : devices.length === 0 ? (
         <V2EmptyState
           icon={Cpu}
-          title="Nenhum equipamento cadastrado"
-          description="O cadastro serve para saber o que existe e onde fica. Luz, sensor e câmera dependem de integração do fabricante — a plataforma guarda o registro, não comanda o aparelho."
+          title={t('Nenhum equipamento cadastrado')}
+          description={t('O cadastro serve para saber o que existe e onde fica. Luz, sensor e câmera dependem de integração do fabricante — a plataforma guarda o registro, não comanda o aparelho.')}
         />
       ) : (
         <div className="space-y-2">
@@ -517,11 +513,11 @@ function DispositivosSecao({ arenaId }) {
               <div className="min-w-0">
                 <p className="font-bold text-ink">{d.name}</p>
                 <p className="text-xs text-gray-500">
-                  {DEVICE_LABEL[d.kind] || d.kind}
+                  {DEVICE_LABEL[d.kind] ? t(DEVICE_LABEL[d.kind]) : d.kind}
                   {d.location ? ` · ${d.location}` : ''}
                 </p>
               </div>
-              <V2Badge tone={STATUS_TONE[d.status] || 'neutral'}>{d.status || 'sem status'}</V2Badge>
+              <V2Badge tone={STATUS_TONE[d.status] || 'neutral'}>{d.status || t('sem status')}</V2Badge>
             </div>
           ))}
         </div>
@@ -529,9 +525,7 @@ function DispositivosSecao({ arenaId }) {
 
       <p className="mt-3 flex items-start gap-1.5 text-xs leading-5 text-gray-500">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Iluminação, sensor e câmera são serviços de terceiro: a plataforma guarda o cadastro e
-        o vínculo com a quadra, mas o comando depende de integração do fabricante. Isto está
-        escrito assim também no catálogo de módulos — não é promessa por fazer, é o limite.
+        {t('Iluminação, sensor e câmera são serviços de terceiro: a plataforma guarda o cadastro e o vínculo com a quadra, mas o comando depende de integração do fabricante. Isto está escrito assim também no catálogo de módulos — não é promessa por fazer, é o limite.')}
       </p>
     </V2Surface>
   );

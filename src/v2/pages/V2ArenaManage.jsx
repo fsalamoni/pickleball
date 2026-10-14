@@ -81,6 +81,7 @@ import { useArenaMembers, useAddArenaMember } from '@/modules/arenas/hooks/useAr
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tn } from '@/core/i18n';
 
 /**
  * O que falta para a arena receber reserva.
@@ -105,14 +106,14 @@ function ArenaProntidao({ arena, onIrParaQuadras }) {
   if (ativas.length === 0) {
     pendencias.push({
       texto: courts.length === 0
-        ? 'Nenhuma quadra cadastrada. Sem quadra, a arena não aparece para reserva.'
-        : 'Todas as quadras estão inativas. Sem quadra ativa, ninguém consegue reservar.',
-      acao: 'Cadastrar quadra',
+        ? t('Nenhuma quadra cadastrada. Sem quadra, a arena não aparece para reserva.')
+        : t('Todas as quadras estão inativas. Sem quadra ativa, ninguém consegue reservar.'),
+      acao: t('Cadastrar quadra'),
     });
   } else if (semHorario.length > 0) {
     pendencias.push({
-      texto: `${semHorario.map((c) => c.name).join(', ')} sem horário de funcionamento — ninguém consegue reservar ${semHorario.length === 1 ? 'essa quadra' : 'essas quadras'}.`,
-      acao: 'Definir horários',
+      texto: tn(semHorario.length, '{quadras} sem horário de funcionamento — ninguém consegue reservar essa quadra.', '{quadras} sem horário de funcionamento — ninguém consegue reservar essas quadras.', { quadras: semHorario.map((c) => c.name).join(', ') }),
+      acao: t('Definir horários'),
     });
   }
 
@@ -124,7 +125,7 @@ function ArenaProntidao({ arena, onIrParaQuadras }) {
         <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
         <div className="min-w-0">
           <h2 className="font-display text-base font-bold text-amber-900">
-            Falta isto para a arena receber reservas
+            {t('Falta isto para a arena receber reservas')}
           </h2>
           <ul className="mt-1.5 space-y-2">
             {pendencias.map((p) => (
@@ -259,8 +260,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     return (
       <div className="mx-auto max-w-[700px]">
         <V2ErrorState
-          title="Não foi possível abrir a gestão da arena"
-          description="A conexão falhou no meio do caminho. A arena continua lá — tente de novo."
+          title={t('Não foi possível abrir a gestão da arena')}
+          description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => recarregarArena()}
         />
       </div>
@@ -271,8 +272,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       <div className="mx-auto max-w-[700px]">
         <V2Surface className="text-center">
           <Building2 className="mx-auto h-10 w-10 text-gray-300" />
-          <h2 className="mt-3 font-display text-lg font-bold text-ink">Arena não encontrada</h2>
-          <Link to="/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao diretório</Link>
+          <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Arena não encontrada')}</h2>
+          <Link to="/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">{t('Voltar ao diretório')}</Link>
         </V2Surface>
       </div>
     );
@@ -319,32 +320,32 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         <V2BackLink to={`/arenas/${arena.id}`}>{arena.name}</V2BackLink>
         {isOwner && (
           <ConfirmDialog
-            title="Excluir arena?"
-            description="A arena, suas reservas e avaliações serão removidas permanentemente."
-            confirmLabel="Excluir"
+            title={t('Excluir arena?')}
+            description={t('A arena, suas reservas e avaliações serão removidas permanentemente.')}
+            confirmLabel={t('Excluir')}
             onConfirm={async () => {
-              try { await deleteArena.mutateAsync(arena.id); toast.success('Arena excluída.'); window.location.assign('/arenas'); }
-              catch (err) { toast.error(err?.message || 'Não foi possível excluir.'); }
+              try { await deleteArena.mutateAsync(arena.id); toast.success(t('Arena excluída.')); window.location.assign('/arenas'); }
+              catch (err) { toast.error(err?.message || t('Não foi possível excluir.')); }
             }}
-            trigger={<V2Button variant="danger" size="sm"><Trash2 className="h-4 w-4" /> Excluir</V2Button>}
+            trigger={<V2Button variant="danger" size="sm"><Trash2 className="h-4 w-4" /> {t('Excluir')}</V2Button>}
           />
         )}
       </div>
 
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
-        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Central da arena</span>
+        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Central da arena')}</span>
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{arena.name}</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">{t('Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.')}</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {arenaModulesOn && (
             <V2Button variant="secondary" size="sm" onClick={() => selectTab('configuracoes', 'modulos')}>
-              <Puzzle className="h-4 w-4" /> Módulos adicionais
+              <Puzzle className="h-4 w-4" /> {t('Módulos adicionais')}
             </V2Button>
           )}
           {gameDayOn && (
             <V2Button asChild variant="secondary" size="sm">
               <Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>
-                <CalendarClock className="h-4 w-4" /> Dia de jogo
+                <CalendarClock className="h-4 w-4" /> {t('Dia de jogo')}
               </Link>
             </V2Button>
           )}
@@ -378,7 +379,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
             módulos ligados eram treze seções numa linha só, e o que não cabia
             não era visto. */}
         <V2SectionNav
-          ariaLabel="Seções da Central da arena"
+          ariaLabel={t('Seções da Central da arena')}
           dica="arena-secoes"
           sections={sections}
           grupos={ARENA_SECTION_GROUPS}
@@ -467,7 +468,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'professores' && !modulos.aulas && coachResidentOn && <ArenaCoachesManager arena={arena} />}
         {tab === 'torneios' && (modulos.torneios || modulos.torneiosPlataforma) && <ArenaPlatformTournamentsTab arena={arena} />}
         {tab === 'ranking-da-casa' && modulos.torneios && <HouseRankingPanel arena={arena} audience="arena" />}
-        {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
+        {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title={t('Clubes da arena')} />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
         {tab === 'modulos' && arenaModulesOn && (
           <ArenaModulesPanel arenaId={arena.id} canManage={canManage} />
@@ -510,9 +511,9 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
   const tornarMembro = async (c) => {
     try {
       await incluir.mutateAsync({ arenaId, target: { user_id: c.athlete_id, user_name: c.name } });
-      toast.success(`${c.name} agora é membro.`);
+      toast.success(t('{name} agora é membro.', { name: c.name }));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível incluir.');
+      toast.error(err?.message || t('Não foi possível incluir.'));
     }
   };
 
@@ -520,8 +521,8 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
   if (reservasFalharam) {
     return (
       <V2ErrorState
-        title="Não foi possível carregar os clientes"
-        description="A lista de clientes sai das reservas, e elas não carregaram. Tente de novo."
+        title={t('Não foi possível carregar os clientes')}
+        description={t('A lista de clientes sai das reservas, e elas não carregaram. Tente de novo.')}
         onRetry={() => recarregarReservas()}
       />
     );
@@ -529,7 +530,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
   if (clients.length === 0) {
     return (
       <V2Surface>
-        <V2EmptyState icon={Users} title="Sem clientes ainda" description="Quando houver reservas, seus clientes aparecem aqui com histórico e valores." />
+        <V2EmptyState icon={Users} title={t('Sem clientes ainda')} description={t('Quando houver reservas, seus clientes aparecem aqui com histórico e valores.')} />
       </V2Surface>
     );
   }
@@ -539,28 +540,27 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
       {membrosOn && membrosFalharam && (
         <V2ErrorState
           inline
-          title="Não foi possível conferir quem já é membro"
-          description="Os clientes aparecem sem o nível até carregar."
+          title={t('Não foi possível conferir quem já é membro')}
+          description={t('Os clientes aparecem sem o nível até carregar.')}
           onRetry={() => recarregarMembros()}
         />
       )}
       <div className={cn('grid grid-cols-2 gap-3', membrosNaMao ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-4')}>
-        <V2StatCard label="Clientes" value={summary.clients} />
-        <V2StatCard label="Reservas" value={summary.bookings} />
-        <V2StatCard label="Valor acordado" value={formatPrice(summary.revenue)} />
-        <V2StatCard label="No-shows" value={summary.no_shows} />
-        {membrosNaMao && <V2StatCard label="Membros" value={resumoMembros.members} />}
-        {membrosNaMao && <V2StatCard label="Frequentes sem ser membro" value={resumoMembros.candidates} />}
+        <V2StatCard label={t('Clientes')} value={summary.clients} />
+        <V2StatCard label={t('Reservas')} value={summary.bookings} />
+        <V2StatCard label={t('Valor acordado')} value={formatPrice(summary.revenue)} />
+        <V2StatCard label={t('No-shows')} value={summary.no_shows} />
+        {membrosNaMao && <V2StatCard label={t('Membros')} value={resumoMembros.members} />}
+        {membrosNaMao && <V2StatCard label={t('Frequentes sem ser membro')} value={resumoMembros.candidates} />}
       </div>
 
       {membrosNaMao && resumoMembros.candidates > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-acid/30 bg-acid/10 px-4 py-3">
           <p className="text-sm text-ink">
-            <strong>{resumoMembros.candidates}</strong> {resumoMembros.candidates === 1 ? 'cliente reservou' : 'clientes reservaram'} {FREQUENT_CLIENT_MIN} vezes
-            ou mais e ainda não {resumoMembros.candidates === 1 ? 'é membro' : 'são membros'}. É quem mais aproveita desconto, pacote e carteira.
+            <strong>{resumoMembros.candidates}</strong> {tn(resumoMembros.candidates, 'cliente reservou {min} vezes ou mais e ainda não é membro', 'clientes reservaram {min} vezes ou mais e ainda não são membros', { min: FREQUENT_CLIENT_MIN })}{t('. É quem mais aproveita desconto, pacote e carteira.')}
           </p>
           <V2Button size="sm" variant="secondary" onClick={() => setSoCandidatos((v) => !v)}>
-            {soCandidatos ? 'Ver todos' : 'Ver só esses'}
+            {soCandidatos ? t('Ver todos') : t('Ver só esses')}
           </V2Button>
         </div>
       )}
@@ -570,13 +570,13 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
           <table className="w-full text-sm">
             <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-4 py-3">Cliente</th>
-                {membrosNaMao && <th className="px-4 py-3">Membro</th>}
-                <th className="px-4 py-3 text-center">Reservas</th>
-                <th className="px-4 py-3 text-center">Confirmadas</th>
-                <th className="px-4 py-3 text-center">No-show</th>
-                <th className="px-4 py-3 text-right">Valor</th>
-                <th className="px-4 py-3">Última</th>
+                <th className="px-4 py-3">{t('Cliente')}</th>
+                {membrosNaMao && <th className="px-4 py-3">{t('Membro')}</th>}
+                <th className="px-4 py-3 text-center">{t('Reservas')}</th>
+                <th className="px-4 py-3 text-center">{t('Confirmadas')}</th>
+                <th className="px-4 py-3 text-center">{t('No-show')}</th>
+                <th className="px-4 py-3 text-right">{t('Valor')}</th>
+                <th className="px-4 py-3">{t('Última')}</th>
               </tr>
             </thead>
             <tbody>
@@ -586,22 +586,22 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
                   <tr key={c.key} className="border-t border-gray-100">
                     <td className="px-4 py-3 font-semibold text-ink">
                       {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
-                      {!c.athlete_id && <span className="ml-1 text-xs text-gray-500">· avulso</span>}
+                      {!c.athlete_id && <span className="ml-1 text-xs text-gray-500">· {t('avulso')}</span>}
                     </td>
                     {membrosNaMao && (
                       <td className="px-4 py-3">
                         {tier ? (
-                          <button type="button" onClick={onVerMembros} className="inline-flex" title="Ver na aba Membros">
+                          <button type="button" onClick={onVerMembros} className="inline-flex" title={t('Ver na aba Membros')}>
                             <V2Badge tone={TIER_TONE[tier.id] || 'amber'}>{tier.name}</V2Badge>
                           </button>
                         ) : c.memberCandidate ? (
                           <V2Button size="sm" variant="secondary" disabled={incluir.isPending} onClick={() => tornarMembro(c)}>
-                            <Crown className="h-3.5 w-3.5" /> Tornar membro
+                            <Crown className="h-3.5 w-3.5" /> {t('Tornar membro')}
                           </V2Button>
                         ) : c.athlete_id ? (
                           <span className="text-xs text-gray-500">—</span>
                         ) : (
-                          <span className="text-xs text-gray-500" title="Sem conta na plataforma">sem conta</span>
+                          <span className="text-xs text-gray-500" title={t('Sem conta na plataforma')}>{t('sem conta')}</span>
                         )}
                       </td>
                     )}
@@ -634,15 +634,15 @@ function InfoTab({ arena }) {
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
   async function save() {
-    try { await update.mutateAsync({ id: arena.id, updates: form }); toast.success('Informações atualizadas.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível salvar.'); }
+    try { await update.mutateAsync({ id: arena.id, updates: form }); toast.success(t('Informações atualizadas.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível salvar.')); }
   }
 
   return (
     <V2Surface id="arena-manage-horarios" className="space-y-4 p-5 sm:p-6">
       <V2ProfileFields form={form} setField={setField} />
       <div className="flex justify-end pt-2">
-        <V2Button onClick={save} disabled={update.isPending}>{update.isPending ? 'Salvando…' : 'Salvar informações'}</V2Button>
+        <V2Button onClick={save} disabled={update.isPending}>{update.isPending ? t('Salvando…') : t('Salvar informações')}</V2Button>
       </div>
     </V2Surface>
   );
@@ -655,36 +655,36 @@ function PhotosTab({ arena }) {
   async function addPhoto(url, meta) {
     if (!url) return;
     const next = [...photos, { url, path: meta?.path || '', name: meta?.name || 'foto' }];
-    try { await setPhotos.mutateAsync({ id: arena.id, photos: next }); toast.success('Foto adicionada.'); }
-    catch (err) { toast.error(err?.message || 'Falha ao adicionar a foto.'); }
+    try { await setPhotos.mutateAsync({ id: arena.id, photos: next }); toast.success(t('Foto adicionada.')); }
+    catch (err) { toast.error(err?.message || t('Falha ao adicionar a foto.')); }
   }
   async function removePhoto(idx) {
     const next = photos.filter((_, i) => i !== idx);
     try { await setPhotos.mutateAsync({ id: arena.id, photos: next }); }
-    catch (err) { toast.error(err?.message || 'Falha ao remover a foto.'); }
+    catch (err) { toast.error(err?.message || t('Falha ao remover a foto.')); }
   }
 
   return (
     <V2Surface className="space-y-4 p-5 sm:p-6">
       <div>
-        <p className="text-sm font-bold text-ink">Fotos da arena</p>
-        <p className="mt-1 text-xs text-gray-500">A primeira foto é usada como capa. Até 20 fotos.</p>
+        <p className="text-sm font-bold text-ink">{t('Fotos da arena')}</p>
+        <p className="mt-1 text-xs text-gray-500">{t('A primeira foto é usada como capa. Até 20 fotos.')}</p>
       </div>
       {photos.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {photos.map((p, i) => (
             <div key={p.path || i} className="group relative">
-              <PhotoLightbox src={p.url} alt={`Foto ${i + 1} da arena`}
+              <PhotoLightbox src={p.url} alt={t('Foto {valor} da arena', { valor: i + 1 })}
                 trigger={<img src={p.url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
-              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-2xs font-bold text-ink">Capa</span>}
-              <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remover foto">
+              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-2xs font-bold text-ink">{t('Capa')}</span>}
+              <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label={t('Remover foto')}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
         </div>
       )}
-      {photos.length < 20 && <ImageUpload value="" onChange={addPhoto} folder="arenas" label="Adicionar foto" hint="JPG/PNG da arena, quadras, estrutura." />}
+      {photos.length < 20 && <ImageUpload value="" onChange={addPhoto} folder="arenas" label={t('Adicionar foto')} hint={t('JPG/PNG da arena, quadras, estrutura.')} />}
     </V2Surface>
   );
 }
@@ -712,24 +712,24 @@ function BookingsTab({ arena }) {
   if (isError) {
     return (
       <V2ErrorState
-        title="Não foi possível carregar as reservas"
-        description="Pode haver pedidos esperando resposta. Tente de novo."
+        title={t('Não foi possível carregar as reservas')}
+        description={t('Pode haver pedidos esperando resposta. Tente de novo.')}
         onRetry={() => refetch()}
       />
     );
   }
-  if (bookings.length === 0) return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Nenhuma solicitação de reserva ainda.</p></V2Surface>;
+  if (bookings.length === 0) return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">{t('Nenhuma solicitação de reserva ainda.')}</p></V2Surface>;
 
   return (
     <div className="space-y-4">
       <V2Surface className="space-y-2 p-4 sm:p-5">
-        <h3 className="text-sm font-bold text-ink">Ativas</h3>
-        {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
+        <h3 className="text-sm font-bold text-ink">{t('Ativas')}</h3>
+        {grouped.active.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhuma reserva ativa.')}</p>
           : grouped.active.map(renderBooking)}
       </V2Surface>
       {grouped.past.length > 0 && (
         <V2Surface className="space-y-2 p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-ink">Histórico</h3>
+          <h3 className="text-sm font-bold text-ink">{t('Histórico')}</h3>
           {grouped.past.map(renderBooking)}
         </V2Surface>
       )}
@@ -748,13 +748,13 @@ function ManagersTab({ arena }) {
     if (!trimmed) return;
     try {
       const snap = await getDocs(query(collection(db, 'users'), where('email', '==', trimmed)));
-      if (snap.empty) { toast.error('Usuário não encontrado. Peça para a pessoa entrar na plataforma ao menos uma vez.'); return; }
+      if (snap.empty) { toast.error(t('Usuário não encontrado. Peça para a pessoa entrar na plataforma ao menos uma vez.')); return; }
       const target = snap.docs[0].data();
-      if (managers.some((m) => m.user_id === target.uid)) { toast.error('Esse usuário já administra esta arena.'); return; }
+      if (managers.some((m) => m.user_id === target.uid)) { toast.error(t('Esse usuário já administra esta arena.')); return; }
       await addManager.mutateAsync({ arena, target: { user_id: target.uid, user_name: target.platform_name || target.full_name || target.email, user_photo: target.photo_url || '' } });
-      toast.success('Admin da arena adicionado.');
+      toast.success(t('Admin da arena adicionado.'));
       setEmail('');
-    } catch (err) { toast.error(err?.message || 'Não foi possível adicionar o admin da arena.'); }
+    } catch (err) { toast.error(err?.message || t('Não foi possível adicionar o admin da arena.')); }
   }
 
   return (
@@ -762,8 +762,8 @@ function ManagersTab({ arena }) {
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid"><Users className="h-5 w-5" /></div>
         <div>
-          <div className="font-display text-base font-bold text-ink">Admins da arena</div>
-          <p className="mt-1 text-sm leading-6 text-gray-500">O criador já nasce como owner. Qualquer admin pode compartilhar a administração com outros usuários.</p>
+          <div className="font-display text-base font-bold text-ink">{t('Admins da arena')}</div>
+          <p className="mt-1 text-sm leading-6 text-gray-500">{t('O criador já nasce como owner. Qualquer admin pode compartilhar a administração com outros usuários.')}</p>
         </div>
       </div>
 
@@ -771,11 +771,11 @@ function ManagersTab({ arena }) {
         {managers.map((m) => (
           <li key={m.user_id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper px-4 py-3">
             <div className="min-w-0">
-              <div className="truncate font-semibold text-ink">{m.user_name || 'Usuário'}</div>
+              <div className="truncate font-semibold text-ink">{m.user_name || t('Usuário')}</div>
               <div className="mt-0.5 text-xs text-gray-500">{m.user_id}</div>
             </div>
             <div className="flex items-center gap-2">
-              <V2Badge tone="neutral">{m.role === ARENA_MANAGER_ROLE.OWNER ? 'Owner' : 'Admin'}</V2Badge>
+              <V2Badge tone="neutral">{m.role === ARENA_MANAGER_ROLE.OWNER ? t('Owner') : t('Admin')}</V2Badge>
               {m.role !== ARENA_MANAGER_ROLE.OWNER && (
                 <button onClick={() => removeManager.mutate({ arenaId: arena.id, userId: m.user_id })} disabled={removeManager.isPending} className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50">
                   <Trash2 className="h-4 w-4" />
@@ -787,10 +787,10 @@ function ManagersTab({ arena }) {
       </ul>
 
       <V2Surface variant="plano" className="mt-5 p-4">
-        <V2Field label="Adicionar admin (e-mail do usuário já cadastrado)">
+        <V2Field label={t('Adicionar admin (e-mail do usuário já cadastrado)')}>
           <div className="flex gap-2">
             <V2Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
-            <V2Button onClick={handleAddManager} disabled={addManager.isPending} aria-label="Adicionar admin"><UserPlus className="h-4 w-4" aria-hidden="true" /></V2Button>
+            <V2Button onClick={handleAddManager} disabled={addManager.isPending} aria-label={t('Adicionar admin')}><UserPlus className="h-4 w-4" aria-hidden="true" /></V2Button>
           </div>
         </V2Field>
       </V2Surface>

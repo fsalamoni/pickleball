@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Domínio: aulas e professores da arena.
  *
@@ -128,16 +129,16 @@ export function calculateCommission(price, pct = 50) {
 /* ================================================================== */
 
 export const CLASS_FORMAT_META = Object.freeze({
-  [CLASS_FORMAT.PRIVATE]: { label: 'Individual', hint: 'Um aluno, atenção inteira.' },
-  [CLASS_FORMAT.GROUP]: { label: 'Em grupo', hint: 'Turma pequena, preço menor por pessoa.' },
-  [CLASS_FORMAT.CLINIC]: { label: 'Clínica', hint: 'Evento pontual, com tema.' },
+  [CLASS_FORMAT.PRIVATE]: { label: tk('Individual'), hint: tk('Um aluno, atenção inteira.') },
+  [CLASS_FORMAT.GROUP]: { label: tk('Em grupo'), hint: tk('Turma pequena, preço menor por pessoa.') },
+  [CLASS_FORMAT.CLINIC]: { label: tk('Clínica'), hint: tk('Evento pontual, com tema.') },
 });
 
 export const COACH_LEVEL_META = Object.freeze({
-  [COACH_LEVEL.BEGINNER]: { label: 'Iniciante' },
-  [COACH_LEVEL.INTERMEDIATE]: { label: 'Intermediário' },
-  [COACH_LEVEL.ADVANCED]: { label: 'Avançado' },
-  [COACH_LEVEL.PRO]: { label: 'Competição' },
+  [COACH_LEVEL.BEGINNER]: { label: tk('Iniciante') },
+  [COACH_LEVEL.INTERMEDIATE]: { label: tk('Intermediário') },
+  [COACH_LEVEL.ADVANCED]: { label: tk('Avançado') },
+  [COACH_LEVEL.PRO]: { label: tk('Competição') },
 });
 
 /** A aula ainda vai acontecer? Cancelada e concluída não ocupam mais nada. */

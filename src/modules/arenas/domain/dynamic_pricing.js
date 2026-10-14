@@ -8,6 +8,7 @@
  */
 
 import { timeToMinutes } from './pricing.js';
+import { t } from '@/core/i18n';
 
 /** Limita um percentual a [0, 90]. */
 function clampPct(n) {
@@ -66,7 +67,7 @@ export function applyDynamicPricing(basePrice, { weekday, minutes, config } = {}
 
 /** Rótulo curto para exibir a etiqueta do ajuste. */
 export function dynamicPricingLabel(kind, pct) {
-  if (kind === 'peak') return `Pico +${pct}%`;
-  if (kind === 'offpeak') return `Baixa −${pct}%`;
+  if (kind === 'peak') return t('Pico +{pct}%', { pct });
+  if (kind === 'offpeak') return t('Baixa −{pct}%', { pct });
   return null;
 }

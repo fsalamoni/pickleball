@@ -5,6 +5,7 @@
  */
 
 import { instanteEmMs } from '@/core/domain/instant';
+import { tk } from '@/core/i18n';
 
 export const MEMBER_TIER = Object.freeze({
   BRONZE: 'bronze',
@@ -22,10 +23,10 @@ export const MEMBER_STATUS = Object.freeze({
 
 /** Config padrão de tiers (a arena pode customizar). */
 export const DEFAULT_TIERS = Object.freeze([
-  { id: 'bronze', name: 'Bronze', min_points: 0, discount_pct: 0, color: 'amber', perks: [] },
-  { id: 'silver', name: 'Prata', min_points: 100, discount_pct: 5, color: 'gray', perks: ['Prioridade em lotação'] },
-  { id: 'gold', name: 'Ouro', min_points: 500, discount_pct: 10, color: 'yellow', perks: ['Prioridade', '10% off', 'Convite de eventos'] },
-  { id: 'platinum', name: 'Platina', min_points: 1500, discount_pct: 15, color: 'violet', perks: ['Tudo do Ouro', 'Aula grátis/mês', 'Reserva antecipada 30 dias'] },
+  { id: 'bronze', name: tk('Bronze'), min_points: 0, discount_pct: 0, color: 'amber', perks: [] },
+  { id: 'silver', name: tk('Prata'), min_points: 100, discount_pct: 5, color: 'gray', perks: [tk('Prioridade em lotação')] },
+  { id: 'gold', name: tk('Ouro'), min_points: 500, discount_pct: 10, color: 'yellow', perks: [tk('Prioridade'), '10% off', tk('Convite de eventos')] },
+  { id: 'platinum', name: tk('Platina'), min_points: 1500, discount_pct: 15, color: 'violet', perks: [tk('Tudo do Ouro'), tk('Aula grátis/mês'), tk('Reserva antecipada 30 dias')] },
 ]);
 
 /** Calcula o tier baseado nos pontos. */

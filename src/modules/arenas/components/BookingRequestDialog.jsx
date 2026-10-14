@@ -41,6 +41,7 @@ import {
   summarizeSelection, describableRecurrence, sortSelection,
 } from '../domain/bookingSelection.js';
 import { useCreateBookingsForSelection } from '../hooks/useBookings.js';
+import { t, tn } from '@/core/i18n';
 
 function slotLabel(slot) {
   return formatSlotLabel(slot);
@@ -328,7 +329,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     if (modoSelecao) return { ok: true };
     if (kind !== BOOKING_KIND.SINGLE) return { ok: true };
     if (!single.date || !normalizeTime(single.start) || !normalizeTime(single.end)) {
-      return { ok: false, reason: 'incomplete', message: 'Preencha data e horários.' };
+      return { ok: false, reason: 'incomplete', message: t('Preencha data e horários.') };
     }
     if (effectiveCourtIds.length === 0) return { ok: true };
     for (const cid of effectiveCourtIds) {
@@ -429,14 +430,14 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       });
       toast.success(
         instantaneaOk
-          ? 'Reserva confirmada! Compareça no horário marcado.'
+          ? t('Reserva confirmada! Compareça no horário marcado.')
           : totalReservas > 1
-            ? `Solicitação enviada — ${totalReservas} reservas. A arena vai responder em breve.`
-            : 'Solicitação enviada! A arena vai responder em breve.',
+            ? t('Solicitação enviada — {totalReservas} reservas. A arena vai responder em breve.', { totalReservas })
+            : t('Solicitação enviada! A arena vai responder em breve.'),
       );
       _onOpenChange(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível solicitar a reserva.');
+      toast.error(err?.message || t('Não foi possível solicitar a reserva.'));
     }
   }
 
@@ -448,11 +449,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         return;
       }
       if (courtMode === 'specific' && activeCourts.length > 0 && effectiveCourtIds.length === 0) {
-        toast.error('Marque ao menos uma quadra disponível.');
+        toast.error(t('Marque ao menos uma quadra disponível.'));
         return;
       }
       if (courtMode === 'all' && activeCourts.length > 0 && effectiveCourtIds.length === 0) {
-        toast.error('Nenhuma quadra livre nos horários escolhidos.');
+        toast.error(t('Nenhuma quadra livre nos horários escolhidos.'));
         return;
       }
       const instantEligible = isInstant && !isMultiCourt;
@@ -477,7 +478,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         }
       }
       if (hasConflict) {
-        toast.error('Há conflito com uma reserva já confirmada. Escolha outro horário.');
+        toast.error(t('Há conflito com uma reserva já confirmada. Escolha outro horário.'));
         return;
       }
       // Convites só quando a reserva é de UMA quadra (dividir a quadra).
@@ -500,14 +501,14 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       await createBooking.mutateAsync({ arena, input });
       toast.success(
         isMultiCourt
-          ? `Solicitação enviada para ${effectiveCourtIds.length} quadras! A arena vai responder em breve.`
+          ? t('Solicitação enviada para {length} quadras! A arena vai responder em breve.', { length: effectiveCourtIds.length })
           : instantEligible
-            ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
-            : 'Solicitação enviada! A arena vai responder em breve.',
+            ? t('Reserva instantânea confirmada! Compareça no horário marcado.')
+            : t('Solicitação enviada! A arena vai responder em breve.'),
       );
       _onOpenChange(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível solicitar a reserva.');
+      toast.error(err?.message || t('Não foi possível solicitar a reserva.'));
     }
   }
 
@@ -515,20 +516,19 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     <Dialog open={_open} onOpenChange={_onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{modoSelecao ? 'Confirmar reserva' : `Reservar em ${arena.name}`}</DialogTitle>
+          <DialogTitle>{modoSelecao ? t('Confirmar reserva') : t('Reservar em {name}', { name: arena.name })}</DialogTitle>
           <DialogDescription>
             {modoSelecao
-              ? 'Confira o que você escolheu e diga se repete toda semana. A arena confirma o valor.'
-              : 'Escolha um horário avulso ou recorrente. A arena confirma o valor.'}
+              ? t('Confira o que você escolheu e diga se repete toda semana. A arena confirma o valor.')
+              : t('Escolha um horário avulso ou recorrente. A arena confirma o valor.')}
           </DialogDescription>
         </DialogHeader>
 
         {disponibilidadeIncerta && (
           <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Não deu para conferir a disponibilidade agora — um horário pode aparecer livre sem estar.
-            Ao enviar, a arena confere de novo.{' '}
+            {t('Não deu para conferir a disponibilidade agora — um horário pode aparecer livre sem estar. Ao enviar, a arena confere de novo. ')}
             <button type="button" className="font-bold underline" onClick={reconferirDisponibilidade}>
-              Conferir de novo
+              {t('Conferir de novo')}
             </button>
           </p>
         )}
@@ -537,7 +537,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           {/* CONFIRMAÇÃO: o que foi escolhido, sem re-perguntar nada. */}
           {modoSelecao && (
             <div className="rounded-2xl border border-gray-200 bg-paper p-3.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sua escolha</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{t('Sua escolha')}</p>
               <ul className="mt-2 space-y-1.5">
                 {resumoSelecao.porQuadra.map((q) => (
                   <li key={q.court_id || 'qualquer'} className="text-sm text-ink">
@@ -552,10 +552,10 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               <p className="mt-2 text-xs text-gray-500">
                 {resumoSelecao.datas.length === 1
                   ? resumoSelecao.datas[0]
-                  : `${resumoSelecao.datas.length} datas: ${resumoSelecao.datas[0]} até ${resumoSelecao.datas[resumoSelecao.datas.length - 1]}`}
+                  : t('{length} datas: {valor} até {valor2}', { length: resumoSelecao.datas.length, valor: resumoSelecao.datas[0], valor2: resumoSelecao.datas[resumoSelecao.datas.length - 1] })}
                 {' · '}
-                {Math.round((resumoSelecao.minutos / 60) * 10) / 10}h no total
-                {totalReservas > 1 && ` · ${totalReservas} reservas`}
+                {Math.round((resumoSelecao.minutos / 60) * 10) / 10}{t('h no total')}
+                {totalReservas > 1 && t(' · {n} reservas', { n: totalReservas })}
               </p>
             </div>
           )}
@@ -563,11 +563,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           {/* CONFIRMAÇÃO: a única pergunta que sobra sobre "quando". */}
           {modoSelecao && (
             <div className="space-y-2">
-              <Label className="text-xs">Repete?</Label>
+              <Label className="text-xs">{t('Repete?')}</Label>
               <div className="flex gap-2">
                 {[
-                  { v: 1, label: 'Só neste dia' },
-                  { v: 4, label: 'Toda semana' },
+                  { v: 1, label: t('Só neste dia') },
+                  { v: 4, label: t('Toda semana') },
                 ].map(({ v, label }) => {
                   const ativo = v === 1 ? semanas === 1 : semanas > 1;
                   return (
@@ -588,7 +588,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               {semanas > 1 && (
                 <div className="flex flex-wrap items-end gap-2">
                   <div>
-                    <Label className="text-xs">Por quantas semanas</Label>
+                    <Label className="text-xs">{t('Por quantas semanas')}</Label>
                     <Input
                       type="number" min="2" max={RECURRENCE_MAX_WEEKS} inputMode="numeric"
                       value={semanas}
@@ -597,7 +597,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                     />
                   </div>
                   <p className="pb-2 text-[11px] text-gray-500">
-                    O mesmo horário, toda semana, a partir deste dia.
+                    {t('O mesmo horário, toda semana, a partir deste dia.')}
                   </p>
                 </div>
               )}
@@ -607,8 +607,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           {!modoSelecao && (
           <div className="flex gap-2">
             {[
-              { k: BOOKING_KIND.SINGLE, label: 'Avulso' },
-              { k: BOOKING_KIND.RECURRING, label: 'Recorrente (semanal)' },
+              { k: BOOKING_KIND.SINGLE, label: t('Avulso') },
+              { k: BOOKING_KIND.RECURRING, label: t('Recorrente (semanal)') },
             ].map(({ k, label }) => (
               <button
                 key={k}
@@ -629,7 +629,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             ? supportsInstant && totalReservas === 1 && semanas === 1
             : kind === BOOKING_KIND.SINGLE && supportsInstant && !isMultiCourt) && (
             <div className="space-y-2">
-              <Label className="text-xs">{INSTANT_BOOKING_LABELS.TITLE}</Label>
+              <Label className="text-xs">{t(INSTANT_BOOKING_LABELS.TITLE)}</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -639,9 +639,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                     !isInstant ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper hover:border-gray-300',
                   )}
                 >
-                  <div className="text-sm font-bold">{INSTANT_BOOKING_LABELS.REQUEST.title}</div>
+                  <div className="text-sm font-bold">{t(INSTANT_BOOKING_LABELS.REQUEST.title)}</div>
                   <div className={cn('mt-1 text-xs', !isInstant ? 'text-white/80' : 'text-gray-500')}>
-                    {INSTANT_BOOKING_LABELS.REQUEST.description}
+                    {t(INSTANT_BOOKING_LABELS.REQUEST.description)}
                   </div>
                 </button>
                 <button
@@ -652,31 +652,31 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                     isInstant ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 bg-paper hover:border-green-300',
                   )}
                 >
-                  <div className="text-sm font-bold">⚡ {INSTANT_BOOKING_LABELS.INSTANT.title}</div>
+                  <div className="text-sm font-bold">⚡ {t(INSTANT_BOOKING_LABELS.INSTANT.title)}</div>
                   <div className={cn('mt-1 text-xs', isInstant ? 'text-white/90' : 'text-gray-500')}>
-                    {INSTANT_BOOKING_LABELS.INSTANT.description}
+                    {t(INSTANT_BOOKING_LABELS.INSTANT.description)}
                   </div>
                 </button>
               </div>
               {isInstant && (
                 <div className="space-y-1">
-                  <Label className="text-xs">Forma de pagamento</Label>
+                  <Label className="text-xs">{t('Forma de pagamento')}</Label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
                     {Object.entries({
-                      pix: 'PIX (QR/código)',
-                      credit_card: 'Cartão de crédito',
-                      debit_card: 'Cartão de débito',
+                      pix: t('PIX (QR/código)'),
+                      credit_card: t('Cartão de crédito'),
+                      debit_card: t('Cartão de débito'),
                       cash: 'Dinheiro (na arena)',
                     }).map(([v, l]) => (
                       <option key={v} value={v}>{l}</option>
                     ))}
                   </select>
                   <p className="text-[10px] text-gray-400">
-                    Pagamento é registrado mas a confirmação na arena é manual (PIX por QR/código ou dinheiro na hora).
+                    {t('Pagamento é registrado mas a confirmação na arena é manual (PIX por QR/código ou dinheiro na hora).')}
                   </p>
                 </div>
               )}
@@ -685,12 +685,12 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
 
           {!modoSelecao && activeCourts.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs">Quadras</Label>
+              <Label className="text-xs">{t('Quadras')}</Label>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { m: 'any', label: 'Qualquer disponível' },
-                  { m: 'specific', label: 'Específicas' },
-                  { m: 'all', label: `Todas (${allFreeCount}/${activeCourts.length})` },
+                  { m: 'any', label: t('Qualquer disponível') },
+                  { m: 'specific', label: t('Específicas') },
+                  { m: 'all', label: t('Todas ({allFreeCount}/{length})', { allFreeCount, length: activeCourts.length }) },
                 ].map(({ m, label }) => (
                   <button
                     key={m}
@@ -726,7 +726,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                           {checked && !busy && <Check className="h-3 w-3" />}
                         </span>
                         <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                        {busy && <span className="shrink-0 text-[9px] font-bold uppercase text-red-500">Reservada</span>}
+                        {busy && <span className="shrink-0 text-[9px] font-bold uppercase text-red-500">{t('Reservada')}</span>}
                       </button>
                     );
                   })}
@@ -735,13 +735,13 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               <p className="text-[11px] text-gray-400">
                 {courtMode === 'all'
                   ? (allFreeCount > 0
-                      ? `${allFreeCount} de ${activeCourts.length} quadra(s) livre(s) ${allFreeCount === 1 ? 'será reservada' : 'serão reservadas'} — uma reserva por quadra.`
-                      : 'Nenhuma quadra livre nos horários escolhidos.')
+                      ? tn(allFreeCount, '{n} de {total} quadra(s) livre(s) será reservada — uma reserva por quadra.', '{n} de {total} quadra(s) livre(s) serão reservadas — uma reserva por quadra.', { total: activeCourts.length })
+                      : t('Nenhuma quadra livre nos horários escolhidos.'))
                   : courtMode === 'specific'
                     ? (selectedCourtIds.length > 0
-                        ? `${selectedCourtIds.length} quadra(s) selecionada(s) — uma reserva por quadra.`
-                        : 'Marque uma ou mais quadras (as reservadas ficam desabilitadas).')
-                    : 'A arena atribui automaticamente uma quadra livre.'}
+                        ? t('{length} quadra(s) selecionada(s) — uma reserva por quadra.', { length: selectedCourtIds.length })
+                        : t('Marque uma ou mais quadras (as reservadas ficam desabilitadas).'))
+                    : t('A arena atribui automaticamente uma quadra livre.')}
               </p>
             </div>
           )}
@@ -750,15 +750,15 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             <div className="space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-3 sm:col-span-1">
-                  <Label className="text-xs">Data</Label>
+                  <Label className="text-xs">{t('Data')}</Label>
                   <Input type="date" value={single.date} onChange={(e) => setSingle((s) => ({ ...s, date: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Início</Label>
+                  <Label className="text-xs">{t('Início')}</Label>
                   <Input type="time" value={single.start} onChange={(e) => setSingle((s) => ({ ...s, start: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Fim</Label>
+                  <Label className="text-xs">{t('Fim')}</Label>
                   <Input type="time" value={single.end} onChange={(e) => setSingle((s) => ({ ...s, end: e.target.value }))} />
                 </div>
               </div>
@@ -766,29 +766,29 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Dia da semana</Label>
+                <Label className="text-xs">{t('Dia da semana')}</Label>
                 <select
                   value={recurring.weekday}
                   onChange={(e) => setRecurring((s) => ({ ...s, weekday: Number(e.target.value) }))}
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  {WEEKDAY_LABELS.map((label, i) => <option key={i} value={i}>{label}</option>)}
+                  {WEEKDAY_LABELS.map((label, i) => <option key={i} value={i}>{t(label)}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">A partir de</Label>
+                <Label className="text-xs">{t('A partir de')}</Label>
                 <Input type="date" value={recurring.fromDate} onChange={(e) => setRecurring((s) => ({ ...s, fromDate: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs">Início</Label>
+                <Label className="text-xs">{t('Início')}</Label>
                 <Input type="time" value={recurring.start} onChange={(e) => setRecurring((s) => ({ ...s, start: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs">Fim</Label>
+                <Label className="text-xs">{t('Fim')}</Label>
                 <Input type="time" value={recurring.end} onChange={(e) => setRecurring((s) => ({ ...s, end: e.target.value }))} />
               </div>
               <div>
-                <Label className="text-xs">Nº de semanas</Label>
+                <Label className="text-xs">{t('Nº de semanas')}</Label>
                 <Input type="number" min="1" max="52" value={recurring.weeks} onChange={(e) => setRecurring((s) => ({ ...s, weeks: e.target.value }))} />
               </div>
             </div>
@@ -798,31 +798,31 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             ? totalReservas === 1
             : !isMultiCourt && kind === BOOKING_KIND.SINGLE) && (
             <div>
-              <Label className="text-xs">Convidar participantes (opcional)</Label>
+              <Label className="text-xs">{t('Convidar participantes (opcional)')}</Label>
               <div className="mt-1">
-                <AthleteMultiPicker value={invitees} onChange={setInvitees} exclude={[user?.uid]} placeholder="Buscar atleta para dividir a quadra…" />
+                <AthleteMultiPicker value={invitees} onChange={setInvitees} exclude={[user?.uid]} placeholder={t('Buscar atleta para dividir a quadra…')} />
               </div>
               <p className="mt-1 text-[11px] text-gray-400">
-                Os convidados recebem um convite para dividir a quadra e o valor. Convites valem para reservas de uma quadra.
+                {t('Os convidados recebem um convite para dividir a quadra e o valor. Convites valem para reservas de uma quadra.')}
               </p>
             </div>
           )}
 
           <div>
-            <Label className="text-xs">Observações</Label>
+            <Label className="text-xs">{t('Observações')}</Label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               maxLength={600}
-              placeholder="Alguma preferência de quadra, forma de pagamento, etc."
+              placeholder={t('Alguma preferência de quadra, forma de pagamento, etc.')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
 
           {candidateSlots.length > 0 && (
             <div className="rounded-[1rem] border border-gray-100 bg-white/75 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Prévia da agenda solicitada</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{t('Prévia da agenda solicitada')}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {candidateSlots.slice(0, 8).map((slot) => (
                   <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1 text-xs text-gray-600">
@@ -831,7 +831,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                 ))}
                 {candidateSlots.length > 8 && (
                   <span className="rounded-full border border-gray-100 bg-paper px-3 py-1 text-xs text-gray-600">
-                    +{candidateSlots.length - 8} horário(s)
+                    {t('+{n} horário(s)', { n: candidateSlots.length - 8 })}
                   </span>
                 )}
               </div>
@@ -840,7 +840,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
 
           {hasConflict && (
             <PlatformNotice className="border-amber-300 bg-amber-50/85 text-amber-950">
-              Já existe reserva confirmada em conflito com parte dessa solicitação. Ajuste data ou horário antes de continuar.
+              {t('Já existe reserva confirmada em conflito com parte dessa solicitação. Ajuste data ou horário antes de continuar.')}
             </PlatformNotice>
           )}
 
@@ -853,7 +853,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           {kind === BOOKING_KIND.SINGLE && dayAvailability && dayAvailability.free.length > 0 && (
             <div className="rounded-[1rem] border border-green-100 bg-green-50/60 p-3">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-green-700">
-                Horários livres na data ({dayAvailability.free.length} janela(s) com 60+ min)
+                {t('Horários livres na data ({length} janela(s) com 60+ min)', { length: dayAvailability.free.length })}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {dayAvailability.free.slice(0, 8).map((slot, i) => (
@@ -880,7 +880,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
 
           {upcomingConfirmedSlots.length > 0 && (
             <div className="rounded-[1rem] border border-gray-100 bg-paper p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Próximos horários já confirmados</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{t('Próximos horários já confirmados')}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {upcomingConfirmedSlots.map((slot) => (
                   <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-white/75 px-3 py-1 text-xs text-gray-600">
@@ -895,26 +895,26 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             totalDaSelecao && totalDaSelecao.total > 0 && (
               <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-bold">Total estimado</span>
+                  <span className="font-bold">{t('Total estimado')}</span>
                   <strong className="font-display text-lg">{formatPrice(totalDaSelecao.total)}</strong>
                 </div>
                 <p className="mt-0.5 text-xs text-ink/70">
                   {priceWithDurationText(totalDaSelecao.total, totalDaSelecao.horas, totalDaSelecao.taxas)}
-                  {totalReservas > 1 && ` · ${totalReservas} reservas`}
-                  {' · a arena confirma o valor final'}
+                  {totalReservas > 1 && t(' · {n} reservas', { n: totalReservas })}
+                  {t(' · a arena confirma o valor final')}
                 </p>
 
                 {isOn(ARENA_MODULE_ID.MARKETING_COUPONS) && (
                   <div className="mt-3 border-t border-ink/10 pt-2.5">
                     <label htmlFor="cupom" className="text-xs font-bold uppercase tracking-wider text-ink/60">
-                      Tem um cupom?
+                      {t('Tem um cupom?')}
                     </label>
                     <div className="mt-1 flex gap-2">
                       <input
                         id="cupom"
                         value={cupomDigitado}
                         onChange={(e) => { setCupomDigitado(e.target.value); setCupom(null); setCupomErro(''); }}
-                        placeholder="CÓDIGO"
+                        placeholder={t('CÓDIGO')}
                         maxLength={30}
                         className="h-9 min-w-0 flex-1 rounded-xl border border-ink/15 bg-paper-pure px-3 text-sm uppercase"
                       />
@@ -923,12 +923,12 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                         disabled={conferindoCupom || !cupomDigitado.trim()}
                         onClick={() => conferirCupom()}
                       >
-                        {conferindoCupom ? 'Conferindo…' : 'Aplicar'}
+                        {conferindoCupom ? t('Conferindo…') : t('Aplicar')}
                       </Button>
                     </div>
                     {promocoes.length > 0 && !cupom && (
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">Promoções:</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">{t('Promoções:')}</span>
                         {promocoes.slice(0, 3).map((p) => (
                           <button
                             key={p.id}
@@ -945,7 +945,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                     )}
                     {cupomErro && <p className="mt-1 text-xs text-red-700">{cupomErro}</p>}
                     {cupom && !cupomErro && (
-                      <p className="mt-1 text-xs font-bold text-green-700">Cupom aplicado.</p>
+                      <p className="mt-1 text-xs font-bold text-green-700">{t('Cupom aplicado.')}</p>
                     )}
                   </div>
                 )}
@@ -953,7 +953,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                 {beneficioDeMembro && (
                   <div className="mt-3 border-t border-ink/10 pt-2.5">
                     <p className="text-xs font-bold uppercase tracking-wider text-ink/60">
-                      O seu preço
+                      {t('O seu preço')}
                     </p>
                     <ul className="mt-1 space-y-0.5">
                       {beneficioDeMembro.linhas.map((l) => (
@@ -964,13 +964,13 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                       ))}
                     </ul>
                     <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-bold">Você paga</span>
+                      <span className="text-sm font-bold">{t('Você paga')}</span>
                       <strong className="font-display text-lg">
                         {formatPrice(beneficioDeMembro.total)}
                       </strong>
                     </div>
                     <p className="mt-0.5 text-[11px] leading-4 text-ink/60">
-                      Horas de pacote e saldo só são descontados quando a arena confirmar.
+                      {t('Horas de pacote e saldo só são descontados quando a arena confirmar.')}
                     </p>
                   </div>
                 )}
@@ -978,8 +978,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             )
           ) : estimate && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
-              Estimativa: <strong>{formatPrice(estimate.price)}</strong>
-              <span className="text-ink/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
+              {t('Estimativa:')} <strong>{formatPrice(estimate.price)}</strong>
+              <span className="text-ink/70"> · {t('{label} (por horário; a arena confirma o valor final)', { label: estimate.label })}</span>
             </div>
           )}
 
@@ -994,16 +994,16 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => _onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => _onOpenChange(false)}>{t('Cancelar')}</Button>
           {modoSelecao ? (
             <Button onClick={handleSubmit} data-dica="reserva-confirmar" disabled={createFromSelection.isPending || celulasEscolhidas.length === 0 || (ofereceIndicacao && Boolean(problemaIndicacao))}>
               {createFromSelection.isPending
-                ? 'Enviando…'
-                : totalReservas > 1 ? `Solicitar ${totalReservas} reservas` : 'Solicitar reserva'}
+                ? t('Enviando…')
+                : totalReservas > 1 ? t('Solicitar {totalReservas} reservas', { totalReservas }) : t('Solicitar reserva')}
             </Button>
           ) : (
             <Button onClick={handleSubmit} data-dica="reserva-confirmar" disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
-              {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
+              {createBooking.isPending ? t('Enviando…') : (isMultiCourt ? t('Solicitar {length} reservas', { length: effectiveCourtIds.length }) : t('Solicitar reserva'))}
             </Button>
           )}
         </DialogFooter>

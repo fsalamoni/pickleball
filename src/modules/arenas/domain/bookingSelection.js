@@ -34,6 +34,7 @@
  */
 
 import { timeToMinutes } from './pricing.js';
+import { t } from '@/core/i18n';
 
 /** Teto de semanas de uma recorrência — meio ano é mais que suficiente. */
 export const RECURRENCE_MAX_WEEKS = 26;
@@ -189,7 +190,7 @@ export function selectionMinutes(selection = []) {
 export function summarizeSelection(selection = [], nomePorQuadra = null) {
   const ordenada = sortSelection(selection);
   const nomeDe = (id) => {
-    if (!id) return 'Qualquer quadra';
+    if (!id) return t('Qualquer quadra');
     if (nomePorQuadra instanceof Map) return nomePorQuadra.get(id) || 'Quadra';
     return (nomePorQuadra && nomePorQuadra[id]) || 'Quadra';
   };

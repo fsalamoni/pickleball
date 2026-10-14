@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Domínio puro de CourtSchedule (horário recorrente de uma quadra).
  *
@@ -35,23 +36,23 @@ export const WEEKDAYS = Object.freeze({
 });
 
 export const WEEKDAY_LABELS_PT = Object.freeze({
-  0: 'Domingo',
-  1: 'Segunda',
-  2: 'Terça',
-  3: 'Quarta',
-  4: 'Quinta',
-  5: 'Sexta',
-  6: 'Sábado',
+  0: tk('Domingo'),
+  1: tk('Segunda'),
+  2: tk('Terça'),
+  3: tk('Quarta'),
+  4: tk('Quinta'),
+  5: tk('Sexta'),
+  6: tk('Sábado'),
 });
 
 export const WEEKDAY_SHORT_PT = Object.freeze({
-  0: 'Dom',
-  1: 'Seg',
-  2: 'Ter',
-  3: 'Qua',
-  4: 'Qui',
-  5: 'Sex',
-  6: 'Sáb',
+  0: tk('Dom'),
+  1: tk('Seg'),
+  2: tk('Ter'),
+  3: tk('Qua'),
+  4: tk('Qui'),
+  5: tk('Sex'),
+  6: tk('Sáb'),
 });
 
 /** Valida formato HH:MM (24h). Retorna 'HH:MM' normalizado ou null. */
@@ -189,17 +190,17 @@ function formatOneSchedule(s) {
 /** Formata lista de weekdays como 'Seg-Sex' ou 'Seg, Qua, Sex'. */
 function formatWeekdayRange(weekdays) {
   if (weekdays.length === 0) return '';
-  if (weekdays.length === 7) return 'Todos os dias';
-  if (weekdays.length === 1) return WEEKDAY_SHORT_PT[weekdays[0]];
+  if (weekdays.length === 7) return t('Todos os dias');
+  if (weekdays.length === 1) return t(WEEKDAY_SHORT_PT[weekdays[0]]);
   // Detecta range contíguo
   let isRange = true;
   for (let i = 1; i < weekdays.length; i++) {
     if (weekdays[i] !== weekdays[i - 1] + 1) { isRange = false; break; }
   }
   if (isRange) {
-    return `${WEEKDAY_SHORT_PT[weekdays[0]]}–${WEEKDAY_SHORT_PT[weekdays[weekdays.length - 1]]}`;
+    return `${t(WEEKDAY_SHORT_PT[weekdays[0]])}–${t(WEEKDAY_SHORT_PT[weekdays[weekdays.length - 1]])}`;
   }
-  return weekdays.map((w) => WEEKDAY_SHORT_PT[w]).join(', ');
+  return weekdays.map((w) => t(WEEKDAY_SHORT_PT[w])).join(', ');
 }
 
 export const SCHEDULE = Object.freeze({

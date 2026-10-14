@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Domínio: Matchmaking (Arena V3 — sprint 1).
  *
@@ -123,11 +124,11 @@ export function topMatches(user, candidates, criteria = {}, n = 10) {
  * Label descritivo do score.
  */
 export function scoreLabel(score) {
-  if (score >= 80) return 'Excelente match';
-  if (score >= 60) return 'Bom match';
-  if (score >= 40) return 'Match ok';
-  if (score >= 20) return 'Match fraco';
-  return 'Sem match';
+  if (score >= 80) return t('Excelente match');
+  if (score >= 60) return t('Bom match');
+  if (score >= 40) return t('Match ok');
+  if (score >= 20) return t('Match fraco');
+  return t('Sem match');
 }
 
 /**

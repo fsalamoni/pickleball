@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
 import { formatArenaAddress } from '../domain/arena.js';
+import { t } from '@/core/i18n';
 
 /**
  * Card de compartilhamento da arena, com QR Code para a página pública.
@@ -26,7 +27,7 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
   const { copied, copy } = useClipboard();
 
   const url = typeof window !== 'undefined' ? `${window.location.origin}/arenas/${arena.id}` : '';
-  const text = `Conheça a arena ${arena.name}${arena.city ? ` (${arena.city})` : ''} no PickleRush: ${url}`;
+  const text = t('Conheça a arena {name}{cidade} no PickleRush: {url}', { name: arena.name, cidade: arena.city ? ` (${arena.city})` : '', url });
 
   useEffect(() => {
     if (!url) return;
@@ -45,7 +46,7 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
       a.download = `arena-${arena.name?.replace(/\s+/g, '-').toLowerCase() || 'card'}.png`;
       a.click();
     } catch (err) {
-      toast.error('Não foi possível gerar a imagem.');
+      toast.error(t('Não foi possível gerar a imagem.'));
     } finally {
       setBusy(false);
     }
@@ -55,14 +56,14 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Compartilhar arena</DialogTitle>
-          <DialogDescription>Baixe o card, copie o link ou envie pelo WhatsApp.</DialogDescription>
+          <DialogTitle>{t('Compartilhar arena')}</DialogTitle>
+          <DialogDescription>{t('Baixe o card, copie o link ou envie pelo WhatsApp.')}</DialogDescription>
         </DialogHeader>
 
         {/* `tema-claro`: a imagem baixada é a mesma no modo escuro. */}
         <div ref={cardRef} className="tema-claro overflow-hidden rounded-2xl border border-acid/20 bg-gradient-to-br from-ink to-ink-light p-5 text-white">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-            <Building className="h-4 w-4" /> Arena · PickleRush
+            <Building className="h-4 w-4" /> {t('Arena · PickleRush')}
           </div>
           {arena.cover_url ? (
             <img src={arena.cover_url} alt="" className="mt-3 h-32 w-full rounded-xl object-cover" />
@@ -74,23 +75,23 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
             </p>
           )}
           <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-xs text-white/70">Aponte a câmera para reservar e ver os horários.</p>
-            {qr && <img src={qr} alt="QR" className="h-20 w-20 rounded-lg bg-white p-1" />}
+            <p className="text-xs text-white/70">{t('Aponte a câmera para reservar e ver os horários.')}</p>
+            {qr && <img src={qr} alt={t('QR')} className="h-20 w-20 rounded-lg bg-white p-1" />}
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <Button variant="outline" onClick={() => copy(url)}>
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            <span className="ml-1 hidden sm:inline">{copied ? 'Copiado' : 'Link'}</span>
+            <span className="ml-1 hidden sm:inline">{copied ? t('Copiado') : t('Link')}</span>
           </Button>
           <Button variant="outline" asChild>
             <a href={buildWhatsAppShareUrl(text)} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">WhatsApp</span>
+              <MessageCircle className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">{t('WhatsApp')}</span>
             </a>
           </Button>
           <Button onClick={handleDownload} disabled={busy}>
-            <Download className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">{busy ? '...' : 'Baixar'}</span>
+            <Download className="h-4 w-4" /> <span className="ml-1 hidden sm:inline">{busy ? '...' : t('Baixar')}</span>
           </Button>
         </div>
       </DialogContent>

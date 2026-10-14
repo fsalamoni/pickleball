@@ -48,6 +48,7 @@ import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
 import ArenaGameDayDialog from '@/v2/components/games/ArenaGameDayDialog';
 import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
+import { t } from '@/core/i18n';
 
 function hojeISO() {
   const d = new Date();
@@ -72,7 +73,7 @@ function textoDeVagas(vagas) {
     const limite = vagas.byCourt.reduce((a, c) => a + (c.limit || 0), 0);
     return `${total}/${limite} por quadra${acima(total, limite)}`;
   }
-  if (vagas.limit == null) return `${vagas.used} inscrito(s) · sem limite`;
+  if (vagas.limit == null) return t('{used} inscrito(s) · sem limite', { used: vagas.used });
   return `${vagas.used}/${vagas.limit} inscrito(s)${acima(vagas.used, vagas.limit)}`;
 }
 
@@ -114,7 +115,7 @@ function CartaoDoDia({ gameDay, arenaId, onOpen, apagado }) {
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{gameDay.title}</h3>
         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-          {isOpenMatchGameDay(gameDay) && <V2Badge tone="acid">Jogo aberto</V2Badge>}
+          {isOpenMatchGameDay(gameDay) && <V2Badge tone="acid">{t('Jogo aberto')}</V2Badge>}
           <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
         </div>
       </div>
@@ -122,8 +123,8 @@ function CartaoDoDia({ gameDay, arenaId, onOpen, apagado }) {
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">
         <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {textoDeVagas(vagas)}</span>
         <span className="flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" /> {quadras.length}</span>
-        {vagas.full && <V2Badge tone="amber">Lotado</V2Badge>}
-        {isGameDayOpenToParticipants(gameDay) && <V2Badge tone="blue">Inscritos conduzem</V2Badge>}
+        {vagas.full && <V2Badge tone="amber">{t('Lotado')}</V2Badge>}
+        {isGameDayOpenToParticipants(gameDay) && <V2Badge tone="blue">{t('Inscritos conduzem')}</V2Badge>}
       </div>
       {/* `arenaId` fica no cartão para o teste de rota e para o leitor saber a
           que arena ele pertence quando a lista for reaproveitada. */}
@@ -152,14 +153,14 @@ function ListaDaArena({ arena }) {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Central da arena</V2BackLink>
+      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">{t('Central da arena')}</V2BackLink>
 
       <V2PageIntro
-        title="Dia de jogo da arena"
-        subtitle="Marque o dia no calendário, escolha as quadras e os horários, defina quantos atletas cabem e conduza as partidas. As quadras escolhidas ficam fechadas para reserva."
+        title={t('Dia de jogo da arena')}
+        subtitle={t('Marque o dia no calendário, escolha as quadras e os horários, defina quantos atletas cabem e conduza as partidas. As quadras escolhidas ficam fechadas para reserva.')}
         action={(
           <V2Button onClick={() => setCriarAberto(true)}>
-            <CalendarPlus className="h-4 w-4" /> Novo dia de jogo
+            <CalendarPlus className="h-4 w-4" /> {t('Novo dia de jogo')}
           </V2Button>
         )}
       />
@@ -171,8 +172,8 @@ function ListaDaArena({ arena }) {
       ) : isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os dias de jogo da arena"
-            description="A conexão falhou. O que já está marcado continua lá — tente de novo."
+            title={t('Não foi possível carregar os dias de jogo da arena')}
+            description={t('A conexão falhou. O que já está marcado continua lá — tente de novo.')}
             onRetry={refetch}
           />
         </V2Surface>
@@ -180,9 +181,9 @@ function ListaDaArena({ arena }) {
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
-            title="Nenhum dia de jogo marcado"
-            description="Escolha a data, as quadras e o horário. O calendário fecha essas quadras sozinho, e os atletas passam a ver o dia na página da arena para marcar presença."
-            action={<V2Button onClick={() => setCriarAberto(true)}>Marcar dia de jogo</V2Button>}
+            title={t('Nenhum dia de jogo marcado')}
+            description={t('Escolha a data, as quadras e o horário. O calendário fecha essas quadras sozinho, e os atletas passam a ver o dia na página da arena para marcar presença.')}
+            action={<V2Button onClick={() => setCriarAberto(true)}>{t('Marcar dia de jogo')}</V2Button>}
           />
         </V2Surface>
       ) : (
@@ -195,7 +196,7 @@ function ListaDaArena({ arena }) {
           {passados.length > 0 && (
             <section>
               <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-                <History className="h-4 w-4 text-gray-300" /> Já aconteceram ({passados.length})
+                <History className="h-4 w-4 text-gray-300" /> {t('Já aconteceram ({n})', { n: passados.length })}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {passados.map((g) => <CartaoDoDia key={g.id} gameDay={g} arenaId={arena.id} onOpen={abrir} apagado />)}
@@ -248,10 +249,10 @@ function Vagas({ gameDay, participants }) {
     <V2Surface className="mb-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Vagas</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Vagas')}</h2>
           <p className="mt-0.5 text-sm text-gray-500">{textoDeVagas(vagas)}</p>
         </div>
-        {vagas.full && <V2Badge tone="amber">Lotado</V2Badge>}
+        {vagas.full && <V2Badge tone="amber">{t('Lotado')}</V2Badge>}
       </div>
 
       {porQuadra && (
@@ -260,9 +261,9 @@ function Vagas({ gameDay, participants }) {
             const nomes = nomesPorQuadra.get(c.court_id) || [];
             return (
               <li key={c.court_id} className="rounded-2xl border border-gray-100 bg-paper px-3.5 py-2.5">
-                <p className="text-sm font-semibold text-ink">{c.court_name || 'Quadra'}</p>
+                <p className="text-sm font-semibold text-ink">{c.court_name || t('Quadra')}</p>
                 <p className="text-xs text-gray-500">
-                  {c.start_time}–{c.end_time} · {c.limit == null ? `${c.used} inscrito(s), sem limite` : `${c.used}/${c.limit}`}
+                  {c.start_time}–{c.end_time} · {c.limit == null ? t('{used} inscrito(s), sem limite', { used: c.used }) : `${c.used}/${c.limit}`}
                 </p>
                 {nomes.length > 0 && (
                   <p className="mt-1.5 text-xs leading-5 text-gray-600">{nomes.join(' · ')}</p>
@@ -275,18 +276,18 @@ function Vagas({ gameDay, participants }) {
 
       {porQuadra && semQuadra.length > 0 && (
         <p className="mt-2 text-xs text-amber-700">
-          Sem quadra escolhida: {semQuadra.join(' · ')}. Eles jogam, mas não contam no limite de nenhuma quadra.
+          {t('Sem quadra escolhida:')} {semQuadra.join(' · ')}{t('. Eles jogam, mas não contam no limite de nenhuma quadra.')}
         </p>
       )}
 
       <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-gray-500">
         <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
         {participants.length === 0 ? (
-          <span>Ninguém marcou presença ainda. O dia de jogo já aparece na página e no calendário da arena.</span>
+          <span>{t('Ninguém marcou presença ainda. O dia de jogo já aparece na página e no calendário da arena.')}</span>
         ) : (
           <span>
-            Os {participants.length} inscritos — com <strong>formar dupla</strong>, <strong>pausar</strong> e{' '}
-            <strong>remover</strong> — estão em <strong>Participantes</strong>, logo abaixo.
+            {t('Os {n} inscritos — com', { n: participants.length })} <strong>{t('formar dupla')}</strong>, <strong>{t('pausar')}</strong> {t('e')}{' '}
+            <strong>{t('remover')}</strong> {t('— estão em')} <strong>{t('Participantes')}</strong>{t(', logo abaixo.')}
           </span>
         )}
       </p>
@@ -314,8 +315,8 @@ function DetalheDaArena({ arena, gameDayId }) {
       <div className="mx-auto max-w-[800px]">
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar este dia de jogo"
-            description="A conexão falhou no meio do caminho. Ele continua lá — tente de novo."
+            title={t('Não foi possível carregar este dia de jogo')}
+            description={t('A conexão falhou no meio do caminho. Ele continua lá — tente de novo.')}
             onRetry={refetch}
           />
         </V2Surface>
@@ -328,9 +329,9 @@ function DetalheDaArena({ arena, gameDayId }) {
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
-            title="Dia de jogo não encontrado"
-            description="Ele pode ter sido arquivado, ou pertence a outra arena."
-            action={<V2Button asChild><Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>Voltar</Link></V2Button>}
+            title={t('Dia de jogo não encontrado')}
+            description={t('Ele pode ter sido arquivado, ou pertence a outra arena.')}
+            action={<V2Button asChild><Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>{t('Voltar')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -348,7 +349,7 @@ function DetalheDaArena({ arena, gameDayId }) {
       <button type="button" onClick={() => navigate(`/arenas/${arena.id}/gerir/dia-de-jogo`)}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink"
       >
-        <ChevronLeft className="h-4 w-4" /> Dias de jogo da arena
+        <ChevronLeft className="h-4 w-4" /> {t('Dias de jogo da arena')}
       </button>
 
       <V2Surface>
@@ -357,7 +358,7 @@ function DetalheDaArena({ arena, gameDayId }) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
               <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
-              {gameDay.status === 'archived' && <V2Badge tone="red">Arquivado</V2Badge>}
+              {gameDay.status === 'archived' && <V2Badge tone="red">{t('Arquivado')}</V2Badge>}
             </div>
             <p className="mt-1 text-sm text-gray-500">{arenaGameDayWhenText(gameDay)}</p>
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
@@ -369,12 +370,12 @@ function DetalheDaArena({ arena, gameDayId }) {
             {podeConfigurar && gameDay.status !== 'archived' && (
               <>
                 <V2Button variant="ghost" size="sm" onClick={() => setEditar(true)}>
-                  <Pencil className="mr-1.5 h-4 w-4" /> Editar
+                  <Pencil className="mr-1.5 h-4 w-4" /> {t('Editar')}
                 </V2Button>
                 <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600"
                   onClick={() => setConfirmarArquivo(true)}
                 >
-                  <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
+                  <Trash2 className="mr-1.5 h-4 w-4" /> {t('Arquivar')}
                 </V2Button>
               </>
             )}
@@ -384,7 +385,7 @@ function DetalheDaArena({ arena, gameDayId }) {
         <ul className="mt-4 flex flex-wrap gap-2">
           {quadras.map((s) => (
             <li key={`${s.court_id}-${s.start_time}`} className="rounded-full border border-gray-200 bg-paper px-3 py-1 text-xs font-semibold text-gray-600">
-              {s.court_name || 'Quadra'} · {s.start_time}–{s.end_time}
+              {s.court_name || t('Quadra')} · {s.start_time}–{s.end_time}
             </li>
           ))}
         </ul>
@@ -393,9 +394,9 @@ function DetalheDaArena({ arena, gameDayId }) {
           <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
           <span>
             {gameDay.status === 'archived'
-              ? 'As quadras foram liberadas no calendário quando este dia de jogo foi arquivado.'
-              : 'Estas quadras estão fechadas para reserva no calendário enquanto o dia de jogo existir.'}
-            {' '}Os atletas marcam presença pela página da arena.
+              ? t('As quadras foram liberadas no calendário quando este dia de jogo foi arquivado.')
+              : t('Estas quadras estão fechadas para reserva no calendário enquanto o dia de jogo existir.')}
+            {t(' Os atletas marcam presença pela página da arena.')}
           </span>
         </p>
       </V2Surface>
@@ -414,8 +415,8 @@ function DetalheDaArena({ arena, gameDayId }) {
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
-            title="Você não conduz este dia de jogo"
-            description="Peça a quem gerencia a arena para incluir você como organizador."
+            title={t('Você não conduz este dia de jogo')}
+            description={t('Peça a quem gerencia a arena para incluir você como organizador.')}
           />
         </V2Surface>
       )}
@@ -431,17 +432,17 @@ function DetalheDaArena({ arena, gameDayId }) {
         open={confirmarArquivo}
         onOpenChange={setConfirmarArquivo}
         destructive
-        title="Arquivar dia de jogo?"
-        description="As quadras voltam a ficar livres para reserva no calendário, o dia sai da lista dos atletas e os resultados saem do ranking. Esta ação não pode ser desfeita."
-        confirmLabel="Arquivar"
+        title={t('Arquivar dia de jogo?')}
+        description={t('As quadras voltam a ficar livres para reserva no calendário, o dia sai da lista dos atletas e os resultados saem do ranking. Esta ação não pode ser desfeita.')}
+        confirmLabel={t('Arquivar')}
         loading={arquivar.isPending}
         onConfirm={async () => {
           try {
             await arquivar.mutateAsync(gameDay.id);
-            toast.success('Dia de jogo arquivado. As quadras foram liberadas.');
+            toast.success(t('Dia de jogo arquivado. As quadras foram liberadas.'));
             navigate(`/arenas/${arena.id}/gerir/dia-de-jogo`);
           } catch (err) {
-            toast.error(err?.message || 'Não foi possível arquivar.');
+            toast.error(err?.message || t('Não foi possível arquivar.'));
           }
         }}
       />

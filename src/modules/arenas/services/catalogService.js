@@ -26,6 +26,7 @@ import {
 } from '../domain/productCatalog.js';
 import { buildCatalogSeed, buildSeedCatalogProducts } from '../domain/catalogSeed.js';
 import { todayISO } from '../domain/calendar.js';
+import { t } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS.catalog_products;
 
@@ -106,7 +107,7 @@ export async function checkCatalogDuplicates(candidate, existing = []) {
  * @returns {Promise<{ id: string }>}
  */
 export async function proposeCatalogProduct(input, actor, { arenaId = null, existing = [], force = false } = {}) {
-  if (!db) throw new Error('Sem conexão.');
+  if (!db) throw new Error(t('Sem conexão.'));
   const isArena = !!arenaId;
   const { valid, error, value } = normalizeCatalogProduct({
     ...input,
@@ -117,7 +118,7 @@ export async function proposeCatalogProduct(input, actor, { arenaId = null, exis
 
   const { exact } = await checkCatalogDuplicates(value, existing);
   if (exact && !force) {
-    const err = new Error('Este produto já existe no catálogo.');
+    const err = new Error(t('Este produto já existe no catálogo.'));
     err.code = 'duplicate';
     err.existing = exact;
     throw err;
@@ -151,7 +152,7 @@ export async function proposeCatalogProduct(input, actor, { arenaId = null, exis
  * @returns {Promise<{ productId: string }>}
  */
 export async function adoptCatalogToArena(arenaId, catalogProduct, arenaFields = {}, actor) {
-  if (!arenaId || !catalogProduct) throw new Error('Dados inválidos.');
+  if (!arenaId || !catalogProduct) throw new Error(t('Dados inválidos.'));
   const productId = await createInventoryProduct(arenaId, {
     name: catalogProduct.name,
     brand: catalogProduct.brand,
@@ -195,7 +196,7 @@ export async function adoptCatalogToArena(arenaId, catalogProduct, arenaFields =
  * @returns {Promise<{ created: number, skipped: number }>}
  */
 export async function adoptManyCatalogToArena(arenaId, catalogProducts = [], actor) {
-  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!db || !arenaId) throw new Error(t('Arena inválida.'));
   if (!Array.isArray(catalogProducts) || catalogProducts.length === 0) return { created: 0, skipped: 0 };
 
   // Já adotados (por catalog_id) para não duplicar no mercado.
@@ -208,7 +209,7 @@ export async function adoptManyCatalogToArena(arenaId, catalogProducts = [], act
     existing = await listInventoryProducts(arenaId);
   } catch (err) {
     logger.warn('[catalog] não foi possível conferir os produtos já adotados', err);
-    throw new Error('Não foi possível conferir os produtos que você já tem. Nada foi adicionado — tente de novo.');
+    throw new Error(t('Não foi possível conferir os produtos que você já tem. Nada foi adicionado — tente de novo.'));
   }
   const adopted = new Set(existing.map((p) => p.catalog_id).filter(Boolean));
 
@@ -262,7 +263,7 @@ function isSeedId(id) {
 
 /** Cria um produto novo no catálogo (platform_admin). */
 export async function createCatalogProductAdmin(input, actor) {
-  if (!db) throw new Error('Sem conexão.');
+  if (!db) throw new Error(t('Sem conexão.'));
   const { valid, error, value } = normalizeCatalogProduct({
     ...input, source: CATALOG_PRODUCT_SOURCE.PLATFORM, status: CATALOG_PRODUCT_STATUS.ACTIVE,
   });
@@ -282,7 +283,7 @@ export async function createCatalogProductAdmin(input, actor) {
  * para o item original não duplicar.
  */
 export async function updateCatalogProductSmart(product, updates, actor) {
-  if (!db || !product) throw new Error('Produto inválido.');
+  if (!db || !product) throw new Error(t('Produto inválido.'));
   const { valid, error, value } = normalizeCatalogProduct({
     ...product, ...updates,
     source: product.source || CATALOG_PRODUCT_SOURCE.PLATFORM,
@@ -316,7 +317,7 @@ export async function updateCatalogProductSmart(product, updates, actor) {
  * reaparecer; contribuições puras do Firestore são removidas de fato.
  */
 export async function deleteCatalogProductSmart(product, actor) {
-  if (!db || !product) throw new Error('Produto inválido.');
+  if (!db || !product) throw new Error(t('Produto inválido.'));
   const seedKeys = new Set(buildSeedCatalogProducts().map((s) => s.dedup_key));
   const dedupKey = product.dedup_key || buildDedupKey(product);
 
@@ -340,7 +341,7 @@ export async function deleteCatalogProductSmart(product, actor) {
  * @returns {Promise<{ created: number, skipped: number, total: number }>}
  */
 export async function seedCatalog(actor) {
-  if (!db) throw new Error('Sem conexão.');
+  if (!db) throw new Error(t('Sem conexão.'));
   const existing = await listCatalogProducts({ includeInactive: true });
   const existingKeys = new Set(existing.map((p) => p.dedup_key).filter(Boolean));
   const seed = buildCatalogSeed();

@@ -36,6 +36,7 @@ import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
 import { todayISO } from '../domain/calendar.js';
+import { t } from '@/core/i18n';
 
 const COL_COACHES = 'arena_coaches';
 const COL_CLASSES = 'arena_classes';
@@ -85,9 +86,9 @@ export async function listArenaCoaches(arenaId, { onlyActive = true, lim = 50 } 
 }
 
 export async function createArenaCoach(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeCoachInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   const id = doc(collection(db, COL_COACHES)).id;
   await setDoc(doc(db, COL_COACHES, id), {
     id, arena_id: arenaId, ...value, rating_avg: null, rating_count: 0, sessions_given: 0, created_at: serverTimestamp(), updated_at: serverTimestamp(),
@@ -126,9 +127,9 @@ export async function listArenaClasses(arenaId, { onlyFuture = false, lim = 100,
 }
 
 export async function createArenaClass(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeClassInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await recusarSeQuadraOcupada(arenaId, value);
   const id = doc(collection(db, COL_CLASSES)).id;
   await setDoc(doc(db, COL_CLASSES, id), {
@@ -143,14 +144,14 @@ export async function updateArenaClass(classId, input, actor) {
   if (!classId) return;
   const ref = doc(db, COL_CLASSES, classId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Aula não encontrada.');
+  if (!snap.exists()) throw new Error(t('Aula não encontrada.'));
   const atual = { id: snap.id, ...snap.data() };
   const { valid, errors, value } = normalizeClassInput({ ...atual, ...input });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   // Reduzir o número de vagas abaixo de quem já se matriculou tiraria alguém
   // da aula sem avisar ninguém.
   if (value.max_students < (Number(atual.enrolled) || 0)) {
-    throw new Error(`Já há ${atual.enrolled} matriculado(s): o limite não pode ser menor.`);
+    throw new Error(t('Já há {enrolled} matriculado(s): o limite não pode ser menor.', { enrolled: atual.enrolled }));
   }
   // A própria aula não pode conflitar consigo mesma ao ser editada.
   await recusarSeQuadraOcupada(atual.arena_id, value, { exceptClassId: classId });
@@ -341,20 +342,20 @@ export async function listMyTaughtClasses(userId) {
 }
 
 export async function bookClass(classId, user, profile, opts = {}) {
-  if (!classId) throw new Error('classId obrigatório.');
-  if (!user?.uid) throw new Error('Faça login.');
+  if (!classId) throw new Error(t('classId obrigatório.'));
+  if (!user?.uid) throw new Error(t('Faça login.'));
 
   const classRef = doc(db, COL_CLASSES, classId);
   const cSnap = await getDoc(classRef);
-  if (!cSnap.exists()) throw new Error('Aula não encontrada.');
+  if (!cSnap.exists()) throw new Error(t('Aula não encontrada.'));
   const cls = { id: cSnap.id, ...cSnap.data() };
 
-  if (!isClassOpen(cls)) throw new Error('Esta aula não está mais aberta.');
-  if (classSeatsLeft(cls) <= 0) throw new Error('Aula lotada.');
+  if (!isClassOpen(cls)) throw new Error(t('Esta aula não está mais aberta.'));
+  if (classSeatsLeft(cls) <= 0) throw new Error(t('Aula lotada.'));
 
   const bookingId = `${classId}_${user.uid}`;
   const jaTem = await getDoc(doc(db, COL_BOOKINGS, bookingId));
-  if (jaTem.exists()) throw new Error('Você já está matriculado nesta aula.');
+  if (jaTem.exists()) throw new Error(t('Você já está matriculado nesta aula.'));
 
   // A divisão é decidida AQUI, com o que está no banco — não com o que a tela
   // mandou. 🐞 A tela mandava `partner: true` fixo: o professor da CASA pagava
@@ -441,9 +442,9 @@ export async function setClassBookingPaid(bookingId, paid, actor) {
 export async function updateArenaCoach(coachId, input, actor) {
   if (!coachId) return;
   const snap = await getDoc(doc(db, COL_COACHES, coachId));
-  if (!snap.exists()) throw new Error('Professor não encontrado.');
+  if (!snap.exists()) throw new Error(t('Professor não encontrado.'));
   const { valid, errors, value } = normalizeCoachInput({ ...snap.data(), ...input });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await updateDoc(doc(db, COL_COACHES, coachId), { ...value, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'arena_coach_updated', actor, details: { coach_id: coachId } });
 }

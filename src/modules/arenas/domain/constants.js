@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Constantes do módulo de Arenas (puro, sem I/O).
  */
@@ -34,12 +35,12 @@ export const BOOKING_STATUS = Object.freeze({
 });
 
 export const BOOKING_STATUS_LABELS = Object.freeze({
-  [BOOKING_STATUS.REQUESTED]: 'Solicitada',
-  [BOOKING_STATUS.NEGOTIATING]: 'Em negociação',
-  [BOOKING_STATUS.CONFIRMED]: 'Confirmada',
-  [BOOKING_STATUS.DECLINED]: 'Recusada',
-  [BOOKING_STATUS.CANCELLED]: 'Cancelada',
-  [BOOKING_STATUS.COMPLETED]: 'Concluída',
+  [BOOKING_STATUS.REQUESTED]: tk('Solicitada'),
+  [BOOKING_STATUS.NEGOTIATING]: tk('Em negociação'),
+  [BOOKING_STATUS.CONFIRMED]: tk('Confirmada'),
+  [BOOKING_STATUS.DECLINED]: tk('Recusada'),
+  [BOOKING_STATUS.CANCELLED]: tk('Cancelada'),
+  [BOOKING_STATUS.COMPLETED]: tk('Concluída'),
 });
 
 /** Status de pagamento (manual — sem gateway no cliente). */
@@ -51,10 +52,10 @@ export const PAYMENT_STATUS = Object.freeze({
 });
 
 export const PAYMENT_STATUS_LABELS = Object.freeze({
-  [PAYMENT_STATUS.NONE]: 'Sem cobrança',
-  [PAYMENT_STATUS.PENDING]: 'Pagamento pendente',
-  [PAYMENT_STATUS.PAID]: 'Pago',
-  [PAYMENT_STATUS.REFUNDED]: 'Reembolsado',
+  [PAYMENT_STATUS.NONE]: tk('Sem cobrança'),
+  [PAYMENT_STATUS.PENDING]: tk('Pagamento pendente'),
+  [PAYMENT_STATUS.PAID]: tk('Pago'),
+  [PAYMENT_STATUS.REFUNDED]: tk('Reembolsado'),
 });
 
 export const BOOKING_KIND = Object.freeze({
@@ -70,13 +71,13 @@ export const REVIEW_TYPE = Object.freeze({
 });
 
 export const REVIEW_TYPE_LABELS = Object.freeze({
-  [REVIEW_TYPE.REVIEW]: 'Avaliação',
-  [REVIEW_TYPE.COMPLAINT]: 'Reclamação',
-  [REVIEW_TYPE.SUGGESTION]: 'Sugestão',
+  [REVIEW_TYPE.REVIEW]: tk('Avaliação'),
+  [REVIEW_TYPE.COMPLAINT]: tk('Reclamação'),
+  [REVIEW_TYPE.SUGGESTION]: tk('Sugestão'),
 });
 
 export const WEEKDAY_LABELS = Object.freeze([
-  'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado',
+  tk('Domingo'), tk('Segunda'), tk('Terça'), tk('Quarta'), tk('Quinta'), tk('Sexta'), tk('Sábado'),
 ]);
 
-export const WEEKDAY_SHORT = Object.freeze(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']);
+export const WEEKDAY_SHORT = Object.freeze([tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')]);

@@ -37,6 +37,7 @@ import { instanteEmMs } from '@/core/domain/instant';
 import { DEFAULT_TIERS, MEMBER_STATUS, computeTier } from './members.js';
 import { couponDiscount, couponLabel } from './marketing.js';
 import { totalBookingPrice } from './pricing.js';
+import { t } from '@/core/i18n';
 
 /** Arredonda em centavos, sem a sujeira do ponto flutuante. */
 function centavos(v) {
@@ -177,7 +178,7 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   // As horas saem da MESMA conta do preço: `totalBookingPrice` descarta slot
   // inválido, e contar por fora daria uma duração que não corresponde ao valor.
   const { total: tabela, hours: horas } = totalBookingPrice(arena, selecao);
-  const lines = [{ label: 'Valor da tabela', value: centavos(tabela) }];
+  const lines = [{ label: t('Valor da tabela'), value: centavos(tabela) }];
 
   const ativo = isMemberActive(member);
   const { tier, discountPct } = memberTier(member, tiers);
@@ -192,7 +193,7 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
     horasPacote = Math.min(horas, disponiveis);
     if (horasPacote > 0) {
       valorPacote = centavos((tabela / horas) * horasPacote);
-      lines.push({ label: `Pacote (${horasPacote}h)`, value: -valorPacote });
+      lines.push({ label: t('Pacote ({horasPacote}h)', { horasPacote }), value: -valorPacote });
     }
   }
 
@@ -201,7 +202,7 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   // 2. Desconto do nível, sobre o que sobrou.
   const valorDesconto = discountPct > 0 ? centavos(aposPacote * (discountPct / 100)) : 0;
   if (valorDesconto > 0) {
-    lines.push({ label: `Desconto ${tier?.name || 'membro'} (${discountPct}%)`, value: -valorDesconto });
+    lines.push({ label: t('Desconto {valor} ({discountPct}%)', { valor: tier?.name || 'membro', discountPct }), value: -valorDesconto });
   }
 
   const aposDesconto = Math.max(0, centavos(aposPacote - valorDesconto));
@@ -217,7 +218,7 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   const cupomVale = coupon && !(minimoCupom > 0 && tabela < minimoCupom);
   const valorCupom = cupomVale ? couponDiscount(aposDesconto, coupon, { hours: Math.max(0, horas - horasPacote) }) : 0;
   if (valorCupom > 0) {
-    lines.push({ label: couponLabel(coupon) || 'Cupom', value: -valorCupom });
+    lines.push({ label: couponLabel(coupon) || t('Cupom'), value: -valorCupom });
   }
 
   const aposCupom = Math.max(0, centavos(aposDesconto - valorCupom));
@@ -227,7 +228,7 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   if (ativo && useWallet && aposCupom > 0) {
     const saldo = Math.max(0, Number(wallet?.balance) || 0);
     valorCarteira = centavos(Math.min(saldo, aposCupom));
-    if (valorCarteira > 0) lines.push({ label: 'Saldo em carteira', value: -valorCarteira });
+    if (valorCarteira > 0) lines.push({ label: t('Saldo em carteira'), value: -valorCarteira });
   }
 
   const total = Math.max(0, centavos(aposCupom - valorCarteira));

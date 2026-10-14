@@ -25,6 +25,7 @@
 
 import { BOOKING_STATUS } from './constants.js';
 import { timeToMinutes, normalizeTime, normalizeWeekdays } from './court_schedule.js';
+import { t } from '@/core/i18n';
 
 /** Status que bloqueiam horário (others são históricas). */
 export const BLOCKING_STATUSES = Object.freeze([
@@ -163,18 +164,18 @@ export function unavailabilityConflictMessage(conflicts = []) {
   if (!c) return null;
   const quando = `${c.candidate.date} ${c.candidate.start}–${c.candidate.end}`;
   if (c.reason === 'game_day') {
-    return `Este horário (${quando}) está reservado para um dia de jogo da arena${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário ou marque presença no dia de jogo.`;
+    return t('Este horário ({quando}) está reservado para um dia de jogo da arena{valor}. Escolha outro horário ou marque presença no dia de jogo.', { quando, valor: c.notes ? ` — ${c.notes}` : '' });
   }
   if (c.reason === 'class') {
-    return `Este horário (${quando}) está com uma aula marcada${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário, ou matricule-se na aula.`;
+    return t('Este horário ({quando}) está com uma aula marcada{valor}. Escolha outro horário, ou matricule-se na aula.', { quando, valor: c.notes ? ` — ${c.notes}` : '' });
   }
   if (c.reason === 'maintenance') {
     // O MOTIVO da manutenção nunca chega aqui: o bloqueio público não carrega
     // o texto da ordem. "Manutenção" já diz o que a pessoa precisa saber, e
     // dizer que é temporário evita que ela desista da arena.
-    return `A quadra está em manutenção neste horário (${quando}). É temporário — escolha outro horário ou outro dia.`;
+    return t('A quadra está em manutenção neste horário ({quando}). É temporário — escolha outro horário ou outro dia.', { quando });
   }
-  return `A arena bloqueou este horário (${quando})${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário.`;
+  return t('A arena bloqueou este horário ({quando}){valor}. Escolha outro horário.', { quando, valor: c.notes ? ` — ${c.notes}` : '' });
 }
 
 /**
@@ -190,12 +191,12 @@ export function checkScheduleAlignment({ date, start_time, end_time, court_id, c
   }
   // Calcula weekday da data
   const dow = weekdayFromDate(date);
-  if (dow == null) return { aligned: false, error: 'Data inválida.' };
+  if (dow == null) return { aligned: false, error: t('Data inválida.') };
 
   const startMin = timeToMinutes(start_time);
   const endMin = timeToMinutes(end_time);
   if (startMin == null || endMin == null) {
-    return { aligned: false, error: 'Horário inválido.' };
+    return { aligned: false, error: t('Horário inválido.') };
   }
 
   const matching = court_schedules.filter((s) => {
@@ -230,13 +231,13 @@ export function validateBookingRequest({
   existingBookings = [], court_schedules = [],
 }) {
   if (!date || !normalizeTime(start_time) || !normalizeTime(end_time)) {
-    return { ok: false, reason: 'invalid_slot', message: 'Preencha data e horário válido (fim depois do início).' };
+    return { ok: false, reason: 'invalid_slot', message: t('Preencha data e horário válido (fim depois do início).') };
   }
   // Detecta end <= start explicitamente
   const sM = timeToMinutes(start_time);
   const eM = timeToMinutes(end_time);
   if (sM != null && eM != null && eM <= sM) {
-    return { ok: false, reason: 'invalid_slot', message: 'O horário de fim deve ser depois do início.' };
+    return { ok: false, reason: 'invalid_slot', message: t('O horário de fim deve ser depois do início.') };
   }
   // 1. Schedule alignment
   const align = checkScheduleAlignment({ date, start_time, end_time, court_id, court_schedules });
@@ -245,7 +246,7 @@ export function validateBookingRequest({
     return {
       ok: false,
       reason: 'outside_schedule',
-      message: 'A quadra não está disponível nesse dia/horário.',
+      message: t('A quadra não está disponível nesse dia/horário.'),
     };
   }
   // 2. Conflito com reservas existentes
@@ -257,7 +258,7 @@ export function validateBookingRequest({
     return {
       ok: false,
       reason: 'conflict',
-      message: 'Já existe uma reserva ativa nesse horário para esta quadra.',
+      message: t('Já existe uma reserva ativa nesse horário para esta quadra.'),
       conflicts: conflict.conflicts,
     };
   }

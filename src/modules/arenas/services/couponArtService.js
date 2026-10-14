@@ -15,6 +15,7 @@ import {
   ARENA_TEMPLATES_MAX, COUPON_TEMPLATES_FIELD, arenaCouponTemplatesFrom,
 } from '../domain/couponArt.js';
 import { getOrCreateArenaSettings } from './v3SettingsService.js';
+import { t } from '@/core/i18n';
 
 const COL_SETTINGS = 'arena_settings';
 
@@ -31,7 +32,7 @@ export async function getArenaCouponTemplates(arenaId) {
  * conferida de novo aqui — quem grava confere.
  */
 export async function saveArenaCouponTemplates(arenaId, lista = [], actor = null) {
-  if (!db || !arenaId) throw new Error('arenaId é obrigatório.');
+  if (!db || !arenaId) throw new Error(t('arenaId é obrigatório.'));
   const limpa = arenaCouponTemplatesFrom({ [COUPON_TEMPLATES_FIELD]: lista })
     .slice(0, ARENA_TEMPLATES_MAX)
     .map((t) => ({

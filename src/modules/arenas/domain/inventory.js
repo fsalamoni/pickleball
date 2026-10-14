@@ -12,17 +12,18 @@
  */
 
 import { todayISO } from './calendar.js';
+import { t, tk } from '@/core/i18n';
 
 export const INVENTORY_CATEGORIES = Object.freeze({
-  VESTUARIO: 'Vestuário',
-  BEBIDA: 'Bebida',
-  COMIDA: 'Comida',
-  RAQUETE: 'Raquete',
-  BOLA: 'Bola',
-  ACESSORIOS: 'Acessórios',
-  BRINDES: 'Brindes',
-  EQUIPAMENTO: 'Equipamento',
-  OUTROS: 'Outros',
+  VESTUARIO: tk('Vestuário'),
+  BEBIDA: tk('Bebida'),
+  COMIDA: tk('Comida'),
+  RAQUETE: tk('Raquete'),
+  BOLA: tk('Bola'),
+  ACESSORIOS: tk('Acessórios'),
+  BRINDES: tk('Brindes'),
+  EQUIPAMENTO: tk('Equipamento'),
+  OUTROS: tk('Outros'),
 });
 
 export const INVENTORY_CATEGORIES_LIST = Object.values(INVENTORY_CATEGORIES);
@@ -50,13 +51,13 @@ function isValidCategory(value) {
  */
 export function normalizeInventoryProduct(input = {}) {
   const name = str(input.name);
-  if (!name) return { valid: false, error: 'Nome do produto é obrigatório.', value: {} };
+  if (!name) return { valid: false, error: t('Nome do produto é obrigatório.'), value: {} };
   if (name.length > PRODUCT_NAME_MAX) {
-    return { valid: false, error: `Nome muito longo (max ${PRODUCT_NAME_MAX}).`, value: { name: name.slice(0, PRODUCT_NAME_MAX) } };
+    return { valid: false, error: t('Nome muito longo (max {PRODUCT_NAME_MAX}).', { PRODUCT_NAME_MAX }), value: { name: name.slice(0, PRODUCT_NAME_MAX) } };
   }
   const category = str(input.category);
   if (!isValidCategory(category)) {
-    return { valid: false, error: 'Categoria inválida.', value: { name } };
+    return { valid: false, error: t('Categoria inválida.'), value: { name } };
   }
   const value = {
     name,
@@ -141,16 +142,16 @@ export function expiryStatus(expiryDate, { soonDays = 15, today } = {}) {
  */
 export function normalizeInventoryEntry(input = {}) {
   const product_id = str(input.product_id);
-  if (!product_id) return { valid: false, error: 'Produto é obrigatório.', value: {} };
+  if (!product_id) return { valid: false, error: t('Produto é obrigatório.'), value: {} };
   const date = str(input.date);
-  if (!isValidDate(date)) return { valid: false, error: 'Data inválida (YYYY-MM-DD).', value: { product_id } };
+  if (!isValidDate(date)) return { valid: false, error: t('Data inválida (YYYY-MM-DD).'), value: { product_id } };
   const quantity = Number(input.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0 || quantity > INVENTORY_MAX_QUANTITY) {
-    return { valid: false, error: `Quantidade deve ser entre 1 e ${INVENTORY_MAX_QUANTITY}.`, value: { product_id, date } };
+    return { valid: false, error: t('Quantidade deve ser entre 1 e {INVENTORY_MAX_QUANTITY}.', { INVENTORY_MAX_QUANTITY }), value: { product_id, date } };
   }
   const unit_cost = Number(input.unit_cost);
   if (!Number.isFinite(unit_cost) || unit_cost < 0) {
-    return { valid: false, error: 'Custo unitário inválido (>= 0).', value: { product_id, date, quantity } };
+    return { valid: false, error: t('Custo unitário inválido (>= 0).'), value: { product_id, date, quantity } };
   }
   return {
     valid: true,
@@ -174,20 +175,20 @@ export function normalizeInventoryEntry(input = {}) {
  */
 export function normalizeInventoryExit(input = {}) {
   const product_id = str(input.product_id);
-  if (!product_id) return { valid: false, error: 'Produto é obrigatório.', value: {} };
+  if (!product_id) return { valid: false, error: t('Produto é obrigatório.'), value: {} };
   const date = str(input.date);
-  if (!isValidDate(date)) return { valid: false, error: 'Data inválida (YYYY-MM-DD).', value: { product_id } };
+  if (!isValidDate(date)) return { valid: false, error: t('Data inválida (YYYY-MM-DD).'), value: { product_id } };
   const quantity = Number(input.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0 || quantity > INVENTORY_MAX_QUANTITY) {
-    return { valid: false, error: `Quantidade deve ser entre 1 e ${INVENTORY_MAX_QUANTITY}.`, value: { product_id, date } };
+    return { valid: false, error: t('Quantidade deve ser entre 1 e {INVENTORY_MAX_QUANTITY}.', { INVENTORY_MAX_QUANTITY }), value: { product_id, date } };
   }
   const exit_type = str(input.exit_type) || 'sale';
   if (!['sale', 'consumption', 'loss', 'gift', 'return'].includes(exit_type)) {
-    return { valid: false, error: 'Tipo de saída inválido (sale, consumption, loss, gift, return).', value: { product_id, date, quantity } };
+    return { valid: false, error: t('Tipo de saída inválido (sale, consumption, loss, gift, return).'), value: { product_id, date, quantity } };
   }
   const unit_price = Number(input.unit_price);
   if (!Number.isFinite(unit_price) || unit_price < 0) {
-    return { valid: false, error: 'Preço unitário inválido (>= 0).', value: { product_id, date, quantity, exit_type } };
+    return { valid: false, error: t('Preço unitário inválido (>= 0).'), value: { product_id, date, quantity, exit_type } };
   }
   return {
     valid: true,
@@ -312,12 +313,12 @@ export function stockPosition(product, entries = [], exits = [], { today, vendeP
  * vender agora. O resto não some — fica num filtro, fora da frente.
  */
 export const STOCK_FILTERS = Object.freeze([
-  { value: 'a_venda', label: 'À venda', situacoes: [S.A_VENDA, S.BAIXO, S.SEM_CONTROLE] },
-  { value: 'esgotados', label: 'Esgotados', situacoes: [S.ESGOTADO] },
-  { value: 'vencidos', label: 'Vencidos', situacoes: [S.VENCIDO] },
-  { value: 'sem_compra', label: 'Sem compra registrada', situacoes: [S.SEM_COMPRA] },
-  { value: 'inativos', label: 'Inativos', situacoes: [S.INATIVO] },
-  { value: 'todos', label: 'Todos', situacoes: null },
+  { value: 'a_venda', label: tk('À venda'), situacoes: [S.A_VENDA, S.BAIXO, S.SEM_CONTROLE] },
+  { value: 'esgotados', label: tk('Esgotados'), situacoes: [S.ESGOTADO] },
+  { value: 'vencidos', label: tk('Vencidos'), situacoes: [S.VENCIDO] },
+  { value: 'sem_compra', label: tk('Sem compra registrada'), situacoes: [S.SEM_COMPRA] },
+  { value: 'inativos', label: tk('Inativos'), situacoes: [S.INATIVO] },
+  { value: 'todos', label: tk('Todos'), situacoes: null },
 ]);
 
 /** O filtro deixa passar esta situação? */

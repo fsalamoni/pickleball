@@ -31,10 +31,11 @@ import {
 } from '@/v2/ui/primitives';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import CampaignBanner from '@/v2/components/arenas/marketing/campaigns/CampaignBanner';
+import { t } from '@/core/i18n';
 
 function Voltar({ arenaId, arenaName }) {
   return (
-    <V2BackLink to={`/arenas/${arenaId}`}>{arenaName || 'Voltar para a arena'}</V2BackLink>
+    <V2BackLink to={`/arenas/${arenaId}`}>{arenaName || t('Voltar para a arena')}</V2BackLink>
   );
 }
 
@@ -61,8 +62,8 @@ export default function V2ArenaCampaign() {
       <div className="mx-auto max-w-3xl space-y-4">
         <Voltar arenaId={arenaId} />
         <V2ErrorState
-          title="Não foi possível carregar a campanha"
-          description="A conexão falhou. A campanha continua lá — tente de novo em instantes."
+          title={t('Não foi possível carregar a campanha')}
+          description={t('A conexão falhou. A campanha continua lá — tente de novo em instantes.')}
           onRetry={() => q.refetch()}
         />
       </div>
@@ -74,10 +75,10 @@ export default function V2ArenaCampaign() {
       <div className="mx-auto max-w-3xl space-y-4">
         <Voltar arenaId={arenaId} arenaName={arena?.name} />
         <V2Surface className="text-center">
-          <p className="font-display text-lg font-bold text-ink">Esta campanha não está mais disponível</p>
-          <p className="mt-1 text-sm text-gray-500">A arena pode tê-la retirado. Veja o que ela tem agora.</p>
+          <p className="font-display text-lg font-bold text-ink">{t('Esta campanha não está mais disponível')}</p>
+          <p className="mt-1 text-sm text-gray-500">{t('A arena pode tê-la retirado. Veja o que ela tem agora.')}</p>
           <V2Button asChild className="mt-4">
-            <Link to={`/arenas/${arenaId}`}>Ver a arena</Link>
+            <Link to={`/arenas/${arenaId}`}>{t('Ver a arena')}</Link>
           </V2Button>
         </V2Surface>
       </div>
@@ -109,7 +110,7 @@ export default function V2ArenaCampaign() {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h1 className="font-display text-2xl font-black text-ink">{campanha.name}</h1>
           {!valendo && (
-            <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? 'Pausada pela arena' : 'Encerrada'}</V2Badge>
+            <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? t('Pausada pela arena') : t('Encerrada')}</V2Badge>
           )}
         </div>
         {arena?.name && (
@@ -124,13 +125,13 @@ export default function V2ArenaCampaign() {
           <p className="mt-4 flex items-center gap-1.5 text-sm text-gray-500">
             <CalendarClock className="h-4 w-4" aria-hidden />
             {estado === BANNER_STATE.ENDED
-              ? `Valeu até ${formatDateShortBR(campanha.banner_until)}.`
-              : `Vale até ${formatDateShortBR(campanha.banner_until)}.`}
+              ? t('Valeu até {banner_until}.', { banner_until: formatDateShortBR(campanha.banner_until) })
+              : t('Vale até {banner_until}.', { banner_until: formatDateShortBR(campanha.banner_until) })}
           </p>
         )}
         {!valendo && (
           <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Esta campanha não está mais no ar. Confira na página da arena o que ela oferece agora.
+            {t('Esta campanha não está mais no ar. Confira na página da arena o que ela oferece agora.')}
           </p>
         )}
 
@@ -142,11 +143,11 @@ export default function V2ArenaCampaign() {
           )}
           {destino.type !== CAMPAIGN_DESTINATION.BOOKING && (
             <V2Button asChild variant={valendo && vaiParaOutroLugar ? 'secondary' : 'primary'}>
-              <Link to={reservarLink}><LayoutGrid className="h-4 w-4" /> Reservar um horário</Link>
+              <Link to={reservarLink}><LayoutGrid className="h-4 w-4" /> {t('Reservar um horário')}</Link>
             </V2Button>
           )}
           <V2Button asChild variant="ghost">
-            <Link to={`/arenas/${arenaDaCampanha}`}>Ver a arena</Link>
+            <Link to={`/arenas/${arenaDaCampanha}`}>{t('Ver a arena')}</Link>
           </V2Button>
         </div>
       </V2Surface>

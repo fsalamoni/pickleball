@@ -36,6 +36,7 @@ import {
   referralProgram,
 } from './marketing.js';
 import { instanteEmMs } from '@/core/domain/instant';
+import { t, tk } from '@/core/i18n';
 
 /** Reserva que de fato aconteceu (ou vai acontecer): conta no custo e na receita. */
 const CONTA = new Set(['confirmed', 'completed']);
@@ -64,7 +65,7 @@ export function couponStatus(coupon, now = Date.now()) {
 }
 
 export const COUPON_STATUS_LABEL = Object.freeze({
-  ativo: 'Ativo', desligado: 'Desligado', esgotado: 'Esgotado', vencido: 'Vencido',
+  ativo: tk('Ativo'), desligado: tk('Desligado'), esgotado: tk('Esgotado'), vencido: tk('Vencido'),
 });
 
 /**
@@ -160,7 +161,7 @@ export function couponUsageReport({ coupons = [], bookings = [], referrals = [],
       code: c.code || '',
       kind,
       family,
-      kindLabel: COUPON_KIND_META[kind].label,
+      kindLabel: t(COUPON_KIND_META[kind].label),
       benefit: couponBenefitText(c),
       status: couponStatus(c, now),
       uses,
@@ -182,7 +183,7 @@ export function couponUsageReport({ coupons = [], bookings = [], referrals = [],
       const receitas = doTipo.map((r) => r.revenue).filter((v) => v != null);
       return {
         kind,
-        label: COUPON_KIND_META[kind].label,
+        label: t(COUPON_KIND_META[kind].label),
         family: COUPON_KIND_META[kind].family,
         coupons: doTipo.length,
         uses: doTipo.reduce((acc, r) => acc + r.uses, 0),

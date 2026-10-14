@@ -25,6 +25,7 @@ import { instanteEmMs } from '@/core/domain/instant';
 import { formatDateShortBR } from './calendar.js';
 import { formatPrice } from './pricing.js';
 import { normalizeCouponArt } from './couponArt.js';
+import { t, tk } from '@/core/i18n';
 
 export const CAMPAIGN_STATUS = Object.freeze({
   DRAFT: 'draft',
@@ -83,24 +84,24 @@ export const COUPON_FAMILY = Object.freeze({
  * "descreva o benefício".
  */
 export const COUPON_KIND_META = Object.freeze({
-  [COUPON_KIND.DISCOUNT]: { label: 'Desconto', family: COUPON_FAMILY.BOOKING, hint: 'Percentual ou valor fixo abatido do preço da reserva.' },
-  [COUPON_KIND.FREE_HOURS]: { label: 'Hora grátis', family: COUPON_FAMILY.BOOKING, hint: 'Horas de quadra sem custo, abatidas do preço da reserva.' },
-  [COUPON_KIND.PRIVATE_LESSON]: { label: 'Aula particular', family: COUPON_FAMILY.VOUCHER, hint: 'Uma aula individual com professor da arena.', example: '1 aula particular de 1h' },
-  [COUPON_KIND.GROUP_LESSON]: { label: 'Aula em grupo', family: COUPON_FAMILY.VOUCHER, hint: 'Uma vaga numa aula em grupo.', example: '1 aula em grupo (turma de iniciantes)' },
-  [COUPON_KIND.CLINIC]: { label: 'Clínica', family: COUPON_FAMILY.VOUCHER, hint: 'Participação numa clínica ou treino especial.', example: 'Clínica de saque e devolução' },
-  [COUPON_KIND.FOOD]: { label: 'Comida', family: COUPON_FAMILY.VOUCHER, hint: 'Um lanche ou refeição na arena.', example: '1 sanduíche natural' },
-  [COUPON_KIND.DRINK]: { label: 'Bebida', family: COUPON_FAMILY.VOUCHER, hint: 'Uma bebida na arena.', example: '1 água de coco' },
-  [COUPON_KIND.PRODUCT]: { label: 'Produto ou brinde', family: COUPON_FAMILY.VOUCHER, hint: 'Um item da loja ou um brinde.', example: '1 tubo de bolas' },
-  [COUPON_KIND.RENTAL]: { label: 'Aluguel de equipamento', family: COUPON_FAMILY.VOUCHER, hint: 'Raquete, bolas ou outro equipamento emprestado.', example: 'Aluguel de 2 raquetes' },
-  [COUPON_KIND.EVENT]: { label: 'Inscrição em evento', family: COUPON_FAMILY.VOUCHER, hint: 'Inscrição num torneio da casa, dia de jogo ou evento.', example: 'Inscrição no torneio de sábado' },
-  [COUPON_KIND.OTHER]: { label: 'Outro benefício', family: COUPON_FAMILY.VOUCHER, hint: 'Qualquer outra vantagem que a arena queira dar.', example: 'Estacionamento grátis' },
-  [COUPON_KIND.REFERRAL]: { label: 'Indicação', family: COUPON_FAMILY.REFERRAL, hint: 'As regras do "indique e ganhe": quem indica e quem chega ganham.' },
+  [COUPON_KIND.DISCOUNT]: { label: tk('Desconto'), family: COUPON_FAMILY.BOOKING, hint: tk('Percentual ou valor fixo abatido do preço da reserva.') },
+  [COUPON_KIND.FREE_HOURS]: { label: tk('Hora grátis'), family: COUPON_FAMILY.BOOKING, hint: tk('Horas de quadra sem custo, abatidas do preço da reserva.') },
+  [COUPON_KIND.PRIVATE_LESSON]: { label: tk('Aula particular'), family: COUPON_FAMILY.VOUCHER, hint: tk('Uma aula individual com professor da arena.'), example: '1 aula particular de 1h' },
+  [COUPON_KIND.GROUP_LESSON]: { label: tk('Aula em grupo'), family: COUPON_FAMILY.VOUCHER, hint: tk('Uma vaga numa aula em grupo.'), example: '1 aula em grupo (turma de iniciantes)' },
+  [COUPON_KIND.CLINIC]: { label: tk('Clínica'), family: COUPON_FAMILY.VOUCHER, hint: tk('Participação numa clínica ou treino especial.'), example: tk('Clínica de saque e devolução') },
+  [COUPON_KIND.FOOD]: { label: tk('Comida'), family: COUPON_FAMILY.VOUCHER, hint: tk('Um lanche ou refeição na arena.'), example: tk('1 sanduíche natural') },
+  [COUPON_KIND.DRINK]: { label: tk('Bebida'), family: COUPON_FAMILY.VOUCHER, hint: tk('Uma bebida na arena.'), example: tk('1 água de coco') },
+  [COUPON_KIND.PRODUCT]: { label: tk('Produto ou brinde'), family: COUPON_FAMILY.VOUCHER, hint: tk('Um item da loja ou um brinde.'), example: '1 tubo de bolas' },
+  [COUPON_KIND.RENTAL]: { label: tk('Aluguel de equipamento'), family: COUPON_FAMILY.VOUCHER, hint: tk('Raquete, bolas ou outro equipamento emprestado.'), example: tk('Aluguel de 2 raquetes') },
+  [COUPON_KIND.EVENT]: { label: tk('Inscrição em evento'), family: COUPON_FAMILY.VOUCHER, hint: tk('Inscrição num torneio da casa, dia de jogo ou evento.'), example: tk('Inscrição no torneio de sábado') },
+  [COUPON_KIND.OTHER]: { label: tk('Outro benefício'), family: COUPON_FAMILY.VOUCHER, hint: tk('Qualquer outra vantagem que a arena queira dar.'), example: tk('Estacionamento grátis') },
+  [COUPON_KIND.REFERRAL]: { label: tk('Indicação'), family: COUPON_FAMILY.REFERRAL, hint: tk('As regras do "indique e ganhe": quem indica e quem chega ganham.') },
 });
 
 export const COUPON_FAMILY_META = Object.freeze({
-  [COUPON_FAMILY.BOOKING]: { label: 'Desconto na reserva', hint: 'Entra sozinho no preço, quando a pessoa digita o código.' },
-  [COUPON_FAMILY.VOUCHER]: { label: 'Vale para usar na arena', hint: 'A pessoa mostra o código na recepção e a arena registra o uso.' },
-  [COUPON_FAMILY.REFERRAL]: { label: 'Indique e ganhe', hint: 'Cada atleta tem o próprio código; aqui ficam as regras.' },
+  [COUPON_FAMILY.BOOKING]: { label: tk('Desconto na reserva'), hint: tk('Entra sozinho no preço, quando a pessoa digita o código.') },
+  [COUPON_FAMILY.VOUCHER]: { label: tk('Vale para usar na arena'), hint: tk('A pessoa mostra o código na recepção e a arena registra o uso.') },
+  [COUPON_FAMILY.REFERRAL]: { label: tk('Indique e ganhe'), hint: tk('Cada atleta tem o próprio código; aqui ficam as regras.') },
 });
 
 /** Como a pessoa que chega por indicação é premiada. */
@@ -143,12 +144,12 @@ export function couponBenefitText(coupon) {
   const kind = couponKind(coupon);
   if (kind === COUPON_KIND.DISCOUNT) {
     return coupon.type === COUPON_TYPE.FIXED
-      ? `${reais(coupon.value)} de desconto`
+      ? t('{value} de desconto', { value: reais(coupon.value) })
       : `${Number(coupon.value) || 0}% de desconto`;
   }
   if (kind === COUPON_KIND.FREE_HOURS) return horasTexto(coupon.value);
   if (kind === COUPON_KIND.REFERRAL) return referralRulesText(coupon);
-  return String(coupon.benefit || COUPON_KIND_META[kind].label).trim();
+  return String(coupon.benefit || t(COUPON_KIND_META[kind].label)).trim();
 }
 
 /**
@@ -167,7 +168,7 @@ export function referralRulesText(rules) {
     else if (rules.referred_reward_kind === REFERRED_REWARD.CREDIT) partes.push(`quem chega ganha ${reais(valor)} em crédito`);
   }
   const txt = partes.join(' · ');
-  return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : 'Sem prêmio definido';
+  return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : t('Sem prêmio definido');
 }
 
 export const NPS_SCORE = Object.freeze({
@@ -351,28 +352,28 @@ export function applyCoupon(price, coupon) {
  */
 export function couponError(coupon, ctx = {}) {
   const { amount = 0, usedByUser = false, now = Date.now() } = ctx;
-  if (!coupon) return 'Cupom não encontrado.';
+  if (!coupon) return t('Cupom não encontrado.');
   // Vale e indicação não entram no preço da reserva — e dizer por quê ensina
   // onde usar, em vez de parecer que o código está errado.
   if (!ctx.anyFamily) {
     const familia = couponFamily(coupon);
-    if (familia === COUPON_FAMILY.VOUCHER) return 'Este código é um vale: mostre na recepção da arena para usar.';
-    if (familia === COUPON_FAMILY.REFERRAL) return 'Este é o programa de indicação: use o código de quem indicou você.';
+    if (familia === COUPON_FAMILY.VOUCHER) return t('Este código é um vale: mostre na recepção da arena para usar.');
+    if (familia === COUPON_FAMILY.REFERRAL) return t('Este é o programa de indicação: use o código de quem indicou você.');
   }
-  if (coupon.active === false) return 'Este cupom não está mais valendo.';
+  if (coupon.active === false) return t('Este cupom não está mais valendo.');
   if (coupon.expires_at) {
     const exp = instanteEmMs(coupon.expires_at);
-    if (Number.isFinite(exp) && exp < now) return 'Este cupom venceu.';
+    if (Number.isFinite(exp) && exp < now) return t('Este cupom venceu.');
   }
   if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
-    return 'Este cupom já atingiu o limite de usos.';
+    return t('Este cupom já atingiu o limite de usos.');
   }
   if (coupon.once_per_user !== false && usedByUser) {
-    return 'Você já usou este cupom.';
+    return t('Você já usou este cupom.');
   }
   const minimo = Number(coupon.min_amount) || 0;
   if (minimo > 0 && Number(amount) < minimo) {
-    return `Este cupom vale a partir de R$ ${minimo.toFixed(2).replace('.', ',')}.`;
+    return t('Este cupom vale a partir de R$ {valor}.', { valor: minimo.toFixed(2).replace('.', ',') });
   }
   return null;
 }
@@ -535,8 +536,8 @@ export function referralFriendReward(program) {
   const valor = Number(program?.referred_reward_value) || 0;
   if (!program || valor <= 0) return null;
   if (program.referred_reward_kind === REFERRED_REWARD.PERCENT) return `${valor}% na primeira reserva`;
-  if (program.referred_reward_kind === REFERRED_REWARD.FIXED) return `${reais(valor)} na primeira reserva`;
-  if (program.referred_reward_kind === REFERRED_REWARD.CREDIT) return `${reais(valor)} em crédito`;
+  if (program.referred_reward_kind === REFERRED_REWARD.FIXED) return t('{valor} na primeira reserva', { valor: reais(valor) });
+  if (program.referred_reward_kind === REFERRED_REWARD.CREDIT) return t('{valor} em crédito', { valor: reais(valor) });
   return null;
 }
 
@@ -545,12 +546,12 @@ export function referralFriendReward(program) {
  * promessa genérica. Sem programa, o texto de sempre.
  */
 export function referralInviteText({ arenaName = 'arena', code = '', program = null } = {}) {
-  if (!program) return `Jogo na ${arenaName} — use meu código ${code} na primeira visita e nós dois ganhamos crédito.`;
+  if (!program) return t('Jogo na {arenaName} — use meu código {code} na primeira visita e nós dois ganhamos crédito.', { arenaName, code });
   const valor = Number(program.referred_reward_value) || 0;
   const base = `Jogo na ${arenaName} — use meu código ${code} na sua primeira reserva`;
-  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.PERCENT) return `${base} e ganhe ${valor}% de desconto nela.`;
-  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.FIXED) return `${base} e ganhe ${reais(valor)} de desconto nela.`;
-  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.CREDIT) return `${base} e ganhe ${reais(valor)} em crédito.`;
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.PERCENT) return t('{base} e ganhe {valor}% de desconto nela.', { base, valor });
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.FIXED) return t('{base} e ganhe {valor} de desconto nela.', { base, valor: reais(valor) });
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.CREDIT) return t('{base} e ganhe {valor} em crédito.', { base, valor: reais(valor) });
   return `${base}.`;
 }
 
@@ -575,10 +576,10 @@ export function referralCodeProblem(code, { userId = null } = {}) {
   const c = normalizeReferralCode(code);
   if (!c) return null;
   if (c.length < 6 || c.length > 20 || !/^[A-Z0-9]+$/.test(c)) {
-    return 'Confira o código: são letras e números, como ele aparece para quem indicou.';
+    return t('Confira o código: são letras e números, como ele aparece para quem indicou.');
   }
   if (userId && c.slice(0, 6) === String(userId).slice(0, 6).toUpperCase()) {
-    return 'Esse é o seu próprio código — ele é para quem você indicar.';
+    return t('Esse é o seu próprio código — ele é para quem você indicar.');
   }
   return null;
 }
@@ -633,16 +634,16 @@ export function bookingReferralLine(referral, { perspective = 'athlete' } = {}) 
     if (perspective === 'arena' && Number(referral.referrer_reward) > 0) {
       partes.push(`${reais(referral.referrer_reward)} para quem indicou`);
     }
-    return { tone: 'green', text: `Indicação registrada (${code})${partes.length ? ` · ${partes.join(' · ')}` : ''}` };
+    return { tone: 'green', text: t('Indicação registrada ({code}){valor}', { code, valor: partes.length ? ` · ${partes.join(' · ')}` : '' }) };
   }
   if (referral.status === BOOKING_REFERRAL_STATUS.REFUSED) {
-    return { tone: 'red', text: `Indicação não aplicada (${code})${referral.reason ? `: ${referral.reason}` : ''}` };
+    return { tone: 'red', text: t('Indicação não aplicada ({code}){valor}', { code, valor: referral.reason ? `: ${referral.reason}` : '' }) };
   }
   return {
     tone: 'amber',
     text: perspective === 'arena'
-      ? `Chegou por indicação (${code}) — a arena confere e credita ao confirmar`
-      : `Código de indicação ${code} — a arena confere ao confirmar a reserva`,
+      ? t('Chegou por indicação ({code}) — a arena confere e credita ao confirmar', { code })
+      : t('Código de indicação {code} — a arena confere ao confirmar a reserva', { code }),
   };
 }
 
@@ -711,14 +712,14 @@ export function redeemPoints(points, opts = {}) {
   const pedido = Math.trunc(Number(points) || 0);
   const saldo = Math.max(0, Math.trunc(Number(available) || 0));
 
-  if (pedido <= 0) return { points: 0, credit: 0, error: 'Informe quantos pontos quer trocar.' };
-  if (pedido > saldo) return { points: 0, credit: 0, error: `Você tem ${saldo} pontos.` };
+  if (pedido <= 0) return { points: 0, credit: 0, error: t('Informe quantos pontos quer trocar.') };
+  if (pedido > saldo) return { points: 0, credit: 0, error: t('Você tem {saldo} pontos.', { saldo }) };
   if (pedido < minPoints) {
-    return { points: 0, credit: 0, error: `O mínimo para trocar é ${minPoints} pontos.` };
+    return { points: 0, credit: 0, error: t('O mínimo para trocar é {minPoints} pontos.', { minPoints }) };
   }
 
   const reais = Math.floor(pedido / taxa);
-  if (reais <= 0) return { points: 0, credit: 0, error: `São necessários ${taxa} pontos para R$ 1.` };
+  if (reais <= 0) return { points: 0, credit: 0, error: t('São necessários {taxa} pontos para R$ 1.', { taxa }) };
   return { points: reais * taxa, credit: reais, error: null };
 }
 
@@ -742,20 +743,20 @@ export const CAMPAIGN_AUDIENCE = Object.freeze({
 
 export const CAMPAIGN_AUDIENCE_META = Object.freeze({
   [CAMPAIGN_AUDIENCE.MEMBERS]: {
-    label: 'Membros',
-    hint: 'Quem faz parte do programa de membros da arena.',
+    label: tk('Membros'),
+    hint: tk('Quem faz parte do programa de membros da arena.'),
   },
   [CAMPAIGN_AUDIENCE.LAPSED]: {
-    label: 'Sumidos',
-    hint: 'Já jogou aqui, mas não reserva há mais de 60 dias.',
+    label: tk('Sumidos'),
+    hint: tk('Já jogou aqui, mas não reserva há mais de 60 dias.'),
   },
   [CAMPAIGN_AUDIENCE.RECENT]: {
-    label: 'Frequentes',
-    hint: 'Reservou nos últimos 60 dias.',
+    label: tk('Frequentes'),
+    hint: tk('Reservou nos últimos 60 dias.'),
   },
   [CAMPAIGN_AUDIENCE.ALL]: {
-    label: 'Todo mundo',
-    hint: 'Qualquer pessoa que já reservou ou é membro.',
+    label: tk('Todo mundo'),
+    hint: tk('Qualquer pessoa que já reservou ou é membro.'),
   },
 });
 

@@ -47,6 +47,7 @@ import {
   V2Skeleton, V2Surface, V2Textarea,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink' };
 
@@ -72,52 +73,52 @@ function NovoPacoteForm({ arenaId, onClose }) {
           validity_days: Number(form.validity_days),
         },
       });
-      toast.success('Pacote publicado.');
+      toast.success(t('Pacote publicado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível criar o pacote.');
+      toast.error(err?.message || t('Não foi possível criar o pacote.'));
     }
   };
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-base font-bold text-ink">Novo pacote de horas</h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <h3 className="font-display text-base font-bold text-ink">{t('Novo pacote de horas')}</h3>
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Nome" htmlFor="pkg-nome">
-          <V2Input id="pkg-nome" required maxLength={80} placeholder="Ex.: Mensal 10h"
+        <V2Field label={t('Nome')} htmlFor="pkg-nome">
+          <V2Input id="pkg-nome" required maxLength={80} placeholder={t('Ex.: Mensal 10h')}
             value={form.name} onChange={(e) => set({ name: e.target.value })} />
         </V2Field>
-        <V2Field label="Validade (dias)" htmlFor="pkg-validade">
+        <V2Field label={t('Validade (dias)')} htmlFor="pkg-validade">
           <V2Input id="pkg-validade" type="number" min="1" max="365" required
             value={form.validity_days} onChange={(e) => set({ validity_days: e.target.value })} />
         </V2Field>
-        <V2Field label="Horas" htmlFor="pkg-horas">
+        <V2Field label={t('Horas')} htmlFor="pkg-horas">
           <V2Input id="pkg-horas" type="number" min="1" max="200" required
             value={form.hours} onChange={(e) => set({ hours: e.target.value })} />
         </V2Field>
         <V2Field
-          label="Preço (R$)"
+          label={t('Preço (R$)')}
           htmlFor="pkg-preco"
-          hint={porHora > 0 ? `Sai a ${formatPrice(porHora)} por hora` : undefined}
+          hint={porHora > 0 ? t('Sai a {porHora} por hora', { porHora: formatPrice(porHora) }) : undefined}
         >
           <V2Input id="pkg-preco" type="number" min="1" step="0.01" required
             value={form.price} onChange={(e) => set({ price: e.target.value })} />
         </V2Field>
       </div>
-      <V2Field label="Descrição" htmlFor="pkg-desc" className="mt-3">
+      <V2Field label={t('Descrição')} htmlFor="pkg-desc" className="mt-3">
         <V2Textarea id="pkg-desc" rows={2} maxLength={500}
-          placeholder="O que está incluído, restrições de horário…"
+          placeholder={t('O que está incluído, restrições de horário…')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Publicando…' : 'Publicar pacote'}
+          {create.isPending ? t('Publicando…') : t('Publicar pacote')}
         </V2Button>
       </div>
     </form>
@@ -150,18 +151,18 @@ function IncluirMembro({ arenaId, jaSaoMembros, onClose }) {
           user_photo: a.photo_url || '',
         },
       });
-      toast.success(`${a.platform_name || a.full_name || 'Atleta'} agora é membro.`);
+      toast.success(t('{valor} agora é membro.', { valor: a.platform_name || a.full_name || 'Atleta' }));
       setQ('');
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível incluir.');
+      toast.error(err?.message || t('Não foi possível incluir.'));
     }
   };
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-base font-bold text-ink">Incluir membro</h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <h3 className="font-display text-base font-bold text-ink">{t('Incluir membro')}</h3>
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -169,12 +170,12 @@ function IncluirMembro({ arenaId, jaSaoMembros, onClose }) {
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           type="search" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar atleta pelo nome…"
+          placeholder={t('Buscar atleta pelo nome…')}
           className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure pl-10 pr-4 text-sm"
         />
       </label>
       {q.trim() && resultados.length === 0 && (
-        <p className="mt-2 text-xs text-gray-500">Ninguém encontrado — ou já é membro.</p>
+        <p className="mt-2 text-xs text-gray-500">{t('Ninguém encontrado — ou já é membro.')}</p>
       )}
       <div className="mt-2 space-y-1.5">
         {resultados.map((a) => (
@@ -187,7 +188,7 @@ function IncluirMembro({ arenaId, jaSaoMembros, onClose }) {
           >
             <V2Avatar name={a.platform_name || a.full_name} photoUrl={a.photo_url} size="sm" />
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
-              {a.platform_name || a.full_name || 'Atleta'}
+              {a.platform_name || a.full_name || t('Atleta')}
             </span>
             <UserPlus className="h-4 w-4 shrink-0 text-gray-400" />
           </button>
@@ -220,10 +221,10 @@ function AjusteDoMembro({ arenaId, member, temCarteira, onClose }) {
           source: form.reason.trim() || 'ajuste da arena',
         });
       }
-      toast.success('Ajuste aplicado.');
+      toast.success(t('Ajuste aplicado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível aplicar.');
+      toast.error(err?.message || t('Não foi possível aplicar.'));
     }
   };
 
@@ -232,25 +233,25 @@ function AjusteDoMembro({ arenaId, member, temCarteira, onClose }) {
   return (
     <form onSubmit={aplicar} className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <div className="grid gap-3 sm:grid-cols-3">
-        <V2Field label="Pontos (+/−)" htmlFor={`pts-${member.id}`}>
-          <V2Input id={`pts-${member.id}`} type="number" placeholder="Ex.: 50"
+        <V2Field label={t('Pontos (+/−)')} htmlFor={`pts-${member.id}`}>
+          <V2Input id={`pts-${member.id}`} type="number" placeholder={t('Ex.: 50')}
             value={form.points} onChange={(e) => set({ points: e.target.value })} />
         </V2Field>
         {temCarteira && (
-          <V2Field label="Creditar (R$)" htmlFor={`cred-${member.id}`}>
-            <V2Input id={`cred-${member.id}`} type="number" min="0" step="0.01" placeholder="Ex.: 20"
+          <V2Field label={t('Creditar (R$)')} htmlFor={`cred-${member.id}`}>
+            <V2Input id={`cred-${member.id}`} type="number" min="0" step="0.01" placeholder={t('Ex.: 20')}
               value={form.amount} onChange={(e) => set({ amount: e.target.value })} />
           </V2Field>
         )}
-        <V2Field label="Motivo" htmlFor={`mot-${member.id}`} hint="Aparece no extrato do atleta">
-          <V2Input id={`mot-${member.id}`} maxLength={60} placeholder="Ex.: cortesia"
+        <V2Field label={t('Motivo')} htmlFor={`mot-${member.id}`} hint={t('Aparece no extrato do atleta')}>
+          <V2Input id={`mot-${member.id}`} maxLength={60} placeholder={t('Ex.: cortesia')}
             value={form.reason} onChange={(e) => set({ reason: e.target.value })} />
         </V2Field>
       </div>
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" size="sm" disabled={ocupado}>
-          {ocupado ? 'Aplicando…' : 'Aplicar ajuste'}
+          {ocupado ? t('Aplicando…') : t('Aplicar ajuste')}
         </V2Button>
       </div>
     </form>
@@ -283,20 +284,20 @@ function ResgateDePontos({ arenaId, member, onClose }) {
       const { points, credit } = await resgatar.mutateAsync({
         arenaId, userId: member.user_id, points: previa.points,
       });
-      toast.success(`${points} pontos trocados por ${formatPrice(credit)} em carteira.`);
+      toast.success(t('{points} pontos trocados por {credit} em carteira.', { points, credit: formatPrice(credit) }));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível resgatar.');
+      toast.error(err?.message || t('Não foi possível resgatar.'));
     }
   };
 
   return (
     <form onSubmit={aplicar} className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <p className="mb-2 text-xs text-gray-500">
-        {disponiveis} pontos disponíveis · {DEFAULT_POINTS_PER_REAL} pontos = R$ 1,00
+        {t('{disponiveis} pontos disponíveis · {DEFAULT_POINTS_PER_REAL} pontos = R$ 1,00', { disponiveis, DEFAULT_POINTS_PER_REAL })}
       </p>
       <div className="flex flex-wrap items-end gap-3">
-        <V2Field label="Pontos a trocar" htmlFor={`resg-${member.id}`} className="flex-1 min-w-[140px]">
+        <V2Field label={t('Pontos a trocar')} htmlFor={`resg-${member.id}`} className="flex-1 min-w-[140px]">
           <V2Input id={`resg-${member.id}`} type="number" min="0" step="1"
             value={pontos} onChange={(e) => setPontos(e.target.value)} />
         </V2Field>
@@ -307,13 +308,13 @@ function ResgateDePontos({ arenaId, member, onClose }) {
       {previa.error && <p className="mt-1 text-xs text-amber-700">{previa.error}</p>}
       {!previa.error && previa.points < Number(pontos) && (
         <p className="mt-1 text-xs text-gray-500">
-          Sobram {Number(pontos) - previa.points} pontos com o atleta — o resgate é sempre em reais inteiros.
+          {t('Sobram {n} pontos com o atleta — o resgate é sempre em reais inteiros.', { n: Number(pontos) - previa.points })}
         </p>
       )}
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" size="sm" disabled={resgatar.isPending || !!previa.error}>
-          {resgatar.isPending ? 'Resgatando…' : 'Resgatar'}
+          {resgatar.isPending ? t('Resgatando…') : t('Resgatar')}
         </V2Button>
       </div>
     </form>
@@ -354,10 +355,10 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
           user_name: member.user_name,
         },
       });
-      toast.success('Mensalidade salva.');
+      toast.success(t('Mensalidade salva.'));
       setEditando(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -365,9 +366,9 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
     return (
       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-gray-200 p-3">
         <CalendarClock className="h-4 w-4 text-gray-400" />
-        <span className="text-xs text-gray-500">Sem mensalidade.</span>
+        <span className="text-xs text-gray-500">{t('Sem mensalidade.')}</span>
         <V2Button variant="ghost" size="sm" onClick={() => setEditando(true)}>
-          Criar mensalidade
+          {t('Criar mensalidade')}
         </V2Button>
       </div>
     );
@@ -377,22 +378,22 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
     return (
       <form onSubmit={submit} className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
         <div className="grid gap-3 sm:grid-cols-3">
-          <V2Field label="Plano" htmlFor={`plano-${member.id}`}>
+          <V2Field label={t('Plano')} htmlFor={`plano-${member.id}`}>
             <V2Input id={`plano-${member.id}`} required maxLength={80}
               value={form.plan_name} onChange={(e) => setForm((f) => ({ ...f, plan_name: e.target.value }))} />
           </V2Field>
-          <V2Field label="Valor mensal (R$)" htmlFor={`valor-${member.id}`}>
+          <V2Field label={t('Valor mensal (R$)')} htmlFor={`valor-${member.id}`}>
             <V2Input id={`valor-${member.id}`} type="number" min="1" step="0.01" required
               value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
           </V2Field>
-          <V2Field label="Vence no dia" htmlFor={`dia-${member.id}`} hint="De 1 a 28">
+          <V2Field label={t('Vence no dia')} htmlFor={`dia-${member.id}`} hint={t('De 1 a 28')}>
             <V2Input id={`dia-${member.id}`} type="number" min="1" max="28" required
               value={form.billing_day} onChange={(e) => setForm((f) => ({ ...f, billing_day: e.target.value }))} />
           </V2Field>
         </div>
         <div className="mt-3 flex justify-end gap-2">
-          <V2Button type="button" variant="ghost" size="sm" onClick={() => setEditando(false)}>Cancelar</V2Button>
-          <V2Button type="submit" size="sm" disabled={salvar.isPending}>Salvar</V2Button>
+          <V2Button type="button" variant="ghost" size="sm" onClick={() => setEditando(false)}>{t('Cancelar')}</V2Button>
+          <V2Button type="submit" size="sm" disabled={salvar.isPending}>{t('Salvar')}</V2Button>
         </div>
       </form>
     );
@@ -404,13 +405,13 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-bold text-ink">
-            {sub.plan_name} · {formatPrice(sub.price)}/mês
+            {t('{plan_name} · {price}/mês', { plan_name: sub.plan_name, price: formatPrice(sub.price) })}
           </p>
           <p className="text-xs text-gray-500">
-            Vence dia {sub.billing_day}
+            {t('Vence dia {billing_day}', { billing_day: sub.billing_day })}
             {devendo
-              ? ` · ${estado.monthsLate} mês(es) em aberto (${formatPrice(amountDue(sub))})`
-              : ' · em dia'}
+              ? t(' · {monthsLate} mês(es) em aberto ({valor})', { monthsLate: estado.monthsLate, valor: formatPrice(amountDue(sub)) })
+              : t(' · em dia')}
           </p>
         </div>
         <V2Badge tone={devendo ? 'amber' : 'green'}>{estado.label}</V2Badge>
@@ -422,33 +423,33 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
           disabled={marcar.isPending}
           onClick={() => marcar.mutateAsync({
             arenaId, userId: member.user_id, month: mesAtual, paid: !estado.paidCurrent,
-          }).then(() => toast.success(estado.paidCurrent ? 'Pagamento desfeito.' : 'Pagamento registrado.'))
-            .catch((e) => toast.error(e?.message || 'Não foi possível registrar.'))}
+          }).then(() => toast.success(estado.paidCurrent ? t('Pagamento desfeito.') : t('Pagamento registrado.')))
+            .catch((e) => toast.error(e?.message || t('Não foi possível registrar.')))}
         >
           {estado.paidCurrent
-            ? <><Check className="h-4 w-4" /> {mesAtual} recebido</>
-            : `Recebi ${mesAtual}`}
+            ? <><Check className="h-4 w-4" /> {t('{mesAtual} recebido', { mesAtual })}</>
+            : t('Recebi {mesAtual}', { mesAtual })}
         </V2Button>
         {estado.unpaidMonths.filter((m) => m !== mesAtual).map((m) => (
           <V2Button
             key={m} size="sm" variant="ghost" disabled={marcar.isPending}
             onClick={() => marcar.mutateAsync({ arenaId, userId: member.user_id, month: m, paid: true })
-              .then(() => toast.success(`Pagamento de ${m} registrado.`))
-              .catch((e) => toast.error(e?.message || 'Não foi possível registrar.'))}
+              .then(() => toast.success(t('Pagamento de {m} registrado.', { m })))
+              .catch((e) => toast.error(e?.message || t('Não foi possível registrar.')))}
           >
-            Recebi {m}
+            {t('Recebi {m}', { m })}
           </V2Button>
         ))}
-        <V2Button variant="ghost" size="sm" onClick={() => setEditando(true)}>Editar plano</V2Button>
+        <V2Button variant="ghost" size="sm" onClick={() => setEditando(true)}>{t('Editar plano')}</V2Button>
         <ConfirmDialog
-          title="Encerrar a mensalidade?"
-          description="O plano para de ser cobrado. O histórico de pagamentos permanece."
-          confirmLabel="Encerrar"
+          title={t('Encerrar a mensalidade?')}
+          description={t('O plano para de ser cobrado. O histórico de pagamentos permanece.')}
+          confirmLabel={t('Encerrar')}
           destructive
           onConfirm={() => encerrar.mutateAsync({ arenaId, userId: member.user_id })
-            .then(() => toast.success('Mensalidade encerrada.'))
-            .catch((e) => toast.error(e?.message || 'Não foi possível encerrar.'))}
-          trigger={<V2Button variant="ghost" size="sm" className="text-red-600">Encerrar</V2Button>}
+            .then(() => toast.success(t('Mensalidade encerrada.')))
+            .catch((e) => toast.error(e?.message || t('Não foi possível encerrar.')))}
+          trigger={<V2Button variant="ghost" size="sm" className="text-red-600">{t('Encerrar')}</V2Button>}
         />
       </div>
     </div>
@@ -485,20 +486,20 @@ function PedidoDePacote({ arenaId, packages, members }) {
   if (!pkg) {
     return (
       <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        O pacote deste pedido não existe mais.{' '}
-        <button type="button" className="font-bold underline" onClick={limpar}>Fechar</button>
+        {t('O pacote deste pedido não existe mais. ')}
+        <button type="button" className="font-bold underline" onClick={limpar}>{t('Fechar')}</button>
       </div>
     );
   }
 
   return (
     <div className="mb-4 rounded-2xl border border-acid/60 bg-acid/10 p-4">
-      <p className="text-xs font-bold uppercase tracking-wider text-ink/70">Pedido de pacote</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-ink/70">{t('Pedido de pacote')}</p>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <V2Avatar name={nome} photoUrl={foto} size="sm" />
         <p className="min-w-0 flex-1 text-sm text-ink">
-          <strong>{nome}</strong> quer <strong>{pkg.name}</strong> — {pkg.hours}h por {formatPrice(pkg.price)}.
-          {!membro && ' Ao confirmar, a pessoa vira membro.'}
+          <strong>{nome}</strong> {t('quer')} <strong>{pkg.name}</strong> {t('— {hours}h por {preco}.', { hours: pkg.hours, preco: formatPrice(pkg.price) })}
+          {!membro && t(' Ao confirmar, a pessoa vira membro.')}
         </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -508,12 +509,12 @@ function PedidoDePacote({ arenaId, packages, members }) {
           onClick={() => vender.mutateAsync({
             arenaId, pkgId, target: { user_id: uid, user_name: nome, user_photo: foto },
           })
-            .then(() => { toast.success(`${pkg.hours}h creditadas para ${nome}.`); limpar(); })
-            .catch((e) => toast.error(e?.message || 'Não foi possível creditar.'))}
+            .then(() => { toast.success(t('{hours}h creditadas para {nome}.', { hours: pkg.hours, nome })); limpar(); })
+            .catch((e) => toast.error(e?.message || t('Não foi possível creditar.')))}
         >
-          <Check className="h-4 w-4" /> Recebi o pagamento — creditar
+          <Check className="h-4 w-4" /> {t('Recebi o pagamento — creditar')}
         </V2Button>
-        <V2Button size="sm" variant="ghost" onClick={limpar}>Descartar</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={limpar}>{t('Descartar')}</V2Button>
       </div>
     </div>
   );
@@ -526,11 +527,11 @@ function VenderPacote({ arenaId, member, packages, onClose }) {
   const vender = useSellPackageToMember();
   const pkg = aVenda.find((p) => p.id === pkgId);
   if (aVenda.length === 0) {
-    return <p className="mt-2 text-xs text-gray-500">Nenhum pacote à venda — crie um na aba Pacotes de horas.</p>;
+    return <p className="mt-2 text-xs text-gray-500">{t('Nenhum pacote à venda — crie um na aba Pacotes de horas.')}</p>;
   }
   return (
     <div className="mt-2 flex flex-wrap items-end gap-2 rounded-xl bg-paper-pure p-3">
-      <V2Field label="Pacote" htmlFor={`vp-${member.user_id}`} className="min-w-[200px] flex-1">
+      <V2Field label={t('Pacote')} htmlFor={`vp-${member.user_id}`} className="min-w-[200px] flex-1">
         <select id={`vp-${member.user_id}`} value={pkgId} onChange={(e) => setPkgId(e.target.value)}
           className="h-10 w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 text-sm">
           {aVenda.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.hours}h · {formatPrice(p.price)}</option>)}
@@ -543,11 +544,11 @@ function VenderPacote({ arenaId, member, packages, onClose }) {
           arenaId, pkgId, target: { user_id: member.user_id, user_name: member.user_name, user_photo: member.user_photo },
         })
           .then(() => { toast.success(`${pkg.hours}h creditadas.`); onClose(); })
-          .catch((e) => toast.error(e?.message || 'Não foi possível creditar.'))}
+          .catch((e) => toast.error(e?.message || t('Não foi possível creditar.')))}
       >
-        Recebi — creditar
+        {t('Recebi — creditar')}
       </V2Button>
-      <V2Button size="sm" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+      <V2Button size="sm" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
     </div>
   );
 }
@@ -568,34 +569,34 @@ function LinhaDoMembro({
       <div className="flex flex-wrap items-center gap-3">
         <V2Avatar name={member.user_name} photoUrl={member.user_photo} size="sm" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-bold text-ink">{member.user_name || 'Atleta'}</p>
+          <p className="truncate font-bold text-ink">{member.user_name || t('Atleta')}</p>
           <p className="text-xs text-gray-500">
-            {Number(member.points) || 0} pontos
+            {t('{n} pontos', { n: Number(member.points) || 0 })}
             {member.status && member.status !== 'active' ? ` · ${member.status}` : ''}
           </p>
         </div>
         <V2Badge tone={TIER_TONE[tier.id] || 'amber'}>{tier.name}</V2Badge>
         <V2Button variant="ghost" size="sm" onClick={() => setAjustando((v) => !v)}>
-          Ajustar
+          {t('Ajustar')}
         </V2Button>
         {podeResgatar && (
           <V2Button variant="ghost" size="sm" onClick={() => setResgatando((v) => !v)}>
-            Resgatar pontos
+            {t('Resgatar pontos')}
           </V2Button>
         )}
         {pacotes.length > 0 && (
           <V2Button variant="ghost" size="sm" onClick={() => setVendendo((v) => !v)}>
-            Vender pacote
+            {t('Vender pacote')}
           </V2Button>
         )}
         <ConfirmDialog
-          title="Remover este membro?"
-          description="A pessoa deixa de ter os benefícios. Pacotes já comprados e saldo em carteira NÃO são apagados."
-          confirmLabel="Remover"
+          title={t('Remover este membro?')}
+          description={t('A pessoa deixa de ter os benefícios. Pacotes já comprados e saldo em carteira NÃO são apagados.')}
+          confirmLabel={t('Remover')}
           destructive
           onConfirm={() => onRemover(member)}
           trigger={(
-            <button type="button" aria-label="Remover membro"
+            <button type="button" aria-label={t('Remover membro')}
               className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -672,8 +673,8 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
         <V2Surface>
           <V2EmptyState
             icon={Package}
-            title="Pacotes de horas não estão ativos"
-            description="Ative “Pacotes de horas” em Configurações → Módulos para vender horas adiantado."
+            title={t('Pacotes de horas não estão ativos')}
+            description={t('Ative “Pacotes de horas” em Configurações → Módulos para vender horas adiantado.')}
           />
         </V2Surface>
       );
@@ -682,15 +683,15 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
       <V2Surface>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="font-display text-base font-bold text-ink">Pacotes de horas</h2>
+            <h2 className="font-display text-base font-bold text-ink">{t('Pacotes de horas')}</h2>
             <p className="text-xs text-gray-500">
-              Horas vendidas adiantado. O pacote é abatido na CONFIRMAÇÃO da reserva, e o que vence primeiro sai primeiro.
+              {t('Horas vendidas adiantado. O pacote é abatido na CONFIRMAÇÃO da reserva, e o que vence primeiro sai primeiro.')}
             </p>
           </div>
           {/* Sem a lista, "Novo pacote" é convite a duplicar um que já está à venda. */}
           {!novoPacote && !pacotesFalharam && (
             <V2Button size="sm" onClick={() => setNovoPacote(true)}>
-              <Plus className="h-4 w-4" /> Novo pacote
+              <Plus className="h-4 w-4" /> {t('Novo pacote')}
             </V2Button>
           )}
         </div>
@@ -704,15 +705,15 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
         ) : pacotesFalharam ? (
           <V2ErrorState
             inline
-            title="Não foi possível carregar os pacotes"
-            description="Tente de novo antes de criar um — ele pode já existir."
+            title={t('Não foi possível carregar os pacotes')}
+            description={t('Tente de novo antes de criar um — ele pode já existir.')}
             onRetry={() => recarregarPacotes()}
           />
         ) : packages.length === 0 ? (
           <V2EmptyState
             icon={Package}
-            title="Nenhum pacote ainda"
-            description="Vender horas adiantado garante a frequência e o caixa. Comece por um."
+            title={t('Nenhum pacote ainda')}
+            description={t('Vender horas adiantado garante a frequência e o caixa. Comece por um.')}
           />
         ) : (
           <div className="space-y-2">
@@ -721,24 +722,24 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
                 <div className="min-w-0">
                   <p className="font-bold text-ink">{pkg.name}</p>
                   <p className="text-xs text-gray-500">
-                    {pkg.hours}h · {formatPrice(pkg.price)} · vale {pkg.validity_days} dias
-                    {pkg.sold_count ? ` · ${pkg.sold_count} vendido(s)` : ''}
+                    {t('{hours}h · {price} · vale {validity_days} dias', { hours: pkg.hours, price: formatPrice(pkg.price), validity_days: pkg.validity_days })}
+                    {pkg.sold_count ? t(' · {n} vendido(s)', { n: pkg.sold_count }) : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <V2Badge tone={pkg.active !== false ? 'green' : 'neutral'}>
-                    {pkg.active !== false ? 'À venda' : 'Fora do ar'}
+                    {pkg.active !== false ? t('À venda') : t('Fora do ar')}
                   </V2Badge>
                   <ConfirmDialog
-                    title="Excluir este pacote?"
-                    description={`"${pkg.name}" sai da vitrine. Quem já comprou NÃO perde as horas.`}
-                    confirmLabel="Excluir"
+                    title={t('Excluir este pacote?')}
+                    description={t('"{name}" sai da vitrine. Quem já comprou NÃO perde as horas.', { name: pkg.name })}
+                    confirmLabel={t('Excluir')}
                     destructive
                     onConfirm={() => excluirPacote.mutateAsync({ pkgId: pkg.id })
-                      .then(() => toast.success('Pacote excluído.'))
-                      .catch((e) => toast.error(e?.message || 'Não foi possível excluir.'))}
+                      .then(() => toast.success(t('Pacote excluído.')))
+                      .catch((e) => toast.error(e?.message || t('Não foi possível excluir.')))}
                     trigger={(
-                      <button type="button" aria-label="Excluir pacote"
+                      <button type="button" aria-label={t('Excluir pacote')}
                         className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -758,13 +759,13 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-display text-base font-bold text-ink">
-            Quem é membro <V2Badge tone="neutral">{members.length}</V2Badge>
+            {t('Quem é membro')} <V2Badge tone="neutral">{members.length}</V2Badge>
           </h2>
-          <p className="text-xs text-gray-500">Nível, horas de pacote, saldo e mensalidade de cada um.</p>
+          <p className="text-xs text-gray-500">{t('Nível, horas de pacote, saldo e mensalidade de cada um.')}</p>
         </div>
         {!incluindo && !membrosFalharam && (
           <V2Button size="sm" variant="secondary" onClick={() => setIncluindo(true)}>
-            <UserPlus className="h-4 w-4" /> Incluir membro
+            <UserPlus className="h-4 w-4" /> {t('Incluir membro')}
           </V2Button>
         )}
       </div>
@@ -780,8 +781,8 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
         <V2ErrorState
           inline
           className="mb-3"
-          title="Não foi possível carregar as mensalidades"
-          description="Os membros aparecem sem o plano até carregar."
+          title={t('Não foi possível carregar as mensalidades')}
+          description={t('Os membros aparecem sem o plano até carregar.')}
           onRetry={() => recarregarMensalidades()}
         />
       )}
@@ -799,16 +800,16 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
       ) : membrosFalharam ? (
         <V2ErrorState
           inline
-          title="Não foi possível carregar os membros"
-          description="A arena não perdeu ninguém — a lista só não chegou. Tente de novo."
+          title={t('Não foi possível carregar os membros')}
+          description={t('A arena não perdeu ninguém — a lista só não chegou. Tente de novo.')}
           onRetry={() => recarregarMembros()}
         />
       ) : members.length === 0 ? (
         <V2EmptyState
           icon={Wallet}
-          title="Nenhum membro ainda"
-          description="Inclua quem já joga aqui sempre — a aba Clientes mostra quem mais reserva. Membro tem desconto, pacote e carteira, e volta mais."
-          action={<V2Button onClick={() => setIncluindo(true)}><UserPlus className="h-4 w-4" /> Incluir o primeiro</V2Button>}
+          title={t('Nenhum membro ainda')}
+          description={t('Inclua quem já joga aqui sempre — a aba Clientes mostra quem mais reserva. Membro tem desconto, pacote e carteira, e volta mais.')}
+          action={<V2Button onClick={() => setIncluindo(true)}><UserPlus className="h-4 w-4" /> {t('Incluir o primeiro')}</V2Button>}
         />
       ) : (
         <div className="space-y-2">
@@ -825,8 +826,8 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
               sub={mensalidadePorUid.get(m.user_id) || null}
               pacotes={temPacotes && !pacotesFalharam ? packages : []}
               onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
-                .then(() => toast.success('Membro removido.'))
-                .catch((e) => toast.error(e?.message || 'Não foi possível remover.'))}
+                .then(() => toast.success(t('Membro removido.')))
+                .catch((e) => toast.error(e?.message || t('Não foi possível remover.')))}
             />
           ))}
         </div>

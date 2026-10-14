@@ -37,6 +37,7 @@ import {
 } from '../domain/waitlist.js';
 import { getArena } from './arenaService.js';
 import { getOpenSlot, joinOpenSlot } from './openMatchService.js';
+import { t } from '@/core/i18n';
 
 const COL = 'arena_waitlist';
 
@@ -52,11 +53,11 @@ function displayName(user, profile) {
  * Atleta entra na fila de espera de um slot.
  */
 export async function joinWaitlist(slotId, user, profile) {
-  if (!slotId) throw new Error('slotId é obrigatório.');
-  if (!user?.uid) throw new Error('Faça login.');
+  if (!slotId) throw new Error(t('slotId é obrigatório.'));
+  if (!user?.uid) throw new Error(t('Faça login.'));
 
   const slot = await getOpenSlot(slotId);
-  if (!slot) throw new Error('Slot não encontrado.');
+  if (!slot) throw new Error(t('Slot não encontrado.'));
 
   // Verifica se já está na fila
   const existing = await getUserWaitlistEntry(user.uid, slotId);
@@ -99,7 +100,7 @@ export async function joinWaitlist(slotId, user, profile) {
  * Atleta sai da fila.
  */
 export async function leaveWaitlist(slotId, userId, actor) {
-  if (!slotId || !userId) throw new Error('Parâmetros obrigatórios.');
+  if (!slotId || !userId) throw new Error(t('Parâmetros obrigatórios.'));
   const id = `${slotId}_${userId}`;
   await deleteDoc(doc(db, COL, id));
   // Sem "reordenar": a fila anda pela MENOR posição entre quem espera, e um
@@ -215,16 +216,16 @@ export async function notifyNextInLine(slotId, actor) {
  * Atleta aceita promoção.
  */
 export async function acceptWaitlistPromotion(slotId, user, profile) {
-  if (!slotId || !user?.uid) throw new Error('Parâmetros obrigatórios.');
+  if (!slotId || !user?.uid) throw new Error(t('Parâmetros obrigatórios.'));
   const entry = await getUserWaitlistEntry(user.uid, slotId);
-  if (!entry) throw new Error('Você não está na fila.');
+  if (!entry) throw new Error(t('Você não está na fila.'));
 
   const action = buildAcceptPromotionAction(entry, user);
   if (!action) {
     if (isPromotionExpired(entry)) {
-      throw new Error('Promoção expirou.');
+      throw new Error(t('Promoção expirou.'));
     }
-    throw new Error('Não foi possível aceitar.');
+    throw new Error(t('Não foi possível aceitar.'));
   }
 
   // Marca como aceito
@@ -248,13 +249,13 @@ export async function acceptWaitlistPromotion(slotId, user, profile) {
  * Atleta recusa promoção.
  */
 export async function declineWaitlistPromotion(slotId, user, _actor) {
-  if (!slotId || !user?.uid) throw new Error('Parâmetros obrigatórios.');
+  if (!slotId || !user?.uid) throw new Error(t('Parâmetros obrigatórios.'));
   const entry = await getUserWaitlistEntry(user.uid, slotId);
-  if (!entry) throw new Error('Você não está na fila.');
+  if (!entry) throw new Error(t('Você não está na fila.'));
 
   const action = buildDeclinePromotionAction(entry, user);
   if (!action) {
-    throw new Error('Não foi possível recusar.');
+    throw new Error(t('Não foi possível recusar.'));
   }
 
   await updateDoc(doc(db, COL, entry.id), {

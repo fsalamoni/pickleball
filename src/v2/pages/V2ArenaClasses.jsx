@@ -39,6 +39,7 @@ import ArenaClassesPanel from '@/v2/components/arenas/classes/ArenaClassesPanel'
 import {
   V2Avatar, V2Badge, V2Button, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** A vitrine dos professores da arena (módulo `classes_catalog`). */
 function VitrineDeProfessores({ arenaId }) {
@@ -48,7 +49,7 @@ function VitrineDeProfessores({ arenaId }) {
     <V2Surface className="mb-6">
       <div className="mb-4 flex items-center gap-2">
         <GraduationCap className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Professores</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Professores')}</h2>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {coaches.map((c) => {
@@ -60,14 +61,14 @@ function VitrineDeProfessores({ arenaId }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-base font-bold text-ink">{c.name}</p>
                   <div className="mt-0.5 flex flex-wrap gap-1.5">
-                    <V2Badge tone="neutral">{nivel.label}</V2Badge>
+                    <V2Badge tone="neutral">{t(nivel.label)}</V2Badge>
                     {Number(c.price_per_hour) > 0 && (
                       <V2Badge tone="acid">{formatPrice(c.price_per_hour)}/h</V2Badge>
                     )}
                   </div>
                   {c.bio && <p className="mt-2 text-sm leading-6 text-gray-600">{c.bio}</p>}
                   {Number(c.sessions_given) > 0 && (
-                    <p className="mt-1 text-xs text-gray-500">{c.sessions_given} aula(s) dada(s) aqui</p>
+                    <p className="mt-1 text-xs text-gray-500">{t('{n} aula(s) dada(s) aqui', { n: c.sessions_given })}</p>
                   )}
                 </div>
               </div>
@@ -120,13 +121,13 @@ export default function V2ArenaClasses() {
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{titulo}</h1>
         <p className="mt-2 font-medium text-gray-500">
           {souProfessor
-            ? 'As aulas em que você é o professor, com os alunos de cada uma.'
-            : `${arena.name} · agenda e matrículas.`}
+            ? t('As aulas em que você é o professor, com os alunos de cada uma.')
+            : t('{name} · agenda e matrículas.', { name: arena.name })}
         </p>
         {podeGerir && (
           <V2Button asChild size="sm" variant="secondary" className="mt-3">
             <Link to={`/arenas/${arena.id}/gerir?aba=aulas`}>
-              <Settings2 className="h-4 w-4" /> Gerir aulas e professores na Central
+              <Settings2 className="h-4 w-4" /> {t('Gerir aulas e professores na Central')}
             </Link>
           </V2Button>
         )}

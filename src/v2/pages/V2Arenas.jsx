@@ -17,6 +17,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function arenaCover(arena) {
   if (arena.cover_url) return arena.cover_url;
@@ -80,9 +81,9 @@ function V2ArenasContent() {
   return (
     <div className="mx-auto max-w-[1400px]">
       <V2PageIntro
-        title="Explorar Quadras"
-        subtitle="Encontre arenas, veja preços e horários e solicite sua reserva."
-        action={<V2Button asChild variant="secondary" size="sm"><Link to="/arenas/criar" data-dica="arenas-cadastrar">Cadastrar arena</Link></V2Button>}
+        title={t('Explorar Quadras')}
+        subtitle={t('Encontre arenas, veja preços e horários e solicite sua reserva.')}
+        action={<V2Button asChild variant="secondary" size="sm"><Link to="/arenas/criar" data-dica="arenas-cadastrar">{t('Cadastrar arena')}</Link></V2Button>}
       />
 
       <V2Surface className="mb-8" data-dica="arenas-busca">
@@ -90,11 +91,11 @@ function V2ArenasContent() {
           icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar arena por nome, cidade ou endereço"
+          placeholder={t('Buscar arena por nome, cidade ou endereço')}
         />
         {cities.length > 1 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            <V2FilterChip active={city === ''} onClick={() => setCity('')}>Todas as cidades</V2FilterChip>
+            <V2FilterChip active={city === ''} onClick={() => setCity('')}>{t('Todas as cidades')}</V2FilterChip>
             {cities.map((c) => (
               <V2FilterChip key={c} active={city === c} onClick={() => setCity(c)}>{c}</V2FilterChip>
             ))}
@@ -102,8 +103,8 @@ function V2ArenasContent() {
         )}
         <RegionBar regional={regional} className="mt-4" nomeItens={['arena', 'arenas']} />
         <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-          <span className="font-bold text-ink">{filtered.length}</span> arena(s)
-          {city ? ` em ${city}` : (regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : ' disponíveis')}.
+          <span className="font-bold text-ink">{filtered.length}</span> {t('arena(s)')}
+          {city ? t(' em {city}', { city }) : (regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : t(' disponíveis'))}.
         </p>
       </V2Surface>
 
@@ -115,9 +116,9 @@ function V2ArenasContent() {
         <V2Surface>
           <V2EmptyState
             icon={LayoutGrid}
-            title="Não foi possível carregar as arenas"
-            description="Pode ser a conexão. Nada foi perdido — tente de novo."
-            action={<V2Button onClick={() => refetch()}>Tentar de novo</V2Button>}
+            title={t('Não foi possível carregar as arenas')}
+            description={t('Pode ser a conexão. Nada foi perdido — tente de novo.')}
+            action={<V2Button onClick={() => refetch()}>{t('Tentar de novo')}</V2Button>}
           />
         </V2Surface>
       ) : filtered.length === 0 && regional.fora > 0 ? (
@@ -126,14 +127,14 @@ function V2ArenasContent() {
         <V2Surface>
           <V2EmptyState
             icon={LayoutGrid}
-            title="Nenhuma arena encontrada"
+            title={t('Nenhuma arena encontrada')}
             description={(search || city)
-              ? 'Nenhuma arena corresponde ao filtro atual. Limpe os filtros para ver todas.'
-              : 'Cadastre uma arena para começar a receber reservas.'}
+              ? t('Nenhuma arena corresponde ao filtro atual. Limpe os filtros para ver todas.')
+              : t('Cadastre uma arena para começar a receber reservas.')}
             action={(search || city) ? (
-              <V2Button onClick={() => { setSearch(''); setCity(''); }}>Limpar filtros</V2Button>
+              <V2Button onClick={() => { setSearch(''); setCity(''); }}>{t('Limpar filtros')}</V2Button>
             ) : (
-              <V2Button asChild><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>
+              <V2Button asChild><Link to="/arenas/criar">{t('Cadastrar arena')}</Link></V2Button>
             )}
           />
         </V2Surface>
@@ -193,14 +194,14 @@ function ArenaCard({ arena, onIntencao, distancia = null }) {
       <div className="flex flex-1 flex-col p-6">
         <div className="flex flex-wrap gap-2">
           {Number.isFinite(arena.court_count) && arena.court_count > 0 && (
-            <V2Badge tone="neutral">{arena.court_count} quadra(s)</V2Badge>
+            <V2Badge tone="neutral">{t('{n} quadra(s)', { n: arena.court_count })}</V2Badge>
           )}
           {hours && <V2Badge tone="neutral"><Clock className="h-3 w-3" /> {hours}</V2Badge>}
         </div>
         {arena.description && <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{arena.description}</p>}
         <div className="mt-auto pt-6">
           <span className="btn-press block w-full rounded-full bg-ink py-3.5 text-center text-sm font-bold text-white transition-colors group-hover:bg-acid group-hover:text-ink">
-            Ver arena e reservar
+            {t('Ver arena e reservar')}
           </span>
         </div>
       </div>
