@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { V2Button, V2FilterChip, V2SearchInput } from '@/v2/ui/primitives';
 import { KindIcon } from '@/v2/components/training/ItemCard';
+import { t, tn } from '@/core/i18n';
 
 const LIMITE_LISTA = 60;
 
@@ -49,9 +50,9 @@ export default function ItemPickerDialog({
     <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="flex max-w-2xl flex-col gap-4">
         <DialogHeader>
-          <DialogTitle>Acrescentar ao dia</DialogTitle>
+          <DialogTitle>{t('Acrescentar ao dia')}</DialogTitle>
           <DialogDescription>
-            {max === 1 ? 'Cabe mais um item neste dia.' : `Escolha até ${max} itens.`} Toque para marcar; a ordem é a dos toques.
+            {max === 1 ? t('Cabe mais um item neste dia.') : t('Escolha até {n} itens.', { n: max })} {t('Toque para marcar; a ordem é a dos toques.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -60,34 +61,34 @@ export default function ItemPickerDialog({
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value.slice(0, 80))}
-          placeholder="Buscar: dink, saque, voleio…"
-          aria-label="Buscar na biblioteca"
+          placeholder={t('Buscar: dink, saque, voleio…')}
+          aria-label={t('Buscar na biblioteca')}
         />
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar">
-          <V2FilterChip active={!tipo} aria-pressed={!tipo} onClick={() => setTipo('')} className="px-3 py-1.5">Todos</V2FilterChip>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Filtrar')}>
+          <V2FilterChip active={!tipo} aria-pressed={!tipo} onClick={() => setTipo('')} className="px-3 py-1.5">{t('Todos')}</V2FilterChip>
           {ITEM_KINDS.map((k) => (
             <V2FilterChip key={k} active={tipo === k} aria-pressed={tipo === k} onClick={() => setTipo(tipo === k ? '' : k)} className="px-3 py-1.5">
-              {ITEM_KIND_LABELS[k]}
+              {t(ITEM_KIND_LABELS[k])}
             </V2FilterChip>
           ))}
           {Number.isFinite(level) && (
-            <V2FilterChip active={meuNivel} aria-pressed={meuNivel} onClick={() => setMeuNivel(!meuNivel)} className="px-3 py-1.5">Do meu nível</V2FilterChip>
+            <V2FilterChip active={meuNivel} aria-pressed={meuNivel} onClick={() => setMeuNivel(!meuNivel)} className="px-3 py-1.5">{t('Do meu nível')}</V2FilterChip>
           )}
           {favorites.length > 0 && (
             <V2FilterChip active={salvos} aria-pressed={salvos} onClick={() => setSalvos(!salvos)} className="px-3 py-1.5">
-              <Star className="h-3.5 w-3.5" aria-hidden="true" /> Salvos
+              <Star className="h-3.5 w-3.5" aria-hidden="true" />{' '}{t('Salvos')}
             </V2FilterChip>
           )}
         </div>
 
-        {incompleto && <p className="text-xs text-amber-700">Parte da biblioteca não carregou; a lista pode estar incompleta.</p>}
+        {incompleto && <p className="text-xs text-amber-700">{t('Parte da biblioteca não carregou; a lista pode estar incompleta.')}</p>}
 
         {lista.length === 0 ? (
           <p className="rounded-3xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-            Nada com esses filtros. Tente outra palavra ou tire um filtro.
+            {t('Nada com esses filtros. Tente outra palavra ou tire um filtro.')}
           </p>
         ) : (
-          <ul className="space-y-1.5" aria-label="Itens da biblioteca">
+          <ul className="space-y-1.5" aria-label={t('Itens da biblioteca')}>
             {lista.slice(0, LIMITE_LISTA).map((it) => {
               const ordem = marcados.indexOf(it.id);
               const marcado = ordem >= 0;
@@ -109,11 +110,11 @@ export default function ItemPickerDialog({
                     <KindIcon kind={it.kind} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">
-                        {fav.has(it.id) && <Star className="mr-1 inline h-3.5 w-3.5 text-amber-500" aria-label="Salvo" />}
+                        {fav.has(it.id) && <Star className="mr-1 inline h-3.5 w-3.5 text-amber-500" aria-label={t('Salvo')} />}
                         {it.title}
                       </span>
                       <span className="block truncate text-xs text-gray-500">
-                        {[ITEM_KIND_LABELS[it.kind], itemMetaLine(it)].filter(Boolean).join(' · ')}
+                        {[t(ITEM_KIND_LABELS[it.kind]), itemMetaLine(it)].filter(Boolean).join(' · ')}
                       </span>
                     </span>
                     <span
@@ -132,17 +133,17 @@ export default function ItemPickerDialog({
           </ul>
         )}
         {lista.length > LIMITE_LISTA && (
-          <p className="text-xs text-gray-500">Mostrando {LIMITE_LISTA} de {lista.length}. Use a busca para achar o resto.</p>
+          <p className="text-xs text-gray-500">{t('Mostrando {n} de {total}. Use a busca para achar o resto.', { n: LIMITE_LISTA, total: lista.length })}</p>
         )}
 
         <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-paper-pure px-6 py-4">
           <p className="text-sm text-gray-500" aria-live="polite">
-            {marcados.length ? `${marcados.length} marcado${marcados.length > 1 ? 's' : ''}` : 'Nada marcado'}
+            {marcados.length ? tn(marcados.length, '{n} marcado', '{n} marcados') : t('Nada marcado')}
           </p>
           <div className="flex gap-2">
-            <V2Button variant="ghost" onClick={() => fechar(false)}>Cancelar</V2Button>
+            <V2Button variant="ghost" onClick={() => fechar(false)}>{t('Cancelar')}</V2Button>
             <V2Button onClick={confirmar} disabled={!marcados.length}>
-              {marcados.length > 1 ? `Acrescentar ${marcados.length}` : 'Acrescentar'}
+              {marcados.length > 1 ? t('Acrescentar {n}', { n: marcados.length }) : t('Acrescentar')}
             </V2Button>
           </div>
         </div>

@@ -19,8 +19,9 @@ import { countMyUploads, prepareUpload, uploadTrainingMedia } from '@/modules/tr
 import { V2Button, V2ErrorState, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { IconBtn } from './editorFields';
 import { removeAt, replaceAt } from './editorForm';
+import { fmtNumero, t } from '@/core/i18n';
 
-const num = (n) => String(n).replace('.', ',');
+const num = (n) => fmtNumero(n, { maximumFractionDigits: 1, useGrouping: false });
 
 /** Campo de minuto do vídeo: aceita "1:30", "90" ou "1m30s"; grava segundos. */
 function TempoInput({ id, label, segundos, onCommit }) {
@@ -37,7 +38,7 @@ function TempoInput({ id, label, segundos, onCommit }) {
         onBlur={() => {
           if (!texto.trim()) { setErro(''); onCommit(null); return; }
           const s = parseTimeSeconds(texto);
-          if (s === null) { setErro('Use 1:30, 90 ou 1m30s.'); return; }
+          if (s === null) { setErro(t('Use 1:30, 90 ou 1m30s.')); return; }
           setErro('');
           setTexto(s ? formatTimeSeconds(s) : '');
           onCommit(s || null);
@@ -50,10 +51,10 @@ function TempoInput({ id, label, segundos, onCommit }) {
 /** O link vira vídeo (YouTube, Vimeo, arquivo de vídeo) ou imagem. */
 function mediaFromLink(url) {
   const limpo = String(url || '').trim();
-  if (!limpo.startsWith('https://')) return { erro: 'Use um link que comece com https://' };
+  if (!limpo.startsWith('https://')) return { erro: t('Use um link que comece com https://') };
   const tipo = parseVideoUrl(limpo) ? 'video' : 'image';
   const m = normalizeMedia({ type: tipo, source: 'url', url: limpo, tag: 'demo' });
-  return m ? { media: m } : { erro: 'Não reconheci esse link. Use YouTube, Vimeo ou o endereço direto de uma imagem.' };
+  return m ? { media: m } : { erro: t('Não reconheci esse link. Use YouTube, Vimeo ou o endereço direto de uma imagem.') };
 }
 
 export default function MediaInput({ value = [], onChange, identity, settings, onBusyChange, onUploaded }) {
@@ -120,7 +121,7 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
       }
       contagem.refetch();
     } catch (err) {
-      if (!err?.canceled) setErroEnvio(err?.message || 'Não foi possível enviar o arquivo.');
+      if (!err?.canceled) setErroEnvio(err?.message || t('Não foi possível enviar o arquivo.'));
     } finally {
       tarefaRef.current = null;
       setEnvio(null);
@@ -133,10 +134,10 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
   const mudar = (i, patch) => onChange(replaceAt(lista, i, { ...lista[i], ...patch }));
 
   const limitesTexto = [
-    `Imagens JPG, PNG ou WebP de até ${num(limits.imageMb)} MB.`,
+    t('Imagens JPG, PNG ou WebP de até {mb} MB.', { mb: num(limits.imageMb) }),
     limits.videoEnabled
-      ? `Vídeos MP4, WebM ou MOV de até ${num(limits.videoMb)} MB e ${limits.videoSeconds} segundos.`
-      : 'Vídeo, só por link.',
+      ? t('Vídeos MP4, WebM ou MOV de até {mb} MB e {s} segundos.', { mb: num(limits.videoMb), s: limits.videoSeconds })
+      : t('Vídeo, só por link.'),
   ].join(' ');
 
   return (
@@ -152,45 +153,45 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                   {miniatura ? (
                     <img src={miniatura} alt="" loading="lazy" className="h-16 w-24 shrink-0 rounded-xl object-cover" />
                   ) : (
-                    <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xs font-bold text-gray-500">Vídeo</span>
+                    <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xs font-bold text-gray-500">{t('Vídeo')}</span>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-ink">
-                      {m.type === 'video' ? 'Vídeo' : 'Imagem'} · {m.source === 'upload' ? 'arquivo enviado' : 'link'}
+                      {m.type === 'video' ? t('Vídeo') : t('Imagem')} · {m.source === 'upload' ? t('arquivo enviado') : t('link')}
                     </p>
                     <p className="truncate text-xs text-gray-500">{m.url}</p>
                   </div>
-                  <IconBtn label={`Remover mídia ${i + 1}`} onClick={() => onChange(removeAt(lista, i))}>
+                  <IconBtn label={t('Remover mídia {n}', { n: i + 1 })} onClick={() => onChange(removeAt(lista, i))}>
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </IconBtn>
                 </div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <V2Field label="Legenda: o que observar" htmlFor={`midia-${i}-legenda`} className="sm:col-span-2">
+                  <V2Field label={t('Legenda: o que observar')} htmlFor={`midia-${i}-legenda`} className="sm:col-span-2">
                     <V2Input
                       id={`midia-${i}-legenda`}
                       maxLength={140}
                       value={m.caption || ''}
                       onChange={(e) => mudar(i, { caption: e.target.value })}
-                      placeholder="Ex.: repare na raquete parada na frente do corpo"
+                      placeholder={t('Ex.: repare na raquete parada na frente do corpo')}
                     />
                   </V2Field>
-                  <V2Field label="Mostra" htmlFor={`midia-${i}-marca`}>
+                  <V2Field label={t('Mostra')} htmlFor={`midia-${i}-marca`}>
                     <V2Select
                       id={`midia-${i}-marca`}
                       value={m.tag || 'demo'}
                       onChange={(e) => mudar(i, { tag: e.target.value })}
-                      options={MEDIA_TAGS.map((t) => ({ value: t, label: MEDIA_TAG_LABELS[t] }))}
+                      options={MEDIA_TAGS.map((tag) => ({ value: tag, label: t(MEDIA_TAG_LABELS[tag]) }))}
                     />
                   </V2Field>
                   {m.type === 'video' && (
                     <div className="grid grid-cols-2 gap-3">
-                      <TempoInput id={`midia-${i}-ini`} label="Começa em" segundos={m.start} onCommit={(s) => mudar(i, { start: s })} />
-                      <TempoInput id={`midia-${i}-fim`} label="Termina em" segundos={m.end} onCommit={(s) => mudar(i, { end: s })} />
+                      <TempoInput id={`midia-${i}-ini`} label={t('Começa em')} segundos={m.start} onCommit={(s) => mudar(i, { start: s })} />
+                      <TempoInput id={`midia-${i}-fim`} label={t('Termina em')} segundos={m.end} onCommit={(s) => mudar(i, { end: s })} />
                     </div>
                   )}
                 </div>
                 {m.source === 'upload' && (
-                  <p className="mt-2 text-xs text-gray-500">Se remover, o arquivo é apagado quando você salvar.</p>
+                  <p className="mt-2 text-xs text-gray-500">{t('Se remover, o arquivo é apagado quando você salvar.')}</p>
                 )}
               </li>
             );
@@ -199,14 +200,14 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
       )}
 
       {cheio ? (
-        <p className="text-sm text-gray-500">Chegou a {MAX_MEDIA} mídias, o máximo por item.</p>
+        <p className="text-sm text-gray-500">{t('Chegou a {n} mídias, o máximo por item.', { n: MAX_MEDIA })}</p>
       ) : (
         <>
           <V2Field
-            label="Adicionar por link"
+            label={t('Adicionar por link')}
             htmlFor="midia-link"
             error={erroLink}
-            hint="YouTube ou Vimeo (o minuto do link vira o início), ou o endereço direto de uma imagem."
+            hint={t('YouTube ou Vimeo (o minuto do link vira o início), ou o endereço direto de uma imagem.')}
           >
             <div className="flex flex-col gap-2 sm:flex-row">
               <V2Input
@@ -219,27 +220,27 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); adicionarLink(); } }}
               />
               <V2Button type="button" variant="secondary" onClick={adicionarLink} disabled={!link.trim()}>
-                <Link2 className="h-4 w-4" aria-hidden="true" /> Adicionar
+                <Link2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Adicionar')}
               </V2Button>
             </div>
           </V2Field>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">Enviar arquivo</p>
+            <p className="text-sm font-semibold text-ink">{t('Enviar arquivo')}</p>
             {menor || !limits.enabled ? (
               <p className="text-sm text-gray-500">{permissao.reason}</p>
             ) : contagem.isError ? (
               <V2ErrorState
                 inline
-                title="Não deu para conferir quantos arquivos você já enviou"
-                description="O envio volta assim que a conferência passar. O link continua valendo."
+                title={t('Não deu para conferir quantos arquivos você já enviou')}
+                description={t('O envio volta assim que a conferência passar. O link continua valendo.')}
                 onRetry={contagem.refetch}
               />
             ) : (
               <>
                 <p className="text-xs leading-5 text-gray-500">
                   {limitesTexto}
-                  {contagem.isSuccess && ` Você já enviou ${contagem.data} de ${limits.perUser}.`}
+                  {contagem.isSuccess && ` ${t('Você já enviou {n} de {total}.', { n: contagem.data, total: limits.perUser })}`}
                 </p>
                 {!permissao.ok && contagem.isSuccess && <p className="text-sm text-gray-500">{permissao.reason}</p>}
                 <input
@@ -253,11 +254,11 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                 />
                 {envio ? (
                   <div className="space-y-2" role="status">
-                    <p className="text-xs text-gray-600">Enviando {envio.nome} · {envio.progresso}%</p>
+                    <p className="text-xs text-gray-600">{t('Enviando {nome} · {pct}%', { nome: envio.nome, pct: envio.progresso })}</p>
                     <div
                       className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
                       role="progressbar"
-                      aria-label="Progresso do envio"
+                      aria-label={t('Progresso do envio')}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={envio.progresso}
@@ -265,7 +266,7 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                       <div className="h-full bg-acid transition-all" style={{ width: `${envio.progresso}%` }} />
                     </div>
                     <V2Button type="button" variant="ghost" size="sm" onClick={cancelar}>
-                      <X className="h-4 w-4" aria-hidden="true" /> Cancelar envio
+                      <X className="h-4 w-4" aria-hidden="true" />{' '}{t('Cancelar envio')}
                     </V2Button>
                   </div>
                 ) : (
@@ -275,7 +276,7 @@ export default function MediaInput({ value = [], onChange, identity, settings, o
                     disabled={!contagem.isSuccess || !permissao.ok}
                     onClick={() => arquivoRef.current?.click()}
                   >
-                    <Upload className="h-4 w-4" aria-hidden="true" /> {contagem.isSuccess ? 'Escolher arquivo' : 'Conferindo o limite…'}
+                    <Upload className="h-4 w-4" aria-hidden="true" /> {contagem.isSuccess ? t('Escolher arquivo') : t('Conferindo o limite…')}
                   </V2Button>
                 )}
               </>

@@ -13,6 +13,7 @@ import { isActiveRegistration } from '@/modules/tournament/domain/checkin.js';
 import { addDays, todayLocal } from '../domain/dates.js';
 import { DEBRIEF_LIMITS } from '../domain/debrief.js';
 import { bookingEvents, gameDayEvent, tournamentEvent } from '../domain/debriefEvents.js';
+import { t } from '@/core/i18n';
 
 /** Inscrição antiga não vira busca de torneio: um torneio dura dias, não meses. */
 const INSCRICAO_RECENTE_DIAS = 120;
@@ -60,9 +61,9 @@ export async function listRecentPlay(uid, { today = todayLocal(), nowMs = Date.n
   if (!uid) return { events: [], incompleto: [] };
   const inicio = addDays(today, -DEBRIEF_LIMITS.windowDays);
   const fontes = [
-    ['Dias de jogo', () => diasDeJogo(uid, inicio, today)],
-    ['Torneios', () => torneios(uid, inicio, today, nowMs)],
-    ['Reservas de quadra', () => reservas(uid, inicio, today)],
+    [t('Dias de jogo'), () => diasDeJogo(uid, inicio, today)],
+    [t('Torneios'), () => torneios(uid, inicio, today, nowMs)],
+    [t('Reservas de quadra'), () => reservas(uid, inicio, today)],
   ];
   const r = await Promise.allSettled(fontes.map(([, ler]) => ler()));
   const events = [];
@@ -72,6 +73,6 @@ export async function listRecentPlay(uid, { today = todayLocal(), nowMs = Date.n
     else incompleto.push(fontes[i][0]);
   });
   // Tudo falhou: é falha, não "nenhum jogo".
-  if (incompleto.length === fontes.length) throw new Error('Não foi possível ler os seus jogos recentes.');
+  if (incompleto.length === fontes.length) throw new Error(t('Não foi possível ler os seus jogos recentes.'));
   return { events, incompleto };
 }

@@ -9,21 +9,22 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { TrainingItemError } from './trainingItemService.js';
+import { t, tk } from '@/core/i18n';
 
 export const TRAINING_REPORTS = 'training_reports';
 export const REPORT_REASONS = Object.freeze({
-  impreciso: 'Informação técnica errada',
-  perigoso: 'Pode causar lesão',
-  ofensivo: 'Ofensivo ou desrespeitoso',
-  spam: 'Propaganda ou spam',
-  direitos: 'Copiado sem permissão (direitos autorais)',
-  outro: 'Outro motivo',
+  impreciso: tk('Informação técnica errada'),
+  perigoso: tk('Pode causar lesão'),
+  ofensivo: tk('Ofensivo ou desrespeitoso'),
+  spam: tk('Propaganda ou spam'),
+  direitos: tk('Copiado sem permissão (direitos autorais)'),
+  outro: tk('Outro motivo'),
 });
-export const REPORT_STATUS_LABELS = Object.freeze({ aberta: 'Aberta', resolvida: 'Resolvida', descartada: 'Descartada' });
+export const REPORT_STATUS_LABELS = Object.freeze({ aberta: tk('Aberta'), resolvida: tk('Resolvida'), descartada: tk('Descartada') });
 
 export async function createReport(item, { reason, text = '' }, { identity }) {
-  if (!identity?.uid) throw new TrainingItemError('Entre na sua conta.');
-  if (!REPORT_REASONS[reason]) throw new TrainingItemError('Escolha o motivo.');
+  if (!identity?.uid) throw new TrainingItemError(t('Entre na sua conta.'));
+  if (!REPORT_REASONS[reason]) throw new TrainingItemError(t('Escolha o motivo.'));
   const ref = await addDoc(collection(db, TRAINING_REPORTS), {
     reporter_uid: identity.uid,
     item_id: item.id,
@@ -52,8 +53,8 @@ export async function listReports() {
 
 /** Resolve ou descarta, com uma nota. */
 export async function resolveReport(report, status, resolution, { identity }) {
-  if (!identity?.isAdmin) throw new TrainingItemError('Só a equipe da plataforma resolve denúncias.');
-  if (!['resolvida', 'descartada', 'aberta'].includes(status)) throw new TrainingItemError('Situação inválida.');
+  if (!identity?.isAdmin) throw new TrainingItemError(t('Só a equipe da plataforma resolve denúncias.'));
+  if (!['resolvida', 'descartada', 'aberta'].includes(status)) throw new TrainingItemError(t('Situação inválida.'));
   await updateDoc(doc(db, TRAINING_REPORTS, report.id), {
     status,
     resolution: String(resolution ?? '').trim().slice(0, 300),

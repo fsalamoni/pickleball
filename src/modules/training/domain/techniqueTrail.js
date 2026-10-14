@@ -11,50 +11,51 @@
  * entre aprender o gesto e repeti-lo na quadra.
  */
 
+import { tk } from '@/core/i18n';
 import { ITEM_KIND, skillArea } from './taxonomy.js';
 import { MASTERY } from './evolution.js';
 
 export const TRAIL_FAMILIES = Object.freeze([
   {
     id: 'base',
-    title: 'Base do jogo',
-    description: 'Empunhadura, prontidão e como se mover: o que todo golpe usa.',
+    title: tk('Base do jogo'),
+    description: tk('Empunhadura, prontidão e como se mover: o que todo golpe usa.'),
     slugs: ['empunhadura-continental', 'empunhaduras-eastern-e-western', 'posicao-de-prontidao', 'olhar-na-bola', 'split-step', 'deslocamento-lateral', 'avancar-e-recuar'],
   },
   {
     id: 'saque',
-    title: 'Saque e devolução',
-    description: 'Os dois primeiros golpes do ponto: dentro, fundo e com calma.',
+    title: tk('Saque e devolução'),
+    description: tk('Os dois primeiros golpes do ponto: dentro, fundo e com calma.'),
     slugs: ['saque', 'saque-drop', 'saque-com-efeito', 'devolucao-de-saque'],
   },
   {
     id: 'fundo',
-    title: 'Golpes de fundo',
-    description: 'Drive de direita e de esquerda, efeito, lob e passada.',
+    title: tk('Golpes de fundo'),
+    description: tk('Drive de direita e de esquerda, efeito, lob e passada.'),
     slugs: ['drive', 'drive-de-backhand', 'topspin', 'slice', 'lob', 'passada'],
   },
   {
     id: 'transicao',
-    title: 'Transição',
-    description: 'Do fundo para a rede: o drop, o reset e o meio-voleio.',
+    title: tk('Transição'),
+    description: tk('Do fundo para a rede: o drop, o reset e o meio-voleio.'),
     slugs: ['drop-da-terceira-bola', 'reset', 'meio-voleio'],
   },
   {
     id: 'cozinha',
-    title: 'Na cozinha',
-    description: 'Os dinks: bola baixa, paciência e efeito.',
+    title: tk('Na cozinha'),
+    description: tk('Os dinks: bola baixa, paciência e efeito.'),
     slugs: ['dink', 'dink-de-backhand', 'dink-com-efeito', 'dink-voleio'],
   },
   {
     id: 'rede',
-    title: 'Na rede',
-    description: 'Voleios, bloqueios, acelerações e defesas rápidas.',
+    title: tk('Na rede'),
+    description: tk('Voleios, bloqueios, acelerações e defesas rápidas.'),
     slugs: ['voleio', 'voleio-punch', 'bloqueio', 'defesa-de-corpo', 'speed-up', 'contra-ataque', 'flick-de-backhand'],
   },
   {
     id: 'avancados',
-    title: 'Jogadas avançadas',
-    description: 'O smash da bola alta e as jogadas pela lateral: Erne e ATP.',
+    title: tk('Jogadas avançadas'),
+    description: tk('O smash da bola alta e as jogadas pela lateral: Erne e ATP.'),
     slugs: ['smash', 'erne', 'atp-por-fora-do-poste'],
   },
 ]);

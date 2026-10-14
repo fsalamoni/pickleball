@@ -9,6 +9,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { normalizePlan, PLAN_STATUS } from '../domain/plan.js';
 import { TrainingItemError } from './trainingItemService.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_PLANS = 'training_plans';
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -26,7 +27,7 @@ function pauseOthers(batch, plans, keepId) {
 
 /** Cria um plano. Nasce ativo e pausa o que estava ativo. @returns {Promise<string>} */
 export async function createPlan(input, { identity, plans = [] }) {
-  if (!identity?.uid) throw new TrainingItemError('Entre na sua conta.');
+  if (!identity?.uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizePlan(input);
   if (!valid) throw new TrainingItemError(error);
   const ref = doc(collection(db, TRAINING_PLANS));
@@ -45,7 +46,7 @@ export async function updatePlan(plan, input) {
 
 /** Ativa, pausa ou conclui. Ativar pausa o plano ativo anterior. */
 export async function setPlanStatus(plan, status, { plans = [] } = {}) {
-  if (!Object.values(PLAN_STATUS).includes(status)) throw new TrainingItemError('Situação inválida.');
+  if (!Object.values(PLAN_STATUS).includes(status)) throw new TrainingItemError(t('Situação inválida.'));
   const batch = writeBatch(db);
   if (status === PLAN_STATUS.ATIVO) pauseOthers(batch, plans, plan.id);
   batch.update(doc(db, TRAINING_PLANS, plan.id), { status, updated_at: serverTimestamp() });

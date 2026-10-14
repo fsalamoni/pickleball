@@ -11,10 +11,11 @@
  */
 
 import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { fmtNumero, t, tk } from '@/core/i18n';
 
 export const MEDIA_TYPES = Object.freeze(['image', 'video']);
 export const MEDIA_TAGS = Object.freeze(['demo', 'certo', 'errado']);
-export const MEDIA_TAG_LABELS = Object.freeze({ demo: 'Demonstração', certo: 'Certo', errado: 'Errado' });
+export const MEDIA_TAG_LABELS = Object.freeze({ demo: tk('Demonstração'), certo: tk('Certo'), errado: tk('Errado') });
 export const MAX_MEDIA = 8;
 
 /** Tetos rígidos — os mesmos do `storage.rules`. A configuração do admin só pode BAIXAR. */
@@ -186,18 +187,18 @@ export function uploadLimits(settings = {}) {
  * @returns {{ ok: boolean, reason: string }}
  */
 export function uploadPermission({ ageYears = null, limits, usedCount = 0 } = {}) {
-  if (!limits?.enabled) return { ok: false, reason: 'O envio de arquivos está desligado no momento. Use um link.' };
+  if (!limits?.enabled) return { ok: false, reason: t('O envio de arquivos está desligado no momento. Use um link.') };
   if (Number.isFinite(ageYears) && ageYears < 18) {
-    return { ok: false, reason: 'Para menores de 18 anos, a mídia entra só por link.' };
+    return { ok: false, reason: t('Para menores de 18 anos, a mídia entra só por link.') };
   }
   if (usedCount >= limits.perUser) {
-    return { ok: false, reason: `Você chegou ao limite de ${limits.perUser} arquivos enviados. Apague algum ou use um link.` };
+    return { ok: false, reason: t('Você chegou ao limite de {n} arquivos enviados. Apague algum ou use um link.', { n: limits.perUser }) };
   }
   return { ok: true, reason: '' };
 }
 
 const mb = (bytes) => bytes / (1024 * 1024);
-const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.', ',');
+const fmt = (n) => fmtNumero(Number.isInteger(n) ? n : Number(n.toFixed(1)), { maximumFractionDigits: 1, useGrouping: false });
 
 /**
  * Confere um arquivo antes de subir. `durationSec` vem do `<video>` do navegador.
@@ -206,25 +207,25 @@ const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.',
 export function validateUpload({ type: mime = '', size = 0, durationSec = null } = {}, limits) {
   const lim = limits || uploadLimits();
   if (IMAGE_MIME.includes(mime)) {
-    if (size <= 0) return { ok: false, type: 'image', error: 'Arquivo vazio.' };
+    if (size <= 0) return { ok: false, type: 'image', error: t('Arquivo vazio.') };
     // Estrito, como o `storage.rules` (`size < N MB`).
     if (mb(size) >= lim.imageMb) {
-      return { ok: false, type: 'image', error: `A imagem tem ${fmt(mb(size))} MB. Ela precisa ter menos de ${fmt(lim.imageMb)} MB.` };
+      return { ok: false, type: 'image', error: t('A imagem tem {mb} MB. Ela precisa ter menos de {max} MB.', { mb: fmt(mb(size)), max: fmt(lim.imageMb) }) };
     }
     return { ok: true, type: 'image', error: '' };
   }
   if (VIDEO_MIME.includes(mime)) {
-    if (!lim.videoEnabled) return { ok: false, type: 'video', error: 'O envio de vídeo está desligado. Use um link do YouTube ou Vimeo.' };
-    if (size <= 0) return { ok: false, type: 'video', error: 'Arquivo vazio.' };
+    if (!lim.videoEnabled) return { ok: false, type: 'video', error: t('O envio de vídeo está desligado. Use um link do YouTube ou Vimeo.') };
+    if (size <= 0) return { ok: false, type: 'video', error: t('Arquivo vazio.') };
     if (mb(size) >= lim.videoMb) {
-      return { ok: false, type: 'video', error: `O vídeo tem ${fmt(mb(size))} MB. Ele precisa ter menos de ${fmt(lim.videoMb)} MB.` };
+      return { ok: false, type: 'video', error: t('O vídeo tem {mb} MB. Ele precisa ter menos de {max} MB.', { mb: fmt(mb(size)), max: fmt(lim.videoMb) }) };
     }
     if (Number.isFinite(durationSec) && durationSec > lim.videoSeconds + 0.5) {
-      return { ok: false, type: 'video', error: `O vídeo tem ${Math.round(durationSec)} s. O máximo é ${lim.videoSeconds} s.` };
+      return { ok: false, type: 'video', error: t('O vídeo tem {s} s. O máximo é {max} s.', { s: Math.round(durationSec), max: lim.videoSeconds }) };
     }
     return { ok: true, type: 'video', error: '' };
   }
-  return { ok: false, type: null, error: 'Formato não aceito. Imagens: JPG, PNG ou WebP. Vídeos: MP4, WebM ou MOV.' };
+  return { ok: false, type: null, error: t('Formato não aceito. Imagens: JPG, PNG ou WebP. Vídeos: MP4, WebM ou MOV.') };
 }
 
 /** Nome de arquivo seguro para o Storage: `<agora>-<aleatório>.<ext>`. */

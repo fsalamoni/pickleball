@@ -2,9 +2,10 @@
  * Dúvidas ao professor (`training_questions` + `messages`).
  * Privadas: só quem pergunta e o professor (vínculo ATIVO) leem.
  */
+import { t, tk } from '@/core/i18n';
 
 export const QUESTION_STATUS = Object.freeze({ ABERTA: 'aberta', RESPONDIDA: 'respondida', ENCERRADA: 'encerrada' });
-export const QUESTION_STATUS_LABELS = Object.freeze({ aberta: 'Esperando resposta', respondida: 'Respondida', encerrada: 'Encerrada' });
+export const QUESTION_STATUS_LABELS = Object.freeze({ aberta: tk('Esperando resposta'), respondida: tk('Respondida'), encerrada: tk('Encerrada') });
 export const QUESTION_SUBJECT_MAX = 120;
 export const MESSAGE_MAX = 2000;
 
@@ -14,9 +15,9 @@ const str = (v, max) => String(v ?? '').trim().slice(0, max);
 export function normalizeQuestion(input = {}) {
   const subject = str(input.subject, QUESTION_SUBJECT_MAX);
   const text = str(input.text, MESSAGE_MAX);
-  if (!input.coach_uid) return { valid: false, error: 'Escolha o professor.', value: {} };
-  if (subject.length < 3) return { valid: false, error: 'Escreva o assunto.', value: {} };
-  if (text.length < 3) return { valid: false, error: 'Escreva a sua dúvida.', value: {} };
+  if (!input.coach_uid) return { valid: false, error: t('Escolha o professor.'), value: {} };
+  if (subject.length < 3) return { valid: false, error: t('Escreva o assunto.'), value: {} };
+  if (text.length < 3) return { valid: false, error: t('Escreva a sua dúvida.'), value: {} };
   return {
     valid: true,
     error: '',

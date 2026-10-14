@@ -37,6 +37,6 @@ export function studentsOverview({ ativos = [], sessions = [], sent = [], today 
   return {
     porAluno,
     treinaramNaSemana: porAluno.filter((a) => a.thisWeek > 0).length,
-    enviosPendentes: porAluno.reduce((t, a) => t + a.pending, 0),
+    enviosPendentes: porAluno.reduce((soma, a) => soma + a.pending, 0),
   };
 }

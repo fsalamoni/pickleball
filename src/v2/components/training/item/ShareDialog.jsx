@@ -25,11 +25,12 @@ import {
 } from '@/v2/ui/primitives';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import { shareResultText } from './contentView';
+import { t } from '@/core/i18n';
 
-const nomeAtleta = (a) => a?.platform_name || a?.full_name || 'Atleta';
+const nomeAtleta = (a) => a?.platform_name || a?.full_name || t('Atleta');
 
 function erroDe(err) {
-  return err?.name === 'TrainingItemError' && err.message ? err.message : 'Não foi possível enviar agora. Tente de novo.';
+  return err?.name === 'TrainingItemError' && err.message ? err.message : t('Não foi possível enviar agora. Tente de novo.');
 }
 
 export default function ShareDialog({ open, onOpenChange, item, identity, settings }) {
@@ -101,16 +102,16 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
 
   let corpo;
   if (pausado) {
-    corpo = <p className="text-sm text-gray-600">O compartilhamento de treinos está pausado pela equipe no momento.</p>;
+    corpo = <p className="text-sm text-gray-600">{t('O compartilhamento de treinos está pausado pela equipe no momento.')}</p>;
   } else if (!pode.ok) {
     corpo = <p className="text-sm text-gray-600">{pode.reason}</p>;
   } else {
     corpo = (
       <div className="space-y-5">
         {professor && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Para quem">
-            <V2FilterChip active={paraAlunos} aria-pressed={paraAlunos} onClick={() => trocarModo(SHARE_KIND.ALUNO)}>Para meus alunos</V2FilterChip>
-            <V2FilterChip active={!paraAlunos} aria-pressed={!paraAlunos} onClick={() => trocarModo(SHARE_KIND.INDICACAO)}>Indicar a alguém</V2FilterChip>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('Para quem')}>
+            <V2FilterChip active={paraAlunos} aria-pressed={paraAlunos} onClick={() => trocarModo(SHARE_KIND.ALUNO)}>{t('Para meus alunos')}</V2FilterChip>
+            <V2FilterChip active={!paraAlunos} aria-pressed={!paraAlunos} onClick={() => trocarModo(SHARE_KIND.INDICACAO)}>{t('Indicar a alguém')}</V2FilterChip>
           </div>
         )}
 
@@ -118,19 +119,19 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
           <div className="space-y-3">
             {roster.isPending && <V2Skeleton lines={3} />}
             {roster.isError && (
-              <V2ErrorState inline title="Não foi possível carregar seus alunos" onRetry={() => roster.refetch()} />
+              <V2ErrorState inline title={t('Não foi possível carregar seus alunos')} onRetry={() => roster.refetch()} />
             )}
             {roster.isSuccess && ativos.length === 0 && (
               <p className="rounded-2xl bg-gray-50 p-3 text-sm text-gray-600">
-                Você não tem alunos ativos agora. Quem está convidado ou pausado não recebe — use “Indicar a alguém”.
+                {t('Você não tem alunos ativos agora. Quem está convidado ou pausado não recebe — use “Indicar a alguém”.')}
               </p>
             )}
             {roster.isSuccess && ativos.length > 0 && (
               <fieldset className="space-y-2">
-                <legend className="text-sm font-semibold text-ink">Alunos ativos</legend>
+                <legend className="text-sm font-semibold text-ink">{t('Alunos ativos')}</legend>
                 <label className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 text-sm font-semibold text-ink">
                   <input type="checkbox" checked={todos} onChange={alternarTodos} className="h-4 w-4" />
-                  Todos os alunos ativos ({ativos.length})
+                  {t('Todos os alunos ativos ({n})', { n: ativos.length })}
                 </label>
                 <ul className="max-h-60 space-y-1 overflow-y-auto">
                   {ativos.map((s) => {
@@ -145,38 +146,38 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
                             onChange={() => alternarAluno(s.student_id)}
                             className="h-4 w-4"
                           />
-                          <span className="min-w-0 truncate">{s.student_name || 'Aluno'}</span>
+                          <span className="min-w-0 truncate">{s.student_name || t('Aluno')}</span>
                         </label>
                       </li>
                     );
                   })}
                 </ul>
                 {ativos.length > MAX_RECIPIENTS && (
-                  <p className="text-xs text-gray-500">Até {MAX_RECIPIENTS} por envio. Mande de novo para os outros.</p>
+                  <p className="text-xs text-gray-500">{t('Até {n} por envio. Mande de novo para os outros.', { n: MAX_RECIPIENTS })}</p>
                 )}
               </fieldset>
             )}
-            <V2Field label="Para fazer até (opcional)" htmlFor="envio-prazo">
+            <V2Field label={t('Para fazer até (opcional)')} htmlFor="envio-prazo">
               <V2Input id="envio-prazo" type="date" min={todayLocal()} value={prazo} onChange={(e) => setPrazo(e.target.value)} />
             </V2Field>
           </div>
         ) : (
           <div className="space-y-3">
-            <V2Field label="Indicar para" htmlFor="envio-pessoa" hint={`Até ${MAX_RECIPIENTS} pessoas.`}>
+            <V2Field label={t('Indicar para')} htmlFor="envio-pessoa" hint={t('Até {n} pessoas.', { n: MAX_RECIPIENTS })}>
               {cheio ? (
-                <p className="text-sm text-gray-600">Chegou ao limite de {MAX_RECIPIENTS} pessoas.</p>
+                <p className="text-sm text-gray-600">{t('Chegou ao limite de {n} pessoas.', { n: MAX_RECIPIENTS })}</p>
               ) : (
                 <AthletePicker value={null} onChange={adicionarPessoa} inputId="envio-pessoa" />
               )}
             </V2Field>
             {pessoas.length > 0 && (
-              <ul className="flex flex-wrap gap-2" aria-label="Quem vai receber">
+              <ul className="flex flex-wrap gap-2" aria-label={t('Quem vai receber')}>
                 {pessoas.map((p) => (
                   <li key={p.id} className="inline-flex items-center gap-1 rounded-full bg-gray-100 py-1 pl-3 pr-1 text-sm text-ink">
                     {nomeAtleta(p)}
                     <button
                       type="button"
-                      aria-label={`Tirar ${nomeAtleta(p)}`}
+                      aria-label={t('Tirar {nome}', { nome: nomeAtleta(p) })}
                       onClick={() => setPessoas((atual) => atual.filter((x) => x.id !== p.id))}
                       className="rounded-full p-2 text-gray-500 hover:bg-gray-200 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
@@ -189,22 +190,22 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
           </div>
         )}
 
-        <V2Field label="Recado (opcional)" htmlFor="envio-recado">
+        <V2Field label={t('Recado (opcional)')} htmlFor="envio-recado">
           <V2Textarea id="envio-recado" rows={3} maxLength={SHARE_NOTE_MAX} value={recado} onChange={(e) => setRecado(e.target.value)} />
         </V2Field>
 
         {needsSharedAccess(item, { kind: modo }) && (
-          <p className="text-xs text-gray-500">Este item não está na biblioteca: quem receber passa a poder abri-lo (só este item).</p>
+          <p className="text-xs text-gray-500">{t('Este item não está na biblioteca: quem receber passa a poder abri-lo (só este item).')}</p>
         )}
         {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
         {resultado && <p role="status" className="rounded-2xl bg-gray-50 p-3 text-sm text-ink">{resultado}</p>}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <V2Button variant="ghost" onClick={() => fechar(false)}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={() => fechar(false)}>{t('Fechar')}</V2Button>
           {!(paraAlunos && !roster.isSuccess) && (
             <V2Button onClick={confirmar} disabled={destinos.length === 0 || enviar.isPending}>
               <Send className="h-4 w-4" aria-hidden="true" />
-              {enviar.isPending ? 'Enviando…' : paraAlunos ? `Enviar${destinos.length ? ` (${destinos.length})` : ''}` : `Indicar${destinos.length ? ` (${destinos.length})` : ''}`}
+              {enviar.isPending ? t('Enviando…') : paraAlunos ? `Enviar${destinos.length ? ` (${destinos.length})` : ''}` : `Indicar${destinos.length ? ` (${destinos.length})` : ''}`}
             </V2Button>
           )}
         </div>
@@ -216,9 +217,9 @@ export default function ShareDialog({ open, onOpenChange, item, identity, settin
     <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{professor ? 'Enviar ou indicar' : 'Indicar a alguém'}</DialogTitle>
+          <DialogTitle>{professor ? t('Enviar ou indicar') : t('Indicar a alguém')}</DialogTitle>
           <DialogDescription>
-            {item?.title ? `"${item.title}" vai para Recebidos de quem você escolher, com um aviso.` : 'Quem receber é avisado.'}
+            {item?.title ? t('"{titulo}" vai para Recebidos de quem você escolher, com um aviso.', { titulo: item.title }) : t('Quem receber é avisado.')}
           </DialogDescription>
         </DialogHeader>
         {corpo}

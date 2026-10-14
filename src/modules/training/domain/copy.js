@@ -9,6 +9,7 @@
  * "lavar" o conteúdo privado de outra pessoa.
  */
 
+import { t } from '@/core/i18n';
 import { isPubliclyListed, VISIBILITY } from './visibility.js';
 
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
@@ -21,9 +22,9 @@ export function isOpenToCopy(source = {}, uid) {
 
 /** Dá para copiar? Conteúdo antigo do professor (`coach_content`) não. */
 export function canCopyItem(source = {}, { uid } = {}) {
-  if (!uid) return { ok: false, reason: 'Entre na sua conta.' };
-  if (source.legacy) return { ok: false, reason: 'Este conteúdo antigo não pode ser copiado.' };
-  if (!source.id) return { ok: false, reason: 'Item inválido.' };
+  if (!uid) return { ok: false, reason: t('Entre na sua conta.') };
+  if (source.legacy) return { ok: false, reason: t('Este conteúdo antigo não pode ser copiado.') };
+  if (!source.id) return { ok: false, reason: t('Item inválido.') };
   return { ok: true, reason: '' };
 }
 

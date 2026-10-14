@@ -12,6 +12,7 @@
 import { blankItem } from '@/modules/training/domain/trainingItem';
 import { ITEM_KINDS, LEVEL_MAX, LEVEL_MIN } from '@/modules/training/domain/taxonomy';
 import { AUTHOR_ROLE, VISIBILITY, isAutoApproved, publishNotice } from '@/modules/training/domain/visibility';
+import { fmtNumero, t, tk } from '@/core/i18n';
 
 const exceto = (...tipos) => ITEM_KINDS.filter((k) => !tipos.includes(k));
 const GOLPE = ['drill', 'fundamento', 'jogada'];
@@ -79,94 +80,94 @@ export function campoVisivel(kind, campo, form = {}) {
 export const EDITOR_SECTIONS = Object.freeze([
   {
     id: 'basico',
-    titulo: 'Básico',
-    porque: 'O que é, para quem serve e quanto tempo leva — é o que aparece no cartão da biblioteca.',
+    titulo: tk('Básico'),
+    porque: tk('O que é, para quem serve e quanto tempo leva — é o que aparece no cartão da biblioteca.'),
     campos: ['title', 'summary', 'objective', 'skills', 'level_min', 'players_min', 'duration_min', 'intensity', 'place', 'equipment', 'practice_mode'],
   },
   {
     id: 'como',
-    titulo: 'Como fazer',
-    porque: 'Escreva para quem chega na quadra sem você: onde cada um fica, os passos na ordem e uma ou duas dicas curtas.',
+    titulo: tk('Como fazer'),
+    porque: tk('Escreva para quem chega na quadra sem você: onde cada um fica, os passos na ordem e uma ou duas dicas curtas.'),
     campos: ['setup', 'steps', 'cues'],
   },
   {
     id: 'tecnica',
-    titulo: 'O corpo, ponto a ponto',
-    porque: 'Uma parte do corpo por linha — empunhadura, pés, pernas, tronco, braço, punho, raquete — e o que cada uma faz. Feche com 3 ou 4 sinais de que saiu certo, que a pessoa confere sozinha.',
+    titulo: tk('O corpo, ponto a ponto'),
+    porque: tk('Uma parte do corpo por linha — empunhadura, pés, pernas, tronco, braço, punho, raquete — e o que cada uma faz. Feche com 3 ou 4 sinais de que saiu certo, que a pessoa confere sozinha.'),
     campos: ['technique'],
   },
   {
     id: 'blocos',
-    titulo: 'Blocos do treino',
-    porque: 'Aquecimento → técnica e tática → jogo (a maior parte) → volta à calma. Cada bloco pode apontar para um item da biblioteca.',
+    titulo: tk('Blocos do treino'),
+    porque: tk('Aquecimento → técnica e tática → jogo (a maior parte) → volta à calma. Cada bloco pode apontar para um item da biblioteca.'),
     campos: ['blocks'],
   },
   {
     id: 'fisico',
-    titulo: 'Séries e repetições',
-    porque: 'A receita completa — séries, repetições, descanso e ritmo — para repetir igual em casa ou na academia.',
+    titulo: tk('Séries e repetições'),
+    porque: tk('A receita completa — séries, repetições, descanso e ritmo — para repetir igual em casa ou na academia.'),
     campos: ['sets', 'reps', 'rest_sec', 'tempo'],
   },
   {
     id: 'estudo',
-    titulo: 'Estudo',
-    porque: 'Regra muda todo ano: diga a edição. Perguntas de situação ("pode ou não pode?") fixam mais do que reler.',
+    titulo: tk('Estudo'),
+    porque: tk('Regra muda todo ano: diga a edição. Perguntas de situação ("pode ou não pode?") fixam mais do que reler.'),
     campos: ['study_type', 'rules_edition', 'rules_section', 'link', 'questions'],
   },
   {
     id: 'quando',
-    titulo: 'Quando usar',
-    porque: 'A situação de jogo em que isso aparece — sem ela, o treino não chega à partida.',
+    titulo: tk('Quando usar'),
+    porque: tk('A situação de jogo em que isso aparece — sem ela, o treino não chega à partida.'),
     campos: ['when_to_use'],
   },
   {
     id: 'certo',
-    titulo: 'Certo × errado',
-    porque: 'O errado só ensina AO LADO do certo — sozinho, ele fixa justamente o erro. Escreva o certo e, logo depois, o errado com o porquê.',
+    titulo: tk('Certo × errado'),
+    porque: tk('O errado só ensina AO LADO do certo — sozinho, ele fixa justamente o erro. Escreva o certo e, logo depois, o errado com o porquê.'),
     campos: ['positioning'],
   },
   {
     id: 'erros',
-    titulo: 'Erros comuns',
-    porque: 'O erro como ele APARECE na quadra e a correção como uma dica: é o que o atleta procura quando algo dá errado.',
+    titulo: tk('Erros comuns'),
+    porque: tk('O erro como ele APARECE na quadra e a correção como uma dica: é o que o atleta procura quando algo dá errado.'),
     campos: ['common_errors'],
   },
   {
     id: 'movimento',
-    titulo: 'Movimento',
-    porque: 'Preparação, execução e finalização: o que o corpo e a raquete fazem em cada fase — e as capacidades que o exercício treina.',
+    titulo: tk('Movimento'),
+    porque: tk('Preparação, execução e finalização: o que o corpo e a raquete fazem em cada fase — e as capacidades que o exercício treina.'),
     campos: ['motor'],
   },
   {
     id: 'variacoes',
-    titulo: 'Variações',
-    porque: 'Mude UMA alavanca por vez — Espaço, Tarefa, Equipamento ou Pessoas — para cada um treinar no próprio desafio.',
+    titulo: tk('Variações'),
+    porque: tk('Mude UMA alavanca por vez — Espaço, Tarefa, Equipamento ou Pessoas — para cada um treinar no próprio desafio.'),
     campos: ['variations'],
   },
   {
     id: 'meta',
-    titulo: 'Meta',
-    porque: 'Um número que a pessoa consegue contar sozinha diz quando o exercício está dominado e é hora de subir.',
+    titulo: tk('Meta'),
+    porque: tk('Um número que a pessoa consegue contar sozinha diz quando o exercício está dominado e é hora de subir.'),
     campos: ['metric', 'success_criteria'],
   },
   {
     id: 'seguranca',
-    titulo: 'Segurança',
-    porque: 'O risco real do exercício e como evitar. "Tome cuidado" não protege ninguém; diga o que fazer.',
+    titulo: tk('Segurança'),
+    porque: tk('O risco real do exercício e como evitar. "Tome cuidado" não protege ninguém; diga o que fazer.'),
     campos: ['safety'],
   },
   {
     id: 'diagramas',
     dica: 'treino-editor-diagrama',
-    titulo: 'Diagramas da quadra',
-    porque: 'Um desenho mostra posição e trajetória melhor que um parágrafo. Use "Certo" e "Errado" para comparar lado a lado.',
+    titulo: tk('Diagramas da quadra'),
+    porque: tk('Um desenho mostra posição e trajetória melhor que um parágrafo. Use "Certo" e "Errado" para comparar lado a lado.'),
     campos: ['diagrams'],
   },
   {
     id: 'midia',
     dica: 'treino-editor-midia',
-    titulo: 'Fotos e vídeos',
-    porque: 'Um vídeo curto ou uma foto mostram o que o texto não alcança. Diga na legenda o que observar.',
+    titulo: tk('Fotos e vídeos'),
+    porque: tk('Um vídeo curto ou uma foto mostram o que o texto não alcança. Diga na legenda o que observar.'),
     campos: ['media'],
   },
 ]);
@@ -247,7 +248,7 @@ export function levelOptions() {
   return out;
 }
 
-export const formatLevel = (n) => Number(n).toFixed(1).replace('.', ',');
+export const formatLevel = (n) => fmtNumero(Number(n), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** Ordem em que a tela leva a pessoa ao primeiro erro (a ordem do formulário). */
 const ORDEM_DOS_ERROS = ['kind', 'title', 'summary', 'steps', 'blocks', 'rules_edition', 'link'];
@@ -327,7 +328,7 @@ export function orphanUploads({ before = [], sessionPaths = [], after = [], uid 
 export function saveNotice({ visibility, role, settings = {}, isAdmin = false, uid = null, wasApproved = false, ageYears = null }) {
   if (visibility === VISIBILITY.PUBLICO && !isAdmin && role !== AUTHOR_ROLE.PLATAFORMA
     && Number.isFinite(ageYears) && ageYears < 18 && isAutoApproved(role, settings, { uid })) {
-    return 'A equipe revisa antes de publicar. Enquanto isso, só você vê.';
+    return t('A equipe revisa antes de publicar. Enquanto isso, só você vê.');
   }
   return publishNotice({ visibility, role, settings, isAdmin, uid, wasApproved });
 }

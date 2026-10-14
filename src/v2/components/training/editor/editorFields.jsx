@@ -9,6 +9,7 @@ import { cn } from '@/core/lib/utils';
 import { skillOptions } from '@/modules/training/domain/taxonomy';
 import { V2Button } from '@/v2/ui/primitives';
 import { moveItem, removeAt, replaceAt } from './editorForm';
+import { t } from '@/core/i18n';
 
 export function EditorSection({ id, titulo, porque, feito = false, dica, children }) {
   return (
@@ -21,7 +22,7 @@ export function EditorSection({ id, titulo, porque, feito = false, dica, childre
       <div className="mb-5">
         <h2 id={`secao-${id}-t`} className="flex items-center gap-2 font-display text-xl font-bold text-ink">
           {titulo}
-          {feito && <Check className="h-5 w-5 text-green-600" aria-label="preenchida" />}
+          {feito && <Check className="h-5 w-5 text-green-600" aria-label={t('preenchida')} />}
         </h2>
         {porque && <p className="mt-1 text-sm text-gray-500">{porque}</p>}
       </div>
@@ -105,13 +106,13 @@ export function ListEditor({
             <li key={i} className="rounded-3xl border border-gray-100 bg-paper p-3">
               <div className="min-w-0">{renderItem(it, i, (v) => onChange(replaceAt(items, i, v)))}</div>
               <div className="mt-2 flex justify-end gap-2">
-                <IconBtn label={`Subir ${itemLabel} ${i + 1}`} disabled={i === 0} onClick={() => onChange(moveItem(items, i, -1))}>
+                <IconBtn label={t('Subir {item} {n}', { item: itemLabel, n: i + 1 })} disabled={i === 0} onClick={() => onChange(moveItem(items, i, -1))}>
                   <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </IconBtn>
-                <IconBtn label={`Descer ${itemLabel} ${i + 1}`} disabled={i === items.length - 1} onClick={() => onChange(moveItem(items, i, 1))}>
+                <IconBtn label={t('Descer {item} {n}', { item: itemLabel, n: i + 1 })} disabled={i === items.length - 1} onClick={() => onChange(moveItem(items, i, 1))}>
                   <ArrowDown className="h-4 w-4" aria-hidden="true" />
                 </IconBtn>
-                <IconBtn label={`Remover ${itemLabel} ${i + 1}`} onClick={() => onChange(removeAt(items, i))}>
+                <IconBtn label={t('Remover {item} {n}', { item: itemLabel, n: i + 1 })} onClick={() => onChange(removeAt(items, i))}>
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </IconBtn>
               </div>
@@ -126,7 +127,7 @@ export function ListEditor({
           </V2Button>
         )}
         {extraActions}
-        <span className="text-xs text-gray-500">{items.length} de {max}</span>
+        <span className="text-xs text-gray-500">{t('{n} de {total}', { n: items.length, total: max })}</span>
       </div>
     </div>
   );
@@ -156,10 +157,9 @@ export function MultiChips({ id, legend, hint, options = [], value = [], onChang
   );
 }
 
-const SKILL_GROUPS = skillOptions();
-
 /** Habilidades agrupadas por área (a área também é escolhível). */
 export function SkillPicker({ id, value = [], onChange, max = 6 }) {
+  const SKILL_GROUPS = skillOptions();
   const lista = Array.isArray(value) ? value : [];
   const alternar = (v) => onChange(lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]);
   const chip = (o) => (
@@ -174,14 +174,14 @@ export function SkillPicker({ id, value = [], onChange, max = 6 }) {
   );
   return (
     <fieldset id={id} className="scroll-mt-4">
-      <legend className="mb-1 text-sm font-semibold text-ink">Habilidades</legend>
-      <p className="mb-3 text-xs text-gray-500">A principal primeiro. Até {max} ({lista.length} escolhidas).</p>
+      <legend className="mb-1 text-sm font-semibold text-ink">{t('Habilidades')}</legend>
+      <p className="mb-3 text-xs text-gray-500">{t('A principal primeiro. Até {max} ({n} escolhidas).', { max, n: lista.length })}</p>
       <div className="space-y-3">
         {SKILL_GROUPS.map((g) => (
           <div key={g.value}>
             <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</p>
             <div className="flex flex-wrap gap-2">
-              {chip({ value: g.value, label: `${g.label} (geral)` })}
+              {chip({ value: g.value, label: t('{nome} (geral)', { nome: g.label }) })}
               {g.children.map(chip)}
             </div>
           </div>

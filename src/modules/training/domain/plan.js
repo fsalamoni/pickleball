@@ -9,12 +9,13 @@
  * (nível mais baixo, intensidade menor) para o mais desafiador.
  */
 
+import { t, tk } from '@/core/i18n';
 import { isISODate, todayLocal, weekKeyOf, addDays, daysBetween } from './dates.js';
 import { isValidSkill, ITEM_KIND } from './taxonomy.js';
 import { fitsLevel } from './trainingItem.js';
 
 export const PLAN_STATUS = Object.freeze({ ATIVO: 'ativo', PAUSADO: 'pausado', CONCLUIDO: 'concluido' });
-export const PLAN_STATUS_LABELS = Object.freeze({ ativo: 'Ativo', pausado: 'Pausado', concluido: 'Concluído' });
+export const PLAN_STATUS_LABELS = Object.freeze({ ativo: tk('Ativo'), pausado: tk('Pausado'), concluido: tk('Concluído') });
 export const PLAN_LIMITS = Object.freeze({ weeks: 16, slots: 112, itemsPerSlot: 4, title: 120, goal: 300 });
 
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
@@ -39,10 +40,10 @@ function normalizeSlot(s = {}) {
 /** @returns {{ valid: boolean, error: string, value: object }} */
 export function normalizePlan(input = {}, { today = todayLocal() } = {}) {
   const title = str(input.title, PLAN_LIMITS.title);
-  if (title.length < 3) return { valid: false, error: 'Dê um nome ao plano.', value: {} };
+  if (title.length < 3) return { valid: false, error: t('Dê um nome ao plano.'), value: {} };
   const weeks = int(input.weeks, 1, PLAN_LIMITS.weeks, 4);
   const days = [...new Set((Array.isArray(input.days) ? input.days : []).map((d) => int(d, 0, 6, null)).filter((d) => d !== null))].sort();
-  if (!days.length) return { valid: false, error: 'Escolha pelo menos um dia da semana.', value: {} };
+  if (!days.length) return { valid: false, error: t('Escolha pelo menos um dia da semana.'), value: {} };
   const slotKey = (s) => `${s.week}-${s.day}`;
   const seen = new Set();
   const slots = (Array.isArray(input.slots) ? input.slots : [])

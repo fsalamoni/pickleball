@@ -14,6 +14,7 @@ import {
   V2Button, V2Field, V2Input, V2Select, V2Textarea,
 } from '@/v2/ui/primitives';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t } from '@/core/i18n';
 
 export default function NewQuestionForm({ identity, itemId = null, onCriada, onCancelar }) {
   const acoes = useQuestionActions(identity);
@@ -27,7 +28,7 @@ export default function NewQuestionForm({ identity, itemId = null, onCriada, onC
   }));
   const [erro, setErro] = useState('');
   const set = (patch) => { setErro(''); setF((x) => ({ ...x, ...patch })); };
-  const nome = (uid) => people.get(uid)?.name || 'Professor';
+  const nome = (uid) => people.get(uid)?.name || t('Professor');
 
   const enviar = (e) => {
     e.preventDefault();
@@ -40,8 +41,8 @@ export default function NewQuestionForm({ identity, itemId = null, onCriada, onC
     const { valid, error } = normalizeQuestion(input);
     if (!valid) { setErro(error); return; }
     acoes.create.mutate(input, {
-      onSuccess: (id) => { toast.success('Dúvida enviada. O professor é avisado.'); onCriada(id); },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível enviar agora.')),
+      onSuccess: (id) => { toast.success(t('Dúvida enviada. O professor é avisado.')); onCriada(id); },
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível enviar agora.'))),
     });
   };
 
@@ -50,25 +51,25 @@ export default function NewQuestionForm({ identity, itemId = null, onCriada, onC
       {itemId && (
         <p className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2 text-sm text-gray-600">
           <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Sobre: <span className="font-semibold text-ink">{citado?.title || (item.isPending ? 'carregando…' : 'o item citado')}</span></span>
+          <span>{t('Sobre:')}{' '}<span className="font-semibold text-ink">{citado?.title || (item.isPending ? t('carregando…') : t('o item citado'))}</span></span>
         </p>
       )}
-      <V2Field label="Professor" htmlFor="duvida-prof" required>
+      <V2Field label={t('Professor')} htmlFor="duvida-prof" required>
         <V2Select id="duvida-prof" value={f.coach_uid} onChange={(e) => set({ coach_uid: e.target.value })}>
-          {identity.activeCoachIds.length !== 1 && <option value="">Escolha o professor</option>}
+          {identity.activeCoachIds.length !== 1 && <option value="">{t('Escolha o professor')}</option>}
           {identity.activeCoachIds.map((uid) => <option key={uid} value={uid}>{nome(uid)}</option>)}
         </V2Select>
       </V2Field>
-      <V2Field label="Assunto" htmlFor="duvida-assunto" required>
-        <V2Input id="duvida-assunto" maxLength={QUESTION_SUBJECT_MAX} value={f.subject} onChange={(e) => set({ subject: e.target.value })} placeholder="Ex.: Meu dink está subindo demais" />
+      <V2Field label={t('Assunto')} htmlFor="duvida-assunto" required>
+        <V2Input id="duvida-assunto" maxLength={QUESTION_SUBJECT_MAX} value={f.subject} onChange={(e) => set({ subject: e.target.value })} placeholder={t('Ex.: Meu dink está subindo demais')} />
       </V2Field>
-      <V2Field label="Sua dúvida" htmlFor="duvida-texto" required hint="Só você e o professor veem esta conversa.">
+      <V2Field label={t('Sua dúvida')} htmlFor="duvida-texto" required hint={t('Só você e o professor veem esta conversa.')}>
         <V2Textarea id="duvida-texto" rows={4} maxLength={MESSAGE_MAX} value={f.text} onChange={(e) => set({ text: e.target.value })} />
       </V2Field>
       {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
       <div className="flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onCancelar}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={acoes.create.isPending}>{acoes.create.isPending ? 'Enviando…' : 'Enviar dúvida'}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onCancelar}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" disabled={acoes.create.isPending}>{acoes.create.isPending ? t('Enviando…') : t('Enviar dúvida')}</V2Button>
       </div>
     </form>
   );

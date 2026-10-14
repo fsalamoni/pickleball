@@ -27,6 +27,7 @@ import {
 import SessionComments from '@/v2/components/training/SessionComments';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
 import { rosterForTraining, studentsOverview } from '@/v2/components/training/students/studentsView';
+import { t, tn } from '@/core/i18n';
 
 const SESSOES_POR_ALUNO = 10;
 
@@ -36,12 +37,12 @@ function SessaoDoAluno({ s, identity, acoes, hoje }) {
     <li className="space-y-2 rounded-3xl bg-gray-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {t(SESSION_KIND_LABELS[s.kind]) || t('Treino')}</p>
           <p className="font-semibold text-ink">{s.title}</p>
-          <p className="text-sm text-gray-500">{s.duration_min} min{Number.isFinite(s.rpe) ? ` · esforço ${s.rpe} (${rpeLabel(s.rpe).toLowerCase()})` : ''}</p>
+          <p className="text-sm text-gray-500">{s.duration_min} min{Number.isFinite(s.rpe) ? ` · ${t('esforço {n} ({rotulo})', { n: s.rpe, rotulo: rpeLabel(s.rpe).toLowerCase() })}` : ''}</p>
         </div>
         {s.coach_confirmed_at ? (
-          <V2Badge tone="green"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /> Você viu</V2Badge>
+          <V2Badge tone="green"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />{' '}{t('Você viu')}</V2Badge>
         ) : (
           <V2Button
             size="sm"
@@ -49,17 +50,17 @@ function SessaoDoAluno({ s, identity, acoes, hoje }) {
             data-dica="treino-alunos-confirmar"
             disabled={acoes.confirm.isPending}
             onClick={() => acoes.confirm.mutate(s, {
-              onSuccess: () => toast.success('Confirmado. O aluno é avisado.'),
-              onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível confirmar agora.')),
+              onSuccess: () => toast.success(t('Confirmado. O aluno é avisado.')),
+              onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível confirmar agora.'))),
             })}
           >
-            <BadgeCheck className="h-4 w-4" aria-hidden="true" /> Confirmar que vi
+            <BadgeCheck className="h-4 w-4" aria-hidden="true" />{' '}{t('Confirmar que vi')}
           </V2Button>
         )}
       </div>
       {s.notes && <p className="whitespace-pre-line text-sm text-gray-700">{s.notes}</p>}
       <V2Button size="sm" variant="ghost" aria-expanded={conversa} onClick={() => setConversa((c) => !c)}>
-        <MessageCircle className="h-4 w-4" aria-hidden="true" /> {conversa ? 'Fechar a conversa' : 'Comentar'}
+        <MessageCircle className="h-4 w-4" aria-hidden="true" /> {conversa ? t('Fechar a conversa') : t('Comentar')}
       </V2Button>
       {conversa && <SessionComments session={s} identity={identity} />}
     </li>
@@ -68,11 +69,11 @@ function SessaoDoAluno({ s, identity, acoes, hoje }) {
 
 function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk, enviosFalharam }) {
   const [aberto, setAberto] = useState(false);
-  const nome = a.student.student_name || 'Aluno';
+  const nome = a.student.student_name || t('Aluno');
   const resumo = [
-    sessoesOk && (a.thisWeek ? `${a.thisWeek} ${a.thisWeek === 1 ? 'treino' : 'treinos'} nesta semana` : 'sem treino nesta semana'),
-    sessoesOk && a.toConfirm > 0 && `${a.toConfirm} para confirmar`,
-    enviosOk && a.pending > 0 && `${a.pending} ${a.pending === 1 ? 'envio' : 'envios'} por fazer`,
+    sessoesOk && (a.thisWeek ? tn(a.thisWeek, '{n} treino nesta semana', '{n} treinos nesta semana') : t('sem treino nesta semana')),
+    sessoesOk && a.toConfirm > 0 && t('{n} para confirmar', { n: a.toConfirm }),
+    enviosOk && a.pending > 0 && tn(a.pending, '{n} envio por fazer', '{n} envios por fazer'),
   ].filter(Boolean).join(' · ');
   return (
     <V2Surface as="li">
@@ -86,33 +87,33 @@ function Aluno({ a, identity, acoes, hoje, sessoesOk, sessoesFalharam, enviosOk,
           <p className="font-display text-lg font-bold text-ink">{nome}</p>
           {resumo && <p className="text-sm text-gray-500">{resumo}</p>}
         </div>
-        {sessoesOk && a.toConfirm > 0 && <V2Badge tone="acid" className="shrink-0">{a.toConfirm} novo{a.toConfirm === 1 ? '' : 's'}</V2Badge>}
+        {sessoesOk && a.toConfirm > 0 && <V2Badge tone="acid" className="shrink-0">{tn(a.toConfirm, '{n} novo', '{n} novos')}</V2Badge>}
         <ChevronDown className={cn('h-5 w-5 shrink-0 text-gray-400 transition-transform', aberto && 'rotate-180')} aria-hidden="true" />
       </button>
       {aberto && (
         <div className="space-y-5 border-t border-gray-100 p-5">
-          <section className="space-y-2" aria-label={`Treinos de ${nome}`}>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Treinos que mostrou a você</h3>
-            {!sessoesOk ? <p className="text-sm text-gray-500">{sessoesFalharam ? 'Não carregou.' : 'Carregando…'}</p>
-              : a.sessions.length === 0 ? <p className="text-sm text-gray-500">Nenhum ainda. No diário, o aluno escolhe “Mostrar ao professor”.</p>
+          <section className="space-y-2" aria-label={t('Treinos de {nome}', { nome })}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Treinos que mostrou a você')}</h3>
+            {!sessoesOk ? <p className="text-sm text-gray-500">{sessoesFalharam ? t('Não carregou.') : t('Carregando…')}</p>
+              : a.sessions.length === 0 ? <p className="text-sm text-gray-500">{t('Nenhum ainda. No diário, o aluno escolhe “Mostrar ao professor”.')}</p>
                 : (
                   <ul className="space-y-2">
                     {a.sessions.slice(0, SESSOES_POR_ALUNO).map((s) => <SessaoDoAluno key={s.id} s={s} identity={identity} acoes={acoes} hoje={hoje} />)}
                   </ul>
                 )}
           </section>
-          <section className="space-y-2" aria-label={`Envios para ${nome}`}>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">O que você enviou</h3>
-            {!enviosOk ? <p className="text-sm text-gray-500">{enviosFalharam ? 'Não carregou.' : 'Carregando…'}</p>
-              : a.sent.length === 0 ? <p className="text-sm text-gray-500">Nada enviado. Na ficha de um item, use “Enviar a alunos”.</p>
+          <section className="space-y-2" aria-label={t('Envios para {nome}', { nome })}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('O que você enviou')}</h3>
+            {!enviosOk ? <p className="text-sm text-gray-500">{enviosFalharam ? t('Não carregou.') : t('Carregando…')}</p>
+              : a.sent.length === 0 ? <p className="text-sm text-gray-500">{t('Nada enviado. Na ficha de um item, use “Enviar a alunos”.')}</p>
                 : (
                   <ul className="space-y-1.5">
                     {a.sent.map((x) => (
                       <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-gray-50 px-3 py-2 text-sm">
-                        <Link to={`/treino/item/${x.item_id}`} className="min-w-0 truncate font-semibold text-ink hover:underline">{x.item_title || 'Item'}</Link>
+                        <Link to={`/treino/item/${x.item_id}`} className="min-w-0 truncate font-semibold text-ink hover:underline">{x.item_title || t('Item')}</Link>
                         <span className="flex flex-wrap items-center gap-1.5">
                           {x.due_date && !x.done_at && <span className="text-xs text-gray-500">{dueLabel(x.due_date, hoje)}</span>}
-                          <V2Badge tone={x.done_at ? 'green' : x.read_at ? 'blue' : 'neutral'}>{x.done_at ? 'Feito' : x.read_at ? 'Visto' : 'Não visto'}</V2Badge>
+                          <V2Badge tone={x.done_at ? 'green' : x.read_at ? 'blue' : 'neutral'}>{x.done_at ? t('Feito') : x.read_at ? t('Visto') : t('Não visto')}</V2Badge>
                         </span>
                         {x.done_note && <p className="w-full text-xs text-gray-600">“{x.done_note}”</p>}
                       </li>
@@ -143,16 +144,16 @@ export default function StudentsTab({ identity, irPara }) {
 
   if (alunos.isPending) return <V2Skeleton className="h-72 rounded-4xl" />;
   if (alunos.isError) {
-    return <V2Surface><V2ErrorState title="Os seus alunos não carregaram" onRetry={() => alunos.refetch()} /></V2Surface>;
+    return <V2Surface><V2ErrorState title={t('Os seus alunos não carregaram')} onRetry={() => alunos.refetch()} /></V2Surface>;
   }
   if (podeAfirmarVazio(alunos) && !ativos.length && !convidados.length) {
     return (
       <V2Surface>
         <V2EmptyState
           icon={Users}
-          title="Você ainda não tem alunos"
-          description="Adicione alunos no seu painel de professor. Quando eles aceitarem, aqui aparecem os treinos que mostrarem a você e o que você enviar."
-          action={<V2Button asChild variant="secondary"><Link to="/aulas?aba=alunos">Abrir os meus alunos</Link></V2Button>}
+          title={t('Você ainda não tem alunos')}
+          description={t('Adicione alunos no seu painel de professor. Quando eles aceitarem, aqui aparecem os treinos que mostrarem a você e o que você enviar.')}
+          action={<V2Button asChild variant="secondary"><Link to="/aulas?aba=alunos">{t('Abrir os meus alunos')}</Link></V2Button>}
         />
       </V2Surface>
     );
@@ -162,19 +163,19 @@ export default function StudentsTab({ identity, irPara }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          {sessoesOk ? <><span className="font-semibold text-ink">{visao.treinaramNaSemana} de {ativos.length}</span> {ativos.length === 1 ? 'aluno treinou' : 'alunos treinaram'} nesta semana</>
-            : sessoes.isError ? 'Os treinos dos alunos não carregaram' : 'Carregando os treinos dos alunos…'}
-          {enviosOk && visao.enviosPendentes > 0 ? ` · ${visao.enviosPendentes} ${visao.enviosPendentes === 1 ? 'envio por fazer' : 'envios por fazer'}` : ''}
+          {sessoesOk ? <><span className="font-semibold text-ink">{t('{n} de {total}', { n: visao.treinaramNaSemana, total: ativos.length })}</span> {ativos.length === 1 ? t('aluno treinou nesta semana') : t('alunos treinaram nesta semana')}</>
+            : sessoes.isError ? t('Os treinos dos alunos não carregaram') : t('Carregando os treinos dos alunos…')}
+          {enviosOk && visao.enviosPendentes > 0 ? ` · ${tn(visao.enviosPendentes, '{n} envio por fazer', '{n} envios por fazer')}` : ''}
         </p>
         <V2Button variant="secondary" onClick={() => irPara('biblioteca')}>
-          <Library className="h-4 w-4" aria-hidden="true" /> Enviar um item
+          <Library className="h-4 w-4" aria-hidden="true" />{' '}{t('Enviar um item')}
         </V2Button>
       </div>
 
       {(sessoes.isError || sessoes.data?.incompleto) && (
-        <V2ErrorState inline title="Parte dos treinos dos alunos não carregou" onRetry={() => sessoes.refetch()} />
+        <V2ErrorState inline title={t('Parte dos treinos dos alunos não carregou')} onRetry={() => sessoes.refetch()} />
       )}
-      {enviados.isError && <V2ErrorState inline title="Os seus envios não carregaram" onRetry={() => enviados.refetch()} />}
+      {enviados.isError && <V2ErrorState inline title={t('Os seus envios não carregaram')} onRetry={() => enviados.refetch()} />}
 
       {ativos.length > 0 && (
         <ul className="space-y-3" data-dica="treino-alunos-lista">
@@ -185,10 +186,10 @@ export default function StudentsTab({ identity, irPara }) {
       )}
 
       {convidados.length > 0 && (
-        <section className="space-y-2" aria-label="Convidados">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Convidados, ainda sem aceitar</h2>
+        <section className="space-y-2" aria-label={t('Convidados')}>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Convidados, ainda sem aceitar')}</h2>
           <ul className="flex flex-wrap gap-2">
-            {convidados.map((s) => <li key={s.id}><V2Badge>{s.student_name || 'Convidado'}</V2Badge></li>)}
+            {convidados.map((s) => <li key={s.id}><V2Badge>{s.student_name || t('Convidado')}</V2Badge></li>)}
           </ul>
         </section>
       )}

@@ -9,6 +9,7 @@
  * A zona de não-voleio (cozinha) tem 7 pés de cada lado da rede.
  * "meia" e "cozinha" só recortam a VISTA — as coordenadas não mudam.
  */
+import { t, tk, tn } from '@/core/i18n';
 
 export const COURT = Object.freeze({
   widthFt: 20,
@@ -19,7 +20,7 @@ export const COURT = Object.freeze({
 });
 
 export const COURT_VIEWS = Object.freeze(['inteira', 'meia', 'cozinha']);
-export const COURT_VIEW_LABELS = Object.freeze({ inteira: 'Quadra inteira', meia: 'Meia quadra', cozinha: 'Cozinha' });
+export const COURT_VIEW_LABELS = Object.freeze({ inteira: tk('Quadra inteira'), meia: tk('Meia quadra'), cozinha: tk('Cozinha') });
 
 /** Recorte de y (0–100) que cada vista mostra. */
 export const VIEW_BOUNDS = Object.freeze({
@@ -29,14 +30,14 @@ export const VIEW_BOUNDS = Object.freeze({
 });
 
 export const DIAGRAM_TAGS = Object.freeze(['neutro', 'certo', 'errado']);
-export const DIAGRAM_TAG_LABELS = Object.freeze({ neutro: 'Diagrama', certo: 'Certo', errado: 'Errado' });
+export const DIAGRAM_TAG_LABELS = Object.freeze({ neutro: tk('Diagrama'), certo: tk('Certo'), errado: tk('Errado') });
 
 export const ELEMENT_TYPES = Object.freeze(['jogador', 'bola', 'cone', 'alvo', 'seta', 'zona', 'texto']);
 export const ELEMENT_LABELS = Object.freeze({
-  jogador: 'Jogador', bola: 'Bola', cone: 'Cone', alvo: 'Alvo', seta: 'Seta', zona: 'Zona', texto: 'Texto',
+  jogador: tk('Jogador'), bola: tk('Bola'), cone: tk('Cone'), alvo: tk('Alvo'), seta: tk('Seta'), zona: tk('Zona'), texto: tk('Texto'),
 });
 export const ARROW_STYLES = Object.freeze(['bola', 'movimento']);
-export const ARROW_STYLE_LABELS = Object.freeze({ bola: 'Trajetória da bola', movimento: 'Deslocamento' });
+export const ARROW_STYLE_LABELS = Object.freeze({ bola: tk('Trajetória da bola'), movimento: tk('Deslocamento') });
 
 export const MAX_DIAGRAMS = 4;
 export const MAX_ELEMENTS = 24;
@@ -97,19 +98,19 @@ export function normalizeDiagrams(list) {
  */
 export function describeDiagram(diagram) {
   if (!diagram?.elements?.length) return '';
-  const count = (t) => diagram.elements.filter((e) => e.t === t).length;
+  const count = (tipo) => diagram.elements.filter((e) => e.t === tipo).length;
   const partes = [];
   const jogadores = count('jogador');
-  if (jogadores) partes.push(`${jogadores} jogador${jogadores > 1 ? 'es' : ''}`);
+  if (jogadores) partes.push(tn(jogadores, '{n} jogador', '{n} jogadores'));
   const setasBola = diagram.elements.filter((e) => e.t === 'seta' && e.style === 'bola').length;
   const setasMov = diagram.elements.filter((e) => e.t === 'seta' && e.style === 'movimento').length;
-  if (setasBola) partes.push(`${setasBola} trajetória${setasBola > 1 ? 's' : ''} da bola`);
-  if (setasMov) partes.push(`${setasMov} deslocamento${setasMov > 1 ? 's' : ''}`);
+  if (setasBola) partes.push(tn(setasBola, '{n} trajetória da bola', '{n} trajetórias da bola'));
+  if (setasMov) partes.push(tn(setasMov, '{n} deslocamento', '{n} deslocamentos'));
   const alvos = count('alvo') + count('zona');
-  if (alvos) partes.push(`${alvos} alvo${alvos > 1 ? 's' : ''}`);
+  if (alvos) partes.push(tn(alvos, '{n} alvo', '{n} alvos'));
   const cones = count('cone');
-  if (cones) partes.push(`${cones} cone${cones > 1 ? 's' : ''}`);
-  const tag = diagram.tag === 'certo' ? 'Forma certa' : diagram.tag === 'errado' ? 'Forma errada' : 'Diagrama';
+  if (cones) partes.push(tn(cones, '{n} cone', '{n} cones'));
+  const tag = diagram.tag === 'certo' ? t('Forma certa') : diagram.tag === 'errado' ? t('Forma errada') : t('Diagrama');
   const titulo = diagram.title ? `: ${diagram.title}` : '';
   return `${tag}${titulo}${partes.length ? ` — ${partes.join(', ')}` : ''}.`;
 }

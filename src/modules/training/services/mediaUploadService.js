@@ -19,6 +19,7 @@ import { stripImageMetadata } from '@/core/lib/imageMetadata';
 import {
   IMAGE_MIME, VIDEO_MIME, storageFileName, trainingStoragePath, validateUpload,
 } from '../domain/media.js';
+import { t, tk } from '@/core/i18n';
 
 const MAX_SIDE = 1600;
 
@@ -37,9 +38,9 @@ export async function countMyUploads(uid) {
 /** Quanto esperar o navegador ler a duração do vídeo antes de desistir. */
 export const VIDEO_DURATION_TIMEOUT_MS = 8000;
 
-const AVISO_MOV = 'Vídeos .mov (comuns no iPhone) podem não tocar em todos os aparelhos. Se der, envie em MP4.';
-const AVISO_ILEGIVEL = 'Este navegador não conseguiu abrir o vídeo, então ele pode não tocar em todos os aparelhos. Se der, envie em MP4.';
-const ERRO_DEMOROU = 'Não deu para ler a duração do vídeo a tempo. Tente de novo; se continuar, envie em MP4.';
+const AVISO_MOV = tk('Vídeos .mov (comuns no iPhone) podem não tocar em todos os aparelhos. Se der, envie em MP4.');
+const AVISO_ILEGIVEL = tk('Este navegador não conseguiu abrir o vídeo, então ele pode não tocar em todos os aparelhos. Se der, envie em MP4.');
+const ERRO_DEMOROU = tk('Não deu para ler a duração do vídeo a tempo. Tente de novo; se continuar, envie em MP4.');
 
 /** Lê a duração com tempo-limite: `{ seconds, timedOut }`. Nunca fica pendurado. */
 function lerDuracao(file, timeoutMs = VIDEO_DURATION_TIMEOUT_MS) {
@@ -118,7 +119,7 @@ export async function compressImage(file) {
  * @returns {Promise<{ ok: boolean, error: string, file: File|null, type: 'image'|'video'|null, warning?: string }>}
  */
 export async function prepareUpload(file, limits) {
-  if (!file) return { ok: false, error: 'Selecione um arquivo.', file: null, type: null };
+  if (!file) return { ok: false, error: t('Selecione um arquivo.'), file: null, type: null };
   const isImage = String(file.type).startsWith('image/');
   const isVideo = !isImage && String(file.type).startsWith('video/');
   const prepared = isImage ? await compressImage(file) : file;
@@ -126,10 +127,10 @@ export async function prepareUpload(file, limits) {
   let warning = '';
   if (isVideo && VIDEO_MIME.includes(file.type) && limits?.videoEnabled !== false) {
     const lido = await lerDuracao(file);
-    if (lido.timedOut) return { ok: false, error: ERRO_DEMOROU, file: null, type: 'video' };
+    if (lido.timedOut) return { ok: false, error: t(ERRO_DEMOROU), file: null, type: 'video' };
     durationSec = lido.seconds;
-    if (file.type === 'video/quicktime') warning = AVISO_MOV;
-    else if (durationSec === null) warning = AVISO_ILEGIVEL;
+    if (file.type === 'video/quicktime') warning = t(AVISO_MOV);
+    else if (durationSec === null) warning = t(AVISO_ILEGIVEL);
   }
   const check = validateUpload({ type: prepared.type, size: prepared.size, durationSec }, limits);
   const result = { ok: check.ok, error: check.error, file: check.ok ? prepared : null, type: check.type };
@@ -143,8 +144,8 @@ export async function prepareUpload(file, limits) {
  *   done: Promise<{ url: string, path: string, type: 'image'|'video' }> }}
  */
 export function uploadTrainingMedia(file, { uid, type, onProgress } = {}) {
-  if (!storage) return { task: null, done: Promise.reject(new Error('Envio de arquivos indisponível neste ambiente.')) };
-  if (!uid) return { task: null, done: Promise.reject(new Error('Entre na sua conta.')) };
+  if (!storage) return { task: null, done: Promise.reject(new Error(t('Envio de arquivos indisponível neste ambiente.'))) };
+  if (!uid) return { task: null, done: Promise.reject(new Error(t('Entre na sua conta.'))) };
   const path = trainingStoragePath(uid, storageFileName(file.type));
   const task = uploadBytesResumable(ref(storage, path), file, {
     contentType: file.type,
@@ -157,16 +158,16 @@ export function uploadTrainingMedia(file, { uid, type, onProgress } = {}) {
         if (onProgress && snap.totalBytes) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
       },
       (error) => {
-        if (error?.code === 'storage/canceled') { reject(Object.assign(new Error('Envio cancelado.'), { canceled: true })); return; }
+        if (error?.code === 'storage/canceled') { reject(Object.assign(new Error(t('Envio cancelado.')), { canceled: true })); return; }
         logger.error('Falha no envio de mídia de treino:', error);
-        reject(new Error('Não foi possível enviar o arquivo. Confira a conexão e tente de novo.'));
+        reject(new Error(t('Não foi possível enviar o arquivo. Confira a conexão e tente de novo.')));
       },
       async () => {
         try {
           resolve({ url: await getDownloadURL(task.snapshot.ref), path, type });
         } catch (error) {
           logger.error('Falha ao obter o link da mídia de treino:', error);
-          reject(new Error('Arquivo enviado, mas não deu para obter o link. Tente de novo.'));
+          reject(new Error(t('Arquivo enviado, mas não deu para obter o link. Tente de novo.')));
         }
       },
     );

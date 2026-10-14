@@ -5,6 +5,7 @@
  * regra é a defesa; aqui a tela só evita oferecer o que seria recusado e diz
  * à pessoa, ANTES de salvar, o que vai acontecer ("vai para revisão").
  */
+import { t, tk } from '@/core/i18n';
 
 export const VISIBILITY = Object.freeze({
   PUBLICO: 'publico',
@@ -13,15 +14,15 @@ export const VISIBILITY = Object.freeze({
 });
 
 export const VISIBILITY_LABELS = Object.freeze({
-  publico: 'Público',
-  privado: 'Só eu',
-  alunos: 'Meus alunos',
+  publico: tk('Público'),
+  privado: tk('Só eu'),
+  alunos: tk('Meus alunos'),
 });
 
 export const VISIBILITY_HINTS = Object.freeze({
-  publico: 'Aparece na biblioteca para todas as pessoas da plataforma.',
-  privado: 'Só você vê — e quem você escolher compartilhar.',
-  alunos: 'Seus alunos ativos veem e podem usar. Ninguém mais.',
+  publico: tk('Aparece na biblioteca para todas as pessoas da plataforma.'),
+  privado: tk('Só você vê — e quem você escolher compartilhar.'),
+  alunos: tk('Seus alunos ativos veem e podem usar. Ninguém mais.'),
 });
 
 export const REVIEW = Object.freeze({
@@ -33,9 +34,9 @@ export const REVIEW = Object.freeze({
 
 export const REVIEW_LABELS = Object.freeze({
   nao_se_aplica: '—',
-  pendente: 'Em revisão',
-  aprovado: 'Publicado',
-  recusado: 'Não aprovado',
+  pendente: tk('Em revisão'),
+  aprovado: tk('Publicado'),
+  recusado: tk('Não aprovado'),
 });
 
 export const AUTHOR_ROLE = Object.freeze({
@@ -46,8 +47,8 @@ export const AUTHOR_ROLE = Object.freeze({
 
 export const AUTHOR_ROLE_LABELS = Object.freeze({
   plataforma: 'PickleRush',
-  professor: 'Professor',
-  atleta: 'Atleta',
+  professor: tk('Professor'),
+  atleta: tk('Atleta'),
 });
 
 /** `author_uid` do conteúdo da plataforma (não é uma conta). */
@@ -113,10 +114,10 @@ export function reviewFor({
 /** O que dizer ao autor antes de salvar um item público. */
 export function publishNotice({ visibility, role, settings = {}, isAdmin = false, uid = null, wasApproved = false }) {
   if (visibility !== VISIBILITY.PUBLICO) return '';
-  if (isAutoApproved(role, settings, { isAdmin, uid })) return 'Será publicado na biblioteca assim que você salvar.';
+  if (isAutoApproved(role, settings, { isAdmin, uid })) return t('Será publicado na biblioteca assim que você salvar.');
   return wasApproved
-    ? 'Ao salvar, a nova versão passa por revisão da equipe antes de voltar à biblioteca.'
-    : 'A equipe revisa antes de publicar. Enquanto isso, só você vê.';
+    ? t('Ao salvar, a nova versão passa por revisão da equipe antes de voltar à biblioteca.')
+    : t('A equipe revisa antes de publicar. Enquanto isso, só você vê.');
 }
 
 /** Está na biblioteca pública agora? */
@@ -154,15 +155,15 @@ export function canEditItem(item = {}, { uid = null, isAdmin = false } = {}) {
  */
 export function authorBadge(item = {}) {
   const role = item.author_role;
-  if (role === AUTHOR_ROLE.PLATAFORMA) return { role, name: 'PickleRush', label: 'Equipe PickleRush' };
-  const name = String(item.author_name || '').trim() || 'Atleta';
-  if (role === AUTHOR_ROLE.PROFESSOR) return { role, name, label: `Professor ${name}` };
+  if (role === AUTHOR_ROLE.PLATAFORMA) return { role, name: 'PickleRush', label: t('Equipe PickleRush') };
+  const name = String(item.author_name || '').trim() || t('Atleta');
+  if (role === AUTHOR_ROLE.PROFESSOR) return { role, name, label: t('Professor {nome}', { nome: name }) };
   return { role, name, label: name };
 }
 
 /** Rótulo de estado para o autor (lista "Meus"). */
 export function itemStatusLabel(item = {}) {
-  if (item.hidden === true) return 'Oculto pela equipe';
-  if (item.visibility === VISIBILITY.PUBLICO) return REVIEW_LABELS[item.review] || 'Em revisão';
-  return VISIBILITY_LABELS[item.visibility] || 'Só eu';
+  if (item.hidden === true) return t('Oculto pela equipe');
+  if (item.visibility === VISIBILITY.PUBLICO) return t(REVIEW_LABELS[item.review] || 'Em revisão');
+  return t(VISIBILITY_LABELS[item.visibility] || 'Só eu');
 }

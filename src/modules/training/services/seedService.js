@@ -15,6 +15,7 @@ import { normalizeItemInput } from '../domain/trainingItem.js';
 import { PLATFORM_AUTHOR } from '../domain/visibility.js';
 import { createItem, TRAINING_ITEMS } from './trainingItemService.js';
 import { markSeed } from './settingsService.js';
+import { t } from '@/core/i18n';
 
 /** @returns {Promise<{ version: number, items: object[] }>} */
 export async function loadSeed() {
@@ -52,7 +53,7 @@ export async function planSeedInstall(settings) {
  * @returns {Promise<{ created: number, updated: number, failed: Array<{ slug: string, error: string }> }>}
  */
 export async function installSeed({ identity, settings, restoreRemoved = false, onProgress }) {
-  if (!identity?.isAdmin) throw new Error('Só a equipe da plataforma instala a biblioteca inicial.');
+  if (!identity?.isAdmin) throw new Error(t('Só a equipe da plataforma instala a biblioteca inicial.'));
   const plan = await planSeedInstall(settings);
   const criar = restoreRemoved ? [...plan.create, ...plan.removed] : plan.create;
   const total = criar.length + plan.update.length;
@@ -101,7 +102,7 @@ export async function installSeed({ identity, settings, restoreRemoved = false, 
  * @returns {Promise<{ created: number, failed: Array<{ title: string, error: string }> }>}
  */
 export async function importItems(values = [], { identity, settings, asPlatform = true, visibility = 'publico', aiAssisted = false }) {
-  if (!identity?.isAdmin) throw new Error('Só a equipe da plataforma importa em lote.');
+  if (!identity?.isAdmin) throw new Error(t('Só a equipe da plataforma importa em lote.'));
   let created = 0;
   const failed = [];
   for (const v of values) {

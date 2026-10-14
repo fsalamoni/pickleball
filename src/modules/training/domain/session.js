@@ -9,17 +9,18 @@
  * dá XP na gamificação.
  */
 
+import { t, tk } from '@/core/i18n';
 import { isISODate, weekKeyOf, weekDates, todayLocal, addDays } from './dates.js';
 import { isValidSkill } from './taxonomy.js';
 
 export const SESSION_KINDS = Object.freeze(['quadra', 'jogo', 'fisico', 'estudo', 'mental']);
 export const SESSION_KIND_LABELS = Object.freeze({
-  quadra: 'Treino de quadra', jogo: 'Jogo', fisico: 'Físico', estudo: 'Estudo', mental: 'Mental',
+  quadra: tk('Treino de quadra'), jogo: tk('Jogo'), fisico: tk('Físico'), estudo: tk('Estudo'), mental: tk('Mental'),
 });
 export const SESSION_STATUS = Object.freeze({ FEITO: 'feito', PARCIAL: 'parcial', LIVRE: 'livre' });
-export const SESSION_STATUS_LABELS = Object.freeze({ feito: 'Fiz tudo', parcial: 'Fiz uma parte', livre: 'Treino livre' });
+export const SESSION_STATUS_LABELS = Object.freeze({ feito: tk('Fiz tudo'), parcial: tk('Fiz uma parte'), livre: tk('Treino livre') });
 export const SESSION_NOTES_MAX = 2000;
-export const SESSION_HEALTH_HINT = 'Não registre informações de saúde (dor, lesão, remédio) aqui.';
+export const SESSION_HEALTH_HINT = tk('Não registre informações de saúde (dor, lesão, remédio) aqui.');
 
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
 const int = (v, min, max, d = null) => {
@@ -31,7 +32,7 @@ const int = (v, min, max, d = null) => {
 /** @returns {{ valid: boolean, error: string, value: object }} */
 export function normalizeSession(input = {}, { today = todayLocal() } = {}) {
   const date = isISODate(input.date) ? input.date : today;
-  if (date > addDays(today, 1)) return { valid: false, error: 'O registro não pode ser de um dia que ainda não chegou.', value: {} };
+  if (date > addDays(today, 1)) return { valid: false, error: t('O registro não pode ser de um dia que ainda não chegou.'), value: {} };
   const duration_min = int(input.duration_min, 0, 600, 0);
   const rpe = int(input.rpe, 0, 10, null);
   const value = {
@@ -48,7 +49,7 @@ export function normalizeSession(input = {}, { today = todayLocal() } = {}) {
     skills: [...new Set((Array.isArray(input.skills) ? input.skills : []).filter(isValidSkill))].slice(0, 6),
     shared_coach_id: input.shared_coach_id ? str(input.shared_coach_id, 128) : null,
   };
-  if (duration_min <= 0) return { valid: false, error: 'Diga quantos minutos durou.', value };
+  if (duration_min <= 0) return { valid: false, error: t('Diga quantos minutos durou.'), value };
   return { valid: true, error: '', value };
 }
 

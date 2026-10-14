@@ -37,6 +37,7 @@ import TrainingGate from '@/v2/components/training/TrainingGate';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
 import { KindIcon } from '@/v2/components/training/ItemCard';
 import ItemPickerDialog from '@/v2/components/training/plan/ItemPickerDialog';
+import { t, tk, tn } from '@/core/i18n';
 
 const LogSessionDialog = lazy(() => import('@/v2/components/training/LogSessionDialog'));
 const CourtMode = lazy(() => import('@/v2/components/training/today/CourtMode'));
@@ -44,15 +45,15 @@ const CourtMode = lazy(() => import('@/v2/components/training/today/CourtMode'))
 const VOLTAR = '/treino?aba=planos';
 const TOM = { [PLAN_STATUS.ATIVO]: 'acid', [PLAN_STATUS.PAUSADO]: 'amber', [PLAN_STATUS.CONCLUIDO]: 'neutral' };
 const ESTADO_DIA = {
-  feito: { texto: 'Feito', tom: 'green' },
-  hoje: { texto: 'Hoje', tom: 'ink' },
-  planejado: { texto: 'Planejado', tom: 'neutral' },
-  depois: { texto: 'Ficou para depois', tom: 'neutral' },
+  feito: { texto: tk('Feito'), tom: 'green' },
+  hoje: { texto: tk('Hoje'), tom: 'ink' },
+  planejado: { texto: tk('Planejado'), tom: 'neutral' },
+  depois: { texto: tk('Ficou para depois'), tom: 'neutral' },
 };
 
 function Voltar() {
   return (
-    <V2BackLink to={VOLTAR}>Planos</V2BackLink>
+    <V2BackLink to={VOLTAR}>{t('Planos')}</V2BackLink>
   );
 }
 
@@ -65,8 +66,8 @@ function Cabecalho({ plan, acoes }) {
   const salvar = (e) => {
     e.preventDefault();
     acoes.update.mutate({ plan, input: f }, {
-      onSuccess: () => { toast.success('Plano atualizado.'); setEditando(false); },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar agora.')),
+      onSuccess: () => { toast.success(t('Plano atualizado.')); setEditando(false); },
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar agora.'))),
     });
   };
 
@@ -74,17 +75,17 @@ function Cabecalho({ plan, acoes }) {
     return (
       <form onSubmit={salvar} className="space-y-3">
         <label className="block space-y-1 text-sm font-semibold text-ink">
-          Nome do plano
+          {t('Nome do plano')}
           <V2Input maxLength={PLAN_LIMITS.title} value={f.title} onChange={(e) => { setErro(''); setF({ ...f, title: e.target.value }); }} />
         </label>
         <label className="block space-y-1 text-sm font-semibold text-ink">
-          Objetivo
+          {t('Objetivo')}
           <V2Textarea rows={2} maxLength={PLAN_LIMITS.goal} value={f.goal} onChange={(e) => setF({ ...f, goal: e.target.value })} />
         </label>
         {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
         <div className="flex gap-2">
-          <V2Button type="submit" size="sm" disabled={acoes.update.isPending}>{acoes.update.isPending ? 'Salvando…' : 'Salvar'}</V2Button>
-          <V2Button type="button" size="sm" variant="ghost" onClick={() => { setEditando(false); setF({ title: plan.title, goal: plan.goal || '' }); }}>Cancelar</V2Button>
+          <V2Button type="submit" size="sm" disabled={acoes.update.isPending}>{acoes.update.isPending ? t('Salvando…') : t('Salvar')}</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => { setEditando(false); setF({ title: plan.title, goal: plan.goal || '' }); }}>{t('Cancelar')}</V2Button>
         </div>
       </form>
     );
@@ -92,14 +93,14 @@ function Cabecalho({ plan, acoes }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <V2Badge tone={TOM[plan.status]}>{PLAN_STATUS_LABELS[plan.status]}</V2Badge>
+        <V2Badge tone={TOM[plan.status]}>{t(PLAN_STATUS_LABELS[plan.status])}</V2Badge>
         <span className="text-sm text-gray-500">
-          {plan.weeks} {plan.weeks === 1 ? 'semana' : 'semanas'} · {plan.days.length} {plan.days.length === 1 ? 'dia' : 'dias'} por semana · {plan.minutes} min
+          {tn(plan.weeks, '{n} semana', '{n} semanas')} · {tn(plan.days.length, '{n} dia por semana', '{n} dias por semana')} · {plan.minutes} min
         </span>
       </div>
       <div className="flex items-start gap-2">
         <h1 className="font-display text-3xl font-bold text-ink">{plan.title}</h1>
-        <button type="button" aria-label="Editar nome e objetivo" onClick={() => setEditando(true)} className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+        <button type="button" aria-label={t('Editar nome e objetivo')} onClick={() => setEditando(true)} className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
@@ -115,8 +116,8 @@ function TempoDoDia({ items, alvo }) {
   return (
     <p className={cn('text-xs font-semibold', fit.state === 'passa' ? 'text-amber-700' : 'text-gray-500')}>
       {fit.state === 'passa'
-        ? `${fit.minutes} min · passa ${fit.over} min do tempo do plano (${alvo} min)`
-        : `${fit.minutes} de ${alvo} min do plano`}
+        ? t('{n} min · passa {mais} min do tempo do plano ({alvo} min)', { n: fit.minutes, mais: fit.over, alvo })
+        : t('{n} de {alvo} min do plano', { n: fit.minutes, alvo })}
     </p>
   );
 }
@@ -134,7 +135,7 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
   const [erro, setErro] = useState('');
   const vagas = PLAN_LIMITS.itemsPerSlot - ids.length;
   const seguintes = plan.weeks - semana;
-  const titulo = (id) => visiveis.byId[id]?.title || 'Item indisponível';
+  const titulo = (id) => visiveis.byId[id]?.title || t('Item indisponível');
 
   const salvar = () => {
     const r = repetir && seguintes > 0
@@ -143,17 +144,17 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
     if (!r.ok) { setErro(r.error); return; }
     acoes.update.mutate({ plan, input: { slots: r.slots } }, {
       onSuccess: () => {
-        toast.success(r.weeks ? `Dia atualizado nesta semana e em mais ${r.weeks === 1 ? '1 semana' : `${r.weeks} semanas`}.` : 'Dia atualizado.');
+        toast.success(r.weeks ? tn(r.weeks, 'Dia atualizado nesta semana e em mais {n} semana.', 'Dia atualizado nesta semana e em mais {n} semanas.') : t('Dia atualizado.'));
         onFechar();
       },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar agora.')),
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar agora.'))),
     });
   };
 
   return (
     <div className="space-y-3 rounded-3xl bg-gray-50 p-3 sm:p-4">
-      {ids.length === 0 && <p className="text-sm text-gray-500">Nenhum item neste dia ainda.</p>}
-      <ol className="space-y-1.5" aria-label="Itens do dia, na ordem do treino">
+      {ids.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum item neste dia ainda.')}</p>}
+      <ol className="space-y-1.5" aria-label={t('Itens do dia, na ordem do treino')}>
         {ids.map((id, i) => (
           <li key={id} className="flex items-center gap-2 rounded-2xl bg-paper-pure px-2 py-1.5 text-sm">
             <span className="w-5 shrink-0 text-center text-xs font-bold text-gray-500" aria-hidden="true">{i + 1}</span>
@@ -162,13 +163,13 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
               <span className="block line-clamp-2 font-semibold leading-snug text-ink">{titulo(id)}</span>
               {visiveis.byId[id]?.duration_min ? <span className="block text-xs text-gray-500">{visiveis.byId[id].duration_min} min</span> : null}
             </span>
-            <button type="button" aria-label={`Subir ${titulo(id)}`} disabled={i === 0} onClick={() => setIds(moveInList(ids, i, -1))} className={BOTAO_ICONE}>
+            <button type="button" aria-label={t('Subir {titulo}', { titulo: titulo(id) })} disabled={i === 0} onClick={() => setIds(moveInList(ids, i, -1))} className={BOTAO_ICONE}>
               <ArrowUp className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" aria-label={`Descer ${titulo(id)}`} disabled={i === ids.length - 1} onClick={() => setIds(moveInList(ids, i, 1))} className={BOTAO_ICONE}>
+            <button type="button" aria-label={t('Descer {titulo}', { titulo: titulo(id) })} disabled={i === ids.length - 1} onClick={() => setIds(moveInList(ids, i, 1))} className={BOTAO_ICONE}>
               <ArrowDown className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" aria-label={`Tirar ${titulo(id)} deste dia`} onClick={() => { setErro(''); setIds(ids.filter((x) => x !== id)); }} className={BOTAO_ICONE}>
+            <button type="button" aria-label={t('Tirar {titulo} deste dia', { titulo: titulo(id) })} onClick={() => { setErro(''); setIds(ids.filter((x) => x !== id)); }} className={BOTAO_ICONE}>
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </li>
@@ -177,26 +178,28 @@ function EditarDia({ plan, dia, semana, visiveis, contexto, acoes, onFechar }) {
       <TempoDoDia items={pickItems(ids, visiveis.byId).items} alvo={plan.minutes} />
       {vagas > 0 ? (
         <V2Button size="sm" variant="secondary" onClick={() => setEscolher(true)} disabled={visiveis.isLoading} data-dica="treino-plano-acrescentar">
-          <Plus className="h-4 w-4" aria-hidden="true" /> {visiveis.isLoading ? 'Carregando a biblioteca…' : 'Acrescentar da biblioteca'}
+          <Plus className="h-4 w-4" aria-hidden="true" /> {visiveis.isLoading ? t('Carregando a biblioteca…') : t('Acrescentar da biblioteca')}
         </V2Button>
       ) : (
-        <p className="text-xs text-gray-500">Um dia tem no máximo {PLAN_LIMITS.itemsPerSlot} itens.</p>
+        <p className="text-xs text-gray-500">{t('Um dia tem no máximo {n} itens.', { n: PLAN_LIMITS.itemsPerSlot })}</p>
       )}
       {seguintes > 0 && (
         <label className="flex items-start gap-2 text-sm text-ink">
           <input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-ink" />
           <span>
-            Repetir nas próximas semanas
+            {t('Repetir nas próximas semanas')}
             <span className="block text-xs text-gray-500">
-              {WEEKDAY_LONG[dia.day]} das semanas {semana + 1}{seguintes > 1 ? ` a ${plan.weeks}` : ''} fica igual a este (substitui o que houver lá).
+              {seguintes > 1
+                ? t('{dia} das semanas {de} a {ate} fica igual a este (substitui o que houver lá).', { dia: t(WEEKDAY_LONG[dia.day]), de: semana + 1, ate: plan.weeks })
+                : t('{dia} da semana {de} fica igual a este (substitui o que houver lá).', { dia: t(WEEKDAY_LONG[dia.day]), de: semana + 1 })}
             </span>
           </span>
         </label>
       )}
       {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
       <div className="flex gap-2">
-        <V2Button size="sm" onClick={salvar} disabled={acoes.update.isPending}>{acoes.update.isPending ? 'Salvando…' : 'Salvar o dia'}</V2Button>
-        <V2Button size="sm" variant="ghost" onClick={onFechar}>Cancelar</V2Button>
+        <V2Button size="sm" onClick={salvar} disabled={acoes.update.isPending}>{acoes.update.isPending ? t('Salvando…') : t('Salvar o dia')}</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={onFechar}>{t('Cancelar')}</V2Button>
       </div>
       {escolher && (
         <ItemPickerDialog
@@ -219,7 +222,7 @@ function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, diarioPronto,
   const [editando, setEditando] = useState(false);
   const { items, missingIds } = pickItems(dia.slot?.item_ids || [], visiveis.byId);
   const e = ESTADO_DIA[dia.state] || ESTADO_DIA.planejado;
-  const minutos = dia.sessions.reduce((t, s) => t + (s.duration_min || 0), 0);
+  const minutos = dia.sessions.reduce((soma, s) => soma + (s.duration_min || 0), 0);
   const aberto = plan.status !== PLAN_STATUS.CONCLUIDO;
   // Sem o diário carregado todo dia parece "pendente": registrar de novo duplicaria o treino.
   const podeRegistrar = dia.date <= hoje && aberto && diarioPronto;
@@ -230,10 +233,10 @@ function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, diarioPronto,
     <li className={cn('min-w-0 space-y-3 rounded-4xl border bg-paper-pure p-5', dia.state === 'hoje' ? 'border-ink' : 'border-gray-100')}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-display text-lg font-bold text-ink">{WEEKDAY_LONG[dia.day]}</p>
+          <p className="font-display text-lg font-bold text-ink">{t(WEEKDAY_LONG[dia.day])}</p>
           <p className="text-sm text-gray-500">{formatDayLabel(dia.date, hoje)}</p>
         </div>
-        <V2Badge tone={e.tom}>{dia.state === 'feito' && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{e.texto}</V2Badge>
+        <V2Badge tone={e.tom}>{dia.state === 'feito' && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{t(e.texto)}</V2Badge>
       </div>
 
       {editando ? (
@@ -255,32 +258,32 @@ function Dia({ plan, dia, semana, visiveis, contexto, acoes, hoje, diarioPronto,
               </ol>
               <TempoDoDia items={items} alvo={plan.minutes} />
             </>
-          ) : (!missingIds.length && <p className="text-sm text-gray-500">Dia livre: escolha o que treinar.</p>)}
+          ) : (!missingIds.length && <p className="text-sm text-gray-500">{t('Dia livre: escolha o que treinar.')}</p>)}
           {missingIds.length > 0 && !visiveis.isLoading && (
             <p className="text-xs text-gray-500">
-              {missingIds.length === 1 ? 'Um item não está disponível' : `${missingIds.length} itens não estão disponíveis`}
-              {visiveis.incompleto ? ' agora (parte da biblioteca não carregou).' : ' (apagado pelo autor ou fora da sua visão).'}
+              {missingIds.length === 1 ? t('Um item não está disponível') : t('{n} itens não estão disponíveis', { n: missingIds.length })}
+              {visiveis.incompleto ? t(' agora (parte da biblioteca não carregou).') : t(' (apagado pelo autor ou fora da sua visão).')}
             </p>
           )}
           {dia.sessions.length > 0 && (
             <p className="text-sm text-gray-600">
-              {dia.sessions.length === 1 ? 'Um treino registrado' : `${dia.sessions.length} treinos registrados`}{minutos ? ` · ${minutos} min` : ''}
+              {dia.sessions.length === 1 ? t('Um treino registrado') : t('{n} treinos registrados', { n: dia.sessions.length })}{minutos ? ` · ${minutos} min` : ''}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
             {dia.date === hoje && aberto && items.length > 0 && (
               <V2Button size="sm" onClick={() => onTreinar({ items, registro })}>
-                <Play className="h-4 w-4" aria-hidden="true" /> Treinar agora
+                <Play className="h-4 w-4" aria-hidden="true" />{' '}{t('Treinar agora')}
               </V2Button>
             )}
             {aberto && (
               <V2Button size="sm" variant="secondary" onClick={() => setEditando(true)} data-dica="treino-plano-editar-dia">
-                <Pencil className="h-4 w-4" aria-hidden="true" /> {items.length || missingIds.length ? 'Editar o dia' : 'Escolher o que treinar'}
+                <Pencil className="h-4 w-4" aria-hidden="true" /> {items.length || missingIds.length ? t('Editar o dia') : t('Escolher o que treinar')}
               </V2Button>
             )}
             {podeRegistrar && (
               <V2Button size="sm" variant="ghost" onClick={() => onRegistrar(registro)}>
-                <NotebookPen className="h-4 w-4" aria-hidden="true" /> Registrar
+                <NotebookPen className="h-4 w-4" aria-hidden="true" />{' '}{t('Registrar')}
               </V2Button>
             )}
           </div>
@@ -309,7 +312,7 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
 
   const mudarStatus = (status, msg) => acoes.setStatus.mutate({ plan, status }, {
     onSuccess: () => toast.success(msg),
-    onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível mudar agora.')),
+    onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível mudar agora.'))),
   });
 
   return (
@@ -322,49 +325,49 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
             <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
               <div className="h-full rounded-full bg-acid" style={{ width: `${prog.pct}%` }} />
             </div>
-            <p className="text-sm text-gray-500">{prog.done} de {prog.total} treinos feitos{atual ? ` · semana ${atual} de ${plan.weeks}` : ''}</p>
+            <p className="text-sm text-gray-500">{t('{n} de {total} treinos feitos', { n: prog.done, total: prog.total })}{atual ? ` · ${t('semana {n} de {total}', { n: atual, total: plan.weeks })}` : ''}</p>
           </div>
         )}
         <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
           {plan.status === PLAN_STATUS.ATIVO && (
-            <V2Button size="sm" variant="secondary" onClick={() => mudarStatus(PLAN_STATUS.PAUSADO, 'Plano pausado.')} disabled={acoes.setStatus.isPending}>
-              <Pause className="h-4 w-4" aria-hidden="true" /> Pausar
+            <V2Button size="sm" variant="secondary" onClick={() => mudarStatus(PLAN_STATUS.PAUSADO, t('Plano pausado.'))} disabled={acoes.setStatus.isPending}>
+              <Pause className="h-4 w-4" aria-hidden="true" />{' '}{t('Pausar')}
             </V2Button>
           )}
           {plan.status !== PLAN_STATUS.ATIVO && (
-            <V2Button size="sm" variant="secondary" onClick={() => mudarStatus(PLAN_STATUS.ATIVO, 'Plano ativo: ele aparece em “Hoje”.')} disabled={acoes.setStatus.isPending}>
-              <Play className="h-4 w-4" aria-hidden="true" /> {plan.status === PLAN_STATUS.CONCLUIDO ? 'Reativar' : 'Retomar'}
+            <V2Button size="sm" variant="secondary" onClick={() => mudarStatus(PLAN_STATUS.ATIVO, t('Plano ativo: ele aparece em “Hoje”.'))} disabled={acoes.setStatus.isPending}>
+              <Play className="h-4 w-4" aria-hidden="true" /> {plan.status === PLAN_STATUS.CONCLUIDO ? t('Reativar') : t('Retomar')}
             </V2Button>
           )}
           {plan.status !== PLAN_STATUS.CONCLUIDO && (
-            <V2Button size="sm" variant="ghost" onClick={() => mudarStatus(PLAN_STATUS.CONCLUIDO, 'Plano concluído. Parabéns pela constância!')} disabled={acoes.setStatus.isPending}>
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Concluir
+            <V2Button size="sm" variant="ghost" onClick={() => mudarStatus(PLAN_STATUS.CONCLUIDO, t('Plano concluído. Parabéns pela constância!'))} disabled={acoes.setStatus.isPending}>
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Concluir')}
             </V2Button>
           )}
           <V2Button size="sm" variant="ghost" onClick={() => setApagar(true)}>
-            <Trash2 className="h-4 w-4" aria-hidden="true" /> Apagar
+            <Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Apagar')}
           </V2Button>
         </div>
         {plan.status !== PLAN_STATUS.ATIVO && planos.some((p) => p.status === PLAN_STATUS.ATIVO && p.id !== plan.id) && (
-          <p className="text-xs text-gray-500">Ativar este plano pausa o que está ativo agora.</p>
+          <p className="text-xs text-gray-500">{t('Ativar este plano pausa o que está ativo agora.')}</p>
         )}
       </V2Surface>
 
       {sessoes.isError && (
-        <V2ErrorState inline title="O diário não carregou" description="O plano está aqui; o que já foi feito aparece quando o diário carregar." onRetry={() => sessoes.refetch()} />
+        <V2ErrorState inline title={t('O diário não carregou')} description={t('O plano está aqui; o que já foi feito aparece quando o diário carregar.')} onRetry={() => sessoes.refetch()} />
       )}
 
-      <section className="space-y-4" aria-label="Semanas do plano">
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Escolher a semana" data-dica="treino-plano-semanas">
+      <section className="space-y-4" aria-label={t('Semanas do plano')}>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Escolher a semana')} data-dica="treino-plano-semanas">
           {resumo.map((s) => (
             <V2FilterChip key={s.week} active={s.week === semana} aria-pressed={s.week === semana} onClick={() => setSemana(s.week)} className="px-3 py-1.5">
-              Semana {s.week}
+              {t('Semana {n}', { n: s.week })}
               {sessoes.isSuccess && s.done > 0 && <span className="ml-1 text-xs opacity-70">{s.done}/{s.total}</span>}
-              {s.week === atual && <span className="sr-only"> (semana atual)</span>}
+              {s.week === atual && <span className="sr-only">{' '}{t('(semana atual)')}</span>}
             </V2FilterChip>
           ))}
         </div>
-        <p className="text-sm text-gray-500">{weekRangeLabel(inicioSemana)}{semana === atual ? ' · esta semana' : ''}</p>
+        <p className="text-sm text-gray-500">{weekRangeLabel(inicioSemana)}{semana === atual ? ` · ${t('esta semana')}` : ''}</p>
         <ul className="grid gap-3 md:grid-cols-2">
           {dias.map((d) => (
             <Dia key={`${semana}-${d.day}`} plan={plan} dia={d} semana={semana} visiveis={visiveis} contexto={contexto} acoes={acoes} hoje={hoje} diarioPronto={sessoes.isSuccess} onRegistrar={setRegistro} onTreinar={setQuadra} />
@@ -375,13 +378,13 @@ function Plano({ plan, identity, planos, sessoes, visiveis, hoje }) {
       <ConfirmDialog
         open={apagar}
         onOpenChange={setApagar}
-        title="Apagar este plano?"
-        description="Os treinos já registrados no diário continuam lá; só o plano some."
-        confirmLabel="Apagar o plano"
+        title={t('Apagar este plano?')}
+        description={t('Os treinos já registrados no diário continuam lá; só o plano some.')}
+        confirmLabel={t('Apagar o plano')}
         pending={acoes.remove.isPending}
         onConfirm={() => acoes.remove.mutate(plan, {
-          onSuccess: () => { toast.success('Plano apagado.'); navigate(VOLTAR); },
-          onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível apagar agora.')),
+          onSuccess: () => { toast.success(t('Plano apagado.')); navigate(VOLTAR); },
+          onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível apagar agora.'))),
         })}
       />
       <Suspense fallback={null}>
@@ -423,7 +426,7 @@ function PlanoPage() {
     return (
       <div className="space-y-6">
         <Voltar />
-        <V2Surface><V2ErrorState title="O plano não carregou" onRetry={() => planos.refetch()} /></V2Surface>
+        <V2Surface><V2ErrorState title={t('O plano não carregou')} onRetry={() => planos.refetch()} /></V2Surface>
       </div>
     );
   }
@@ -435,9 +438,9 @@ function PlanoPage() {
         <V2Surface>
           <V2EmptyState
             icon={CalendarRange}
-            title="Este plano não está entre os seus"
-            description="Ele pode ter sido apagado. Os seus planos estão na aba Planos."
-            action={<V2Button asChild variant="secondary"><Link to={VOLTAR}><Plus className="h-4 w-4" aria-hidden="true" /> Ver os planos</Link></V2Button>}
+            title={t('Este plano não está entre os seus')}
+            description={t('Ele pode ter sido apagado. Os seus planos estão na aba Planos.')}
+            action={<V2Button asChild variant="secondary"><Link to={VOLTAR}><Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Ver os planos')}</Link></V2Button>}
           />
         </V2Surface>
       </div>

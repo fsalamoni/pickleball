@@ -7,14 +7,15 @@
  * nível desconhecido nunca esconde item (é a regra de `fitsLevel`).
  */
 import { ITEM_KINDS, PLACES, isValidSkill } from '@/modules/training/domain/taxonomy';
+import { tk } from '@/core/i18n';
 
 /** Origens: as três de autoria + dois recortes da pessoa. */
 export const ORIGINS = Object.freeze([
-  { value: 'plataforma', label: 'Equipe PickleRush' },
-  { value: 'professor', label: 'Professores' },
-  { value: 'atleta', label: 'Atletas' },
-  { value: 'meus_professores', label: 'Dos meus professores' },
-  { value: 'salvos', label: 'Salvos' },
+  { value: 'plataforma', label: tk('Equipe PickleRush') },
+  { value: 'professor', label: tk('Professores') },
+  { value: 'atleta', label: tk('Atletas') },
+  { value: 'meus_professores', label: tk('Dos meus professores') },
+  { value: 'salvos', label: tk('Salvos') },
 ]);
 
 export const MAX_MINUTES = Object.freeze([10, 20, 30, 45, 60]);

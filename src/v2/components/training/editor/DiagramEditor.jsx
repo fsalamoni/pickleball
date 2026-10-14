@@ -23,6 +23,7 @@ import {
   NUDGE, TOOLS, TWO_TAP, blankDiagram, buildElement, defaultElement, elementName, popHistory, pushHistory,
   translateElement,
 } from './diagramEditing';
+import { t } from '@/core/i18n';
 
 const COM_ROTULO = new Set(['jogador', 'texto', 'zona', 'seta']);
 
@@ -142,47 +143,47 @@ export default function DiagramEditor({ value = [], onChange }) {
               i === idx ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
             )}
           >
-            Quadro {i + 1}{d.tag && d.tag !== 'neutro' ? ` · ${DIAGRAM_TAG_LABELS[d.tag]}` : ''}
+            {t('Quadro {n}', { n: i + 1 })}{d.tag && d.tag !== 'neutro' ? ` · ${t(DIAGRAM_TAG_LABELS[d.tag])}` : ''}
           </button>
         ))}
         <V2Button type="button" variant="ghost" size="sm" onClick={novoQuadro} disabled={diagrams.length >= MAX_DIAGRAMS}>
-          <Plus className="h-4 w-4" aria-hidden="true" /> {diagrams.length ? 'Novo quadro' : 'Desenhar um quadro'}
+          <Plus className="h-4 w-4" aria-hidden="true" /> {diagrams.length ? t('Novo quadro') : t('Desenhar um quadro')}
         </V2Button>
         {historico.length > 0 && (
           <V2Button type="button" variant="ghost" size="sm" onClick={desfazer}>
-            <Undo2 className="h-4 w-4" aria-hidden="true" /> Desfazer
+            <Undo2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Desfazer')}
           </V2Button>
         )}
-        <span className="text-xs text-gray-500">{diagrams.length} de {MAX_DIAGRAMS}</span>
+        <span className="text-xs text-gray-500">{t('{n} de {total}', { n: diagrams.length, total: MAX_DIAGRAMS })}</span>
       </div>
 
       {quadro && (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="space-y-3">
-            <div role="toolbar" aria-label="Ferramentas do diagrama" className="flex flex-wrap gap-2">
-              {TOOLS.map((t) => (
+            <div role="toolbar" aria-label={t('Ferramentas do diagrama')} className="flex flex-wrap gap-2">
+              {TOOLS.map((ferr) => (
                 <button
-                  key={t.id}
+                  key={ferr.id}
                   type="button"
-                  aria-pressed={tool === t.id}
-                  onClick={() => trocarFerramenta(t.id)}
+                  aria-pressed={tool === ferr.id}
+                  onClick={() => trocarFerramenta(ferr.id)}
                   className={cn(
                     'min-h-[44px] rounded-full border px-3 text-xs font-bold transition-colors',
-                    tool === t.id ? 'border-transparent bg-acid text-ink' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
+                    tool === ferr.id ? 'border-transparent bg-acid text-ink' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
                   )}
                 >
-                  {t.label}
+                  {t(ferr.label)}
                 </button>
               ))}
             </div>
             <p role="status" className="text-xs text-gray-500">
               {cheio
-                ? `Este quadro chegou a ${MAX_ELEMENTS} elementos. Apague algum ou use outro quadro.`
+                ? t('Este quadro chegou a {n} elementos. Apague algum ou use outro quadro.', { n: MAX_ELEMENTS })
                 : tool === 'selecionar'
-                  ? 'Toque num elemento para escolher; arraste para mover.'
+                  ? t('Toque num elemento para escolher; arraste para mover.')
                   : TWO_TAP.has(tool)
-                    ? (pendente ? 'Agora toque onde termina.' : 'Toque onde começa e, depois, onde termina.')
-                    : 'Toque na quadra para pôr. Arraste um elemento para mover.'}
+                    ? (pendente ? t('Agora toque onde termina.') : t('Toque onde começa e, depois, onde termina.'))
+                    : t('Toque na quadra para pôr. Arraste um elemento para mover.')}
             </p>
             <div className="mx-auto max-w-sm">
               <CourtDiagram
@@ -204,43 +205,43 @@ export default function DiagramEditor({ value = [], onChange }) {
                 disabled={cheio}
                 onClick={() => { setPendente(null); por(defaultElement(tool, quadro.court, elementos)); }}
               >
-                Pôr no meio da quadra: {TOOLS.find((t) => t.id === tool)?.label}
+                {t('Pôr no meio da quadra: {nome}', { nome: t(TOOLS.find((ferr) => ferr.id === tool)?.label) })}
               </V2Button>
             )}
           </div>
 
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <V2Field label="Vista" htmlFor={`diag-${idx}-vista`}>
+              <V2Field label={t('Vista')} htmlFor={`diag-${idx}-vista`}>
                 <V2Select
                   id={`diag-${idx}-vista`}
                   value={quadro.court || 'inteira'}
                   onChange={(e) => mudarQuadro({ court: e.target.value })}
-                  options={COURT_VIEWS.map((v) => ({ value: v, label: COURT_VIEW_LABELS[v] }))}
+                  options={COURT_VIEWS.map((v) => ({ value: v, label: t(COURT_VIEW_LABELS[v]) }))}
                 />
               </V2Field>
-              <V2Field label="Marca" htmlFor={`diag-${idx}-marca`}>
+              <V2Field label={t('Marca')} htmlFor={`diag-${idx}-marca`}>
                 <V2Select
                   id={`diag-${idx}-marca`}
                   value={quadro.tag || 'neutro'}
                   onChange={(e) => mudarQuadro({ tag: e.target.value })}
-                  options={DIAGRAM_TAGS.map((v) => ({ value: v, label: DIAGRAM_TAG_LABELS[v] }))}
+                  options={DIAGRAM_TAGS.map((v) => ({ value: v, label: t(DIAGRAM_TAG_LABELS[v]) }))}
                 />
               </V2Field>
-              <V2Field label="Título do quadro" htmlFor={`diag-${idx}-titulo`} className="sm:col-span-2">
+              <V2Field label={t('Título do quadro')} htmlFor={`diag-${idx}-titulo`} className="sm:col-span-2">
                 <V2Input
                   id={`diag-${idx}-titulo`}
                   maxLength={80}
                   value={quadro.title || ''}
                   onChange={(e) => mudarQuadro({ title: e.target.value })}
-                  placeholder="Ex.: Saída da cozinha em dupla"
+                  placeholder={t('Ex.: Saída da cozinha em dupla')}
                 />
               </V2Field>
             </div>
 
             {elementos.length > 0 ? (
               <div>
-                <p className="mb-2 text-sm font-semibold text-ink">Elementos ({elementos.length} de {MAX_ELEMENTS})</p>
+                <p className="mb-2 text-sm font-semibold text-ink">{t('Elementos ({n} de {total})', { n: elementos.length, total: MAX_ELEMENTS })}</p>
                 <ul className="max-h-48 space-y-1 overflow-y-auto">
                   {elementos.map((el, i) => (
                     <li key={i}>
@@ -260,7 +261,7 @@ export default function DiagramEditor({ value = [], onChange }) {
                 </ul>
               </div>
             ) : (
-              <p className="text-xs text-gray-500">Quadro vazio não é salvo: ponha ao menos um elemento.</p>
+              <p className="text-xs text-gray-500">{t('Quadro vazio não é salvo: ponha ao menos um elemento.')}</p>
             )}
 
             {escolhido && (
@@ -268,9 +269,9 @@ export default function DiagramEditor({ value = [], onChange }) {
                 <p className="text-sm font-bold text-ink">{elementName(escolhido)}</p>
                 {COM_ROTULO.has(escolhido.t) && (
                   <V2Field
-                    label={escolhido.t === 'texto' ? 'Texto' : 'Rótulo'}
+                    label={escolhido.t === 'texto' ? t('Texto') : t('Rótulo')}
                     htmlFor={`diag-${idx}-rotulo`}
-                    hint={escolhido.t === 'texto' ? 'Até 12 letras. Texto vazio some ao salvar.' : 'Até 12 letras.'}
+                    hint={escolhido.t === 'texto' ? t('Até 12 letras. Texto vazio some ao salvar.') : t('Até 12 letras.')}
                   >
                     <V2Input
                       id={`diag-${idx}-rotulo`}
@@ -281,32 +282,32 @@ export default function DiagramEditor({ value = [], onChange }) {
                   </V2Field>
                 )}
                 {escolhido.t === 'jogador' && (
-                  <V2Field label="Time" htmlFor={`diag-${idx}-time`}>
+                  <V2Field label={t('Time')} htmlFor={`diag-${idx}-time`}>
                     <V2Select
                       id={`diag-${idx}-time`}
                       value={escolhido.team === 'b' ? 'b' : 'a'}
                       onChange={(e) => mudarEscolhido({ team: e.target.value })}
-                      options={[{ value: 'a', label: 'Time A' }, { value: 'b', label: 'Time B' }]}
+                      options={[{ value: 'a', label: t('Time A') }, { value: 'b', label: t('Time B') }]}
                     />
                   </V2Field>
                 )}
                 {escolhido.t === 'seta' && (
-                  <V2Field label="Tipo de seta" htmlFor={`diag-${idx}-seta`}>
+                  <V2Field label={t('Tipo de seta')} htmlFor={`diag-${idx}-seta`}>
                     <V2Select
                       id={`diag-${idx}-seta`}
                       value={escolhido.style || 'bola'}
                       onChange={(e) => mudarEscolhido({ style: e.target.value })}
-                      options={ARROW_STYLES.map((v) => ({ value: v, label: ARROW_STYLE_LABELS[v] }))}
+                      options={ARROW_STYLES.map((v) => ({ value: v, label: t(ARROW_STYLE_LABELS[v]) }))}
                     />
                   </V2Field>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <IconBtn label="Mover para cima" onClick={() => empurrar(0, -NUDGE)}><ArrowUp className="h-4 w-4" aria-hidden="true" /></IconBtn>
-                  <IconBtn label="Mover para baixo" onClick={() => empurrar(0, NUDGE)}><ArrowDown className="h-4 w-4" aria-hidden="true" /></IconBtn>
-                  <IconBtn label="Mover para a esquerda" onClick={() => empurrar(-NUDGE, 0)}><ArrowLeft className="h-4 w-4" aria-hidden="true" /></IconBtn>
-                  <IconBtn label="Mover para a direita" onClick={() => empurrar(NUDGE, 0)}><ArrowRight className="h-4 w-4" aria-hidden="true" /></IconBtn>
+                  <IconBtn label={t('Mover para cima')} onClick={() => empurrar(0, -NUDGE)}><ArrowUp className="h-4 w-4" aria-hidden="true" /></IconBtn>
+                  <IconBtn label={t('Mover para baixo')} onClick={() => empurrar(0, NUDGE)}><ArrowDown className="h-4 w-4" aria-hidden="true" /></IconBtn>
+                  <IconBtn label={t('Mover para a esquerda')} onClick={() => empurrar(-NUDGE, 0)}><ArrowLeft className="h-4 w-4" aria-hidden="true" /></IconBtn>
+                  <IconBtn label={t('Mover para a direita')} onClick={() => empurrar(NUDGE, 0)}><ArrowRight className="h-4 w-4" aria-hidden="true" /></IconBtn>
                   <IconBtn
-                    label="Apagar elemento"
+                    label={t('Apagar elemento')}
                     onClick={() => { mudarElementos(removeAt(elementos, sel)); setSel(null); }}
                     className="text-red-600"
                   >
@@ -317,7 +318,7 @@ export default function DiagramEditor({ value = [], onChange }) {
             )}
 
             <V2Button type="button" variant="ghost" size="sm" onClick={apagarQuadro}>
-              <Trash2 className="h-4 w-4" aria-hidden="true" /> Apagar este quadro
+              <Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Apagar este quadro')}
             </V2Button>
           </div>
         </div>

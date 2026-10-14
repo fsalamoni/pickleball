@@ -14,6 +14,7 @@ import { db } from '@/core/config/firebase';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { MESSAGE_MAX, normalizeQuestion, QUESTION_STATUS, statusAfterMessage } from '../domain/question.js';
 import { TrainingItemError } from './trainingItemService.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_QUESTIONS = 'training_questions';
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -37,7 +38,7 @@ export async function listMessages(questionId) {
 
 /** Abre uma dúvida (vínculo ATIVO com o professor). @returns {Promise<string>} id */
 export async function createQuestion(input, { identity }) {
-  if (!identity?.uid) throw new TrainingItemError('Entre na sua conta.');
+  if (!identity?.uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizeQuestion(input);
   if (!valid) throw new TrainingItemError(error);
   const ref = doc(collection(db, TRAINING_QUESTIONS));
@@ -74,11 +75,11 @@ export async function createQuestion(input, { identity }) {
 
 /** Responde/continua a conversa; a outra parte é avisada. */
 export async function sendMessage(question, text, { identity }) {
-  const t = String(text ?? '').trim().slice(0, MESSAGE_MAX);
-  if (!t) throw new TrainingItemError('Escreva a mensagem.');
+  const texto = String(text ?? '').trim().slice(0, MESSAGE_MAX);
+  if (!texto) throw new TrainingItemError(t('Escreva a mensagem.'));
   const from = question.coach_uid === identity.uid ? 'professor' : 'aluno';
   await addDoc(collection(db, TRAINING_QUESTIONS, question.id, 'messages'), {
-    uid: identity.uid, name: String(identity.name || '').slice(0, 80), text: t, created_at: serverTimestamp(),
+    uid: identity.uid, name: String(identity.name || '').slice(0, 80), text: texto, created_at: serverTimestamp(),
   });
   await updateDoc(doc(db, TRAINING_QUESTIONS, question.id), {
     status: statusAfterMessage(from), last_from: from, updated_at: serverTimestamp(),
@@ -87,7 +88,7 @@ export async function sendMessage(question, text, { identity }) {
   await notifyUsers([to], {
     type: from === 'professor' ? NOTIFICATION_TYPE.TRAINING_ANSWER : NOTIFICATION_TYPE.TRAINING_QUESTION,
     title: from === 'professor' ? 'Seu professor respondeu' : 'Seu aluno escreveu de novo',
-    message: `${question.subject}: ${t.slice(0, 120)}`,
+    message: `${question.subject}: ${texto.slice(0, 120)}`,
     link: `/treino?aba=duvidas&q=${question.id}`,
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);

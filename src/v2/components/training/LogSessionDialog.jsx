@@ -24,6 +24,7 @@ import {
   V2Button, V2Field, V2FilterChip, V2Input, V2Select, V2Textarea,
 } from '@/v2/ui/primitives';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t } from '@/core/i18n';
 
 const MINUTOS_RAPIDOS = [15, 30, 45, 60, 90];
 
@@ -89,11 +90,11 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
     if (!valid) { setErro(error); return; }
     const fim = {
       onSuccess: (id) => {
-        toast.success(session ? 'Registro atualizado.' : 'Treino registrado no diário.');
+        toast.success(session ? t('Registro atualizado.') : t('Treino registrado no diário.'));
         onOpenChange(false);
         onSaved?.(id);
       },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar agora. Tente de novo.')),
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar agora. Tente de novo.'))),
     };
     if (session) acoes.update.mutate({ session, input: value }, fim);
     else acoes.create.mutate(value, fim);
@@ -103,23 +104,23 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{session ? 'Editar registro' : 'Registrar treino'}</DialogTitle>
-          <DialogDescription>Leva menos de um minuto. Só os minutos são obrigatórios.</DialogDescription>
+          <DialogTitle>{session ? t('Editar registro') : t('Registrar treino')}</DialogTitle>
+          <DialogDescription>{t('Leva menos de um minuto. Só os minutos são obrigatórios.')}</DialogDescription>
         </DialogHeader>
         <form className="space-y-5" onSubmit={salvar} noValidate>
-          <div className="space-y-2" role="group" aria-label="Como foi">
-            <p className="text-sm font-semibold text-ink">Como foi</p>
+          <div className="space-y-2" role="group" aria-label={t('Como foi')}>
+            <p className="text-sm font-semibold text-ink">{t('Como foi')}</p>
             <div className="flex flex-wrap gap-2">
               {Object.values(SESSION_STATUS).map((s) => (
                 <V2FilterChip key={s} active={f.status === s} aria-pressed={f.status === s} onClick={() => set({ status: s })} className="px-3 py-1.5">
-                  {SESSION_STATUS_LABELS[s]}
+                  {t(SESSION_STATUS_LABELS[s])}
                 </V2FilterChip>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <V2Field label="Minutos" htmlFor="sessao-min" required>
+            <V2Field label={t('Minutos')} htmlFor="sessao-min" required>
               <V2Input
                 id="sessao-min"
                 type="number"
@@ -128,7 +129,7 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
                 max={600}
                 value={f.duration_min}
                 onChange={(e) => set({ duration_min: e.target.value })}
-                placeholder="Ex.: 45"
+                placeholder={t('Ex.: 45')}
               />
             </V2Field>
             <div className="flex flex-wrap gap-1.5">
@@ -142,7 +143,7 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
 
           <div className="space-y-2">
             <label htmlFor="sessao-rpe" className="block text-sm font-semibold text-ink">
-              Esforço: {f.rpeSet ? `${f.rpe} · ${rpeLabel(f.rpe)}` : 'arraste para marcar'}
+              {t('Esforço:')} {f.rpeSet ? `${f.rpe} · ${rpeLabel(f.rpe)}` : t('arraste para marcar')}
             </label>
             <input
               id="sessao-rpe"
@@ -152,39 +153,39 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
               step={1}
               value={f.rpe}
               onChange={(e) => set({ rpe: Number(e.target.value), rpeSet: true })}
-              aria-valuetext={f.rpeSet ? `${f.rpe}, ${rpeLabel(f.rpe)}` : 'Não marcado'}
+              aria-valuetext={f.rpeSet ? `${f.rpe}, ${rpeLabel(f.rpe)}` : t('Não marcado')}
               className="w-full accent-ink"
             />
             <div className="flex justify-between text-xs text-gray-500" aria-hidden="true">
-              <span>0 · Repouso</span><span>5 · Puxado</span><span>10 · Máximo</span>
+              <span>{t('0 · Repouso')}</span><span>{t('5 · Puxado')}</span><span>{t('10 · Máximo')}</span>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <V2Field label="Dia" htmlFor="sessao-dia">
+            <V2Field label={t('Dia')} htmlFor="sessao-dia">
               <V2Input id="sessao-dia" type="date" max={todayLocal()} value={f.date} onChange={(e) => set({ date: e.target.value })} />
             </V2Field>
-            <V2Field label="Tipo" htmlFor="sessao-tipo">
+            <V2Field label={t('Tipo')} htmlFor="sessao-tipo">
               <V2Select id="sessao-tipo" value={f.kind} onChange={(e) => set({ kind: e.target.value })}>
-                {SESSION_KINDS.map((k) => <option key={k} value={k}>{SESSION_KIND_LABELS[k]}</option>)}
+                {SESSION_KINDS.map((k) => <option key={k} value={k}>{t(SESSION_KIND_LABELS[k])}</option>)}
               </V2Select>
             </V2Field>
           </div>
 
-          <V2Field label="Nome (opcional)" htmlFor="sessao-titulo">
-            <V2Input id="sessao-titulo" maxLength={120} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder="Treino" />
+          <V2Field label={t('Nome (opcional)')} htmlFor="sessao-titulo">
+            <V2Input id="sessao-titulo" maxLength={120} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder={t('Treino')} />
           </V2Field>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">O que você treinou</p>
+            <p className="text-sm font-semibold text-ink">{t('O que você treinou')}</p>
             {f.item_ids.length > 0 && (
               <ul className="flex flex-wrap gap-2">
                 {f.item_ids.map((id) => (
                   <li key={id} className="inline-flex items-center gap-1 rounded-full bg-gray-100 py-1 pl-3 pr-1 text-sm text-ink">
-                    {itemsById[id]?.title || 'Item'}
+                    {itemsById[id]?.title || t('Item')}
                     <button
                       type="button"
-                      aria-label={`Tirar "${itemsById[id]?.title || 'item'}" do registro`}
+                      aria-label={t('Tirar "{titulo}" do registro', { titulo: itemsById[id]?.title || t('item') })}
                       onClick={() => set({ item_ids: f.item_ids.filter((x) => x !== id) })}
                       className="rounded-full p-2 text-gray-500 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
@@ -196,33 +197,33 @@ export default function LogSessionDialog({ open, onOpenChange, identity, itemsBy
             )}
             {f.item_ids.length < 12 && opcoesItens.length > 0 && (
               <V2Select
-                aria-label="Acrescentar um item da biblioteca"
+                aria-label={t('Acrescentar um item da biblioteca')}
                 value=""
                 onChange={(e) => { if (e.target.value) set({ item_ids: [...f.item_ids, e.target.value] }); }}
               >
-                <option value="">Acrescentar um item (opcional)</option>
+                <option value="">{t('Acrescentar um item (opcional)')}</option>
                 {opcoesItens.map((it) => <option key={it.id} value={it.id}>{it.title}</option>)}
               </V2Select>
             )}
           </div>
 
-          <V2Field label="Notas (opcional)" htmlFor="sessao-notas" hint={SESSION_HEALTH_HINT}>
+          <V2Field label={t('Notas (opcional)')} htmlFor="sessao-notas" hint={t(SESSION_HEALTH_HINT)}>
             <V2Textarea id="sessao-notas" rows={3} maxLength={SESSION_NOTES_MAX} value={f.notes} onChange={(e) => set({ notes: e.target.value })} />
           </V2Field>
 
           {identity.activeCoachIds.length > 0 && (
-            <V2Field label="Mostrar ao professor" htmlFor="sessao-prof" hint="O professor vê este registro e pode comentar.">
+            <V2Field label={t('Mostrar ao professor')} htmlFor="sessao-prof" hint={t('O professor vê este registro e pode comentar.')}>
               <V2Select id="sessao-prof" value={f.shared_coach_id} onChange={(e) => set({ shared_coach_id: e.target.value })}>
-                <option value="">Só eu</option>
-                {identity.activeCoachIds.map((id) => <option key={id} value={id}>{people.get(id)?.name || 'Professor'}</option>)}
+                <option value="">{t('Só eu')}</option>
+                {identity.activeCoachIds.map((id) => <option key={id} value={id}>{people.get(id)?.name || t('Professor')}</option>)}
               </V2Select>
             </V2Field>
           )}
 
           {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t('Cancelar')}</V2Button>
+            <V2Button type="submit" disabled={salvando}>{salvando ? t('Salvando…') : t('Salvar')}</V2Button>
           </div>
         </form>
       </DialogContent>

@@ -8,6 +8,7 @@
  * Na interface a palavra é "Habilidade" — nunca "skill", que na plataforma já
  * é a trilha de XP da gamificação.
  */
+import { t, tk } from '@/core/i18n';
 
 export const SKILL_AREAS = Object.freeze([
   'serve', 'groundstrokes', 'kitchen', 'net', 'tactics',
@@ -15,68 +16,68 @@ export const SKILL_AREAS = Object.freeze([
 ]);
 
 export const SKILL_AREA_LABELS = Object.freeze({
-  serve: 'Saque e devolução',
-  groundstrokes: 'Golpes de fundo',
-  kitchen: 'Jogo curto e dinks',
-  net: 'Voleios e rede',
-  tactics: 'Leitura de jogo',
-  doubles: 'Duplas',
-  mental: 'Mental',
-  physical: 'Físico',
-  rules: 'Regras',
-  experience: 'Experiência de jogo',
+  serve: tk('Saque e devolução'),
+  groundstrokes: tk('Golpes de fundo'),
+  kitchen: tk('Jogo curto e dinks'),
+  net: tk('Voleios e rede'),
+  tactics: tk('Leitura de jogo'),
+  doubles: tk('Duplas'),
+  mental: tk('Mental'),
+  physical: tk('Físico'),
+  rules: tk('Regras'),
+  experience: tk('Experiência de jogo'),
 });
 
 /** Sub-habilidades: `area.slug` → rótulo. A área sozinha também é válida. */
 export const SKILLS = Object.freeze({
-  'serve.saque_profundo': 'Saque profundo',
-  'serve.devolucao_profunda': 'Devolução profunda',
-  'serve.consistencia': 'Consistência no saque',
-  'serve.efeito': 'Saque com efeito',
-  'groundstrokes.drive': 'Drive',
-  'groundstrokes.terceira_bola_drop': 'Drop da terceira bola',
-  'groundstrokes.terceira_bola_drive': 'Drive da terceira bola',
-  'groundstrokes.transicao': 'Transição para a rede',
-  'groundstrokes.lob': 'Lob',
-  'groundstrokes.backhand': 'Backhand',
-  'groundstrokes.efeito': 'Efeito (topspin e slice)',
-  'groundstrokes.passada': 'Passada',
-  'kitchen.dink_cruzado': 'Dink cruzado',
-  'kitchen.dink_paralelo': 'Dink paralelo',
-  'kitchen.dink_atacavel': 'Atacar o dink alto',
-  'kitchen.paciencia': 'Paciência no jogo curto',
-  'net.voleio': 'Voleio',
-  'net.reset': 'Reset',
-  'net.speed_up': 'Aceleração (speed-up)',
-  'net.contra_ataque': 'Contra-ataque',
-  'net.smash': 'Smash',
-  'net.erne': 'Erne',
-  'net.atp': 'ATP (por fora do poste)',
-  'net.bloqueio': 'Bloqueio',
-  'net.meio_voleio': 'Meio-voleio',
-  'net.defesa_corpo': 'Defesa de corpo',
-  'tactics.selecao_golpe': 'Escolha do golpe',
-  'tactics.alvo': 'Alvos e ângulos',
-  'tactics.leitura_adversario': 'Leitura do adversário',
-  'doubles.comunicacao': 'Comunicação com a dupla',
-  'doubles.posicionamento': 'Posicionamento da dupla',
-  'doubles.stacking': 'Stacking',
-  'doubles.cobertura_meio': 'Cobertura do meio',
-  'mental.rotina_entre_pontos': 'Rotina entre pontos',
-  'mental.foco': 'Foco e concentração',
-  'mental.pressao': 'Jogar sob pressão',
-  'physical.aquecimento': 'Aquecimento',
-  'physical.agilidade': 'Agilidade e deslocamento',
-  'physical.forca_inferior': 'Força de membros inferiores',
-  'physical.ombro_antebraco': 'Ombro e antebraço',
-  'physical.core': 'Core',
-  'physical.mobilidade': 'Mobilidade',
-  'physical.condicionamento': 'Condicionamento',
-  'rules.saque': 'Regras do saque',
-  'rules.cozinha': 'Regras da cozinha',
-  'rules.placar': 'Contagem do placar',
-  'rules.faltas': 'Faltas e bolas fora',
-  'experience.jogo': 'Jogo e competição',
+  'serve.saque_profundo': tk('Saque profundo'),
+  'serve.devolucao_profunda': tk('Devolução profunda'),
+  'serve.consistencia': tk('Consistência no saque'),
+  'serve.efeito': tk('Saque com efeito'),
+  'groundstrokes.drive': tk('Drive'),
+  'groundstrokes.terceira_bola_drop': tk('Drop da terceira bola'),
+  'groundstrokes.terceira_bola_drive': tk('Drive da terceira bola'),
+  'groundstrokes.transicao': tk('Transição para a rede'),
+  'groundstrokes.lob': tk('Lob'),
+  'groundstrokes.backhand': tk('Backhand'),
+  'groundstrokes.efeito': tk('Efeito (topspin e slice)'),
+  'groundstrokes.passada': tk('Passada'),
+  'kitchen.dink_cruzado': tk('Dink cruzado'),
+  'kitchen.dink_paralelo': tk('Dink paralelo'),
+  'kitchen.dink_atacavel': tk('Atacar o dink alto'),
+  'kitchen.paciencia': tk('Paciência no jogo curto'),
+  'net.voleio': tk('Voleio'),
+  'net.reset': tk('Reset'),
+  'net.speed_up': tk('Aceleração (speed-up)'),
+  'net.contra_ataque': tk('Contra-ataque'),
+  'net.smash': tk('Smash'),
+  'net.erne': tk('Erne'),
+  'net.atp': tk('ATP (por fora do poste)'),
+  'net.bloqueio': tk('Bloqueio'),
+  'net.meio_voleio': tk('Meio-voleio'),
+  'net.defesa_corpo': tk('Defesa de corpo'),
+  'tactics.selecao_golpe': tk('Escolha do golpe'),
+  'tactics.alvo': tk('Alvos e ângulos'),
+  'tactics.leitura_adversario': tk('Leitura do adversário'),
+  'doubles.comunicacao': tk('Comunicação com a dupla'),
+  'doubles.posicionamento': tk('Posicionamento da dupla'),
+  'doubles.stacking': tk('Stacking'),
+  'doubles.cobertura_meio': tk('Cobertura do meio'),
+  'mental.rotina_entre_pontos': tk('Rotina entre pontos'),
+  'mental.foco': tk('Foco e concentração'),
+  'mental.pressao': tk('Jogar sob pressão'),
+  'physical.aquecimento': tk('Aquecimento'),
+  'physical.agilidade': tk('Agilidade e deslocamento'),
+  'physical.forca_inferior': tk('Força de membros inferiores'),
+  'physical.ombro_antebraco': tk('Ombro e antebraço'),
+  'physical.core': tk('Core'),
+  'physical.mobilidade': tk('Mobilidade'),
+  'physical.condicionamento': tk('Condicionamento'),
+  'rules.saque': tk('Regras do saque'),
+  'rules.cozinha': tk('Regras da cozinha'),
+  'rules.placar': tk('Contagem do placar'),
+  'rules.faltas': tk('Faltas e bolas fora'),
+  'experience.jogo': tk('Jogo e competição'),
 });
 
 export function isValidSkill(value) {
@@ -90,17 +91,18 @@ export function skillArea(value) {
 
 export function skillLabel(value) {
   const v = String(value ?? '').trim();
-  return SKILLS[v] || SKILL_AREA_LABELS[v] || v;
+  const rotulo = SKILLS[v] || SKILL_AREA_LABELS[v];
+  return rotulo ? t(rotulo) : v;
 }
 
 /** Lista para seletores: áreas e suas sub-habilidades, na ordem das áreas. */
 export function skillOptions() {
   return SKILL_AREAS.map((area) => ({
     value: area,
-    label: SKILL_AREA_LABELS[area],
+    label: t(SKILL_AREA_LABELS[area]),
     children: Object.keys(SKILLS)
       .filter((k) => skillArea(k) === area)
-      .map((k) => ({ value: k, label: SKILLS[k] })),
+      .map((k) => ({ value: k, label: t(SKILLS[k]) })),
   }));
 }
 
@@ -116,36 +118,36 @@ export const ITEM_KIND = Object.freeze({
 export const ITEM_KINDS = Object.freeze(Object.values(ITEM_KIND));
 
 export const ITEM_KIND_LABELS = Object.freeze({
-  drill: 'Drill',
-  treino: 'Treino',
-  fundamento: 'Fundamento',
-  jogada: 'Jogada',
-  fisico: 'Exercício físico',
-  estudo: 'Estudo',
+  drill: tk('Drill'),
+  treino: tk('Treino'),
+  fundamento: tk('Fundamento'),
+  jogada: tk('Jogada'),
+  fisico: tk('Exercício físico'),
+  estudo: tk('Estudo'),
 });
 
 /** Uma frase do que é cada tipo — aparece ao escolher o tipo no editor. */
 export const ITEM_KIND_HINTS = Object.freeze({
-  drill: 'Exercício de quadra repetível, com montagem, passo a passo e meta.',
-  treino: 'Uma sessão completa em blocos: aquecimento, parte técnica, jogo e volta à calma.',
-  fundamento: 'Como executar um golpe: fases do movimento, certo e errado, erros comuns.',
-  jogada: 'Quando e como usar uma jogada ou padrão tático, com o diagrama da quadra.',
-  fisico: 'Exercício de preparação física ou prevenção, com séries, repetições e descanso.',
-  estudo: 'Regra, vídeo ou leitura para estudar, com perguntas para fixar.',
+  drill: tk('Exercício de quadra repetível, com montagem, passo a passo e meta.'),
+  treino: tk('Uma sessão completa em blocos: aquecimento, parte técnica, jogo e volta à calma.'),
+  fundamento: tk('Como executar um golpe: fases do movimento, certo e errado, erros comuns.'),
+  jogada: tk('Quando e como usar uma jogada ou padrão tático, com o diagrama da quadra.'),
+  fisico: tk('Exercício de preparação física ou prevenção, com séries, repetições e descanso.'),
+  estudo: tk('Regra, vídeo ou leitura para estudar, com perguntas para fixar.'),
 });
 
 export const PLACES = Object.freeze(['quadra', 'parede', 'casa', 'academia']);
 export const PLACE_LABELS = Object.freeze({
-  quadra: 'Quadra', parede: 'Parede', casa: 'Em casa', academia: 'Academia',
+  quadra: tk('Quadra'), parede: tk('Parede'), casa: tk('Em casa'), academia: tk('Academia'),
 });
 
 export const EQUIPMENT = Object.freeze([
   'bolas', 'cones', 'alvo', 'parede', 'elastico', 'escada', 'cesto', 'maquina', 'raquete', 'rede_portatil',
 ]);
 export const EQUIPMENT_LABELS = Object.freeze({
-  bolas: 'Bolas', cones: 'Cones', alvo: 'Alvos', parede: 'Parede', elastico: 'Elástico',
-  escada: 'Escada de agilidade', cesto: 'Cesto de bolas', maquina: 'Máquina de bolas',
-  raquete: 'Raquete', rede_portatil: 'Rede portátil',
+  bolas: tk('Bolas'), cones: tk('Cones'), alvo: tk('Alvos'), parede: tk('Parede'), elastico: tk('Elástico'),
+  escada: tk('Escada de agilidade'), cesto: tk('Cesto de bolas'), maquina: tk('Máquina de bolas'),
+  raquete: tk('Raquete'), rede_portatil: tk('Rede portátil'),
 });
 
 export const MOTOR_ABILITIES = Object.freeze([
@@ -153,10 +155,10 @@ export const MOTOR_ABILITIES = Object.freeze([
   'potencia', 'resistencia', 'mobilidade', 'precisao', 'leitura',
 ]);
 export const MOTOR_ABILITY_LABELS = Object.freeze({
-  coordenacao: 'Coordenação', equilibrio: 'Equilíbrio', tempo_reacao: 'Tempo de reação',
-  agilidade: 'Agilidade', ritmo: 'Ritmo', forca: 'Força', potencia: 'Potência',
-  resistencia: 'Resistência', mobilidade: 'Mobilidade', precisao: 'Precisão',
-  leitura: 'Leitura e antecipação',
+  coordenacao: tk('Coordenação'), equilibrio: tk('Equilíbrio'), tempo_reacao: tk('Tempo de reação'),
+  agilidade: tk('Agilidade'), ritmo: tk('Ritmo'), forca: tk('Força'), potencia: tk('Potência'),
+  resistencia: tk('Resistência'), mobilidade: tk('Mobilidade'), precisao: tk('Precisão'),
+  leitura: tk('Leitura e antecipação'),
 });
 
 /**
@@ -168,31 +170,31 @@ export const TECHNIQUE_PARTS = Object.freeze([
   'empunhadura', 'olhar', 'pes', 'pernas', 'tronco', 'braco', 'punho', 'raquete',
 ]);
 export const TECHNIQUE_PART_LABELS = Object.freeze({
-  empunhadura: 'Empunhadura', olhar: 'Olhar', pes: 'Pés', pernas: 'Pernas',
-  tronco: 'Quadril e tronco', braco: 'Braço e ombro', punho: 'Punho', raquete: 'Face da raquete',
+  empunhadura: tk('Empunhadura'), olhar: tk('Olhar'), pes: tk('Pés'), pernas: tk('Pernas'),
+  tronco: tk('Quadril e tronco'), braco: tk('Braço e ombro'), punho: tk('Punho'), raquete: tk('Face da raquete'),
 });
 
 /** Escala de esforço CR-10 (RPE), com rótulos que qualquer pessoa entende. */
 export const RPE_LABELS = Object.freeze({
-  0: 'Repouso', 1: 'Muito, muito leve', 2: 'Leve', 3: 'Moderado', 4: 'Um pouco puxado',
-  5: 'Puxado', 6: 'Puxado', 7: 'Muito puxado', 8: 'Muito puxado', 9: 'Quase o máximo', 10: 'Máximo',
+  0: tk('Repouso'), 1: tk('Muito, muito leve'), 2: tk('Leve'), 3: tk('Moderado'), 4: tk('Um pouco puxado'),
+  5: tk('Puxado'), 6: tk('Puxado'), 7: tk('Muito puxado'), 8: tk('Muito puxado'), 9: tk('Quase o máximo'), 10: tk('Máximo'),
 });
 
 export function rpeLabel(value) {
   const n = Math.round(Number(value));
-  return Number.isFinite(n) && n >= 0 && n <= 10 ? RPE_LABELS[n] : '';
+  return Number.isFinite(n) && n >= 0 && n <= 10 ? t(RPE_LABELS[n]) : '';
 }
 
 export const BLOCK_TYPES = Object.freeze(['aquecimento', 'tecnica', 'tatica', 'jogo', 'fisico', 'volta_calma']);
 export const BLOCK_TYPE_LABELS = Object.freeze({
-  aquecimento: 'Aquecimento', tecnica: 'Técnica', tatica: 'Tática', jogo: 'Jogo',
-  fisico: 'Físico', volta_calma: 'Volta à calma',
+  aquecimento: tk('Aquecimento'), tecnica: tk('Técnica'), tatica: tk('Tática'), jogo: tk('Jogo'),
+  fisico: tk('Físico'), volta_calma: tk('Volta à calma'),
 });
 
 export const METRIC_TYPES = Object.freeze(['sequencia', 'percentual', 'placar', 'tempo', 'reps']);
 export const METRIC_TYPE_LABELS = Object.freeze({
-  sequencia: 'Sequência sem errar', percentual: 'Acertos em %', placar: 'Placar',
-  tempo: 'Tempo', reps: 'Repetições',
+  sequencia: tk('Sequência sem errar'), percentual: tk('Acertos em %'), placar: tk('Placar'),
+  tempo: tk('Tempo'), reps: tk('Repetições'),
 });
 
 /**
@@ -202,14 +204,14 @@ export const METRIC_TYPE_LABELS = Object.freeze({
  */
 export const PRACTICE_MODES = Object.freeze(['bloco', 'variado', 'aleatorio', 'jogo']);
 export const PRACTICE_MODE_LABELS = Object.freeze({
-  bloco: 'Em bloco (repetição do mesmo golpe)',
-  variado: 'Variado (alterna golpes ou alvos)',
-  aleatorio: 'Aleatório (não se sabe o que vem)',
-  jogo: 'Jogo reduzido (pontuação, situação de jogo)',
+  bloco: tk('Em bloco (repetição do mesmo golpe)'),
+  variado: tk('Variado (alterna golpes ou alvos)'),
+  aleatorio: tk('Aleatório (não se sabe o que vem)'),
+  jogo: tk('Jogo reduzido (pontuação, situação de jogo)'),
 });
 
 export const STUDY_TYPES = Object.freeze(['regra', 'video', 'leitura']);
-export const STUDY_TYPE_LABELS = Object.freeze({ regra: 'Regra', video: 'Vídeo', leitura: 'Leitura' });
+export const STUDY_TYPE_LABELS = Object.freeze({ regra: tk('Regra'), video: tk('Vídeo'), leitura: tk('Leitura') });
 
 export const LEVEL_MIN = 2;
 export const LEVEL_MAX = 8;
