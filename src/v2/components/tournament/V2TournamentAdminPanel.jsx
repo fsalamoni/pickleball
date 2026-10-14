@@ -11,6 +11,7 @@ import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
 import { isTournamentComplete } from '@/modules/tournament/domain/tournamentCompletion';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
+import { t, tk } from '@/core/i18n';
 
 /**
  * Encerra o torneio automaticamente quando o último resultado é lançado
@@ -42,11 +43,11 @@ function useAutoCloseTournament(tournament) {
 
 // `dica`: âncora das dicas guiadas — é para onde a seta do guia do torneio aponta.
 const ADMIN_TABS = [
-  { value: 'geral', label: 'Geral', icon: Settings2, dica: 'torneio-aba-geral' },
-  { value: 'modalidades', label: 'Modalidades', icon: FolderCog, dica: 'torneio-aba-modalidades' },
-  { value: 'inscricoes', label: 'Inscrições', icon: Users, dica: 'torneio-aba-inscricoes' },
-  { value: 'sorteio', label: 'Sorteio', icon: ClipboardCheck, dica: 'torneio-aba-sorteio' },
-  { value: 'resultados', label: 'Resultados', icon: Swords, dica: 'torneio-aba-resultados' },
+  { value: 'geral', label: tk('Geral'), icon: Settings2, dica: 'torneio-aba-geral' },
+  { value: 'modalidades', label: tk('Modalidades'), icon: FolderCog, dica: 'torneio-aba-modalidades' },
+  { value: 'inscricoes', label: tk('Inscrições'), icon: Users, dica: 'torneio-aba-inscricoes' },
+  { value: 'sorteio', label: tk('Sorteio'), icon: ClipboardCheck, dica: 'torneio-aba-sorteio' },
+  { value: 'resultados', label: tk('Resultados'), icon: Swords, dica: 'torneio-aba-resultados' },
 ];
 
 export default function V2TournamentAdminPanel({ tournament }) {
@@ -54,9 +55,10 @@ export default function V2TournamentAdminPanel({ tournament }) {
   const opsOn = true;
   useAutoCloseTournament(tournament);
 
+  const abas = ADMIN_TABS.map((a) => ({ ...a, label: t(a.label) }));
   const tabs = opsOn
-    ? [{ value: 'resumo', label: 'Resumo', icon: LayoutDashboard }, ...ADMIN_TABS]
-    : ADMIN_TABS;
+    ? [{ value: 'resumo', label: t('Resumo'), icon: LayoutDashboard }, ...abas]
+    : abas;
 
   return (
     <div className="space-y-6">
@@ -65,9 +67,9 @@ export default function V2TournamentAdminPanel({ tournament }) {
         <div className="relative z-10 max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-widest text-acid">
-              <Sparkles className="h-3.5 w-3.5" /> Hub administrativo
+              <Sparkles className="h-3.5 w-3.5" /> {t('Hub administrativo')}
             </span>
-            <V2Badge tone="amber">Somente admins</V2Badge>
+            <V2Badge tone="amber">{t('Somente admins')}</V2Badge>
           </div>
 
           <div className="mt-5 flex items-start gap-4">
@@ -75,9 +77,9 @@ export default function V2TournamentAdminPanel({ tournament }) {
               <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-display text-2xl font-bold leading-tight text-white sm:text-3xl">Controle a operação do torneio.</h3>
+              <h3 className="font-display text-2xl font-bold leading-tight text-white sm:text-3xl">{t('Controle a operação do torneio.')}</h3>
               <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-                Status, modalidades, inscrições, sorteio e resultados — separados da visão do atleta.
+                {t('Status, modalidades, inscrições, sorteio e resultados — separados da visão do atleta.')}
               </p>
             </div>
           </div>
@@ -87,7 +89,7 @@ export default function V2TournamentAdminPanel({ tournament }) {
       {/* Quebra em linhas no celular em vez de rolar para o lado: aba que não
           cabe na tela não é vista. */}
       <V2SectionNav
-        ariaLabel="Abas da gestão do torneio"
+        ariaLabel={t('Abas da gestão do torneio')}
         dica="torneio-gestao-secoes"
         sections={tabs.map(({ value, label, icon, dica }) => ({ id: value, label, icon, dica }))}
         activeId={activeTab}

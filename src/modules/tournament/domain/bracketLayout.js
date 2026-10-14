@@ -16,6 +16,8 @@
  */
 
 /** Tipos de fase eliminatória (só neles existem "fases finais"). */
+import { t } from '@/core/i18n';
+
 const KNOCKOUT_STAGE_TYPES = new Set(['knockout', 'double_knockout']);
 
 /**
@@ -33,7 +35,7 @@ export function isKnockoutSet(matches = []) {
   if (list.some((m) => m?.bracket)) return true; // wb/lb/gf só existem em chave
   const types = list.map((m) => m?.stage_type).filter(Boolean);
   if (types.length === 0) return true;
-  return types.some((t) => KNOCKOUT_STAGE_TYPES.has(t));
+  return types.some((tt) => KNOCKOUT_STAGE_TYPES.has(tt));
 }
 
 /**
@@ -56,11 +58,11 @@ export function isWinnersBracketMatch(m) {
 /** Rótulo da rodada a partir da distância até a final. */
 export function roundLabel(round, totalRounds) {
   const fromEnd = totalRounds - round;
-  if (fromEnd === 0) return 'Final';
-  if (fromEnd === 1) return 'Semifinal';
-  if (fromEnd === 2) return 'Quartas de final';
-  if (fromEnd === 3) return 'Oitavas de final';
-  return `Rodada ${round}`;
+  if (fromEnd === 0) return t('Final');
+  if (fromEnd === 1) return t('Semifinal');
+  if (fromEnd === 2) return t('Quartas de final');
+  if (fromEnd === 3) return t('Oitavas de final');
+  return t('Rodada {round}', { round });
 }
 
 /**
@@ -87,7 +89,7 @@ export function buildBracketColumns(matches = []) {
     const rounds = [...new Set(ko.map((m) => Number(m.round)))].sort((a, b) => a - b);
     const columns = rounds.map((round) => ({
       round,
-      label: `Rodada ${round}`,
+      label: t('Rodada {round}', { round }),
       matches: ko.filter((m) => Number(m.round) === round).slice().sort(byPosition),
     }));
     return { columns, totalRounds: rounds[rounds.length - 1], kind: 'rounds', thirdPlace: null };
@@ -131,8 +133,8 @@ export function buildBracketColumns(matches = []) {
 
 /** Referência a um jogo anterior: "Vencedor do jogo 3" / "Perdedor do jogo 5". */
 export function refLabel(ref) {
-  if (!ref) return 'A definir';
-  return `${ref.tipo === 'perdedor' ? 'Perdedor' : 'Vencedor'} do jogo ${ref.jogo}`;
+  if (!ref) return t('A definir');
+  return t('{v1} do jogo {jogo}', { v1: ref.tipo === 'perdedor' ? t('Perdedor') : t('Vencedor'), jogo: ref.jogo });
 }
 
 function vencedorDe(n) { return n ? { tipo: 'vencedor', jogo: n } : null; }
@@ -169,7 +171,7 @@ export function buildKnockoutDiagram(matches = [], opts = {}) {
 
   const wbCols = base.columns.map((col, ci) => ({
     round: col.round,
-    label: double && ci === base.columns.length - 1 ? 'Final da chave principal' : col.label,
+    label: double && ci === base.columns.length - 1 ? t('Final da chave principal') : col.label,
     cells: col.matches.map((m, i) => ({
       ...m,
       refs: m.from ? [vencedorDe(m.from[0]), vencedorDe(m.from[1])] : null,
@@ -180,7 +182,7 @@ export function buildKnockoutDiagram(matches = [], opts = {}) {
   let numero = wbCols.reduce((s, c) => s + c.cells.length, 0);
   const wbFinal = wbCols[wbCols.length - 1].cells[0];
 
-  const sections = [{ key: 'principal', title: double ? 'Chave principal' : null, columns: wbCols }];
+  const sections = [{ key: 'principal', title: double ? t('Chave principal') : null, columns: wbCols }];
   let decisive = wbFinal;
   let thirdPlace = null;
   const extraCols = [];
@@ -220,11 +222,11 @@ export function buildKnockoutDiagram(matches = [], opts = {}) {
       }
       lbCols.push({
         round: r,
-        label: r === lbRounds ? 'Final da repescagem' : `Repescagem · rodada ${r}`,
+        label: r === lbRounds ? t('Final da repescagem') : t('Repescagem · rodada {r}', { r }),
         cells,
       });
     }
-    if (lbCols.length) sections.push({ key: 'repescagem', title: 'Repescagem', columns: lbCols });
+    if (lbCols.length) sections.push({ key: 'repescagem', title: t('Repescagem'), columns: lbCols });
 
     const lbFinal = lbCols[lbCols.length - 1]?.cells[0];
     const gfReal = (r) => lista.find((m) => m?.bracket === 'gf' && Number(m.round || 1) === r);
@@ -234,13 +236,13 @@ export function buildKnockoutDiagram(matches = [], opts = {}) {
     const gf1 = g1
       ? { ...g1, number: numero, refs: gfRefs, feeders: [0] }
       : { id: 'vaga-gf-1', placeholder: true, number: numero, refs: gfRefs, feeders: [0] };
-    extraCols.push({ round: 'gf', label: 'Grande final', cells: [gf1] });
+    extraCols.push({ round: 'gf', label: t('Grande final'), cells: [gf1] });
     decisive = gf1;
     const g2 = gfReal(2);
     if (g2) {
       numero += 1;
       const gf2 = { ...g2, number: numero, refs: [vencedorDe(gf1.number), perdedorDe(gf1.number)], feeders: [0] };
-      extraCols.push({ round: 'gf2', label: 'Grande final · desempate', cells: [gf2] });
+      extraCols.push({ round: 'gf2', label: t('Grande final · desempate'), cells: [gf2] });
       decisive = gf2;
     }
   } else if (base.thirdPlace || (opts.thirdPlace && wbCols.length >= 2)) {

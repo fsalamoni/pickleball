@@ -40,18 +40,19 @@ import StageExplanation from './StageExplanation';
 import PhaseRulesSummary from './PhaseRulesSummary';
 import NextPhasePreview from './NextPhasePreview';
 import DirectEntryPanel from '@/v2/components/tournament/DirectEntryPanel';
+import { t, fmtData } from '@/core/i18n';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '—' : fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 function roundLabel(m) {
-  if (m.third_place) return 'Disputa de 3º lugar';
-  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
-  if (m.bracket === 'wb') return `Vencedores R${m.round}`;
-  if (m.bracket === 'lb') return `Repescagem R${m.round}`;
+  if (m.third_place) return t('Disputa de 3º lugar');
+  if (m.bracket === 'gf') return m.round === 2 ? t('Final (reset)') : t('Grande final');
+  if (m.bracket === 'wb') return t('Vencedores R{round}', { round: m.round });
+  if (m.bracket === 'lb') return t('Repescagem R{round}', { round: m.round });
   return `R${m.round}`;
 }
 
@@ -81,7 +82,7 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
     try {
       await updateModality.mutateAsync({ id: modality.id, updates: { stages } });
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar a configuração das fases.');
+      toast.error(err?.message || t('Não foi possível salvar a configuração das fases.'));
     } finally {
       setSavingStages(false);
     }
@@ -90,7 +91,7 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
   return (
     <CollapsibleSection
       title={modality.name}
-      subtitle={`${phases.length} fases · inscrição em lista única · ${registrations.length} inscrito(s)`}
+      subtitle={t('{n} fases · inscrição em lista única · {n2} inscrito(s)', { n: phases.length, n2: registrations.length })}
       defaultOpen
     >
       <div className="space-y-3">
@@ -186,12 +187,12 @@ function PhaseSection({
         // Só é reconhecimento quando a tela REALMENTE viu os jogos.
         replacesKnownMatches: matches.length > 0,
       });
-      toast.success(`Fase ${stageIndex + 1} sorteada (${res.groups.length} grupo(s)).`);
+      toast.success(t('Fase {v1} sorteada ({n} grupo(s)).', { v1: stageIndex + 1, n: res.groups.length }));
       (res.scheduleWarnings || []).length > 0
-        && toast.warning(`${res.scheduleWarnings.length} jogo(s) sem horário — ajuste quadras/horário.`);
+        && toast.warning(t('{n} jogo(s) sem horário — ajuste quadras/horário.', { n: res.scheduleWarnings.length }));
     } catch (err) {
-      setError(err?.message || 'Falha ao sortear.');
-      toast.error(err?.message || 'Falha ao sortear.');
+      setError(err?.message || t('Falha ao sortear.'));
+      toast.error(err?.message || t('Falha ao sortear.'));
     } finally {
       setRunning(false);
     }
@@ -206,12 +207,12 @@ function PhaseSection({
         modality,
         tournament,
       });
-      if (res.complete) toast.success(ehEtapas ? 'Todas as etapas foram jogadas — a classificação final está valendo. 🏆' : 'Fase concluída — definido! 🏆');
+      if (res.complete) toast.success(ehEtapas ? t('Todas as etapas foram jogadas — a classificação final está valendo. 🏆') : t('Fase concluída — definido! 🏆'));
       else toast.success(ehEtapas
-        ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
-        : (res.created ? `${res.created} confronto(s) novo(s) na chave.` : 'Chave atualizada com os vencedores certos.'));
+        ? t('Etapa {proxima} gerada ({created} jogo(s)), com os grupos refeitos.', { proxima: progEtapas?.proxima, created: res.created })
+        : (res.created ? t('{created} confronto(s) novo(s) na chave.', { created: res.created }) : t('Chave atualizada com os vencedores certos.')));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível avançar a rodada.');
+      toast.error(err?.message || t('Não foi possível avançar a rodada.'));
     } finally {
       setRunning(false);
     }
@@ -225,9 +226,9 @@ function PhaseSection({
         modalityId: modality.id,
         stageIndex,
       });
-      toast.success(`Fase ${res.nextStageIndex + 1} gerada com ${res.groups.length} grupo(s)/chave.`);
+      toast.success(t('Fase {v1} gerada com {n} grupo(s)/chave.', { v1: res.nextStageIndex + 1, n: res.groups.length }));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível gerar a próxima fase.');
+      toast.error(err?.message || t('Não foi possível gerar a próxima fase.'));
     } finally {
       setRunning(false);
     }
@@ -238,7 +239,7 @@ function PhaseSection({
       {isFirst && (
         <Button size="sm" onClick={doDraw} disabled={running}>
           <Shuffle className="w-4 h-4 mr-1" />
-          {matches.length > 0 ? 'Re-sortear' : 'Sortear grupos e jogos'}
+          {matches.length > 0 ? t('Re-sortear') : t('Sortear grupos e jogos')}
         </Button>
       )}
       {hasGroups && (
@@ -247,9 +248,9 @@ function PhaseSection({
           variant="outline"
           onClick={() => setGroupsEditorOpen(true)}
           disabled={running}
-          title="Mover participantes entre os grupos sorteados desta fase"
+          title={t('Mover participantes entre os grupos sorteados desta fase')}
         >
-          <Users className="w-4 h-4 mr-1" /> Editar grupos
+          <Users className="w-4 h-4 mr-1" /> {t('Editar grupos')}
         </Button>
       )}
       {withinAdvance && matches.length > 0 && (!ehEtapas || progEtapas.podeGerar) && (
@@ -258,9 +259,9 @@ function PhaseSection({
           variant="outline"
           onClick={doWithinAdvance}
           disabled={running}
-          title={ehEtapas ? 'Refaz os grupos, misturando quem ainda não se encontrou' : undefined}
+          title={ehEtapas ? t('Refaz os grupos, misturando quem ainda não se encontrou') : undefined}
         >
-          <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : 'Avançar rodada'}
+          <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : t('Avançar rodada')}
         </Button>
       )}
       {!isLast && (
@@ -270,10 +271,10 @@ function PhaseSection({
           onClick={doAdvanceToNext}
           disabled={running || !faseFechada}
           title={faseFechada
-            ? 'Classificar e gerar a próxima fase'
-            : (ehEtapas && allDone ? `Jogue as ${progEtapas.total} etapas antes de gerar a próxima fase` : 'Conclua todos os jogos desta fase')}
+            ? t('Classificar e gerar a próxima fase')
+            : (ehEtapas && allDone ? t('Jogue as {total} etapas antes de gerar a próxima fase', { total: progEtapas.total }) : t('Conclua todos os jogos desta fase'))}
         >
-          <ArrowDownToLine className="w-4 h-4 mr-1" /> Gerar próxima fase
+          <ArrowDownToLine className="w-4 h-4 mr-1" /> {t('Gerar próxima fase')}
         </Button>
       )}
     </>
@@ -283,12 +284,12 @@ function PhaseSection({
     <CollapsibleSection
       className="border-gray-200 bg-paper/40"
       headerClassName="py-1.5"
-      title={`Fase ${stageIndex + 1}`}
+      title={t('Fase {v1}', { v1: stageIndex + 1 })}
       badges={(
         <>
           <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[phase.type]}</Badge>
           <span className="text-xs text-gray-500">
-            {matches.length > 0 ? `${playedCount}/${matches.length} jogos` : 'não sorteada'}
+            {matches.length > 0 ? t('{playedCount}/{n} jogos', { playedCount, n: matches.length }) : t('não sorteada')}
           </span>
         </>
       )}
@@ -299,8 +300,8 @@ function PhaseSection({
         {falhouJogos && (
           <V2ErrorState
             inline
-            title="Não foi possível carregar os jogos desta fase"
-            description="Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar."
+            title={t('Não foi possível carregar os jogos desta fase')}
+            description={t('Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar.')}
             onRetry={recarregarJogos}
           />
         )}
@@ -367,13 +368,13 @@ function PhaseSection({
               <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-2 py-1">#</th>
-                  {matches.some((m) => m.group) && <th className="px-2 py-1">Grupo</th>}
-                  <th className="px-2 py-1">Rod.</th>
-                  {matches.some((m) => m.court || m.scheduled_at) && <th className="px-2 py-1">Quadra</th>}
-                  {matches.some((m) => m.scheduled_at) && <th className="px-2 py-1">Horário</th>}
-                  <th className="px-2 py-1">Lado A</th>
-                  <th className="px-2 py-1">Lado B</th>
-                  <th className="px-2 py-1">Status</th>
+                  {matches.some((m) => m.group) && <th className="px-2 py-1">{t('Grupo')}</th>}
+                  <th className="px-2 py-1">{t('Rod.')}</th>
+                  {matches.some((m) => m.court || m.scheduled_at) && <th className="px-2 py-1">{t('Quadra')}</th>}
+                  {matches.some((m) => m.scheduled_at) && <th className="px-2 py-1">{t('Horário')}</th>}
+                  <th className="px-2 py-1">{t('Lado A')}</th>
+                  <th className="px-2 py-1">{t('Lado B')}</th>
+                  <th className="px-2 py-1">{t('Status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -416,8 +417,7 @@ function PhaseSection({
 
         {matches.length === 0 && !isFirst && (
           <p className="text-xs text-gray-500">
-            Esta fase será gerada automaticamente ao concluir a fase anterior e clicar em
-            “Gerar próxima fase”.
+            {t('Esta fase será gerada automaticamente ao concluir a fase anterior e clicar em “Gerar próxima fase”.')}
           </p>
         )}
       </div>
@@ -463,8 +463,8 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
               <button
                 type="button"
                 onClick={() => onSubstitute(regId)}
-                title={`Substituir ${name}`}
-                aria-label={`Substituir ${name}`}
+                title={t('Substituir {name}', { name })}
+                aria-label={t('Substituir {name}', { name })}
                 className="text-gray-400 hover:text-green-600 focus-visible:text-green-600 transition-colors ml-1"
               >
                 <Pencil className="w-3 h-3" />
@@ -501,9 +501,9 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
         entrantId,
         toGroupName,
       });
-      toast.success('Participante movido e jogos da fase regerados.');
+      toast.success(t('Participante movido e jogos da fase regerados.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível mover o participante.');
+      toast.error(err?.message || t('Não foi possível mover o participante.'));
     }
   }
 
@@ -520,15 +520,14 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
     <Dialog open onOpenChange={(o) => !moveMutation.isPending && !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar grupos · {modality.name}</DialogTitle>
+          <DialogTitle>{t('Editar grupos · {name}', { name: modality.name })}</DialogTitle>
           <DialogDescription>
-            Mova participantes entre os grupos desta fase. Ao mover, os jogos da fase são
-            regerados com a nova composição{hasPlayedScores ? ' — os placares já lançados nesta fase serão perdidos' : ''}.
+            {t('Mova participantes entre os grupos desta fase. Ao mover, os jogos da fase são regerados com a nova composição')}{hasPlayedScores ? t(' — os placares já lançados nesta fase serão perdidos') : ''}.
           </DialogDescription>
         </DialogHeader>
 
         {groups.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum grupo sorteado nesta fase.</p>
+          <p className="text-sm text-gray-500">{t('Nenhum grupo sorteado nesta fase.')}</p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {groups.map((g) => {
@@ -541,7 +540,7 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
                   </div>
                   <div className="space-y-1.5">
                     {entrants.length === 0 ? (
-                      <p className="text-xs text-gray-400">Grupo vazio</p>
+                      <p className="text-xs text-gray-400">{t('Grupo vazio')}</p>
                     ) : (
                       entrants.map((e) => (
                         <div key={e.id} className="flex items-center justify-between gap-2">
@@ -551,12 +550,12 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
                             value={g.name}
                             disabled={moveMutation.isPending}
                             onChange={(ev) => requestMove(e, ev.target.value, g.name)}
-                            aria-label={`Mover ${entrantLabel(e)} para outro grupo`}
-                            title="Mover para outro grupo"
+                            aria-label={t('Mover {e} para outro grupo', { e: entrantLabel(e) })}
+                            title={t('Mover para outro grupo')}
                           >
                             {groupNames.map((name) => (
                               <option key={name} value={name}>
-                                {name === g.name ? `${name} (atual)` : `Mover para ${name}`}
+                                {name === g.name ? t('{name} (atual)', { name }) : t('Mover para {name}', { name })}
                               </option>
                             ))}
                           </select>
@@ -572,7 +571,7 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={moveMutation.isPending}>
-            {moveMutation.isPending ? 'Movendo…' : 'Fechar'}
+            {moveMutation.isPending ? t('Movendo…') : t('Fechar')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -581,14 +580,14 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
         open={Boolean(pendingMove)}
         onOpenChange={(o) => !o && !moveMutation.isPending && setPendingMove(null)}
         destructive
-        title="Mover participante e refazer os jogos?"
+        title={t('Mover participante e refazer os jogos?')}
         description={
           pendingMove
-            ? `${pendingMove.name} vai do ${pendingMove.fromGroupName} para o ${pendingMove.toGroupName}. `
-              + 'Os jogos desta fase serão regerados e os placares já lançados nela serão perdidos.'
+            ? t('{name} vai do {fromGroupName} para o {toGroupName}. ', { name: pendingMove.name, fromGroupName: pendingMove.fromGroupName, toGroupName: pendingMove.toGroupName })
+              + t('Os jogos desta fase serão regerados e os placares já lançados nela serão perdidos.')
             : ''
         }
-        confirmLabel="Mover e refazer jogos"
+        confirmLabel={t('Mover e refazer jogos')}
         loading={moveMutation.isPending}
         onConfirm={async () => {
           if (!pendingMove) return;
@@ -628,10 +627,10 @@ function SubstitutePlayerDialog({
         oldRegistrationId: registrationId,
         newRegistrationId: selectedId,
       });
-      toast.success('Jogador substituído com sucesso.');
+      toast.success(t('Jogador substituído com sucesso.'));
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Falha ao substituir jogador.');
+      toast.error(err.message || t('Falha ao substituir jogador.'));
     }
   }
 
@@ -639,17 +638,17 @@ function SubstitutePlayerDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Substituir jogador</DialogTitle>
+          <DialogTitle>{t('Substituir jogador')}</DialogTitle>
           <DialogDescription>
-            Substituindo: <strong>{currentName}</strong>
+            {t('Substituindo:')} <strong>{currentName}</strong>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Substituto</Label>
+            <Label>{t('Substituto')}</Label>
             {available.length === 0 ? (
               <p className="text-sm text-gray-500 mt-1">
-                Nenhum jogador disponível para substituição.
+                {t('Nenhum jogador disponível para substituição.')}
               </p>
             ) : (
               <select
@@ -657,7 +656,7 @@ function SubstitutePlayerDialog({
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
               >
-                <option value="">— selecione um jogador —</option>
+                <option value="">{t('— selecione um jogador —')}</option>
                 {available.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label || r.player_a_name}
@@ -669,13 +668,13 @@ function SubstitutePlayerDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            {t('Cancelar')}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={!selectedId || substituteMutation.isPending}
           >
-            {substituteMutation.isPending ? 'Substituindo…' : 'Confirmar substituição'}
+            {substituteMutation.isPending ? t('Substituindo…') : t('Confirmar substituição')}
           </Button>
         </DialogFooter>
       </DialogContent>

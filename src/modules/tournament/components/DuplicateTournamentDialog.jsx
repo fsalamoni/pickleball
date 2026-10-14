@@ -16,6 +16,7 @@ import { Copy, Users } from 'lucide-react';
 import { useModalities, useRegistrationsByTournament, useDuplicateTournament } from '@/modules/tournament/hooks/useTournament';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { copyableRegistrations, validateDuplicationPlan } from '@/modules/tournament/domain/duplication';
+import { t } from '@/core/i18n';
 
 /**
  * Dialog de duplicação de torneio (criador/admin do torneio).
@@ -86,7 +87,7 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
     const modalitySelections = modalities.map((m) => ({ selected: selectionFor(m.id).selected }));
     const error = validateDuplicationPlan({ copyDefinitions, modalitySelections });
     if (error) return toast.error(error);
-    if (!name.trim()) return toast.error('Informe o nome do novo torneio.');
+    if (!name.trim()) return toast.error(t('Informe o nome do novo torneio.'));
 
     const selectedModalities = modalities
       .filter((m) => selectionFor(m.id).selected)
@@ -104,13 +105,13 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
         modalities: selectedModalities,
       });
       toast.success(
-        `Torneio duplicado: ${result.modalityCount} modalidade(s)`
-        + `${result.registrationCount ? ` e ${result.registrationCount} inscrito(s)` : ''}.`,
+        t('Torneio duplicado: {modalityCount} modalidade(s)', { modalityCount: result.modalityCount })
+        + `${result.registrationCount ? t(' e {registrationCount} inscrito(s)', { registrationCount: result.registrationCount }) : ''}.`,
       );
       onClose();
       navigate(`/torneios/${result.tournamentId}/admin`);
     } catch (err) {
-      toast.error(err?.message || 'Falha ao duplicar o torneio.');
+      toast.error(err?.message || t('Falha ao duplicar o torneio.'));
     }
   }
 
@@ -118,9 +119,9 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Duplicar torneio</DialogTitle>
+          <DialogTitle>{t('Duplicar torneio')}</DialogTitle>
           <DialogDescription>
-            Gera uma cópia como rascunho. O sorteio (grupos, jogos e ranking) nunca é copiado.
+            {t('Gera uma cópia como rascunho. O sorteio (grupos, jogos e ranking) nunca é copiado.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -133,13 +134,13 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
               onChange={(e) => toggleFull(e.target.checked)}
             />
             <span className="text-sm">
-              <span className="font-semibold text-ink">Duplicar integralmente</span>
-              <span className="block text-xs text-gray-500">Definições, todas as modalidades e todos os inscritos.</span>
+              <span className="font-semibold text-ink">{t('Duplicar integralmente')}</span>
+              <span className="block text-xs text-gray-500">{t('Definições, todas as modalidades e todos os inscritos.')}</span>
             </span>
           </label>
 
           <div className="space-y-2">
-            <Label>Nome do novo torneio</Label>
+            <Label>{t('Nome do novo torneio')}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
@@ -151,15 +152,15 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
               onChange={(e) => setCopyDefinitions(e.target.checked)}
             />
             <span className="text-sm">
-              <span className="font-medium text-ink">Copiar definições</span>
-              <span className="block text-xs text-gray-500">Descrição, local, regras, datas, acesso e capa.</span>
+              <span className="font-medium text-ink">{t('Copiar definições')}</span>
+              <span className="block text-xs text-gray-500">{t('Descrição, local, regras, datas, acesso e capa.')}</span>
             </span>
           </label>
 
           <div>
-            <div className="text-sm font-medium text-ink">Modalidades</div>
+            <div className="text-sm font-medium text-ink">{t('Modalidades')}</div>
             {modalities.length === 0 ? (
-              <p className="mt-1 text-xs text-gray-500">Este torneio não tem modalidades.</p>
+              <p className="mt-1 text-xs text-gray-500">{t('Este torneio não tem modalidades.')}</p>
             ) : (
               <div className="mt-2 space-y-2">
                 {modalities.map((m) => {
@@ -177,7 +178,7 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
                         <span className="min-w-0 text-sm">
                           <span className="font-medium text-ink">{m.name}</span>
                           <span className="block text-xs text-gray-500">
-                            {MODALITY_FORMAT_LABELS[m.format]} · {count} inscrito(s)
+                            {t('{formato} · {count} inscrito(s)', { formato: MODALITY_FORMAT_LABELS[m.format], count })}
                           </span>
                         </span>
                       </label>
@@ -191,7 +192,7 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
                             onChange={(e) => setModality(m.id, { copyRegistrations: e.target.checked })}
                           />
                           <Users className="h-3.5 w-3.5" />
-                          {count === 0 ? 'Sem inscritos para copiar' : `Copiar os ${count} inscrito(s) desta modalidade`}
+                          {count === 0 ? t('Sem inscritos para copiar') : t('Copiar os {count} inscrito(s) desta modalidade', { count })}
                         </label>
                       )}
                     </div>
@@ -203,10 +204,10 @@ export default function DuplicateTournamentDialog({ tournament, open, onClose })
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>{t('Cancelar')}</Button>
           <Button onClick={handleSubmit} disabled={duplicateMutation.isPending}>
             <Copy className="w-4 h-4 mr-1" />
-            {duplicateMutation.isPending ? 'Duplicando…' : 'Duplicar'}
+            {duplicateMutation.isPending ? t('Duplicando…') : t('Duplicar')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,6 +3,7 @@ import { CheckCircle2, Info, AlertTriangle, XCircle, ListChecks, Lightbulb } fro
 import { explainStage } from '@/modules/tournament/domain/formatExplain';
 import { suggestGroupPlans } from '@/modules/tournament/domain/groupPlan';
 import { TOURNAMENT_STAGE_TYPE } from '@/modules/tournament/domain/constants';
+import { t } from '@/core/i18n';
 
 const STATUS_STYLES = {
   ok: {
@@ -85,10 +86,10 @@ export default function StageExplanation({
             <div className="flex flex-wrap gap-x-4 gap-y-1 font-semibold">
               <span className="inline-flex items-center gap-1">
                 <ListChecks className="h-3 w-3" />
-                {explanation.stats.totalMatches} jogos no total
+                {t('{totalMatches} jogos no total', { totalMatches: explanation.stats.totalMatches })}
               </span>
               {explanation.stats.rounds > 0 && (
-                <span>{explanation.stats.rounds} rodadas</span>
+                <span>{t('{rounds} rodadas', { rounds: explanation.stats.rounds })}</span>
               )}
             </div>
           )}
@@ -105,15 +106,15 @@ export default function StageExplanation({
           {alternativas.length > 0 && (
             <div className="space-y-1 border-t border-current/15 pt-2">
               <p className="inline-flex items-center gap-1 font-semibold">
-                <Lightbulb aria-hidden="true" className="h-3 w-3" /> Outras divisões possíveis
+                <Lightbulb aria-hidden="true" className="h-3 w-3" /> {t('Outras divisões possíveis')}
               </p>
               <ul className="space-y-0.5">
                 {alternativas.map((p) => (
                   <li key={p.groupCount}>
-                    <strong>{p.groupCount} {p.groupCount === 1 ? 'grupo' : 'grupos'}</strong>
-                    {' '}({p.sizes.join('+')}) · {p.totalMatches} jogos ·{' '}
-                    {p.qualifiers} classificados → chave de {p.bracket.size}
-                    {p.bracket.byes > 0 ? ` com ${p.bracket.byes} bye(s)` : ' cheia'}
+                    <strong>{p.groupCount} {p.groupCount === 1 ? t('grupo') : t('grupos')}</strong>
+                    {' '}({p.sizes.join('+')}{t(') · {totalMatches} jogos ·', { totalMatches: p.totalMatches })}{' '}
+                    {t('{qualifiers} classificados → chave de {size}', { qualifiers: p.qualifiers, size: p.bracket.size })}
+                    {p.bracket.byes > 0 ? t('com {byes} bye(s)', { byes: p.bracket.byes }) : t(' cheia')}
                   </li>
                 ))}
               </ul>

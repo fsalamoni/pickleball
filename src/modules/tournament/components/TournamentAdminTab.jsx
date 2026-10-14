@@ -53,6 +53,7 @@ import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
 import TournamentAnnouncementsCard from '@/modules/tournament/components/TournamentAnnouncementsCard';
+import { t, tk } from '@/core/i18n';
 
 function buildFormState(tournament) {
   return {
@@ -76,26 +77,26 @@ function buildFormState(tournament) {
 const STATUS_ACTIONS = [
   {
     value: TOURNAMENT_STATUS.REGISTRATIONS_OPEN,
-    label: 'Abrir inscrições',
-    description: 'Permite novas entradas nas modalidades.',
+    label: tk('Abrir inscrições'),
+    description: tk('Permite novas entradas nas modalidades.'),
     icon: Play,
   },
   {
     value: TOURNAMENT_STATUS.REGISTRATIONS_CLOSED,
-    label: 'Encerrar inscrições',
-    description: 'Fecha novas entradas e estabiliza a lista.',
+    label: tk('Encerrar inscrições'),
+    description: tk('Fecha novas entradas e estabiliza a lista.'),
     icon: Lock,
   },
   {
     value: TOURNAMENT_STATUS.IN_PROGRESS,
-    label: 'Iniciar torneio',
-    description: 'Marca o evento como em andamento.',
+    label: tk('Iniciar torneio'),
+    description: tk('Marca o evento como em andamento.'),
     icon: Settings2,
   },
   {
     value: TOURNAMENT_STATUS.FINISHED,
-    label: 'Encerrar torneio',
-    description: 'Fecha a operação e mantém o histórico publicado.',
+    label: tk('Encerrar torneio'),
+    description: tk('Fecha a operação e mantém o histórico publicado.'),
     icon: CheckCircle2,
   },
 ];
@@ -130,22 +131,22 @@ export default function TournamentAdminTab({ tournament }) {
     try {
       if (isArchived) {
         await unarchiveMutation.mutateAsync();
-        toast.success('Torneio desarquivado. Ele voltou a aparecer publicamente.');
+        toast.success(t('Torneio desarquivado. Ele voltou a aparecer publicamente.'));
       } else {
         await archiveMutation.mutateAsync();
-        toast.success('Torneio arquivado. Saiu das listas públicas e do /p/:id.');
+        toast.success(t('Torneio arquivado. Saiu das listas públicas e do /p/:id.'));
       }
     } catch (err) {
-      toast.error(err?.message || 'Falha ao atualizar o arquivo.');
+      toast.error(err?.message || t('Falha ao atualizar o arquivo.'));
     }
   }
 
   async function handleSetLocked(locked) {
     try {
       await lockMutation.mutateAsync(locked);
-      toast.success(locked ? 'Alterações bloqueadas.' : 'Alterações desbloqueadas.');
+      toast.success(locked ? t('Alterações bloqueadas.') : t('Alterações desbloqueadas.'));
     } catch (err) {
-      toast.error(err?.message || 'Falha ao atualizar o bloqueio.');
+      toast.error(err?.message || t('Falha ao atualizar o bloqueio.'));
     }
   }
 
@@ -164,34 +165,34 @@ export default function TournamentAdminTab({ tournament }) {
       const q = query(collection(db, 'users'), where('email', '==', trimmed));
       const snap = await getDocs(q);
       if (snap.empty) {
-        toast.error('Usuário não encontrado. Peça para a pessoa fazer login uma vez na plataforma.');
+        toast.error(t('Usuário não encontrado. Peça para a pessoa fazer login uma vez na plataforma.'));
         return;
       }
       const data = snap.docs[0].data();
       await addMutation.mutateAsync({ uid: data.uid, email: data.email, displayName: data.platform_name || data.full_name });
-      toast.success('Admin adicionado.');
+      toast.success(t('Admin adicionado.'));
       setEmail('');
     } catch (err) {
-      toast.error(err.message || 'Falha ao adicionar.');
+      toast.error(err.message || t('Falha ao adicionar.'));
     }
   }
 
   async function handlePickAdmin(a) {
     if (!a?.id) return;
     if (admins.some((x) => x.user_id === a.id)) {
-      toast.info('Essa pessoa já administra o torneio.');
+      toast.info(t('Essa pessoa já administra o torneio.'));
       return;
     }
     try {
       await addMutation.mutateAsync({ uid: a.id, displayName: a.platform_name || a.full_name });
-      toast.success('Admin adicionado.');
+      toast.success(t('Admin adicionado.'));
     } catch (err) {
-      toast.error(err.message || 'Falha ao adicionar.');
+      toast.error(err.message || t('Falha ao adicionar.'));
     }
   }
 
   async function handleSave() {
-    if (!form.name.trim()) return toast.error('Informe o nome do torneio.');
+    if (!form.name.trim()) return toast.error(t('Informe o nome do torneio.'));
     try {
       await updateMutation.mutateAsync({
         name: form.name.trim(),
@@ -216,16 +217,16 @@ export default function TournamentAdminTab({ tournament }) {
           win_by_two: tournament?.scoring?.win_by_two ?? true,
         },
       });
-      toast.success('Parâmetros do torneio atualizados.');
+      toast.success(t('Parâmetros do torneio atualizados.'));
     } catch (err) {
-      toast.error(err.message || 'Falha ao salvar.');
+      toast.error(err.message || t('Falha ao salvar.'));
     }
   }
 
   async function setStatus(s) {
     try {
       await statusMutation.mutateAsync(s);
-      toast.success('Status atualizado.');
+      toast.success(t('Status atualizado.'));
     } catch (err) {
       toast.error(err.message);
     }
@@ -233,17 +234,17 @@ export default function TournamentAdminTab({ tournament }) {
 
   const infoCards = [
     {
-      label: 'Status atual',
+      label: t('Status atual'),
       value: TOURNAMENT_STATUS_LABELS[tournament.status],
       icon: ShieldAlert,
     },
     {
-      label: 'Acesso',
+      label: t('Acesso'),
       value: TOURNAMENT_VISIBILITY_LABELS[form.visibility],
       icon: Lock,
     },
     {
-      label: 'Admins ativos',
+      label: t('Admins ativos'),
       value: admins.length,
       icon: Users,
     },
@@ -254,17 +255,17 @@ export default function TournamentAdminTab({ tournament }) {
       <PlatformSurfaceCard>
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Parâmetros centrais</div>
-              <h3 className="mt-2 text-2xl font-semibold text-ink">Edite o torneio sem perder contexto operacional</h3>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">{t('Parâmetros centrais')}</div>
+              <h3 className="mt-2 text-2xl font-semibold text-ink">{t('Edite o torneio sem perder contexto operacional')}</h3>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-                Nome, local, regras, datas e acesso ficam concentrados aqui para facilitar revisão antes de abrir inscrições ou iniciar partidas.
+                {t('Nome, local, regras, datas e acesso ficam concentrados aqui para facilitar revisão antes de abrir inscrições ou iniciar partidas.')}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {duplicationOn && (
                 <Button variant="outline" onClick={() => setDuplicateOpen(true)}>
                   <Copy className="w-4 h-4 mr-1" />
-                  Duplicar torneio
+                  {t('Duplicar torneio')}
                 </Button>
               )}
               {templatesOn && (
@@ -273,40 +274,40 @@ export default function TournamentAdminTab({ tournament }) {
                   onClick={() => updateMutation.mutate(
                     { is_template: !tournament.is_template },
                     {
-                      onSuccess: () => toast.success(tournament.is_template ? 'Não é mais um modelo.' : 'Torneio marcado como modelo.'),
-                      onError: (err) => toast.error(err?.message || 'Não foi possível atualizar.'),
+                      onSuccess: () => toast.success(tournament.is_template ? t('Não é mais um modelo.') : t('Torneio marcado como modelo.')),
+                      onError: (err) => toast.error(err?.message || t('Não foi possível atualizar.')),
                     },
                   )}
                   disabled={updateMutation.isPending}
                 >
                   <FileStack className="w-4 h-4 mr-1" />
-                  {tournament.is_template ? 'É um modelo' : 'Marcar como modelo'}
+                  {tournament.is_template ? t('É um modelo') : t('Marcar como modelo')}
                 </Button>
               )}
               {lifecycleOn && isFinished && (
                 isLocked ? (
                   <ConfirmDialog
-                    title="Desbloquear alterações?"
-                    description="O torneio voltará a permitir sorteios e ajustes. Os dados seguem valendo para o ranking enquanto o torneio estiver encerrado."
-                    confirmLabel="Desbloquear"
+                    title={t('Desbloquear alterações?')}
+                    description={t('O torneio voltará a permitir sorteios e ajustes. Os dados seguem valendo para o ranking enquanto o torneio estiver encerrado.')}
+                    confirmLabel={t('Desbloquear')}
                     destructive={false}
                     onConfirm={() => handleSetLocked(false)}
                     trigger={(
                       <Button variant="outline" disabled={lockMutation.isPending}>
-                        <LockOpen className="w-4 h-4 mr-1" /> Desbloquear alterações
+                        <LockOpen className="w-4 h-4 mr-1" /> {t('Desbloquear alterações')}
                       </Button>
                     )}
                   />
                 ) : (
                   <ConfirmDialog
-                    title="Bloquear alterações?"
-                    description="Congela o resultado oficial do torneio: sorteios e ajustes ficam bloqueados até você desbloquear. Você pode reverter a qualquer momento."
-                    confirmLabel="Bloquear"
+                    title={t('Bloquear alterações?')}
+                    description={t('Congela o resultado oficial do torneio: sorteios e ajustes ficam bloqueados até você desbloquear. Você pode reverter a qualquer momento.')}
+                    confirmLabel={t('Bloquear')}
                     destructive={false}
                     onConfirm={() => handleSetLocked(true)}
                     trigger={(
                       <Button variant="outline" disabled={lockMutation.isPending}>
-                        <Lock className="w-4 h-4 mr-1" /> Bloquear alterações
+                        <Lock className="w-4 h-4 mr-1" /> {t('Bloquear alterações')}
                       </Button>
                     )}
                   />
@@ -314,7 +315,7 @@ export default function TournamentAdminTab({ tournament }) {
               )}
               <Button onClick={handleSave} disabled={updateMutation.isPending || (lifecycleOn && isLocked)}>
                 <Save className="w-4 h-4 mr-1" />
-                {updateMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
+                {updateMutation.isPending ? t('Salvando…') : t('Salvar alterações')}
               </Button>
             </div>
           </div>
@@ -322,8 +323,8 @@ export default function TournamentAdminTab({ tournament }) {
           {lifecycleOn && isFinished && (
             <div className={`mt-4 rounded-[1.25rem] border p-4 text-sm ${isLocked ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900'}`}>
               {isLocked
-                ? 'Torneio encerrado e bloqueado: os resultados estão congelados e valendo para o ranking da plataforma. Desbloqueie para permitir ajustes.'
-                : 'Torneio encerrado: os resultados já valem para o ranking da plataforma. Você pode bloquear as alterações para congelar o resultado oficial.'}
+                ? t('Torneio encerrado e bloqueado: os resultados estão congelados e valendo para o ranking da plataforma. Desbloqueie para permitir ajustes.')
+                : t('Torneio encerrado: os resultados já valem para o ranking da plataforma. Você pode bloquear as alterações para congelar o resultado oficial.')}
             </div>
           )}
 
@@ -338,17 +339,17 @@ export default function TournamentAdminTab({ tournament }) {
         <PlatformSurfaceCard contentClassName="space-y-6 p-6 sm:p-7">
             <section className="space-y-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Identidade e contexto</div>
-                <h4 className="mt-2 text-xl font-semibold text-ink">Como o torneio aparece para o público</h4>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{t('Identidade e contexto')}</div>
+                <h4 className="mt-2 text-xl font-semibold text-ink">{t('Como o torneio aparece para o público')}</h4>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <Label>Nome do torneio</Label>
+                  <Label>{t('Nome do torneio')}</Label>
                   <Input value={form.name} onChange={(e) => set('name', e.target.value)} className="mt-2" />
                 </div>
                 <div className="md:col-span-2">
-                  <Label>Descrição</Label>
+                  <Label>{t('Descrição')}</Label>
                   <textarea
                     className="mt-2 flex min-h-28 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
                     value={form.description}
@@ -356,15 +357,15 @@ export default function TournamentAdminTab({ tournament }) {
                   />
                 </div>
                 <div>
-                  <Label>Cidade</Label>
+                  <Label>{t('Cidade')}</Label>
                   <Input value={form.city} onChange={(e) => set('city', e.target.value)} className="mt-2" />
                 </div>
                 <div>
-                  <Label>UF</Label>
+                  <Label>{t('UF')}</Label>
                   <Input value={form.state} onChange={(e) => set('state', e.target.value)} maxLength={2} className="mt-2" />
                 </div>
                 <div className="md:col-span-2">
-                  <Label>Local (quadra/clube)</Label>
+                  <Label>{t('Local (quadra/clube)')}</Label>
                   <Input value={form.venue} onChange={(e) => set('venue', e.target.value)} className="mt-2" />
                 </div>
               </div>
@@ -372,12 +373,12 @@ export default function TournamentAdminTab({ tournament }) {
 
             <PlatformFormSection
               icon={Settings2}
-              title="Acesso e regras-base"
-              description="Defina quem encontra o torneio e qual conjunto de regras-base será herdado pelas modalidades."
+              title={t('Acesso e regras-base')}
+              description={t('Defina quem encontra o torneio e qual conjunto de regras-base será herdado pelas modalidades.')}
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Tipo de acesso</Label>
+                  <Label>{t('Tipo de acesso')}</Label>
                   <select
                     className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
                     value={form.visibility}
@@ -389,7 +390,7 @@ export default function TournamentAdminTab({ tournament }) {
                   </select>
                 </div>
                 <div className="md:col-span-1">
-                  <Label>Conjunto de regras</Label>
+                  <Label>{t('Conjunto de regras')}</Label>
                   <select
                     className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
                     value={form.ruleset}
@@ -401,27 +402,27 @@ export default function TournamentAdminTab({ tournament }) {
                   </select>
                 </div>
                 <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
-                  Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.
+                  {t('Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.')}
                 </div>
               </div>
             </PlatformFormSection>
 
             <PlatformFormSection
               icon={CalendarDays}
-              title="Datas operacionais"
-              description="Controle o período do evento e o fechamento das inscrições sem sair da área administrativa."
+              title={t('Datas operacionais')}
+              description={t('Controle o período do evento e o fechamento das inscrições sem sair da área administrativa.')}
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <Label>Início</Label>
+                  <Label>{t('Início')}</Label>
                   <Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} className="mt-2" />
                 </div>
                 <div>
-                  <Label>Fim</Label>
+                  <Label>{t('Fim')}</Label>
                   <Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} className="mt-2" />
                 </div>
                 <div>
-                  <Label>Fim das inscrições</Label>
+                  <Label>{t('Fim das inscrições')}</Label>
                   <Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} className="mt-2" />
                 </div>
               </div>
@@ -430,50 +431,50 @@ export default function TournamentAdminTab({ tournament }) {
             {paymentOn && (
               <PlatformFormSection
                 icon={Wallet}
-                title="Pagamento das inscrições (PIX)"
-                description="Com a chave configurada, o atleta vê o QR Code e o código copia e cola ao se inscrever em modalidades pagas, e pode avisar quando pagar. A confirmação continua manual, feita por você."
+                title={t('Pagamento das inscrições (PIX)')}
+                description={t('Com a chave configurada, o atleta vê o QR Code e o código copia e cola ao se inscrever em modalidades pagas, e pode avisar quando pagar. A confirmação continua manual, feita por você.')}
               >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <Label>Chave PIX (CPF/CNPJ, e-mail, telefone ou chave aleatória)</Label>
+                    <Label>{t('Chave PIX (CPF/CNPJ, e-mail, telefone ou chave aleatória)')}</Label>
                     <Input
                       value={form.payment_pix_key}
                       onChange={(e) => set('payment_pix_key', e.target.value)}
-                      placeholder="ex.: organizador@email.com"
+                      placeholder={t('ex.: organizador@email.com')}
                       className="mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Nome do recebedor</Label>
+                    <Label>{t('Nome do recebedor')}</Label>
                     <Input
                       value={form.payment_pix_name}
                       onChange={(e) => set('payment_pix_name', e.target.value)}
                       maxLength={25}
-                      placeholder="como aparece no banco"
+                      placeholder={t('como aparece no banco')}
                       className="mt-2"
                     />
                   </div>
                   <div>
-                    <Label>Cidade do recebedor</Label>
+                    <Label>{t('Cidade do recebedor')}</Label>
                     <Input
                       value={form.payment_pix_city}
                       onChange={(e) => set('payment_pix_city', e.target.value)}
                       maxLength={15}
-                      placeholder="ex.: Sao Paulo"
+                      placeholder={t('ex.: Sao Paulo')}
                       className="mt-2"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label>Instruções adicionais (opcional)</Label>
+                    <Label>{t('Instruções adicionais (opcional)')}</Label>
                     <textarea
                       className="mt-2 flex min-h-20 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
                       value={form.payment_instructions}
                       onChange={(e) => set('payment_instructions', e.target.value)}
-                      placeholder="ex.: envie o comprovante no WhatsApp (11) 99999-9999"
+                      placeholder={t('ex.: envie o comprovante no WhatsApp (11) 99999-9999')}
                     />
                   </div>
                   <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
-                    Deixe a chave em branco para não exibir instruções de pagamento. O valor cobrado é a taxa definida em cada modalidade.
+                    {t('Deixe a chave em branco para não exibir instruções de pagamento. O valor cobrado é a taxa definida em cada modalidade.')}
                   </div>
                 </div>
               </PlatformFormSection>
@@ -482,10 +483,10 @@ export default function TournamentAdminTab({ tournament }) {
 
         <div className="space-y-5">
           <PlatformSurfaceCard data-dica="torneio-status">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Status da operação</div>
-            <h4 className="mt-2 text-xl font-semibold text-ink">Atualize o estado do evento com clareza</h4>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{t('Status da operação')}</div>
+            <h4 className="mt-2 text-xl font-semibold text-ink">{t('Atualize o estado do evento com clareza')}</h4>
             <p className="mt-2 text-sm leading-6 text-gray-500">
-              Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.
+              {t('Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.')}
             </p>
 
             <div className="mt-5 space-y-3">
@@ -500,17 +501,17 @@ export default function TournamentAdminTab({ tournament }) {
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                    <div className="font-semibold text-ink">{label}</div>
-                    <p className="mt-1 text-sm leading-6 text-gray-500">{description}</p>
+                    <div className="font-semibold text-ink">{t(label)}</div>
+                    <p className="mt-1 text-sm leading-6 text-gray-500">{t(description)}</p>
                   </div>
                 </button>
               ))}
 
               {cancelActionOn && !isCancelled && (
                 <ConfirmDialog
-                  title="Cancelar o torneio?"
-                  description="O torneio passa ao status &quot;Cancelado&quot;: sai das listas ativas e fica liberado para arquivamento. Os dados (modalidades, inscrições e jogos) são preservados e você pode reverter escolhendo outro status depois."
-                  confirmLabel="Cancelar torneio"
+                  title={t('Cancelar o torneio?')}
+                  description={t('O torneio passa ao status "Cancelado": sai das listas ativas e fica liberado para arquivamento. Os dados (modalidades, inscrições e jogos) são preservados e você pode reverter escolhendo outro status depois.')}
+                  confirmLabel={t('Cancelar torneio')}
                   onConfirm={() => setStatus(TOURNAMENT_STATUS.CANCELLED)}
                   trigger={(
                     <button
@@ -521,9 +522,9 @@ export default function TournamentAdminTab({ tournament }) {
                         <Ban className="h-4.5 w-4.5" />
                       </div>
                       <div>
-                        <div className="font-semibold text-red-700">Cancelar torneio</div>
+                        <div className="font-semibold text-red-700">{t('Cancelar torneio')}</div>
                         <p className="mt-1 text-sm leading-6 text-red-600/80">
-                          Marca o evento como cancelado e libera o arquivamento. Reversível.
+                          {t('Marca o evento como cancelado e libera o arquivamento. Reversível.')}
                         </p>
                       </div>
                     </button>
@@ -539,9 +540,9 @@ export default function TournamentAdminTab({ tournament }) {
                 <Users className="h-4.5 w-4.5" />
               </div>
               <div>
-                <div className="text-base font-semibold text-ink">Admins do torneio</div>
+                <div className="text-base font-semibold text-ink">{t('Admins do torneio')}</div>
                 <p className="mt-1 text-sm leading-6 text-gray-500">
-                  O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.
+                  {t('O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.')}
                 </p>
               </div>
             </div>
@@ -553,11 +554,11 @@ export default function TournamentAdminTab({ tournament }) {
                     {/* P1-01: `tournament_admins` é lido por qualquer conta
                         logada; o e-mail do organizador saiu do documento e da
                         tela. O nome identifica quem administra. */}
-                    <div className="truncate font-medium text-ink">{a.user_name || 'Organizador'}</div>
+                    <div className="truncate font-medium text-ink">{a.user_name || t('Organizador')}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="shadow-none">
-                      {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? 'Owner' : 'Admin'}
+                      {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? t('Owner') : t('Admin')}
                     </Badge>
                     {a.role !== TOURNAMENT_ADMIN_ROLE.OWNER && (
                       <Button size="icon" variant="ghost" onClick={() => removeMutation.mutate(a.user_id)}>
@@ -570,11 +571,11 @@ export default function TournamentAdminTab({ tournament }) {
             </ul>
 
             <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-paper p-4">
-              <Label>Adicionar admin pela lista de usuários</Label>
+              <Label>{t('Adicionar admin pela lista de usuários')}</Label>
               <div className="mt-3">
-                <AthletePicker value={null} onChange={handlePickAdmin} inputId="torneio-admin-pessoa" placeholder="Buscar pelo nome…" />
+                <AthletePicker value={null} onChange={handlePickAdmin} inputId="torneio-admin-pessoa" placeholder={t('Buscar pelo nome…')} />
               </div>
-              <Label className="mt-4 block">Ou pelo e-mail do usuário já cadastrado</Label>
+              <Label className="mt-4 block">{t('Ou pelo e-mail do usuário já cadastrado')}</Label>
               <div className="mt-3 flex gap-2">
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
                 <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
@@ -592,30 +593,26 @@ export default function TournamentAdminTab({ tournament }) {
                 </div>
                 <div>
                   <div className="text-base font-semibold text-ink">
-                    {isArchived ? 'Torneio arquivado' : 'Arquivamento'}
+                    {isArchived ? t('Torneio arquivado') : t('Arquivamento')}
                   </div>
                   <p className="mt-1 text-sm leading-6 text-gray-500">
                     {isArchived
-                      ? 'O torneio está fora das listas públicas e da visão de espectador. Você ainda consegue consultá-lo por aqui para reabri-lo quando quiser.'
-                      : 'Arquivar esconde o torneio da UI pública, do /p/:id e da Dashboard dos atletas. O histórico (modalidades, jogos, ranking) fica preservado para você e para o admin da plataforma.'}
+                      ? t('O torneio está fora das listas públicas e da visão de espectador. Você ainda consegue consultá-lo por aqui para reabri-lo quando quiser.')
+                      : t('Arquivar esconde o torneio da UI pública, do /p/:id e da Dashboard dos atletas. O histórico (modalidades, jogos, ranking) fica preservado para você e para o admin da plataforma.')}
                   </p>
                 </div>
               </div>
 
               {!isArchived && !isCancelled && (
                 <div className="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                  Para arquivar, o torneio precisa estar com o status
-                  <strong> &quot;Cancelado&quot;</strong>. Cancele o torneio primeiro
-                  (use o card &quot;Status da operação&quot; à esquerda) e só depois
-                  arquive — assim a galera é avisada do cancelamento antes do
-                  torneio sumir.
+                  {t('Para arquivar, o torneio precisa estar com o status')}
+                  <strong> {t('"Cancelado"')}</strong>. {t('Cancele o torneio primeiro (use o card "Status da operação" à esquerda) e só depois arquive — assim a galera é avisada do cancelamento antes do torneio sumir.')}
                 </div>
               )}
 
               {isArchived && (
                 <div className="mt-4 rounded-[1.25rem] border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
-                  Desarquivar faz o torneio voltar a aparecer nas listas
-                  (respeitando a visibilidade configurada) e na Dashboard.
+                  {t('Desarquivar faz o torneio voltar a aparecer nas listas (respeitando a visibilidade configurada) e na Dashboard.')}
                 </div>
               )}
 
@@ -627,17 +624,17 @@ export default function TournamentAdminTab({ tournament }) {
                     disabled={unarchiveMutation.isPending}
                   >
                     <ArchiveRestore className="w-4 h-4 mr-1" />
-                    {unarchiveMutation.isPending ? 'Desarquivando…' : 'Desarquivar torneio'}
+                    {unarchiveMutation.isPending ? t('Desarquivando…') : t('Desarquivar torneio')}
                   </Button>
                 ) : (
                   <Button
                     variant="outline"
                     onClick={handleArchiveToggle}
                     disabled={!isCancelled || archiveMutation.isPending}
-                    title={!isCancelled ? 'Cancele o torneio antes de arquivar' : undefined}
+                    title={!isCancelled ? t('Cancele o torneio antes de arquivar') : undefined}
                   >
                     <Archive className="w-4 h-4 mr-1" />
-                    {archiveMutation.isPending ? 'Arquivando…' : 'Arquivar torneio'}
+                    {archiveMutation.isPending ? t('Arquivando…') : t('Arquivar torneio')}
                   </Button>
                 )}
               </div>

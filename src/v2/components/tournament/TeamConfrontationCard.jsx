@@ -19,22 +19,23 @@ import {
   buildEtapaDrafts, computeEtapaResult, confrontationSnapshot,
   formatEtapaScoringLabel,
 } from '@/modules/tournament/domain/teamFormat';
+import { t, fmtData } from '@/core/i18n';
 
 /** Nome de cada atleta do elenco, pela chave usada na escalação. */
 function rosterNames(team, prefix) {
   const members = Array.isArray(team?.members) ? team.members : [];
   const map = new Map();
-  members.forEach((m, idx) => map.set(m.user_id || `${prefix}${idx}`, m.name || `Atleta ${idx + 1}`));
+  members.forEach((m, idx) => map.set(m.user_id || `${prefix}${idx}`, m.name || t('Atleta {n}', { n: idx + 1 })));
   return map;
 }
 
 /** Escalação de um lado, em texto (com a ordem quando é rodízio). */
 function LineupText({ ids = [], names, rotation, align = 'left' }) {
   const list = (ids || []).map((id) => names.get(id) || '—').filter(Boolean);
-  if (list.length === 0) return <span className="text-xs text-gray-500">A definir</span>;
+  if (list.length === 0) return <span className="text-xs text-gray-500">{t('A definir')}</span>;
   return (
     <span className={cn('block text-xs text-gray-700', align === 'right' && 'text-right')}>
-      {rotation ? list.map((n, i) => `${i + 1}º ${n}`).join(' · ') : list.join(' / ')}
+      {rotation ? list.map((n, i) => `${t('{n}º', { n: i + 1 })} ${n}`).join(' · ') : list.join(' / ')}
     </span>
   );
 }
@@ -64,8 +65,8 @@ export default function TeamConfrontationCard({
   );
   const { result } = snapshot;
 
-  const teamAName = teamA?.team_name || 'A definir';
-  const teamBName = teamB?.team_name || 'A definir';
+  const teamAName = teamA?.team_name || t('A definir');
+  const teamBName = teamB?.team_name || t('A definir');
   const rotationSingles = config.singles_mode === TEAM_SINGLES_MODE.ROTATING;
 
   return (
@@ -79,7 +80,7 @@ export default function TeamConfrontationCard({
         <div className="flex min-w-0 items-center gap-2">
           <Swords className="h-4 w-4 shrink-0 text-gray-400" />
           <span className="min-w-0 truncate font-bold text-ink">
-            {teamAName} <span className="font-normal text-gray-400">vs</span> {teamBName}
+            {teamAName} <span className="font-normal text-gray-400">{t('vs')}</span> {teamBName}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -106,15 +107,15 @@ export default function TeamConfrontationCard({
             {match.scheduled_at && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {new Date(match.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                {fmtData(new Date(match.scheduled_at), { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
             <V2Badge tone="neutral">
-              {config.win_rule === 'best_of' ? `Melhor de ${config.win_target} etapas` : 'Todas as etapas'}
+              {config.win_rule === 'best_of' ? t('Melhor de {win_target} etapas', { win_target: config.win_target }) : t('Todas as etapas')}
             </V2Badge>
             {rotationSingles && etapas.some((e) => e.type === TEAM_ETAPA_TYPE.SINGLES) && (
               <span className="inline-flex items-center gap-1">
-                <Repeat className="h-3 w-3" /> Simples em rodízio: troca a cada {config.singles_rotation_points} pontos
+                <Repeat className="h-3 w-3" /> {t('Simples em rodízio: troca a cada {singles_rotation_points} pontos', { singles_rotation_points: config.singles_rotation_points })}
               </span>
             )}
           </div>
@@ -123,9 +124,9 @@ export default function TeamConfrontationCard({
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="text-left text-2xs font-bold uppercase tracking-widest text-gray-500">
-                  <th className="py-2 pr-2">Etapa</th>
+                  <th className="py-2 pr-2">{t('Etapa')}</th>
                   <th className="py-2 pr-2">{teamAName}</th>
-                  <th className="py-2 text-center">Games</th>
+                  <th className="py-2 text-center">{t('Games')}</th>
                   <th className="py-2 pl-2 text-right">{teamBName}</th>
                 </tr>
               </thead>
@@ -161,7 +162,7 @@ export default function TeamConfrontationCard({
                               </span>
                             ))}
                             {jogados.length > 1 && (
-                              <span className="text-2xs text-gray-500">games {res.sets_a}–{res.sets_b}</span>
+                              <span className="text-2xs text-gray-500">{t('games {sets_a}–{sets_b}', { sets_a: res.sets_a, sets_b: res.sets_b })}</span>
                             )}
                           </div>
                         )}
@@ -175,10 +176,10 @@ export default function TeamConfrontationCard({
               </tbody>
               <tfoot>
                 <tr className="border-t border-gray-200 text-xs font-semibold text-gray-500">
-                  <td className="py-2">Pontos somados</td>
+                  <td className="py-2">{t('Pontos somados')}</td>
                   <td className="py-2 tabular-nums text-ink">{result.points.a}</td>
                   <td className="py-2 text-center tabular-nums text-gray-400">
-                    {result.sets.a}–{result.sets.b} games
+                    {t('{a}–{b} games', { a: result.sets.a, b: result.sets.b })}
                   </td>
                   <td className="py-2 text-right tabular-nums text-ink">{result.points.b}</td>
                 </tr>

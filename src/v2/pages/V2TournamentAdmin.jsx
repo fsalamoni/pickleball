@@ -19,6 +19,7 @@ import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdmin
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
 import { V2Badge, V2Button, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2TournamentAdmin() {
   const { tournamentId } = useParams();
@@ -47,7 +48,7 @@ export default function V2TournamentAdmin() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-paper-pure p-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-gray-500">
-            <ShieldCheck className="h-3.5 w-3.5" /> Gestão do torneio
+            <ShieldCheck className="h-3.5 w-3.5" /> {t('Gestão do torneio')}
           </div>
           <h1 className="mt-0.5 truncate font-display text-xl font-bold text-ink">{tournament.name}</h1>
         </div>
@@ -59,12 +60,12 @@ export default function V2TournamentAdmin() {
               de um torneio, e fica aqui para rever quando quiser. */}
           <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} dica="torneio-como-funciona" />
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> Ver página pública</Link>
+            <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> {t('Ver página pública')}</Link>
           </V2Button>
         </div>
       </div>
 
-      <V2BackLink to="/perfil/torneios" className="mb-4">Meus torneios</V2BackLink>
+      <V2BackLink to="/perfil/torneios" className="mb-4">{t('Meus torneios')}</V2BackLink>
 
       <V2TournamentAdminPanel tournament={tournament} />
     </div>

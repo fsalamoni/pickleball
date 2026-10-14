@@ -50,53 +50,56 @@
  * garante é que a ordem escolhida seja aplicada exatamente, e que ela apareça
  * na tela — classificação que ninguém consegue explicar vira discussão.
  */
+import { tk } from '@/core/i18n';
+import { rotulos } from './constants.js';
+
 export const TIEBREAK_CRITERIA = Object.freeze([
   {
     key: 'wins',
-    label: 'Mais vitórias',
-    help: 'O critério básico: quem ganhou mais jogos. Quase sempre o primeiro.',
+    label: tk('Mais vitórias'),
+    help: tk('O critério básico: quem ganhou mais jogos. Quase sempre o primeiro.'),
   },
   {
     key: 'head_to_head',
-    label: 'Confronto direto',
-    help: 'Entre os empatados, quem venceu mais jogos CONTRA os outros empatados. Com três ou mais, vale a mini-tabela só entre eles. É o critério que a quadra cobra ("eu ganhei dele").',
+    label: tk('Confronto direto'),
+    help: tk('Entre os empatados, quem venceu mais jogos CONTRA os outros empatados. Com três ou mais, vale a mini-tabela só entre eles. É o critério que a quadra cobra ("eu ganhei dele").'),
   },
   {
     key: 'balance',
-    label: 'Saldo de pontos',
-    help: 'Pontos a favor menos pontos contra, em todos os jogos do grupo. Premia quem vence com folga — e pune quem perde feio.',
+    label: tk('Saldo de pontos'),
+    help: tk('Pontos a favor menos pontos contra, em todos os jogos do grupo. Premia quem vence com folga — e pune quem perde feio.'),
   },
   {
     key: 'head_to_head_balance',
-    label: 'Saldo no confronto direto',
-    help: 'O mesmo saldo, mas contando só os jogos entre os empatados.',
+    label: tk('Saldo no confronto direto'),
+    help: tk('O mesmo saldo, mas contando só os jogos entre os empatados.'),
   },
   {
     key: 'points_for',
-    label: 'Mais pontos a favor',
-    help: 'Total de pontos marcados. Premia quem ataca; num formato de tempo, premia quem joga rápido.',
+    label: tk('Mais pontos a favor'),
+    help: tk('Total de pontos marcados. Premia quem ataca; num formato de tempo, premia quem joga rápido.'),
   },
   {
     key: 'points_against',
-    label: 'Menos pontos sofridos',
-    help: 'Total de pontos cedidos. O espelho do anterior: premia quem defende.',
+    label: tk('Menos pontos sofridos'),
+    help: tk('Total de pontos cedidos. O espelho do anterior: premia quem defende.'),
   },
   {
     key: 'win_rate',
-    label: 'Aproveitamento (%)',
-    help: 'Vitórias divididas por jogos DISPUTADOS. Use quando alguém do grupo jogou menos (desistência, W.O., grupo interrompido) — aí o número absoluto de vitórias mente.',
+    label: tk('Aproveitamento (%)'),
+    help: tk('Vitórias divididas por jogos DISPUTADOS. Use quando alguém do grupo jogou menos (desistência, W.O., grupo interrompido) — aí o número absoluto de vitórias mente.'),
   },
   {
     key: 'balance_rate',
-    label: 'Saldo por partida',
-    help: 'Saldo dividido por jogos disputados. Mesma ideia do aproveitamento, aplicada ao saldo.',
+    label: tk('Saldo por partida'),
+    help: tk('Saldo dividido por jogos disputados. Mesma ideia do aproveitamento, aplicada ao saldo.'),
   },
   {
     key: 'sets',
-    label: 'Saldo de games/sets',
-    help: 'Games (ou sets) ganhos menos perdidos. Só muda alguma coisa em formato de mais de um game por jogo.',
+    label: tk('Saldo de games/sets'),
+    help: tk('Games (ou sets) ganhos menos perdidos. Só muda alguma coisa em formato de mais de um game por jogo.'),
   },
-]);
+].map(rotulos));
 
 /** A ordem OFICIAL (USA Pickleball 15.B.4) — o padrão de quem não configurar. */
 export const DEFAULT_TIEBREAK_ORDER = Object.freeze([
@@ -107,29 +110,29 @@ export const DEFAULT_TIEBREAK_ORDER = Object.freeze([
 export const TIEBREAK_PRESETS = Object.freeze([
   {
     id: 'oficial',
-    label: 'Oficial (USA Pickleball)',
+    label: tk('Oficial (USA Pickleball)'),
     order: [...DEFAULT_TIEBREAK_ORDER],
-    help: 'A sequência do regulamento: vitórias, confronto direto, saldo geral, saldo no confronto direto e pontos. É o que um torneio sancionado usa.',
+    help: tk('A sequência do regulamento: vitórias, confronto direto, saldo geral, saldo no confronto direto e pontos. É o que um torneio sancionado usa.'),
   },
   {
     id: 'confronto_primeiro',
-    label: 'Confronto direto acima de tudo',
+    label: tk('Confronto direto acima de tudo'),
     order: ['head_to_head', 'wins', 'balance', 'points_for', 'points_against'],
-    help: 'Quem ganhou do outro fica à frente, mesmo com uma vitória a menos no grupo. Costuma agradar em torneio pequeno, onde todo mundo assistiu a todos os jogos.',
+    help: tk('Quem ganhou do outro fica à frente, mesmo com uma vitória a menos no grupo. Costuma agradar em torneio pequeno, onde todo mundo assistiu a todos os jogos.'),
   },
   {
     id: 'aproveitamento',
-    label: 'Aproveitamento (grupos desiguais ou com desistência)',
+    label: tk('Aproveitamento (grupos desiguais ou com desistência)'),
     order: ['win_rate', 'head_to_head', 'balance_rate', 'points_for'],
-    help: 'Compara por percentual em vez de número absoluto. É o certo quando os grupos têm tamanhos diferentes ou quando alguém abandonou no meio.',
+    help: tk('Compara por percentual em vez de número absoluto. É o certo quando os grupos têm tamanhos diferentes ou quando alguém abandonou no meio.'),
   },
   {
     id: 'saldo',
-    label: 'Saldo acima do confronto direto',
+    label: tk('Saldo acima do confronto direto'),
     order: ['wins', 'balance', 'points_for', 'head_to_head', 'points_against'],
-    help: 'Premia quem venceu com folga. Era o comportamento da plataforma antes de o confronto direto existir; fica aqui para quem prefere assim.',
+    help: tk('Premia quem venceu com folga. Era o comportamento da plataforma antes de o confronto direto existir; fica aqui para quem prefere assim.'),
   },
-]);
+].map(rotulos));
 
 const num0 = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const perGame = (valor, jogos) => (jogos > 0 ? valor / jogos : 0);

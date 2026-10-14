@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Copy, Info } from 'lucide-react';
 import { buildPixPayload, formatBrlCents } from '@/modules/tournament/domain/payment';
 import { useDeclareRegistrationPayment } from '@/modules/tournament/hooks/useTournament';
+import { t } from '@/core/i18n';
 
 /**
  * Instruções de pagamento por PIX de uma inscrição (flag payment_instructions).
@@ -51,9 +52,9 @@ export function PixPaymentContent({ tournament, modality, registrationId, paymen
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(payload);
-      toast.success('Código PIX copiado.');
+      toast.success(t('Código PIX copiado.'));
     } catch {
-      toast.error('Não foi possível copiar. Selecione o texto manualmente.');
+      toast.error(t('Não foi possível copiar. Selecione o texto manualmente.'));
     }
   }
 
@@ -61,28 +62,28 @@ export function PixPaymentContent({ tournament, modality, registrationId, paymen
     try {
       await declareMutation.mutateAsync(registrationId);
       setDeclared(true);
-      toast.success('Obrigado! O organizador foi avisado e vai confirmar o pagamento.');
+      toast.success(t('Obrigado! O organizador foi avisado e vai confirmar o pagamento.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar. Tente novamente.');
+      toast.error(err?.message || t('Não foi possível registrar. Tente novamente.'));
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-gray-100 bg-paper p-4 text-center">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Valor da inscrição</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t('Valor da inscrição')}</p>
         <p className="mt-1 text-3xl font-bold text-ink">{formatBrlCents(modality?.entry_fee_cents)}</p>
         <p className="mt-1 text-xs text-gray-500">{modality?.name}</p>
       </div>
 
       {qrDataUrl && (
         <div className="flex justify-center">
-          <img src={qrDataUrl} alt="QR Code do PIX" className="h-56 w-56 rounded-xl border border-gray-100" />
+          <img src={qrDataUrl} alt={t('QR Code do PIX')} className="h-56 w-56 rounded-xl border border-gray-100" />
         </div>
       )}
 
       <div>
-        <p className="mb-1 text-xs font-semibold text-gray-500">PIX copia e cola</p>
+        <p className="mb-1 text-xs font-semibold text-gray-500">{t('PIX copia e cola')}</p>
         <div className="flex items-start gap-2">
           <textarea
             readOnly
@@ -91,7 +92,7 @@ export function PixPaymentContent({ tournament, modality, registrationId, paymen
             className="w-full resize-none rounded-xl border border-gray-200 bg-paper px-3 py-2 font-mono text-xs text-gray-600"
             onFocus={(e) => e.target.select()}
           />
-          <Button type="button" variant="outline" size="icon" onClick={handleCopy} title="Copiar código PIX" aria-label="Copiar código PIX">
+          <Button type="button" variant="outline" size="icon" onClick={handleCopy} title={t('Copiar código PIX')} aria-label={t('Copiar código PIX')}>
             <Copy className="h-4 w-4" />
           </Button>
         </div>
@@ -107,12 +108,11 @@ export function PixPaymentContent({ tournament, modality, registrationId, paymen
       {declared ? (
         <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Pagamento informado — aguarde a confirmação do organizador.
+          {t('Pagamento informado — aguarde a confirmação do organizador.')}
         </div>
       ) : (
         <p className="text-xs leading-5 text-gray-500">
-          Após pagar, toque em &quot;Já paguei&quot; para avisar o organizador. A inscrição é confirmada
-          quando ele conferir o pagamento.
+          {t('Após pagar, toque em "Já paguei" para avisar o organizador. A inscrição é confirmada quando ele conferir o pagamento.')}
         </p>
       )}
 
@@ -120,11 +120,11 @@ export function PixPaymentContent({ tournament, modality, registrationId, paymen
         {!declared && registrationId && (
           <Button type="button" onClick={handleDeclare} disabled={declareMutation.isPending}>
             <CheckCircle2 className="h-4 w-4" />
-            {declareMutation.isPending ? 'Enviando…' : 'Já paguei'}
+            {declareMutation.isPending ? t('Enviando…') : t('Já paguei')}
           </Button>
         )}
         {onDone && (
-          <Button type="button" variant="outline" onClick={onDone}>Fechar</Button>
+          <Button type="button" variant="outline" onClick={onDone}>{t('Fechar')}</Button>
         )}
       </div>
     </div>
@@ -136,9 +136,9 @@ export default function PixPaymentDialog({ open, onClose, tournament, modality, 
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Pagamento da inscrição</DialogTitle>
+          <DialogTitle>{t('Pagamento da inscrição')}</DialogTitle>
           <DialogDescription>
-            Pague por PIX usando o QR Code ou o código abaixo.
+            {t('Pague por PIX usando o QR Code ou o código abaixo.')}
           </DialogDescription>
         </DialogHeader>
         <PixPaymentContent

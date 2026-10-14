@@ -23,8 +23,9 @@ import {
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
+import { t, tn, fmtData } from '@/core/i18n';
 
-const athleteLabel = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
+const athleteLabel = (a) => a.platform_name || a.full_name || a.name || t('Atleta');
 
 const RANK_TONES = {
   1: 'amber', 2: 'blue', 3: 'neutral',
@@ -44,13 +45,13 @@ function CircuitInfo({ circuit, isAdmin, onEdit }) {
           <h2 className="font-display text-2xl font-bold text-ink">{circuit.name}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
             <V2Badge tone="green"><Calendar className="h-3 w-3" /> {circuit.season}</V2Badge>
-            {circuit.start_date && <span>· {circuit.start_date} → {circuit.end_date || 'em aberto'}</span>}
-            {!circuit.active && <V2Badge tone="red">Inativo</V2Badge>}
+            {circuit.start_date && <span>· {circuit.start_date} → {circuit.end_date || t('em aberto')}</span>}
+            {!circuit.active && <V2Badge tone="red">{t('Inativo')}</V2Badge>}
           </div>
         </div>
         {isAdmin && (
           <V2Button variant="ghost" size="sm" onClick={onEdit}>
-            <Edit3 className="h-4 w-4" /> Editar
+            <Edit3 className="h-4 w-4" /> {t('Editar')}
           </V2Button>
         )}
       </div>
@@ -77,22 +78,22 @@ function TournamentList({ circuitId, isAdmin }) {
   // Mapa id → nome, para exibir o nome em vez do id cru.
   const nameById = useMemo(() => {
     const m = {};
-    (myTournaments || []).forEach((t) => { m[t.id] = t.name; });
+    (myTournaments || []).forEach((tt) => { m[tt.id] = tt.name; });
     return m;
   }, [myTournaments]);
 
-  const linkedIds = useMemo(() => new Set(tournaments.map((t) => t.tournament_id)), [tournaments]);
+  const linkedIds = useMemo(() => new Set(tournaments.map((tt) => tt.tournament_id)), [tournaments]);
   const options = useMemo(
-    () => (myTournaments || []).filter((t) => !linkedIds.has(t.id)),
+    () => (myTournaments || []).filter((tt) => !linkedIds.has(tt.id)),
     [myTournaments, linkedIds],
   );
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!tournamentId.trim()) { toast.error('Escolha um torneio.'); return; }
+    if (!tournamentId.trim()) { toast.error(t('Escolha um torneio.')); return; }
     try {
       await add.mutateAsync({ circuitId, tournamentId: tournamentId.trim() });
-      toast.success('Torneio vinculado ao circuito.');
+      toast.success(t('Torneio vinculado ao circuito.'));
       setTournamentId('');
       setAdding(false);
     } catch (err) {
@@ -108,8 +109,8 @@ function TournamentList({ circuitId, isAdmin }) {
       <V2Surface>
         <V2ErrorState
           inline
-          title="Não foi possível carregar os torneios do circuito"
-          description="Os vínculos continuam lá — só não conseguimos buscá-los agora."
+          title={t('Não foi possível carregar os torneios do circuito')}
+          description={t('Os vínculos continuam lá — só não conseguimos buscá-los agora.')}
           onRetry={() => refetch()}
         />
       </V2Surface>
@@ -119,43 +120,43 @@ function TournamentList({ circuitId, isAdmin }) {
     <V2Surface>
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <Trophy className="h-4 w-4" /> Torneios do circuito
+          <Trophy className="h-4 w-4" /> {t('Torneios do circuito')}
         </h3>
         {isAdmin && !adding && (
-          <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Vincular torneio</V2Button>
+          <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> {t('Vincular torneio')}</V2Button>
         )}
       </div>
       {adding && (
         <form onSubmit={handleAdd} className="mt-3 flex flex-wrap gap-2">
           <V2Select value={tournamentId} onChange={(e) => setTournamentId(e.target.value)} className="min-w-0 flex-1">
-            <option value="">— Escolha um dos seus torneios —</option>
-            {options.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            <option value="">{t('— Escolha um dos seus torneios —')}</option>
+            {options.map((tt) => <option key={tt.id} value={tt.id}>{tt.name}</option>)}
           </V2Select>
           <V2Button type="submit" size="sm" disabled={add.isPending || !tournamentId}>
-            {add.isPending ? 'Vinculando…' : 'Vincular'}
+            {add.isPending ? t('Vinculando…') : t('Vincular')}
           </V2Button>
           <V2Button type="button" variant="ghost" size="sm" onClick={() => { setAdding(false); setTournamentId(''); }}>
-            Cancelar
+            {t('Cancelar')}
           </V2Button>
         </form>
       )}
       {adding && options.length === 0 && (
-        <p className="mt-2 text-xs text-gray-500">Você não tem torneios disponíveis para vincular (ou todos já estão no circuito).</p>
+        <p className="mt-2 text-xs text-gray-500">{t('Você não tem torneios disponíveis para vincular (ou todos já estão no circuito).')}</p>
       )}
       <div className="mt-3 space-y-2">
         {tournaments.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum torneio vinculado ainda. Use “Vincular torneio” para montar as etapas do circuito.</p>
+          <p className="text-sm text-gray-500">{t('Nenhum torneio vinculado ainda. Use “Vincular torneio” para montar as etapas do circuito.')}</p>
         ) : (
-          tournaments.map((t) => (
-            <div key={t.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper p-3">
+          tournaments.map((tt) => (
+            <div key={tt.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper p-3">
               <div className="min-w-0 flex-1">
-                <Link to={`/torneios/${t.tournament_id}`} className="truncate text-sm font-bold text-ink hover:underline">
-                  {nameById[t.tournament_id] || `Torneio ${t.tournament_id}`}
+                <Link to={`/torneios/${tt.tournament_id}`} className="truncate text-sm font-bold text-ink hover:underline">
+                  {nameById[tt.tournament_id] || t('Torneio {tournament_id}', { tournament_id: tt.tournament_id })}
                 </Link>
-                <div className="text-xs text-gray-500">Vinculado em {t.added_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || '—'}</div>
+                <div className="text-xs text-gray-500">{t('Vinculado em')} {tt.added_at?.toDate ? fmtData(tt.added_at.toDate(), { dateStyle: 'short' }) || '—' : '—'}</div>
               </div>
               {isAdmin && (
-                <V2Button variant="ghost" size="sm" onClick={() => remove.mutate({ circuitId, tournamentId: t.tournament_id })}>
+                <V2Button variant="ghost" size="sm" onClick={() => remove.mutate({ circuitId, tournamentId: tt.tournament_id })}>
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </V2Button>
               )}
@@ -177,7 +178,7 @@ function CircuitResultsEntry({ circuit, circuitId }) {
 
   const nameById = useMemo(() => {
     const m = {};
-    (myTournaments || []).forEach((t) => { m[t.id] = t.name; });
+    (myTournaments || []).forEach((tt) => { m[tt.id] = tt.name; });
     return m;
   }, [myTournaments]);
 
@@ -191,7 +192,7 @@ function CircuitResultsEntry({ circuit, circuitId }) {
   const removeRow = (i) => setRows((rs) => (rs.length > 1 ? rs.filter((_, idx) => idx !== i) : rs));
 
   const save = async () => {
-    if (!tid) { toast.error('Escolha o torneio (etapa) do circuito.'); return; }
+    if (!tid) { toast.error(t('Escolha o torneio (etapa) do circuito.')); return; }
     const athleteMap = Object.fromEntries((athletes || []).map((a) => [a.id, a]));
     const results = rows
       .filter((r) => r.user_id && Number(r.position) >= 1)
@@ -205,13 +206,13 @@ function CircuitResultsEntry({ circuit, circuitId }) {
           points_table: circuit.points_table,
         };
       });
-    if (results.length === 0) { toast.error('Adicione ao menos um atleta e sua colocação.'); return; }
+    if (results.length === 0) { toast.error(t('Adicione ao menos um atleta e sua colocação.')); return; }
     try {
       const n = await record.mutateAsync({ circuitId, tournamentId: tid, results });
-      toast.success(`${n} resultado(s) registrado(s). Ranking atualizado.`);
+      toast.success(t('{n} resultado(s) registrado(s). Ranking atualizado.', { n }));
       setRows([{ user_id: '', position: '' }]);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível registrar os resultados.');
+      toast.error(err.message || t('Não foi possível registrar os resultados.'));
     }
   };
 
@@ -220,19 +221,18 @@ function CircuitResultsEntry({ circuit, circuitId }) {
   return (
     <V2Surface>
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Award className="h-4 w-4" /> Registrar resultados
+        <Award className="h-4 w-4" /> {t('Registrar resultados')}
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        Escolha a etapa (torneio) e informe a colocação de cada atleta. Os pontos são calculados
-        pela tabela do circuito e somados no ranking.
+        {t('Escolha a etapa (torneio) e informe a colocação de cada atleta. Os pontos são calculados pela tabela do circuito e somados no ranking.')}
       </p>
       <div className="mt-3 space-y-2">
-        <V2Field label="Etapa (torneio)">
+        <V2Field label={t('Etapa (torneio)')}>
           <V2Select value={tid} onChange={(e) => setTid(e.target.value)}>
-            <option value="">— Escolha o torneio —</option>
-            {linked.map((t) => (
-              <option key={t.tournament_id} value={t.tournament_id}>
-                {nameById[t.tournament_id] || `Torneio ${t.tournament_id}`}
+            <option value="">{t('— Escolha o torneio —')}</option>
+            {linked.map((tt) => (
+              <option key={tt.tournament_id} value={tt.tournament_id}>
+                {nameById[tt.tournament_id] || t('Torneio {tournament_id}', { tournament_id: tt.tournament_id })}
               </option>
             ))}
           </V2Select>
@@ -240,13 +240,13 @@ function CircuitResultsEntry({ circuit, circuitId }) {
 
         {rows.map((r, i) => (
           <div key={i} className="flex items-end gap-2">
-            <V2Field label={i === 0 ? 'Atleta' : ''} className="min-w-0 flex-1">
+            <V2Field label={i === 0 ? t('Atleta') : ''} className="min-w-0 flex-1">
               <V2Select value={r.user_id} onChange={(e) => setRow(i, { user_id: e.target.value })}>
-                <option value="">— Atleta —</option>
+                <option value="">{t('— Atleta —')}</option>
                 {sortedAthletes.map((a) => <option key={a.id} value={a.id}>{athleteLabel(a)}</option>)}
               </V2Select>
             </V2Field>
-            <V2Field label={i === 0 ? 'Colocação' : ''} className="w-28">
+            <V2Field label={i === 0 ? t('Colocação') : ''} className="w-28">
               <V2Input type="number" min="1" value={r.position} onChange={(e) => setRow(i, { position: e.target.value })} placeholder="1" />
             </V2Field>
             <V2Button type="button" variant="ghost" size="sm" onClick={() => removeRow(i)} disabled={rows.length === 1}>
@@ -257,10 +257,10 @@ function CircuitResultsEntry({ circuit, circuitId }) {
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <V2Button type="button" variant="ghost" size="sm" onClick={addRow}>
-            <Plus className="h-4 w-4" /> Adicionar atleta
+            <Plus className="h-4 w-4" /> {t('Adicionar atleta')}
           </V2Button>
           <V2Button type="button" size="sm" onClick={save} disabled={record.isPending || !tid}>
-            {record.isPending ? 'Salvando…' : 'Salvar resultados'}
+            {record.isPending ? t('Salvando…') : t('Salvar resultados')}
           </V2Button>
         </div>
       </div>
@@ -278,8 +278,8 @@ function Ranking({ circuitId }) {
       <V2Surface>
         <V2ErrorState
           inline
-          title="Não foi possível carregar o ranking do circuito"
-          description="Os resultados continuam registrados — só não conseguimos buscá-los agora."
+          title={t('Não foi possível carregar o ranking do circuito')}
+          description={t('Os resultados continuam registrados — só não conseguimos buscá-los agora.')}
           onRetry={() => refetch()}
         />
       </V2Surface>
@@ -288,14 +288,14 @@ function Ranking({ circuitId }) {
   return (
     <V2Surface>
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Award className="h-4 w-4" /> Ranking do circuito
+        <Award className="h-4 w-4" /> {t('Ranking do circuito')}
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        Pontos por posição: 1º {pointsTable?.[1] || 100} · 2º {pointsTable?.[2] || 75} · 3º/4º {pointsTable?.[3] || 50}
+        {t('Pontos por posição: 1º')} {pointsTable?.[1] || 100} · 2º {pointsTable?.[2] || 75} · 3º/4º {pointsTable?.[3] || 50}
       </p>
       <div className="mt-3 space-y-1.5">
         {ranking.length === 0 ? (
-          <V2EmptyState icon={Trophy} title="Sem resultados ainda" description="Vincule torneios e registre os resultados para o ranking aparecer." />
+          <V2EmptyState icon={Trophy} title={t('Sem resultados ainda')} description={t('Vincule torneios e registre os resultados para o ranking aparecer.')} />
         ) : (
           ranking.slice(0, 50).map((u) => (
             <div key={u.user_id} className={cn(
@@ -306,13 +306,13 @@ function Ranking({ circuitId }) {
               <div className="flex-1">
                 <div className="text-sm font-bold text-ink">{u.user_name}</div>
                 <div className="text-xs text-gray-500">
-                  {u.tournaments} torneio{u.tournaments !== 1 ? 's' : ''}
-                  {u.best_position && ` · melhor ${u.best_position}º`}
+                  {tn(u.tournaments, '{n} torneio', '{n} torneios')}
+                  {u.best_position && t('· melhor {best_position}º', { best_position: u.best_position })}
                 </div>
               </div>
               <div className="text-right">
                 <div className="font-display text-lg font-bold text-green-700">{u.total_points}</div>
-                <div className="text-2xs uppercase tracking-widest text-gray-500">pontos</div>
+                <div className="text-2xs uppercase tracking-widest text-gray-500">{t('pontos')}</div>
               </div>
             </div>
           ))
@@ -345,7 +345,7 @@ function EditCircuitModal({ circuit, onClose }) {
           categories: form.categories.split(',').map((c) => c.trim()).filter(Boolean),
         },
       });
-      toast.success('Circuito atualizado.');
+      toast.success(t('Circuito atualizado.'));
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -355,24 +355,24 @@ function EditCircuitModal({ circuit, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <V2Surface className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-display text-lg font-bold text-ink">Editar circuito</h3>
+        <h3 className="font-display text-lg font-bold text-ink">{t('Editar circuito')}</h3>
         <form onSubmit={handleSubmit} className="mt-3 space-y-3">
-          <V2Field label="Nome"><V2Input value={form.name} onChange={setField('name')} required maxLength={80} /></V2Field>
-          <V2Field label="Temporada"><V2Input value={form.season} onChange={setField('season')} required maxLength={40} /></V2Field>
-          <V2Field label="Categorias (separadas por vírgula)"><V2Input value={form.categories} onChange={setField('categories')} placeholder="Open, Sênior, Misto" /></V2Field>
-          <V2Field label="Descrição"><V2Textarea value={form.description} onChange={setField('description')} maxLength={500} /></V2Field>
+          <V2Field label={t('Nome')}><V2Input value={form.name} onChange={setField('name')} required maxLength={80} /></V2Field>
+          <V2Field label={t('Temporada')}><V2Input value={form.season} onChange={setField('season')} required maxLength={40} /></V2Field>
+          <V2Field label={t('Categorias (separadas por vírgula)')}><V2Input value={form.categories} onChange={setField('categories')} placeholder={t('Open, Sênior, Misto')} /></V2Field>
+          <V2Field label={t('Descrição')}><V2Textarea value={form.description} onChange={setField('description')} maxLength={500} /></V2Field>
           <div className="grid grid-cols-2 gap-2">
-            <V2Field label="Início"><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
-            <V2Field label="Fim"><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
+            <V2Field label={t('Início')}><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
+            <V2Field label={t('Fim')}><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.active} onChange={setField('active')} />
-            Circuito ativo
+            {t('Circuito ativo')}
           </label>
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+            <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('Cancelar')}</V2Button>
             <V2Button type="submit" size="sm" disabled={update.isPending}>
-              {update.isPending ? 'Salvando…' : 'Salvar'}
+              {update.isPending ? t('Salvando…') : t('Salvar')}
             </V2Button>
           </div>
         </form>
@@ -402,23 +402,23 @@ export default function V2CircuitManage() {
   if (isError) return (
     <div className="p-4">
       <V2ErrorState
-        title="Não foi possível carregar o circuito"
-        description="O circuito continua lá — só não conseguimos buscá-lo agora."
+        title={t('Não foi possível carregar o circuito')}
+        description={t('O circuito continua lá — só não conseguimos buscá-lo agora.')}
         onRetry={() => refetch()}
       />
-      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">← Ver circuitos</Link>
+      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">{t('← Ver circuitos')}</Link>
     </div>
   );
   if (!circuit) return (
     <div className="p-4">
-      <V2EmptyState icon={Trophy} title="Circuito não encontrado" description="Confira o link ou volte para a lista." />
-      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">← Ver circuitos</Link>
+      <V2EmptyState icon={Trophy} title={t('Circuito não encontrado')} description={t('Confira o link ou volte para a lista.')} />
+      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">{t('← Ver circuitos')}</Link>
     </div>
   );
 
   return (
     <div className="space-y-4 p-4">
-      <V2BackLink to="/circuits">Circuitos</V2BackLink>
+      <V2BackLink to="/circuits">{t('Circuitos')}</V2BackLink>
       <CircuitInfo circuit={circuit} isAdmin={isAdmin} onEdit={() => setEditing(true)} />
       <TournamentList circuitId={circuitId} isAdmin={isAdmin} />
       {isAdmin && <CircuitResultsEntry circuit={circuit} circuitId={circuitId} />}

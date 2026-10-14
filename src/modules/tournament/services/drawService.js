@@ -27,6 +27,7 @@ import {
 } from '../domain/constants.js';
 import { isActiveRegistration } from '../domain/checkin.js';
 import { firstEtapaDraw } from '../domain/americanoEtapas.js';
+import { t } from '@/core/i18n';
 
 /**
  * Deriva o gênero competitivo de uma inscrição, dentro do que é conhecido:
@@ -159,14 +160,14 @@ export async function runDraw(params, actor) {
     replacesKnownMatches,
   } = params;
   const modality = await getModality(modalityId);
-  if (!modality) throw new Error('Modalidade não encontrada.');
-  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
+  if (modality.tournament_id !== tournamentId) throw new Error(t('Modalidade não pertence ao torneio.'));
   const stage = modality.stages?.[stageIndex];
-  if (!stage) throw new Error('Fase não encontrada na modalidade.');
+  if (!stage) throw new Error(t('Fase não encontrada na modalidade.'));
 
   const lockCheck = await getTournament(tournamentId);
   if (lockCheck?.results_locked) {
-    throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
+    throw new Error(t('Torneio bloqueado: desbloqueie as alterações para sortear.'));
   }
 
   // ⚠️ Sortear APAGA os jogos da fase. Se a tela não sabia que eles existiam
@@ -188,8 +189,7 @@ export async function runDraw(params, actor) {
     || stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
   )) {
     throw new Error(
-      'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
-      + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+      t('Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'),
     );
   }
   const compat = stageFormatCompatibility(modality.format, stage.type);
@@ -201,8 +201,8 @@ export async function runDraw(params, actor) {
   const confirmed = registrations.filter(isActiveRegistration);
   if (confirmed.length < 2) {
     throw new Error(isTeam
-      ? 'São necessárias ao menos 2 equipes inscritas para sortear.'
-      : 'São necessários ao menos 2 inscritos confirmados.');
+      ? t('São necessárias ao menos 2 equipes inscritas para sortear.')
+      : t('São necessários ao menos 2 inscritos confirmados.'));
   }
 
   // Define a ordem dos participantes:
@@ -359,17 +359,17 @@ export async function getStageGroups(modalityId, stageIndex = 0) {
 export async function redrawGroupMatchesKeepingGroups(params, actor) {
   const { tournamentId, modalityId, stageIndex = 0 } = params;
   const modality = await getModality(modalityId);
-  if (!modality) throw new Error('Modalidade não encontrada.');
-  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
+  if (modality.tournament_id !== tournamentId) throw new Error(t('Modalidade não pertence ao torneio.'));
   const stage = modality.stages?.[stageIndex];
-  if (!stage) throw new Error('Fase não encontrada na modalidade.');
+  if (!stage) throw new Error(t('Fase não encontrada na modalidade.'));
   if (stage.type !== TOURNAMENT_STAGE_TYPE.GROUPS) {
-    throw new Error('Esta opção é apenas para fases de grupos. Para os demais formatos, use "Sortear".');
+    throw new Error(t('Esta opção é apenas para fases de grupos. Para os demais formatos, use "Sortear".'));
   }
 
   const groups = await getStageGroups(modalityId, stageIndex);
   if (groups.length === 0) {
-    throw new Error('Nenhum grupo sorteado encontrado nesta fase. Use "Sortear" para criar os grupos primeiro.');
+    throw new Error(t('Nenhum grupo sorteado encontrado nesta fase. Use "Sortear" para criar os grupos primeiro.'));
   }
 
   // Reembaralha a ordem interna de cada grupo (varia a arrumação das rodadas),
@@ -386,7 +386,7 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
   // Torneio com alterações bloqueadas: refazer jogos apagaria os placares da
   // fase — o mesmo bloqueio do "Sortear".
   if (tournament?.results_locked) {
-    throw new Error('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.');
+    throw new Error(t('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.'));
   }
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,
@@ -409,18 +409,18 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
 export async function moveParticipantBetweenGroups(params, actor) {
   const { tournamentId, modalityId, stageIndex = 0, registrationId, toGroupName } = params;
   const modality = await getModality(modalityId);
-  if (!modality) throw new Error('Modalidade não encontrada.');
-  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
+  if (modality.tournament_id !== tournamentId) throw new Error(t('Modalidade não pertence ao torneio.'));
   const stage = modality.stages?.[stageIndex];
   if (!stage || stage.type !== TOURNAMENT_STAGE_TYPE.GROUPS) {
-    throw new Error('Mover entre grupos só se aplica a fases de grupos.');
+    throw new Error(t('Mover entre grupos só se aplica a fases de grupos.'));
   }
 
   const groups = await getStageGroups(modalityId, stageIndex);
   const target = groups.find((g) => g.name === toGroupName);
-  if (!target) throw new Error('Grupo de destino não encontrado.');
+  if (!target) throw new Error(t('Grupo de destino não encontrado.'));
   const source = groups.find((g) => g.participants.includes(registrationId));
-  if (!source) throw new Error('Participante não encontrado em nenhum grupo.');
+  if (!source) throw new Error(t('Participante não encontrado em nenhum grupo.'));
   if (source.name === target.name) return { matches: 0, scheduleWarnings: [] };
 
   // Aplica o movimento (composição nova).
@@ -441,7 +441,7 @@ export async function moveParticipantBetweenGroups(params, actor) {
   // Torneio com alterações bloqueadas: refazer jogos apagaria os placares da
   // fase — o mesmo bloqueio do "Sortear".
   if (tournament?.results_locked) {
-    throw new Error('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.');
+    throw new Error(t('Torneio bloqueado: desbloqueie as alterações para refazer os jogos.'));
   }
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,

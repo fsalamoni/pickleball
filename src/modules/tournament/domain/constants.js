@@ -4,6 +4,19 @@
  * O nome dos enums é mantido em inglês para servir de chave técnica;
  * os rótulos para exibição são em pt-BR e ficam nos mapas *_LABELS.
  */
+import { t, tk } from '@/core/i18n';
+
+/**
+ * Mapa de rótulos traduzido na LEITURA: o catálogo de idioma chega depois do
+ * import, então `t()` roda quando a tela lê `X_LABELS[chave]`. Somente leitura,
+ * como o `Object.freeze` de antes.
+ */
+export const rotulos = (mapa) => new Proxy(mapa, {
+  get: (alvo, k) => (typeof alvo[k] === 'string' ? t(alvo[k]) : alvo[k]),
+  set: () => false,
+  deleteProperty: () => false,
+  defineProperty: () => false,
+});
 
 /**
  * Formato de inscrição da modalidade.
@@ -19,9 +32,9 @@ export const MODALITY_FORMAT = Object.freeze({
   DOUBLES: 'doubles',
 });
 
-export const MODALITY_FORMAT_LABELS = Object.freeze({
-  [MODALITY_FORMAT.SINGLES]: 'Simples',
-  [MODALITY_FORMAT.DOUBLES]: 'Duplas',
+export const MODALITY_FORMAT_LABELS = rotulos({
+  [MODALITY_FORMAT.SINGLES]: tk('Simples'),
+  [MODALITY_FORMAT.DOUBLES]: tk('Duplas'),
 });
 
 /** Estrutura de fase do torneio. */
@@ -39,15 +52,15 @@ export const TOURNAMENT_STAGE_TYPE = Object.freeze({
   AMERICANO_ETAPAS: 'americano_etapas',
 });
 
-export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
-  [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: 'Pontos corridos',
-  [TOURNAMENT_STAGE_TYPE.GROUPS]: 'Fase de grupos',
-  [TOURNAMENT_STAGE_TYPE.KNOCKOUT]: 'Chaves (mata-mata)',
-  [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: 'Dupla eliminação',
-  [TOURNAMENT_STAGE_TYPE.SWISS]: 'Sistema suíço',
-  [TOURNAMENT_STAGE_TYPE.AMERICANO]: 'Americana (rotação)',
-  [TOURNAMENT_STAGE_TYPE.MEXICANO]: 'Mexicano (rotação dinâmica)',
-  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]: 'Americano aprimorado em etapas',
+export const TOURNAMENT_STAGE_TYPE_LABELS = rotulos({
+  [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: tk('Pontos corridos'),
+  [TOURNAMENT_STAGE_TYPE.GROUPS]: tk('Fase de grupos'),
+  [TOURNAMENT_STAGE_TYPE.KNOCKOUT]: tk('Chaves (mata-mata)'),
+  [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: tk('Dupla eliminação'),
+  [TOURNAMENT_STAGE_TYPE.SWISS]: tk('Sistema suíço'),
+  [TOURNAMENT_STAGE_TYPE.AMERICANO]: tk('Americana (rotação)'),
+  [TOURNAMENT_STAGE_TYPE.MEXICANO]: tk('Mexicano (rotação dinâmica)'),
+  [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]: tk('Americano aprimorado em etapas'),
 });
 
 /**
@@ -121,10 +134,10 @@ export const PHASE_DIVISION_MODE = Object.freeze({
   MAX_PER_GROUP: 'max_per_group',
 });
 
-export const PHASE_DIVISION_MODE_LABELS = Object.freeze({
-  [PHASE_DIVISION_MODE.SINGLE]: 'Grupo único (todos juntos)',
-  [PHASE_DIVISION_MODE.GROUP_COUNT]: 'Número de grupos',
-  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: 'Máximo de atletas por grupo',
+export const PHASE_DIVISION_MODE_LABELS = rotulos({
+  [PHASE_DIVISION_MODE.SINGLE]: tk('Grupo único (todos juntos)'),
+  [PHASE_DIVISION_MODE.GROUP_COUNT]: tk('Número de grupos'),
+  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: tk('Máximo de atletas por grupo'),
 });
 
 /**
@@ -139,9 +152,9 @@ export const PHASE_QUALIFIER_MODE = Object.freeze({
   BY_GENDER: 'by_gender',
 });
 
-export const PHASE_QUALIFIER_MODE_LABELS = Object.freeze({
-  [PHASE_QUALIFIER_MODE.OVERALL]: 'Melhores classificados (geral)',
-  [PHASE_QUALIFIER_MODE.BY_GENDER]: 'Melhor(es) de cada gênero (M e F)',
+export const PHASE_QUALIFIER_MODE_LABELS = rotulos({
+  [PHASE_QUALIFIER_MODE.OVERALL]: tk('Melhores classificados (geral)'),
+  [PHASE_QUALIFIER_MODE.BY_GENDER]: tk('Melhor(es) de cada gênero (M e F)'),
 });
 
 /**
@@ -158,10 +171,10 @@ export const PHASE_FEED_MODE = Object.freeze({
   POOL_ALL: 'pool_all',
 });
 
-export const PHASE_FEED_MODE_LABELS = Object.freeze({
-  [PHASE_FEED_MODE.INHERIT_GROUPS]: 'Por grupo da fase anterior',
-  [PHASE_FEED_MODE.MERGE_GROUPS]: 'Fundir grupos (A+B → AB)',
-  [PHASE_FEED_MODE.POOL_ALL]: 'Juntar todos e redividir',
+export const PHASE_FEED_MODE_LABELS = rotulos({
+  [PHASE_FEED_MODE.INHERIT_GROUPS]: tk('Por grupo da fase anterior'),
+  [PHASE_FEED_MODE.MERGE_GROUPS]: tk('Fundir grupos (A+B → AB)'),
+  [PHASE_FEED_MODE.POOL_ALL]: tk('Juntar todos e redividir'),
 });
 
 /**
@@ -177,10 +190,10 @@ export const PHASE_PAIRING_MODE = Object.freeze({
   PAIR_TOP_TWO: 'pair_top_two',
 });
 
-export const PHASE_PAIRING_MODE_LABELS = Object.freeze({
-  [PHASE_PAIRING_MODE.NONE]: 'Avançam individualmente',
-  [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: 'Formar dupla mista por grupo (M + F)',
-  [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: 'Formar dupla com os 2 melhores do grupo',
+export const PHASE_PAIRING_MODE_LABELS = rotulos({
+  [PHASE_PAIRING_MODE.NONE]: tk('Avançam individualmente'),
+  [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: tk('Formar dupla mista por grupo (M + F)'),
+  [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: tk('Formar dupla com os 2 melhores do grupo'),
 });
 
 /**
@@ -196,9 +209,9 @@ export const PHASE_BRACKET_SEEDING = Object.freeze({
   ADJACENT: 'adjacent',
 });
 
-export const PHASE_BRACKET_SEEDING_LABELS = Object.freeze({
-  [PHASE_BRACKET_SEEDING.STANDARD]: 'Cabeças-de-chave espalhadas (clássico)',
-  [PHASE_BRACKET_SEEDING.ADJACENT]: 'Cruzado por grupos (A×B, C×D)',
+export const PHASE_BRACKET_SEEDING_LABELS = rotulos({
+  [PHASE_BRACKET_SEEDING.STANDARD]: tk('Cabeças-de-chave espalhadas (clássico)'),
+  [PHASE_BRACKET_SEEDING.ADJACENT]: tk('Cruzado por grupos (A×B, C×D)'),
 });
 
 /** Limite de segurança para o número de fases de uma modalidade. */
@@ -210,9 +223,9 @@ export const RULESET = Object.freeze({
   USAP: 'usap', // USA Pickleball
 });
 
-export const RULESET_LABELS = Object.freeze({
-  [RULESET.CBP]: 'Regras Brasileiras (CBP)',
-  [RULESET.USAP]: 'Regras Americanas (USAP)',
+export const RULESET_LABELS = rotulos({
+  [RULESET.CBP]: tk('Regras Brasileiras (CBP)'),
+  [RULESET.USAP]: tk('Regras Americanas (USAP)'),
 });
 
 /** Pontuação alvo de um game. */
@@ -228,9 +241,9 @@ export const TOURNAMENT_VISIBILITY = Object.freeze({
   PRIVATE: 'private',
 });
 
-export const TOURNAMENT_VISIBILITY_LABELS = Object.freeze({
-  [TOURNAMENT_VISIBILITY.PUBLIC]: 'Público',
-  [TOURNAMENT_VISIBILITY.PRIVATE]: 'Privado',
+export const TOURNAMENT_VISIBILITY_LABELS = rotulos({
+  [TOURNAMENT_VISIBILITY.PUBLIC]: tk('Público'),
+  [TOURNAMENT_VISIBILITY.PRIVATE]: tk('Privado'),
 });
 
 /** Categoria de nível. */
@@ -244,14 +257,14 @@ export const SKILL_LEVEL = Object.freeze({
   ELITE: 'elite',
 });
 
-export const SKILL_LEVEL_LABELS = Object.freeze({
-  [SKILL_LEVEL.BEGINNER]: 'Iniciante (2.0–2.5)',
-  [SKILL_LEVEL.INTERMEDIATE]: 'Intermediário (3.0)',
-  [SKILL_LEVEL.INTERMEDIATE_PLUS]: 'Intermediário Plus (3.5–4.0)',
-  [SKILL_LEVEL.ADVANCED]: 'Avançado (4.0)',
-  [SKILL_LEVEL.PRO]: 'PRO (4.5)',
-  [SKILL_LEVEL.OPEN]: 'Open (5.0+)',
-  [SKILL_LEVEL.ELITE]: 'Elite (Profissional)',
+export const SKILL_LEVEL_LABELS = rotulos({
+  [SKILL_LEVEL.BEGINNER]: tk('Iniciante (2.0–2.5)'),
+  [SKILL_LEVEL.INTERMEDIATE]: tk('Intermediário (3.0)'),
+  [SKILL_LEVEL.INTERMEDIATE_PLUS]: tk('Intermediário Plus (3.5–4.0)'),
+  [SKILL_LEVEL.ADVANCED]: tk('Avançado (4.0)'),
+  [SKILL_LEVEL.PRO]: tk('PRO (4.5)'),
+  [SKILL_LEVEL.OPEN]: tk('Open (5.0+)'),
+  [SKILL_LEVEL.ELITE]: tk('Elite (Profissional)'),
 });
 
 /** Categoria por gênero (CBP). */
@@ -262,11 +275,11 @@ export const GENDER_CATEGORY = Object.freeze({
   OPEN: 'open',
 });
 
-export const GENDER_CATEGORY_LABELS = Object.freeze({
-  [GENDER_CATEGORY.MALE]: 'Masculino',
-  [GENDER_CATEGORY.FEMALE]: 'Feminino',
-  [GENDER_CATEGORY.MIXED]: 'Misto',
-  [GENDER_CATEGORY.OPEN]: 'Aberto',
+export const GENDER_CATEGORY_LABELS = rotulos({
+  [GENDER_CATEGORY.MALE]: tk('Masculino'),
+  [GENDER_CATEGORY.FEMALE]: tk('Feminino'),
+  [GENDER_CATEGORY.MIXED]: tk('Misto'),
+  [GENDER_CATEGORY.OPEN]: tk('Aberto'),
 });
 
 /**
@@ -280,9 +293,9 @@ export const COMPETITION_GENDER = Object.freeze({
   FEMALE: 'female',
 });
 
-export const COMPETITION_GENDER_LABELS = Object.freeze({
-  [COMPETITION_GENDER.MALE]: 'Competir na categoria masculina',
-  [COMPETITION_GENDER.FEMALE]: 'Competir na categoria feminina',
+export const COMPETITION_GENDER_LABELS = rotulos({
+  [COMPETITION_GENDER.MALE]: tk('Competir na categoria masculina'),
+  [COMPETITION_GENDER.FEMALE]: tk('Competir na categoria feminina'),
 });
 
 /** Faixa etária (CBP). */
@@ -295,9 +308,9 @@ export const AGE_CATEGORY = Object.freeze({
   A70: '70plus',
 });
 
-export const AGE_CATEGORY_LABELS = Object.freeze({
-  [AGE_CATEGORY.OPEN]: 'Open',
-  [AGE_CATEGORY.U19]: 'Sub-19',
+export const AGE_CATEGORY_LABELS = rotulos({
+  [AGE_CATEGORY.OPEN]: tk('Open'),
+  [AGE_CATEGORY.U19]: tk('Sub-19'),
   [AGE_CATEGORY.A35]: '35+',
   [AGE_CATEGORY.A50]: '50+',
   [AGE_CATEGORY.A60]: '60+',
@@ -314,13 +327,13 @@ export const TOURNAMENT_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
-export const TOURNAMENT_STATUS_LABELS = Object.freeze({
-  [TOURNAMENT_STATUS.DRAFT]: 'Rascunho',
-  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'Inscrições abertas',
-  [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'Inscrições encerradas',
-  [TOURNAMENT_STATUS.IN_PROGRESS]: 'Em andamento',
-  [TOURNAMENT_STATUS.FINISHED]: 'Encerrado',
-  [TOURNAMENT_STATUS.CANCELLED]: 'Cancelado',
+export const TOURNAMENT_STATUS_LABELS = rotulos({
+  [TOURNAMENT_STATUS.DRAFT]: tk('Rascunho'),
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: tk('Inscrições abertas'),
+  [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: tk('Inscrições encerradas'),
+  [TOURNAMENT_STATUS.IN_PROGRESS]: tk('Em andamento'),
+  [TOURNAMENT_STATUS.FINISHED]: tk('Encerrado'),
+  [TOURNAMENT_STATUS.CANCELLED]: tk('Cancelado'),
 });
 
 /** Status de uma inscrição em uma modalidade. */
@@ -333,13 +346,13 @@ export const REGISTRATION_STATUS = Object.freeze({
   WITHDRAWN: 'withdrawn',
 });
 
-export const REGISTRATION_STATUS_LABELS = Object.freeze({
-  [REGISTRATION_STATUS.PENDING_PAYMENT]: 'Pagamento pendente',
-  [REGISTRATION_STATUS.CONFIRMED]: 'Confirmada',
-  [REGISTRATION_STATUS.CHECKED_IN]: 'Check-in feito',
-  [REGISTRATION_STATUS.WAITLIST]: 'Lista de espera',
-  [REGISTRATION_STATUS.CANCELLED]: 'Cancelada',
-  [REGISTRATION_STATUS.WITHDRAWN]: 'Desistência (WO)',
+export const REGISTRATION_STATUS_LABELS = rotulos({
+  [REGISTRATION_STATUS.PENDING_PAYMENT]: tk('Pagamento pendente'),
+  [REGISTRATION_STATUS.CONFIRMED]: tk('Confirmada'),
+  [REGISTRATION_STATUS.CHECKED_IN]: tk('Check-in feito'),
+  [REGISTRATION_STATUS.WAITLIST]: tk('Lista de espera'),
+  [REGISTRATION_STATUS.CANCELLED]: tk('Cancelada'),
+  [REGISTRATION_STATUS.WITHDRAWN]: tk('Desistência (WO)'),
 });
 
 /** Status de um jogo. */
@@ -351,12 +364,12 @@ export const MATCH_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
-export const MATCH_STATUS_LABELS = Object.freeze({
-  [MATCH_STATUS.SCHEDULED]: 'Agendado',
-  [MATCH_STATUS.IN_PROGRESS]: 'Em andamento',
-  [MATCH_STATUS.FINISHED]: 'Encerrado',
-  [MATCH_STATUS.WALKOVER]: 'WO',
-  [MATCH_STATUS.CANCELLED]: 'Cancelado',
+export const MATCH_STATUS_LABELS = rotulos({
+  [MATCH_STATUS.SCHEDULED]: tk('Agendado'),
+  [MATCH_STATUS.IN_PROGRESS]: tk('Em andamento'),
+  [MATCH_STATUS.FINISHED]: tk('Encerrado'),
+  [MATCH_STATUS.WALKOVER]: tk('WO'),
+  [MATCH_STATUS.CANCELLED]: tk('Cancelado'),
 });
 
 /** Papel de admin de torneio. */
@@ -385,11 +398,11 @@ export const PICKLEBALL_EXPERIENCE = Object.freeze({
   MORE_THAN_TWO_YEARS: 'more_than_two_years',
 });
 
-export const PICKLEBALL_EXPERIENCE_LABELS = Object.freeze({
-  [PICKLEBALL_EXPERIENCE.UP_TO_6_MONTHS]: '6 meses ou menos',
-  [PICKLEBALL_EXPERIENCE.SIX_TO_TWELVE_MONTHS]: 'Entre 6 meses e 1 ano',
-  [PICKLEBALL_EXPERIENCE.ONE_TO_TWO_YEARS]: 'Entre 1 e 2 anos',
-  [PICKLEBALL_EXPERIENCE.MORE_THAN_TWO_YEARS]: 'Mais de 2 anos',
+export const PICKLEBALL_EXPERIENCE_LABELS = rotulos({
+  [PICKLEBALL_EXPERIENCE.UP_TO_6_MONTHS]: tk('6 meses ou menos'),
+  [PICKLEBALL_EXPERIENCE.SIX_TO_TWELVE_MONTHS]: tk('Entre 6 meses e 1 ano'),
+  [PICKLEBALL_EXPERIENCE.ONE_TO_TWO_YEARS]: tk('Entre 1 e 2 anos'),
+  [PICKLEBALL_EXPERIENCE.MORE_THAN_TWO_YEARS]: tk('Mais de 2 anos'),
 });
 
 /** Status de uma quadra. */
@@ -400,11 +413,11 @@ export const COURT_STATUS = Object.freeze({
   CLOSED: 'closed',
 });
 
-export const COURT_STATUS_LABELS = Object.freeze({
-  [COURT_STATUS.AVAILABLE]: 'Disponível',
-  [COURT_STATUS.IN_USE]: 'Em uso',
-  [COURT_STATUS.MAINTENANCE]: 'Manutenção',
-  [COURT_STATUS.CLOSED]: 'Fechada',
+export const COURT_STATUS_LABELS = rotulos({
+  [COURT_STATUS.AVAILABLE]: tk('Disponível'),
+  [COURT_STATUS.IN_USE]: tk('Em uso'),
+  [COURT_STATUS.MAINTENANCE]: tk('Manutenção'),
+  [COURT_STATUS.CLOSED]: tk('Fechada'),
 });
 
 /** Templates de torneio pré-configurados. */
@@ -417,13 +430,13 @@ export const TOURNAMENT_TEMPLATE = Object.freeze({
   AMERICANO_OPEN: 'americano_open',
 });
 
-export const TOURNAMENT_TEMPLATE_LABELS = Object.freeze({
-  [TOURNAMENT_TEMPLATE.ROUND_ROBIN_SIMPLE]: 'Pontos corridos (simples)',
-  [TOURNAMENT_TEMPLATE.GROUPS_THEN_KO]: 'Grupos + mata-mata',
-  [TOURNAMENT_TEMPLATE.SINGLE_KO]: 'Eliminação simples',
-  [TOURNAMENT_TEMPLATE.DOUBLE_KO]: 'Dupla eliminação',
-  [TOURNAMENT_TEMPLATE.SWISS_THEN_KO]: 'Suíço + mata-mata',
-  [TOURNAMENT_TEMPLATE.AMERICANO_OPEN]: 'Americana aberta',
+export const TOURNAMENT_TEMPLATE_LABELS = rotulos({
+  [TOURNAMENT_TEMPLATE.ROUND_ROBIN_SIMPLE]: tk('Pontos corridos (simples)'),
+  [TOURNAMENT_TEMPLATE.GROUPS_THEN_KO]: tk('Grupos + mata-mata'),
+  [TOURNAMENT_TEMPLATE.SINGLE_KO]: tk('Eliminação simples'),
+  [TOURNAMENT_TEMPLATE.DOUBLE_KO]: tk('Dupla eliminação'),
+  [TOURNAMENT_TEMPLATE.SWISS_THEN_KO]: tk('Suíço + mata-mata'),
+  [TOURNAMENT_TEMPLATE.AMERICANO_OPEN]: tk('Americana aberta'),
 });
 
 /** Códigos USAP por nível, úteis para comunicação cruzada. */

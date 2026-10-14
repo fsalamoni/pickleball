@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
 import ModalityInfoContent from './ModalityInfoContent';
+import { t } from '@/core/i18n';
 
 export default function ModalityInfoModal({ modality, tournament, registrationsCount, open, onClose }) {
   if (!modality) return null;
@@ -29,7 +30,7 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Fechar</Button>
+          <Button variant="outline" onClick={onClose}>{t('Fechar')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

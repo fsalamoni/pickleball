@@ -10,6 +10,7 @@ import { listAllMatchesForModality } from './matchService.js';
 import { getTournament } from './tournamentService.js';
 import { MATCH_STATUS } from '../domain/constants.js';
 import { partnerNameFor } from '../domain/participation.js';
+import { t } from '@/core/i18n';
 
 function toTime(value) {
   if (!value) return NaN;
@@ -87,11 +88,11 @@ export async function getMyUpcomingMatches(uid, options = {}) {
       upcoming.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
-        tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
+        tournamentName: tournamentName.get(m.tournament_id) || t('Torneio'),
         scheduledAt: when,
         court: m.court || null,
         partner: resolveMyPartner({ myIds, myRegIds, myRegById, labelById, uid }),
-        opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'A definir',
+        opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || t('A definir'),
       });
     });
   }
@@ -146,12 +147,12 @@ export async function getMyFinishedMatches(uid, options = {}) {
       out.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
-        tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
+        tournamentName: tournamentName.get(m.tournament_id) || t('Torneio'),
         at: Number.isNaN(when) ? 0 : when,
         // Parceiro da MINHA dupla: nos formatos de rotação (americana) é a OUTRA
         // inscrição do meu lado da partida; nas duplas fixas é o player_b.
         partner: resolveMyPartner({ myIds, myRegIds, myRegById, labelById, uid }),
-        opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'Adversário',
+        opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || t('Adversário'),
         myScore: mySide === 'a' ? pointsA : pointsB,
         oppScore: mySide === 'a' ? pointsB : pointsA,
         won: m.winner_side === mySide,

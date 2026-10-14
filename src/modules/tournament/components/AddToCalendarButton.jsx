@@ -11,14 +11,15 @@ import { CalendarPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildICS, icsFilename } from '@/modules/tournament/domain/ics.js';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function AddToCalendarButton({
-  event, label = 'Adicionar ao calendário', size = 'sm', variant = 'secondary', className,
+  event, label = t('Adicionar ao calendário'), size = 'sm', variant = 'secondary', className,
 }) {
   function handleClick() {
     const content = buildICS(event || {});
     if (!content) {
-      toast.error('Não foi possível gerar o evento (data inválida).');
+      toast.error(t('Não foi possível gerar o evento (data inválida).'));
       return;
     }
     try {
@@ -32,7 +33,7 @@ export default function AddToCalendarButton({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      toast.error('Não foi possível baixar o evento.');
+      toast.error(t('Não foi possível baixar o evento.'));
     }
   }
 

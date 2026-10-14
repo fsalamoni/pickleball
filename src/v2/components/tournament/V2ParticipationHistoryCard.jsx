@@ -15,6 +15,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { V2Badge, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function formatDate(value) {
   if (!value) return null;
@@ -23,7 +24,7 @@ function formatDate(value) {
   else if (typeof value === 'object' && typeof value.seconds === 'number') d = new Date(value.seconds * 1000);
   else d = new Date(value);
   if (Number.isNaN(d?.getTime?.())) return null;
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return fmtData(d, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function tournamentStatusTone(status) {
@@ -48,13 +49,13 @@ function medalEmoji(position) {
 }
 
 function RankingBadge({ ranking }) {
-  if (!ranking) return <span className="text-xs text-gray-500">Aguardando início dos jogos</span>;
+  if (!ranking) return <span className="text-xs text-gray-500">{t('Aguardando início dos jogos')}</span>;
   const medal = medalEmoji(ranking.position);
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      <V2Badge tone={medal ? 'amber' : 'neutral'}>{medal ? `${medal} ` : ''}{ranking.position}º de {ranking.total}</V2Badge>
+      <V2Badge tone={medal ? 'amber' : 'neutral'}>{medal ? `${medal} ` : ''}{t('{position}º de {total}', { position: ranking.position, total: ranking.total })}</V2Badge>
       <span className="tabular-nums text-gray-600">
-        {ranking.wins}V – {ranking.losses}D<span className="text-gray-400"> · {ranking.played} jogo(s)</span>
+        {ranking.wins}V – {ranking.losses}D<span className="text-gray-400"> {t('· {played} jogo(s)', { played: ranking.played })}</span>
       </span>
     </div>
   );
@@ -62,7 +63,7 @@ function RankingBadge({ ranking }) {
 
 function EntryRow({ entry }) {
   const { registration: reg, modality, partnerName, partnerPhoto, ranking } = entry;
-  const name = modality?.name || 'Modalidade';
+  const name = modality?.name || t('Modalidade');
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -76,7 +77,7 @@ function EntryRow({ entry }) {
           </div>
           {partnerName && (
             <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-600">
-              <Users className="h-3.5 w-3.5" /> Dupla com
+              <Users className="h-3.5 w-3.5" /> {t('Dupla com')}
               <UserAvatar size="xs" name={partnerName} photoUrl={partnerPhoto} />
               {partnerName}
             </div>
@@ -91,7 +92,7 @@ function EntryRow({ entry }) {
 
 function TournamentGroup({ group }) {
   const { tournament, tournamentId, entries } = group;
-  const name = tournament?.name || 'Torneio';
+  const name = tournament?.name || t('Torneio');
   const date = formatDate(tournament?.starts_at);
   const place = [tournament?.city, tournament?.state].filter(Boolean).join(' / ');
 
@@ -107,7 +108,7 @@ function TournamentGroup({ group }) {
                 <ChevronRight className="h-4 w-4" />
               </Link>
             ) : (
-              <span className="font-bold text-gray-400">{name} (indisponível)</span>
+              <span className="font-bold text-gray-400">{t('{name} (indisponível)', { name })}</span>
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
@@ -134,34 +135,34 @@ export default function V2ParticipationHistoryCard() {
     <V2Surface className="p-0 sm:p-0">
       <div className="border-b border-gray-100 p-5 sm:p-6">
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <History className="h-5 w-5 text-ink" /> Histórico de participações
+          <History className="h-5 w-5 text-ink" /> {t('Histórico de participações')}
         </h3>
         <p className="mt-1 text-sm text-gray-500">
-          Torneios em que você se inscreveu, com as modalidades, sua dupla e a posição no ranking de cada competição.
+          {t('Torneios em que você se inscreveu, com as modalidades, sua dupla e a posição no ranking de cada competição.')}
         </p>
       </div>
       <div className="p-5 sm:p-6">
         {isLoading ? (
-          <p className="text-sm text-gray-500">Carregando…</p>
+          <p className="text-sm text-gray-500">{t('Carregando…')}</p>
         ) : falhouHistorico ? (
           /* ⚠️ Dizer a alguém que ela nunca participou de torneio nenhum,
              quando o que falhou foi a rede, é apagar o histórico dessa pessoa
              na cara dela. */
           <V2ErrorState
             inline
-            title="O histórico não carregou"
-            description="Sua participação continua registrada."
+            title={t('O histórico não carregou')}
+            description={t('Sua participação continua registrada.')}
             onRetry={() => recarregarHistorico()}
           />
         ) : history.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-gray-200 bg-paper p-6 text-center">
             <Trophy className="mx-auto mb-2 h-6 w-6 text-gray-400" />
-            <p className="text-sm text-gray-600">Você ainda não participou de nenhum torneio.</p>
-            <Link to="/torneios" className="mt-2 inline-block text-sm font-bold text-ink hover:underline">Ver torneios disponíveis</Link>
+            <p className="text-sm text-gray-600">{t('Você ainda não participou de nenhum torneio.')}</p>
+            <Link to="/torneios" className="mt-2 inline-block text-sm font-bold text-ink hover:underline">{t('Ver torneios disponíveis')}</Link>
           </div>
         ) : (
           <>
-            <p className="mb-3 text-xs text-gray-500">{history.length} torneio(s) · {totalRegistrations} inscrição(ões)</p>
+            <p className="mb-3 text-xs text-gray-500">{t('{n} torneio(s) · {totalRegistrations} inscrição(ões)', { n: history.length, totalRegistrations })}</p>
             <div className="space-y-3">
               {history.map((group) => <TournamentGroup key={group.tournamentId} group={group} />)}
             </div>

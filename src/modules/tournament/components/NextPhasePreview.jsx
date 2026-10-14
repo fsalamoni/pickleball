@@ -10,6 +10,7 @@ import { registrationsToEntrants } from '@/modules/tournament/domain/registratio
 import { previewPhaseAdvance, describePhaseAdvance } from '@/modules/tournament/domain/phaseAdvancePreview';
 import { etapasProgress } from '@/modules/tournament/domain/americanoEtapas';
 import { MATCH_STATUS, TOURNAMENT_STAGE_TYPE } from '@/modules/tournament/domain/constants';
+import { t } from '@/core/i18n';
 
 const CONCLUIDOS = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
 
@@ -137,7 +138,7 @@ export default function NextPhasePreview({
           : <ArrowDownToLine className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />}
         <div className="min-w-0 space-y-1.5">
           <p className="font-semibold">
-            {preview.blocked ? 'A próxima fase ainda não pode ser gerada' : describePhaseAdvance(preview, { isTeam })}
+            {preview.blocked ? t('A próxima fase ainda não pode ser gerada') : describePhaseAdvance(preview, { isTeam })}
           </p>
 
           {preview.blocked && <p className="leading-snug">{preview.blocked.message}</p>}
@@ -147,19 +148,19 @@ export default function NextPhasePreview({
               <Lista
                 Icon={ArrowDownToLine}
                 tone="text-sky-800"
-                titulo="Classificados"
+                titulo={t('Classificados')}
                 nomes={preview.names.qualifiers}
               />
               <Lista
                 Icon={LifeBuoy}
                 tone="text-emerald-800"
-                titulo="Por repescagem"
+                titulo={t('Por repescagem')}
                 nomes={preview.names.wildcards}
               />
               <Lista
                 Icon={SkipForward}
                 tone="text-violet-800"
-                titulo="Entram direto"
+                titulo={t('Entram direto')}
                 nomes={preview.names.directs}
               />
             </div>
@@ -168,8 +169,8 @@ export default function NextPhasePreview({
           {parcial && (
             <p className="text-[11px] leading-snug opacity-80">
               {etapasFaltando
-                ? 'Ainda há etapas por jogar — esta prévia considera só as etapas já jogadas e vai mudar até a última.'
-                : 'Ainda há jogos por decidir nesta fase — esta prévia considera só os resultados já lançados e vai mudar até o último jogo.'}
+                ? t('Ainda há etapas por jogar — esta prévia considera só as etapas já jogadas e vai mudar até a última.')
+                : t('Ainda há jogos por decidir nesta fase — esta prévia considera só os resultados já lançados e vai mudar até o último jogo.')}
             </p>
           )}
         </div>

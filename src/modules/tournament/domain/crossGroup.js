@@ -46,6 +46,8 @@
  */
 
 import { balanceOf } from './tiebreak.js';
+import { tk } from '@/core/i18n';
+import { rotulos } from './constants.js';
 
 /**
  * Como comparar quem veio de grupos diferentes. São três escolas, todas em uso
@@ -64,19 +66,19 @@ export const CROSS_GROUP_METHOD = Object.freeze({
   DROP_LAST: 'drop_last',
 });
 
-export const CROSS_GROUP_METHOD_LABELS = Object.freeze({
-  [CROSS_GROUP_METHOD.RATE]: 'Aproveitamento (percentual)',
-  [CROSS_GROUP_METHOD.ABSOLUTE]: 'Números absolutos',
-  [CROSS_GROUP_METHOD.DROP_LAST]: 'Descartar o jogo contra o último de cada grupo',
+export const CROSS_GROUP_METHOD_LABELS = rotulos({
+  [CROSS_GROUP_METHOD.RATE]: tk('Aproveitamento (percentual)'),
+  [CROSS_GROUP_METHOD.ABSOLUTE]: tk('Números absolutos'),
+  [CROSS_GROUP_METHOD.DROP_LAST]: tk('Descartar o jogo contra o último de cada grupo'),
 });
 
-export const CROSS_GROUP_METHOD_HELP = Object.freeze({
+export const CROSS_GROUP_METHOD_HELP = rotulos({
   [CROSS_GROUP_METHOD.RATE]:
-    'Vitórias e saldo divididos pelas partidas jogadas. É o que os circuitos de pickleball usam quando as chaves têm tamanhos diferentes: 3 vitórias em 3 vale mais que 3 em 4. Escolha esta se não tiver certeza.',
+    tk('Vitórias e saldo divididos pelas partidas jogadas. É o que os circuitos de pickleball usam quando as chaves têm tamanhos diferentes: 3 vitórias em 3 vale mais que 3 em 4. Escolha esta se não tiver certeza.'),
   [CROSS_GROUP_METHOD.ABSOLUTE]:
-    'Compara vitórias e saldo crus. Simples e transparente, mas só é justo quando TODOS os grupos têm o mesmo tamanho — senão quem jogou mais leva vantagem por ter tido mais chance de somar.',
+    tk('Compara vitórias e saldo crus. Simples e transparente, mas só é justo quando TODOS os grupos têm o mesmo tamanho — senão quem jogou mais leva vantagem por ter tido mais chance de somar.'),
   [CROSS_GROUP_METHOD.DROP_LAST]:
-    'Tira da conta o jogo de cada um contra o último colocado do seu grupo, de modo que todos passem a ser comparados sobre o mesmo número de partidas. É a regra da FIFA para grupos de tamanhos diferentes. Mais rigorosa, e mais difícil de explicar na beira da quadra.',
+    tk('Tira da conta o jogo de cada um contra o último colocado do seu grupo, de modo que todos passem a ser comparados sobre o mesmo número de partidas. É a regra da FIFA para grupos de tamanhos diferentes. Mais rigorosa, e mais difícil de explicar na beira da quadra.'),
 });
 
 /** Normaliza o método (desconhecido ⇒ percentual). */

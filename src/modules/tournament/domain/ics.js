@@ -9,6 +9,8 @@
  * usuário (flag calendar_export).
  */
 
+import { t } from '@/core/i18n';
+
 const PRODID = '-//PickleRush//Calendario//PT-BR';
 
 /** Escapa texto conforme a RFC 5545 (vírgula, ponto-e-vírgula, barra, quebra). */
@@ -89,7 +91,7 @@ export function buildICS(e = {}) {
     `DTSTAMP:${toICSDate(new Date())}`,
     `DTSTART:${dtStart}`,
     `DTEND:${dtEnd}`,
-    `SUMMARY:${escapeICSText(e.title || 'Evento')}`,
+    `SUMMARY:${escapeICSText(e.title || t('Evento'))}`,
   ];
   if (e.description) lines.push(`DESCRIPTION:${escapeICSText(e.description)}`);
   if (e.location) lines.push(`LOCATION:${escapeICSText(e.location)}`);

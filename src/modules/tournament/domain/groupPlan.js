@@ -41,6 +41,7 @@
 import { PHASE_DIVISION_MODE } from './constants.js';
 import { computeGroupSizes } from './grouping.js';
 import { bracketFit } from './crossGroup.js';
+import { t } from '@/core/i18n';
 
 /** Tamanhos que os guias de organização recomendam. */
 export const IDEAL_GROUP_SIZES = Object.freeze([4, 5]);
@@ -85,42 +86,42 @@ export function describeGroupPlan(total, groupCount, options = {}) {
 
   const warnings = [];
   if (n === 0) {
-    warnings.push({ level: 'error', text: 'Ainda não há inscritos nesta modalidade.' });
+    warnings.push({ level: 'error', text: t('Ainda não há inscritos nesta modalidade.') });
   } else if (menor < 2) {
     warnings.push({
       level: 'error',
-      text: `Com ${n} inscritos em ${sizes.length} grupos sobra grupo sem adversário. Use no máximo ${Math.floor(n / 2)} grupo(s).`,
+      text: t('Com {n} inscritos em {n2} grupos sobra grupo sem adversário. Use no máximo {v3} grupo(s).', { n, n2: sizes.length, v3: Math.floor(n / 2) }),
     });
   } else if (menor === 2) {
     warnings.push({
       level: 'error',
-      text: 'Grupo de 2 não é grupo: é uma partida só, e quem perde vai embora depois de um jogo. Reduza o número de grupos.',
+      text: t('Grupo de 2 não é grupo: é uma partida só, e quem perde vai embora depois de um jogo. Reduza o número de grupos.'),
     });
   } else if (menor === 3 && legs === 1) {
     warnings.push({
       level: 'warn',
-      text: 'Grupo de 3 dá só 2 jogos por atleta. Ida e volta dentro do grupo sobe para 4 — é o que os circuitos fazem com grupo pequeno.',
+      text: t('Grupo de 3 dá só 2 jogos por atleta. Ida e volta dentro do grupo sobe para 4 — é o que os circuitos fazem com grupo pequeno.'),
     });
   }
 
   if (maior > MAX_COMFORTABLE_GROUP_SIZE) {
     warnings.push({
       level: 'warn',
-      text: `Grupo de ${maior} gera ${comb2(maior) * legs} jogos e ${rodadas} rodadas só nele. Com mais grupos o dia fica mais curto.`,
+      text: t('Grupo de {maior} gera {v2} jogos e {rodadas} rodadas só nele. Com mais grupos o dia fica mais curto.', { maior, v2: comb2(maior) * legs, rodadas }),
     });
   }
 
   if (!uniforme) {
     warnings.push({
       level: 'info',
-      text: `Grupos de tamanhos diferentes (${menor} e ${maior}) — normal e permitido. Quem joga menos partidas não sai prejudicado: a comparação entre grupos é por APROVEITAMENTO, não por número de vitórias.`,
+      text: t('Grupos de tamanhos diferentes ({menor} e {maior}) — normal e permitido. Quem joga menos partidas não sai prejudicado: a comparação entre grupos é por APROVEITAMENTO, não por número de vitórias.', { menor, maior }),
     });
   }
 
   if (per > 0 && classificados > 1 && !chave.perfect) {
     warnings.push({
       level: 'info',
-      text: `${classificados} classificados não fecham uma chave: seriam ${chave.byes} bye(s) numa chave de ${chave.size}. Repescar ${chave.toFill} completa a chave; ${chave.dropToFill} classificado(s) a menos caberia(m) numa chave de ${chave.downTo}.`,
+      text: t('{classificados} classificados não fecham uma chave: seriam {byes} bye(s) numa chave de {size}. Repescar {toFill} completa a chave; {dropToFill} classificado(s) a menos caberia(m) numa chave de {downTo}.', { classificados, byes: chave.byes, size: chave.size, toFill: chave.toFill, dropToFill: chave.dropToFill, downTo: chave.downTo }),
     });
   }
 

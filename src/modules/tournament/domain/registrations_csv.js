@@ -6,6 +6,7 @@
  * Sem I/O — o download é responsabilidade da UI.
  */
 import { resolveRegistrationContact } from './registrationContact.js';
+import { t, tk } from '@/core/i18n';
 
 const BOM = String.fromCharCode(0xFEFF);
 const SEP = ';';
@@ -25,8 +26,8 @@ export function csvRow(fields) {
 }
 
 const HEADERS = [
-  'Modalidade', 'Inscrição', 'Jogador A', 'E-mail A', 'Nível A',
-  'Jogador B', 'E-mail B', 'Nível B', 'Status', 'Provisória', 'Pagamento',
+  tk('Modalidade'), tk('Inscrição'), tk('Jogador A'), tk('E-mail A'), tk('Nível A'),
+  tk('Jogador B'), tk('E-mail B'), tk('Nível B'), tk('Status'), tk('Provisória'), tk('Pagamento'),
 ];
 
 /**
@@ -58,11 +59,11 @@ export function buildRegistrationsCsv(registrations = [], opts = {}) {
     contatoDe(r).player_b_email || '',
     r.player_b_level || '',
     statusLabels[r.status] || r.status || '',
-    r.is_provisional ? 'Sim' : '',
+    r.is_provisional ? t('Sim') : '',
     r.payment_status ? (paymentLabels[r.payment_status] || r.payment_status) : '',
   ]));
 
-  return BOM + [csvRow(HEADERS), ...rows].join('\r\n');
+  return BOM + [csvRow(HEADERS.map((h) => t(h))), ...rows].join('\r\n');
 }
 
 /** Nome de arquivo do CSV a partir do nome do torneio. */

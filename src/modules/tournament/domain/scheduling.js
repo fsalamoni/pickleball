@@ -8,7 +8,6 @@
  */
 
 import { scheduleMatches } from './schedule.js';
-
 export const DEFAULT_COURT_COUNT = 1;
 export const MAX_COURT_COUNT = 50;
 export const DEFAULT_MATCH_DURATION_MINUTES = 30;

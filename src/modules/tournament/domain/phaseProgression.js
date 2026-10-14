@@ -29,6 +29,7 @@ import { supportsGroups, BRACKET_FORMATS } from './phases.js';
 import { selectWildcards, rankAcrossGroups, withoutLastPlaced, CROSS_GROUP_METHOD } from './crossGroup.js';
 import { normalizeDirectEntry, hasDirectEntry } from './directEntry.js';
 import { buildTeamRanking, matchToConfrontation, isTeamConfrontation } from './teamFormat.js';
+import { t } from '@/core/i18n';
 
 /** Formatos de ROTAÇÃO de parceiros (jogam com duplas montadas por rodada). */
 const ROTATION_FORMATS = new Set([

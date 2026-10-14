@@ -22,6 +22,8 @@
  * Posição 0 = não pontuou.
  */
 
+import { t } from '@/core/i18n';
+
 export const CIRCUIT_DEFAULT_POINTS = {
   1: 100, 2: 75, 3: 50, 4: 50,
   5: 30, 6: 30, 7: 30, 8: 30,
@@ -47,26 +49,26 @@ const str = (v) => String(v ?? '').trim();
  */
 export function normalizeCircuitInput(input = {}) {
   const name = str(input.name);
-  if (!name) return { valid: false, error: 'Nome do circuito é obrigatório.', value: {} };
+  if (!name) return { valid: false, error: t('Nome do circuito é obrigatório.'), value: {} };
   if (name.length > CIRCUIT_MAX_NAME) {
-    return { valid: false, error: `Nome muito longo (máx. ${CIRCUIT_MAX_NAME} chars).`, value: { name: name.slice(0, CIRCUIT_MAX_NAME) } };
+    return { valid: false, error: t('Nome muito longo (máx. {CIRCUIT_MAX_NAME} chars).', { CIRCUIT_MAX_NAME }), value: { name: name.slice(0, CIRCUIT_MAX_NAME) } };
   }
   const description = str(input.description).slice(0, CIRCUIT_MAX_DESCRIPTION);
   const season = str(input.season).slice(0, CIRCUIT_MAX_SEASON_LENGTH);
   if (!season) {
-    return { valid: false, error: 'Temporada (ex: "2026 Q1", "2026 Inverno") é obrigatória.', value: { name, description } };
+    return { valid: false, error: t('Temporada (ex: "2026 Q1", "2026 Inverno") é obrigatória.'), value: { name, description } };
   }
   const categories = (Array.isArray(input.categories) ? input.categories : [])
     .map((c) => str(c).slice(0, CIRCUIT_CATEGORY_MAX))
     .filter(Boolean)
     .slice(0, CIRCUIT_MAX_CATEGORIES);
   if (categories.length === 0) {
-    return { valid: false, error: 'Informe ao menos uma categoria (ex: "Open Misto", "Sênior").', value: { name, description, season } };
+    return { valid: false, error: t('Informe ao menos uma categoria (ex: "Open Misto", "Sênior").'), value: { name, description, season } };
   }
   const startDate = str(input.start_date);
   const endDate = str(input.end_date);
   if (startDate && endDate && startDate > endDate) {
-    return { valid: false, error: 'Data final não pode ser anterior à inicial.', value: { name, description, season, categories } };
+    return { valid: false, error: t('Data final não pode ser anterior à inicial.'), value: { name, description, season, categories } };
   }
   const value = {
     name,
@@ -99,7 +101,7 @@ export function computeCircuitRanking(results = [], pointsTable) {
     const pts = pointsForPosition(r.position, pointsTable);
     if (pts <= 0) continue;
     const cur = byUser.get(r.user_id) || {
-      user_id: r.user_id, user_name: r.user_name || 'Atleta', user_photo: r.user_photo || null,
+      user_id: r.user_id, user_name: r.user_name || t('Atleta'), user_photo: r.user_photo || null,
       total_points: 0, tournaments: 0, best_position: Infinity, history: [],
     };
     cur.total_points += pts;
@@ -134,7 +136,7 @@ export function computeCircuitRanking(results = [], pointsTable) {
 export function normalizeCircuitResult(input = {}) {
   const position = Number(input.position);
   if (!Number.isInteger(position) || position < 1 || position > 9999) {
-    return { valid: false, error: 'Posição inválida.', value: {} };
+    return { valid: false, error: t('Posição inválida.'), value: {} };
   }
   return {
     valid: true,

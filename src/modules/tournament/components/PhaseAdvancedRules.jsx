@@ -25,6 +25,7 @@ import {
 import {
   DIRECT_ENTRY_MODE, DIRECT_ENTRY_MODE_LABELS, DIRECT_ENTRY_MODE_HELP,
 } from '@/modules/tournament/domain/directEntry';
+import { t } from '@/core/i18n';
 
 function Help({ children }) {
   return <p className="mt-1 text-[11px] leading-snug text-gray-500">{children}</p>;
@@ -62,12 +63,9 @@ function TiebreakOrderEditor({ value, onChange }) {
 
   return (
     <div className="space-y-2 md:col-span-2">
-      <Label className="text-xs">Ordem dos critérios de desempate (dentro do grupo)</Label>
+      <Label className="text-xs">{t('Ordem dos critérios de desempate (dentro do grupo)')}</Label>
       <Help>
-        Aplicados nesta ordem, de cima para baixo. Quando um critério separa os empatados, os
-        que continuam empatados são comparados de novo <strong>a partir do primeiro critério,
-        só entre eles</strong> — é o que faz &quot;eu ganhei dele&quot; continuar valendo depois
-        que um terceiro sai da conta.
+        {t('Aplicados nesta ordem, de cima para baixo. Quando um critério separa os empatados, os que continuam empatados são comparados de novo')} <strong>{t('a partir do primeiro critério, só entre eles')}</strong> {t('— é o que faz "eu ganhei dele" continuar valendo depois que um terceiro sai da conta.')}
       </Help>
 
       <div className="flex flex-wrap gap-1.5">
@@ -91,7 +89,7 @@ function TiebreakOrderEditor({ value, onChange }) {
           className="h-7 text-[11px]"
           onClick={() => onChange([])}
         >
-          <RotateCcw className="mr-1 h-3 w-3" /> Voltar ao padrão
+          <RotateCcw className="mr-1 h-3 w-3" /> {t('Voltar ao padrão')}
         </Button>
       </div>
 
@@ -100,23 +98,23 @@ function TiebreakOrderEditor({ value, onChange }) {
           const c = porChave.get(chave);
           return (
             <li key={chave} className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-2">
-              <span className="mt-0.5 w-5 shrink-0 text-center text-xs font-bold text-gray-400">{i + 1}º</span>
+              <span className="mt-0.5 w-5 shrink-0 text-center text-xs font-bold text-gray-400">{t('{n}º', { n: i + 1 })}</span>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-ink">{c?.label || chave}</div>
                 {c?.help && <Help>{c.help}</Help>}
               </div>
               <div className="flex shrink-0 gap-1">
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label="Subir"
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label={t('Subir')}
                   disabled={i === 0} onClick={() => mover(i, -1)}>
                   <ArrowUp className="h-3 w-3" />
                 </Button>
-                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label="Descer"
+                <Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label={t('Descer')}
                   disabled={i === ordem.length - 1} onClick={() => mover(i, 1)}>
                   <ArrowDown className="h-3 w-3" />
                 </Button>
                 <Button type="button" size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]"
                   disabled={ordem.length <= 1} onClick={() => remover(chave)}>
-                  tirar
+                  {t('tirar')}
                 </Button>
               </div>
             </li>
@@ -126,7 +124,7 @@ function TiebreakOrderEditor({ value, onChange }) {
 
       {foraDaOrdem.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-gray-500">Acrescentar:</span>
+          <span className="text-[11px] text-gray-500">{t('Acrescentar:')}</span>
           {foraDaOrdem.map((c) => (
             <Button key={c.key} type="button" size="sm" variant="outline" className="h-6 text-[10px]"
               title={c.help} onClick={() => onChange([...ordem, c.key])}>
@@ -160,12 +158,12 @@ export default function PhaseAdvancedRules({
   const direct = phase.direct_entry || { mode: DIRECT_ENTRY_MODE.NONE, count: 0, ids: [] };
 
   const ativos = [
-    (phase.custom_group_sizes || []).length > 0 && 'tamanhos manuais',
-    (phase.qualifiers_by_group || []).length > 0 && 'classificados por grupo',
-    (phase.tiebreak_order || []).length > 0 && 'desempate próprio',
-    phase.cross_group_method && phase.cross_group_method !== CROSS_GROUP_METHOD.RATE && 'comparação própria',
-    direct.mode !== DIRECT_ENTRY_MODE.NONE && 'entrada direta',
-    Number(phase.wildcard_from_position) > 0 && 'repescagem fixa',
+    (phase.custom_group_sizes || []).length > 0 && t('tamanhos manuais'),
+    (phase.qualifiers_by_group || []).length > 0 && t('classificados por grupo'),
+    (phase.tiebreak_order || []).length > 0 && t('desempate próprio'),
+    phase.cross_group_method && phase.cross_group_method !== CROSS_GROUP_METHOD.RATE && t('comparação própria'),
+    direct.mode !== DIRECT_ENTRY_MODE.NONE && t('entrada direta'),
+    Number(phase.wildcard_from_position) > 0 && t('repescagem fixa'),
   ].filter(Boolean);
 
   return (
@@ -177,10 +175,10 @@ export default function PhaseAdvancedRules({
       >
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700">
           {aberto ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          Regras avançadas desta fase
+          {t('Regras avançadas desta fase')}
         </span>
         <span className="truncate text-[11px] text-gray-500">
-          {ativos.length > 0 ? ativos.join(' · ') : 'tudo no padrão'}
+          {ativos.length > 0 ? ativos.join(' · ') : t('tudo no padrão')}
         </span>
       </button>
 
@@ -189,18 +187,15 @@ export default function PhaseAdvancedRules({
           {/* ---------------- formação dos grupos ---------------- */}
           {grouped && (
             <div className="md:col-span-2">
-              <Label className="text-xs">Tamanhos dos grupos, escritos à mão</Label>
+              <Label className="text-xs">{t('Tamanhos dos grupos, escritos à mão')}</Label>
               <Input
                 className="h-9"
-                placeholder="Ex.: 6, 5, 5 — em branco, a plataforma equilibra sozinha"
+                placeholder={t('Ex.: 6, 5, 5 — em branco, a plataforma equilibra sozinha')}
                 defaultValue={formatNumberList(phase.custom_group_sizes)}
                 onBlur={(e) => onChange({ custom_group_sizes: parseNumberList(e.target.value) })}
               />
               <Help>
-                Manda nos tamanhos exatos, na ordem dos grupos (A, B, C…). Em branco, a divisão é
-                equilibrada automaticamente, com diferença máxima de 1 entre os grupos. Se o número
-                de inscritos mudar até a véspera, a lista é <strong>ajustada</strong> para caber —
-                ninguém fica de fora e ninguém é sorteado sem existir.
+                {t('Manda nos tamanhos exatos, na ordem dos grupos (A, B, C…). Em branco, a divisão é equilibrada automaticamente, com diferença máxima de 1 entre os grupos. Se o número de inscritos mudar até a véspera, a lista é')} <strong>{t('ajustada')}</strong> {t('para caber — ninguém fica de fora e ninguém é sorteado sem existir.')}
               </Help>
             </div>
           )}
@@ -217,24 +212,22 @@ export default function PhaseAdvancedRules({
             <>
               {grouped && (
                 <div>
-                  <Label className="text-xs">Classificados de cada grupo</Label>
+                  <Label className="text-xs">{t('Classificados de cada grupo')}</Label>
                   <Input
                     className="h-9"
-                    placeholder="Ex.: 2, 2, 1 — em branco, o mesmo para todos"
+                    placeholder={t('Ex.: 2, 2, 1 — em branco, o mesmo para todos')}
                     defaultValue={formatNumberList(phase.qualifiers_by_group)}
                     onBlur={(e) => onChange({ qualifiers_by_group: parseNumberList(e.target.value) })}
                   />
                   <Help>
-                    Um número por grupo, na ordem A, B, C… Serve para grupos de tamanhos diferentes:
-                    passam 2 do grupo de 5 e 1 do de 3. Em branco, vale o número único configurado
-                    acima para todos.
+                    {t('Um número por grupo, na ordem A, B, C… Serve para grupos de tamanhos diferentes: passam 2 do grupo de 5 e 1 do de 3. Em branco, vale o número único configurado acima para todos.')}
                   </Help>
                 </div>
               )}
 
               {!tabelaUnica && (
               <div>
-                <Label className="text-xs">Repescagem: de qual colocação</Label>
+                <Label className="text-xs">{t('Repescagem: de qual colocação')}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -243,16 +236,14 @@ export default function PhaseAdvancedRules({
                   onChange={(e) => onChange({ wildcard_from_position: e.target.value })}
                 />
                 <Help>
-                  0 = automático (a colocação logo abaixo do corte: os &quot;melhores terceiros&quot;
-                  quando passam 2). Outro número fixa a colocação que concorre às vagas de
-                  repescagem — útil quando o seu regulamento repesca de outro lugar.
+                  {t('0 = automático (a colocação logo abaixo do corte: os "melhores terceiros" quando passam 2). Outro número fixa a colocação que concorre às vagas de repescagem — útil quando o seu regulamento repesca de outro lugar.')}
                 </Help>
               </div>
               )}
 
               {grouped && (
                 <div className="md:col-span-2">
-                  <Label className="text-xs">Como comparar quem veio de grupos diferentes</Label>
+                  <Label className="text-xs">{t('Como comparar quem veio de grupos diferentes')}</Label>
                   <select
                     className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     value={phase.cross_group_method || CROSS_GROUP_METHOD.RATE}
@@ -272,7 +263,7 @@ export default function PhaseAdvancedRules({
           {!isFirst && (
             <div className="md:col-span-2 space-y-2 rounded-md border border-acid/40 bg-acid/5 p-2">
               <div className="text-xs font-semibold text-ink">
-                Quem entra direto nesta fase (pulando as anteriores)
+                {t('Quem entra direto nesta fase (pulando as anteriores)')}
               </div>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
@@ -287,7 +278,7 @@ export default function PhaseAdvancedRules({
 
               {direct.mode === DIRECT_ENTRY_MODE.SEEDS && (
                 <div>
-                  <Label className="text-xs">Quantos entram direto</Label>
+                  <Label className="text-xs">{t('Quantos entram direto')}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -296,19 +287,17 @@ export default function PhaseAdvancedRules({
                     onChange={(e) => onChange({ direct_entry: { ...direct, count: e.target.value } })}
                   />
                   <Help>
-                    Os mais fortes ({unit}) pelo nível usado no sorteio. Eles <strong>não jogam</strong> as
-                    fases anteriores: entram aqui como cabeças, à frente dos classificados. A 1ª fase
-                    precisa continuar com ao menos 2 — a tela avisa se não sobrar gente.
+                    {t('Os mais fortes ({unit}) pelo nível usado no sorteio. Eles', { unit: t(unit) })} <strong>{t('não jogam')}</strong> {t('as fases anteriores: entram aqui como cabeças, à frente dos classificados. A 1ª fase precisa continuar com ao menos 2 — a tela avisa se não sobrar gente.')}
                   </Help>
                 </div>
               )}
 
               {direct.mode === DIRECT_ENTRY_MODE.MANUAL && (
                 <div>
-                  <Label className="text-xs">Inscrições que entram direto (uma por linha ou separadas por vírgula)</Label>
+                  <Label className="text-xs">{t('Inscrições que entram direto (uma por linha ou separadas por vírgula)')}</Label>
                   <Input
                     className="h-9"
-                    placeholder="Cole aqui os identificadores das inscrições"
+                    placeholder={t('Cole aqui os identificadores das inscrições')}
                     defaultValue={(direct.ids || []).join(', ')}
                     onBlur={(e) => onChange({
                       direct_entry: {
@@ -319,9 +308,7 @@ export default function PhaseAdvancedRules({
                     })}
                   />
                   <Help>
-                    Escolha nome por nome, para campeão defendendo título, convidado da organização
-                    ou qualquer critério que não seja o ranking. Quem for listado em duas fases
-                    entra na <strong>mais cedo</strong>, e a tela avisa.
+                    {t('Escolha nome por nome, para campeão defendendo título, convidado da organização ou qualquer critério que não seja o ranking. Quem for listado em duas fases entra na')} <strong>{t('mais cedo')}</strong>{t(', e a tela avisa.')}
                   </Help>
                 </div>
               )}
@@ -329,8 +316,7 @@ export default function PhaseAdvancedRules({
           )}
 
           <p className="md:col-span-2 text-[11px] italic text-gray-500">
-            Fase {index + 1}. Todo campo em branco aqui significa &quot;faça como sempre fez&quot; —
-            nada nesta área muda o comportamento de um torneio que não a usa.
+            {t('Fase {n}. Todo campo em branco aqui significa "faça como sempre fez" — nada nesta área muda o comportamento de um torneio que não a usa.', { n: index + 1 })}
           </p>
         </div>
       )}

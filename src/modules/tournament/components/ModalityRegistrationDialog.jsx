@@ -35,10 +35,11 @@ import {
 import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationDialog';
 
 const GENDER_OPTIONS = [
-  { value: COMPETITION_GENDER.MALE, label: 'Masculino' },
-  { value: COMPETITION_GENDER.FEMALE, label: 'Feminino' },
+  { value: COMPETITION_GENDER.MALE, label: tk('Masculino') },
+  { value: COMPETITION_GENDER.FEMALE, label: tk('Feminino') },
 ];
 import { evaluateRegistrationEligibility, athleteAllowedByGender, genderRegistrationErrors } from '@/modules/tournament/domain/eligibility';
+import { t, tk } from '@/core/i18n';
 
 /**
  * Dialog reutilizável de inscrição em uma modalidade.
@@ -215,22 +216,22 @@ export default function ModalityRegistrationDialog({
   }
 
   async function handleSubmit() {
-    if (!form.player_a_name.trim()) return toast.error('Informe o nome do jogador A.');
+    if (!form.player_a_name.trim()) return toast.error(t('Informe o nome do jogador A.'));
     if (modality.format === MODALITY_FORMAT.DOUBLES && !form.player_b_name.trim()) {
-      return toast.error('Informe o nome da dupla (jogador B).');
+      return toast.error(t('Informe o nome da dupla (jogador B).'));
     }
     if (isAdmin) {
       if (!form.player_a_email.trim() || !form.player_a_level) {
-        return toast.error('Informe e-mail e nível do jogador A.');
+        return toast.error(t('Informe e-mail e nível do jogador A.'));
       }
       if (!form.player_a_gender) {
-        return toast.error('Informe o gênero do jogador A.');
+        return toast.error(t('Informe o gênero do jogador A.'));
       }
       if (modality.format === MODALITY_FORMAT.DOUBLES && (!form.player_b_email.trim() || !form.player_b_level)) {
-        return toast.error('Informe e-mail e nível do jogador B.');
+        return toast.error(t('Informe e-mail e nível do jogador B.'));
       }
       if (modality.format === MODALITY_FORMAT.DOUBLES && !form.player_b_gender) {
-        return toast.error('Informe o gênero do jogador B.');
+        return toast.error(t('Informe o gênero do jogador B.'));
       }
     }
     // Gênero é categórico: bloqueia inscrição de gênero incompatível para
@@ -246,7 +247,7 @@ export default function ModalityRegistrationDialog({
       return toast.error(genderErrors[0]);
     }
     if (blocked) {
-      return toast.error('Não é possível enviar a inscrição: você não atende aos critérios desta modalidade.');
+      return toast.error(t('Não é possível enviar a inscrição: você não atende aos critérios desta modalidade.'));
     }
     try {
       const registrationId = await createMutation.mutateAsync({
@@ -280,7 +281,7 @@ export default function ModalityRegistrationDialog({
               }
             : null,
       });
-      toast.success(asWaitlist ? 'Você entrou na lista de espera!' : 'Inscrição enviada!');
+      toast.success(asWaitlist ? t('Você entrou na lista de espera!') : t('Inscrição enviada!'));
       if (!asWaitlist && pixReady && registrationId) {
         // Mantém o dialog aberto na etapa de pagamento (flag payment_instructions).
         setPaymentRegId(registrationId);
@@ -288,7 +289,7 @@ export default function ModalityRegistrationDialog({
         onClose();
       }
     } catch (err) {
-      toast.error(err.message || 'Falha na inscrição.');
+      toast.error(err.message || t('Falha na inscrição.'));
     }
   }
 
@@ -322,7 +323,7 @@ export default function ModalityRegistrationDialog({
       <Dialog open={open} onOpenChange={(o) => !o && closeAll()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pagamento da inscrição</DialogTitle>
+            <DialogTitle>{t('Pagamento da inscrição')}</DialogTitle>
           </DialogHeader>
           <PixPaymentContent
             tournament={tournament}
@@ -340,22 +341,22 @@ export default function ModalityRegistrationDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isAdmin ? 'Inscrever participante' : 'Inscrever-se'} em {modality.name}
+            {isAdmin ? t('Inscrever participante') : t('Inscrever-se')} {t('em {name}', { name: modality.name })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           {asWaitlist && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <div className="flex items-center gap-2 font-medium">
-                <Info className="w-4 h-4" /> Modalidade lotada
+                <Info className="w-4 h-4" /> {t('Modalidade lotada')}
               </div>
-              <p className="mt-1">Você pode entrar na lista de espera e será promovido se abrir uma vaga.</p>
+              <p className="mt-1">{t('Você pode entrar na lista de espera e será promovido se abrir uma vaga.')}</p>
             </div>
           )}
           {eligibility.errors.length > 0 && (
             <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
               <div className="flex items-center gap-2 font-medium">
-                <AlertTriangle className="w-4 h-4" /> Você não atende a esta modalidade
+                <AlertTriangle className="w-4 h-4" /> {t('Você não atende a esta modalidade')}
               </div>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 {eligibility.errors.map((e, i) => (
@@ -364,7 +365,7 @@ export default function ModalityRegistrationDialog({
               </ul>
               {isAdmin && (
                 <p className="mt-2 text-xs text-red-900/80">
-                  Como administrador você pode prosseguir mesmo assim — confira manualmente os dados.
+                  {t('Como administrador você pode prosseguir mesmo assim — confira manualmente os dados.')}
                 </p>
               )}
             </div>
@@ -372,7 +373,7 @@ export default function ModalityRegistrationDialog({
           {eligibility.warnings.length > 0 && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <div className="flex items-center gap-2 font-medium">
-                <Info className="w-4 h-4" /> Atenção
+                <Info className="w-4 h-4" /> {t('Atenção')}
               </div>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 {eligibility.warnings.map((w, i) => (
@@ -384,7 +385,7 @@ export default function ModalityRegistrationDialog({
 
           {canPickAthletes && (
             <AthletePicker
-              label="Escolher atleta cadastrado (Jogador A)"
+              label={t('Escolher atleta cadastrado (Jogador A)')}
               users={eligiblePlatformUsers}
               falhou={falhouPlataforma}
               selectedUserId={form.player_a_user_id}
@@ -393,7 +394,7 @@ export default function ModalityRegistrationDialog({
             />
           )}
           <div>
-            <Label>{isAdmin ? 'Nome (Jogador A)' : 'Seu nome (Jogador A)'}</Label>
+            <Label>{isAdmin ? t('Nome (Jogador A)') : t('Seu nome (Jogador A)')}</Label>
             <Input
               value={form.player_a_name}
               onChange={(e) => setForm((f) => ({ ...f, player_a_name: e.target.value, player_a_user_id: null, player_a_photo: null }))}
@@ -401,7 +402,7 @@ export default function ModalityRegistrationDialog({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <Label>E-mail do jogador A</Label>
+              <Label>{t('E-mail do jogador A')}</Label>
               <Input
                 type="email"
                 value={form.player_a_email}
@@ -410,12 +411,12 @@ export default function ModalityRegistrationDialog({
               />
             </div>
             <LevelSelect
-              label="Nível do jogador A"
+              label={t('Nível do jogador A')}
               value={form.player_a_level}
               onChange={(value) => setForm((f) => ({ ...f, player_a_level: value }))}
             />
             <GenderSelect
-              label="Gênero do jogador A"
+              label={t('Gênero do jogador A')}
               value={form.player_a_gender}
               onChange={(value) => setForm((f) => ({ ...f, player_a_gender: value }))}
             />
@@ -424,7 +425,7 @@ export default function ModalityRegistrationDialog({
             <>
               {canPickAthletes && (
                 <AthletePicker
-                  label="Escolher atleta cadastrado (Jogador B)"
+                  label={t('Escolher atleta cadastrado (Jogador B)')}
                   users={eligiblePlatformUsers}
                   falhou={falhouPlataforma}
                   selectedUserId={form.player_b_user_id}
@@ -457,7 +458,7 @@ export default function ModalityRegistrationDialog({
                 />
               )}
               <div>
-                <Label>Parceiro(a) (Jogador B)</Label>
+                <Label>{t('Parceiro(a) (Jogador B)')}</Label>
                 <Input
                   value={form.player_b_name}
                   onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value, player_b_user_id: null, player_b_photo: null }))}
@@ -465,7 +466,7 @@ export default function ModalityRegistrationDialog({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <Label>E-mail do jogador B</Label>
+                  <Label>{t('E-mail do jogador B')}</Label>
                   <Input
                     type="email"
                     value={form.player_b_email}
@@ -473,19 +474,19 @@ export default function ModalityRegistrationDialog({
                   />
                 </div>
                 <LevelSelect
-                  label="Nível do jogador B"
+                  label={t('Nível do jogador B')}
                   value={form.player_b_level}
                   onChange={(value) => setForm((f) => ({ ...f, player_b_level: value }))}
                 />
                 <GenderSelect
-                  label="Gênero do jogador B"
+                  label={t('Gênero do jogador B')}
                   value={form.player_b_gender}
                   onChange={(value) => setForm((f) => ({ ...f, player_b_gender: value }))}
                 />
               </div>
               {canPickPartner && form.player_b_user_id && (
                 <p className="text-xs text-green-800 bg-acid/10 border border-gray-200 rounded p-2">
-                  {form.player_b_name || 'Seu parceiro'} receberá um convite para confirmar a dupla.
+                  {form.player_b_name || t('Seu parceiro')} {t('receberá um convite para confirmar a dupla.')}
                 </p>
               )}
             </>
@@ -493,17 +494,17 @@ export default function ModalityRegistrationDialog({
           {modality.entry_fee_cents > 0 && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
               {pixReady
-                ? `Taxa: ${formatBrlCents(modality.entry_fee_cents)} — as instruções de pagamento (PIX) aparecem após confirmar a inscrição.`
-                : `Taxa: ${formatBrlCents(modality.entry_fee_cents)} — pagamento será solicitado em seguida.`}
+                ? t('Taxa: {entry_fee_cents} — as instruções de pagamento (PIX) aparecem após confirmar a inscrição.', { entry_fee_cents: formatBrlCents(modality.entry_fee_cents) })
+                : t('Taxa: {entry_fee_cents} — pagamento será solicitado em seguida.', { entry_fee_cents: formatBrlCents(modality.entry_fee_cents) })}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>{t('Cancelar')}</Button>
           <Button onClick={handleSubmit} disabled={createMutation.isPending || blocked}>
             {createMutation.isPending
-              ? 'Enviando…'
-              : asWaitlist ? 'Entrar na lista de espera' : 'Confirmar inscrição'}
+              ? t('Enviando…')
+              : asWaitlist ? t('Entrar na lista de espera') : t('Confirmar inscrição')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -531,7 +532,7 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou
             onClick={onClear}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-ink"
           >
-            <X className="w-3 h-3" /> limpar seleção
+            <X className="w-3 h-3" /> {t('limpar seleção')}
           </button>
         )}
       </div>
@@ -549,7 +550,7 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               className="pl-8"
-              placeholder="Filtrar atletas por nome…"
+              placeholder={t('Filtrar atletas por nome…')}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
@@ -557,12 +558,12 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou
           <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
             {falhou ? (
               <div className="p-3 text-xs text-amber-700 text-center">
-                A lista de atletas não carregou. Não dá para saber quem já tem conta.
+                {t('A lista de atletas não carregou. Não dá para saber quem já tem conta.')}
               </div>
             ) : users.length === 0 ? (
-              <div className="p-3 text-xs text-gray-500 text-center">Carregando atletas…</div>
+              <div className="p-3 text-xs text-gray-500 text-center">{t('Carregando atletas…')}</div>
             ) : results.length === 0 ? (
-              <div className="p-3 text-xs text-gray-500 text-center">Nenhum atleta encontrado.</div>
+              <div className="p-3 text-xs text-gray-500 text-center">{t('Nenhum atleta encontrado.')}</div>
             ) : (
               results.map((u) => {
                 const name = platformUserDisplayName(u);
@@ -611,14 +612,14 @@ function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, select
   return (
     <div className="rounded-md border border-input bg-paper/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs uppercase tracking-wide text-gray-500">Convidar parceiro(a) da plataforma</Label>
+        <Label className="text-xs uppercase tracking-wide text-gray-500">{t('Convidar parceiro(a) da plataforma')}</Label>
         {selectedUserId && (
           <button
             type="button"
             onClick={onClear}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-ink"
           >
-            <X className="w-3 h-3" /> limpar seleção
+            <X className="w-3 h-3" /> {t('limpar seleção')}
           </button>
         )}
       </div>
@@ -627,7 +628,7 @@ function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, select
           <UserAvatar name={selectedName} photoUrl={selectedPhoto} size="sm" />
           <div className="min-w-0">
             <div className="text-sm font-medium truncate">{selectedName}</div>
-            <div className="text-xs text-gray-500 truncate">Receberá um convite para confirmar a dupla</div>
+            <div className="text-xs text-gray-500 truncate">{t('Receberá um convite para confirmar a dupla')}</div>
           </div>
         </div>
       ) : (
@@ -636,7 +637,7 @@ function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, select
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               className="pl-8"
-              placeholder="Buscar por nome ou cidade…"
+              placeholder={t('Buscar por nome ou cidade…')}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
@@ -647,12 +648,11 @@ function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, select
                 /* ⚠️ "Nenhum atleta encontrado → preencha manualmente" numa
                    falha cria inscrição provisória para quem JÁ tem conta. */
                 <div className="p-3 text-xs text-amber-700 text-center">
-                  A lista de atletas não carregou — não dá para saber se essa pessoa
-                  já tem conta. Tente de novo antes de preencher à mão.
+                  {t('A lista de atletas não carregou — não dá para saber se essa pessoa já tem conta. Tente de novo antes de preencher à mão.')}
                 </div>
               ) : results.length === 0 ? (
                 <div className="p-3 text-xs text-gray-500 text-center">
-                  Nenhum atleta encontrado. Você pode preencher os dados manualmente abaixo.
+                  {t('Nenhum atleta encontrado. Você pode preencher os dados manualmente abaixo.')}
                 </div>
               ) : (
                 results.map((profile) => {
@@ -678,7 +678,7 @@ function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, select
             </div>
           )}
           <p className="text-[11px] leading-4 text-gray-400">
-            Sem conta na plataforma? Preencha os dados manualmente abaixo.
+            {t('Sem conta na plataforma? Preencha os dados manualmente abaixo.')}
           </p>
         </>
       )}
@@ -695,7 +695,7 @@ function LevelSelect({ label, value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Selecione</option>
+        <option value="">{t('Selecione')}</option>
         {LEVEL_OPTIONS.map((option) => (
           <option key={option.code} value={option.code}>{option.label}</option>
         ))}
@@ -713,9 +713,9 @@ function GenderSelect({ label, value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Selecione</option>
+        <option value="">{t('Selecione')}</option>
         {GENDER_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
+          <option key={option.value} value={option.value}>{t(option.label)}</option>
         ))}
       </select>
     </div>

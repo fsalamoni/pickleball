@@ -17,12 +17,13 @@ import {
   buildAnnouncementWhatsAppText,
   validateAnnouncement,
 } from '@/modules/tournament/domain/announcements';
+import { t, fmtData } from '@/core/i18n';
 
 function formatWhen(announcement) {
   const ms = announcement.created_at_ms
     || (announcement.created_at?.toMillis ? announcement.created_at.toMillis() : null);
   if (!ms) return '';
-  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return fmtData(new Date(ms), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 /**
@@ -58,11 +59,11 @@ export default function TournamentAnnouncementsCard({ tournament }) {
         message,
         recipients,
       });
-      toast.success(`Aviso enviado para ${recipients.length} atleta(s).`);
+      toast.success(t('Aviso enviado para {n} atleta(s).', { n: recipients.length }));
       setTitle('');
       setMessage('');
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar o aviso.');
+      toast.error(err?.message || t('Não foi possível enviar o aviso.'));
     }
   }
 
@@ -70,9 +71,9 @@ export default function TournamentAnnouncementsCard({ tournament }) {
     const text = buildAnnouncementWhatsAppText({ tournamentName: tournament.name, title, message });
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('Texto copiado — cole no grupo de WhatsApp.');
+      toast.success(t('Texto copiado — cole no grupo de WhatsApp.'));
     } catch {
-      toast.error('Não foi possível copiar o texto.');
+      toast.error(t('Não foi possível copiar o texto.'));
     }
   }
 
@@ -83,76 +84,75 @@ export default function TournamentAnnouncementsCard({ tournament }) {
           <Megaphone className="h-4.5 w-4.5" />
         </div>
         <div>
-          <div className="text-base font-semibold text-ink">Comunicação com os inscritos</div>
+          <div className="text-base font-semibold text-ink">{t('Comunicação com os inscritos')}</div>
           <p className="mt-1 text-sm leading-6 text-gray-500">
-            Envie um aviso como notificação na plataforma para todos os inscritos com conta
-            vinculada — do torneio inteiro ou de uma modalidade.
+            {t('Envie um aviso como notificação na plataforma para todos os inscritos com conta vinculada — do torneio inteiro ou de uma modalidade.')}
           </p>
         </div>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <Label>Destinatários</Label>
+          <Label>{t('Destinatários')}</Label>
           <select
             className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
             value={modalityId}
             onChange={(e) => setModalityId(e.target.value)}
           >
-            <option value="">Todo o torneio</option>
+            <option value="">{t('Todo o torneio')}</option>
             {modalities.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
           </select>
           <p className="mt-2 text-xs text-gray-500">
-            {recipients.length} atleta(s) com conta vinculada receberão o aviso.
+            {t('{n} atleta(s) com conta vinculada receberão o aviso.', { n: recipients.length })}
           </p>
         </div>
         <div>
-          <Label>Título</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} placeholder="ex.: Jogos atrasados em 30 minutos" className="mt-2" />
+          <Label>{t('Título')}</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} placeholder={t('ex.: Jogos atrasados em 30 minutos')} className="mt-2" />
         </div>
         <div className="md:col-span-2">
-          <Label>Mensagem</Label>
+          <Label>{t('Mensagem')}</Label>
           <textarea
             className="mt-2 flex min-h-24 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             maxLength={1000}
-            placeholder="Escreva o aviso que os atletas verão na notificação."
+            placeholder={t('Escreva o aviso que os atletas verão na notificação.')}
           />
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <ConfirmDialog
-          title={`Enviar aviso para ${recipients.length} atleta(s)?`}
-          description={modality ? `Somente os inscritos de "${modality.name}" receberão.` : 'Todos os inscritos do torneio com conta vinculada receberão.'}
-          confirmLabel="Enviar aviso"
+          title={t('Enviar aviso para {n} atleta(s)?', { n: recipients.length })}
+          description={modality ? t('Somente os inscritos de "{name}" receberão.', { name: modality.name }) : t('Todos os inscritos do torneio com conta vinculada receberão.')}
+          confirmLabel={t('Enviar aviso')}
           destructive={false}
           onConfirm={handleSend}
           trigger={(
             <Button disabled={!validation.isValid || recipients.length === 0 || sendMutation.isPending}>
               <Send className="mr-1 h-4 w-4" />
-              {sendMutation.isPending ? 'Enviando…' : 'Enviar aviso'}
+              {sendMutation.isPending ? t('Enviando…') : t('Enviar aviso')}
             </Button>
           )}
         />
         <Button variant="outline" onClick={handleCopyWhatsApp} disabled={!validation.isValid}>
-          <Copy className="mr-1 h-4 w-4" /> Copiar texto p/ WhatsApp
+          <Copy className="mr-1 h-4 w-4" /> {t('Copiar texto p/ WhatsApp')}
         </Button>
       </div>
 
       {announcements.length > 0 && (
         <div className="mt-6">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Avisos enviados</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{t('Avisos enviados')}</div>
           <ul className="mt-3 space-y-2">
             {announcements.slice(0, 8).map((a) => (
               <li key={a.id} className="rounded-[1.25rem] border border-gray-100 bg-white/75 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-ink">{a.title}</span>
                   <span className="text-xs text-gray-500">
-                    {[a.modality_name || 'Todo o torneio', `${a.recipients_count} destinatário(s)`, formatWhen(a)].filter(Boolean).join(' · ')}
+                    {[a.modality_name || t('Todo o torneio'), t('{n} destinatário(s)', { n: a.recipients_count }), formatWhen(a)].filter(Boolean).join(' · ')}
                   </span>
                 </div>
                 <p className="mt-1 whitespace-pre-line text-gray-600">{a.message}</p>

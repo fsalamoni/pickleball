@@ -43,6 +43,7 @@ import {
   validateArchiveRequest,
   validateUnarchiveRequest,
 } from '../domain/archiveValidation.js';
+import { t } from '@/core/i18n';
 
 const COL = {
   tournaments: 'tournaments',
@@ -71,7 +72,7 @@ async function arenaManagerIds(arenaId) {
 }
 
 export async function createTournament(creator, data) {
-  if (!creator?.uid) throw new Error('Usuário não autenticado.');
+  if (!creator?.uid) throw new Error(t('Usuário não autenticado.'));
   const id = doc(collection(db, COL.tournaments)).id;
   // Sede: quem gere a arena confirma na hora; os outros pedem, e a arena
   // confirma ou recusa na Central (a regra exige a sede pendente).
@@ -140,7 +141,7 @@ export async function createTournament(creator, data) {
 
 /** A arena decide a sede: confirma, ou recusa (o torneio deixa de ser da casa). */
 export async function decideTournamentArena(tournament, confirm, actor) {
-  if (!tournament?.id || !tournament.arena_id) throw new Error('Torneio sem sede.');
+  if (!tournament?.id || !tournament.arena_id) throw new Error(t('Torneio sem sede.'));
   await updateDoc(doc(db, COL.tournaments, tournament.id), confirm
     ? { arena_confirmed: true, updated_at: serverTimestamp() }
     : { arena_id: null, arena_confirmed: false, updated_at: serverTimestamp() });
@@ -251,11 +252,11 @@ export async function deleteTournament(id, actor) {
  *                 ou se a Firestore rule recusar.
  */
 export async function archiveTournament(tournamentId, actor) {
-  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!tournamentId) throw new Error(t('ID do torneio é obrigatório.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
 
   const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
-  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  if (!snap.exists()) throw new Error(t('Torneio não encontrado.'));
   const tournament = snap.data();
   if (tournament.archived) {
     // idempotente: já está arquivado, nada a fazer
@@ -294,11 +295,11 @@ export async function archiveTournament(tournamentId, actor) {
  * @throws {Error} se torneio não existir, ou se a Firestore rule recusar.
  */
 export async function unarchiveTournament(tournamentId, actor) {
-  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!tournamentId) throw new Error(t('ID do torneio é obrigatório.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
 
   const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
-  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  if (!snap.exists()) throw new Error(t('Torneio não encontrado.'));
   const tournament = snap.data();
   if (!tournament.archived) {
     return { tournamentId, archived: false, alreadyUnarchived: true };
@@ -387,7 +388,7 @@ export async function setResultsLocked(id, locked, actor) {
 /* --------------------------- Admin (compartilhado) ---------------------- */
 
 export async function addTournamentAdmin(tournamentId, targetUser, actor) {
-  if (!targetUser?.uid) throw new Error('Usuário alvo inválido.');
+  if (!targetUser?.uid) throw new Error(t('Usuário alvo inválido.'));
   await setDoc(doc(db, COL.admins, adminDocId(tournamentId, targetUser.uid)), {
     tournament_id: tournamentId,
     user_id: targetUser.uid,
@@ -459,10 +460,10 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
   const docs = await Promise.all(unique.map((id) => getTournament(id)));
   const results = [];
   unique.forEach((id, i) => {
-    const t = docs[i];
-    if (!t) return;
+    const tt = docs[i];
+    if (!tt) return;
     // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
-    if (!includeArchived && t.archived) return;
+    if (!includeArchived && tt.archived) return;
     const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
     // `my_role` segue como sempre (o PAPEL: owner/admin vence player). Ao lado,
     // calculado — nada gravado —, se eu também JOGO: quem organiza e se
@@ -470,7 +471,7 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
     // tratava só como organizador (sumia de "Você está inscrito").
     const minhas = summarizeMyRegistrations([...(minhasPorTorneio.get(id)?.values() || [])]);
     results.push({
-      ...t,
+      ...tt,
       my_role: adminDoc ? adminDoc.data().role : 'player',
       is_player: minhas.isPlayer,
       my_registration_status: minhas.status,
@@ -490,10 +491,10 @@ export async function listMyManagedTournaments(userId, { includeArchived = false
   const results = [];
   for (const adminDoc of adminSnap.docs) {
     const { tournament_id: tid, role } = adminDoc.data();
-    const t = await getTournament(tid);
-    if (!t) continue;
-    if (!includeArchived && t.archived) continue;
-    results.push({ ...t, my_role: role || TOURNAMENT_ADMIN_ROLE.ADMIN });
+    const tt = await getTournament(tid);
+    if (!tt) continue;
+    if (!includeArchived && tt.archived) continue;
+    results.push({ ...tt, my_role: role || TOURNAMENT_ADMIN_ROLE.ADMIN });
   }
   return results;
 }
@@ -505,7 +506,7 @@ export async function listAllTournaments({ includeArchived = false } = {}) {
   // Filtro client-side: o Firestore já recusa leitura de arquivados para
   // não-criador/não-admin, mas se o caller for admin e passar
   // includeArchived=false, queremos garantir o contrato.
-  return docs.filter((t) => !t.archived);
+  return docs.filter((tt) => !tt.archived);
 }
 
 export async function listPublicTournaments() {

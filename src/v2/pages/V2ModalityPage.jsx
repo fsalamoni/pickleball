@@ -19,21 +19,22 @@ import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } fr
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
+import { t } from '@/core/i18n';
 
 function competitionLabel(modality) {
   const stages = Array.isArray(modality.stages) ? modality.stages : [];
-  if (stages.length > 1) return `${stages.length} fases encadeadas`;
-  return TOURNAMENT_STAGE_TYPE_LABELS[stages[0]?.type] || 'Formato competitivo definido';
+  if (stages.length > 1) return t('{n} fases encadeadas', { n: stages.length });
+  return TOURNAMENT_STAGE_TYPE_LABELS[stages[0]?.type] || t('Formato competitivo definido');
 }
 
 function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, isTeam }) {
   // Esta é a página do atleta: o CTA é a inscrição dele. O organizador inscreve
   // e edita equipes no painel (aba Inscrições), não por aqui.
-  if (alreadyRegistered) return isTeam ? 'Sua equipe está inscrita' : 'Você já está inscrito';
-  if (!canRegister) return 'Torneio privado: exige código';
-  if (slotsFull && !isAdmin) return 'Modalidade lotada';
-  if (isTeam) return 'Inscrever equipe';
-  return isAdmin ? 'Inscrever jogador' : 'Inscrever-se';
+  if (alreadyRegistered) return isTeam ? t('Sua equipe está inscrita') : t('Você já está inscrito');
+  if (!canRegister) return t('Torneio privado: exige código');
+  if (slotsFull && !isAdmin) return t('Modalidade lotada');
+  if (isTeam) return t('Inscrever equipe');
+  return isAdmin ? t('Inscrever jogador') : t('Inscrever-se');
 }
 
 export default function V2ModalityPage() {
@@ -61,8 +62,8 @@ export default function V2ModalityPage() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar a modalidade"
-            description="A conexão falhou no meio do caminho. Ela continua lá — tente de novo."
+            title={t('Não foi possível carregar a modalidade')}
+            description={t('A conexão falhou no meio do caminho. Ela continua lá — tente de novo.')}
             onRetry={() => { recarregarTorneio(); recarregarModalidades(); }}
           />
         </V2Surface>
@@ -76,8 +77,8 @@ export default function V2ModalityPage() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface className="text-center">
           <Trophy className="mx-auto h-10 w-10 text-gray-300" />
-          <h2 className="mt-3 font-display text-lg font-bold text-ink">Modalidade não encontrada</h2>
-          <Link to={`/torneios/${tournamentId}`} className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao torneio</Link>
+          <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Modalidade não encontrada')}</h2>
+          <Link to={`/torneios/${tournamentId}`} className="mt-2 inline-block text-sm font-bold text-ink underline">{t('Voltar ao torneio')}</Link>
         </V2Surface>
       </div>
     );
@@ -98,25 +99,25 @@ export default function V2ModalityPage() {
   const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin, isTeam });
 
   const badges = [
-    isTeam ? 'Equipes' : MODALITY_FORMAT_LABELS[modality.format],
+    isTeam ? t('Equipes') : MODALITY_FORMAT_LABELS[modality.format],
     SKILL_LEVEL_LABELS[modality.skill_level],
     GENDER_CATEGORY_LABELS[modality.gender_category],
     AGE_CATEGORY_LABELS[modality.age_category],
   ].filter(Boolean);
 
   const facts = [
-    { icon: Layers, label: 'Formato', value: competitionLabel(modality) },
-    { icon: Target, label: 'Perfil', value: SKILL_LEVEL_LABELS[modality.skill_level] },
-    { icon: Users, label: 'Inscrições', value: hasUnlimitedEntries(modality.max_entries) ? `${confirmed.length} confirmadas` : `${occupiedCount}/${modality.max_entries} ocupadas` },
-    { icon: Wallet, label: 'Taxa', value: Number(modality.entry_fee_cents || 0) > 0 ? `R$ ${(Number(modality.entry_fee_cents) / 100).toFixed(2).replace('.', ',')}` : 'Gratuita' },
+    { icon: Layers, label: t('Formato'), value: competitionLabel(modality) },
+    { icon: Target, label: t('Perfil'), value: SKILL_LEVEL_LABELS[modality.skill_level] },
+    { icon: Users, label: t('Inscrições'), value: hasUnlimitedEntries(modality.max_entries) ? t('{n} confirmadas', { n: confirmed.length }) : t('{occupiedCount}/{max_entries} ocupadas', { occupiedCount, max_entries: modality.max_entries }) },
+    { icon: Wallet, label: t('Taxa'), value: Number(modality.entry_fee_cents || 0) > 0 ? `R$ ${(Number(modality.entry_fee_cents) / 100).toFixed(2).replace('.', ',')}` : t('Gratuita') },
   ];
 
   const tabs = [
-    { value: 'info', label: 'Visão geral' },
-    { value: 'inscricao', label: 'Inscrição' },
-    { value: 'jogos', label: 'Jogos' },
-    { value: 'ranking', label: 'Ranking' },
-    { value: 'fotos', label: 'Fotos' },
+    { value: 'info', label: t('Visão geral') },
+    { value: 'inscricao', label: t('Inscrição') },
+    { value: 'jogos', label: t('Jogos') },
+    { value: 'ranking', label: t('Ranking') },
+    { value: 'fotos', label: t('Fotos') },
   ];
 
   return (
@@ -127,14 +128,14 @@ export default function V2ModalityPage() {
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
         <div className="relative z-10">
-          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Modalidade do torneio</span>
+          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Modalidade do torneio')}</span>
           <div className="mt-4 flex flex-wrap items-start gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm"><Trophy className="h-6 w-6" /></div>
             <div className="min-w-0 flex-1">
               <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">{modality.name}</h1>
               <div className="mt-3 flex flex-wrap gap-2">
                 {badges.map((b) => <span key={b} className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">{b}</span>)}
-                {alreadyRegistered && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> Inscrito</span>}
+                {alreadyRegistered && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Inscrito')}</span>}
               </div>
             </div>
           </div>
@@ -156,7 +157,7 @@ export default function V2ModalityPage() {
               <Plus className="h-4 w-4" /> {registerLabel}
             </V2Button>
             <V2Button asChild variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40">
-              <Link to={`/torneios/${tournamentId}/jogos`}>Ver jogos do torneio</Link>
+              <Link to={`/torneios/${tournamentId}/jogos`}>{t('Ver jogos do torneio')}</Link>
             </V2Button>
           </div>
         </div>
@@ -173,10 +174,10 @@ export default function V2ModalityPage() {
       {/* Tabs */}
       <div className="mt-6 overflow-x-auto">
         <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {tabs.map((t) => (
-            <button key={t.value} onClick={() => setTab(t.value)}
-              className={cn('whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-              {t.label}
+          {tabs.map((tt) => (
+            <button key={tt.value} onClick={() => setTab(tt.value)}
+              className={cn('whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors', tab === tt.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+              {tt.label}
             </button>
           ))}
         </div>
@@ -188,17 +189,17 @@ export default function V2ModalityPage() {
           <V2Surface>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-display text-base font-bold text-ink">Inscrição na modalidade</h3>
-                <p className="mt-1 text-sm text-gray-500">{confirmed.length} inscrição(ões) confirmada(s){!isPublic && !hasPrivateAccess && !isAdmin ? ' · torneio privado (use o código)' : ''}</p>
+                <h3 className="font-display text-base font-bold text-ink">{t('Inscrição na modalidade')}</h3>
+                <p className="mt-1 text-sm text-gray-500">{t('{n} inscrição(ões) confirmada(s)', { n: confirmed.length })}{!isPublic && !hasPrivateAccess && !isAdmin ? t(' · torneio privado (use o código)') : ''}</p>
               </div>
               {canRegister ? (
                 <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || (slotsFull && !isAdmin)}><Plus className="h-4 w-4" /> {registerLabel}</V2Button>
-              ) : <V2Badge tone="neutral">Privado: exige código</V2Badge>}
+              ) : <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>}
             </div>
             <div className="mt-5">
-              <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink"><Users className="h-4 w-4" /> Inscritos confirmados</h4>
+              <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink"><Users className="h-4 w-4" /> {t('Inscritos confirmados')}</h4>
               {confirmed.length === 0 ? (
-                <p className="text-sm text-gray-500">Ainda não há inscritos confirmados nesta modalidade.</p>
+                <p className="text-sm text-gray-500">{t('Ainda não há inscritos confirmados nesta modalidade.')}</p>
               ) : (
                 <div className="space-y-2">
                   {confirmed.map((r) => (

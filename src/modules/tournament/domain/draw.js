@@ -11,6 +11,7 @@ import { buildDoubleEliminationBracket } from './doubleElimination.js';
 import { pairSwissRound } from './swiss.js';
 import { buildMexicanoFirstRound } from './mexicano.js';
 import { getWhistTable } from './whistTables.js';
+import { t } from '@/core/i18n';
 
 /* ----------------------------- RNG semeado ------------------------------- */
 
@@ -30,9 +31,9 @@ export function seededRng(seed = 'pickleball') {
   return function rng() {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    let tt = Math.imul(a ^ (a >>> 15), 1 | a);
+    tt = (tt + Math.imul(tt ^ (tt >>> 7), 61 | tt)) ^ tt;
+    return ((tt ^ (tt >>> 14)) >>> 0) / 4294967296;
   };
 }
 
@@ -360,13 +361,13 @@ export function seedSlot(seedNum, size) {
  * @returns {{ totalMatches: number, exact: boolean, reason?: string }}
  */
 export function americanoMatchCount(n) {
-  if (n < 4) return { totalMatches: 0, exact: false, reason: 'Mínimo de 4 jogadores.' };
+  if (n < 4) return { totalMatches: 0, exact: false, reason: t('Mínimo de 4 jogadores.') };
   const product = n * (n - 1);
   if (product % 4 !== 0) {
     return {
       totalMatches: Math.floor(product / 4),
       exact: false,
-      reason: `O número de inscritos (${n}) não é condizente com o formato Americano: não é possível formar todas as duplas exatamente uma vez. Use um número com N ≡ 0 ou 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17…`,
+      reason: t('O número de inscritos ({n}) não é condizente com o formato Americano: não é possível formar todas as duplas exatamente uma vez. Use um número com N ≡ 0 ou 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17…', { n }),
     };
   }
   return { totalMatches: product / 4, exact: true };
@@ -832,7 +833,7 @@ function americanoPrimitiveRoot(p) {
  */
 function americanoPrimeCyclic(n) {
   const g = americanoPrimitiveRoot(n);
-  const t = (n - 1) / 4;
+  const tt = (n - 1) / 4;
   const pw = [];
   let c = 1;
   for (let i = 0; i < n - 1; i += 1) {
@@ -840,8 +841,8 @@ function americanoPrimeCyclic(n) {
     c = (c * g) % n;
   }
   const base = [];
-  for (let i = 0; i < t; i += 1) {
-    base.push([[pw[i], pw[i + 2 * t]], [pw[i + t], pw[i + 3 * t]]]);
+  for (let i = 0; i < tt; i += 1) {
+    base.push([[pw[i], pw[i + 2 * tt]], [pw[i + tt], pw[i + 3 * tt]]]);
   }
   const rounds = [];
   for (let r = 0; r < n; r += 1) {
@@ -984,13 +985,13 @@ export function buildAmericanoRotation(playerIds, options = {}) {
   const { seed = 'americano', playerMeta = null } = options;
   const n = playerIds.length;
   if (n < 4) {
-    throw new Error('Americano exige no mínimo 4 jogadores.');
+    throw new Error(t('Americano exige no mínimo 4 jogadores.'));
   }
   const { exact, reason } = americanoMatchCount(n);
   if (!exact) {
     throw new Error(
       reason ||
-        `O formato Americano exige um número de inscritos que permita formar todas as duplas exatamente uma vez (N ≡ 0 ou 1 mod 4: 4, 5, 8, 9, 12, 13, 16, 17…). Com ${n} inscritos não é possível gerar todos os jogos sem deixar duplas de fora.`,
+        t('O formato Americano exige um número de inscritos que permita formar todas as duplas exatamente uma vez (N ≡ 0 ou 1 mod 4: 4, 5, 8, 9, 12, 13, 16, 17…). Com {n} inscritos não é possível gerar todos os jogos sem deixar duplas de fora.', { n }),
     );
   }
 
@@ -1091,7 +1092,7 @@ export function generateDraw(input) {
   if (stageType === 'americano') {
     if (format === MODALITY_FORMAT.DOUBLES) {
       throw new Error(
-        'O formato Americano (rotação de duplas) só é compatível com inscrição individual (Simples). Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+        t('O formato Americano (rotação de duplas) só é compatível com inscrição individual (Simples). Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'),
       );
     }
     return {
@@ -1102,7 +1103,7 @@ export function generateDraw(input) {
   if (stageType === 'mexicano') {
     if (format === MODALITY_FORMAT.DOUBLES) {
       throw new Error(
-        'O Mexicano (rotação dinâmica de duplas) só é compatível com inscrição individual (Simples).',
+        t('O Mexicano (rotação dinâmica de duplas) só é compatível com inscrição individual (Simples).'),
       );
     }
     const { matches } = buildMexicanoFirstRound(participants, { seed, seedCount });
@@ -1154,5 +1155,5 @@ export function generateDraw(input) {
     }));
     return { stageType, matches };
   }
-  throw new Error(`Tipo de fase desconhecido: ${stageType}`);
+  throw new Error(t('Tipo de fase desconhecido: {stageType}', { stageType }));
 }

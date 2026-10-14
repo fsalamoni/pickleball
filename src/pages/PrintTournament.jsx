@@ -11,6 +11,7 @@ import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import { t, fmtData } from '@/core/i18n';
 
 /**
  * Versão para impressão (A4) das chaves, grupos e ranking de um torneio.
@@ -45,7 +46,7 @@ export default function PrintTournament() {
   }, []);
 
   if (isLoading) {
-    return <p className="p-8 text-sm text-gray-500">Carregando…</p>;
+    return <p className="p-8 text-sm text-gray-500">{t('Carregando…')}</p>;
   }
 
   // ⚠️ Antes, QUALQUER desfecho sem torneio ficava em "Carregando…" para
@@ -54,14 +55,14 @@ export default function PrintTournament() {
   if (falhouTorneio) {
     return (
       <div className="p-8 text-sm">
-        <p className="font-semibold text-ink">Não foi possível carregar o torneio</p>
-        <p className="mt-1 text-gray-500">A conexão falhou. O link continua valendo.</p>
+        <p className="font-semibold text-ink">{t('Não foi possível carregar o torneio')}</p>
+        <p className="mt-1 text-gray-500">{t('A conexão falhou. O link continua valendo.')}</p>
         <button
           type="button"
           onClick={() => recarregarTorneio()}
           className="mt-3 rounded border px-3 py-1.5 font-semibold hover:bg-paper"
         >
-          Tentar de novo
+          {t('Tentar de novo')}
         </button>
       </div>
     );
@@ -70,9 +71,9 @@ export default function PrintTournament() {
   if (!tournament) {
     return (
       <div className="p-8 text-sm">
-        <p className="font-semibold text-ink">Torneio não encontrado</p>
+        <p className="font-semibold text-ink">{t('Torneio não encontrado')}</p>
         <p className="mt-1 text-gray-500">
-          Confira o link recebido — ele pode apontar para um torneio removido.
+          {t('Confira o link recebido — ele pode apontar para um torneio removido.')}
         </p>
       </div>
     );
@@ -87,7 +88,7 @@ export default function PrintTournament() {
           </h1>
           <p className="text-xs text-gray-500">
             {tournament.city ? `${tournament.city} · ` : ''}
-            Código: {tournament.invite_code}
+            {t('Código: {invite_code}', { invite_code: tournament.invite_code })}
           </p>
         </div>
         <button
@@ -95,20 +96,19 @@ export default function PrintTournament() {
           onClick={() => window.print()}
           className="print:hidden text-sm inline-flex items-center gap-1 px-3 py-1.5 border rounded hover:bg-paper"
         >
-          <Printer className="w-4 h-4" /> Imprimir
+          <Printer className="w-4 h-4" /> {t('Imprimir')}
         </button>
       </header>
 
       {falhouModalidades && (
         <p className="mb-4 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
-          ⚠ Esta folha está INCOMPLETA: a lista de modalidades não carregou.
-          Recarregue a página antes de usá-la.{' '}
+          {t('⚠ Esta folha está INCOMPLETA: a lista de modalidades não carregou. Recarregue a página antes de usá-la.')}{' '}
           <button
             type="button"
             onClick={() => recarregarModalidades()}
             className="print:hidden underline"
           >
-            Tentar de novo
+            {t('Tentar de novo')}
           </button>
         </p>
       )}
@@ -119,7 +119,7 @@ export default function PrintTournament() {
 
       <footer className="text-[10px] text-gray-400 mt-6">
         <Link to={`/p/${tournamentId}`} className="hover:underline">
-          plataforma PickleRush — visão pública
+          {t('plataforma PickleRush — visão pública')}
         </Link>
       </footer>
     </div>
@@ -130,14 +130,14 @@ function formatPrintTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 function roundLabel(m) {
-  if (m.third_place) return '3º lugar';
-  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
-  if (m.bracket === 'wb') return `Venc. R${m.round}`;
-  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  if (m.third_place) return t('3º lugar');
+  if (m.bracket === 'gf') return m.round === 2 ? t('Final (reset)') : t('Grande final');
+  if (m.bracket === 'wb') return t('Venc. R{round}', { round: m.round });
+  if (m.bracket === 'lb') return t('Repesc. R{round}', { round: m.round });
   return m.round;
 }
 
@@ -206,9 +206,9 @@ function PrintModality({ modality }) {
   // Sem os inscritos, `renderSide` cai no `id`: a folha sairia com
   // identificadores do banco no lugar dos nomes de quem vai jogar.
   const partesQueFalharam = [
-    falhouJogos && 'os jogos',
-    falhouRanking && 'a classificação',
-    falhouInscritos && 'os nomes dos inscritos',
+    falhouJogos && t('os jogos'),
+    falhouRanking && t('a classificação'),
+    falhouInscritos && t('os nomes dos inscritos'),
   ].filter(Boolean);
 
   return (
@@ -222,18 +222,18 @@ function PrintModality({ modality }) {
 
       {partesQueFalharam.length > 0 && (
         <p className="mb-2 rounded border border-amber-400 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900">
-          ⚠ Incompleto: não carregou {partesQueFalharam.join(' nem ')}.
+          {t('⚠ Incompleto: não carregou')} {partesQueFalharam.join(' nem ')}.
         </p>
       )}
 
       {rankingPhases.length > 0 && (
         <div className="mb-3 space-y-3">
-          <h3 className="text-xs font-semibold">Classificação</h3>
+          <h3 className="text-xs font-semibold">{t('Classificação')}</h3>
           {rankingPhases.map((phase) => (
             <div key={phase.stageIndex} className="space-y-2">
               {showRankingPhaseHeaders && (
                 <div className="text-[11px] font-semibold text-gray-600">
-                  Fase {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
+                  {t('Fase')} {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
                 </div>
               )}
               {phase.groups.filter((g) => (g.rows || []).length > 0).map((group, gi) => (
@@ -254,14 +254,14 @@ function PrintModality({ modality }) {
                     <thead>
                       <tr className="border-b">
                         <th className="py-1 text-left">#</th>
-                        <th className="py-1 text-left">Participante</th>
-                        <th className="py-1 text-center" title="Partidas jogadas">PJ</th>
-                        <th className="py-1 text-center" title="Vitórias">V</th>
-                        <th className="py-1 text-center" title="Derrotas">D</th>
-                        <th className="py-1 text-center">Sets</th>
-                        <th className="py-1 text-center" title="Pontos a favor">PF</th>
-                        <th className="py-1 text-center" title="Pontos contra">PC</th>
-                        <th className="py-1 text-right">Saldo</th>
+                        <th className="py-1 text-left">{t('Participante')}</th>
+                        <th className="py-1 text-center" title={t('Partidas jogadas')}>{t('PJ')}</th>
+                        <th className="py-1 text-center" title={t('Vitórias')}>V</th>
+                        <th className="py-1 text-center" title={t('Derrotas')}>D</th>
+                        <th className="py-1 text-center">{t('Sets')}</th>
+                        <th className="py-1 text-center" title={t('Pontos a favor')}>{t('PF')}</th>
+                        <th className="py-1 text-center" title={t('Pontos contra')}>{t('PC')}</th>
+                        <th className="py-1 text-right">{t('Saldo')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -292,7 +292,7 @@ function PrintModality({ modality }) {
 
       {chavesPorFase.length > 0 && (
         <div className="mb-3 space-y-3">
-          <h3 className="text-xs font-semibold">Chave</h3>
+          <h3 className="text-xs font-semibold">{t('Chave')}</h3>
           {chavesPorFase.map(([stageIndex, stageMatches]) => (
             <V2BracketTree
               key={stageIndex}
@@ -300,7 +300,7 @@ function PrintModality({ modality }) {
               labelById={labelById}
               thirdPlace={Boolean(fasesConfig[stageIndex]?.third_place)}
               double={fasesConfig[stageIndex]?.type === 'double_knockout'}
-              title={multiPhase ? `Fase ${Number(stageIndex) + 1}` : undefined}
+              title={multiPhase ? t('Fase {v1}', { v1: Number(stageIndex) + 1 }) : undefined}
               larguraMax={700}
             />
           ))}
@@ -309,18 +309,18 @@ function PrintModality({ modality }) {
 
       {jogosEmLista.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold mb-1">Jogos</h3>
+          <h3 className="text-xs font-semibold mb-1">{t('Jogos')}</h3>
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="border-b">
-                {multiPhase && <th className="py-1 text-left">Fase</th>}
-                <th className="py-1 text-left">Rod.</th>
-                {hasGroups && <th className="py-1 text-left">Grupo</th>}
-                {hasSchedule && <th className="py-1 text-left">Quadra</th>}
-                {hasSchedule && <th className="py-1 text-left">Horário</th>}
-                <th className="py-1 text-left">Lado A</th>
-                <th className="py-1 text-left">Lado B</th>
-                <th className="py-1 text-right">Placar</th>
+                {multiPhase && <th className="py-1 text-left">{t('Fase')}</th>}
+                <th className="py-1 text-left">{t('Rod.')}</th>
+                {hasGroups && <th className="py-1 text-left">{t('Grupo')}</th>}
+                {hasSchedule && <th className="py-1 text-left">{t('Quadra')}</th>}
+                {hasSchedule && <th className="py-1 text-left">{t('Horário')}</th>}
+                <th className="py-1 text-left">{t('Lado A')}</th>
+                <th className="py-1 text-left">{t('Lado B')}</th>
+                <th className="py-1 text-right">{t('Placar')}</th>
               </tr>
             </thead>
             <tbody>

@@ -23,6 +23,7 @@
  */
 
 import { seededRng, shuffle } from './draw.js';
+import { t } from '@/core/i18n';
 
 const COURT_SIZE = 4;
 
@@ -136,7 +137,7 @@ export function buildMexicanoRoundFromOrder(orderedIds, byesByPlayer, round) {
 export function buildMexicanoFirstRound(playerIds, options = {}) {
   const { seed = 'mexicano', seedCount = 0 } = options;
   if (playerIds.length < COURT_SIZE) {
-    throw new Error('O Mexicano exige no mínimo 4 jogadores.');
+    throw new Error(t('O Mexicano exige no mínimo 4 jogadores.'));
   }
   const rng = seededRng(seed);
   const seeds = playerIds.slice(0, seedCount);

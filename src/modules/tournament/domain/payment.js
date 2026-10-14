@@ -9,6 +9,8 @@
  * payload estático: campos EMV `id + len(2) + valor`, CRC16-CCITT no campo 63.
  */
 
+import { fmtMoeda } from '@/core/i18n';
+
 const PIX_GUI = 'br.gov.bcb.pix';
 
 /** Monta um campo EMV: id (2 dígitos) + tamanho (2 dígitos) + valor. */
@@ -87,7 +89,7 @@ export function buildPixPayload({ key, merchantName, merchantCity, amountCents =
 /** Formata centavos como moeda pt-BR (R$ 1.234,56). */
 export function formatBrlCents(cents) {
   const value = (Number(cents) || 0) / 100;
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return fmtMoeda(value);
 }
 
 /** O torneio tem PIX configurado para exibir instruções de pagamento? */

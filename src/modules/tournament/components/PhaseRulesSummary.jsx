@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SlidersHorizontal, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { describePhaseRules } from '@/modules/tournament/domain/phaseRules';
+import { t, tn } from '@/core/i18n';
 
 /**
  * O que está EM VIGOR nesta fase, ao lado do botão que age sobre ela.
@@ -32,10 +33,10 @@ export default function PhaseRulesSummary({ phase, isFirst, isLast, groupCount, 
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 font-semibold text-gray-700">
           <SlidersHorizontal className="h-3.5 w-3.5 text-gray-400" />
-          Regras desta fase
+          {t('Regras desta fase')}
           {changedCount > 0 && (
             <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
-              {changedCount} ajustada{changedCount > 1 ? 's' : ''}
+              {tn(changedCount, '{n} ajustada', '{n} ajustadas')}
             </span>
           )}
         </span>
@@ -46,7 +47,7 @@ export default function PhaseRulesSummary({ phase, isFirst, isLast, groupCount, 
               onClick={onEdit}
               className="inline-flex items-center gap-1 text-[11px] text-gray-500 underline-offset-2 hover:underline"
             >
-              <Pencil className="h-3 w-3" /> Editar
+              <Pencil className="h-3 w-3" /> {t('Editar')}
             </button>
           )}
           <button
@@ -55,15 +56,14 @@ export default function PhaseRulesSummary({ phase, isFirst, isLast, groupCount, 
             className="inline-flex items-center gap-1 text-[11px] text-gray-500 underline-offset-2 hover:underline"
           >
             <Chevron className="h-3 w-3" />
-            {aberto ? 'Ocultar' : 'Ver todas as regras'}
+            {aberto ? t('Ocultar') : t('Ver todas as regras')}
           </button>
         </span>
       </div>
 
       {visiveis.length === 0 ? (
         <p className="mt-1.5 text-gray-500">
-          Tudo nos padrões da plataforma — desempate oficial, classificação por aproveitamento
-          e sem repescagem.
+          {t('Tudo nos padrões da plataforma — desempate oficial, classificação por aproveitamento e sem repescagem.')}
         </p>
       ) : (
         <ul className="mt-2 space-y-1.5">

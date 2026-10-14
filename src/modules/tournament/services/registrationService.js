@@ -54,6 +54,7 @@ import {
   canRespondToPartnerInvite,
 } from '../domain/partnerInvite.js';
 import { isActiveRegistration, selfCheckInState } from '../domain/checkin.js';
+import { t, tk } from '@/core/i18n';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -87,17 +88,17 @@ function officialPlayerData(user, profile = {}) {
 export async function createRegistration(input, actor) {
   const { tournament_id, modality_id, player_a, player_b } = input;
   const modality = await getModality(modality_id);
-  if (!modality) throw new Error('Modalidade não encontrada.');
-  if (modality.tournament_id !== tournament_id) throw new Error('Modalidade não pertence ao torneio.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
+  if (modality.tournament_id !== tournament_id) throw new Error(t('Modalidade não pertence ao torneio.'));
   const tournament = await getTournament(tournament_id);
-  if (!tournament) throw new Error('Torneio não encontrado.');
+  if (!tournament) throw new Error(t('Torneio não encontrado.'));
   const actorIsAdmin = await isTournamentAdmin(tournament_id, actor?.uid);
   if (
     tournament.visibility === TOURNAMENT_VISIBILITY.PRIVATE &&
     !actorIsAdmin &&
     String(input.invite_code || '').trim().toUpperCase() !== String(tournament.invite_code || '').toUpperCase()
   ) {
-    throw new Error('Este torneio é privado. Informe o código de acesso para se inscrever.');
+    throw new Error(t('Este torneio é privado. Informe o código de acesso para se inscrever.'));
   }
 
   const existing = await listRegistrations(modality_id);
@@ -106,7 +107,7 @@ export async function createRegistration(input, actor) {
   // Lotada: bloqueia, salvo quando o fluxo de lista de espera é permitido
   // explicitamente (flag tournament_waitlist), caso em que entra como WAITLIST.
   if (capacityReached && !input.allow_waitlist) {
-    throw new Error('Modalidade lotada.');
+    throw new Error(t('Modalidade lotada.'));
   }
 
   const id = doc(collection(db, COL)).id;
@@ -212,9 +213,9 @@ export async function createRegistration(input, actor) {
  */
 export async function respondPartnerInvite(id, accept, actor) {
   const registration = await getRegistration(id);
-  if (!registration) throw new Error('Inscrição não encontrada.');
+  if (!registration) throw new Error(t('Inscrição não encontrada.'));
   if (!canRespondToPartnerInvite(registration, actor?.uid)) {
-    throw new Error('Este convite não está mais disponível para resposta.');
+    throw new Error(t('Este convite não está mais disponível para resposta.'));
   }
   const status = accept ? PARTNER_INVITE_STATUS.ACCEPTED : PARTNER_INVITE_STATUS.DECLINED;
   await updateDoc(doc(db, COL, id), {
@@ -434,10 +435,10 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
  * @returns {Promise<{ created: number, cleared: number, total: number }>}
  */
 export async function migrateProvisionalData(options = {}, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const callerIsAdmin = await checkIsPlatformAdmin(actor.uid);
   if (!callerIsAdmin) {
-    throw new Error('Apenas o admin da plataforma pode executar migração de dados provisórios.');
+    throw new Error(t('Apenas o admin da plataforma pode executar migração de dados provisórios.'));
   }
 
   const {
@@ -448,19 +449,19 @@ export async function migrateProvisionalData(options = {}, actor) {
     note = null,
   } = options;
 
-  if (!targetUid) throw new Error('Informe o UID do atleta definitivo.');
+  if (!targetUid) throw new Error(t('Informe o UID do atleta definitivo.'));
   if (!Array.isArray(fromEmails) || fromEmails.length === 0) {
-    throw new Error('Informe ao menos um email de origem para migrar.');
+    throw new Error(t('Informe ao menos um email de origem para migrar.'));
   }
   const aliasEmails = Array.from(new Set(fromEmails.map(normalizeEmail).filter(Boolean)));
   if (aliasEmails.length === 0) {
-    throw new Error('Nenhum email válido para migrar.');
+    throw new Error(t('Nenhum email válido para migrar.'));
   }
 
   // 1) Lê o usuário-alvo.
   const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
   if (!targetUserSnap.exists()) {
-    throw new Error(`Usuário alvo (users/${targetUid}) não encontrado.`);
+    throw new Error(t('Usuário alvo (users/{targetUid}) não encontrado.', { targetUid }));
   }
   const targetProfile = { uid: targetUid, ...targetUserSnap.data() };
   const player = buildOfficialPlayer(
@@ -642,7 +643,7 @@ export async function ensurePlaceholderRegistrations(modality, actor) {
   if (!db || !modality?.id) return { created: 0, cleared: 0, total: 0 };
   const max = Number(modality.max_entries);
   if (!Number.isFinite(max) || max <= 0) {
-    throw new Error('Defina um número exato de participantes na modalidade para preencher as vagas.');
+    throw new Error(t('Defina um número exato de participantes na modalidade para preencher as vagas.'));
   }
   const all = await listRegistrations(modality.id);
   const existingPlaceholders = all.filter((r) => r.is_placeholder);
@@ -785,7 +786,7 @@ export async function updateRegistrationDetails(id, input, actor) {
  */
 export async function linkRegistrationPlayerToAccount(id, slot, athlete, actor) {
   const uid = athlete?.user_id;
-  if (!id || !uid || (slot !== 'a' && slot !== 'b')) throw new Error('Escolha o atleta da plataforma.');
+  if (!id || !uid || (slot !== 'a' && slot !== 'b')) throw new Error(t('Escolha o atleta da plataforma.'));
   // A troca é do SERVIDOR: o e-mail oficial mora no cadastro do atleta, que o
   // organizador não lê. Lá a inscrição recebe conta + dados oficiais, o
   // contato privado recebe o e-mail oficial e a prova do e-mail inventado é
@@ -818,7 +819,7 @@ export async function linkRegistrationPlayerToAccount(id, slot, athlete, actor) 
 }
 
 async function callRegistrationLink(payload) {
-  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
     const { data } = await httpsCallable(functions, 'tournamentLinkRegistrationAccount', { timeout: 60_000 })(payload);
     return data || {};
@@ -827,8 +828,8 @@ async function callRegistrationLink(payload) {
     if (['functions/failed-precondition', 'functions/permission-denied', 'functions/invalid-argument'].includes(code)) {
       throw new Error(err.message);
     }
-    if (code === 'functions/not-found') throw new Error('A troca ainda não está disponível no servidor. Tente de novo em alguns minutos.');
-    throw new Error('Não foi possível ligar à conta agora. Tentar de novo é seguro.');
+    if (code === 'functions/not-found') throw new Error(t('A troca ainda não está disponível no servidor. Tente de novo em alguns minutos.'));
+    throw new Error(t('Não foi possível ligar à conta agora. Tentar de novo é seguro.'));
   }
 }
 
@@ -852,7 +853,7 @@ export async function cancelRegistration(id, actor) {
  */
 export async function declareRegistrationPayment(id, actor) {
   const registration = await getRegistration(id);
-  if (!registration) throw new Error('Inscrição não encontrada.');
+  if (!registration) throw new Error(t('Inscrição não encontrada.'));
   await updateRegistration(id, { payment_declared_at: serverTimestamp() }, actor);
   try {
     const admins = await listTournamentAdmins(registration.tournament_id);
@@ -886,11 +887,11 @@ export async function undoRegistrationCheckIn(id, actor) {
 
 /** O que dizer a quem tentou o próprio check-in e não pode (`selfCheckInState`). */
 const SELF_CHECKIN_RECUSA = Object.freeze({
-  feito: 'O check-in desta inscrição já foi feito.',
-  fora_do_dia: 'O check-in abre quando o torneio começa.',
-  nao_confirmada: 'O check-in vale para inscrição confirmada.',
-  outra_pessoa: 'Esta inscrição foi feita por outra pessoa: o check-in é com ela ou com a organização, na mesa do torneio.',
-  nao_e_minha: 'Esta inscrição não é sua.',
+  feito: tk('O check-in desta inscrição já foi feito.'),
+  fora_do_dia: tk('O check-in abre quando o torneio começa.'),
+  nao_confirmada: tk('O check-in vale para inscrição confirmada.'),
+  outra_pessoa: tk('Esta inscrição foi feita por outra pessoa: o check-in é com ela ou com a organização, na mesa do torneio.'),
+  nao_e_minha: tk('Esta inscrição não é sua.'),
 });
 
 /**
@@ -901,11 +902,11 @@ const SELF_CHECKIN_RECUSA = Object.freeze({
  */
 export async function selfCheckInRegistration(id, actor) {
   const registration = await getRegistration(id);
-  if (!registration) throw new Error('Inscrição não encontrada.');
+  if (!registration) throw new Error(t('Inscrição não encontrada.'));
   const tournament = await getTournament(registration.tournament_id);
   const estado = selfCheckInState({ tournament, registration, uid: actor?.uid });
   if (!estado.pode) {
-    throw new Error(SELF_CHECKIN_RECUSA[estado.motivo] || 'O check-in não está disponível para esta inscrição.');
+    throw new Error(t(SELF_CHECKIN_RECUSA[estado.motivo] || 'O check-in não está disponível para esta inscrição.'));
   }
   await updateRegistration(id, {
     status: REGISTRATION_STATUS.CHECKED_IN,
@@ -955,10 +956,10 @@ export async function bulkRemoveProvisionalRegistrations(options = {}, actor) {
     dryRun = false,
   } = options;
 
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const callerIsAdmin = await checkIsPlatformAdmin(actor.uid);
   if (!callerIsAdmin) {
-    throw new Error('Apenas o admin da plataforma pode executar limpeza em massa.');
+    throw new Error(t('Apenas o admin da plataforma pode executar limpeza em massa.'));
   }
 
   const filters = [];
