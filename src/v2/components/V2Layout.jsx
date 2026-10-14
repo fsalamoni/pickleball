@@ -89,6 +89,7 @@ const V2CommandPalette = lazy(() => import('@/v2/components/search/V2CommandPale
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
+import { t, tk, tn } from '@/core/i18n';
 
 const BRAND = 'PickleRush';
 
@@ -97,38 +98,38 @@ const BRAND = 'PickleRush';
  * para o mais genérico; '/' é o fallback exato.
  */
 const PAGE_TITLES = [
-  ['/torneios', 'Torneios'],
-  ['/arenas', 'Arenas'],
-  ['/minhas-reservas', 'Minhas reservas'],
-  ['/atletas', 'Atletas'],
-  ['/atleta/', 'Atleta'],
-  ['/ranking', 'Ranking'],
+  ['/torneios', tk('Torneios')],
+  ['/arenas', tk('Arenas')],
+  ['/minhas-reservas', tk('Minhas reservas')],
+  ['/atletas', tk('Atletas')],
+  ['/atleta/', tk('Atleta')],
+  ['/ranking', tk('Ranking')],
   ['/encontrar-jogadores', (r) => r.pessoas],
   ['/procura-jogo', (r) => r.vagas],
-  ['/dia-de-jogo', 'Dia de jogo'],
-  ['/clubes', 'Clubes'],
-  ['/novidades', 'Comunidade'],
-  ['/parceiros', 'Parceiros'],
-  ['/chat', 'Mensagens'],
-  ['/meu-desempenho', 'Meu desempenho'],
-  ['/treino', 'Treino'],
-  ['/perfil', 'Meu perfil'],
-  ['/regras', 'Regras'],
-  ['/nivelamento', 'Nivelamento'],
-  ['/historia', 'História do esporte'],
-  ['/conduta', 'Conduta e fair play'],
-  ['/legal', 'Termos e Documentos'],
-  ['/politica-uso', 'Política de Uso'],
-  ['/gamification/como-funciona', 'Como funciona a gamificação'],
-  ['/gamification/revisao', 'Revisão da gamificação'],
-  ['/gamification/configuracoes', 'Preferências da gamificação'],
+  ['/dia-de-jogo', tk('Dia de jogo')],
+  ['/clubes', tk('Clubes')],
+  ['/novidades', tk('Comunidade')],
+  ['/parceiros', tk('Parceiros')],
+  ['/chat', tk('Mensagens')],
+  ['/meu-desempenho', tk('Meu desempenho')],
+  ['/treino', tk('Treino')],
+  ['/perfil', tk('Meu perfil')],
+  ['/regras', tk('Regras')],
+  ['/nivelamento', tk('Nivelamento')],
+  ['/historia', tk('História do esporte')],
+  ['/conduta', tk('Conduta e fair play')],
+  ['/legal', tk('Termos e Documentos')],
+  ['/politica-uso', tk('Política de Uso')],
+  ['/gamification/como-funciona', tk('Como funciona a gamificação')],
+  ['/gamification/revisao', tk('Revisão da gamificação')],
+  ['/gamification/configuracoes', tk('Preferências da gamificação')],
   ['/gamification', (r) => r.gamificacao],
-  ['/hall-da-fama', 'Hall da Fama'],
-  ['/conquistas', 'Conquistas'],
-  ['/vinculos', 'Vínculos'],
-  ['/notificacoes', 'Notificações'],
-  ['/mercado', 'Mercado'],
-  ['/admin', 'Admin'],
+  ['/hall-da-fama', tk('Hall da Fama')],
+  ['/conquistas', tk('Conquistas')],
+  ['/vinculos', tk('Vínculos')],
+  ['/notificacoes', tk('Notificações')],
+  ['/mercado', tk('Mercado')],
+  ['/admin', tk('Admin')],
 ];
 
 /**
@@ -141,13 +142,13 @@ function jogarHubTo({ gameDayOn, openGamesOn }) {
 }
 
 function resolvePageTitle(pathname, { userHubOn = false } = {}) {
-  if (pathname === '/') return 'Visão Geral';
+  if (pathname === '/') return t('Visão Geral');
   const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
   // Minha área (flag `user_hub`): o `/perfil` é a central da pessoa.
-  if (match && userHubOn && match[0] === '/perfil') return 'Minha área';
+  if (match && userHubOn && match[0] === '/perfil') return t('Minha área');
   if (!match) return null;
   // Rótulo que vem do vocabulário da navegação é função.
-  return typeof match[1] === 'function' ? match[1](navRotulos()) : match[1];
+  return typeof match[1] === 'function' ? match[1](navRotulos()) : t(match[1]);
 }
 
 function useV2Nav() {
@@ -186,67 +187,67 @@ function useV2Nav() {
 
   const sections = useMemo(() => [
     {
-      title: 'Plataforma',
+      title: t('Plataforma'),
       items: [
-        { to: '/', label: 'Visão Geral', icon: LayoutGrid, exact: true },
-        (arenasOn || isPlatformAdmin) && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin, tag: !arenasOn && isPlatformAdmin ? 'Off' : undefined },
-        { to: '/torneios', label: 'Torneios', icon: Trophy, tag: 'Novo' },
-        circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
-        coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
-        communityFeedOn && { to: '/novidades', label: 'Comunidade', icon: Zap },
+        { to: '/', label: t('Visão Geral'), icon: LayoutGrid, exact: true },
+        (arenasOn || isPlatformAdmin) && { to: '/arenas', label: t('Explorar Quadras'), icon: MapPin, tag: !arenasOn && isPlatformAdmin ? 'Off' : undefined },
+        { to: '/torneios', label: t('Torneios'), icon: Trophy, tag: t('Novo') },
+        circuitsOn && { to: '/circuits', label: t('Circuitos'), icon: Award },
+        coachesOn && { to: '/coaches', label: t('Professores'), icon: GraduationCap },
+        communityFeedOn && { to: '/novidades', label: t('Comunidade'), icon: Zap },
       ].filter(Boolean),
     },
     {
-      title: 'Descobrir',
+      title: t('Descobrir'),
       items: [
-        { to: '/atletas', label: 'Atletas', icon: Users },
-        ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
-        doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
+        { to: '/atletas', label: t('Atletas'), icon: Users },
+        ratingOn && { to: '/ranking', label: t('Ranking'), icon: Medal },
+        doublesRankingOn && { to: '/ranking/duplas', label: t('Ranking de duplas'), icon: Medal },
         ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: rotulos.pessoas, icon: Swords },
         openGamesOn && { to: '/procura-jogo', label: rotulos.vagas, icon: Megaphone },
-        { to: '/clubes', label: 'Clubes', icon: Building2 },
-        affiliatesOn && { to: '/parceiros', label: 'Parceiros', icon: HeartHandshake },
+        { to: '/clubes', label: t('Clubes'), icon: Building2 },
+        affiliatesOn && { to: '/parceiros', label: t('Parceiros'), icon: HeartHandshake },
       ].filter(Boolean),
     },
     {
-      title: 'Você',
+      title: t('Você'),
       items: [
-        { to: '/chat', label: 'Mensagens', icon: MessageSquare },
-        gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
-        performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
+        { to: '/chat', label: t('Mensagens'), icon: MessageSquare },
+        gameDayOn && { to: '/dia-de-jogo', label: t('Dia de jogo'), icon: Dices },
+        performanceOn && { to: '/meu-desempenho', label: t('Meu desempenho'), icon: BarChart3 },
         gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
         showMyArenas && {
           to: '/arenas',
-          label: 'Minhas arenas',
+          label: t('Minhas arenas'),
           icon: Building2,
           badge: myPendingBookings,
           badgeHint: myPendingBookings > 0
             ? `${myPendingBookings} pedido(s) de reserva aguardando resposta`
             : undefined,
         },
-        arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
-        isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
-        coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
-        { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu Perfil', icon: User },
-        trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
+        arenasOn && { to: '/minhas-reservas', label: t('Minhas reservas'), icon: Building2 },
+        isCoach && { to: '/aulas', label: t('Ensino'), icon: GraduationCap },
+        coachLessonsOn && { to: '/minhas-aulas', label: t('Minhas aulas'), icon: GraduationCap },
+        { to: '/perfil', label: userHubOn ? t('Minha área') : t('Meu Perfil'), icon: User },
+        trainingOn && { to: '/treino', label: t('Treino'), icon: Dumbbell },
         tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },
-        settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
+        settingsPageOn && { to: '/configuracoes', label: t('Configurações'), icon: Settings },
       ].filter(Boolean),
     },
     isPlatformAdmin && {
-      title: 'Admin geral',
+      title: t('Admin geral'),
       items: [
-        adminConsoleOn && { to: '/admin/painel', label: 'Painel', icon: LayoutDashboard, tag: 'Novo' },
+        adminConsoleOn && { to: '/admin/painel', label: t('Painel'), icon: LayoutDashboard, tag: t('Novo') },
       ].filter(Boolean),
     },
     {
-      title: 'Aprender',
+      title: t('Aprender'),
       items: [
-        { to: '/regras', label: 'Regras', icon: BookOpen },
-        { to: '/nivelamento', label: 'Nivelamento', icon: Award },
-        sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
-        { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-        { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
+        { to: '/regras', label: t('Regras'), icon: BookOpen },
+        { to: '/nivelamento', label: t('Nivelamento'), icon: Award },
+        sportHistoryOn && { to: '/historia', label: t('História do esporte'), icon: History },
+        { to: '/conduta', label: t('Conduta e fair play'), icon: HeartHandshake },
+        { to: legalCenterOn ? '/legal' : '/politica-uso', label: t('Termos e Documentos'), icon: FileText },
       ].filter(Boolean),
     },
   ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, rotulos]);
@@ -259,24 +260,24 @@ function useV2Nav() {
       return { ...h, children };
     };
     return [
-      hub({ id: 'inicio', dica: 'menu-inicio', label: 'Início', icon: LayoutGrid, to: '/', exact: true, children: [] }),
+      hub({ id: 'inicio', dica: 'menu-inicio', label: t('Início'), icon: LayoutGrid, to: '/', exact: true, children: [] }),
       hub({
-        id: 'competir', dica: 'menu-competir', label: 'Competir', icon: Trophy, to: '/torneios',
+        id: 'competir', dica: 'menu-competir', label: t('Competir'), icon: Trophy, to: '/torneios',
         children: [
-          { to: '/torneios', label: 'Torneios', icon: Trophy },
-          circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
-          ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
-          doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
+          { to: '/torneios', label: t('Torneios'), icon: Trophy },
+          circuitsOn && { to: '/circuits', label: t('Circuitos'), icon: Award },
+          ratingOn && { to: '/ranking', label: t('Ranking'), icon: Medal },
+          doublesRankingOn && { to: '/ranking/duplas', label: t('Ranking de duplas'), icon: Medal },
           // Gamificação V2: a temporada do mês, os desafios e o Hall da Fama são competição.
           gamificationOn && { to: '/gamification', label: rotulos.gamificacao, icon: Sparkles },
-          gamificationOn && { to: '/hall-da-fama', label: 'Hall da Fama', icon: Crown },
+          gamificationOn && { to: '/hall-da-fama', label: t('Hall da Fama'), icon: Crown },
         ],
       }),
       // Jogar abre no DIA DE JOGO (os seus dias e os com vaga para você) e as
       // abas seguem a ordem de uso: organizar/entrar num dia, procurar jogo,
       // procurar gente. A ordem é contrato de tela (há teste travando).
       hub({
-        id: 'jogar', dica: 'menu-jogar', label: 'Jogar', icon: Swords, to: jogarHubTo({ gameDayOn, openGamesOn }),
+        id: 'jogar', dica: 'menu-jogar', label: t('Jogar'), icon: Swords, to: jogarHubTo({ gameDayOn, openGamesOn }),
         children: [
           gameDayOn && { to: '/dia-de-jogo', label: rotulos.abaDiaDeJogo, icon: Dices },
           openGamesOn && { to: '/procura-jogo', label: rotulos.vagas, icon: Megaphone },
@@ -284,74 +285,74 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'comunidade', dica: 'menu-comunidade', label: 'Comunidade', icon: Users, to: '/atletas',
+        id: 'comunidade', dica: 'menu-comunidade', label: t('Comunidade'), icon: Users, to: '/atletas',
         children: [
-          { to: '/atletas', label: 'Atletas', icon: Users },
-          { to: '/clubes', label: 'Clubes', icon: Building2 },
-          communityFeedOn && { to: '/novidades', label: 'Novidades', icon: Zap },
-          { to: '/chat', label: 'Mensagens', icon: MessageSquare },
+          { to: '/atletas', label: t('Atletas'), icon: Users },
+          { to: '/clubes', label: t('Clubes'), icon: Building2 },
+          communityFeedOn && { to: '/novidades', label: t('Novidades'), icon: Zap },
+          { to: '/chat', label: t('Mensagens'), icon: MessageSquare },
         ],
       }),
       // Quem GERE arena tem a porta dela no 1º nível, acima de "Arenas" (que é
       // a lista para quem reserva). Com 2+ arenas, uma aba cada.
       showMyArenas && hub({
-        id: 'minha-arena', label: myArenas.length === 1 ? (myArenas[0].name || 'Minha arena') : 'Minhas arenas',
+        id: 'minha-arena', label: myArenas.length === 1 ? (myArenas[0].name || t('Minha arena')) : t('Minhas arenas'),
         icon: LayoutDashboard, to: `/arenas/${myArenas[0].id}/gerir`,
         badge: myPendingBookings,
         badgeHint: myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
         children: myArenas.map((a) => ({
-          to: `/arenas/${a.id}/gerir`, label: a.name || 'Arena', icon: LayoutDashboard, badge: pendingByArena[a.id] || 0,
+          to: `/arenas/${a.id}/gerir`, label: a.name || t('Arena'), icon: LayoutDashboard, badge: pendingByArena[a.id] || 0,
         })),
       }),
       (arenasOn || isPlatformAdmin) && hub({
-        id: 'arenas', dica: 'menu-arenas', label: 'Arenas', icon: Building2, to: '/arenas',
+        id: 'arenas', dica: 'menu-arenas', label: t('Arenas'), icon: Building2, to: '/arenas',
         children: [
           { to: '/arenas', label: rotulos.reservar, icon: MapPin },
-          arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
+          arenasOn && { to: '/minhas-reservas', label: t('Minhas reservas'), icon: CalendarClock },
         ],
       }),
       (coachesOn || isCoach || coachLessonsOn) && hub({
-        id: 'ensino', dica: 'menu-aulas', label: 'Aulas', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
+        id: 'ensino', dica: 'menu-aulas', label: t('Aulas'), icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
         children: [
-          coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
-          coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
+          coachesOn && { to: '/coaches', label: t('Professores'), icon: GraduationCap },
+          coachLessonsOn && { to: '/minhas-aulas', label: t('Minhas aulas'), icon: CalendarClock },
           // O painel do professor é hub próprio (abaixo).
         ],
       }),
       isCoach && hub({
-        id: 'professor', label: 'Painel do professor', icon: GraduationCap, to: '/aulas',
-        children: [{ to: '/aulas', label: 'Painel do professor', icon: GraduationCap }],
+        id: 'professor', label: t('Painel do professor'), icon: GraduationCap, to: '/aulas',
+        children: [{ to: '/aulas', label: t('Painel do professor'), icon: GraduationCap }],
       }),
       // "Pickleball" (regras, nivelamento, história) não fica no 1º nível (§5.1):
       // continua na Ajuda e nas rotas de sempre; o menu fica com o que a pessoa FAZ.
       hub({
-        id: 'perfil', dica: 'menu-perfil', label: userHubOn ? 'Minha área' : 'Perfil', icon: User, to: '/perfil',
+        id: 'perfil', dica: 'menu-perfil', label: userHubOn ? t('Minha área') : t('Perfil'), icon: User, to: '/perfil',
         children: [
-          { to: '/perfil', label: userHubOn ? 'Minha área' : 'Meu perfil', icon: User },
-          trainingOn && { to: '/treino', label: 'Treino', icon: Dumbbell },
-          performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
-          gamificationOn && { to: '/conquistas', label: 'Conquistas', icon: Award },
+          { to: '/perfil', label: userHubOn ? t('Minha área') : t('Meu perfil'), icon: User },
+          trainingOn && { to: '/treino', label: t('Treino'), icon: Dumbbell },
+          performanceOn && { to: '/meu-desempenho', label: t('Meu desempenho'), icon: BarChart3 },
+          gamificationOn && { to: '/conquistas', label: t('Conquistas'), icon: Award },
           tournamentAdminConsoleOn && { to: '/perfil/torneios', label: rotulos.meusTorneios, icon: Trophy },
-          settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
+          settingsPageOn && { to: '/configuracoes', label: t('Configurações'), icon: Settings },
         ],
       }),
       // Mercado (flag `marketplace`): comprar e vender, separado do mercado interno das arenas.
       marketplaceOn && hub({
-        id: 'mercado', dica: 'menu-mercado', label: 'Mercado', icon: Store, to: '/mercado',
+        id: 'mercado', dica: 'menu-mercado', label: t('Mercado'), icon: Store, to: '/mercado',
         children: [
-          { to: '/mercado', label: 'Comprar', icon: Store, exact: true },
-          { to: '/mercado/pedidos', label: 'Minhas compras', icon: ShoppingBag },
-          { to: '/mercado/favoritos', label: 'Favoritos', icon: Heart },
+          { to: '/mercado', label: t('Comprar'), icon: Store, exact: true },
+          { to: '/mercado/pedidos', label: t('Minhas compras'), icon: ShoppingBag },
+          { to: '/mercado/favoritos', label: t('Favoritos'), icon: Heart },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
       affiliatesOn && hub({
-        id: 'parceiros', label: 'Parceiros', icon: HeartHandshake, to: '/parceiros',
-        children: [{ to: '/parceiros', label: 'Parceiros', icon: HeartHandshake }],
+        id: 'parceiros', label: t('Parceiros'), icon: HeartHandshake, to: '/parceiros',
+        children: [{ to: '/parceiros', label: t('Parceiros'), icon: HeartHandshake }],
       }),
       isPlatformAdmin && adminConsoleOn && hub({
-        id: 'admin', label: 'Admin', icon: LayoutDashboard, to: '/admin/painel',
-        children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
+        id: 'admin', label: t('Admin'), icon: LayoutDashboard, to: '/admin/painel',
+        children: [{ to: '/admin/painel', label: t('Painel admin'), icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
   }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn]);
@@ -425,7 +426,7 @@ function NavItem({ item, active, onClick }) {
             'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-2xs font-bold',
             active ? 'bg-acid text-ink' : 'bg-acid/90 text-ink',
           )}
-          title={item.badgeHint || `${item.badge} pendência(s)`}
+          title={item.badgeHint || tn(item.badge, '{n} pendência', '{n} pendências', { n: item.badge })}
         >
           {item.badge > 99 ? '99+' : item.badge}
         </span>
@@ -453,13 +454,13 @@ function useBottomNav({ uid, pathname, arenas, pendingByArena, ehProfessor }) {
     ehProfessor,
     temTorneioAtual: myCurrentTournaments(meusTorneios, hojeLocal()).length > 0,
     treinoUltimoAcessoMs: Number(readViewPreference(uid, 'treino:ultimo-acesso')) || null,
-  }).map((i) => ({ ...i, icon: BOTTOM_NAV_ICONS[i.icon] || LayoutGrid })), [arenas, pendingByArena, ehProfessor, meusTorneios, uid]);
+  }).map((i) => ({ ...i, label: t(i.label), icon: BOTTOM_NAV_ICONS[i.icon] || LayoutGrid })), [arenas, pendingByArena, ehProfessor, meusTorneios, uid]);
 }
 
 function MobileBottomNav({ pathname, userHubOn = false, items }) {
   return (
     <nav
-      aria-label="Navegação principal"
+      aria-label={t('Navegação principal')}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 backdrop-blur-md lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
@@ -488,7 +489,7 @@ function MobileBottomNav({ pathname, userHubOn = false, items }) {
                   </span>
                 )}
               </span>
-              {userHubOn && item.to === '/perfil' ? 'Minha área' : item.label}
+              {userHubOn && item.to === '/perfil' ? t('Minha área') : item.label}
             </Link>
           );
         })}
@@ -511,7 +512,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
       <DropdownMenuTrigger asChild>
         <button
           className="btn-press hidden items-center justify-center rounded-full transition-opacity hover:opacity-80 sm:flex"
-          aria-label="Menu do usuário"
+          aria-label={t('Menu do usuário')}
         >
           <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
         </button>
@@ -523,7 +524,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
-          <User className="mr-2 h-4 w-4" /> {userHubOn ? 'Minha área' : 'Meu perfil'}
+          <User className="mr-2 h-4 w-4" /> {userHubOn ? t('Minha área') : t('Meu perfil')}
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
           <Pencil className="mr-2 h-4 w-4" /> Editar perfil
@@ -533,7 +534,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
         {centralAvisosOn && (
           <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(NOTIFICATIONS_PATH)}>
             <Bell className="mr-2 h-4 w-4" />
-            <span className="flex-1">Notificações</span>
+            <span className="flex-1">{t('Notificações')}</span>
             {seloAvisos && (
               <span className="ml-2 rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">{seloAvisos}</span>
             )}
@@ -690,10 +691,10 @@ export default function V2Layout({ children }) {
     ? hubs.map((h) => ({ title: h.label, items: h.children.length ? h.children : [{ to: h.to, label: h.label, icon: h.icon, exact: h.exact }] }))
     : sections;
 
-  const displayName = userProfile?.platform_name || userProfile?.full_name || 'Atleta';
+  const displayName = userProfile?.platform_name || userProfile?.full_name || t('Atleta');
   const displayPhoto = userProfile?.photo_url || null;
   const levelCode = userProfile?.leveling?.result?.level;
-  const levelLabel = levelCode ? getLevelByCode(levelCode)?.name : 'Não nivelado';
+  const levelLabel = levelCode ? getLevelByCode(levelCode)?.name : t('Não nivelado');
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -753,7 +754,7 @@ export default function V2Layout({ children }) {
               <Link to="/" aria-label="PickleRush"><BrandMark className="h-9 w-9" /></Link>
             ) : <BrandLockup />}
           </div>
-          <nav data-dica="menu-principal" aria-label="Menu principal" className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
+          <nav data-dica="menu-principal" aria-label={t('Menu principal')} className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
             {hubsVisiveis.map((hub) => (
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
@@ -765,8 +766,8 @@ export default function V2Layout({ children }) {
           {helpCenterOn && (
             <Link
               to={helpLinkFor(location.pathname)}
-              title={collapsed ? 'Central de ajuda' : undefined}
-              aria-label={collapsed ? 'Central de ajuda' : undefined}
+              title={collapsed ? t('Central de ajuda') : undefined}
+              aria-label={collapsed ? t('Central de ajuda') : undefined}
               className={cn(
                 'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-colors',
                 collapsed ? 'justify-center px-0' : 'px-3.5',
@@ -774,7 +775,7 @@ export default function V2Layout({ children }) {
               )}
             >
               <LifeBuoy className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: '/ajuda' }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
-              {!collapsed && <span className="ml-3">Central de ajuda</span>}
+              {!collapsed && <span className="ml-3">{t('Central de ajuda')}</span>}
             </Link>
           )}
 
@@ -782,8 +783,8 @@ export default function V2Layout({ children }) {
               Reúne todos os termos, contratos, documentos e políticas de uso. */}
           <Link
             to={legalDocsPath}
-            title={collapsed ? 'Termos e Documentos' : undefined}
-            aria-label={collapsed ? 'Termos e Documentos' : undefined}
+            title={collapsed ? t('Termos e Documentos') : undefined}
+            aria-label={collapsed ? t('Termos e Documentos') : undefined}
             className={cn(
               'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-colors',
               collapsed ? 'justify-center px-0' : 'px-3.5',
@@ -791,21 +792,21 @@ export default function V2Layout({ children }) {
             )}
           >
             <FileText className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: legalDocsPath }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
-            {!collapsed && <span className="ml-3">Termos e Documentos</span>}
+            {!collapsed && <span className="ml-3">{t('Termos e Documentos')}</span>}
           </Link>
           {/* O menu é da pessoa: o que aparece aqui se escolhe em Configurações → Menu. */}
           <Link
             to="/configuracoes#menu-lateral"
             data-dica="menu-personalizar"
-            title={collapsed ? 'Personalizar o menu' : undefined}
-            aria-label={collapsed ? 'Personalizar o menu' : undefined}
+            title={collapsed ? t('Personalizar o menu') : undefined}
+            aria-label={collapsed ? t('Personalizar o menu') : undefined}
             className={cn(
               'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-ink',
               collapsed ? 'justify-center px-0' : 'px-3.5',
             )}
           >
             <SlidersHorizontal className="h-4 w-4 shrink-0 text-gray-500 group-hover:text-acid" />
-            {!collapsed && <span className="ml-3">Personalizar o menu</span>}
+            {!collapsed && <span className="ml-3">{t('Personalizar o menu')}</span>}
           </Link>
           <button
             type="button"
@@ -814,10 +815,10 @@ export default function V2Layout({ children }) {
               'mx-3 mb-3 flex items-center gap-2 rounded-2xl border border-gray-100 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:border-ink/30 hover:text-ink',
               collapsed ? 'justify-center px-0' : 'px-3.5',
             )}
-            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            title={collapsed ? t('Expandir menu') : t('Recolher menu')}
+            aria-label={collapsed ? t('Expandir menu') : t('Recolher menu')}
           >
-            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> Recolher</>}
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> {t('Recolher')}</>}
           </button>
           {!collapsed && (
             <Link
@@ -880,7 +881,7 @@ export default function V2Layout({ children }) {
             onClick={() => setMobileOpen(true)}
             data-dica="menu-celular"
             className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm lg:hidden"
-            aria-label="Abrir menu"
+            aria-label={t('Abrir menu')}
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -888,10 +889,10 @@ export default function V2Layout({ children }) {
           <button type="button"
             onClick={() => abrirPaleta('cabecalho')}
             className="hidden min-w-0 max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 xl:flex"
-            aria-label="Buscar ou ir para (Ctrl K)"
+            aria-label={t('Buscar ou ir para (Ctrl K)')}
           >
             <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="flex-1 truncate">Buscar ou ir para…</span>
+            <span className="flex-1 truncate">{t('Buscar ou ir para…')}</span>
             <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
           </button>
 
@@ -900,7 +901,7 @@ export default function V2Layout({ children }) {
               <button
                 type="button"
                 onClick={toggleViewAsUser}
-                title={viewAsUser ? 'Você está vendo como usuário comum. Toque para voltar à visão de admin.' : 'Ver a plataforma como um usuário comum.'}
+                title={viewAsUser ? t('Você está vendo como usuário comum. Toque para voltar à visão de admin.') : t('Ver a plataforma como um usuário comum.')}
                 aria-pressed={viewAsUser}
                 className={cn(
                   'btn-press flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold shadow-sm transition-colors',
@@ -908,7 +909,7 @@ export default function V2Layout({ children }) {
                 )}
               >
                 {viewAsUser ? <Eye className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                <span className="hidden xl:inline">{viewAsUser ? 'Vendo como usuário' : 'Visão admin'}</span>
+                <span className="hidden xl:inline">{viewAsUser ? t('Vendo como usuário') : t('Visão admin')}</span>
               </button>
             )}
             {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
@@ -916,8 +917,8 @@ export default function V2Layout({ children }) {
             <BotaoDicas />
             <button type="button"
               onClick={() => abrirPaleta('icone')}
-              aria-label="Buscar ou ir para"
-              title="Buscar"
+              aria-label={t('Buscar ou ir para')}
+              title={t('Buscar')}
               className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper xl:hidden"
             >
               <SearchIcon className="h-5 w-5" />
@@ -925,8 +926,8 @@ export default function V2Layout({ children }) {
             {/* Mensagens saiu da barra inferior e mora aqui, ao lado do sino. */}
             <Link
               to="/chat"
-              aria-label="Mensagens"
-              title="Mensagens"
+              aria-label={t('Mensagens')}
+              title={t('Mensagens')}
               className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper"
             >
               <MessageSquare className="h-5 w-5" />
@@ -943,10 +944,10 @@ export default function V2Layout({ children }) {
             <Link
               to="/procura-jogo"
               data-dica="botao-procuro-jogo"
-              aria-label="Entrar num jogo"
+              aria-label={t('Entrar num jogo')}
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
             >
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Entrar num jogo</span>
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t('Entrar num jogo')}</span>
             </Link>
           </div>
         </header>
@@ -1001,14 +1002,14 @@ export default function V2Layout({ children }) {
           <button
             onClick={closeMobile}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"
-            aria-label="Fechar menu"
+            aria-label={t('Fechar menu')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="hide-scrollbar flex-1 overflow-y-auto px-6 pb-10">
           <form onSubmit={handleSearch} className="mb-4">
-            <label htmlFor="busca-gaveta" className="sr-only">Buscar</label>
+            <label htmlFor="busca-gaveta" className="sr-only">{t('Buscar')}</label>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
               <input
@@ -1017,7 +1018,7 @@ export default function V2Layout({ children }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full rounded-full border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-base text-white placeholder:text-white/60 focus:border-acid focus:outline-none"
-                placeholder="Buscar atletas, torneios, arenas…"
+                placeholder={t('Buscar atletas, torneios, arenas…')}
               />
             </div>
           </form>
@@ -1094,7 +1095,7 @@ export default function V2Layout({ children }) {
                 className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
               >
                 <Bell className="h-5 w-5" />
-                <span className="flex-1">Notificações</span>
+                <span className="flex-1">{t('Notificações')}</span>
                 {avisosNaoLidos > 0 && (
                   <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-2xs font-bold text-ink">
                     {formatUnreadBadge(avisosNaoLidos)}
