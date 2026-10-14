@@ -7,6 +7,7 @@ import {
 import { V2Button } from '@/v2/ui/primitives';
 import SetScoreEditor from '@/v2/components/games/SetScoreEditor';
 import { resultFromSets, setsForEdit, setsText, hasSets } from '@/modules/games/domain/gameSets';
+import { t } from '@/core/i18n';
 
 /**
  * O placar de um jogo na LISTA da grade (Americano e os demais formatos de
@@ -41,8 +42,8 @@ export default function GridScoreCell({ game, disabled = false, onSave }) {
           onClick={() => !disabled && setAberto(true)}
           disabled={disabled}
           className="flex flex-col items-center rounded-md px-2 py-0.5 hover:bg-gray-50 disabled:cursor-default"
-          title={disabled ? undefined : 'Corrigir os sets'}
-          aria-label={`Placar por sets ${game.score_a} a ${game.score_b}: ${setsText(game)}`}
+          title={disabled ? undefined : t('Corrigir os sets')}
+          aria-label={t('Placar por sets {a} a {b}: {sets}', { a: game.score_a, b: game.score_b, sets: setsText(game) })}
         >
           <span className="font-bold tabular-nums text-ink">{game.score_a} × {game.score_b}</span>
           <span className="text-2xs tabular-nums text-gray-500">{setsText(game)}</span>
@@ -50,19 +51,19 @@ export default function GridScoreCell({ game, disabled = false, onSave }) {
       ) : (
         <>
           <Input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} onBlur={salvarUmSet}
-            disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado A" />
+            disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label={t('Placar lado A')} />
           <span className="text-xs text-gray-500">×</span>
           <Input type="number" min={0} value={b} onChange={(e) => setB(e.target.value)} onBlur={salvarUmSet}
-            disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label="Placar lado B" />
+            disabled={disabled} className="h-8 w-12 px-1 text-center tabular-nums" aria-label={t('Placar lado B')} />
           {!disabled && (
             <button
               type="button"
               onClick={() => setAberto(true)}
               className="ml-0.5 flex h-7 items-center gap-0.5 rounded-md px-1.5 text-2xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink"
-              title="Lançar por sets"
-              aria-label="Lançar por sets"
+              title={t('Lançar por sets')}
+              aria-label={t('Lançar por sets')}
             >
-              <Layers className="h-3 w-3" /> Sets
+              <Layers className="h-3 w-3" /> {t('Sets')}
             </button>
           )}
         </>
@@ -90,16 +91,15 @@ function SetsDialog({ game, comecarComDois, onClose, onSave }) {
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Placar por sets</DialogTitle>
+          <DialogTitle>{t('Placar por sets')}</DialogTitle>
           <DialogDescription>
-            {nomes(game.side_a)} contra {nomes(game.side_b)}. Vence quem ganhou mais sets; os pontos
-            de todos os sets contam no saldo. Remova sets até sobrar um para voltar ao placar simples.
+            {t('{a} contra {b}. Vence quem ganhou mais sets; os pontos de todos os sets contam no saldo. Remova sets até sobrar um para voltar ao placar simples.', { a: nomes(game.side_a), b: nomes(game.side_b) })}
           </DialogDescription>
         </DialogHeader>
         <SetScoreEditor value={sets} onChange={setSets} />
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button disabled={!r.ok} onClick={() => onSave(r.fields)}>Salvar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button disabled={!r.ok} onClick={() => onSave(r.fields)}>{t('Salvar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

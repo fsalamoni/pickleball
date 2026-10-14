@@ -76,6 +76,7 @@ import {
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
+import { t, tn } from '@/core/i18n';
 
 const CAMPOS_DE_IDENTIDADE = [
   'title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes',
@@ -184,7 +185,7 @@ export default function GameDaySettingsCard({ gameDay }) {
       if (sucesso) toast.success(sucesso);
       return true;
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
       return false;
     }
   };
@@ -193,13 +194,13 @@ export default function GameDaySettingsCard({ gameDay }) {
     if (!novo || novo === format) return;
     // `play_courts` vai junto para o dia nunca ficar sem contagem de quadras ao
     // virar um formato que precisa dela.
-    gravar({ format: novo, play_courts: quadras }, 'Formato alterado.');
+    gravar({ format: novo, play_courts: quadras }, t('Formato alterado.'));
   };
 
   const trocarQuadras = (valor) => {
     const n = normalizePlayCourts(valor);
     if (n === quadras) return;
-    gravar({ play_courts: n }, n === 1 ? '1 quadra neste dia.' : `${n} quadras neste dia.`);
+    gravar({ play_courts: n }, tn(n, '{n} quadra neste dia.', '{n} quadras neste dia.'));
   };
 
   const trocarModo = async (novo) => {
@@ -207,37 +208,37 @@ export default function GameDaySettingsCard({ gameDay }) {
     try {
       await setMode.mutateAsync(novo);
       toast.success(novo === GAME_DAY_MANAGE_MODE.PARTICIPANTS
-        ? 'Agora qualquer participante pode organizar as partidas.'
-        : 'Só você e os organizadores que nomear podem conduzir as partidas.');
+        ? t('Agora qualquer participante pode organizar as partidas.')
+        : t('Só você e os organizadores que nomear podem conduzir as partidas.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível mudar o modo.');
+      toast.error(err?.message || t('Não foi possível mudar o modo.'));
     }
   };
 
   const nomear = async (pessoa) => {
     try {
       await addAdmin.mutateAsync(pessoa.uid);
-      toast.success(`${pessoa.name} agora organiza este dia de jogo.`);
+      toast.success(t('{nome} agora organiza este dia de jogo.', { nome: pessoa.name }));
       setPickerOpen(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível nomear.');
+      toast.error(err?.message || t('Não foi possível nomear.'));
     }
   };
 
   const remover = async (uid) => {
     try {
       await removeAdmin.mutateAsync(uid);
-      toast.success('Organizador removido. Ele continua participando do dia de jogo.');
+      toast.success(t('Organizador removido. Ele continua participando do dia de jogo.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover.');
+      toast.error(err?.message || t('Não foi possível remover.'));
     }
   };
 
   const salvarIdentidade = async () => {
-    if (!identidade.title.trim()) { toast.error('Dê um nome ao dia de jogo.'); return; }
+    if (!identidade.title.trim()) { toast.error(t('Dê um nome ao dia de jogo.')); return; }
     const patch = {};
     CAMPOS_DE_IDENTIDADE.forEach((k) => { patch[k] = identidade[k]; });
-    const ok = await gravar(patch, 'Dia de jogo atualizado.');
+    const ok = await gravar(patch, t('Dia de jogo atualizado.'));
     if (ok) setEditandoIdentidade(false);
   };
 
@@ -247,17 +248,17 @@ export default function GameDaySettingsCard({ gameDay }) {
   };
 
   const resumo = [
-    GAME_DAY_FORMAT_LABELS[format] || format,
-    quadras === 1 ? '1 quadra' : `${quadras} quadras`,
+    t(GAME_DAY_FORMAT_LABELS[format]) || format,
+    tn(quadras, '{n} quadra', '{n} quadras'),
     modo === GAME_DAY_MANAGE_MODE.PARTICIPANTS
-      ? 'Aberto a todos'
-      : `Só você${nomeados > 0 ? ` e mais ${nomeados}` : ''}`,
+      ? t('Aberto a todos')
+      : (nomeados > 0 ? t('Só você e mais {n}', { n: nomeados }) : t('Só você')),
   ].join(' · ');
 
   return (
     <V2CollapsibleCard
       icon={Settings2}
-      title="Configurações do dia de jogo"
+      title={t('Configurações do dia de jogo')}
       summary={resumo}
       dica="dia-de-jogo-config"
       sectionId={GAME_DAY_SECTION.SETTINGS}
@@ -266,10 +267,10 @@ export default function GameDaySettingsCard({ gameDay }) {
       <div className="space-y-6">
         {/* ------------------------------------------------- 1. como se joga */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-ink">Como se joga</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('Como se joga')}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor={`gds-fmt-${gdId}`}>Formato</Label>
+              <Label htmlFor={`gds-fmt-${gdId}`}>{t('Formato')}</Label>
               <V2Select
                 id={`gds-fmt-${gdId}`}
                 className="h-10 bg-white px-3 disabled:bg-paper disabled:text-gray-400"
@@ -278,24 +279,22 @@ export default function GameDaySettingsCard({ gameDay }) {
                 onChange={(e) => trocarFormato(e.target.value)}
               >
                 {opcoesDeFormato.map((v) => (
-                  <option key={v} value={v}>{GAME_DAY_FORMAT_LABELS[v] || v}</option>
+                  <option key={v} value={v}>{t(GAME_DAY_FORMAT_LABELS[v]) || v}</option>
                 ))}
               </V2Select>
               {falhouJogos ? (
                 <p className="text-xs text-amber-700">
-                  A lista de partidas não carregou, então não dá para saber se este dia já tem jogos.
-                  Trocar o formato agora poderia apagar rodada disputada.
+                  {t('A lista de partidas não carregou, então não dá para saber se este dia já tem jogos. Trocar o formato agora poderia apagar rodada disputada.')}
                 </p>
               ) : temPartidas ? (
                 <p className="text-xs text-gray-500">
-                  Este dia já tem partidas. Para trocar de formato, apague as partidas primeiro — cada
-                  formato deriva as rodadas de um jeito, e a troca perderia o que já aconteceu.
+                  {t('Este dia já tem partidas. Para trocar de formato, apague as partidas primeiro — cada formato deriva as rodadas de um jeito, e a troca perderia o que já aconteceu.')}
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor={`gds-qd-${gdId}`}>Quadras disponíveis</Label>
+              <Label htmlFor={`gds-qd-${gdId}`}>{t('Quadras disponíveis')}</Label>
               {daArena ? (
                 <>
                   <div className="flex h-10 w-full items-center rounded-md border border-dashed border-gray-200 bg-paper px-3 text-sm text-gray-600">
@@ -303,8 +302,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                   </div>
                   <p className="flex items-start gap-1.5 text-xs text-gray-500">
                     <Building2 aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Vem das quadras reservadas no calendário da arena. Para mudar, edite o dia de jogo
-                    na gestão da arena.
+                    {t('Vem das quadras reservadas no calendário da arena. Para mudar, edite o dia de jogo na gestão da arena.')}
                   </p>
                 </>
               ) : (
@@ -321,8 +319,8 @@ export default function GameDaySettingsCard({ gameDay }) {
                   />
                   <p className="text-xs text-gray-500">
                     {isCourtByCourtFormat(format)
-                      ? 'Quantas quadras rodam ao mesmo tempo. Com mais de uma, dá para sortear a rodada inteira de uma vez.'
-                      : 'Quantas quadras rodam ao mesmo tempo no sorteio. Deixe em 1 para automático — aí o sorteio usa todas as quadras que o número de atletas permitir.'}
+                      ? t('Quantas quadras rodam ao mesmo tempo. Com mais de uma, dá para sortear a rodada inteira de uma vez.')
+                      : t('Quantas quadras rodam ao mesmo tempo no sorteio. Deixe em 1 para automático — aí o sorteio usa todas as quadras que o número de atletas permitir.')}
                   </p>
                 </>
               )}
@@ -332,7 +330,7 @@ export default function GameDaySettingsCard({ gameDay }) {
 
         {/* --------------------------------------------- 2. quem organiza */}
         <section className="space-y-3 border-t border-gray-100 pt-5">
-          <h3 className="text-sm font-semibold text-ink">Quem organiza as partidas</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('Quem organiza as partidas')}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {Object.values(GAME_DAY_MANAGE_MODE).map((m) => (
               <button
@@ -346,34 +344,34 @@ export default function GameDaySettingsCard({ gameDay }) {
                   modo === m ? 'border-ink bg-ink text-white' : 'border-gray-200 hover:bg-paper',
                 )}
               >
-                <span className="block text-sm font-semibold">{GAME_DAY_MANAGE_MODE_LABELS[m]}</span>
+                <span className="block text-sm font-semibold">{t(GAME_DAY_MANAGE_MODE_LABELS[m])}</span>
                 <span className={cn('mt-0.5 block text-2xs leading-4', modo === m ? 'text-white/70' : 'text-gray-500')}>
-                  {GAME_DAY_MANAGE_MODE_HINTS[m]}
+                  {t(GAME_DAY_MANAGE_MODE_HINTS[m])}
                 </span>
               </button>
             ))}
           </div>
 
           <div className="flex items-center justify-between gap-3 pt-1">
-            <p className="text-sm font-semibold text-ink">Organizadores</p>
+            <p className="text-sm font-semibold text-ink">{t('Organizadores')}</p>
             <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)}>
-              <UserPlus className="mr-1.5 h-4 w-4" /> Nomear organizador
+              <UserPlus className="mr-1.5 h-4 w-4" /> {t('Nomear organizador')}
             </V2Button>
           </div>
           <div className="space-y-1.5">
             {organizadores.map((o) => (
               <div key={o.uid} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white p-2">
-                <UserAvatar name={o.nome || 'Atleta'} photoUrl={o.foto} size="sm" />
+                <UserAvatar name={o.nome || t('Atleta')} photoUrl={o.foto} size="sm" />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                  {o.nome || 'Atleta da plataforma'}
+                  {o.nome || t('Atleta da plataforma')}
                 </span>
                 {o.criador ? (
-                  <V2Badge tone="neutral"><Crown className="mr-1 h-3 w-3" /> Criador</V2Badge>
+                  <V2Badge tone="neutral"><Crown className="mr-1 h-3 w-3" /> {t('Criador')}</V2Badge>
                 ) : (
                   <V2Button
                     variant="ghost"
                     className="text-gray-400 hover:text-red-600"
-                    title="Remover organizador"
+                    title={t('Remover organizador')}
                     aria-label={`Remover ${o.nome || 'organizador'}`}
                     onClick={() => setConfirmRemove(o)}
                   >
@@ -384,18 +382,17 @@ export default function GameDaySettingsCard({ gameDay }) {
             ))}
           </div>
           <p className="text-2xs text-gray-500">
-            O organizador conduz as partidas e a lista de participantes. Remover não tira ninguém do
-            dia de jogo. Editar, arquivar e publicar no ranking continuam com quem configura o dia.
+            {t('O organizador conduz as partidas e a lista de participantes. Remover não tira ninguém do dia de jogo. Editar, arquivar e publicar no ranking continuam com quem configura o dia.')}
           </p>
         </section>
 
         {/* ------------------------------------------- 3. identificação */}
         <section className="space-y-3 border-t border-gray-100 pt-5">
-          <h3 className="text-sm font-semibold text-ink">Nome, data e local</h3>
+          <h3 className="text-sm font-semibold text-ink">{t('Nome, data e local')}</h3>
           {identidadeAqui ? (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor={`gds-nome-${gdId}`}>Nome*</Label>
+                <Label htmlFor={`gds-nome-${gdId}`}>{t('Nome*')}</Label>
                 <Input
                   id={`gds-nome-${gdId}`}
                   value={identidade.title}
@@ -405,7 +402,7 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Visibilidade</Label>
+                <Label>{t('Visibilidade')}</Label>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {Object.values(GAME_DAY_VISIBILITY).map((v) => (
                     <button
@@ -420,18 +417,18 @@ export default function GameDaySettingsCard({ gameDay }) {
                           : 'border-gray-200 text-gray-600 hover:bg-paper',
                       )}
                     >
-                      {GAME_DAY_VISIBILITY_LABELS[v]}
+                      {t(GAME_DAY_VISIBILITY_LABELS[v])}
                     </button>
                   ))}
                 </div>
                 <p className="text-2xs text-gray-500">
-                  Público publica um convite em &quot;Procura-se jogo&quot;; privado remove esse convite.
+                  {t('Público publica um convite em "Procura-se jogo"; privado remove esse convite.')}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor={`gds-data-${gdId}`}>Data</Label>
+                  <Label htmlFor={`gds-data-${gdId}`}>{t('Data')}</Label>
                   <Input
                     id={`gds-data-${gdId}`}
                     type="date"
@@ -440,7 +437,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`gds-hora-${gdId}`}>Horário</Label>
+                  <Label htmlFor={`gds-hora-${gdId}`}>{t('Horário')}</Label>
                   <Input
                     id={`gds-hora-${gdId}`}
                     type="time"
@@ -451,19 +448,19 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor={`gds-local-${gdId}`}>Local</Label>
+                <Label htmlFor={`gds-local-${gdId}`}>{t('Local')}</Label>
                 <Input
                   id={`gds-local-${gdId}`}
                   value={identidade.location}
                   maxLength={160}
-                  placeholder="Arena, quadra, endereço…"
+                  placeholder={t('Arena, quadra, endereço…')}
                   onChange={(e) => setCampo('location', e.target.value)}
                 />
               </div>
 
               <div className="grid grid-cols-[1fr_auto] gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor={`gds-cidade-${gdId}`}>Cidade</Label>
+                  <Label htmlFor={`gds-cidade-${gdId}`}>{t('Cidade')}</Label>
                   <Input
                     id={`gds-cidade-${gdId}`}
                     value={identidade.city}
@@ -472,7 +469,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                   />
                 </div>
                 <div className="w-20 space-y-1.5">
-                  <Label htmlFor={`gds-uf-${gdId}`}>UF</Label>
+                  <Label htmlFor={`gds-uf-${gdId}`}>{t('UF')}</Label>
                   <Input
                     id={`gds-uf-${gdId}`}
                     value={identidade.state}
@@ -484,13 +481,13 @@ export default function GameDaySettingsCard({ gameDay }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor={`gds-obs-${gdId}`}>Observações (opcional)</Label>
+                <Label htmlFor={`gds-obs-${gdId}`}>{t('Observações (opcional)')}</Label>
                 <textarea
                   id={`gds-obs-${gdId}`}
                   rows={2}
                   maxLength={1000}
                   value={identidade.notes}
-                  placeholder="Nível, valor da quadra, o que levar…"
+                  placeholder={t('Nível, valor da quadra, o que levar…')}
                   onChange={(e) => setCampo('notes', e.target.value)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
                 />
@@ -507,11 +504,11 @@ export default function GameDaySettingsCard({ gameDay }) {
                     disabled={update.isPending}
                     onClick={() => { setEditandoIdentidade(false); setIdentidade(identidadeDe(gameDay)); }}
                   >
-                    Descartar
+                    {t('Descartar')}
                   </V2Button>
                   <V2Button size="sm" disabled={update.isPending} onClick={salvarIdentidade}>
                     <Check className="mr-1.5 h-4 w-4" />
-                    {update.isPending ? 'Salvando…' : 'Salvar alterações'}
+                    {update.isPending ? t('Salvando…') : t('Salvar alterações')}
                   </V2Button>
                 </div>
               )}
@@ -523,13 +520,13 @@ export default function GameDaySettingsCard({ gameDay }) {
                   <Building2 aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
                     {isOpenMatchGameDay(gameDay)
-                      ? 'Nome, data, horário, quadras e vagas são do jogo aberto — mudam junto com a vitrine.'
-                      : 'Nome, data, local e as quadras reservadas são da arena.'}{' '}
+                      ? t('Nome, data, horário, quadras e vagas são do jogo aberto — mudam junto com a vitrine.')
+                      : t('Nome, data, local e as quadras reservadas são da arena.')}{' '}
                     <Link
                       to={arenaGameDayEditLink({ ...gameDay, id: gdId })}
                       className="font-semibold text-ink underline"
                     >
-                      {isOpenMatchGameDay(gameDay) ? 'Editar o jogo aberto' : 'Editar na gestão da arena'}
+                      {isOpenMatchGameDay(gameDay) ? t('Editar o jogo aberto') : t('Editar na gestão da arena')}
                     </Link>.
                   </span>
                 </>
@@ -537,7 +534,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                 <>
                   <Users aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Nome, data, horário e local vêm da DATA do evento do clube — é ela que manda neles.
+                    {t('Nome, data, horário e local vêm da DATA do evento do clube — é ela que manda neles.')}
                     {gameDay.club_event_id && (
                       <>
                         {' '}
@@ -545,7 +542,7 @@ export default function GameDaySettingsCard({ gameDay }) {
                           to={`/clubes/${gameDay.club_id}/eventos/${gameDay.club_event_id}`}
                           className="font-semibold text-ink underline"
                         >
-                          Editar no clube
+                          {t('Editar no clube')}
                         </Link>.
                       </>
                     )}
@@ -567,11 +564,11 @@ export default function GameDaySettingsCard({ gameDay }) {
       <ConfirmDialog
         open={!!confirmRemove}
         onOpenChange={(v) => !v && setConfirmRemove(null)}
-        title="Remover organizador?"
+        title={t('Remover organizador?')}
         description={confirmRemove
-          ? `${confirmRemove.nome || 'O atleta'} deixa de conduzir as partidas. Ele continua participando do dia de jogo.`
+          ? t('{nome} deixa de conduzir as partidas. Ele continua participando do dia de jogo.', { nome: confirmRemove.nome || t('O atleta') })
           : ''}
-        confirmLabel="Remover"
+        confirmLabel={t('Remover')}
         onConfirm={() => { const o = confirmRemove; setConfirmRemove(null); if (o) remover(o.uid); }}
       />
     </V2CollapsibleCard>
@@ -587,21 +584,20 @@ function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false })
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nomear organizador</DialogTitle>
+          <DialogTitle>{t('Nomear organizador')}</DialogTitle>
           <DialogDescription>
-            Quem você escolher passa a conduzir as partidas e a lista de participantes deste dia de jogo —
-            e entra nele como membro, para poder acompanhar.
+            {t('Quem você escolher passa a conduzir as partidas e a lista de participantes deste dia de jogo — e entra nele como membro, para poder acompanhar.')}
           </DialogDescription>
         </DialogHeader>
-        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome…" />
+        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar por nome…')} />
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {lista.length === 0 ? (
             falhou ? (
               <p className="py-6 text-center text-sm text-amber-700">
-                A lista de atletas não carregou. Tente de novo.
+                {t('A lista de atletas não carregou. Tente de novo.')}
               </p>
             ) : (
-              <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta encontrado.</p>
+              <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta encontrado.')}</p>
             )
           ) : lista.map((p) => (
             <div key={p.uid} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
@@ -610,13 +606,13 @@ function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false })
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => onEscolher(p)}>
-                <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Nomear
+                <ShieldCheck className="mr-1 h-3.5 w-3.5" /> {t('Nomear')}
               </V2Button>
             </div>
           ))}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

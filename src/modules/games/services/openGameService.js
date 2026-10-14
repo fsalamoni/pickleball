@@ -20,6 +20,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeOpenGameInput, OPEN_GAME_STATUS } from '../domain/openGames.js';
+import { t } from '@/core/i18n';
 
 const COL = 'open_games';
 
@@ -28,9 +29,9 @@ export async function createOpenGame(input, actor) {
   const { valid, errors, value } = normalizeOpenGameInput(input);
   if (!valid) {
     const first = Object.values(errors)[0];
-    throw new Error(first || 'Dados inválidos.');
+    throw new Error(first || t('Dados inválidos.'));
   }
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
+  if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
 
   const id = doc(collection(db, COL)).id;
   const payload = {

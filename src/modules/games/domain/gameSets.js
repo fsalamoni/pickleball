@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * PLACAR POR SETS no dia de jogo (Americano, Americano aprimorado e demais
  * formatos de placar).
@@ -54,8 +55,8 @@ export function setsForEdit(game) {
  */
 export function resultFromSets(sets, { allowEmpty = false } = {}) {
   const lista = Array.isArray(sets) ? sets : [];
-  if (lista.length === 0) return { ok: false, error: 'Informe o placar.' };
-  if (lista.length > MAX_SETS) return { ok: false, error: `No máximo ${MAX_SETS} sets por partida.` };
+  if (lista.length === 0) return { ok: false, error: t('Informe o placar.') };
+  if (lista.length > MAX_SETS) return { ok: false, error: t('No máximo {n} sets por partida.', { n: MAX_SETS }) };
 
   if (lista.length === 1) {
     const [s] = lista;
@@ -65,7 +66,7 @@ export function resultFromSets(sets, { allowEmpty = false } = {}) {
     const a = inteiroValido(s?.a);
     const b = inteiroValido(s?.b);
     if (vazio(s?.a) || vazio(s?.b) || a == null || b == null) {
-      return { ok: false, error: 'Informe os dois placares.' };
+      return { ok: false, error: t('Informe os dois placares.') };
     }
     return { ok: true, fields: { score_a: a, score_b: b, sets: null, points_a: null, points_b: null } };
   }
@@ -76,15 +77,15 @@ export function resultFromSets(sets, { allowEmpty = false } = {}) {
     const a = inteiroValido(s?.a);
     const b = inteiroValido(s?.b);
     if (vazio(s?.a) || vazio(s?.b) || a == null || b == null) {
-      return { ok: false, error: `Informe os dois placares do set ${i + 1} (ou remova o set).` };
+      return { ok: false, error: t('Informe os dois placares do set {n} (ou remova o set).', { n: i + 1 }) };
     }
-    if (a === b) return { ok: false, error: `O set ${i + 1} está empatado: cada set precisa de um vencedor.` };
+    if (a === b) return { ok: false, error: t('O set {n} está empatado: cada set precisa de um vencedor.', { n: i + 1 }) };
     limpos.push({ a, b });
   }
   const setsA = limpos.filter((s) => s.a > s.b).length;
   const setsB = limpos.length - setsA;
   if (setsA === setsB) {
-    return { ok: false, error: `Os sets ficaram ${setsA} × ${setsB}: acrescente o set de desempate.` };
+    return { ok: false, error: t('Os sets ficaram {a} × {b}: acrescente o set de desempate.', { a: setsA, b: setsB }) };
   }
   return {
     ok: true,

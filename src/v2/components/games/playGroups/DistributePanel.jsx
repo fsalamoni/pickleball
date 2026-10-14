@@ -10,12 +10,13 @@ import { V2Button } from '@/v2/ui/primitives';
 import { suggestPlayGroupAssignments } from '@/modules/games/domain/playGroups';
 import { PlayGroupBadge } from './PlayGroupBadge';
 import GroupSelect from './GroupSelect';
+import { t, tn } from '@/core/i18n';
 
 const MOSTRAR = 8;
 
 function nomes(lista) {
   const vistos = lista.slice(0, MOSTRAR).join(', ');
-  return lista.length > MOSTRAR ? `${vistos} e mais ${lista.length - MOSTRAR}` : vistos;
+  return lista.length > MOSTRAR ? t('{lista} e mais {n}', { lista: vistos, n: lista.length - MOSTRAR }) : vistos;
 }
 
 /**
@@ -43,19 +44,18 @@ export default function DistributePanel({ participants, config, applying = false
   const nada = sugestao.assignments.length === 0 && sugestao.unmatched.length === 0;
 
   return (
-    <section aria-label="Distribuir por nível" className="space-y-4 rounded-lg border border-gray-200 bg-paper p-4">
+    <section aria-label={t('Distribuir por nível')} className="space-y-4 rounded-lg border border-gray-200 bg-paper p-4">
       <div>
-        <h4 className="text-sm font-bold text-ink">Distribuir por nível</h4>
+        <h4 className="text-sm font-bold text-ink">{t('Distribuir por nível')}</h4>
         <p className="mt-1 text-xs leading-5 text-gray-500">
-          Cada pessoa vai para o grupo da faixa do seu nível (e do sexo, quando o grupo pede). Confira
-          abaixo antes de aplicar — nada é gravado até você confirmar.
+          {t('Cada pessoa vai para o grupo da faixa do seu nível (e do sexo, quando o grupo pede). Confira abaixo antes de aplicar — nada é gravado até você confirmar.')}
         </p>
       </div>
 
-      <div role="radiogroup" aria-label="Quem distribuir" className="space-y-2">
+      <div role="radiogroup" aria-label={t('Quem distribuir')} className="space-y-2">
         {[
-          ['ungrouped', 'Só quem está sem grupo', 'Quem já foi colocado num grupo fica onde está.'],
-          ['all', 'Todo mundo', 'Refaz a distribuição inteira — inclusive de quem você já tinha movido.'],
+          ['ungrouped', t('Só quem está sem grupo'), t('Quem já foi colocado num grupo fica onde está.')],
+          ['all', t('Todo mundo'), t('Refaz a distribuição inteira — inclusive de quem você já tinha movido.')],
         ].map(([valor, titulo, ajuda]) => (
           <label key={valor} className="flex cursor-pointer items-start gap-2.5 text-sm">
             <input
@@ -75,7 +75,7 @@ export default function DistributePanel({ participants, config, applying = false
 
       {nada ? (
         <p className="rounded-lg bg-white px-3 py-2 text-sm text-gray-600">
-          Nada a mudar: {escopo === 'ungrouped' ? 'todo mundo já está num grupo.' : 'ninguém precisa trocar de grupo.'}
+          {escopo === 'ungrouped' ? t('Nada a mudar: todo mundo já está num grupo.') : t('Nada a mudar: ninguém precisa trocar de grupo.')}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -92,31 +92,31 @@ export default function DistributePanel({ participants, config, applying = false
       {sugestao.unmatched.length > 0 && (
         <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
           <p className="text-sm font-semibold text-amber-900">
-            {sugestao.unmatched.length} {sugestao.unmatched.length === 1 ? 'pessoa não deu' : 'pessoas não deram'} para classificar
+            {tn(sugestao.unmatched.length, '{n} pessoa não deu para classificar', '{n} pessoas não deram para classificar')}
           </p>
           <ul className="space-y-0.5 text-xs text-amber-900">
             {sugestao.unmatched.slice(0, MOSTRAR).map((u) => (
               <li key={u.pid}><strong className="font-semibold">{u.name}</strong> — {u.reason}</li>
             ))}
-            {sugestao.unmatched.length > MOSTRAR && <li>e mais {sugestao.unmatched.length - MOSTRAR}…</li>}
+            {sugestao.unmatched.length > MOSTRAR && <li>{t('e mais {n}…', { n: sugestao.unmatched.length - MOSTRAR })}</li>}
           </ul>
           <label className="flex flex-wrap items-center gap-2 text-xs text-amber-900">
-            Colocar essas pessoas em:
+            {t('Colocar essas pessoas em:')}
             <GroupSelect
               value={reserva}
               groups={config.groups}
               onChange={setReserva}
-              label="Grupo para quem não deu para classificar"
-              noneLabel="Deixar sem grupo"
+              label={t('Grupo para quem não deu para classificar')}
+              noneLabel={t('Deixar sem grupo')}
             />
           </label>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <V2Button variant="ghost" size="sm" onClick={onCancel} disabled={applying}>Cancelar</V2Button>
+        <V2Button variant="ghost" size="sm" onClick={onCancel} disabled={applying}>{t('Cancelar')}</V2Button>
         <V2Button size="sm" onClick={() => onApply(finais)} disabled={applying || finais.length === 0}>
-          {applying ? 'Aplicando…' : `Aplicar a ${finais.length} ${finais.length === 1 ? 'pessoa' : 'pessoas'}`}
+          {applying ? t('Aplicando…') : tn(finais.length, 'Aplicar a {n} pessoa', 'Aplicar a {n} pessoas')}
         </V2Button>
       </div>
     </section>

@@ -91,6 +91,7 @@ import { PlayGroupBadge, NoGroupBadge } from '@/v2/components/games/playGroups/P
 import { telaoConnectionState } from '@/modules/games/domain/telaoConnection';
 import { useWakeLock } from '@/core/lib/useWakeLock';
 import { useRelogio } from '@/core/lib/useRelogio';
+import { t } from '@/core/i18n';
 
 /** De quanto em quanto tempo o painel se atualiza sozinho. */
 const REFRESH_MS = 15_000;
@@ -147,7 +148,7 @@ function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
 
   if (nomes.length === 0) {
     const vazio = variante === 'empilhado' ? 'text-2xl font-bold xl:text-3xl' : 'text-base font-semibold';
-    return <div className={`${vazio} text-white/30`}>A definir</div>;
+    return <div className={`${vazio} text-white/30`}>{t('A definir')}</div>;
   }
 
   if (variante === 'linha') {
@@ -169,7 +170,7 @@ function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
             key={p.id || p.name}
             type="button"
             onClick={() => onJogador(p)}
-            title={`Opções para ${p.name}: indisponível para esta partida ou substituir`}
+            title={t('Opções para {nome}: indisponível para esta partida ou substituir', { nome: p.name })}
             className="block max-w-full truncate rounded-lg px-1 text-left transition-colors hover:bg-white/10 hover:text-acid"
           >
             {p.name}
@@ -235,7 +236,7 @@ function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null, 
       <Lado side={jogo.side_a} vencedor={venc === 'a'} onJogador={onJogador} />
       <div className="my-2 flex items-center gap-3">
         <span className="h-px flex-1 bg-white/10" />
-        <span className="text-sm font-bold text-white/30">VS</span>
+        <span className="text-sm font-bold text-white/30">{t('VS')}</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
       <Lado side={jogo.side_b} vencedor={venc === 'b'} onJogador={onJogador} />
@@ -273,15 +274,15 @@ function CardQuadraLivre({ court, acoes = null, kind = GAME_KIND.DOUBLES, onKind
     <div className="flex flex-col justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] p-5 landscape:lg:min-h-[14rem] portrait:lg:min-h-[16rem] xl:p-6">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-black text-white/50">
-          QUADRA {court}
+          {t('QUADRA {n}', { n: court })}
         </span>
         {/* O tipo da próxima partida desta quadra: quem organiza escolhe; os
             demais só veem o selo quando é de simples. */}
         {onKind
-          ? <GameKindToggle value={kind} onChange={onKind} variant="dark" label={`Tipo de jogo da quadra ${court}`} />
+          ? <GameKindToggle value={kind} onChange={onKind} variant="dark" label={t('Tipo de jogo da quadra {n}', { n: court })} />
           : <GameKindBadge kind={kind} variant="dark" />}
       </div>
-      <p className="text-2xl font-bold text-white/30 xl:text-3xl">Livre</p>
+      <p className="text-2xl font-bold text-white/30 xl:text-3xl">{t('Livre')}</p>
       {acoes && <div className="mt-4 flex flex-wrap gap-2">{acoes}</div>}
     </div>
   );
@@ -291,13 +292,13 @@ function LinhaJogo({ jogo, mostrarRodada }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
       <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-        {mostrarRodada && jogo.round != null && <span>Rodada {jogo.round}</span>}
-        {jogo.court != null && <span>· Quadra {jogo.court}</span>}
+        {mostrarRodada && jogo.round != null && <span>{t('Rodada {n}', { n: jogo.round })}</span>}
+        {jogo.court != null && <span>· {t('Quadra {n}', { n: jogo.court })}</span>}
       </div>
       <Lado side={jogo.side_a} variante="linha" />
       <div className="my-1 flex items-center gap-2">
         <span className="h-px flex-1 bg-white/10" />
-        <span className="text-2xs font-bold text-white/30">VS</span>
+        <span className="text-2xs font-bold text-white/30">{t('VS')}</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
       <Lado side={jogo.side_b} variante="linha" />
@@ -350,7 +351,7 @@ function OrdemDeParticipacao({
 }) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
-  if (total === 0) return <Vazio>Ninguém na ordem ainda.</Vazio>;
+  if (total === 0) return <Vazio>{t('Ninguém na ordem ainda.')}</Vazio>;
 
   // Só faz sentido anunciar "entra a seguir" quando há gente suficiente para
   // formar uma partida; com 3 na fila, ninguém entra. Numa quadra de SIMPLES
@@ -373,12 +374,12 @@ function OrdemDeParticipacao({
           <span className="truncate text-lg font-semibold text-white">{p.name}</span>
           {p.partner_id && <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-300" />}
         </span>
-        {destacado && <span className="shrink-0 text-xs font-bold uppercase text-acid">entra a seguir</span>}
+        {destacado && <span className="shrink-0 text-xs font-bold uppercase text-acid">{t('entra a seguir')}</span>}
       </>
     );
     return onAtleta
       ? (
-        <button key={p.id} type="button" onClick={() => onAtleta(p)} className={classe} title={`Ações de ${p.name}`}>
+        <button key={p.id} type="button" onClick={() => onAtleta(p)} className={classe} title={t('Ações de {nome}', { nome: p.name })}>
           {corpo}
         </button>
       )
@@ -397,25 +398,25 @@ function OrdemDeParticipacao({
     <div className="space-y-1.5">
       {order.length === 0 && (
         <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/40">
-          Ninguém aguardando no momento.
+          {t('Ninguém aguardando no momento.')}
         </p>
       )}
       {secoes
         ? secoes.map(({ id, g, fila }) => (
           <section
             key={id ?? 'sem-grupo'}
-            aria-label={g ? `Fila do grupo ${g.name}` : 'Fila de quem está sem grupo'}
+            aria-label={g ? t('Fila do grupo {nome}', { nome: g.name }) : t('Fila de quem está sem grupo')}
             className="space-y-1.5 pb-2"
           >
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {g ? <PlayGroupBadge name={g.name} color={g.color} variant="dark" /> : <NoGroupBadge variant="dark" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-white/40">
-                {g?.paused ? 'grupo em pausa' : `${fila.length} aguardando`}
+                {g?.paused ? t('grupo em pausa') : t('{n} aguardando', { n: fila.length })}
               </span>
             </div>
             {fila.length === 0 && !g?.paused && (
               <p className="rounded-2xl border border-dashed border-white/10 px-4 py-2 text-sm text-white/30">
-                Ninguém aguardando neste grupo.
+                {t('Ninguém aguardando neste grupo.')}
               </p>
             )}
             {fila.map((p) => linha(p, entraAseguir(p, order.indexOf(p)), p.groupNo ?? p.orderNo))}
@@ -425,7 +426,7 @@ function OrdemDeParticipacao({
 
       {inCourt.length > 0 && (
         <p className="pt-1 text-sm leading-relaxed text-white/40">
-          <span className="font-bold uppercase text-white/50">Em quadra: </span>
+          <span className="font-bold uppercase text-white/50">{t('Em quadra:')} </span>
           {inCourt.map((p) => p.name).join(', ')}
         </p>
       )}
@@ -433,7 +434,7 @@ function OrdemDeParticipacao({
           traz alguém de volta para a fila. */}
       {unavailable.length > 0 && (
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-amber-300/50">
-          <span className="font-bold uppercase">Pausado:</span>
+          <span className="font-bold uppercase">{t('Pausado:')}</span>
           {unavailable.map((p) => (onAtleta ? (
             <button
               key={p.id}
@@ -473,17 +474,17 @@ function ProximaPorQuadra({
     return (
       <Vazio>
         {disponiveis === 0
-          ? 'Ninguém aguardando no momento.'
+          ? t('Ninguém aguardando no momento.')
           : comGrupos
-            ? `Nenhum grupo tem partida pronta ainda (${disponiveis} na fila).`
-            : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
+            ? t('Nenhum grupo tem partida pronta ainda ({n} na fila).', { n: disponiveis })
+            : t('Faltam jogadores para a próxima partida ({n} na fila).', { n: disponiveis })}
       </Vazio>
     );
   }
   return (
     <div className="space-y-3">
       <p className="text-sm text-white/40">
-        Quem entra em cada quadra, pela ordem da fila. As duplas são formadas na hora de criar o jogo.
+        {t('Quem entra em cada quadra, pela ordem da fila. As duplas são formadas na hora de criar o jogo.')}
       </p>
       {/* Mesma grade dos cards de quadra logo acima: cada previsão fica na
           mesma coluna da quadra a que se refere. */}
@@ -503,10 +504,10 @@ function ProximaPorQuadra({
                 destaque ? 'bg-acid text-ink' : 'bg-white/10 text-white/50'
               }`}
               >
-                QUADRA {e.court}
+                {t('QUADRA {n}', { n: e.court })}
               </span>
               <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
-                {e.free ? 'livre agora' : 'quando liberar'}
+                {e.free ? t('livre agora') : t('quando liberar')}
               </span>
               <GameKindBadge kind={e.kind} variant="dark" />
               {e.group && <PlayGroupBadge name={e.group.name} color={e.group.color} variant="dark" />}
@@ -514,7 +515,7 @@ function ProximaPorQuadra({
 
             {e.players.length === 0 ? (
               <div className="text-lg font-semibold text-white/30">
-                {comGrupos ? 'Nenhum grupo tem partida pronta para esta quadra' : 'A fila acaba antes desta quadra'}
+                {comGrupos ? t('Nenhum grupo tem partida pronta para esta quadra') : t('A fila acaba antes desta quadra')}
               </div>
             ) : (
               <div className="text-lg font-semibold leading-snug text-white">
@@ -524,7 +525,7 @@ function ProximaPorQuadra({
 
             {e.waiting > 0 && (
               <div className="mt-1 text-sm text-amber-300/70">
-                faltam {e.waiting} — a partida sai quando houver {e.slots || PLAY_SLOTS} na fila
+                {t('faltam {n} — a partida sai quando houver {min} na fila', { n: e.waiting, min: e.slots || PLAY_SLOTS })}
               </div>
             )}
             {acoes && <div className="mt-2 flex flex-wrap gap-2">{acoes}</div>}
@@ -552,16 +553,15 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
     return (
       <Vazio>
         {disponiveis === 0
-          ? 'Ninguém aguardando no momento.'
-          : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
+          ? t('Ninguém aguardando no momento.')
+          : t('Faltam jogadores para a próxima partida ({n} na fila).', { n: disponiveis })}
       </Vazio>
     );
   }
   return (
     <div className="space-y-3">
       <p className="text-sm text-white/40">
-        As duplas abaixo são as que o sorteio formaria agora. Quem entra, pausa ou
-        vincula dupla refaz a conta.
+        {t('As duplas abaixo são as que o sorteio formaria agora. Quem entra, pausa ou vincula dupla refaz a conta.')}
       </p>
       {/* Mesma grade dos cards de quadra logo acima: cada previsão fica na
           mesma coluna da quadra a que se refere. */}
@@ -582,10 +582,10 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
                   destaque ? 'bg-acid text-ink' : 'bg-white/10 text-white/50'
                 }`}
                 >
-                  QUADRA {e.court}
+                  {t('QUADRA {n}', { n: e.court })}
                 </span>
                 <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
-                  {destaque ? 'livre agora' : 'quando liberar'}
+                  {destaque ? t('livre agora') : t('quando liberar')}
                 </span>
                 <GameKindBadge kind={e.kind} variant="dark" />
               </div>
@@ -594,7 +594,7 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
               </div>
               <div className="my-1 flex items-center gap-2">
                 <span className="h-px flex-1 bg-white/10" />
-                <span className="text-2xs font-bold text-white/30">VS</span>
+                <span className="text-2xs font-bold text-white/30">{t('VS')}</span>
                 <span className="h-px flex-1 bg-white/10" />
               </div>
               <div className="truncate text-lg font-semibold leading-snug text-white">
@@ -632,7 +632,7 @@ function RankingsDoDia({ secoes }) {
 }
 
 function RankingDoDia({ linhas }) {
-  if (linhas.length === 0) return <Vazio>Ainda sem resultados.</Vazio>;
+  if (linhas.length === 0) return <Vazio>{t('Ainda sem resultados.')}</Vazio>;
   const visiveis = linhas.slice(0, RANKING_VISIVEL);
   const restantes = linhas.length - visiveis.length;
   return (
@@ -641,10 +641,10 @@ function RankingDoDia({ linhas }) {
         <thead>
           <tr className="bg-white/5 text-xs font-bold uppercase tracking-wide text-white/40">
             <th className="px-3 py-2">#</th>
-            <th className="px-3 py-2">Atleta</th>
+            <th className="px-3 py-2">{t('Atleta')}</th>
             <th className="px-3 py-2 text-center">V</th>
             <th className="px-3 py-2 text-center">D</th>
-            <th className="px-3 py-2 text-right">Saldo</th>
+            <th className="px-3 py-2 text-right">{t('Saldo')}</th>
           </tr>
         </thead>
         <tbody>
@@ -909,7 +909,7 @@ export default function V2GameDayTelao() {
       toast.success(typeof sucesso === 'function' ? sucesso(res) : sucesso);
       await recarregar();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível concluir a ação.');
+      toast.error(err?.message || t('Não foi possível concluir a ação.'));
     } finally {
       setOcupado(false);
     }
@@ -917,20 +917,20 @@ export default function V2GameDayTelao() {
 
   const criarJogoNaQuadra = (court) => executar(
     () => criarProximo.mutateAsync({ court, ...pedidoDoTipo(court) }),
-    (res) => `Jogo criado na quadra ${res?.court ?? court}.`,
+    (res) => t('Jogo criado na quadra {n}.', { n: res?.court ?? court }),
   );
   const encerrarECriarProxima = (gid, court = null) => executar(
     () => encerrarPartida.mutateAsync({
       gid, createNext: true, ...(court != null ? pedidoDoTipo(court) : {}),
     }),
     (res) => (res?.next
-      ? `Partida encerrada. Próxima criada na quadra ${res.next.court}.`
-      : 'Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.'),
+      ? t('Partida encerrada. Próxima criada na quadra {n}.', { n: res.next.court })
+      : t('Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.')),
   );
   /** Encerra SEM sortear: libera a quadra para o sorteio da rodada inteira. */
   const encerrarSemSortear = (gid) => executar(
     () => encerrarPartida.mutateAsync({ gid, createNext: false }),
-    'Partida encerrada. A quadra ficou livre para o sorteio da rodada.',
+    t('Partida encerrada. A quadra ficou livre para o sorteio da rodada.'),
   );
   /**
    * Sorteia as próximas partidas de TODAS as quadras livres de uma vez — é o
@@ -944,34 +944,34 @@ export default function V2GameDayTelao() {
     (res) => {
       const n = res?.created?.length || 0;
       return n === 1
-        ? `Partida sorteada na quadra ${res.courts[0]}.`
-        : `${n} partidas sorteadas (quadras ${res.courts.join(', ')}), com os grupos misturados.`;
+        ? t('Partida sorteada na quadra {n}.', { n: res.courts[0] })
+        : t('{n} partidas sorteadas (quadras {lista}), com os grupos misturados.', { n, lista: res.courts.join(', ') });
     },
   );
-  const cancelar = (gid) => executar(() => cancelarJogo.mutateAsync(gid), 'Jogo cancelado.');
+  const cancelar = (gid) => executar(() => cancelarJogo.mutateAsync(gid), t('Jogo cancelado.'));
   // `replacementId` nulo = entra o próximo da ordem; preenchido = entra quem
   // quem organiza escolheu. Os dois caminhos são a mesma troca no serviço.
   const trocarAusente = (gid, absentId, nome, replacementId = null, nomeEntrando = '') => executar(
     () => substituirAusente.mutateAsync({ gid, absentId, replacementId }),
     replacementId
-      ? `${nome} saiu da partida e ${nomeEntrando || 'o substituto escolhido'} entrou.`
-      : `${nome} saiu da partida e entrou o próximo da ordem.`,
+      ? t('{nome} saiu da partida e {entrando} entrou.', { nome, entrando: nomeEntrando || t('o substituto escolhido') })
+      : t('{nome} saiu da partida e entrou o próximo da ordem.', { nome }),
   );
   const pausar = (pid, count) => executar(
     () => definirPausa.mutateAsync({ pid, count }),
-    count > 0 ? `Pausado por ${count} partida(s).` : 'De volta à fila.',
+    count > 0 ? t('Pausado por {n} partida(s).', { n: count }) : t('De volta à fila.'),
   );
   const gerarAoVivo = (court) => executar(
     () => criarProximoAoVivo.mutateAsync({ court, ...pedidoDoTipo(court) }),
-    (res) => `Partida sorteada na quadra ${res?.court ?? court}.`,
+    (res) => t('Partida sorteada na quadra {n}.', { n: res?.court ?? court }),
   );
   const salvarResultado = ({ gid, court, sets }) => executar(
     () => lancarResultado.mutateAsync({ gid, sets }),
-    `Resultado salvo. A quadra ${court} está livre para a próxima partida.`,
+    t('Resultado salvo. A quadra {n} está livre para a próxima partida.', { n: court }),
   );
   const vincular = (pid, partnerId) => executar(
     () => definirDupla.mutateAsync({ pid, partnerId }),
-    partnerId ? 'Dupla fixa formada.' : 'Dupla desfeita.',
+    partnerId ? t('Dupla fixa formada.') : t('Dupla desfeita.'),
   );
 
   // ⚠️ O telão fica HORAS numa TV ou num tablet na beira da quadra, e o
@@ -993,7 +993,7 @@ export default function V2GameDayTelao() {
   if (isLoading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-ink text-2xl text-white/50">
-        Carregando o dia de jogo…
+        {t('Carregando o dia de jogo…')}
       </div>
     );
   }
@@ -1002,21 +1002,21 @@ export default function V2GameDayTelao() {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-ink px-6 text-center">
         <p className="text-2xl font-bold text-white">
-          {isError ? 'Não foi possível carregar o dia de jogo' : 'Dia de jogo não encontrado'}
+          {isError ? t('Não foi possível carregar o dia de jogo') : t('Dia de jogo não encontrado')}
         </p>
         <p className="max-w-md text-lg text-white/50">
           {isError
-            ? 'A conexão falhou. O telão volta sozinho assim que a rede voltar.'
-            : 'Ele pode ter sido arquivado, ou esta conta não participa dele.'}
+            ? t('A conexão falhou. O telão volta sozinho assim que a rede voltar.')
+            : t('Ele pode ter sido arquivado, ou esta conta não participa dele.')}
         </p>
         <Link to="/dia-de-jogo" className="rounded-full bg-acid px-5 py-2.5 font-bold text-ink">
-          Voltar aos dias de jogo
+          {t('Voltar aos dias de jogo')}
         </Link>
       </div>
     );
   }
 
-  const rotuloFormato = GAME_DAY_FORMAT_LABELS[gameDay.format] || 'Americano';
+  const rotuloFormato = t(GAME_DAY_FORMAT_LABELS[gameDay.format]) || t('Americano');
 
   // Quando nada mais ocupa a coluna larga (Play, ou grade que ainda não tem
   // ranking), os cards de quadra CRESCEM para preencher a altura em paisagem.
@@ -1070,15 +1070,15 @@ export default function V2GameDayTelao() {
                     valendo de fato — prometer e não cumprir faz alguém deixar
                     o tablet sozinho e voltar para uma tela preta. */}
                 {podeManterAcesa && telaAcesa && (
-                  <span className="inline-flex items-center gap-1" title="A tela não vai apagar enquanto o telão estiver aberto">
+                  <span className="inline-flex items-center gap-1" title={t('A tela não vai apagar enquanto o telão estiver aberto')}>
                     <Sun aria-hidden="true" className="h-3.5 w-3.5 text-acid/70" />
-                    <span className="sr-only">Tela mantida acesa</span>
+                    <span className="sr-only">{t('Tela mantida acesa')}</span>
                   </span>
                 )}
                 <Users aria-hidden="true" className="h-3.5 w-3.5" />
-                {participants.length} participante(s)
+                {t('{n} participante(s)', { n: participants.length })}
                 {board.isCourtByCourt
-                  ? ` · ${disponiveis} na fila · ${board.recent.length} ${ehAoVivo ? 'partida(s)' : 'jogo(s)'} concluída(s)`
+                  ? ` · ${t('{n} na fila', { n: disponiveis })} · ${ehAoVivo ? t('{n} partida(s) concluída(s)', { n: board.recent.length }) : t('{n} jogo(s) concluída(s)', { n: board.recent.length })}`
                   : ''}
               </div>
             </div>
@@ -1087,8 +1087,8 @@ export default function V2GameDayTelao() {
                 type="button"
                 onClick={telaCheia.alternar}
                 className="rounded-full border border-white/20 p-2.5 text-white/60 transition-colors hover:border-white/40 hover:text-white"
-                title={telaCheia.ativa ? 'Sair da tela cheia' : 'Tela cheia'}
-                aria-label={telaCheia.ativa ? 'Sair da tela cheia' : 'Tela cheia'}
+                title={telaCheia.ativa ? t('Sair da tela cheia') : t('Tela cheia')}
+                aria-label={telaCheia.ativa ? t('Sair da tela cheia') : t('Tela cheia')}
               >
                 {telaCheia.ativa ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </button>
@@ -1096,8 +1096,8 @@ export default function V2GameDayTelao() {
             <Link
               to={`/dia-de-jogo/${gameDayId}`}
               className="rounded-full border border-white/20 p-2.5 text-white/60 transition-colors hover:border-white/40 hover:text-white"
-              title="Voltar ao dia de jogo"
-              aria-label="Voltar ao dia de jogo"
+              title={t('Voltar ao dia de jogo')}
+              aria-label={t('Voltar ao dia de jogo')}
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -1122,7 +1122,7 @@ export default function V2GameDayTelao() {
           {/* 1. Em quadra agora */}
           <Bloco
             icon={Radio}
-            titulo="Em quadra agora"
+            titulo={t('Em quadra agora')}
             // A contagem é de partidas ACONTECENDO, não de quadras: no Play a
             // grade mostra também as quadras livres, e dizer "(3)" com uma
             // vazia seria mentira.
@@ -1133,7 +1133,7 @@ export default function V2GameDayTelao() {
             // livre e fila para encher pelo menos duas.
             acoes={podeGerir && quadras > 1 && podeSortearRodada && (
               <BotaoTelao tone="acid" onClick={sortearRodada} disabled={ocupado}>
-                <Shuffle className="h-4 w-4" /> Sortear todas as quadras
+                <Shuffle className="h-4 w-4" /> {t('Sortear todas as quadras')}
               </BotaoTelao>
             )}
           >
@@ -1165,15 +1165,15 @@ export default function V2GameDayTelao() {
                             onClick={() => setAlvoResultado({ gid: jogo.id, court, game: jogo })}
                             disabled={ocupado}
                           >
-                            <Check className="h-4 w-4" /> Lançar resultado
+                            <Check className="h-4 w-4" /> {t('Lançar resultado')}
                           </BotaoTelao>
                         ) : (
                           <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar({ gid: jogo.id, court })} disabled={ocupado}>
-                            <Check className="h-4 w-4" /> Criar próxima partida
+                            <Check className="h-4 w-4" /> {t('Criar próxima partida')}
                           </BotaoTelao>
                         )}
                         <BotaoTelao tone="danger" onClick={() => setAlvoCancelar(jogo.id)} disabled={ocupado}>
-                          Cancelar
+                          {t('Cancelar')}
                         </BotaoTelao>
                       </>
                     )}
@@ -1191,12 +1191,12 @@ export default function V2GameDayTelao() {
                         disabled={ocupado || !podeCriarNa(court)}
                         title={!podeCriarNa(court)
                           ? (comGrupos
-                            ? 'Nenhum grupo tem partida pronta para esta quadra'
-                            : `Mínimo de ${slotsForKind(kindOfCourt(tiposDasQuadras, court))} disponíveis na fila`)
+                            ? t('Nenhum grupo tem partida pronta para esta quadra')
+                            : t('Mínimo de {n} disponíveis na fila', { n: slotsForKind(kindOfCourt(tiposDasQuadras, court)) }))
                           : undefined}
                       >
                         <PlayCircle className="h-4 w-4" />
-                        {ehAoVivo ? 'Gerar próxima partida' : 'Criar jogo'}
+                        {ehAoVivo ? t('Gerar próxima partida') : t('Criar jogo')}
                       </BotaoTelao>
                     )}
                   />
@@ -1205,8 +1205,8 @@ export default function V2GameDayTelao() {
             ) : board.live.length === 0 ? (
               <Vazio>
                 {board.totals.total === 0
-                  ? 'Os jogos ainda não foram sorteados.'
-                  : 'Nenhum jogo em andamento no momento.'}
+                  ? t('Os jogos ainda não foram sorteados.')
+                  : t('Nenhum jogo em andamento no momento.')}
               </Vazio>
             ) : (
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
@@ -1218,7 +1218,7 @@ export default function V2GameDayTelao() {
           {/* 2. Próximos jogos — logo abaixo das quadras, nas duas orientações. */}
           <Bloco
             icon={Clock}
-            titulo="Próximos jogos"
+            titulo={t('Próximos jogos')}
             contagem={board.isPlay ? null : board.upcoming.length}
             className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-2"
           >
@@ -1227,7 +1227,7 @@ export default function V2GameDayTelao() {
             ) : board.isPlay ? (
               <ProximaPorQuadra entradas={proximasPlay} disponiveis={disponiveis} comGrupos={comGrupos} />
             ) : board.upcoming.length === 0 ? (
-              <Vazio>Sem jogos programados adiante.</Vazio>
+              <Vazio>{t('Sem jogos programados adiante.')}</Vazio>
             ) : (
               <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
                 {board.upcoming.map((jogo) => <LinhaJogo key={jogo.id} jogo={jogo} mostrarRodada />)}
@@ -1246,12 +1246,12 @@ export default function V2GameDayTelao() {
             }`}
           >
             {ehAoVivo && temRanking && (
-              <Bloco icon={Trophy} titulo="Ranking do dia">
+              <Bloco icon={Trophy} titulo={t('Ranking do dia')}>
                 <RankingsDoDia secoes={rankings} />
               </Bloco>
             )}
             {board.isCourtByCourt ? (
-              <Bloco icon={ListOrdered} titulo="Ordem de participação">
+              <Bloco icon={ListOrdered} titulo={t('Ordem de participação')}>
                 {playView
                   ? (
                     <OrdemDeParticipacao
@@ -1267,13 +1267,13 @@ export default function V2GameDayTelao() {
             ) : (
               <>
                 {temRanking && (
-                  <Bloco icon={Trophy} titulo="Ranking do dia">
+                  <Bloco icon={Trophy} titulo={t('Ranking do dia')}>
                     <RankingsDoDia secoes={rankings} />
                   </Bloco>
                 )}
-                <Bloco icon={CheckCircle2} titulo="Últimos resultados" contagem={board.totals.decided}>
+                <Bloco icon={CheckCircle2} titulo={t('Últimos resultados')} contagem={board.totals.decided}>
                   {board.recent.length === 0 ? (
-                    <Vazio>Nenhum resultado ainda.</Vazio>
+                    <Vazio>{t('Nenhum resultado ainda.')}</Vazio>
                   ) : (
                     <div className="space-y-2">
                       {board.recent.map((jogo) => <LinhaResultado key={jogo.id} jogo={jogo} />)}
@@ -1291,12 +1291,12 @@ export default function V2GameDayTelao() {
           {ehAoVivo && (
             <Bloco
               icon={Swords}
-              titulo="Partidas concluídas"
+              titulo={t('Partidas concluídas')}
               contagem={board.totals.decided}
               className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-3"
             >
               {board.recent.length === 0 ? (
-                <Vazio>Nenhuma partida concluída ainda.</Vazio>
+                <Vazio>{t('Nenhuma partida concluída ainda.')}</Vazio>
               ) : (
                 <>
                   <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
@@ -1316,10 +1316,10 @@ export default function V2GameDayTelao() {
 
         <footer className="mt-8 border-t border-white/10 pt-4 text-center text-sm text-white/30">
           {!podeGerir
-            ? 'Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.'
+            ? t('Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.')
             : ehAoVivo
-              ? 'Você organiza este dia de jogo: lance o resultado da quadra para liberá-la, depois gere a próxima partida. Clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'
-              : 'Você organiza este Play: clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'}
+              ? t('Você organiza este dia de jogo: lance o resultado da quadra para liberá-la, depois gere a próxima partida. Clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.')
+              : t('Você organiza este Play: clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.')}
         </footer>
       </div>
 
@@ -1333,13 +1333,13 @@ export default function V2GameDayTelao() {
           <ConfirmDialog
             open={!!alvoEncerrar}
             onOpenChange={(v) => !v && setAlvoEncerrar(null)}
-            title={`Encerrar a partida da quadra ${alvoEncerrar?.court ?? ''}?`}
+            title={t('Encerrar a partida da quadra {n}?', { n: alvoEncerrar?.court ?? '' })}
             description={quadras > 1
-              ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
-              : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).'}
-            confirmLabel="Criar próxima aqui"
+              ? t('Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.')
+              : t('A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).')}
+            confirmLabel={t('Criar próxima aqui')}
             onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g.gid, g.court); }}
-            secondaryLabel={quadras > 1 ? 'Só encerrar' : null}
+            secondaryLabel={quadras > 1 ? t('Só encerrar') : null}
             onSecondary={quadras > 1
               ? () => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarSemSortear(g.gid); }
               : null}
@@ -1348,9 +1348,9 @@ export default function V2GameDayTelao() {
             open={!!alvoCancelar}
             onOpenChange={(v) => !v && setAlvoCancelar(null)}
             destructive
-            title="Cancelar jogo?"
-            description="O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado."
-            confirmLabel="Cancelar jogo"
+            title={t('Cancelar jogo?')}
+            description={t('O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado.')}
+            confirmLabel={t('Cancelar jogo')}
             onConfirm={() => { const g = alvoCancelar; setAlvoCancelar(null); if (g) cancelar(g); }}
           />
           {/* Clicar num nome em quadra abre a ESCOLHA (indisponível para esta
@@ -1366,7 +1366,7 @@ export default function V2GameDayTelao() {
               const entrando = replacementId && playView
                 ? playView.order.find((p) => p.id === replacementId)
                 : null;
-              trocarAusente(gid, absentId, alvo?.player?.name || 'O jogador', replacementId, entrando?.name || '');
+              trocarAusente(gid, absentId, alvo?.player?.name || t('O jogador'), replacementId, entrando?.name || '');
             }}
           />
 
@@ -1432,27 +1432,26 @@ function ResultadoDialog({ alvo, ocupado, onClose, onConfirm }) {
     <Dialog open={!!alvo} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Lançar resultado — quadra {alvo?.court}</DialogTitle>
+          <DialogTitle>{t('Lançar resultado — quadra {n}', { n: alvo?.court })}</DialogTitle>
           <DialogDescription>
-            A partida vai para as concluídas com este placar e os quatro voltam
-            ao fim da ordem de participação. A quadra fica livre para a próxima.
+            {t('A partida vai para as concluídas com este placar e os quatro voltam ao fim da ordem de participação. A quadra fica livre para a próxima.')}
           </DialogDescription>
         </DialogHeader>
 
         <SetScoreEditor
           value={sets}
           onChange={setSets}
-          labelA={sideNames(alvo?.game?.side_a).join(' · ') || 'Lado A'}
-          labelB={sideNames(alvo?.game?.side_b).join(' · ') || 'Lado B'}
+          labelA={sideNames(alvo?.game?.side_a).join(' · ') || t('Lado A')}
+          labelB={sideNames(alvo?.game?.side_b).join(' · ') || t('Lado B')}
         />
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button
             onClick={() => onConfirm({ sets })}
             disabled={!valido || ocupado}
           >
-            <Check className="mr-1.5 h-4 w-4" /> Salvar resultado
+            <Check className="mr-1.5 h-4 w-4" /> {t('Salvar resultado')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
@@ -1473,32 +1472,32 @@ function AcoesDoAtleta({ atleta, onClose, onPausar, onVoltar, onDupla, onDesfaze
           <DialogTitle>{atleta?.name}</DialogTitle>
           <DialogDescription>
             {pausado
-              ? `Pausado pelas próximas ${Number(atleta?.skip_remaining) || 0} partida(s).`
-              : 'Na ordem de participação.'}
+              ? t('Pausado pelas próximas {n} partida(s).', { n: Number(atleta?.skip_remaining) || 0 })
+              : t('Na ordem de participação.')}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           {pausado ? (
             <V2Button onClick={onVoltar}>
-              <PlayCircle className="mr-1.5 h-4 w-4" /> Voltar a jogar
+              <PlayCircle className="mr-1.5 h-4 w-4" /> {t('Voltar a jogar')}
             </V2Button>
           ) : (
             <V2Button variant="secondary" onClick={onPausar}>
-              <Pause className="mr-1.5 h-4 w-4" /> Ficar indisponível por X jogos
+              <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível por X jogos')}
             </V2Button>
           )}
           {atleta?.partner_id ? (
             <V2Button variant="ghost" onClick={onDesfazerDupla}>
-              <Unlink className="mr-1.5 h-4 w-4" /> Desfazer dupla
+              <Unlink className="mr-1.5 h-4 w-4" /> {t('Desfazer dupla')}
             </V2Button>
           ) : (
             <V2Button variant="ghost" onClick={onDupla}>
-              <Link2 className="mr-1.5 h-4 w-4" /> Vincular dupla
+              <Link2 className="mr-1.5 h-4 w-4" /> {t('Vincular dupla')}
             </V2Button>
           )}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -41,6 +41,7 @@ import { isPublicGameDay } from './gameDay.js';
 import { isArenaGameDay } from './arenaGameDay.js';
 import { isClubGameDay } from './clubGameDay.js';
 import { GROUP_POLICY_LABELS, GROUP_POLICY_HINTS } from './playGroups.js';
+import { t, tn, tk } from '@/core/i18n';
 
 /** Quantos nomes de grupo cabem na linha antes de virar "+N". */
 const NOMES_DE_GRUPO_NA_LINHA = 4;
@@ -61,18 +62,18 @@ export function formatHonorsFixedPairs(format) {
 /** Uma frase dizendo como as partidas saem neste formato. */
 export function formatRhythm(format) {
   if (isPlayFormat(format)) {
-    return 'Quadra a quadra, por ordem de chegada. Sem placar.';
+    return t('Quadra a quadra, por ordem de chegada. Sem placar.');
   }
   if (isAmericanoLiveFormat(format)) {
-    return 'Quadra a quadra, uma partida por vez, com placar e ranking do dia.';
+    return t('Quadra a quadra, uma partida por vez, com placar e ranking do dia.');
   }
   if (format === GAME_DAY_FORMAT.MEXICANO) {
-    return 'Rodadas sorteadas, com as duplas saindo da classificação da rodada anterior.';
+    return t('Rodadas sorteadas, com as duplas saindo da classificação da rodada anterior.');
   }
   if (format === GAME_DAY_FORMAT.KING_OF_COURT) {
-    return 'Rodadas em que quem vence sobe de quadra e quem perde desce.';
+    return t('Rodadas em que quem vence sobe de quadra e quem perde desce.');
   }
-  return 'Rodadas sorteadas de uma vez, com placar e ranking do dia.';
+  return t('Rodadas sorteadas de uma vez, com placar e ranking do dia.');
 }
 
 /**
@@ -90,13 +91,13 @@ export function describeGameDayRules(gameDay, ctx = {}) {
   if (!gameDay) return { rows: [] };
   const format = gameDay.format || GAME_DAY_FORMAT.AMERICANO;
   const rows = [];
-  const add = (key, label, value, help) => rows.push({ key, label, value, help });
+  const add = (key, label, value, help) => rows.push({ key, label: t(label), value, help });
 
   // --------------------------------------------------------------- formato
   add(
     'formato',
-    'Formato',
-    GAME_DAY_FORMAT_LABELS[format] || format,
+    tk('Formato'),
+    t(GAME_DAY_FORMAT_LABELS[format]) || format,
     formatRhythm(format),
   );
 
@@ -104,11 +105,11 @@ export function describeGameDayRules(gameDay, ctx = {}) {
   const temPlacar = formatHasScores(format);
   add(
     'placar',
-    'Placar',
-    temPlacar ? 'Sim — com ranking do dia' : 'Não — só as partidas',
+    tk('Placar'),
+    temPlacar ? t('Sim — com ranking do dia') : t('Não — só as partidas'),
     temPlacar
-      ? 'Cada partida tem resultado lançado, e o ranking do dia se atualiza a cada placar.'
-      : 'O Play organiza quem joga com quem e não guarda resultado. Por isso ele não alimenta ranking nenhum — nem o do dia, nem o da plataforma.',
+      ? t('Cada partida tem resultado lançado, e o ranking do dia se atualiza a cada placar.')
+      : t('O Play organiza quem joga com quem e não guarda resultado. Por isso ele não alimenta ranking nenhum — nem o do dia, nem o da plataforma.'),
   );
 
   // ------------------------------------------------------ ranking da casa
@@ -116,11 +117,11 @@ export function describeGameDayRules(gameDay, ctx = {}) {
     const publicado = Boolean(gameDay.publish_to_ranking);
     add(
       'ranking',
-      'Ranking da plataforma',
-      publicado ? 'Publicado' : 'Só depois de publicado',
+      tk('Ranking da plataforma'),
+      publicado ? t('Publicado') : t('Só depois de publicado'),
       publicado
-        ? 'Os resultados deste dia já foram enviados ao ranking e ao rating da plataforma.'
-        : 'Diferente do torneio, aqui lançar o placar não basta: mandar para o ranking da plataforma é uma DECISÃO de quem organiza, num botão à parte.',
+        ? t('Os resultados deste dia já foram enviados ao ranking e ao rating da plataforma.')
+        : t('Diferente do torneio, aqui lançar o placar não basta: mandar para o ranking da plataforma é uma DECISÃO de quem organiza, num botão à parte.'),
     );
   }
 
@@ -129,12 +130,12 @@ export function describeGameDayRules(gameDay, ctx = {}) {
   const grupos = isPlayFormat(format) && ctx.playGroups?.groups?.length > 0 ? ctx.playGroups : null;
   add(
     'duplas',
-    'Dupla vinculada',
-    honra ? 'Vale neste formato' : 'Não vale neste formato',
+    tk('Dupla vinculada'),
+    honra ? t('Vale neste formato') : t('Não vale neste formato'),
     honra
-      ? 'Dá para prender duas pessoas para jogarem sempre juntas — e nunca uma contra a outra. As demais regras do sorteio continuam valendo para o resto.'
-        + (grupos ? ' Com grupos, a dupla só vale se os dois estão no mesmo grupo.' : '')
-      :'Aqui as duplas saem da classificação da rodada e do resultado da anterior — é o que define o formato. Prender uma dupla deixaria de ser este jogo.',
+      ? t('Dá para prender duas pessoas para jogarem sempre juntas — e nunca uma contra a outra. As demais regras do sorteio continuam valendo para o resto.')
+        + (grupos ? ` ${t('Com grupos, a dupla só vale se os dois estão no mesmo grupo.')}` : '')
+      : t('Aqui as duplas saem da classificação da rodada e do resultado da anterior — é o que define o formato. Prender uma dupla deixaria de ser este jogo.'),
   );
 
   // ------------------------------------------------------------ quadras
@@ -142,11 +143,11 @@ export function describeGameDayRules(gameDay, ctx = {}) {
   if (isCourtByCourtFormat(format) && quadras > 0) {
     add(
       'quadras',
-      'Quadras em uso',
-      quadras === 1 ? '1 quadra' : `${quadras} quadras`,
+      tk('Quadras em uso'),
+      tn(quadras, '{n} quadra', '{n} quadras'),
       quadras > 1
-        ? 'Com mais de uma quadra livre dá para sortear a RODADA inteira de uma vez, em vez de partida a partida — é o que mistura a fila quando o grupo é pequeno.'
-        : 'Com uma quadra só, as partidas saem uma a uma, na ordem da fila.',
+        ? t('Com mais de uma quadra livre dá para sortear a RODADA inteira de uma vez, em vez de partida a partida — é o que mistura a fila quando o grupo é pequeno.')
+        : t('Com uma quadra só, as partidas saem uma a uma, na ordem da fila.'),
     );
   }
 
@@ -157,9 +158,9 @@ export function describeGameDayRules(gameDay, ctx = {}) {
     const politica = GROUP_POLICY_LABELS[grupos.policy] ? grupos.policy : 'queue';
     add(
       'grupos',
-      'Grupos',
+      tk('Grupos'),
       nomes.slice(0, NOMES_DE_GRUPO_NA_LINHA).join(', ') + (resto > 0 ? ` +${resto}` : ''),
-      `Cada grupo tem a sua fila, e as partidas saem dentro dele. ${GROUP_POLICY_LABELS[politica]}: ${GROUP_POLICY_HINTS[politica]}`,
+      `${t('Cada grupo tem a sua fila, e as partidas saem dentro dele.')} ${t(GROUP_POLICY_LABELS[politica])}: ${t(GROUP_POLICY_HINTS[politica])}`,
     );
   }
 
@@ -169,9 +170,9 @@ export function describeGameDayRules(gameDay, ctx = {}) {
     const inscritos = Number(ctx.participantCount) || 0;
     add(
       'vagas',
-      'Vagas',
-      `${inscritos} de ${cap}`,
-      'Limite de atletas no dia. Cheio, ninguém mais entra sozinho — mas quem organiza ainda pode incluir à mão.',
+      tk('Vagas'),
+      t('{n} de {total}', { n: inscritos, total: cap }),
+      t('Limite de atletas no dia. Cheio, ninguém mais entra sozinho — mas quem organiza ainda pode incluir à mão.'),
     );
   }
 
@@ -182,11 +183,11 @@ export function describeGameDayRules(gameDay, ctx = {}) {
     const aberto = modo === GAME_DAY_MANAGE_MODE.PARTICIPANTS;
     add(
       'organiza',
-      'Quem conduz as partidas',
-      GAME_DAY_MANAGE_MODE_LABELS[modo] + (nomeados > 0 ? ` · ${nomeados} nomeado(s)` : ''),
+      tk('Quem conduz as partidas'),
+      t(GAME_DAY_MANAGE_MODE_LABELS[modo]) + (nomeados > 0 ? ` · ${t('{n} nomeado(s)', { n: nomeados })}` : ''),
       aberto
-        ? 'Todo mundo que está no dia pode sortear, substituir e mexer na lista. Bom quando várias pessoas se revezam organizando.'
-        : 'Sortear, substituir, pausar, vincular dupla e mexer na lista ficam com quem criou e com os administradores nomeados.',
+        ? t('Todo mundo que está no dia pode sortear, substituir e mexer na lista. Bom quando várias pessoas se revezam organizando.')
+        : t('Sortear, substituir, pausar, vincular dupla e mexer na lista ficam com quem criou e com os administradores nomeados.'),
     );
   }
 
@@ -195,11 +196,11 @@ export function describeGameDayRules(gameDay, ctx = {}) {
     const publico = isPublicGameDay(gameDay);
     add(
       'visibilidade',
-      'Quem enxerga',
-      publico ? 'Qualquer atleta da plataforma' : 'Só quem foi convidado',
+      tk('Quem enxerga'),
+      publico ? t('Qualquer atleta da plataforma') : t('Só quem foi convidado'),
       publico
-        ? 'O dia aparece como convite em "Procura-se jogo", e qualquer conta pode se inscrever sozinha.'
-        : 'Ele não aparece em nenhuma busca: só entra quem você convidar.',
+        ? t('O dia aparece como convite em "Procura-se jogo", e qualquer conta pode se inscrever sozinha.')
+        : t('Ele não aparece em nenhuma busca: só entra quem você convidar.'),
     );
   }
 

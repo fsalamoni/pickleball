@@ -12,15 +12,16 @@ import { Building2, Dices, MapPin, Users } from 'lucide-react';
 import { PLAY_ORIGIN } from '@/modules/games/domain/playDiscovery';
 import { V2Badge } from '@/v2/ui/primitives';
 import PlayItemAction from './PlayItemAction';
+import { t, tk } from '@/core/i18n';
 
 /** Um dia de jogo com vaga (do atleta, do clube ou da arena), com o botão de entrar. */
 export default function PlayGameDayCard({ item, distancia = null }) {
   const Icone = item.origem === PLAY_ORIGIN.CLUBE ? Users : (item.daArena ? Building2 : Dices);
   const origem = {
-    [PLAY_ORIGIN.CLUBE]: { tom: 'blue', texto: 'Dia de jogo do seu clube' },
-    [PLAY_ORIGIN.ARENA]: { tom: 'acid', texto: 'Dia de jogo da arena' },
-    [PLAY_ORIGIN.JOGO_ABERTO]: { tom: 'acid', texto: 'Jogo aberto da arena' },
-  }[item.origem] || { tom: 'blue', texto: 'Dia de jogo' };
+    [PLAY_ORIGIN.CLUBE]: { tom: 'blue', texto: tk('Dia de jogo do seu clube') },
+    [PLAY_ORIGIN.ARENA]: { tom: 'acid', texto: tk('Dia de jogo da arena') },
+    [PLAY_ORIGIN.JOGO_ABERTO]: { tom: 'acid', texto: tk('Jogo aberto da arena') },
+  }[item.origem] || { tom: 'blue', texto: tk('Dia de jogo') };
   return (
     <div
       className={`flex h-full flex-col rounded-4xl border bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic ${
@@ -41,7 +42,7 @@ export default function PlayGameDayCard({ item, distancia = null }) {
       </Link>
       <div className="mt-4 flex flex-wrap gap-1.5">
         <V2Badge tone={origem.tom}>
-          <Icone className="h-3 w-3" aria-hidden="true" /> {origem.texto}
+          <Icone className="h-3 w-3" aria-hidden="true" /> {t(origem.texto)}
         </V2Badge>
         {/* "Você vai" já está ao lado do botão de sair — aqui, só as vagas. */}
         {item.badge && !item.estou && item.origem !== PLAY_ORIGIN.CLUBE && (

@@ -17,6 +17,7 @@
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
+import { t, tk } from '@/core/i18n';
 
 /** Visibilidade do dia de jogo. */
 export const GAME_DAY_VISIBILITY = Object.freeze({
@@ -25,8 +26,8 @@ export const GAME_DAY_VISIBILITY = Object.freeze({
 });
 
 export const GAME_DAY_VISIBILITY_LABELS = Object.freeze({
-  [GAME_DAY_VISIBILITY.PUBLIC]: 'Público (aparece em Procura-se jogo)',
-  [GAME_DAY_VISIBILITY.PRIVATE]: 'Privado (somente convidados)',
+  [GAME_DAY_VISIBILITY.PUBLIC]: tk('Público (aparece em Procura-se jogo)'),
+  [GAME_DAY_VISIBILITY.PRIVATE]: tk('Privado (somente convidados)'),
 });
 
 /** Estado do dia de jogo. */
@@ -44,10 +45,10 @@ export const GD_PARTICIPANT_SOURCE = Object.freeze({
 });
 
 export const GD_PARTICIPANT_SOURCE_LABELS = Object.freeze({
-  [GD_PARTICIPANT_SOURCE.OWNER]: 'Organizador',
-  [GD_PARTICIPANT_SOURCE.INVITED]: 'Convidado',
-  [GD_PARTICIPANT_SOURCE.JOINED]: 'Entrou pelo convite',
-  [GD_PARTICIPANT_SOURCE.GUEST]: 'Convidado avulso',
+  [GD_PARTICIPANT_SOURCE.OWNER]: tk('Organizador'),
+  [GD_PARTICIPANT_SOURCE.INVITED]: tk('Convidado'),
+  [GD_PARTICIPANT_SOURCE.JOINED]: tk('Entrou pelo convite'),
+  [GD_PARTICIPANT_SOURCE.GUEST]: tk('Convidado avulso'),
 });
 
 /** Limites do dia de jogo do atleta. */
@@ -99,7 +100,7 @@ export function normalizeGameDayInput(input = {}) {
   };
 
   const errors = {};
-  if (!value.title) errors.title = 'Dê um nome ao seu dia de jogo.';
+  if (!value.title) errors.title = t('Dê um nome ao seu dia de jogo.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

@@ -39,6 +39,7 @@ import {
   americanoLiveView, forecastAmericanoLiveMatches, americanoLiveProgress,
   americanoLiveInCourtIds,
 } from '@/modules/games/domain/americanoLive';
+import { t } from '@/core/i18n';
 
 /**
  * AMERICANO APRIMORADO — a tela.
@@ -81,8 +82,8 @@ export default function AthleteAmericanoLiveOrganizer({ gameDay }) {
       {falhouEstado && (
         <V2ErrorState
           inline
-          title="Não foi possível carregar o dia de jogo"
-          description="Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu."
+          title={t('Não foi possível carregar o dia de jogo')}
+          description={t('Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu.')}
           onRetry={recarregarEstado}
         />
       )}
@@ -121,14 +122,14 @@ function ProgressSection({ participants, games }) {
   return (
     <V2CollapsibleCard
       icon={Target}
-      title="Como o dia está indo"
+      title={t('Como o dia está indo')}
       sectionId={GAME_DAY_SECTION.AL_PROGRESS}
       summary={`${p.partidasConcluidas} de ~${p.partidasPrevistas} partida(s)`}
     >
       <div className="space-y-3">
         <div>
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Partidas concluídas</span>
+            <span>{t('Partidas concluídas')}</span>
             <span className="font-semibold text-ink">
               {p.partidasConcluidas} / ~{p.partidasPrevistas}
             </span>
@@ -141,26 +142,24 @@ function ProgressSection({ participants, games }) {
             (duplas) e contra todos duas vezes (confrontos). Mostrar só o
             primeiro escondia metade do que o sorteio persegue. */}
         <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-          <Metrica rotulo="Participantes" valor={p.participantes} />
+          <Metrica rotulo={t('Participantes')} valor={p.participantes} />
           <Metrica
-            rotulo="Duplas com todos"
+            rotulo={t('Duplas com todos')}
             valor={`${p.duplasFormadas}/${p.duplasPossiveis}`}
-            detalhe="pares que já jogaram juntos"
+            detalhe={t('pares que já jogaram juntos')}
           />
           <Metrica
-            rotulo="Contra todos 2x"
+            rotulo={t('Contra todos 2x')}
             valor={`${p.confrontosCompletos}/${p.confrontosPossiveis}`}
-            detalhe="pares que já se enfrentaram duas vezes"
+            detalhe={t('pares que já se enfrentaram duas vezes')}
           />
-          <Metrica rotulo="Menos jogou" valor={`${p.minJogos} jogo(s)`} />
-          <Metrica rotulo="Mais jogou" valor={`${p.maxJogos} jogo(s)`} />
-          <Metrica rotulo="Partidas criadas" valor={p.partidasCriadas} />
+          <Metrica rotulo={t('Menos jogou')} valor={t('{n} jogo(s)', { n: p.minJogos })} />
+          <Metrica rotulo={t('Mais jogou')} valor={t('{n} jogo(s)', { n: p.maxJogos })} />
+          <Metrica rotulo={t('Partidas criadas')} valor={p.partidasCriadas} />
         </div>
         <p className="text-2xs leading-5 text-gray-500">
-          A previsão de <strong>~{p.partidasPrevistas}</strong> partidas é o número que faria
-          todos formarem dupla com todos e enfrentarem todos duas vezes. É uma
-          <strong> referência, não um compromisso</strong>: gente entrando, saindo, pausando ou
-          com dupla fixa muda o número real.
+          {t('A previsão de')} <strong>~{p.partidasPrevistas}</strong> {t('partidas é o número que faria todos formarem dupla com todos e enfrentarem todos duas vezes. É uma')}
+          <strong> {t('referência, não um compromisso')}</strong>{t(': gente entrando, saindo, pausando ou com dupla fixa muda o número real.')}
         </p>
       </div>
     </V2CollapsibleCard>
@@ -222,19 +221,19 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
     try {
       await criar.mutateAsync({ court, ...pedidoDoTipo(court) });
       toast.success(kind === GAME_KIND.SINGLES
-        ? `Partida simples sorteada na quadra ${court}.`
-        : `Partida sorteada na quadra ${court}.`);
+        ? t('Partida simples sorteada na quadra {n}.', { n: court })
+        : t('Partida sorteada na quadra {n}.', { n: court }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível sortear.');
+      toast.error(e?.message || t('Não foi possível sortear.'));
     }
   };
 
   const cancelarPartida = async ({ gid, court }) => {
     try {
       await cancelar.mutateAsync(gid);
-      toast.success(`Partida cancelada. A quadra ${court} está livre e os jogadores voltaram para a fila.`);
+      toast.success(t('Partida cancelada. A quadra {n} está livre e os jogadores voltaram para a fila.', { n: court }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível cancelar a partida.');
+      toast.error(e?.message || t('Não foi possível cancelar a partida.'));
     }
   };
 
@@ -242,10 +241,10 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
     try {
       await substituir.mutateAsync({ gid, absentId, replacementId });
       toast.success(entrando
-        ? `${entrando} entrou no lugar de ${nome}.`
-        : `${nome} saiu da partida e entrou o próximo da ordem.`);
+        ? t('{entrando} entrou no lugar de {nome}.', { entrando, nome })
+        : t('{nome} saiu da partida e entrou o próximo da ordem.', { nome }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível alterar a partida.');
+      toast.error(e?.message || t('Não foi possível alterar a partida.'));
     }
   };
 
@@ -263,24 +262,24 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
       const res = await criarRodada.mutateAsync({ courtKinds: tiposDasQuadras });
       const n = res?.created?.length || 0;
       toast.success(n === 1
-        ? `Partida sorteada na quadra ${res.courts[0]}.`
-        : `${n} partidas sorteadas (quadras ${res.courts.join(', ')}), com os grupos misturados.`);
+        ? t('Partida sorteada na quadra {n}.', { n: res.courts[0] })
+        : t('{n} partidas sorteadas (quadras {lista}), com os grupos misturados.', { n, lista: res.courts.join(', ') }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível sortear a rodada.');
+      toast.error(e?.message || t('Não foi possível sortear a rodada.'));
     }
   };
 
   return (
     <V2CollapsibleCard
       icon={LayoutGrid}
-      title="Quadras e partidas"
+      title={t('Quadras e partidas')}
       dica="dia-de-jogo-quadras"
       sectionId={GAME_DAY_SECTION.AL_COURTS}
-      summary={`${abertos.length} em quadra · ${disponiveis} na fila`}
+      summary={t('{a} em quadra · {b} na fila', { a: abertos.length, b: disponiveis })}
       actions={canManage ? (
         <>
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Manual
+            <Plus className="mr-1 h-3.5 w-3.5" /> {t('Manual')}
           </V2Button>
           {/* Com uma quadra só, "sortear todas" é o mesmo que "gerar próxima". */}
           {courts > 1 && (
@@ -291,7 +290,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
               data-dica="dia-de-jogo-sortear-rodada"
             >
               <Shuffle className="mr-1 h-3.5 w-3.5" />
-              {criarRodada.isPending ? 'Sorteando…' : 'Sortear todas as quadras'}
+              {criarRodada.isPending ? t('Sorteando…') : t('Sortear todas as quadras')}
             </V2Button>
           )}
         </>
@@ -304,9 +303,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         {canManage && courts > 1 && !podeSortearRodada && abertos.length > 0 && (
           <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
             <Shuffle aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
-            Para <strong>misturar os grupos entre as quadras</strong>, lance o resultado de todas as partidas
-            antes de sortear: com as quadras livres, <strong>Sortear todas as quadras</strong> distribui a fila
-            inteira. Sorteando uma quadra por vez, os mesmos quatro voltam para ela.
+            {t('Para')} <strong>{t('misturar os grupos entre as quadras')}</strong>{t(', lance o resultado de todas as partidas antes de sortear: com as quadras livres,')} <strong>{t('Sortear todas as quadras')}</strong> {t('distribui a fila inteira. Sorteando uma quadra por vez, os mesmos quatro voltam para ela.')}
           </p>
         )}
         {/* ⚠️ O que trava a quadra quase sempre não é a quadra: é não haver
@@ -316,16 +313,14 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         {participants.length === 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
             <Users aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
-            As quadras só liberam partida com atletas no dia de jogo — <strong>2 para simples</strong>,
-            {' '}<strong>4 para duplas</strong> — e ainda não há ninguém. Use <strong>Inserir atletas</strong>,
-            em Participantes, logo acima.
+            {t('As quadras só liberam partida com atletas no dia de jogo —')} <strong>{t('2 para simples')}</strong>,
+            {' '}<strong>{t('4 para duplas')}</strong> {t('— e ainda não há ninguém. Use')} <strong>{t('Inserir atletas')}</strong>{t(', em Participantes, logo acima.')}
           </p>
         )}
         {canManage && participants.length > 0 && (
           <p className="text-2xs leading-5 text-gray-500">
-            Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
-            <strong className="text-gray-500">simples</strong> — escolha na quadra livre, antes de gerar a partida.
-            Simples e duplas têm rankings do dia separados.
+            {t('Cada quadra pode ser de')} <strong className="text-gray-500">{t('duplas')}</strong> ou de{' '}
+            <strong className="text-gray-500">{t('simples')}</strong> {t('— escolha na quadra livre, antes de gerar a partida. Simples e duplas têm rankings do dia separados.')}
           </p>
         )}
         {Array.from({ length: courts }, (_, i) => i + 1).map((court) => (
@@ -353,9 +348,9 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
               if (!g) return;
               try {
                 await lancar.mutateAsync({ gid: g.id, sets });
-                toast.success(`Resultado salvo. A quadra ${court} está livre para a próxima.`);
+                toast.success(t('Resultado salvo. A quadra {n} está livre para a próxima.', { n: court }));
               } catch (e) {
-                toast.error(e?.message || 'Não foi possível salvar o resultado.');
+                toast.error(e?.message || t('Não foi possível salvar o resultado.'));
               }
             }}
             pendente={lancar.isPending || criar.isPending || cancelar.isPending || substituir.isPending}
@@ -391,7 +386,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
             gid,
             absentId,
             replacementId,
-            nome: alvo?.player?.name || 'O jogador',
+            nome: alvo?.player?.name || t('O jogador'),
             entrando: entrando?.name || '',
           });
         }}
@@ -401,10 +396,10 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         open={!!alvoCancelar}
         onOpenChange={(v) => !v && setAlvoCancelar(null)}
         destructive
-        title={alvoCancelar ? `Cancelar a partida da quadra ${alvoCancelar.court}?` : 'Cancelar a partida?'}
-        description="A partida sai da quadra sem placar nenhum e os jogadores voltam para a fila. Nada vai para o ranking do dia. Depois disso, a quadra oferece um NOVO sorteio, com outra organização."
-        confirmLabel="Cancelar partida"
-        cancelLabel="Voltar"
+        title={alvoCancelar ? t('Cancelar a partida da quadra {n}?', { n: alvoCancelar.court }) : t('Cancelar a partida?')}
+        description={t('A partida sai da quadra sem placar nenhum e os jogadores voltam para a fila. Nada vai para o ranking do dia. Depois disso, a quadra oferece um NOVO sorteio, com outra organização.')}
+        confirmLabel={t('Cancelar partida')}
+        cancelLabel={t('Voltar')}
         onConfirm={() => {
           const alvo = alvoCancelar;
           setAlvoCancelar(null);
@@ -432,17 +427,17 @@ function CourtCard({
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-bold ${
           game ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}
         >
-          Quadra {court}
+          {t('Quadra {n}', { n: court })}
         </span>
         {game && <GameKindBadge kind={gameKindOf(game)} />}
-        {game ? <V2Badge tone="acid">Em quadra</V2Badge> : <V2Badge tone="neutral">Livre</V2Badge>}
+        {game ? <V2Badge tone="acid">{t('Em quadra')}</V2Badge> : <V2Badge tone="neutral">{t('Livre')}</V2Badge>}
       </div>
 
       {game ? (
         <>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
             <Lado side={game.side_a} align="right" onJogador={canManage ? onJogador : null} />
-            <span className="text-xs font-bold text-gray-500">VS</span>
+            <span className="text-xs font-bold text-gray-500">{t('VS')}</span>
             <Lado side={game.side_b} align="left" onJogador={canManage ? onJogador : null} />
           </div>
           {canManage && (
@@ -454,7 +449,7 @@ function CourtCard({
                 onClick={() => onLancar({ sets })}
                 data-dica="dia-de-jogo-lancar-resultado"
               >
-                <Check className="mr-1 h-3.5 w-3.5" /> Lançar resultado
+                <Check className="mr-1 h-3.5 w-3.5" /> {t('Lançar resultado')}
               </V2Button>
             </div>
           )}
@@ -467,11 +462,10 @@ function CourtCard({
                 disabled={pendente}
                 onClick={onCancelar}
               >
-                <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar partida
+                <XCircle className="mr-1 h-3.5 w-3.5" /> {t('Cancelar partida')}
               </V2Button>
               <p className="text-center text-2xs leading-4 text-gray-500">
-                Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os jogadores
-                à fila, sem placar — e a quadra volta a oferecer um novo sorteio.
+                {t('Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os jogadores à fila, sem placar — e a quadra volta a oferecer um novo sorteio.')}
               </p>
             </div>
           )}
@@ -481,23 +475,23 @@ function CourtCard({
           {/* O tipo da próxima partida desta quadra: escolhido AQUI, na quadra
               livre, antes de gerar — é quando a escolha faz sentido. */}
           {canManage && onKind && (
-            <GameKindToggle value={kind} onChange={onKind} label={`Tipo de jogo da quadra ${court}`} />
+            <GameKindToggle value={kind} onChange={onKind} label={t('Tipo de jogo da quadra {n}', { n: court })} />
           )}
           <p className="text-xs text-gray-500">
             {disponiveis >= vagas
-              ? 'Pronta para a próxima partida.'
+              ? t('Pronta para a próxima partida.')
               : semNinguem
-                ? 'Sem atletas no dia de jogo ainda.'
-                : `Faltam ${vagas - disponiveis} jogador(es) disponível(is).`}
+                ? t('Sem atletas no dia de jogo ainda.')
+                : t('Faltam {n} jogador(es) disponível(is).', { n: vagas - disponiveis })}
             {/* Duplas esperando com 2 ou 3 na fila: um simples já sai. */}
             {canManage && onKind && kind === GAME_KIND.DOUBLES && disponiveis >= 2 && disponiveis < vagas && (
-              <> Ou troque para <strong>Simples</strong> e a partida sai agora.</>
+              <> {t('Ou troque para')} <strong>{t('Simples')}</strong> {t('e a partida sai agora.')}</>
             )}
           </p>
           {canManage && (
             <V2Button size="sm" variant="secondary" disabled={!podeGerar || pendente} onClick={onGerar} data-dica="dia-de-jogo-criar-partida">
               <PlayCircle className="mr-1 h-3.5 w-3.5" />
-              {kind === GAME_KIND.SINGLES ? 'Gerar partida simples' : 'Gerar próxima partida'}
+              {kind === GAME_KIND.SINGLES ? t('Gerar partida simples') : t('Gerar próxima partida')}
             </V2Button>
           )}
         </div>
@@ -520,7 +514,7 @@ function Lado({ side, align, onJogador = null }) {
           key={p.id}
           type="button"
           onClick={() => onJogador(p)}
-          title={`Opções para ${p.name || 'este jogador'}: indisponível para esta partida ou substituir por outro jogador`}
+          title={t('Opções para {nome}: indisponível para esta partida ou substituir por outro jogador', { nome: p.name || t('este jogador') })}
           className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-gray-100"
         >
           <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
@@ -542,18 +536,18 @@ function ForecastBlock({ previsao }) {
     <div className="rounded-xl border border-gray-100 bg-paper p-3">
       <div className="flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-gray-400" />
-        <h4 className="text-sm font-semibold text-ink">Próximas partidas (previsão)</h4>
+        <h4 className="text-sm font-semibold text-ink">{t('Próximas partidas (previsão)')}</h4>
       </div>
       <div className="mt-2 space-y-1.5">
         {previsao.map((b) => (
           <div key={`${b.court}-${b.conditional}`} className="flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600">
-              Quadra {b.court}
+              {t('Quadra {n}', { n: b.court })}
             </span>
             <GameKindBadge kind={b.kind} />
             {b.conditional && (
               <span className="rounded bg-amber-50 px-1.5 py-0.5 text-2xs text-amber-700">
-                quando liberar
+                {t('quando liberar')}
               </span>
             )}
             <span className="text-gray-600">{b.players.map((p) => p.name || p.id).join(' · ')}</span>
@@ -561,8 +555,7 @@ function ForecastBlock({ previsao }) {
         ))}
       </div>
       <p className="mt-2 text-2xs leading-4 text-gray-500">
-        A previsão das quadras ocupadas é condicional: depende de qual partida terminar
-        primeiro. A hipótese é &quot;termina primeiro quem começou primeiro&quot;.
+        {t('A previsão das quadras ocupadas é condicional: depende de qual partida terminar primeiro. A hipótese é "termina primeiro quem começou primeiro".')}
       </p>
     </div>
   );
@@ -586,14 +579,14 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
   return (
     <V2CollapsibleCard
       icon={Swords}
-      title="Partidas concluídas"
+      title={t('Partidas concluídas')}
       dica="dia-de-jogo-concluidas"
       sectionId={GAME_DAY_SECTION.AL_COMPLETED}
-      summary={concluidas.length === 0 ? 'Nenhuma ainda' : `${concluidas.length} partida(s)`}
+      summary={concluidas.length === 0 ? t('Nenhuma ainda') : `${concluidas.length} partida(s)`}
     >
       {concluidas.length === 0 ? (
         <p className="py-4 text-sm text-gray-400">
-          As partidas aparecem aqui assim que você lançar o resultado.
+          {t('As partidas aparecem aqui assim que você lançar o resultado.')}
         </p>
       ) : (
         <div className="space-y-2">
@@ -623,7 +616,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
               </div>
               {canManage && (
                 <div className="flex shrink-0 gap-1">
-                  <V2Button size="sm" variant="ghost" onClick={() => setAlvoEditar(g)} title="Corrigir placar">
+                  <V2Button size="sm" variant="ghost" onClick={() => setAlvoEditar(g)} title={t('Corrigir placar')}>
                     <Pencil className="h-3.5 w-3.5" />
                   </V2Button>
                   <V2Button
@@ -631,7 +624,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
                     variant="ghost"
                     className="text-red-500 hover:text-red-600"
                     onClick={() => setAlvoApagar(g)}
-                    title="Excluir partida"
+                    title={t('Excluir partida')}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </V2Button>
@@ -646,18 +639,18 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
         open={!!alvoApagar}
         onOpenChange={(v) => !v && setAlvoApagar(null)}
         destructive
-        title="Excluir esta partida?"
-        description="A partida e o resultado saem do ranking do dia. Se o dia já foi publicado, o espelho no ranking da plataforma é atualizado."
-        confirmLabel="Excluir"
+        title={t('Excluir esta partida?')}
+        description={t('A partida e o resultado saem do ranking do dia. Se o dia já foi publicado, o espelho no ranking da plataforma é atualizado.')}
+        confirmLabel={t('Excluir')}
         onConfirm={async () => {
           const g = alvoApagar;
           setAlvoApagar(null);
           if (!g) return;
           try {
             await apagar.mutateAsync(g.id);
-            toast.success('Partida excluída.');
+            toast.success(t('Partida excluída.'));
           } catch (e) {
-            toast.error(e?.message || 'Não foi possível excluir.');
+            toast.error(e?.message || t('Não foi possível excluir.'));
           }
         }}
       />
@@ -671,9 +664,9 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
           if (!g) return;
           try {
             await editar.mutateAsync({ gid: g.id, sets });
-            toast.success('Placar corrigido.');
+            toast.success(t('Placar corrigido.'));
           } catch (e) {
-            toast.error(e?.message || 'Não foi possível corrigir.');
+            toast.error(e?.message || t('Não foi possível corrigir.'));
           }
         }}
       />
@@ -694,7 +687,7 @@ function EditScoreDialog({ game, onClose, onSave }) {
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Corrigir o placar</DialogTitle>
+          <DialogTitle>{t('Corrigir o placar')}</DialogTitle>
           <DialogDescription>
             {(game.side_a || []).map((p) => p.name || p).join(' / ')} contra{' '}
             {(game.side_b || []).map((p) => p.name || p).join(' / ')}
@@ -702,9 +695,9 @@ function EditScoreDialog({ game, onClose, onSave }) {
         </DialogHeader>
         <SetScoreEditor value={sets} onChange={setSets} />
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button disabled={!valido} onClick={() => onSave({ sets })}>
-            Salvar
+            {t('Salvar')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
@@ -762,10 +755,9 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Criar partida manualmente</DialogTitle>
+          <DialogTitle>{t('Criar partida manualmente')}</DialogTitle>
           <DialogDescription>
-            Escolha se é de duplas ou simples e os jogadores. O placar é opcional — sem ele, a
-            partida entra como em andamento na quadra escolhida.
+            {t('Escolha se é de duplas ou simples e os jogadores. O placar é opcional — sem ele, a partida entra como em andamento na quadra escolhida.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -775,17 +767,17 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
             {posicoes.map((i) => (
               <label key={`${kind}-${i}`} className="text-xs font-semibold text-ink">
                 {porLado === 1
-                  ? (i === 0 ? 'Lado A' : 'Lado B')
+                  ? (i === 0 ? t('Lado A') : t('Lado B'))
                   : (i < 2 ? `Lado A · jogador ${i + 1}` : `Lado B · jogador ${i - 1}`)}
                 <V2Select
                   className="mt-1"
                   value={ids[i]}
                   onChange={(e) => setIds((prev) => prev.map((v, k) => (k === i ? e.target.value : v)))}
                 >
-                  <option value="">— escolher —</option>
+                  <option value="">{t('— escolher —')}</option>
                   {participants.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {emQuadra.has(p.id) ? `${p.name} · em quadra` : p.name}
+                      {emQuadra.has(p.id) ? t('{nome} · em quadra', { nome: p.name }) : p.name}
                     </option>
                   ))}
                 </V2Select>
@@ -794,29 +786,27 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
           </div>
 
           <label className="block text-xs font-semibold text-ink">
-            Quadra
+            {t('Quadra')}
             <V2Select className="mt-1" value={court} onChange={(e) => setCourt(e.target.value)}>
-              <option value="">— sem quadra —</option>
-              {livres.map((c) => <option key={c} value={c}>Quadra {c}</option>)}
+              <option value="">{t('— sem quadra —')}</option>
+              {livres.map((c) => <option key={c} value={c}>{t('Quadra {n}', { n: c })}</option>)}
             </V2Select>
           </label>
 
           <div>
-            <p className="mb-1 text-xs font-semibold text-ink">Placar (opcional)</p>
+            <p className="mb-1 text-xs font-semibold text-ink">{t('Placar (opcional)')}</p>
             <SetScoreEditor value={sets} onChange={setSets} />
           </div>
         </div>
 
         {conflitos.length > 0 && (
           <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-            <strong>{nomesEmConflito}</strong> já está em quadra. Encerre aquela partida
-            antes, ou informe o placar — com placar, a partida entra como já disputada e
-            não ocupa quadra nenhuma.
+            <strong>{nomesEmConflito}</strong> {t('já está em quadra. Encerre aquela partida antes, ou informe o placar — com placar, a partida entra como já disputada e não ocupa quadra nenhuma.')}
           </p>
         )}
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button
             disabled={!valido || !placarOk || conflitos.length > 0 || criar.isPending}
             onClick={async () => {
@@ -827,14 +817,14 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
                   sideBIds: porLado === 1 ? [ids[1]] : [ids[2], ids[3]],
                   sets: comPlacar ? sets : null,
                 });
-                toast.success(comPlacar ? 'Partida e resultado salvos.' : 'Partida criada.');
+                toast.success(comPlacar ? t('Partida e resultado salvos.') : t('Partida criada.'));
                 onClose();
               } catch (e) {
-                toast.error(e?.message || 'Não foi possível criar.');
+                toast.error(e?.message || t('Não foi possível criar.'));
               }
             }}
           >
-            <Trophy className="mr-1 h-3.5 w-3.5" /> Criar partida
+            <Trophy className="mr-1 h-3.5 w-3.5" /> {t('Criar partida')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

@@ -27,6 +27,7 @@ import {
   statusBadge, SkipDialog, PartnerDialog, PlayCourtsSection, PlayOrderSection,
 } from '@/v2/components/games/AthletePlayOrganizer';
 import { useJoinPanelApplies } from '@/modules/games/hooks/useGameDayJoin';
+import { t } from '@/core/i18n';
 
 /**
  * Visão do PARTICIPANTE de um dia de jogo no formato Play (para quem não é o
@@ -91,21 +92,21 @@ function MeuGrupo({ gameDayId, me, config }) {
       const r = await setGroup.mutateAsync({ pid: me.id, groupId, self: true });
       const nome = groupId ? config.groups.find((g) => g.id === groupId)?.name : null;
       toast.success(r.moved.length > 1
-        ? `Você e a sua dupla foram para ${nome ? `o grupo ${nome}` : 'a fila de quem está sem grupo'}.`
-        : (nome ? `Você agora é do grupo ${nome}.` : 'Você ficou sem grupo.'));
+        ? (nome ? t('Você e a sua dupla foram para o grupo {nome}.', { nome }) : t('Você e a sua dupla foram para a fila de quem está sem grupo.'))
+        : (nome ? t('Você agora é do grupo {nome}.', { nome }) : t('Você ficou sem grupo.')));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível trocar de grupo.');
+      toast.error(err?.message || t('Não foi possível trocar de grupo.'));
     }
   };
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-      <span>Seu grupo:</span>
+      <span>{t('Seu grupo:')}</span>
       <PlayGroupBadgeById groupId={meuGrupoId} config={config} mostrarSemGrupo />
       {podeTrocar && (
         <GroupSelect
           value={meuGrupoId}
           groups={escolhiveis}
-          label="Trocar de grupo"
+          label={t('Trocar de grupo')}
           disabled={setGroup.isPending}
           onChange={trocar}
         />
@@ -137,60 +138,61 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
   const handleJoin = async () => {
     try {
       await join.mutateAsync(gameDay);
-      toast.success('Você entrou no Play! Já está na ordem de participação.');
+      toast.success(t('Você entrou no Play! Já está na ordem de participação.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível iniciar sua participação.');
+      toast.error(err?.message || t('Não foi possível iniciar sua participação.'));
     }
   };
 
   const handleLeave = async () => {
     try {
       await sair.mutateAsync(gameDay.id);
-      toast.success('Você saiu do Play.');
+      toast.success(t('Você saiu do Play.'));
       setConfirmLeave(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível sair.');
+      toast.error(err?.message || t('Não foi possível sair.'));
     }
   };
 
   const statusText = () => {
     if (!myView) return '';
-    if (myView.status === PLAY_STATUS.IN_COURT) return 'Você está em quadra agora. Bom jogo!';
+    if (myView.status === PLAY_STATUS.IN_COURT) return t('Você está em quadra agora. Bom jogo!');
     if (myView.status === PLAY_STATUS.UNAVAILABLE) {
-      return `Você está pausado pelas próximas ${Number(me.skip_remaining) || 0} partida(s).`;
+      return t('Você está pausado pelas próximas {n} partida(s).', { n: Number(me.skip_remaining) || 0 });
     }
     // Com grupos, a posição é a da fila DO GRUPO — a que o telão mostra.
-    const onde = grupos?.ativo && myView.group_id
-      ? ` do grupo ${grupos.config.groups.find((g) => g.id === myView.group_id)?.name}`
-      : '';
-    return `Você está na fila${onde}, na posição #${myView.groupNo ?? myView.orderNo}. Fique por perto para entrar em quadra.`;
+    const nomeDoGrupo = grupos?.ativo && myView.group_id
+      ? grupos.config.groups.find((g) => g.id === myView.group_id)?.name
+      : null;
+    const posicao = myView.groupNo ?? myView.orderNo;
+    return nomeDoGrupo
+      ? t('Você está na fila do grupo {grupo}, na posição #{n}. Fique por perto para entrar em quadra.', { grupo: nomeDoGrupo, n: posicao })
+      : t('Você está na fila, na posição #{n}. Fique por perto para entrar em quadra.', { n: posicao });
   };
 
   return (
     <V2CollapsibleCard
       icon={UserCheck}
-      title="Minha participação"
+      title={t('Minha participação')}
       sectionId={GAME_DAY_SECTION.PLAY_ME}
-      summary={!me ? 'Você ainda não entrou neste Play' : statusText()}
+      summary={!me ? t('Você ainda não entrou neste Play') : statusText()}
     >
       <div className="space-y-4">
         {!me ? (
           <div className="space-y-3">
             {entraPeloPainel ? (
               <p className="text-sm text-gray-600">
-                Você ainda não está participando deste Play. Para entrar, use{' '}
-                <strong className="font-semibold text-ink">“Participar”</strong>, no alto da página — você vai para a
-                ordem de participação e pode ser chamado para as quadras.
+                {t('Você ainda não está participando deste Play. Para entrar, use')}{' '}
+                <strong className="font-semibold text-ink">{t('“Participar”')}</strong>{t(', no alto da página — você vai para a ordem de participação e pode ser chamado para as quadras.')}
               </p>
             ) : (
               <p className="text-sm text-gray-600">
-                Você ainda não está participando deste Play. Ao iniciar, você entra na ordem de participação e
-                pode ser chamado para as quadras.
+                {t('Você ainda não está participando deste Play. Ao iniciar, você entra na ordem de participação e pode ser chamado para as quadras.')}
               </p>
             )}
             {entraPeloPainel ? null : (
               <V2Button onClick={handleJoin} disabled={join.isPending}>
-                <PlayCircle className="mr-1.5 h-4 w-4" /> {join.isPending ? 'Entrando…' : 'Iniciar minha participação'}
+                <PlayCircle className="mr-1.5 h-4 w-4" /> {join.isPending ? t('Entrando…') : t('Iniciar minha participação')}
               </V2Button>
             )}
           </div>
@@ -202,7 +204,7 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
             </div>
             {partnerName && (
               <p className="flex items-center gap-1.5 text-sm text-blue-600">
-                <Link2 className="h-4 w-4" /> Você joga em dupla com {partnerName}.
+                <Link2 className="h-4 w-4" /> {t('Você joga em dupla com {nome}.', { nome: partnerName })}
               </p>
             )}
             {grupos?.ativo && <MeuGrupo gameDayId={gameDay.id} me={me} config={grupos.config} />}
@@ -210,26 +212,26 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
             <div className="flex flex-wrap gap-2">
               {myView.status === PLAY_STATUS.UNAVAILABLE ? (
                 <V2Button variant="secondary" onClick={() => setSkip.mutate({ pid: me.id, count: 0 })}>
-                  <PlayCircle className="mr-1.5 h-4 w-4" /> Voltar a jogar
+                  <PlayCircle className="mr-1.5 h-4 w-4" /> {t('Voltar a jogar')}
                 </V2Button>
               ) : (
                 <V2Button variant="ghost" onClick={() => setSkipOpen(true)}>
-                  <Pause className="mr-1.5 h-4 w-4" /> Ficar indisponível por X jogos
+                  <Pause className="mr-1.5 h-4 w-4" /> {t('Ficar indisponível por X jogos')}
                 </V2Button>
               )}
 
               {me.partner_id ? (
                 <V2Button variant="ghost" onClick={() => setPartner.mutate({ pid: me.id, partnerId: null })}>
-                  <Unlink className="mr-1.5 h-4 w-4" /> Desfazer dupla
+                  <Unlink className="mr-1.5 h-4 w-4" /> {t('Desfazer dupla')}
                 </V2Button>
               ) : (
                 <V2Button variant="ghost" onClick={() => setPartnerOpen(true)}>
-                  <Link2 className="mr-1.5 h-4 w-4" /> Vincular dupla
+                  <Link2 className="mr-1.5 h-4 w-4" /> {t('Vincular dupla')}
                 </V2Button>
               )}
 
               <V2Button variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmLeave(true)}>
-                <LogOut className="mr-1.5 h-4 w-4" /> Sair do Play
+                <LogOut className="mr-1.5 h-4 w-4" /> {t('Sair do Play')}
               </V2Button>
             </div>
           </>
@@ -252,9 +254,9 @@ function MyParticipationCard({ gameDay, participants, view, me, grupos = null })
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
         destructive
-        title="Sair do Play?"
-        description="Você será removido da ordem de participação deste dia de jogo. Pode entrar de novo depois."
-        confirmLabel="Sair"
+        title={t('Sair do Play?')}
+        description={t('Você será removido da ordem de participação deste dia de jogo. Pode entrar de novo depois.')}
+        confirmLabel={t('Sair')}
         loading={sair.isPending}
         onConfirm={handleLeave}
       />

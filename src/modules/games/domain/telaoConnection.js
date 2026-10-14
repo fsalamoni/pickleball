@@ -1,3 +1,4 @@
+import { t, tn } from '@/core/i18n';
 /**
  * O telão aguenta o dia (lógica pura).
  *
@@ -35,9 +36,6 @@
 /** Quanto tempo sem atualizar até valer a pena avisar (ms). */
 export const TELAO_STALE_MS = 60_000;
 
-function pluralizar(n, singular, plural) {
-  return n === 1 ? `1 ${singular}` : `${n} ${plural}`;
-}
 
 /**
  * Há quanto tempo, em português de quadra.
@@ -46,11 +44,11 @@ function pluralizar(n, singular, plural) {
  */
 export function telaoStaleLabel(ms) {
   const seg = Math.max(0, Math.floor(ms / 1000));
-  if (seg < 90) return `há ${pluralizar(seg, 'segundo', 'segundos')}`;
+  if (seg < 90) return tn(seg, 'há {n} segundo', 'há {n} segundos');
   const min = Math.floor(seg / 60);
-  if (min < 60) return `há ${pluralizar(min, 'minuto', 'minutos')}`;
+  if (min < 60) return tn(min, 'há {n} minuto', 'há {n} minutos');
   const h = Math.floor(min / 60);
-  return `há ${pluralizar(h, 'hora', 'horas')}`;
+  return tn(h, 'há {n} hora', 'há {n} horas');
 }
 
 /**
@@ -94,6 +92,6 @@ export function telaoConnectionState(params = {}) {
     mode: 'stale',
     showBoard: true,
     staleMs,
-    label: `Sem conexão — mostrando o estado de ${telaoStaleLabel(staleMs)}`,
+    label: t('Sem conexão — mostrando o estado de {quando}', { quando: telaoStaleLabel(staleMs) }),
   };
 }

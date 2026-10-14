@@ -58,6 +58,7 @@ import { timeToMinutes } from '@/modules/arenas/domain/pricing.js';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
+import { t, tk } from '@/core/i18n';
 
 /** Onde o atleta se inscreve. */
 export const ARENA_SIGNUP_MODE = Object.freeze({
@@ -66,15 +67,15 @@ export const ARENA_SIGNUP_MODE = Object.freeze({
 });
 
 export const ARENA_SIGNUP_MODE_LABELS = Object.freeze({
-  [ARENA_SIGNUP_MODE.DAY]: 'No dia (a arena distribui as quadras)',
-  [ARENA_SIGNUP_MODE.COURT]: 'Na quadra (o atleta escolhe onde joga)',
+  [ARENA_SIGNUP_MODE.DAY]: tk('No dia (a arena distribui as quadras)'),
+  [ARENA_SIGNUP_MODE.COURT]: tk('Na quadra (o atleta escolhe onde joga)'),
 });
 
 export const ARENA_SIGNUP_MODE_HINTS = Object.freeze({
   [ARENA_SIGNUP_MODE.DAY]:
-    'Uma lista só para o dia inteiro. Use quando o rodízio atravessa as quadras — é o caso do Play e do Americano aprimorado.',
+    tk('Uma lista só para o dia inteiro. Use quando o rodízio atravessa as quadras — é o caso do Play e do Americano aprimorado.'),
   [ARENA_SIGNUP_MODE.COURT]:
-    'Uma lista por quadra, cada uma com o seu limite. Use quando cada quadra tem a sua turma e o seu horário.',
+    tk('Uma lista por quadra, cada uma com o seu limite. Use quando cada quadra tem a sua turma e o seu horário.'),
 });
 
 export const ARENA_GAME_DAY_LIMITS = Object.freeze({
@@ -347,22 +348,22 @@ export function canSignUpToArenaGameDay({
 } = {}) {
   const negar = (reason, message) => ({ ok: false, reason, message });
 
-  if (!isArenaGameDay(gameDay)) return negar('not_arena', 'Este dia de jogo não é de uma arena.');
-  if (!uid) return negar('anonymous', 'Entre na sua conta para marcar presença.');
-  if (gameDay.status === 'archived') return negar('archived', 'Este dia de jogo foi encerrado.');
-  if (isSignedUp(participants, uid)) return negar('already', 'Você já está inscrito neste dia de jogo.');
+  if (!isArenaGameDay(gameDay)) return negar('not_arena', t('Este dia de jogo não é de uma arena.'));
+  if (!uid) return negar('anonymous', t('Entre na sua conta para marcar presença.'));
+  if (gameDay.status === 'archived') return negar('archived', t('Este dia de jogo foi encerrado.'));
+  if (isSignedUp(participants, uid)) return negar('already', t('Você já está inscrito neste dia de jogo.'));
 
   const vagas = arenaGameDayVacancies(gameDay, participants);
 
   if (vagas.mode === ARENA_SIGNUP_MODE.COURT) {
-    if (!courtId) return negar('court_required', 'Escolha em qual quadra você vai jogar.');
+    if (!courtId) return negar('court_required', t('Escolha em qual quadra você vai jogar.'));
     const quadra = vagas.byCourt.find((c) => c.court_id === courtId);
-    if (!quadra) return negar('court_unknown', 'Essa quadra não faz parte deste dia de jogo.');
-    if (quadra.full) return negar('court_full', `A ${quadra.court_name || 'quadra'} já está lotada.`);
+    if (!quadra) return negar('court_unknown', t('Essa quadra não faz parte deste dia de jogo.'));
+    if (quadra.full) return negar('court_full', t('A {quadra} já está lotada.', { quadra: quadra.court_name || t('quadra') }));
     return { ok: true, reason: null, message: null };
   }
 
-  if (vagas.full) return negar('full', 'As vagas deste dia de jogo acabaram.');
+  if (vagas.full) return negar('full', t('As vagas deste dia de jogo acabaram.'));
   return { ok: true, reason: null, message: null };
 }
 
@@ -414,9 +415,9 @@ export function normalizeArenaGameDayInput(input = {}, { courts = [] } = {}) {
   };
 
   const errors = {};
-  if (!value.title) errors.title = 'Dê um nome ao dia de jogo.';
-  if (!value.date || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)) errors.date = 'Escolha a data.';
-  if (slots.length === 0) errors.arena_slots = 'Escolha pelo menos uma quadra.';
+  if (!value.title) errors.title = t('Dê um nome ao dia de jogo.');
+  if (!value.date || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)) errors.date = t('Escolha a data.');
+  if (slots.length === 0) errors.arena_slots = t('Escolha pelo menos uma quadra.');
 
   // Horários: cada slot precisa de início e fim, e o fim tem de vir depois.
   const horaRuim = slots.find((s) => {
@@ -425,7 +426,7 @@ export function normalizeArenaGameDayInput(input = {}, { courts = [] } = {}) {
     return ini == null || fim == null || fim <= ini;
   });
   if (horaRuim && !errors.arena_slots) {
-    errors.arena_slots = `Confira o horário da ${horaRuim.court_name || 'quadra'}: o fim precisa vir depois do início.`;
+    errors.arena_slots = t('Confira o horário da {quadra}: o fim precisa vir depois do início.', { quadra: horaRuim.court_name || t('quadra') });
   }
 
   // Uma quadra não pode aparecer duas vezes em faixas que se sobrepõem DENTRO
@@ -435,7 +436,7 @@ export function normalizeArenaGameDayInput(input = {}, { courts = [] } = {}) {
       for (let j = i + 1; j < slots.length; j += 1) {
         if (slots[i].court_id !== slots[j].court_id) continue;
         if (timeRangesOverlap(slots[i].start_time, slots[i].end_time, slots[j].start_time, slots[j].end_time)) {
-          errors.arena_slots = `A ${slots[i].court_name || 'quadra'} aparece duas vezes em horários que se sobrepõem.`;
+          errors.arena_slots = t('A {quadra} aparece duas vezes em horários que se sobrepõem.', { quadra: slots[i].court_name || t('quadra') });
           break;
         }
       }

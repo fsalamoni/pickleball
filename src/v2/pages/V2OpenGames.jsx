@@ -55,6 +55,7 @@ import {
   V2Skeleton,
   V2Surface, V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function levelLabel(code) {
   if (!code) return null;
@@ -88,8 +89,8 @@ function OpenGameCard({ g, distancia }) {
       </div>
       <div className="mt-4 flex flex-wrap gap-1.5">
         {g.kind === 'game_day'
-          ? <V2Badge tone="blue"><Dices className="h-3 w-3" /> Dia de jogo</V2Badge>
-          : <V2Badge tone="neutral">{OPEN_GAME_FORMAT_LABELS[g.format] || g.format}</V2Badge>}
+          ? <V2Badge tone="blue"><Dices className="h-3 w-3" /> {t('Dia de jogo')}</V2Badge>
+          : <V2Badge tone="neutral">{t(OPEN_GAME_FORMAT_LABELS[g.format]) || g.format}</V2Badge>}
         {levelLabel(g.level) && <V2Badge tone="acid"><Trophy className="h-3 w-3" /> {levelLabel(g.level)}</V2Badge>}
       </div>
       {g.notes && <p className="mt-3 text-sm text-gray-500">{g.notes}</p>}
@@ -98,13 +99,13 @@ function OpenGameCard({ g, distancia }) {
             botão de participar. */}
         {g.kind === 'game_day' && g.game_day_id && (
           <V2Button asChild className="w-full">
-            <Link to={`/dia-de-jogo/${g.game_day_id}`}>Ver e participar <ArrowRight className="h-4 w-4" /></Link>
+            <Link to={`/dia-de-jogo/${g.game_day_id}`}>{t('Ver e participar')} <ArrowRight className="h-4 w-4" /></Link>
           </V2Button>
         )}
         <V2ChatLauncherButton
           athlete={{ id: g.created_by, platform_name: g.creator_name, photo_url: g.creator_photo }}
           className="w-full"
-          label="Chamar para jogar"
+          label={t('Chamar para jogar')}
         />
       </div>
     </V2Surface>
@@ -147,8 +148,8 @@ export default function V2OpenGames() {
     <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={rotulos.vagas}
-        subtitle="Dias de jogo com vaga, jogos abertos das arenas e convites — de hoje em diante."
-        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="procura-publicar"><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
+        subtitle={t('Dias de jogo com vaga, jogos abertos das arenas e convites — de hoje em diante.')}
+        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="procura-publicar"><Plus className="h-4 w-4" /> {t('Publicar convite')}</V2Button>}
       />
 
       {/* A região vale para a tela inteira; o que ficou de fora é dito em cada seção. */}
@@ -156,7 +157,7 @@ export default function V2OpenGames() {
 
       {myOpen.length > 0 && (
         <V2Surface className="mb-8">
-          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Seus convites abertos</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Seus convites abertos')}</p>
           <div className="mt-4 space-y-2">
             {myOpen.map((g) => {
               const dateLabel = formatDate(g.date);
@@ -164,13 +165,13 @@ export default function V2OpenGames() {
               return (
                 <div key={g.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
                   <div className="min-w-0 text-sm">
-                    <span className="font-bold text-ink">{dateLabel || g.when_text || 'Dia de jogo'}</span>
+                    <span className="font-bold text-ink">{dateLabel || g.when_text || t('Dia de jogo')}</span>
                     {dateLabel && g.when_text && <span className="text-gray-500"> · {g.when_text}</span>}
                     <span className="text-gray-500"> · {[g.city, g.state].filter(Boolean).join(' / ')}</span>
-                    {isPast && <V2Badge tone="neutral" className="ml-2">Data passada — encerre</V2Badge>}
+                    {isPast && <V2Badge tone="neutral" className="ml-2">{t('Data passada — encerre')}</V2Badge>}
                   </div>
                   <V2Button variant="ghost" size="sm" onClick={() => closeGame.mutate(g.id)} disabled={closeGame.isPending}>
-                    <X className="h-4 w-4" /> Encerrar
+                    <X className="h-4 w-4" /> {t('Encerrar')}
                   </V2Button>
                 </div>
               );
@@ -181,17 +182,17 @@ export default function V2OpenGames() {
 
       {jogos.falhas.dias && (
         <div className="mb-6">
-          <V2ErrorState inline title="Não foi possível carregar os dias de jogo" description="A conexão falhou. Os dias de jogo continuam lá — tente de novo." onRetry={jogos.recarregar.dias} />
+          <V2ErrorState inline title={t('Não foi possível carregar os dias de jogo')} description={t('A conexão falhou. Os dias de jogo continuam lá — tente de novo.')} onRetry={jogos.recarregar.dias} />
         </div>
       )}
       {jogos.falhas.clubes && (
         <div className="mb-6">
-          <V2ErrorState inline title="Não foi possível carregar os dias de jogo dos seus clubes" description="A conexão falhou. Os dias marcados nos seus clubes continuam lá — tente de novo." onRetry={jogos.recarregar.clubes} />
+          <V2ErrorState inline title={t('Não foi possível carregar os dias de jogo dos seus clubes')} description={t('A conexão falhou. Os dias marcados nos seus clubes continuam lá — tente de novo.')} onRetry={jogos.recarregar.clubes} />
         </div>
       )}
       {jogos.falhas.convites && (
         <div className="mb-6">
-          <V2ErrorState inline title="Não foi possível carregar os convites" description="A conexão falhou. Os convites publicados continuam lá — tente de novo." onRetry={jogos.recarregar.convites} />
+          <V2ErrorState inline title={t('Não foi possível carregar os convites')} description={t('A conexão falhou. Os convites publicados continuam lá — tente de novo.')} onRetry={jogos.recarregar.convites} />
         </div>
       )}
 
@@ -204,13 +205,13 @@ export default function V2OpenGames() {
           {(dias.itens.length > 0 || dias.fora > 0) && (
             <section>
               <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-                <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Dias de jogo com vaga
+                <Dices className="h-3.5 w-3.5" aria-hidden="true" /> {t('Dias de jogo com vaga')}
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                Os públicos, dos atletas e das arenas, e os dos seus clubes. Entre direto — ou abra para ver o formato e quem vai.
+                {t('Os públicos, dos atletas e das arenas, e os dos seus clubes. Entre direto — ou abra para ver o formato e quem vai.')}
               </p>
-              <RegionForaNote regional={dias} nomeItens={['dia de jogo', 'dias de jogo']} className="mt-1 block text-sm" />
-              <RegionEmptyHint regional={dias} oque="Nenhum dia de jogo com vaga" className="mt-4" />
+              <RegionForaNote regional={dias} nomeItens={[t('dia de jogo'), t('dias de jogo')]} className="mt-1 block text-sm" />
+              <RegionEmptyHint regional={dias} oque={t('Nenhum dia de jogo com vaga')} className="mt-4" />
               {dias.itens.length > 0 && (
                 <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {dias.itens.map((item) => (
@@ -231,10 +232,10 @@ export default function V2OpenGames() {
           {(convites.itens.length > 0 || convites.fora > 0) && (
             <section>
               <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-                <Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> Convites de quem procura jogo
+                <Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> {t('Convites de quem procura jogo')}
               </p>
-              <RegionForaNote regional={convites} nomeItens={['convite', 'convites']} className="mt-1 block text-sm" />
-              <RegionEmptyHint regional={convites} oque="Nenhum convite" className="mt-4" />
+              <RegionForaNote regional={convites} nomeItens={[t('convite'), t('convites')]} className="mt-1 block text-sm" />
+              <RegionEmptyHint regional={convites} oque={t('Nenhum convite')} className="mt-4" />
               {convites.itens.length > 0 && (
                 <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {convites.itens.map((item) => {
@@ -257,12 +258,12 @@ export default function V2OpenGames() {
             <V2Surface>
               <V2EmptyState
                 icon={Megaphone}
-                title="Nenhum jogo marcado para os próximos dias"
-                description={`Nenhum dia de jogo nem convite${dias.limita ? ` ${dias.frase}` : ''} de hoje em diante — nem nos seus clubes. Publique um convite ou crie um dia de jogo público: ele aparece aqui para quem procura jogo.`}
+                title={t('Nenhum jogo marcado para os próximos dias')}
+                description={dias.limita ? t('Nenhum dia de jogo nem convite {regiao} de hoje em diante — nem nos seus clubes. Publique um convite ou crie um dia de jogo público: ele aparece aqui para quem procura jogo.', { regiao: dias.frase }) : t('Nenhum dia de jogo nem convite de hoje em diante — nem nos seus clubes. Publique um convite ou crie um dia de jogo público: ele aparece aqui para quem procura jogo.')}
                 action={(
                   <div className="flex flex-wrap justify-center gap-2">
-                    <V2Button onClick={() => setCreateOpen(true)}>Publicar convite</V2Button>
-                    <V2Button asChild variant="secondary"><Link to="/dia-de-jogo?criar=1">Criar dia de jogo</Link></V2Button>
+                    <V2Button onClick={() => setCreateOpen(true)}>{t('Publicar convite')}</V2Button>
+                    <V2Button asChild variant="secondary"><Link to="/dia-de-jogo?criar=1">{t('Criar dia de jogo')}</Link></V2Button>
                   </div>
                 )}
               />

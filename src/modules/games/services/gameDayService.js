@@ -60,6 +60,7 @@ import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import { resultFromSets } from '../domain/gameSets.js';
+import { t, tk } from '@/core/i18n';
 
 const COL = 'game_days';
 // O jogo aberto ligado a este dia de jogo (Onda CA). Escrito direto aqui, e
@@ -79,9 +80,9 @@ function displayName(u, p) {
 
 /** Cria um dia de jogo do atleta autenticado (+ convite público se aplicável). */
 export async function createGameDay(input, actor, profile) {
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
+  if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
   const { valid, errors, value } = normalizeGameDayInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const id = doc(collection(db, COL)).id;
   const creatorName = displayName(actor, profile);
@@ -194,7 +195,7 @@ export async function listUpcomingClubGameDays({ clubId, dias = [] } = {}) {
 export async function updateGameDay(id, patch, actor) {
   if (!id) return;
   const current = await getGameDay(id);
-  if (!current) throw new Error('Dia de jogo não encontrado.');
+  if (!current) throw new Error(t('Dia de jogo não encontrado.'));
 
   // Normaliza sobre os valores atuais + patch, mantendo só os campos presentes.
   const { value } = normalizeGameDayInput({ ...current, ...patch });
@@ -296,8 +297,8 @@ async function publishGameDayInvite(gameDay, actor, creatorName, creatorPhoto) {
  * Idempotente: se já participa, apenas retorna.
  */
 export async function joinPublicGameDay(gameDay, user, profile) {
-  if (!user?.uid) throw new Error('Entre na plataforma para participar.');
-  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+  if (!user?.uid) throw new Error(t('Entre na plataforma para participar.'));
+  if (!gameDay?.id) throw new Error(t('Dia de jogo inválido.'));
   // O dono já está no dia — exceto no de CLUBE, em que quem agendou a data
   // organiza sem ser jogador e pode querer jogar.
   if (gameDay.created_by === user.uid && !isClubGameDay(gameDay)) return;
@@ -311,7 +312,7 @@ export async function joinPublicGameDay(gameDay, user, profile) {
   // Leitura que falha não vira "entra sem conferir": a exceção sobe e a tela
   // diz que não deu.
   const atual = await getGameDay(gameDay.id);
-  if (!atual) throw new Error('Dia de jogo não encontrado.');
+  if (!atual) throw new Error(t('Dia de jogo não encontrado.'));
   if (atual.arena_id) {
     const { signUpToArenaGameDay } = await import('./arenaGameDayService.js');
     await signUpToArenaGameDay(atual, user, profile);
@@ -323,7 +324,7 @@ export async function joinPublicGameDay(gameDay, user, profile) {
   const doClube = isClubGameDay(atual);
   if (atual.created_by === user.uid && !doClube) return;
   if (!isPublicGameDay(atual) && !doClube) {
-    throw new Error('Este dia de jogo é privado — só entra quem foi convidado.');
+    throw new Error(t('Este dia de jogo é privado — só entra quem foi convidado.'));
   }
 
   const existing = await getDocs(query(
@@ -454,7 +455,7 @@ export async function resolveEntryGroup(gameDay, entry) {
  *   funcionalidade existe.
  */
 export async function addGameDayParticipant(gdId, entry, actor, { gameDay = null } = {}) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
+  if (!gdId) throw new Error(t('Dia de jogo inválido.'));
   const pid = doc(collection(db, COL, gdId, SUB_PARTICIPANTS)).id;
   // Quem chega cai no grupo do seu nível — a menos que quem inseriu já tenha
   // dito (inclusive "sem grupo", que é `null`). A pergunta "o dia tem grupos?"
@@ -555,14 +556,14 @@ export async function removeGameDayParticipant(gdId, pid, actor) {
  */
 export async function linkGuestParticipantToAccount(gdId, pid, athlete, actor) {
   const uid = athlete?.user_id;
-  if (!gdId || !pid || !uid) throw new Error('Escolha o atleta da plataforma.');
+  if (!gdId || !pid || !uid) throw new Error(t('Escolha o atleta da plataforma.'));
   const participants = await listGameDayParticipants(gdId);
   const alvo = participants.find((p) => p.id === pid);
-  if (!alvo) throw new Error('Participante não encontrado — ele pode ter saído do dia.');
-  if (alvo.user_id) throw new Error(`${alvo.name || 'Este participante'} já está ligado a uma conta.`);
+  if (!alvo) throw new Error(t('Participante não encontrado — ele pode ter saído do dia.'));
+  if (alvo.user_id) throw new Error(t('{nome} já está ligado a uma conta.', { nome: alvo.name || t('Este participante') }));
   const jaNoDia = participants.find((p) => p.user_id === uid);
   if (jaNoDia) {
-    throw new Error(`${jaNoDia.name || 'Este atleta'} já está neste dia de jogo. Remova um dos dois antes de vincular.`);
+    throw new Error(t('{nome} já está neste dia de jogo. Remova um dos dois antes de vincular.', { nome: jaNoDia.name || t('Este atleta') }));
   }
 
   await updateDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
@@ -703,9 +704,9 @@ async function espelharJogoAberto(gdId, { gameDay = null, participants = null } 
  * nem acesso de leitura ao que passou a poder gerenciar.
  */
 export async function addGameDayAdmin(gdId, uid, actor) {
-  if (!gdId || !uid) throw new Error('Dados inválidos.');
+  if (!gdId || !uid) throw new Error(t('Dados inválidos.'));
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   if (gd.created_by === uid) return; // o criador já é administrador
   await updateDoc(doc(db, COL, gdId), {
     admin_uids: arrayUnion(uid),
@@ -731,7 +732,7 @@ export async function addGameDayAdmin(gdId, uid, actor) {
  * do dia de jogo — tirar o acesso junto seria uma surpresa desagradável.
  */
 export async function removeGameDayAdmin(gdId, uid, actor) {
-  if (!gdId || !uid) throw new Error('Dados inválidos.');
+  if (!gdId || !uid) throw new Error(t('Dados inválidos.'));
   await updateDoc(doc(db, COL, gdId), {
     admin_uids: arrayRemove(uid),
     updated_at: serverTimestamp(),
@@ -743,7 +744,7 @@ export async function removeGameDayAdmin(gdId, uid, actor) {
 
 /** Troca o modo de gestão do dia de jogo (só o criador). */
 export async function setGameDayManageMode(gdId, mode, actor) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
+  if (!gdId) throw new Error(t('Dia de jogo inválido.'));
   const valor = mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS
     ? GAME_DAY_MANAGE_MODE.PARTICIPANTS
     : GAME_DAY_MANAGE_MODE.OWNER_ONLY;
@@ -764,7 +765,7 @@ export async function listGameDayGames(gdId) {
 }
 
 export async function addGameDayGame(gdId, game, actor) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
+  if (!gdId) throw new Error(t('Dia de jogo inválido.'));
   const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
   await setDoc(doc(db, COL, gdId, SUB_GAMES, gid), {
     id: gid,
@@ -797,7 +798,7 @@ export async function deleteGameDayGame(gdId, gid, actor) {
 
 /** Substitui todos os jogos do dia (usado no sorteio). */
 export async function replaceGameDayGames(gdId, games, actor) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
+  if (!gdId) throw new Error(t('Dia de jogo inválido.'));
   const current = await getDocs(collection(db, COL, gdId, SUB_GAMES));
   const batch = writeBatch(db);
   current.docs.forEach((d) => batch.delete(d.ref));
@@ -832,7 +833,7 @@ export async function replaceGameDayGames(gdId, games, actor) {
  * @param {object} actor
  */
 export async function appendGameDayGames(gdId, { removeIds = [], games = [], orderBase = 0 } = {}, actor) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
+  if (!gdId) throw new Error(t('Dia de jogo inválido.'));
   const batch = writeBatch(db);
   removeIds.forEach((id) => {
     if (id) batch.delete(doc(db, COL, gdId, SUB_GAMES, id));
@@ -953,8 +954,13 @@ function tipoMaisBarato(livres, tipos) {
 }
 
 /** A mensagem de "falta gente" certa para o tipo da partida. */
+const FALTA_GENTE = {
+  'o próximo jogo': tk('Não há jogadores disponíveis suficientes (mínimo {n}) para criar o próximo jogo.'),
+  'uma partida': tk('Não há jogadores disponíveis suficientes (mínimo {n}) para criar uma partida.'),
+  'a próxima partida': tk('Não há jogadores disponíveis suficientes (mínimo {n}) para criar a próxima partida.'),
+};
 function faltaGente(kind, partida = 'o próximo jogo') {
-  return `Não há jogadores disponíveis suficientes (mínimo ${slotsForKind(kind)}) para criar ${partida}.`;
+  return t(FALTA_GENTE[partida], { n: slotsForKind(kind) });
 }
 
 /**
@@ -977,18 +983,18 @@ function quadraParaPartida(court, gd, games) {
   const total = gd.play_courts || 1;
   if (court != null) {
     if (!freePlayCourts({ courts: Math.max(total, Number(court) || 0), games }).includes(Number(court))) {
-      throw new Error('Esta quadra já está em jogo. Atualize a tela.');
+      throw new Error(t('Esta quadra já está em jogo. Atualize a tela.'));
     }
     return court;
   }
   const livre = nextFreePlayCourt({ courts: total, games });
-  if (livre == null) throw new Error('Todas as quadras já estão em jogo.');
+  if (livre == null) throw new Error(t('Todas as quadras já estão em jogo.'));
   return livre;
 }
 
 export async function createNextPlayGame(gdId, actor, { court = null, kind = null, groupId = null } = {}) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const [participantsBrutos, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
@@ -1128,14 +1134,14 @@ function mensagemSemPartida({ view, grupos, vagas, court, groupId, historico }) 
  */
 export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = null, courtGroups = null } = {}) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const [participantsBrutos, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
 
   const totalCourts = Math.max(1, Number(gd.play_courts) || 1);
   const livres = freePlayCourts({ courts: totalCourts, games });
-  if (livres.length === 0) throw new Error('Todas as quadras já estão em jogo.');
+  if (livres.length === 0) throw new Error(t('Todas as quadras já estão em jogo.'));
 
   // Mesma leitura de flags de `createNextPlayGame`: ligadas, o rodízio
   // equilibrado varia grupos e duplas sem furar a ordem, e os GRUPOS sorteiam
@@ -1230,10 +1236,10 @@ function manualGameKind(sideAIds = [], sideBIds = []) {
   const a = (sideAIds || []).filter(Boolean);
   const b = (sideBIds || []).filter(Boolean);
   const todos = [...a, ...b];
-  if (new Set(todos).size !== todos.length) throw new Error('Há jogadores repetidos.');
+  if (new Set(todos).size !== todos.length) throw new Error(t('Há jogadores repetidos.'));
   if (a.length === 1 && b.length === 1) return GAME_KIND.SINGLES;
   if (a.length === 2 && b.length === 2) return GAME_KIND.DOUBLES;
-  throw new Error('Escolha 1 jogador de cada lado (simples) ou 2 de cada lado (duplas).');
+  throw new Error(t('Escolha 1 jogador de cada lado (simples) ou 2 de cada lado (duplas).'));
 }
 
 /**
@@ -1285,12 +1291,12 @@ export async function createManualPlayGame(gdId, { court = null, sideAIds = [], 
  */
 export async function finishPlayGame(gdId, gid, actor, { createNext = true, kind = null } = {}) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
   const game = games.find((g) => g.id === gid);
-  if (!game) throw new Error('Jogo não encontrado.');
+  if (!game) throw new Error(t('Jogo não encontrado.'));
   if (game.status === PLAY_GAME_STATUS.FINISHED) return { finished: gid, next: null };
 
   const now = Date.now();
@@ -1343,7 +1349,7 @@ export async function cancelPlayGame(gdId, gid, actor) {
   if (!game) return;
   const temPlacar = game.score_a != null && game.score_b != null;
   if (game.status === PLAY_GAME_STATUS.FINISHED || temPlacar) {
-    throw new Error('Esta partida já tem resultado lançado. Para desfazê-la, exclua-a na lista de partidas concluídas.');
+    throw new Error(t('Esta partida já tem resultado lançado. Para desfazê-la, exclua-a na lista de partidas concluídas.'));
   }
   const now = Date.now();
   // Só quem ainda está no dia: atualizar a inscrição de quem saiu falharia o
@@ -1386,9 +1392,9 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
   const game = games.find((g) => g.id === gid);
-  if (!game || game.status === PLAY_GAME_STATUS.FINISHED) throw new Error('Jogo não disponível.');
+  if (!game || game.status === PLAY_GAME_STATUS.FINISHED) throw new Error(t('Jogo não disponível.'));
   const inGameIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id);
-  if (!inGameIds.includes(absentId)) throw new Error('Jogador não está neste jogo.');
+  if (!inGameIds.includes(absentId)) throw new Error(t('Jogador não está neste jogo.'));
 
   // Quem já foi substituído para FORA deste mesmo jogo não pode voltar a ele
   // (mesmo em uma segunda substituição na mesma partida).
@@ -1402,15 +1408,15 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) 
   const preferGroupId = game.group_id || null;
   let repl;
   if (escolhido) {
-    if (escolhido === absentId) throw new Error('Escolha outro jogador para entrar.');
+    if (escolhido === absentId) throw new Error(t('Escolha outro jogador para entrar.'));
     if (!isEligibleSwapReplacement(order, escolhido, { inGameIds, swappedOutIds })) {
-      throw new Error('Esse jogador não está disponível para entrar nesta partida.');
+      throw new Error(t('Esse jogador não está disponível para entrar nesta partida.'));
     }
     repl = order.find((p) => p.id === escolhido);
   } else {
     repl = pickSwapReplacement(order, { inGameIds, swappedOutIds, preferGroupId });
   }
-  if (!repl) throw new Error('Não há substituto disponível na ordem de participação.');
+  if (!repl) throw new Error(t('Não há substituto disponível na ordem de participação.'));
 
   const swapSide = (side) => (side || []).map((p) => (p.id === absentId
     ? { id: repl.id, name: repl.name || 'Jogador', user_id: repl.user_id || null, photo_url: repl.photo_url || null }
@@ -1461,8 +1467,8 @@ export async function setPlayParticipantPartner(gdId, pid, partnerId, actor) {
   const participants = await listGameDayParticipants(gdId);
   const byId = new Map(participants.map((p) => [p.id, p]));
   const me = byId.get(pid);
-  if (!me) throw new Error('Participante não encontrado.');
-  if (partnerId && partnerId === pid) throw new Error('Escolha outro participante.');
+  if (!me) throw new Error(t('Participante não encontrado.'));
+  if (partnerId && partnerId === pid) throw new Error(t('Escolha outro participante.'));
 
   const batch = writeBatch(db);
   const clearOldPartner = (p) => {
@@ -1479,7 +1485,7 @@ export async function setPlayParticipantPartner(gdId, pid, partnerId, actor) {
     batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), { partner_id: null, updated_at: serverTimestamp() });
   } else {
     const partner = byId.get(partnerId);
-    if (!partner) throw new Error('Parceiro não encontrado.');
+    if (!partner) throw new Error(t('Parceiro não encontrado.'));
     clearOldPartner(me);
     clearOldPartner(partner);
     batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), { partner_id: partnerId, updated_at: serverTimestamp() });
@@ -1512,7 +1518,7 @@ export async function setPlayParticipantPartner(gdId, pid, partnerId, actor) {
  */
 export async function setPlayGroups(gdId, { groups = [], policy } = {}, actor) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const { valid, errors, value } = validatePlayGroups({ groups, policy });
   if (!valid) throw new Error(errors[0]);
 
@@ -1558,16 +1564,16 @@ export async function setPlayGroups(gdId, { groups = [], policy } = {}, actor) {
  */
 export async function setPlayParticipantGroup(gdId, pid, groupId, actor, { self = false } = {}) {
   const [gd, participants] = await Promise.all([getGameDay(gdId), listGameDayParticipants(gdId)]);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const p = participants.find((x) => x.id === pid);
-  if (!p) throw new Error('Participante não encontrado — ele pode ter saído do dia.');
+  if (!p) throw new Error(t('Participante não encontrado — ele pode ter saído do dia.'));
 
   const alvo = groupId || null;
   if (alvo) {
     const g = groupById(normalizePlayGroupsConfig(gd), alvo);
-    if (!g) throw new Error('Esse grupo não existe mais.');
+    if (!g) throw new Error(t('Esse grupo não existe mais.'));
     if (self && g.join !== 'open') {
-      throw new Error('Este grupo é só a organização que preenche — peça a quem organiza o dia.');
+      throw new Error(t('Este grupo é só a organização que preenche — peça a quem organiza o dia.'));
     }
   }
 
@@ -1599,10 +1605,10 @@ export async function assignPlayGroups(gdId, assignments = [], actor) {
   const lista = (assignments || []).filter((a) => a?.pid);
   if (lista.length === 0) return { updated: 0 };
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const config = normalizePlayGroupsConfig(gd);
   if (lista.some((a) => a.groupId && !groupById(config, a.groupId))) {
-    throw new Error('Um dos grupos não existe mais — confira a distribuição e tente de novo.');
+    throw new Error(t('Um dos grupos não existe mais — confira a distribuição e tente de novo.'));
   }
   const batch = writeBatch(db);
   lista.forEach((a) => batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, a.pid), {
@@ -1712,7 +1718,7 @@ async function applyGameDayMirror(gameDay, actor) {
  * Idempotente.
  */
 export async function publishGameDayToRanking(gameDay, actor) {
-  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+  if (!gameDay?.id) throw new Error(t('Dia de jogo inválido.'));
   const { result } = await applyGameDayMirror(gameDay, actor);
 
   await updateDoc(doc(db, COL, gameDay.id), {
@@ -1798,7 +1804,7 @@ function autoSyncGameDayRanking(gameDayId, actor) {
 
 /** Remove os resultados espelhados deste dia de jogo do ranking. */
 export async function unpublishGameDayFromRanking(gameDay, actor) {
-  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+  if (!gameDay?.id) throw new Error(t('Dia de jogo inválido.'));
   const removed = await clearGameDayRanking(gameDay.id);
   await updateDoc(doc(db, COL, gameDay.id), {
     publish_to_ranking: false,
@@ -1944,7 +1950,7 @@ export { gameDayRankingId, GAME_DAY_DATE_ID };
 /** Cria a PRÓXIMA partida do Americano aprimorado numa quadra. */
 export async function createNextAmericanoLiveGame(gdId, actor, { court = null, kind = null } = {}) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
@@ -1993,14 +1999,14 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null, k
  */
 export async function createAmericanoLiveRoundForFreeCourts(gdId, actor, { courtKinds = null } = {}) {
   const gd = await getGameDay(gdId);
-  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (!gd) throw new Error(t('Dia de jogo não encontrado.'));
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
 
   const totalCourts = Math.max(1, Number(gd.play_courts) || 1);
   const livres = freePlayCourts({ courts: totalCourts, games });
-  if (livres.length === 0) throw new Error('Todas as quadras já estão em jogo.');
+  if (livres.length === 0) throw new Error(t('Todas as quadras já estão em jogo.'));
 
   const { order } = computePlayOrder({ participants, games });
   const niveis = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
@@ -2072,12 +2078,12 @@ export async function submitAmericanoLiveResult(gdId, gid, placar = {}, actor) {
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
   const game = games.find((g) => g.id === gid);
-  if (!game) throw new Error('Partida não encontrada.');
+  if (!game) throw new Error(t('Partida não encontrada.'));
   // Lançada de outro aparelho enquanto esta tela estava aberta: lançar de novo
   // mandaria os quatro outra vez para o fim da fila — quem já está em outra
   // partida inclusive. Corrigir o placar é na lista de concluídas.
   if (game.status === PLAY_GAME_STATUS.FINISHED) {
-    throw new Error('O resultado desta partida já foi lançado. Para corrigir, edite na lista de partidas concluídas.');
+    throw new Error(t('O resultado desta partida já foi lançado. Para corrigir, edite na lista de partidas concluídas.'));
   }
 
   const now = Date.now();
@@ -2143,12 +2149,12 @@ export async function createManualAmericanoLiveGame(
     const conflito = ids.filter((id) => emQuadra.has(id));
     if (conflito.length > 0) {
       const nomes = conflito.map((id) => byId.get(id)?.name || id).join(', ');
-      throw new Error(`Já está em quadra: ${nomes}. Encerre a partida antes.`);
+      throw new Error(t('Já está em quadra: {nomes}. Encerre a partida antes.', { nomes }));
     }
     if (court != null) {
       const ocupada = games.some((g) => g?.status !== PLAY_GAME_STATUS.FINISHED
         && g?.court != null && Number(g.court) === Number(court));
-      if (ocupada) throw new Error(`A quadra ${court} já tem uma partida em andamento.`);
+      if (ocupada) throw new Error(t('A quadra {court} já tem uma partida em andamento.', { court }));
     }
   }
 

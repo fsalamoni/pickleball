@@ -11,6 +11,7 @@
 import React from 'react';
 import { cn } from '@/core/lib/utils';
 import { NO_GROUP } from '@/modules/games/domain/playGroups';
+import { t } from '@/core/i18n';
 
 const AUTO = '__auto__';
 
@@ -24,7 +25,7 @@ const AUTO = '__auto__';
  *   `autoLabel` acrescenta "Automático" — e então `value: undefined` é ele.
  */
 export default function GroupSelect({
-  value, groups, onChange, label, noneLabel = 'Sem grupo', autoLabel = null, disabled = false, className,
+  value, groups, onChange, label, noneLabel = t('Sem grupo'), autoLabel = null, disabled = false, className,
 }) {
   const atual = autoLabel && value === undefined ? AUTO : (value ?? NO_GROUP);
   return (

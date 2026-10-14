@@ -51,6 +51,7 @@ import {
   getGameDay, listGameDayParticipants, addGameDayParticipant,
   deleteGameDay, leaveGameDay,
 } from './gameDayService.js';
+import { t } from '@/core/i18n';
 
 const COL = 'game_days';
 const SUB_PARTICIPANTS = 'participants';
@@ -165,7 +166,7 @@ export async function checkArenaGameDaySlots(arenaId, value, { ignoreId = null, 
     const c = choques[0];
     return {
       ok: false,
-      message: `A ${c.court_name || 'quadra'} já está ocupada nesse horário pelo dia de jogo "${c.title}" (${c.start_time}–${c.end_time}).`,
+      message: t('A {quadra} já está ocupada nesse horário pelo dia de jogo "{titulo}" ({inicio}–{fim}).', { quadra: c.court_name || t('quadra'), titulo: c.title, inicio: c.start_time, fim: c.end_time }),
     };
   }
 
@@ -180,7 +181,7 @@ export async function checkArenaGameDaySlots(arenaId, value, { ignoreId = null, 
       const c = conflicts[0];
       return {
         ok: false,
-        message: `Já existe uma reserva nessa quadra das ${c.conflict_with.start} às ${c.conflict_with.end}. Cancele a reserva ou escolha outro horário.`,
+        message: t('Já existe uma reserva nessa quadra das {inicio} às {fim}. Cancele a reserva ou escolha outro horário.', { inicio: c.conflict_with.start, fim: c.conflict_with.end }),
       };
     }
   }
@@ -241,11 +242,11 @@ export function buildArenaGameDayPayload({ id, value, arenaId, arena = null, act
  * @returns {Promise<{ id: string }>}
  */
 export async function createArenaGameDay(arenaId, input, actor, { arena = null, courts = [], bookings = null } = {}) {
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
-  if (!arenaId) throw new Error('Arena inválida.');
+  if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
+  if (!arenaId) throw new Error(t('Arena inválida.'));
 
   const { valid, errors, value } = normalizeArenaGameDayInput(input, { courts });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const livre = await checkArenaGameDaySlots(arenaId, value, { bookings });
   if (!livre.ok) throw new Error(livre.message);
@@ -266,10 +267,10 @@ export async function createArenaGameDay(arenaId, input, actor, { arena = null, 
 /** Edita o dia de jogo da arena e reajusta os bloqueios do calendário. */
 export async function updateArenaGameDay(gameDayId, input, actor, { courts = [], bookings = null } = {}) {
   const atual = await getGameDay(gameDayId);
-  if (!atual?.arena_id) throw new Error('Dia de jogo de arena não encontrado.');
+  if (!atual?.arena_id) throw new Error(t('Dia de jogo de arena não encontrado.'));
 
   const { valid, errors, value } = normalizeArenaGameDayInput({ ...atual, ...input }, { courts });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const livre = await checkArenaGameDaySlots(atual.arena_id, value, { ignoreId: gameDayId, bookings });
   if (!livre.ok) throw new Error(livre.message);
@@ -299,7 +300,7 @@ export async function updateArenaGameDay(gameDayId, input, actor, { courts = [],
  */
 export async function archiveArenaGameDay(gameDayId, actor, { fromOpenSlot = false } = {}) {
   const atual = await getGameDay(gameDayId);
-  if (!atual?.arena_id) throw new Error('Dia de jogo de arena não encontrado.');
+  if (!atual?.arena_id) throw new Error(t('Dia de jogo de arena não encontrado.'));
   await deleteGameDay(gameDayId, actor);
   await syncArenaGameDayBlocks({ ...atual, id: gameDayId }, { remover: true });
   // Encerrar o dia de jogo de um JOGO ABERTO encerra a vitrine junto: senão o
@@ -330,11 +331,11 @@ export async function archiveArenaGameDay(gameDayId, actor, { fromOpenSlot = fal
  * número velho na mão, e o teto tem de valer sobre o que existe agora.
  */
 export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = null } = {}) {
-  if (!user?.uid) throw new Error('Entre na sua conta para marcar presença.');
-  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+  if (!user?.uid) throw new Error(t('Entre na sua conta para marcar presença.'));
+  if (!gameDay?.id) throw new Error(t('Dia de jogo inválido.'));
 
   const atual = await getGameDay(gameDay.id);
-  if (!atual) throw new Error('Dia de jogo não encontrado.');
+  if (!atual) throw new Error(t('Dia de jogo não encontrado.'));
   // Dia de jogo de um JOGO ABERTO (Onda CA): entrar é entrar no jogo aberto —
   // a faixa de nível, a fila e a vitrine valem, e as duas listas são gravadas
   // juntas. Importação dinâmica para não criar ciclo entre os módulos.
@@ -348,7 +349,7 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
   const pode = canSignUpToArenaGameDay({
     gameDay: atual, participants, uid: user.uid, courtId,
   });
-  if (!pode.ok) throw new Error(pode.message || 'Não foi possível marcar presença.');
+  if (!pode.ok) throw new Error(pode.message || t('Não foi possível marcar presença.'));
 
   const name = nomeDe(user, profile);
   await addGameDayParticipant(gameDay.id, {

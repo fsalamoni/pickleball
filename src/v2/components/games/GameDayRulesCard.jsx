@@ -6,6 +6,7 @@ import { describeGameDayRules } from '@/modules/games/domain/gameDayRules';
 import { isPlayGroupsActive, normalizePlayGroupsConfig } from '@/modules/games/domain/playGroups';
 
 import { useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
+import { t } from '@/core/i18n';
 
 /**
  * O que ESTE dia de jogo é — logo acima de onde se joga.
@@ -65,7 +66,7 @@ export default function GameDayRulesCard({ gameDay, podeGerenciar = false }) {
         </span>
         <span className="inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-gray-500">
           <Chevron className="h-3 w-3" />
-          {aberto ? 'Ocultar' : 'Como funciona este dia'}
+          {aberto ? t('Ocultar') : t('Como funciona este dia')}
         </span>
       </button>
 

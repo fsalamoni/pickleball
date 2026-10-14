@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * SIMPLES × DUPLAS no dia de jogo (Onda CF) — lógica pura, sem I/O.
  *
@@ -30,8 +31,8 @@ export const GAME_KIND = Object.freeze({
 });
 
 export const GAME_KIND_LABELS = Object.freeze({
-  [GAME_KIND.DOUBLES]: 'Duplas',
-  [GAME_KIND.SINGLES]: 'Simples',
+  [GAME_KIND.DOUBLES]: tk('Duplas'),
+  [GAME_KIND.SINGLES]: tk('Simples'),
 });
 
 /** Jogadores por partida de cada tipo. */

@@ -17,6 +17,7 @@ import { cn } from '@/core/lib/utils';
 import {
   GAME_KIND, GAME_KIND_LABELS, normalizeGameKind,
 } from '@/modules/games/domain/gameKind';
+import { t } from '@/core/i18n';
 
 const ICONE = { [GAME_KIND.DOUBLES]: Users, [GAME_KIND.SINGLES]: User };
 
@@ -27,7 +28,7 @@ const ICONE = { [GAME_KIND.DOUBLES]: Users, [GAME_KIND.SINGLES]: User };
  * }} props
  */
 export function GameKindToggle({
-  value, onChange, label = 'Tipo de jogo', size = 'sm', variant = 'light', disabled = false, className,
+  value, onChange, label = t('Tipo de jogo'), size = 'sm', variant = 'light', disabled = false, className,
 }) {
   const atual = normalizeGameKind(value);
   const escuro = variant === 'dark';
@@ -60,7 +61,7 @@ export function GameKindToggle({
             )}
           >
             <Icone aria-hidden="true" className={size === 'xs' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
-            {GAME_KIND_LABELS[kind]}
+            {t(GAME_KIND_LABELS[kind])}
           </button>
         );
       })}
@@ -80,7 +81,7 @@ export function GameKindBadge({ kind, variant = 'light', className }) {
       )}
     >
       <User aria-hidden="true" className="h-3 w-3" />
-      {GAME_KIND_LABELS[GAME_KIND.SINGLES]}
+      {t(GAME_KIND_LABELS[GAME_KIND.SINGLES])}
     </span>
   );
 }

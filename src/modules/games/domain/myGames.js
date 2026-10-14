@@ -13,6 +13,7 @@
 import { winRate, normalizeStatsFormat } from '@/modules/performance/domain/playerStats.js';
 import { toMillis } from '@/modules/tournament/domain/participation.js';
 import { buildParticipantResolver, resolveSlotUid } from '@/modules/clubs/domain/rankingPublishing.js';
+import { t } from '@/core/i18n';
 
 /**
  * Por que um jogo do atleta NÃO está no ranking da plataforma. O jogo continua
@@ -62,20 +63,20 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
   const scoreA = Number(porSets ? m.sets_a : m.score_a) || 0;
   const scoreB = Number(porSets ? m.sets_b : m.score_b) || 0;
   const source = m.source === 'athlete_game_day' ? MY_GAME_SOURCE.GAME_DAY : MY_GAME_SOURCE.CLUB_GAME_DAY;
-  const resolveName = (id) => (nameByUid && nameByUid.get(id)) || 'Atleta';
+  const resolveName = (id) => (nameByUid && nameByUid.get(id)) || t('Atleta');
   return {
     id: m.id,
     at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || 0,
     // Americano/duplas: sempre duplas; só individual se o espelho marcou singles.
     kind: normalizeStatsFormat(m.kind),
-    label: m.event_title || 'Dia de jogo',
+    label: m.event_title || t('Dia de jogo'),
     source,
     // Só o dia de jogo modular tem página própria (`/dia-de-jogo/:id`); o
     // `event_id` do legado de clube é o EVENTO, não um dia de jogo.
     gameDayId: m.source === 'athlete_game_day' ? (m.event_id || null) : null,
     // Parceiro(s) da MINHA dupla (os do meu lado que não sou eu). Vazio = individual.
     partner: myUids.filter((id) => id !== uid).map(resolveName).join(' / '),
-    opponent: oppUids.map(resolveName).join(' / ') || 'Adversário',
+    opponent: oppUids.map(resolveName).join(' / ') || t('Adversário'),
     // Um a um (confronto direto por PESSOA): no dia de jogo as duplas giram,
     // e "Caio / Duda" quase nunca se repete — "Caio" se repete sempre.
     opponents: oppUids.map(resolveName),
@@ -146,11 +147,11 @@ export function sourceGameToMyGame(uid, gameDayId, gdTitle, game, partById, { pu
     id: gameDayMirrorId(gameDayId, game.id),
     at: toMillis(game.updated_at) || toMillis(game.created_at) || 0,
     kind,
-    label: gdTitle || 'Dia de jogo',
+    label: gdTitle || t('Dia de jogo'),
     source: MY_GAME_SOURCE.GAME_DAY,
     gameDayId,
     partner,
-    opponent: (oppSide || []).map((p) => p.name).join(' / ') || 'Adversário',
+    opponent: (oppSide || []).map((p) => p.name).join(' / ') || t('Adversário'),
     partnerUids: myUids.filter((id, i) => id && id !== uid && (mySide || [])[i]),
     opponentUids: (mine === 'a' ? bU : aU).filter(Boolean),
     // Só o jogo PUBLICADO tem espelho (e portanto como o servidor conferir).
@@ -239,7 +240,7 @@ export function gameDayGamesToH2HRecords(games) {
       const opponent = String(nome || '').trim();
       // "Atleta" é o nome de quem não tem perfil: juntar todos sob um nome só
       // inventaria um rival que não existe.
-      if (!opponent || opponent === 'Atleta') return;
+      if (!opponent || opponent === t('Atleta')) return;
       out.push({ opponent, won: Boolean(g.won), at: Number(g.at) || 0 });
     });
   });

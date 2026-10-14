@@ -44,6 +44,7 @@ import {
   useSetPlayParticipantPartner, useLinkGuestParticipant,
 } from '@/modules/games/hooks/useGameDays';
 import { previewGameDayPublication } from '@/modules/games/domain/gameDayRanking';
+import { t } from '@/core/i18n';
 
 /**
  * Organiza UM dia de jogo do atleta: participantes, jogos (sorteio/manual +
@@ -70,8 +71,8 @@ export default function AthleteGameDayOrganizer({ gameDay }) {
       {erroParticipantes && (
         <V2ErrorState
           inline
-          title="Não foi possível carregar os participantes"
-          description="A lista não chegou. Quem está inscrito continua inscrito — tente de novo."
+          title={t('Não foi possível carregar os participantes')}
+          description={t('A lista não chegou. Quem está inscrito continua inscrito — tente de novo.')}
           onRetry={recarregarParticipantes}
         />
       )}
@@ -120,7 +121,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
     try {
       await addParticipant.mutateAsync({ ...entry, source: GD_PARTICIPANT_SOURCE.INVITED });
     } catch (err) {
-      toast.error(err.message || 'Não foi possível inserir.');
+      toast.error(err.message || t('Não foi possível inserir.'));
     }
   };
 
@@ -128,20 +129,20 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
     e.preventDefault();
     const name = guestName.trim();
     if (!name) return;
-    if (addedNames.has(name.toLowerCase())) { toast.error('Já existe um participante com esse nome.'); return; }
+    if (addedNames.has(name.toLowerCase())) { toast.error(t('Já existe um participante com esse nome.')); return; }
     try {
       await addParticipant.mutateAsync({ name, source: GD_PARTICIPANT_SOURCE.GUEST });
       setGuestName('');
     } catch (err) {
-      toast.error(err.message || 'Não foi possível inserir.');
+      toast.error(err.message || t('Não foi possível inserir.'));
     }
   };
 
   // Remover com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
   const handleRemove = (id) => {
     const p = participants.find((x) => x.id === id);
-    desfazivel.agendar(id, `${p?.name || 'Participante'} removido do dia de jogo.`, () => removeParticipant.mutateAsync(id), {
-      aoFalhar: (err) => toast.error(err.message || 'Não foi possível remover.'),
+    desfazivel.agendar(id, t('{nome} removido do dia de jogo.', { nome: p?.name || t('Participante') }), () => removeParticipant.mutateAsync(id), {
+      aoFalhar: (err) => toast.error(err.message || t('Não foi possível remover.')),
     });
   };
 
@@ -154,9 +155,9 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
   const definirDupla = async (pid, partnerId) => {
     try {
       await setPartner.mutateAsync({ pid, partnerId });
-      toast.success(partnerId ? 'Dupla vinculada. Eles vão jogar sempre juntos.' : 'Dupla desfeita.');
+      toast.success(partnerId ? t('Dupla vinculada. Eles vão jogar sempre juntos.') : t('Dupla desfeita.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível vincular a dupla.');
+      toast.error(err.message || t('Não foi possível vincular a dupla.'));
     }
   };
 
@@ -165,14 +166,14 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
   return (
     <V2CollapsibleCard
       icon={Users}
-      title="Participantes"
+      title={t('Participantes')}
       count={participants.length}
       dica="dia-de-jogo-participantes"
       sectionId={GAME_DAY_SECTION.PARTICIPANTS}
-      summary={participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} no dia de jogo`}
+      summary={participants.length === 0 ? t('Nenhum participante ainda') : t('{n} no dia de jogo', { n: participants.length })}
       actions={isOwner && (
         <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit} data-dica="dia-de-jogo-inserir-atletas">
-          <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
+          <UserPlus className="mr-1.5 h-4 w-4" /> {t('Inserir atletas')}
         </V2Button>
       )}
     >
@@ -180,7 +181,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
         ) : participants.length === 0 ? (
-          <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar." />
+          <EmptyState icon={Users} title={t('Sem participantes')} description={t('Insira os atletas que vão jogar.')} />
         ) : (
           <div className="flex flex-wrap gap-2">
             {participants.filter((p) => !desfazivel.ocultos.has(p.id)).map((p) => (
@@ -188,10 +189,10 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
                 <span className="font-medium text-ink">{p.name}</span>
                 <V2Badge tone="neutral" className="rounded-full px-1.5 py-0 text-2xs font-normal">
-                  {GD_PARTICIPANT_SOURCE_LABELS[p.source] || 'Atleta'}
+                  {t(GD_PARTICIPANT_SOURCE_LABELS[p.source]) || t('Atleta')}
                 </V2Badge>
                 {parceiroDe(p) && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-2xs font-semibold text-ink" title={`Dupla fixa com ${parceiroDe(p).name}`}>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-2xs font-semibold text-ink" title={t('Dupla fixa com {nome}', { nome: parceiroDe(p).name })}>
                     <Link2 aria-hidden="true" className="h-3 w-3" /> {parceiroDe(p).name}
                   </span>
                 )}
@@ -199,13 +200,13 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                   <V2Button
                     onClick={() => (parceiroDe(p) ? definirDupla(p.id, null) : setAlvoDupla(p))}
                     className="text-gray-400 transition-colors hover:text-ink"
-                    title={parceiroDe(p) ? 'Desfazer a dupla' : 'Vincular dupla fixa'}
+                    title={parceiroDe(p) ? t('Desfazer a dupla') : t('Vincular dupla fixa')}
                   >
                     {parceiroDe(p) ? <Unlink className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
                   </V2Button>
                 )}
                 {isOwner && (
-                  <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
+                  <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title={t('Remover')}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </V2Button>
                 )}
@@ -220,7 +221,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
               <Input
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Adicionar convidado pelo nome (fora da plataforma)"
+                placeholder={t('Adicionar convidado pelo nome (fora da plataforma)')}
                 maxLength={60}
                 disabled={atLimit}
               />
@@ -230,13 +231,13 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                 type="submit"
                 tone="neutral"
                 disabled={!guestName.trim() || atLimit}
-                aria-label="Incluir convidado"
-                title="Incluir convidado"
+                aria-label={t('Incluir convidado')}
+                title={t('Incluir convidado')}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
               </V2Button>
             </form>
-            {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}
+            {atLimit && <p className="text-xs text-amber-600">{t('Limite de {n} participantes atingido.', { n: GAME_DAY_LIMITS.MAX_PARTICIPANTS })}</p>}
           </>
         )}
       </div>
@@ -254,7 +255,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
           if (alvo) definirDupla(alvo.id, partnerId);
         }}
         description={alvoDupla
-          ? `${alvoDupla.name} e o parceiro escolhido vão jogar juntos em TODAS as rodadas sorteadas, e nunca um contra o outro. As demais regras do sorteio — parceria inédita, adversário inédito, equilíbrio de nível e participação — continuam valendo para o resto.`
+          ? t('{nome} e o parceiro escolhido vão jogar juntos em TODAS as rodadas sorteadas, e nunca um contra o outro. As demais regras do sorteio — parceria inédita, adversário inédito, equilíbrio de nível e participação — continuam valendo para o resto.', { nome: alvoDupla.name })
           : null}
       />
     </V2CollapsibleCard>
@@ -270,13 +271,13 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Inserir atletas</DialogTitle>
-          <DialogDescription>Convide qualquer atleta da plataforma para o seu dia de jogo.</DialogDescription>
+          <DialogTitle>{t('Inserir atletas')}</DialogTitle>
+          <DialogDescription>{t('Convide qualquer atleta da plataforma para o seu dia de jogo.')}</DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {people.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta disponível.</p>
+            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta disponível.')}</p>
           ) : people.map((p) => (
             <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">
@@ -284,13 +285,13 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => onAdd(p)}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> Inserir
+                <Plus className="mr-1 h-3.5 w-3.5" /> {t('Inserir')}
               </V2Button>
             </div>
           ))}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -415,16 +416,16 @@ function GamesSection({ gameDay, participants, isOwner }) {
       // resultado — é o que define os dois formatos; no simples cada um joga
       // por si. A tela AVISA em vez de ignorar o vínculo em silêncio.
       if (res.fixedPairsReason === 'singles') {
-        toast.warning('No jogo simples cada um joga por si — as duplas vinculadas não valem neste sorteio.');
+        toast.warning(t('No jogo simples cada um joga por si — as duplas vinculadas não valem neste sorteio.'));
       } else if (res.fixedPairsIgnored) {
-        toast.warning(`${res.label} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.`);
+        toast.warning(t('{formato} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.', { formato: res.label }));
       }
       toast.success(isKingOfCourt
-        ? `Rei da Quadra: ${res.payload.length} jogo(s) adicionado(s).`
-        : `Sorteio (${res.label}): ${res.payload.length} jogo(s) adicionado(s).`);
+        ? t('Rei da Quadra: {n} jogo(s) adicionado(s).', { n: res.payload.length })
+        : t('Sorteio ({formato}): {n} jogo(s) adicionado(s).', { formato: res.label, n: res.payload.length }));
       setDrawOpen(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível sortear.');
+      toast.error(err.message || t('Não foi possível sortear.'));
     } finally {
       setDrawing(false);
     }
@@ -445,14 +446,14 @@ function GamesSection({ gameDay, participants, isOwner }) {
     setAddingRound(true);
     try {
       const next = kingOfCourtNextRound(lastRoundGames, { round: lastRoundNumber + 1 });
-      if (next.length === 0) { toast.error('Não foi possível gerar a próxima rodada.'); return; }
+      if (next.length === 0) { toast.error(t('Não foi possível gerar a próxima rodada.')); return; }
       for (let i = 0; i < next.length; i += 1) {
         // eslint-disable-next-line no-await-in-loop
         await addGame.mutateAsync({ ...toPayload(next[i]), order: Date.now() + i });
       }
       toast.success(`Rodada ${lastRoundNumber + 1} gerada: ${next.length} jogo(s).`);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível gerar a próxima rodada.');
+      toast.error(err.message || t('Não foi possível gerar a próxima rodada.'));
     } finally {
       setAddingRound(false);
     }
@@ -461,10 +462,10 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const handleClear = async () => {
     try {
       await clearGames.mutateAsync();
-      toast.success('Jogos removidos.');
+      toast.success(t('Jogos removidos.'));
       setConfirmClear(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível limpar.');
+      toast.error(err.message || t('Não foi possível limpar.'));
     }
   };
 
@@ -483,13 +484,13 @@ function GamesSection({ gameDay, participants, isOwner }) {
   }, [games]);
 
   const resumoJogos = games.length === 0
-    ? 'Nenhum jogo sorteado ainda'
-    : `${scoredGames.length} com resultado · ${unscoredGames.length} a jogar`;
+    ? t('Nenhum jogo sorteado ainda')
+    : t('{a} com resultado · {b} a jogar', { a: scoredGames.length, b: unscoredGames.length });
 
   return (
     <V2CollapsibleCard
       icon={Swords}
-      title="Jogos"
+      title={t('Jogos')}
       count={games.length}
       dica="dia-de-jogo-jogos"
       sectionId={GAME_DAY_SECTION.GAMES}
@@ -497,19 +498,19 @@ function GamesSection({ gameDay, participants, isOwner }) {
       actions={isOwner && !falhouJogos && (
         <>
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
-            <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Inserir partida')}
           </V2Button>
           <V2Button size="sm" onClick={openDraw} disabled={!canOpenDraw} data-dica="dia-de-jogo-sortear">
-            <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
+            <Shuffle className="mr-1.5 h-4 w-4" /> {t('Sortear jogos')}
           </V2Button>
           {isKingOfCourt && games.length > 0 && (
             <V2Button size="sm" variant="secondary" onClick={handleAddKingRound} disabled={!canAddKingRound || addingRound}>
-              <Plus className="mr-1.5 h-4 w-4" /> {addingRound ? 'Gerando…' : 'Próxima rodada'}
+              <Plus className="mr-1.5 h-4 w-4" /> {addingRound ? t('Gerando…') : t('Próxima rodada')}
             </V2Button>
           )}
           {games.length > 0 && (
             <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
-              <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t('Limpar')}
             </V2Button>
           )}
         </>
@@ -518,8 +519,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
       <div className="space-y-4">
         {isOwner && participants.length < 4 && (
           <p className="text-xs text-gray-500">
-            Jogos de duplas pedem ao menos 4 participantes. Com 2 ou 3 já dá para jogo <strong>simples</strong> —
-            no sorteio ou em Inserir partida.
+            {t('Jogos de duplas pedem ao menos 4 participantes. Com 2 ou 3 já dá para jogo')} <strong>{t('simples')}</strong> {t('— no sorteio ou em Inserir partida.')}
           </p>
         )}
 
@@ -528,26 +528,25 @@ function GamesSection({ gameDay, participants, isOwner }) {
         ) : falhouJogos ? (
           <V2ErrorState
             inline
-            title="Não foi possível carregar os jogos"
-            description="O que já foi sorteado continua lá. Até a lista voltar, sortear ficaria por cima do que a tela não viu."
+            title={t('Não foi possível carregar os jogos')}
+            description={t('O que já foi sorteado continua lá. Até a lista voltar, sortear ficaria por cima do que a tela não viu.')}
             onRetry={recarregarJogos}
           />
         ) : games.length === 0 ? (
           <EmptyState
             icon={ListChecks}
-            title="Nenhum jogo ainda"
-            description={isOwner ? 'Sorteie os jogos do dia ou insira partidas manualmente.' : 'O organizador ainda não montou os jogos.'}
+            title={t('Nenhum jogo ainda')}
+            description={isOwner ? t('Sorteie os jogos do dia ou insira partidas manualmente.') : t('O organizador ainda não montou os jogos.')}
           />
         ) : (
           <div className="space-y-4">
             <p className="rounded-lg bg-green-50 px-3 py-2 text-xs text-green-800">
-              Rodadas sorteadas e partidas avulsas são tratadas do mesmo jeito: todas contam
-              igualmente no ranking, no rating e no desenvolvimento quando você publica o dia no ranking.
+              {t('Rodadas sorteadas e partidas avulsas são tratadas do mesmo jeito: todas contam igualmente no ranking, no rating e no desenvolvimento quando você publica o dia no ranking.')}
             </p>
             {byRound.map(([key, list]) => (
               <div key={key}>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {key === 'manual' ? 'Partidas avulsas' : `Rodada ${key}`}
+                  {key === 'manual' ? t('Partidas avulsas') : `Rodada ${key}`}
                 </div>
                 <div className="space-y-2">
                   {list.map((g) => (
@@ -562,27 +561,29 @@ function GamesSection({ gameDay, participants, isOwner }) {
         <Dialog open={drawOpen} onOpenChange={(v) => !drawing && setDrawOpen(v)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Sortear jogos do dia</DialogTitle>
+              <DialogTitle>{t('Sortear jogos do dia')}</DialogTitle>
               <DialogDescription>
-                Gera novos jogos {simples ? 'simples (1 × 1)' : 'de duplas'} com os {participants.length} participantes
-                atuais e os adiciona aos que já existem.
-                {scoredGames.length > 0 && ' Os jogos com resultado lançado são sempre mantidos.'}
+                {simples
+                  ? t('Gera novos jogos simples (1 × 1) com os {n} participantes atuais e os adiciona aos que já existem.', { n: participants.length })
+                  : t('Gera novos jogos de duplas com os {n} participantes atuais e os adiciona aos que já existem.', { n: participants.length })}
+                {scoredGames.length > 0 && ` ${t('Os jogos com resultado lançado são sempre mantidos.')}`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
               {unscoredGames.length > 0 && (
                 <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                   <p className="text-sm font-medium text-ink">
-                    Há {unscoredGames.length} jogo(s) sem resultado lançado
-                    {scoredGames.length > 0 ? ` e ${scoredGames.length} com resultado` : ''}. O que fazer com os sem resultado?
+                    {scoredGames.length > 0
+                      ? t('Há {n} jogo(s) sem resultado lançado e {m} com resultado. O que fazer com os sem resultado?', { n: unscoredGames.length, m: scoredGames.length })
+                      : t('Há {n} jogo(s) sem resultado lançado. O que fazer com os sem resultado?', { n: unscoredGames.length })}
                   </p>
                   <label className="flex items-start gap-2 text-sm text-gray-700">
                     <input type="radio" name="gd-unscored" className="mt-0.5" checked={!replaceUnscored} onChange={() => setReplaceUnscored(false)} />
-                    <span>Manter e adicionar os novos jogos</span>
+                    <span>{t('Manter e adicionar os novos jogos')}</span>
                   </label>
                   <label className="flex items-start gap-2 text-sm text-gray-700">
                     <input type="radio" name="gd-unscored" className="mt-0.5" checked={replaceUnscored} onChange={() => setReplaceUnscored(true)} />
-                    <span>Substituir os jogos sem resultado pelos novos</span>
+                    <span>{t('Substituir os jogos sem resultado pelos novos')}</span>
                   </label>
                 </div>
               )}
@@ -590,7 +591,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
                   plataforma), um seletor seria ruído: não há o que escolher. */}
               {formatsOn && formatosDoSorteio.length > 1 && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="gd-format">Formato</Label>
+                  <Label htmlFor="gd-format">{t('Formato')}</Label>
                   <select
                     id="gd-format"
                     value={format}
@@ -598,7 +599,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
                     {formatosDoSorteio.map((f) => (
-                      <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
+                      <option key={f} value={f}>{t(GAME_DAY_FORMAT_LABELS[f])}</option>
                     ))}
                   </select>
                 </div>
@@ -608,27 +609,27 @@ function GamesSection({ gameDay, participants, isOwner }) {
                   adversário enquanto houver outro para enfrentar. */}
               {isAmericano && (
                 <div className="space-y-1.5">
-                  <Label>Tipo de jogo</Label>
+                  <Label>{t('Tipo de jogo')}</Label>
                   <div>
                     <GameKindToggle value={drawKind} onChange={setDrawKind} />
                   </div>
                   <p className="text-xs text-gray-500">
                     {simples
-                      ? 'Um contra um. Quem menos jogou entra primeiro, e ninguém repete adversário enquanto houver outro para enfrentar. Simples e duplas têm rankings do dia separados.'
-                      : 'Dois contra dois, com duplas e adversários variando a cada rodada.'}
+                      ? t('Um contra um. Quem menos jogou entra primeiro, e ninguém repete adversário enquanto houver outro para enfrentar. Simples e duplas têm rankings do dia separados.')
+                      : t('Dois contra dois, com duplas e adversários variando a cada rodada.')}
                   </p>
                 </div>
               )}
               {!canDraw && (
                 <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   {simples
-                    ? 'O jogo simples pede ao menos 2 participantes.'
-                    : `Jogos de duplas pedem ao menos 4 participantes — há ${participants.length}.${isAmericano ? ' Troque para Simples para sortear um contra um.' : ''}`}
+                    ? t('O jogo simples pede ao menos 2 participantes.')
+                    : `${t('Jogos de duplas pedem ao menos 4 participantes — há {n}.', { n: participants.length })}${isAmericano ? ` ${t('Troque para Simples para sortear um contra um.')}` : ''}`}
                 </p>
               )}
               {!isKingOfCourt && (
                 <div className="space-y-2">
-                  <Label htmlFor="rounds">Número de rodadas</Label>
+                  <Label htmlFor="rounds">{t('Número de rodadas')}</Label>
                   <Input
                     id="rounds"
                     type="number"
@@ -641,7 +642,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
               )}
               {isAmericano && canDraw && (
                 <div className="space-y-2">
-                  <Label htmlFor="courts">Quadras disponíveis</Label>
+                  <Label htmlFor="courts">{t('Quadras disponíveis')}</Label>
                   <Input
                     id="courts"
                     type="number"
@@ -658,17 +659,17 @@ function GamesSection({ gameDay, participants, isOwner }) {
                   />
                   <p className="text-xs text-gray-500">
                     {courtsValue == null
-                      ? `Em branco usa todas as quadras possíveis (${maxCourts} com ${participants.length} atletas).`
+                      ? t('Em branco usa todas as quadras possíveis ({max} com {n} atletas).', { max: maxCourts, n: participants.length })
                       : courtsValue >= maxCourts
-                        ? `Com ${participants.length} atletas cabem no máximo ${maxCourts} jogo(s) ao mesmo tempo.`
-                        : `${courtsValue * porJogo} em quadra e ${participants.length - courtsValue * porJogo} aguardando por rodada — quem fica de fora entra na seguinte, com os jogos distribuídos por igual.`}
+                        ? t('Com {n} atletas cabem no máximo {max} jogo(s) ao mesmo tempo.', { n: participants.length, max: maxCourts })
+                        : t('{a} em quadra e {b} aguardando por rodada — quem fica de fora entra na seguinte, com os jogos distribuídos por igual.', { a: courtsValue * porJogo, b: participants.length - courtsValue * porJogo })}
                   </p>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <V2Button variant="ghost" onClick={() => setDrawOpen(false)} disabled={drawing}>Cancelar</V2Button>
-              <V2Button onClick={handleDraw} disabled={drawing || !canDraw}>{drawing ? 'Sorteando…' : 'Sortear'}</V2Button>
+              <V2Button variant="ghost" onClick={() => setDrawOpen(false)} disabled={drawing}>{t('Cancelar')}</V2Button>
+              <V2Button onClick={handleDraw} disabled={drawing || !canDraw}>{drawing ? t('Sorteando…') : t('Sortear')}</V2Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -678,9 +679,9 @@ function GamesSection({ gameDay, participants, isOwner }) {
         <ConfirmDialog
           open={confirmClear}
           onOpenChange={setConfirmClear}
-          title="Limpar jogos"
-          description="Todos os jogos deste dia serão removidos. Os participantes são mantidos."
-          confirmLabel="Limpar"
+          title={t('Limpar jogos')}
+          description={t('Todos os jogos deste dia serão removidos. Os participantes são mantidos.')}
+          confirmLabel={t('Limpar')}
           destructive
           loading={clearGames.isPending}
           onConfirm={handleClear}
@@ -715,16 +716,16 @@ function GameRow({ gdId, game, isOwner }) {
       <div className={`flex-1 ${winB ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>{sideNames(game.side_b)}</div>
       {isOwner && (
         <>
-          <V2Button type="button" onClick={() => setConfirmDelete(true)} className="text-gray-400 transition-colors hover:text-red-600" title="Excluir jogo" aria-label="Excluir jogo">
+          <V2Button type="button" onClick={() => setConfirmDelete(true)} className="text-gray-400 transition-colors hover:text-red-600" title={t('Excluir jogo')} aria-label={t('Excluir jogo')}>
             <Trash2 className="h-3.5 w-3.5" />
           </V2Button>
           <ConfirmDialog
             open={confirmDelete}
             onOpenChange={setConfirmDelete}
             destructive
-            title="Excluir jogo?"
-            description="Este jogo será removido."
-            confirmLabel="Excluir"
+            title={t('Excluir jogo?')}
+            description={t('Este jogo será removido.')}
+            confirmLabel={t('Excluir')}
             onConfirm={() => { setConfirmDelete(false); deleteGame.mutate(game.id); }}
           />
         </>
@@ -762,22 +763,22 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
   const handleSave = async () => {
     const a = buildSide(sideA);
     const b = buildSide(sideB);
-    if (a.length < slots || b.length < slots) { toast.error('Selecione os jogadores dos dois lados.'); return; }
+    if (a.length < slots || b.length < slots) { toast.error(t('Selecione os jogadores dos dois lados.')); return; }
     const ids = [...a, ...b].map((p) => p.id);
-    if (new Set(ids).size !== ids.length) { toast.error('Um jogador não pode aparecer mais de uma vez.'); return; }
+    if (new Set(ids).size !== ids.length) { toast.error(t('Um jogador não pode aparecer mais de uma vez.')); return; }
     try {
       await addGame.mutateAsync({ kind, side_a: a, side_b: b, round: null });
-      toast.success('Partida adicionada.');
+      toast.success(t('Partida adicionada.'));
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível adicionar.');
+      toast.error(err.message || t('Não foi possível adicionar.'));
     }
   };
 
   const chosen = new Set([...sideA, ...sideB].filter(Boolean));
   const PlayerSelect = ({ value, onChange, exclude }) => (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-      <option value="">— jogador —</option>
+      <option value="">{t('— jogador —')}</option>
       {participants.filter((p) => p.id === value || !exclude.has(p.id)).map((p) => (
         <option key={p.id} value={p.id}>{p.name}</option>
       ))}
@@ -788,23 +789,23 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Inserir partida</DialogTitle>
+          <DialogTitle>{t('Inserir partida')}</DialogTitle>
           <DialogDescription>
-            Defina se é de duplas ou simples e os jogadores de cada lado. Simples e duplas têm rankings do dia separados.
+            {t('Defina se é de duplas ou simples e os jogadores de cada lado. Simples e duplas têm rankings do dia separados.')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <GameKindToggle value={kind} onChange={setKind} />
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-gray-500">Lado A</Label>
+              <Label className="text-xs uppercase text-gray-500">{t('Lado A')}</Label>
               {Array.from({ length: slots }).map((_, i) => (
                 <PlayerSelect key={i} value={sideA[i] || ''} exclude={chosen} onChange={(v) => setSideA((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
             </div>
-            <div className="pt-7 text-xs font-medium text-gray-500">vs</div>
+            <div className="pt-7 text-xs font-medium text-gray-500">{t('vs')}</div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-gray-500">Lado B</Label>
+              <Label className="text-xs uppercase text-gray-500">{t('Lado B')}</Label>
               {Array.from({ length: slots }).map((_, i) => (
                 <PlayerSelect key={i} value={sideB[i] || ''} exclude={chosen} onChange={(v) => setSideB((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
@@ -812,8 +813,8 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
           </div>
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button onClick={handleSave} disabled={addGame.isPending}>Adicionar partida</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button onClick={handleSave} disabled={addGame.isPending}>{t('Adicionar partida')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -833,10 +834,10 @@ export function DailyRankingSection({ gameDay, participants }) {
   return (
     <V2CollapsibleCard
       icon={BarChart3}
-      title="Ranking do dia"
+      title={t('Ranking do dia')}
       dica="dia-de-jogo-ranking"
       sectionId={GAME_DAY_SECTION.DAILY_RANKING}
-      summary={decididos === 0 ? 'Ainda sem resultados' : `${decididos} jogo(s) computado(s)`}
+      summary={decididos === 0 ? t('Ainda sem resultados') : `${decididos} jogo(s) computado(s)`}
     >
       <GameDayLeaderboard participants={participants} games={games} />
     </V2CollapsibleCard>
@@ -866,45 +867,40 @@ export function RankingSection({ gameDay, participants }) {
       const entraram = (summary.published || 0) + (summary.updated || 0) + (summary.already_published || 0);
       toast.success(
         summary.skipped > 0
-          ? `No ranking: ${entraram} jogo(s). ${summary.skipped} ficaram de fora — têm atleta sem conta na plataforma.`
-          : `No ranking: ${entraram} jogo(s).`,
+          ? t('No ranking: {n} jogo(s). {m} ficaram de fora — têm atleta sem conta na plataforma.', { n: entraram, m: summary.skipped })
+          : t('No ranking: {n} jogo(s).', { n: entraram }),
       );
     } catch (err) {
-      toast.error(err.message || 'Não foi possível publicar.');
+      toast.error(err.message || t('Não foi possível publicar.'));
     }
   };
 
   const handleUnpublish = async () => {
     try {
       await unpublish.mutateAsync(gameDay);
-      toast.success('Resultados removidos do ranking.');
+      toast.success(t('Resultados removidos do ranking.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
+      toast.error(err.message || t('Não foi possível remover.'));
     }
   };
 
   return (
     <V2CollapsibleCard
       icon={Trophy}
-      title="Resultados no ranking"
+      title={t('Resultados no ranking')}
       dica="dia-de-jogo-publicar"
       sectionId={GAME_DAY_SECTION.PLATFORM_RANKING}
       summary={isPublished
-        ? `Publicado · ${publishedCount} jogo(s) no ranking`
-        : `${decidedCount} jogo(s) decidido(s), ainda não publicados`}
-      actions={isPublished ? <V2Badge tone="green">Publicado</V2Badge> : null}
+        ? t('Publicado · {n} jogo(s) no ranking', { n: publishedCount })
+        : t('{n} jogo(s) decidido(s), ainda não publicados', { n: decidedCount })}
+      actions={isPublished ? <V2Badge tone="green">{t('Publicado')}</V2Badge> : null}
     >
       <div className="space-y-3">
         <p className="text-sm text-gray-500">
-          Publique os resultados decididos no ranking geral da plataforma — tanto as rodadas
-          sorteadas quanto as partidas avulsas contam igualmente. Cada jogo vai para o lugar certo:
-          o <strong>simples</strong> entra no rating de simples; as <strong>duplas</strong>, no rating
-          de duplas e no ranking de duplas. Partidas em que todos os atletas são do mesmo clube
-          também entram no ranking desse clube. Depois de publicado, cada resultado novo ou
-          corrigido entra sozinho.
+          {t('Publique os resultados decididos no ranking geral da plataforma — tanto as rodadas sorteadas quanto as partidas avulsas contam igualmente. Cada jogo vai para o lugar certo: o')} <strong>{t('simples')}</strong> {t('entra no rating de simples; as')} <strong>{t('duplas')}</strong>{t(', no rating de duplas e no ranking de duplas. Partidas em que todos os atletas são do mesmo clube também entram no ranking desse clube. Depois de publicado, cada resultado novo ou corrigido entra sozinho.')}
         </p>
         <p className="text-xs text-gray-500">
-          {decidedCount} jogo(s) decidido(s){publishedCount > 0 ? ` · ${publishedCount} espelhado(s) no ranking` : ''}.
+          {t('{n} jogo(s) decidido(s)', { n: decidedCount })}{publishedCount > 0 ? ` · ${t('{n} espelhado(s) no ranking', { n: publishedCount })}` : ''}.
         </p>
 
         {/* Só afirma o que fica de fora com os jogos na mão: sem eles, "0 fora"
@@ -919,11 +915,11 @@ export function RankingSection({ gameDay, participants }) {
 
         <div className="flex flex-wrap gap-2">
           <V2Button onClick={handlePublish} disabled={publish.isPending || decidedCount === 0}>
-            {publish.isPending ? 'Publicando…' : isPublished ? 'Atualizar publicação' : 'Publicar no ranking'}
+            {publish.isPending ? t('Publicando…') : isPublished ? t('Atualizar publicação') : t('Publicar no ranking')}
           </V2Button>
           {isPublished && (
             <V2Button variant="ghost" className="text-red-500 hover:text-red-600" onClick={handleUnpublish} disabled={unpublish.isPending}>
-              {unpublish.isPending ? 'Removendo…' : 'Remover do ranking'}
+              {unpublish.isPending ? t('Removendo…') : t('Remover do ranking')}
             </V2Button>
           )}
         </div>
@@ -952,9 +948,7 @@ function ForaDoRankingDoDia({ previa, podeVincular, onVincular }) {
       </p>
       {previa.foraConvidado > 0 && (
         <p className="mt-1 text-xs leading-5">
-          {previa.foraConvidado} jogo(s) ficam de fora porque têm atleta <strong>sem conta</strong> na
-          plataforma — e ficam de fora para <strong>todos</strong> da partida, não só para ele. Se a
-          pessoa tem conta, vincule e os jogos dela passam a contar.
+          {previa.foraConvidado} jogo(s) ficam de fora porque têm atleta <strong>{t('sem conta')}</strong> {t('na plataforma — e ficam de fora para')} <strong>{t('todos')}</strong> {t('da partida, não só para ele. Se a pessoa tem conta, vincule e os jogos dela passam a contar.')}
         </p>
       )}
       {previa.foraOutro > 0 && (
@@ -967,12 +961,12 @@ function ForaDoRankingDoDia({ previa, podeVincular, onVincular }) {
           {previa.convidados.map((c) => (
             <li key={c.id || c.name} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2">
               <span className="min-w-0 text-xs">
-                <strong className="text-ink">{c.name}</strong> · {c.jogos} jogo(s)
-                {!c.vinculavel && <span className="text-gray-500"> · já saiu do dia</span>}
+                <strong className="text-ink">{c.name}</strong> · {t('{n} jogo(s)', { n: c.jogos })}
+                {!c.vinculavel && <span className="text-gray-500"> {t('· já saiu do dia')}</span>}
               </span>
               {podeVincular && c.vinculavel && (
                 <V2Button size="sm" variant="subtle" onClick={() => onVincular(c)}>
-                  <Link2 aria-hidden="true" className="mr-1 h-3.5 w-3.5" /> Vincular a uma conta
+                  <Link2 aria-hidden="true" className="mr-1 h-3.5 w-3.5" /> {t('Vincular a uma conta')}
                 </V2Button>
               )}
             </li>
@@ -1016,11 +1010,11 @@ function LinkGuestDialog({ gameDay, participants, convidado, onClose }) {
     try {
       const r = await link.mutateAsync({ pid: convidado.id, athlete: escolhido });
       toast.success(r?.synced
-        ? `${convidado.name} agora é ${escolhido.name}. Os jogos dele entraram no ranking.`
-        : `${convidado.name} agora é ${escolhido.name}. Os jogos passam a contar quando o dia for publicado.`);
+        ? t('{convidado} agora é {conta}. Os jogos dele entraram no ranking.', { convidado: convidado.name, conta: escolhido.name })
+        : t('{convidado} agora é {conta}. Os jogos passam a contar quando o dia for publicado.', { convidado: convidado.name, conta: escolhido.name }));
       fechar();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível vincular.');
+      toast.error(err.message || t('Não foi possível vincular.'));
     }
   };
 
@@ -1028,27 +1022,25 @@ function LinkGuestDialog({ gameDay, participants, convidado, onClose }) {
     <Dialog open={aberto} onOpenChange={(v) => !v && fechar()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Vincular {convidado?.name || 'convidado'} a uma conta</DialogTitle>
+          <DialogTitle>{t('Vincular {nome} a uma conta', { nome: convidado?.name || t('convidado') })}</DialogTitle>
           <DialogDescription>
-            Escolha quem é esta pessoa na plataforma. Os jogos que ela fez neste dia passam a ser
-            dela — no ranking, no rating e no perfil — e ela é avisada. Só vincule se tiver certeza
-            de que é a mesma pessoa.
+            {t('Escolha quem é esta pessoa na plataforma. Os jogos que ela fez neste dia passam a ser dela — no ranking, no rating e no perfil — e ela é avisada. Só vincule se tiver certeza de que é a mesma pessoa.')}
           </DialogDescription>
         </DialogHeader>
-        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar atleta pelo nome…" />
+        <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar atleta pelo nome…')} />
         <div className="max-h-[45vh] space-y-1.5 overflow-y-auto">
           {isLoading ? (
             <Skeleton className="h-24 rounded-lg" />
           ) : isError ? (
             <V2ErrorState
               inline
-              title="A lista de atletas não carregou"
-              description="Sem ela não dá para escolher a conta — tente de novo."
+              title={t('A lista de atletas não carregou')}
+              description={t('Sem ela não dá para escolher a conta — tente de novo.')}
               onRetry={() => refetch()}
             />
           ) : pessoas.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
-              Nenhum atleta com esse nome fora deste dia. Confira a grafia ou busque só pelo primeiro nome.
+              {t('Nenhum atleta com esse nome fora deste dia. Confira a grafia ou busque só pelo primeiro nome.')}
             </p>
           ) : pessoas.map((p) => (
             <button
@@ -1067,9 +1059,9 @@ function LinkGuestDialog({ gameDay, participants, convidado, onClose }) {
           ))}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={fechar}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={fechar}>{t('Cancelar')}</V2Button>
           <V2Button onClick={confirmar} disabled={!escolhido || link.isPending}>
-            {link.isPending ? 'Vinculando…' : escolhido ? `Vincular a ${escolhido.name}` : 'Escolha o atleta'}
+            {link.isPending ? t('Vinculando…') : escolhido ? `Vincular a ${escolhido.name}` : t('Escolha o atleta')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
