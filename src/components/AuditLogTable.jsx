@@ -146,7 +146,7 @@ export function AuditLogTable({ title, description, tournamentId, userId, classN
               onChange={(e) => setPage(Math.max(1, Math.min(pageCount, Number(e.target.value) || 1)))}
               className="h-9 w-20"
             />
-            <span className="text-sm text-gray-500">de {pageCount}</span>
+            <span className="text-sm text-gray-500">{t('de {total}', { total: pageCount })}</span>
             <Button type="button" variant="outline" size="sm" disabled={safePage >= pageCount} onClick={() => setPage((p) => p + 1)}>
               {t('Próxima')}
             </Button>

@@ -33,6 +33,7 @@
  */
 import { normalizeLocality, ufOf } from './locality.js';
 import { ufName } from './ufs.js';
+import { t, fmtNumero } from '@/core/i18n';
 
 export const REGION_MODE = Object.freeze({
   CIDADE: 'cidade',
@@ -142,16 +143,16 @@ export function regionLimits(region) {
 }
 
 const cidadeUf = (r) => `${r.cidade}${r.uf ? ` / ${r.uf}` : ''}`;
-const km = (n) => `${Number(n).toLocaleString('pt-BR')} km`;
+const km = (n) => `${fmtNumero(Number(n))} km`;
 
 /** "Porto Alegre / RS e até 50 km" · "Rio Grande do Sul (todo o estado)" · "Todo lugar". */
 export function regionLabel(region) {
   if (!region) return '';
   switch (region.modo) {
     case REGION_MODE.CIDADE: return cidadeUf(region);
-    case REGION_MODE.RAIO: return `${cidadeUf(region)} e até ${km(region.raioKm)}`;
-    case REGION_MODE.ESTADO: return `${ufName(region.uf)} (todo o estado)`;
-    default: return 'Todo lugar';
+    case REGION_MODE.RAIO: return t('{lugar} e até {km}', { lugar: cidadeUf(region), km: km(region.raioKm) });
+    case REGION_MODE.ESTADO: return t('{estado} (todo o estado)', { estado: ufName(region.uf) });
+    default: return t('Todo lugar');
   }
 }
 
@@ -162,7 +163,7 @@ export function regionShortLabel(region) {
     case REGION_MODE.CIDADE: return region.cidade;
     case REGION_MODE.RAIO: return `${region.cidade} + ${km(region.raioKm)}`;
     case REGION_MODE.ESTADO: return region.uf;
-    default: return 'Todo lugar';
+    default: return t('Todo lugar');
   }
 }
 
@@ -172,9 +173,9 @@ export function regionPhrase(region) {
   switch (region.modo) {
     case REGION_MODE.CIDADE:
     case REGION_MODE.RAIO:
-      return `em ${regionLabel(region)}`;
-    case REGION_MODE.ESTADO: return `em todo o estado (${region.uf})`;
-    default: return 'em todo lugar';
+      return t('em {lugar}', { lugar: regionLabel(region) });
+    case REGION_MODE.ESTADO: return t('em todo o estado ({uf})', { uf: region.uf });
+    default: return t('em todo lugar');
   }
 }
 
@@ -194,8 +195,8 @@ export function haversineKm(a, b) {
 /** "na sua cidade" · "a 14 km" · `null` (distância desconhecida). */
 export function distanceLabel(distancia) {
   if (distancia == null || !Number.isFinite(distancia)) return null;
-  if (distancia < 1) return 'na sua cidade';
-  return `a ${km(Math.round(distancia))}`;
+  if (distancia < 1) return t('na sua cidade');
+  return t('a {km}', { km: km(Math.round(distancia)) });
 }
 
 /**

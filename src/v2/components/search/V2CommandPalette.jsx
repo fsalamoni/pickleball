@@ -27,6 +27,7 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { recordEvent } from '@/core/services/observabilityService';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const ICONES = { Building2, ChevronRight, Dices, Dumbbell, LayoutDashboard, Store, Swords, LifeBuoy, Clock };
 const ICONE_TIPO = { athlete: Users, tournament: Trophy, arena: Building2, club: Users2 };
@@ -36,7 +37,7 @@ const DEBOUNCE_MS = 250;
 
 function useDebounced(valor, ms) {
   const [v, setV] = useState(valor);
-  useEffect(() => { const t = setTimeout(() => setV(valor), ms); return () => clearTimeout(t); }, [valor, ms]);
+  useEffect(() => { const id = setTimeout(() => setV(valor), ms); return () => clearTimeout(id); }, [valor, ms]);
   return v;
 }
 
@@ -75,17 +76,17 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
       }))
       : [];
     const lista = [
-      !termoBusca && recentes.length > 0 && { grupo: 'recentes', label: 'Recentes', itens: recentes.map((r) => ({ ...r, id: `rec:${r.to}`, icon: 'Clock' })) },
-      acoes.length > 0 && { grupo: 'acoes', label: 'Ações', itens: acoes },
-      telas.length > 0 && { grupo: 'telas', label: 'Telas', itens: telas },
+      !termoBusca && recentes.length > 0 && { grupo: 'recentes', label: t('Recentes'), itens: recentes.map((r) => ({ ...r, id: `rec:${r.to}`, icon: 'Clock' })) },
+      acoes.length > 0 && { grupo: 'acoes', label: t('Ações'), itens: acoes },
+      telas.length > 0 && { grupo: 'telas', label: t('Telas'), itens: telas },
       ...dados.groups.map((g) => ({ grupo: g.type, label: g.label, itens: g.items.map((i) => ({ id: `${i.type}:${i.id}`, label: i.title, sub: i.subtitle, to: i.to, tipo: i.type, photo: i.photo })) })),
-      ajuda.length > 0 && { grupo: 'ajuda', label: 'Ajuda', itens: ajuda },
+      ajuda.length > 0 && { grupo: 'ajuda', label: t('Ajuda'), itens: ajuda },
     ].filter(Boolean);
     return lista;
   }, [termoBusca, mercadoOn, indice, recentes, atletasQ.data, torneiosQ.data, arenasQ.data, clubesQ.data]);
 
   const planos = useMemo(() => grupos.flatMap((g) => g.itens.map((i) => ({ ...i, grupo: g.grupo }))), [grupos]);
-  const fontes = [['atletas', atletasQ], ['torneios', torneiosQ], ['arenas', arenasQ], ['clubes', clubesQ]];
+  const fontes = [[t('atletas'), atletasQ], [t('torneios'), torneiosQ], [t('arenas'), arenasQ], [t('clubes'), clubesQ]];
   const falharam = fontes.filter(([, q]) => q.isError).map(([n]) => n);
   const carregando = termoBusca.trim().length >= 2 && fontes.some(([, q]) => q.isLoading);
 
@@ -121,8 +122,8 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
           onOpenAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus(); }}
           className="fixed left-1/2 top-[8dvh] z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure shadow-2xl data-[state=open]:animate-in data-[state=open]:fade-in-0"
         >
-          <DialogPrimitive.Title className="sr-only">Buscar ou ir para</DialogPrimitive.Title>
-          <DialogPrimitive.Description className="sr-only">Digite para buscar ações, telas, atletas, torneios, arenas, clubes e ajuda. Use as setas e Enter.</DialogPrimitive.Description>
+          <DialogPrimitive.Title className="sr-only">{t('Buscar ou ir para')}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">{t('Digite para buscar ações, telas, atletas, torneios, arenas, clubes e ajuda. Use as setas e Enter.')}</DialogPrimitive.Description>
           <div className="flex items-center gap-3 border-b border-gray-100 px-4">
             <Search className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
             <input
@@ -133,17 +134,17 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
               aria-controls="cmd-lista"
               aria-activedescendant={idAtivo}
               aria-autocomplete="list"
-              aria-label="Buscar ou ir para"
+              aria-label={t('Buscar ou ir para')}
               value={termo}
               onChange={(e) => setTermo(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Buscar ou ir para…"
+              placeholder={t('Buscar ou ir para…')}
               className="h-14 w-full bg-transparent text-base text-ink outline-none placeholder:text-gray-500"
               autoComplete="off"
             />
             <kbd className="hidden rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs text-gray-500 sm:inline">Esc</kbd>
           </div>
-          <div ref={listaRef} id="cmd-lista" role="listbox" aria-label="Resultados" className="max-h-[60dvh] overflow-y-auto overscroll-contain p-2">
+          <div ref={listaRef} id="cmd-lista" role="listbox" aria-label={t('Resultados')} className="max-h-[60dvh] overflow-y-auto overscroll-contain p-2">
             {grupos.map((g) => (
               <div key={g.grupo} role="group" aria-label={g.label} className="mb-1">
                 <p className="px-3 pb-1 pt-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{g.label}</p>
@@ -179,12 +180,12 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
             ))}
             {planos.length === 0 && (
               <p className="px-3 py-6 text-center text-sm text-gray-500" role="status">
-                {carregando ? 'Buscando…' : termoBusca.trim().length < 2 ? 'Digite ao menos 2 letras para buscar atletas, torneios, arenas, clubes e ajuda.' : 'Nada encontrado.'}
+                {carregando ? t('Buscando…') : termoBusca.trim().length < 2 ? t('Digite ao menos 2 letras para buscar atletas, torneios, arenas, clubes e ajuda.') : t('Nada encontrado.')}
               </p>
             )}
             {falharam.length > 0 && termoBusca.trim().length >= 2 && (
               <p className="px-3 py-2 text-xs text-amber-700" role="status">
-                {falharam.join(', ')} não responderam — os resultados podem estar incompletos.
+                {t('{fontes} não responderam — os resultados podem estar incompletos.', { fontes: falharam.join(', ') })}
               </p>
             )}
           </div>

@@ -3,45 +3,46 @@ import { Link } from 'react-router-dom';
 import { Flag, Trophy } from 'lucide-react';
 import { V2Badge, V2Button, V2ContentHero, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tk } from '@/core/i18n';
 
 const SECTIONS = {
   cbp: [
     {
-      title: 'Quadra e equipamentos',
+      title: tk('Quadra e equipamentos'),
       body: [
-        'Quadra de 13,41 m × 6,10 m (igual ao badminton de duplas), com rede central a 91,4 cm nas laterais e 86,3 cm no meio.',
-        'A Non-Volley Zone (NVZ, ou "cozinha") é a área de 2,13 m adjacente à rede de cada lado.',
-        'Raquete sólida (sem cordas), bola perfurada (40 furos em geral). A CBP recomenda bolas homologadas USAP/IFP.',
+        tk('Quadra de 13,41 m × 6,10 m (igual ao badminton de duplas), com rede central a 91,4 cm nas laterais e 86,3 cm no meio.'),
+        tk('A Non-Volley Zone (NVZ, ou "cozinha") é a área de 2,13 m adjacente à rede de cada lado.'),
+        tk('Raquete sólida (sem cordas), bola perfurada (40 furos em geral). A CBP recomenda bolas homologadas USAP/IFP.'),
       ],
     },
     {
-      title: 'Saque',
+      title: tk('Saque'),
       body: [
-        'Saque por baixo, com o contato abaixo da cintura. O saque "drop serve" (deixar a bola quicar) também é permitido.',
-        'O saque é cruzado e deve cair além da NVZ, dentro do quadrado oposto.',
-        'Em duplas, ambos os jogadores sacam (exceto a primeira jogada de cada parcial, em que apenas um saca).',
+        tk('Saque por baixo, com o contato abaixo da cintura. O saque "drop serve" (deixar a bola quicar) também é permitido.'),
+        tk('O saque é cruzado e deve cair além da NVZ, dentro do quadrado oposto.'),
+        tk('Em duplas, ambos os jogadores sacam (exceto a primeira jogada de cada parcial, em que apenas um saca).'),
       ],
     },
     {
-      title: 'Regra do duplo quique (two-bounce rule)',
+      title: tk('Regra do duplo quique (two-bounce rule)'),
       body: [
-        'A bola deve quicar uma vez no recebedor e uma vez no sacador antes de voleios serem permitidos. Isso favorece ralis mais longos.',
+        tk('A bola deve quicar uma vez no recebedor e uma vez no sacador antes de voleios serem permitidos. Isso favorece ralis mais longos.'),
       ],
     },
     {
-      title: 'Pontuação',
+      title: tk('Pontuação'),
       body: [
-        'Tradicionalmente, jogos a 11 com diferença de 2 (em torneios pode-se adotar 15 ou 21).',
-        'Em formato side-out, só pontua quem está sacando. Em formato rally scoring (alternativa adotada pela CBP em algumas competições), todo rali gera ponto.',
-        'O placar é cantado em três números no formato (saque): sacador, recebedor, servidor 1 ou 2 (em duplas).',
+        tk('Tradicionalmente, jogos a 11 com diferença de 2 (em torneios pode-se adotar 15 ou 21).'),
+        tk('Em formato side-out, só pontua quem está sacando. Em formato rally scoring (alternativa adotada pela CBP em algumas competições), todo rali gera ponto.'),
+        tk('O placar é cantado em três números no formato (saque): sacador, recebedor, servidor 1 ou 2 (em duplas).'),
       ],
     },
     {
-      title: 'Faltas comuns',
+      title: tk('Faltas comuns'),
       body: [
-        'Volear (bater na bola sem deixar quicar) com qualquer parte do corpo dentro da NVZ.',
-        'Saque acima da cintura ou com o braço se movimentando para cima de forma não-natural.',
-        'Bola na rede que não cai no campo adversário; bola fora; dois ressaltos antes do retorno.',
+        tk('Volear (bater na bola sem deixar quicar) com qualquer parte do corpo dentro da NVZ.'),
+        tk('Saque acima da cintura ou com o braço se movimentando para cima de forma não-natural.'),
+        tk('Bola na rede que não cai no campo adversário; bola fora; dois ressaltos antes do retorno.'),
       ],
     },
   ],
@@ -94,14 +95,14 @@ export default function V2Rules() {
   return (
     <div className="mx-auto max-w-[900px]">
       <V2ContentHero
-        eyebrow="Sobre o esporte"
-        title="Regras do Pickleball"
-        description="Resumo das regras oficiais nas duas variações mais comuns (CBP e USAP)."
-        action={<V2Badge tone="acid"><Flag className="h-3 w-3" /> {active === 'cbp' ? 'Brasil (CBP)' : 'EUA (USAP)'}</V2Badge>}
+        eyebrow={t('Sobre o esporte')}
+        title={t('Regras do Pickleball')}
+        description={t('Resumo das regras oficiais nas duas variações mais comuns (CBP e USAP).')}
+        action={<V2Badge tone="acid"><Flag className="h-3 w-3" /> {active === 'cbp' ? t('Brasil (CBP)') : t('EUA (USAP)')}</V2Badge>}
       />
 
       <div className="mb-6 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-        <TabButton active={active === 'cbp'} onClick={() => setActive('cbp')}>Regras brasileiras</TabButton>
+        <TabButton active={active === 'cbp'} onClick={() => setActive('cbp')}>{t('Regras brasileiras')}</TabButton>
         <TabButton active={active === 'usap'} onClick={() => setActive('usap')}>USAP rules</TabButton>
       </div>
 
@@ -109,17 +110,17 @@ export default function V2Rules() {
         {data.map((section) => (
           <V2Surface key={section.title} contentClassName="p-5 sm:p-6">
             <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <Trophy className="h-4.5 w-4.5 text-ink" /> {section.title}
+              <Trophy className="h-4.5 w-4.5 text-ink" /> {t(section.title)}
             </h2>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-gray-600">
-              {section.body.map((p, i) => <li key={i}>{p}</li>)}
+              {section.body.map((p, i) => <li key={i}>{t(p)}</li>)}
             </ul>
           </V2Surface>
         ))}
       </div>
 
       <div className="mt-6 text-center text-sm text-gray-500">
-        <Link to="/nivelamento" className="font-bold text-ink underline">Descubra seu nível com nosso formulário de nivelamento →</Link>
+        <Link to="/nivelamento" className="font-bold text-ink underline">{t('Descubra seu nível com nosso formulário de nivelamento →')}</Link>
       </div>
     </div>
   );

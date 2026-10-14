@@ -6,6 +6,7 @@ import { cn } from '@/core/lib/utils';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { uploadImage, maxImageMb, ACCEPTED_IMAGE_ATTR } from '@/core/services/storageService';
+import { t } from '@/core/i18n';
 
 /**
  * Upload de uma imagem com pré-visualização.
@@ -24,12 +25,13 @@ export function ImageUpload({
   onChange,
   folder = 'misc',
   shape = 'square',
-  label = 'Enviar imagem',
+  label: rotulo,
   hint,
   fallback = null,
   disabled = false,
   className,
 }) {
+  const label = rotulo || t('Enviar imagem');
   const { user } = useAuth();
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -48,9 +50,9 @@ export function ImageUpload({
     try {
       const meta = await uploadImage(file, { uid: user?.uid, folder, onProgress: setProgress });
       onChange?.(meta.url, meta);
-      toast.success('Imagem enviada.');
+      toast.success(t('Imagem enviada.'));
     } catch (err) {
-      toast.error(err.message || 'Falha ao enviar a imagem.');
+      toast.error(err.message || t('Falha ao enviar a imagem.'));
     } finally {
       setBusy(false);
       setProgress(0);
@@ -66,7 +68,7 @@ export function ImageUpload({
           src={value}
           alt={label}
           title={label}
-          description="Use o botão Alterar para enviar outra imagem."
+          description={t('Use o botão Alterar para enviar outra imagem.')}
           trigger={(
             <button
               type="button"
@@ -119,9 +121,9 @@ export function ImageUpload({
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={openPicker} disabled={busy || disabled}>
             {busy ? (
-              <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando… {progress}%</>
+              <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t('Enviando… {n}%', { n: progress })}</>
             ) : (
-              <><Camera className="mr-1.5 h-4 w-4" /> {value ? 'Alterar' : label}</>
+              <><Camera className="mr-1.5 h-4 w-4" /> {value ? t('Alterar') : label}</>
             )}
           </Button>
           {value && !busy && !disabled && (
@@ -132,11 +134,11 @@ export function ImageUpload({
               className="text-red-500 hover:text-red-600"
               onClick={() => onChange?.('', null)}
             >
-              <Trash2 className="mr-1.5 h-4 w-4" /> Remover
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t('Remover')}
             </Button>
           )}
         </div>
-        <p className="text-xs text-gray-500">{hint || `JPG, PNG ou WEBP até ${maxImageMb()} MB.`}</p>
+        <p className="text-xs text-gray-500">{hint || t('JPG, PNG ou WEBP até {mb} MB.', { mb: maxImageMb() })}</p>
       </div>
     </div>
   );

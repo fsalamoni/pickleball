@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Como a tela se recupera de um erro de renderização (lógica pura).
  *
@@ -103,8 +104,8 @@ export function planErrorRecovery(params = {}) {
       reload: true,
       autoRetry: false,
       delayMs: 0,
-      title: 'Uma versão nova foi publicada',
-      description: 'Esta aba está com a versão anterior. Recarregue para continuar de onde parou.',
+      title: t('Uma versão nova foi publicada'),
+      description: t('Esta aba está com a versão anterior. Recarregue para continuar de onde parou.'),
     };
   }
 
@@ -114,9 +115,9 @@ export function planErrorRecovery(params = {}) {
     reload: false,
     autoRetry: podeTentar,
     delayMs: podeTentar ? autoRetryDelayMs(feitas) : 0,
-    title: 'Esta parte da tela falhou',
+    title: t('Esta parte da tela falhou'),
     description: podeTentar
-      ? 'Tentando de novo sozinho…'
-      : 'O resto da plataforma continua funcionando. Você pode tentar de novo ou voltar.',
+      ? t('Tentando de novo sozinho…')
+      : t('O resto da plataforma continua funcionando. Você pode tentar de novo ou voltar.'),
   };
 }

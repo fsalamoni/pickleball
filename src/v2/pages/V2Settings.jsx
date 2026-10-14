@@ -41,6 +41,7 @@ import DebriefSettingsCard from '@/v2/components/training/debrief/DebriefSetting
 import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
+import { t, tn } from '@/core/i18n';
 
 export default function V2Settings() {
   const enabled = true;
@@ -67,9 +68,9 @@ export default function V2Settings() {
     const updated = { ...prefs, [categoryId]: next };
     try {
       await updateUserProfile({ notification_prefs: updated });
-      toast.success('Preferências salvas.');
+      toast.success(t('Preferências salvas.'));
     } catch (err) {
-      toast.error('Não foi possível salvar as preferências.');
+      toast.error(t('Não foi possível salvar as preferências.'));
     } finally {
       setSavingPrefs(false);
     }
@@ -88,7 +89,7 @@ export default function V2Settings() {
           const { collectTrainingExport } = await import('@/modules/training/services/trainingExportService');
           extra = await collectTrainingExport(user?.uid);
         } catch (_) {
-          extra = { incomplete: ['Centro de Treino e metas'] };
+          extra = { incomplete: [t('Centro de Treino e metas')] };
         }
       }
       // O Mercado entra sempre (com a flag desligada, o que já foi vendido ou
@@ -98,12 +99,12 @@ export default function V2Settings() {
         const { collectMarketExport } = await import('@/modules/marketplace/services/marketExportService');
         mercado = await collectMarketExport(user?.uid);
       } catch (_) {
-        mercado = { market: undefined, incomplete: ['Mercado'] };
+        mercado = { market: undefined, incomplete: [t('Mercado')] };
       }
       // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
       const incomplete = [
-        ...(inscricoes.isSuccess ? [] : ['Inscrições em torneio']),
-        ...(reservas.isSuccess ? [] : ['Reservas de quadra']),
+        ...(inscricoes.isSuccess ? [] : [t('Inscrições em torneio')]),
+        ...(reservas.isSuccess ? [] : [t('Reservas de quadra')]),
         ...extra.incomplete,
         ...mercado.incomplete,
       ];
@@ -127,12 +128,12 @@ export default function V2Settings() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       if (incomplete.length > 0) {
-        toast.warning(`Exportado, mas ficou de fora: ${incomplete.join(', ')}. Tente de novo mais tarde para ter tudo.`);
+        toast.warning(t('Exportado, mas ficou de fora: {itens}. Tente de novo mais tarde para ter tudo.', { itens: incomplete.join(', ') }));
       } else {
-        toast.success('Seus dados foram exportados.');
+        toast.success(t('Seus dados foram exportados.'));
       }
     } catch (err) {
-      toast.error('Não foi possível exportar os dados.');
+      toast.error(t('Não foi possível exportar os dados.'));
     } finally {
       setBusy(false);
     }
@@ -142,44 +143,44 @@ export default function V2Settings() {
     .filter((cat) => cat.id !== 'training' || treinoOn)
     .filter((cat) => prefs[cat.id] === false).length;
   const resumoAvisos = silenciadas === 0
-    ? 'Todas as categorias ligadas'
-    : `${silenciadas} ${silenciadas === 1 ? 'categoria silenciada' : 'categorias silenciadas'}`;
+    ? t('Todas as categorias ligadas')
+    : tn(silenciadas, '{n} categoria silenciada', '{n} categorias silenciadas');
 
   return (
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
-        title="Configurações"
-        subtitle="Cada cartão diz como está. Abra só o que você quer mudar."
+        title={t('Configurações')}
+        subtitle={t('Cada cartão diz como está. Abra só o que você quer mudar.')}
       />
 
       <div className="space-y-8">
-        <SettingsGroup title="Conta e privacidade" description="Quem você é na plataforma e o que ela guarda de você.">
+        <SettingsGroup title={t('Conta e privacidade')} description={t('Quem você é na plataforma e o que ela guarda de você.')}>
           <V2Surface variant="compacto">
             <Link to="/perfil/editar" className="flex items-center gap-3">
               <User className="h-5 w-5 shrink-0 text-ink" aria-hidden="true" />
               <span className="min-w-0 flex-1">
-                <span className="block text-base font-semibold text-ink">Conta</span>
-                <span className="block text-xs text-gray-500">Perfil, foto, contato, nível e privacidade do contato.</span>
+                <span className="block text-base font-semibold text-ink">{t('Conta')}</span>
+                <span className="block text-xs text-gray-500">{t('Perfil, foto, contato, nível e privacidade do contato.')}</span>
               </span>
               <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
             </Link>
           </V2Surface>
 
-          <SettingsSection id="privacidade-e-dados" dica="config-dados" icon={ShieldCheck} title="Privacidade e dados (LGPD)" summary="Baixe uma cópia de tudo o que é seu">
+          <SettingsSection id="privacidade-e-dados" dica="config-dados" icon={ShieldCheck} title={t('Privacidade e dados (LGPD)')} summary={t('Baixe uma cópia de tudo o que é seu')}>
             <p className="text-sm text-gray-500">
               {treinoOn
-                ? 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.'
-                : 'Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.'}
+                ? t('Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.')
+                : t('Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.')}
             </p>
             <div className="mt-3">
               <V2Button size="sm" onClick={exportData} disabled={busy}>
-                <Download className="h-4 w-4" /> {busy ? 'Gerando…' : 'Baixar meus dados'}
+                <Download className="h-4 w-4" /> {busy ? t('Gerando…') : t('Baixar meus dados')}
               </V2Button>
             </div>
           </SettingsSection>
         </SettingsGroup>
 
-        <SettingsGroup title="Tela e navegação" description="Como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.">
+        <SettingsGroup title={t('Tela e navegação')} description={t('Como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.')}>
           {/* Aparência: Claro, Escuro ou Automático. */}
           <ThemeSettingsCard />
           {/* Idioma: português, inglês, espanhol (flag multi_language). */}
@@ -192,17 +193,18 @@ export default function V2Settings() {
           <DicasSettingsCard />
         </SettingsGroup>
 
-        <SettingsGroup title="Região e avisos" description="De onde vem o que você vê, e por onde a plataforma fala com você.">
+        <SettingsGroup title={t('Região e avisos')} description={t('De onde vem o que você vê, e por onde a plataforma fala com você.')}>
           {/* Minha região: de onde a plataforma mostra o que acontece. */}
           <RegionSettingsCard />
 
           {/* `/configuracoes#notificacoes`: o sino e a central levam direto para cá. */}
-          <SettingsSection id="notificacoes" dica="config-notificacoes" icon={Bell} title="Notificações" summary={notifPrefsOn ? resumoAvisos : undefined}>
+          <SettingsSection id="notificacoes" dica="config-notificacoes" icon={Bell} title={t('Notificações')} summary={notifPrefsOn ? resumoAvisos : undefined}>
             {notifPrefsOn ? (
               <>
                 <p className="text-sm text-gray-500">
-                  Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino
-                  {centralAvisosOn ? ' nem na central de notificações' : ''}, e não contam no número de não lidas.
+                  {centralAvisosOn
+                    ? t('Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino nem na central de notificações, e não contam no número de não lidas.')
+                    : t('Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino, e não contam no número de não lidas.')}
                 </p>
                 <div className="mt-4 space-y-3">
                   {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
@@ -211,24 +213,24 @@ export default function V2Settings() {
                         id={`notif-${cat.id}`}
                         checked={prefs[cat.id] !== false}
                         onChange={(next) => toggleCategory(cat.id, next)}
-                        label={cat.label}
-                        hint={cat.description}
+                        label={t(cat.label)}
+                        hint={t(cat.description)}
                       />
                     </div>
                   ))}
                 </div>
-                {savingPrefs && <p className="mt-3 text-xs text-gray-500">Salvando…</p>}
+                {savingPrefs && <p className="mt-3 text-xs text-gray-500">{t('Salvando…')}</p>}
                 {centralAvisosOn && (
                   <div className="mt-4">
                     <V2Button asChild variant="secondary" size="sm">
-                      <Link to="/notificacoes">Ver todas as notificações</Link>
+                      <Link to="/notificacoes">{t('Ver todas as notificações')}</Link>
                     </V2Button>
                   </div>
                 )}
               </>
             ) : (
               <p className="text-sm text-gray-500">
-                As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.
+                {t('As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.')}
               </p>
             )}
           </SettingsSection>
@@ -236,7 +238,7 @@ export default function V2Settings() {
           {pushOn && <V2PushCard />}
         </SettingsGroup>
 
-        <SettingsGroup title="Jogo e treino">
+        <SettingsGroup title={t('Jogo e treino')}>
           {/* Gamificação: privacidade, interação e avisos, numa página própria. */}
           {gamificacaoOn && <GamificationSettingsCard />}
           {/* Balanço do jogo: cada pessoa liga para si. */}

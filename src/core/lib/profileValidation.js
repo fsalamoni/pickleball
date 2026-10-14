@@ -1,4 +1,5 @@
 import { isBrazilUF } from '../domain/ufs.js';
+import { t, tk } from '../i18n/index.js';
 
 export function calculateAge(birthDateValue, referenceDate = new Date()) {
   if (!birthDateValue) return null;
@@ -51,17 +52,17 @@ export function validateRequiredProfile({ platformName, birthDate, phone, pickle
   const trimmedName = String(platformName || '').trim();
   const trimmedPhone = String(phone || '').trim();
 
-  if (!trimmedName) errors.platformName = 'Informe seu nome completo.';
-  else if (!isFullName(trimmedName)) errors.platformName = 'Informe nome e sobrenome (ao menos dois nomes).';
-  if (!birthDate) errors.birthDate = 'Informe sua data de nascimento.';
-  if (!trimmedPhone) errors.phone = 'Informe seu telefone.';
-  if (!pickleballExperience) errors.pickleballExperience = 'Informe seu tempo de experiência no pickleball.';
+  if (!trimmedName) errors.platformName = t('Informe seu nome completo.');
+  else if (!isFullName(trimmedName)) errors.platformName = t('Informe nome e sobrenome (ao menos dois nomes).');
+  if (!birthDate) errors.birthDate = t('Informe sua data de nascimento.');
+  if (!trimmedPhone) errors.phone = t('Informe seu telefone.');
+  if (!pickleballExperience) errors.pickleballExperience = t('Informe seu tempo de experiência no pickleball.');
 
   const age = calculateAge(birthDate);
-  if (birthDate && age === null) errors.birthDate = 'Informe uma data de nascimento válida.';
+  if (birthDate && age === null) errors.birthDate = t('Informe uma data de nascimento válida.');
 
   const phoneDigits = trimmedPhone.replace(/\D/g, '');
-  if (trimmedPhone && phoneDigits.length < 10) errors.phone = 'Informe um telefone com DDD.';
+  if (trimmedPhone && phoneDigits.length < 10) errors.phone = t('Informe um telefone com DDD.');
 
   return { isValid: Object.keys(errors).length === 0, errors, age };
 }
@@ -102,17 +103,17 @@ export function hasDeclaredLevel(profile) {
 
 /** Como cada campo do cadastro se chama na tela (e no painel do admin). */
 export const REGISTRATION_FIELD_LABELS = Object.freeze({
-  platform_name: 'Nome completo',
-  birth_date: 'Data de nascimento',
-  phone: 'Telefone',
-  pickleball_experience: 'Tempo de experiência',
-  gender: 'Gênero',
-  city: 'Cidade',
-  state: 'UF',
-  court_side: 'Lado da quadra',
-  interests: 'Interesses',
-  competition_gender: 'Categoria em que joga',
-  level: 'Nível',
+  platform_name: tk('Nome completo'),
+  birth_date: tk('Data de nascimento'),
+  phone: tk('Telefone'),
+  pickleball_experience: tk('Tempo de experiência'),
+  gender: tk('Gênero'),
+  city: tk('Cidade'),
+  state: tk('UF'),
+  court_side: tk('Lado da quadra'),
+  interests: tk('Interesses'),
+  competition_gender: tk('Categoria em que joga'),
+  level: tk('Nível'),
 });
 
 /**

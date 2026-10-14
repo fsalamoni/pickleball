@@ -6,13 +6,14 @@ import { registerPwa } from '@core/pwa/registerPwa';
 import { firebaseReady, firebaseServicesEnabled, firebaseDisabledReason } from '@/core/config/firebase';
 import { iniciarIdiomas } from '@/core/i18n/loader';
 import './index.css';
+import { t } from '@/core/i18n';
 
 function BootFallback() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-paper">
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-ink border-t-transparent" />
-        <p className="text-sm text-gray-500">Inicializando…</p>
+        <p className="text-sm text-gray-500" data-boot-inicializando>{t('Inicializando…')}</p>
       </div>
     </div>
   );
@@ -33,17 +34,16 @@ function BootFailed() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-paper p-6">
       <div className="max-w-md rounded-3xl border border-gray-200 bg-white p-6 text-center">
-        <h1 className="font-display text-lg font-bold text-ink">Não conseguimos abrir o PickleRush</h1>
+        <h1 className="font-display text-lg font-bold text-ink">{t('Não conseguimos abrir o PickleRush')}</h1>
         <p className="mt-2 text-sm text-gray-500">
-          Verifique a conexão e tente de novo. Se continuar, abra no Chrome ou Safari
-          (e não pelo navegador de dentro de outro aplicativo) e atualize o navegador.
+          {t('Verifique a conexão e tente de novo. Se continuar, abra no Chrome ou Safari (e não pelo navegador de dentro de outro aplicativo) e atualize o navegador.')}
         </p>
         <button
           type="button"
           onClick={recarregar}
           className="mt-4 rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white"
         >
-          Tentar de novo
+          {t('Tentar de novo')}
         </button>
       </div>
     </div>
@@ -59,7 +59,7 @@ function FirebaseUnavailable({ reason }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-paper p-6">
       <div className="max-w-md rounded-3xl border border-red-200 bg-red-50 p-6 text-center">
-        <h1 className="font-display text-lg font-bold text-red-700">Firebase indisponível</h1>
+        <h1 className="font-display text-lg font-bold text-red-700">{t('Firebase indisponível')}</h1>
         <p className="mt-2 text-sm text-red-600">
           {reason || 'Não foi possível resolver a configuração do Firebase (env vars nem /__/firebase/init.json).'}
         </p>
@@ -102,7 +102,7 @@ setTimeout(() => {
 }, 500);
 setTimeout(() => {
   const root = document.getElementById('root');
-  if (root && root.querySelector('.animate-spin') && root.textContent.includes('Inicializando')) {
+  if (root && root.querySelector('.animate-spin') && root.querySelector('[data-boot-inicializando]')) {
     root.replaceChildren();
     renderBootFailed();
   }

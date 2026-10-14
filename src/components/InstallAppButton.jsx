@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { usePwaInstall } from '@core/pwa/usePwaInstall';
+import { t } from '@/core/i18n';
 
 /**
  * Botão "Baixar o app" (PWA). Renderiza sempre que o PWA está habilitado por
@@ -22,7 +23,7 @@ export default function InstallAppButton({
   className,
   variant = 'default',
   size = 'default',
-  label = 'Baixar o app',
+  label = t('Baixar o app'),
 }) {
   const { available, canPrompt, isIOS, promptInstall } = usePwaInstall();
   const [showIOS, setShowIOS] = useState(false);
@@ -56,28 +57,28 @@ export default function InstallAppButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-green-600" />
-              Instalar no iPhone / iPad
+              {t('Instalar no iPhone / iPad')}
             </DialogTitle>
             <DialogDescription>
-              No iOS, o app é instalado direto pelo Safari, sem App Store. Siga os passos:
+              {t('No iOS, o app é instalado direto pelo Safari, sem App Store. Siga os passos:')}
             </DialogDescription>
           </DialogHeader>
           <ol className="mt-2 space-y-3 text-sm text-gray-600">
             <li className="flex items-start gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">1</span>
               <span className="flex items-center gap-1">
-                Toque no botão <Share className="inline h-4 w-4" /> <strong>Compartilhar</strong> na barra do Safari.
+                {t('Toque no botão')} <Share className="inline h-4 w-4" /> <strong>{t('Compartilhar')}</strong> {t('na barra do Safari.')}
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">2</span>
               <span className="flex items-center gap-1">
-                Escolha <Plus className="inline h-4 w-4" /> <strong>Adicionar à Tela de Início</strong>.
+                {t('Escolha')} <Plus className="inline h-4 w-4" /> <strong>{t('Adicionar à Tela de Início')}</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">3</span>
-              <span>Confirme em <strong>Adicionar</strong>. O ícone do Pickleball aparece na tela inicial.</span>
+              <span>{t('Confirme em')} <strong>{t('Adicionar')}</strong>. {t('O ícone do Pickleball aparece na tela inicial.')}</span>
             </li>
           </ol>
         </DialogContent>
@@ -88,10 +89,10 @@ export default function InstallAppButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MonitorDown className="h-5 w-5 text-green-600" />
-              Instalar o app
+              {t('Instalar o app')}
             </DialogTitle>
             <DialogDescription>
-              Você pode instalar o Pickleball direto do navegador, sem loja de apps:
+              {t('Você pode instalar o Pickleball direto do navegador, sem loja de apps:')}
             </DialogDescription>
           </DialogHeader>
           <ul className="mt-2 space-y-3 text-sm text-gray-600">
@@ -100,8 +101,8 @@ export default function InstallAppButton({
                 <MonitorDown className="h-3.5 w-3.5" />
               </span>
               <span>
-                <strong>No computador (Chrome/Edge):</strong> clique no ícone de instalar na barra de endereço, ou no menu
-                <MoreVertical className="mx-1 inline h-4 w-4" /> e em <strong>“Instalar app”</strong>.
+                <strong>{t('No computador (Chrome/Edge):')}</strong> {t('clique no ícone de instalar na barra de endereço, ou no menu')}
+                <MoreVertical className="mx-1 inline h-4 w-4" /> {t('e em')} <strong>“{t('Instalar app')}”</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -109,9 +110,9 @@ export default function InstallAppButton({
                 <Smartphone className="h-3.5 w-3.5" />
               </span>
               <span>
-                <strong>No Android:</strong> abra o menu
-                <MoreVertical className="mx-1 inline h-4 w-4" /> do navegador e toque em
-                <strong> “Instalar app”</strong> ou <strong>“Adicionar à tela inicial”</strong>.
+                <strong>{t('No Android:')}</strong> {t('abra o menu')}
+                <MoreVertical className="mx-1 inline h-4 w-4" /> {t('do navegador e toque em')}
+                <strong> “{t('Instalar app')}”</strong> {t('ou')} <strong>“{t('Adicionar à tela inicial')}”</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -119,8 +120,8 @@ export default function InstallAppButton({
                 <Share className="h-3.5 w-3.5" />
               </span>
               <span>
-                <strong>No iPhone/iPad:</strong> use o Safari, toque em <strong>Compartilhar</strong> e em
-                <strong> “Adicionar à Tela de Início”</strong>.
+                <strong>{t('No iPhone/iPad:')}</strong> {t('use o Safari, toque em')} <strong>{t('Compartilhar')}</strong> {t('e em')}
+                <strong> “{t('Adicionar à Tela de Início')}”</strong>.
               </span>
             </li>
           </ul>

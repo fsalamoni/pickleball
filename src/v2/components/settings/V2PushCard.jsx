@@ -7,6 +7,7 @@ import {
 } from '@/core/services/pushService';
 import { V2Button } from '@/v2/ui/primitives';
 import SettingsSection from './SettingsSection';
+import { t } from '@/core/i18n';
 
 /**
  * Card de opt-in de notificações push (flag push_notifications).
@@ -26,16 +27,16 @@ export default function V2PushCard() {
     setBusy(false);
     if (res.ok) {
       setState('granted');
-      toast.success('Notificações push ativadas neste aparelho.');
+      toast.success(t('Notificações push ativadas neste aparelho.'));
     } else if (res.reason === 'denied') {
       setState('denied');
-      toast.error('Permissão negada pelo navegador.');
+      toast.error(t('Permissão negada pelo navegador.'));
     } else if (res.reason === 'unsupported') {
-      toast.error('Seu navegador não suporta notificações push.');
+      toast.error(t('Seu navegador não suporta notificações push.'));
     } else if (res.reason === 'unconfigured') {
-      toast.error('O push ainda não foi configurado na plataforma.');
+      toast.error(t('O push ainda não foi configurado na plataforma.'));
     } else {
-      toast.error('Não foi possível ativar as notificações push.');
+      toast.error(t('Não foi possível ativar as notificações push.'));
     }
   }
 
@@ -44,42 +45,39 @@ export default function V2PushCard() {
     await disablePush(user);
     setBusy(false);
     setState(getPermissionState());
-    toast.success('Notificações push desativadas neste aparelho.');
+    toast.success(t('Notificações push desativadas neste aparelho.'));
   }
 
-  const resumo = !configured ? 'Em configuração na plataforma'
-    : state === 'unsupported' ? 'Sem suporte neste navegador'
-      : state === 'denied' ? 'Bloqueadas no navegador'
-        : granted ? 'Ativas neste aparelho' : 'Desativadas neste aparelho';
+  const resumo = !configured ? t('Em configuração na plataforma')
+    : state === 'unsupported' ? t('Sem suporte neste navegador')
+      : state === 'denied' ? t('Bloqueadas no navegador')
+        : granted ? t('Ativas neste aparelho') : t('Desativadas neste aparelho');
 
   return (
-    <SettingsSection id="notificacoes-push" dica="config-push" icon={BellRing} title="Notificações push" summary={resumo}>
+    <SettingsSection id="notificacoes-push" dica="config-push" icon={BellRing} title={t('Notificações push')} summary={resumo}>
       <p className="text-sm text-gray-500">
-        Receba avisos no seu aparelho, mesmo com o app fechado: jogo chegando, novidades do
-        torneio, convites de dupla e mensagens.
+        {t('Receba avisos no seu aparelho, mesmo com o app fechado: jogo chegando, novidades do torneio, convites de dupla e mensagens.')}
       </p>
 
       {!configured ? (
         <p className="mt-3 rounded-2xl bg-paper px-3 py-2 text-xs text-gray-500">
-          Recurso em configuração. Assim que o push for habilitado na plataforma, a opção de
-          ativar aparece aqui.
+          {t('Recurso em configuração. Assim que o push for habilitado na plataforma, a opção de ativar aparece aqui.')}
         </p>
       ) : state === 'unsupported' ? (
-        <p className="mt-3 text-xs text-gray-500">Seu navegador não suporta notificações push.</p>
+        <p className="mt-3 text-xs text-gray-500">{t('Seu navegador não suporta notificações push.')}</p>
       ) : state === 'denied' ? (
         <p className="mt-3 text-xs text-gray-500">
-          As notificações estão bloqueadas nas permissões do navegador para este site. Libere-as
-          nas configurações do navegador e tente novamente.
+          {t('As notificações estão bloqueadas nas permissões do navegador para este site. Libere-as nas configurações do navegador e tente novamente.')}
         </p>
       ) : (
         <div className="mt-3">
           {granted ? (
             <V2Button variant="secondary" size="sm" onClick={handleDisable} disabled={busy}>
-              {busy ? 'Desativando…' : 'Desativar push neste aparelho'}
+              {busy ? t('Desativando…') : t('Desativar push neste aparelho')}
             </V2Button>
           ) : (
             <V2Button size="sm" onClick={handleEnable} disabled={busy}>
-              <BellRing className="h-4 w-4" /> {busy ? 'Ativando…' : 'Ativar notificações push'}
+              <BellRing className="h-4 w-4" /> {busy ? t('Ativando…') : t('Ativar notificações push')}
             </V2Button>
           )}
         </div>

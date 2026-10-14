@@ -1,3 +1,4 @@
+import { t } from '../../../core/i18n/index.js';
 /**
  * Lógica pura de compartilhamento (sem I/O nem DOM).
  *

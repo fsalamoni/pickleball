@@ -15,6 +15,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 import { isOwnerEmail } from '@/core/config/owners';
+import { t, fmtData } from '@/core/i18n';
 
 const AuthContext = createContext(null);
 
@@ -25,50 +26,53 @@ const isPlatformOwnerEmail = isOwnerEmail;
 /** O que a pessoa suspensa/bloqueada lê ao ser deslogada. */
 function mensagemDeContaFechada(perfil) {
   const ate = Number(perfil?.status_until);
-  const prazo = perfil?.account_status === 'suspended' && ate
-    ? ` até ${new Date(ate).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : '';
-  const motivo = perfil?.status_reason ? ` Motivo: ${perfil.status_reason}.` : '';
-  return `${perfil?.account_status === 'blocked' ? 'Esta conta foi bloqueada' : `Esta conta está suspensa${prazo}`}.${motivo} Fale com o suporte se achar que é um engano.`;
+  const fechada = perfil?.account_status === 'blocked'
+    ? t('Esta conta foi bloqueada.')
+    : perfil?.account_status === 'suspended' && ate
+      ? t('Esta conta está suspensa até {data}.', { data: fmtData(new Date(ate), { timeZone: 'America/Sao_Paulo' }) })
+      : t('Esta conta está suspensa.');
+  const motivo = perfil?.status_reason ? ` ${t('Motivo: {motivo}.', { motivo: perfil.status_reason })}` : '';
+  return `${fechada}${motivo} ${t('Fale com o suporte se achar que é um engano.')}`;
 }
 
-function mapAuthError(error, fallback = 'Não foi possível entrar. Tente novamente.') {
+function mapAuthError(error, fallback = t('Não foi possível entrar. Tente novamente.')) {
   switch (error?.code) {
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
-      return 'Login cancelado. Tente novamente.';
+      return t('Login cancelado. Tente novamente.');
     case 'auth/popup-blocked':
-      return 'Pop-up bloqueado pelo navegador. Libere os pop-ups e tente de novo.';
+      return t('Pop-up bloqueado pelo navegador. Libere os pop-ups e tente de novo.');
     case 'auth/network-request-failed':
-      return 'Erro de conexão. Verifique sua internet.';
+      return t('Erro de conexão. Verifique sua internet.');
     case 'auth/operation-not-supported-in-this-environment':
-      return 'Seu navegador não suporta este login. Tente abrir em outro navegador.';
+      return t('Seu navegador não suporta este login. Tente abrir em outro navegador.');
     case 'auth/web-storage-unsupported':
-      return 'Seu navegador bloqueou o armazenamento necessário para entrar.';
+      return t('Seu navegador bloqueou o armazenamento necessário para entrar.');
     case 'auth/unauthorized-domain':
-      return 'Domínio não autorizado para login.';
+      return t('Domínio não autorizado para login.');
     case 'auth/invalid-email':
-      return 'E-mail inválido.';
+      return t('E-mail inválido.');
     case 'auth/user-disabled':
-      return 'Esta conta está suspensa ou bloqueada. Fale com o suporte para saber o motivo.';
+      return t('Esta conta está suspensa ou bloqueada. Fale com o suporte para saber o motivo.');
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
     case 'auth/invalid-login-credentials':
-      return 'E-mail ou senha incorretos.';
+      return t('E-mail ou senha incorretos.');
     case 'auth/missing-password':
-      return 'Informe a senha.';
+      return t('Informe a senha.');
     case 'auth/email-already-in-use':
-      return 'Já existe uma conta com este e-mail. Faça login em vez de criar uma nova.';
+      return t('Já existe uma conta com este e-mail. Faça login em vez de criar uma nova.');
     case 'auth/weak-password':
-      return 'A senha precisa ter ao menos 6 caracteres.';
+      return t('A senha precisa ter ao menos 6 caracteres.');
     case 'auth/too-many-requests':
-      return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+      return t('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
     case 'auth/account-exists-with-different-credential':
-      return 'Este e-mail já está vinculado a outro método de login. Entre pelo método usado originalmente.';
+      return t('Este e-mail já está vinculado a outro método de login. Entre pelo método usado originalmente.');
     case 'auth/operation-not-allowed':
-      return 'Este método de login não está habilitado. Contate o organizador.';
+      return t('Este método de login não está habilitado. Contate o organizador.');
     case 'auth/configuration-missing':
-      return firebaseDisabledReason || 'Login indisponível neste ambiente.';
+      return firebaseDisabledReason || t('Login indisponível neste ambiente.');
     default:
       return fallback;
   }
@@ -228,7 +232,7 @@ export const AuthProvider = ({ children }) => {
     if (!auth || (provider && !provider.ok)) {
       const error = {
         type: 'signin_error',
-        message: firebaseDisabledReason || 'Login indisponível neste ambiente.',
+        message: firebaseDisabledReason || t('Login indisponível neste ambiente.'),
         code: 'auth/configuration-missing',
       };
       setAuthError(error);

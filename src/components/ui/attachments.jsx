@@ -13,6 +13,7 @@ import {
   formatBytes,
   ACCEPTED_FILE_ATTR,
 } from '@/core/services/storageService';
+import { t } from '@/core/i18n';
 
 /**
  * Primitivas reutilizáveis para anexos (imagens e documentos) em chat e fóruns.
@@ -40,7 +41,7 @@ export function useAttachmentUploader({ folder = 'attachments', max = DEFAULT_MA
       if (files.length === 0) return;
       const remaining = max - itemsRef.current.length;
       if (remaining <= 0) {
-        toast.error(`Máximo de ${max} anexos.`);
+        toast.error(t('Máximo de {max} anexos.', { max }));
         return;
       }
       setUploading(true);
@@ -50,7 +51,7 @@ export function useAttachmentUploader({ folder = 'attachments', max = DEFAULT_MA
             const meta = await uploadAttachment(file, { uid: user?.uid, folder });
             setItems((prev) => [...prev, meta]);
           } catch (err) {
-            toast.error(err.message || `Falha ao enviar ${file.name}.`);
+            toast.error(err.message || t('Falha ao enviar {arquivo}.', { arquivo: file.name }));
           }
         }
       } finally {
@@ -76,7 +77,7 @@ export function AttachmentAddButton({
   disabled = false,
   multiple = true,
   accept = ACCEPTED_FILE_ATTR,
-  label = 'Anexar',
+  label = t('Anexar'),
   variant = 'outline',
   size = 'sm',
   iconOnly = false,
@@ -111,7 +112,7 @@ export function AttachmentAddButton({
         ) : (
           <Paperclip className={cn('h-4 w-4', !iconOnly && 'mr-1.5')} />
         )}
-        {!iconOnly && (uploading ? 'Enviando…' : label)}
+        {!iconOnly && (uploading ? t('Enviando…') : label)}
       </Button>
     </>
   );
@@ -129,7 +130,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
           {item.kind === 'image' ? (
             <PhotoLightbox
               src={item.url}
-              alt={item.name || 'Imagem'}
+              alt={item.name || t('Imagem')}
               trigger={<img src={item.url} alt="" loading="lazy" decoding="async" className="h-16 w-16 cursor-zoom-in object-cover" />}
             />
           ) : (
@@ -144,7 +145,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
           <button
             type="button"
             onClick={() => onRemove?.(item.path)}
-            aria-label="Remover anexo"
+            aria-label={t('Remover anexo')}
             className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
           >
             <X className="h-3 w-3" />
@@ -170,13 +171,13 @@ export function AttachmentGallery({ attachments = [], className }) {
               <PhotoLightbox
                 src={image.url}
                 alt={image.name || ''}
-                title={image.name || 'Imagem'}
+                title={image.name || t('Imagem')}
                 trigger={<img src={image.url} alt={image.name || ''} loading="lazy" className="h-32 w-full cursor-zoom-in object-cover transition-transform group-hover:scale-[1.02]" />}
               />
               <button
                 type="button"
                 onClick={() => downloadAttachment(image.url, image.name)}
-                aria-label="Baixar imagem"
+                aria-label={t('Baixar imagem')}
                 className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -196,7 +197,7 @@ export function AttachmentGallery({ attachments = [], className }) {
             >
               <FileText className="h-5 w-5 shrink-0 text-ink" />
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-ink">{file.name || 'Arquivo'}</span>
+                <span className="block truncate text-sm font-medium text-ink">{file.name || t('Arquivo')}</span>
                 {file.size ? <span className="block text-[11px] text-gray-500">{formatBytes(file.size)}</span> : null}
               </span>
               <Download className="ml-1 h-4 w-4 shrink-0 text-gray-400" />

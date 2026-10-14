@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 export function PhotoLightbox({
   src,
@@ -61,7 +62,7 @@ export function ZoomableImage({
       title={title}
       description={description}
       trigger={(
-        <button type="button" className={cn('block w-full cursor-zoom-in text-left', className)} aria-label="Ampliar imagem">
+        <button type="button" className={cn('block w-full cursor-zoom-in text-left', className)} aria-label={t('Ampliar imagem')}>
           <img src={src} alt={alt} className={cn('w-full object-cover', imgClassName)} />
         </button>
       )}

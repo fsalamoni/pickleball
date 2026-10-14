@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { MarkdownContent } from '@/components/ui/markdown-content';
+import { t } from '@/core/i18n';
 
 /**
  * Editor de texto rico baseado em Markdown com barra de ferramentas e
@@ -43,7 +44,7 @@ function ToolbarButton({ title, onClick, children, disabled }) {
 export function MarkdownEditor({
   value,
   onChange,
-  placeholder = 'Escreva aqui. Use a barra para formatar (negrito, títulos, tabelas…).',
+  placeholder = t('Escreva aqui. Use a barra para formatar (negrito, títulos, tabelas…).'),
   rows = 5,
   maxLength = 20000,
   disabled = false,
@@ -114,33 +115,33 @@ export function MarkdownEditor({
   return (
     <div className={cn('rounded-lg border border-input bg-background', disabled && 'opacity-70', className)}>
       <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-1.5 py-1">
-        <ToolbarButton title="Negrito" onClick={() => applyWrap('**', '**', 'negrito')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Negrito')} onClick={() => applyWrap('**', '**', 'negrito')} disabled={disabled || mode === 'preview'}>
           <Bold className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Itálico" onClick={() => applyWrap('_', '_', 'itálico')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Itálico')} onClick={() => applyWrap('_', '_', 'itálico')} disabled={disabled || mode === 'preview'}>
           <Italic className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Título" onClick={() => applyLinePrefix('## ')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Título')} onClick={() => applyLinePrefix('## ')} disabled={disabled || mode === 'preview'}>
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
         <span className="mx-0.5 h-5 w-px bg-ink/10" />
-        <ToolbarButton title="Lista" onClick={() => applyLinePrefix('- ')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Lista')} onClick={() => applyLinePrefix('- ')} disabled={disabled || mode === 'preview'}>
           <List className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Lista numerada" onClick={() => applyLinePrefix('1. ')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Lista numerada')} onClick={() => applyLinePrefix('1. ')} disabled={disabled || mode === 'preview'}>
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Citação" onClick={() => applyLinePrefix('> ')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Citação')} onClick={() => applyLinePrefix('> ')} disabled={disabled || mode === 'preview'}>
           <Quote className="h-4 w-4" />
         </ToolbarButton>
         <span className="mx-0.5 h-5 w-px bg-ink/10" />
-        <ToolbarButton title="Link" onClick={insertLink} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Link')} onClick={insertLink} disabled={disabled || mode === 'preview'}>
           <Link2 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Código" onClick={() => applyWrap('`', '`', 'código')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Código')} onClick={() => applyWrap('`', '`', 'código')} disabled={disabled || mode === 'preview'}>
           <Code2 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title="Tabela" onClick={() => insertText(TABLE_SNIPPET)} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Tabela')} onClick={() => insertText(TABLE_SNIPPET)} disabled={disabled || mode === 'preview'}>
           <TableIcon className="h-4 w-4" />
         </ToolbarButton>
         <div className="ml-auto">
@@ -149,7 +150,7 @@ export function MarkdownEditor({
             onClick={() => setMode((m) => (m === 'write' ? 'preview' : 'write'))}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-acid/15 hover:text-ink"
           >
-            {mode === 'write' ? <><Eye className="h-3.5 w-3.5" /> Prévia</> : <><Pencil className="h-3.5 w-3.5" /> Editar</>}
+            {mode === 'write' ? <><Eye className="h-3.5 w-3.5" /> {t('Prévia')}</> : <><Pencil className="h-3.5 w-3.5" /> {t('Editar')}</>}
           </button>
         </div>
       </div>
@@ -170,7 +171,7 @@ export function MarkdownEditor({
           {value.trim() ? (
             <MarkdownContent>{value}</MarkdownContent>
           ) : (
-            <p className="text-sm text-gray-400">Nada para pré-visualizar ainda.</p>
+            <p className="text-sm text-gray-400">{t('Nada para pré-visualizar ainda.')}</p>
           )}
         </div>
       )}

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { LEVEL_TABLE } from '@/modules/leveling/data/levels';
 import { V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 function InfoList({ title, dotTone, items, marker = '•' }) {
   return (
@@ -14,7 +15,7 @@ function InfoList({ title, dotTone, items, marker = '•' }) {
         {items.map((item) => (
           <li key={item} className="flex items-start gap-2 text-sm leading-6 text-gray-600">
             <span className="mt-0.5 shrink-0 font-bold text-gray-400">{marker}</span>
-            <span>{item}</span>
+            <span>{t(item)}</span>
           </li>
         ))}
       </ul>
@@ -28,19 +29,19 @@ export default function V2LevelTable() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="font-display text-2xl font-bold text-ink sm:text-3xl">Tabela de Níveis de Pickleball</h2>
+        <h2 className="font-display text-2xl font-bold text-ink sm:text-3xl">{t('Tabela de Níveis de Pickleball')}</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-500">
-          Sistema USAP adaptado para a realidade brasileira, definido por comportamentos observáveis em partidas reais.
+          {t('Sistema USAP adaptado para a realidade brasileira, definido por comportamentos observáveis em partidas reais.')}
         </p>
       </div>
 
       <div
         className="flex h-3 overflow-hidden rounded-full bg-paper"
         role="img"
-        aria-label={`Progressão dos níveis`}
+        aria-label={t('Progressão dos níveis')}
       >
         {LEVEL_TABLE.map((level) => (
-          <div key={level.id} className={cn('flex-1', level.id === 'iniciante' ? 'bg-ink/10' : level.id === 'novato' ? 'bg-ink/20' : level.id === 'intermediario' ? 'bg-acid/60' : level.id === 'avancado' ? 'bg-acid/80' : 'bg-acid')} title={`${level.name} — USAP ${level.usap}`} />
+          <div key={level.id} className={cn('flex-1', level.id === 'iniciante' ? 'bg-ink/10' : level.id === 'novato' ? 'bg-ink/20' : level.id === 'intermediario' ? 'bg-acid/60' : level.id === 'avancado' ? 'bg-acid/80' : 'bg-acid')} title={`${t(level.name)} — USAP ${level.usap}`} />
         ))}
       </div>
 
@@ -59,13 +60,13 @@ export default function V2LevelTable() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <span className="font-display text-xl font-bold text-ink sm:text-2xl">{level.name}</span>
+                    <span className="font-display text-xl font-bold text-ink sm:text-2xl">{t(level.name)}</span>
                     <span className="rounded-full bg-paper px-3 py-0.5 text-xs font-bold text-gray-500">USAP {level.usap}</span>
                   </div>
-                  <p className="text-sm text-gray-500">{level.tagline}</p>
+                  <p className="text-sm text-gray-500">{t(level.tagline)}</p>
                 </div>
                 <div className="hidden text-right md:block">
-                  <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Score normalizado</p>
+                  <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Score normalizado')}</p>
                   <p className="mt-1 font-display text-xl font-bold text-ink">{level.normalizedRange}</p>
                 </div>
                 <div className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
@@ -76,20 +77,20 @@ export default function V2LevelTable() {
               {isOpen && (
                 <div className="border-t border-gray-100 p-5 sm:p-6">
                   <p className="rounded-3xl border border-gray-100 bg-paper p-5 text-sm leading-relaxed text-gray-600">
-                    {level.description}
+                    {t(level.description)}
                   </p>
                   <div className="mt-6 grid gap-8 md:grid-cols-3">
-                    <InfoList title="Características" dotTone="bg-ink" items={level.characteristics} />
+                    <InfoList title={t('Características')} dotTone="bg-ink" items={level.characteristics} />
                     <div className="space-y-6">
-                      <InfoList title="Pontos Fortes" dotTone="bg-green-500" items={level.strengths} marker="✓" />
-                      <InfoList title="Pontos a Melhorar" dotTone="bg-red-400" items={level.weaknesses} marker="✗" />
+                      <InfoList title={t('Pontos Fortes')} dotTone="bg-green-500" items={level.strengths} marker="✓" />
+                      <InfoList title={t('Pontos a Melhorar')} dotTone="bg-red-400" items={level.weaknesses} marker="✗" />
                     </div>
                     <div>
                       <h4 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-ink">
-                        <span className="h-2 w-2 rounded-full bg-acid" /> Próximo Passo
+                        <span className="h-2 w-2 rounded-full bg-acid" /> {t('Próximo Passo')}
                       </h4>
                       <div className="rounded-2xl border border-acid/30 bg-acid/10 p-4 text-sm leading-relaxed text-ink">
-                        {level.nextStep}
+                        {t(level.nextStep)}
                       </div>
                     </div>
                   </div>

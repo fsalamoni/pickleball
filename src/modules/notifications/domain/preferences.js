@@ -9,6 +9,7 @@
  * `core/services/notificationService.js`; ficam replicados aqui como strings
  * para manter este módulo puro (sem importar o serviço, que carrega o Firebase).
  */
+import { t, tk } from '@/core/i18n';
 
 import { t, tk } from '@/core/i18n';
 

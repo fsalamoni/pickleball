@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { t } from '@/core/i18n';
 
 /**
  * Hook utilitário: copia um texto para o clipboard e mantém estado
@@ -35,7 +36,7 @@ export function useClipboard(resetDelay = 2000) {
    *   vale dizer o código na mensagem: é o que a pessoa vai anotar.
    */
   const copy = useCallback(
-    async (value, successMessage = 'Copiado!', errorMessage = 'Não foi possível copiar. Tente manualmente.') => {
+    async (value, successMessage = t('Copiado!'), errorMessage = t('Não foi possível copiar. Tente manualmente.')) => {
       if (!value) return false;
       const texto = String(value);
       let ok = false;

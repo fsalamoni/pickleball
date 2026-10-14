@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Slot } from '@radix-ui/react-slot';
 import { AlertTriangle, ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
+import { t, tk } from '@/core/i18n';
 
 /**
  * Primitivos de UI do design system v2 "Athleisure Premium".
@@ -161,7 +162,7 @@ export function V2BackLink({ to, className, children, ...props }) {
 }
 
 /** Cabeçalho de página: o "voltar" (opcional) em cima do título e das ações. */
-export function V2PageHeader({ voltarPara, voltarLabel = 'Voltar', className, ...intro }) {
+export function V2PageHeader({ voltarPara, voltarLabel = t('Voltar'), className, ...intro }) {
   return (
     <div className={className}>
       {voltarPara && <V2BackLink to={voltarPara} className="mb-3">{voltarLabel}</V2BackLink>}
@@ -373,13 +374,13 @@ export function V2EmptyState({ icon: Icon, title, description, action, className
 /** Texto próprio por tipo de falha (Fase 4.1): rede × servidor. */
 const ERRO_POR_TIPO = {
   rede: {
-    title: 'Sem conexão',
-    description: 'Não deu para falar com o servidor. Confira a sua internet e tente de novo.',
+    title: tk('Sem conexão'),
+    description: tk('Não deu para falar com o servidor. Confira a sua internet e tente de novo.'),
     Icone: WifiOff,
   },
   servidor: {
-    title: 'Algo deu errado do nosso lado',
-    description: 'A falha não é da sua conexão. Tente de novo em instantes; se continuar, avise a gente.',
+    title: tk('Algo deu errado do nosso lado'),
+    description: tk('A falha não é da sua conexão. Tente de novo em instantes; se continuar, avise a gente.'),
     Icone: AlertTriangle,
   },
 };
@@ -396,14 +397,14 @@ export function V2ErrorState({
   description: descriptionProp,
   detail,
   onRetry,
-  retryLabel = 'Tentar de novo',
+  retryLabel = t('Tentar de novo'),
   inline = false,
   className,
 }) {
   const porTipo = ERRO_POR_TIPO[tipo];
-  const title = titleProp ?? porTipo?.title ?? 'Não foi possível carregar';
-  const description = descriptionProp ?? porTipo?.description
-    ?? 'A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.';
+  const title = titleProp ?? (porTipo ? t(porTipo.title) : t('Não foi possível carregar'));
+  const description = descriptionProp ?? (porTipo ? t(porTipo.description)
+    : t('A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.'));
   const Icone = porTipo?.Icone ?? WifiOff;
   const botao = onRetry ? (
     <V2Button variant={inline ? 'ghost' : 'primary'} size="sm" onClick={onRetry}>

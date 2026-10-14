@@ -23,6 +23,7 @@
  * Nada aqui toca o banco.
  */
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import { tk } from '@/core/i18n';
 
 /** As três aparências. Os valores são contrato de armazenamento. */
 export const TEMA = Object.freeze({
@@ -68,18 +69,18 @@ export const MIDIA_SISTEMA_ESCURO = '(prefers-color-scheme: dark)';
 export const OPCOES_DE_TEMA = Object.freeze([
   Object.freeze({
     valor: TEMA.CLARO,
-    rotulo: 'Claro',
-    descricao: 'O visual de sempre, com fundo claro.',
+    rotulo: tk('Claro'),
+    descricao: tk('O visual de sempre, com fundo claro.'),
   }),
   Object.freeze({
     valor: TEMA.ESCURO,
-    rotulo: 'Escuro',
-    descricao: 'Fundo escuro, mais confortável à noite e com pouca luz.',
+    rotulo: tk('Escuro'),
+    descricao: tk('Fundo escuro, mais confortável à noite e com pouca luz.'),
   }),
   Object.freeze({
     valor: TEMA.AUTOMATICO,
-    rotulo: 'Automático',
-    descricao: 'Acompanha o aparelho: claro de dia, escuro quando ele escurecer.',
+    rotulo: tk('Automático'),
+    descricao: tk('Acompanha o aparelho: claro de dia, escuro quando ele escurecer.'),
   }),
 ]);
 

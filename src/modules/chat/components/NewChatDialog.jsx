@@ -165,7 +165,7 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">{athlete.platform_name}</span>
                       <span className="block truncate text-xs text-gray-500">
-                        {[athlete.city, athlete.level].filter(Boolean).join(' · ') || 'Atleta'}
+                        {[athlete.city, athlete.level].filter(Boolean).join(' · ') || t('Atleta')}
                       </span>
                     </span>
                     <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${isChecked ? 'border-ink bg-ink text-white' : 'border-gray-200'}`}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@/core/lib/logger';
+import { t } from '@/core/i18n';
 
 /**
  * GamificationErrorBoundary — captura erros em componentes V2 de gamificação.
@@ -41,10 +42,10 @@ export default class GamificationErrorBoundary extends React.Component {
             </div>
             <div className="flex-1">
               <h2 className="font-display text-lg font-bold text-red-900">
-                Ops, algo deu errado
+                {t('Ops, algo deu errado')}
               </h2>
               <p className="mt-1 text-sm text-red-700">
-                A seção de gamificação encontrou um erro inesperado. O resto da plataforma continua funcionando.
+                {t('A seção de gamificação encontrou um erro inesperado. O resto da plataforma continua funcionando.')}
               </p>
               {/* Detalhe técnico só em desenvolvimento — em produção a
                   mensagem crua do erro não ajuda o atleta e pode vazar
@@ -60,7 +61,7 @@ export default class GamificationErrorBoundary extends React.Component {
                 className="mt-3 inline-flex items-center gap-1 rounded-2xl bg-red-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-red-700"
                 data-testid="gamification-retry-btn"
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Tentar de novo
+                <RefreshCw className="h-3.5 w-3.5" /> {t('Tentar de novo')}
               </button>
             </div>
           </div>

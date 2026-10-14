@@ -7,6 +7,7 @@
 
 import { t } from '@/core/i18n';
 import { toMillis } from '@/modules/tournament/domain/participation';
+import { t } from '@/core/i18n';
 
 export const FEED_ITEM_TYPE = Object.freeze({ TOURNAMENT: 'tournament', OPEN_GAME: 'open_game' });
 
