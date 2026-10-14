@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  sellerKeyFor, parseSellerKey, slugify, sellingIdentities, isValidCnpj, maskCnpj, validatePixKey, validatePayment, validateStoreApplication,
+  sellerKeyFor, parseSellerKey, slugify, sellingIdentities, isValidCnpj, maskCnpj, validatePixKey, validatePayment, validateStoreApplication, sellerReviewNotice,
 } from './seller.js';
 
 describe('vendedor', () => {
@@ -43,5 +43,27 @@ describe('vendedor', () => {
     expect(r.private.cnpj).toBe('11222333000181');
     const bad = validateStoreApplication({ return_days: 3 });
     expect(Object.keys(bad.errors)).toEqual(expect.arrayContaining(['display_name', 'cnpj', 'return_days', 'accept_terms']));
+  });
+});
+
+describe('sellerReviewNotice', () => {
+  const loja = { id: 'store_u1', seller_key: 'store_u1', seller_type: 'store', display_name: 'Loja X', status: 'pending' };
+  it('aprovação de loja em análise leva ao painel', () => {
+    const n = sellerReviewNotice(loja, { status: 'active' });
+    expect(n.title).toContain('aprovada');
+    expect(n.link).toBe('/mercado/vender?como=store_u1');
+  });
+  it('recusa leva ao cadastro e diz o motivo', () => {
+    const n = sellerReviewNotice(loja, { status: 'rejected', reason: 'CNPJ não confere' });
+    expect(n.link).toBe('/mercado/loja/abrir');
+    expect(n.message).toContain('CNPJ não confere');
+  });
+  it('reativação e suspensão', () => {
+    expect(sellerReviewNotice({ ...loja, status: 'suspended' }, { status: 'active' }).title).toContain('de novo');
+    expect(sellerReviewNotice({ ...loja, status: 'active' }, { status: 'suspended', reason: 'golpe' }).message).toContain('golpe');
+  });
+  it('tirar o selo não avisa', () => {
+    expect(sellerReviewNotice(loja, { verified: false })).toBeNull();
+    expect(sellerReviewNotice(loja, { verified: true }).link).toBe('/mercado/vendedor/store_u1');
   });
 });

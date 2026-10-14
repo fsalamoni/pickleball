@@ -98,7 +98,7 @@ function SellerPage() {
   let topo;
   if (s.isError) topo = <V2ErrorState onRetry={() => s.refetch()} />;
   else if (s.isLoading) topo = <V2Skeleton className="h-48" />;
-  else if (!seller || seller.status === 'suspended' || seller.status === 'rejected') {
+  else if (!seller || seller.status !== 'active') {
     return (
       <div className="mx-auto max-w-7xl space-y-6 pb-16">
         <MarketHeader />
@@ -134,6 +134,13 @@ function SellerPage() {
           </div>
         </div>
         {seller.bio && <p className="whitespace-pre-line border-t border-gray-100 px-5 py-4 text-sm leading-6 text-gray-700 sm:px-6">{seller.bio}</p>}
+        {seller.seller_type === 'store' && seller.policies && (
+          <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-gray-100 px-5 py-3 text-sm sm:px-6">
+            <div className="flex gap-1"><dt className="text-gray-500">Devolução:</dt><dd className="font-medium text-ink">até {seller.policies.return_days} dias</dd></div>
+            {seller.policies.ship_within_hours > 0 && <div className="flex gap-1"><dt className="text-gray-500">Despacha em:</dt><dd className="font-medium text-ink">até {seller.policies.ship_within_hours < 48 ? '24 horas' : `${Math.round(seller.policies.ship_within_hours / 24)} dias`}</dd></div>}
+            {seller.cnpj_masked && <div className="flex gap-1"><dt className="text-gray-500">CNPJ:</dt><dd className="font-medium text-ink">{seller.cnpj_masked}</dd></div>}
+          </dl>
+        )}
       </section>
     );
   }

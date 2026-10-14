@@ -12,7 +12,8 @@ const lida = (f) => f && f.ok === true && Number.isFinite(f.count);
 
 /**
  * @param {Record<string, { ok: boolean, count?: number }>} fontes
- *   revisao, denuncias, sinais, cartas, ranking (ranking: count 1 = problema na última passada), suspensoes
+ *   revisao, denuncias, sinais, cartas, ranking (ranking: count 1 = problema na última passada), suspensoes,
+ *   lojas (opcional: só com o Mercado ligado)
  * @returns {Array<{ id: string, tab: string, label: string, count: number|null, atencao: boolean, detalhe: string }>}
  */
 export function buildInbox(fontes = {}) {
@@ -23,7 +24,9 @@ export function buildInbox(fontes = {}) {
     { id: 'cartas', tab: 'gam-integrity', label: 'Cartas denunciadas', um: 'carta', varios: 'cartas' },
     { id: 'ranking', tab: 'overview', label: 'Recálculo do ranking com erro', um: 'erro', varios: 'erros' },
     { id: 'suspensoes', tab: 'records', label: 'Suspensões com prazo vencido (reativar ou bloquear)', um: 'conta', varios: 'contas' },
-  ];
+    // Só existe com o Mercado ligado: sem a fonte, a linha nem aparece.
+    { id: 'lojas', tab: 'mercado-lojas', label: 'Lojas do Mercado esperando aprovação', um: 'loja', varios: 'lojas', opcional: true },
+  ].filter((d) => !d.opcional || d.id in fontes);
   return defs.map((d) => {
     const f = fontes[d.id];
     if (!lida(f)) return { id: d.id, tab: d.tab, label: d.label, count: null, atencao: false, detalhe: 'Não deu para verificar agora' };

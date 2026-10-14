@@ -45,6 +45,7 @@ import {
   ClipboardCheck,
   BookOpenCheck,
   Bell,
+  Store,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -106,6 +107,7 @@ import { flagsQueMudam, resolveAdminTab } from '@/modules/admin/domain/consoleNa
 // Os ids das abas são contrato (links, avisos, dicas guiadas): nunca renomeie.
 const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
 const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
+const AdminMarketPanel = lazy(() => import('@/v2/components/admin/market/AdminMarketPanel'));
 
 const SECTIONS = Object.freeze([
   { id: 'today', label: 'Hoje', icon: LayoutDashboard, tabs: [
@@ -141,6 +143,10 @@ const SECTIONS = Object.freeze([
     { id: 'gam-integrity', label: 'Integridade', icon: ShieldAlert, keywords: ['sinais', 'cartas', 'moderação'] },
     { id: 'gam-metrics', label: 'Métricas', icon: BarChart3 },
   ] },
+  // O Mercado (flag `marketplace`): some da barra com a flag desligada.
+  { id: 'market', label: 'Mercado', icon: Store, flag: 'marketplace', tabs: [
+    { id: 'mercado-lojas', label: 'Lojas', icon: Store, keywords: ['marketplace', 'aprovar loja', 'cnpj', 'vendedor'] },
+  ] },
   // A voz da plataforma e dos parceiros falando com todos.
   { id: 'outreach', label: 'Divulgação', icon: Megaphone, tabs: [
     { id: 'promo', label: 'Cupons e campanhas', icon: Megaphone, keywords: ['divulgação', 'banner'] },
@@ -157,13 +163,15 @@ const SECTIONS = Object.freeze([
   ] },
 ]);
 
-const ALL_TABS = SECTIONS.flatMap((s) => s.tabs);
 
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const inbox = useAdminInbox(isPlatformAdmin);
+  const { flags } = useFeatureFlags();
+  const sections = useMemo(() => SECTIONS.filter((s) => !s.flag || flags?.[s.flag]), [flags]);
+  const ALL_TABS = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
   // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra
   // ALL_TABS; ids antigos (`profiles`, `branding`) seguem abrindo um lugar válido.
@@ -193,7 +201,7 @@ export default function V2AdminConsole() {
       />
 
       <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-6">
-      <AdminConsoleNav sections={SECTIONS} tab={tab} onTab={setTab} badges={inbox.badges} />
+      <AdminConsoleNav sections={sections} tab={tab} onTab={setTab} badges={inbox.badges} />
 
       <div className="mt-6 min-w-0 lg:mt-0">
         {tab === 'overview'   && <OverviewTab inbox={inbox} onTab={setTab} />}
@@ -216,6 +224,11 @@ export default function V2AdminConsole() {
         {tab.startsWith('treino-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminTrainingPanel tab={tab} onTab={setTab} />
+          </Suspense>
+        )}
+        {tab.startsWith('mercado-') && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminMarketPanel tab={tab} />
           </Suspense>
         )}
         {tab === 'promo' && (

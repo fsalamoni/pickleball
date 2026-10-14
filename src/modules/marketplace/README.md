@@ -44,6 +44,21 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
 7. **Coleção `market_*` nova entra na exclusão de conta E na exportação** —
    `src/core/guards/exclusaoCobreColecoes.test.js` lê o `firestore.rules`.
 8. **Avaliação cega**: aparece quando os dois lados avaliam ou em 14 dias.
+9. **Loja nasce "em análise"** (`/mercado/loja/abrir`, `applyStore`) e só o
+   admin aprova, recusa (com motivo), suspende ou dá o selo (Painel admin →
+   Mercado → Lojas, `reviewSeller`, que avisa o dono e grava auditoria).
+   Suspender PAUSA os anúncios públicos com `admin_paused: true` e a regra não
+   deixa vendedor suspenso pôr anúncio de volta no ar; reativar devolve só os
+   que a suspensão pausou.
+
+## Telas
+
+`/mercado` (vitrine), `/mercado/anuncio/:id`, `/mercado/vendedor/:key`,
+`/mercado/favoritos`, `/mercado/carrinho`, `/mercado/pedidos` (+ `:id`),
+`/mercado/vendas/:id`, `/mercado/ofertas/:id`, `/mercado/vender` (painel de
+quem vende, `?como=` e `?aba=`), `/mercado/vender/anuncio/novo|:id` (editor),
+`/mercado/loja/abrir`. Admin: seção **Mercado** do Painel admin (`mercado-*`),
+que some com a flag desligada.
 
 ## Estrutura
 

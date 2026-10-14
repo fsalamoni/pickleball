@@ -7,6 +7,9 @@ import { isPendingReview } from '@/v2/components/admin/training/adminTrainingVie
 import { buildInbox, inboxBadges, inboxTotals } from '@/modules/admin/domain/adminInbox';
 import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { expiredSuspensions } from '@/modules/admin/domain/accountStatus';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useAdminStores } from '@/modules/marketplace/hooks/useMarket';
 
 /** Uma fonte só vale quando a consulta respondeu; carregando ou falha = desconhecida. */
 const fonte = (ok, count) => (ok ? { ok: true, count } : { ok: false });
@@ -23,6 +26,8 @@ export function useAdminInbox(enabled = true) {
   const cartas = useReportedLetters(enabled);
   const ranking = useRankingWorkerStatus(enabled);
   const usuarios = useAllPlatformUsers({ enabled });
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const lojas = useAdminStores({ enabled: enabled && mercadoOn });
 
   const lista = useMemo(() => buildInbox({
     revisao: fonte(itens.isSuccess, (itens.data || []).filter(isPendingReview).length),
@@ -31,8 +36,9 @@ export function useAdminInbox(enabled = true) {
     cartas: fonte(!cartas.isLoading && !cartas.isError, cartas.letters.length),
     ranking: fonte(ranking.isSuccess, describeRankingWorker(ranking.data).erro ? 1 : 0),
     suspensoes: fonte(usuarios.isSuccess, expiredSuspensions(usuarios.data || []).length),
+    ...(mercadoOn ? { lojas: fonte(lojas.isSuccess, (lojas.data || []).filter((s) => s.status === 'pending').length) } : {}),
   }), [usuarios.isSuccess, usuarios.data, itens.isSuccess, itens.data, denuncias.isSuccess, denuncias.data, sinais.isLoading, sinais.isError, sinais.flags,
-    cartas.isLoading, cartas.isError, cartas.letters, ranking.isSuccess, ranking.data]);
+    cartas.isLoading, cartas.isError, cartas.letters, ranking.isSuccess, ranking.data, mercadoOn, lojas.isSuccess, lojas.data]);
 
   return { itens: lista, badges: inboxBadges(lista), ...inboxTotals(lista) };
 }

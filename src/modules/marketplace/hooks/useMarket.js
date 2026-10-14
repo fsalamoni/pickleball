@@ -92,6 +92,11 @@ export function useStores({ enabled = true } = {}) {
   });
 }
 
+/** Admin: todas as lojas, em qualquer estado (a fila de aprovação sai daqui). */
+export function useAdminStores({ enabled = true } = {}) {
+  return useQuery({ queryKey: [...marketKeys.admin, 'lojas'], queryFn: svc.listStores, enabled });
+}
+
 export function useSellerPrivate(key, { enabled = true } = {}) {
   return useQuery({ queryKey: marketKeys.sellerPrivate(key), queryFn: () => svc.getSellerPrivate(key), enabled: !!key && enabled });
 }
