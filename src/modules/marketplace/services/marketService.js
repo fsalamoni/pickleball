@@ -15,7 +15,7 @@ import {
   setDoc, updateDoc, where, addDoc,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
-import { MARKET_COLLECTIONS as C, MARKET_SETTINGS_DOC, PUBLIC_LISTING_STATUSES, SELLER_STATUS, SELLER_TYPE } from '../domain/constants.js';
+import { MARKET_COLLECTIONS as C, MARKET_SETTINGS_DOC, PUBLIC_LISTING_STATUSES, REPORT_REASON_LABELS, SELLER_STATUS, SELLER_TYPE } from '../domain/constants.js';
 import { validateListingInput } from '../domain/listing.js';
 import { normalizeMarketSettings, findBannedTerm, validateQuestion, validateAnswer } from '../domain/settings.js';
 import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplication } from '../domain/seller.js';
@@ -271,13 +271,73 @@ export async function deleteListing(listing) {
   await deleteDoc(doc(db, C.listings, listing.id));
 }
 
-/** Admin: tirar do ar (com motivo) ou devolver. */
-export async function moderateListing(listing, { action, reason = '' }, { uid }) {
-  const moderation = { status: action === 'remove' ? 'removed' : 'ok', reason: String(reason).trim().slice(0, 300), by: uid, at_ms: Date.now(), auto: false };
+/**
+ * Admin: tirar do ar (com motivo) ou devolver. Avisa quem vende, vai para a
+ * auditoria e encerra as denúncias abertas do anúncio (decididas aqui).
+ */
+export async function moderateListing(listing, { action, reason = '' }, { uid, actor } = {}) {
+  const by = uid || actor?.uid || null;
+  const motivo = String(reason).trim().slice(0, 300);
+  if (action === 'remove' && !motivo) throw new MarketError('Diga o motivo: quem vende vai ler.');
+  const moderation = { status: action === 'remove' ? 'removed' : 'ok', reason: motivo, by, at_ms: Date.now(), auto: false };
   const patch = { moderation, updated_at: serverTimestamp() };
   if (action === 'remove') patch.status = 'removed';
   if (action === 'restore') patch.status = 'paused';
   await updateDoc(doc(db, C.listings, listing.id), patch);
+  const extras = await Promise.allSettled([
+    resolveListingReports(listing.id, { outcome: action === 'remove' ? 'removed' : 'kept', uid: by }),
+    createAuditLog({
+      action: action === 'remove' ? 'market_listing_removed' : 'market_listing_restored',
+      actor: actor || { uid: by }, userId: listing.created_by || null,
+      details: { listing_id: listing.id, title: listing.title, seller_key: listing.seller_key, reason: motivo },
+    }),
+    listing.created_by ? notifyUsers([listing.created_by], action === 'remove'
+      ? { title: 'Anúncio retirado pela moderação', message: `"${String(listing.title || '').slice(0, 60)}" saiu do Mercado. Motivo: ${motivo}`, type: 'market', link: '/mercado/vender?aba=anuncios' }
+      : { title: 'Anúncio liberado', message: `"${String(listing.title || '').slice(0, 60)}" foi liberado pela moderação. Ele está pausado: retome quando quiser.`, type: 'market', link: '/mercado/vender?aba=anuncios' }) : null,
+  ]);
+  return { warnings: extras.filter((r) => r.status === 'rejected').length };
+}
+
+/* ----------------------------------------------------------- denúncias -- */
+
+const reportId = (listingId, uid) => `${listingId}_${uid}`;
+
+/** A denúncia desta pessoa para este anúncio (ou `null`). */
+export async function getMyReport(listingId, uid) {
+  if (!listingId || !uid) return null;
+  const snap = await getDoc(doc(db, C.reports, reportId(listingId, uid)));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+export async function reportListing({ listing, uid, reason, text = '' }) {
+  if (!REPORT_REASON_LABELS[reason]) throw new MarketError('Escolha o motivo.');
+  const t = String(text || '').trim();
+  if (t.length > 500) throw new MarketError('Use até 500 caracteres.');
+  await setDoc(doc(db, C.reports, reportId(listing.id, uid)), {
+    listing_id: listing.id,
+    listing_title: String(listing.title || '').slice(0, 120),
+    seller_key: listing.seller_key,
+    reporter_uid: uid,
+    reason,
+    text: t,
+    status: 'open',
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+  });
+}
+
+/** Admin: as denúncias ainda sem decisão. */
+export async function listOpenReports() {
+  const q = query(collection(db, C.reports), where('status', '==', 'open'));
+  return (await getDocs(q)).docs.map(toDoc).sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+/** Admin: fecha as denúncias abertas de um anúncio com a decisão tomada. */
+export async function resolveListingReports(listingId, { outcome, uid }) {
+  const q = query(collection(db, C.reports), where('listing_id', '==', listingId), where('status', '==', 'open'));
+  const docs = (await getDocs(q)).docs;
+  await Promise.all(docs.map((d) => updateDoc(d.ref, { status: 'resolved', outcome, resolved_by: uid || null, resolved_at_ms: Date.now() })));
+  return docs.length;
 }
 
 /* ----------------------------------------------------------- perguntas -- */

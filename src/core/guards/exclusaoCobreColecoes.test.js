@@ -121,6 +121,7 @@ const MERCADO_EXPORTADO_POR = {
 };
 const MERCADO_FORA_DA_EXPORTACAO = {
   market_disputes: 'A disputa é do pedido e não guarda nada que o pedido exportado já não diga; a decisão é da moderação.',
+  market_reports: 'A denúncia é sobre o anúncio de outra pessoa e serve à moderação; não guarda dado pessoal de quem denunciou além do uid.',
 };
 
 describe('a exclusão e a exportação cobrem o Mercado', () => {

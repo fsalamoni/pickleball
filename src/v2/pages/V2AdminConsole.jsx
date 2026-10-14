@@ -46,6 +46,8 @@ import {
   BookOpenCheck,
   Bell,
   Store,
+  Package,
+  MessageSquareWarning,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -145,7 +147,12 @@ const SECTIONS = Object.freeze([
   ] },
   // O Mercado (flag `marketplace`): some da barra com a flag desligada.
   { id: 'market', label: 'Mercado', icon: Store, flag: 'marketplace', tabs: [
+    { id: 'mercado-resumo', label: 'Visão geral', icon: BarChart3, keywords: ['marketplace', 'vendas', 'métricas', 'gmv'] },
+    { id: 'mercado-disputas', label: 'Problemas em pedidos', icon: MessageSquareWarning, keywords: ['marketplace', 'disputa', 'reclamação', 'não recebi'] },
+    { id: 'mercado-anuncios', label: 'Anúncios', icon: Flag, keywords: ['marketplace', 'denúncia', 'moderação', 'tirar do ar', 'réplica'] },
+    { id: 'mercado-pedidos', label: 'Pedidos', icon: Package, keywords: ['marketplace', 'compras', 'vendas', 'cancelar pedido'] },
     { id: 'mercado-lojas', label: 'Lojas', icon: Store, keywords: ['marketplace', 'aprovar loja', 'cnpj', 'vendedor'] },
+    { id: 'mercado-config', label: 'Configurações', icon: SlidersHorizontal, keywords: ['marketplace', 'termos proibidos', 'categorias', 'prazos'] },
   ] },
   // A voz da plataforma e dos parceiros falando com todos.
   { id: 'outreach', label: 'Divulgação', icon: Megaphone, tabs: [

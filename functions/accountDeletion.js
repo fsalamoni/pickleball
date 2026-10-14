@@ -210,6 +210,8 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'coach_products', field: 'coach_id', label: 'Produtos da loja do professor' },
   // A disputa é do pedido (o pedido fica, sem o nome) e não guarda nome.
   { col: 'market_disputes', field: 'buyer_uid', label: 'Problemas relatados em pedidos do Mercado' },
+  // A denúncia de anúncio é sobre o conteúdo de OUTRA pessoa (como a do treino) e não guarda nome.
+  { col: 'market_reports', field: 'reporter_uid', label: 'Denúncias de anúncios do Mercado que fez' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
