@@ -4261,5 +4261,28 @@ service cloud.firestore {
         || isPlatformAdmin());
       allow write: if false;
     }
+
+    // Denúncia de anúncio: uma por pessoa e anúncio (id `{anúncio}_{uid}`).
+    // Quem denuncia só cria e lê a própria; a moderação decide.
+    match /market_reports/{reportId} {
+      // `get` pelo id (que termina no uid) funciona mesmo sem o documento:
+      // é como a tela sabe se a pessoa já denunciou.
+      allow get: if isAuthed() && (reportId.matches('.+_' + request.auth.uid) || isPlatformAdmin());
+      allow list: if isAuthed() && (resource.data.reporter_uid == request.auth.uid || isPlatformAdmin());
+      allow create: if marketOn() && isAuthed()
+        && reportId == request.resource.data.listing_id + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['listing_id', 'listing_title', 'seller_key', 'reporter_uid', 'reason', 'text', 'status', 'created_at', 'created_at_ms'])
+        && request.resource.data.reporter_uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.listing_id is string
+        && request.resource.data.seller_key is string
+        && !isMarketOperator(request.resource.data.seller_key)
+        && request.resource.data.reason in ['fake', 'prohibited', 'misleading', 'scam', 'offensive', 'other']
+        && request.resource.data.get('text', '') is string
+        && request.resource.data.get('text', '').size() <= 500
+        && request.resource.data.get('listing_title', '') is string
+        && request.resource.data.get('listing_title', '').size() <= 120;
+      allow update, delete: if isPlatformAdmin();
+    }
   }
 }

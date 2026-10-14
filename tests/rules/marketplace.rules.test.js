@@ -233,3 +233,39 @@ describe('o que é só do dono', () => {
     await assertFails(getDoc(doc(como(ANA), 'market_saved_searches', 's1')));
   });
 });
+
+describe('⭐ denúncia de anúncio', () => {
+  const denuncia = (over = {}) => ({
+    listing_id: 'l1', listing_title: 'Raquete', seller_key: `athlete_${ANA}`, reporter_uid: BIA,
+    reason: 'fake', text: 'Parece réplica', status: 'open', ...over,
+  });
+  it('uma por pessoa e anúncio, com id que termina no uid', async () => {
+    await assertSucceeds(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia()));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia({ text: 'de novo' })));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${PROF}`), denuncia({ reporter_uid: PROF })));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_x`), denuncia()));
+  });
+  it('não nasce decidida, nem com motivo inventado, nem pelo próprio vendedor', async () => {
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia({ status: 'resolved' })));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia({ reason: 'chato' })));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia({ outcome: 'removed' })));
+    await assertFails(setDoc(doc(como(ANA), 'market_reports', `l1_${ANA}`), denuncia({ reporter_uid: ANA })));
+  });
+  it('⭐ quem denunciou sabe que denunciou (mesmo antes de existir); o vendedor não lê', async () => {
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`)));
+    await semRegras((db) => setDoc(doc(db, 'market_reports', `l1_${BIA}`), denuncia()));
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`)));
+    await assertFails(getDoc(doc(como(ANA), 'market_reports', `l1_${BIA}`)));
+    await assertFails(getDocs(query(collection(como(ANA), 'market_reports'), where('status', '==', 'open'))));
+  });
+  it('⭐ só o admin lista e decide', async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_reports', `l1_${BIA}`), denuncia()));
+    await assertFails(updateDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), { status: 'resolved' }));
+    await assertSucceeds(getDocs(query(collection(como(ADMIN), 'market_reports'), where('listing_id', '==', 'l1'), where('status', '==', 'open'))));
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'market_reports', `l1_${BIA}`), { status: 'resolved', outcome: 'kept' }));
+  });
+  it('sem a flag, não denuncia', async () => {
+    await semRegras((db) => setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { marketplace: false } }));
+    await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia()));
+  });
+});

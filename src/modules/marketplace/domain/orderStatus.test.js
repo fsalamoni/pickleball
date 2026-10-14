@@ -63,5 +63,7 @@ describe('pedido', () => {
     expect(t.find((s) => s.current).id).toBe('accepted');
     expect(t[3].label).toBe('Pronto');
     expect(orderWaitingOn({ status: 'accepted' }, 'buyer')).toMatch(/Pix/);
+    expect(orderWaitingOn({ status: 'disputed' }, 'admin')).toMatch(/decida/);
+    expect(orderWaitingOn({ status: 'paid' }, 'admin')).toBe('');
   });
 });

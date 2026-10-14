@@ -302,7 +302,7 @@ function OrderPage() {
   const order = q.data ? { id: orderId, ...q.data } : null;
   const role = orderRoleOf(order, user?.uid, { isAdmin: isPlatformAdmin });
   const [acao, setAcao] = useState(null);
-  const voltar = role === 'seller' ? '/mercado' : '/mercado/pedidos';
+  const voltar = role === 'seller' ? '/mercado' : role === 'admin' ? (order?.status === 'disputed' ? '/admin?tab=mercado-disputas' : '/admin?tab=mercado-pedidos') : '/mercado/pedidos';
   useEffect(() => { setAcao(null); }, [order?.status]);
 
   let corpo;
@@ -330,9 +330,9 @@ function OrderPage() {
           <V2Surface className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{role === 'seller' ? 'Venda' : 'Compra'} · {order.code}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{role === 'seller' ? 'Venda' : role === 'admin' ? 'Moderação' : 'Compra'} · {order.code}</p>
                 <h1 className="font-display text-2xl font-bold text-ink">{ORDER_STATUS_LABELS[order.status] || order.status}</h1>
-                <p className="text-sm text-gray-500">{role === 'seller' ? `Para ${order.buyer_name}` : `De ${order.seller_name}`} · {dataHora(order.placed_at_ms)}</p>
+                <p className="text-sm text-gray-500">{role === 'seller' ? `Para ${order.buyer_name}` : role === 'admin' ? `${order.buyer_name} comprou de ${order.seller_name}` : `De ${order.seller_name}`} · {dataHora(order.placed_at_ms)}</p>
               </div>
               <V2Badge tone={statusTone(order.status)}>{order.source === 'offer' ? 'Pela oferta' : fulfillmentLabel(order.fulfillment)}</V2Badge>
             </div>
@@ -399,6 +399,13 @@ function OrderPage() {
               <V2ChatLauncherButton athlete={outro} variant="outline" label={`Conversar com ${outro.platform_name || (role === 'buyer' ? 'o vendedor' : 'o comprador')}`} />
             </V2Surface>
           )}
+          {role === 'admin' && (
+            <V2Surface variant="compacto" className="space-y-2 p-5">
+              <p className="text-sm text-gray-600">Precisa ouvir um dos lados antes de decidir?</p>
+              <V2ChatLauncherButton athlete={{ id: order.buyer_uid, platform_name: order.buyer_name }} variant="outline" label={`Conversar com ${order.buyer_name || 'o comprador'}`} />
+              {(order.seller_manager_uids || [])[0] && <V2ChatLauncherButton athlete={{ id: order.seller_manager_uids[0], platform_name: order.seller_name }} variant="outline" label={`Conversar com ${order.seller_name || 'o vendedor'}`} />}
+            </V2Surface>
+          )}
           {role === 'seller' && <Link to={voltar} className="block text-center text-sm font-bold text-ink underline">Voltar ao Mercado</Link>}
         </aside>
         {acao && <ActionDialog action={acao} order={order} onClose={() => setAcao(null)} />}
@@ -409,7 +416,7 @@ function OrderPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-16">
       <MarketHeader />
-      <V2BackLink to={voltar}>{role === 'seller' ? 'Mercado' : 'Minhas compras'}</V2BackLink>
+      <V2BackLink to={voltar}>{role === 'seller' ? 'Mercado' : role === 'admin' ? 'Painel admin' : 'Minhas compras'}</V2BackLink>
       {corpo}
     </div>
   );

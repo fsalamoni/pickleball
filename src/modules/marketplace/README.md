@@ -50,6 +50,11 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
    Suspender PAUSA os anúncios públicos com `admin_paused: true` e a regra não
    deixa vendedor suspenso pôr anúncio de volta no ar; reativar devolve só os
    que a suspensão pausou.
+10. **Denúncia** (`market_reports/{anúncio}_{uid}`): uma por pessoa e anúncio,
+    criada pelo navegador, decidida só pelo admin. Tirar do ar (`moderateListing`)
+    exige motivo, avisa quem vende, grava auditoria e encerra as denúncias
+    abertas do anúncio. O admin decide disputa NO PRÓPRIO pedido (o papel
+    `admin` sai de `orderRoleOf`); o Painel admin → Mercado só lista e leva lá.
 
 ## Telas
 
@@ -57,15 +62,17 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
 `/mercado/favoritos`, `/mercado/carrinho`, `/mercado/pedidos` (+ `:id`),
 `/mercado/vendas/:id`, `/mercado/ofertas/:id`, `/mercado/vender` (painel de
 quem vende, `?como=` e `?aba=`), `/mercado/vender/anuncio/novo|:id` (editor),
-`/mercado/loja/abrir`. Admin: seção **Mercado** do Painel admin (`mercado-*`),
-que some com a flag desligada.
+`/mercado/loja/abrir`. Admin: seção **Mercado** do Painel admin (`mercado-*`:
+Visão geral, Problemas em pedidos, Anúncios, Pedidos, Lojas, Configurações),
+que some com a flag desligada; disputas e anúncios denunciados entram em
+"Precisa de você".
 
 ## Estrutura
 
 ```
 marketplace/
 ├── domain/    constants, taxonomy, money, listing, search, cart, orderStatus,
-│              offers, reputation, seller, settings (puro, com testes)
+│              offers, reputation, seller, settings, metrics (puro, com testes)
 ├── services/  marketService (vendedores, anúncios, perguntas, favoritos,
 │              buscas, carrinho, configuração), marketOrderService (funções e
 │              leituras de pedido/oferta/avaliação/disputa), marketMediaService
@@ -79,7 +86,7 @@ marketplace/
 `market_sellers` (+ `private/data`), `market_listings`, `market_questions`,
 `market_favorites`, `market_saved_searches`, `market_carts`, `market_offers`,
 `market_orders` (+ `events`, `private/shipping`), `market_reviews`,
-`market_disputes`; configuração em `platform_settings/marketplace`. Detalhe
+`market_disputes`, `market_reports`; configuração em `platform_settings/marketplace`. Detalhe
 em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
 `tests/rules/marketplace.rules.test.js`; funções em
 `tests/rules/marketplace.functions.test.js`.

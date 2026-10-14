@@ -1,23 +1,37 @@
 /**
- * Painel admin → Mercado. As abas do Mercado (`mercado-*`): por enquanto as
- * LOJAS — a fila de aprovação e o cuidado com as que já vendem (selo de
- * verificada, suspender, reativar).
+ * Painel admin → Mercado. As abas do Mercado (`mercado-*`):
+ *  - Visão geral: o que foi vendido, o que está andando, o que travou;
+ *  - Problemas: as disputas de pedido abertas (a decisão é no próprio pedido);
+ *  - Anúncios: as denúncias (agrupadas por anúncio) e o que a moderação tirou;
+ *  - Pedidos: todos, por estado;
+ *  - Lojas: a fila de aprovação e o cuidado com as que já vendem;
+ *  - Configurações: o que vale para o Mercado inteiro.
  *
  * Toda decisão avisa o dono da loja e vai para a auditoria (`reviewSeller`).
  * Os dados da empresa (razão social, CNPJ inteiro, telefone) só são lidos
  * quando o admin abre a ficha.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Building2, ExternalLink, Store } from 'lucide-react';
+import { BadgeCheck, Building2, CheckCircle2, ExternalLink, Flag, MessageSquareWarning, Package, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { reviewSeller } from '@/modules/marketplace/services/marketService';
-import { useAdminStores, useMarketMutation, useSellerPrivate } from '@/modules/marketplace/hooks/useMarket';
-import { SELLER_STATUS_LABELS } from '@/modules/marketplace/domain/constants';
+import { moderateListing, resolveListingReports, reviewSeller, saveMarketSettings } from '@/modules/marketplace/services/marketService';
+import {
+  useAdminListings, useAdminOrders, useAdminStores, useListingsByIds, useMarketMutation, useMarketSettings, useOpenDisputes,
+  useOpenReports, usePublicListings, useSellerPrivate,
+} from '@/modules/marketplace/hooks/useMarket';
+import {
+  ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS, REPORT_REASON_LABELS, SELLER_STATUS_LABELS, SELLER_TYPE_LABELS,
+} from '@/modules/marketplace/domain/constants';
+import { normalizeMarketSettings, DEFAULT_BANNED_TERMS } from '@/modules/marketplace/domain/settings';
+import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
+import { marketMetrics } from '@/modules/marketplace/domain/metrics';
+import { formatBRL } from '@/modules/marketplace/domain/money';
+import { statusTone } from '@/v2/components/marketplace/marketUi';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Skeleton, V2Surface, V2Textarea,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 
 const FILTROS = [
@@ -164,7 +178,351 @@ function StoresTab() {
   );
 }
 
+const ALL_ORDER_STATUSES = Object.keys(ORDER_STATUS_LABELS);
+const msDe = (ts) => (ts?.toMillis ? ts.toMillis() : Number(ts) || 0);
+const haQuanto = (ms) => {
+  if (!ms) return '';
+  const h = Math.floor((Date.now() - ms) / 3600000);
+  if (h < 1) return 'agora há pouco';
+  if (h < 48) return `há ${h} h`;
+  return `há ${Math.floor(h / 24)} dias`;
+};
+
+function TabTitle({ title, children }) {
+  return (
+    <div>
+      <h2 className="font-display text-xl font-bold text-ink">{title}</h2>
+      {children && <p className="text-sm text-gray-500">{children}</p>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------- visão geral -- */
+
+function Numero({ label, value, hint }) {
+  return (
+    <V2Surface variant="compacto" className="p-4">
+      <p className="text-xs font-medium text-gray-500">{label}</p>
+      <p className="mt-1 font-display text-2xl font-bold text-ink">{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-gray-500">{hint}</p>}
+    </V2Surface>
+  );
+}
+
+function OverviewTab() {
+  const pedidos = useAdminOrders(ALL_ORDER_STATUSES);
+  const anuncios = usePublicListings();
+  const lojas = useAdminStores();
+  const m = useMemo(() => marketMetrics(pedidos.data || []), [pedidos.data]);
+  if (pedidos.isError) return <V2ErrorState onRetry={() => pedidos.refetch()} />;
+  if (pedidos.isLoading) return <V2Skeleton lines={6} />;
+  const vendedores = new Set((anuncios.data || []).map((l) => l.seller_key));
+  const porTipo = (anuncios.data || []).reduce((acc, l) => ({ ...acc, [l.seller_type]: (acc[l.seller_type] || 0) + 1 }), {});
+  return (
+    <section className="space-y-5" aria-label="Visão geral do Mercado">
+      <TabTitle title="Visão geral">Só o que foi concluído conta como vendido. O dinheiro vai direto do comprador para quem vende (Pix), sem passar pela plataforma.</TabTitle>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Numero label="Vendido nos últimos 30 dias" value={formatBRL(m.recentCompletedCents)} hint={`${m.recentCompletedCount} pedido(s)`} />
+        <Numero label="Vendido desde o início" value={formatBRL(m.completedCents)} hint={m.avgTicketCents != null ? `ticket médio ${formatBRL(m.avgTicketCents)}` : 'nenhuma venda concluída'} />
+        <Numero label="Pedidos em andamento" value={m.activeCount} hint={m.disputedCount ? `${m.disputedCount} em disputa` : 'nenhum em disputa'} />
+        <Numero label="Pedidos que chegam ao fim" value={m.completionRate == null ? '—' : `${Math.round(m.completionRate * 100)}%`} hint={`${m.lostCount} cancelado(s) ou expirado(s)`} />
+      </div>
+      {anuncios.isError ? <V2ErrorState inline onRetry={() => anuncios.refetch()} /> : !anuncios.isLoading && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Numero label="Anúncios na vitrine" value={(anuncios.data || []).length} hint={`${vendedores.size} vendedor(es)`} />
+          <V2Surface variant="compacto" className="col-span-2 p-4">
+            <p className="text-xs font-medium text-gray-500">Anúncios por quem vende</p>
+            <dl className="mt-2 grid grid-cols-4 gap-2">
+              {Object.entries(SELLER_TYPE_LABELS).map(([k, l]) => (
+                <div key={k}><dt className="text-xs text-gray-500">{l}</dt><dd className="font-display text-xl font-bold text-ink">{porTipo[k] || 0}</dd></div>
+              ))}
+            </dl>
+          </V2Surface>
+        </div>
+      )}
+      {lojas.isSuccess && <p className="text-sm text-gray-500">{(lojas.data || []).filter((x) => x.status === 'active').length} loja(s) ativa(s) · {(lojas.data || []).filter((x) => x.status === 'pending').length} esperando aprovação.</p>}
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------- disputas -- */
+
+function DisputesTab() {
+  const q = useOpenDisputes();
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={5} />;
+  const lista = [...(q.data || [])].sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+  return (
+    <section className="space-y-4" aria-label="Problemas em pedidos">
+      <TabTitle title="Problemas em pedidos">O comprador relatou um problema depois de pagar. Abra o pedido, leia o histórico e decida a favor de um dos lados (o motivo vai para os dois). Os mais antigos primeiro.</TabTitle>
+      {!lista.length ? (
+        <V2EmptyState icon={CheckCircle2} title="Nenhum problema aberto" description="Quando um comprador relatar um problema, o pedido aparece aqui." />
+      ) : (
+        <ul className="space-y-3">
+          {lista.map((d) => (
+            <li key={d.id}>
+              <V2Surface variant="compacto" className="flex flex-wrap items-start gap-3 p-4">
+                <MessageSquareWarning className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-ink">Pedido {d.order_code || d.id}</p>
+                  <p className="text-sm text-gray-700">{d.reason}</p>
+                  <p className="text-xs text-gray-500">Aberto {haQuanto(d.created_at_ms)}{d.previous_status ? ` · estava "${ORDER_STATUS_LABELS[d.previous_status] || d.previous_status}"` : ''}</p>
+                </div>
+                <V2Button asChild size="sm"><Link to={`/mercado/pedidos/${d.order_id || d.id}`}>Abrir e decidir</Link></V2Button>
+              </V2Surface>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------- anúncios -- */
+
+function RemoveForm({ listing, onDone }) {
+  const { user } = useAuth();
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState('');
+  const m = useMarketMutation(() => moderateListing(listing, { action: 'remove', reason: motivo }, { uid: user?.uid, actor: user }));
+  return (
+    <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success('Anúncio retirado. Quem vende foi avisado.'); onDone(); }, onError: (er) => setErro(er.message) }); }}>
+      <V2Field label="Motivo (quem vende vai ler)" htmlFor={`motivo-${listing.id}`} error={erro}>
+        <V2Textarea id={`motivo-${listing.id}`} rows={2} maxLength={300} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} autoFocus />
+      </V2Field>
+      <div className="flex gap-2">
+        <V2Button type="button" size="sm" variant="ghost" onClick={onDone}>Voltar</V2Button>
+        <V2Button type="submit" size="sm" variant="danger" disabled={m.isPending}>Tirar do ar</V2Button>
+      </div>
+    </form>
+  );
+}
+
+function ReportedRow({ listingId, reports, listing }) {
+  const { user } = useAuth();
+  const [tirando, setTirando] = useState(false);
+  const manter = useMarketMutation(() => resolveListingReports(listingId, { outcome: 'kept', uid: user?.uid }));
+  const titulo = listing?.title || reports[0].listing_title || 'Anúncio';
+  const motivos = reports.reduce((acc, r) => ({ ...acc, [r.reason]: (acc[r.reason] || 0) + 1 }), {});
+  return (
+    <li>
+      <V2Surface variant="compacto" className="space-y-3 p-4">
+        <div className="flex flex-wrap items-start gap-3">
+          <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">
+            {listing?.media?.[0]?.thumb_url || listing?.media?.[0]?.url ? <img src={listing.media[0].thumb_url || listing.media[0].url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-ink">{titulo}</p>
+            <p className="text-xs text-gray-500">{listing ? `${listing.seller_name || ''} · ${formatBRL(listing.price_cents)}` : 'Não deu para carregar o anúncio'}{listing?.status === 'removed' ? ' · já retirado' : ''}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {Object.entries(motivos).map(([k, n]) => <V2Badge key={k} tone="red">{REPORT_REASON_LABELS[k] || k}{n > 1 ? ` · ${n}` : ''}</V2Badge>)}
+            </div>
+            {reports.filter((r) => r.text).map((r) => <p key={r.id} className="mt-2 rounded-xl bg-paper p-2 text-sm text-gray-700">“{r.text}”</p>)}
+          </div>
+        </div>
+        {tirando ? <RemoveForm listing={listing} onDone={() => setTirando(false)} /> : (
+          <div className="flex flex-wrap gap-2">
+            {listing && listing.status !== 'removed' && <V2Button type="button" size="sm" variant="danger" onClick={() => setTirando(true)}>Tirar do ar</V2Button>}
+            <V2Button type="button" size="sm" variant="secondary" disabled={manter.isPending} onClick={() => manter.mutate(undefined, { onSuccess: () => toast.success('Denúncias encerradas. O anúncio segue no ar.'), onError: (e) => toast.error(e.message) })}>
+              {listing?.status === 'removed' ? 'Encerrar as denúncias' : 'Está tudo certo, manter'}
+            </V2Button>
+            <V2Button asChild size="sm" variant="ghost"><Link to={`/mercado/anuncio/${listingId}`}>Ver o anúncio <ExternalLink className="h-3.5 w-3.5" /></Link></V2Button>
+          </div>
+        )}
+      </V2Surface>
+    </li>
+  );
+}
+
+function ModeratedRow({ listing }) {
+  const { user } = useAuth();
+  const m = useMarketMutation(() => moderateListing(listing, { action: 'restore' }, { uid: user?.uid, actor: user }));
+  return (
+    <li>
+      <V2Surface variant="compacto" className="flex flex-wrap items-center gap-3 p-4">
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-ink">{listing.title}</p>
+          <p className="text-xs text-gray-500">{listing.seller_name} · {listing.moderation?.auto ? 'Pausado automaticamente' : 'Retirado'}{listing.moderation?.reason ? `: ${listing.moderation.reason}` : ''}</p>
+        </div>
+        {listing.status === 'removed' && <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => m.mutate(undefined, { onSuccess: () => toast.success('Anúncio liberado. Quem vende foi avisado.'), onError: (e) => toast.error(e.message) })}>Liberar</V2Button>}
+        <V2Button asChild size="sm" variant="ghost"><Link to={`/mercado/anuncio/${listing.id}`}>Ver</Link></V2Button>
+      </V2Surface>
+    </li>
+  );
+}
+
+function ListingsTab() {
+  const reports = useOpenReports();
+  const moderados = useAdminListings(['removed', 'paused']);
+  const [vista, setVista] = useState('denuncias');
+  const grupos = useMemo(() => {
+    const g = {};
+    (reports.data || []).forEach((r) => { (g[r.listing_id] = g[r.listing_id] || []).push(r); });
+    return Object.entries(g).sort((a, b) => b[1].length - a[1].length);
+  }, [reports.data]);
+  const anuncios = useListingsByIds(grupos.map(([id]) => id));
+  const listaModerados = (moderados.data || []).filter((l) => l.status === 'removed' || l.moderation?.auto);
+  return (
+    <section className="space-y-4" aria-label="Anúncios">
+      <TabTitle title="Anúncios">As denúncias chegam agrupadas por anúncio. Anúncio com termo proibido é pausado sozinho e quem vende é avisado. Para tirar do ar qualquer outro, abra o anúncio: o admin vê a caixa “Moderação”.</TabTitle>
+      <div className="flex flex-wrap gap-2">
+        <V2FilterChip active={vista === 'denuncias'} onClick={() => setVista('denuncias')}>Denunciados{reports.isSuccess ? ` (${grupos.length})` : ''}</V2FilterChip>
+        <V2FilterChip active={vista === 'moderados'} onClick={() => setVista('moderados')}>Retirados e pausados pela moderação{moderados.isSuccess ? ` (${listaModerados.length})` : ''}</V2FilterChip>
+      </div>
+      {vista === 'denuncias' ? (
+        reports.isError ? <V2ErrorState onRetry={() => reports.refetch()} />
+          : reports.isLoading ? <V2Skeleton lines={5} />
+            : !grupos.length ? <V2EmptyState icon={Flag} title="Nenhuma denúncia aberta" description="Quando alguém denunciar um anúncio, ele aparece aqui." />
+              : <ul className="space-y-3">{grupos.map(([id, rs]) => <ReportedRow key={id} listingId={id} reports={rs} listing={anuncios.data?.[id]} />)}</ul>
+      ) : (
+        moderados.isError ? <V2ErrorState onRetry={() => moderados.refetch()} />
+          : moderados.isLoading ? <V2Skeleton lines={5} />
+            : !listaModerados.length ? <V2EmptyState icon={CheckCircle2} title="Nada retirado" description="Os anúncios que a moderação tirar do ar ficam aqui, para liberar se for o caso." />
+              : <ul className="space-y-3">{listaModerados.map((l) => <ModeratedRow key={l.id} listing={l} />)}</ul>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ pedidos -- */
+
+function OrdersTab() {
+  const q = useAdminOrders(ALL_ORDER_STATUSES);
+  const [filtro, setFiltro] = useState('andamento');
+  const [busca, setBusca] = useState('');
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={6} />;
+  const todos = q.data || [];
+  const filtros = {
+    andamento: (o) => !ORDER_FINAL_STATUSES.includes(o.status) && o.status !== 'disputed',
+    disputa: (o) => o.status === 'disputed',
+    concluidos: (o) => o.status === 'completed',
+    perdidos: (o) => o.status === 'cancelled' || o.status === 'expired',
+  };
+  const termo = busca.trim().toLowerCase();
+  const lista = todos.filter(filtros[filtro]).filter((o) => !termo || [o.code, o.buyer_name, o.seller_name].some((x) => String(x || '').toLowerCase().includes(termo)));
+  return (
+    <section className="space-y-4" aria-label="Pedidos do Mercado">
+      <TabTitle title="Pedidos">Todos os pedidos do Mercado. O admin abre qualquer um e pode cancelar com motivo (os dois lados são avisados).</TabTitle>
+      <div className="flex flex-wrap gap-2">
+        {[['andamento', 'Em andamento'], ['disputa', 'Em disputa'], ['concluidos', 'Concluídos'], ['perdidos', 'Cancelados e expirados']].map(([id, l]) => (
+          <V2FilterChip key={id} active={filtro === id} onClick={() => setFiltro(id)}>{l} ({todos.filter(filtros[id]).length})</V2FilterChip>
+        ))}
+      </div>
+      <label htmlFor="busca-pedido" className="sr-only">Buscar pedido</label>
+      <V2Input id="busca-pedido" type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Código, comprador ou vendedor" className="max-w-sm" />
+      {!lista.length ? <V2EmptyState icon={Package} title="Nenhum pedido aqui" /> : (
+        <ul className="divide-y divide-gray-100 rounded-3xl border border-gray-100 bg-paper-pure">
+          {lista.slice(0, 200).map((o) => (
+            <li key={o.id}>
+              <Link to={`/mercado/pedidos/${o.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4 hover:bg-paper">
+                <span className="font-bold text-ink">{o.code}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-gray-600">{o.buyer_name} → {o.seller_name}</span>
+                <span className="text-sm font-bold text-ink">{formatBRL(o.total_cents)}</span>
+                <V2Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABELS[o.status] || o.status}</V2Badge>
+                <span className="w-full text-xs text-gray-500 sm:w-auto">{haQuanto(o.placed_at_ms || msDe(o.created_at))}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {lista.length > 200 && <p className="text-xs text-gray-500">Mostrando os 200 mais recentes. Use a busca para achar um pedido.</p>}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------ configurações -- */
+
+function NumberField({ id, label, hint, value, onChange, min, max }) {
+  return (
+    <V2Field label={label} htmlFor={id} hint={hint}>
+      <V2Input id={id} type="number" inputMode="numeric" min={min} max={max} value={value} onChange={(e) => onChange(e.target.value)} className="max-w-[10rem]" />
+    </V2Field>
+  );
+}
+
+function SettingsTab() {
+  const { user } = useAuth();
+  const q = useMarketSettings();
+  const [v, setV] = useState(null);
+  const [termos, setTermos] = useState('');
+  useEffect(() => {
+    if (q.data && !v) { setV(q.data); setTermos((q.data.banned_terms || []).join('\n')); }
+  }, [q.data, v]);
+  const m = useMarketMutation((input) => saveMarketSettings(input, { uid: user?.uid }));
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (!v) return <V2Skeleton lines={8} />;
+  const set = (k, val) => setV((x) => ({ ...x, [k]: val }));
+  const desligadas = new Set(v.disabled_categories || []);
+  const alternarCat = (slug) => set('disabled_categories', desligadas.has(slug) ? [...desligadas].filter((s) => s !== slug) : [...desligadas, slug]);
+  const salvar = (e) => {
+    e.preventDefault();
+    const final = normalizeMarketSettings({ ...v, banned_terms: termos.split('\n') });
+    m.mutate(final, { onSuccess: (r) => { setV(r); toast.success('Configurações do Mercado salvas.'); }, onError: (er) => toast.error(er.message) });
+  };
+  return (
+    <form className="space-y-6" onSubmit={salvar} aria-label="Configurações do Mercado">
+      <TabTitle title="Configurações">Vale para o Mercado inteiro, na hora. Ligar ou desligar o Mercado em si fica em Funcionalidades.</TabTitle>
+      <V2Surface variant="compacto" className="space-y-4 p-5">
+        <h3 className="font-bold text-ink">O que está aberto</h3>
+        <V2Toggle id="cfg-pedidos" checked={v.orders_enabled} onChange={(x) => set('orders_enabled', x)} label="Pedidos" hint="Desligado, ninguém finaliza compra (os pedidos em andamento seguem)." />
+        <V2Toggle id="cfg-ofertas" checked={v.offers_enabled} onChange={(x) => set('offers_enabled', x)} label="Ofertas" hint="Desligado, some o botão Fazer oferta." />
+        <V2Toggle id="cfg-lojas" checked={v.stores_enabled} onChange={(x) => set('stores_enabled', x)} label="Novos cadastros de loja" hint="Desligado, a página de abrir loja avisa que os cadastros estão fechados." />
+      </V2Surface>
+      <V2Surface variant="compacto" className="space-y-4 p-5">
+        <h3 className="font-bold text-ink">Prazos</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberField id="cfg-resposta" label="Vendedor responde o pedido em (horas)" min={12} max={240} value={v.seller_answer_hours} onChange={(x) => set('seller_answer_hours', x)} />
+          <NumberField id="cfg-pagamento" label="Comprador paga em (horas)" min={6} max={168} value={v.payment_hours} onChange={(x) => set('payment_hours', x)} />
+          <NumberField id="cfg-concluir" label="Conclusão automática depois de enviado (dias)" min={2} max={30} value={v.auto_complete_days} onChange={(x) => set('auto_complete_days', x)} />
+          <NumberField id="cfg-disputa" label="Prazo para relatar problema (dias)" min={2} max={30} value={v.dispute_window_days} onChange={(x) => set('dispute_window_days', x)} />
+          <NumberField id="cfg-rodadas" label="Rodadas de oferta e contraoferta" min={1} max={10} value={v.offer_max_rounds} onChange={(x) => set('offer_max_rounds', x)} />
+          <NumberField id="cfg-oferta" label="Oferta vale por (horas)" min={6} max={240} value={v.offer_ttl_hours} onChange={(x) => set('offer_ttl_hours', x)} />
+        </div>
+      </V2Surface>
+      <V2Surface variant="compacto" className="space-y-4 p-5">
+        <h3 className="font-bold text-ink">Anúncios no ar por vendedor</h3>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {Object.entries(SELLER_TYPE_LABELS).map(([k, l]) => (
+            <NumberField key={k} id={`cfg-lim-${k}`} label={l} min={1} max={10000} value={v.max_active_listings?.[k] ?? ''} onChange={(x) => set('max_active_listings', { ...v.max_active_listings, [k]: x })} />
+          ))}
+        </div>
+      </V2Surface>
+      <V2Surface variant="compacto" className="space-y-3 p-5">
+        <h3 className="font-bold text-ink">Termos proibidos</h3>
+        <p className="text-sm text-gray-500">Um por linha. O anúncio que citar um deles nem é publicado, e o que já estava no ar é pausado (quem vende é avisado). Já valem sempre: {DEFAULT_BANNED_TERMS.join(', ')}.</p>
+        <label htmlFor="cfg-termos" className="sr-only">Termos proibidos</label>
+        <V2Textarea id="cfg-termos" rows={5} value={termos} onChange={(e) => setTermos(e.target.value)} placeholder="Ex.: atacado" />
+      </V2Surface>
+      <V2Surface variant="compacto" className="space-y-3 p-5">
+        <h3 className="font-bold text-ink">Categorias</h3>
+        <p className="text-sm text-gray-500">Toque para desligar. Categoria desligada some da vitrine e da escolha ao anunciar.</p>
+        <div className="space-y-3">
+          {MARKET_CATEGORIES.map((c) => (
+            <div key={c.slug} className="flex flex-wrap items-center gap-1.5">
+              <V2FilterChip active={!desligadas.has(c.slug)} onClick={() => alternarCat(c.slug)}>{c.label}</V2FilterChip>
+              {!desligadas.has(c.slug) && (c.children || []).map((k) => <V2FilterChip key={k.slug} active={!desligadas.has(k.slug)} onClick={() => alternarCat(k.slug)} className="text-xs">{k.label}</V2FilterChip>)}
+            </div>
+          ))}
+        </div>
+      </V2Surface>
+      <div className="sticky bottom-4 flex justify-end">
+        <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : 'Salvar configurações'}</V2Button>
+      </div>
+    </form>
+  );
+}
+
+const TABS = {
+  'mercado-resumo': OverviewTab,
+  'mercado-disputas': DisputesTab,
+  'mercado-anuncios': ListingsTab,
+  'mercado-pedidos': OrdersTab,
+  'mercado-lojas': StoresTab,
+  'mercado-config': SettingsTab,
+};
+
 export default function AdminMarketPanel({ tab }) {
-  if (tab === 'mercado-lojas') return <StoresTab />;
-  return null;
+  const Tab = TABS[tab];
+  return Tab ? <Tab /> : null;
 }

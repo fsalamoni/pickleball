@@ -30,6 +30,7 @@ import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import ListingGallery from '@/v2/components/marketplace/ListingGallery';
 import ListingQuestions from '@/v2/components/marketplace/ListingQuestions';
 import OfferDialog from '@/v2/components/marketplace/OfferDialog';
+import { AdminModerationBox, ReportListingButton } from '@/v2/components/marketplace/ListingModeration';
 import {
   FavoriteButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, VerifiedMark,
 } from '@/v2/components/marketplace/marketUi';
@@ -252,6 +253,8 @@ function ListingPage() {
   const settings = useMarketSettings();
   const listing = q.data;
   const isOperator = useIsMarketOperator(listing?.seller_key);
+  const { isPlatformAdmin } = useAuth();
+  const podeVerOculto = isOperator || isPlatformAdmin;
   useHashScroll();
 
   let corpo;
@@ -263,7 +266,7 @@ function ListingPage() {
         <div className="space-y-3 lg:col-span-5"><V2Skeleton className="h-10" /><V2Skeleton className="h-64" /></div>
       </div>
     );
-  } else if (!listing || (listing.status === 'removed' && !isOperator) || (['draft', 'pending_review'].includes(listing.status) && !isOperator)) {
+  } else if (!listing || (['removed', 'draft', 'pending_review'].includes(listing.status) && !podeVerOculto)) {
     corpo = (
       <V2Surface className="text-center">
         <h1 className="font-display text-2xl font-bold text-ink">Este anúncio não está mais no ar</h1>
@@ -287,6 +290,8 @@ function ListingPage() {
             <div className="space-y-4 lg:sticky lg:top-4">
               <BuyBox listing={listing} isOperator={isOperator} settings={settings.data} />
               <SellerCard listing={listing} />
+              {isPlatformAdmin && <AdminModerationBox listing={listing} />}
+              {!isOperator && <ReportListingButton listing={listing} />}
             </div>
           </div>
         </div>

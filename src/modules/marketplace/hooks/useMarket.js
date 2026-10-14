@@ -97,6 +97,31 @@ export function useAdminStores({ enabled = true } = {}) {
   return useQuery({ queryKey: [...marketKeys.admin, 'lojas'], queryFn: svc.listStores, enabled });
 }
 
+/** Admin: as denúncias de anúncio sem decisão. */
+export function useOpenReports({ enabled = true } = {}) {
+  return useQuery({ queryKey: [...marketKeys.admin, 'denuncias'], queryFn: svc.listOpenReports, enabled });
+}
+
+/** Admin: as disputas de pedido abertas. */
+export function useOpenDisputes({ enabled = true } = {}) {
+  return useQuery({ queryKey: [...marketKeys.admin, 'disputas'], queryFn: orders.listOpenDisputes, enabled });
+}
+
+/** Admin: anúncios por estado (os retirados, os pausados pela moderação). */
+export function useAdminListings(statuses, { enabled = true } = {}) {
+  return useQuery({ queryKey: [...marketKeys.admin, 'anuncios', statuses.join(',')], queryFn: () => svc.listListingsByStatus(statuses), enabled });
+}
+
+/** Admin: pedidos por estado. */
+export function useAdminOrders(statuses, { enabled = true } = {}) {
+  return useQuery({ queryKey: [...marketKeys.admin, 'pedidos', statuses.join(',')], queryFn: () => orders.listOrdersByStatus(statuses), enabled });
+}
+
+/** Esta pessoa já denunciou este anúncio? */
+export function useMyReport(listingId, uid, { enabled = true } = {}) {
+  return useQuery({ queryKey: ['mercado', 'denuncia', listingId, uid], queryFn: () => svc.getMyReport(listingId, uid), enabled: !!listingId && !!uid && enabled });
+}
+
 export function useSellerPrivate(key, { enabled = true } = {}) {
   return useQuery({ queryKey: marketKeys.sellerPrivate(key), queryFn: () => svc.getSellerPrivate(key), enabled: !!key && enabled });
 }

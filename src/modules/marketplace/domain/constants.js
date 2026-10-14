@@ -18,6 +18,7 @@ export const MARKET_COLLECTIONS = Object.freeze({
   orders: 'market_orders',
   reviews: 'market_reviews',
   disputes: 'market_disputes',
+  reports: 'market_reports',
 });
 
 /** Documento de configuração do admin (em `platform_settings`). */
@@ -171,6 +172,16 @@ export const DISPUTE_REASON_LABELS = Object.freeze({
   not_received: 'Não recebi o produto',
   not_as_described: 'Diferente do anunciado',
   damaged: 'Chegou danificado',
+  other: 'Outro motivo',
+});
+
+/** Por que alguém denuncia um anúncio (o valor é gravado: nunca renomeie). */
+export const REPORT_REASON_LABELS = Object.freeze({
+  fake: 'Produto falsificado ou réplica',
+  prohibited: 'Item proibido no Mercado',
+  misleading: 'Anúncio enganoso (foto, preço ou descrição)',
+  scam: 'Parece golpe (pede pagamento por fora, contato fora do app)',
+  offensive: 'Conteúdo ofensivo',
   other: 'Outro motivo',
 });
 

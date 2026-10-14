@@ -1382,6 +1382,10 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
   vendedor só lê com `shipping_visible`), `market_offers/{id}` (rodadas e
   `history[]`), `market_reviews/{orderId}_{buyer|seller}` (cega até
   `visible`), `market_disputes/{orderId}`.
+- `market_reports/{listingId}_{uid}`: denúncia de anúncio (`reason` em
+  `REPORT_REASON_LABELS`, `text` ≤ 500, `status: open|resolved`, `outcome`).
+  Quem denuncia cria e lê a própria; só o admin lista e decide. Na exclusão
+  de conta fica (como a denúncia do treino).
 - Storage: `mercado/{uid}/{arquivo}` (foto < 3 MB, vídeo < 60 MB, PDF < 3 MB).
 
 Na exclusão de conta: carrinho, favoritos, buscas, Pix e endereços somem;

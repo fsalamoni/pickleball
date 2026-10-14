@@ -88,6 +88,7 @@ export function nextActionsFor(order, role, { now = Date.now(), disputeWindowDay
 /** O que o pedido espera, dito para cada lado ("Aguardando você pagar"). */
 export function orderWaitingOn(order, role) {
   const st = order?.status;
+  if (role === 'admin') return st === 'disputed' ? 'Leia o relato e o histórico e decida a favor de um dos lados.' : '';
   const me = role === 'buyer' ? 'buyer' : 'seller';
   const map = {
     placed: { seller: 'Aceite ou recuse o pedido.', buyer: 'Esperando o vendedor aceitar.' },
