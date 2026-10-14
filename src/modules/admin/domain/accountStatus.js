@@ -8,6 +8,7 @@
  * você" para o admin decidir. Bloqueada não tem prazo.
  */
 import { deletionBlockedReason } from './accountDeletion.js';
+import { t, tk } from '../../../core/i18n/index.js';
 
 export const ACCOUNT_STATUS = Object.freeze({ ACTIVE: 'active', SUSPENDED: 'suspended', BLOCKED: 'blocked' });
 export const STATUS_REASON_MIN = 5;
@@ -15,15 +16,15 @@ export const SUSPEND_DAYS_MAX = 365;
 export const SUSPEND_DAYS_OPTIONS = Object.freeze([1, 3, 7, 15, 30, 90]);
 
 export const ACCOUNT_STATUS_META = Object.freeze({
-  active: { label: 'Ativa', tone: 'green' },
-  suspended: { label: 'Suspensa', tone: 'amber' },
-  blocked: { label: 'Bloqueada', tone: 'red' },
+  active: { label: tk('Ativa'), tone: 'green' },
+  suspended: { label: tk('Suspensa'), tone: 'amber' },
+  blocked: { label: tk('Bloqueada'), tone: 'red' },
 });
 
 export const STATUS_ACTION_META = Object.freeze({
-  suspend: { label: 'Suspender', verb: 'suspensa', hint: 'Por um prazo. Reativar é decisão do admin quando ele vence.' },
-  block: { label: 'Bloquear', verb: 'bloqueada', hint: 'Sem prazo. Só o admin reativa.' },
-  reactivate: { label: 'Reativar', verb: 'reativada', hint: 'Devolve o acesso exatamente como era.' },
+  suspend: { label: tk('Suspender'), verb: 'suspensa', hint: tk('Por um prazo. Reativar é decisão do admin quando ele vence.') },
+  block: { label: tk('Bloquear'), verb: 'bloqueada', hint: tk('Sem prazo. Só o admin reativa.') },
+  reactivate: { label: tk('Reativar'), verb: 'reativada', hint: tk('Devolve o acesso exatamente como era.') },
 });
 
 /** O estado da conta como a tela mostra. `vencida` = suspensão cujo prazo passou. */
@@ -39,7 +40,10 @@ export const isAccountOffline = (user) => accountStatusOf(user).status !== ACCOU
 /** As ações que fazem sentido para esta conta (as três portas da exclusão valem). */
 export function accountStatusActions(user, ctx) {
   const porta = deletionBlockedReason(user, ctx);
-  if (!porta.ok) return { actions: [], reason: porta.reason.replace('excluída', 'suspensa nem bloqueada') };
+  if (!porta.ok) {
+    const dono = porta.reason === t('Conta de dono da plataforma. Não pode ser excluída.');
+    return { actions: [], reason: dono ? t('Conta de dono da plataforma. Não pode ser suspensa nem bloqueada.') : porta.reason };
+  }
   const { status } = accountStatusOf(user);
   return {
     actions: status === ACCOUNT_STATUS.ACTIVE ? ['suspend', 'block'] : ['reactivate', status === ACCOUNT_STATUS.SUSPENDED ? 'block' : 'suspend'],
@@ -50,13 +54,13 @@ export function accountStatusActions(user, ctx) {
 /** Valida o pedido antes de chamar o servidor. */
 export function validateStatusRequest({ action, reason = '', days } = {}) {
   const erros = {};
-  if (!STATUS_ACTION_META[action]) erros.action = 'Escolha a ação.';
+  if (!STATUS_ACTION_META[action]) erros.action = t('Escolha a ação.');
   if (String(reason).trim().length < STATUS_REASON_MIN) {
-    erros.reason = `Descreva o motivo (mínimo ${STATUS_REASON_MIN} caracteres). A pessoa lê ao tentar entrar.`;
+    erros.reason = t('Descreva o motivo (mínimo {min} caracteres). A pessoa lê ao tentar entrar.', { min: STATUS_REASON_MIN });
   }
   if (action === 'suspend') {
     const d = Number(days);
-    if (!Number.isInteger(d) || d < 1 || d > SUSPEND_DAYS_MAX) erros.days = `Entre 1 e ${SUSPEND_DAYS_MAX} dias.`;
+    if (!Number.isInteger(d) || d < 1 || d > SUSPEND_DAYS_MAX) erros.days = t('Entre 1 e {max} dias.', { max: SUSPEND_DAYS_MAX });
   }
   return { isValid: Object.keys(erros).length === 0, errors: erros };
 }

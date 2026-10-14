@@ -9,6 +9,7 @@ import React from 'react';
 import { Lightbulb } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useDicas } from './DicasContext';
+import { t } from '@/core/i18n';
 
 export default function BotaoDicas() {
   const { on, ligadas, abrirPainel, painelAberto } = useDicas();
@@ -20,8 +21,8 @@ export default function BotaoDicas() {
       onClick={abrirPainel}
       aria-haspopup="dialog"
       aria-expanded={painelAberto}
-      aria-label={ligadas ? 'Dicas (ligadas)' : 'Dicas (desligadas)'}
-      title={ligadas ? 'Dicas ligadas — ver os guias' : 'Dicas — ligar ou ver os guias'}
+      aria-label={ligadas ? t('Dicas (ligadas)') : t('Dicas (desligadas)')}
+      title={ligadas ? t('Dicas ligadas — ver os guias') : t('Dicas — ligar ou ver os guias')}
       className={cn(
         'btn-press flex h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-bold shadow-sm transition-colors md:px-3.5',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40',
@@ -29,7 +30,7 @@ export default function BotaoDicas() {
       )}
     >
       <Lightbulb className="h-5 w-5" aria-hidden="true" />
-      <span className="hidden xl:inline">Dicas</span>
+      <span className="hidden xl:inline">{t('Dicas')}</span>
     </button>
   );
 }

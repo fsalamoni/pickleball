@@ -37,12 +37,13 @@ import { AdminModerationBox, ReportListingButton } from '@/v2/components/marketp
 import {
   FavoriteButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, VerifiedMark,
 } from '@/v2/components/marketplace/marketUi';
+import { t, tn } from '@/core/i18n';
 
 function Breadcrumb({ slug }) {
   const trilha = categoryBreadcrumb(slug);
   return (
-    <nav aria-label="Categoria" className="flex flex-wrap items-center gap-1 text-sm text-gray-500">
-      <Link to="/mercado" className="hover:text-ink hover:underline">Mercado</Link>
+    <nav aria-label={t('Categoria')} className="flex flex-wrap items-center gap-1 text-sm text-gray-500">
+      <Link to="/mercado" className="hover:text-ink hover:underline">{t('Mercado')}</Link>
       {trilha.map((c) => (
         <React.Fragment key={c.slug}>
           <ChevronRight className="h-3.5 w-3.5" />
@@ -56,11 +57,11 @@ function Breadcrumb({ slug }) {
 function deliveryLines(l) {
   return (l.fulfillment || []).map((f) => {
     if (f === 'shipping') {
-      const valor = l.shipping_to_agree ? 'frete a combinar' : l.shipping_cents ? `frete ${formatBRL(l.shipping_cents)}` : 'frete grátis';
-      return { f, Icon: Truck, text: `Envio pelo correio ou transportadora · ${valor}` };
+      const valor = l.shipping_to_agree ? t('frete a combinar') : l.shipping_cents ? t('frete {valor}', { valor: formatBRL(l.shipping_cents) }) : t('frete grátis');
+      return { f, Icon: Truck, text: t('Envio pelo correio ou transportadora · {frete}', { frete: valor }) };
     }
-    if (f === 'pickup') return { f, Icon: StoreIcon, text: `Retirar no local${l.pickup_note ? ` · ${l.pickup_note}` : ''}${l.city ? ` · ${l.city}` : ''}` };
-    return { f, Icon: Users, text: `Entrega combinada com o vendedor${l.city ? ` em ${l.city}` : ''}` };
+    if (f === 'pickup') return { f, Icon: StoreIcon, text: `${t('Retirar no local')}${l.pickup_note ? ` · ${l.pickup_note}` : ''}${l.city ? ` · ${l.city}` : ''}` };
+    return { f, Icon: Users, text: l.city ? t('Entrega combinada com o vendedor em {cidade}', { cidade: l.city }) : t('Entrega combinada com o vendedor') };
   });
 }
 
@@ -84,9 +85,9 @@ function BuyBox({ listing, isOperator, settings }) {
       const r = noCarrinho ? (await cart.setQuantity(listing.id, qtd), { error: null }) : await cart.add(listing, qtd);
       if (r.error) { toast.error(r.error); return; }
       if (depois === 'fechar') navigate('/mercado/carrinho?fechar=1');
-      else toast.success('No carrinho.', { action: { label: 'Ver carrinho', onClick: () => navigate('/mercado/carrinho') } });
+      else toast.success(t('No carrinho.'), { action: { label: t('Ver carrinho'), onClick: () => navigate('/mercado/carrinho') } });
     } catch {
-      toast.error('Não foi possível guardar no carrinho. Tente de novo.');
+      toast.error(t('Não foi possível guardar no carrinho. Tente de novo.'));
     } finally {
       setBusy(false);
     }
@@ -95,8 +96,8 @@ function BuyBox({ listing, isOperator, settings }) {
   return (
     <V2Surface variant="compacto" className="space-y-4 p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-        <span>{listing.type === LISTING_TYPE.USED ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'}</span>
-        {listing.quantity_sold > 0 && <span>· {listing.quantity_sold} vendido{listing.quantity_sold > 1 ? 's' : ''}</span>}
+        <span>{listing.type === LISTING_TYPE.USED ? t(CONDITION_LABELS[listing.condition] || 'Usado') : t('Novo')}</span>
+        {listing.quantity_sold > 0 && <span>· {tn(listing.quantity_sold, '{n} vendido', '{n} vendidos')}</span>}
         <SellerTypeTag type={listing.seller_type} />
       </div>
       <h1 className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">{listing.title}</h1>
@@ -111,40 +112,40 @@ function BuyBox({ listing, isOperator, settings }) {
       </ul>
 
       {own ? (
-        <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">Este anúncio é seu. Responda às perguntas logo abaixo.</p>
+        <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">{t('Este anúncio é seu. Responda às perguntas logo abaixo.')}</p>
       ) : !pode.ok ? (
         <p className="rounded-2xl bg-paper p-4 text-sm font-bold text-ink">{pode.reason}</p>
       ) : !comprasAbertas ? (
-        <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">As compras no Mercado estão pausadas no momento. Salve nos favoritos e volte depois.</p>
+        <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">{t('As compras no Mercado estão pausadas no momento. Salve nos favoritos e volte depois.')}</p>
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <label htmlFor="quantidade" className="text-sm font-semibold text-ink">Quantidade</label>
+            <label htmlFor="quantidade" className="text-sm font-semibold text-ink">{t('Quantidade')}</label>
             <V2Select id="quantidade" value={qtd} onChange={(e) => setQtd(Number(e.target.value))} className="h-11 w-24 py-0">
               {Array.from({ length: Math.min(10, disp) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
             </V2Select>
-            <span className="text-xs text-gray-500">{disp === 1 ? 'Última unidade' : `${disp} disponíveis`}</span>
+            <span className="text-xs text-gray-500">{disp === 1 ? t('Última unidade') : t('{n} disponíveis', { n: disp })}</span>
           </div>
           <div className="grid gap-2">
-            <V2Button type="button" size="lg" disabled={busy} onClick={() => colocar('fechar')}>Comprar agora</V2Button>
+            <V2Button type="button" size="lg" disabled={busy} onClick={() => colocar('fechar')}>{t('Comprar agora')}</V2Button>
             <V2Button type="button" variant="secondary" disabled={busy} onClick={() => colocar('carrinho')}>
-              <ShoppingCart className="h-4 w-4" /> {noCarrinho ? 'Atualizar no carrinho' : 'Adicionar ao carrinho'}
+              <ShoppingCart className="h-4 w-4" /> {noCarrinho ? t('Atualizar no carrinho') : t('Adicionar ao carrinho')}
             </V2Button>
             {listing.accepts_offers && settings?.offers_enabled !== false && (
               user ? (
-                <V2Button type="button" variant="ghost" onClick={() => setOferta(true)}><HandCoins className="h-4 w-4" /> Fazer oferta</V2Button>
+                <V2Button type="button" variant="ghost" onClick={() => setOferta(true)}><HandCoins className="h-4 w-4" /> {t('Fazer oferta')}</V2Button>
               ) : (
-                <V2Button asChild variant="ghost"><Link to="/login"><HandCoins className="h-4 w-4" /> Entre para fazer oferta</Link></V2Button>
+                <V2Button asChild variant="ghost"><Link to="/login"><HandCoins className="h-4 w-4" /> {t('Entre para fazer oferta')}</Link></V2Button>
               )
             )}
           </div>
-          {noCarrinho && <p className="text-xs text-gray-500">Já está no seu carrinho ({noCarrinho.quantity}).</p>}
+          {noCarrinho && <p className="text-xs text-gray-500">{t('Já está no seu carrinho ({n}).', { n: noCarrinho.quantity })}</p>}
         </>
       )}
 
       <div className="flex items-start gap-2 rounded-2xl bg-paper p-3 text-xs text-gray-600">
         <ShieldCheck className="h-4 w-4 shrink-0 text-ink" />
-        <span>Você paga pelo Pix direto ao vendedor, só depois de ele aceitar o pedido. Se o produto não chegar ou vier diferente, relate pelo pedido e a moderação analisa.</span>
+        <span>{t('Você paga pelo Pix direto ao vendedor, só depois de ele aceitar o pedido. Se o produto não chegar ou vier diferente, relate pelo pedido e a moderação analisa.')}</span>
       </div>
       {oferta && <OfferDialog listing={listing} open={oferta} onOpenChange={setOferta} />}
     </V2Surface>
@@ -158,7 +159,7 @@ function SellerCard({ listing }) {
   const badges = seller ? sellerBadges(seller) : [];
   return (
     <V2Surface variant="compacto" className="space-y-3 p-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Vendido por</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Vendido por')}</p>
       <Link to={`/mercado/vendedor/${listing.seller_key}`} className="flex items-center gap-3 hover:underline">
         <V2Avatar name={nome} photoUrl={seller?.logo_url} />
         <span className="min-w-0">
@@ -172,9 +173,9 @@ function SellerCard({ listing }) {
       )}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
         {(seller?.city || listing.city) && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{[seller?.city || listing.city, seller?.state || listing.state].filter(Boolean).join(' · ')}</span>}
-        {seller?.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3 w-3" />{seller.sales_count} venda{seller.sales_count > 1 ? 's' : ''} concluída{seller.sales_count > 1 ? 's' : ''}</span>}
+        {seller?.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3 w-3" />{tn(seller.sales_count, '{n} venda concluída', '{n} vendas concluídas')}</span>}
       </div>
-      <Link to={`/mercado/vendedor/${listing.seller_key}`} className="inline-flex text-sm font-bold text-ink hover:underline">Ver a vitrine do vendedor</Link>
+      <Link to={`/mercado/vendedor/${listing.seller_key}`} className="inline-flex text-sm font-bold text-ink hover:underline">{t('Ver a vitrine do vendedor')}</Link>
     </V2Surface>
   );
 }
@@ -184,13 +185,13 @@ function Characteristics({ listing }) {
     .map((a) => ({ a, v: listing.attributes?.[a.key] }))
     .filter(({ v }) => v !== undefined && v !== null && v !== '');
   const linhas = [
-    ...(listing.brand && !attrs.some(({ a }) => a.key === 'marca') ? [['Marca', listing.brand]] : []),
-    ['Condição', listing.type === LISTING_TYPE.USED ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'],
-    ...attrs.map(({ a, v }) => [a.label, formatAttribute(a, v)]),
+    ...(listing.brand && !attrs.some(({ a }) => a.key === 'marca') ? [[t('Marca'), listing.brand]] : []),
+    [t('Condição'), listing.type === LISTING_TYPE.USED ? t(CONDITION_LABELS[listing.condition] || 'Usado') : t('Novo')],
+    ...attrs.map(({ a, v }) => [t(a.label), formatAttribute(a, v)]),
   ];
   return (
     <section aria-labelledby="carac-titulo" className="space-y-3">
-      <h2 id="carac-titulo" className="font-display text-xl font-bold text-ink">Características</h2>
+      <h2 id="carac-titulo" className="font-display text-xl font-bold text-ink">{t('Características')}</h2>
       <dl className="grid grid-cols-1 overflow-hidden rounded-2xl border border-gray-100 sm:grid-cols-2">
         {linhas.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 border-b border-gray-100 px-4 py-3 text-sm odd:bg-paper sm:odd:bg-transparent">
@@ -208,10 +209,10 @@ function MoreFrom({ listing }) {
   const itens = (q.data || []).filter((l) => l.id !== listing.id && l.status === 'active').slice(0, 4);
   if (!itens.length) return null;
   return (
-    <section aria-label="Mais deste vendedor" className="space-y-3">
+    <section aria-label={t('Mais deste vendedor')} className="space-y-3">
       <div className="flex items-end justify-between">
-        <h2 className="font-display text-xl font-bold text-ink">Mais de {listing.seller_name}</h2>
-        <Link to={`/mercado/vendedor/${listing.seller_key}`} className="text-sm font-bold text-ink hover:underline">Ver tudo</Link>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Mais de {nome}', { nome: listing.seller_name })}</h2>
+        <Link to={`/mercado/vendedor/${listing.seller_key}`} className="text-sm font-bold text-ink hover:underline">{t('Ver tudo')}</Link>
       </div>
       <ListingGrid>{itens.map((l) => <ListingCard key={l.id} listing={l} />)}</ListingGrid>
     </section>
@@ -227,8 +228,8 @@ function Similar({ listing }) {
     .slice(0, 8), [feed.data, listing]);
   if (!itens.length) return null;
   return (
-    <section aria-label="Parecidos" className="space-y-3">
-      <h2 className="font-display text-xl font-bold text-ink">Quem viu este também viu</h2>
+    <section aria-label={t('Parecidos')} className="space-y-3">
+      <h2 className="font-display text-xl font-bold text-ink">{t('Quem viu este também viu')}</h2>
       <ListingGrid>{itens.map((l) => <ListingCard key={l.id} listing={l} />)}</ListingGrid>
     </section>
   );
@@ -239,16 +240,16 @@ function ShareButton({ listing }) {
   const url = typeof window !== 'undefined' ? `${window.location.origin}/mercado/anuncio/${listing.id}` : '';
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label="Compartilhar o anúncio" className="flex h-11 w-11 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm">
+      <button type="button" onClick={() => setOpen(true)} aria-label={t('Compartilhar o anúncio')} className="flex h-11 w-11 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm">
         <Share2 className="h-5 w-5" />
       </button>
       <ShareImageDialog
         open={open}
         onOpenChange={setOpen}
-        title="Compartilhar o anúncio"
+        title={t('Compartilhar o anúncio')}
         url={url}
         fileName={`mercado-${listing.id}.png`}
-        shareText={`${listing.title} por ${formatBRL(listing.price_cents)} no Mercado PickleRush`}
+        shareText={t('{titulo} por {valor} no Mercado PickleRush', { titulo: listing.title, valor: formatBRL(listing.price_cents) })}
         renderCard={({ ref, qr, showImage }) => (
           <MarketShareCard ref={ref} image={coverOf(listing)?.url} showImage={showImage} qr={qr} title={listing.title}
             subtitle={listing.seller_name} priceCents={listing.price_cents} compareAtCents={listing.compare_at_cents} />
@@ -287,9 +288,9 @@ function ListingPage() {
   } else if (!listing || (['removed', 'draft', 'pending_review'].includes(listing.status) && !podeVerOculto)) {
     corpo = (
       <V2Surface className="text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">Este anúncio não está mais no ar</h1>
-        <p className="mt-2 text-gray-500">O vendedor pausou ou encerrou, ou a moderação retirou. Veja outros parecidos na vitrine.</p>
-        <V2Button asChild className="mt-6"><Link to="/mercado">Ir para o Mercado</Link></V2Button>
+        <h1 className="font-display text-2xl font-bold text-ink">{t('Este anúncio não está mais no ar')}</h1>
+        <p className="mt-2 text-gray-500">{t('O vendedor pausou ou encerrou, ou a moderação retirou. Veja outros parecidos na vitrine.')}</p>
+        <V2Button asChild className="mt-6"><Link to="/mercado">{t('Ir para o Mercado')}</Link></V2Button>
       </V2Surface>
     );
   } else {
@@ -307,7 +308,7 @@ function ListingPage() {
           <div className="space-y-4 lg:col-span-5">
             <div className="space-y-4 lg:sticky lg:top-4">
               <BuyBox listing={listing} isOperator={isOperator} settings={settings.data} />
-              {!isOperator && <StoreCoupons sellerKey={listing.seller_key} title="Cupons da loja" compact />}
+              {!isOperator && <StoreCoupons sellerKey={listing.seller_key} title={t('Cupons da loja')} compact />}
               <SellerCard listing={listing} />
               {isPlatformAdmin && <AdminModerationBox listing={listing} />}
               {!isOperator && <ReportListingButton listing={listing} />}
@@ -318,7 +319,7 @@ function ListingPage() {
           <div className="space-y-10 lg:col-span-7">
             {listing.description && (
               <section aria-labelledby="desc-titulo" className="space-y-3">
-                <h2 id="desc-titulo" className="font-display text-xl font-bold text-ink">Descrição</h2>
+                <h2 id="desc-titulo" className="font-display text-xl font-bold text-ink">{t('Descrição')}</h2>
                 <p className="whitespace-pre-line text-base leading-7 text-gray-700">{listing.description}</p>
               </section>
             )}

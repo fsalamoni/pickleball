@@ -12,6 +12,7 @@ import { useNavRotulos } from '@/core/lib/useNavRotulos';
 import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { V2Avatar, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeSection } from './HomeSection';
+import { t } from '@/core/i18n';
 
 export default function HomeCommunitySection({ reason, perfil, uid }) {
   const rotulos = useNavRotulos();
@@ -24,16 +25,16 @@ export default function HomeCommunitySection({ reason, perfil, uid }) {
     .slice(0, 6), [atletas.data, perfil, uid]);
 
   return (
-    <HomeSection id="comunidade" icon={Users} title="Comunidade" reason={reason} action={{ to: '/atletas', label: 'Atletas' }}>
+    <HomeSection id="comunidade" icon={Users} title={t('Comunidade')} reason={reason} action={{ to: '/atletas', label: t('Atletas') }}>
       <div className="space-y-4">
         {atletas.isLoading ? (
           <V2Skeleton className="h-16 rounded-3xl" />
         ) : atletas.isError ? (
-          <V2ErrorState inline title="Não carregou os atletas" description="Tente de novo em instantes." onRetry={atletas.refetch} />
+          <V2ErrorState inline title={t('Não carregou os atletas')} description={t('Tente de novo em instantes.')} onRetry={atletas.refetch} />
         ) : perto.length > 0 && (
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-              Atletas {perto[0].p === 2 ? 'da sua cidade' : 'do seu estado'}
+              {perto[0].p === 2 ? t('Atletas da sua cidade') : t('Atletas do seu estado')}
             </p>
             <ul className="flex flex-wrap gap-3">
               {perto.map(({ a }) => (
@@ -51,8 +52,8 @@ export default function HomeCommunitySection({ reason, perfil, uid }) {
           </div>
         )}
         <div className="flex flex-wrap gap-2">
-          <HomeAction to="/novidades"><Zap className="h-3.5 w-3.5" aria-hidden="true" /> Novidades</HomeAction>
-          <HomeAction to="/chat"><MessageSquare className="h-3.5 w-3.5" aria-hidden="true" /> Mensagens</HomeAction>
+          <HomeAction to="/novidades"><Zap className="h-3.5 w-3.5" aria-hidden="true" /> {t('Novidades')}</HomeAction>
+          <HomeAction to="/chat"><MessageSquare className="h-3.5 w-3.5" aria-hidden="true" /> {t('Mensagens')}</HomeAction>
           <HomeAction to="/encontrar-jogadores"><Users className="h-3.5 w-3.5" aria-hidden="true" /> {rotulos.pessoas}</HomeAction>
         </div>
       </div>

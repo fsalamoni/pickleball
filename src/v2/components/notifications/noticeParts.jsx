@@ -11,6 +11,7 @@ import { cn } from '@/core/lib/utils';
 import {
   NOTICE_AREA, noticeArea, noticeAreaMeta, noticeFullDate, noticeTime, noticeTimeLabel,
 } from '@/modules/notifications/domain/noticeFeed';
+import { t } from '@/core/i18n';
 
 export const AREA_ICON = Object.freeze({
   [NOTICE_AREA.JOGOS]: CalendarDays,
@@ -40,7 +41,7 @@ export function NoticeIcon({ notice, size = 'md', className }) {
         lida ? 'bg-gray-100 text-gray-500' : 'bg-acid/20 text-ink',
         className,
       )}
-      title={noticeAreaMeta(area).label}
+      title={t(noticeAreaMeta(area).label)}
       aria-hidden="true"
     >
       <Icon className={size === 'sm' ? 'h-4 w-4' : 'h-[18px] w-[18px]'} />

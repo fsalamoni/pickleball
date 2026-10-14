@@ -25,15 +25,16 @@ import { usePreviewAccountMerge, useMergeAccountHistory } from '@/modules/admin/
 import {
   MERGE_CONFIRM_WORD, suggestMergeTargets, validateMergeRequest, normalizarNome,
 } from '@/modules/admin/domain/accountMerge';
+import { t, tn } from '@/core/i18n';
 
-const nomeDe = (u) => u?.full_name || u?.platform_name || u?.display_name || '(sem nome)';
+const nomeDe = (u) => u?.full_name || u?.platform_name || u?.display_name || t('(sem nome)');
 
 function Conta({ titulo, nome, email, uid, tom }) {
   return (
     <div className={`min-w-0 flex-1 rounded-xl border p-3 ${tom}`}>
       <p className="text-2xs font-semibold uppercase tracking-wide text-gray-500">{titulo}</p>
-      <p className="truncate text-sm font-bold text-ink">{nome || '(sem nome)'}</p>
-      <p className="truncate text-2xs text-gray-500">{email || 'sem e-mail'}</p>
+      <p className="truncate text-sm font-bold text-ink">{nome || t('(sem nome)')}</p>
+      <p className="truncate text-2xs text-gray-500">{email || t('sem e-mail')}</p>
       <p className="truncate text-2xs text-gray-500">{uid}</p>
     </div>
   );
@@ -81,21 +82,19 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><GitMerge className="h-5 w-5" /> Unificar o histórico</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><GitMerge className="h-5 w-5" /> {t('Unificar o histórico')}</DialogTitle>
           <DialogDescription>
-            Os jogos, inscrições e resultados da conta excluída <strong>{deleted.name}</strong> passam
-            para a conta que continua — no ranking, no rating e no perfil. Use quando a pessoa tinha
-            dois cadastros. Posse (torneios, clubes), financeiro e conversas não mudam.
+            {t('Os jogos, inscrições e resultados da conta excluída')} <strong>{deleted.name}</strong> {t('passam para a conta que continua — no ranking, no rating e no perfil. Use quando a pessoa tinha dois cadastros. Posse (torneios, clubes), financeiro e conversas não mudam.')}
           </DialogDescription>
         </DialogHeader>
 
         {resultado?.status === 'merged' ? (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
-            <p className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-4 w-4" /> Histórico unificado</p>
+            <p className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-4 w-4" /> {t('Histórico unificado')}</p>
             <p className="mt-1 text-xs leading-5">
-              {resultado.documentos} registro(s) passaram para {nomeDe(destino)}. O ranking
-              {resultado.ranking ? ' já foi recalculado.' : ' é recalculado em instantes (pelo servidor).'}
-              {' '}A Auditoria guarda o que mudou.
+              {tn(resultado.documentos, '{n} registro passou para {nome}.', '{n} registros passaram para {nome}.', { nome: nomeDe(destino) })}{' '}
+              {resultado.ranking ? t('O ranking já foi recalculado.') : t('O ranking é recalculado em instantes (pelo servidor).')}{' '}
+              {t('A Auditoria guarda o que mudou.')}
             </p>
           </div>
         ) : (
@@ -105,7 +104,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
               <div className="space-y-3">
                 {sugestoes.length > 0 && (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold text-ink">Provavelmente é a mesma pessoa:</p>
+                    <p className="mb-1.5 text-xs font-semibold text-ink">{t('Provavelmente é a mesma pessoa:')}</p>
                     <div className="space-y-1.5">
                       {sugestoes.map(({ user: u, motivos }) => (
                         <button
@@ -126,11 +125,11 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                 )}
                 <div>
                   <p className="mb-1.5 text-xs font-semibold text-ink">
-                    {sugestoes.length > 0 ? 'Ou procure a conta que fica:' : 'Procure a conta que fica:'}
+                    {sugestoes.length > 0 ? t('Ou procure a conta que fica:') : t('Procure a conta que fica:')}
                   </p>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <V2Input className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, e-mail ou uid…" />
+                    <V2Input className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Nome, e-mail ou uid…')} />
                   </div>
                   <div className="mt-1.5 space-y-1">
                     {buscados.map((u) => (
@@ -154,7 +153,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
               <div className="space-y-3">
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <Conta
-                    titulo="Conta excluída"
+                    titulo={t('Conta excluída')}
                     nome={report?.excluida?.name || deleted.name}
                     email={report?.excluida?.email || deleted.email}
                     uid={deleted.uid}
@@ -162,7 +161,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                   />
                   <ArrowRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-gray-400 sm:rotate-0" />
                   <Conta
-                    titulo="Conta que fica"
+                    titulo={t('Conta que fica')}
                     nome={report?.destino?.name || nomeDe(destino)}
                     email={report?.destino?.email || destino.email}
                     uid={destino.uid}
@@ -170,11 +169,11 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                   />
                 </div>
                 <button type="button" className="text-2xs font-semibold text-gray-500 underline hover:text-ink" onClick={() => { setDestino(null); preview.reset(); }}>
-                  Escolher outra conta
+                  {t('Escolher outra conta')}
                 </button>
 
                 {preview.isPending && (
-                  <p className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> O servidor está conferindo o histórico…</p>
+                  <p className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> {t('O servidor está conferindo o histórico…')}</p>
                 )}
                 {preview.isError && (
                   <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{preview.error.message}</p>
@@ -191,8 +190,7 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                     {report.conflitosTotal > 0 && (
                       <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700">
                         <p className="font-semibold">
-                          {report.conflitosTotal} conflito(s): as duas contas aparecem no mesmo registro — juntá-las faria a
-                          pessoa jogar com (ou contra) ela mesma. Nada será gravado enquanto isso existir.
+                          {t('{n} conflito(s): as duas contas aparecem no mesmo registro — juntá-las faria a pessoa jogar com (ou contra) ela mesma. Nada será gravado enquanto isso existir.', { n: report.conflitosTotal })}
                         </p>
                         <ul className="mt-1 space-y-0.5 text-2xs">
                           {report.conflitos.map((c) => <li key={c.path}>{c.motivo} <span className="text-red-400">({c.path})</span></li>)}
@@ -201,17 +199,17 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                     )}
                     {report.total === 0 && report.bloqueios.length === 0 && report.conflitosTotal === 0 && (
                       <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">
-                        Não há histórico esportivo desta conta para transferir — ou ele já foi unificado.
+                        {t('Não há histórico esportivo desta conta para transferir — ou ele já foi unificado.')}
                       </p>
                     )}
                     {report.itens.length > 0 && (
                       <div className="rounded-xl border border-gray-100 p-3">
-                        <p className="text-xs font-semibold text-ink">O que passa para {report.destino?.name}:</p>
+                        <p className="text-xs font-semibold text-ink">{t('O que passa para {nome}:', { nome: report.destino?.name })}</p>
                         <ul className="mt-1 grid gap-x-4 gap-y-0.5 text-2xs text-gray-600 sm:grid-cols-2">
                           {report.itens.map((i) => <li key={i.label}>{i.label}: <strong className="text-ink">{i.count}</strong></li>)}
                         </ul>
                         {report.truncado && (
-                          <p className="mt-1 text-2xs text-amber-700">Há mais registros do que cabem numa passada — rode de novo depois para terminar.</p>
+                          <p className="mt-1 text-2xs text-amber-700">{t('Há mais registros do que cabem numa passada — rode de novo depois para terminar.')}</p>
                         )}
                       </div>
                     )}
@@ -223,23 +221,23 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
                   podeExecutar ? (
                     <div className="space-y-2 rounded-xl border border-gray-100 p-3">
                       <label className="block text-xs font-semibold text-ink">
-                        Motivo (vai para a Auditoria)
-                        <V2Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: segunda conta do mesmo atleta, excluída em 30/09" />
+                        {t('Motivo (vai para a Auditoria)')}
+                        <V2Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('Ex.: segunda conta do mesmo atleta, excluída em 30/09')} />
                       </label>
                       <label className="block text-xs font-semibold text-ink">
-                        Digite {MERGE_CONFIRM_WORD} para confirmar
+                        {t('Digite {palavra} para confirmar', { palavra: MERGE_CONFIRM_WORD })}
                         <V2Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
                       </label>
                     </div>
                   ) : (
                     <p className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
                       <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                      Só o dono da plataforma executa a unificação — como a exclusão. Você vê a prévia para conferir.
+                      {t('Só o dono da plataforma executa a unificação — como a exclusão. Você vê a prévia para conferir.')}
                     </p>
                   )
                 )}
                 {resultado?.status === 'blocked' && (
-                  <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">O servidor encontrou um impedimento ao conferir de novo. Veja a prévia acima.</p>
+                  <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{t('O servidor encontrou um impedimento ao conferir de novo. Veja a prévia acima.')}</p>
                 )}
                 {resultado?.status === 'error' && (
                   <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{resultado.error}</p>
@@ -250,10 +248,10 @@ export default function AdminAccountMergeDialog({ deleted, users, onClose }) {
         )}
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>{resultado?.status === 'merged' ? 'Fechar' : 'Cancelar'}</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{resultado?.status === 'merged' ? t('Fechar') : t('Cancelar')}</V2Button>
           {resultado?.status !== 'merged' && report?.podeUnificar && podeExecutar && (
             <V2Button onClick={executar} disabled={!validacao.isValid || merge.isPending}>
-              {merge.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Unificando…</> : <><GitMerge className="h-4 w-4" /> Unificar</>}
+              {merge.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('Unificando…')}</> : <><GitMerge className="h-4 w-4" /> {t('Unificar')}</>}
             </V2Button>
           )}
         </DialogFooter>

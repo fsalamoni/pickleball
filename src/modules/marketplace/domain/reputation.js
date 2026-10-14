@@ -7,14 +7,16 @@
  * vendedor só aparece com 3 avaliações ou mais; antes disso, "Vendedor novo".
  */
 
+import { t, fmtNumero } from '@/core/i18n';
+
 export const REVIEW_REVEAL_DAYS = 14;
 export const MIN_REVIEWS_FOR_RATING = 3;
 
 export function validateReview({ rating, comment } = {}) {
   const r = Math.round(Number(rating));
-  if (!(r >= 1 && r <= 5)) return { error: 'Escolha de 1 a 5 estrelas.' };
+  if (!(r >= 1 && r <= 5)) return { error: t('Escolha de 1 a 5 estrelas.') };
   const c = String(comment || '').trim().slice(0, 1000);
-  if (r <= 2 && c.length < 10) return { error: 'Conte em poucas palavras o que deu errado.' };
+  if (r <= 2 && c.length < 10) return { error: t('Conte em poucas palavras o que deu errado.') };
   return { value: { rating: r, comment: c } };
 }
 
@@ -44,18 +46,18 @@ export function summarizeReviews(reviews = []) {
 
 /** "4,8 (23)" ou "Vendedor novo". */
 export function ratingLabel(avg, count) {
-  if (!(count >= MIN_REVIEWS_FOR_RATING)) return 'Vendedor novo';
-  return `${String((Math.round(avg * 10) / 10).toFixed(1)).replace('.', ',')} (${count})`;
+  if (!(count >= MIN_REVIEWS_FOR_RATING)) return t('Vendedor novo');
+  return `${fmtNumero(Math.round(avg * 10) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} (${count})`;
 }
 
 /** Selos derivados (nunca escritos à mão, exceto o "verificada" que o admin dá). */
 export function sellerBadges(seller = {}) {
   const badges = [];
-  if (seller.verified) badges.push({ id: 'verified', label: seller.seller_type === 'store' ? 'Loja verificada' : 'Verificado' });
-  if (seller.seller_type === 'arena') badges.push({ id: 'arena', label: 'Arena' });
-  if (seller.seller_type === 'coach') badges.push({ id: 'coach', label: 'Professor' });
+  if (seller.verified) badges.push({ id: 'verified', label: seller.seller_type === 'store' ? t('Loja verificada') : t('Verificado') });
+  if (seller.seller_type === 'arena') badges.push({ id: 'arena', label: t('Arena') });
+  if (seller.seller_type === 'coach') badges.push({ id: 'coach', label: t('Professor') });
   if ((seller.sales_count || 0) >= 10 && (seller.rating_avg || 0) >= 4.7 && (seller.rating_count || 0) >= MIN_REVIEWS_FOR_RATING) {
-    badges.push({ id: 'top', label: 'Vendedor destaque' });
+    badges.push({ id: 'top', label: t('Vendedor destaque') });
   }
   return badges;
 }

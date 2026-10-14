@@ -22,6 +22,7 @@ import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domai
 import { useFavorites, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
 import { V2Skeleton } from '@/v2/ui/primitives';
 import { toast } from 'sonner';
+import { t, tk } from '@/core/i18n';
 
 /**
  * O Mercado só existe com a flag ligada. Enquanto as flags carregam, nada;
@@ -54,14 +55,14 @@ export function CategoryIcon({ icon, className }) {
 }
 
 const SELLER_TYPE_META = {
-  store: { label: 'Loja', Icon: Store },
-  arena: { label: 'Arena', Icon: Building2 },
-  coach: { label: 'Professor', Icon: GraduationCap },
-  athlete: { label: 'Atleta', Icon: null },
+  store: { label: tk('Loja'), Icon: Store },
+  arena: { label: tk('Arena'), Icon: Building2 },
+  coach: { label: tk('Professor'), Icon: GraduationCap },
+  athlete: { label: tk('Atleta'), Icon: null },
 };
 
 export function sellerTypeLabel(type) {
-  return SELLER_TYPE_META[type]?.label || 'Vendedor';
+  return t(SELLER_TYPE_META[type]?.label || 'Vendedor');
 }
 
 /** "Loja" / "Arena" / "Professor" (atleta não leva selo: é o comum). */
@@ -71,7 +72,7 @@ export function SellerTypeTag({ type, className }) {
   const { Icon } = meta;
   return (
     <span className={cn('inline-flex items-center gap-1 text-2xs font-bold uppercase tracking-wide text-gray-500', className)}>
-      <Icon className="h-3 w-3" /> {meta.label}
+      <Icon className="h-3 w-3" /> {t(meta.label)}
     </span>
   );
 }
@@ -85,7 +86,7 @@ export function Price({ cents, compareAt, size = 'md', className }) {
       {off > 0 && <div className="text-xs text-gray-500 line-through">{formatBRL(compareAt)}</div>}
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span className={cn('font-display font-bold text-ink', big)}>{formatBRL(cents)}</span>
-        {off > 0 && <span className="text-sm font-bold text-green-600">{off}% OFF</span>}
+        {off > 0 && <span className="text-sm font-bold text-green-600">{t('{n}% OFF', { n: off })}</span>}
       </div>
     </div>
   );
@@ -94,11 +95,11 @@ export function Price({ cents, compareAt, size = 'md', className }) {
 /** Estrelas + nota. Vendedor com menos de 3 avaliações é "novo" (média de 1 avaliação não diz nada). */
 export function Stars({ avg = 0, count = 0, className, showLabel = true }) {
   if (!(count >= MIN_REVIEWS_FOR_RATING)) {
-    return showLabel ? <span className={cn('text-xs font-medium text-gray-500', className)}>Vendedor novo</span> : null;
+    return showLabel ? <span className={cn('text-xs font-medium text-gray-500', className)}>{t('Vendedor novo')}</span> : null;
   }
   const full = Math.round(avg);
   return (
-    <span className={cn('inline-flex items-center gap-1 text-xs text-gray-500', className)} aria-label={`Nota ${ratingLabel(avg, count)}`}>
+    <span className={cn('inline-flex items-center gap-1 text-xs text-gray-500', className)} aria-label={t('Nota {nota}', { nota: ratingLabel(avg, count) })}>
       <span className="inline-flex" aria-hidden="true">
         {[1, 2, 3, 4, 5].map((i) => (
           <Star key={i} className={cn('h-3.5 w-3.5', i <= full ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />
@@ -110,7 +111,7 @@ export function Stars({ avg = 0, count = 0, className, showLabel = true }) {
 }
 
 export function VerifiedMark({ className }) {
-  return <BadgeCheck className={cn('h-4 w-4 shrink-0 text-blue-600', className)} aria-label="Verificado" />;
+  return <BadgeCheck className={cn('h-4 w-4 shrink-0 text-blue-600', className)} aria-label={t('Verificado')} />;
 }
 
 /**
@@ -126,7 +127,7 @@ export function FavoriteButton({ listingId, className, size = 'md' }) {
   const dim = size === 'sm' ? 'h-9 w-9' : 'h-11 w-11';
   if (!uid) {
     return (
-      <Link to="/login" aria-label="Entre para favoritar" className={cn('flex items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm backdrop-blur', dim, className)}>
+      <Link to="/login" aria-label={t('Entre para favoritar')} className={cn('flex items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm backdrop-blur', dim, className)}>
         <Heart className="h-5 w-5" />
       </Link>
     );
@@ -135,13 +136,13 @@ export function FavoriteButton({ listingId, className, size = 'md' }) {
     <button
       type="button"
       aria-pressed={on}
-      aria-label={on ? 'Tirar dos favoritos' : 'Salvar nos favoritos'}
+      aria-label={on ? t('Tirar dos favoritos') : t('Salvar nos favoritos')}
       disabled={favs.isLoading}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         toggle.mutate({ listingId, on: !on }, {
-          onError: () => toast.error('Não foi possível salvar o favorito. Tente de novo.'),
+          onError: () => toast.error(t('Não foi possível salvar o favorito. Tente de novo.')),
         });
       }}
       className={cn(
@@ -155,7 +156,7 @@ export function FavoriteButton({ listingId, className, size = 'md' }) {
   );
 }
 
-const CONDITION_SHORT = { like_new: 'Usado · como novo', good: 'Usado · bom estado', fair: 'Usado · marcas de uso' };
+const CONDITION_SHORT = { like_new: tk('Usado · como novo'), good: tk('Usado · bom estado'), fair: tk('Usado · marcas de uso') };
 
 /** O cartão do anúncio na vitrine e nas listas. */
 export function ListingCard({ listing, className, showFavorite = true }) {
@@ -184,10 +185,10 @@ export function ListingCard({ listing, className, showFavorite = true }) {
           <div className="flex h-full items-center justify-center text-gray-300"><Box className="h-12 w-12" /></div>
         )}
         {cover?.ai_generated && <AiStamp className="absolute bottom-3 left-3" />}
-        {sold && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">Esgotado</span>}
+        {sold && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">{t('Esgotado')}</span>}
         {!sold && listing.type === LISTING_TYPE.USED && (
           <span className="absolute left-3 top-3 rounded-full bg-paper-pure/90 px-3 py-1 text-xs font-bold text-ink backdrop-blur">
-            {CONDITION_SHORT[listing.condition] || 'Usado'}
+            {t(CONDITION_SHORT[listing.condition] || 'Usado')}
           </span>
         )}
       </div>
@@ -198,15 +199,15 @@ export function ListingCard({ listing, className, showFavorite = true }) {
           {ship && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
               <Truck className="h-3.5 w-3.5" />
-              {listing.shipping_cents === 0 && !listing.shipping_to_agree ? 'Frete grátis' : 'Envia'}
+              {listing.shipping_cents === 0 && !listing.shipping_to_agree ? t('Frete grátis') : t('Envia')}
             </span>
           )}
-          {listing.accepts_offers && !sold && <span className="text-xs font-medium text-blue-600">Aceita oferta</span>}
+          {listing.accepts_offers && !sold && <span className="text-xs font-medium text-blue-600">{t('Aceita oferta')}</span>}
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-gray-500">
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{[listing.city, listing.state].filter(Boolean).join(' · ') || 'Brasil'}</span>
+            <span className="truncate">{[listing.city, listing.state].filter(Boolean).join(' · ') || t('Brasil')}</span>
           </span>
           <SellerTypeTag type={listing.seller_type} />
         </div>
@@ -239,7 +240,7 @@ export function ListingGridSkeleton({ n = 8 }) {
 }
 
 export function fulfillmentLabel(f) {
-  return FULFILLMENT_LABELS[f] || f;
+  return FULFILLMENT_LABELS[f] ? t(FULFILLMENT_LABELS[f]) : f;
 }
 
 /** A cor do selo de status de um pedido. */

@@ -21,6 +21,7 @@ import { colocacaoTexto, lastTournamentResult } from '@/modules/home/domain/home
 import { TOURNAMENT_PHASE_LABEL } from '@/modules/home/domain/freshness';
 import { cn } from '@/core/lib/utils';
 import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
+import { t } from '@/core/i18n';
 
 const MEDALHA = { 1: 'bg-acid text-ink', 2: 'bg-gray-200 text-ink', 3: 'bg-amber-200 text-ink' };
 
@@ -30,23 +31,23 @@ export default function HomeLastResultSection({ reason, hoje, escolhido = false 
 
   if (historico.isLoading) {
     return (
-      <HomeSection id="resultado" icon={Medal} title="Seu último torneio" reason={reason}>
+      <HomeSection id="resultado" icon={Medal} title={t('Seu último torneio')} reason={reason}>
         <V2Skeleton className="h-28 rounded-3xl" />
       </HomeSection>
     );
   }
   if (historico.isError) {
     return (
-      <HomeSection id="resultado" icon={Medal} title="Seu último torneio" reason={reason}>
-        <V2ErrorState inline title="Não carregou o seu histórico" description="Os seus resultados continuam lá." onRetry={historico.refetch} />
+      <HomeSection id="resultado" icon={Medal} title={t('Seu último torneio')} reason={reason}>
+        <V2ErrorState inline title={t('Não carregou o seu histórico')} description={t('Os seus resultados continuam lá.')} onRetry={historico.refetch} />
       </HomeSection>
     );
   }
   if (!ultimo && escolhido) {
     return (
-      <HomeSection id="resultado" icon={Medal} title="Seu último torneio" reason={reason}>
-        <HomeEmpty icon={Trophy} actions={<HomeAction to="/torneios">Ver torneios</HomeAction>}>
-          Você ainda não tem resultado de torneio. Depois do primeiro, a sua colocação aparece aqui.
+      <HomeSection id="resultado" icon={Medal} title={t('Seu último torneio')} reason={reason}>
+        <HomeEmpty icon={Trophy} actions={<HomeAction to="/torneios">{t('Ver torneios')}</HomeAction>}>
+          {t('Você ainda não tem resultado de torneio. Depois do primeiro, a sua colocação aparece aqui.')}
         </HomeEmpty>
       </HomeSection>
     );
@@ -59,9 +60,9 @@ export default function HomeLastResultSection({ reason, hoje, escolhido = false 
     <HomeSection
       id="resultado"
       icon={Medal}
-      title="Seu último torneio"
+      title={t('Seu último torneio')}
       reason={reason}
-      action={{ to: `/torneios/${ultimo.tournamentId}/ranking`, label: 'Classificação' }}
+      action={{ to: `/torneios/${ultimo.tournamentId}/ranking`, label: t('Classificação') }}
     >
       <Link
         to={`/torneios/${ultimo.tournamentId}/ranking`}
@@ -79,12 +80,12 @@ export default function HomeLastResultSection({ reason, hoje, escolhido = false 
         <span className="min-w-0 flex-1">
           <span className="block truncate font-display text-lg font-bold">{ultimo.name}</span>
           <span className="mt-0.5 block text-sm text-gray-300">
-            {colocacaoTexto(best)} na classificação · {best.modality}
+            {t('{pos} na classificação', { pos: colocacaoTexto(best) })} · {best.modality}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-            <span>{best.wins}V – {best.losses}D</span>
-            {best.partnerName && <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" aria-hidden="true" /> com {best.partnerName}</span>}
-            <span>{ultimo.encerrado ? 'Encerrado' : TOURNAMENT_PHASE_LABEL[ultimo.phase]}{ultimo.when ? ` · ${ultimo.when}` : ''}</span>
+            <span>{t('{v}V – {d}D', { v: best.wins, d: best.losses })}</span>
+            {best.partnerName && <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" aria-hidden="true" /> {t('com {nome}', { nome: best.partnerName })}</span>}
+            <span>{ultimo.encerrado ? t('Encerrado') : t(TOURNAMENT_PHASE_LABEL[ultimo.phase])}{ultimo.when ? ` · ${ultimo.when}` : ''}</span>
           </span>
         </span>
         <ArrowRight className="h-5 w-5 shrink-0 text-acid transition-transform group-hover:translate-x-1" aria-hidden="true" />

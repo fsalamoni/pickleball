@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { V2Button, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * Rota de emergência para o owner da plataforma.
@@ -80,7 +81,7 @@ export default function V2AdminOwnerRestore() {
       // Re-busca o doc para mostrar o estado novo.
       const fresh = await getDoc(doc(db, 'users', user.uid));
       setUsersDoc(fresh.exists() ? { id: fresh.id, ...fresh.data() } : null);
-      toast.success('Admin restaurado. Faça logout/login para o useAuth() recarregar.');
+      toast.success(t('Admin restaurado. Faça logout/login para o useAuth() recarregar.'));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -100,8 +101,8 @@ export default function V2AdminOwnerRestore() {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2PageIntro
-          title="Acesso restrito"
-          subtitle="Esta rota é exclusiva para o owner da plataforma."
+          title={t('Acesso restrito')}
+          subtitle={t('Esta rota é exclusiva para o owner da plataforma.')}
         />
         <V2Surface className="p-6 sm:p-7">
           <div className="flex items-start gap-3">
@@ -109,18 +110,16 @@ export default function V2AdminOwnerRestore() {
               <ShieldAlert className="h-4.5 w-4.5" />
             </div>
             <div>
-              <h2 className="font-display text-xl font-bold text-ink">Você não é o owner</h2>
+              <h2 className="font-display text-xl font-bold text-ink">{t('Você não é o owner')}</h2>
               <p className="mt-1 text-sm leading-6 text-gray-500">
-                Esta página está acessível a qualquer usuário logado, mas a
-                ação de restauração só executa se o seu e-mail estiver na
-                lista de owners (single source of truth em
+                {t('Esta página está acessível a qualquer usuário logado, mas a ação de restauração só executa se o seu e-mail estiver na lista de owners (single source of truth em')}
                 <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">core/config/owners.js</code>).
-                Conta logada: <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">{user?.email || '—'}</code>.
+                {t('Conta logada:')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">{user?.email || '—'}</code>.
               </p>
             </div>
           </div>
           <div className="mt-5">
-            <Link to="/" className="text-sm font-bold text-ink underline">← Voltar ao início</Link>
+            <Link to="/" className="text-sm font-bold text-ink underline">{t('← Voltar ao início')}</Link>
           </div>
         </V2Surface>
       </div>
@@ -135,8 +134,8 @@ export default function V2AdminOwnerRestore() {
   return (
     <div className="mx-auto max-w-[900px]">
       <V2PageIntro
-        title="Restaurar admin (emergência)"
-        subtitle="Use esta página se você perdeu o acesso admin. Detecta e corrige o role do seu users/{uid}."
+        title={t('Restaurar admin (emergência)')}
+        subtitle={t('Use esta página se você perdeu o acesso admin. Detecta e corrige o role do seu users/{uid}.')}
       />
 
       <V2Surface className="mb-6 p-6 sm:p-7">
@@ -145,10 +144,10 @@ export default function V2AdminOwnerRestore() {
             <KeyRound className="h-4.5 w-4.5" />
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Diagnóstico</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{t('Diagnóstico')}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Verifica o estado do seu <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
-              e <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code> e oferece a restauração quando necessário.
+              {t('Verifica o estado do seu')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
+              {t('e')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code> {t('e oferece a restauração quando necessário.')}
             </p>
           </div>
         </div>
@@ -157,10 +156,10 @@ export default function V2AdminOwnerRestore() {
           <V2Skeleton className="mt-4 h-32 rounded-2xl" />
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Field label="UID" value={user?.uid} mono />
-            <Field label="E-mail" value={user?.email} />
-            <Field label="Auth email verificado" value={String(user?.emailVerified)} />
-            <Field label="Display name (Google)" value={user?.displayName} />
+            <Field label={t('UID')} value={user?.uid} mono />
+            <Field label={t('E-mail')} value={user?.email} />
+            <Field label={t('Auth email verificado')} value={String(user?.emailVerified)} />
+            <Field label={t('Display name (Google)')} value={user?.displayName} />
             <Field label="users.role" value={currentRole || '— (vazio)'} highlight={roleIsBroken ? 'red' : 'green'} />
             <Field label="users.can_create_pools" value={String(usersDoc?.can_create_pools ?? '—')} />
             <Field label="users.photo_url" value={userDocPhotoIsEmpty ? '(vazio)' : usersDoc?.photo_url || '—'} mono={!userDocPhotoIsEmpty} />
@@ -191,18 +190,16 @@ export default function V2AdminOwnerRestore() {
           <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-900">
             <div className="flex items-center gap-2 font-bold">
               <AlertTriangle className="h-4 w-4" />
-              Role incorreto detectado
+              {t('Role incorreto detectado')}
             </div>
             <p className="mt-1">
-              O <code className="rounded bg-white px-1.5 py-0.5 text-xs">users/{user?.uid}</code>
-              tem <code className="rounded bg-white px-1.5 py-0.5 text-xs">role: &apos;{currentRole || '—'}&apos;</code>
-              mas deveria ser <code className="rounded bg-white px-1.5 py-0.5 text-xs">&apos;platform_admin&apos;</code>.
-              O FirebaseAuthContext deveria auto-corrigir isso no próximo login, mas em alguns
-              casos (sessão stale, bug de merge) o fix não dispara.
+              {t('O')} <code className="rounded bg-white px-1.5 py-0.5 text-xs">users/{user?.uid}</code>
+              {t('tem')} <code className="rounded bg-white px-1.5 py-0.5 text-xs">role: &apos;{currentRole || '—'}&apos;</code>
+              {t('mas deveria ser')} <code className="rounded bg-white px-1.5 py-0.5 text-xs">&apos;platform_admin&apos;</code>{t('. O FirebaseAuthContext deveria auto-corrigir isso no próximo login, mas em alguns casos (sessão stale, bug de merge) o fix não dispara.')}
             </p>
             <V2Button className="mt-4" onClick={handleRestore} disabled={busy}>
               <ShieldCheck className="h-4 w-4" />
-              {busy ? 'Restaurando…' : 'Restaurar meu admin agora'}
+              {busy ? t('Restaurando…') : t('Restaurar meu admin agora')}
             </V2Button>
           </div>
         )}
@@ -211,23 +208,22 @@ export default function V2AdminOwnerRestore() {
           <div className="mt-5 rounded-[1.25rem] border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-900">
             <div className="flex items-center gap-2 font-bold">
               <ShieldCheck className="h-4 w-4" />
-              Role correto
+              {t('Role correto')}
             </div>
             <p className="mt-1">
-              Tudo certo com seu admin. Se você ainda não está vendo a página de
-              administração, faça logout/login para o
+              {t('Tudo certo com seu admin. Se você ainda não está vendo a página de administração, faça logout/login para o')}
               <code className="mx-1 rounded bg-white px-1.5 py-0.5 text-xs">useAuth()</code>
-              recarregar.
+              {t('recarregar.')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=tournaments')}>
-                Ir para Painel › Torneios
+                {t('Ir para Painel › Torneios')}
               </V2Button>
               <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=records')}>
-                Ir para Painel › Cadastros
+                {t('Ir para Painel › Cadastros')}
               </V2Button>
               <V2Button variant="outline" onClick={() => navigate('/admin/painel?tab=overview')}>
-                Ir para Painel › Visão geral
+                {t('Ir para Painel › Visão geral')}
               </V2Button>
             </div>
           </div>
@@ -237,12 +233,10 @@ export default function V2AdminOwnerRestore() {
           <div className="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
             <div className="flex items-center gap-2 font-bold">
               <AlertTriangle className="h-4 w-4" />
-              Foto do atleta_profiles está vazia
+              {t('Foto do atleta_profiles está vazia')}
             </div>
             <p className="mt-1">
-              Indica que o bug antigo do <code className="rounded bg-white px-1.5 py-0.5 text-xs">syncAthleteProfile</code> sobrescreveu sua foto com string vazia.
-              Vá em <Link to="/admin/perfis" className="font-bold underline">/admin/perfis</Link> e use o botão &quot;Restaurar perfil&quot; pelo UID pra re-ler
-              do <code className="rounded bg-white px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>.
+              {t('Indica que o bug antigo do')} <code className="rounded bg-white px-1.5 py-0.5 text-xs">syncAthleteProfile</code> {t('sobrescreveu sua foto com string vazia. Vá em')} <Link to="/admin/perfis" className="font-bold underline">/admin/perfis</Link> {t('e use o botão “Restaurar perfil” pelo UID pra re-ler do')} <code className="rounded bg-white px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>.
             </p>
           </div>
         )}

@@ -11,6 +11,7 @@ import { storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { prepareUpload } from '@/modules/training/services/mediaUploadService';
 import { MEDIA_LIMITS } from '../domain/constants.js';
+import { t } from '@/core/i18n';
 
 const EXT = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'application/pdf': 'pdf' };
 
@@ -23,7 +24,7 @@ export async function prepareMarketFile(file, { allowVideo = true, allowPdf = fa
   if (allowPdf && file?.type === 'application/pdf') {
     return file.size < MEDIA_LIMITS.maxImageBytes
       ? { ok: true, error: '', file, type: 'pdf' }
-      : { ok: false, error: 'PDF de até 3 MB.', file: null, type: 'pdf' };
+      : { ok: false, error: t('PDF de até 3 MB.'), file: null, type: 'pdf' };
   }
   return prepareUpload(file, { imageMb: 3, videoMb: 60, videoSeconds: MEDIA_LIMITS.maxVideoSeconds, videoEnabled: allowVideo });
 }
@@ -33,8 +34,8 @@ export async function prepareMarketFile(file, { allowVideo = true, allowPdf = fa
  * @returns {{ task, done: Promise<{ url: string, path: string, kind: 'image'|'video'|'pdf' }> }}
  */
 export function uploadMarketFile(file, { uid, kind, folder, onProgress } = {}) {
-  if (!storage) return { task: null, done: Promise.reject(new Error('Envio de arquivos indisponível neste ambiente.')) };
-  if (!uid) return { task: null, done: Promise.reject(new Error('Entre na sua conta.')) };
+  if (!storage) return { task: null, done: Promise.reject(new Error(t('Envio de arquivos indisponível neste ambiente.'))) };
+  if (!uid) return { task: null, done: Promise.reject(new Error(t('Entre na sua conta.'))) };
   const path = marketStoragePath(uid, file.type, folder);
   const task = uploadBytesResumable(ref(storage, path), file, { contentType: file.type, cacheControl: 'public, max-age=31536000, immutable' });
   const done = new Promise((resolve, reject) => {
@@ -42,16 +43,16 @@ export function uploadMarketFile(file, { uid, kind, folder, onProgress } = {}) {
       'state_changed',
       (s) => { if (onProgress && s.totalBytes) onProgress(Math.round((s.bytesTransferred / s.totalBytes) * 100)); },
       (error) => {
-        if (error?.code === 'storage/canceled') { reject(Object.assign(new Error('Envio cancelado.'), { canceled: true })); return; }
+        if (error?.code === 'storage/canceled') { reject(Object.assign(new Error(t('Envio cancelado.')), { canceled: true })); return; }
         logger.error('Falha no envio de arquivo do Mercado:', error);
-        reject(new Error('Não foi possível enviar o arquivo. Confira a conexão e tente de novo.'));
+        reject(new Error(t('Não foi possível enviar o arquivo. Confira a conexão e tente de novo.')));
       },
       async () => {
         try {
           resolve({ url: await getDownloadURL(task.snapshot.ref), path, kind });
         } catch (error) {
           logger.error('Falha ao obter o link do arquivo do Mercado:', error);
-          reject(new Error('Arquivo enviado, mas não deu para obter o link. Tente de novo.'));
+          reject(new Error(t('Arquivo enviado, mas não deu para obter o link. Tente de novo.')));
         }
       },
     );

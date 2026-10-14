@@ -41,8 +41,8 @@ import {
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { AREA_ICON, NoticeIcon, NoticeTime } from '@/v2/components/notifications/noticeParts';
 import { NOTIFICATION_PREFS_PATH } from '@/v2/components/notifications/NotificationsBell';
+import { t, tn } from '@/core/i18n';
 
-const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
   const destino = destinoDeAviso(n.link);
@@ -73,13 +73,13 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs font-medium text-gray-500">
           <NoticeTime notice={n} agora={agora} />
           <span aria-hidden="true">·</span>
-          <span>{area.label}</span>
+          <span>{t(area.label)}</span>
           {silenciado && (
             <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">
-              <BellOff className="h-3 w-3" aria-hidden="true" /> Silenciada
+              <BellOff className="h-3 w-3" aria-hidden="true" /> {t('Silenciada')}
             </span>
           )}
-          {!n.read && <span className="sr-only">Não lida</span>}
+          {!n.read && <span className="sr-only">{t('Não lida')}</span>}
         </div>
         <div className="relative z-10">
           <PartnerInviteNotificationAction
@@ -92,8 +92,8 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
         <button
           type="button"
           onClick={() => onAlternarLida(n, !n.read)}
-          aria-label={n.read ? `Marcar como não lida: ${n.title}` : `Marcar como lida: ${n.title}`}
-          title={n.read ? 'Marcar como não lida' : 'Marcar como lida'}
+          aria-label={n.read ? t('Marcar como não lida: {titulo}', { titulo: n.title }) : t('Marcar como lida: {titulo}', { titulo: n.title })}
+          title={n.read ? t('Marcar como não lida') : t('Marcar como lida')}
           className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
           {n.read ? <CircleDot className="h-4 w-4" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
@@ -106,7 +106,7 @@ function NoticeRow({ n, agora, silenciado, onAbrir, onAlternarLida }) {
 
 function ListaCarregando() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Carregando notificações">
+    <div className="space-y-3" aria-busy="true" aria-label={t('Carregando notificações')}>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4">
           <V2Skeleton className="h-10 w-10 shrink-0 rounded-full" />
@@ -166,7 +166,7 @@ export default function V2Notifications() {
       if (lida) await markAsRead(n.id);
       else await markAsUnread(n.id);
     } catch {
-      toast.error('Não foi possível atualizar a notificação. Tente de novo.');
+      toast.error(t('Não foi possível atualizar a notificação. Tente de novo.'));
     }
   }
 
@@ -179,9 +179,9 @@ export default function V2Notifications() {
     setMarcando(true);
     try {
       const n = await markAllAsRead(base);
-      if (n > 0) toast.success(`${plural(n, 'notificação marcada', 'notificações marcadas')} como lida${n === 1 ? '' : 's'}.`);
+      if (n > 0) toast.success(tn(n, '{n} notificação marcada como lida.', '{n} notificações marcadas como lidas.'));
     } catch {
-      toast.error('Não foi possível marcar as notificações como lidas. Tente de novo.');
+      toast.error(t('Não foi possível marcar as notificações como lidas. Tente de novo.'));
     } finally {
       setMarcando(false);
     }
@@ -199,8 +199,8 @@ export default function V2Notifications() {
   if (isError) {
     conteudo = (
       <V2ErrorState
-        title="Não foi possível carregar as notificações"
-        description="A conexão falhou no meio do caminho. Suas notificações continuam guardadas — tente de novo."
+        title={t('Não foi possível carregar as notificações')}
+        description={t('A conexão falhou no meio do caminho. Suas notificações continuam guardadas — tente de novo.')}
         onRetry={retry}
       />
     );
@@ -210,24 +210,24 @@ export default function V2Notifications() {
     conteudo = (
       <V2EmptyState
         icon={Bell}
-        title="Nenhuma notificação por enquanto"
-        description="Convites, respostas de reserva, resultados e novidades dos seus clubes vão aparecer aqui — os novos e os antigos."
+        title={t('Nenhuma notificação por enquanto')}
+        description={t('Convites, respostas de reserva, resultados e novidades dos seus clubes vão aparecer aqui — os novos e os antigos.')}
       />
     );
   } else if (filtrada.length === 0) {
     conteudo = filtros.somenteNaoLidas && !filtros.area && !busca.trim() ? (
       <V2EmptyState
         icon={CheckCheck}
-        title="Tudo lido"
-        description="Você está em dia com as notificações."
-        action={<V2Button variant="secondary" size="sm" onClick={() => mudarFiltros({ somenteNaoLidas: false })}>Ver todas</V2Button>}
+        title={t('Tudo lido')}
+        description={t('Você está em dia com as notificações.')}
+        action={<V2Button variant="secondary" size="sm" onClick={() => mudarFiltros({ somenteNaoLidas: false })}>{t('Ver todas')}</V2Button>}
       />
     ) : (
       <V2EmptyState
         icon={Search}
-        title="Nada encontrado"
-        description="Nenhuma notificação com esses filtros."
-        action={<V2Button variant="secondary" size="sm" onClick={limparFiltros}>Limpar filtros</V2Button>}
+        title={t('Nada encontrado')}
+        description={t('Nenhuma notificação com esses filtros.')}
+        action={<V2Button variant="secondary" size="sm" onClick={limparFiltros}>{t('Limpar filtros')}</V2Button>}
       />
     );
   } else {
@@ -254,11 +254,11 @@ export default function V2Notifications() {
         ))}
         <div className="flex flex-col items-center gap-2 pt-2 text-center">
           <p className="text-xs text-gray-500" aria-live="polite">
-            Mostrando {visiveis.length} de {plural(filtrada.length, 'notificação', 'notificações')}
+            {tn(filtrada.length, 'Mostrando {mostradas} de {n} notificação', 'Mostrando {mostradas} de {n} notificações', { mostradas: visiveis.length })}
           </p>
           {filtrada.length > visiveis.length && (
             <V2Button variant="secondary" size="sm" onClick={() => setLimite((l) => l + NOTICE_PAGE_STEP)}>
-              Mostrar mais {Math.min(NOTICE_PAGE_STEP, filtrada.length - visiveis.length)}
+              {t('Mostrar mais {n}', { n: Math.min(NOTICE_PAGE_STEP, filtrada.length - visiveis.length) })}
             </V2Button>
           )}
         </div>
@@ -269,21 +269,21 @@ export default function V2Notifications() {
   return (
     <div className="mx-auto max-w-[760px]">
       <V2PageIntro
-        title="Notificações"
+        title={t('Notificações')}
         // O número de não lidas já está no filtro "Não lidas" e no sino.
-        subtitle="Os avisos novos e os antigos, num lugar só."
+        subtitle={t('Os avisos novos e os antigos, num lugar só.')}
         action={(
           <>
             {naoLidasNaBase > 0 && !isError && (
               <V2Button size="sm" onClick={marcarTodas} disabled={marcando}>
                 <CheckCheck className="h-4 w-4" aria-hidden="true" />
-                {marcando ? 'Marcando…' : 'Marcar todas como lidas'}
+                {marcando ? t('Marcando…') : t('Marcar todas como lidas')}
               </V2Button>
             )}
             <V2Button asChild variant="ghost" size="sm">
-              <Link to={NOTIFICATION_PREFS_PATH} aria-label="Preferências de notificação" title="Preferências de notificação">
+              <Link to={NOTIFICATION_PREFS_PATH} aria-label={t('Preferências de notificação')} title={t('Preferências de notificação')}>
                 <Settings className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Preferências</span>
+                <span className="hidden sm:inline">{t('Preferências')}</span>
               </Link>
             </V2Button>
           </>
@@ -293,20 +293,20 @@ export default function V2Notifications() {
       {!isError && !carregando && base.length > 0 && (
         <div className="mb-6 space-y-3" data-dica="notificacoes-filtros">
           <div className="flex flex-wrap items-center gap-2">
-            <div role="group" aria-label="Quais notificações" className="flex flex-wrap gap-2">
+            <div role="group" aria-label={t('Quais notificações')} className="flex flex-wrap gap-2">
               <V2FilterChip
                 active={!filtros.somenteNaoLidas}
                 aria-pressed={!filtros.somenteNaoLidas}
                 onClick={() => mudarFiltros({ somenteNaoLidas: false })}
               >
-                Todas <span className="text-xs opacity-70">{base.length}</span>
+                {t('Todas')} <span className="text-xs opacity-70">{base.length}</span>
               </V2FilterChip>
               <V2FilterChip
                 active={filtros.somenteNaoLidas}
                 aria-pressed={filtros.somenteNaoLidas}
                 onClick={() => mudarFiltros({ somenteNaoLidas: true })}
               >
-                Não lidas <span className="text-xs opacity-70">{naoLidasNaBase}</span>
+                {t('Não lidas')} <span className="text-xs opacity-70">{naoLidasNaBase}</span>
               </V2FilterChip>
             </div>
             <V2SearchInput
@@ -314,8 +314,8 @@ export default function V2Notifications() {
               type="search"
               value={busca}
               onChange={(e) => onBusca(e.target.value)}
-              placeholder="Buscar nas notificações"
-              aria-label="Buscar nas notificações"
+              placeholder={t('Buscar nas notificações')}
+              aria-label={t('Buscar nas notificações')}
               maxLength={80}
               wrapperClassName="min-w-[12rem] flex-1"
               className="py-2.5"
@@ -325,29 +325,29 @@ export default function V2Notifications() {
             // No celular, uma lista de seleção: nove botões ocupariam cinco
             // linhas antes do primeiro aviso.
             <V2Select
-              aria-label="Filtrar por área"
+              aria-label={t('Filtrar por área')}
               value={filtros.area || ''}
               onChange={(e) => mudarFiltros({ area: e.target.value || null })}
               className="h-11 py-2 sm:hidden"
             >
-              <option value="">Todas as áreas ({base.length})</option>
+              <option value="">{t('Todas as áreas')} ({base.length})</option>
               {areas.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.label} ({a.total}{a.naoLidas > 0 ? `, ${plural(a.naoLidas, 'não lida', 'não lidas')}` : ''})
+                  {t(a.label)} ({a.total}{a.naoLidas > 0 ? `, ${tn(a.naoLidas, '{n} não lida', '{n} não lidas')}` : ''})
                 </option>
               ))}
             </V2Select>
           )}
           {areas.length > 1 && (
-            <div role="group" aria-label="Filtrar por área" className="hidden flex-wrap gap-2 sm:flex">
-              <span className="sr-only">Área:</span>
+            <div role="group" aria-label={t('Filtrar por área')} className="hidden flex-wrap gap-2 sm:flex">
+              <span className="sr-only">{t('Área:')}</span>
               <V2FilterChip
                 active={!filtros.area}
                 aria-pressed={!filtros.area}
                 onClick={() => mudarFiltros({ area: null })}
                 className="px-4 py-1.5"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> Todas as áreas
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> {t('Todas as áreas')}
               </V2FilterChip>
               {areas.map((a) => {
                 const Icon = AREA_ICON[a.id] || Bell;
@@ -357,14 +357,14 @@ export default function V2Notifications() {
                     key={a.id}
                     active={ativa}
                     aria-pressed={ativa}
-                    title={a.label}
+                    title={t(a.label)}
                     onClick={() => mudarFiltros({ area: ativa ? null : a.id })}
                     className="px-4 py-1.5"
                   >
                     <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                    {a.curto}
+                    {t(a.curto)}
                     <span className="text-xs opacity-70">{a.total}</span>
-                    {a.naoLidas > 0 && <span className="sr-only">, {plural(a.naoLidas, 'não lida', 'não lidas')}</span>}
+                    {a.naoLidas > 0 && <span className="sr-only">, {tn(a.naoLidas, '{n} não lida', '{n} não lidas')}</span>}
                   </V2FilterChip>
                 );
               })}
@@ -379,16 +379,16 @@ export default function V2Notifications() {
             <BellOff className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
             <span>
               {filtros.silenciados
-                ? `Mostrando também ${plural(muted.total, 'notificação silenciada', 'notificações silenciadas')} (${muted.categorias.join(', ')}).`
-                : `Você silenciou ${muted.categorias.join(', ')}: ${plural(muted.total, 'notificação dessa categoria não aparece', 'notificações dessas categorias não aparecem')} aqui nem no sino.`}
+                ? tn(muted.total, 'Mostrando também {n} notificação silenciada ({categorias}).', 'Mostrando também {n} notificações silenciadas ({categorias}).', { categorias: muted.categorias.join(', ') })
+                : tn(muted.total, 'Você silenciou {categorias}: {n} notificação dessa categoria não aparece aqui nem no sino.', 'Você silenciou {categorias}: {n} notificações dessas categorias não aparecem aqui nem no sino.', { categorias: muted.categorias.join(', ') })}
             </span>
           </p>
           <div className="flex flex-wrap gap-1">
             <V2Button variant="ghost" size="sm" onClick={() => mudarFiltros({ silenciados: !filtros.silenciados })}>
-              {filtros.silenciados ? 'Esconder de novo' : 'Mostrar também'}
+              {filtros.silenciados ? t('Esconder de novo') : t('Mostrar também')}
             </V2Button>
             <V2Button asChild variant="ghost" size="sm">
-              <Link to={NOTIFICATION_PREFS_PATH}>Ajustar</Link>
+              <Link to={NOTIFICATION_PREFS_PATH}>{t('Ajustar')}</Link>
             </V2Button>
           </div>
         </div>
@@ -401,7 +401,7 @@ export default function V2Notifications() {
             onClick={limparFiltros}
             className="text-xs font-semibold text-gray-500 underline-offset-2 hover:text-ink hover:underline"
           >
-            Limpar filtros
+            {t('Limpar filtros')}
           </button>
         </div>
       )}

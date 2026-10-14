@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/core/lib/utils';
 import { MAX_PONTOS_POR_TELA } from '@/modules/help/domain/pontosDeDica';
 import { dialogoDe, elementoVisivel, haDialogoAberto } from './alvoNaTela';
+import { t } from '@/core/i18n';
 
 const TAMANHO = 28;
 const escapar = (s) => (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s);
@@ -86,7 +87,7 @@ export default function PontosNaTela({ pontos, vistos, onAbrir }) {
   const visto = new Set(vistos);
 
   return (
-    <div aria-label="Dicas desta tela" role="group" className="pointer-events-none fixed inset-0 z-[35]">
+    <div aria-label={t('Dicas desta tela')} role="group" className="pointer-events-none fixed inset-0 z-[35]">
       {posicoes.map((p) => {
         const jaViu = visto.has(p.id);
         return (
@@ -95,8 +96,8 @@ export default function PontosNaTela({ pontos, vistos, onAbrir }) {
             type="button"
             data-ponto-dica={p.id}
             onClick={() => onAbrir(p.id)}
-            aria-label={`Dica: ${p.title}`}
-            title={`Dica: ${p.title}`}
+            aria-label={t('Dica: {titulo}', { titulo: t(p.title) })}
+            title={t('Dica: {titulo}', { titulo: t(p.title) })}
             className="pointer-events-auto absolute flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/50"
             style={{ left: p.x, top: p.y, width: TAMANHO, height: TAMANHO }}
           >

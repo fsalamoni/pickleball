@@ -13,6 +13,7 @@ import { useFavorites, useListingsByIds, useToggleFavorite } from '@/modules/mar
 import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ListingCard, ListingGrid, ListingGridSkeleton, MarketGate } from '@/v2/components/marketplace/marketUi';
+import { t, tn } from '@/core/i18n';
 
 function FavoritesPage() {
   const { user } = useAuth();
@@ -28,9 +29,9 @@ function FavoritesPage() {
     corpo = (
       <V2EmptyState
         icon={Heart}
-        title="Nenhum favorito ainda"
-        description="Toque no coração de um anúncio para guardar aqui e voltar quando quiser."
-        action={<V2Button asChild><Link to="/mercado">Explorar o Mercado</Link></V2Button>}
+        title={t('Nenhum favorito ainda')}
+        description={t('Toque no coração de um anúncio para guardar aqui e voltar quando quiser.')}
+        action={<V2Button asChild><Link to="/mercado">{t('Explorar o Mercado')}</Link></V2Button>}
       />
     );
   } else {
@@ -41,22 +42,22 @@ function FavoritesPage() {
     const semLeitura = ids.filter((id) => !(id in mapa)).length;
     corpo = (
       <div className="space-y-8">
-        {semLeitura > 0 && <V2ErrorState inline title={`${semLeitura} favorito${semLeitura > 1 ? 's' : ''} não carregou agora`} onRetry={() => l.refetch()} />}
+        {semLeitura > 0 && <V2ErrorState inline title={tn(semLeitura, '{n} favorito não carregou agora', '{n} favoritos não carregaram agora')} onRetry={() => l.refetch()} />}
         {ativos.length > 0 && <ListingGrid>{ativos.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>}
         {fora.length > 0 && (
-          <section className="space-y-3" aria-label="Não estão mais à venda">
-            <h2 className="font-display text-lg font-bold text-ink">Não estão mais à venda ({fora.length})</h2>
+          <section className="space-y-3" aria-label={t('Não estão mais à venda')}>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Não estão mais à venda ({n})', { n: fora.length })}</h2>
             <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100">
               {fora.map((id) => (
                 <li key={id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                  <span className="truncate text-gray-600">{mapa[id]?.title || 'Anúncio encerrado'}</span>
+                  <span className="truncate text-gray-600">{mapa[id]?.title || t('Anúncio encerrado')}</span>
                   <V2Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    onClick={() => toggle.mutate({ listingId: id, on: false }, { onError: () => toast.error('Não foi possível tirar. Tente de novo.') })}
+                    onClick={() => toggle.mutate({ listingId: id, on: false }, { onError: () => toast.error(t('Não foi possível tirar. Tente de novo.')) })}
                   >
-                    Tirar da lista
+                    {t('Tirar da lista')}
                   </V2Button>
                 </li>
               ))}
@@ -70,7 +71,7 @@ function FavoritesPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-16">
       <MarketHeader />
-      <V2PageIntro title="Favoritos" subtitle={ids.length ? `${ids.length} anúncio${ids.length > 1 ? 's' : ''} guardado${ids.length > 1 ? 's' : ''}` : undefined} />
+      <V2PageIntro title={t('Favoritos')} subtitle={ids.length ? tn(ids.length, '{n} anúncio guardado', '{n} anúncios guardados') : undefined} />
       {corpo}
     </div>
   );

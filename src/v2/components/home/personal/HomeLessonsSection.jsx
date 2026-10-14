@@ -12,6 +12,7 @@ import { useCoaches } from '@/modules/coaches/hooks/useCoaches';
 import { normalizeLocality } from '@/modules/arenas/domain/homeBanners';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
+import { t } from '@/core/i18n';
 
 function atendeMinhaCidade(coach, cidade) {
   if (!cidade) return false;
@@ -28,14 +29,14 @@ export default function HomeLessonsSection({ reason, perfil, uid }) {
     .slice(0, 3), [professores.data, cidade, uid]);
 
   return (
-    <HomeSection id="aulas" icon={GraduationCap} title="Aulas e professores" reason={reason} action={{ to: '/minhas-aulas', label: 'Minhas aulas' }}>
+    <HomeSection id="aulas" icon={GraduationCap} title={t('Aulas e professores')} reason={reason} action={{ to: '/minhas-aulas', label: t('Minhas aulas') }}>
       {professores.isLoading ? (
         <V2Skeleton lines={3} />
       ) : professores.isError ? (
-        <V2ErrorState inline title="Não carregou os professores" description="Tente de novo em instantes." onRetry={professores.refetch} />
+        <V2ErrorState inline title={t('Não carregou os professores')} description={t('Tente de novo em instantes.')} onRetry={professores.refetch} />
       ) : lista.length === 0 ? (
-        <HomeEmpty icon={Search} actions={<HomeAction to="/coaches" primary>Ver professores</HomeAction>}>
-          Nenhum professor aceitando alunos no momento. Vale conferir de novo em breve.
+        <HomeEmpty icon={Search} actions={<HomeAction to="/coaches" primary>{t('Ver professores')}</HomeAction>}>
+          {t('Nenhum professor aceitando alunos no momento. Vale conferir de novo em breve.')}
         </HomeEmpty>
       ) : (
         <div className="space-y-3">
@@ -47,14 +48,14 @@ export default function HomeLessonsSection({ reason, perfil, uid }) {
                   icon={perto ? MapPin : GraduationCap}
                   title={c.display_name || 'Professor'}
                   subtitle={[(c.modalities || []).slice(0, 2).join(', '), c.hourly_rate != null ? `R$ ${Number(c.hourly_rate).toFixed(0)}/h` : null].filter(Boolean).join(' · ')}
-                  badge={perto ? 'Atende sua cidade' : null}
+                  badge={perto ? t('Atende sua cidade') : null}
                   badgeTone="acid"
                 />
               </li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <HomeAction to="/coaches"><Search className="h-3.5 w-3.5" aria-hidden="true" /> Encontrar professor</HomeAction>
+            <HomeAction to="/coaches"><Search className="h-3.5 w-3.5" aria-hidden="true" /> {t('Encontrar professor')}</HomeAction>
           </div>
         </div>
       )}

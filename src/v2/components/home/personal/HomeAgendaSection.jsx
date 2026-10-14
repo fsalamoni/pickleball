@@ -19,6 +19,7 @@ import {
   AGENDA_KIND, AGENDA_KIND_LABEL, groupAgendaByDay,
 } from '@/modules/home/domain/homeAgenda';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
+import { t, tn } from '@/core/i18n';
 
 const ICONE = {
   [AGENDA_KIND.JOGO_TORNEIO]: Trophy,
@@ -40,7 +41,7 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
   const restantes = Math.max(0, itens.length - LIMITE);
 
   return (
-    <HomeSection id="agenda" icon={CalendarDays} title="Sua agenda" reason="O que vem pela frente" wide>
+    <HomeSection id="agenda" icon={CalendarDays} title={t('Sua agenda')} reason={t('O que vem pela frente')} wide>
       {carregando && itens.length === 0 ? (
         <V2Skeleton lines={4} />
       ) : (
@@ -48,13 +49,13 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
           {falhas.length > 0 && (
             <V2ErrorState
               inline
-              title={`Não carregou: ${falhas.join(', ')}`}
-              description="A sua agenda pode estar incompleta."
+              title={t('Não carregou: {oque}', { oque: falhas.join(', ') })}
+              description={t('A sua agenda pode estar incompleta.')}
               onRetry={recarregar}
             />
           )}
           {grupos.length > 0 ? (
-            <ol className="space-y-4" aria-label="Próximos compromissos">
+            <ol className="space-y-4" aria-label={t('Próximos compromissos')}>
               {grupos.map((g) => (
                 <li key={g.dia}>
                   <p className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
@@ -67,9 +68,9 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
                           to={i.link}
                           icon={ICONE[i.kind] || CalendarClock}
                           title={i.hora ? `${i.hora} · ${i.title}` : i.title}
-                          subtitle={[AGENDA_KIND_LABEL[i.kind], i.subtitle].filter(Boolean).join(' · ')}
+                          subtitle={[AGENDA_KIND_LABEL[i.kind] && t(AGENDA_KIND_LABEL[i.kind]), i.subtitle].filter(Boolean).join(' · ')}
                           badge={i.status}
-                          badgeTone={i.acao ? 'amber' : (i.status === 'Confirmada' || i.status === 'Você vai' ? 'green' : 'neutral')}
+                          badgeTone={i.acao ? 'amber' : (i.status === t('Confirmada') || i.status === t('Você vai') ? 'green' : 'neutral')}
                           highlight={i.acao}
                         />
                       </li>
@@ -79,7 +80,7 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
               ))}
               {restantes > 0 && (
                 <li className="text-xs font-semibold text-gray-500">
-                  E mais {restantes} {restantes === 1 ? 'compromisso' : 'compromissos'} nos próximos dias.
+                  {tn(restantes, 'E mais {n} compromisso nos próximos dias.', 'E mais {n} compromissos nos próximos dias.')}
                 </li>
               )}
             </ol>
@@ -90,7 +91,7 @@ export default function HomeAgendaSection({ agenda, hoje, sugestoes = [] }) {
                 <HomeAction key={s.to} to={s.to} primary={idx === 0}>{s.label}</HomeAction>
               ))}
             >
-              Nada marcado por enquanto — sua agenda está livre.
+              {t('Nada marcado por enquanto — sua agenda está livre.')}
             </HomeEmpty>
           ) : null}
         </div>

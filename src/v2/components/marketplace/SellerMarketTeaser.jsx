@@ -11,6 +11,7 @@ import { useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { coverOf } from '@/modules/marketplace/domain/listing';
 import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2Surface } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 export default function SellerMarketTeaser({ sellerKey, quem }) {
@@ -23,17 +24,19 @@ export default function SellerMarketTeaser({ sellerKey, quem }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Store className="h-5 w-5" aria-hidden="true" /> Também no Mercado
+            <Store className="h-5 w-5" aria-hidden="true" /> {t('Também no Mercado')}
           </h2>
           <p className="text-sm text-gray-500">
-            {ativos.length} produto{ativos.length === 1 ? '' : 's'} à venda {quem ? `por ${quem}` : ''} no Mercado PickleRush, com carrinho e Pix direto.
+            {quem
+              ? tn(ativos.length, '{n} produto à venda por {quem} no Mercado PickleRush, com carrinho e Pix direto.', '{n} produtos à venda por {quem} no Mercado PickleRush, com carrinho e Pix direto.', { quem })
+              : tn(ativos.length, '{n} produto à venda no Mercado PickleRush, com carrinho e Pix direto.', '{n} produtos à venda no Mercado PickleRush, com carrinho e Pix direto.')}
           </p>
         </div>
         <Link
           to={`/mercado/vendedor/${sellerKey}`}
           className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ink hover:underline"
         >
-          Ver no Mercado <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          {t('Ver no Mercado')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">

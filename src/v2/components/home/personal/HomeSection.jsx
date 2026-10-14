@@ -19,6 +19,7 @@ import { AlertTriangle, ArrowRight, ChevronRight, RotateCw } from 'lucide-react'
 import { recordClientError } from '@/core/services/observabilityService';
 import { cn } from '@/core/lib/utils';
 import { HomeWideCards } from './homeWideCards';
+import { t } from '@/core/i18n';
 
 export function HomeSection({
   id, icon: Icon, title, reason, action, children, className, wide = false,
@@ -159,14 +160,14 @@ export class HomeSectionBoundary extends React.Component {
         >
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Esta parte da tela inicial não abriu. O resto continua funcionando.
+            {t('Esta parte da tela inicial não abriu. O resto continua funcionando.')}
           </span>
           <button
             type="button"
             onClick={() => this.setState((s) => ({ error: null, key: s.key + 1 }))}
             className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-paper-pure px-4 py-2 text-xs font-bold text-amber-900 hover:border-amber-500"
           >
-            <RotateCw className="h-3.5 w-3.5" aria-hidden="true" /> Tentar de novo
+            <RotateCw className="h-3.5 w-3.5" aria-hidden="true" /> {t('Tentar de novo')}
           </button>
         </div>
       );

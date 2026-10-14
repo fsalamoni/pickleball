@@ -14,6 +14,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
 import { useMarketCart, useMarketSettings } from '@/modules/marketplace/hooks/useMarket';
 import { CategoryIcon } from './marketUi';
+import { t } from '@/core/i18n';
 
 function HeaderLink({ to, icon: Icon, label, badge, dica }) {
   return (
@@ -58,42 +59,42 @@ export default function MarketHeader({ className }) {
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex items-center gap-2">
-        <Link to="/mercado" className="hidden items-center gap-2 pr-2 sm:flex" aria-label="Mercado — início">
+        <Link to="/mercado" className="hidden items-center gap-2 pr-2 sm:flex" aria-label={t('Mercado — início')}>
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-acid"><Store className="h-5 w-5" /></span>
-          <span className="font-display text-xl font-bold text-ink">Mercado</span>
+          <span className="font-display text-xl font-bold text-ink">{t('Mercado')}</span>
         </Link>
         <form role="search" onSubmit={buscar} data-dica="mercado-busca" className="relative min-w-0 flex-1">
-          <label htmlFor="mercado-busca" className="sr-only">Buscar no Mercado</label>
+          <label htmlFor="mercado-busca" className="sr-only">{t('Buscar no Mercado')}</label>
           <input
             id="mercado-busca"
             type="search"
             enterKeyHint="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar raquete, bola, tênis…"
+            placeholder={t('Buscar raquete, bola, tênis…')}
             className="h-12 w-full rounded-full border-2 border-ink bg-paper-pure pl-5 pr-14 text-base text-ink placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-acid/40"
             maxLength={80}
           />
           <button
             type="submit"
-            aria-label="Buscar"
+            aria-label={t('Buscar')}
             className="absolute right-1 top-1 flex h-10 w-12 items-center justify-center rounded-full bg-acid text-ink hover:bg-acid-light"
           >
             <Search className="h-5 w-5" />
           </button>
         </form>
-        <nav aria-label="Atalhos do Mercado" className="flex shrink-0 items-center">
+        <nav aria-label={t('Atalhos do Mercado')} className="flex shrink-0 items-center">
           <span className="hidden sm:contents">
-            <HeaderLink to="/mercado/favoritos" icon={Heart} label="Favoritos" />
-            {user && <HeaderLink to="/mercado/buscas" icon={Bell} label="Buscas" dica="mercado-buscas" />}
-            <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label="Compras" />
-            {user && <HeaderLink to="/mercado/vales" icon={Gift} label="Vales" />}
+            <HeaderLink to="/mercado/favoritos" icon={Heart} label={t('Favoritos')} />
+            {user && <HeaderLink to="/mercado/buscas" icon={Bell} label={t('Buscas')} dica="mercado-buscas" />}
+            <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label={t('Compras')} />
+            {user && <HeaderLink to="/mercado/vales" icon={Gift} label={t('Vales')} />}
           </span>
-          <HeaderLink to="/mercado/vender" icon={Store} label="Vender" dica="mercado-vender" />
-          <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label="Carrinho" dica="mercado-carrinho" badge={cart.isError ? 0 : cart.count} />
+          <HeaderLink to="/mercado/vender" icon={Store} label={t('Vender')} dica="mercado-vender" />
+          <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label={t('Carrinho')} dica="mercado-carrinho" badge={cart.isError ? 0 : cart.count} />
         </nav>
       </div>
-      <nav aria-label="Departamentos" data-dica="mercado-departamentos" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
+      <nav aria-label={t('Departamentos')} data-dica="mercado-departamentos" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
         <ul className="flex gap-2 sm:flex-wrap">
           {cats.map((c) => {
             const ativo = cat === c.slug || (cat && c.children?.some((f) => f.slug === cat));
@@ -107,7 +108,7 @@ export default function MarketHeader({ className }) {
                     ativo ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-ink hover:border-ink',
                   )}
                 >
-                  <CategoryIcon icon={c.icon} className="h-4 w-4" /> {c.label}
+                  <CategoryIcon icon={c.icon} className="h-4 w-4" /> {t(c.label)}
                 </Link>
               </li>
             );

@@ -13,6 +13,7 @@
  *    apps de mensagem, sem destruir o histórico do outro participante.
  */
 
+import { t } from '@/core/i18n';
 import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import {
   collection,
@@ -82,11 +83,11 @@ export async function getConversation(id) {
  * Idempotente graças ao id determinístico.
  */
 export async function getOrCreateDirectConversation(user, profile, other) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const me = toMember({ uid: user.uid, name: profile?.platform_name || user.displayName || user.email, photo_url: profile?.photo_url || user.photoURL });
   const target = toMember(other);
-  if (!target) throw new Error('Selecione um atleta válido.');
-  if (target.uid === me.uid) throw new Error('Você não pode iniciar uma conversa consigo mesmo.');
+  if (!target) throw new Error(t('Selecione um atleta válido.'));
+  if (target.uid === me.uid) throw new Error(t('Você não pode iniciar uma conversa consigo mesmo.'));
 
   const id = directConversationId(me.uid, target.uid);
   const existing = await getConversation(id);
@@ -123,12 +124,12 @@ export async function getOrCreateDirectConversation(user, profile, other) {
  * Cria uma conversa em grupo com os participantes informados (inclui o autor).
  */
 export async function createGroupConversation(user, profile, people, title) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const me = toMember({ uid: user.uid, name: profile?.platform_name || user.displayName || user.email, photo_url: profile?.photo_url || user.photoURL });
   const members = dedupeMembers([me, ...(people || [])]);
-  if (members.length < 2) throw new Error('Selecione pelo menos um atleta.');
+  if (members.length < 2) throw new Error(t('Selecione pelo menos um atleta.'));
   if (members.length > CHAT_LIMITS.MAX_GROUP_MEMBERS) {
-    throw new Error(`Um grupo pode ter no máximo ${CHAT_LIMITS.MAX_GROUP_MEMBERS} participantes.`);
+    throw new Error(t('Um grupo pode ter no máximo {n} participantes.', { n: CHAT_LIMITS.MAX_GROUP_MEMBERS }));
   }
 
   const type = conversationTypeFor(members.map((m) => m.uid));
@@ -163,7 +164,7 @@ export async function createGroupConversation(user, profile, people, title) {
  * Retorna o id existente caso o grupo resultante seja idêntico.
  */
 export async function startGroupFromConversation(conversation, newPeople, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const currentMembers = (conversation?.members || []);
   const union = dedupeMembers([...currentMembers, ...(newPeople || [])]);
   if (union.length <= currentMembers.length) {
@@ -283,8 +284,8 @@ export function subscribeToMessages(conversationId, callback, onError) {
  * notifica os demais participantes.
  */
 export async function sendMessage(conversation, { text, attachments } = {}, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!conversation?.id) throw new Error('Conversa inválida.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!conversation?.id) throw new Error(t('Conversa inválida.'));
   const cleanText = trimmed(text, CHAT_LIMITS.MESSAGE_MAX_CHARS);
   const cleanAttachments = sanitizeAttachments(attachments);
   if (!cleanText && cleanAttachments.length === 0) return null;

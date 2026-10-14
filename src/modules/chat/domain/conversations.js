@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 import { CONVERSATION_TYPE } from './constants.js';
 
 /**
@@ -50,16 +51,16 @@ export function conversationTypeFor(memberIds) {
  *  - Direta: nome do outro participante.
  */
 export function conversationTitle(conversation, viewerId) {
-  if (!conversation) return 'Conversa';
+  if (!conversation) return t('Conversa');
   const others = (conversation.members || []).filter((m) => m.uid !== viewerId);
   if (conversation.type === CONVERSATION_TYPE.GROUP) {
     if (conversation.title && conversation.title.trim()) return conversation.title.trim();
     const names = others.map((m) => firstName(m.name)).filter(Boolean);
-    if (names.length === 0) return 'Grupo';
+    if (names.length === 0) return t('Grupo');
     if (names.length <= 3) return names.join(', ');
     return `${names.slice(0, 3).join(', ')} +${names.length - 3}`;
   }
-  return others[0]?.name || conversation.title || 'Conversa';
+  return others[0]?.name || conversation.title || t('Conversa');
 }
 
 /** Outro participante de uma conversa direta (para avatar/cabeçalho). */
@@ -75,8 +76,8 @@ function firstName(name) {
 /** Resumo curto da última mensagem para a lista de conversas. */
 export function lastMessagePreview(conversation) {
   const last = conversation?.last_message;
-  if (!last) return 'Conversa iniciada';
+  if (!last) return t('Conversa iniciada');
   if (last.text && last.text.trim()) return last.text.trim();
-  if (last.has_attachments) return '📎 Anexo';
-  return 'Mensagem';
+  if (last.has_attachments) return `📎 ${t('Anexo')}`;
+  return t('Mensagem');
 }

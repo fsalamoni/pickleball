@@ -37,6 +37,7 @@ import { ModuleIcon } from '@/v2/components/arenas/moduleIcons';
 import {
   V2Badge, V2Button, V2Skeleton, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Sem acento e em minúsculas, para a busca não depender de digitação exata. */
 function fold(s) {
@@ -99,9 +100,9 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
               {mod.label}
             </span>
             <StatusBadge status={mod.status} />
-            {released && forced && <V2Badge tone="blue">Obrigatório</V2Badge>}
+            {released && forced && <V2Badge tone="blue">{t('Obrigatório')}</V2Badge>}
             {typeof adoption === 'number' && adoption > 0 && (
-              <V2Badge tone="neutral" title="Arenas que ativaram este módulo">
+              <V2Badge tone="neutral" title={t('Arenas que ativaram este módulo')}>
                 <Building2 className="h-3 w-3" /> {adoption}
               </V2Badge>
             )}
@@ -138,11 +139,11 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
           {released && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="text-2xs font-bold uppercase tracking-wider text-gray-500">
-                Como a arena recebe
+                {t('Como a arena recebe')}
               </span>
               {[
-                { id: MODULE_RELEASE_MODE.OPT_IN, label: 'A arena escolhe' },
-                { id: MODULE_RELEASE_MODE.FORCED, label: 'Ativo para todas' },
+                { id: MODULE_RELEASE_MODE.OPT_IN, label: t('A arena escolhe') },
+                { id: MODULE_RELEASE_MODE.FORCED, label: t('Ativo para todas') },
               ].map((opt) => (
                 <button
                   key={opt.id}
@@ -171,7 +172,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
               checked={released}
               onChange={(v) => {
                 if (!releasable) {
-                  toast.error('Este módulo ainda está em construção.');
+                  toast.error(t('Este módulo ainda está em construção.'));
                   return;
                 }
                 onRelease(mod.id, v);
@@ -224,7 +225,7 @@ function FamilyCard({ node, platformModules, adoption, busyId, onRelease, onMode
               disabled={Boolean(busyId) || releasedCount === all.length}
               onClick={() => onBulk(releasable.map((m) => m.id), true)}
             >
-              <Check className="h-4 w-4" /> Liberar a família inteira
+              <Check className="h-4 w-4" /> {t('Liberar a família inteira')}
             </V2Button>
             <V2Button
               variant="ghost"
@@ -232,7 +233,7 @@ function FamilyCard({ node, platformModules, adoption, busyId, onRelease, onMode
               disabled={Boolean(busyId) || releasedCount === 0}
               onClick={() => onBulk(all.map((m) => m.id), false)}
             >
-              <X className="h-4 w-4" /> Retirar tudo
+              <X className="h-4 w-4" /> {t('Retirar tudo')}
             </V2Button>
           </div>
           <div className="space-y-2">
@@ -304,9 +305,9 @@ export default function AdminArenaModulesTab() {
         user,
       );
       invalidate();
-      toast.success(released ? 'Módulo liberado às arenas.' : 'Módulo retirado das arenas.');
+      toast.success(released ? t('Módulo liberado às arenas.') : t('Módulo retirado das arenas.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar a liberação.');
+      toast.error(err?.message || t('Não foi possível alterar a liberação.'));
     } finally {
       setBusyId(null);
     }
@@ -319,11 +320,11 @@ export default function AdminArenaModulesTab() {
       invalidate();
       toast.success(
         mode === MODULE_RELEASE_MODE.FORCED
-          ? 'Passa a valer para TODAS as arenas, sem escolha.'
-          : 'Cada arena escolhe se ativa.',
+          ? t('Passa a valer para TODAS as arenas, sem escolha.')
+          : t('Cada arena escolhe se ativa.'),
       );
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar o modo.');
+      toast.error(err?.message || t('Não foi possível alterar o modo.'));
     } finally {
       setBusyId(null);
     }
@@ -341,9 +342,9 @@ export default function AdminArenaModulesTab() {
         user,
       );
       invalidate();
-      toast.success(released ? 'Família liberada.' : 'Família retirada.');
+      toast.success(released ? t('Família liberada.') : t('Família retirada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar a família.');
+      toast.error(err?.message || t('Não foi possível alterar a família.'));
     } finally {
       setBusyId(null);
     }
@@ -358,11 +359,9 @@ export default function AdminArenaModulesTab() {
               <Puzzle className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="font-display text-lg font-bold text-ink">Módulos de arena</h2>
+              <h2 className="font-display text-lg font-bold text-ink">{t('Módulos de arena')}</h2>
               <p className="max-w-2xl text-xs leading-5 text-gray-500">
-                Aqui você <strong>libera</strong> o que as arenas podem escolher. Liberar não liga
-                para ninguém: cada arena decide, em Configurações → Módulos, o que ativa para si e
-                para os atletas dela. Um módulo em construção não pode ser liberado.
+                {t('Aqui você')} <strong>{t('libera')}</strong> {t('o que as arenas podem escolher. Liberar não liga para ninguém: cada arena decide, em Configurações → Módulos, o que ativa para si e para os atletas dela. Um módulo em construção não pode ser liberado.')}
               </p>
             </div>
           </div>
@@ -372,7 +371,7 @@ export default function AdminArenaModulesTab() {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar módulo…"
+              placeholder={t('Buscar módulo…')}
               className="h-10 w-60 rounded-2xl border border-gray-200 bg-paper-pure pl-10 pr-4 text-sm"
             />
           </label>
@@ -380,10 +379,10 @@ export default function AdminArenaModulesTab() {
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <V2Badge tone={totals.released > 0 ? 'green' : 'neutral'}>
-            {totals.released} liberados de {totals.total}
+            {t('{released} liberados de {total}', { released: totals.released, total: totals.total })}
           </V2Badge>
           {totals.pending > 0 && (
-            <V2Badge tone="neutral">{totals.pending} em construção</V2Badge>
+            <V2Badge tone="neutral">{t('{pending} em construção', { pending: totals.pending })}</V2Badge>
           )}
           <V2Button
             variant="ghost"
@@ -392,18 +391,18 @@ export default function AdminArenaModulesTab() {
             className="ml-auto"
           >
             <Layers className="h-4 w-4" />
-            {showAdoption ? 'Ocultar adoção' : 'Ver adoção pelas arenas'}
+            {showAdoption ? t('Ocultar adoção') : t('Ver adoção pelas arenas')}
           </V2Button>
         </div>
 
         {showAdoption && adoptionQuery.isLoading && (
-          <p className="mt-2 text-xs text-gray-500">Contando as arenas…</p>
+          <p className="mt-2 text-xs text-gray-500">{t('Contando as arenas…')}</p>
         )}
         {showAdoption && adoptionQuery.isError && (
           <p className="mt-2 text-xs text-red-600">
-            Não foi possível contar a adoção.{' '}
+            {t('Não foi possível contar a adoção.')}{' '}
             <button type="button" className="underline" onClick={() => adoptionQuery.refetch()}>
-              Tentar de novo
+              {t('Tentar de novo')}
             </button>
           </p>
         )}
@@ -414,12 +413,10 @@ export default function AdminArenaModulesTab() {
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div>
-              <p className="text-sm font-bold text-amber-900">A chave geral está desligada</p>
+              <p className="text-sm font-bold text-amber-900">{t('A chave geral está desligada')}</p>
               <p className="mt-1 text-xs leading-5 text-amber-800">
-                Você pode preparar as liberações aqui, mas enquanto a flag{' '}
-                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-2xs">arena_modules</code>{' '}
-                estiver desligada em <strong>Flags por assunto</strong>, nenhuma arena vê nem usa
-                módulo nenhum.
+                {t('Você pode preparar as liberações aqui, mas enquanto a flag ')}
+                <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-2xs">arena_modules</code>{t(' estiver desligada em')} <strong>{t('Flags por assunto')}</strong>{t(', nenhuma arena vê nem usa módulo nenhum.')}
               </p>
             </div>
           </div>
@@ -429,9 +426,9 @@ export default function AdminArenaModulesTab() {
       {isError && (
         <V2Surface className="border-red-100">
           <p className="text-sm text-red-700">
-            Não foi possível carregar as liberações.{' '}
+            {t('Não foi possível carregar as liberações.')}{' '}
             <button type="button" className="font-bold underline" onClick={() => refetch()}>
-              Tentar de novo
+              {t('Tentar de novo')}
             </button>
           </p>
         </V2Surface>
@@ -442,7 +439,7 @@ export default function AdminArenaModulesTab() {
       ) : filtered.length === 0 ? (
         <V2Surface>
           <p className="py-6 text-center text-sm text-gray-500">
-            Nenhum módulo encontrado para “{q}”.
+            {t('Nenhum módulo encontrado para “{q}”.', { q })}
           </p>
         </V2Surface>
       ) : (

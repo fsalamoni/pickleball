@@ -19,8 +19,9 @@ import {
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
+import { t, fmtData } from '@/core/i18n';
 
-const dataHora = (ms) => (ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+const dataHora = (ms) => (ms ? fmtData(ms, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 function OfferPage() {
   const { offerId } = useParams();
@@ -39,14 +40,14 @@ function OfferPage() {
     const precisaValor = id === 'counter' || id === 'counter_back';
     if (precisaValor && contra !== id) { setContra(id); setErro(''); return; }
     const amount = precisaValor ? parseBRL(valor) : undefined;
-    if (precisaValor && !(amount > 0)) { setErro('Diga o valor.'); return; }
+    if (precisaValor && !(amount > 0)) { setErro(t('Diga o valor.')); return; }
     m.mutate({ action: id, offerId, ...(precisaValor ? { amount_cents: amount } : {}) }, {
       onSuccess: (r) => {
         setContra(null); setValor('');
         if (r?.orderId) {
-          toast.success('Oferta aceita: o pedido foi criado.');
+          toast.success(t('Oferta aceita: o pedido foi criado.'));
           navigate(role === 'seller' ? `/mercado/vendas/${r.orderId}` : `/mercado/pedidos/${r.orderId}`);
-        } else toast.success('Pronto. O outro lado foi avisado.');
+        } else toast.success(t('Pronto. O outro lado foi avisado.'));
       },
       onError: (e) => setErro(e.message),
     });
@@ -58,9 +59,9 @@ function OfferPage() {
   else if (!offer || !role) {
     corpo = (
       <V2Surface className="text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">Oferta não disponível</h1>
-        <p className="mt-2 text-gray-500">Esta negociação não existe ou não é da sua conta.</p>
-        <Link to="/mercado/pedidos?aba=ofertas" className="mt-4 inline-flex font-bold text-ink underline">Ver minhas ofertas</Link>
+        <h1 className="font-display text-2xl font-bold text-ink">{t('Oferta não disponível')}</h1>
+        <p className="mt-2 text-gray-500">{t('Esta negociação não existe ou não é da sua conta.')}</p>
+        <Link to="/mercado/pedidos?aba=ofertas" className="mt-4 inline-flex font-bold text-ink underline">{t('Ver minhas ofertas')}</Link>
       </V2Surface>
     );
   } else {
@@ -73,31 +74,35 @@ function OfferPage() {
         <V2Surface className="space-y-5 lg:col-span-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{role === 'seller' ? `Oferta de ${offer.buyer_name || 'um comprador'}` : 'Sua oferta'}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{role === 'seller' ? t('Oferta de {nome}', { nome: offer.buyer_name || t('um comprador') }) : t('Sua oferta')}</p>
               <Link to={`/mercado/anuncio/${offer.listing_id}`} className="font-display text-xl font-bold text-ink hover:underline">{offer.listing_title}</Link>
-              <p className="text-sm text-gray-500">Anunciado por {formatBRL(offer.list_price_cents)} · {fulfillmentLabel(offer.fulfillment)}</p>
+              <p className="text-sm text-gray-500">{t('Anunciado por {valor}', { valor: formatBRL(offer.list_price_cents) })} · {fulfillmentLabel(offer.fulfillment)}</p>
             </div>
-            <V2Badge tone={offer.status === 'ordered' || offer.status === 'accepted' ? 'green' : vez ? 'amber' : 'neutral'}>{expirou ? 'Expirada' : OFFER_STATUS_LABELS[offer.status] || offer.status}</V2Badge>
+            <V2Badge tone={offer.status === 'ordered' || offer.status === 'accepted' ? 'green' : vez ? 'amber' : 'neutral'}>{expirou ? t('Expirada') : OFFER_STATUS_LABELS[offer.status] ? t(OFFER_STATUS_LABELS[offer.status]) : offer.status}</V2Badge>
           </div>
           <div className="rounded-2xl bg-paper p-4">
-            <p className="text-xs text-gray-500">Valor em negociação</p>
+            <p className="text-xs text-gray-500">{t('Valor em negociação')}</p>
             <p className="font-display text-3xl font-bold text-ink">{formatBRL(offer.amount_cents)}</p>
             {vez && !expirou && (
               <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                 <Clock className="h-3.5 w-3.5" />
-                {vez === role ? 'É a sua vez de responder' : `Esperando ${vez === 'seller' ? 'o vendedor' : 'o comprador'}`} até {dataHora(offer.expires_at_ms)}
+                {vez === role
+                  ? t('É a sua vez de responder até {data}', { data: dataHora(offer.expires_at_ms) })
+                  : vez === 'seller'
+                    ? t('Esperando o vendedor até {data}', { data: dataHora(offer.expires_at_ms) })
+                    : t('Esperando o comprador até {data}', { data: dataHora(offer.expires_at_ms) })}
               </p>
             )}
           </div>
-          {offer.message && <p className="rounded-2xl border border-gray-100 p-4 text-sm text-gray-700"><span className="block text-xs text-gray-500">Recado do comprador</span>{offer.message}</p>}
+          {offer.message && <p className="rounded-2xl border border-gray-100 p-4 text-sm text-gray-700"><span className="block text-xs text-gray-500">{t('Recado do comprador')}</span>{offer.message}</p>}
           {offer.status === 'ordered' && offer.order_id && (
-            <V2Button asChild><Link to={role === 'seller' ? `/mercado/vendas/${offer.order_id}` : `/mercado/pedidos/${offer.order_id}`}>Ver o pedido</Link></V2Button>
+            <V2Button asChild><Link to={role === 'seller' ? `/mercado/vendas/${offer.order_id}` : `/mercado/pedidos/${offer.order_id}`}>{t('Ver o pedido')}</Link></V2Button>
           )}
           {acoes.length > 0 && !expirou && (
             <div className="space-y-3">
               {contra && (
-                <V2Field label={contra === 'counter' ? 'Sua contraproposta' : 'Sua nova oferta'} htmlFor="contra-valor" hint={contra === 'counter' ? 'Entre a oferta e o preço anunciado.' : 'Maior que a sua oferta anterior e menor que a contraproposta.'}>
-                  <V2Input id="contra-valor" inputMode="decimal" placeholder="R$ 0,00" value={valor} onChange={(e) => { setValor(e.target.value); setErro(''); }} autoFocus />
+                <V2Field label={contra === 'counter' ? t('Sua contraproposta') : t('Sua nova oferta')} htmlFor="contra-valor" hint={contra === 'counter' ? t('Entre a oferta e o preço anunciado.') : t('Maior que a sua oferta anterior e menor que a contraproposta.')}>
+                  <V2Input id="contra-valor" inputMode="decimal" placeholder={t('R$ 0,00')} value={valor} onChange={(e) => { setValor(e.target.value); setErro(''); }} autoFocus />
                 </V2Field>
               )}
               {erro && <p role="alert" className="text-sm font-medium text-red-500">{erro}</p>}
@@ -110,21 +115,21 @@ function OfferPage() {
                     variant={['decline', 'withdraw'].includes(a.id) ? 'danger' : a.id.startsWith('accept') ? 'primary' : 'secondary'}
                     onClick={() => agir(a.id)}
                   >
-                    {contra === a.id ? 'Enviar' : a.label}
+                    {contra === a.id ? t('Enviar') : a.label}
                   </V2Button>
                 ))}
-                {contra && <V2Button type="button" variant="ghost" onClick={() => { setContra(null); setErro(''); }}>Voltar</V2Button>}
+                {contra && <V2Button type="button" variant="ghost" onClick={() => { setContra(null); setErro(''); }}>{t('Voltar')}</V2Button>}
               </div>
             </div>
           )}
         </V2Surface>
         <aside className="lg:col-span-4">
           <V2Surface variant="compacto" as="section" aria-labelledby="neg-titulo" className="p-5">
-            <h2 id="neg-titulo" className="mb-3 font-bold text-ink">A negociação</h2>
+            <h2 id="neg-titulo" className="mb-3 font-bold text-ink">{t('A negociação')}</h2>
             <ol className="space-y-3">
               {valores.map((h, i) => (
                 <li key={`${h.at_ms}-${i}`} className={cn('flex items-center justify-between gap-2 text-sm', h.by === role && 'font-bold')}>
-                  <span className="text-gray-600">{h.by === role ? 'Você' : h.by === 'seller' ? 'Vendedor' : 'Comprador'} · {dataHora(h.at_ms)}</span>
+                  <span className="text-gray-600">{h.by === role ? t('Você') : h.by === 'seller' ? t('Vendedor') : t('Comprador')} · {dataHora(h.at_ms)}</span>
                   <span className="text-ink">{formatBRL(h.amount_cents)}</span>
                 </li>
               ))}
@@ -138,7 +143,7 @@ function OfferPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-16">
       <MarketHeader />
-      <V2BackLink to="/mercado/pedidos?aba=ofertas">Minhas ofertas</V2BackLink>
+      <V2BackLink to="/mercado/pedidos?aba=ofertas">{t('Minhas ofertas')}</V2BackLink>
       {corpo}
     </div>
   );

@@ -29,6 +29,7 @@ import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -132,9 +133,9 @@ export default function V2ProfileEdit() {
     // no cadastro: apagá-lo aqui só faria o assistente reabrir na próxima
     // entrada pedindo de volta.
     const extras = {};
-    if (!courtSide) extras.courtSide = 'Escolha o lado da quadra que prefere.';
+    if (!courtSide) extras.courtSide = t('Escolha o lado da quadra que prefere.');
     if (essencial && competitionGender !== 'male' && competitionGender !== 'female') {
-      extras.competitionGender = 'Escolha a categoria em que você joga.';
+      extras.competitionGender = t('Escolha a categoria em que você joga.');
     }
     if (!validation.isValid || Object.keys(extras).length > 0) {
       setErrors({ ...validation.errors, ...extras });
@@ -155,11 +156,11 @@ export default function V2ProfileEdit() {
         dupr_rating: parseDuprRating(duprRating),
         court_side: courtSide || null,
       });
-      toast.success('Perfil atualizado.');
+      toast.success(t('Perfil atualizado.'));
       // Marco de funil: só na transição incompleto → completo.
       if (!wasComplete) track(FUNNEL_EVENT.PROFILE_COMPLETED);
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar.');
+      toast.error(err.message || t('Erro ao salvar.'));
     } finally {
       setBusy(false);
     }
@@ -170,10 +171,10 @@ export default function V2ProfileEdit() {
     setPhotoUrl(url);
     try {
       await updateUserProfile({ photo_url: url });
-      toast.success(url ? 'Foto atualizada.' : 'Foto removida.');
+      toast.success(url ? t('Foto atualizada.') : t('Foto removida.'));
     } catch (err) {
       setPhotoUrl(previous);
-      toast.error(err.message || 'Erro ao salvar a foto.');
+      toast.error(err.message || t('Erro ao salvar a foto.'));
     }
   };
 
@@ -181,10 +182,10 @@ export default function V2ProfileEdit() {
     // Gênero, cidade e UF são do cadastro obrigatório — é por eles que a busca
     // por perto e o filtro de região acham a pessoa. Em branco, não salva.
     const faltas = {};
-    if (!gender) faltas.gender = 'Informe seu gênero (há a opção "Prefiro não informar").';
-    if (!city.trim()) faltas.city = 'Informe sua cidade.';
-    if (!stateUf.trim()) faltas.state = 'Informe a UF.';
-    else if (essencial && !isBrazilUF(stateUf)) faltas.state = 'Escolha a UF na lista.';
+    if (!gender) faltas.gender = t('Informe seu gênero (há a opção "Prefiro não informar").');
+    if (!city.trim()) faltas.city = t('Informe sua cidade.');
+    if (!stateUf.trim()) faltas.state = t('Informe a UF.');
+    else if (essencial && !isBrazilUF(stateUf)) faltas.state = t('Escolha a UF na lista.');
     setCommunityErrors(faltas);
     if (Object.keys(faltas).length > 0) return;
     setCommunityBusy(true);
@@ -199,9 +200,9 @@ export default function V2ProfileEdit() {
         address_public: addressPublic,
         directory_listed: directoryListed,
       });
-      toast.success('Preferências de comunidade e privacidade salvas.');
+      toast.success(t('Preferências de comunidade e privacidade salvas.'));
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar preferências.');
+      toast.error(err.message || t('Erro ao salvar preferências.'));
     } finally {
       setCommunityBusy(false);
     }
@@ -212,13 +213,13 @@ export default function V2ProfileEdit() {
   };
 
   const saveInterests = async () => {
-    if (interests.length === 0) { toast.error('Escolha ao menos um interesse.'); return; }
+    if (interests.length === 0) { toast.error(t('Escolha ao menos um interesse.')); return; }
     setInterestsBusy(true);
     try {
       await updateUserProfile({ interests: sanitizeInterests(interests) });
-      toast.success('Interesses atualizados.');
+      toast.success(t('Interesses atualizados.'));
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar interesses.');
+      toast.error(err.message || t('Erro ao salvar interesses.'));
     } finally {
       setInterestsBusy(false);
     }
@@ -226,7 +227,7 @@ export default function V2ProfileEdit() {
 
   const saveCoach = async () => {
     if (isCoach && !coachModalities.trim() && !(myCoach?.modalities || []).length) {
-      toast.error('Informe ao menos uma modalidade (ex.: Iniciantes, Avançado, DUPR 4.0+).');
+      toast.error(t('Informe ao menos uma modalidade (ex.: Iniciantes, Avançado, DUPR 4.0+).'));
       return;
     }
     // Consentimento aos Termos do Professor exigido só ao ativar o papel.
@@ -255,16 +256,16 @@ export default function V2ProfileEdit() {
         },
       });
       if (isCoach) await coachConsent.recordAfterSuccess();
-      toast.success('Informações de professor salvas.');
+      toast.success(t('Informações de professor salvas.'));
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar informações de professor.');
+      toast.error(err.message || t('Erro ao salvar informações de professor.'));
     } finally {
       setCoachBusy(false);
     }
   };
 
   const saveManualLevel = async () => {
-    if (!manualLevel) { toast.error('Selecione um nível.'); return; }
+    if (!manualLevel) { toast.error(t('Selecione um nível.')); return; }
     const level = getLevelByCode(manualLevel);
     setLevelBusy(true);
     try {
@@ -274,9 +275,9 @@ export default function V2ProfileEdit() {
         leveling_method: 'manual',
         leveling_manual_level: manualLevel,
       });
-      toast.success('Nível salvo no perfil.');
+      toast.success(t('Nível salvo no perfil.'));
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar nível.');
+      toast.error(err.message || t('Erro ao salvar nível.'));
     } finally {
       setLevelBusy(false);
     }
@@ -293,9 +294,9 @@ export default function V2ProfileEdit() {
       });
       setManualLevel(result.level);
       setVisibleResult(result);
-      toast.success('Formulário e resultado salvos no seu perfil.');
+      toast.success(t('Formulário e resultado salvos no seu perfil.'));
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar formulário.');
+      toast.error(err.message || t('Erro ao salvar formulário.'));
     } finally {
       setLevelBusy(false);
     }
@@ -304,104 +305,104 @@ export default function V2ProfileEdit() {
   const startFromScratch = () => { setVisibleResult(null); setFormMode('scratch'); setFormVersion((v) => v + 1); };
   const startFromSaved = () => { setVisibleResult(null); setFormMode('saved'); setFormVersion((v) => v + 1); };
   const regenerateResult = async () => {
-    if (!savedAnswers) { toast.error('Não há respostas salvas.'); return; }
+    if (!savedAnswers) { toast.error(t('Não há respostas salvas.')); return; }
     await saveAssessment({ answers: savedAnswers, result: calculateAssessment(savedAnswers) });
   };
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <V2BackLink to="/perfil" className="mb-5">Voltar ao perfil</V2BackLink>
+      <V2BackLink to="/perfil" className="mb-5">{t('Voltar ao perfil')}</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
-        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Seu perfil</span>
-        <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">Como você aparece para a comunidade.</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Organize identidade, privacidade, nível e informações de professor. Cada bloco salva de forma independente.</p>
+        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Seu perfil')}</span>
+        <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{t('Como você aparece para a comunidade.')}</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">{t('Organize identidade, privacidade, nível e informações de professor. Cada bloco salva de forma independente.')}</p>
       </div>
 
       <div className="space-y-6">
         {/* Identity */}
-        <V2Surface collapsible collapseId="perfil-identidade" data-dica="perfil-identidade" eyebrow="Identidade" title="Dados do participante">
+        <V2Surface collapsible collapseId="perfil-identidade" data-dica="perfil-identidade" eyebrow={t('Identidade')} title={t('Dados do participante')}>
           <div className="mt-5">
             <ImageUpload
               value={photoUrl}
               onChange={savePhoto}
               folder="profile"
               shape="circle"
-              label="Enviar foto"
-              hint="Sua foto aparece no perfil, no diretório de atletas e nos clubes."
+              label={t('Enviar foto')}
+              hint={t('Sua foto aparece no perfil, no diretório de atletas e nos clubes.')}
             />
-            <p className="mt-2 text-xs text-gray-500">{user?.email} · Login via Google</p>
+            <p className="mt-2 text-xs text-gray-500">{user?.email} · {t('Login via Google')}</p>
           </div>
 
           <form onSubmit={onSaveIdentity} className="mt-6 space-y-4">
-            <V2Field label="Nome completo" required error={errors.platformName} hint="Esse é o nome que aparece nos rankings.">
+            <V2Field label={t('Nome completo')} required error={errors.platformName} hint={t('Esse é o nome que aparece nos rankings.')}>
               <V2Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} maxLength={60} />
             </V2Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <V2Field label="Data de nascimento" required error={errors.birthDate}>
+              <V2Field label={t('Data de nascimento')} required error={errors.birthDate}>
                 <V2Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
               </V2Field>
-              <V2Field label="Telefone" required error={errors.phone}>
+              <V2Field label={t('Telefone')} required error={errors.phone}>
                 <V2Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" />
               </V2Field>
             </div>
-            <V2Field label="Tempo de experiência em pickleball" required error={errors.pickleballExperience}>
+            <V2Field label={t('Tempo de experiência em pickleball')} required error={errors.pickleballExperience}>
               <V2Select value={pickleballExperience} onChange={(e) => setPickleballExperience(e.target.value)}>
-                <option value="">Selecione uma opção</option>
-                {Object.entries(PICKLEBALL_EXPERIENCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{t('Selecione uma opção')}</option>
+                {Object.entries(PICKLEBALL_EXPERIENCE_LABELS).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </V2Select>
             </V2Field>
             <V2Field
-              label="Categoria em que deseja competir"
+              label={t('Categoria em que deseja competir')}
               required={essencial}
               error={errors.competitionGender}
               hint={essencial
-                ? 'Usada nas duplas mistas do dia de jogo e nas categorias dos torneios. Preferência competitiva (não é sobre identidade de gênero).'
-                : 'Preferência competitiva (não é sobre identidade de gênero).'}
+                ? t('Usada nas duplas mistas do dia de jogo e nas categorias dos torneios. Preferência competitiva (não é sobre identidade de gênero).')
+                : t('Preferência competitiva (não é sobre identidade de gênero).')}
             >
               <V2Select value={competitionGender} onChange={(e) => setCompetitionGender(e.target.value)}>
-                <option value="">{essencial ? 'Selecione' : 'Não informar (decido na inscrição)'}</option>
-                {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{essencial ? t('Selecione') : t('Não informar (decido na inscrição)')}</option>
+                {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </V2Select>
             </V2Field>
-            <V2Field label="ID DUPR (opcional)" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.">
-              <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder="Ex.: ABC123" />
+            <V2Field label={t('ID DUPR (opcional)')} hint={t('Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Não é obrigatório, mas ajuda: fica visível no seu perfil e nos torneios.')}>
+              <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder={t('Ex.: ABC123')} />
             </V2Field>
             {skillRatingOn && (
-              <V2Field label="Meu rating DUPR atual (opcional)" hint="Se você já tem um rating DUPR, informe-o (2.000 a 8.000) para servir de ponto de partida no ranking de nível da plataforma. Opcional — se vazio, usamos o seu nivelamento.">
-                <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder="Ex.: 3.500" />
+              <V2Field label={t('Meu rating DUPR atual (opcional)')} hint={t('Se você já tem um rating DUPR, informe-o (2.000 a 8.000) para servir de ponto de partida no ranking de nível da plataforma. Opcional — se vazio, usamos o seu nivelamento.')}>
+                <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder={t('Ex.: 3.500')} />
               </V2Field>
             )}
-            <V2Field label="Lado da quadra que prefere jogar" required error={errors.courtSide} hint="Ajuda a encontrar parcerias compatíveis.">
+            <V2Field label={t('Lado da quadra que prefere jogar')} required error={errors.courtSide} hint={t('Ajuda a encontrar parcerias compatíveis.')}>
               <V2Select value={courtSide} onChange={(e) => setCourtSide(e.target.value)}>
-                <option value="">Selecione</option>
-                {COURT_SIDE_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{t('Selecione')}</option>
+                {COURT_SIDE_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{t(label)}</option>)}
               </V2Select>
             </V2Field>
             <div className="flex justify-end">
-              <V2Button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Salvar alterações'}</V2Button>
+              <V2Button type="submit" disabled={busy}>{busy ? t('Salvando…') : t('Salvar alterações')}</V2Button>
             </div>
           </form>
         </V2Surface>
 
         {/* Community & privacy */}
-        <V2Surface collapsible collapseId="perfil-comunidade" data-dica="perfil-comunidade" eyebrow="Comunidade" title="Comunidade e privacidade"
-          description="Defina como você aparece no diretório e quais contatos são públicos.">
+        <V2Surface collapsible collapseId="perfil-comunidade" data-dica="perfil-comunidade" eyebrow={t('Comunidade')} title={t('Comunidade e privacidade')}
+          description={t('Defina como você aparece no diretório e quais contatos são públicos.')}>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <V2Field label="Gênero" required error={communityErrors.gender}>
+            <V2Field label={t('Gênero')} required error={communityErrors.gender}>
               <V2Select value={gender} onChange={(e) => setGender(e.target.value)}>
-                <option value="">Selecione</option>
-                {Object.entries(ATHLETE_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{t('Selecione')}</option>
+                {Object.entries(ATHLETE_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
               </V2Select>
             </V2Field>
             <div className="grid grid-cols-[1fr,96px] gap-3">
-              <V2Field label="Cidade" required error={communityErrors.city}>
+              <V2Field label={t('Cidade')} required error={communityErrors.city}>
                 <V2Input value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} />
               </V2Field>
-              <V2Field label="UF" required error={communityErrors.state}>
+              <V2Field label={t('UF')} required error={communityErrors.state}>
                 {essencial ? (
-                  <V2Select value={isBrazilUF(stateUf) ? stateUf.trim().toUpperCase() : ''} onChange={(e) => setStateUf(e.target.value)} aria-label="UF">
-                    <option value="">UF</option>
+                  <V2Select value={isBrazilUF(stateUf) ? stateUf.trim().toUpperCase() : ''} onChange={(e) => setStateUf(e.target.value)} aria-label={t('UF')}>
+                    <option value="">{t('UF')}</option>
                     {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </V2Select>
                 ) : (
@@ -412,35 +413,34 @@ export default function V2ProfileEdit() {
           </div>
           {regiaoOn && (
             <p className="mt-2 text-xs leading-5 text-gray-500">
-              A cidade também é o centro da <strong className="font-semibold text-ink">sua região</strong>: dias de jogo,
-              torneios e arenas aparecem a partir dela.{' '}
-              <Link to="/configuracoes#minha-regiao" className="font-semibold text-ink underline">Escolher raio ou outro lugar</Link>
+              {t('A cidade também é o centro da')} <strong className="font-semibold text-ink">{t('sua região')}</strong>{t(': dias de jogo, torneios e arenas aparecem a partir dela.')}{' '}
+              <Link to="/configuracoes#minha-regiao" className="font-semibold text-ink underline">{t('Escolher raio ou outro lugar')}</Link>
             </p>
           )}
-          <V2Field label="Endereço" className="mt-4" hint="Só é exibido se você marcar como público abaixo.">
+          <V2Field label={t('Endereço')} className="mt-4" hint={t('Só é exibido se você marcar como público abaixo.')}>
             <V2Input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={160} />
           </V2Field>
 
           <V2Surface variant="plano" className="mt-5 p-5">
-            <div className="flex items-center gap-2 text-sm font-bold text-ink"><Shield className="h-4 w-4" /> Visibilidade dos contatos</div>
+            <div className="flex items-center gap-2 text-sm font-bold text-ink"><Shield className="h-4 w-4" /> {t('Visibilidade dos contatos')}</div>
             <div className="mt-4 space-y-4">
-              <V2Toggle id="phone_public" label="Telefone público" hint="Outros atletas veem seu telefone" checked={phonePublic} onChange={setPhonePublic} />
-              <V2Toggle id="email_public" label="E-mail público" hint="Outros atletas veem seu e-mail" checked={emailPublic} onChange={setEmailPublic} />
-              <V2Toggle id="address_public" label="Endereço público" hint="Outros atletas veem seu endereço" checked={addressPublic} onChange={setAddressPublic} />
+              <V2Toggle id="phone_public" label={t('Telefone público')} hint={t('Outros atletas veem seu telefone')} checked={phonePublic} onChange={setPhonePublic} />
+              <V2Toggle id="email_public" label={t('E-mail público')} hint={t('Outros atletas veem seu e-mail')} checked={emailPublic} onChange={setEmailPublic} />
+              <V2Toggle id="address_public" label={t('Endereço público')} hint={t('Outros atletas veem seu endereço')} checked={addressPublic} onChange={setAddressPublic} />
             </div>
           </V2Surface>
           <V2Surface variant="plano" className="mt-4 p-5">
-            <V2Toggle id="directory_listed" label="Aparecer no diretório de atletas" hint="Se desativado, seu perfil não é listado" checked={directoryListed} onChange={setDirectoryListed} />
+            <V2Toggle id="directory_listed" label={t('Aparecer no diretório de atletas')} hint={t('Se desativado, seu perfil não é listado')} checked={directoryListed} onChange={setDirectoryListed} />
           </V2Surface>
 
           <div className="mt-5 flex justify-end">
-            <V2Button onClick={saveCommunity} disabled={communityBusy}>{communityBusy ? 'Salvando…' : 'Salvar comunidade e privacidade'}</V2Button>
+            <V2Button onClick={saveCommunity} disabled={communityBusy}>{communityBusy ? t('Salvando…') : t('Salvar comunidade e privacidade')}</V2Button>
           </div>
         </V2Surface>
 
         {/* Interesses na plataforma */}
-        <V2Surface collapsible collapseId="perfil-interesses" data-dica="perfil-interesses" eyebrow="Interesses" title="Meus interesses na plataforma"
-          description="O que você quer fazer por aqui. Usamos isso para destacar o que importa para você no painel.">
+        <V2Surface collapsible collapseId="perfil-interesses" data-dica="perfil-interesses" eyebrow={t('Interesses')} title={t('Meus interesses na plataforma')}
+          description={t('O que você quer fazer por aqui. Usamos isso para destacar o que importa para você no painel.')}>
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {platformInterestMeta({ treino: treinoOn }).map(({ value, label, hint, icon }) => {
               const Icon = interestIcon(icon);
@@ -458,8 +458,8 @@ export default function V2ProfileEdit() {
                 >
                   <Icon className={cn('mt-0.5 h-4.5 w-4.5 shrink-0', active ? 'text-acid' : 'text-gray-400')} />
                   <span>
-                    {label}
-                    {hint && <span className={cn('mt-0.5 block text-xs font-normal', active ? 'text-white/70' : 'text-gray-500')}>{hint}</span>}
+                    {t(label)}
+                    {hint && <span className={cn('mt-0.5 block text-xs font-normal', active ? 'text-white/70' : 'text-gray-500')}>{t(hint)}</span>}
                   </span>
                 </button>
               );
@@ -467,17 +467,17 @@ export default function V2ProfileEdit() {
           </div>
           <div className="mt-5 flex justify-end">
             <V2Button onClick={saveInterests} disabled={interestsBusy || interests.length === 0}>
-              {interestsBusy ? 'Salvando…' : 'Salvar interesses'}
+              {interestsBusy ? t('Salvando…') : t('Salvar interesses')}
             </V2Button>
           </div>
         </V2Surface>
 
         {/* Coach */}
         {coachDirectoryOn && (
-          <V2Surface collapsible collapseId="perfil-professor" eyebrow="Professor" title="Perfil de aulas e clínicas"
-            description="Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas.">
+          <V2Surface collapsible collapseId="perfil-professor" eyebrow={t('Professor')} title={t('Perfil de aulas e clínicas')}
+            description={t('Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas.')}>
             <V2Surface variant="plano" className="mt-5 p-5">
-              <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer na busca de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
+              <V2Toggle id="is_coach" label={t('Sou professor(a)')} hint={t('Aparecer na busca de professores e exibir informações de aula')} checked={isCoach} onChange={setIsCoach} />
             </V2Surface>
             {isCoach && (
               <div className="mt-4 space-y-4">
@@ -487,28 +487,28 @@ export default function V2ProfileEdit() {
                     className="flex items-center justify-between gap-3 rounded-2xl border border-ink/15 bg-ink/[0.03] px-4 py-3 transition-colors hover:border-ink/30"
                   >
                     <span className="flex items-center gap-2 text-sm font-bold text-ink">
-                      <Shield className="h-4 w-4" /> Painel do Professor
+                      <Shield className="h-4 w-4" /> {t('Painel do Professor')}
                     </span>
-                    <span className="text-xs font-semibold text-gray-500">Horários, aulas, alunos e pacotes →</span>
+                    <span className="text-xs font-semibold text-gray-500">{t('Horários, aulas, alunos e pacotes →')}</span>
                   </Link>
                 )}
-                <V2Field label="Sobre suas aulas"><V2Textarea value={coachBio} onChange={(e) => setCoachBio(e.target.value)} maxLength={1000} rows={3} placeholder="Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática." /></V2Field>
-                <V2Field label="Modalidades (separadas por vírgula)" required>
-                  <V2Input value={coachModalities} onChange={(e) => setCoachModalities(e.target.value)} maxLength={160} placeholder="Ex.: Iniciantes, Avançado, DUPR 4.0+" />
+                <V2Field label={t('Sobre suas aulas')}><V2Textarea value={coachBio} onChange={(e) => setCoachBio(e.target.value)} maxLength={1000} rows={3} placeholder={t('Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática.')} /></V2Field>
+                <V2Field label={t('Modalidades (separadas por vírgula)')} required>
+                  <V2Input value={coachModalities} onChange={(e) => setCoachModalities(e.target.value)} maxLength={160} placeholder={t('Ex.: Iniciantes, Avançado, DUPR 4.0+')} />
                 </V2Field>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <V2Field label="Valor (opcional)"><V2Input value={coachPrice} onChange={(e) => setCoachPrice(e.target.value)} maxLength={60} placeholder="Ex.: 80 (R$/hora)" /></V2Field>
-                  <V2Field label="Regiões de atuação (opcional)"><V2Input value={coachRegions} onChange={(e) => setCoachRegions(e.target.value)} maxLength={120} placeholder="Ex.: Zona Sul, online" /></V2Field>
+                  <V2Field label={t('Valor (opcional)')}><V2Input value={coachPrice} onChange={(e) => setCoachPrice(e.target.value)} maxLength={60} placeholder={t('Ex.: 80 (R$/hora)')} /></V2Field>
+                  <V2Field label={t('Regiões de atuação (opcional)')}><V2Input value={coachRegions} onChange={(e) => setCoachRegions(e.target.value)} maxLength={120} placeholder={t('Ex.: Zona Sul, online')} /></V2Field>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Estas informações formam seu perfil público de professor. Para foto, certificações e contatos,
-                  {' '}<Link to="/coaches" className="font-semibold text-ink underline">gerencie seu perfil completo em Professores</Link>. Tudo fica sincronizado.
+                  {t('Estas informações formam seu perfil público de professor. Para foto, certificações e contatos,')}
+                  {' '}<Link to="/coaches" className="font-semibold text-ink underline">{t('gerencie seu perfil completo em Professores')}</Link>. {t('Tudo fica sincronizado.')}
                 </p>
                 {coachConsent.field}
               </div>
             )}
             <div className="mt-5 flex justify-end">
-              <V2Button onClick={saveCoach} disabled={coachBusy || syncCoach.isPending}>{(coachBusy || syncCoach.isPending) ? 'Salvando…' : 'Salvar informações de professor'}</V2Button>
+              <V2Button onClick={saveCoach} disabled={coachBusy || syncCoach.isPending}>{(coachBusy || syncCoach.isPending) ? t('Salvando…') : t('Salvar informações de professor')}</V2Button>
             </div>
           </V2Surface>
         )}
@@ -516,27 +516,27 @@ export default function V2ProfileEdit() {
         <V2ParticipationHistoryCard />
 
         {/* Leveling */}
-        <V2Surface collapsible collapseId="perfil-nivelamento" data-dica="perfil-nivel" eyebrow="Nivelamento" title="Seu nível competitivo"
-          description="Informe pela tabela detalhada ou preencha o formulário para obter a recomendação.">
+        <V2Surface collapsible collapseId="perfil-nivelamento" data-dica="perfil-nivel" eyebrow={t('Nivelamento')} title={t('Seu nível competitivo')}
+          description={t('Informe pela tabela detalhada ou preencha o formulário para obter a recomendação.')}>
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
             <V2Field
-              label="Meu nível informado"
+              label={t('Meu nível informado')}
               required={essencial}
-              hint={selectedLevel?.tagline || (essencial ? 'O sorteio equilibra os jogos pelo nível — escolha o seu (o teste abaixo refina).' : undefined)}
+              hint={selectedLevel?.tagline || (essencial ? t('O sorteio equilibra os jogos pelo nível — escolha o seu (o teste abaixo refina).') : undefined)}
             >
               <V2Select value={manualLevel} onChange={(e) => setManualLevel(e.target.value)}>
-                <option value="">Selecione um nível</option>
+                <option value="">{t('Selecione um nível')}</option>
                 {LEVEL_OPTIONS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
               </V2Select>
             </V2Field>
-            <V2Button onClick={saveManualLevel} disabled={levelBusy}>Salvar nível</V2Button>
+            <V2Button onClick={saveManualLevel} disabled={levelBusy}>{t('Salvar nível')}</V2Button>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <V2Button variant="ghost" size="sm" onClick={startFromScratch}>Preencher formulário do zero</V2Button>
-            <V2Button variant="ghost" size="sm" onClick={startFromSaved} disabled={!savedAnswers}>Refazer com respostas anteriores</V2Button>
-            <V2Button variant="ghost" size="sm" onClick={regenerateResult} disabled={!savedAnswers || levelBusy}>Gerar resultado salvo</V2Button>
-            <V2Button variant="ghost" size="sm" onClick={() => window.print()} disabled={!visibleResult}><Printer className="h-4 w-4" /> Imprimir</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={startFromScratch}>{t('Preencher formulário do zero')}</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={startFromSaved} disabled={!savedAnswers}>{t('Refazer com respostas anteriores')}</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={regenerateResult} disabled={!savedAnswers || levelBusy}>{t('Gerar resultado salvo')}</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={() => window.print()} disabled={!visibleResult}><Printer className="h-4 w-4" /> {t('Imprimir')}</V2Button>
           </div>
 
           {visibleResult && <div className="mt-5"><V2LevelingResultCard result={visibleResult} compact /></div>}

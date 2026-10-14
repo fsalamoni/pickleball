@@ -12,6 +12,7 @@ import React from 'react';
 import { Ban, CheckCheck, Clock, Download, X } from 'lucide-react';
 import { ADMIN_ASSIGNABLE_STATUSES, EXPORT_STATUS, EXPORT_STATUS_LABELS } from '@/modules/rating/domain/duprReconcile';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Ícone de cada situação atribuível pelo admin. */
 const STATUS_ICON = {
@@ -43,14 +44,14 @@ export default function DuprBulkActions({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-100 bg-acid/10 px-4 py-3">
       <span className="text-sm font-semibold text-ink">
-        {count} partida(s) selecionada(s)
+        {t('{n} partida(s) selecionada(s)', { n: count })}
       </span>
       {hiddenCount > 0 && (
         <span className="text-xs text-gray-500">
-          ({hiddenCount} fora do recorte atual — a ação também vale para ela(s))
+          ({t('{n} fora do recorte atual — a ação também vale para ela(s)', { n: hiddenCount })})
         </span>
       )}
-      <span className="text-xs uppercase tracking-wide text-gray-500">Tornar</span>
+      <span className="text-xs uppercase tracking-wide text-gray-500">{t('Tornar')}</span>
       {ADMIN_ASSIGNABLE_STATUSES.map((status) => {
         const Icon = STATUS_ICON[status];
         return (
@@ -62,7 +63,7 @@ export default function DuprBulkActions({
             disabled={disabled}
           >
             {Icon && <Icon className="mr-1.5 h-3.5 w-3.5" />}
-            {EXPORT_STATUS_LABELS[status]}
+            {t(EXPORT_STATUS_LABELS[status])}
           </V2Button>
         );
       })}
@@ -73,7 +74,7 @@ export default function DuprBulkActions({
         </V2Button>
       ))}
       <V2Button variant="ghost" size="sm" onClick={onClear} disabled={disabled}>
-        <X className="mr-1.5 h-3.5 w-3.5" /> Limpar seleção
+        <X className="mr-1.5 h-3.5 w-3.5" /> {t('Limpar seleção')}
       </V2Button>
     </div>
   );

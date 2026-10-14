@@ -7,14 +7,15 @@
 import { normalizeSearchText, tokenize, listingCompleteness } from './listing.js';
 import { LISTING_TYPE, SELLER_TYPE, FULFILLMENT, LISTING_STATUS } from './constants.js';
 import { filterableAttributes } from './taxonomy.js';
+import { t, tk } from '@/core/i18n';
 
 export const SORT_OPTIONS = Object.freeze([
-  { id: 'relevance', label: 'Mais relevantes' },
-  { id: 'recent', label: 'Mais recentes' },
-  { id: 'price_asc', label: 'Menor preço' },
-  { id: 'price_desc', label: 'Maior preço' },
-  { id: 'rating', label: 'Melhor avaliados' },
-  { id: 'discount', label: 'Maior desconto' },
+  { id: 'relevance', label: tk('Mais relevantes') },
+  { id: 'recent', label: tk('Mais recentes') },
+  { id: 'price_asc', label: tk('Menor preço') },
+  { id: 'price_desc', label: tk('Maior preço') },
+  { id: 'rating', label: tk('Melhor avaliados') },
+  { id: 'discount', label: tk('Maior desconto') },
 ]);
 
 const SORT_IDS = new Set(SORT_OPTIONS.map((s) => s.id));
@@ -95,12 +96,12 @@ export function relevance(listing, { q = '', now = Date.now(), viewer = {} } = {
   const complete = listingCompleteness(listing);
   let score = 0.45 * text + 0.2 * fresh + 0.2 * trust + 0.15 * complete;
   const why = [];
-  if (q && text > 0.6) why.push('o título combina com a busca');
-  if (fresh > 0.7) why.push('anunciado há pouco');
-  if (count >= 3 && avg >= 4.5) why.push('vendedor bem avaliado');
+  if (q && text > 0.6) why.push(t('o título combina com a busca'));
+  if (fresh > 0.7) why.push(t('anunciado há pouco'));
+  if (count >= 3 && avg >= 4.5) why.push(t('vendedor bem avaliado'));
   if (viewer.city && normalizeSearchText(viewer.city) === normalizeSearchText(listing.city)) {
     score += 0.05;
-    why.push('na sua cidade');
+    why.push(t('na sua cidade'));
   }
   if (listing.status === LISTING_STATUS.SOLD_OUT) score -= 1;
   return { score, why };
@@ -160,14 +161,14 @@ export function activeFilterChips(f, labels = {}) {
   const chips = [];
   if (f.q) chips.push({ key: 'q', label: `“${f.q}”` });
   if (f.cat) chips.push({ key: 'cat', label: labels.cat?.[f.cat] || f.cat });
-  if (f.cond) chips.push({ key: 'cond', label: f.cond === 'used' ? 'Usados' : 'Novos' });
+  if (f.cond) chips.push({ key: 'cond', label: f.cond === 'used' ? t('Usados') : t('Novos') });
   if (f.min != null || f.max != null) chips.push({ key: 'price', label: priceRangeLabel(f.min, f.max) });
   (f.sellers || []).forEach((s) => chips.push({ key: `seller:${s}`, label: labels.sellers?.[s] || s }));
   if (f.ship) chips.push({ key: 'ship', label: labels.ship?.[f.ship] || f.ship });
-  if (f.offers) chips.push({ key: 'offers', label: 'Aceita oferta' });
+  if (f.offers) chips.push({ key: 'offers', label: t('Aceita oferta') });
   if (f.uf) chips.push({ key: 'uf', label: f.uf });
   if (f.city) chips.push({ key: 'city', label: f.city });
-  Object.entries(f.attrs || {}).forEach(([k, v]) => { if (v !== '' && v != null) chips.push({ key: `attr:${k}`, label: String(v) }); });
+  Object.entries(f.attrs || {}).forEach(([k, v]) => { if (v !== '' && v != null) chips.push({ key: `attr:${k}`, label: t(String(v)) }); });
   return chips;
 }
 
@@ -184,9 +185,9 @@ export function clearChip(f, key) {
 
 function priceRangeLabel(min, max) {
   const r = (c) => `R$ ${Math.round(c / 100)}`;
-  if (min != null && max != null) return `${r(min)} a ${r(max)}`;
-  if (min != null) return `A partir de ${r(min)}`;
-  return `Até ${r(max)}`;
+  if (min != null && max != null) return t('{min} a {max}', { min: r(min), max: r(max) });
+  if (min != null) return t('A partir de {valor}', { valor: r(min) });
+  return t('Até {valor}', { valor: r(max) });
 }
 
 const SELLER_IDS = new Set(Object.values(SELLER_TYPE));

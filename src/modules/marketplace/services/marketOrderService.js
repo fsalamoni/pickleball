@@ -10,6 +10,7 @@ import { httpsCallable } from 'firebase/functions';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db, functions } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C } from '../domain/constants.js';
+import { t } from '@/core/i18n';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 // Pedidos e ofertas gravam `placed_at_ms`/`created_at` (do servidor), não `created_at_ms`.
@@ -19,15 +20,15 @@ const recentes = (xs) => xs.sort((a, b) => quando(b) - quando(a));
 /** A frase certa para o erro do servidor (a mensagem dele já é em pt-BR). */
 export function marketCallError(err) {
   const code = String(err?.code || '').replace('functions/', '');
-  if (code === 'unimplemented') return 'Esta parte do Mercado ainda está sendo publicada. Tente de novo em alguns minutos.';
-  if (code === 'unavailable' || code === 'deadline-exceeded') return 'O servidor não respondeu. Confira a conexão e tente de novo: nada foi cobrado.';
-  if (code === 'internal') return 'O servidor falhou ao processar. Tente de novo.';
-  if (code === 'unauthenticated') return 'Entre na sua conta.';
-  return err?.message || 'Não foi possível concluir.';
+  if (code === 'unimplemented') return t('Esta parte do Mercado ainda está sendo publicada. Tente de novo em alguns minutos.');
+  if (code === 'unavailable' || code === 'deadline-exceeded') return t('O servidor não respondeu. Confira a conexão e tente de novo: nada foi cobrado.');
+  if (code === 'internal') return t('O servidor falhou ao processar. Tente de novo.');
+  if (code === 'unauthenticated') return t('Entre na sua conta.');
+  return err?.message || t('Não foi possível concluir.');
 }
 
 async function chamar(nome, payload) {
-  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
     const { data } = await httpsCallable(functions, nome, { timeout: 60_000 })(payload);
     return data;

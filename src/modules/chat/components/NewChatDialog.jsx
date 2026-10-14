@@ -17,6 +17,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { toMember } from '@/modules/chat/domain/conversations';
+import { t } from '@/core/i18n';
 
 /**
  * Diálogo para iniciar uma nova conversa (direta ou em grupo) ou para chamar
@@ -70,14 +71,14 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
 
   const handleConfirm = async () => {
     if (selectedList.length === 0) {
-      toast.error('Selecione pelo menos um atleta.');
+      toast.error(t('Selecione pelo menos um atleta.'));
       return;
     }
     try {
       await onConfirm(selectedList, title);
       reset();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível iniciar a conversa.');
+      toast.error(err.message || t('Não foi possível iniciar a conversa.'));
     }
   };
 
@@ -92,12 +93,12 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-ink" />
-            {mode === 'add' ? 'Chamar atletas para um novo grupo' : 'Nova conversa'}
+            {mode === 'add' ? t('Chamar atletas para um novo grupo') : t('Nova conversa')}
           </DialogTitle>
           <DialogDescription>
             {mode === 'add'
-              ? 'Os participantes atuais e os atletas selecionados formarão um novo grupo.'
-              : 'Selecione um atleta para conversa direta ou vários para criar um grupo.'}
+              ? t('Os participantes atuais e os atletas selecionados formarão um novo grupo.')
+              : t('Selecione um atleta para conversa direta ou vários para criar um grupo.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -107,7 +108,7 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar atleta por nome, cidade ou nível"
+              placeholder={t('Buscar atleta por nome, cidade ou nível')}
               className="pl-9"
             />
           </div>
@@ -141,14 +142,14 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
             ) : isError ? (
               // Falha não é "não há outros atletas no diretório".
               <div role="alert" className="px-3 py-6 text-center text-sm text-amber-800">
-                <p>Não foi possível carregar os atletas agora.</p>
+                <p>{t('Não foi possível carregar os atletas agora.')}</p>
                 <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-                  Tentar de novo
+                  {t('Tentar de novo')}
                 </Button>
               </div>
             ) : candidates.length === 0 ? (
               <p className="px-3 py-8 text-center text-sm text-gray-500">
-                {athletes.length <= 1 ? 'Ainda não há outros atletas no diretório.' : 'Nenhum atleta encontrado para a busca.'}
+                {athletes.length <= 1 ? t('Ainda não há outros atletas no diretório.') : t('Nenhum atleta encontrado para a busca.')}
               </p>
             ) : (
               candidates.map((athlete) => {
@@ -178,22 +179,22 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
 
           {isGroup && (
             <div className="space-y-1.5">
-              <Label htmlFor="group-title">Nome do grupo (opcional)</Label>
+              <Label htmlFor="group-title">{t('Nome do grupo (opcional)')}</Label>
               <Input
                 id="group-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={80}
-                placeholder="Ex.: Treino de quinta, Dupla do torneio…"
+                placeholder={t('Ex.: Treino de quinta, Dupla do torneio…')}
               />
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>{t('Cancelar')}</Button>
           <Button onClick={handleConfirm} disabled={busy || selectedList.length === 0}>
-            {busy ? 'Abrindo…' : mode === 'add' ? 'Criar grupo' : selectedList.length > 1 ? 'Criar grupo' : 'Conversar'}
+            {busy ? t('Abrindo…') : mode === 'add' ? t('Criar grupo') : selectedList.length > 1 ? t('Criar grupo') : t('Conversar')}
           </Button>
         </DialogFooter>
       </DialogContent>

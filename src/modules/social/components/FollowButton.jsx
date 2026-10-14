@@ -2,6 +2,7 @@ import React from 'react';
 import { UserPlus, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFollow } from '../hooks/useFollow.js';
+import { t } from '@/core/i18n';
 
 /**
  * Botão Seguir/Seguindo para um atleta. Renderiza `null` se for o próprio
@@ -22,7 +23,7 @@ export default function FollowButton({ targetUid, size = 'sm', className }) {
       disabled={isPending}
     >
       {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-      <span className="ml-1">{isFollowing ? 'Seguindo' : 'Seguir'}</span>
+      <span className="ml-1">{isFollowing ? t('Seguindo') : t('Seguir')}</span>
     </Button>
   );
 }

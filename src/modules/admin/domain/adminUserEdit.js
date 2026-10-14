@@ -28,6 +28,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { hasDeclaredLevel } from '@/core/lib/profileValidation';
+import { t, tk } from '@/core/i18n';
 
 /** `{ valor: rótulo }` vira `[{ value, label }]`, o formato do formulário. */
 const deRotulos = (labels) => Object.entries(labels).map(([value, label]) => ({ value, label }));
@@ -48,21 +49,21 @@ export const FIELD_OPTIONS = Object.freeze({
 
 /** Campos que o admin PODE corrigir, com rótulo e tipo para montar o formulário. */
 export const ADMIN_EDITABLE_FIELDS = Object.freeze([
-  { key: 'platform_name', label: 'Nome de exibição', type: 'text', group: 'identidade', required: true },
-  { key: 'full_name', label: 'Nome completo', type: 'text', group: 'identidade' },
-  { key: 'birth_date', label: 'Data de nascimento', type: 'date', group: 'identidade', required: true },
-  { key: 'phone', label: 'Telefone', type: 'text', group: 'identidade', required: true },
-  { key: 'gender', label: 'Gênero', type: 'select', group: 'identidade', required: true },
-  { key: 'city', label: 'Cidade', type: 'text', group: 'local', required: true },
-  { key: 'state', label: 'Estado (UF)', type: 'text', group: 'local', maxLength: 2, required: true },
-  { key: 'address', label: 'Endereço', type: 'text', group: 'local' },
-  { key: 'pickleball_experience', label: 'Experiência no pickleball', type: 'select', group: 'jogo', required: true },
-  { key: 'competition_gender', label: 'Categoria competitiva', type: 'select', group: 'jogo', requiredWithEssential: true },
-  { key: 'court_side', label: 'Lado na quadra', type: 'select', group: 'jogo', required: true },
-  { key: 'leveling_level', label: 'Nível declarado', type: 'select', group: 'jogo', requiredWithEssential: true },
-  { key: 'dupr_id', label: 'DUPR ID', type: 'text', group: 'jogo' },
-  { key: 'dupr_rating', label: 'DUPR rating', type: 'number', group: 'jogo' },
-  { key: 'photo_url', label: 'URL da foto', type: 'text', group: 'jogo' },
+  { key: 'platform_name', label: tk('Nome de exibição'), type: 'text', group: 'identidade', required: true },
+  { key: 'full_name', label: tk('Nome completo'), type: 'text', group: 'identidade' },
+  { key: 'birth_date', label: tk('Data de nascimento'), type: 'date', group: 'identidade', required: true },
+  { key: 'phone', label: tk('Telefone'), type: 'text', group: 'identidade', required: true },
+  { key: 'gender', label: tk('Gênero'), type: 'select', group: 'identidade', required: true },
+  { key: 'city', label: tk('Cidade'), type: 'text', group: 'local', required: true },
+  { key: 'state', label: tk('Estado (UF)'), type: 'text', group: 'local', maxLength: 2, required: true },
+  { key: 'address', label: tk('Endereço'), type: 'text', group: 'local' },
+  { key: 'pickleball_experience', label: tk('Experiência no pickleball'), type: 'select', group: 'jogo', required: true },
+  { key: 'competition_gender', label: tk('Categoria competitiva'), type: 'select', group: 'jogo', requiredWithEssential: true },
+  { key: 'court_side', label: tk('Lado na quadra'), type: 'select', group: 'jogo', required: true },
+  { key: 'leveling_level', label: tk('Nível declarado'), type: 'select', group: 'jogo', requiredWithEssential: true },
+  { key: 'dupr_id', label: tk('DUPR ID'), type: 'text', group: 'jogo' },
+  { key: 'dupr_rating', label: tk('DUPR rating'), type: 'number', group: 'jogo' },
+  { key: 'photo_url', label: tk('URL da foto'), type: 'text', group: 'jogo' },
 ]);
 
 const EDITAVEIS = new Set(ADMIN_EDITABLE_FIELDS.map((f) => f.key));
@@ -268,7 +269,7 @@ export function userRecordStatus(user = {}, opts = {}) {
 /** O motivo é obrigatório: edição de dado alheio sem justificativa não é suporte. */
 export function validateAdminEdit({ changes = [], reason = '' } = {}) {
   const erros = {};
-  if (changes.length === 0) erros.changes = 'Nenhuma alteração para salvar.';
-  if (texto(reason).length < 5) erros.reason = 'Descreva o motivo da correção (mínimo 5 caracteres).';
+  if (changes.length === 0) erros.changes = t('Nenhuma alteração para salvar.');
+  if (texto(reason).length < 5) erros.reason = t('Descreva o motivo da correção (mínimo 5 caracteres).');
   return { isValid: Object.keys(erros).length === 0, errors: erros };
 }

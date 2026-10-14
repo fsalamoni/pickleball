@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { t } from '@/core/i18n';
 
 // Carregado sob demanda: as libs de imagem/QR só entram no bundle ao abrir.
 const ShareCardDialog = lazy(() => import('./ShareCardDialog.jsx'));
@@ -18,7 +19,7 @@ export default function ShareCardButton({ tournament, size = 'sm', variant = 'ou
     <>
       <Button size={size} variant={variant} onClick={() => setOpen(true)}>
         <Share2 className="h-4 w-4" />
-        <span className="ml-1 hidden sm:inline">Compartilhar</span>
+        <span className="ml-1 hidden sm:inline">{t('Compartilhar')}</span>
       </Button>
       {open && (
         <Suspense fallback={null}>

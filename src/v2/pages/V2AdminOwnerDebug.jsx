@@ -14,6 +14,7 @@ import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { isOwnerEmail } from '@/core/config/owners';
 import { V2Button, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * Página de DEBUG profundo do estado de um user no Firestore.
@@ -42,7 +43,7 @@ export default function V2AdminOwnerDebug() {
 
   async function runDiagnostics(targetUid) {
     if (!db) {
-      setError('Firestore não inicializado (firebaseServicesEnabled = false).');
+      setError(t('Firestore não inicializado (firebaseServicesEnabled = false).'));
       return;
     }
     setLoading(true);
@@ -222,10 +223,10 @@ export default function V2AdminOwnerDebug() {
   if (!isOwner) {
     return (
       <div className="mx-auto max-w-[700px]">
-        <V2PageIntro title="Acesso restrito" subtitle="Página de debug exclusiva do owner." />
+        <V2PageIntro title={t('Acesso restrito')} subtitle={t('Página de debug exclusiva do owner.')} />
         <V2Surface className="p-6">
-          <p>Você não é o owner da plataforma. Esta página só é acessível para o e-mail cadastrado em <code>core/config/owners.js</code>.</p>
-          <Link to="/" className="mt-4 inline-block text-sm font-bold text-ink underline">← Voltar ao início</Link>
+          <p>{t('Você não é o owner da plataforma. Esta página só é acessível para o e-mail cadastrado em')} <code>core/config/owners.js</code>.</p>
+          <Link to="/" className="mt-4 inline-block text-sm font-bold text-ink underline">{t('← Voltar ao início')}</Link>
         </V2Surface>
       </div>
     );
@@ -234,19 +235,19 @@ export default function V2AdminOwnerDebug() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
-        title="Debug profundo do user"
-        subtitle="Lê Firestore direto (sem hooks/cache) e mostra contagens + erros. Use quando 'user sumiu' / 'perfil zerado' / 'useMyTournaments retorna []'."
+        title={t('Debug profundo do user')}
+        subtitle={t('Lê Firestore direto (sem hooks/cache) e mostra contagens + erros. Use quando “user sumiu” / “perfil zerado” / “useMyTournaments retorna []”.')}
       />
 
       <V2Surface className="mb-6 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">UID alvo</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{t('UID alvo')}</div>
             <code className="mt-1 block break-all font-mono text-sm text-ink">{user?.uid || '—'}</code>
           </div>
           <V2Button onClick={() => runDiagnostics(user.uid)} disabled={loading}>
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Rodando…' : 'Re-rodar diagnóstico'}
+            {loading ? t('Rodando…') : t('Re-rodar diagnóstico')}
           </V2Button>
         </div>
         {error && (
@@ -263,7 +264,7 @@ export default function V2AdminOwnerDebug() {
                   <AlertTriangle className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-bold text-red-900">Erros durante o diagnóstico</h2>
+                  <h2 className="font-display text-lg font-bold text-red-900">{t('Erros durante o diagnóstico')}</h2>
                   <ul className="mt-2 space-y-1 text-sm text-red-800">
                     {report.errors.map((e, i) => <li key={i}>• {e}</li>)}
                   </ul>
@@ -287,7 +288,7 @@ export default function V2AdminOwnerDebug() {
               summary="count"
             />
             <Section
-              title="5b. TODOS os tournaments (sem filtro) — diz onde estão os 2 que somem"
+              title={t('5b. TODOS os tournaments (sem filtro) — diz onde estão os 2 que somem')}
               data={report.sections.tournaments_all}
               summary="count"
             />
@@ -304,7 +305,7 @@ export default function V2AdminOwnerDebug() {
           </div>
 
           <details className="mt-6 rounded-2xl border border-gray-100 bg-paper-pure p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-ink">Ver JSON bruto completo</summary>
+            <summary className="cursor-pointer text-sm font-semibold text-ink">{t('Ver JSON bruto completo')}</summary>
             <pre className="mt-4 overflow-x-auto rounded-xl bg-ink p-4 text-xs text-acid">
               {JSON.stringify(report, null, 2)}
             </pre>
@@ -322,7 +323,7 @@ function Section({ title, data, summary }) {
       {summary === 'count' && data && (
         <div className="mt-2">
           <span className="text-2xl font-bold text-ink">{data.count ?? 0}</span>
-          <span className="ml-2 text-sm text-gray-500">documentos encontrados</span>
+          <span className="ml-2 text-sm text-gray-500">{t('documentos encontrados')}</span>
         </div>
       )}
       {summary === 'counts' && data && (
@@ -339,12 +340,12 @@ function Section({ title, data, summary }) {
       )}
       {data?.error && (
         <div className="mt-2 rounded-[1rem] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          <strong>Erro:</strong> {data.error} <code className="ml-1">({data.code})</code>
+          <strong>{t('Erro:')}</strong> {data.error} <code className="ml-1">({data.code})</code>
         </div>
       )}
       <details className="mt-3">
         <summary className="cursor-pointer text-xs font-semibold uppercase tracking-widest text-gray-500">
-          Detalhes
+          {t('Detalhes')}
         </summary>
         <pre className="mt-2 overflow-x-auto rounded-xl bg-ink p-3 text-xs text-acid">
           {JSON.stringify(data, null, 2)}

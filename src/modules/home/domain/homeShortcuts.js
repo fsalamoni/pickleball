@@ -14,6 +14,8 @@
 import { HOME_FOCUS } from './homeProfile.js';
 import { NAV_ROTULOS } from '../../../core/domain/navRotulos.js';
 import { agendaDayLabel } from './homeAgenda.js';
+import { diasAte } from './freshness.js';
+import { t, tn } from '@/core/i18n';
 
 /** Quantos atalhos cabem sem virar um menu. */
 export const SHORTCUTS_MAX = 8;
@@ -41,54 +43,54 @@ export function homeShortcuts(foci = [], ctx = {}) {
     [HOME_FOCUS.ARENA]: arenas.length > 0
       ? arenas.map((a) => ({
         id: `arena:${a.id}`,
-        label: arenas.length > 1 ? (a.name || 'Minha arena') : 'Central da arena',
+        label: arenas.length > 1 ? (a.name || t('Minha arena')) : t('Central da arena'),
         hint: a.pending > 0
-          ? `${a.pending} ${a.pending === 1 ? 'pedido esperando' : 'pedidos esperando'}`
-          : (a.name || 'Reservas, agenda e gestão'),
+          ? tn(a.pending, '{n} pedido esperando', '{n} pedidos esperando')
+          : (a.name || t('Reservas, agenda e gestão')),
         to: `/arenas/${a.id}/gerir`,
         icon: 'Building2',
         badge: a.pending > 0 ? a.pending : undefined,
       }))
       : ctx.arenasDesconhecidas
-        ? [{ id: 'arena:lista', label: 'Minhas arenas', hint: 'Arenas e reservas', to: '/arenas', icon: 'Building2' }]
-        : [{ id: 'arena:criar', label: 'Cadastrar minha arena', hint: 'Quadras, horários e reservas', to: '/arenas/criar', icon: 'Building2' }],
+        ? [{ id: 'arena:lista', label: t('Minhas arenas'), hint: t('Arenas e reservas'), to: '/arenas', icon: 'Building2' }]
+        : [{ id: 'arena:criar', label: t('Cadastrar minha arena'), hint: t('Quadras, horários e reservas'), to: '/arenas/criar', icon: 'Building2' }],
     [HOME_FOCUS.ENSINAR]: (ctx.ehProfessor || ctx.professorDesconhecido)
-      ? [{ id: 'professor', label: 'Painel do professor', hint: 'Aulas, alunos e agenda', to: '/aulas', icon: 'GraduationCap' }]
-      : [{ id: 'professor:ativar', label: 'Ativar perfil de professor', hint: 'Receba pedidos de aula', to: '/perfil/editar', icon: 'GraduationCap' }],
+      ? [{ id: 'professor', label: t('Painel do professor'), hint: t('Aulas, alunos e agenda'), to: '/aulas', icon: 'GraduationCap' }]
+      : [{ id: 'professor:ativar', label: t('Ativar perfil de professor'), hint: t('Receba pedidos de aula'), to: '/perfil/editar', icon: 'GraduationCap' }],
     [HOME_FOCUS.ORGANIZAR]: [
-      { id: 'torneio:criar', label: 'Criar torneio', hint: 'Do rascunho à inscrição', to: '/torneios/criar', icon: 'ClipboardList' },
-      { id: 'torneio:meus', label: rotulos.meusTorneios, hint: 'Gestão de cada um', to: '/perfil/torneios', icon: 'Trophy' },
+      { id: 'torneio:criar', label: t('Criar torneio'), hint: t('Do rascunho à inscrição'), to: '/torneios/criar', icon: 'ClipboardList' },
+      { id: 'torneio:meus', label: rotulos.meusTorneios, hint: t('Gestão de cada um'), to: '/perfil/torneios', icon: 'Trophy' },
     ],
     [HOME_FOCUS.COMPETIR]: [
-      { id: 'torneios', label: 'Torneios abertos', hint: 'Inscreva-se', to: '/torneios', icon: 'Trophy' },
+      { id: 'torneios', label: t('Torneios abertos'), hint: t('Inscreva-se'), to: '/torneios', icon: 'Trophy' },
     ],
     [HOME_FOCUS.JOGAR]: [
-      { id: 'procura-jogo', label: rotulos.vagas, hint: 'Jogos com vaga', to: '/procura-jogo', icon: 'Megaphone' },
-      { id: 'dia-de-jogo:criar', label: 'Criar dia de jogo', hint: 'Monte a rodada', to: '/dia-de-jogo?criar=1', icon: 'Dices' },
-      { id: 'jogadores', label: rotulos.pessoas, hint: 'Do seu nível', to: '/encontrar-jogadores', icon: 'Users' },
+      { id: 'procura-jogo', label: rotulos.vagas, hint: t('Jogos com vaga'), to: '/procura-jogo', icon: 'Megaphone' },
+      { id: 'dia-de-jogo:criar', label: t('Criar dia de jogo'), hint: t('Monte a rodada'), to: '/dia-de-jogo?criar=1', icon: 'Dices' },
+      { id: 'jogadores', label: rotulos.pessoas, hint: t('Do seu nível'), to: '/encontrar-jogadores', icon: 'Users' },
     ],
     [HOME_FOCUS.TREINAR]: [
-      { id: 'treino', label: 'Treino de hoje', hint: 'Rotina, biblioteca e diário', to: '/treino', icon: 'Dumbbell' },
+      { id: 'treino', label: t('Treino de hoje'), hint: t('Rotina, biblioteca e diário'), to: '/treino', icon: 'Dumbbell' },
     ],
     [HOME_FOCUS.RESERVAR]: [
-      { id: 'reservar', label: 'Reservar quadra', hint: 'Horários livres', to: '/arenas', icon: 'CalendarCheck' },
-      { id: 'reservas', label: 'Minhas reservas', hint: 'Pedidos e confirmadas', to: '/minhas-reservas', icon: 'CalendarClock' },
+      { id: 'reservar', label: t('Reservar quadra'), hint: t('Horários livres'), to: '/arenas', icon: 'CalendarCheck' },
+      { id: 'reservas', label: t('Minhas reservas'), hint: t('Pedidos e confirmadas'), to: '/minhas-reservas', icon: 'CalendarClock' },
     ],
     [HOME_FOCUS.APRENDER]: [
-      { id: 'professores', label: 'Encontrar professor', hint: 'Aulas e clínicas', to: '/coaches', icon: 'GraduationCap' },
-      { id: 'minhas-aulas', label: 'Minhas aulas', hint: 'Agenda de aulas', to: '/minhas-aulas', icon: 'CalendarClock' },
+      { id: 'professores', label: t('Encontrar professor'), hint: t('Aulas e clínicas'), to: '/coaches', icon: 'GraduationCap' },
+      { id: 'minhas-aulas', label: t('Minhas aulas'), hint: t('Agenda de aulas'), to: '/minhas-aulas', icon: 'CalendarClock' },
     ],
     [HOME_FOCUS.CLUBES]: [
-      { id: 'clubes', label: 'Meus clubes', hint: 'Eventos e comunidade', to: '/clubes', icon: 'Users' },
+      { id: 'clubes', label: t('Meus clubes'), hint: t('Eventos e comunidade'), to: '/clubes', icon: 'Users' },
     ],
     [HOME_FOCUS.RANKING]: [
-      { id: 'ranking', label: 'Ranking', hint: 'Sua posição', to: '/ranking', icon: 'Medal' },
-      { id: 'duplas', label: 'Ranking de duplas', hint: 'Suas parcerias', to: '/ranking/duplas', icon: 'Handshake' },
-      { id: 'desempenho', label: 'Meu desempenho', hint: 'Evolução e jogos', to: '/meu-desempenho', icon: 'TrendingUp' },
+      { id: 'ranking', label: t('Ranking'), hint: t('Sua posição'), to: '/ranking', icon: 'Medal' },
+      { id: 'duplas', label: t('Ranking de duplas'), hint: t('Suas parcerias'), to: '/ranking/duplas', icon: 'Handshake' },
+      { id: 'desempenho', label: t('Meu desempenho'), hint: t('Evolução e jogos'), to: '/meu-desempenho', icon: 'TrendingUp' },
     ],
     [HOME_FOCUS.COMUNIDADE]: [
-      { id: 'comunidade', label: 'Comunidade', hint: 'Novidades', to: '/novidades', icon: 'Zap' },
-      { id: 'atletas', label: 'Atletas', hint: 'Diretório', to: '/atletas', icon: 'Users' },
+      { id: 'comunidade', label: t('Comunidade'), hint: t('Novidades'), to: '/novidades', icon: 'Zap' },
+      { id: 'atletas', label: t('Atletas'), hint: t('Diretório'), to: '/atletas', icon: 'Users' },
     ],
   };
 
@@ -105,7 +107,7 @@ export function homeShortcuts(foci = [], ctx = {}) {
   for (let i = 0; i < rodadas; i += 1) listas.forEach((l) => incluir(l[i]));
   if (ctx.isPlatformAdmin) {
     // O admin tem a porta dele sempre — no lugar do último, se lotou.
-    const admin = { id: 'admin', label: 'Painel admin', hint: 'Plataforma', to: '/admin/painel', icon: 'LayoutDashboard' };
+    const admin = { id: 'admin', label: t('Painel admin'), hint: t('Plataforma'), to: '/admin/painel', icon: 'LayoutDashboard' };
     if (!vistos.has(admin.to)) {
       if (saida.length >= SHORTCUTS_MAX) saida.pop();
       saida.push(admin);
@@ -117,10 +119,10 @@ export function homeShortcuts(foci = [], ctx = {}) {
 /** "Bom dia", "Boa tarde", "Boa noite" pela hora local. */
 export function saudacao(agora = new Date()) {
   const h = (agora instanceof Date ? agora : new Date(agora)).getHours();
-  if (h < 5) return 'Boa noite';
-  if (h < 12) return 'Bom dia';
-  if (h < 18) return 'Boa tarde';
-  return 'Boa noite';
+  if (h < 5) return t('Boa noite');
+  if (h < 12) return t('Bom dia');
+  if (h < 18) return t('Boa tarde');
+  return t('Boa noite');
 }
 
 /**
@@ -135,19 +137,31 @@ export function saudacao(agora = new Date()) {
 export function frasePrincipal({ agenda = [], hoje, completa = true, acoes = 0 } = {}) {
   const deHoje = agenda.filter((i) => i.dia === hoje);
   const pendente = acoes > 0
-    ? ` ${acoes === 1 ? 'Um item pede' : `${acoes} itens pedem`} a sua ação.`
+    ? ` ${tn(acoes, 'Um item pede a sua ação.', '{n} itens pedem a sua ação.')}`
     : '';
   if (deHoje.length > 0) {
     const primeiro = deHoje.find((i) => i.hora) || deHoje[0];
-    const quantos = deHoje.length === 1 ? 'um compromisso' : `${deHoje.length} compromissos`;
-    const hora = primeiro.hora ? ` — o primeiro às ${primeiro.hora}` : '';
-    return `Hoje você tem ${quantos}${hora}.${pendente}`;
+    const frase = primeiro.hora
+      ? tn(deHoje.length, 'Hoje você tem um compromisso — o primeiro às {hora}.', 'Hoje você tem {n} compromissos — o primeiro às {hora}.', { hora: primeiro.hora })
+      : tn(deHoje.length, 'Hoje você tem um compromisso.', 'Hoje você tem {n} compromissos.');
+    return `${frase}${pendente}`;
   }
   if (agenda.length > 0) {
     const prox = agenda[0];
     const quando = agendaDayLabel(prox.dia, hoje);
-    return `Nada marcado para hoje. O próximo é ${quando.toLowerCase() === 'amanhã' ? 'amanhã' : `em ${quando}`}${prox.hora ? `, às ${prox.hora}` : ''}.${pendente}`;
+    const amanha = diasAte(prox.dia, hoje) === 1;
+    let frase;
+    if (amanha) {
+      frase = prox.hora
+        ? t('Nada marcado para hoje. O próximo é amanhã, às {hora}.', { hora: prox.hora })
+        : t('Nada marcado para hoje. O próximo é amanhã.');
+    } else {
+      frase = prox.hora
+        ? t('Nada marcado para hoje. O próximo é em {quando}, às {hora}.', { quando, hora: prox.hora })
+        : t('Nada marcado para hoje. O próximo é em {quando}.', { quando });
+    }
+    return `${frase}${pendente}`;
   }
   if (!completa) return pendente.trim() || null;
-  return `Sua agenda está livre — que tal marcar um jogo?${pendente}`;
+  return `${t('Sua agenda está livre — que tal marcar um jogo?')}${pendente}`;
 }

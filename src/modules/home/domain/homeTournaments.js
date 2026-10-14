@@ -6,11 +6,12 @@
  * pela MESMA régua de "ainda vale" (`tournamentPhase`): torneio encerrado não
  * aparece como aberto, nem como destaque, nem como "em andamento".
  */
+import { t, tk } from '@/core/i18n';
 import { formatDateShortBR } from '../../arenas/domain/calendar.js';
 import { normalizeLocality } from '../../arenas/domain/homeBanners.js';
 import { REGISTRATION_STATUS, TOURNAMENT_STATUS } from '../../tournament/domain/constants.js';
 import {
-  TOURNAMENT_PHASE, diaLocal, isTournamentCurrent, isTournamentOpen, prazoRelativo, tournamentPhase,
+  TOURNAMENT_PHASE, diaLocal, isTournamentCurrent, isTournamentOpen, prazoRelativo, diasAte, tournamentPhase,
 } from './freshness.js';
 
 const uf = (v) => String(v || '').trim().toUpperCase().slice(0, 2);
@@ -27,12 +28,13 @@ export function proximidade(t, perfil = {}) {
 }
 
 /** "Inscrições até Qui, 01/10 (em 5 dias)" — ou `null` sem prazo. */
-export function prazoTexto(t, hoje) {
-  const prazo = diaLocal(t?.registration_deadline);
+export function prazoTexto(tor, hoje) {
+  const prazo = diaLocal(tor?.registration_deadline);
   if (!prazo) return null;
+  if (diasAte(prazo, hoje) === 0) return t('Inscrições encerram hoje');
   const rel = prazoRelativo(prazo, hoje);
-  if (rel === 'hoje') return 'Inscrições encerram hoje';
-  return `Inscrições até ${formatDateShortBR(prazo, { hoje })}${rel ? ` (${rel})` : ''}`;
+  const data = formatDateShortBR(prazo, { hoje });
+  return rel ? t('Inscrições até {data} ({rel})', { data, rel }) : t('Inscrições até {data}', { data });
 }
 
 /** "Sáb, 03/10" ou "Sáb, 03/10 – Dom, 04/10" — ou `null` sem data. */
@@ -137,10 +139,10 @@ export function myTournamentsForHome(meus = [], hoje) {
 
 /** Como a pessoa está no torneio, em poucas palavras. */
 const MEU_STATUS = Object.freeze({
-  [REGISTRATION_STATUS.CHECKED_IN]: 'check-in feito',
-  [REGISTRATION_STATUS.CONFIRMED]: 'inscrição confirmada',
-  [REGISTRATION_STATUS.PENDING_PAYMENT]: 'pagamento pendente',
-  [REGISTRATION_STATUS.WAITLIST]: 'na lista de espera',
+  [REGISTRATION_STATUS.CHECKED_IN]: tk('check-in feito'),
+  [REGISTRATION_STATUS.CONFIRMED]: tk('inscrição confirmada'),
+  [REGISTRATION_STATUS.PENDING_PAYMENT]: tk('pagamento pendente'),
+  [REGISTRATION_STATUS.WAITLIST]: tk('na lista de espera'),
 });
 
 /** O que aparece ao lado de "Você organiza e joga" (confirmada é o normal). */
@@ -155,13 +157,13 @@ const STATUS_QUE_MERECE_NOTA = new Set([
  * torneios". Vai no SUBTÍTULO de propósito: o selo da linha some no celular.
  */
 export function meuPapelTexto({ organizo, inscrito, status } = {}) {
-  const comoJogo = MEU_STATUS[status] || 'inscrito';
+  const comoJogo = t(MEU_STATUS[status] || tk('inscrito'));
   // Confirmada é o normal: só o que pede atenção (pagamento, espera) ou o
   // que é notícia (check-in) ganha espaço ao lado — o subtítulo é curto.
   if (organizo && inscrito) {
-    return STATUS_QUE_MERECE_NOTA.has(status) ? `Você organiza e joga · ${comoJogo}` : 'Você organiza e joga';
+    return STATUS_QUE_MERECE_NOTA.has(status) ? t('Você organiza e joga · {status}', { status: comoJogo }) : t('Você organiza e joga');
   }
-  if (organizo) return 'Você organiza';
+  if (organizo) return t('Você organiza');
   return comoJogo.charAt(0).toUpperCase() + comoJogo.slice(1);
 }
 
@@ -182,11 +184,11 @@ export function managedTournamentsForHome(meus = [], hoje) {
 /** O que o organizador precisa fazer, por fase (a frase do cartão). */
 export function organizerHint(phase) {
   switch (phase) {
-    case TOURNAMENT_PHASE.DRAFT: return 'Rascunho — publique quando estiver pronto';
-    case TOURNAMENT_PHASE.OPEN: return 'Inscrições abertas';
-    case TOURNAMENT_PHASE.UPCOMING: return 'Inscrições fechadas — hora do sorteio';
-    case TOURNAMENT_PHASE.LIVE: return 'Acontecendo — lance os resultados';
-    case TOURNAMENT_PHASE.STALE: return 'A data passou — encerre o torneio';
+    case TOURNAMENT_PHASE.DRAFT: return t('Rascunho — publique quando estiver pronto');
+    case TOURNAMENT_PHASE.OPEN: return t('Inscrições abertas');
+    case TOURNAMENT_PHASE.UPCOMING: return t('Inscrições fechadas — hora do sorteio');
+    case TOURNAMENT_PHASE.LIVE: return t('Acontecendo — lance os resultados');
+    case TOURNAMENT_PHASE.STALE: return t('A data passou — encerre o torneio');
     default: return '';
   }
 }
@@ -207,14 +209,14 @@ export function organizerHint(phase) {
  */
 export function lastTournamentResult(historico = [], hoje) {
   for (const grupo of historico || []) {
-    const t = grupo?.tournament;
-    if (!t || t.status === TOURNAMENT_STATUS.CANCELLED || t.status === TOURNAMENT_STATUS.DRAFT) continue;
-    const inicio = diaLocal(t.starts_at);
+    const tor = grupo?.tournament;
+    if (!tor || tor.status === TOURNAMENT_STATUS.CANCELLED || tor.status === TOURNAMENT_STATUS.DRAFT) continue;
+    const inicio = diaLocal(tor.starts_at);
     if (inicio && inicio > hoje) continue;
     const entries = (grupo.entries || [])
       .filter((e) => e?.ranking?.started && Number.isFinite(e.ranking.position))
       .map((e) => ({
-        modality: e.modality?.name || 'Modalidade',
+        modality: e.modality?.name || t('Modalidade'),
         partnerName: e.partnerName || null,
         position: e.ranking.position,
         total: e.ranking.total,
@@ -224,13 +226,13 @@ export function lastTournamentResult(historico = [], hoje) {
       }))
       .sort((a, b) => (a.position / (a.total || 1)) - (b.position / (b.total || 1)));
     if (entries.length === 0) continue;
-    const phase = tournamentPhase(t, hoje);
+    const phase = tournamentPhase(tor, hoje);
     return {
-      tournamentId: grupo.tournamentId || t.id,
-      name: t.name || 'Torneio',
+      tournamentId: grupo.tournamentId || tor.id,
+      name: tor.name || t('Torneio'),
       phase,
-      encerrado: t.status === TOURNAMENT_STATUS.FINISHED,
-      when: periodoTexto(t, hoje),
+      encerrado: tor.status === TOURNAMENT_STATUS.FINISHED,
+      when: periodoTexto(tor, hoje),
       entries,
       best: entries[0],
       podio: entries[0].position <= 3,
@@ -242,5 +244,5 @@ export function lastTournamentResult(historico = [], hoje) {
 /** "3º de 12" */
 export function colocacaoTexto(entry) {
   if (!entry) return '';
-  return entry.total ? `${entry.position}º de ${entry.total}` : `${entry.position}º`;
+  return entry.total ? t('{pos}º de {total}', { pos: entry.position, total: entry.total }) : t('{pos}º', { pos: entry.position });
 }

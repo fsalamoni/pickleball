@@ -8,6 +8,7 @@ import { TEXT_LIMITS } from './constants.js';
 import { normalizeSearchText } from './listing.js';
 import { ORDER_DEADLINES } from './orderStatus.js';
 import { OFFER_RULES } from './offers.js';
+import { t, tk } from '@/core/i18n';
 
 /** Termos que derrubam o anúncio na hora (o admin acrescenta outros). */
 export const DEFAULT_BANNED_TERMS = Object.freeze([
@@ -75,26 +76,26 @@ export function findBannedTerm(text, extra = []) {
 /** Telefone, e-mail ou link de pagamento escritos na pergunta ou no anúncio. */
 export function findContactLeak(text) {
   const s = String(text || '');
-  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(s)) return 'e-mail';
-  if (/(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/.test(s)) return 'telefone';
-  if (/wa\.me|whatsapp\.com|chave pix/i.test(s)) return 'contato fora da plataforma';
+  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(s)) return tk('e-mail');
+  if (/(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/.test(s)) return tk('telefone');
+  if (/wa\.me|whatsapp\.com|chave pix/i.test(s)) return tk('contato fora da plataforma');
   return null;
 }
 
 export function validateQuestion(text) {
-  const t = String(text || '').trim().replace(/\s+/g, ' ');
-  if (t.length < 5) return { error: 'Escreva a sua pergunta.' };
-  if (t.length > TEXT_LIMITS.question) return { error: `Até ${TEXT_LIMITS.question} caracteres.` };
-  const leak = findContactLeak(t);
-  if (leak) return { error: `Não coloque ${leak} na pergunta: ela é pública. Combine tudo pelo pedido ou pela conversa.` };
-  return { value: t };
+  const texto = String(text || '').trim().replace(/\s+/g, ' ');
+  if (texto.length < 5) return { error: t('Escreva a sua pergunta.') };
+  if (texto.length > TEXT_LIMITS.question) return { error: t('Até {n} caracteres.', { n: TEXT_LIMITS.question }) };
+  const leak = findContactLeak(texto);
+  if (leak) return { error: t('Não coloque {oque} na pergunta: ela é pública. Combine tudo pelo pedido ou pela conversa.', { oque: t(leak) }) };
+  return { value: texto };
 }
 
 export function validateAnswer(text) {
-  const t = String(text || '').trim();
-  if (t.length < 2) return { error: 'Escreva a resposta.' };
-  if (t.length > TEXT_LIMITS.answer) return { error: `Até ${TEXT_LIMITS.answer} caracteres.` };
-  const leak = findContactLeak(t);
-  if (leak) return { error: `Não coloque ${leak} na resposta: ela é pública.` };
-  return { value: t };
+  const texto = String(text || '').trim();
+  if (texto.length < 2) return { error: t('Escreva a resposta.') };
+  if (texto.length > TEXT_LIMITS.answer) return { error: t('Até {n} caracteres.', { n: TEXT_LIMITS.answer }) };
+  const leak = findContactLeak(texto);
+  if (leak) return { error: t('Não coloque {oque} na resposta: ela é pública.', { oque: t(leak) }) };
+  return { value: texto };
 }

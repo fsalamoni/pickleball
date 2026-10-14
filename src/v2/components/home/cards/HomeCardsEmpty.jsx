@@ -7,6 +7,7 @@
 import React from 'react';
 import { LayoutGrid, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { useHomeCards } from '@/modules/home/hooks/useHomeCards';
+import { t } from '@/core/i18n';
 
 export default function HomeCardsEmpty({ onEscolher }) {
   const { restaurar } = useHomeCards();
@@ -19,9 +20,9 @@ export default function HomeCardsEmpty({ onEscolher }) {
         <LayoutGrid className="h-6 w-6" />
       </span>
       <div className="max-w-md">
-        <h2 id="inicio-enxuto-titulo" className="font-display text-xl font-bold text-ink">Seu início está enxuto</h2>
+        <h2 id="inicio-enxuto-titulo" className="font-display text-xl font-bold text-ink">{t('Seu início está enxuto')}</h2>
         <p className="mt-1.5 text-sm text-gray-500">
-          Só o resumo do dia, como você escolheu. Quando quiser, ligue os cards que fazem sentido para você.
+          {t('Só o resumo do dia, como você escolheu. Quando quiser, ligue os cards que fazem sentido para você.')}
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -31,14 +32,14 @@ export default function HomeCardsEmpty({ onEscolher }) {
           aria-haspopup="dialog"
           className="btn-press inline-flex items-center gap-1.5 rounded-full bg-acid px-4 py-2 text-sm font-bold text-ink hover:bg-acid-light focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40"
         >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Escolher o que aparece
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> {t('Escolher o que aparece')}
         </button>
         <button
           type="button"
           onClick={restaurar}
           className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-bold text-ink hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" /> Voltar ao padrão
+          <RotateCcw className="h-4 w-4" aria-hidden="true" /> {t('Voltar ao padrão')}
         </button>
       </div>
     </section>

@@ -22,12 +22,13 @@ import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { casaRota } from '@/modules/help/domain/dicasRota';
 import {
-  alvosDoPasso, destinoDeRecuo, destinoDoPasso, paragrafos, passoQueAbre,
+  alvosDoPasso, destinoDeRecuo, destinoDoPasso, paragrafos, passoQueAbre, textoDaAcao, textoDoGuiaT,
 } from '@/modules/help/domain/guias';
 import { useDicas } from './DicasContext';
 import Destaque from './Destaque';
 import { dialogoDe, encontrarAlvo, haDialogoAberto, useAlvoNaTela } from './alvoNaTela';
 import { conteinerQueRola, rolarAte } from '@/v2/ui/rolarAte';
+import { t } from '@/core/i18n';
 
 const reduzMovimento = () => typeof window !== 'undefined'
   && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
@@ -131,8 +132,8 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
   useEffect(() => {
     if (!naTela || espera !== 'click') return undefined;
     const aoClicar = (e) => {
-      const t = e.target;
-      if (alvos.some((a) => t?.closest?.(`[data-dica="${a}"]`))) setTimeout(avancar, 80);
+      const alvo = e.target;
+      if (alvos.some((a) => alvo?.closest?.(`[data-dica="${a}"]`))) setTimeout(avancar, 80);
     };
     document.addEventListener('click', aoClicar, true);
     return () => document.removeEventListener('click', aoClicar, true);
@@ -144,8 +145,8 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
 
   useEffect(() => {
     if (!espera?.appears) return undefined;
-    const t = setInterval(() => { if (encontrarAlvo([espera.appears])) avancar(); }, 200);
-    return () => clearInterval(t);
+    const relogio = setInterval(() => { if (encontrarAlvo([espera.appears])) avancar(); }, 200);
+    return () => clearInterval(relogio);
   }, [espera, avancar]);
 
   // Esc sai do guia (o Esc de um diálogo aberto é do diálogo).
@@ -181,16 +182,16 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
 
   return (
     <Destaque el={naTela ? el : null} rect={naTela ? rect : null} tituloId={tituloId} chave={`${chave}:${naTela}`}>
-      <p className="sr-only" aria-live="polite">{`Passo ${idx + 1} de ${total}: ${passo.title}`}</p>
+      <p className="sr-only" aria-live="polite">{t('Passo {n} de {total}: {titulo}', { n: idx + 1, total, titulo: t(passo.title) })}</p>
       <div className="flex items-start justify-between gap-3">
         <p className="flex min-w-0 items-baseline text-2xs font-bold uppercase tracking-widest text-gray-500">
-          <span className="min-w-0 truncate">{guia.title}</span>
-          <span className="shrink-0 whitespace-nowrap">&nbsp;· {idx + 1} de {total}</span>
+          <span className="min-w-0 truncate">{t(guia.title)}</span>
+          <span className="shrink-0 whitespace-nowrap">&nbsp;· {t('{n} de {total}', { n: idx + 1, total })}</span>
         </p>
         <button
           type="button"
           onClick={() => encerrarGuia()}
-          aria-label="Sair do guia"
+          aria-label={t('Sair do guia')}
           className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -198,41 +199,40 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
       </div>
 
       <h2 id={tituloId} ref={tituloRef} tabIndex={-1} className="mt-1 font-display text-lg font-bold leading-tight text-ink outline-none">
-        {passo.title}
+        {t(passo.title)}
       </h2>
 
       {naTela ? (
         <>
-          {paragrafos(passo).map((t) => (
-            <p key={t.slice(0, 48)} className="mt-1.5 text-sm leading-6 text-gray-600">{t}</p>
+          {paragrafos(passo).map((texto) => (
+            <p key={texto.slice(0, 48)} className="mt-1.5 text-sm leading-6 text-gray-600">{texto}</p>
           ))}
           {passo.tip && (
             <p className="mt-3 flex items-start gap-2 rounded-2xl bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
               <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-acid-dark" aria-hidden="true" />
-              <span>{passo.tip}</span>
+              <span>{textoDoGuiaT(passo.tip)}</span>
             </p>
           )}
           {passo.action && !naoAchou && (
             <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-acid px-3 py-1.5 text-xs font-bold text-ink">
-              <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" /> {passo.action}
+              <MousePointerClick className="h-3.5 w-3.5" aria-hidden="true" /> {textoDaAcao(passo.action)}
             </p>
           )}
           {naoAchou && (
             <div role="status" className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-              {podeRecuar && <p>Este ponto fica noutra parte desta tela.</p>}
-              {podeReabrir && <p>Parece que o formulário foi fechado.</p>}
+              {podeRecuar && <p>{t('Este ponto fica noutra parte desta tela.')}</p>}
+              {podeReabrir && <p>{t('Parece que o formulário foi fechado.')}</p>}
               {!podeRecuar && !podeReabrir && (
                 <p>
-                  Não encontrei este ponto na tela agora — ele pode depender de uma permissão sua, de algo que
-                  ainda não existe (um jogo, uma reserva) ou de um cartão fechado. Dá para seguir mesmo assim.
+                  {t('Não encontrei este ponto na tela agora — ele pode depender de uma permissão sua, de algo que ainda não existe (um jogo, uma reserva) ou de um cartão fechado. Dá para seguir mesmo assim.')}
                 </p>
               )}
               {/* O caminho de volta mora junto do aviso que o explica. */}
               {podeRecuar && (
-                <V2Button size="sm" variant="secondary" className="mt-2" onClick={() => navigate(recuo)}>Levar-me até lá</V2Button>
+                <V2Button size="sm" variant="secondary" className="mt-2" onClick={() => navigate(recuo)}>{t('Levar-me até lá')}</V2Button>
               )}
               {podeReabrir && (
-                <V2Button size="sm" variant="secondary" className="mt-2" onClick={() => irParaPasso(abridor)}>Abrir de novo</V2Button>
+                <V2Button size="sm" variant="secondary" className="mt-2" onClick={() => irParaPasso(abridor)}>{t('Abrir de novo')}</V2Button>
               )}
             </div>
           )}
@@ -242,14 +242,14 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
               onClick={() => focavel(el)?.focus()}
               className="sr-only focus:not-sr-only focus:mt-2 focus:inline-block focus:rounded-full focus:bg-paper focus:px-3 focus:py-1 focus:text-xs focus:font-semibold"
             >
-              Ir até o ponto destacado
+              {t('Ir até o ponto destacado')}
             </button>
           )}
         </>
       ) : (
         <p className="mt-1.5 flex items-start gap-2 text-sm leading-6 text-gray-600">
           <MapPin className="mt-1 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-          <span>{passo.awayText || 'Este passo acontece em outra tela.'}</span>
+          <span>{passo.awayText ? t(passo.awayText) : t('Este passo acontece em outra tela.')}</span>
         </p>
       )}
 
@@ -258,12 +258,12 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
       <div className="mt-4 flex items-center justify-between gap-2">
         {idx > 0 ? (
           <V2Button variant="ghost" size="sm" onClick={() => irParaPasso(idx - 1)}>
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" /> {t('Voltar')}
           </V2Button>
         ) : <span />}
         <div className="flex items-center gap-2">
           {!naTela && podeLevar && (
-            <V2Button size="sm" onClick={() => navigate(destino)}>Levar-me até lá</V2Button>
+            <V2Button size="sm" onClick={() => navigate(destino)}>{t('Levar-me até lá')}</V2Button>
           )}
           {naTela && espera && !naoAchou && (
             <button
@@ -271,12 +271,12 @@ export default function GuiaEmAndamento({ guia, passoIdx, ctx }) {
               onClick={avancar}
               className="rounded-full px-3 py-1.5 text-xs font-semibold text-gray-500 underline-offset-2 hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
             >
-              Pular
+              {t('Pular')}
             </button>
           )}
           {(naTela && (!espera || naoAchou)) || (!naTela && !podeLevar) ? (
             <V2Button size="sm" onClick={avancar}>
-              {ultimo ? (<><Check className="h-4 w-4" aria-hidden="true" /> Concluir</>) : (<>Próximo <ChevronRight className="h-4 w-4" aria-hidden="true" /></>)}
+              {ultimo ? (<><Check className="h-4 w-4" aria-hidden="true" /> {t('Concluir')}</>) : (<>{t('Próximo')} <ChevronRight className="h-4 w-4" aria-hidden="true" /></>)}
             </V2Button>
           ) : null}
         </div>

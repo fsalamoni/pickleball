@@ -5,6 +5,7 @@ import { cn } from '@/core/lib/utils';
 import { CONVERSATION_TYPE } from '@/modules/chat/domain/constants';
 import { conversationTitle, directCounterpart, lastMessagePreview } from '@/modules/chat/domain/conversations';
 import { V2EmptyState, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function timeLabel(ms) {
   if (!ms) return '';
@@ -16,7 +17,7 @@ function timeLabel(ms) {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return fmtData(ms, { day: '2-digit', month: '2-digit' });
 }
 
 export default function V2ConversationList({
@@ -31,8 +32,8 @@ export default function V2ConversationList({
   if (isError) {
     return (
       <V2ErrorState
-        title="Não foi possível carregar as conversas"
-        description="Suas conversas continuam lá — só não conseguimos buscá-las agora."
+        title={t('Não foi possível carregar as conversas')}
+        description={t('Suas conversas continuam lá — só não conseguimos buscá-las agora.')}
         onRetry={onRetry}
         className="py-10"
       />
@@ -43,8 +44,8 @@ export default function V2ConversationList({
     return (
       <V2EmptyState
         icon={Users}
-        title="Nenhuma conversa"
-        description="Inicie uma conversa com atletas da comunidade."
+        title={t('Nenhuma conversa')}
+        description={t('Inicie uma conversa com atletas da comunidade.')}
         className="py-10"
       />
     );
@@ -81,7 +82,7 @@ export default function V2ConversationList({
                 <span className="shrink-0 text-2xs text-gray-500">{timeLabel(conversation.last_message_at_ms)}</span>
               </span>
               <span className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
-                {last?.sender_id === currentUserId && <span className="text-gray-400">Você:</span>}
+                {last?.sender_id === currentUserId && <span className="text-gray-400">{t('Você:')}</span>}
                 <span className="truncate">{lastMessagePreview(conversation)}</span>
               </span>
             </span>

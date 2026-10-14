@@ -8,6 +8,8 @@
  * documento público (`athlete_profiles/{uid}`).
  */
 
+import { t, tk } from '@/core/i18n';
+
 /** Coleção pública de atletas (projeção de `users`). */
 export const ATHLETE_DIRECTORY_COLLECTION = 'athlete_profiles';
 
@@ -20,10 +22,10 @@ export const ATHLETE_GENDER = Object.freeze({
 });
 
 export const ATHLETE_GENDER_LABELS = Object.freeze({
-  [ATHLETE_GENDER.MALE]: 'Masculino',
-  [ATHLETE_GENDER.FEMALE]: 'Feminino',
-  [ATHLETE_GENDER.OTHER]: 'Outro',
-  [ATHLETE_GENDER.PREFER_NOT_TO_SAY]: 'Prefiro não informar',
+  [ATHLETE_GENDER.MALE]: tk('Masculino'),
+  [ATHLETE_GENDER.FEMALE]: tk('Feminino'),
+  [ATHLETE_GENDER.OTHER]: tk('Outro'),
+  [ATHLETE_GENDER.PREFER_NOT_TO_SAY]: tk('Prefiro não informar'),
 });
 
 /**
@@ -38,5 +40,5 @@ export const ATHLETE_PRIVACY_FIELDS = Object.freeze({
 });
 
 export function genderLabel(value) {
-  return ATHLETE_GENDER_LABELS[value] || null;
+  return ATHLETE_GENDER_LABELS[value] ? t(ATHLETE_GENDER_LABELS[value]) : null;
 }

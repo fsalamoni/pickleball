@@ -12,6 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { searchAdminTabs } from '@/modules/admin/domain/consoleNav';
 import { cn } from '@/core/lib/utils';
+import { t, tn } from '@/core/i18n';
 
 function Busca({ sections, onTab }) {
   const [q, setQ] = useState('');
@@ -19,7 +20,7 @@ function Busca({ sections, onTab }) {
   const abrir = (id) => { onTab(id); setQ(''); };
   return (
     <div className="relative">
-      <label className="sr-only" htmlFor="admin-busca">Buscar no painel</label>
+      <label className="sr-only" htmlFor="admin-busca">{t('Buscar no painel')}</label>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden />
       <input
         id="admin-busca"
@@ -27,14 +28,14 @@ function Busca({ sections, onTab }) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && achados[0]) { e.preventDefault(); abrir(achados[0].id); } }}
-        placeholder="Buscar: flags, cadastros, biblioteca…"
+        placeholder={t('Buscar: flags, cadastros, biblioteca…')}
         autoComplete="off"
         className="h-10 w-full rounded-2xl border border-gray-200 bg-paper-pure pl-9 pr-3 text-sm text-ink placeholder:text-gray-500"
       />
       {q.trim() && (
-        <ul className="absolute left-0 right-0 top-11 z-30 max-h-72 overflow-auto rounded-2xl border border-gray-100 bg-paper-pure p-1 shadow-organic" role="listbox" aria-label="Resultados da busca">
+        <ul className="absolute left-0 right-0 top-11 z-30 max-h-72 overflow-auto rounded-2xl border border-gray-100 bg-paper-pure p-1 shadow-organic" role="listbox" aria-label={t('Resultados da busca')}>
           {achados.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-gray-500">Nada com esse nome. Tente outra palavra.</li>
+            <li className="px-3 py-2 text-sm text-gray-500">{t('Nada com esse nome. Tente outra palavra.')}</li>
           ) : achados.map((r) => (
             <li key={r.id}>
               <button type="button" onClick={() => abrir(r.id)} className="flex w-full items-baseline justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-paper">
@@ -53,7 +54,7 @@ function Selo({ n, className }) {
   if (!n) return null;
   return (
     <span className={cn('ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-2xs font-bold text-amber-800', className)}>
-      <span className="sr-only">{n} pendente{n === 1 ? '' : 's'}</span>
+      <span className="sr-only">{tn(n, '{n} pendente', '{n} pendentes')}</span>
       <span aria-hidden>{n > 99 ? '99+' : n}</span>
     </span>
   );
@@ -66,12 +67,12 @@ function Selo({ n, className }) {
 function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
   const ir = (id) => { onTab(id); onEscolheu?.(); };
   return (
-    <nav aria-label="Seções do painel" data-dica="admin-secoes">
+    <nav aria-label={t('Seções do painel')} data-dica="admin-secoes">
       <ul className="space-y-0.5">
         {sections.map((s) => {
-          const ativa = s.tabs.some((t) => t.id === tab);
+          const ativa = s.tabs.some((aba) => aba.id === tab);
           const unica = s.tabs.length === 1;
-          const pendentes = s.tabs.reduce((a, t) => a + (badges[t.id] || 0), 0);
+          const pendentes = s.tabs.reduce((a, aba) => a + (badges[aba.id] || 0), 0);
           return (
             <li key={s.id} data-dica={s.dica} className={cn(s.quieta && 'mt-3 border-t border-gray-100 pt-3')}>
               <button
@@ -93,19 +94,19 @@ function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
               </button>
               {!unica && ativa && (
                 <ul className="mb-1 ml-5 mt-0.5 space-y-0.5 border-l border-gray-100 pl-2">
-                  {s.tabs.map((t) => (
-                    <li key={t.id}>
+                  {s.tabs.map((aba) => (
+                    <li key={aba.id}>
                       <button
                         type="button"
-                        aria-current={t.id === tab ? 'page' : undefined}
-                        onClick={() => ir(t.id)}
+                        aria-current={aba.id === tab ? 'page' : undefined}
+                        onClick={() => ir(aba.id)}
                         className={cn(
                           'flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-sm coarse:min-h-11',
-                          t.id === tab ? 'bg-ink font-bold text-white' : 'text-ink hover:bg-paper',
+                          aba.id === tab ? 'bg-ink font-bold text-white' : 'text-ink hover:bg-paper',
                         )}
                       >
-                        {t.label}
-                        <Selo n={badges[t.id]} />
+                        {aba.label}
+                        <Selo n={badges[aba.id]} />
                       </button>
                     </li>
                   ))}
@@ -121,8 +122,8 @@ function Lista({ sections, tab, onTab, onEscolheu, badges = {} }) {
 
 export default function AdminConsoleNav({ sections, tab, onTab, badges }) {
   const [aberta, setAberta] = useState(false);
-  const atual = sections.find((s) => s.tabs.some((t) => t.id === tab));
-  const abaAtual = atual?.tabs.find((t) => t.id === tab);
+  const atual = sections.find((s) => s.tabs.some((aba) => aba.id === tab));
+  const abaAtual = atual?.tabs.find((aba) => aba.id === tab);
   return (
     <>
       {/* Computador: lateral fixa, com a busca no topo. */}

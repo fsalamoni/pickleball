@@ -24,6 +24,7 @@
  * A escolha mora no navegador, por usuário (`homeCardsStore.js`). Nada aqui
  * lê nem grava o banco.
  */
+import { t, tn, tk, fmtLista } from '@/core/i18n';
 import { FOCUS_REASON, HOME_FOCUS, HOME_SECTION, focusReasonText } from './homeProfile.js';
 
 /** Os cards. Os das seções têm o MESMO id da seção (`HOME_SECTION`). */
@@ -60,10 +61,10 @@ export const HOME_CARD_GROUP = Object.freeze({
 });
 
 export const HOME_CARD_GROUP_LABEL = Object.freeze({
-  [HOME_CARD_GROUP.JOGAR]: 'Para jogar',
-  [HOME_CARD_GROUP.COMPETIR]: 'Para competir',
-  [HOME_CARD_GROUP.ROTINA]: 'O seu dia a dia',
-  [HOME_CARD_GROUP.TRABALHO]: 'Se você trabalha com pickleball',
+  [HOME_CARD_GROUP.JOGAR]: tk('Para jogar'),
+  [HOME_CARD_GROUP.COMPETIR]: tk('Para competir'),
+  [HOME_CARD_GROUP.ROTINA]: tk('O seu dia a dia'),
+  [HOME_CARD_GROUP.TRABALHO]: tk('Se você trabalha com pickleball'),
 });
 
 /**
@@ -74,117 +75,117 @@ export const HOME_CARD_GROUP_LABEL = Object.freeze({
  */
 export const HOME_CARD_META = Object.freeze({
   [HOME_CARD.JOGAR]: Object.freeze({
-    label: 'Dias de jogo',
-    description: 'Dias de jogo e jogos com vaga perto de você, das arenas e dos atletas.',
+    label: tk('Dias de jogo'),
+    description: tk('Dias de jogo e jogos com vaga perto de você, das arenas e dos atletas.'),
     icon: 'Swords',
     group: HOME_CARD_GROUP.JOGAR,
     focos: [HOME_FOCUS.JOGAR],
   }),
   [HOME_CARD.RESERVAR]: Object.freeze({
-    label: 'Horários da arena',
-    description: 'Os horários livres da arena onde você costuma jogar, para reservar.',
+    label: tk('Horários da arena'),
+    description: tk('Os horários livres da arena onde você costuma jogar, para reservar.'),
     icon: 'CalendarCheck',
     group: HOME_CARD_GROUP.JOGAR,
     focos: [HOME_FOCUS.RESERVAR],
   }),
   [HOME_CARD.RANKING]: Object.freeze({
-    label: 'Ranking',
-    description: 'A sua posição no ranking, o seu nível e as suas duplas.',
+    label: tk('Ranking'),
+    description: tk('A sua posição no ranking, o seu nível e as suas duplas.'),
     icon: 'Medal',
     group: HOME_CARD_GROUP.COMPETIR,
     focos: [HOME_FOCUS.RANKING],
   }),
   [HOME_CARD.AGENDA]: Object.freeze({
-    label: 'Sua agenda',
-    description: 'Tudo o que você tem marcado — jogos, reservas, aulas e eventos — numa linha do tempo.',
+    label: tk('Sua agenda'),
+    description: tk('Tudo o que você tem marcado — jogos, reservas, aulas e eventos — numa linha do tempo.'),
     icon: 'CalendarDays',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
   }),
   [HOME_CARD.ATALHOS]: Object.freeze({
-    label: 'Atalhos',
-    description: 'Botões diretos para o que você mais usa, como criar dia de jogo ou abrir a sua arena.',
+    label: tk('Atalhos'),
+    description: tk('Botões diretos para o que você mais usa, como criar dia de jogo ou abrir a sua arena.'),
     icon: 'Zap',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
   }),
   [HOME_CARD.EVOLUCAO]: Object.freeze({
-    label: 'Sua evolução',
-    description: 'Sequência de semanas jogando, nível e as próximas conquistas.',
+    label: tk('Sua evolução'),
+    description: tk('Sequência de semanas jogando, nível e as próximas conquistas.'),
     icon: 'TrendingUp',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
     requer: 'evolucao',
   }),
   [HOME_CARD.TREINO]: Object.freeze({
-    label: 'Treino',
-    description: 'O treino de hoje, o que o seu professor mandou e a porta para o Centro de Treino.',
+    label: tk('Treino'),
+    description: tk('O treino de hoje, o que o seu professor mandou e a porta para o Centro de Treino.'),
     icon: 'Dumbbell',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [HOME_FOCUS.TREINAR],
     requer: 'treino',
   }),
   [HOME_CARD.MERCADO]: Object.freeze({
-    label: 'Mercado',
-    description: 'As suas compras que esperam por você e o que acabou de chegar à venda.',
+    label: tk('Mercado'),
+    description: tk('As suas compras que esperam por você e o que acabou de chegar à venda.'),
     icon: 'Store',
     group: HOME_CARD_GROUP.ROTINA,
     focos: [],
     requer: 'mercado',
   }),
   [HOME_CARD.TORNEIOS]: Object.freeze({
-    label: 'Torneios',
-    description: 'Os torneios em que você está e os com inscrição aberta perto de você.',
+    label: tk('Torneios'),
+    description: tk('Os torneios em que você está e os com inscrição aberta perto de você.'),
     icon: 'Trophy',
     group: HOME_CARD_GROUP.COMPETIR,
     focos: [HOME_FOCUS.COMPETIR],
   }),
   [HOME_CARD.RESULTADO]: Object.freeze({
-    label: 'Seu último torneio',
-    description: 'A sua colocação no último torneio que você disputou.',
+    label: tk('Seu último torneio'),
+    description: tk('A sua colocação no último torneio que você disputou.'),
     icon: 'Medal',
     group: HOME_CARD_GROUP.COMPETIR,
     focos: [HOME_FOCUS.COMPETIR],
-    nota: 'Antes do seu primeiro torneio, ele avisa que ainda não há resultado.',
+    nota: tk('Antes do seu primeiro torneio, ele avisa que ainda não há resultado.'),
   }),
   [HOME_CARD.ORGANIZAR]: Object.freeze({
-    label: 'Torneios que você organiza',
-    description: 'O que cada torneio seu pede agora: inscrições, sorteio, jogos, encerrar.',
+    label: tk('Torneios que você organiza'),
+    description: tk('O que cada torneio seu pede agora: inscrições, sorteio, jogos, encerrar.'),
     icon: 'ClipboardList',
     group: HOME_CARD_GROUP.COMPETIR,
     focos: [HOME_FOCUS.ORGANIZAR],
   }),
   [HOME_CARD.AULAS]: Object.freeze({
-    label: 'Aulas e professores',
-    description: 'Professores aceitando alunos perto de você.',
+    label: tk('Aulas e professores'),
+    description: tk('Professores aceitando alunos perto de você.'),
     icon: 'GraduationCap',
     group: HOME_CARD_GROUP.JOGAR,
     focos: [HOME_FOCUS.APRENDER],
   }),
   [HOME_CARD.CLUBES]: Object.freeze({
-    label: 'Seus clubes',
-    description: 'Os seus clubes e os próximos eventos deles.',
+    label: tk('Seus clubes'),
+    description: tk('Os seus clubes e os próximos eventos deles.'),
     icon: 'Users',
     group: HOME_CARD_GROUP.JOGAR,
     focos: [HOME_FOCUS.CLUBES],
   }),
   [HOME_CARD.COMUNIDADE]: Object.freeze({
-    label: 'Comunidade',
-    description: 'Atletas perto de você para jogar, e as novidades.',
+    label: tk('Comunidade'),
+    description: tk('Atletas perto de você para jogar, e as novidades.'),
     icon: 'Handshake',
     group: HOME_CARD_GROUP.JOGAR,
     focos: [HOME_FOCUS.COMUNIDADE],
   }),
   [HOME_CARD.ARENA]: Object.freeze({
-    label: 'Sua arena',
-    description: 'Os pedidos de reserva esperando resposta e as portas para a Central da arena.',
+    label: tk('Sua arena'),
+    description: tk('Os pedidos de reserva esperando resposta e as portas para a Central da arena.'),
     icon: 'Building2',
     group: HOME_CARD_GROUP.TRABALHO,
     focos: [HOME_FOCUS.ARENA],
   }),
   [HOME_CARD.PROFESSOR]: Object.freeze({
-    label: 'Suas aulas (professor)',
-    description: 'Pedidos de aula esperando a sua resposta, próximas aulas e alunos.',
+    label: tk('Suas aulas (professor)'),
+    description: tk('Pedidos de aula esperando a sua resposta, próximas aulas e alunos.'),
     icon: 'GraduationCap',
     group: HOME_CARD_GROUP.TRABALHO,
     focos: [HOME_FOCUS.ENSINAR],
@@ -351,8 +352,7 @@ export function homeCardsOfGroup(group, ctx = {}) {
  * @returns {string} ex.: "3 cards: Dias de jogo, Horários da arena e Ranking"
  */
 export function homeCardsSummary(lista, ctx = {}) {
-  const nomes = visibleHomeCards(lista, ctx).map((id) => HOME_CARD_META[id].label);
-  if (nomes.length === 0) return 'Nenhum card escolhido';
-  const juntar = nomes.length === 1 ? nomes[0] : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
-  return `${nomes.length} ${nomes.length === 1 ? 'card' : 'cards'}: ${juntar}`;
+  const nomes = visibleHomeCards(lista, ctx).map((id) => t(HOME_CARD_META[id].label));
+  if (nomes.length === 0) return t('Nenhum card escolhido');
+  return tn(nomes.length, '{n} card: {nomes}', '{n} cards: {nomes}', { nomes: fmtLista(nomes) });
 }

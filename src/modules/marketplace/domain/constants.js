@@ -6,6 +6,7 @@
  * prefixo `market_`. Os valores dos enums são gravados no banco — nunca
  * renomeie um valor, só acrescente.
  */
+import { tk } from '@/core/i18n';
 
 export const MARKET_COLLECTIONS = Object.freeze({
   sellers: 'market_sellers',
@@ -35,10 +36,10 @@ export const SELLER_TYPE = Object.freeze({
 });
 
 export const SELLER_TYPE_LABELS = Object.freeze({
-  athlete: 'Atleta',
-  coach: 'Professor',
-  arena: 'Arena',
-  store: 'Loja',
+  athlete: tk('Atleta'),
+  coach: tk('Professor'),
+  arena: tk('Arena'),
+  store: tk('Loja'),
 });
 
 /** Estado do vendedor. Loja nasce `pending` até o admin aprovar. */
@@ -50,10 +51,10 @@ export const SELLER_STATUS = Object.freeze({
 });
 
 export const SELLER_STATUS_LABELS = Object.freeze({
-  active: 'Ativo',
-  pending: 'Em análise',
-  rejected: 'Recusado',
-  suspended: 'Suspenso',
+  active: tk('Ativo'),
+  pending: tk('Em análise'),
+  rejected: tk('Recusado'),
+  suspended: tk('Suspenso'),
 });
 
 /** O que é o anúncio. */
@@ -73,12 +74,12 @@ export const LISTING_STATUS = Object.freeze({
 });
 
 export const LISTING_STATUS_LABELS = Object.freeze({
-  draft: 'Rascunho',
-  active: 'No ar',
-  paused: 'Pausado',
-  sold_out: 'Esgotado',
-  closed: 'Encerrado',
-  removed: 'Removido pela moderação',
+  draft: tk('Rascunho'),
+  active: tk('No ar'),
+  paused: tk('Pausado'),
+  sold_out: tk('Esgotado'),
+  closed: tk('Encerrado'),
+  removed: tk('Removido pela moderação'),
 });
 
 /** Estados que o comprador vê na vitrine (o resto é só do vendedor). */
@@ -93,10 +94,10 @@ export const CONDITION = Object.freeze({
 });
 
 export const CONDITION_LABELS = Object.freeze({
-  new: 'Novo',
-  like_new: 'Usado, como novo',
-  good: 'Usado, bom estado',
-  fair: 'Usado, com marcas de uso',
+  new: tk('Novo'),
+  like_new: tk('Usado, como novo'),
+  good: tk('Usado, bom estado'),
+  fair: tk('Usado, com marcas de uso'),
 });
 
 /** Como o produto chega a quem compra. */
@@ -107,11 +108,11 @@ export const FULFILLMENT = Object.freeze({
 });
 
 export const FULFILLMENT_LABELS = Object.freeze({
-  pickup: 'Retirar no local',
-  meetup: 'Entrega combinada',
-  shipping: 'Envio',
+  pickup: tk('Retirar no local'),
+  meetup: tk('Entrega combinada'),
+  shipping: tk('Envio'),
   // Só no pedido de vale-presente: não há nada a entregar.
-  digital: 'Vale-presente (sem entrega)',
+  digital: tk('Vale-presente (sem entrega)'),
 });
 
 export const ORDER_STATUS = Object.freeze({
@@ -129,17 +130,17 @@ export const ORDER_STATUS = Object.freeze({
 });
 
 export const ORDER_STATUS_LABELS = Object.freeze({
-  placed: 'Aguardando o vendedor',
-  accepted: 'Aguardando pagamento',
-  payment_review: 'Pagamento em conferência',
-  paid: 'Pago',
-  shipped: 'Enviado',
-  ready: 'Pronto para retirar',
-  delivered: 'Entregue',
-  completed: 'Concluído',
-  cancelled: 'Cancelado',
-  expired: 'Expirado',
-  disputed: 'Em disputa',
+  placed: tk('Aguardando o vendedor'),
+  accepted: tk('Aguardando pagamento'),
+  payment_review: tk('Pagamento em conferência'),
+  paid: tk('Pago'),
+  shipped: tk('Enviado'),
+  ready: tk('Pronto para retirar'),
+  delivered: tk('Entregue'),
+  completed: tk('Concluído'),
+  cancelled: tk('Cancelado'),
+  expired: tk('Expirado'),
+  disputed: tk('Em disputa'),
 });
 
 /** Pedido terminado: nada mais acontece com ele. */
@@ -156,13 +157,13 @@ export const OFFER_STATUS = Object.freeze({
 });
 
 export const OFFER_STATUS_LABELS = Object.freeze({
-  pending: 'Esperando o vendedor',
-  countered: 'Contraproposta do vendedor',
-  accepted: 'Aceita',
-  declined: 'Recusada',
-  withdrawn: 'Retirada',
-  expired: 'Expirada',
-  ordered: 'Virou pedido',
+  pending: tk('Esperando o vendedor'),
+  countered: tk('Contraproposta do vendedor'),
+  accepted: tk('Aceita'),
+  declined: tk('Recusada'),
+  withdrawn: tk('Retirada'),
+  expired: tk('Expirada'),
+  ordered: tk('Virou pedido'),
 });
 
 export const DISPUTE_REASON = Object.freeze({
@@ -173,20 +174,20 @@ export const DISPUTE_REASON = Object.freeze({
 });
 
 export const DISPUTE_REASON_LABELS = Object.freeze({
-  not_received: 'Não recebi o produto',
-  not_as_described: 'Diferente do anunciado',
-  damaged: 'Chegou danificado',
-  other: 'Outro motivo',
+  not_received: tk('Não recebi o produto'),
+  not_as_described: tk('Diferente do anunciado'),
+  damaged: tk('Chegou danificado'),
+  other: tk('Outro motivo'),
 });
 
 /** Por que alguém denuncia um anúncio (o valor é gravado: nunca renomeie). */
 export const REPORT_REASON_LABELS = Object.freeze({
-  fake: 'Produto falsificado ou réplica',
-  prohibited: 'Item proibido no Mercado',
-  misleading: 'Anúncio enganoso (foto, preço ou descrição)',
-  scam: 'Parece golpe (pede pagamento por fora, contato fora do app)',
-  offensive: 'Conteúdo ofensivo',
-  other: 'Outro motivo',
+  fake: tk('Produto falsificado ou réplica'),
+  prohibited: tk('Item proibido no Mercado'),
+  misleading: tk('Anúncio enganoso (foto, preço ou descrição)'),
+  scam: tk('Parece golpe (pede pagamento por fora, contato fora do app)'),
+  offensive: tk('Conteúdo ofensivo'),
+  other: tk('Outro motivo'),
 });
 
 export const DISPUTE_STATUS = Object.freeze({

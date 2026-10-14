@@ -8,6 +8,7 @@ import { Box, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { parseVideoLink } from '@/modules/marketplace/domain/listing';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { t } from '@/core/i18n';
 import { normalizeAspect, normalizeFrame, rotatedAspect } from '@/modules/marketplace/domain/mediaFrame';
 import MarketPhoto, { AiStamp } from './MarketPhoto';
 
@@ -44,8 +45,8 @@ export default function ListingGallery({ listing }) {
     <div
       className="space-y-3"
       role="group"
-      aria-roledescription="galeria"
-      aria-label={`Fotos de ${listing.title}`}
+      aria-roledescription={t('galeria')}
+      aria-label={t('Fotos de {titulo}', { titulo: listing.title })}
       tabIndex={-1}
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight') passo(1);
@@ -60,7 +61,7 @@ export default function ListingGallery({ listing }) {
             title={listing.title}
             description={atual.ai_generated ? 'O vendedor informou que esta imagem foi gerada ou alterada por inteligência artificial.' : undefined}
             trigger={(
-              <button type="button" className="relative block h-full w-full cursor-zoom-in" aria-label="Ampliar a foto">
+              <button type="button" className="relative block h-full w-full cursor-zoom-in" aria-label={t('Ampliar a foto')}>
                 <MarketPhoto src={atual.url} alt={atual.alt || listing.title} aspect={atual.aspect} frame={atual.frame} mode="contain" />
               </button>
             )}
@@ -77,7 +78,7 @@ export default function ListingGallery({ listing }) {
         {atual.kind === 'link' && (
           <iframe
             src={atual.embed}
-            title={`Vídeo de ${listing.title}`}
+            title={t('Vídeo de {titulo}', { titulo: listing.title })}
             className="h-full w-full"
             allow="encrypted-media; picture-in-picture; fullscreen"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -86,10 +87,10 @@ export default function ListingGallery({ listing }) {
         )}
         {itens.length > 1 && (
           <>
-            <button type="button" onClick={() => passo(-1)} aria-label="Foto anterior" className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow">
+            <button type="button" onClick={() => passo(-1)} aria-label={t('Foto anterior')} className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <button type="button" onClick={() => passo(1)} aria-label="Próxima foto" className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow">
+            <button type="button" onClick={() => passo(1)} aria-label={t('Próxima foto')} className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow">
               <ChevronRight className="h-5 w-5" />
             </button>
             <span className="absolute bottom-3 right-3 rounded-full bg-ink/80 px-3 py-1 text-xs font-bold text-white">{i + 1}/{itens.length}</span>
@@ -103,7 +104,7 @@ export default function ListingGallery({ listing }) {
               <button
                 type="button"
                 onClick={() => setI(k)}
-                aria-label={m.kind === 'image' ? `Foto ${k + 1}` : 'Vídeo'}
+                aria-label={m.kind === 'image' ? t('Foto {n}', { n: k + 1 }) : t('Vídeo')}
                 aria-current={k === i ? 'true' : undefined}
                 className={cn('relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-paper', k === i ? 'border-ink' : 'border-transparent')}
               >

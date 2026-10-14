@@ -27,6 +27,7 @@ import { BR_UFS, ufName } from '@/core/domain/ufs';
 import { normalizeLocality } from '@/core/domain/locality';
 import { cn } from '@/core/lib/utils';
 import { V2Button } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 const OPCAO = Object.freeze({ CIDADE: 'cidade', ESTADO: 'estado', OUTRO: 'outro', TODOS: 'todos' });
 
@@ -43,7 +44,7 @@ function Raios({ modo, raioKm, onChange, rotulo }) {
   return (
     <div role="group" aria-label={rotulo} className="flex flex-wrap gap-1.5">
       <ChipRaio ativo={modo === REGION_MODE.CIDADE} onClick={() => onChange(REGION_MODE.CIDADE, raioKm)}>
-        Só a cidade
+        {t('Só a cidade')}
       </ChipRaio>
       {RADIUS_CHOICES_KM.map((km) => (
         <ChipRaio
@@ -51,7 +52,7 @@ function Raios({ modo, raioKm, onChange, rotulo }) {
           ativo={modo === REGION_MODE.RAIO && raioKm === km}
           onClick={() => onChange(REGION_MODE.RAIO, km)}
         >
-          até {km} km
+          {t('até {km} km', { km })}
         </ChipRaio>
       ))}
     </div>
@@ -80,12 +81,12 @@ function Vizinhas({ geo, cidade, uf, modo, raioKm }) {
     if (!geo || !cidade) return null;
     const centro = geo.coordsOf(cidade, uf);
     if (!centro) return null;
-    if (modo !== REGION_MODE.RAIO) return 'Só o que acontece na própria cidade.';
+    if (modo !== REGION_MODE.RAIO) return t('Só o que acontece na própria cidade.');
     const lista = geo.within(centro, raioKm, { limite: 400 });
-    if (lista.length === 0) return `Nenhuma outra cidade a até ${raioKm} km — vale só a própria cidade.`;
+    if (lista.length === 0) return t('Nenhuma outra cidade a até {km} km — vale só a própria cidade.', { km: raioKm });
     const nomes = lista.slice(0, 4).map((c) => c.nome);
     const resto = lista.length - nomes.length;
-    return `Entram também ${lista.length} ${lista.length === 1 ? 'cidade' : 'cidades'}: ${nomes.join(', ')}${resto > 0 ? ` e mais ${resto}` : ''}.`;
+    return tn(lista.length, 'Entra também {n} cidade: {nomes}.', 'Entram também {n} cidades: {nomes}{mais}.', { nomes: nomes.join(', '), mais: resto > 0 ? ` ${t('e mais {n}', { n: resto })}` : '' });
   }, [geo, cidade, uf, modo, raioKm]);
   if (!texto) return null;
   return <p className="text-xs leading-5 text-gray-500">{texto}</p>;
@@ -173,7 +174,7 @@ function OutroLugar({ escolha, region, geo, definir }) {
           if (!perto) throw new Error('fora');
           usarCidade(perto.nome, perto.uf, REGION_ORIGIN.APARELHO);
         } catch {
-          setAviso('Não achamos uma cidade do Brasil perto de você. Escolha na lista.');
+          setAviso(t('Não achamos uma cidade do Brasil perto de você. Escolha na lista.'));
         } finally {
           setLocalizando(false);
         }
@@ -181,8 +182,8 @@ function OutroLugar({ escolha, region, geo, definir }) {
       (erro) => {
         setLocalizando(false);
         setAviso(erro?.code === 1
-          ? 'A localização não foi permitida. Tudo bem — escolha a cidade na lista.'
-          : 'Não deu para achar a sua localização agora. Escolha a cidade na lista.');
+          ? t('A localização não foi permitida. Tudo bem — escolha a cidade na lista.')
+          : t('Não deu para achar a sua localização agora. Escolha a cidade na lista.'));
       },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 10 * 60_000 },
     );
@@ -195,30 +196,30 @@ function OutroLugar({ escolha, region, geo, definir }) {
     <div className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-[1fr_7rem]">
         <div className="relative">
-          <label htmlFor={idBusca} className="sr-only">Cidade</label>
+          <label htmlFor={idBusca} className="sr-only">{t('Cidade')}</label>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
           <input
             id={idBusca}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder="Digite a cidade"
+            placeholder={t('Digite a cidade')}
             autoComplete="off"
             className="w-full rounded-2xl border border-gray-200 bg-paper-pure py-2.5 pl-9 pr-3 text-sm text-ink placeholder-gray-400 focus:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100"
           />
         </div>
         <select
-          aria-label="Estado"
+          aria-label={t('Estado')}
           value={uf}
           onChange={(e) => usarEstado(e.target.value)}
           className="rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-4 focus:ring-gray-100"
         >
-          <option value="">UF</option>
+          <option value="">{t('UF')}</option>
           {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
         </select>
       </div>
 
       {sugestoes.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Cidades encontradas">
+        <ul className="flex flex-wrap gap-1.5" aria-label={t('Cidades encontradas')}>
           {sugestoes.map((c) => (
             <li key={`${c.uf}-${c.nome}`}>
               <ChipRaio ativo={false} onClick={() => usarCidade(c.nome, c.uf)}>{c.nome} / {c.uf}</ChipRaio>
@@ -228,8 +229,8 @@ function OutroLugar({ escolha, region, geo, definir }) {
       )}
       {texto.trim().length >= 2 && sugestoes.length === 0 && !cidadeEscolhida && geo && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-          <span>Não achamos “{texto.trim()}” entre as cidades do Brasil.</span>
-          <ChipRaio ativo={false} onClick={() => usarCidade(texto.trim(), uf)}>Usar assim mesmo</ChipRaio>
+          <span>{t('Não achamos “{texto}” entre as cidades do Brasil.', { texto: texto.trim() })}</span>
+          <ChipRaio ativo={false} onClick={() => usarCidade(texto.trim(), uf)}>{t('Usar assim mesmo')}</ChipRaio>
         </div>
       )}
 
@@ -237,12 +238,12 @@ function OutroLugar({ escolha, region, geo, definir }) {
         <>
           <p className="flex items-center gap-1.5 text-xs font-semibold text-ink">
             <Check className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" />
-            {escolha.origem === REGION_ORIGIN.APARELHO ? 'Perto de mim: ' : ''}
+            {escolha.origem === REGION_ORIGIN.APARELHO ? t('Perto de mim: ') : ''}
             {escolha.cidade}{escolha.uf ? ` / ${escolha.uf}` : ''}
           </p>
           {achadaNoMapa === false ? (
             <p className="text-xs leading-5 text-gray-500">
-              Essa cidade não está no mapa do Brasil, então não dá para medir distância: vale o nome exato.
+              {t('Essa cidade não está no mapa do Brasil, então não dá para medir distância: vale o nome exato.')}
             </p>
           ) : (
             <>
@@ -259,23 +260,23 @@ function OutroLugar({ escolha, region, geo, definir }) {
       )}
       {doOutro && escolha.modo === REGION_MODE.ESTADO && (
         <p className="flex items-center gap-1.5 text-xs font-semibold text-ink">
-          <Check className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" /> {ufName(escolha.uf)} (todo o estado)
+          <Check className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" /> {ufName(escolha.uf)} ({t('todo o estado')})
         </p>
       )}
 
       {podeLocalizar && (
         <div className="space-y-1">
           <V2Button type="button" variant="secondary" size="sm" onClick={localizar} disabled={localizando}>
-            <LocateFixed className="h-4 w-4" aria-hidden="true" /> {localizando ? 'Localizando…' : 'Usar a minha localização atual'}
+            <LocateFixed className="h-4 w-4" aria-hidden="true" /> {localizando ? t('Localizando…') : t('Usar a minha localização atual')}
           </V2Button>
           <p className="text-2xs leading-4 text-gray-500">
-            A localização é usada só neste aparelho para achar a cidade mais próxima. Ela não é enviada nem guardada.
+            {t('A localização é usada só neste aparelho para achar a cidade mais próxima. Ela não é enviada nem guardada.')}
           </p>
         </div>
       )}
       {aviso && <p role="status" className="text-xs font-medium text-amber-700">{aviso}</p>}
       {region.falta && doOutro && !cidadeEscolhida && escolha.modo !== REGION_MODE.ESTADO && (
-        <p className="text-xs text-gray-500">Escolha uma cidade ou um estado.</p>
+        <p className="text-xs text-gray-500">{t('Escolha uma cidade ou um estado.')}</p>
       )}
     </div>
   );
@@ -318,17 +319,17 @@ export default function RegionPicker({ className }) {
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div role="radiogroup" aria-label="Minha região" className="space-y-2">
+      <div role="radiogroup" aria-label={t('Minha região')} className="space-y-2">
         <Opcao
           id={id}
           valor={OPCAO.CIDADE}
           marcada={marcada === OPCAO.CIDADE}
           onEscolher={escolher}
           icon={MapPin}
-          titulo={cidadePerfil ? `Minha cidade — ${cidadePerfil}${ufPerfil ? ` / ${ufPerfil}` : ''}` : 'Minha cidade'}
+          titulo={cidadePerfil ? `${t('Minha cidade')} — ${cidadePerfil}${ufPerfil ? ` / ${ufPerfil}` : ''}` : t('Minha cidade')}
           descricao={cidadePerfil
-            ? 'A cidade do seu perfil, sozinha ou com as vizinhas.'
-            : 'Seu perfil ainda não tem cidade.'}
+            ? t('A cidade do seu perfil, sozinha ou com as vizinhas.')
+            : t('Seu perfil ainda não tem cidade.')}
           desabilitada={!cidadePerfil}
         >
           <Raios
@@ -339,13 +340,13 @@ export default function RegionPicker({ className }) {
           />
           <Vizinhas geo={geo} cidade={cidadePerfil} uf={ufPerfil} modo={modoCidade} raioKm={raio} />
           {mapaFalhou && (
-            <p className="text-xs text-amber-700">O mapa das cidades não carregou agora; até ele voltar, vale só a própria cidade.</p>
+            <p className="text-xs text-amber-700">{t('O mapa das cidades não carregou agora; até ele voltar, vale só a própria cidade.')}</p>
           )}
         </Opcao>
         {!cidadePerfil && (
           <p className="pl-2 text-xs text-gray-500">
-            <Link to="/perfil/editar" className="font-semibold text-ink underline">Informe a sua cidade no perfil</Link>
-            {' '}para ver primeiro o que acontece perto de você.
+            <Link to="/perfil/editar" className="font-semibold text-ink underline">{t('Informe a sua cidade no perfil')}</Link>
+            {' '}{t('para ver primeiro o que acontece perto de você.')}
           </p>
         )}
 
@@ -355,8 +356,8 @@ export default function RegionPicker({ className }) {
           marcada={marcada === OPCAO.ESTADO}
           onEscolher={escolher}
           icon={MapIcon}
-          titulo={ufPerfil ? `Todo o meu estado — ${ufName(ufPerfil)}` : 'Todo o meu estado'}
-          descricao={ufPerfil ? 'Qualquer cidade do estado do seu perfil.' : 'Seu perfil ainda não tem estado.'}
+          titulo={ufPerfil ? `${t('Todo o meu estado')} — ${ufName(ufPerfil)}` : t('Todo o meu estado')}
+          descricao={ufPerfil ? t('Qualquer cidade do estado do seu perfil.') : t('Seu perfil ainda não tem estado.')}
           desabilitada={!ufPerfil}
         />
 
@@ -366,8 +367,8 @@ export default function RegionPicker({ className }) {
           marcada={marcada === OPCAO.OUTRO}
           onEscolher={escolher}
           icon={LocateFixed}
-          titulo="Outro lugar"
-          descricao="Vai viajar, ou joga longe da cidade do cadastro? Escolha a cidade (ou só o estado) — ou use a sua localização."
+          titulo={t('Outro lugar')}
+          descricao={t('Vai viajar, ou joga longe da cidade do cadastro? Escolha a cidade (ou só o estado) — ou use a sua localização.')}
         >
           <OutroLugar escolha={escolha} region={region} geo={geo} definir={definir} />
         </Opcao>
@@ -378,20 +379,20 @@ export default function RegionPicker({ className }) {
           marcada={marcada === OPCAO.TODOS}
           onEscolher={escolher}
           icon={Globe2}
-          titulo="Todo lugar"
-          descricao="Sem filtro — outros estados e países também. O que está mais perto continua aparecendo primeiro."
+          titulo={t('Todo lugar')}
+          descricao={t('Sem filtro — outros estados e países também. O que está mais perto continua aparecendo primeiro.')}
         />
       </div>
 
       {geoQ.isError && (
         <p className="text-xs text-amber-700">
-          O mapa das cidades não carregou agora — as sugestões e a lista de vizinhas voltam quando ele carregar.{' '}
-          <button type="button" onClick={() => geoQ.refetch()} className="font-semibold underline">Tentar de novo</button>
+          {t('O mapa das cidades não carregou agora — as sugestões e a lista de vizinhas voltam quando ele carregar.')}{' '}
+          <button type="button" onClick={() => geoQ.refetch()} className="font-semibold underline">{t('Tentar de novo')}</button>
         </p>
       )}
       <div className="flex flex-col gap-2 rounded-3xl bg-paper px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-600" aria-live="polite">
-          Você vê: <strong className="font-semibold text-ink">{rotulo}</strong>
+          {t('Você vê:')} <strong className="font-semibold text-ink">{rotulo}</strong>
         </p>
         {personalizada && (
           <button
@@ -399,7 +400,7 @@ export default function RegionPicker({ className }) {
             onClick={() => { restaurar(); setMarcadaLocal(null); }}
             className="inline-flex items-center gap-1 self-start rounded-full px-2 py-1 text-xs font-semibold text-gray-500 hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30 sm:self-auto"
           >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Voltar ao padrão (minha cidade e até {DEFAULT_RADIUS_KM} km)
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> {t('Voltar ao padrão (minha cidade e até {km} km)', { km: DEFAULT_RADIUS_KM })}
           </button>
         )}
       </div>

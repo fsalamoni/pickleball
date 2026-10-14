@@ -19,6 +19,7 @@ import { upcomingClinics } from '@/modules/coaches/domain/clinic';
 import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
+import { t, tn } from '@/core/i18n';
 
 function Numero({ to, label, value, icon: Icon }) {
   return (
@@ -53,23 +54,23 @@ export default function HomeCoachSection({
   // Falha não é "você não é professor": o convite a ativar mandaria recadastrar.
   if (!ehProfessor && perfilQ?.isError) {
     return (
-      <HomeSection id="professor" icon={GraduationCap} title="Suas aulas" reason={reason} action={{ to: '/aulas', label: 'Painel do professor' }}>
-        <V2ErrorState inline title="Não carregou o seu perfil de professor" description="O seu perfil continua lá." onRetry={perfilQ.refetch} />
+      <HomeSection id="professor" icon={GraduationCap} title={t('Suas aulas')} reason={reason} action={{ to: '/aulas', label: t('Painel do professor') }}>
+        <V2ErrorState inline title={t('Não carregou o seu perfil de professor')} description={t('O seu perfil continua lá.')} onRetry={perfilQ.refetch} />
       </HomeSection>
     );
   }
   if (!ehProfessor && perfilQ?.isLoading) {
     return (
-      <HomeSection id="professor" icon={GraduationCap} title="Suas aulas" reason={reason}>
+      <HomeSection id="professor" icon={GraduationCap} title={t('Suas aulas')} reason={reason}>
         <V2Skeleton className="h-20 rounded-3xl" />
       </HomeSection>
     );
   }
   if (!ehProfessor) {
     return (
-      <HomeSection id="professor" icon={GraduationCap} title="Dar aulas" reason={reason}>
-        <HomeEmpty icon={GraduationCap} actions={<HomeAction to="/perfil/editar" primary>Ativar perfil de professor</HomeAction>}>
-          Ative o seu perfil de professor para publicar horários, receber pedidos de aula e montar clínicas.
+      <HomeSection id="professor" icon={GraduationCap} title={t('Dar aulas')} reason={reason}>
+        <HomeEmpty icon={GraduationCap} actions={<HomeAction to="/perfil/editar" primary>{t('Ativar perfil de professor')}</HomeAction>}>
+          {t('Ative o seu perfil de professor para publicar horários, receber pedidos de aula e montar clínicas.')}
         </HomeEmpty>
       </HomeSection>
     );
@@ -77,7 +78,7 @@ export default function HomeCoachSection({
 
   const falhou = aulas.isError || alunos.isError || clinicas.isError;
   return (
-    <HomeSection id="professor" icon={GraduationCap} title="Suas aulas" reason={reason} action={{ to: '/aulas', label: 'Painel do professor' }}>
+    <HomeSection id="professor" icon={GraduationCap} title={t('Suas aulas')} reason={reason} action={{ to: '/aulas', label: t('Painel do professor') }}>
       {aulas.isLoading ? (
         <V2Skeleton className="h-28 rounded-3xl" />
       ) : (
@@ -85,8 +86,8 @@ export default function HomeCoachSection({
           {falhou && (
             <V2ErrorState
               inline
-              title="Parte do painel não carregou"
-              description="Pode haver pedido de aula esperando resposta."
+              title={t('Parte do painel não carregou')}
+              description={t('Pode haver pedido de aula esperando resposta.')}
               onRetry={() => { aulas.refetch(); alunos.refetch(); clinicas.refetch(); }}
             />
           )}
@@ -96,19 +97,19 @@ export default function HomeCoachSection({
               className="group flex items-center justify-between gap-3 rounded-3xl bg-acid px-4 py-3 text-ink transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20"
             >
               <span className="font-semibold">
-                {pedidos === 1 ? '1 pedido de aula esperando a sua resposta' : `${pedidos} pedidos de aula esperando a sua resposta`}
+                {tn(pedidos, '{n} pedido de aula esperando a sua resposta', '{n} pedidos de aula esperando a sua resposta')}
               </span>
               <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
             </Link>
           )}
           <div className="grid grid-cols-3 gap-2">
-            <Numero to="/aulas" label="Próximas" value={aulas.isError ? '—' : upcoming.length} icon={GraduationCap} />
-            <Numero to="/aulas" label="Alunos ativos" value={alunos.isError ? '—' : ativos} icon={Users} />
-            <Numero to="/aulas" label="Clínicas" value={clinicas.isError ? '—' : proxClinicas} icon={Sparkles} />
+            <Numero to="/aulas" label={t('Próximas')} value={aulas.isError ? '—' : upcoming.length} icon={GraduationCap} />
+            <Numero to="/aulas" label={t('Alunos ativos')} value={alunos.isError ? '—' : ativos} icon={Users} />
+            <Numero to="/aulas" label={t('Clínicas')} value={clinicas.isError ? '—' : proxClinicas} icon={Sparkles} />
           </div>
           {marketingOn && (
             <div className="flex flex-wrap gap-2">
-              <HomeAction to="/aulas?secao=divulgacao"><Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> Divulgar com cupom ou campanha</HomeAction>
+              <HomeAction to="/aulas?secao=divulgacao"><Megaphone className="h-3.5 w-3.5" aria-hidden="true" /> {t('Divulgar com cupom ou campanha')}</HomeAction>
             </div>
           )}
         </div>

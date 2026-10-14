@@ -14,15 +14,16 @@ import { useMyDoublesRankings, useMyPlayerRating } from '@/modules/rating/hooks/
 import { useDuprRatingForUid } from '@/modules/rating/hooks/useDuprRating';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeSection } from './HomeSection';
+import { t, fmtNumero } from '@/core/i18n';
 
 function fmt(n, casas = 0) {
   const v = Number(n);
-  return Number.isFinite(v) ? v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas }) : '—';
+  return Number.isFinite(v) ? fmtNumero(v, { minimumFractionDigits: casas, maximumFractionDigits: casas }) : '—';
 }
 
 function Tile({ to, icon: Icon, label, value, detail, carregando, falhou, onRetry }) {
   if (carregando) return <V2Skeleton className="h-28 rounded-3xl" />;
-  if (falhou) return <V2ErrorState inline title={`Não carregou: ${label.toLowerCase()}`} description="" onRetry={onRetry} />;
+  if (falhou) return <V2ErrorState inline title={t('Não carregou: {oque}', { oque: label.toLowerCase() })} description="" onRetry={onRetry} />;
   return (
     <Link
       to={to}
@@ -57,41 +58,41 @@ export default function HomeRankingSection({ reason }) {
   const nivelSimples = n && (n.singles_games || 0) > 0 ? n.singles_rating : null;
 
   return (
-    <HomeSection id="ranking" icon={Medal} title="Ranking e duplas" reason={reason} action={{ to: '/ranking', label: 'Ranking' }}>
+    <HomeSection id="ranking" icon={Medal} title={t('Ranking e duplas')} reason={reason} action={{ to: '/ranking', label: t('Ranking') }}>
       <div className="grid gap-3 sm:grid-cols-3">
         <Tile
           to="/ranking"
           icon={Medal}
-          label="Ranking nacional"
+          label={t('Ranking nacional')}
           carregando={nacional.isLoading}
           falhou={nacional.isError}
           onRetry={nacional.refetch}
           value={r?.position ? `${r.position}º` : '—'}
-          detail={r ? `Rating ${fmt(r.rating)} · ${r.wins || 0}V ${r.losses || 0}D` : 'Sem jogos publicados no ranking'}
+          detail={r ? t('Rating {rating} · {v}V {d}D', { rating: fmt(r.rating), v: r.wins || 0, d: r.losses || 0 }) : t('Sem jogos publicados no ranking')}
         />
         <Tile
           to="/meu-desempenho"
           icon={Sparkles}
-          label="Nível 2.0–8.0"
+          label={t('Nível 2.0–8.0')}
           carregando={nivel.isLoading}
           falhou={nivel.isError}
           onRetry={nivel.refetch}
           value={nivelDuplas != null ? fmt(nivelDuplas, 2) : (nivelSimples != null ? fmt(nivelSimples, 2) : '—')}
           detail={nivelDuplas != null
-            ? `Duplas${nivelSimples != null ? ` · simples ${fmt(nivelSimples, 2)}` : ''}`
-            : (nivelSimples != null ? 'Simples' : 'Calculado com os jogos publicados')}
+            ? nivelSimples != null ? t('Duplas · simples {nivel}', { nivel: fmt(nivelSimples, 2) }) : t('Duplas')
+            : (nivelSimples != null ? t('Simples') : t('Calculado com os jogos publicados'))}
         />
         <Tile
           to="/ranking/duplas"
           icon={Handshake}
-          label="Melhor dupla"
+          label={t('Melhor dupla')}
           carregando={duplas.isLoading}
           falhou={duplas.isError}
           onRetry={duplas.refetch}
           value={melhorDupla?.position ? `${melhorDupla.position}º` : '—'}
           detail={melhorDupla
-            ? `${parceiro ? `com ${parceiro} · ` : ''}${melhorDupla.wins || 0}V ${melhorDupla.losses || 0}D`
-            : 'Jogue em dupla para entrar no ranking'}
+            ? `${parceiro ? `${t('com {nome}', { nome: parceiro })} · ` : ''}${t('{v}V {d}D', { v: melhorDupla.wins || 0, d: melhorDupla.losses || 0 })}`
+            : t('Jogue em dupla para entrar no ranking')}
         />
       </div>
     </HomeSection>

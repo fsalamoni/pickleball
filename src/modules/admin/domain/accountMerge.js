@@ -13,6 +13,7 @@
  * foi excluído (pela auditoria da exclusão, a única prova de quem era), quem
  * provavelmente é a mesma pessoa, e o que a confirmação exige.
  */
+import { t } from '../../../core/i18n/index.js';
 
 /** A palavra que o admin digita para confirmar. */
 export const MERGE_CONFIRM_WORD = 'UNIFICAR';
@@ -59,7 +60,7 @@ export function deletedAccountsFromAudit(logs) {
     if (atual && atual.deletedAtMs >= ms) return;
     porUid.set(uid, {
       uid,
-      name: texto(l.user_name) || '(sem nome)',
+      name: texto(l.user_name) || t('(sem nome)'),
       email: texto(l.user_email),
       deletedAtMs: ms,
       mergedInto: unificadas.get(uid) || null,
@@ -94,14 +95,14 @@ export function suggestMergeTargets(excluida, usuarios, { limit = 5 } = {}) {
       const partesC = candidato.split(' ').filter(Boolean);
       const motivos = [];
       let score = 0;
-      if (nome && candidato === nome) { score += 5; motivos.push('mesmo nome'); }
+      if (nome && candidato === nome) { score += 5; motivos.push(t('mesmo nome')); }
       else {
-        if (primeiro && partesC[0] === primeiro) { score += 2; motivos.push('mesmo primeiro nome'); }
-        if (partesC.slice(1).some((p) => sobrenomes.has(p))) { score += 2; motivos.push('sobrenome em comum'); }
+        if (primeiro && partesC[0] === primeiro) { score += 2; motivos.push(t('mesmo primeiro nome')); }
+        if (partesC.slice(1).some((p) => sobrenomes.has(p))) { score += 2; motivos.push(t('sobrenome em comum')); }
       }
       const raizC = raizDoEmail(u?.email);
       if (raiz.length >= 3 && raizC.length >= 3 && (raiz === raizC || raiz.includes(raizC) || raizC.includes(raiz))) {
-        score += 3; motivos.push('e-mail parecido');
+        score += 3; motivos.push(t('e-mail parecido'));
       }
       return { user: u, score, motivos };
     })
@@ -117,14 +118,14 @@ export function suggestMergeTargets(excluida, usuarios, { limit = 5 } = {}) {
  */
 export function validateMergeRequest({ fromUid = '', intoUid = '', reason = '', confirmText = '' } = {}) {
   const erros = {};
-  if (!texto(fromUid)) erros.fromUid = 'Escolha a conta excluída.';
-  if (!texto(intoUid)) erros.intoUid = 'Escolha a conta que fica.';
-  if (texto(fromUid) && texto(fromUid) === texto(intoUid)) erros.intoUid = 'As duas contas são a mesma.';
+  if (!texto(fromUid)) erros.fromUid = t('Escolha a conta excluída.');
+  if (!texto(intoUid)) erros.intoUid = t('Escolha a conta que fica.');
+  if (texto(fromUid) && texto(fromUid) === texto(intoUid)) erros.intoUid = t('As duas contas são a mesma.');
   if (texto(reason).length < MERGE_REASON_MIN) {
-    erros.reason = `Descreva o motivo (mínimo ${MERGE_REASON_MIN} caracteres).`;
+    erros.reason = t('Descreva o motivo (mínimo {min} caracteres).', { min: MERGE_REASON_MIN });
   }
   if (texto(confirmText).toUpperCase() !== MERGE_CONFIRM_WORD) {
-    erros.confirmText = `Digite ${MERGE_CONFIRM_WORD} para confirmar.`;
+    erros.confirmText = t('Digite {palavra} para confirmar.', { palavra: MERGE_CONFIRM_WORD });
   }
   return { isValid: Object.keys(erros).length === 0, errors: erros };
 }

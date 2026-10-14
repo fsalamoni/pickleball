@@ -26,6 +26,7 @@ import {
   visibleHomeCards,
 } from '@/modules/home/domain/homeCards';
 import { useHomeCards, useHomeCardsContext } from '@/modules/home/hooks/useHomeCards';
+import { t, tn } from '@/core/i18n';
 
 const ICONES = {
   Building2, CalendarCheck, CalendarDays, ClipboardList, Dumbbell, GraduationCap, Handshake, Medal, Megaphone, Store, Swords,
@@ -65,7 +66,7 @@ function BotaoMover({ direcao, label, ponta, onMover }) {
   return (
     <button
       type="button"
-      aria-label={`${direcao < 0 ? 'Subir' : 'Descer'} “${label}”`}
+      aria-label={`${direcao < 0 ? t('Subir') : t('Descer')} “${label}”`}
       aria-disabled={ponta || undefined}
       onClick={() => { if (!ponta) onMover(direcao); }}
       className={cn(
@@ -111,12 +112,12 @@ function LinhaCard({
         <Icone className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p id={tituloId} className="font-display text-sm font-bold leading-tight text-ink sm:text-base">{meta.label}</p>
+        <p id={tituloId} className="font-display text-sm font-bold leading-tight text-ink sm:text-base">{t(meta.label)}</p>
         {!compacta && (
           <p id={descId} className="mt-0.5 text-xs leading-snug text-gray-500">
             {motivo ? <span className="font-semibold text-ink">{motivo}. </span> : null}
-            {meta.description}
-            {meta.nota ? ` ${meta.nota}` : ''}
+            {t(meta.description)}
+            {meta.nota ? ` ${t(meta.nota)}` : ''}
           </p>
         )}
       </div>
@@ -124,8 +125,8 @@ function LinhaCard({
           interruptor, espremiam a descrição em duas palavras por linha. */}
       {posicao != null && (
         <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
-          <BotaoMover direcao={-1} label={meta.label} ponta={posicao === 1} onMover={(d) => onMover(id, d)} />
-          <BotaoMover direcao={1} label={meta.label} ponta={posicao === total} onMover={(d) => onMover(id, d)} />
+          <BotaoMover direcao={-1} label={t(meta.label)} ponta={posicao === 1} onMover={(d) => onMover(id, d)} />
+          <BotaoMover direcao={1} label={t(meta.label)} ponta={posicao === total} onMover={(d) => onMover(id, d)} />
         </div>
       )}
       {motivo ? (
@@ -135,8 +136,8 @@ function LinhaCard({
           aria-describedby={descId}
           className="btn-press inline-flex shrink-0 items-center gap-1 rounded-full bg-acid px-3 py-2 text-xs font-bold text-ink hover:bg-acid-light focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40"
         >
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Adicionar
-          <span className="sr-only"> “{meta.label}”</span>
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t('Adicionar')}
+          <span className="sr-only"> “{t(meta.label)}”</span>
         </button>
       ) : (
         <Interruptor ligado={ligado} onClick={() => onAlternar(id)} labelledBy={tituloId} describedBy={compacta ? undefined : descId} />
@@ -183,20 +184,20 @@ export default function HomeCardsPicker({ foci = [] }) {
     .filter((x) => x.ids.length > 0), [ctx, escolhidos, sugeridos]);
 
   const onAlternar = (id) => {
-    const label = HOME_CARD_META[id].label;
+    const label = t(HOME_CARD_META[id].label);
     const entra = !escolhidos.includes(id);
     alternar(id);
     const posicao = visibleHomeCards([...escolhidos.filter((c) => c !== id), id], ctx).indexOf(id) + 1;
-    setAviso(entra ? `${label} entrou no início, em ${ordinal(posicao)}.` : `${label} saiu do início.`);
+    setAviso(entra ? t('{label} entrou no início, em {pos}.', { label, pos: ordinal(posicao) }) : t('{label} saiu do início.', { label }));
   };
   const onMover = (id, passo) => {
     const agora = ligados.indexOf(id) + 1 + passo;
     mover(id, passo);
-    setAviso(`${HOME_CARD_META[id].label} agora é o ${ordinal(agora)}.`);
+    setAviso(t('{label} agora é o {pos}.', { label: t(HOME_CARD_META[id].label), pos: ordinal(agora) }));
   };
   const onRestaurar = () => {
     restaurar();
-    setAviso('O início voltou ao padrão: Dias de jogo, Horários da arena e Ranking.');
+    setAviso(t('O início voltou ao padrão: Dias de jogo, Horários da arena e Ranking.'));
   };
 
   // Um card escolhido que não aparece agora (funcionalidade desligada) segue
@@ -208,8 +209,8 @@ export default function HomeCardsPicker({ foci = [] }) {
       <p className="sr-only" aria-live="polite">{aviso}</p>
 
       <Bloco
-        titulo="No seu início, nesta ordem"
-        dica={ligados.length > 0 ? `${ligados.length} ${ligados.length === 1 ? 'card' : 'cards'}` : null}
+        titulo={t('No seu início, nesta ordem')}
+        dica={ligados.length > 0 ? tn(ligados.length, '{n} card', '{n} cards') : null}
       >
         {ligados.length > 0 ? (
           <ol className="space-y-2">
@@ -227,7 +228,7 @@ export default function HomeCardsPicker({ foci = [] }) {
           </ol>
         ) : (
           <p className="rounded-3xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-            Por enquanto o seu início mostra só o resumo do dia. Ligue abaixo o que quiser ver.
+            {t('Por enquanto o seu início mostra só o resumo do dia. Ligue abaixo o que quiser ver.')}
           </p>
         )}
         {!padrao && (
@@ -236,13 +237,13 @@ export default function HomeCardsPicker({ foci = [] }) {
             onClick={onRestaurar}
             className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
           >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Restaurar o padrão (Dias de jogo, Horários da arena e Ranking)
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> {t('Restaurar o padrão (Dias de jogo, Horários da arena e Ranking)')}
           </button>
         )}
       </Bloco>
 
       {sugestoes.length > 0 && (
-        <Bloco titulo="Sugeridos para você" dica="Pelo que você faz na plataforma">
+        <Bloco titulo={t('Sugeridos para você')} dica={t('Pelo que você faz na plataforma')}>
           <ul className="space-y-2">
             {sugestoes.map((s) => (
               <LinhaCard key={s.id} id={s.id} ligado={false} motivo={s.motivo} onAlternar={onAlternar} />
@@ -252,11 +253,11 @@ export default function HomeCardsPicker({ foci = [] }) {
       )}
 
       {grupos.length > 0 && (
-        <Bloco titulo="Para acrescentar">
+        <Bloco titulo={t('Para acrescentar')}>
           <div className="space-y-4">
             {grupos.map(({ g, ids }) => (
               <div key={g} className="space-y-2">
-                <p className="px-1 text-xs font-semibold text-gray-500">{HOME_CARD_GROUP_LABEL[g]}</p>
+                <p className="px-1 text-xs font-semibold text-gray-500">{t(HOME_CARD_GROUP_LABEL[g])}</p>
                 <ul className="space-y-2">
                   {ids.map((id) => (
                     <LinhaCard key={id} id={id} ligado={false} onAlternar={onAlternar} />
@@ -271,9 +272,8 @@ export default function HomeCardsPicker({ foci = [] }) {
       <div className="flex items-start gap-2 rounded-3xl bg-paper p-4 text-xs leading-relaxed text-gray-500">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
         <p>
-          O que tem prazo aparece sempre, fora dos cards — como a chamada da fila de um jogo aberto, que vence em 1 hora.
-          A escolha fica salva neste aparelho, na sua conta.
-          {guardadosOcultos > 0 && ' Um card que depende de uma funcionalidade desligada fica guardado e volta sozinho.'}
+          {t('O que tem prazo aparece sempre, fora dos cards — como a chamada da fila de um jogo aberto, que vence em 1 hora. A escolha fica salva neste aparelho, na sua conta.')}
+          {guardadosOcultos > 0 && ` ${t('Um card que depende de uma funcionalidade desligada fica guardado e volta sozinho.')}`}
         </p>
       </div>
     </div>

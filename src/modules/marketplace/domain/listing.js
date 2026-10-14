@@ -7,6 +7,7 @@ import {
   PUBLIC_LISTING_STATUSES,
 } from './constants.js';
 import { findCategory, validateAttributes, categoryPath } from './taxonomy.js';
+import { t } from '@/core/i18n';
 import { normalizeAspect, normalizeFrame } from './mediaFrame.js';
 
 const STOPWORDS = new Set([
@@ -65,13 +66,13 @@ export function availableQuantity(listing) {
  * motivo em vez de um botão desabilitado mudo.
  */
 export function buyability(listing, { viewerUid, sellerManagers = [] } = {}) {
-  if (!listing) return { ok: false, reason: 'Anúncio não encontrado.' };
+  if (!listing) return { ok: false, reason: t('Anúncio não encontrado.') };
   if (listing.status !== LISTING_STATUS.ACTIVE) {
-    return { ok: false, reason: listing.status === LISTING_STATUS.SOLD_OUT ? 'Esgotado.' : 'Este anúncio não está à venda agora.' };
+    return { ok: false, reason: listing.status === LISTING_STATUS.SOLD_OUT ? t('Esgotado.') : t('Este anúncio não está à venda agora.') };
   }
-  if (availableQuantity(listing) < 1) return { ok: false, reason: 'Esgotado.' };
+  if (availableQuantity(listing) < 1) return { ok: false, reason: t('Esgotado.') };
   if (viewerUid && (listing.seller_uid === viewerUid || sellerManagers.includes(viewerUid))) {
-    return { ok: false, reason: 'Este anúncio é seu.', own: true };
+    return { ok: false, reason: t('Este anúncio é seu.'), own: true };
   }
   return { ok: true, reason: '' };
 }
@@ -100,39 +101,39 @@ export function parseVideoLink(url) {
 export function validateListingInput(input = {}, { publish = false } = {}) {
   const errors = {};
   const title = String(input.title || '').trim().replace(/\s+/g, ' ');
-  if (!title) errors.title = 'Dê um título ao anúncio.';
-  else if (title.length < 6) errors.title = 'O título precisa de pelo menos 6 letras.';
-  else if (title.length > TEXT_LIMITS.title) errors.title = `Até ${TEXT_LIMITS.title} caracteres.`;
+  if (!title) errors.title = t('Dê um título ao anúncio.');
+  else if (title.length < 6) errors.title = t('O título precisa de pelo menos 6 letras.');
+  else if (title.length > TEXT_LIMITS.title) errors.title = t('Até {n} caracteres.', { n: TEXT_LIMITS.title });
 
   const description = String(input.description || '').trim().slice(0, TEXT_LIMITS.description);
 
   const category = findCategory(input.category_slug);
-  if (!category) errors.category_slug = 'Escolha a categoria.';
+  if (!category) errors.category_slug = t('Escolha a categoria.');
 
   // 'used' é o apelido curto (rascunhos antigos do editor gravavam assim).
   const type = [LISTING_TYPE.USED, 'used'].includes(input.type) ? LISTING_TYPE.USED : LISTING_TYPE.NEW;
   const condition = type === LISTING_TYPE.NEW
     ? CONDITION.NEW
     : (Object.values(CONDITION).includes(input.condition) && input.condition !== CONDITION.NEW ? input.condition : null);
-  if (type === LISTING_TYPE.USED && !condition) errors.condition = 'Diga o estado do produto usado.';
+  if (type === LISTING_TYPE.USED && !condition) errors.condition = t('Diga o estado do produto usado.');
 
   const price = Math.round(Number(input.price_cents));
-  if (!(price > 0)) errors.price_cents = 'Informe o preço.';
-  else if (price > 10_000_000) errors.price_cents = 'Preço acima do limite (R$ 100.000).';
+  if (!(price > 0)) errors.price_cents = t('Informe o preço.');
+  else if (price > 10_000_000) errors.price_cents = t('Preço acima do limite (R$ 100.000).');
 
   let compareAt = input.compare_at_cents == null || input.compare_at_cents === '' ? null : Math.round(Number(input.compare_at_cents));
   if (compareAt != null && !(compareAt > price)) {
-    if (compareAt) errors.compare_at_cents = 'O preço "de" precisa ser maior que o preço atual.';
+    if (compareAt) errors.compare_at_cents = t('O preço "de" precisa ser maior que o preço atual.');
     compareAt = null;
   }
 
   const quantity = Math.floor(Number(input.quantity ?? 1));
-  if (!(quantity >= 0) || quantity > 9999) errors.quantity = 'Quantidade entre 0 e 9999.';
+  if (!(quantity >= 0) || quantity > 9999) errors.quantity = t('Quantidade entre 0 e 9999.');
 
   const fulfillment = Array.isArray(input.fulfillment)
     ? [...new Set(input.fulfillment.filter((f) => Object.values(FULFILLMENT).includes(f)))]
     : [];
-  if (!fulfillment.length) errors.fulfillment = 'Escolha ao menos uma forma de entrega.';
+  if (!fulfillment.length) errors.fulfillment = t('Escolha ao menos uma forma de entrega.');
 
   const shippingCents = fulfillment.includes(FULFILLMENT.SHIPPING)
     ? (input.shipping_cents === '' || input.shipping_cents == null ? null : Math.max(0, Math.round(Number(input.shipping_cents) || 0)))
@@ -154,13 +155,13 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
     }));
   const photos = media.filter((m) => m.kind === 'image');
   const videos = media.filter((m) => m.kind === 'video');
-  if (photos.length > MEDIA_LIMITS.maxPhotos) errors.media = `Até ${MEDIA_LIMITS.maxPhotos} fotos.`;
-  if (videos.length > 1) errors.media = 'Um vídeo por anúncio.';
+  if (photos.length > MEDIA_LIMITS.maxPhotos) errors.media = t('Até {n} fotos.', { n: MEDIA_LIMITS.maxPhotos });
+  if (videos.length > 1) errors.media = t('Um vídeo por anúncio.');
   if (photos[0]) photos[0].is_cover = true;
   const orderedMedia = [...photos, ...videos.slice(0, 1)].map((m, i) => ({ ...m, order: i }));
 
   const videoLink = input.video_link ? parseVideoLink(input.video_link) : null;
-  if (input.video_link && !videoLink) errors.video_link = 'Use um link do YouTube ou do Vimeo.';
+  if (input.video_link && !videoLink) errors.video_link = t('Use um link do YouTube ou do Vimeo.');
 
   const { value: attributes, errors: attrErrors } = validateAttributes(input.category_slug, input.attributes);
   Object.entries(attrErrors).forEach(([k, msg]) => { errors[`attr_${k}`] = msg; });
@@ -169,10 +170,10 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
   const state = String(input.state || '').trim().toUpperCase().slice(0, 2);
 
   if (publish) {
-    if (!photos.length) errors.media = 'Coloque ao menos uma foto.';
-    if (!city || state.length !== 2) errors.city = 'Diga a cidade e o estado.';
+    if (!photos.length) errors.media = t('Coloque ao menos uma foto.');
+    if (!city || state.length !== 2) errors.city = t('Diga a cidade e o estado.');
     if (fulfillment.includes(FULFILLMENT.SHIPPING) && shippingCents == null && !input.shipping_to_agree) {
-      errors.shipping_cents = 'Diga o valor do envio ou marque "a combinar".';
+      errors.shipping_cents = t('Diga o valor do envio ou marque "a combinar".');
     }
   }
 

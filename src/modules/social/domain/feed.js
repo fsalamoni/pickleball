@@ -5,20 +5,21 @@
  * homogêneos e os ordena por data (mais recentes primeiro).
  */
 
+import { t } from '@/core/i18n';
 import { toMillis } from '@/modules/tournament/domain/participation';
 
 export const FEED_ITEM_TYPE = Object.freeze({ TOURNAMENT: 'tournament', OPEN_GAME: 'open_game' });
 
-function tournamentToItem(t) {
-  const place = [t.city, t.state].filter(Boolean).join(' / ');
+function tournamentToItem(tor) {
+  const place = [tor.city, tor.state].filter(Boolean).join(' / ');
   return {
-    id: `t_${t.id}`,
+    id: `t_${tor.id}`,
     type: FEED_ITEM_TYPE.TOURNAMENT,
-    at: toMillis(t.created_at),
-    title: t.name || 'Novo torneio',
-    subtitle: place || 'Torneio público',
-    link: `/p/${t.id}`,
-    actorUid: t.owner_id || null,
+    at: toMillis(tor.created_at),
+    title: tor.name || t('Novo torneio'),
+    subtitle: place || t('Torneio público'),
+    link: `/p/${tor.id}`,
+    actorUid: tor.owner_id || null,
   };
 }
 
@@ -28,8 +29,8 @@ function openGameToItem(g) {
     id: `g_${g.id}`,
     type: FEED_ITEM_TYPE.OPEN_GAME,
     at: toMillis(g.created_at),
-    title: `${g.creator_name || 'Um atleta'} procura jogo`,
-    subtitle: [g.when_text, place].filter(Boolean).join(' · ') || 'Convite aberto',
+    title: t('{nome} procura jogo', { nome: g.creator_name || t('Um atleta') }),
+    subtitle: [g.when_text, place].filter(Boolean).join(' · ') || t('Convite aberto'),
     link: '/procura-jogo',
     actorUid: g.created_by || null,
   };
@@ -73,7 +74,7 @@ export function filterFeedByFollowing(items, followingUids) {
 export function feedDasFontes(torneios, convites) {
   const falhou = (r) => r?.status !== 'fulfilled';
   if (falhou(torneios) && falhou(convites)) {
-    throw torneios?.reason || convites?.reason || new Error('Falha ao carregar o feed.');
+    throw torneios?.reason || convites?.reason || new Error(t('Falha ao carregar o feed.'));
   }
   return {
     items: buildFeed({
