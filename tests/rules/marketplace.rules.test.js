@@ -171,7 +171,7 @@ describe('⭐ anúncio', () => {
 
 describe('⭐ perguntas', () => {
   const pergunta = (over = {}) => ({
-    listing_id: 'l1', listing_title: 'Raquete', seller_key: `athlete_${ANA}`, asker_uid: BIA, asker_name: 'Bia',
+    listing_id: 'l1', listing_title: 'Raquete Joola', seller_key: `athlete_${ANA}`, asker_uid: BIA, asker_name: 'Bia',
     text: 'Tem nota fiscal?', status: 'open', ...over,
   });
   it('qualquer conta pergunta; quem vende não pergunta a si mesmo', async () => {
@@ -270,5 +270,102 @@ describe('⭐ denúncia de anúncio', () => {
   it('sem a flag, não denuncia', async () => {
     await semRegras((db) => setDoc(doc(db, 'platform_settings', 'global'), { feature_flags: { marketplace: false } }));
     await assertFails(setDoc(doc(como(BIA), 'market_reports', `l1_${BIA}`), denuncia()));
+  });
+});
+
+describe('⭐ pergunta leva o título de verdade do anúncio', () => {
+  it('título inventado é recusado', async () => {
+    await assertFails(setDoc(doc(como(BIA), 'market_questions', 'qx'), {
+      listing_id: 'l1', listing_title: 'Raquete GRÁTIS clique aqui', seller_key: `athlete_${ANA}`, asker_uid: BIA, asker_name: 'Bia',
+      text: 'Oi', status: 'open',
+    }));
+  });
+});
+
+describe('⭐ preço "de/por" e estoque da arena', () => {
+  it('o preço "de" precisa ser maior que o "por"', async () => {
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { compare_at_cents: 99000 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { compare_at_cents: 80000 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { compare_at_cents: 99000.5 }));
+  });
+  it('anúncio ligado ao estoque da arena: a quantidade é do servidor', async () => {
+    await semRegras((db) => updateDoc(doc(db, 'market_listings', 'l1'), { source: { kind: 'arena_product', id: 'p1', tracked: true } }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { quantity: 99 }));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { price_cents: 70000 }));
+  });
+});
+
+describe('⭐ CNPJ aprovado não muda pela loja', () => {
+  it('loja ativa não troca o CNPJ; o admin troca', async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_sellers', `store_${BIA}`), vendedor(`store_${BIA}`, { owner_uid: BIA, status: 'active', cnpj_masked: '12.***' })));
+    await assertFails(updateDoc(doc(como(BIA), 'market_sellers', `store_${BIA}`), { cnpj_masked: '99.***' }));
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'market_sellers', `store_${BIA}`), { cnpj_masked: '99.***' }));
+  });
+});
+
+describe('⭐ cupom da loja', () => {
+  const cupom = (over = {}) => ({
+    seller_key: `athlete_${ANA}`, code: 'DEZ', kind: 'percent', value: 10, min_subtotal_cents: 0, listing_ids: [],
+    description: '', max_uses: null, public: true, active: true, uses_count: 0, created_by: ANA, ...over,
+  });
+  const id = `athlete_${ANA}_DEZ`;
+  it('quem vende cria pelo id {chave}_{CÓDIGO}; outra pessoa não', async () => {
+    await assertSucceeds(setDoc(doc(como(ANA), 'market_coupons', id), cupom()));
+    await assertFails(setDoc(doc(como(ANA), 'market_coupons', `athlete_${ANA}_OUTRO`), cupom()));
+    await assertFails(setDoc(doc(como(BIA), 'market_coupons', `athlete_${ANA}_XYZ`), cupom({ code: 'XYZ', created_by: BIA })));
+  });
+  it('não nasce usado, nem com desconto fora do limite', async () => {
+    await assertFails(setDoc(doc(como(ANA), 'market_coupons', id), cupom({ uses_count: 5 })));
+    await assertFails(setDoc(doc(como(ANA), 'market_coupons', id), cupom({ value: 95 })));
+    await assertFails(setDoc(doc(como(ANA), 'market_coupons', id), cupom({ kind: 'free_shipping', value: 10 })));
+  });
+  it('edita, mas não o código nem a contagem de usos', async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_coupons', id), cupom()));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_coupons', id), { value: 15, active: false }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_coupons', id), { code: 'ABC' }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_coupons', id), { uses_count: 3 }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_coupons', id), { value: 50 }));
+  });
+  it('quem sabe o código lê; a lista aberta é só dos divulgados', async () => {
+    await semRegras(async (db) => {
+      await setDoc(doc(db, 'market_coupons', id), cupom({ public: false }));
+      await setDoc(doc(db, 'market_coupons', `athlete_${ANA}_PUB`), cupom({ code: 'PUB' }));
+      await setDoc(doc(db, 'market_coupons', id, 'market_coupon_uses', BIA), { buyer_uid: BIA, count: 1 });
+    });
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_coupons', id)));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'market_coupons'), where('public', '==', true), where('active', '==', true))));
+    await assertFails(getDocs(query(collection(como(BIA), 'market_coupons'), where('seller_key', '==', `athlete_${ANA}`))));
+    await assertSucceeds(getDocs(query(collection(como(ANA), 'market_coupons'), where('seller_key', '==', `athlete_${ANA}`))));
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_coupons', id, 'market_coupon_uses', BIA)));
+    await assertFails(getDoc(doc(como(PROF), 'market_coupons', id, 'market_coupon_uses', BIA)));
+    await assertFails(setDoc(doc(como(BIA), 'market_coupons', id, 'market_coupon_uses', BIA), { count: 0 }));
+  });
+});
+
+describe('⭐ vale-presente: só o servidor escreve', () => {
+  beforeEach(async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_gift_cards', 'g1'), {
+      code: 'PRK-AAAA-BBBB-CCCC', seller_key: `athlete_${ANA}`, buyer_uid: BIA, holder_uid: PROF, balance_cents: 5000, status: 'active',
+    }));
+  });
+  it('quem comprou, quem tem e a loja leem; o resto não', async () => {
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_gift_cards', 'g1')));
+    await assertSucceeds(getDoc(doc(como(PROF), 'market_gift_cards', 'g1')));
+    await assertSucceeds(getDoc(doc(como(ANA), 'market_gift_cards', 'g1')));
+    await assertFails(getDoc(doc(como(GESTOR), 'market_gift_cards', 'g1')));
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'market_gift_cards'), where('holder_uid', '==', PROF))));
+    await assertFails(getDocs(query(collection(como(GESTOR), 'market_gift_cards'), where('code', '==', 'PRK-AAAA-BBBB-CCCC'))));
+  });
+  it('ninguém mexe no saldo pelo aplicativo', async () => {
+    await assertFails(updateDoc(doc(como(PROF), 'market_gift_cards', 'g1'), { balance_cents: 999999 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_gift_cards', 'g1'), { balance_cents: 999999 }));
+    await assertFails(setDoc(doc(como(BIA), 'market_gift_cards', 'g2'), { seller_key: `athlete_${ANA}`, holder_uid: BIA, balance_cents: 100 }));
+  });
+});
+
+describe('avaliações do comprador', () => {
+  it('a consulta das reveladas sobre um comprador passa pela regra', async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_reviews', 'r2'), { author_uid: ANA, target_uid: BIA, seller_key: `athlete_${ANA}`, visible: true, rating: 4 }));
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'market_reviews'), where('target_uid', '==', BIA), where('visible', '==', true))));
   });
 });

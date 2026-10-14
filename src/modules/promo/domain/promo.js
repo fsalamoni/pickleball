@@ -320,6 +320,8 @@ export const PROMO_DESTINATION = Object.freeze({
   COMMUNITY: 'community',
   PARTNERS: 'partners',
   PROMOS: 'promos',
+  // plataforma e professor (só com a flag `marketplace`)
+  MARKET: 'market',
   // professor
   PROFILE: 'profile',
   BOOK_LESSON: 'book_lesson',
@@ -345,6 +347,7 @@ export const PROMO_DESTINATION_META = Object.freeze({
   [D.COMMUNITY]: { label: 'Comunidade', hint: 'As novidades da comunidade.', cta: 'Ver novidades' },
   [D.PARTNERS]: { label: 'Parceiros', hint: 'Os parceiros da plataforma.', cta: 'Ver parceiros' },
   [D.PROMOS]: { label: 'Promoções', hint: 'A vitrine de cupons e campanhas.', cta: 'Ver promoções' },
+  [D.MARKET]: { label: 'Mercado', hint: 'O marketplace: equipamentos novos e usados (o professor leva à própria loja).', cta: 'Ver o Mercado', flag: 'marketplace' },
   [D.PROFILE]: { label: 'Meu perfil de professor', hint: 'O seu perfil público, com agenda, clínicas e loja.', cta: 'Conhecer o professor' },
   [D.BOOK_LESSON]: { label: 'Marcar aula', hint: 'Abre o pedido de aula no seu perfil.', cta: 'Marcar aula' },
   [D.CLINICS]: { label: 'Minhas clínicas', hint: 'As clínicas e workshops abertos.', cta: 'Ver clínicas' },
@@ -356,10 +359,10 @@ export const PROMO_DESTINATION_META = Object.freeze({
 export const PROMO_DESTINATIONS_BY_ISSUER = Object.freeze({
   [PROMO_ISSUER.PLATFORM]: Object.freeze([
     D.DETAILS, D.TOURNAMENTS, D.TOURNAMENT, D.OPEN_GAMES, D.GAME_DAY, D.ARENAS, D.COACHES,
-    D.RANKING, D.DOUBLES, D.CLUBS, D.COMMUNITY, D.PARTNERS, D.PROMOS,
+    D.RANKING, D.DOUBLES, D.CLUBS, D.COMMUNITY, D.PARTNERS, D.PROMOS, D.MARKET,
   ]),
   [PROMO_ISSUER.COACH]: Object.freeze([
-    D.DETAILS, D.PROFILE, D.BOOK_LESSON, D.CLINICS, D.STORE, D.CONTENT, D.PROMOS,
+    D.DETAILS, D.PROFILE, D.BOOK_LESSON, D.CLINICS, D.STORE, D.CONTENT, D.PROMOS, D.MARKET,
   ]),
 });
 
@@ -400,6 +403,7 @@ export function promoDestinationLink(destination, { issuerType, issuerId, campai
     case D.COMMUNITY: return '/novidades';
     case D.PARTNERS: return '/parceiros';
     case D.PROMOS: return '/promocoes';
+    case D.MARKET: return issuerId && issuerType === PROMO_ISSUER.COACH ? `/mercado/vendedor/coach_${encodeURIComponent(issuerId)}` : '/mercado';
     case D.PROFILE: return perfil || '/coaches';
     case D.BOOK_LESSON: return perfil ? `${perfil}?marcar=1` : '/coaches';
     case D.CLINICS: return perfil ? `${perfil}#professor-clinicas` : '/coaches';

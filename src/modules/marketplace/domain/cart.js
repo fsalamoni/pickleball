@@ -94,7 +94,8 @@ export function cartCount(cart) {
  * @returns {{ ok: boolean, problem: string|null, unit_price_cents: number, max: number }}
  */
 export function checkLine(line, listing) {
-  if (listing === undefined) return { ok: true, problem: null, unit_price_cents: line.price_cents_at_add, max: line.quantity, unknown: true };
+  // Não deu para ler o anúncio agora: não se compra às cegas (nem se diz que acabou).
+  if (listing === undefined) return { ok: false, problem: 'Não conseguimos conferir este item agora. Tente de novo.', unit_price_cents: line.price_cents_at_add, max: line.quantity, unknown: true };
   if (!listing || listing.status === LISTING_STATUS.REMOVED || listing.status === LISTING_STATUS.CLOSED) {
     return { ok: false, problem: 'Não está mais à venda.', unit_price_cents: line.price_cents_at_add, max: 0 };
   }
@@ -129,7 +130,7 @@ export function groupCartBySeller(cart, listings = {}) {
     const check = checkLine(line, listing);
     let g = index.get(line.seller_key);
     if (!g) {
-      g = { seller_key: line.seller_key, seller_name: listing?.seller_name || line.seller_name, seller_type: listing?.seller_type || '', lines: [], subtotal_cents: 0, buyable: 0, fulfillment: null };
+      g = { seller_key: line.seller_key, seller_name: listing?.seller_name || line.seller_name, seller_type: listing?.seller_type || '', lines: [], subtotal_cents: 0, savings_cents: 0, buyable: 0, fulfillment: null };
       index.set(line.seller_key, g);
       groups.push(g);
     }
@@ -137,6 +138,9 @@ export function groupCartBySeller(cart, listings = {}) {
     const subtotal = check.ok ? check.unit_price_cents * line.quantity : 0;
     g.lines.push({ ...line, listing, check, subtotal_cents: subtotal, buy_quantity: qty });
     g.subtotal_cents += subtotal;
+    // O "de/por" do anúncio de agora: quanto se economiza nesta linha.
+    const de = Number(listing?.compare_at_cents) || 0;
+    if (check.ok && de > check.unit_price_cents) g.savings_cents += (de - check.unit_price_cents) * line.quantity;
     if (check.ok) g.buyable += 1;
     // Entregas que TODOS os itens deste vendedor aceitam.
     const f = listing?.fulfillment || [];

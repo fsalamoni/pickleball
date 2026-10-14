@@ -25,7 +25,7 @@ export const ORDER_ACTIONS = Object.freeze({
   confirm_received: { from: [S.SHIPPED, S.READY, S.DELIVERED], to: S.COMPLETED, roles: ['buyer'], label: 'Recebi o produto', tone: 'primary' },
   cancel: { from: [S.PLACED, S.ACCEPTED], to: S.CANCELLED, roles: ['buyer'], label: 'Cancelar pedido', tone: 'danger', needsReason: true },
   seller_cancel: { from: [S.ACCEPTED, S.PAYMENT_REVIEW], to: S.CANCELLED, roles: ['seller'], label: 'Cancelar pedido', tone: 'danger', needsReason: true },
-  open_dispute: { from: [S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.DISPUTED, roles: ['buyer'], label: 'Tive um problema', tone: 'danger', needsReason: true },
+  open_dispute: { from: [S.PAYMENT_REVIEW, S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.DISPUTED, roles: ['buyer'], label: 'Tive um problema', tone: 'danger', needsReason: true },
   resolve_buyer: { from: [S.DISPUTED], to: S.CANCELLED, roles: ['admin'], label: 'Dar razão ao comprador', tone: 'danger', needsReason: true },
   resolve_seller: { from: [S.DISPUTED], to: S.COMPLETED, roles: ['admin'], label: 'Dar razão ao vendedor', tone: 'primary', needsReason: true },
   admin_cancel: { from: [S.PLACED, S.ACCEPTED, S.PAYMENT_REVIEW, S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.CANCELLED, roles: ['admin'], label: 'Cancelar (admin)', tone: 'danger', needsReason: true },
@@ -81,7 +81,9 @@ export function nextActionsFor(order, role, { now = Date.now(), disputeWindowDay
     .filter(([id]) => {
       if (id !== 'open_dispute') return true;
       // A mesma data que o servidor usa (`open_dispute` em functions/marketplace.js).
-      const since = Number(order.delivered_at_ms || order.shipped_at_ms || order.ready_at_ms || order.paid_at_ms || 0);
+      // Pago e nunca enviado (ou pagamento sem conferência): o prazo não corre.
+      const since = [S.PAID, S.PAYMENT_REVIEW].includes(order.status) ? 0
+        : Number(order.delivered_at_ms || order.shipped_at_ms || order.ready_at_ms || 0);
       return !since || now - since <= janela * 86400000;
     })
     .map(([id, a]) => ({ id, label: a.label, tone: a.tone || 'secondary', needsReason: Boolean(a.needsReason) }));
@@ -96,10 +98,12 @@ export function orderWaitingOn(order, role) {
     placed: { seller: 'Aceite ou recuse o pedido.', buyer: 'Esperando o vendedor aceitar.' },
     accepted: { buyer: 'Pague pelo Pix e avise.', seller: 'Esperando o pagamento do comprador.' },
     payment_review: { seller: 'Confira se o Pix chegou.', buyer: 'O vendedor está conferindo o pagamento.' },
-    paid: { seller: order?.fulfillment === 'shipping' ? 'Envie e informe o rastreio.' : 'Combine a entrega e marque como pronto.', buyer: 'O vendedor está preparando o pedido.' },
+    paid: order?.fulfillment === 'digital' ? { seller: 'Pago.', buyer: 'Pago.' } : { seller: order?.fulfillment === 'shipping' ? 'Envie e informe o rastreio.' : 'Combine a entrega e marque como pronto.', buyer: 'O vendedor está preparando o pedido.' },
     shipped: { buyer: 'Confirme quando receber.', seller: 'Esperando o comprador confirmar o recebimento.' },
     ready: { buyer: 'Retire o produto e confirme o recebimento.', seller: 'Entregue o produto ao comprador.' },
-    delivered: { buyer: 'Confirme o recebimento.', seller: 'Esperando o comprador confirmar.' },
+    delivered: order?.fulfillment === 'digital'
+      ? { buyer: 'O vale-presente está em Mercado → Vales. Dê o código a quem vai ganhar.', seller: 'O vale foi entregue na conta do comprador.' }
+      : { buyer: 'Confirme o recebimento.', seller: 'Esperando o comprador confirmar.' },
     disputed: { buyer: 'A moderação está analisando.', seller: 'A moderação está analisando.' },
   };
   return map[st]?.[me] || '';
@@ -132,6 +136,11 @@ export function orderCode(random = Math.random) {
 /** Passos do pedido para a linha do tempo da tela, com o atual marcado. */
 export function orderTimeline(order) {
   const shipping = order?.fulfillment === 'shipping';
+  if (order?.fulfillment === 'digital') {
+    const st = [{ id: 'accepted', label: 'Pedido feito' }, { id: 'paid', label: 'Pago' }, { id: 'delivered', label: 'Vale entregue' }];
+    const r = { accepted: 0, payment_review: 0, paid: 1, delivered: 2, completed: 2, disputed: 1 }[order.status];
+    return st.map((s, i) => ({ ...s, done: r != null && i <= r, current: i === r }));
+  }
   const steps = [
     { id: 'placed', label: 'Pedido feito' },
     { id: 'accepted', label: 'Aceito' },

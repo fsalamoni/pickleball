@@ -11,7 +11,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  CheckCircle2, Clock, FileText, MapPin, MessageSquareWarning, Package, Star, Truck,
+  CheckCircle2, Clock, FileText, Gift, MapPin, MessageSquareWarning, Package, Star, TicketPercent, Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -28,7 +28,7 @@ import { validateReview } from '@/modules/marketplace/domain/reputation';
 import { orderAction, submitReview } from '@/modules/marketplace/services/marketOrderService';
 import { getMarketFileUrl, prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
 import {
-  useDispute, useMarketMutation, useMarketSettings, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
+  useBuyerReviews, useDispute, useIsMarketOperator, useMarketMutation, useMarketSettings, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -37,12 +37,12 @@ import {
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
-import { MarketGate, fulfillmentLabel, statusTone } from '@/v2/components/marketplace/marketUi';
+import { MarketGate, Stars, fulfillmentLabel, statusTone } from '@/v2/components/marketplace/marketUi';
 
 const dataHora = (ms) => (ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 
-const EVENT_LABELS = { placed: 'Pedido feito', offer_accepted: 'Oferta aceita · pedido criado', expire: 'Expirou por prazo', auto_complete: 'Concluído automaticamente' };
+const EVENT_LABELS = { placed: 'Pedido feito', gift_card_bought: 'Vale-presente comprado', offer_accepted: 'Oferta aceita · pedido criado', expire: 'Expirou por prazo', auto_complete: 'Concluído automaticamente' };
 
 function Timeline({ order }) {
   if (ORDER_FINAL_STATUSES.includes(order.status) && order.status !== 'completed') return null;
@@ -274,6 +274,22 @@ function DisputeBox({ order }) {
   );
 }
 
+/** Para quem vende: como outros vendedores avaliaram este comprador. */
+function BuyerReputation({ uid }) {
+  const q = useBuyerReviews(uid);
+  if (!q.isSuccess) return null;
+  const notas = q.data.map((r) => Number(r.rating) || 0).filter(Boolean);
+  const media = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
+  return (
+    <p className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+      <span>Comprador:</span>
+      {notas.length >= 3
+        ? <Stars avg={media} count={notas.length} />
+        : <span className="text-xs font-medium text-gray-500">{notas.length ? `${notas.length} avaliação(ões), média ${media.toFixed(1).replace('.', ',')}` : 'ainda sem avaliações de vendedores'}</span>}
+    </p>
+  );
+}
+
 function History({ orderId }) {
   const q = useOrderEvents(orderId);
   if (q.isError) return <V2ErrorState inline onRetry={() => q.refetch()} />;
@@ -301,7 +317,10 @@ function OrderPage() {
   const { user, isPlatformAdmin } = useAuth();
   const q = useOrder(orderId);
   const order = q.data ? { id: orderId, ...q.data } : null;
-  const role = orderRoleOf(order, user?.uid, { isAdmin: isPlatformAdmin });
+  // Quem passou a gerir a arena depois do pedido também é vendedor (o
+  // `seller_manager_uids` do pedido é um retrato da hora da compra).
+  const operador = useIsMarketOperator(order?.seller_key);
+  const role = orderRoleOf(order, user?.uid, { isAdmin: isPlatformAdmin, managerUids: operador && user?.uid ? [user.uid] : [] });
   const [acao, setAcao] = useState(null);
   const voltar = role === 'seller' ? '/mercado' : role === 'admin' ? (order?.status === 'disputed' ? '/admin?tab=mercado-disputas' : '/admin?tab=mercado-pedidos') : '/mercado/pedidos';
   useEffect(() => { setAcao(null); }, [order?.status]);
@@ -323,6 +342,7 @@ function OrderPage() {
     const outro = role === 'buyer'
       ? { id: (order.seller_manager_uids || [])[0], platform_name: order.seller_name }
       : { id: order.buyer_uid, platform_name: order.buyer_name };
+    const digital = order.fulfillment === 'digital';
     const principal = acoes.filter((a) => a.tone !== 'danger');
     const perigo = acoes.filter((a) => a.tone === 'danger');
     corpo = (
@@ -337,6 +357,7 @@ function OrderPage() {
               </div>
               <V2Badge tone={statusTone(order.status)}>{order.source === 'offer' ? 'Pela oferta' : fulfillmentLabel(order.fulfillment)}</V2Badge>
             </div>
+            {role === 'seller' && <BuyerReputation uid={order.buyer_uid} />}
             <Timeline order={order} />
             {espera && (
               <div className="rounded-2xl bg-paper p-4">
@@ -348,7 +369,10 @@ function OrderPage() {
             )}
             {order.status === 'cancelled' && order.cancel_reason && <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">Cancelado: {order.cancel_reason}</p>}
             {order.status === 'expired' && <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">O pedido expirou porque passou do prazo. O estoque voltou ao anúncio.</p>}
-            {role === 'seller' && order.status === 'payment_review' && <ProofLink path={order.payment_proof_path} />}
+            {(role === 'seller' || role === 'admin') && (order.status === 'payment_review' || order.payment_proof_path) && <ProofLink path={order.payment_proof_path} />}
+            {digital && role === 'buyer' && ['delivered', 'completed'].includes(order.status) && (
+              <Link to="/mercado/vales" className="flex items-center gap-2 rounded-2xl bg-acid/30 p-4 text-sm font-bold text-ink"><Gift className="h-4 w-4" /> O vale está em Vales-presente: mande para quem vai ganhar ou use você mesmo.</Link>
+            )}
             {(principal.length > 0 || perigo.length > 0) && (
               <div className="flex flex-wrap gap-2">
                 {principal.map((a) => <V2Button key={a.id} type="button" variant={a.tone === 'primary' ? 'primary' : 'secondary'} onClick={() => setAcao(a)}>{a.label}</V2Button>)}
@@ -367,14 +391,22 @@ function OrderPage() {
               {(order.items || []).map((i) => (
                 <li key={i.listing_id} className="flex items-center gap-3 py-3">
                   <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">{i.cover_url ? <img src={i.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}</span>
-                  <Link to={`/mercado/anuncio/${i.listing_id}`} className="min-w-0 flex-1 text-sm text-ink hover:underline">{i.title}<span className="block text-xs text-gray-500">{i.quantity} × {formatBRL(i.unit_price_cents)}</span></Link>
+                  {i.listing_id
+                    ? <Link to={`/mercado/anuncio/${i.listing_id}`} className="min-w-0 flex-1 text-sm text-ink hover:underline">{i.title}<span className="block text-xs text-gray-500">{i.quantity} × {formatBRL(i.unit_price_cents)}</span></Link>
+                    : <span className="min-w-0 flex-1 text-sm text-ink">{i.title}{i.gift?.recipient_name && <span className="block text-xs text-gray-500">Para {i.gift.recipient_name}</span>}</span>}
                   <span className="font-bold text-ink">{formatBRL(i.unit_price_cents * i.quantity)}</span>
                 </li>
               ))}
             </ul>
             <dl className="space-y-1 border-t border-gray-100 pt-3 text-sm">
               <div className="flex justify-between"><dt className="text-gray-500">Produtos</dt><dd>{formatBRL(order.subtotal_cents)}</dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Frete</dt><dd>{order.shipping_to_agree ? 'A combinar' : order.shipping_cents ? formatBRL(order.shipping_cents) : '—'}</dd></div>
+              {!digital && <div className="flex justify-between"><dt className="text-gray-500">Frete</dt><dd>{order.shipping_to_agree ? 'A combinar' : order.shipping_cents ? formatBRL(order.shipping_cents) : '—'}</dd></div>}
+              {(order.discount_cents > 0 || order.shipping_discount_cents > 0) && (
+                <div className="flex justify-between text-green-700"><dt className="flex items-center gap-1"><TicketPercent className="h-3.5 w-3.5" /> Cupom{order.coupon?.code ? ` ${order.coupon.code}` : ''}</dt><dd>− {formatBRL((order.discount_cents || 0) + (order.shipping_discount_cents || 0))}</dd></div>
+              )}
+              {order.gift_card_cents > 0 && (
+                <div className="flex justify-between text-green-700"><dt className="flex items-center gap-1"><Gift className="h-3.5 w-3.5" /> Vale-presente{(order.gift_cards || []).length ? ` ${order.gift_cards.map((g) => g.code_mask).join(', ')}` : ''}</dt><dd>− {formatBRL(order.gift_card_cents)}</dd></div>
+              )}
               <div className="flex justify-between text-base font-bold"><dt>Total</dt><dd>{formatBRL(order.total_cents)}</dd></div>
             </dl>
           </V2Surface>
@@ -382,7 +414,7 @@ function OrderPage() {
         </div>
 
         <aside className="space-y-4 lg:col-span-4">
-          <V2Surface variant="compacto" className="space-y-3 p-5">
+          {!digital && <V2Surface variant="compacto" className="space-y-3 p-5">
             <h2 className="flex items-center gap-2 font-bold text-ink">{order.fulfillment === 'shipping' ? <Truck className="h-4 w-4" /> : <MapPin className="h-4 w-4" />} {fulfillmentLabel(order.fulfillment)}</h2>
             <Address order={order} role={role} />
             {order.tracking?.code && (
@@ -392,11 +424,14 @@ function OrderPage() {
               </div>
             )}
             {order.fulfillment !== 'shipping' && <p className="text-sm text-gray-500">Combinem o local e o horário pela conversa.</p>}
+            {[...new Set((order.items || []).map((i) => i.pickup_note).filter(Boolean))].map((n) => (
+              <p key={n} className="rounded-2xl bg-paper p-3 text-sm text-gray-700"><span className="block text-xs text-gray-500">Onde retirar (do anúncio)</span>{n}</p>
+            ))}
             {order.buyer_note && <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700"><span className="block text-xs text-gray-500">Recado do comprador</span>{order.buyer_note}</p>}
-          </V2Surface>
-          {order.status !== 'placed' && outro.id && role !== 'admin' && (
+          </V2Surface>}
+          {outro.id && role !== 'admin' && (
             <V2Surface variant="compacto" className="space-y-2 p-5">
-              <p className="text-sm text-gray-600">Dúvida sobre entrega ou pagamento? Fale com {role === 'buyer' ? 'o vendedor' : 'o comprador'}.</p>
+              <p className="text-sm text-gray-600">{order.status === 'placed' ? 'Quer combinar algo antes do aceite? Fale com' : 'Dúvida sobre entrega ou pagamento? Fale com'} {role === 'buyer' ? 'o vendedor' : 'o comprador'}.</p>
               <V2ChatLauncherButton athlete={outro} variant="outline" label={`Conversar com ${outro.platform_name || (role === 'buyer' ? 'o vendedor' : 'o comprador')}`} />
             </V2Surface>
           )}

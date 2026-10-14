@@ -17,9 +17,10 @@ import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { RECENT_PREF, parseRecent, pushRecent } from '@/modules/marketplace/domain/discovery';
-import { useClipboard } from '@/core/lib/useClipboard';
+import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
+import { StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
-import { availableQuantity, buyability } from '@/modules/marketplace/domain/listing';
+import { availableQuantity, buyability, coverOf } from '@/modules/marketplace/domain/listing';
 import { attributesFor, categoryBreadcrumb, formatAttribute } from '@/modules/marketplace/domain/taxonomy';
 import { CONDITION_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { formatBRL } from '@/modules/marketplace/domain/money';
@@ -234,18 +235,26 @@ function Similar({ listing }) {
 }
 
 function ShareButton({ listing }) {
-  const { copy } = useClipboard();
+  const [open, setOpen] = useState(false);
   const url = typeof window !== 'undefined' ? `${window.location.origin}/mercado/anuncio/${listing.id}` : '';
-  const compartilhar = async () => {
-    if (navigator.share) {
-      try { await navigator.share({ title: listing.title, url }); return; } catch (e) { if (e?.name === 'AbortError') return; }
-    }
-    copy(url, 'Link copiado.');
-  };
   return (
-    <button type="button" onClick={compartilhar} aria-label="Compartilhar o anúncio" className="flex h-11 w-11 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm">
-      <Share2 className="h-5 w-5" />
-    </button>
+    <>
+      <button type="button" onClick={() => setOpen(true)} aria-label="Compartilhar o anúncio" className="flex h-11 w-11 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm">
+        <Share2 className="h-5 w-5" />
+      </button>
+      <ShareImageDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Compartilhar o anúncio"
+        url={url}
+        fileName={`mercado-${listing.id}.png`}
+        shareText={`${listing.title} por ${formatBRL(listing.price_cents)} no Mercado PickleRush`}
+        renderCard={({ ref, qr, showImage }) => (
+          <MarketShareCard ref={ref} image={coverOf(listing)?.url} showImage={showImage} qr={qr} title={listing.title}
+            subtitle={listing.seller_name} priceCents={listing.price_cents} compareAtCents={listing.compare_at_cents} />
+        )}
+      />
+    </>
   );
 }
 
@@ -279,7 +288,7 @@ function ListingPage() {
     corpo = (
       <V2Surface className="text-center">
         <h1 className="font-display text-2xl font-bold text-ink">Este anúncio não está mais no ar</h1>
-        <p className="mt-2 text-gray-500">O vendedor encerrou ou a moderação retirou. Veja outros parecidos na vitrine.</p>
+        <p className="mt-2 text-gray-500">O vendedor pausou ou encerrou, ou a moderação retirou. Veja outros parecidos na vitrine.</p>
         <V2Button asChild className="mt-6"><Link to="/mercado">Ir para o Mercado</Link></V2Button>
       </V2Surface>
     );
@@ -298,6 +307,7 @@ function ListingPage() {
           <div className="space-y-4 lg:col-span-5">
             <div className="space-y-4 lg:sticky lg:top-4">
               <BuyBox listing={listing} isOperator={isOperator} settings={settings.data} />
+              {!isOperator && <StoreCoupons sellerKey={listing.seller_key} title="Cupons da loja" compact />}
               <SellerCard listing={listing} />
               {isPlatformAdmin && <AdminModerationBox listing={listing} />}
               {!isOperator && <ReportListingButton listing={listing} />}

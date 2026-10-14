@@ -46,6 +46,7 @@ describe('carrinho', () => {
     expect(checkLine(line, null).problem).toMatch(/Não está mais/);
     expect(checkLine(line, { ...a, status: 'paused' }).ok).toBe(false);
     expect(checkLine(line, undefined).unknown).toBe(true);
+    expect(checkLine(line, undefined).ok).toBe(false);
   });
   it('🐞 nunca passa de 99 unidades (o servidor recusa acima)', () => {
     const muito = { ...b, id: 'm', quantity: 500 };

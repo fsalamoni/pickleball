@@ -26,6 +26,8 @@
  * `functions/marketplace.parity.test.js` exige o mesmo resultado nos dois.
  */
 
+const promo = require('./marketPromo.js');
+
 /* ------------------------------------------------------------ tabelas -- */
 
 const S = Object.freeze({
@@ -46,7 +48,7 @@ const ORDER_ACTIONS = Object.freeze({
   confirm_received: { from: [S.SHIPPED, S.READY, S.DELIVERED], to: S.COMPLETED, roles: ['buyer'] },
   cancel: { from: [S.PLACED, S.ACCEPTED], to: S.CANCELLED, roles: ['buyer'], needsReason: true },
   seller_cancel: { from: [S.ACCEPTED, S.PAYMENT_REVIEW], to: S.CANCELLED, roles: ['seller'], needsReason: true },
-  open_dispute: { from: [S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.DISPUTED, roles: ['buyer'], needsReason: true },
+  open_dispute: { from: [S.PAYMENT_REVIEW, S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.DISPUTED, roles: ['buyer'], needsReason: true },
   resolve_buyer: { from: [S.DISPUTED], to: S.CANCELLED, roles: ['admin'], needsReason: true },
   resolve_seller: { from: [S.DISPUTED], to: S.COMPLETED, roles: ['admin'], needsReason: true },
   admin_cancel: { from: [S.PLACED, S.ACCEPTED, S.PAYMENT_REVIEW, S.PAID, S.SHIPPED, S.READY, S.DELIVERED], to: S.CANCELLED, roles: ['admin'], needsReason: true },
@@ -55,6 +57,14 @@ const ORDER_ACTIONS = Object.freeze({
 });
 
 const RESTOCK_ON = Object.freeze([S.CANCELLED, S.EXPIRED]);
+/** O produto já saiu das mãos de quem vende: cancelar NÃO devolve o estoque (a pessoa ajusta à mão se ele voltar). */
+const GOODS_OUT = Object.freeze([S.SHIPPED, S.READY, S.DELIVERED]);
+// Em disputa vale o estado de antes dela (`disputed_from`): disputa aberta
+// com o pedido só pago ainda tem o produto com quem vende.
+const devolveEstoque = (order, to) => RESTOCK_ON.includes(to)
+  && !GOODS_OUT.includes(order.status === S.DISPUTED ? order.disputed_from : order.status);
+/** O envio pelo correio demora: o pedido enviado só se conclui sozinho depois disto. */
+const SHIPPED_AUTO_COMPLETE_DAYS = 30;
 
 function checkOrderAction(order, action, role) {
   const a = ORDER_ACTIONS[action];
@@ -278,12 +288,78 @@ function validatePlaceRequest(data = {}) {
       seen.add(i.listing_id);
       its.push({ listing_id: i.listing_id, quantity: q, expected_price_cents: Math.round(Number(i.expected_price_cents) || 0) });
     }
-    out.push({ seller_key: g.seller_key, fulfillment: g.fulfillment, items: its, buyer_note: texto(g.buyer_note, 300) });
+    const giftIds = [...new Set((Array.isArray(g.gift_card_ids) ? g.gift_card_ids : []).filter((x) => typeof x === 'string' && /^[\w-]{1,64}$/.test(x)))];
+    if (giftIds.length > promo.GIFT_CARD_LIMITS.maxPerOrder) return { error: `Use até ${promo.GIFT_CARD_LIMITS.maxPerOrder} vales por loja.` };
+    out.push({
+      seller_key: g.seller_key, fulfillment: g.fulfillment, items: its, buyer_note: texto(g.buyer_note, 300),
+      coupon_code: promo.normalizeCouponCode(g.coupon_code), gift_card_ids: giftIds,
+    });
   }
   const needsAddress = out.some((g) => g.fulfillment === 'shipping');
   const address = needsAddress ? cleanAddress(data.shipping) : null;
   if (needsAddress && !address) return { error: 'Preencha o endereço de entrega.' };
   return { groups: out, address };
+}
+
+/** Já comprou desta loja (pedido que não foi cancelado nem expirou)? */
+async function hasBoughtFrom(db, uid, sellerKey) {
+  const snap = await db.collection('market_orders').where('buyer_uid', '==', uid).where('seller_key', '==', sellerKey).get();
+  // Comprar vale-presente não é "já comprou na loja" (o vale ainda vai ser usado nela).
+  return snap.docs.some((d) => d.data().source !== 'gift_card' && ![S.CANCELLED, S.EXPIRED].includes(d.data().status));
+}
+
+/**
+ * Cupom e vales de UM pedido, dentro da transação (as leituras já vieram):
+ * confere com a mesma conta do cliente (`marketPromo.js`), grava o uso e
+ * devolve o preço. Cupom ou vale que não vale DERRUBA este pedido com o motivo
+ * — nunca um pedido mais caro do que a pessoa viu na tela.
+ */
+function applyPromotions(tx, p) {
+  const { uid, now, sellerKey, items, fulfillment, ship, jaComprou, couponRef, couponSnap, usesRef, usesSnap, giftSnaps, FieldValue } = p;
+  const inc = (n) => (FieldValue ? FieldValue.increment(n) : n);
+  let coupon = null;
+  if (couponRef) {
+    const c = couponSnap && couponSnap.exists ? { id: couponSnap.id, ...couponSnap.data() } : null;
+    const problema = promo.couponProblem(c, {
+      sellerKey, items, fulfillment, shippingToAgree: ship.shipping_to_agree, now,
+      buyerUses: usesSnap && usesSnap.exists ? Number(usesSnap.data().count) || 0 : 0,
+      hasBoughtBefore: jaComprou,
+    });
+    if (problema) fail('failed-precondition', `Cupom: ${problema}`);
+    coupon = c;
+  }
+  const cards = [];
+  giftSnaps.forEach((s) => {
+    const card = s.exists ? { id: s.id, ...s.data() } : null;
+    const problema = promo.giftCardProblem(card, { sellerKey, uid, now });
+    if (problema) fail('failed-precondition', `Vale-presente: ${problema}`);
+    cards.push(card);
+  });
+  const pricing = promo.orderPricing({
+    items, shippingCents: ship.shipping_cents, coupon, giftCards: promo.sortGiftCardsForUse(cards),
+  });
+  if (coupon) {
+    tx.update(couponRef, { uses_count: inc(1), last_used_at_ms: now });
+    tx.set(usesRef, { buyer_uid: uid, count: inc(1), last_at_ms: now }, { merge: true });
+  }
+  pricing.gift_card_uses.forEach((u) => {
+    const card = cards.find((c) => c.id === u.id);
+    const saldo = (Number(card.balance_cents) || 0) - u.amount_cents;
+    tx.update(giftSnaps.find((s) => s.id === u.id).ref, {
+      balance_cents: saldo, status: saldo <= 0 ? promo.GIFT_CARD_STATUS.USED : promo.GIFT_CARD_STATUS.ACTIVE,
+      last_used_at_ms: now, updated_at: new Date(now),
+    });
+  });
+  return {
+    pricing,
+    coupon: coupon ? {
+      id: coupon.id, code: coupon.code, kind: coupon.kind, value: coupon.value,
+      discount_cents: pricing.discount_cents, shipping_discount_cents: pricing.shipping_discount_cents,
+    } : null,
+    gift_cards: pricing.gift_card_uses.map((u) => ({
+      id: u.id, amount_cents: u.amount_cents, code_mask: promo.maskGiftCardCode(cards.find((c) => c.id === u.id).code),
+    })),
+  };
 }
 
 /**
@@ -304,12 +380,22 @@ async function placeOrders(ctx, uid, data) {
     // eslint-disable-next-line no-await-in-loop
     const ops = await operatorUids(db, g.seller_key);
     if (ops.includes(uid)) { failures.push({ seller_key: g.seller_key, error: 'Você não pode comprar de você mesmo.' }); continue; }
+    // eslint-disable-next-line no-await-in-loop
+    const jaComprou = g.coupon_code ? await hasBoughtFrom(db, uid, g.seller_key) : false;
     try {
       // eslint-disable-next-line no-await-in-loop
       const res = await db.runTransaction(async (tx) => {
         const sellerRef = db.collection('market_sellers').doc(g.seller_key);
         const refs = g.items.map((i) => db.collection('market_listings').doc(i.listing_id));
-        const [sellerSnap, ...snaps] = await tx.getAll(sellerRef, ...refs);
+        const couponRef = g.coupon_code ? db.collection('market_coupons').doc(promo.couponDocId(g.seller_key, g.coupon_code)) : null;
+        const usesRef = couponRef ? couponRef.collection('market_coupon_uses').doc(uid) : null;
+        const giftRefs = g.gift_card_ids.map((id) => db.collection('market_gift_cards').doc(id));
+        const extra = [couponRef, usesRef, ...giftRefs].filter(Boolean);
+        const [sellerSnap, ...rest] = await tx.getAll(sellerRef, ...refs, ...extra);
+        const snaps = rest.slice(0, refs.length);
+        const couponSnap = couponRef ? rest[refs.length] : null;
+        const usesSnap = couponRef ? rest[refs.length + 1] : null;
+        const giftSnaps = rest.slice(refs.length + (couponRef ? 2 : 0));
         if (!sellerSnap.exists || sellerSnap.data().status !== 'active') fail('failed-precondition', 'Este vendedor não está vendendo agora.');
         const seller = sellerSnap.data();
         const listings = snaps.map((s, k) => {
@@ -327,11 +413,16 @@ async function placeOrders(ctx, uid, data) {
 
         const items = listings.map((l, k) => ({
           listing_id: l.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '',
+          ...(g.fulfillment !== 'shipping' && l.pickup_note ? { pickup_note: texto(l.pickup_note, 140), city: texto(l.city, 60) } : {}),
           unit_price_cents: l.price_cents, quantity: g.items[k].quantity,
           ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
         }));
-        const subtotal = items.reduce((n, i) => n + i.unit_price_cents * i.quantity, 0);
         const ship = groupShipping(listings, g.fulfillment);
+        const desconto = applyPromotions(tx, {
+          uid, now, sellerKey: g.seller_key, items, fulfillment: g.fulfillment, ship, jaComprou,
+          couponRef, couponSnap, usesRef, usesSnap, giftSnaps, FieldValue: ctx.FieldValue,
+        });
+        const subtotal = desconto.pricing.subtotal_cents;
         const orderRef = db.collection('market_orders').doc();
         const order = {
           code: orderCode(), source: 'cart', status: S.PLACED,
@@ -340,7 +431,11 @@ async function placeOrders(ctx, uid, data) {
           seller_manager_uids: ops, items, item_count: items.reduce((n, i) => n + i.quantity, 0),
           listing_ids: items.map((i) => i.listing_id),
           fulfillment: g.fulfillment, buyer_note: g.buyer_note, ...ship,
-          subtotal_cents: subtotal, total_cents: subtotal + ship.shipping_cents,
+          subtotal_cents: subtotal, total_cents: desconto.pricing.total_cents,
+          discount_cents: desconto.pricing.discount_cents,
+          shipping_discount_cents: desconto.pricing.shipping_discount_cents,
+          gift_card_cents: desconto.pricing.gift_card_cents,
+          coupon: desconto.coupon, gift_cards: desconto.gift_cards,
           platform_fee_cents: 0, shipping_visible: false,
           placed_at_ms: now, status_at_ms: now, deadline_at_ms: now + settings.seller_answer_hours * 3600000,
           created_at: new Date(now), updated_at: new Date(now),
@@ -403,11 +498,15 @@ function validateActionRequest(data = {}) {
   };
 }
 
+/** Itens que vieram de um anúncio (o vale-presente não tem anúncio nem estoque). */
+const itensComAnuncio = (order) => (order.items || []).filter((i) => i && i.listing_id);
+
 function restockUpdates(order, snaps, now) {
+  const itens = itensComAnuncio(order);
   return snaps.map((s, k) => {
-    if (!s.exists) return null;
+    if (!s || !s.exists) return null;
     const l = s.data();
-    const q = order.items[k].quantity;
+    const q = itens[k].quantity;
     return {
       ref: s.ref,
       data: {
@@ -424,7 +523,9 @@ const OTHER_SIDE_MSG = {
   accept: (o) => ['Pedido aceito', `${o.seller_name} aceitou o pedido ${o.code}. Pague pelo Pix e avise.`, 'buyer'],
   decline: (o) => ['Pedido recusado', `${o.seller_name} recusou o pedido ${o.code}.`, 'buyer'],
   send_proof: (o) => ['Pagamento informado', `${o.buyer_name} avisou que pagou o pedido ${o.code}. Confira o Pix.`, 'seller'],
-  confirm_payment: (o) => ['Pagamento confirmado', `${o.seller_name} confirmou o pagamento do pedido ${o.code}.`, 'buyer'],
+  confirm_payment: (o) => ['Pagamento confirmado', (o.issued_gift_card_ids || []).length
+    ? `${o.seller_name} confirmou o pagamento do pedido ${o.code}. O vale-presente já está em Mercado → Vales.`
+    : `${o.seller_name} confirmou o pagamento do pedido ${o.code}.`, 'buyer'],
   reject_payment: (o) => ['Pagamento não encontrado', `${o.seller_name} não encontrou o Pix do pedido ${o.code}.`, 'buyer'],
   ship: (o) => ['Pedido enviado', `O pedido ${o.code} saiu para entrega.`, 'buyer'],
   ready: (o) => ['Pedido pronto', `O pedido ${o.code} está pronto para entregar.`, 'buyer'],
@@ -439,6 +540,61 @@ const OTHER_SIDE_MSG = {
   expire: (o) => ['Pedido expirado', `O pedido ${o.code} passou do prazo e foi cancelado. O estoque voltou ao anúncio.`, 'both'],
   auto_complete: (o) => ['Pedido concluído', `O pedido ${o.code} foi concluído automaticamente.`, 'both'],
 };
+
+/**
+ * Pagamento confirmado: cada vale-presente do pedido vira um vale de verdade,
+ * com código, na conta de quem comprou (que pode dar o código a outra pessoa).
+ */
+function issueGiftCardsForOrder(db, tx, orderId, order, { now, actorUid }) {
+  const ids = [];
+  (order.items || []).filter((i) => i && i.kind === 'gift_card').forEach((i) => {
+    for (let n = 0; n < Math.max(1, Number(i.quantity) || 1); n += 1) {
+      const ref = db.collection('market_gift_cards').doc();
+      const valor = Math.round(Number(i.unit_price_cents) || 0);
+      tx.set(ref, {
+        code: promo.giftCardCode(), seller_key: order.seller_key, seller_name: order.seller_name || '',
+        initial_cents: valor, balance_cents: valor, status: promo.GIFT_CARD_STATUS.ACTIVE,
+        buyer_uid: order.buyer_uid, holder_uid: order.buyer_uid,
+        recipient_name: texto(i.gift && i.gift.recipient_name, promo.GIFT_CARD_LIMITS.name),
+        from_name: texto(i.gift && i.gift.from_name, promo.GIFT_CARD_LIMITS.name),
+        message: texto(i.gift && i.gift.message, promo.GIFT_CARD_LIMITS.message),
+        source: 'order', order_id: orderId, issued_by: actorUid || null,
+        issued_at_ms: now, expires_at_ms: promo.giftCardExpiry(now, Number(i.gift && i.gift.validity_months) || 0),
+        created_at: new Date(now), updated_at: new Date(now),
+      });
+      ids.push(ref.id);
+    }
+  });
+  return ids;
+}
+
+/**
+ * Pedido cancelado ou expirado: o cupom volta a ter o uso, o saldo dos vales
+ * usados volta, e o vale que o pedido EMITIU (comprado e depois cancelado pela
+ * moderação) é cancelado — o dinheiro dele volta por fora, com o vendedor.
+ */
+function restorePromotions(db, tx, order, { valesUsados, valesEmitidos, valeSnaps, now, FieldValue, reason }) {
+  const inc = (n) => (FieldValue ? FieldValue.increment(n) : n);
+  if (order.coupon && order.coupon.id) {
+    const ref = db.collection('market_coupons').doc(order.coupon.id);
+    tx.set(ref, { uses_count: inc(-1) }, { merge: true });
+    tx.set(ref.collection('market_coupon_uses').doc(order.buyer_uid), { count: inc(-1) }, { merge: true });
+  }
+  valesUsados.forEach((g, k) => {
+    const s = valeSnaps[k];
+    if (!s || !s.exists) return;
+    const card = s.data();
+    if (card.status === promo.GIFT_CARD_STATUS.CANCELLED) return;
+    tx.update(s.ref, {
+      balance_cents: (Number(card.balance_cents) || 0) + Math.round(Number(g.amount_cents) || 0),
+      status: promo.GIFT_CARD_STATUS.ACTIVE, updated_at: new Date(now),
+    });
+  });
+  valeSnaps.slice(valesUsados.length).forEach((s) => {
+    if (!s || !s.exists || s.data().status === promo.GIFT_CARD_STATUS.CANCELLED) return;
+    tx.update(s.ref, { status: promo.GIFT_CARD_STATUS.CANCELLED, cancel_reason: texto(reason, 200) || 'Pedido cancelado.', updated_at: new Date(now) });
+  });
+}
 
 /**
  * Aplica uma ação ao pedido, numa transação. `role` já decidido por quem
@@ -456,17 +612,31 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
     const a = ORDER_ACTIONS[action];
     if (a.needsReason && role !== 'system' && texto(extra.reason).length < 3) fail('invalid-argument', 'Conte o motivo em poucas palavras.');
 
-    const to = chk.to;
+    // Só vale-presente (sem nada a entregar): pago = entregue.
+    const to = action === 'confirm_payment' && order.fulfillment === 'digital' ? S.DELIVERED : chk.to;
     const upd = { status: to, status_at_ms: now, updated_at: new Date(now) };
     // Leituras antes de qualquer escrita (regra da transação).
-    const listingSnaps = RESTOCK_ON.includes(to)
-      ? await tx.getAll(...order.items.map((i) => db.collection('market_listings').doc(i.listing_id)))
+    const comAnuncio = itensComAnuncio(order);
+    const listingSnaps = devolveEstoque(order, to) && comAnuncio.length
+      ? await tx.getAll(...comAnuncio.map((i) => db.collection('market_listings').doc(i.listing_id)))
+      : [];
+    const valesUsados = RESTOCK_ON.includes(to) ? (order.gift_cards || []).filter((g) => g && g.id) : [];
+    const valesEmitidos = RESTOCK_ON.includes(to) ? (order.issued_gift_card_ids || []) : [];
+    const valeSnaps = valesUsados.length || valesEmitidos.length
+      ? await tx.getAll(...[...valesUsados.map((g) => g.id), ...valesEmitidos].map((id) => db.collection('market_gift_cards').doc(id)))
       : [];
     const estoqueArena = await arenaStockReads(db, tx, orderId, order, to);
     let privSnap = null;
-    if (action === 'accept') privSnap = await tx.get(db.collection('market_sellers').doc(order.seller_key).collection('private').doc('data'));
+    let sellerAtivo = true;
+    if (action === 'accept') {
+      const sRef = db.collection('market_sellers').doc(order.seller_key);
+      const [ss, ps] = await tx.getAll(sRef, sRef.collection('private').doc('data'));
+      privSnap = ps;
+      sellerAtivo = ss.exists && ss.data().status === 'active';
+    }
 
     if (action === 'accept') {
+      if (!sellerAtivo) fail('failed-precondition', 'Sua loja está suspensa ou em análise: não dá para aceitar pedidos agora.');
       const p = privSnap && privSnap.exists ? privSnap.data() : {};
       if (!p.pix_key || !p.pix_key_type) fail('failed-precondition', 'Cadastre a sua chave Pix (Vender → Recebimento) antes de aceitar.');
       upd.payment = {
@@ -488,6 +658,9 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
     } else if (action === 'confirm_payment') {
       upd.paid_at_ms = now;
       upd.deadline_at_ms = null;
+      const emitidos = issueGiftCardsForOrder(db, tx, orderId, order, { now, actorUid });
+      if (emitidos.length) upd.issued_gift_card_ids = emitidos;
+      if (to === S.DELIVERED) upd.delivered_at_ms = now;
     } else if (action === 'ship') {
       upd.shipped_at_ms = now;
       upd.tracking = { code: extra.tracking_code || '', carrier: extra.carrier || '' };
@@ -496,7 +669,9 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
     } else if (action === 'delivered') {
       upd.delivered_at_ms = now;
     } else if (action === 'open_dispute') {
-      const since = Number(order.delivered_at_ms || order.shipped_at_ms || order.ready_at_ms || order.paid_at_ms || 0);
+      // Pago e nunca enviado (ou pagamento sem conferência): o prazo não corre.
+      const since = [S.PAID, S.PAYMENT_REVIEW].includes(order.status) ? 0
+        : Number(order.delivered_at_ms || order.shipped_at_ms || order.ready_at_ms || 0);
       if (since && now - since > settings.dispute_window_days * 86400000) fail('failed-precondition', 'O prazo para relatar problema neste pedido acabou.');
       const dRef = db.collection('market_disputes').doc(orderId);
       tx.set(dRef, {
@@ -504,6 +679,7 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
         reason: extra.reason, status: 'open', previous_status: order.status, created_at: new Date(now), created_at_ms: now,
       });
       upd.dispute_id = orderId;
+      upd.disputed_from = order.status;
     }
     if (action === 'resolve_buyer' || action === 'resolve_seller') {
       tx.set(db.collection('market_disputes').doc(orderId), {
@@ -515,7 +691,8 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
       upd.cancelled_at_ms = now;
       upd.cancel_reason = extra.reason || (action === 'expire' ? 'Passou do prazo.' : '');
       upd.deadline_at_ms = null;
-      restockUpdates(order, listingSnaps, now).forEach((r) => tx.update(r.ref, r.data));
+      if (devolveEstoque(order, to)) restockUpdates(order, listingSnaps, now).forEach((r) => tx.update(r.ref, r.data));
+      restorePromotions(db, tx, order, { valesUsados, valesEmitidos, valeSnaps, now, FieldValue: ctx.FieldValue, reason: upd.cancel_reason });
     }
     Object.assign(upd, arenaStockWrites(db, tx, order, orderId, estoqueArena, { now, actorUid }));
     if (to === S.COMPLETED) {
@@ -537,7 +714,7 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
   if (msg) {
     const [title, message, quem] = msg;
     const o = result.order;
-    const sellerUids = o.seller_manager_uids || [];
+    const sellerUids = await operatorUids(db, o.seller_key);
     if (quem === 'buyer' || quem === 'both') await notify(db, [o.buyer_uid], { title, message, link: `/mercado/pedidos/${orderId}` }, now);
     if (quem === 'seller' || quem === 'both') await notify(db, sellerUids, { title, message, link: `/mercado/vendas/${orderId}` }, now);
   }
@@ -563,13 +740,17 @@ async function orderAction(ctx, actor, data) {
 
 /* ------------------------------------------------------- a negociação -- */
 
-async function createOrderFromOffer(ctx, tx, offer, listingSnap, privSnap, sellerSnap) {
+async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sellerSnap) {
+  let offer = offerIn;
   const { db, now, settings } = ctx;
   const l = listingSnap.data();
   if (l.status !== 'active' || (Number(l.quantity) || 0) < 1) fail('failed-precondition', 'O produto esgotou. A oferta foi encerrada.');
   const p = privSnap.exists ? privSnap.data() : {};
   if (!p.pix_key) fail('failed-precondition', 'O vendedor ainda não cadastrou o Pix. Ele foi avisado.');
   const seller = sellerSnap.exists ? sellerSnap.data() : {};
+  if (seller.status !== 'active') fail('failed-precondition', 'Este vendedor não está vendendo agora.');
+  // Se o preço caiu abaixo do combinado, vale o preço de agora.
+  offer = { ...offer, amount_cents: Math.min(Math.round(Number(offer.amount_cents) || 0), Math.round(Number(l.price_cents) || Infinity)) };
   const orderRef = db.collection('market_orders').doc();
   const left = (Number(l.quantity) || 0) - 1;
   tx.update(listingSnap.ref, {
@@ -638,6 +819,9 @@ async function offerAction(ctx, actor, data = {}) {
     return { id: ref.id, status: O.PENDING };
   }
 
+  if (['accept', 'accept_counter'].includes(action) && (!enabled || !settings.orders_enabled)) {
+    fail('failed-precondition', 'As compras no Mercado estão fechadas no momento. A oferta continua aberta.');
+  }
   const offerId = texto(data.offerId, 64);
   const pre = await db.collection('market_offers').doc(offerId).get();
   if (!pre.exists) fail('not-found', 'Oferta não encontrada.');
@@ -684,9 +868,10 @@ async function offerAction(ctx, actor, data = {}) {
   };
   const [title, message] = msgs[action] || ['Oferta', ''];
   const link = res.orderId ? (toBuyer ? `/mercado/pedidos/${res.orderId}` : `/mercado/vendas/${res.orderId}`) : `/mercado/ofertas/${offerId}`;
-  await notify(db, toBuyer ? [o.buyer_uid] : (o.seller_manager_uids || []), { title, message, link }, now);
+  const opsAgora = await operatorUids(db, o.seller_key);
+  await notify(db, toBuyer ? [o.buyer_uid] : opsAgora, { title, message, link }, now);
   if (res.orderId && !toBuyer) {
-    await notify(db, o.seller_manager_uids || [], { title: 'Venda combinada', message: `Pedido criado pelo valor combinado de "${o.listing_title}".`, link: `/mercado/vendas/${res.orderId}` }, now);
+    await notify(db, opsAgora, { title: 'Venda combinada', message: `Pedido criado pelo valor combinado de "${o.listing_title}".`, link: `/mercado/vendas/${res.orderId}` }, now);
   }
   return { status: o.status, orderId: res.orderId };
 }
@@ -784,8 +969,9 @@ async function housekeeping(ctx) {
     const snap = await db.collection('market_orders').where('status', '==', st).get();
     for (const d of snap.docs) {
       const at = Number(d.data().status_at_ms) || 0;
+      const dias = st === S.SHIPPED ? Math.max(SHIPPED_AUTO_COMPLETE_DAYS, settings.auto_complete_days) : settings.auto_complete_days;
       // eslint-disable-next-line no-await-in-loop
-      if (at && now - at > settings.auto_complete_days * 86400000 && await run(d.id, 'auto_complete')) feitos.completed += 1;
+      if (at && now - at > dias * 86400000 && await run(d.id, 'auto_complete')) feitos.completed += 1;
     }
   }
   for (const st of [O.PENDING, O.COUNTERED]) {
@@ -795,6 +981,13 @@ async function housekeeping(ctx) {
     for (const d of vencidas) {
       // eslint-disable-next-line no-await-in-loop
       await d.ref.update({ status: O.EXPIRED, updated_at: new Date(now) });
+      const of = d.data();
+      // eslint-disable-next-line no-await-in-loop
+      await notify(db, [of.buyer_uid], {
+        title: 'Oferta expirou',
+        message: `A negociação por "${of.listing_title || 'um anúncio'}" passou do prazo sem resposta. Você pode fazer outra oferta.`,
+        link: `/mercado/ofertas/${d.id}`,
+      }, now);
       feitos.offers += 1;
     }
   }
@@ -824,12 +1017,18 @@ async function moderateListing(ctx, listingId, listing) {
   if (!listing || !['active', 'sold_out'].includes(listing.status)) return null;
   const { settings } = await loadContext(db);
   const termo = findBannedTerm(`${listing.title || ''} ${listing.description || ''}`, settings.banned_terms);
-  if (!termo) return null;
+  if (!termo) {
+    // Texto corrigido e de volta ao ar: a marca da moderação automática sai.
+    if (listing.moderation && listing.moderation.auto && listing.moderation.status === 'flagged') {
+      await db.collection('market_listings').doc(listingId).update({ moderation: null });
+    }
+    return null;
+  }
   await db.collection('market_listings').doc(listingId).update({
     status: 'paused',
     moderation: { status: 'flagged', reason: `Termo não permitido: "${termo}"`, auto: true, at_ms: now },
   });
-  await notify(db, [listing.created_by], {
+  await notify(db, [...new Set([listing.created_by, ...(await operatorUids(db, listing.seller_key))])], {
     title: 'Anúncio pausado',
     message: `"${String(listing.title || '').slice(0, 60)}" tem um termo não permitido ("${termo}"). Edite e publique de novo.`,
     link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}`,
@@ -1002,7 +1201,7 @@ async function arenaStockReads(db, tx, orderId, order, to) {
     const produtos = new Map(snaps.filter((s) => s.exists && s.data().arena_id === arena.id).map((s) => [s.id, s.data()]));
     return { tipo: 'saida', arenaId: arena.id, linhas, produtos };
   }
-  if (RESTOCK_ON.includes(to) && order.arena_stock_applied) {
+  if (devolveEstoque(order, to) && order.arena_stock_applied) {
     const saidas = await tx.get(db.collection(COL_INV_EXITS).where('market_order_id', '==', orderId));
     const doc = saidas.docs.filter((d) => d.data().arena_id === arena.id);
     const ids = [...new Set(doc.map((d) => d.data().product_id))];
@@ -1119,6 +1318,181 @@ async function linkArenaProduct(ctx, actor, data = {}) {
   return { ok: true };
 }
 
+/* ------------------------------------------------------ vale-presente -- */
+
+/**
+ * O vale-presente da loja: COMPRAR (vira um pedido já aceito, pago pelo Pix
+ * do vendedor; o vale nasce quando o vendedor confirma o pagamento), RESGATAR
+ * (o código passa para a conta de quem digitou), EMITIR (a loja dá um vale de
+ * prêmio ou cortesia) e CANCELAR (a loja desfaz um vale emitido por engano).
+ */
+async function giftCardAction(ctx, actor, data = {}) {
+  const { db, now = Date.now() } = ctx;
+  const { enabled, settings } = await loadContext(db);
+  if (!enabled) fail('failed-precondition', 'O Mercado está fechado no momento.');
+  const action = texto(data.action, 16);
+  if (action === 'buy') return buyGiftCard({ ...ctx, now, settings }, actor, data);
+  if (action === 'claim') return claimGiftCard({ ...ctx, now }, actor, data);
+  if (action === 'issue') return issueGiftCard({ ...ctx, now }, actor, data);
+  if (action === 'cancel') return cancelGiftCard({ ...ctx, now }, actor, data);
+  fail('invalid-argument', 'Ação desconhecida.');
+  return null;
+}
+
+async function buyGiftCard(ctx, actor, data) {
+  const { db, now, settings } = ctx;
+  if (!settings.orders_enabled) fail('failed-precondition', 'As compras no Mercado estão fechadas no momento.');
+  const sellerKey = texto(data.seller_key, 120);
+  if (!parseSellerKey(sellerKey)) fail('invalid-argument', 'Loja inválida.');
+  const ops = await operatorUids(db, sellerKey);
+  if (ops.includes(actor.uid)) fail('failed-precondition', 'Você não pode comprar de você mesmo.');
+  const valor = Math.round(Number(data.amount_cents));
+  const gift = {
+    recipient_name: texto(data.recipient_name, promo.GIFT_CARD_LIMITS.name),
+    from_name: texto(data.from_name, promo.GIFT_CARD_LIMITS.name),
+    message: texto(data.message, promo.GIFT_CARD_LIMITS.message),
+  };
+  const nome = await buyerName(db, actor.uid);
+  const sellerRef = db.collection('market_sellers').doc(sellerKey);
+  const res = await db.runTransaction(async (tx) => {
+    const [sellerSnap, privSnap] = await tx.getAll(sellerRef, sellerRef.collection('private').doc('data'));
+    if (!sellerSnap.exists || sellerSnap.data().status !== 'active') fail('failed-precondition', 'Esta loja não está vendendo agora.');
+    const seller = sellerSnap.data();
+    const cfg = promo.giftCardConfig(seller);
+    const problema = promo.giftCardAmountProblem(cfg, valor);
+    if (problema) fail('failed-precondition', problema);
+    const p = privSnap.exists ? privSnap.data() : {};
+    if (!p.pix_key || !p.pix_key_type) fail('failed-precondition', 'A loja ainda não cadastrou o Pix. Tente mais tarde.');
+    const orderRef = db.collection('market_orders').doc();
+    const order = {
+      code: orderCode(), source: 'gift_card', status: S.ACCEPTED,
+      buyer_uid: actor.uid, buyer_name: nome,
+      seller_key: sellerKey, seller_name: seller.display_name || '', seller_type: seller.seller_type || '',
+      seller_manager_uids: ops,
+      items: [{
+        kind: 'gift_card', listing_id: '', title: `Vale-presente ${promo.formatBRL(valor)}`, cover_url: seller.logo_url || '',
+        condition: '', unit_price_cents: valor, quantity: 1, gift: { ...gift, validity_months: cfg.validity_months },
+      }],
+      item_count: 1, listing_ids: [],
+      fulfillment: 'digital', buyer_note: '', shipping_cents: 0, shipping_to_agree: false,
+      subtotal_cents: valor, total_cents: valor, discount_cents: 0, gift_card_cents: 0, platform_fee_cents: 0,
+      payment: { pix_key_type: p.pix_key_type, pix_key: p.pix_key, receiver_name: p.receiver_name || '', instructions: p.instructions || '' },
+      shipping_visible: false, placed_at_ms: now, accepted_at_ms: now, status_at_ms: now,
+      deadline_at_ms: now + settings.payment_hours * 3600000,
+      created_at: new Date(now), updated_at: new Date(now),
+    };
+    tx.set(orderRef, order);
+    tx.set(orderRef.collection('events').doc(), { action: 'gift_card_bought', by_role: 'buyer', by_uid: actor.uid, at_ms: now });
+    return { id: orderRef.id, code: order.code, seller_name: order.seller_name };
+  });
+  await notify(db, ops, {
+    title: `Vale-presente vendido · ${res.code}`,
+    message: `${nome} comprou um vale-presente de ${promo.formatBRL(valor)}. Confira o Pix e confirme o pagamento.`,
+    link: `/mercado/vendas/${res.id}`,
+  }, now);
+  return res;
+}
+
+/** Auditoria no formato do cliente (`createAuditLog`). */
+async function audit(db, actor, now, action, label, details) {
+  await db.collection('audit_logs').add({
+    log_number: Number(`${now}${Math.floor(Math.random() * 900 + 100)}`),
+    action, action_label: label, actor_id: actor.uid, actor_name: actor.name || actor.uid, actor_email: '',
+    tournament_id: null, details, created_at: new Date(now),
+  });
+}
+
+async function findGiftCardByCode(db, codigo) {
+  const code = promo.normalizeGiftCardCode(codigo);
+  if (!code) fail('invalid-argument', 'Confira o código: são 12 letras e números depois de PRK.');
+  const snap = await db.collection('market_gift_cards').where('code', '==', code).limit(1).get();
+  if (snap.empty) fail('not-found', 'Não achamos um vale com este código. Confira as letras e os números.');
+  return snap.docs[0].ref;
+}
+
+async function claimGiftCard(ctx, actor, data) {
+  const { db, now } = ctx;
+  const ref = await findGiftCardByCode(db, data.code);
+  const res = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const card = snap.data();
+    if (card.status === promo.GIFT_CARD_STATUS.CANCELLED) fail('failed-precondition', 'Este vale foi cancelado pela loja.');
+    if (card.expires_at_ms && now > card.expires_at_ms) fail('failed-precondition', 'Este vale venceu.');
+    if (card.holder_uid === actor.uid && card.claimed_at_ms) return { id: ref.id, already: true, card };
+    if (card.claimed_at_ms && card.holder_uid && card.holder_uid !== actor.uid) fail('failed-precondition', 'Este vale já foi resgatado por outra conta.');
+    tx.update(ref, { holder_uid: actor.uid, claimed_at_ms: now, updated_at: new Date(now) });
+    return { id: ref.id, already: false, card };
+  });
+  const { card } = res;
+  if (!res.already && card.buyer_uid && card.buyer_uid !== actor.uid) {
+    const nome = await buyerName(db, actor.uid);
+    await notify(db, [card.buyer_uid], {
+      title: 'Seu presente chegou',
+      message: `${nome} resgatou o vale-presente de ${promo.formatBRL(card.initial_cents)} de ${card.seller_name || 'uma loja'}.`,
+      link: '/mercado/vales',
+    }, now);
+  }
+  return { id: res.id, already: res.already, seller_key: card.seller_key, seller_name: card.seller_name || '', balance_cents: Number(card.balance_cents) || 0 };
+}
+
+async function issueGiftCard(ctx, actor, data) {
+  const { db, now } = ctx;
+  const sellerKey = texto(data.seller_key, 120);
+  const ops = await operatorUids(db, sellerKey);
+  if (!ops.includes(actor.uid)) fail('permission-denied', 'Só quem vende por esta loja emite vale.');
+  const sellerSnap = await db.collection('market_sellers').doc(sellerKey).get();
+  if (!sellerSnap.exists || sellerSnap.data().status !== 'active') fail('failed-precondition', 'A loja precisa estar ativa para emitir vale.');
+  const valor = Math.round(Number(data.amount_cents));
+  if (!(valor >= promo.GIFT_CARD_LIMITS.minCents && valor <= promo.GIFT_CARD_LIMITS.maxCents)) {
+    fail('invalid-argument', `Escolha um valor entre ${promo.formatBRL(promo.GIFT_CARD_LIMITS.minCents)} e ${promo.formatBRL(promo.GIFT_CARD_LIMITS.maxCents)}.`);
+  }
+  const cfg = promo.giftCardConfig(sellerSnap.data());
+  const ref = db.collection('market_gift_cards').doc();
+  const card = {
+    code: promo.giftCardCode(), seller_key: sellerKey, seller_name: sellerSnap.data().display_name || '',
+    initial_cents: valor, balance_cents: valor, status: promo.GIFT_CARD_STATUS.ACTIVE,
+    buyer_uid: null, holder_uid: null,
+    recipient_name: texto(data.recipient_name, promo.GIFT_CARD_LIMITS.name),
+    from_name: texto(data.from_name, promo.GIFT_CARD_LIMITS.name) || sellerSnap.data().display_name || '',
+    message: texto(data.message, promo.GIFT_CARD_LIMITS.message),
+    note: texto(data.note, 140),
+    source: 'issued', order_id: null, issued_by: actor.uid,
+    issued_at_ms: now, expires_at_ms: promo.giftCardExpiry(now, cfg.validity_months),
+    created_at: new Date(now), updated_at: new Date(now),
+  };
+  await ref.set(card);
+  await audit(db, actor, now, 'market_gift_card_issued', 'Vale-presente emitido pela loja', {
+    gift_card_id: ref.id, seller_key: sellerKey, amount_cents: valor, note: card.note,
+  });
+  return { id: ref.id, code: card.code, expires_at_ms: card.expires_at_ms };
+}
+
+async function cancelGiftCard(ctx, actor, data) {
+  const { db, now } = ctx;
+  const ref = db.collection('market_gift_cards').doc(texto(data.id, 64) || 'x');
+  const snap = await ref.get();
+  if (!snap.exists) fail('not-found', 'Vale não encontrado.');
+  const card = snap.data();
+  const ops = await operatorUids(db, card.seller_key);
+  if (!ops.includes(actor.uid)) fail('permission-denied', 'Só a loja que emitiu cancela o vale.');
+  if (card.source === 'order') fail('failed-precondition', 'Vale comprado pelo Mercado só é desfeito cancelando o pedido.');
+  if (card.status === promo.GIFT_CARD_STATUS.CANCELLED) return { ok: true };
+  const motivo = texto(data.reason, 200);
+  if (motivo.length < 3) fail('invalid-argument', 'Conte o motivo em poucas palavras.');
+  await ref.update({ status: promo.GIFT_CARD_STATUS.CANCELLED, cancel_reason: motivo, updated_at: new Date(now) });
+  await audit(db, actor, now, 'market_gift_card_cancelled', 'Vale-presente cancelado pela loja', {
+    gift_card_id: ref.id, seller_key: card.seller_key, reason: motivo, balance_cents: card.balance_cents,
+  });
+  if (card.holder_uid) {
+    await notify(db, [card.holder_uid], {
+      title: 'Vale-presente cancelado',
+      message: `${card.seller_name || 'A loja'} cancelou o vale ${promo.maskGiftCardCode(card.code)}: ${motivo}`,
+      link: '/mercado/vales',
+    }, now);
+  }
+  return { ok: true };
+}
+
 module.exports = {
   ORDER_ACTIONS, OFFER_ACTIONS, OFFER_RULES, RESTOCK_ON, DEFAULT_BANNED_TERMS,
   checkOrderAction, applyOfferAction, validateOfferAmount, validateReview, findBannedTerm,
@@ -1127,4 +1501,5 @@ module.exports = {
   housekeeping, moderateListing, recomputeSellerRating, operatorUids, notifyQuestion,
   reservedFor, linkedListingPatch, syncArenaListing, linkArenaProduct,
   savedSearchAlerts, notifyPriceDrop,
+  hasBoughtFrom, applyPromotions, giftCardAction,
 };

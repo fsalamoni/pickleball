@@ -9,8 +9,9 @@
 import React, { useMemo } from 'react';
 import {
   Award, BookOpen, CalendarDays, CalendarPlus, ExternalLink, GraduationCap, Handshake, LayoutGrid, Medal,
-  Newspaper, ShoppingBag, Sparkles, Swords, Tag, Trophy, User, Users,
+  Newspaper, ShoppingBag, Sparkles, Store, Swords, Tag, Trophy, User, Users,
 } from 'lucide-react';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useMyGameDays } from '@/modules/games/hooks/useGameDays';
 import { hojeLocal, isTournamentCurrent } from '@/modules/home/domain/freshness';
@@ -40,6 +41,7 @@ const ICONE = {
   [D.CLINICS]: Sparkles,
   [D.STORE]: ShoppingBag,
   [D.CONTENT]: BookOpen,
+  [D.MARKET]: Store,
 };
 
 function useOpcoes(alvo) {
@@ -74,7 +76,9 @@ function useOpcoes(alvo) {
  * @param {{ issuerType: string, value: { type, target_id, target_label }, onChange: Function }} props
  */
 export default function PromoDestinationPicker({ issuerType, value, onChange }) {
-  const tipos = PROMO_DESTINATIONS_BY_ISSUER[issuerType] || [D.DETAILS];
+  const { flags = {} } = useFeatureFlags() || {};
+  const tipos = (PROMO_DESTINATIONS_BY_ISSUER[issuerType] || [D.DETAILS])
+    .filter((t) => !PROMO_DESTINATION_META[t]?.flag || flags[PROMO_DESTINATION_META[t].flag] || value?.type === t);
   const tipo = value?.type || D.DETAILS;
   const alvo = PROMO_DESTINATION_META[tipo]?.target || null;
   const lista = useOpcoes(alvo);

@@ -19,6 +19,18 @@ class FakeDocRef {
   collection(name) { return new FakeQuery(this.store, `${this.path}/${name}`); }
   async delete() { this.store.log.push(['delete', this.path]); this.store.docs.delete(this.path); }
   async update(data) { aplicarUpdate(this.store, this, data); }
+  async set(data, opts) { aplicarSet(this.store, this, data, opts); }
+}
+
+/** `set` (com `merge` e `increment` falsos, como no Firestore). */
+function aplicarSet(store, ref, data, opts) {
+  store.log.push(['set', ref.path]);
+  const base = opts && opts.merge ? (store.docs.get(ref.path) || {}) : {};
+  const novo = { ...base };
+  Object.entries(data).forEach(([k, v]) => {
+    novo[k] = v && typeof v === 'object' && '__increment' in v ? (Number(base[k]) || 0) + v.__increment : v;
+  });
+  store.docs.set(ref.path, novo);
 }
 
 /** Aplica um `update` (com `increment` falso) — usado pelo lote e pela transação. */
@@ -87,10 +99,7 @@ function createFakeDb(seed = {}) {
         get: (alvo) => alvo.get(),
         getAll: (...refs) => Promise.all(refs.map((r) => r.get())),
         update: (ref, data) => escritas.push(() => aplicarUpdate(store, ref, data)),
-        set: (ref, data, opts) => escritas.push(() => {
-          store.log.push(['set', ref.path]);
-          store.docs.set(ref.path, opts && opts.merge ? { ...(store.docs.get(ref.path) || {}), ...data } : data);
-        }),
+        set: (ref, data, opts) => escritas.push(() => aplicarSet(store, ref, data, opts)),
         delete: (ref) => escritas.push(() => { store.log.push(['delete', ref.path]); store.docs.delete(ref.path); }),
       };
       const r = await fn(tx);

@@ -36,9 +36,12 @@ function FavoritesPage() {
   } else {
     const mapa = l.data || {};
     const ativos = ids.map((id) => mapa[id]).filter((x) => x && isPublicListing(x));
-    const fora = ids.filter((id) => !mapa[id] || !isPublicListing(mapa[id]));
+    // Ausente do mapa = a leitura falhou: não dizer que "não está mais à venda".
+    const fora = ids.filter((id) => id in mapa && (!mapa[id] || !isPublicListing(mapa[id])));
+    const semLeitura = ids.filter((id) => !(id in mapa)).length;
     corpo = (
       <div className="space-y-8">
+        {semLeitura > 0 && <V2ErrorState inline title={`${semLeitura} favorito${semLeitura > 1 ? 's' : ''} não carregou agora`} onRetry={() => l.refetch()} />}
         {ativos.length > 0 && <ListingGrid>{ativos.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>}
         {fora.length > 0 && (
           <section className="space-y-3" aria-label="Não estão mais à venda">

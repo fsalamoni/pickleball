@@ -4086,7 +4086,10 @@ service cloud.firestore {
         );
       // A loja recusada pode pedir de novo (volta a "em análise"); fora isso,
       // o operador edita a vitrine, nunca o que dá confiança.
-      allow update: if isPlatformAdmin() || (isMarketOperator(key) && (
+      allow update: if isPlatformAdmin() || (isMarketOperator(key)
+        // O CNPJ que o admin aprovou não muda pela própria loja.
+        && !(resource.data.status == 'active' && request.resource.data.diff(resource.data).affectedKeys().hasAny(['cnpj_masked']))
+        && (
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(marketSellerLocked())
         || (resource.data.seller_type == 'store' && resource.data.status == 'rejected'
           && request.resource.data.status == 'pending'
@@ -4111,7 +4114,10 @@ service cloud.firestore {
         && d.price_cents is int && d.price_cents > 0 && d.price_cents <= 100000000
         && d.quantity is int && d.quantity >= 0 && d.quantity <= 100000
         && d.get('media', []) is list && d.get('media', []).size() <= 11
-        && d.get('description', '') is string && d.get('description', '').size() <= 5000;
+        && d.get('description', '') is string && d.get('description', '').size() <= 5000
+        // O "de" (preço riscado) só vale MAIOR que o preço: "de" inventado não sobe na vitrine de ofertas.
+        && (d.get('compare_at_cents', null) == null
+          || (d.compare_at_cents is int && d.compare_at_cents > d.price_cents && d.compare_at_cents <= 100000000));
     }
 
     match /market_listings/{listingId} {
@@ -4139,6 +4145,9 @@ service cloud.firestore {
           || marketSeller(resource.data.seller_key).status == 'active')
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(marketListingLocked().concat(['seller_key', 'seller_type', 'created_by']))
+        // Anúncio ligado ao estoque da arena: a quantidade é do servidor.
+        && (!(resource.data.get('source', null) is map && resource.data.source.get('tracked', false) == true)
+          || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['quantity']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['seller_name'])
           || request.resource.data.seller_name == marketSeller(resource.data.seller_key).display_name)
         && marketListingShapeOk(request.resource.data));
@@ -4162,6 +4171,7 @@ service cloud.firestore {
         && request.resource.data.text.size() >= 5 && request.resource.data.text.size() <= 500
         && exists(/databases/$(database)/documents/market_listings/$(request.resource.data.listing_id))
         && get(/databases/$(database)/documents/market_listings/$(request.resource.data.listing_id)).data.seller_key == request.resource.data.seller_key
+        && request.resource.data.listing_title == get(/databases/$(database)/documents/market_listings/$(request.resource.data.listing_id)).data.title
         && get(/databases/$(database)/documents/market_listings/$(request.resource.data.listing_id)).data.status in ['active', 'sold_out']
         && !isMarketOperator(request.resource.data.seller_key);
       // Quem vende responde (só a resposta); o admin esconde.
@@ -4208,7 +4218,59 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // Cupom da loja `{vendedor}_{CÓDIGO}`: quem vende cria e muda; o uso
+    // (`uses_count`) só o servidor conta, na compra. Quem SABE o código lê o
+    // cupom (é assim que a tela mostra o desconto antes de fechar); a lista
+    // aberta é só dos divulgados.
+    function marketCouponShapeOk(d) {
+      return d.code is string && d.code.matches('[A-Z0-9]{3,20}')
+        && d.kind in ['percent', 'amount', 'free_shipping']
+        && d.value is int
+        && ((d.kind == 'percent' && d.value >= 1 && d.value <= 90)
+          || (d.kind == 'amount' && d.value >= 100 && d.value <= 10000000)
+          || (d.kind == 'free_shipping' && d.value == 0))
+        && d.get('min_subtotal_cents', 0) is int && d.get('min_subtotal_cents', 0) >= 0
+        && d.get('listing_ids', []) is list && d.get('listing_ids', []).size() <= 30
+        && d.get('description', '') is string && d.get('description', '').size() <= 140
+        && (d.get('max_uses', null) == null || (d.max_uses is int && d.max_uses >= 1 && d.max_uses <= 100000))
+        && d.get('public', false) is bool && d.get('active', true) is bool;
+    }
+    match /market_coupons/{couponId} {
+      allow get: if isAuthed();
+      allow list: if isAuthed() && (
+        (resource.data.public == true && resource.data.active == true)
+        || isMarketOperator(resource.data.seller_key)
+        || isPlatformAdmin());
+      allow create: if marketOn() && isMarketOperator(request.resource.data.seller_key)
+        && couponId == request.resource.data.seller_key + '_' + request.resource.data.code
+        && request.resource.data.get('uses_count', 0) == 0
+        && request.resource.data.created_by == request.auth.uid
+        && marketCouponShapeOk(request.resource.data);
+      allow update: if isPlatformAdmin() || (
+        isMarketOperator(resource.data.seller_key)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['seller_key', 'code', 'uses_count', 'last_used_at_ms', 'created_by'])
+        && marketCouponShapeOk(request.resource.data));
+      allow delete: if isPlatformAdmin() || isMarketOperator(resource.data.seller_key);
+      // Quantas vezes CADA pessoa usou: a própria pessoa lê o seu; só o servidor escreve.
+      match /market_coupon_uses/{uid} {
+        allow get: if isOwner(uid) || isPlatformAdmin();
+        allow write: if false;
+      }
+    }
+
     // ---- Escritos SÓ pelo servidor ----
+
+    // Vale-presente: quem comprou, quem resgatou e a loja que aceita leem.
+    // Saldo, código e resgate passam pelo servidor (`marketGiftCardAction`).
+    match /market_gift_cards/{cardId} {
+      allow read: if isAuthed() && (
+        resource.data.holder_uid == request.auth.uid
+        || resource.data.buyer_uid == request.auth.uid
+        || isMarketOperator(resource.data.seller_key)
+        || isPlatformAdmin());
+      allow write: if false;
+    }
     match /market_offers/{offerId} {
       allow read: if isAuthed() && (
         resource.data.buyer_uid == request.auth.uid

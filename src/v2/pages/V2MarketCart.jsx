@@ -23,7 +23,11 @@ import { BR_UFS } from '@/core/domain/ufs';
 import { groupCartBySeller, groupShippingCost } from '@/modules/marketplace/domain/cart';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { placeOrders } from '@/modules/marketplace/services/marketOrderService';
-import { useListingsByIds, useMarketCart, useMarketMutation, useMarketSettings } from '@/modules/marketplace/hooks/useMarket';
+import {
+  useListingsByIds, useMarketCart, useMarketMutation, useMarketSettings, useMyGiftCards, useMyOrders, useOrderShipping, usePublicCoupons,
+} from '@/modules/marketplace/hooks/useMarket';
+import { couponLive, couponProblem, giftCardProblem, orderPricing, sortGiftCardsForUse } from '@/modules/marketplace/domain/promotions';
+import CheckoutPromos from '@/v2/components/marketplace/promo/CheckoutPromos';
 import {
   V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
@@ -97,10 +101,11 @@ function shipText(cost) {
   return cost.shipping_cents ? `Frete ${formatBRL(cost.shipping_cents)}` : 'Frete grátis';
 }
 
-function SellerGroup({ g, cart, choice, setChoice, editable }) {
+function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
   const opcoes = g.fulfillment || [];
   const listings = g.lines.filter((l) => l.check.ok).map((l) => l.listing);
   const cost = groupShippingCost(listings, choice.fulfillment);
+  const { pricing } = promo;
   return (
     <V2Surface variant="compacto" as="section" aria-label={`Pedido de ${g.seller_name}`} className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -147,9 +152,15 @@ function SellerGroup({ g, cart, choice, setChoice, editable }) {
               <V2Textarea id={`nota-${g.seller_key}`} rows={2} maxLength={300} value={choice.note} onChange={(e) => setChoice({ ...choice, note: e.target.value })} placeholder="Ex.: prefiro retirar à noite" className="min-h-0" />
             </V2Field>
           )}
+          {opcoes.length > 0 && (
+            <CheckoutPromos sellerKey={g.seller_key} choice={choice} patch={patch} giftCards={promo.giftCards} pricing={pricing} couponError={promo.couponError} publicCoupons={promo.publicCoupons} />
+          )}
+          {g.savings_cents > 0 && (
+            <p className="text-xs font-medium text-green-700">Você economiza {formatBRL(g.savings_cents)} nos preços “de/por”.</p>
+          )}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Subtotal deste vendedor</span>
-            <span className="font-bold text-ink">{formatBRL(g.subtotal_cents + cost.shipping_cents)}</span>
+            <span className="text-gray-500">Total deste vendedor</span>
+            <span className="font-bold text-ink">{formatBRL(pricing.total_cents)}</span>
           </div>
         </div>
       )}
@@ -242,14 +253,15 @@ function CartPage() {
   const place = useMarketMutation(placeOrders);
   const step = params.get('fechar') ? 'fechar' : 'carrinho';
 
-  // Mapa id → anúncio (`undefined` enquanto lê; `null` quando não existe mais).
+  // Mapa id → anúncio (`undefined` enquanto lê ou se a leitura falhou; `null` quando saiu do ar).
   const mapa = useMemo(() => {
     if (!ls.isSuccess) return {};
-    return Object.fromEntries(ids.map((id) => [id, ls.data[id] || (ls.isPlaceholderData ? undefined : null)]));
+    return Object.fromEntries(ids.map((id) => [id, id in ls.data ? ls.data[id] : undefined]));
   }, [ls.isSuccess, ls.isPlaceholderData, ls.data, ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   const grupos = useMemo(() => groupCartBySeller(cart.cart, mapa), [cart.cart, mapa]);
 
   useEffect(() => {
+    if (!ls.isSuccess || ls.isPlaceholderData) return; // decidir "marcado" só com os anúncios na mão
     setChoices((atual) => {
       const next = { ...atual };
       grupos.groups.forEach((g) => {
@@ -261,12 +273,45 @@ function CartPage() {
       });
       return next;
     });
-  }, [grupos]);
+  }, [grupos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const escolhidos = grupos.groups.filter((g) => choices[g.seller_key]?.on && g.buyable && choices[g.seller_key]?.fulfillment);
   const custo = (g) => groupShippingCost(g.lines.filter((l) => l.check.ok).map((l) => l.listing), choices[g.seller_key]?.fulfillment);
+
+  // Cupom e vale de cada vendedor, com a MESMA conta que o servidor refaz.
+  const vales = useMyGiftCards(user?.uid);
+  const compras = useMyOrders(user?.uid);
+  // O endereço da última compra com envio já vem preenchido (a pessoa confere).
+  const ultimaComEnvio = useMemo(() => [...(compras.data || [])]
+    .filter((o) => o.fulfillment === 'shipping')
+    .sort((a, b) => (b.placed_at_ms || 0) - (a.placed_at_ms || 0))[0]?.id || null, [compras.data]);
+  const enderecoAnterior = useOrderShipping(ultimaComEnvio, { enabled: Boolean(ultimaComEnvio) && step === 'fechar' });
+  useEffect(() => {
+    const a = enderecoAnterior.data?.address;
+    if (!a) return;
+    setAddress((atual) => (atual.street || atual.cep ? atual : { ...atual, ...Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, a[k] || atual[k] || ''])) }));
+  }, [enderecoAnterior.data]);
+  const cuponsPublicos = usePublicCoupons();
+  const promoDe = (g) => {
+    const ch = choices[g.seller_key] || {};
+    const items = g.lines.filter((l) => l.check.ok).map((l) => ({ listing_id: l.listing_id, unit_price_cents: l.check.unit_price_cents, quantity: l.quantity }));
+    const c = custo(g);
+    const jaComprou = (compras.data || []).some((o) => o.seller_key === g.seller_key && o.source !== 'gift_card' && !['cancelled', 'expired'].includes(o.status));
+    const couponError = ch.coupon
+      ? couponProblem(ch.coupon, { sellerKey: g.seller_key, items, fulfillment: ch.fulfillment, shippingToAgree: c.shipping_to_agree, buyerUses: ch.couponUses || 0, hasBoughtBefore: jaComprou })
+      : null;
+    const giftCards = sortGiftCardsForUse((vales.data || []).filter((v) => !(v.buyer_uid === user?.uid && !v.claimed_at_ms) && !giftCardProblem(v, { sellerKey: g.seller_key, uid: user?.uid })));
+    const usados = giftCards.filter((v) => (ch.giftIds || []).includes(v.id));
+    const pricing = orderPricing({ items, shippingCents: c.shipping_cents, coupon: ch.coupon && !couponError ? ch.coupon : null, giftCards: usados });
+    const publicCoupons = (cuponsPublicos.data || []).filter((x) => x.seller_key === g.seller_key && couponLive(x));
+    return { pricing, couponError, giftCards, publicCoupons };
+  };
+  const promos = Object.fromEntries(grupos.groups.map((g) => [g.seller_key, promoDe(g)]));
   const subtotal = escolhidos.reduce((n, g) => n + g.subtotal_cents, 0);
   const frete = escolhidos.reduce((n, g) => n + custo(g).shipping_cents, 0);
+  const descontos = escolhidos.reduce((n, g) => n + promos[g.seller_key].pricing.discount_cents + promos[g.seller_key].pricing.shipping_discount_cents, 0);
+  const emVales = escolhidos.reduce((n, g) => n + promos[g.seller_key].pricing.gift_card_cents, 0);
+  const total = escolhidos.reduce((n, g) => n + promos[g.seller_key].pricing.total_cents, 0);
   const freteCombinar = escolhidos.some((g) => custo(g).shipping_to_agree);
   const precisaEndereco = escolhidos.some((g) => choices[g.seller_key].fulfillment === 'shipping');
   const unidades = escolhidos.reduce((n, g) => n + g.lines.filter((l) => l.check.ok).reduce((m, l) => m + l.quantity, 0), 0);
@@ -283,6 +328,8 @@ function CartPage() {
         seller_key: g.seller_key,
         fulfillment: choices[g.seller_key].fulfillment,
         buyer_note: choices[g.seller_key].note || '',
+        coupon_code: choices[g.seller_key].coupon && !promos[g.seller_key].couponError ? choices[g.seller_key].couponCode : '',
+        gift_card_ids: promos[g.seller_key].pricing.gift_card_uses.map((u) => u.id),
         items: g.lines.filter((l) => l.check.ok).map((l) => ({ listing_id: l.listing_id, quantity: l.quantity, expected_price_cents: l.check.unit_price_cents })),
       })),
       ...(precisaEndereco ? { shipping: Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, address[k] || ''])) } : {}),
@@ -329,6 +376,8 @@ function CartPage() {
               editable={!fechar}
               choice={choices[g.seller_key] || { on: false, fulfillment: '', note: '' }}
               setChoice={(c) => setChoices((x) => ({ ...x, [g.seller_key]: c }))}
+              patch={(p) => setChoices((x) => ({ ...x, [g.seller_key]: { ...x[g.seller_key], ...p } }))}
+              promo={promos[g.seller_key]}
             />
           ))}
           {fechar && precisaEndereco && <AddressForm value={address} onChange={(a) => { setAddress(a); setAddrErr(''); }} error={addrErr} />}
@@ -359,7 +408,9 @@ function CartPage() {
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-gray-500">Produtos ({unidades})</dt><dd className="font-medium text-ink">{formatBRL(subtotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-500">Frete</dt><dd className="font-medium text-ink">{freteCombinar ? `${formatBRL(frete)} + a combinar` : frete ? formatBRL(frete) : 'Grátis'}</dd></div>
-              <div className="flex justify-between border-t border-gray-100 pt-2 text-base"><dt className="font-bold text-ink">Total</dt><dd className="font-display text-xl font-bold text-ink">{formatBRL(subtotal + frete)}</dd></div>
+              {descontos > 0 && <div className="flex justify-between"><dt className="text-gray-500">Cupons</dt><dd className="font-medium text-green-700">−{formatBRL(descontos)}</dd></div>}
+              {emVales > 0 && <div className="flex justify-between"><dt className="text-gray-500">Vale-presente</dt><dd className="font-medium text-green-700">−{formatBRL(emVales)}</dd></div>}
+              <div className="flex justify-between border-t border-gray-100 pt-2 text-base"><dt className="font-bold text-ink">Total</dt><dd className="font-display text-xl font-bold text-ink">{formatBRL(total)}</dd></div>
             </dl>
             {escolhidos.length > 1 && <p className="text-xs text-gray-500">{escolhidos.length} vendedores: vira um pedido para cada um, e você paga cada um pelo Pix dele.</p>}
             {!comprasAbertas ? (

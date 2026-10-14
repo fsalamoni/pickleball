@@ -240,6 +240,7 @@ function EditorPage() {
     return { ...v, id: listingId || 'previa', status: 'active', seller_type: sq.data?.seller_type };
   }, [form, listingId, sq.data]);
 
+  const noAr = ['active', 'sold_out'].includes(listing?.status);
   const salvar = (publish) => {
     const input = toInput(form);
     const r = validateListingInput(input, { publish });
@@ -436,8 +437,9 @@ function EditorPage() {
 
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
             <div className="mx-auto flex max-w-6xl justify-end gap-2">
-              <V2Button type="button" variant="ghost" disabled={m.isPending} onClick={() => salvar(false)}>Salvar rascunho</V2Button>
-              <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : listing?.status === 'active' ? 'Salvar e manter no ar' : 'Publicar'}</V2Button>
+              {/* No ar, "rascunho" tiraria o anúncio do ar sem querer: pausar é no painel. */}
+              {!noAr && <V2Button type="button" variant="ghost" disabled={m.isPending} onClick={() => salvar(false)}>Salvar rascunho</V2Button>}
+              <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : noAr ? 'Salvar e manter no ar' : 'Publicar'}</V2Button>
             </div>
           </div>
         </form>
