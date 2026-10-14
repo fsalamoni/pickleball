@@ -11,6 +11,7 @@
  * `/buscar`, sem consulta nova); a ajuda, de `searchHelp`. Cada uma é
  * agrupada pela tela.
  */
+import { t } from '@/core/i18n';
 import { normalizeText } from '../../athletes/domain/globalSearch.js';
 
 export const RECENTES_MAX = 6;
@@ -22,16 +23,16 @@ export const RECENTES_MAX = 6;
 export function commandIndex(ctx = {}) {
   const { hubs = [], arenas = [], treinoOn = false, isPlatformAdmin = false, mercadoOn = false } = ctx;
   const acoes = [
-    { id: 'acao:reservar', label: 'Reservar quadra', to: '/arenas', icon: 'Building2' },
-    { id: 'acao:dia-de-jogo', label: 'Criar dia de jogo', to: '/dia-de-jogo?criar=1', icon: 'Dices' },
-    { id: 'acao:entrar', label: 'Entrar num jogo', to: '/procura-jogo', icon: 'Swords' },
-    treinoOn && { id: 'acao:treino', label: 'Meus treinos', to: '/treino', icon: 'Dumbbell' },
-    mercadoOn && { id: 'acao:mercado', label: 'Comprar no Mercado', to: '/mercado', icon: 'Store' },
-    mercadoOn && { id: 'acao:anunciar', label: 'Anunciar no Mercado', to: '/mercado/vender', icon: 'Store' },
+    { id: 'acao:reservar', label: t('Reservar quadra'), to: '/arenas', icon: 'Building2' },
+    { id: 'acao:dia-de-jogo', label: t('Criar dia de jogo'), to: '/dia-de-jogo?criar=1', icon: 'Dices' },
+    { id: 'acao:entrar', label: t('Entrar num jogo'), to: '/procura-jogo', icon: 'Swords' },
+    treinoOn && { id: 'acao:treino', label: t('Meus treinos'), to: '/treino', icon: 'Dumbbell' },
+    mercadoOn && { id: 'acao:mercado', label: t('Comprar no Mercado'), to: '/mercado', icon: 'Store' },
+    mercadoOn && { id: 'acao:anunciar', label: t('Anunciar no Mercado'), to: '/mercado/vender', icon: 'Store' },
     ...arenas.filter((a) => a?.id).map((a) => ({
-      id: `acao:central:${a.id}`, label: `Abrir a Central da arena ${a.name || ''}`.trim(), to: `/arenas/${a.id}/gerir`, icon: 'LayoutDashboard',
+      id: `acao:central:${a.id}`, label: t('Abrir a Central da arena {nome}', { nome: a.name || '' }).trim(), to: `/arenas/${a.id}/gerir`, icon: 'LayoutDashboard',
     })),
-    isPlatformAdmin && { id: 'acao:admin', label: 'Painel admin', to: '/admin/painel', icon: 'LayoutDashboard' },
+    isPlatformAdmin && { id: 'acao:admin', label: t('Painel admin'), to: '/admin/painel', icon: 'LayoutDashboard' },
   ].filter(Boolean);
 
   const vistos = new Set();
@@ -51,11 +52,11 @@ export function commandIndex(ctx = {}) {
 
 /** Os itens locais (ações e telas) que casam com o termo; sem termo, as ações. */
 export function filtrarComandos(termo, indice, { limite = 6 } = {}) {
-  const t = normalizeText(termo);
-  const casa = (item) => !t || normalizeText(item.label).includes(t);
+  const busca = normalizeText(termo);
+  const casa = (item) => !busca || normalizeText(item.label).includes(busca);
   return {
     acoes: indice.acoes.filter(casa).slice(0, limite),
-    telas: t ? indice.telas.filter(casa).slice(0, limite) : [],
+    telas: busca ? indice.telas.filter(casa).slice(0, limite) : [],
   };
 }
 
@@ -65,9 +66,9 @@ export function filtrarComandos(termo, indice, { limite = 6 } = {}) {
  * então a paleta só leva até lá, sem consulta própria.
  */
 export function buscaNoMercado(termo, mercadoOn) {
-  const t = String(termo || '').trim();
-  if (!mercadoOn || t.length < 2) return null;
-  return { id: 'acao:mercado-busca', label: `Buscar “${t}” no Mercado`, to: `/mercado?q=${encodeURIComponent(t)}`, icon: 'Store' };
+  const busca = String(termo || '').trim();
+  if (!mercadoOn || busca.length < 2) return null;
+  return { id: 'acao:mercado-busca', label: t('Buscar “{termo}” no Mercado', { termo: busca }), to: `/mercado?q=${encodeURIComponent(busca)}`, icon: 'Store' };
 }
 
 /** Guarda um destino escolhido no topo dos recentes (sem repetir, no máximo RECENTES_MAX). */

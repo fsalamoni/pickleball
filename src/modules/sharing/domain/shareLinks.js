@@ -5,6 +5,7 @@
  * compartilhamento (WhatsApp / Web Share) usados pelos cards de UGC.
  * Mantida pura para ser testável e reaproveitável por qualquer tela.
  */
+import { t } from '@/core/i18n';
 
 /** Remove barras finais para evitar `//` ao concatenar caminhos. */
 function trimTrailingSlash(value) {
@@ -32,17 +33,17 @@ export function buildPublicTournamentUrl(origin, tournamentId) {
  * @returns {string}
  */
 export function buildTournamentShareText(tournament, url) {
-  const t = tournament || {};
+  const tor = tournament || {};
   const lines = [];
-  lines.push(`🏓 ${String(t.name || 'Torneio de Pickleball').trim()}`);
+  lines.push(`🏓 ${String(tor.name || t('Torneio de Pickleball')).trim()}`);
 
-  const place = [t.city, t.state].map((v) => String(v || '').trim()).filter(Boolean).join(' / ');
+  const place = [tor.city, tor.state].map((v) => String(v || '').trim()).filter(Boolean).join(' / ');
   if (place) lines.push(`📍 ${place}`);
 
-  if (t.invite_code) lines.push(`🔑 Código de convite: ${t.invite_code}`);
+  if (tor.invite_code) lines.push(`🔑 ${t('Código de convite: {codigo}', { codigo: tor.invite_code })}`);
 
-  if (url) lines.push(`\nAcompanhe ao vivo: ${url}`);
-  lines.push('\nvia PickleRush');
+  if (url) lines.push(`\n${t('Acompanhe ao vivo: {url}', { url })}`);
+  lines.push(`\n${t('via PickleRush')}`);
   return lines.join('\n');
 }
 
@@ -52,9 +53,9 @@ export function buildTournamentShareText(tournament, url) {
  * @returns {string} `https://wa.me/?text=...` (ou '' se texto vazio).
  */
 export function buildWhatsAppShareUrl(text) {
-  const t = String(text || '').trim();
-  if (!t) return '';
-  return `https://wa.me/?text=${encodeURIComponent(t)}`;
+  const texto = String(text || '').trim();
+  if (!texto) return '';
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }
 
 /**

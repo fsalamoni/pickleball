@@ -10,6 +10,7 @@ import V2ChatWindow from '@/v2/components/chat/V2ChatWindow';
 import NewChatDialog from '@/modules/chat/components/NewChatDialog';
 import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 export default function V2Chat() {
   const { user } = useAuth();
@@ -55,7 +56,7 @@ export default function V2Chat() {
     setCreating(true);
     try {
       const id = people.length > 1 ? await actions.createGroup(people, title) : await actions.startDirect(people[0]);
-      toast.success('Conversa iniciada.');
+      toast.success(t('Conversa iniciada.'));
       setNewOpen(false);
       selectConversation(id);
     } finally {
@@ -66,20 +67,20 @@ export default function V2Chat() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Mensagens</h1>
-        <p className="mt-2 font-medium text-gray-500">Converse com atletas e grupos da comunidade em tempo real.</p>
+        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{t('Mensagens')}</h1>
+        <p className="mt-2 font-medium text-gray-500">{t('Converse com atletas e grupos da comunidade em tempo real.')}</p>
       </div>
 
       <V2Surface className="grid h-[calc(100dvh-14rem)] min-h-[30rem] grid-cols-1 overflow-hidden lg:grid-cols-[20rem,1fr] xl:grid-cols-[22rem,1fr]">
         <aside className={cn('flex min-h-0 flex-col border-r border-gray-100', selectedConversation && 'hidden lg:flex')}>
           <div className="space-y-3 border-b border-gray-100 p-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display text-base font-bold text-ink">Conversas</h2>
-              <V2Button size="sm" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova</V2Button>
+              <h2 className="font-display text-base font-bold text-ink">{t('Conversas')}</h2>
+              <V2Button size="sm" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> {t('Nova')}</V2Button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar conversa"
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar conversa')}
                 className="h-9 w-full rounded-full border border-gray-200 bg-paper-pure pl-9 pr-3 text-sm text-ink focus:border-gray-300 focus:ring-4 focus:ring-gray-100" />
             </div>
           </div>
@@ -108,9 +109,9 @@ export default function V2Chat() {
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center text-gray-500">
               <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-acid/15 text-ink"><MessageCircle className="h-8 w-8" /></span>
-              <h3 className="font-display text-lg font-bold text-ink">Suas conversas</h3>
-              <p className="mt-2 max-w-sm text-sm leading-6">Selecione uma conversa à esquerda ou inicie uma nova para falar com atletas e grupos.</p>
-              <V2Button className="mt-5" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova conversa</V2Button>
+              <h3 className="font-display text-lg font-bold text-ink">{t('Suas conversas')}</h3>
+              <p className="mt-2 max-w-sm text-sm leading-6">{t('Selecione uma conversa à esquerda ou inicie uma nova para falar com atletas e grupos.')}</p>
+              <V2Button className="mt-5" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> {t('Nova conversa')}</V2Button>
             </div>
           )}
         </section>

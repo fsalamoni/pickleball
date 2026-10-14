@@ -17,6 +17,7 @@ import { homeCardsSummary } from '@/modules/home/domain/homeCards';
 import { useHomeCards, useHomeCardsContext, useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import SettingsSection from '@/v2/components/settings/SettingsSection';
 import HomeCardsPicker from './HomeCardsPicker';
+import { t } from '@/core/i18n';
 
 function Conteudo() {
   const { user, userProfile } = useAuth();
@@ -37,14 +38,14 @@ function Conteudo() {
       to="/"
       className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold text-gray-500 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
     >
-      Ver o início <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      {t('Ver o início')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
     </Link>
   );
 
   return (
-    <SettingsSection id="pagina-inicial" icon={LayoutGrid} title="Página inicial" summary={resumo} actions={verInicio}>
+    <SettingsSection id="pagina-inicial" icon={LayoutGrid} title={t('Página inicial')} summary={resumo} actions={verInicio}>
       <p className="text-sm text-gray-500">
-        Escolha os cards que aparecem no seu início, e em que ordem. Hoje: {resumo}.
+        {t('Escolha os cards que aparecem no seu início, e em que ordem. Hoje: {resumo}.', { resumo })}
       </p>
       <div className="mt-5">
         <HomeCardsPicker foci={foci} />

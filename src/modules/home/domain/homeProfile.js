@@ -22,6 +22,7 @@
  * a partir do que esta função devolve, então uma seção que não é da pessoa
  * nem chega a consultar nada.
  */
+import { t, tk } from '@/core/i18n';
 import { PLATFORM_INTEREST, sanitizeInterests } from '../../athletes/domain/profileMeta.js';
 
 /** As frentes da tela inicial. A ordem aqui é o desempate canônico. */
@@ -43,17 +44,17 @@ const ORDEM_CANONICA = Object.values(HOME_FOCUS);
 
 /** Rótulo de cada frente, para "Seu início mostra: …". */
 export const HOME_FOCUS_LABEL = Object.freeze({
-  [HOME_FOCUS.ARENA]: 'Minha arena',
-  [HOME_FOCUS.ENSINAR]: 'Minhas aulas (professor)',
-  [HOME_FOCUS.ORGANIZAR]: 'Organizar torneios',
-  [HOME_FOCUS.COMPETIR]: 'Torneios',
-  [HOME_FOCUS.JOGAR]: 'Dias de jogo',
-  [HOME_FOCUS.TREINAR]: 'Treino',
-  [HOME_FOCUS.RESERVAR]: 'Reservar quadras',
-  [HOME_FOCUS.APRENDER]: 'Aulas e professores',
-  [HOME_FOCUS.CLUBES]: 'Clubes',
-  [HOME_FOCUS.RANKING]: 'Ranking e duplas',
-  [HOME_FOCUS.COMUNIDADE]: 'Comunidade',
+  [HOME_FOCUS.ARENA]: tk('Minha arena'),
+  [HOME_FOCUS.ENSINAR]: tk('Minhas aulas (professor)'),
+  [HOME_FOCUS.ORGANIZAR]: tk('Organizar torneios'),
+  [HOME_FOCUS.COMPETIR]: tk('Torneios'),
+  [HOME_FOCUS.JOGAR]: tk('Dias de jogo'),
+  [HOME_FOCUS.TREINAR]: tk('Treino'),
+  [HOME_FOCUS.RESERVAR]: tk('Reservar quadras'),
+  [HOME_FOCUS.APRENDER]: tk('Aulas e professores'),
+  [HOME_FOCUS.CLUBES]: tk('Clubes'),
+  [HOME_FOCUS.RANKING]: tk('Ranking e duplas'),
+  [HOME_FOCUS.COMUNIDADE]: tk('Comunidade'),
 });
 
 /** Interesse declarado → frente(s) da tela inicial. */
@@ -154,10 +155,10 @@ export function hasFocus(foci, focus) {
 /** Texto curto do motivo, para o "por que estou vendo isto". */
 export function focusReasonText(reason) {
   switch (reason) {
-    case FOCUS_REASON.PAPEL: return 'Porque você faz isso na plataforma';
-    case FOCUS_REASON.INTERESSE: return 'Porque está nos seus interesses';
-    case FOCUS_REASON.ATIVIDADE: return 'Porque você tem algo disso marcado';
-    default: return 'Um bom começo para quem está chegando';
+    case FOCUS_REASON.PAPEL: return t('Porque você faz isso na plataforma');
+    case FOCUS_REASON.INTERESSE: return t('Porque está nos seus interesses');
+    case FOCUS_REASON.ATIVIDADE: return t('Porque você tem algo disso marcado');
+    default: return t('Um bom começo para quem está chegando');
   }
 }
 

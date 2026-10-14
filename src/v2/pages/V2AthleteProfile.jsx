@@ -19,6 +19,7 @@ import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -62,8 +63,8 @@ export default function V2AthleteProfile() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar o perfil"
-            description="O perfil continua lá — só não conseguimos buscá-lo agora."
+            title={t('Não foi possível carregar o perfil')}
+            description={t('O perfil continua lá — só não conseguimos buscá-lo agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -78,9 +79,9 @@ export default function V2AthleteProfile() {
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
-            title="Atleta não encontrado"
-            description="O perfil que você procura não existe ou não está mais disponível."
-            action={<Link to="/atletas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar aos atletas</Link>}
+            title={t('Atleta não encontrado')}
+            description={t('O perfil que você procura não existe ou não está mais disponível.')}
+            action={<Link to="/atletas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar aos atletas')}</Link>}
           />
         </V2Surface>
       </div>
@@ -94,7 +95,7 @@ export default function V2AthleteProfile() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <V2BackLink to="/atletas" className="mb-5">Voltar aos atletas</V2BackLink>
+      <V2BackLink to="/atletas" className="mb-5">{t('Voltar aos atletas')}</V2BackLink>
 
       {/* Hero */}
       <V2Surface className="overflow-hidden">
@@ -108,7 +109,7 @@ export default function V2AthleteProfile() {
             </div>
             <div className="flex w-full items-center gap-2 sm:w-auto">
               {followOn && <FollowButton targetUid={uid} />}
-              <V2ChatLauncherButton athlete={athlete} label="Conversar" className="w-full sm:w-auto" />
+              <V2ChatLauncherButton athlete={athlete} label={t('Conversar')} className="w-full sm:w-auto" />
             </div>
           </div>
 
@@ -116,17 +117,17 @@ export default function V2AthleteProfile() {
             <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{athlete.platform_name}</h1>
             <p className="mt-1 font-medium text-gray-500">
               {[
-                Number.isFinite(athlete.age) ? `${athlete.age} anos` : null,
+                Number.isFinite(athlete.age) ? tn(athlete.age, '{n} ano', '{n} anos') : null,
                 genderLabel(athlete.gender),
                 location,
-                followOn ? `${followers.length} seguidor(es)` : null,
-              ].filter(Boolean).join(' • ') || 'Atleta da comunidade'}
+                followOn ? tn(followers.length, '{n} seguidor', '{n} seguidores') : null,
+              ].filter(Boolean).join(' • ') || t('Atleta da comunidade')}
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
               {rating && (
                 <div className="flex items-center gap-2 rounded-2xl border border-acid/40 bg-acid/15 px-4 py-2 text-sm font-semibold text-ink">
-                  <Medal className="h-4 w-4" /> Rating {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
+                  <Medal className="h-4 w-4" /> {t('Rating {n}', { n: rating.rating })}{rating.position ? ` · ${rating.position}º` : ''}
                 </div>
               )}
               {/* Nível 2.0–8.0 (ranking estilo DUPR) — auto-oculto pela flag/dados. */}
@@ -144,9 +145,9 @@ export default function V2AthleteProfile() {
               {validatedLevel?.level_id && (
                 <div
                   className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700"
-                  title={validatedLevel.coach_name ? `Validado por ${validatedLevel.coach_name}` : 'Validado por professor'}
+                  title={validatedLevel.coach_name ? t('Validado por {nome}', { nome: validatedLevel.coach_name }) : t('Validado por professor')}
                 >
-                  <ShieldCheck className="h-4 w-4" /> Nível {validatedLevel.level_badge || validatedLevel.level_name} validado
+                  <ShieldCheck className="h-4 w-4" /> {t('Nível {nivel} validado', { nivel: validatedLevel.level_badge || validatedLevel.level_name })}
                 </div>
               )}
             </div>
@@ -169,18 +170,18 @@ export default function V2AthleteProfile() {
         <V2ErrorState
           inline
           className="mt-8"
-          title="O histórico de jogos não carregou por completo"
-          description="Os números abaixo ficam em branco até ele chegar — um total pela metade pareceria o total."
+          title={t('O histórico de jogos não carregou por completo')}
+          description={t('Os números abaixo ficam em branco até ele chegar — um total pela metade pareceria o total.')}
           onRetry={() => refetch()}
         />
       )}
       <div className={`${historicoFalhou ? 'mt-4' : 'mt-8'} grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6`}>
-        <MiniStat icon={Trophy} label="Torneios" value={historicoFalhou ? '—' : stats.tournaments} />
-        <MiniStat icon={Swords} label="Jogos" value={historicoFalhou ? '—' : stats.played} />
-        <MiniStat icon={Percent} label="Aproveit." value={historicoFalhou ? '—' : formatPercent(stats.winRate)} />
-        <MiniStat icon={Award} label="Títulos" value={historicoFalhou ? '—' : stats.titles} />
-        <MiniStat icon={Medal} label="Pódios" value={historicoFalhou ? '—' : stats.podiums} />
-        <MiniStat icon={Trophy} label="Inscrições" value={historicoFalhou ? '—' : stats.registrations} />
+        <MiniStat icon={Trophy} label={t('Torneios')} value={historicoFalhou ? '—' : stats.tournaments} />
+        <MiniStat icon={Swords} label={t('Jogos')} value={historicoFalhou ? '—' : stats.played} />
+        <MiniStat icon={Percent} label={t('Aproveit.')} value={historicoFalhou ? '—' : formatPercent(stats.winRate)} />
+        <MiniStat icon={Award} label={t('Títulos')} value={historicoFalhou ? '—' : stats.titles} />
+        <MiniStat icon={Medal} label={t('Pódios')} value={historicoFalhou ? '—' : stats.podiums} />
+        <MiniStat icon={Trophy} label={t('Inscrições')} value={historicoFalhou ? '—' : stats.registrations} />
       </div>
 
       {coachResidentOn && coachProfile?.active && (
@@ -191,9 +192,9 @@ export default function V2AthleteProfile() {
                 <GraduationCap className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-display text-lg font-bold text-ink">Também é professor</h2>
+                <h2 className="font-display text-lg font-bold text-ink">{t('Também é professor')}</h2>
                 <p className="mt-0.5 text-sm text-gray-600">
-                  {athlete.platform_name} atua como professor na plataforma. Veja o perfil profissional para conhecer horários, aulas e contato.
+                  {t('{nome} atua como professor na plataforma. Veja o perfil profissional para conhecer horários, aulas e contato.', { nome: athlete.platform_name })}
                 </p>
                 {coachProfile.modalities?.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -203,7 +204,7 @@ export default function V2AthleteProfile() {
               </div>
             </div>
             <Link to={`/coaches/${uid}`} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-bold text-acid transition-colors hover:bg-ink/90">
-              <GraduationCap className="h-4 w-4" /> Ver perfil profissional
+              <GraduationCap className="h-4 w-4" /> {t('Ver perfil profissional')}
             </Link>
           </div>
         </V2Surface>
@@ -211,13 +212,13 @@ export default function V2AthleteProfile() {
 
       {formats.length > 0 && (
         <V2Surface className="mt-8">
-          <h2 className="mb-4 font-display text-lg font-bold text-ink">Desempenho por formato</h2>
+          <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Desempenho por formato')}</h2>
           <div className="space-y-2">
             {formats.map(([format, b]) => (
               <div key={format} className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">
                 <span className="text-sm font-semibold text-ink">{MODALITY_FORMAT_LABELS[format] || format}</span>
                 <span className="text-xs text-gray-500 tabular-nums">
-                  {b.played} jogo(s) · {b.wins}V – {b.losses}D · <strong className="text-ink">{formatPercent(b.winRate)}</strong>
+                  {tn(b.played, '{n} jogo', '{n} jogos')} · {t('{v}V – {d}D', { v: b.wins, d: b.losses })} · <strong className="text-ink">{formatPercent(b.winRate)}</strong>
                 </span>
               </div>
             ))}
@@ -243,7 +244,7 @@ export default function V2AthleteProfile() {
       {/* A estante de troféus: pódios de torneio e de dia de jogo, com o cartão
           e o "Parabenizar" (um kudo, com XP para quem torce). */}
       <V2Surface className="mt-8">
-        <h2 className="mb-4 inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Medal className="h-5 w-5" aria-hidden="true" /> Troféus</h2>
+        <h2 className="mb-4 inline-flex items-center gap-2 font-display text-lg font-bold text-ink"><Medal className="h-5 w-5" aria-hidden="true" /> {t('Troféus')}</h2>
         <TrophyShelf uid={uid} nome={athlete?.name || ''} compacto />
       </V2Surface>
 
@@ -251,7 +252,7 @@ export default function V2AthleteProfile() {
 
       {history.length > 0 && (
         <V2Surface className="mt-8">
-          <h2 className="mb-4 font-display text-lg font-bold text-ink">Torneios recentes</h2>
+          <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Torneios recentes')}</h2>
           <div className="space-y-2">
             {history.slice(0, 8).map((g) => (
               <Link
@@ -272,7 +273,7 @@ export default function V2AthleteProfile() {
 
 function formatGameDate(ms) {
   if (!ms) return '';
-  return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  return fmtData(ms, { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 /**
@@ -285,15 +286,15 @@ function RecentGameDayGames({ games }) {
   return (
     <V2Surface className="mt-8">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-lg font-bold text-ink">Jogos recentes em dias de jogo</h2>
-        <span className="text-xs text-gray-500">{games.length} jogo(s) no ranking</span>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Jogos recentes em dias de jogo')}</h2>
+        <span className="text-xs text-gray-500">{tn(games.length, '{n} jogo no ranking', '{n} jogos no ranking')}</span>
       </div>
       <div className="space-y-2">
         {lista.map((g) => (
           <div key={g.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-4">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">
-                {g.partner ? `com ${g.partner} ` : ''}<span className="font-normal text-gray-400">vs</span> {g.opponent}
+                {g.partner ? `${t('com {nome}', { nome: g.partner })} ` : ''}<span className="font-normal text-gray-400">{t('vs')}</span> {g.opponent}
               </p>
               <p className="truncate text-xs text-gray-500">{[g.label, formatGameDate(g.at)].filter(Boolean).join(' · ')}</p>
             </div>

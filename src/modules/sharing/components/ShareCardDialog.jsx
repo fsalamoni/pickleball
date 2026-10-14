@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { buildTournamentSharePayload } from '../domain/shareLinks.js';
+import { t } from '@/core/i18n';
 
 /**
  * Diálogo de compartilhamento (UGC): mostra um card visual do torneio com QR
@@ -58,7 +59,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
     if (whatsappUrl && typeof window !== 'undefined') {
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     } else {
-      copy(url, 'Link copiado!');
+      copy(url, t('Link copiado!'));
     }
   }
 
@@ -75,9 +76,9 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
       link.download = `picklerush-${safeName || 'torneio'}.png`;
       link.href = dataUrl;
       link.click();
-      toast.success('Card gerado! Compartilhe nos stories ou no WhatsApp.');
+      toast.success(t('Card gerado! Compartilhe nos stories ou no WhatsApp.'));
     } catch {
-      toast.error('Não foi possível gerar a imagem. Tente novamente.');
+      toast.error(t('Não foi possível gerar a imagem. Tente novamente.'));
     } finally {
       setDownloading(false);
     }
@@ -87,9 +88,9 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Compartilhar torneio</DialogTitle>
+          <DialogTitle>{t('Compartilhar torneio')}</DialogTitle>
           <DialogDescription>
-            Gere um card para divulgar nos stories e no WhatsApp, ou copie o link público.
+            {t('Gere um card para divulgar nos stories e no WhatsApp, ou copie o link público.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -101,11 +102,11 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
         >
           <div className="flex items-center gap-2 text-acid">
             <Trophy className="h-5 w-5" />
-            <span className="text-sm font-semibold tracking-wide">PickleRush</span>
+            <span className="text-sm font-semibold tracking-wide">{t('PickleRush')}</span>
           </div>
 
           <h3 className="mt-3 text-xl font-bold leading-tight">
-            {tournament?.name || 'Torneio de Pickleball'}
+            {tournament?.name || t('Torneio de Pickleball')}
           </h3>
 
           <div className="mt-2 space-y-1 text-sm text-white/70">
@@ -118,19 +119,19 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
             {tournament?.invite_code && (
               <div className="flex items-center gap-1.5">
                 <Hash className="h-4 w-4" />
-                Código: <strong className="font-semibold">{tournament.invite_code}</strong>
+                {t('Código:')} <strong className="font-semibold">{tournament.invite_code}</strong>
               </div>
             )}
           </div>
 
           <div className="mt-4 flex items-end justify-between gap-3">
             <p className="text-xs text-acid/90">
-              Aponte a câmera para acompanhar o torneio ao vivo
+              {t('Aponte a câmera para acompanhar o torneio ao vivo')}
             </p>
             {qrDataUrl && (
               <img
                 src={qrDataUrl}
-                alt="QR Code do torneio"
+                alt={t('QR Code do torneio')}
                 className="h-20 w-20 shrink-0 rounded-md bg-white p-1"
               />
             )}
@@ -140,16 +141,16 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
         <div className="grid grid-cols-1 gap-2">
           <Button onClick={handleNativeShare} className="w-full">
             <MessageCircle className="h-4 w-4" />
-            <span className="ml-1">Compartilhar</span>
+            <span className="ml-1">{t('Compartilhar')}</span>
           </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleDownload} disabled={downloading}>
               <Download className="h-4 w-4" />
-              <span className="ml-1">{downloading ? 'Gerando…' : 'Baixar card'}</span>
+              <span className="ml-1">{downloading ? t('Gerando…') : t('Baixar card')}</span>
             </Button>
-            <Button variant="outline" onClick={() => copy(url, 'Link copiado!')}>
+            <Button variant="outline" onClick={() => copy(url, t('Link copiado!'))}>
               {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              <span className="ml-1">Copiar link</span>
+              <span className="ml-1">{t('Copiar link')}</span>
             </Button>
           </div>
         </div>

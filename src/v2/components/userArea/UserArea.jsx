@@ -40,6 +40,7 @@ import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { SECOES } from './UserAreaSections';
+import { t } from '@/core/i18n';
 
 const ICONES = {
   LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, Users, GraduationCap, Building2, LayoutDashboard,
@@ -108,13 +109,13 @@ export default function UserArea() {
     balancosPendentes: balancos.isSuccess ? balancos.pending.length : undefined,
   });
   const falhas = [
-    arenasQ.isError && 'as suas arenas',
-    arenaSummary.pendingError && 'os pedidos de reserva',
-    lessonsQ.isError && 'os pedidos de aula',
-    (clubInvitesQ.isError || eventInvitesQ.isError) && 'os convites dos clubes',
-    trainingOn && (myQuestionsQ.isError || coachQuestionsQ.isError) && 'as dúvidas de treino',
-    trainingOn && inboxQ.isError && 'os treinos recebidos',
-    balancos.isError && 'os jogos para o balanço',
+    arenasQ.isError && t('as suas arenas'),
+    arenaSummary.pendingError && t('os pedidos de reserva'),
+    lessonsQ.isError && t('os pedidos de aula'),
+    (clubInvitesQ.isError || eventInvitesQ.isError) && t('os convites dos clubes'),
+    trainingOn && (myQuestionsQ.isError || coachQuestionsQ.isError) && t('as dúvidas de treino'),
+    trainingOn && inboxQ.isError && t('os treinos recebidos'),
+    balancos.isError && t('os jogos para o balanço'),
   ].filter(Boolean);
   const tentarDeNovo = () => {
     [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ]
@@ -131,7 +132,7 @@ export default function UserArea() {
 
       {(pendencias.length > 0 || falhas.length > 0) && (
         <section aria-labelledby="minha-area-pendencias-titulo" data-dica="minha-area-pendencias" className="rounded-4xl border border-acid/40 bg-acid/10 p-5 sm:p-6">
-          <h2 id="minha-area-pendencias-titulo" className="font-display text-lg font-bold text-ink">Precisa de você</h2>
+          <h2 id="minha-area-pendencias-titulo" className="font-display text-lg font-bold text-ink">{t('Precisa de você')}</h2>
           {pendencias.length > 0 && (
             <ul className="mt-3 space-y-2">
               {pendencias.map((p) => (
@@ -145,8 +146,8 @@ export default function UserArea() {
             <V2ErrorState
               inline
               className="mt-3"
-              title="Não deu para conferir tudo o que espera por você"
-              description={`Ficou de fora: ${falhas.join(', ')}.`}
+              title={t('Não deu para conferir tudo o que espera por você')}
+              description={t('Ficou de fora: {lista}.', { lista: falhas.join(', ') })}
               onRetry={tentarDeNovo}
             />
           )}
@@ -155,11 +156,11 @@ export default function UserArea() {
 
       <div id="minha-area-secoes" className="scroll-mt-4">
         <V2SectionNav
-          sections={secoes}
+          sections={secoes.map((s) => ({ ...s, label: t(s.label) }))}
           activeId={ativa}
           onSelect={(s) => irPara(s.id)}
-          grupos={USER_AREA_GROUPS}
-          ariaLabel="Seções da Minha área"
+          grupos={USER_AREA_GROUPS.map((g) => ({ ...g, label: t(g.label) }))}
+          ariaLabel={t('Seções da Minha área')}
           dica="minha-area-secoes"
         />
       </div>
@@ -200,15 +201,15 @@ function Cabecalho({ user, userProfile }) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <V2Avatar name={name} photoUrl={photo} size="xl" className="h-20 w-20 text-2xl" />
         <div className="min-w-0 flex-1">
-          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Minha área</p>
+          <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Minha área')}</p>
           <h1 className="truncate font-display text-2xl font-bold text-ink sm:text-3xl">{name}</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            {[location, year ? `Membro desde ${year}` : null].filter(Boolean).join(' • ') || 'Complete seu perfil para aparecer no diretório'}
+            {[location, year ? t('Membro desde {ano}', { ano: year }) : null].filter(Boolean).join(' • ') || t('Complete seu perfil para aparecer no diretório')}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {mostraNivel && (
-              <V2Badge tone="acid" title={LEVEL_SOURCE_LABEL[source] || undefined}>
-                Nível {level.toFixed(1)}{LEVEL_SOURCE_LABEL[source] ? ` · ${LEVEL_SOURCE_LABEL[source]}` : ''}
+              <V2Badge tone="acid" title={LEVEL_SOURCE_LABEL[source] ? t(LEVEL_SOURCE_LABEL[source]) : undefined}>
+                {t('Nível {n}', { n: level.toFixed(1) })}{LEVEL_SOURCE_LABEL[source] ? ` · ${t(LEVEL_SOURCE_LABEL[source])}` : ''}
               </V2Badge>
             )}
             <V2DuprRatingBadge uid={user?.uid} />
@@ -216,11 +217,11 @@ function Cabecalho({ user, userProfile }) {
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-col">
           <V2Button asChild variant="subtle" size="sm" className="flex-1 sm:flex-none">
-            <Link to="/perfil/editar" data-dica="perfil-editar"><Pencil className="h-4 w-4" /> Editar perfil</Link>
+            <Link to="/perfil/editar" data-dica="perfil-editar"><Pencil className="h-4 w-4" /> {t('Editar perfil')}</Link>
           </V2Button>
           {user?.uid && (
             <V2Button asChild variant="ghost" size="sm" className="flex-1 sm:flex-none">
-              <Link to={`/atleta/${user.uid}`}><Eye className="h-4 w-4" /> Ver perfil público</Link>
+              <Link to={`/atleta/${user.uid}`}><Eye className="h-4 w-4" /> {t('Ver perfil público')}</Link>
             </V2Button>
           )}
         </div>

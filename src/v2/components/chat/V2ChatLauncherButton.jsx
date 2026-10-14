@@ -5,6 +5,7 @@ import { Loader2, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useChatActions } from '@/modules/chat/hooks/useChat';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const VARIANT_MAP = {
   default: 'primary',
@@ -36,7 +37,7 @@ export default function V2ChatLauncherButton({
 
   const handleClick = async () => {
     if (!isAuthenticated) {
-      toast.error('Entre na plataforma para conversar com atletas.');
+      toast.error(t('Entre na plataforma para conversar com atletas.'));
       return;
     }
     setBusy(true);
@@ -49,7 +50,7 @@ export default function V2ChatLauncherButton({
       onStarted?.(id);
       navigate(`/chat?c=${id}`);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível iniciar a conversa.');
+      toast.error(err.message || t('Não foi possível iniciar a conversa.'));
     } finally {
       setBusy(false);
     }

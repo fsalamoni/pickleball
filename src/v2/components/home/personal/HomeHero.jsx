@@ -19,6 +19,7 @@ import { diasAte } from '@/modules/home/domain/freshness';
 import { frasePrincipal, saudacao } from '@/modules/home/domain/homeShortcuts';
 import { recordEvent } from '@/core/services/observabilityService';
 import PersonalizeHomeDialog from './PersonalizeHomeDialog';
+import { t } from '@/core/i18n';
 
 function Contador({ label, value, destaque = false }) {
   return (
@@ -38,7 +39,7 @@ export default function HomeHero({
   const sobMedida = Array.isArray(cards);
   const chips = sobMedida
     ? cards.map((c) => ({ key: c.id, label: c.label, title: undefined }))
-    : foci.map((f) => ({ key: f.focus, label: HOME_FOCUS_LABEL[f.focus] || f.focus, title: focusReasonText(f.reason) }));
+    : foci.map((f) => ({ key: f.focus, label: HOME_FOCUS_LABEL[f.focus] ? t(HOME_FOCUS_LABEL[f.focus]) : f.focus, title: focusReasonText(f.reason) }));
   const sobra = Math.max(0, chips.length - MAX_CHIPS);
   const abrir = () => {
     recordEvent('home_personalize_open', { sobMedida });
@@ -58,7 +59,7 @@ export default function HomeHero({
 
   return (
     <section
-      aria-label="Resumo do seu dia"
+      aria-label={t('Resumo do seu dia')}
       className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-6 text-white shadow-organic sm:p-8"
     >
       <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-acid opacity-20 blur-[90px]" aria-hidden="true" />
@@ -69,10 +70,10 @@ export default function HomeHero({
             {saudacao(new Date(agora))}, {nome}
           </h1>
           <p className="mt-2 max-w-2xl text-base font-medium text-gray-300" aria-live="polite">
-            {frase || 'Carregando o que você tem pela frente…'}
+            {frase || t('Carregando o que você tem pela frente…')}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">Seu início mostra</span>
+            <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Seu início mostra')}</span>
             {chips.slice(0, MAX_CHIPS).map((c) => (
               <span
                 key={c.key}
@@ -89,7 +90,7 @@ export default function HomeHero({
             )}
             {sobMedida && chips.length === 0 && (
               <span className="rounded-full border border-dashed border-white/20 px-3 py-1 text-xs font-semibold text-gray-300">
-                Só o resumo do dia
+                {t('Só o resumo do dia')}
               </span>
             )}
             <button
@@ -99,14 +100,14 @@ export default function HomeHero({
               data-dica="inicio-personalizar"
               className="btn-press inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-ink transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/50"
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> Personalizar
+              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> {t('Personalizar')}
             </button>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Contador label="Hoje" value={numero(countToday(itens, hoje))} />
-          <Contador label="Próx. 7 dias" value={numero(semana)} />
-          <Contador label="Pedem ação" value={sabe ? acoes : '…'} destaque={sabe && acoes > 0} />
+          <Contador label={t('Hoje')} value={numero(countToday(itens, hoje))} />
+          <Contador label={t('Próx. 7 dias')} value={numero(semana)} />
+          <Contador label={t('Pedem ação')} value={sabe ? acoes : '…'} destaque={sabe && acoes > 0} />
         </div>
       </div>
       {!onPersonalizar && <PersonalizeHomeDialog open={personalizar} onOpenChange={setPersonalizar} />}

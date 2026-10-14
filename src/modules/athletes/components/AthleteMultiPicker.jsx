@@ -11,8 +11,9 @@ import React, { useMemo, useState } from 'react';
 import { Search, X, UserPlus } from 'lucide-react';
 import { useAthletes } from '../hooks/useAthletes';
 import { V2Avatar, V2SearchInput } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
-export default function AthleteMultiPicker({ value = [], onChange, exclude = [], placeholder = 'Buscar atleta…' }) {
+export default function AthleteMultiPicker({ value = [], onChange, exclude = [], placeholder = t('Buscar atleta…') }) {
   const { data: athletes = [], isLoading, isError, refetch } = useAthletes();
   const [q, setQ] = useState('');
   const excludeSet = useMemo(() => new Set([...exclude, ...value.map((v) => v.athlete_id)]), [exclude, value]);
@@ -40,7 +41,7 @@ export default function AthleteMultiPicker({ value = [], onChange, exclude = [],
             <span key={v.athlete_id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper px-2.5 py-1 text-xs font-semibold text-ink">
               <V2Avatar name={v.name} photoUrl={v.photo} size="xs" />
               {v.name}
-              <button type="button" onClick={() => remove(v.athlete_id)} className="text-gray-400 hover:text-red-500" aria-label="Remover">
+              <button type="button" onClick={() => remove(v.athlete_id)} className="text-gray-400 hover:text-red-500" aria-label={t('Remover')}>
                 <X className="h-3 w-3" />
               </button>
             </span>
@@ -51,15 +52,15 @@ export default function AthleteMultiPicker({ value = [], onChange, exclude = [],
       {q.trim() && (
         <div className="rounded-2xl border border-gray-100 bg-paper-pure p-1.5">
           {isLoading ? (
-            <p className="px-2 py-1.5 text-xs text-gray-400">Carregando…</p>
+            <p className="px-2 py-1.5 text-xs text-gray-400">{t('Carregando…')}</p>
           ) : isError ? (
             // Falha não é "nenhum atleta encontrado" — a pessoa procuraria outro nome.
             <p role="alert" className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-amber-800">
-              Não foi possível buscar os atletas agora.
-              <button type="button" onClick={() => refetch()} className="font-bold underline">Tentar de novo</button>
+              {t('Não foi possível buscar os atletas agora.')}
+              <button type="button" onClick={() => refetch()} className="font-bold underline">{t('Tentar de novo')}</button>
             </p>
           ) : results.length === 0 ? (
-            <p className="px-2 py-1.5 text-xs text-gray-400">Nenhum atleta encontrado.</p>
+            <p className="px-2 py-1.5 text-xs text-gray-400">{t('Nenhum atleta encontrado.')}</p>
           ) : (
             results.map((a) => (
               <button

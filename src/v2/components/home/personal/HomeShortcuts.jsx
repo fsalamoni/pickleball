@@ -12,6 +12,7 @@ import {
   Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, Dumbbell, GraduationCap, Handshake,
   LayoutDashboard, Medal, Megaphone, Sparkles, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react';
+import { t } from '@/core/i18n';
 
 const ICONES = {
   Building2, CalendarCheck, CalendarClock, ClipboardList, Dices, Dumbbell, GraduationCap, Handshake,
@@ -21,7 +22,7 @@ const ICONES = {
 export default function HomeShortcuts({ atalhos = [], className = 'mb-6' }) {
   if (atalhos.length === 0) return null;
   return (
-    <nav aria-label="Atalhos para você" className={className}>
+    <nav aria-label={t('Atalhos para você')} className={className}>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {atalhos.map((a) => {
           const Icon = ICONES[a.icon] || Sparkles;

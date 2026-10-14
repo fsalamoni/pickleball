@@ -13,6 +13,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 function clubNames(athlete) {
   return (athlete.clubs || []).map((c) => (typeof c === 'string' ? c : c?.name)).filter(Boolean);
@@ -48,20 +49,20 @@ export default function V2Athletes() {
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <V2PageIntro title="Atletas" subtitle="Encontre parceiros de jogo por nível, cidade e clube." />
+      <V2PageIntro title={t('Atletas')} subtitle={t('Encontre parceiros de jogo por nível, cidade e clube.')} />
 
       <V2Surface className="mb-8">
         <V2SearchInput
           icon={Search}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por nome, cidade, nível ou clube"
+          placeholder={t('Buscar por nome, cidade, nível ou clube')}
         />
         {/* A contagem só é afirmada com a lista na mão: carregando ou com a
             consulta falhando, "0" seria mentira. */}
         {!isLoading && !isError && (
           <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-            <span className="font-bold text-ink">{filtered.length}</span> atleta(s) na comunidade.
+            {tn(filtered.length, '{n} atleta na comunidade.', '{n} atletas na comunidade.')}
           </p>
         )}
       </V2Surface>
@@ -73,8 +74,8 @@ export default function V2Athletes() {
       ) : isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os atletas"
-            description="A comunidade continua lá — só não conseguimos buscá-la agora."
+            title={t('Não foi possível carregar os atletas')}
+            description={t('A comunidade continua lá — só não conseguimos buscá-la agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -82,8 +83,8 @@ export default function V2Athletes() {
         <V2Surface>
           <V2EmptyState
             icon={Users}
-            title="Nenhum atleta encontrado"
-            description="Ajuste a busca ou volte mais tarde para descobrir novos perfis na comunidade."
+            title={t('Nenhum atleta encontrado')}
+            description={t('Ajuste a busca ou volte mais tarde para descobrir novos perfis na comunidade.')}
           />
         </V2Surface>
       ) : (
@@ -114,12 +115,12 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-lg font-bold text-ink">{athlete.platform_name}</h3>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
-            {Number.isFinite(athlete.age) && <span>{athlete.age} anos</span>}
+            {Number.isFinite(athlete.age) && <span>{tn(athlete.age, '{n} ano', '{n} anos')}</span>}
             {genderLabel(athlete.gender) && <span>· {genderLabel(athlete.gender)}</span>}
           </div>
           {isCoach && (
             <V2Badge tone="green" className="mt-2">
-              <GraduationCap className="h-3 w-3" /> Professor
+              <GraduationCap className="h-3 w-3" /> {t('Professor')}
             </V2Badge>
           )}
         </div>
@@ -138,7 +139,7 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
         )}
         {athlete.dupr_id && (
           <div className="flex items-center gap-2">
-            <Hash className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">DUPR: <span className="font-semibold text-ink">{athlete.dupr_id}</span></span>
+            <Hash className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">{t('DUPR:')} <span className="font-semibold text-ink">{athlete.dupr_id}</span></span>
           </div>
         )}
       </div>
@@ -155,7 +156,7 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
 
       {profilePageOn && (
         <div className="mt-auto flex items-center justify-between pt-5 text-sm font-bold text-ink">
-          <span>Ver perfil</span>
+          <span>{t('Ver perfil')}</span>
           <span className="transition-transform group-hover:translate-x-1">→</span>
         </div>
       )}

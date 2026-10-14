@@ -7,6 +7,8 @@
  *   funcionalidades existentes e alimenta a personalização do painel.
  */
 
+import { t, tk } from '@/core/i18n';
+
 /** Lado da quadra preferido. */
 export const COURT_SIDE = Object.freeze({
   ANY: 'any',
@@ -15,9 +17,9 @@ export const COURT_SIDE = Object.freeze({
 });
 
 export const COURT_SIDE_LABELS = Object.freeze({
-  [COURT_SIDE.ANY]: 'Qualquer lado',
-  [COURT_SIDE.LEFT]: 'Esquerda',
-  [COURT_SIDE.RIGHT]: 'Direita',
+  [COURT_SIDE.ANY]: tk('Qualquer lado'),
+  [COURT_SIDE.LEFT]: tk('Esquerda'),
+  [COURT_SIDE.RIGHT]: tk('Direita'),
 });
 
 export const COURT_SIDE_OPTIONS = [
@@ -25,7 +27,7 @@ export const COURT_SIDE_OPTIONS = [
 ].map((value) => ({ value, label: COURT_SIDE_LABELS[value] }));
 
 export function courtSideLabel(value) {
-  return COURT_SIDE_LABELS[value] || null;
+  return COURT_SIDE_LABELS[value] ? t(COURT_SIDE_LABELS[value]) : null;
 }
 
 /** Interesses na plataforma (mapeiam as funcionalidades existentes). */
@@ -49,22 +51,22 @@ export const PLATFORM_INTEREST = Object.freeze({
  * rota principal e um texto de apoio. A ordem define a exibição.
  */
 export const PLATFORM_INTEREST_META = [
-  { value: PLATFORM_INTEREST.PLAY_TOURNAMENTS, label: 'Participar de torneios', icon: 'Trophy', route: '/torneios', hint: 'Inscrever-se e competir' },
-  { value: PLATFORM_INTEREST.ORGANIZE_TOURNAMENTS, label: 'Organizar torneios', icon: 'ClipboardList', route: '/torneios/criar', hint: 'Criar e administrar eventos' },
-  { value: PLATFORM_INTEREST.RANDOM_PARTNERS, label: 'Encontrar parceria para jogos', icon: 'Users', route: '/procura-jogo', hint: 'Jogos avulsos com a comunidade' },
-  { value: PLATFORM_INTEREST.TRAINING_PARTNERS, label: 'Parceria para treinos', icon: 'Handshake', route: '/procura-jogo', hint: 'Treinar com outros atletas' },
-  { value: PLATFORM_INTEREST.PERSONAL_TRAINING, label: 'Organizar meu treino', icon: 'Dices', route: '/dia-de-jogo', hint: 'Montar seus dias de jogo' },
-  { value: PLATFORM_INTEREST.FIND_COACH, label: 'Encontrar professores e aulas', icon: 'GraduationCap', route: '/coaches', hint: 'Aulas e nivelamento' },
-  { value: PLATFORM_INTEREST.COACH_TEACH, label: 'Dar aulas (sou professor)', icon: 'GraduationCap', route: '/aulas', hint: 'Agenda e gestão de aulas' },
-  { value: PLATFORM_INTEREST.ARENA_MANAGE, label: 'Gerir arena e quadras', icon: 'Building2', route: '/arenas', hint: 'Administrar minha arena' },
-  { value: PLATFORM_INTEREST.BOOK_COURTS, label: 'Reservar quadras', icon: 'CalendarCheck', route: '/arenas', hint: 'Agendar quadras para jogar' },
-  { value: PLATFORM_INTEREST.CLUBS, label: 'Participar de clubes', icon: 'Users', route: '/clubes', hint: 'Comunidades e dias de jogo' },
-  { value: PLATFORM_INTEREST.COMMUNITY, label: 'Comunidade e novidades', icon: 'Zap', route: '/novidades', hint: 'Feed e interação social' },
-  { value: PLATFORM_INTEREST.RANKING, label: 'Acompanhar ranking e evolução', icon: 'Medal', route: '/ranking', hint: 'Rating e desempenho' },
+  { value: PLATFORM_INTEREST.PLAY_TOURNAMENTS, label: tk('Participar de torneios'), icon: 'Trophy', route: '/torneios', hint: tk('Inscrever-se e competir') },
+  { value: PLATFORM_INTEREST.ORGANIZE_TOURNAMENTS, label: tk('Organizar torneios'), icon: 'ClipboardList', route: '/torneios/criar', hint: tk('Criar e administrar eventos') },
+  { value: PLATFORM_INTEREST.RANDOM_PARTNERS, label: tk('Encontrar parceria para jogos'), icon: 'Users', route: '/procura-jogo', hint: tk('Jogos avulsos com a comunidade') },
+  { value: PLATFORM_INTEREST.TRAINING_PARTNERS, label: tk('Parceria para treinos'), icon: 'Handshake', route: '/procura-jogo', hint: tk('Treinar com outros atletas') },
+  { value: PLATFORM_INTEREST.PERSONAL_TRAINING, label: tk('Organizar meu treino'), icon: 'Dices', route: '/dia-de-jogo', hint: tk('Montar seus dias de jogo') },
+  { value: PLATFORM_INTEREST.FIND_COACH, label: tk('Encontrar professores e aulas'), icon: 'GraduationCap', route: '/coaches', hint: tk('Aulas e nivelamento') },
+  { value: PLATFORM_INTEREST.COACH_TEACH, label: tk('Dar aulas (sou professor)'), icon: 'GraduationCap', route: '/aulas', hint: tk('Agenda e gestão de aulas') },
+  { value: PLATFORM_INTEREST.ARENA_MANAGE, label: tk('Gerir arena e quadras'), icon: 'Building2', route: '/arenas', hint: tk('Administrar minha arena') },
+  { value: PLATFORM_INTEREST.BOOK_COURTS, label: tk('Reservar quadras'), icon: 'CalendarCheck', route: '/arenas', hint: tk('Agendar quadras para jogar') },
+  { value: PLATFORM_INTEREST.CLUBS, label: tk('Participar de clubes'), icon: 'Users', route: '/clubes', hint: tk('Comunidades e dias de jogo') },
+  { value: PLATFORM_INTEREST.COMMUNITY, label: tk('Comunidade e novidades'), icon: 'Zap', route: '/novidades', hint: tk('Feed e interação social') },
+  { value: PLATFORM_INTEREST.RANKING, label: tk('Acompanhar ranking e evolução'), icon: 'Medal', route: '/ranking', hint: tk('Rating e desempenho') },
 ];
 
 /** "Organizar meu treino" com o Centro de Treino ligado: leva ao `/treino`. */
-const PERSONAL_TRAINING_COM_TREINO = Object.freeze({ icon: 'Dumbbell', route: '/treino', hint: 'Treino do dia, rotina e biblioteca' });
+const PERSONAL_TRAINING_COM_TREINO = Object.freeze({ icon: 'Dumbbell', route: '/treino', hint: tk('Treino do dia, rotina e biblioteca') });
 
 /**
  * Os interesses como a tela os mostra. Com `treino` (flag `training_center`),
@@ -84,7 +86,7 @@ const INTEREST_META_BY_VALUE = Object.freeze(
 );
 
 export function interestLabel(value) {
-  return INTEREST_META_BY_VALUE[value]?.label || null;
+  return INTEREST_META_BY_VALUE[value]?.label ? t(INTEREST_META_BY_VALUE[value].label) : null;
 }
 
 export function interestMeta(value) {

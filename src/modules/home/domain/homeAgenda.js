@@ -20,6 +20,7 @@
  * listas com `mergeAgenda` — e é ela que diz quando uma fonte FALHOU, porque
  * agenda vazia só pode ser afirmada com todas as fontes carregadas.
  */
+import { t, tk } from '@/core/i18n';
 import { formatDateShortBR } from '../../arenas/domain/calendar.js';
 import { bookingSlots, sortSlots } from '../../arenas/domain/booking.js';
 import { BOOKING_STATUS } from '../../arenas/domain/constants.js';
@@ -43,14 +44,14 @@ export const AGENDA_KIND = Object.freeze({
 
 /** Rótulo curto do tipo, para o selo do item. */
 export const AGENDA_KIND_LABEL = Object.freeze({
-  [AGENDA_KIND.JOGO_TORNEIO]: 'Torneio',
-  [AGENDA_KIND.DIA_DE_JOGO]: 'Dia de jogo',
-  [AGENDA_KIND.RESERVA]: 'Reserva',
-  [AGENDA_KIND.AULA]: 'Aula',
-  [AGENDA_KIND.AULA_PROFESSOR]: 'Você dá aula',
-  [AGENDA_KIND.AULA_ARENA]: 'Aula',
-  [AGENDA_KIND.JOGO_ABERTO]: 'Jogo aberto',
-  [AGENDA_KIND.EVENTO_CLUBE]: 'Clube',
+  [AGENDA_KIND.JOGO_TORNEIO]: tk('Torneio'),
+  [AGENDA_KIND.DIA_DE_JOGO]: tk('Dia de jogo'),
+  [AGENDA_KIND.RESERVA]: tk('Reserva'),
+  [AGENDA_KIND.AULA]: tk('Aula'),
+  [AGENDA_KIND.AULA_PROFESSOR]: tk('Você dá aula'),
+  [AGENDA_KIND.AULA_ARENA]: tk('Aula'),
+  [AGENDA_KIND.JOGO_ABERTO]: tk('Jogo aberto'),
+  [AGENDA_KIND.EVENTO_CLUBE]: tk('Clube'),
 });
 
 /** Quanto tempo um compromisso sem hora de fim "dura", para sair da tela. */
@@ -65,8 +66,8 @@ function str(v) {
 }
 
 function horaOuNull(h) {
-  const t = str(h);
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : null;
+  const v = str(h);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null;
 }
 
 /**
@@ -108,7 +109,7 @@ export function agendaFromTournamentMatches(matches = [], { agora = Date.now() }
       dia: ms,
       hora,
       agora,
-      title: m.opponent ? `vs ${m.opponent}` : 'Jogo de torneio',
+      title: m.opponent ? t('vs {nome}', { nome: m.opponent }) : t('Jogo de torneio'),
       subtitle: [m.tournamentName, m.court].filter(Boolean).join(' · '),
       link: m.tournamentId ? `/torneios/${m.tournamentId}` : '/torneios',
     });
@@ -137,7 +138,7 @@ export function agendaFromGameDays(gameDays = [], { agora = Date.now() } = {}) {
       fim: arena.fim,
       duracaoMs: DURACAO_DIA_DE_JOGO_MS,
       agora,
-      title: str(gd.title) || 'Dia de jogo',
+      title: str(gd.title) || t('Dia de jogo'),
       subtitle: origem,
       link: `/dia-de-jogo/${gd.id}`,
       gameDayId: gd.id,
@@ -171,9 +172,9 @@ export function agendaFromBookings(bookings = [], { agora = Date.now() } = {}) {
       hora: s.start,
       fim: s.end,
       agora,
-      title: str(b.arena_name) || 'Reserva de quadra',
+      title: str(b.arena_name) || t('Reserva de quadra'),
       subtitle: [b.court_name, s.start && s.end ? `${s.start}–${s.end}` : null].filter(Boolean).join(' · '),
-      status: aguardando ? 'Aguardando a arena' : 'Confirmada',
+      status: aguardando ? t('Aguardando a arena') : t('Confirmada'),
       link: '/minhas-reservas',
     });
   }).filter(Boolean);
@@ -198,10 +199,10 @@ export function agendaFromLessons(lessons = [], { papel = 'aluno', agora = Date.
       fim: s.end,
       agora,
       title: professor
-        ? `Aula com ${str(l.student_name) || 'aluno'}`
-        : `Aula ${lessonFormatLabel(l.format).toLowerCase()}`,
+        ? t('Aula com {nome}', { nome: str(l.student_name) || t('aluno') })
+        : t('Aula {formato}', { formato: lessonFormatLabel(l.format).toLowerCase() }),
       subtitle: [l.location, s.start && s.end ? `${s.start}–${s.end}` : null].filter(Boolean).join(' · '),
-      status: pedido ? (professor ? 'Pedido esperando você' : 'Aguardando o professor') : 'Confirmada',
+      status: pedido ? (professor ? t('Pedido esperando você') : t('Aguardando o professor')) : t('Confirmada'),
       acao: professor && pedido,
       link: professor ? '/aulas' : '/minhas-aulas',
     });
@@ -225,7 +226,7 @@ export function agendaFromArenaEnrollments(rows = [], { agora = Date.now() } = {
       hora: aula.start,
       fim: aula.end,
       agora,
-      title: str(aula.title) || 'Aula na arena',
+      title: str(aula.title) || t('Aula na arena'),
       subtitle: [r.arenaName, aula.coach_name].filter(Boolean).join(' · '),
       link: '/minhas-aulas',
     });
@@ -249,7 +250,7 @@ export function agendaFromOpenSlots(slots = [], { agora = Date.now(), gameDayIds
       hora: s.start,
       fim: s.end,
       agora,
-      title: `Jogo aberto · ${str(s.arena_name) || 'arena'}`,
+      title: t('Jogo aberto · {arena}', { arena: str(s.arena_name) || t('arena') }),
       subtitle: [s.court, s.start && s.end ? `${s.start}–${s.end}` : null].filter(Boolean).join(' · '),
       link: s.game_day_id ? `/dia-de-jogo/${s.game_day_id}` : `/arenas/${s.arena_id}`,
     });
@@ -273,9 +274,9 @@ export function agendaFromClubEvents(events = [], { agora = Date.now() } = {}) {
       hora: str(horaBruta).slice(0, 5),
       duracaoMs: DURACAO_DIA_DE_JOGO_MS,
       agora,
-      title: str(e.title) || 'Evento do clube',
+      title: str(e.title) || t('Evento do clube'),
       subtitle: [e.club_name, e.location].filter(Boolean).join(' · '),
-      status: st === INVITE_STATUS.INVITED ? 'Convite sem resposta' : (st === INVITE_STATUS.MAYBE ? 'Talvez' : 'Você vai'),
+      status: st === INVITE_STATUS.INVITED ? t('Convite sem resposta') : (st === INVITE_STATUS.MAYBE ? t('Talvez') : t('Você vai')),
       acao: st === INVITE_STATUS.INVITED,
       link: e.club_id ? `/clubes/${e.club_id}/eventos/${e.id}` : '/clubes',
     });
@@ -308,8 +309,8 @@ export function mergeAgenda(listas = [], { limite = Infinity } = {}) {
 /** "Hoje", "Amanhã" ou "Sáb, 27/09". */
 export function agendaDayLabel(dia, hoje) {
   const n = diasAte(dia, hoje);
-  if (n === 0) return 'Hoje';
-  if (n === 1) return 'Amanhã';
+  if (n === 0) return t('Hoje');
+  if (n === 1) return t('Amanhã');
   return formatDateShortBR(dia, { hoje });
 }
 

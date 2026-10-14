@@ -16,6 +16,7 @@ import { INVITE_STATUS } from '@/modules/clubs/domain/constants';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
+import { t } from '@/core/i18n';
 
 const JA_RESPONDIDO = new Set(['going', 'not_going']);
 
@@ -26,14 +27,14 @@ function ParticiparDoEvento({ evento }) {
   const onClick = async () => {
     try {
       await responder.mutateAsync(INVITE_STATUS.GOING);
-      toast.success('Presença confirmada no evento. Ele foi para a sua agenda.');
+      toast.success(t('Presença confirmada no evento. Ele foi para a sua agenda.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível confirmar.');
+      toast.error(err?.message || t('Não foi possível confirmar.'));
     }
   };
   return (
-    <V2Button size="sm" onClick={onClick} disabled={responder.isPending} aria-label={`${convidado ? 'Aceitar convite de' : 'Participar de'} ${evento.title || 'evento'}`}>
-      <LogIn className="h-3.5 w-3.5" aria-hidden="true" /> {responder.isPending ? 'Confirmando…' : (convidado ? 'Aceitar convite' : 'Participar')}
+    <V2Button size="sm" onClick={onClick} disabled={responder.isPending} aria-label={convidado ? t('Aceitar convite de {evento}', { evento: evento.title || t('evento') }) : t('Participar de {evento}', { evento: evento.title || t('evento') })}>
+      <LogIn className="h-3.5 w-3.5" aria-hidden="true" /> {responder.isPending ? t('Confirmando…') : (convidado ? t('Aceitar convite') : t('Participar'))}
     </V2Button>
   );
 }
@@ -53,14 +54,14 @@ export default function HomeClubsSection({ reason, hoje }) {
   );
 
   return (
-    <HomeSection id="clubes" icon={Users} title="Seus clubes" reason={reason} action={{ to: '/clubes', label: 'Clubes' }}>
+    <HomeSection id="clubes" icon={Users} title={t('Seus clubes')} reason={reason} action={{ to: '/clubes', label: t('Clubes') }}>
       {clubes.isLoading ? (
         <V2Skeleton lines={3} />
       ) : clubes.isError ? (
-        <V2ErrorState inline title="Não carregou os seus clubes" description="Os seus clubes continuam lá." onRetry={clubes.refetch} />
+        <V2ErrorState inline title={t('Não carregou os seus clubes')} description={t('Os seus clubes continuam lá.')} onRetry={clubes.refetch} />
       ) : (clubes.data || []).length === 0 ? (
-        <HomeEmpty icon={Search} actions={<HomeAction to="/clubes" primary>Encontrar um clube</HomeAction>}>
-          Você ainda não faz parte de um clube. Clubes têm eventos, dias de jogo e ranking interno.
+        <HomeEmpty icon={Search} actions={<HomeAction to="/clubes" primary>{t('Encontrar um clube')}</HomeAction>}>
+          {t('Você ainda não faz parte de um clube. Clubes têm eventos, dias de jogo e ranking interno.')}
         </HomeEmpty>
       ) : (
         <div className="space-y-4">
@@ -80,10 +81,10 @@ export default function HomeClubsSection({ reason, hoje }) {
             ))}
           </ul>
           {eventos.isError ? (
-            <V2ErrorState inline title="Não carregou os eventos dos clubes" description="Pode haver evento marcado." onRetry={eventos.refetch} />
+            <V2ErrorState inline title={t('Não carregou os eventos dos clubes')} description={t('Pode haver evento marcado.')} onRetry={eventos.refetch} />
           ) : proximos.length > 0 && (
             <div>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">Próximos eventos</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Próximos eventos')}</p>
               <ul className="space-y-1">
                 {proximos.map((e) => {
                   const [dia, hora] = String(e.starts_at || '').split('T');
@@ -95,7 +96,7 @@ export default function HomeClubsSection({ reason, hoje }) {
                           icon={CalendarDays}
                           title={e.title || 'Evento'}
                           subtitle={[formatDateShortBR(dia, { hoje }), hora ? hora.slice(0, 5) : null, nomeDoClube.get(e.club_id)].filter(Boolean).join(' · ')}
-                          badge={e.my_invite_status === 'invited' ? 'Convite' : null}
+                          badge={e.my_invite_status === 'invited' ? t('Convite') : null}
                           badgeTone="amber"
                         />
                       </div>

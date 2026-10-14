@@ -27,6 +27,7 @@ import { arenaFreeTimesForDays, pickHomeArena, upcomingFreeTimes } from '@/modul
 import { agendaDayLabel } from '@/modules/home/domain/homeAgenda';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
+import { t, tn } from '@/core/i18n';
 
 function HorariosDaArena({ arenaId, nome, hoje, agora }) {
   const arena = useArena(arenaId);
@@ -59,29 +60,29 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
   }, [carregando, falhou, hoje, agora, quadras.data, janelas.data, reservas.data, bloqueios.data,
     diasDeJogo.data, vagasAbertas, aulas, torneios]);
 
-  const nomeArena = arena.data?.name || nome || 'Sua arena';
+  const nomeArena = arena.data?.name || nome || t('Sua arena');
   const link = `/arenas/${arenaId}#arena-reservar`;
 
   return (
     <div>
       <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-        <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Livres em {nomeArena}
+        <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {t('Livres em {arena}', { arena: nomeArena })}
       </p>
       {carregando ? (
         <V2Skeleton className="h-16 rounded-3xl" />
       ) : falhou ? (
         <V2ErrorState
           inline
-          title="Não carregou os horários da arena"
-          description="Sem a agenda da arena não dá para dizer o que está livre."
+          title={t('Não carregou os horários da arena')}
+          description={t('Sem a agenda da arena não dá para dizer o que está livre.')}
           onRetry={() => essenciais.forEach((q) => q.isError && q.refetch())}
         />
       ) : livres.length === 0 ? (
-        <HomeEmpty icon={CalendarClock} actions={<HomeAction to={link} primary>Ver outros dias</HomeAction>}>
-          Hoje e amanhã já estão sem horário livre em {nomeArena}.
+        <HomeEmpty icon={CalendarClock} actions={<HomeAction to={link} primary>{t('Ver outros dias')}</HomeAction>}>
+          {t('Hoje e amanhã já estão sem horário livre em {arena}.', { arena: nomeArena })}
         </HomeEmpty>
       ) : (
-        <ul className="flex flex-wrap gap-2" aria-label={`Horários livres em ${nomeArena}`}>
+        <ul className="flex flex-wrap gap-2" aria-label={t('Horários livres em {arena}', { arena: nomeArena })}>
           {livres.map((l) => (
             <li key={`${l.date}-${l.time}`}>
               <Link
@@ -90,7 +91,7 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
               >
                 <span className="text-2xs font-bold uppercase tracking-wide text-gray-500">{agendaDayLabel(l.date, hoje)}</span>
                 <span className="font-display text-lg font-bold leading-tight text-ink">{l.time}</span>
-                <span className="text-2xs text-gray-500">{l.freeCourts === 1 ? '1 quadra' : `${l.freeCourts} quadras`}</span>
+                <span className="text-2xs text-gray-500">{tn(l.freeCourts, '{n} quadra', '{n} quadras')}</span>
               </Link>
             </li>
           ))}
@@ -118,15 +119,15 @@ function ArenasPerto() {
   // Falhou: o convite de sempre, sem afirmar que não há arena perto.
   if (arenasQ.isError || lista.length === 0) {
     return (
-      <HomeEmpty icon={Search} actions={<HomeAction to="/arenas" primary>Encontrar uma arena</HomeAction>}>
-        Reserve uma vez (ou favorite uma arena) e os horários livres dela aparecem aqui.
+      <HomeEmpty icon={Search} actions={<HomeAction to="/arenas" primary>{t('Encontrar uma arena')}</HomeAction>}>
+        {t('Reserve uma vez (ou favorite uma arena) e os horários livres dela aparecem aqui.')}
       </HomeEmpty>
     );
   }
   return (
     <div>
       <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-        Arenas perto de você
+        {t('Arenas perto de você')}
       </p>
       <ul className="space-y-1">
         {lista.slice(0, 3).map((a) => (
@@ -140,7 +141,7 @@ function ArenasPerto() {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-gray-500">Reserve uma vez (ou favorite) e os horários livres dela aparecem aqui.</p>
+      <p className="mt-2 text-xs text-gray-500">{t('Reserve uma vez (ou favorite) e os horários livres dela aparecem aqui.')}</p>
     </div>
   );
 }
@@ -156,7 +157,7 @@ export default function HomeBookingSection({ reason, hoje, agora }) {
   const falhou = minhas.isError || favoritas.isError;
 
   return (
-    <HomeSection id="reservar" icon={CalendarCheck} title="Reservar quadra" reason={reason} action={{ to: '/minhas-reservas', label: 'Minhas reservas' }}>
+    <HomeSection id="reservar" icon={CalendarCheck} title={t('Reservar quadra')} reason={reason} action={{ to: '/minhas-reservas', label: t('Minhas reservas') }}>
       <div className="space-y-4">
         {carregando ? (
           <V2Skeleton className="h-20 rounded-3xl" />
@@ -165,8 +166,8 @@ export default function HomeBookingSection({ reason, hoje, agora }) {
         ) : falhou ? (
           <V2ErrorState
             inline
-            title="Não carregou as suas arenas"
-            description="As suas reservas continuam lá."
+            title={t('Não carregou as suas arenas')}
+            description={t('As suas reservas continuam lá.')}
             onRetry={() => { minhas.refetch(); favoritas.refetch(); }}
           />
         ) : (
@@ -174,7 +175,7 @@ export default function HomeBookingSection({ reason, hoje, agora }) {
         )}
         {escolha && (
           <div className="flex flex-wrap gap-2">
-            <HomeAction to="/arenas"><Search className="h-3.5 w-3.5" aria-hidden="true" /> Outras arenas</HomeAction>
+            <HomeAction to="/arenas"><Search className="h-3.5 w-3.5" aria-hidden="true" /> {t('Outras arenas')}</HomeAction>
           </div>
         )}
       </div>

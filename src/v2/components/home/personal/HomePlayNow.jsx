@@ -14,6 +14,7 @@ import { usePlayDiscovery } from '@/modules/games/hooks/usePlayDiscovery';
 import { jogarAgora } from '@/modules/home/domain/homePlay';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { recordEvent } from '@/core/services/observabilityService';
+import { t, tn } from '@/core/i18n';
 
 const lugarDe = (item) => item.place;
 const HORAS = 48;
@@ -36,10 +37,10 @@ export default function HomePlayNow({ hoje, agora }) {
         <Swords className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-2xs font-bold uppercase tracking-widest text-gray-500">Jogar agora</span>
+        <span className="block text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Jogar agora')}</span>
         <span className="block truncate text-sm font-semibold">
-          {n === 1 ? '1 jogo com vaga' : `${n} jogos com vaga`} nas próximas {HORAS} h perto de você
-          {primeiro?.title ? ` — o primeiro: ${primeiro.title}` : ''}
+          {tn(n, '{n} jogo com vaga nas próximas {horas} h perto de você', '{n} jogos com vaga nas próximas {horas} h perto de você', { horas: HORAS })}
+          {primeiro?.title ? ` — ${t('o primeiro: {nome}', { nome: primeiro.title })}` : ''}
         </span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
