@@ -57,11 +57,13 @@ describe('catálogos de idioma', () => {
     const todas = new Set();
     for (const p of pastas) Object.keys(await ler(p, alvos[0])).forEach((k) => todas.add(k));
     const faltando = [];
-    const re = /(?<![\w.$])t[nk]?\(\s*(?:[\w.]+\s*,\s*)?'((?:[^'\\\n])+)'/g;
+    const re = /(?<![\w.$])t[k]?\(\s*'((?:[^'\\\n])+)'/g;
+    // tn(n, 'singular', 'plural'): a chave é o PLURAL.
+    const rePlural = /(?<![\w.$])tn\(\s*[^,]+,\s*'(?:[^'\\\n])+'\s*,\s*'((?:[^'\\\n])+)'/g;
     for (const f of arquivos) {
       if (!/\.(jsx?|mjs)$/.test(f) || /\.test\.|[\\/]locales[\\/]/.test(f)) continue;
       const src = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
-      for (const m of src.matchAll(re)) {
+      for (const m of [...src.matchAll(re), ...src.matchAll(rePlural)]) {
         if (!todas.has(m[1])) faltando.push(`${path.relative(RAIZ, f)}: ${m[1]}`);
       }
     }
