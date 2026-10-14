@@ -4,11 +4,11 @@
  * Serve a atleta, professor, arena e loja — o que muda é o selo.
  */
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Gift, MapPin, PackageCheck, Search, Share2, Star } from 'lucide-react';
 import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { giftCardConfig } from '@/modules/marketplace/domain/promotions';
+import { giftCardConfig, normalizeCouponCode } from '@/modules/marketplace/domain/promotions';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
 import { GiftCardBuyDialog, StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
@@ -86,6 +86,9 @@ function Reviews({ sellerKey }) {
 
 function SellerPage() {
   const { sellerKey } = useParams();
+  const [params] = useSearchParams();
+  const cupomBruto = normalizeCouponCode(params.get('cupom'));
+  const cupomDoLink = cupomBruto.length >= 3 ? cupomBruto : '';
   const s = useSeller(sellerKey);
   const l = useSellerListings(sellerKey, { publicOnly: true });
   const [busca, setBusca] = useState('');
@@ -178,7 +181,7 @@ function SellerPage() {
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
       <MarketHeader />
       {topo}
-      {seller && seller.status === 'active' && <StoreCoupons sellerKey={sellerKey} />}
+      {seller && seller.status === 'active' && <StoreCoupons sellerKey={sellerKey} sharedCode={cupomDoLink} />}
       {seller && (
         <>
           <ShareImageDialog

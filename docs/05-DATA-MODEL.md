@@ -1399,6 +1399,9 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
   (`fulfillment: 'digital'`) e criado quando o vendedor confirma o pagamento,
   ou emitido pelo vendedor; resgatado pelo código (`holder_uid`), abatido no
   pedido e devolvido no cancelamento. Legível por comprador, titular e loja.
+  `expiry_reminded_at_ms` (opcional): a rotina já avisou que o vale com saldo
+  vence em até 30 dias (a quem está com ele, ou a quem comprou se ninguém
+  resgatou) — avisa uma vez só.
   O pedido ganha `discount_cents`, `shipping_discount_cents`, `gift_card_cents`,
   `coupon{…}` e `gift_cards[]`; o item pode ter `pickup_note`.
 - Storage: `mercado/{uid}/{arquivo}` (foto < 3 MB, vídeo < 60 MB, PDF < 3 MB;

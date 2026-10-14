@@ -65,6 +65,8 @@ const devolveEstoque = (order, to) => RESTOCK_ON.includes(to)
   && !GOODS_OUT.includes(order.status === S.DISPUTED ? order.disputed_from : order.status);
 /** O envio pelo correio demora: o pedido enviado só se conclui sozinho depois disto. */
 const SHIPPED_AUTO_COMPLETE_DAYS = 30;
+/** O vale-presente com saldo avisa uma vez, este tanto de dias antes de vencer. */
+const GIFT_CARD_REMIND_DAYS = 30;
 
 function checkOrderAction(order, action, role) {
   const a = ORDER_ACTIONS[action];
@@ -945,7 +947,7 @@ async function housekeeping(ctx) {
   const { db, now = Date.now(), logger } = ctx;
   const { settings } = await loadContext(db);
   const c = { ...ctx, now, settings };
-  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0 };
+  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0, giftCards: 0 };
   const run = async (orderId, action) => {
     try {
       await applyOrderAction(c, orderId, action, 'system', null, {});
@@ -991,6 +993,33 @@ async function housekeeping(ctx) {
       feitos.offers += 1;
     }
   }
+  // Vale com saldo perto de vencer: UM aviso, a quem está com ele (ou a quem
+  // comprou, se ninguém resgatou ainda). Só igualdade na consulta: sem índice.
+  const vales = await db.collection('market_gift_cards').where('status', '==', promo.GIFT_CARD_STATUS.ACTIVE).get();
+  for (const d of vales.docs) {
+    const v = d.data();
+    const exp = Number(v.expires_at_ms) || 0;
+    // Comprado e ainda não resgatado (o vale nasce na conta de quem comprou): é para DAR.
+    const paraDar = Boolean(v.buyer_uid) && !v.claimed_at_ms;
+    const alvo = paraDar ? v.buyer_uid : v.holder_uid;
+    const perto = exp > now && exp - now <= GIFT_CARD_REMIND_DAYS * 86400000;
+    if (!alvo || !perto || v.expiry_reminded_at_ms || !((Number(v.balance_cents) || 0) > 0)) continue;
+    const quando = new Date(exp).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const loja = v.seller_name || 'uma loja';
+    // eslint-disable-next-line no-await-in-loop
+    await d.ref.update({ expiry_reminded_at_ms: now, updated_at: new Date(now) });
+    // eslint-disable-next-line no-await-in-loop
+    await notify(db, [alvo], !paraDar ? {
+      title: 'Seu vale-presente vence logo',
+      message: `Restam ${promo.formatBRL(v.balance_cents)} para usar em ${loja} até ${quando}.`,
+      link: '/mercado/vales',
+    } : {
+      title: 'O vale que você deu ainda não foi usado',
+      message: `O vale de ${promo.formatBRL(v.balance_cents)} de ${loja} vence em ${quando} e ninguém resgatou. Mande o código de novo a quem ganhou.`,
+      link: '/mercado/vales',
+    }, now);
+    feitos.giftCards += 1;
+  }
   const ocultas = await db.collection('market_reviews').where('visible', '==', false).get();
   const sellers = new Set();
   for (const d of ocultas.docs) {
@@ -1005,7 +1034,7 @@ async function housekeeping(ctx) {
     // eslint-disable-next-line no-await-in-loop
     await recomputeSellerRating(db, k, now);
   }
-  if (logger && (feitos.expired || feitos.completed || feitos.offers || feitos.reviews)) logger.info('Mercado: rotina.', feitos);
+  if (logger && Object.values(feitos).some(Boolean)) logger.info('Mercado: rotina.', feitos);
   return feitos;
 }
 

@@ -121,6 +121,18 @@ export function useAdminOrders(statuses, { enabled = true } = {}) {
   return useQuery({ queryKey: [...marketKeys.admin, 'pedidos', statuses.join(',')], queryFn: () => orders.listOrdersByStatus(statuses), enabled });
 }
 
+/** Admin: cupons e vales de todo o Mercado. */
+export function useAdminPromos({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: [...marketKeys.admin, 'promocoes'],
+    queryFn: async () => {
+      const [coupons, giftCards] = await Promise.all([svc.listAllCoupons(), svc.listAllGiftCards()]);
+      return { coupons, giftCards };
+    },
+    enabled,
+  });
+}
+
 /** Esta pessoa já denunciou este anúncio? */
 export function useMyReport(listingId, uid, { enabled = true } = {}) {
   return useQuery({ queryKey: ['mercado', 'denuncia', listingId, uid], queryFn: () => svc.getMyReport(listingId, uid), enabled: !!listingId && !!uid && enabled });

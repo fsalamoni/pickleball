@@ -63,6 +63,11 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
     e todo vale (`market_gift_cards`, `marketGiftCardAction`) só o servidor
     escreve; cancelar o pedido devolve o uso e o saldo. Vale só vale na loja que
     o vendeu, e o código completo só aparece para quem o comprou ou resgatou.
+    O cupom compartilhado por link (`/mercado/vendedor/:key?cupom=CODIGO`,
+    `services/pendingCoupon.js`) fica guardado na aba e entra aplicado no
+    carrinho daquela loja, uma vez. A rotina avisa, uma vez, o vale com saldo
+    que vence em até 30 dias. O admin vê e desliga cupom (com motivo, avisando
+    a loja) em Painel admin → Mercado → Cupons e vales.
 
 ## Telas
 
@@ -73,8 +78,8 @@ quem vende, `?como=` e `?aba=`), `/mercado/vender/anuncio/novo|:id` (editor),
 `/mercado/loja/abrir`, `/mercado/vales` (vales que comprei ou resgatei). No
 painel de quem vende, **Divulgar** (cupons, vale-presente, cartão da loja) e
 **Desempenho** (números de 30/90 dias + planilha). Cartões para compartilhar
-(anúncio, loja, vale) saem como PNG em `promo/ShareImageDialog`. Admin: seção **Mercado** do Painel admin (`mercado-*`:
-Visão geral, Problemas em pedidos, Anúncios, Pedidos, Lojas, Configurações),
+(anúncio, loja, cupom, vale) saem como PNG em `promo/ShareImageDialog`. Admin: seção **Mercado** do Painel admin (`mercado-*`:
+Visão geral, Problemas em pedidos, Anúncios, Pedidos, Lojas, Cupons e vales, Configurações),
 que some com a flag desligada; disputas e anúncios denunciados entram em
 "Precisa de você".
 

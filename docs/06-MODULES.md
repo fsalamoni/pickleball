@@ -814,6 +814,22 @@ drills sugerida, que a pessoa decide pôr nos treinos. Aba `/treino?aba=balanco`
 cartão no início, configuração própria e missões opcionais. Ver
 `docs/42-BALANCO-DO-JOGO.md`.
 
+## marketplace/ — o Mercado aberto (`/mercado`, flag `marketplace`)
+
+Não confundir com o mercado da arena logo abaixo (`arena_*`, PDV). Lojas
+aprovadas, atletas, professores e arenas anunciam; o comprador fecha um
+carrinho com vários vendedores (um pedido por vendedor) e paga pelo Pix de
+quem vende. Pedido, oferta, avaliação, disputa, uso de cupom e vale-presente
+são escritos só pelo servidor (`functions/marketplace.js`, paridade de preço
+em `marketPromo.parity.test.js`). O anúncio de arena pode ser ligado a um
+produto do estoque dela (estoque único). Divulgação: cupons por loja (o link
+`/mercado/vendedor/:key?cupom=CODIGO` já aplica no carrinho), vale-presente,
+cartões PNG com QR (anúncio, loja, cupom, vale). Rotina diária expira
+pedidos parados, conclui entregues, revela avaliações e avisa vale perto de
+vencer. Admin: Painel admin → Mercado (Visão geral, Problemas em pedidos,
+Anúncios, Pedidos, Lojas, Cupons e vales, Configurações). Detalhe em
+`src/modules/marketplace/README.md`.
+
 ## arenas/ — Mercado (NOVO Onda J)
 
 Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).

@@ -9,7 +9,7 @@ import React, { forwardRef, useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
-import { Check, Copy, Download, Gift, Share2, Store } from 'lucide-react';
+import { Check, Copy, Download, Gift, Share2, Store, TicketPercent } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
@@ -30,21 +30,27 @@ function useQr(url) {
   return qr;
 }
 
-/** O cartão de um anúncio ou de uma loja (1080 × 1350 depois do 3×). */
-export const MarketShareCard = forwardRef(function MarketShareCard({ kind = 'listing', image, title, subtitle, priceCents, compareAtCents, highlight, qr, showImage = true }, ref) {
+/** O cartão de um anúncio, de uma loja ou de um cupom (1080 × 1350 depois do 3×). */
+const EYEBROW = { store: 'Loja no Mercado PickleRush', coupon: 'Cupom no Mercado PickleRush' };
+const ICONE = { store: Store, coupon: TicketPercent };
+export const MarketShareCard = forwardRef(function MarketShareCard({ kind = 'listing', image, title, subtitle, priceCents, compareAtCents, highlight, code, qr, showImage = true }, ref) {
+  const Icone = ICONE[kind] || Gift;
   const pct = discountPercent(priceCents, compareAtCents);
   return (
     <div ref={ref} className="tema-claro mx-auto flex w-[360px] flex-col overflow-hidden rounded-3xl bg-ink text-white" style={{ aspectRatio: '4 / 5' }}>
       <div className="relative flex-1 bg-paper">
         {showImage && image
           ? <img src={image} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
-          : <div className="flex h-full items-center justify-center text-ink">{kind === 'store' ? <Store className="h-20 w-20" /> : <Gift className="h-20 w-20" />}</div>}
+          : <div className="flex h-full items-center justify-center text-ink"><Icone className="h-20 w-20" /></div>}
+        {code && (
+          <span className="absolute inset-x-6 bottom-6 rounded-2xl border-2 border-dashed border-ink bg-acid px-4 py-3 text-center font-display text-3xl font-bold tracking-widest text-ink">{code}</span>
+        )}
         {pct > 0 && <span className="absolute left-4 top-4 rounded-full bg-acid px-3 py-1 font-display text-sm font-bold text-ink">−{pct}%</span>}
         {highlight && <span className="absolute bottom-4 left-4 rounded-full bg-paper-pure px-3 py-1 text-xs font-bold text-ink">{highlight}</span>}
       </div>
       <div className="flex items-end gap-3 p-5">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-widest text-acid">{kind === 'store' ? 'Loja no Mercado PickleRush' : 'Mercado PickleRush'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-acid">{EYEBROW[kind] || 'Mercado PickleRush'}</p>
           <p className="mt-1 line-clamp-2 font-display text-xl font-bold leading-tight">{title}</p>
           {subtitle && <p className="mt-1 line-clamp-1 text-sm text-white/80">{subtitle}</p>}
           {priceCents > 0 && (

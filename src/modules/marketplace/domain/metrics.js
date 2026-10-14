@@ -3,6 +3,7 @@
  * Valor movimentado só conta o que CONCLUIU: pedido cancelado não vendeu.
  */
 import { ORDER_FINAL_STATUSES } from './constants.js';
+import { couponLive } from './promotions.js';
 
 const DIA = 86400000;
 
@@ -28,5 +29,36 @@ export function marketMetrics(orders = [], { now = Date.now(), days = 30 } = {})
     lostCount: perdidos.length,
     completionRate: decididos ? concluidos.length / decididos : null,
     avgTicketCents: concluidos.length ? Math.round(soma(concluidos) / concluidos.length) : null,
+  };
+}
+
+/**
+ * Cupons e vales do Mercado inteiro, para o admin. O saldo EM ABERTO dos vales
+ * é o que as lojas ainda devem em mercadoria: só vale ativo, não vencido, com
+ * saldo. O vencido com saldo é contado à parte (é o que alguém perdeu).
+ */
+export function promoOverview(coupons = [], giftCards = [], { now = Date.now() } = {}) {
+  const vivo = (c) => couponLive(c, now);
+  const ativos = coupons.filter(vivo);
+  const saldo = (g) => Number(g.balance_cents) || 0;
+  const valendo = giftCards.filter((g) => g.status === 'active' && saldo(g) > 0 && !(Number(g.expires_at_ms) && now > Number(g.expires_at_ms)));
+  const vencidos = giftCards.filter((g) => g.status === 'active' && saldo(g) > 0 && Number(g.expires_at_ms) && now > Number(g.expires_at_ms));
+  const porLoja = new Map();
+  valendo.forEach((g) => {
+    const k = g.seller_key || '';
+    const a = porLoja.get(k) || { seller_key: k, seller_name: g.seller_name || '', count: 0, balance_cents: 0 };
+    a.count += 1;
+    a.balance_cents += saldo(g);
+    porLoja.set(k, a);
+  });
+  return {
+    couponsActive: ativos.length,
+    couponUses: coupons.reduce((t, c) => t + (Number(c.uses_count) || 0), 0),
+    topCoupons: [...coupons].sort((a, b) => (Number(b.uses_count) || 0) - (Number(a.uses_count) || 0)),
+    isLive: vivo,
+    giftCardsActive: valendo.length,
+    openBalanceCents: valendo.reduce((t, g) => t + saldo(g), 0),
+    expiredBalanceCents: vencidos.reduce((t, g) => t + saldo(g), 0),
+    giftCardsByStore: [...porLoja.values()].sort((a, b) => b.balance_cents - a.balance_cents),
   };
 }

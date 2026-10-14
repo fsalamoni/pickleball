@@ -3,7 +3,8 @@
  * também vira imagem para mandar a quem ganha), o diálogo de dar um vale e a
  * lista de cupons divulgados de uma loja.
  */
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Gift, TicketPercent } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,6 +15,8 @@ import {
 } from '@/modules/marketplace/domain/promotions';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { giftCardAction } from '@/modules/marketplace/services/marketOrderService';
+import { findCoupon } from '@/modules/marketplace/services/marketService';
+import { savePendingCoupon } from '@/modules/marketplace/services/pendingCoupon';
 import { useMarketMutation, usePublicCoupons } from '@/modules/marketplace/hooks/useMarket';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import { V2Button, V2Field, V2FilterChip, V2Input, V2Textarea } from '@/v2/ui/primitives';
@@ -106,27 +109,53 @@ export function GiftCardBuyDialog({ open, onOpenChange, seller, onBought }) {
   );
 }
 
-/** Os cupons divulgados de uma loja, para copiar. Some quando não há nenhum. */
-export function StoreCoupons({ sellerKey, title = 'Cupons desta loja', compact = false }) {
+/** O cupom que veio no link (`?cupom=`): dito no topo e guardado para o carrinho. */
+function SharedCoupon({ sellerKey, code }) {
+  const q = useQuery({ queryKey: ['market', 'coupon', sellerKey, code], queryFn: () => findCoupon(sellerKey, code), enabled: Boolean(sellerKey && code), staleTime: 60000 });
+  const c = q.data;
+  const vale = c && couponLive(c);
+  useEffect(() => { if (vale) savePendingCoupon(sellerKey, c.code); }, [vale, sellerKey, c?.code]);
+  if (!code || q.isLoading) return null;
+  if (q.isError) return <p role="status" className="text-sm text-gray-600">Não deu para conferir o cupom {code} agora. Ele pode ser digitado no carrinho.</p>;
+  if (!vale) return <p role="status" className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">O cupom {code} do link não vale mais nesta loja. Os produtos continuam à venda.</p>;
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-ink bg-acid/20 px-4 py-3">
+      <TicketPercent className="h-5 w-5 shrink-0 text-ink" />
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="block font-bold text-ink">{couponBenefitLabel(c)} com o cupom {c.code}</span>
+        <span className="block text-gray-600">{couponConditionsLabel(c) ? `${couponConditionsLabel(c)} · ` : ''}Ele já entra aplicado no carrinho desta loja.</span>
+      </p>
+      <CopyCodeButton code={c.code} size="sm" successMessage="Cupom copiado." />
+    </div>
+  );
+}
+
+/** Os cupons divulgados de uma loja, para copiar. Some quando não há nenhum (nem cupom de link). */
+export function StoreCoupons({ sellerKey, title = 'Cupons desta loja', compact = false, sharedCode = '' }) {
   const q = usePublicCoupons(sellerKey);
-  const lista = (q.data || []).filter((c) => couponLive(c));
-  if (!lista.length) return null;
+  const lista = (q.data || []).filter((c) => couponLive(c) && c.code !== sharedCode);
+  if (!lista.length && !sharedCode) return null;
   return (
     <section aria-label={title} className="space-y-2">
-      <h2 className={compact ? 'flex items-center gap-2 text-sm font-bold text-ink' : 'flex items-center gap-2 font-display text-lg font-bold text-ink'}>
-        <TicketPercent className="h-4 w-4" /> {title}
-      </h2>
-      <ul className="flex flex-wrap gap-2">
-        {lista.slice(0, compact ? 2 : 6).map((c) => (
-          <li key={c.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-dashed border-ink bg-paper px-3 py-2">
-            <span className="min-w-0 text-sm">
-              <span className="block font-bold text-ink">{couponBenefitLabel(c)}</span>
-              <span className="block text-xs text-gray-500">{c.description || couponConditionsLabel(c) || 'Use no carrinho'}</span>
-            </span>
-            <CopyCodeButton code={c.code} size="sm" successMessage="Cupom copiado. Cole no carrinho." />
-          </li>
-        ))}
-      </ul>
+      {sharedCode && <SharedCoupon sellerKey={sellerKey} code={sharedCode} />}
+      {lista.length > 0 && (
+        <>
+          <h2 className={compact ? 'flex items-center gap-2 text-sm font-bold text-ink' : 'flex items-center gap-2 font-display text-lg font-bold text-ink'}>
+            <TicketPercent className="h-4 w-4" /> {title}
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {lista.slice(0, compact ? 2 : 6).map((c) => (
+              <li key={c.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-dashed border-ink bg-paper px-3 py-2">
+                <span className="min-w-0 text-sm">
+                  <span className="block font-bold text-ink">{couponBenefitLabel(c)}</span>
+                  <span className="block text-xs text-gray-500">{c.description || couponConditionsLabel(c) || 'Use no carrinho'}</span>
+                </span>
+                <CopyCodeButton code={c.code} size="sm" successMessage="Cupom copiado. Cole no carrinho." />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
