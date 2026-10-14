@@ -1811,6 +1811,7 @@ export default {
   "Você já está inscrito.": "You're already registered.",
   "Você já está matriculado nesta aula.": "You're already enrolled in this lesson.",
   "Você já está na fila.": "You're already in the queue.",
+  "Esta pessoa já usou este cupom.": "This person has already used this coupon.",
   "Você já usou este cupom.": "You've already used this coupon.",
   "Você não conduz este dia de jogo": "You don't run this game day",
   "Você não está na fila.": "You're not in the queue.",

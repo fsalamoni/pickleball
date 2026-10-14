@@ -53,7 +53,8 @@ export default function PromoReception({ issuer, cupom: cupomDado = null, onDone
     ? couponError(achado, {
       anyFamily: true,
       usedByUser: Boolean(quem?.id) && (achado.used_by || []).includes(quem.id),
-    })?.replace('Você já usou', 'Esta pessoa já usou')
+      byOther: true,
+    })
     : null;
 
   const confirmar = async () => {

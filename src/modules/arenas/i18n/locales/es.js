@@ -1811,6 +1811,7 @@ export default {
   "Você já está inscrito.": "Ya estás inscrito.",
   "Você já está matriculado nesta aula.": "Ya estás inscrito en esta clase.",
   "Você já está na fila.": "Ya estás en la fila.",
+  "Esta pessoa já usou este cupom.": "Esta persona ya usó este cupón.",
   "Você já usou este cupom.": "Ya usaste este cupón.",
   "Você não conduz este dia de jogo": "No conduces este día de juego",
   "Você não está na fila.": "No estás en la fila.",

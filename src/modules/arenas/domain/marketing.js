@@ -351,7 +351,7 @@ export function applyCoupon(price, coupon) {
  * @returns {string|null}
  */
 export function couponError(coupon, ctx = {}) {
-  const { amount = 0, usedByUser = false, now = Date.now() } = ctx;
+  const { amount = 0, usedByUser = false, byOther = false, now = Date.now() } = ctx;
   if (!coupon) return t('Cupom não encontrado.');
   // Vale e indicação não entram no preço da reserva — e dizer por quê ensina
   // onde usar, em vez de parecer que o código está errado.
@@ -369,7 +369,7 @@ export function couponError(coupon, ctx = {}) {
     return t('Este cupom já atingiu o limite de usos.');
   }
   if (coupon.once_per_user !== false && usedByUser) {
-    return t('Você já usou este cupom.');
+    return byOther ? t('Esta pessoa já usou este cupom.') : t('Você já usou este cupom.');
   }
   const minimo = Number(coupon.min_amount) || 0;
   if (minimo > 0 && Number(amount) < minimo) {
