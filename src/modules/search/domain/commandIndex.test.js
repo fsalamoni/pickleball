@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { commandIndex, filtrarComandos, lembrarRecente, RECENTES_MAX } from './commandIndex';
+import { buscaNoMercado, commandIndex, filtrarComandos, lembrarRecente, RECENTES_MAX } from './commandIndex';
 
 const hubs = [
   { id: 'inicio', label: 'Início', to: '/', children: [] },
@@ -40,5 +40,16 @@ describe('commandIndex', () => {
     r = lembrarRecente(r, { label: 'x', to: '/t3' });
     expect(r[0].to).toBe('/t3');
     expect(r.filter((x) => x.to === '/t3').length).toBe(1);
+  });
+});
+
+describe('Mercado na paleta', () => {
+  it('só com o Mercado ligado oferece comprar, anunciar e buscar', () => {
+    expect(commandIndex({}).acoes.some((a) => a.to.startsWith('/mercado'))).toBe(false);
+    const ids = commandIndex({ mercadoOn: true }).acoes.map((a) => a.id);
+    expect(ids).toEqual(expect.arrayContaining(['acao:mercado', 'acao:anunciar']));
+    expect(buscaNoMercado('raquete', false)).toBeNull();
+    expect(buscaNoMercado('r', true)).toBeNull();
+    expect(buscaNoMercado(' raquete joola ', true).to).toBe('/mercado?q=raquete%20joola');
   });
 });

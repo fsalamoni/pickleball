@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
@@ -46,6 +48,8 @@ import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V
 
 // O banner de campanha (desenho, modelos, especificação) pesa ~25 kB: vem sob
 // demanda, e só a arena com campanha no ar paga por ele (Onda CC).
+// Mercado (flag `marketplace`): só baixa com a flag ligada.
+const SellerMarketTeaser = lazy(() => import('@/v2/components/marketplace/SellerMarketTeaser'));
 const ArenaCampaignsSection = lazy(() => import('@/v2/components/arenas/marketing/campaigns/ArenaCampaignsSection'));
 
 function arenaPhotoUrl(photo) {
@@ -93,6 +97,7 @@ export default function V2ArenaDetail() {
 }
 
 function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, arenaFalhou, recarregarArena, bookingOpen, setBookingOpen }) {
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const [sharedOpen, setSharedOpen] = useState(false);
@@ -376,6 +381,13 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
           vende. Some sozinha com o módulo desligado ou sem nada à venda. */}
       <div id="arena-loja" data-secao-arena="Loja" className="scroll-mt-4"><ArenaShopSection arena={arena} /></div>
+
+      {/* Também no Mercado (flag `marketplace`) — some sem anúncio no ar. */}
+      {mercadoOn && (
+        <div id="arena-mercado" data-secao-arena="No Mercado" className="scroll-mt-4">
+          <Suspense fallback={null}><SellerMarketTeaser sellerKey={`arena_${arenaId}`} quem={arena.name} /></Suspense>
+        </div>
+      )}
 
       {/* Outras unidades da rede (módulo Multi-unidade) — para quem joga aqui
           saber que existem irmãs. Some sem rede ou sem outra unidade. */}

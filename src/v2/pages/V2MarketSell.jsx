@@ -46,11 +46,11 @@ import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
 
 const ABAS = [
   { value: 'resumo', label: 'Resumo', icon: LayoutDashboard },
-  { value: 'anuncios', label: 'Anúncios', icon: Package },
-  { value: 'vendas', label: 'Vendas', icon: Receipt },
+  { value: 'anuncios', label: 'Anúncios', icon: Package, dica: 'mercado-vender-anuncios' },
+  { value: 'vendas', label: 'Vendas', icon: Receipt, dica: 'mercado-vender-vendas' },
   { value: 'ofertas', label: 'Ofertas', icon: HandCoins },
   { value: 'perguntas', label: 'Perguntas', icon: MessageCircleQuestion },
-  { value: 'pix', label: 'Recebimento', icon: Wallet },
+  { value: 'pix', label: 'Recebimento', icon: Wallet, dica: 'mercado-vender-pix' },
   { value: 'vitrine', label: 'Vitrine', icon: Store },
 ];
 

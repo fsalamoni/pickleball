@@ -17,15 +17,17 @@ export const RECENTES_MAX = 6;
 
 /**
  * @param {{ hubs?: Array, arenas?: Array<{id,name}>, treinoOn?: boolean,
- *           isPlatformAdmin?: boolean, rotulos?: object }} ctx
+ *           isPlatformAdmin?: boolean, mercadoOn?: boolean, rotulos?: object }} ctx
  */
 export function commandIndex(ctx = {}) {
-  const { hubs = [], arenas = [], treinoOn = false, isPlatformAdmin = false } = ctx;
+  const { hubs = [], arenas = [], treinoOn = false, isPlatformAdmin = false, mercadoOn = false } = ctx;
   const acoes = [
     { id: 'acao:reservar', label: 'Reservar quadra', to: '/arenas', icon: 'Building2' },
     { id: 'acao:dia-de-jogo', label: 'Criar dia de jogo', to: '/dia-de-jogo?criar=1', icon: 'Dices' },
     { id: 'acao:entrar', label: 'Entrar num jogo', to: '/procura-jogo', icon: 'Swords' },
     treinoOn && { id: 'acao:treino', label: 'Meus treinos', to: '/treino', icon: 'Dumbbell' },
+    mercadoOn && { id: 'acao:mercado', label: 'Comprar no Mercado', to: '/mercado', icon: 'Store' },
+    mercadoOn && { id: 'acao:anunciar', label: 'Anunciar no Mercado', to: '/mercado/vender', icon: 'Store' },
     ...arenas.filter((a) => a?.id).map((a) => ({
       id: `acao:central:${a.id}`, label: `Abrir a Central da arena ${a.name || ''}`.trim(), to: `/arenas/${a.id}/gerir`, icon: 'LayoutDashboard',
     })),
@@ -55,6 +57,17 @@ export function filtrarComandos(termo, indice, { limite = 6 } = {}) {
     acoes: indice.acoes.filter(casa).slice(0, limite),
     telas: t ? indice.telas.filter(casa).slice(0, limite) : [],
   };
+}
+
+/**
+ * Com o Mercado ligado e um termo digitado, o atalho "Buscar “termo” no
+ * Mercado" — a busca dos anúncios é a do próprio Mercado (filtros, ordenação),
+ * então a paleta só leva até lá, sem consulta própria.
+ */
+export function buscaNoMercado(termo, mercadoOn) {
+  const t = String(termo || '').trim();
+  if (!mercadoOn || t.length < 2) return null;
+  return { id: 'acao:mercado-busca', label: `Buscar “${t}” no Mercado`, to: `/mercado?q=${encodeURIComponent(t)}`, icon: 'Store' };
 }
 
 /** Guarda um destino escolhido no topo dos recentes (sem repetir, no máximo RECENTES_MAX). */

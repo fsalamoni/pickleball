@@ -19,7 +19,7 @@ import {
 } from './homeCards.js';
 import { FOCUS_REASON, HOME_FOCUS, HOME_SECTION, resolveHomeFoci } from './homeProfile.js';
 
-const TUDO = { evolucao: true, treino: true };
+const TUDO = { evolucao: true, treino: true, mercado: true };
 
 describe('⭐ o padrão', () => {
   it('são três cards: Dias de jogo, Horários da arena e Ranking — nessa ordem', () => {
@@ -106,6 +106,12 @@ describe('o que depende de outra funcionalidade', () => {
     expect(homeCardAvailable('evolucao', { evolucao: true })).toBe(true);
     expect(homeCardAvailable('jogar', {})).toBe(true);
     expect(homeCardAvailable('inventado', TUDO)).toBe(false);
+  });
+
+  it('o Mercado só existe com a flag do Mercado ligada, e nunca no padrão', () => {
+    expect(homeCardAvailable(HOME_CARD.MERCADO, {})).toBe(false);
+    expect(homeCardAvailable(HOME_CARD.MERCADO, { mercado: true })).toBe(true);
+    expect(DEFAULT_HOME_CARDS).not.toContain(HOME_CARD.MERCADO);
   });
 
   it('⭐ o treino só existe com o Centro de Treino ligado, e nunca no padrão', () => {

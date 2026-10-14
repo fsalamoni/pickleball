@@ -9,6 +9,8 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useParams, Navigate, useSearchParams } from 'react-router-dom';
 import { GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoaches';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { canAcceptStudents } from '@/modules/coaches/domain/coach';
@@ -32,6 +34,7 @@ import {
 
 // Promoções do professor (Onda CG, flag `coach_marketing`) — sob demanda: com
 // a flag desligada, o perfil não baixa nada do marketing.
+const SellerMarketTeaser = lazy(() => import('@/v2/components/marketplace/SellerMarketTeaser'));
 const CoachPromosSection = lazy(() => import('@/v2/components/promo/CoachPromosSection'));
 
 function ResidencyCard({ residency }) {
@@ -61,6 +64,7 @@ function ResidencyCard({ residency }) {
 
 export default function V2CoachProfile() {
   const { coachId } = useParams();
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const { user, isAuthenticated } = useAuth();
   const { data: coach, isLoading, isError: perfilFalhou, refetch: recarregarPerfil } = useCoach(coachId);
   const { data: residencies = [], isError: arenasFalharam, refetch: recarregarArenas } = useCoachResidencies(coachId);
@@ -266,6 +270,13 @@ export default function V2CoachProfile() {
             ))}
           </div>
         </V2Surface>
+      )}
+
+      {/* Também no Mercado (flag `marketplace`) — some sem anúncio no ar. */}
+      {mercadoOn && (
+        <div id="professor-mercado" className="scroll-mt-4">
+          <Suspense fallback={null}><SellerMarketTeaser sellerKey={`coach_${coachId}`} quem={coach?.name || coach?.display_name} /></Suspense>
+        </div>
       )}
 
       {/* Calendário público de disponibilidade (item 3.1) */}

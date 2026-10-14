@@ -15,10 +15,11 @@ import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
 import { useMarketCart, useMarketSettings } from '@/modules/marketplace/hooks/useMarket';
 import { CategoryIcon } from './marketUi';
 
-function HeaderLink({ to, icon: Icon, label, badge }) {
+function HeaderLink({ to, icon: Icon, label, badge, dica }) {
   return (
     <Link
       to={to}
+      data-dica={dica}
       className="relative flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold text-ink hover:bg-paper"
       aria-label={badge ? `${label} (${badge})` : label}
     >
@@ -61,7 +62,7 @@ export default function MarketHeader({ className }) {
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-acid"><Store className="h-5 w-5" /></span>
           <span className="font-display text-xl font-bold text-ink">Mercado</span>
         </Link>
-        <form role="search" onSubmit={buscar} className="relative min-w-0 flex-1">
+        <form role="search" onSubmit={buscar} data-dica="mercado-busca" className="relative min-w-0 flex-1">
           <label htmlFor="mercado-busca" className="sr-only">Buscar no Mercado</label>
           <input
             id="mercado-busca"
@@ -86,11 +87,11 @@ export default function MarketHeader({ className }) {
             <HeaderLink to="/mercado/favoritos" icon={Heart} label="Favoritos" />
             <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label="Compras" />
           </span>
-          <HeaderLink to="/mercado/vender" icon={Store} label="Vender" />
-          <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label="Carrinho" badge={cart.isError ? 0 : cart.count} />
+          <HeaderLink to="/mercado/vender" icon={Store} label="Vender" dica="mercado-vender" />
+          <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label="Carrinho" dica="mercado-carrinho" badge={cart.isError ? 0 : cart.count} />
         </nav>
       </div>
-      <nav aria-label="Departamentos" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
+      <nav aria-label="Departamentos" data-dica="mercado-departamentos" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
         <ul className="flex gap-2 sm:flex-wrap">
           {cats.map((c) => {
             const ativo = cat === c.slug || (cat && c.children?.some((f) => f.slug === cat));

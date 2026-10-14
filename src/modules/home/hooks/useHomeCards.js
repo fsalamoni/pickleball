@@ -9,6 +9,8 @@
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 
 import {
   chosenHomeCards, isDefaultHomeCards, moveHomeCard, toggleHomeCard,
@@ -28,7 +30,8 @@ export function useHomeCardsOn() {
 export function useHomeCardsContext() {
   const evolucao = true;
   const treino = true;
-  return useMemo(() => ({ evolucao, treino }), [evolucao, treino]);
+  const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  return useMemo(() => ({ evolucao, treino, mercado }), [evolucao, treino, mercado]);
 }
 
 /**

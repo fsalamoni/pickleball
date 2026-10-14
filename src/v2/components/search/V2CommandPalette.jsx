@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
-  Building2, ChevronRight, Dices, Dumbbell, LayoutDashboard, LifeBuoy, Search, Swords, Trophy, Users, Users2, Clock,
+  Building2, ChevronRight, Dices, Dumbbell, LayoutDashboard, LifeBuoy, Search, Store, Swords, Trophy, Users, Users2, Clock,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
@@ -22,13 +22,13 @@ import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useClubs } from '@/modules/clubs/hooks/useClubs';
 import { searchAll } from '@/modules/athletes/domain/globalSearch';
 import { searchHelp } from '@/modules/help/domain/helpCenter';
-import { commandIndex, filtrarComandos, lembrarRecente } from '@/modules/search/domain/commandIndex';
+import { buscaNoMercado, commandIndex, filtrarComandos, lembrarRecente } from '@/modules/search/domain/commandIndex';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { recordEvent } from '@/core/services/observabilityService';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
 
-const ICONES = { Building2, ChevronRight, Dices, Dumbbell, LayoutDashboard, Swords, LifeBuoy, Clock };
+const ICONES = { Building2, ChevronRight, Dices, Dumbbell, LayoutDashboard, Store, Swords, LifeBuoy, Clock };
 const ICONE_TIPO = { athlete: Users, tournament: Trophy, arena: Building2, club: Users2 };
 const SEM_ITENS = [];
 const PREF_RECENTES = 'busca:recentes';
@@ -40,7 +40,7 @@ function useDebounced(valor, ms) {
   return v;
 }
 
-export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas = [], treinoOn = false, isPlatformAdmin = false }) {
+export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas = [], treinoOn = false, isPlatformAdmin = false, mercadoOn = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [termo, setTermo] = useState('');
@@ -55,13 +55,16 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
   const clubesQ = useClubs();
 
   const indice = useMemo(
-    () => commandIndex({ hubs, arenas, treinoOn, isPlatformAdmin }),
-    [hubs, arenas, treinoOn, isPlatformAdmin],
+    () => commandIndex({ hubs, arenas, treinoOn, isPlatformAdmin, mercadoOn }),
+    [hubs, arenas, treinoOn, isPlatformAdmin, mercadoOn],
   );
   const recentes = useMemo(() => (open ? readViewPreference(user?.uid, PREF_RECENTES) || [] : []), [open, user?.uid]);
 
   const grupos = useMemo(() => {
-    const { acoes, telas } = filtrarComandos(termoBusca, indice);
+    const filtrados = filtrarComandos(termoBusca, indice);
+    const noMercado = buscaNoMercado(termoBusca, mercadoOn);
+    const acoes = noMercado ? [...filtrados.acoes, noMercado] : filtrados.acoes;
+    const { telas } = filtrados;
     const dados = searchAll(termoBusca, {
       athletes: atletasQ.data ?? SEM_ITENS, tournaments: torneiosQ.data ?? SEM_ITENS,
       arenas: arenasQ.data ?? SEM_ITENS, clubs: clubesQ.data ?? SEM_ITENS,
@@ -79,7 +82,7 @@ export default function V2CommandPalette({ open, onOpenChange, hubs = [], arenas
       ajuda.length > 0 && { grupo: 'ajuda', label: 'Ajuda', itens: ajuda },
     ].filter(Boolean);
     return lista;
-  }, [termoBusca, indice, recentes, atletasQ.data, torneiosQ.data, arenasQ.data, clubesQ.data]);
+  }, [termoBusca, mercadoOn, indice, recentes, atletasQ.data, torneiosQ.data, arenasQ.data, clubesQ.data]);
 
   const planos = useMemo(() => grupos.flatMap((g) => g.itens.map((i) => ({ ...i, grupo: g.grupo }))), [grupos]);
   const fontes = [['atletas', atletasQ], ['torneios', torneiosQ], ['arenas', arenasQ], ['clubes', clubesQ]];

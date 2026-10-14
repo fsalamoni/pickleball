@@ -4,10 +4,14 @@
  */
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Store, Plus, Trash2, Pencil, Eye, EyeOff,
+  Store, Plus, Trash2, Pencil, Eye, EyeOff, ShoppingBag,
 } from 'lucide-react';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { draftFromCoachProduct } from '@/modules/marketplace/domain/internalProducts';
 import {
   COACH_PRODUCT_CATEGORY_LABELS, coachProductCategoryLabel, formatCoachProductPrice,
 } from '../domain/coachProduct.js';
@@ -80,6 +84,9 @@ function ProductForm({ coachId, product, onClose }) {
 export default function CoachStoreSection({ coachId }) {
   const { data: products = [], isLoading } = useCoachProducts(coachId, { full: true });
   const del = useDeleteCoachProduct();
+  // Mercado (flag `marketplace`): o produto vira rascunho de anúncio, como professor.
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  const novoAnuncio = `/mercado/vender/anuncio/novo?como=${encodeURIComponent(`coach_${coachId}`)}`;
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -103,6 +110,7 @@ export default function CoachStoreSection({ coachId }) {
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
         Cadastre itens que você vende. Marque como público para exibir no seu perfil profissional.
+        {mercadoOn && ' Para vender com carrinho e Pix para todo o PickleRush, anuncie no Mercado.'}
       </p>
 
       {showForm && <div className="mb-4"><ProductForm coachId={coachId} product={editing} onClose={close} /></div>}
@@ -126,6 +134,15 @@ export default function CoachStoreSection({ coachId }) {
                 <p className="text-xs text-gray-500">{formatCoachProductPrice(p.price)}{p.description ? ` · ${p.description}` : ''}</p>
               </div>
               <div className="flex items-center gap-1.5">
+                {mercadoOn && (
+                  <Link
+                    to={novoAnuncio}
+                    state={{ rascunho: draftFromCoachProduct(p) }}
+                    className="inline-flex min-h-9 items-center gap-1 rounded-full border border-gray-200 px-3 text-xs font-bold text-ink hover:bg-white"
+                  >
+                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" /> Anunciar no Mercado
+                  </Link>
+                )}
                 <button type="button" onClick={() => openEdit(p)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
