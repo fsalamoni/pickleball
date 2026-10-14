@@ -58,8 +58,11 @@ const ORDER_ACTIONS = Object.freeze({
 
 const RESTOCK_ON = Object.freeze([S.CANCELLED, S.EXPIRED]);
 /** O produto já saiu das mãos de quem vende: cancelar NÃO devolve o estoque (a pessoa ajusta à mão se ele voltar). */
-const GOODS_OUT = Object.freeze([S.SHIPPED, S.READY, S.DELIVERED, S.DISPUTED]);
-const devolveEstoque = (order, to) => RESTOCK_ON.includes(to) && !GOODS_OUT.includes(order.status);
+const GOODS_OUT = Object.freeze([S.SHIPPED, S.READY, S.DELIVERED]);
+// Em disputa vale o estado de antes dela (`disputed_from`): disputa aberta
+// com o pedido só pago ainda tem o produto com quem vende.
+const devolveEstoque = (order, to) => RESTOCK_ON.includes(to)
+  && !GOODS_OUT.includes(order.status === S.DISPUTED ? order.disputed_from : order.status);
 /** O envio pelo correio demora: o pedido enviado só se conclui sozinho depois disto. */
 const SHIPPED_AUTO_COMPLETE_DAYS = 30;
 
@@ -676,6 +679,7 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
         reason: extra.reason, status: 'open', previous_status: order.status, created_at: new Date(now), created_at_ms: now,
       });
       upd.dispute_id = orderId;
+      upd.disputed_from = order.status;
     }
     if (action === 'resolve_buyer' || action === 'resolve_seller') {
       tx.set(db.collection('market_disputes').doc(orderId), {
