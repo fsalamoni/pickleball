@@ -84,3 +84,16 @@ describe('dataExportFilename', () => {
     expect(fn).toMatch(/^picklerush-ana-clara-\d{4}-\d{2}-\d{2}\.json$/);
   });
 });
+
+describe('exportação: o Mercado', () => {
+  it('entra só quando coletado, com as contagens', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('market');
+    const out = buildDataExport({
+      uid: 'u1',
+      market: { orders: [{ id: 'o1', created_at: { toDate: () => new Date('2026-10-01T12:00:00Z') } }], selling: [{ seller: { id: 'athlete_u1' }, listings: [] }], media_paths: ['mercado/u1/a.webp', 3] },
+    });
+    expect(out.market.orders[0].created_at).toBe('2026-10-01T12:00:00.000Z');
+    expect(out.market.media_paths).toEqual(['mercado/u1/a.webp']);
+    expect(out.market.counts).toMatchObject({ orders: 1, selling_as: 1, media: 1, offers: 0 });
+  });
+});

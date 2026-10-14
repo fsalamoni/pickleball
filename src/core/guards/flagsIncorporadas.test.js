@@ -9,11 +9,11 @@ import {
  * que uma funcionalidade incorporada volte a depender do banco.
  */
 describe('funcionalidades incorporadas não são flags', () => {
-  it('restam as 3 flags que estavam desligadas, e nada mais (a nav_v3 virou código em 2026-10-11)', () => {
+  it('restam as 3 flags que estavam desligadas mais o Mercado (2026-10-13), e nada mais', () => {
     expect(Object.values(FEATURE_FLAG).sort()).toEqual(
-      ['dupr_official_sync', 'gameday_king_of_court', 'gameday_mexicano'],
+      ['dupr_official_sync', 'gameday_king_of_court', 'gameday_mexicano', 'marketplace'],
     );
-    expect(countFlags({}).total).toBe(3);
+    expect(countFlags({}).total).toBe(4);
   });
 
   it('as 33 incorporadas valem true mesmo com o banco dizendo false', () => {

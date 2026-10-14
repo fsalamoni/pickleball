@@ -51,6 +51,7 @@ export const NOTIFICATION_TYPE = Object.freeze({
   TRAINING_COMMENT: 'training_comment',
   TRAINING_QUESTION: 'training_question',
   TRAINING_ANSWER: 'training_answer',
+  MARKET: 'market',
   GENERIC: 'generic',
 });
 

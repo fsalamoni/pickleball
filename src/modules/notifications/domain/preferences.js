@@ -47,6 +47,12 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
     types: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
   },
   {
+    id: 'market',
+    label: 'Mercado',
+    description: 'Pedidos, perguntas, ofertas e avaliações do Mercado.',
+    types: ['market'],
+  },
+  {
     id: 'gamification',
     label: 'Gamificação',
     description: 'Resumo da semana, duelos, resultados de desafios e pedidos de recompensa.',

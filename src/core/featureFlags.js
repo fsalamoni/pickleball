@@ -48,6 +48,22 @@ export const FEATURE_FLAG = Object.freeze({
    */
   GAMEDAY_KING_OF_COURT: 'gameday_king_of_court',
 
+  /**
+   * MERCADO — o marketplace próprio da plataforma (`/mercado`).
+   *
+   * Vitrine de produtos de pickleball com busca, filtros, carrinho, favoritos,
+   * perguntas, ofertas, pedidos com Pix direto ao vendedor e avaliações.
+   * Vendem atletas e professores (Minha área → Vender), arenas (inclusive
+   * produtos do Mercado da arena, com estoque único) e lojas aprovadas pelo
+   * admin. NÃO é o Mercado interno da arena (`arena_*`): usa só coleções
+   * `market_*`.
+   *
+   * Desligada, nada aparece — rota, menu, card do início, seção da Minha
+   * área — e nenhuma coleção `market_*` é lida. Ligar e desligar não apaga
+   * nada. Ver `src/modules/marketplace/README.md`.
+   */
+  MARKETPLACE: 'marketplace',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -445,6 +461,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'na troca de formato e no sorteio, no atleta, na arena, no clube e no '
       + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
       + 'criados como Rei da Quadra continuam funcionando normalmente.',
+  },
+  [FEATURE_FLAG.MARKETPLACE]: {
+    label: 'Mercado (marketplace)',
+    description:
+      'Abre o Mercado em /mercado: anúncios de atletas, professores, arenas e '
+      + 'lojas, com busca, filtros, carrinho, favoritos, perguntas, ofertas, '
+      + 'pedidos com Pix direto ao vendedor e avaliações. Desligada, o Mercado '
+      + 'some de todo lugar e nada é lido; anúncios e pedidos ficam guardados.',
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: 'DUPR oficial (fase 2 — reservado)',

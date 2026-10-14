@@ -23,6 +23,7 @@ const CATEGORY_TYPES = Object.freeze({
   tournaments: ['tournament_open', 'tournament_announcement'],
   partners: ['partner_invite', 'partner_response'],
   training: ['training_share', 'training_review', 'training_comment', 'training_question', 'training_answer'],
+  market: ['market'],
   gamification: ['gamification'],
   reminders: ['profile_reminder', 'leveling_reminder'],
 });
@@ -73,6 +74,7 @@ const AREA_DO_TIPO = Object.freeze({
   training_comment: 'treino',
   training_question: 'treino',
   training_answer: 'treino',
+  market: 'mercado',
 });
 
 const AREA_DO_CAMINHO = Object.freeze({
@@ -95,6 +97,7 @@ const AREA_DO_CAMINHO = Object.freeze({
   'minhas-aulas': 'aulas',
   coaches: 'aulas',
   treino: 'treino',
+  mercado: 'mercado',
   chat: 'social',
   atleta: 'social',
   atletas: 'social',

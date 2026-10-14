@@ -65,15 +65,41 @@ function trainingBlock(t = {}) {
   return bloco;
 }
 
+/** O bloco do Mercado (`collectMarketExport`): compras, ofertas, perguntas, avaliações, favoritos e o que vende. */
+function marketBlock(m = {}) {
+  const bloco = {
+    orders: lista(m.orders),
+    offers: lista(m.offers),
+    questions: lista(m.questions),
+    reviews: lista(m.reviews),
+    favorites: lista(m.favorites),
+    saved_searches: lista(m.saved_searches),
+    cart: m.cart ? limpo(m.cart) : null,
+    selling: (Array.isArray(m.selling) ? m.selling : []).map((s) => limpo(s)),
+    media_paths: (Array.isArray(m.media_paths) ? m.media_paths : []).filter((p) => typeof p === 'string'),
+    not_included: ['O que você vende pelas arenas que gere (fica com a arena).'],
+  };
+  bloco.counts = {
+    orders: bloco.orders.length,
+    offers: bloco.offers.length,
+    questions: bloco.questions.length,
+    reviews: bloco.reviews.length,
+    favorites: bloco.favorites.length,
+    selling_as: bloco.selling.length,
+    media: bloco.media_paths.length,
+  };
+  return bloco;
+}
+
 /**
  * Monta o pacote de exportação.
- * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, incomplete? }} input
+ * @param {{ uid, profile, registrations, bookings, lessons, goals?, training?, market?, incomplete? }} input
  *   `goals` e `training` só entram quando foram coletados; `incomplete` lista,
  *   em pt-BR, as partes que falharam na leitura.
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -92,6 +118,7 @@ export function buildDataExport({
   };
   if (goals !== undefined) out.goals = lista(goals);
   if (training !== undefined) out.training = trainingBlock(training || {});
+  if (market !== undefined) out.market = marketBlock(market || {});
   return out;
 }
 
