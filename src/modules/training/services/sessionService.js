@@ -13,6 +13,7 @@ import { db } from '@/core/config/firebase';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeSession } from '../domain/session.js';
 import { TrainingItemError } from './trainingItemService.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_SESSIONS = 'training_sessions';
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -51,7 +52,7 @@ function notifyCoachShared(identity, coachId, title) {
 
 /** Registra uma sessão. @returns {Promise<string>} id */
 export async function createSession(input, { identity }) {
-  if (!identity?.uid) throw new TrainingItemError('Entre na sua conta.');
+  if (!identity?.uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizeSession(input);
   if (!valid) throw new TrainingItemError(error);
   const ref = await addDoc(collection(db, TRAINING_SESSIONS), {
@@ -100,10 +101,10 @@ export async function listComments(sessionId) {
 
 /** Comenta (o dono ou o professor compartilhado); a outra parte é avisada. */
 export async function addComment(session, text, { identity }) {
-  const t = String(text ?? '').trim().slice(0, 1000);
-  if (!t) throw new TrainingItemError('Escreva o comentário.');
+  const texto = String(text ?? '').trim().slice(0, 1000);
+  if (!texto) throw new TrainingItemError(t('Escreva o comentário.'));
   await addDoc(collection(db, TRAINING_SESSIONS, session.id, 'comments'), {
-    uid: identity.uid, name: String(identity.name || '').slice(0, 80), text: t, created_at: serverTimestamp(),
+    uid: identity.uid, name: String(identity.name || '').slice(0, 80), text: texto, created_at: serverTimestamp(),
   });
   const isOwner = session.uid === identity.uid;
   const to = isOwner ? session.shared_coach_id : session.uid;
@@ -111,7 +112,7 @@ export async function addComment(session, text, { identity }) {
     await notifyUsers([to], {
       type: NOTIFICATION_TYPE.TRAINING_COMMENT,
       title: isOwner ? 'Seu aluno comentou um treino' : 'Seu professor comentou o seu treino',
-      message: `${identity.name || 'Alguém'}: ${t.slice(0, 120)}`,
+      message: `${identity.name || 'Alguém'}: ${texto.slice(0, 120)}`,
       link: isOwner ? '/treino?aba=alunos' : '/treino?aba=diario',
       actor: { uid: identity.uid, name: identity.name },
     }).catch(() => 0);

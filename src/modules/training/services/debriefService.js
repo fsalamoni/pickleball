@@ -13,6 +13,7 @@ import { DEBRIEF_STATUS, debriefId, normalizeDebrief } from '../domain/debrief.j
 import { TrainingItemError } from './trainingItemService.js';
 import { saveMeta } from './metaService.js';
 import { todayLocal } from '../domain/dates.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_DEBRIEFS = 'training_debriefs';
 
@@ -29,7 +30,7 @@ export async function listMyDebriefs(uid) {
 
 /** Grava as respostas (cria ou substitui). @returns {Promise<string>} o id */
 export async function saveDebrief(uid, input, { suggestion = null } = {}) {
-  if (!uid) throw new TrainingItemError('Entre na sua conta.');
+  if (!uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, error, value } = normalizeDebrief(input);
   if (!valid) throw new TrainingItemError(error);
   const id = debriefId(uid, value.source);
@@ -51,7 +52,7 @@ export async function saveDebrief(uid, input, { suggestion = null } = {}) {
 /** "Agora não" para um jogo: fica registrado e não volta a perguntar. */
 export async function skipDebrief(uid, source) {
   const id = debriefId(uid, source);
-  if (!id) throw new TrainingItemError('Jogo inválido.');
+  if (!id) throw new TrainingItemError(t('Jogo inválido.'));
   await setDoc(doc(db, TRAINING_DEBRIEFS, id), {
     uid,
     source: {

@@ -21,6 +21,7 @@ import {
   PHASE_BRACKET_SEEDING_LABELS,
   MAX_PHASES_PER_MODALITY,
   TARGET_SCORE,
+  rotulos,
 } from '@/modules/tournament/domain/constants';
 import { normalizePhase, normalizePhases, supportsGroups, BRACKET_FORMATS } from '@/modules/tournament/domain/phases';
 import PhaseAdvancedRules from './PhaseAdvancedRules';
@@ -30,17 +31,18 @@ import { compatibleStageTypes } from '@/modules/tournament/domain/formatExplain'
 import {
   ETAPAS_MIN, ETAPAS_MAX, TAMANHOS_DE_GRUPO,
 } from '@/modules/tournament/domain/americanoEtapasConfig';
+import { t, tk, tn } from '@/core/i18n';
 
 const ROTATION_TYPES = [
   TOURNAMENT_STAGE_TYPE.AMERICANO, TOURNAMENT_STAGE_TYPE.MEXICANO, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS,
 ];
-const isEtapas = (t) => t === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
+const isEtapas = (tt) => tt === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
 
 /** "4 atletas — 3 jogos para cada um por etapa" */
-const TAMANHO_LABEL = Object.fromEntries(
-  TAMANHOS_DE_GRUPO.map((t) => [t, `${t} atletas — ${t - 1} jogos para cada um por etapa`]),
+const tamanhoLabel = () => Object.fromEntries(
+  TAMANHOS_DE_GRUPO.map((tt) => [tt, t('{tt} atletas — {v2} jogos para cada um por etapa', { tt, v2: tt - 1 })]),
 );
-const isRotation = (t) => ROTATION_TYPES.includes(t);
+const isRotation = (tt) => ROTATION_TYPES.includes(tt);
 
 /* ----- Textos de ajuda (o que é cada opção e o que preencher a seguir) ----- */
 
@@ -49,28 +51,28 @@ const isRotation = (t) => ROTATION_TYPES.includes(t);
  * modalidade de equipes — os textos de ajuda falam a língua do formato.
  */
 const divisionHelp = (unit) => ({
-  [PHASE_DIVISION_MODE.SINGLE]: 'Todos jogam juntos, sem subdivisão.',
-  [PHASE_DIVISION_MODE.GROUP_COUNT]: `Você define quantos grupos; ${unit === 'equipes' ? 'as equipes são repartidas' : 'os atletas são repartidos'} de forma equilibrada (diferença máxima de 1 entre grupos).`,
-  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: `Você define o teto de ${unit} por grupo; o sistema cria o menor número de grupos equilibrados que respeita o teto.`,
+  [PHASE_DIVISION_MODE.SINGLE]: t('Todos jogam juntos, sem subdivisão.'),
+  [PHASE_DIVISION_MODE.GROUP_COUNT]: t('Você define quantos grupos; {v1} de forma equilibrada (diferença máxima de 1 entre grupos).', { v1: unit === 'equipes' ? t('as equipes são repartidas') : t('os atletas são repartidos') }),
+  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: t('Você define o teto de {unit} por grupo; o sistema cria o menor número de grupos equilibrados que respeita o teto.', { unit: t(unit) }),
 });
-const QUALIFIER_HELP = {
-  [PHASE_QUALIFIER_MODE.OVERALL]: 'Passam os N melhores classificados do grupo, sem distinção de gênero.',
-  [PHASE_QUALIFIER_MODE.BY_GENDER]: 'Passam o(s) melhor(es) de cada gênero (M e F). Exige o gênero informado em cada inscrição.',
-};
-const FEED_HELP = {
-  [PHASE_FEED_MODE.INHERIT_GROUPS]: 'Cada grupo da fase anterior segue como uma fonte (ex.: vencedor do A enfrenta o do B).',
-  [PHASE_FEED_MODE.MERGE_GROUPS]: 'Junta grupos da fase anterior em novos grupos (ex.: A+B → AB).',
-  [PHASE_FEED_MODE.POOL_ALL]: 'Junta todos os classificados em um pote e redistribui conforme a divisão desta fase.',
-};
-const PAIRING_HELP = {
-  [PHASE_PAIRING_MODE.NONE]: 'Cada classificado avança individualmente.',
-  [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: 'Forma uma dupla mista (melhor homem + melhor mulher) por grupo. Exige classificação por gênero.',
-  [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: 'Forma uma dupla com os 2 melhores de cada grupo — é assim que um torneio individual vira de duplas na fase seguinte.',
-};
-const SEEDING_HELP = {
-  standard: 'Cabeças-de-chave espalhadas: os primeiros colocados só se encontram nas fases finais.',
-  adjacent: 'Cruzado por grupos: o classificado do grupo A enfrenta o do B, o do C enfrenta o do D, e assim por diante.',
-};
+const QUALIFIER_HELP = rotulos({
+  [PHASE_QUALIFIER_MODE.OVERALL]: tk('Passam os N melhores classificados do grupo, sem distinção de gênero.'),
+  [PHASE_QUALIFIER_MODE.BY_GENDER]: tk('Passam o(s) melhor(es) de cada gênero (M e F). Exige o gênero informado em cada inscrição.'),
+});
+const FEED_HELP = rotulos({
+  [PHASE_FEED_MODE.INHERIT_GROUPS]: tk('Cada grupo da fase anterior segue como uma fonte (ex.: vencedor do A enfrenta o do B).'),
+  [PHASE_FEED_MODE.MERGE_GROUPS]: tk('Junta grupos da fase anterior em novos grupos (ex.: A+B → AB).'),
+  [PHASE_FEED_MODE.POOL_ALL]: tk('Junta todos os classificados em um pote e redistribui conforme a divisão desta fase.'),
+});
+const PAIRING_HELP = rotulos({
+  [PHASE_PAIRING_MODE.NONE]: tk('Cada classificado avança individualmente.'),
+  [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: tk('Forma uma dupla mista (melhor homem + melhor mulher) por grupo. Exige classificação por gênero.'),
+  [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: tk('Forma uma dupla com os 2 melhores de cada grupo — é assim que um torneio individual vira de duplas na fase seguinte.'),
+});
+const SEEDING_HELP = rotulos({
+  standard: tk('Cabeças-de-chave espalhadas: os primeiros colocados só se encontram nas fases finais.'),
+  adjacent: tk('Cruzado por grupos: o classificado do grupo A enfrenta o do B, o do C enfrenta o do D, e assim por diante.'),
+});
 
 function HelpText({ children }) {
   return <p className="text-[11px] leading-snug text-gray-500 mt-1">{children}</p>;
@@ -99,10 +101,10 @@ function computePlayUnits(phases, format) {
   let formedDoubles = format === 'doubles';
   return phases.map((p, i) => {
     const unit = isRotation(p.type)
-      ? 'Individual (rotação)'
+      ? t('Individual (rotação)')
       : formedDoubles
-        ? 'Duplas'
-        : 'Individual';
+        ? t('Duplas')
+        : t('Individual');
     const nextIsRotation = isRotation(phases[i + 1]?.type);
     if (p.pairing_mode && p.pairing_mode !== PHASE_PAIRING_MODE.NONE && !nextIsRotation) {
       formedDoubles = true;
@@ -116,20 +118,20 @@ function phaseSummary(phase, index, phases) {
   const parts = [TOURNAMENT_STAGE_TYPE_LABELS[phase.type]];
   if (phase.scoring_override) parts.push(formatScoringSummary(phase.scoring_override));
   if (isEtapas(phase.type)) {
-    parts.push(`${phase.etapa_count} ${phase.etapa_count === 1 ? 'etapa' : 'etapas'}`);
-    parts.push(`grupos de ${phase.max_per_group}`);
+    parts.push(tn(phase.etapa_count, '{n} etapa', '{n} etapas'));
+    parts.push(t('grupos de {max_per_group}', { max_per_group: phase.max_per_group }));
   } else if (supportsGroups(phase.type)) {
-    if (phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT) parts.push(`${phase.group_count} grupos`);
-    else if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) parts.push(`até ${phase.max_per_group}/grupo`);
-    else parts.push('grupo único');
+    if (phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT) parts.push(t('{group_count} grupos', { group_count: phase.group_count }));
+    else if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) parts.push(t('até {max_per_group}/grupo', { max_per_group: phase.max_per_group }));
+    else parts.push(t('grupo único'));
   }
-  if (Number(phase.round_robin_legs) === 2) parts.push('ida e volta');
+  if (Number(phase.round_robin_legs) === 2) parts.push(t('ida e volta'));
   const isLast = index === phases.length - 1;
   if (!isLast) {
-    parts.push(`passam ${phase.qualifiers_per_group}/grupo`);
-    if (Number(phase.wildcard_slots) > 0) parts.push(`+${phase.wildcard_slots} repescado(s)`);
-    if (phase.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP) parts.push('dupla mista');
-    else if (phase.pairing_mode === PHASE_PAIRING_MODE.PAIR_TOP_TWO) parts.push('dupla dos 2 melhores');
+    parts.push(t('passam {qualifiers_per_group}/grupo', { qualifiers_per_group: phase.qualifiers_per_group }));
+    if (Number(phase.wildcard_slots) > 0) parts.push(t('+{wildcard_slots} repescado(s)', { wildcard_slots: phase.wildcard_slots }));
+    if (phase.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP) parts.push(t('dupla mista'));
+    else if (phase.pairing_mode === PHASE_PAIRING_MODE.PAIR_TOP_TWO) parts.push(t('dupla dos 2 melhores'));
   }
   return parts.join(' · ');
 }
@@ -142,26 +144,26 @@ function phaseIssues(phase, index, phases, format) {
   // de escolha continua válido para quem já o tem gravado.
   const allowed = compatibleStageTypes(format);
   if (!allowed.includes(phase.type)) {
-    issues.push('Formato incompatível com o tipo de inscrição desta modalidade.');
+    issues.push(t('Formato incompatível com o tipo de inscrição desta modalidade.'));
   }
   if (phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT && Number(phase.group_count) < 1) {
-    issues.push('Defina um número de grupos válido (ao menos 1).');
+    issues.push(t('Defina um número de grupos válido (ao menos 1).'));
   }
   if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP && Number(phase.max_per_group) < 2) {
-    issues.push('O máximo de atletas por grupo deve ser ao menos 2.');
+    issues.push(t('O máximo de atletas por grupo deve ser ao menos 2.'));
   }
   if (!isLast && Number(phase.qualifiers_per_group) < 1) {
-    issues.push('Defina quantos classificados avançam para a próxima fase (ao menos 1).');
+    issues.push(t('Defina quantos classificados avançam para a próxima fase (ao menos 1).'));
   }
   if (phase.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP
       && phase.qualifier_mode !== PHASE_QUALIFIER_MODE.BY_GENDER) {
-    issues.push('Para formar dupla mista por grupo, escolha a classificação “por gênero (M e F)”.');
+    issues.push(t('Para formar dupla mista por grupo, escolha a classificação “por gênero (M e F)”.'));
   }
   if (Number(phase.wildcard_slots) > 0 && isLast) {
-    issues.push('A repescagem só faz sentido numa fase que classifica para a próxima — na última fase ela é ignorada.');
+    issues.push(t('A repescagem só faz sentido numa fase que classifica para a próxima — na última fase ela é ignorada.'));
   }
   if (!isLast && isRotation(phases[index + 1]?.type) && Number(phase.qualifiers_per_group) < 2) {
-    issues.push(`A próxima fase (${TOURNAMENT_STAGE_TYPE_LABELS[phases[index + 1].type]}) exige ao menos 4 atletas por grupo — garanta classificados suficientes (ex.: 2 por grupo em 2 grupos = 4).`);
+    issues.push(t('A próxima fase ({v1}) exige ao menos 4 atletas por grupo — garanta classificados suficientes (ex.: 2 por grupo em 2 grupos = 4).', { v1: TOURNAMENT_STAGE_TYPE_LABELS[phases[index + 1].type] }));
   }
   return issues;
 }
@@ -222,41 +224,39 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <Label className="text-sm font-semibold">Fases do torneio</Label>
+          <Label className="text-sm font-semibold">{t('Fases do torneio')}</Label>
           <p className="text-xs text-gray-500">
-            Encadeie fases (ex.: grupos → mata-mata). A inscrição é única; cada fase pode ter um
-            formato diferente — inclusive virar de <strong>duplas</strong> a partir dos classificados.
+            {t('Encadeie fases (ex.: grupos → mata-mata). A inscrição é única; cada fase pode ter um formato diferente — inclusive virar de')} <strong>{t('duplas')}</strong> {t('a partir dos classificados.')}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={addPhase} disabled={phases.length >= MAX_PHASES_PER_MODALITY}>
-          <Plus className="w-4 h-4 mr-1" /> Adicionar fase
+          <Plus className="w-4 h-4 mr-1" /> {t('Adicionar fase')}
         </Button>
       </div>
 
       <div className="rounded-md border border-green-200 bg-green-50 p-2">
         <Label className="text-xs flex items-center gap-1 text-green-700">
-          <Sparkles className="w-3.5 h-3.5" /> Começar a partir de um modelo
+          <Sparkles className="w-3.5 h-3.5" /> {t('Começar a partir de um modelo')}
         </Label>
         <select
           className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm mt-1"
           value=""
           onChange={(e) => applyPreset(e.target.value)}
         >
-          <option value="">— escolha um modelo pronto (opcional) —</option>
+          <option value="">{t('— escolha um modelo pronto (opcional) —')}</option>
           {presets.map((p) => (
             <option key={p.id} value={p.id}>{p.label}</option>
           ))}
         </select>
         <p className="text-[11px] text-gray-500 mt-1">
-          Preenche as fases automaticamente; você pode ajustar tudo depois. Veja o que cada modelo
-          faz no{' '}
+          {t('Preenche as fases automaticamente; você pode ajustar tudo depois. Veja o que cada modelo faz no')}{' '}
           <a
             href={`${import.meta.env.BASE_URL}torneios/guia`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-green-700 underline"
           >
-            guia de formatos
+            {t('guia de formatos')}
           </a>.
         </p>
       </div>
@@ -270,14 +270,14 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
         const nextIsRotation = isRotation(phases[index + 1]?.type);
         const issues = phaseIssues(phase, index, normalized, format);
         const unit = units[index];
-        const unitIsDoubles = unit.startsWith('Duplas');
+        const unitIsDoubles = unit === t('Duplas');
 
         return (
           <CollapsibleSection
             key={index}
             className="border-gray-200 bg-paper/40"
             headerClassName="py-1.5"
-            title={`Fase ${index + 1}`}
+            title={t('Fase {v1}', { v1: index + 1 })}
             subtitle={phaseSummary(phase, index, normalized)}
             badges={(
               <>
@@ -297,7 +297,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                 type="button"
                 variant="ghost"
                 size="icon"
-                title="Remover fase"
+                title={t('Remover fase')}
                 onClick={() => removePhase(index)}
               >
                 <Trash2 className="w-4 h-4 text-red-600" />
@@ -315,7 +315,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <MiniSelect
-                  label="Formato da fase"
+                  label={t('Formato da fase')}
                   value={phase.type}
                   options={stageOptionsFor(phase.type)}
                   onChange={(v) => update(index, { type: v })}
@@ -327,7 +327,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                 {isEtapas(phase.type) && (
                   <>
                     <div>
-                      <Label className="text-xs" htmlFor={`fase-${index}-etapas`}>Número de etapas</Label>
+                      <Label className="text-xs" htmlFor={`fase-${index}-etapas`}>{t('Número de etapas')}</Label>
                       <Input
                         id={`fase-${index}-etapas`}
                         type="number"
@@ -338,24 +338,22 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                         className="h-9"
                       />
                       <HelpText>
-                        Em cada etapa os grupos são refeitos, misturando quem ainda não se encontrou.
-                        A classificação soma todas as etapas. Dá para mudar depois: a próxima etapa
-                        só é gerada quando a anterior termina.
+                        {t('Em cada etapa os grupos são refeitos, misturando quem ainda não se encontrou. A classificação soma todas as etapas. Dá para mudar depois: a próxima etapa só é gerada quando a anterior termina.')}
                       </HelpText>
                     </div>
                     <MiniSelect
-                      label="Atletas por grupo"
+                      label={t('Atletas por grupo')}
                       value={String(phase.max_per_group)}
-                      options={TAMANHO_LABEL}
+                      options={tamanhoLabel()}
                       onChange={(v) => update(index, { max_per_group: Number(v) })}
-                      help="O Americano só fecha com 4, 5, 8 ou 9 atletas no grupo. Quando o número de inscritos não divide certo, a plataforma usa grupos de tamanhos vizinhos (ex.: 9 = 5 + 4) e reveza quem fica no maior."
+                      help={t('O Americano só fecha com 4, 5, 8 ou 9 atletas no grupo. Quando o número de inscritos não divide certo, a plataforma usa grupos de tamanhos vizinhos (ex.: 9 = 5 + 4) e reveza quem fica no maior.')}
                     />
                   </>
                 )}
 
                 {grouped && (
                   <MiniSelect
-                    label="Divisão em grupos"
+                    label={t('Divisão em grupos')}
                     value={phase.division_mode}
                     options={PHASE_DIVISION_MODE_LABELS}
                     onChange={(v) => update(index, { division_mode: v })}
@@ -365,13 +363,13 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
 
                 {grouped && phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT && (
                   <div>
-                    <Label className="text-xs">Número de grupos</Label>
+                    <Label className="text-xs">{t('Número de grupos')}</Label>
                     <Input type="number" min={1} value={phase.group_count} onChange={(e) => update(index, { group_count: e.target.value })} className="h-9" />
                   </div>
                 )}
                 {grouped && phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP && (
                   <div>
-                    <Label className="text-xs">Máx. de {unit} por grupo</Label>
+                    <Label className="text-xs">{t('Máx. de {unit} por grupo', { unit: t(unit) })}</Label>
                     <Input type="number" min={2} value={phase.max_per_group} onChange={(e) => update(index, { max_per_group: e.target.value })} className="h-9" />
                   </div>
                 )}
@@ -381,31 +379,31 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                     inscreve espera. Só aparece onde há todos-contra-todos. */}
                 {(grouped || phase.type === TOURNAMENT_STAGE_TYPE.ROUND_ROBIN || isEtapas(phase.type)) && (
                   <MiniSelect
-                    label="Turnos"
+                    label={t('Turnos')}
                     value={String(phase.round_robin_legs ?? 1)}
-                    options={{ 1: '1 turno (só ida: cada confronto uma vez)', 2: '2 turnos (ida e volta: cada confronto duas vezes)' }}
+                    options={{ 1: t('1 turno (só ida: cada confronto uma vez)'), 2: t('2 turnos (ida e volta: cada confronto duas vezes)') }}
                     onChange={(v) => update(index, { round_robin_legs: Number(v) })}
                     help={isRotation(phase.type)
                       ? (String(phase.round_robin_legs) === '2'
-                        ? 'Cada dupla joga junta duas vezes (uma por turno), com os lados trocados no returno — o dobro de jogos.'
-                        : 'O padrão: cada dupla joga junta uma vez. Em 2 turnos, tudo se repete no returno, com os lados trocados.')
+                        ? t('Cada dupla joga junta duas vezes (uma por turno), com os lados trocados no returno — o dobro de jogos.')
+                        : t('O padrão: cada dupla joga junta uma vez. Em 2 turnos, tudo se repete no returno, com os lados trocados.'))
                       : (String(phase.round_robin_legs) === '2'
-                        ? 'Dobra os jogos: bom para grupo pequeno, em que a ida sozinha deixaria cada um com dois jogos.'
-                        : 'O padrão. Com grupo de 3, considere ida e volta — dois jogos por atleta é pouco para quem se inscreveu.')}
+                        ? t('Dobra os jogos: bom para grupo pequeno, em que a ida sozinha deixaria cada um com dois jogos.')
+                        : t('O padrão. Com grupo de 3, considere ida e volta — dois jogos por atleta é pouco para quem se inscreveu.'))}
                   />
                 )}
 
                 {!grouped && isFirst && !isEtapas(phase.type) && (
                   <div>
-                    <Label className="text-xs">Cabeças-de-chave</Label>
+                    <Label className="text-xs">{t('Cabeças-de-chave')}</Label>
                     <Input type="number" min={0} value={phase.seed_count} onChange={(e) => update(index, { seed_count: e.target.value })} className="h-9" />
-                    <HelpText>Quantos melhores são espalhados na chave para não se cruzarem cedo (0 = sorteio livre).</HelpText>
+                    <HelpText>{t('Quantos melhores são espalhados na chave para não se cruzarem cedo (0 = sorteio livre).')}</HelpText>
                   </div>
                 )}
 
                 {isBracket && !isFirst && (
                   <MiniSelect
-                    label="Chaveamento (a partir dos classificados)"
+                    label={t('Chaveamento (a partir dos classificados)')}
                     value={phase.bracket_seeding}
                     options={PHASE_BRACKET_SEEDING_LABELS}
                     onChange={(v) => update(index, { bracket_seeding: v })}
@@ -421,21 +419,21 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                       checked={Boolean(phase.third_place)}
                       onChange={(e) => update(index, { third_place: e.target.checked })}
                     />
-                    <span>Disputa de 3º lugar (medalha de bronze entre os perdedores das semifinais)</span>
+                    <span>{t('Disputa de 3º lugar (medalha de bronze entre os perdedores das semifinais)')}</span>
                   </label>
                 )}
               </div>
 
               <div className="rounded-md border border-gray-200 bg-white p-3 space-y-3">
                 <div>
-                  <div className="text-xs font-medium text-gray-600">Pontuação da fase</div>
+                  <div className="text-xs font-medium text-gray-600">{t('Pontuação da fase')}</div>
                   <p className="text-[11px] leading-snug text-gray-500 mt-1">
-                    Cada fase pode ter sua própria configuração de pontos por game e sets por partida.
+                    {t('Cada fase pode ter sua própria configuração de pontos por game e sets por partida.')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs">Pontos por game</Label>
+                    <Label className="text-xs">{t('Pontos por game')}</Label>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {Object.values(TARGET_SCORE).map((score) => (
                         <button
@@ -449,13 +447,13 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                               : 'border-gray-100 bg-background text-gray-600 hover:border-green-400',
                           ].join(' ')}
                         >
-                          {score} pontos
+                          {t('{score} pontos', { score })}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs">Sets por partida</Label>
+                    <Label className="text-xs">{t('Sets por partida')}</Label>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {[1, 3, 5].map((sets) => (
                         <button
@@ -481,18 +479,18 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
               {!isLast && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-md bg-white border border-gray-200 p-2">
                   <div className="md:col-span-2 text-xs font-medium text-gray-600">
-                    Quem se classifica para a próxima fase
+                    {t('Quem se classifica para a próxima fase')}
                   </div>
                   <div>
-                    <Label className="text-xs">{isEtapas(phase.type) ? 'Classificados (da classificação geral das etapas)' : 'Classificados por grupo'}</Label>
+                    <Label className="text-xs">{isEtapas(phase.type) ? t('Classificados (da classificação geral das etapas)') : t('Classificados por grupo')}</Label>
                     <Input type="number" min={1} value={phase.qualifiers_per_group} onChange={(e) => update(index, { qualifiers_per_group: e.target.value })} className="h-9" />
                     {isEtapas(phase.type) && (
-                      <HelpText>Os N primeiros da tabela única, somando todas as etapas.</HelpText>
+                      <HelpText>{t('Os N primeiros da tabela única, somando todas as etapas.')}</HelpText>
                     )}
                   </div>
                   {!isEtapas(phase.type) && (
                   <div>
-                    <Label className="text-xs">Repescagem (vagas extras)</Label>
+                    <Label className="text-xs">{t('Repescagem (vagas extras)')}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -501,18 +499,14 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                       className="h-9"
                     />
                     <HelpText>
-                      Vagas para os <strong>melhores não classificados</strong> da colocação
-                      seguinte ao corte (os &quot;melhores terceiros&quot;, quando passam 2 por
-                      grupo). Serve para fechar a chave quando os classificados diretos não dão
+                      {t('Vagas para os')} <strong>{t('melhores não classificados')}</strong> {t('da colocação seguinte ao corte (os "melhores terceiros", quando passam 2 por grupo).')} Serve para fechar a chave quando os classificados diretos não dão
                       uma potência de 2 — em vez de um mata-mata cheio de byes. Eles são
-                      comparados por <strong>aproveitamento</strong>, não por número de
-                      vitórias, para que grupos de tamanhos diferentes não distorçam a conta.
-                      0 = sem repescagem.
+                      comparados por <strong>{t('aproveitamento')}</strong>{t(', não por número de vitórias, para que grupos de tamanhos diferentes não distorçam a conta. 0 = sem repescagem.')}
                     </HelpText>
                   </div>
                   )}
                   <MiniSelect
-                    label="Critério"
+                    label={t('Critério')}
                     value={phase.qualifier_mode}
                     options={PHASE_QUALIFIER_MODE_LABELS}
                     onChange={(v) => update(index, { qualifier_mode: v })}
@@ -520,7 +514,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                   />
                   {!nextIsRotation ? (
                     <MiniSelect
-                      label="Formar duplas com os classificados?"
+                      label={t('Formar duplas com os classificados?')}
                       value={phase.pairing_mode}
                       options={PHASE_PAIRING_MODE_LABELS}
                       onChange={(v) => update(index, { pairing_mode: v })}
@@ -528,17 +522,16 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                     />
                   ) : (
                     <div className="md:col-span-1">
-                      <Label className="text-xs">Formar duplas com os classificados?</Label>
+                      <Label className="text-xs">{t('Formar duplas com os classificados?')}</Label>
                       <HelpText>
-                        A próxima fase é de rotação (Americano/Mexicano): os classificados avançam
-                        individualmente e as duplas são montadas a cada rodada.
+                        {t('A próxima fase é de rotação (Americano/Mexicano): os classificados avançam individualmente e as duplas são montadas a cada rodada.')}
                       </HelpText>
                     </div>
                   )}
                   {phase.pairing_mode !== PHASE_PAIRING_MODE.NONE && !nextIsRotation && (
                     <p className="md:col-span-2 text-[11px] text-green-700 inline-flex items-center gap-1">
-                      <Users2 className="w-3.5 h-3.5" /> A partir da próxima fase joga-se em
-                      <strong> duplas</strong> formadas pelos classificados.
+                      <Users2 className="w-3.5 h-3.5" /> {t('A partir da próxima fase joga-se em')}
+                      <strong> {t('duplas')}</strong> {t('formadas pelos classificados.')}
                     </p>
                   )}
                 </div>
@@ -548,11 +541,11 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
               {!isFirst && (
                 <div className="rounded-md bg-white border border-gray-200 p-2 space-y-2">
                   <div className="flex items-center gap-1 text-xs font-medium text-gray-600">
-                    <ArrowDown className="w-3.5 h-3.5" /> Como recebe os classificados
+                    <ArrowDown className="w-3.5 h-3.5" /> {t('Como recebe os classificados')}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <MiniSelect
-                      label="Alimentação"
+                      label={t('Alimentação')}
                       value={phase.feed_mode}
                       options={PHASE_FEED_MODE_LABELS}
                       onChange={(v) => update(index, { feed_mode: v })}
@@ -560,7 +553,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                     />
                     {phase.feed_mode === PHASE_FEED_MODE.MERGE_GROUPS && (
                       <div>
-                        <Label className="text-xs">Grupos por fusão (ex.: 2 → AB)</Label>
+                        <Label className="text-xs">{t('Grupos por fusão (ex.: 2 → AB)')}</Label>
                         <Input type="number" min={2} value={phase.merge_size} onChange={(e) => update(index, { merge_size: e.target.value })} className="h-9" />
                       </div>
                     )}
@@ -586,7 +579,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
               {issues.length > 0 && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-2">
                   <div className="flex items-center gap-1 text-xs font-medium text-amber-800">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Revise antes de salvar
+                    <AlertTriangle className="w-3.5 h-3.5" /> {t('Revise antes de salvar')}
                   </div>
                   <ul className="list-disc pl-5 mt-1 space-y-0.5 text-[11px] text-amber-900">
                     {issues.map((it, i) => <li key={i}>{it}</li>)}

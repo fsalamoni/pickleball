@@ -20,12 +20,14 @@ import {
   STAGE_TYPES_BY_FORMAT,
   TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
+  rotulos,
 } from './constants.js';
 import { nextPowerOfTwo, americanoMatchCount } from './draw.js';
 import { recommendedSwissRounds } from './swiss.js';
 import { recommendedMexicanoRounds } from './mexicano.js';
 import { describeGroupPlan, suggestGroupPlans, scoreGroupPlan } from './groupPlan.js';
 import { explainAmericanoEtapas } from './americanoEtapas.js';
+import { t, tk, tn, fmtLista } from '@/core/i18n';
 
 /* ----------------------------- Utilitários ------------------------------ */
 
@@ -56,31 +58,31 @@ export const STAGE_MIN_PLAYERS = Object.freeze({
 });
 
 /** Descrição curta (independente de N) de cada formato de inscrição. */
-export const FORMAT_DESCRIPTION = Object.freeze({
+export const FORMAT_DESCRIPTION = rotulos({
   [MODALITY_FORMAT.SINGLES]:
-    'Simples: a inscrição é individual — o jogador se inscreve sozinho. Conforme a estrutura escolhida, os jogos podem ser 1×1 (pontos corridos, grupos, chaves, dupla eliminação ou suíço) ou em duplas montadas por rotação (Americano).',
+    tk('Simples: a inscrição é individual — o jogador se inscreve sozinho. Conforme a estrutura escolhida, os jogos podem ser 1×1 (pontos corridos, grupos, chaves, dupla eliminação ou suíço) ou em duplas montadas por rotação (Americano).'),
   [MODALITY_FORMAT.DOUBLES]:
-    'Duplas (2 contra 2): cada inscrição precisa de jogador A e jogador B definidos no momento da inscrição. A dupla é fixa durante todo o torneio.',
+    tk('Duplas (2 contra 2): cada inscrição precisa de jogador A e jogador B definidos no momento da inscrição. A dupla é fixa durante todo o torneio.'),
 });;
 
 /** Descrição curta (independente de N) de cada sistema/fase de competição. */
-export const STAGE_DESCRIPTION = Object.freeze({
+export const STAGE_DESCRIPTION = rotulos({
   [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]:
-    'Pontos corridos: todos jogam contra todos uma vez. A classificação final é dada pelo desempenho geral de cada participante.',
+    tk('Pontos corridos: todos jogam contra todos uma vez. A classificação final é dada pelo desempenho geral de cada participante.'),
   [TOURNAMENT_STAGE_TYPE.GROUPS]:
-    'Fase de grupos: participantes divididos em grupos, todos contra todos dentro do grupo, e os melhores avançam.',
+    tk('Fase de grupos: participantes divididos em grupos, todos contra todos dentro do grupo, e os melhores avançam.'),
   [TOURNAMENT_STAGE_TYPE.KNOCKOUT]:
-    'Chaves (mata-mata): jogos eliminatórios — quem perde está fora. As partidas seguem o chaveamento sorteado.',
+    tk('Chaves (mata-mata): jogos eliminatórios — quem perde está fora. As partidas seguem o chaveamento sorteado.'),
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]:
-    'Dupla eliminação: cada participante tem direito a duas derrotas antes de ser eliminado. Quem perde uma vez vai para a chave dos perdedores.',
+    tk('Dupla eliminação: cada participante tem direito a duas derrotas antes de ser eliminado. Quem perde uma vez vai para a chave dos perdedores.'),
   [TOURNAMENT_STAGE_TYPE.SWISS]:
-    'Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados, sem eliminação direta e sem repetir confrontos.',
+    tk('Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados, sem eliminação direta e sem repetir confrontos.'),
   [TOURNAMENT_STAGE_TYPE.AMERICANO]:
-    'Americana (rotação): só para inscrição individual (Simples). Os jogos são em duplas (2×2) montadas por rotação, de modo que cada jogador forma dupla com todos os demais e nenhuma dupla se repete. Exige um número de inscritos que permita exatidão (N ≡ 0 ou 1 mod 4): 4, 5, 8, 9, 12, 13, 16, 17… O total de jogos é N·(N−1)/4.',
+    tk('Americana (rotação): só para inscrição individual (Simples). Os jogos são em duplas (2×2) montadas por rotação, de modo que cada jogador forma dupla com todos os demais e nenhuma dupla se repete. Exige um número de inscritos que permita exatidão (N ≡ 0 ou 1 mod 4): 4, 5, 8, 9, 12, 13, 16, 17… O total de jogos é N·(N−1)/4.'),
   [TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS]:
-    'Americano aprimorado em etapas: só para inscrição individual (Simples). Os atletas jogam em etapas; em cada etapa, um Americano em grupos (de 4, por padrão: 3 jogos para cada um). A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou para criar o máximo de jogos inéditos, e a classificação é uma só, somando todas as etapas — o campeão é quem foi melhor no total.',
+    tk('Americano aprimorado em etapas: só para inscrição individual (Simples). Os atletas jogam em etapas; em cada etapa, um Americano em grupos (de 4, por padrão: 3 jogos para cada um). A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou para criar o máximo de jogos inéditos, e a classificação é uma só, somando todas as etapas — o campeão é quem foi melhor no total.'),
   [TOURNAMENT_STAGE_TYPE.MEXICANO]:
-    'Mexicano (rotação dinâmica): só para inscrição individual (Simples). Como na Americana joga-se 2×2 em quadras de 4, mas os pares de cada rodada são definidos pela classificação: a cada rodada todos são reordenados por pontos e reagrupados (1º+4º × 2º+3º). Quem vence sobe de quadra e enfrenta os melhores — os jogos ficam sempre equilibrados.',
+    tk('Mexicano (rotação dinâmica): só para inscrição individual (Simples). Como na Americana joga-se 2×2 em quadras de 4, mas os pares de cada rodada são definidos pela classificação: a cada rodada todos são reordenados por pontos e reagrupados (1º+4º × 2º+3º). Quem vence sobe de quadra e enfrenta os melhores — os jogos ficam sempre equilibrados.'),
 });
 
 /**
@@ -106,12 +108,10 @@ function explainRoundRobin(n, legs = 1) {
   const rounds = (n % 2 === 0 ? n - 1 : n) * turnos;
   const lines = [
     volta
-      ? `${n} jogadores → ${totalMatches} jogos no total (todos contra todos em 2 turnos: ida e volta).`
-      : `${n} jogadores → ${totalMatches} jogos no total (todos contra todos uma vez).`,
-    `Cada jogador disputa ${(n - 1) * turnos} jogos.`,
-    `O torneio é organizado em ${rounds} rodadas${
-      n % 2 === 1 ? ' (como o número é ímpar, 1 jogador descansa por rodada)' : ''
-    }.`,
+      ? t('{n} jogadores → {totalMatches} jogos no total (todos contra todos em 2 turnos: ida e volta).', { n, totalMatches })
+      : t('{n} jogadores → {totalMatches} jogos no total (todos contra todos uma vez).', { n, totalMatches }),
+    t('Cada jogador disputa {v1} jogos.', { v1: (n - 1) * turnos }),
+    t('O torneio é organizado em {rounds} rodadas{v2}.', { rounds, v2: n % 2 === 1 ? t(' (como o número é ímpar, 1 jogador descansa por rodada)') : '' }),
   ];
   return {
     status: 'ok',
@@ -120,16 +120,9 @@ function explainRoundRobin(n, legs = 1) {
     lines,
     recommendation:
       n % 2 === 1
-        ? 'Com número par de jogadores ninguém precisa descansar entre as rodadas.'
+        ? t('Com número par de jogadores ninguém precisa descansar entre as rodadas.')
         : undefined,
   };
-}
-
-/** "5, 5, 5 e 4" — a lista de tamanhos como se lê em voz alta. */
-function listarEmPtBR(valores) {
-  const lista = (valores || []).map(String);
-  if (lista.length <= 1) return lista.join('');
-  return `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`;
 }
 
 /**
@@ -152,19 +145,19 @@ function explainGroups(n, groupCount, opts = {}) {
   });
 
   const tamanhos = plano.uniform
-    ? `${plano.groupCount} ${plano.groupCount === 1 ? 'grupo' : 'grupos'} de ${plano.largest}`
-    : `grupos de ${listarEmPtBR(plano.sizes)}`;
+    ? tn(plano.groupCount, '{n} grupo de {tam}', '{n} grupos de {tam}', { tam: plano.largest })
+    : t('grupos de {tamanhos}', { tamanhos: fmtLista(plano.sizes.map(String)) });
 
   const porAtleta = plano.matchesPerEntrant.min === plano.matchesPerEntrant.max
-    ? `${plano.matchesPerEntrant.max} jogo(s)`
-    : `${plano.matchesPerEntrant.min} ou ${plano.matchesPerEntrant.max} jogos`;
+    ? t('{max} jogo(s)', { max: plano.matchesPerEntrant.max })
+    : t('{min} ou {max} jogos', { min: plano.matchesPerEntrant.min, max: plano.matchesPerEntrant.max });
 
   const lines = [
-    `${n} inscritos divididos em ${tamanhos}.`,
-    `${plano.totalMatches} jogos na fase${plano.legs === 2 ? ' (ida e volta dentro do grupo)' : ''}, ${porAtleta} para cada um.`,
+    t('{n} inscritos divididos em {tamanhos}.', { n, tamanhos }),
+    t('{totalMatches} jogos na fase{v2}, {porAtleta} para cada um.', { totalMatches: plano.totalMatches, v2: plano.legs === 2 ? t(' (ida e volta dentro do grupo)') : '', porAtleta }),
   ];
   if (per > 0) {
-    lines.push(`Passam ${per} por grupo → ${plano.qualifiers} classificados para a fase seguinte.`);
+    lines.push(t('Passam {per} por grupo → {qualifiers} classificados para a fase seguinte.', { per, qualifiers: plano.qualifiers }));
   }
 
   // Os avisos do planejador viram linhas e recomendação.
@@ -176,7 +169,7 @@ function explainGroups(n, groupCount, opts = {}) {
   const melhor = suggestGroupPlans(n, { qualifiersPerGroup: per, legs: opts.legs, limit: 3 })
     .find((p) => p.groupCount !== plano.groupCount && p.score > (plano.blocked ? 0 : scoreGroupPlan(plano)));
   const sugestao = melhor
-    ? `Com ${melhor.groupCount} grupo(s) sairia ${melhor.sizes.join('+')} — ${melhor.totalMatches} jogos e ${melhor.qualifiers} classificados (chave de ${melhor.bracket.size}${melhor.bracket.byes ? `, ${melhor.bracket.byes} bye(s)` : ' cheia'}).`
+    ? t('Com {groupCount} grupo(s) sairia {v2} — {totalMatches} jogos e {qualifiers} classificados (chave de {size}{v6}).', { groupCount: melhor.groupCount, v2: melhor.sizes.join('+'), totalMatches: melhor.totalMatches, qualifiers: melhor.qualifiers, size: melhor.bracket.size, v6: melhor.bracket.byes ? t(', {byes} bye(s)', { byes: melhor.bracket.byes }) : t(' cheia') })
     : undefined;
 
   const recommendation = [erro?.text, alerta?.text, sugestao].filter(Boolean).join(' ') || undefined;
@@ -198,14 +191,14 @@ function explainKnockout(n) {
   const perfect = isPowerOfTwo(n);
 
   const lines = [
-    `${n} jogadores → chave de ${size} posições, ${totalMatches} jogos no total.`,
-    `O campeão é decidido em ${rounds} rodada(s) (incluindo a final).`,
+    t('{n} jogadores → chave de {size} posições, {totalMatches} jogos no total.', { n, size, totalMatches }),
+    t('O campeão é decidido em {rounds} rodada(s) (incluindo a final).', { rounds }),
   ];
   if (perfect) {
-    lines.push('Chave cheia: nenhum jogador recebe bye na primeira rodada.');
+    lines.push(t('Chave cheia: nenhum jogador recebe bye na primeira rodada.'));
   } else {
     lines.push(
-      `${byes} jogador(es) avança(m) direto (bye) na 1ª rodada, pois ${n} não é potência de 2.`,
+      t('{byes} jogador(es) avança(m) direto (bye) na 1ª rodada, pois {n} não é potência de 2.', { byes, n }),
     );
   }
 
@@ -216,7 +209,7 @@ function explainKnockout(n) {
     lines,
     recommendation: perfect
       ? undefined
-      : `Para uma chave perfeita (sem byes) use uma potência de 2: ${size / 2} ou ${size} jogadores.`,
+      : t('Para uma chave perfeita (sem byes) use uma potência de 2: {v1} ou {size} jogadores.', { v1: size / 2, size }),
   };
 }
 
@@ -229,13 +222,13 @@ function explainDoubleKnockout(n) {
   const perfect = isPowerOfTwo(n);
 
   const lines = [
-    `${n} jogadores → entre ${minMatches} e ${maxMatches} jogos (depende do "reset" da grande final).`,
-    'Cada jogador só é eliminado após 2 derrotas (chave de vencedores + chave de perdedores).',
-    `A chave de vencedores tem ${rounds} rodada(s); a grande final reúne os campeões das duas chaves.`,
+    t('{n} jogadores → entre {minMatches} e {maxMatches} jogos (depende do "reset" da grande final).', { n, minMatches, maxMatches }),
+    t('Cada jogador só é eliminado após 2 derrotas (chave de vencedores + chave de perdedores).'),
+    t('A chave de vencedores tem {rounds} rodada(s); a grande final reúne os campeões das duas chaves.', { rounds }),
   ];
   if (!perfect) {
     lines.push(
-      `${byes} jogador(es) recebe(m) bye na 1ª rodada da chave de vencedores, pois ${n} não é potência de 2.`,
+      t('{byes} jogador(es) recebe(m) bye na 1ª rodada da chave de vencedores, pois {n} não é potência de 2.', { byes, n }),
     );
   }
 
@@ -246,7 +239,7 @@ function explainDoubleKnockout(n) {
     lines,
     recommendation: perfect
       ? undefined
-      : `Para chaves perfeitas (sem byes) use uma potência de 2: ${size / 2} ou ${size} jogadores.`,
+      : t('Para chaves perfeitas (sem byes) use uma potência de 2: {v1} ou {size} jogadores.', { v1: size / 2, size }),
   };
 }
 
@@ -257,11 +250,9 @@ function explainSwiss(n) {
   const odd = n % 2 === 1;
 
   const lines = [
-    `${n} jogadores → ${rounds} rodadas recomendadas (≈ log₂ de ${n}), ${perRound} jogo(s) por rodada.`,
-    `Total aproximado de ${totalMatches} jogos. Cada jogador disputa ${rounds} jogo(s)${
-      odd ? ' (1 jogador recebe bye por rodada, pois o número é ímpar)' : ''
-    }.`,
-    'Não há eliminação: a cada rodada quem tem pontuação parecida se enfrenta, sem repetir confrontos.',
+    t('{n} jogadores → {rounds} rodadas recomendadas (≈ log₂ de {n}), {perRound} jogo(s) por rodada.', { n, rounds, perRound }),
+    t('Total aproximado de {totalMatches} jogos. Cada jogador disputa {rounds} jogo(s){v3}.', { totalMatches, rounds, v3: odd ? t(' (1 jogador recebe bye por rodada, pois o número é ímpar)') : '' }),
+    t('Não há eliminação: a cada rodada quem tem pontuação parecida se enfrenta, sem repetir confrontos.'),
   ];
 
   return {
@@ -270,7 +261,7 @@ function explainSwiss(n) {
     rounds,
     lines,
     recommendation: odd
-      ? 'Com número par de jogadores ninguém precisa receber bye entre as rodadas.'
+      ? t('Com número par de jogadores ninguém precisa receber bye entre as rodadas.')
       : undefined,
   };
 }
@@ -288,29 +279,29 @@ function explainAmericano(n, legs = 1) {
       totalMatches: check.totalMatches,
       rounds: 0,
       lines: [
-        `${n} jogadores não permitem um Americano exato.`,
-        'No Americano cada jogador forma dupla com todos os demais e nenhuma dupla se repete — isso só é possível quando o número de inscritos é N ≡ 0 ou 1 (mod 4).',
-        `Com ${n} inscritos sobraria(m) dupla(s) sem confronto possível, então o sistema não gera os jogos desta estrutura.`,
+        t('{n} jogadores não permitem um Americano exato.', { n }),
+        t('No Americano cada jogador forma dupla com todos os demais e nenhuma dupla se repete — isso só é possível quando o número de inscritos é N ≡ 0 ou 1 (mod 4).'),
+        t('Com {n} inscritos sobraria(m) dupla(s) sem confronto possível, então o sistema não gera os jogos desta estrutura.', { n }),
       ],
       recommendation:
-        'Ajuste o número de inscritos para 4, 5, 8, 9, 12, 13, 16, 17… (N ≡ 0 ou 1 mod 4).',
+        t('Ajuste o número de inscritos para 4, 5, 8, 9, 12, 13, 16, 17… (N ≡ 0 ou 1 mod 4).'),
     };
   }
 
   const totalMatches = check.totalMatches * (volta ? 2 : 1);
   const lines = volta ? [
-    `${n} jogadores → ${totalMatches} jogos no total, em 2 turnos (ida e volta).`,
-    `Cada uma das ${totalPairs} duplas possíveis joga junta 2 vezes — uma em cada turno.`,
-    `Cada jogador faz ${(n - 1) * 2} jogos: no returno, os mesmos parceiros e adversários do 1º turno, com os lados trocados.`,
-    'Adversários equilibrados: você enfrenta cada outro jogador exatamente 4 vezes (2 por turno).',
-    'A grade sai em rodadas (todos jogam uma vez por rodada), o que ocupa as quadras em paralelo e iguala o tempo de espera de cada jogador.',
+    t('{n} jogadores → {totalMatches} jogos no total, em 2 turnos (ida e volta).', { n, totalMatches }),
+    t('Cada uma das {totalPairs} duplas possíveis joga junta 2 vezes — uma em cada turno.', { totalPairs }),
+    t('Cada jogador faz {v1} jogos: no returno, os mesmos parceiros e adversários do 1º turno, com os lados trocados.', { v1: (n - 1) * 2 }),
+    t('Adversários equilibrados: você enfrenta cada outro jogador exatamente 4 vezes (2 por turno).'),
+    t('A grade sai em rodadas (todos jogam uma vez por rodada), o que ocupa as quadras em paralelo e iguala o tempo de espera de cada jogador.'),
   ] : [
-    `${n} jogadores → ${totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).`,
-    `Cobertura perfeita: cada uma das ${totalPairs} duplas possíveis acontece exatamente uma vez.`,
-    `Cada jogador faz ${n - 1} jogos, formando dupla com cada outro jogador uma única vez.`,
-    'Adversários perfeitamente equilibrados: você enfrenta cada outro jogador exatamente 2 vezes — não importa o número de inscritos.',
-    'A grade sai em rodadas (todos jogam uma vez por rodada), o que ocupa as quadras em paralelo e iguala o tempo de espera de cada jogador.',
-    'Quando há níveis e gêneros informados, o sorteio ainda tenta — sem quebrar o equilíbrio — que duplas do mesmo gênero e de níveis próximos se enfrentem.',
+    t('{n} jogadores → {totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).', { n, totalMatches }),
+    t('Cobertura perfeita: cada uma das {totalPairs} duplas possíveis acontece exatamente uma vez.', { totalPairs }),
+    t('Cada jogador faz {v1} jogos, formando dupla com cada outro jogador uma única vez.', { v1: n - 1 }),
+    t('Adversários perfeitamente equilibrados: você enfrenta cada outro jogador exatamente 2 vezes — não importa o número de inscritos.'),
+    t('A grade sai em rodadas (todos jogam uma vez por rodada), o que ocupa as quadras em paralelo e iguala o tempo de espera de cada jogador.'),
+    t('Quando há níveis e gêneros informados, o sorteio ainda tenta — sem quebrar o equilíbrio — que duplas do mesmo gênero e de níveis próximos se enfrentem.'),
   ];
 
   return {
@@ -326,11 +317,9 @@ function explainMexicano(n) {
   const perRound = Math.floor(n / 4);
   const rounds = recommendedMexicanoRounds(n);
   const lines = [
-    `${n} jogadores → quadras de 4 (${perRound} quadra(s) por rodada)${
-      sitting > 0 ? `, com ${sitting} folga(s) por rodada circulando de forma justa` : ''
-    }.`,
-    `${rounds} rodadas recomendadas (o organizador pode ajustar).`,
-    'A cada rodada, todos são reordenados pela pontuação e reagrupados de 4 em 4 (1º+4º × 2º+3º): quem vai bem sobe de quadra, quem vai mal desce — os jogos ficam sempre equilibrados.',
+    t('{n} jogadores → quadras de 4 ({perRound} quadra(s) por rodada){v3}.', { n, perRound, v3: sitting > 0 ? t(', com {sitting} folga(s) por rodada circulando de forma justa', { sitting }) : '' }),
+    t('{rounds} rodadas recomendadas (o organizador pode ajustar).', { rounds }),
+    t('A cada rodada, todos são reordenados pela pontuação e reagrupados de 4 em 4 (1º+4º × 2º+3º): quem vai bem sobe de quadra, quem vai mal desce — os jogos ficam sempre equilibrados.'),
   ];
   return { status: 'ok', totalMatches: perRound * rounds, rounds, lines };
 }
@@ -370,7 +359,7 @@ export function explainStage(input) {
     etapaCount, maxPerGroup,
   } = input || {};
   const label = TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType || '—';
-  const description = STAGE_DESCRIPTION[stageType] || 'Formato definido pelo organizador.';
+  const description = STAGE_DESCRIPTION[stageType] || t('Formato definido pelo organizador.');
   const minPlayers = STAGE_MIN_PLAYERS[stageType] ?? 2;
   const n = Math.trunc(Number(playerCount) || 0);
 
@@ -400,10 +389,10 @@ export function explainStage(input) {
       status: 'error',
       stats: null,
       lines: [
-        `São necessários pelo menos ${minPlayers} jogadores inscritos para sortear este formato.`,
+        t('São necessários pelo menos {minPlayers} jogadores inscritos para sortear este formato.', { minPlayers }),
         n > 0
-          ? `Atualmente há ${n} jogador(es) — faltam ${minPlayers - n}.`
-          : 'Ainda não há jogadores suficientes inscritos.',
+          ? t('Atualmente há {n} jogador(es) — faltam {v2}.', { n, v2: minPlayers - n })
+          : t('Ainda não há jogadores suficientes inscritos.'),
       ],
     };
   }
@@ -434,7 +423,7 @@ export function describeFormat(format) {
  * @returns {string}
  */
 export function describeStage(stageType) {
-  return STAGE_DESCRIPTION[stageType] || 'Formato definido pelo organizador.';
+  return STAGE_DESCRIPTION[stageType] || t('Formato definido pelo organizador.');
 }
 
 /**
@@ -465,7 +454,7 @@ export function stageFormatCompatibility(format, stageType) {
   }
   const reason =
     stageType === TOURNAMENT_STAGE_TYPE.AMERICANO || stageType === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
-      ? 'O formato Americano (rotação de duplas) só funciona com inscrição individual (Simples), pois monta as duplas sorteando parceiros. Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'
-      : `O sistema "${TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType}" não é compatível com inscrição em ${MODALITY_FORMAT_LABELS[format] || format}.`;
+      ? t('O formato Americano (rotação de duplas) só funciona com inscrição individual (Simples), pois monta as duplas sorteando parceiros. Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.')
+      : t('O sistema "{v1}" não é compatível com inscrição em {v2}.', { v1: TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType, v2: MODALITY_FORMAT_LABELS[format] || format });
   return { compatible: false, reason };
 }

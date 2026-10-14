@@ -18,6 +18,7 @@ import { usePromoSettings, useSetPromoCouponUnitCost } from '@/modules/promo/hoo
 import { useCoachLessons } from '@/modules/coaches/hooks/useLessons';
 import { V2Badge, V2EmptyState, V2ErrorState, V2Input, V2Skeleton } from '@/v2/ui/primitives';
 import { PROMO_KIND_ICON } from './promoUi';
+import { t, tn } from '@/core/i18n';
 
 const dinheiro = (v) => (v == null ? '—' : formatPrice(v));
 const TOM_DO_ESTADO = { ativo: 'green', desligado: 'neutral', esgotado: 'amber', vencido: 'amber' };
@@ -40,8 +41,8 @@ function CustoUnitario({ issuer, row, unit }) {
     return (
       <button type="button" onClick={() => { setValor(unit ?? ''); setEditando(true); }}
         className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold text-ink hover:bg-paper"
-        aria-label={`Editar o custo unitário de ${row.code}`}>
-        {unit == null ? <span className="text-amber-700">Informar</span> : formatPrice(unit)}
+        aria-label={t('Editar o custo unitário de {codigo}', { codigo: row.code })}>
+        {unit == null ? <span className="text-amber-700">{t('Informar')}</span> : formatPrice(unit)}
         <Pencil className="h-3 w-3 text-gray-400" aria-hidden />
       </button>
     );
@@ -49,18 +50,18 @@ function CustoUnitario({ issuer, row, unit }) {
   const gravar = async () => {
     try {
       await salvar.mutateAsync({ issuer, couponId: row.id, cost: valor });
-      toast.success('Custo unitário salvo.');
+      toast.success(t('Custo unitário salvo.'));
       setEditando(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o custo.');
+      toast.error(err?.message || t('Não foi possível salvar o custo.'));
     }
   };
   return (
     <span className="inline-flex items-center gap-1">
-      <label htmlFor={`pcusto-${row.id}`} className="sr-only">Custo unitário de {row.code} (R$)</label>
+      <label htmlFor={`pcusto-${row.id}`} className="sr-only">{t('Custo unitário de {codigo} (R$)', { codigo: row.code })}</label>
       <V2Input id={`pcusto-${row.id}`} type="number" min="0" step="0.01" className="h-8 w-24 px-2 text-xs"
         value={valor} onChange={(e) => setValor(e.target.value)} />
-      <button type="button" onClick={gravar} disabled={salvar.isPending} aria-label="Salvar custo"
+      <button type="button" onClick={gravar} disabled={salvar.isPending} aria-label={t('Salvar custo')}
         className="rounded-full p-1.5 text-ink hover:bg-paper disabled:opacity-50">
         <Check className="h-4 w-4" aria-hidden />
       </button>
@@ -91,10 +92,10 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
   if (falhou) {
     return (
       <V2ErrorState
-        title="Não foi possível montar o controle de uso"
+        title={t('Não foi possível montar o controle de uso')}
         description={ehProfessor
-          ? 'A conta precisa dos cupons, dos custos informados e das suas aulas. Sem um deles, os números sairiam pela metade.'
-          : 'A conta precisa dos cupons e dos custos informados. Sem um deles, os números sairiam pela metade.'}
+          ? t('A conta precisa dos cupons, dos custos informados e das suas aulas. Sem um deles, os números sairiam pela metade.')
+          : t('A conta precisa dos cupons e dos custos informados. Sem um deles, os números sairiam pela metade.')}
         onRetry={() => consultas.filter((q) => q.isError).forEach((q) => q.refetch())}
       />
     );
@@ -102,8 +103,8 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
   if (carregando || !relatorio) return <V2Skeleton className="h-48 rounded-2xl" />;
   if (relatorio.linhas.length === 0) {
     return (
-      <V2EmptyState icon={BarChart3} title="Nenhum cupom criado ainda"
-        description="Quando o primeiro cupom existir, aqui aparecem os usos, o que custou e o que trouxe." />
+      <V2EmptyState icon={BarChart3} title={t('Nenhum cupom criado ainda')}
+        description={t('Quando o primeiro cupom existir, aqui aparecem os usos, o que custou e o que trouxe.')} />
     );
   }
 
@@ -111,24 +112,24 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <Resumo label="Usos" valor={total.usos} dica={`${linhas.length} ${linhas.length === 1 ? 'cupom' : 'cupons'}`} />
-        <Resumo label="Custo" valor={dinheiro(total.custo)}
-          dica={total.custo == null ? 'Falta o custo de algum cupom' : (ehProfessor ? 'Descontos nas aulas e vales' : 'Vales entregues')} />
-        <Resumo label={ehProfessor ? 'Aulas com cupom renderam' : 'Receita'} valor={dinheiro(total.receita)}
-          dica={ehProfessor ? 'Aulas confirmadas que usaram um desconto' : 'A plataforma não cobra pelo que divulga'} />
+        <Resumo label={t('Usos')} valor={total.usos} dica={tn(linhas.length, '{n} cupom', '{n} cupons')} />
+        <Resumo label={t('Custo')} valor={dinheiro(total.custo)}
+          dica={total.custo == null ? t('Falta o custo de algum cupom') : (ehProfessor ? t('Descontos nas aulas e vales') : t('Vales entregues'))} />
+        <Resumo label={ehProfessor ? t('Aulas com cupom renderam') : t('Receita')} valor={dinheiro(total.receita)}
+          dica={ehProfessor ? t('Aulas confirmadas que usaram um desconto') : t('A plataforma não cobra pelo que divulga')} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-3 py-2.5">Cupom</th>
-              <th className="px-3 py-2.5">Estado</th>
-              <th className="px-3 py-2.5 text-center">Usos</th>
-              <th className="px-3 py-2.5 text-right">Custo</th>
-              <th className="px-3 py-2.5 text-right">Receita</th>
+              <th className="px-3 py-2.5">{t('Cupom')}</th>
+              <th className="px-3 py-2.5">{t('Estado')}</th>
+              <th className="px-3 py-2.5 text-center">{t('Usos')}</th>
+              <th className="px-3 py-2.5 text-right">{t('Custo')}</th>
+              <th className="px-3 py-2.5 text-right">{t('Receita')}</th>
               <th className="whitespace-nowrap px-3 py-2.5 text-right">
-                <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> Custo unitário</span>
+                <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> {t('Custo unitário')}</span>
               </th>
             </tr>
           </thead>
@@ -143,9 +144,9 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
                     <p className="inline-flex items-center gap-1.5 font-display font-bold tracking-wide text-ink">
                       {Icone && <Icone className="h-3.5 w-3.5 text-gray-400" aria-hidden />}{r.code}
                     </p>
-                    <p className="text-xs text-gray-500">{promoKindLabel(issuer.type, r.kind)} · {couponBenefitText(c)}</p>
+                    <p className="text-xs text-gray-500">{t(promoKindLabel(issuer.type, r.kind))} · {couponBenefitText(c)}</p>
                   </td>
-                  <td className="px-3 py-2.5"><V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge></td>
+                  <td className="px-3 py-2.5"><V2Badge tone={TOM_DO_ESTADO[estado]}>{t(COUPON_STATUS_LABEL[estado])}</V2Badge></td>
                   <td className="px-3 py-2.5 text-center">
                     {r.usos}{c.max_uses ? <span className="text-gray-400"> / {c.max_uses}</span> : null}
                   </td>
@@ -165,9 +166,9 @@ export default function PromoUsageReport({ issuer, couponsQ }) {
 
       <p className="text-xs leading-5 text-gray-500">
         {ehProfessor
-          ? <><strong>Custo</strong> é o que você deu: o desconto abatido nas aulas confirmadas com o código e os vales entregues (usos × custo unitário). <strong>Receita</strong> é o que essas aulas renderam. </>
-          : <><strong>Custo</strong> é o que a plataforma deu nos vales (usos × custo unitário). O desconto da plataforma não passa por um preço da plataforma — por isso só os usos. </>}
-        <strong>—</strong> quer dizer que o número não é conhecido, nunca que foi zero.
+          ? t('Custo é o que você deu: o desconto abatido nas aulas confirmadas com o código e os vales entregues (usos × custo unitário). Receita é o que essas aulas renderam.')
+          : t('Custo é o que a plataforma deu nos vales (usos × custo unitário). O desconto da plataforma não passa por um preço da plataforma — por isso só os usos.')}
+        {' '}{t('“—” quer dizer que o número não é conhecido, nunca que foi zero.')}
       </p>
     </div>
   );

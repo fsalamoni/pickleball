@@ -16,6 +16,7 @@
 import React, { useId } from 'react';
 import { cn } from '@/core/lib/utils';
 import { COURT, VIEW_BOUNDS, describeDiagram, DIAGRAM_TAG_LABELS } from '@/modules/training/domain/diagram';
+import { t } from '@/core/i18n';
 
 const SX = 2; // 20 pés → 200 unidades
 const SY = 4.4; // 44 pés → 440 unidades
@@ -193,7 +194,7 @@ export default function CourtDiagram({
   const court = diagram?.court || 'inteira';
   const vb = courtViewBox(court);
   const elements = diagram?.elements || [];
-  const descricao = describeDiagram(diagram) || 'Quadra vazia.';
+  const descricao = describeDiagram(diagram) || t('Quadra vazia.');
   const titleId = `cd-t-${uid}`;
   const markerBola = `cd-b-${uid}`;
   const markerMov = `cd-m-${uid}`;
@@ -230,7 +231,7 @@ export default function CourtDiagram({
       {caption && (diagram?.title || tag !== 'neutro') && (
         <figcaption className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-700">
           {tag !== 'neutro' && (
-            <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', TAG_TONE[tag])}>{DIAGRAM_TAG_LABELS[tag]}</span>
+            <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', TAG_TONE[tag])}>{t(DIAGRAM_TAG_LABELS[tag])}</span>
           )}
           {diagram?.title && <span className="font-semibold">{diagram.title}</span>}
         </figcaption>

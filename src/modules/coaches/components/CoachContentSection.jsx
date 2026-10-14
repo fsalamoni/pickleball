@@ -21,6 +21,7 @@ import {
   V2Surface, V2Textarea,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function ContentForm({ coachId, content, onClose }) {
   const create = useCreateContent();
@@ -40,41 +41,41 @@ function ContentForm({ coachId, content, onClose }) {
     try {
       if (editing) await update.mutateAsync({ content, input: form });
       else await create.mutateAsync({ coachId, input: form });
-      toast.success(editing ? 'Conteúdo atualizado.' : 'Conteúdo publicado.');
+      toast.success(editing ? t('Conteúdo atualizado.') : t('Conteúdo publicado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
-      <h3 className="font-display text-base font-bold text-ink">{editing ? 'Editar conteúdo' : 'Novo conteúdo'}</h3>
-      <V2Field label="Título">
-        <V2Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required maxLength={120} placeholder="Ex.: Drill de dink cruzado" />
+      <h3 className="font-display text-base font-bold text-ink">{editing ? t('Editar conteúdo') : t('Novo conteúdo')}</h3>
+      <V2Field label={t('Título')}>
+        <V2Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required maxLength={120} placeholder={t('Ex.: Drill de dink cruzado')} />
       </V2Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Categoria">
+        <V2Field label={t('Categoria')}>
           <V2Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            {Object.entries(CONTENT_CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {Object.entries(CONTENT_CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
           </V2Select>
         </V2Field>
-        <V2Field label="Visibilidade">
+        <V2Field label={t('Visibilidade')}>
           <V2Select value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value })}>
-            <option value={CONTENT_VISIBILITY.PUBLIC}>Público</option>
-            <option value={CONTENT_VISIBILITY.STUDENTS}>Só alunos</option>
+            <option value={CONTENT_VISIBILITY.PUBLIC}>{t('Público')}</option>
+            <option value={CONTENT_VISIBILITY.STUDENTS}>{t('Só alunos')}</option>
           </V2Select>
         </V2Field>
       </div>
-      <V2Field label="Conteúdo (texto)">
-        <V2Textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} rows={4} maxLength={5000} placeholder="Descreva o drill/dica. Você pode usar quebras de linha." />
+      <V2Field label={t('Conteúdo (texto)')}>
+        <V2Textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} rows={4} maxLength={5000} placeholder={t('Descreva o drill/dica. Você pode usar quebras de linha.')} />
       </V2Field>
-      <V2Field label="Link de vídeo (opcional)">
-        <V2Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://youtu.be/…" />
+      <V2Field label={t('Link de vídeo (opcional)')}>
+        <V2Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder={t('https://youtu.be/…')} />
       </V2Field>
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={pending}>{pending ? 'Salvando…' : editing ? 'Salvar' : 'Publicar'}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" disabled={pending}>{pending ? t('Salvando…') : editing ? t('Salvar') : t('Publicar')}</V2Button>
       </div>
     </form>
   );
@@ -89,8 +90,8 @@ export default function CoachContentSection({ coachId }) {
   const items = useMemo(() => sortContent(content), [content]);
 
   const handleDelete = async (item) => {
-    try { await del.mutateAsync({ content: item }); toast.success('Conteúdo excluído.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível excluir.'); }
+    try { await del.mutateAsync({ content: item }); toast.success(t('Conteúdo excluído.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível excluir.')); }
   };
 
   const openNew = () => { setEditing(null); setShowForm(true); };
@@ -102,10 +103,10 @@ export default function CoachContentSection({ coachId }) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Biblioteca de conteúdo</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Biblioteca de conteúdo')}</h2>
         </div>
         {/* Sem a biblioteca na mão, "Novo" é convite a publicar de novo o que já está lá. */}
-        {!showForm && !isError && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Novo</V2Button>}
+        {!showForm && !isError && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> {t('Novo')}</V2Button>}
       </div>
 
       {showForm && (
@@ -117,9 +118,9 @@ export default function CoachContentSection({ coachId }) {
       {isLoading ? (
         <V2Skeleton lines={3} />
       ) : isError ? (
-        <V2ErrorState inline title="Não foi possível carregar a sua biblioteca" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar a sua biblioteca')} onRetry={() => refetch()} />
       ) : items.length === 0 ? (
-        <V2EmptyState icon={BookOpen} title="Nenhum conteúdo" description="Publique drills e dicas (texto e/ou vídeo). Aparecem no seu perfil público." />
+        <V2EmptyState icon={BookOpen} title={t('Nenhum conteúdo')} description={t('Publique drills e dicas (texto e/ou vídeo). Aparecem no seu perfil público.')} />
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
@@ -141,27 +142,27 @@ function ContentRow({ item, openEdit, handleDelete }) {
             <p className="font-bold text-ink">{item.title}</p>
             <V2Badge tone="blue">{contentCategoryLabel(item.category)}</V2Badge>
             {item.visibility === CONTENT_VISIBILITY.STUDENTS
-              ? <V2Badge tone="amber"><Lock className="mr-1 inline h-3 w-3" />Só alunos</V2Badge>
-              : <V2Badge tone="neutral"><Globe className="mr-1 inline h-3 w-3" />Público</V2Badge>}
+              ? <V2Badge tone="amber"><Lock className="mr-1 inline h-3 w-3" />{t('Só alunos')}</V2Badge>
+              : <V2Badge tone="neutral"><Globe className="mr-1 inline h-3 w-3" />{t('Público')}</V2Badge>}
           </div>
           {item.body && <p className="mt-1 whitespace-pre-line text-xs text-gray-600 line-clamp-3">{item.body}</p>}
           {videoUrl && (
             <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-              <Video className="h-3 w-3" /> Ver vídeo
+              <Video className="h-3 w-3" /> {t('Ver vídeo')}
             </a>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button type="button" onClick={() => openEdit(item)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar">
+          <button type="button" onClick={() => openEdit(item)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label={t('Editar')}>
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <ConfirmDialog
-            title="Excluir conteúdo?"
-            description={`"${item.title}" será removido da sua biblioteca.`}
-            confirmLabel="Excluir"
+            title={t('Excluir conteúdo?')}
+            description={t('“{titulo}” será removido da sua biblioteca.', { titulo: item.title })}
+            confirmLabel={t('Excluir')}
             onConfirm={() => handleDelete(item)}
             trigger={(
-              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Excluir">
+              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label={t('Excluir')}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}

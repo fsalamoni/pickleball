@@ -22,6 +22,7 @@ import {
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2Avatar, V2Badge, V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function BookingParticipantsPanel({ booking }) {
   const { user } = useAuth();
@@ -52,7 +53,7 @@ export default function BookingParticipantsPanel({ booking }) {
 
   const doAction = async (fn, args, ok) => {
     try { await fn.mutateAsync(args); if (ok) toast.success(ok); }
-    catch (err) { toast.error(err?.message || 'Ação não concluída.'); }
+    catch (err) { toast.error(err?.message || t('Ação não concluída.')); }
   };
 
   const sendInvites = async () => {
@@ -65,25 +66,25 @@ export default function BookingParticipantsPanel({ booking }) {
     <div className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-          <Users className="h-3.5 w-3.5" /> Participantes ({accepted.length}{booking.max_participants ? `/${booking.max_participants}` : ''})
+          <Users className="h-3.5 w-3.5" /> {t('Participantes')} ({accepted.length}{booking.max_participants ? `/${booking.max_participants}` : ''})
         </div>
         <div className="flex items-center gap-1.5">
-          {booking.booking_type === 'coach_lesson' && <V2Badge tone="ink">Aula com professor</V2Badge>}
-          {booking.open_join && <V2Badge tone="blue"><DoorOpen className="mr-1 inline h-3 w-3" />Aberta{remainingSlots(booking) != null ? ` · ${remainingSlots(booking)} vaga(s)` : ''}</V2Badge>}
+          {booking.booking_type === 'coach_lesson' && <V2Badge tone="ink">{t('Aula com professor')}</V2Badge>}
+          {booking.open_join && <V2Badge tone="blue"><DoorOpen className="mr-1 inline h-3 w-3" />{t('Aberta')}{remainingSlots(booking) != null ? t(' · {n} vaga(s)', { n: remainingSlots(booking) }) : ''}</V2Badge>}
         </div>
       </div>
 
       {/* Convite pendente para o próprio usuário */}
       {invited && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-2.5">
-          <span className="text-sm text-amber-800">Você foi convidado para esta reserva.</span>
+          <span className="text-sm text-amber-800">{t('Você foi convidado para esta reserva.')}</span>
           <div className="flex gap-2">
-            <V2Button size="sm" onClick={() => doAction(accept, { booking }, 'Você entrou na reserva.')} disabled={accept.isPending}>
-              <Check className="h-4 w-4" /> Aceitar
+            <V2Button size="sm" onClick={() => doAction(accept, { booking }, t('Você entrou na reserva.'))} disabled={accept.isPending}>
+              <Check className="h-4 w-4" /> {t('Aceitar')}
             </V2Button>
             <button type="button" onClick={() => doAction(decline, { booking }, 'Convite recusado.')} disabled={decline.isPending}
               className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-white">
-              Recusar
+              {t('Recusar')}
             </button>
           </div>
         </div>
@@ -92,9 +93,9 @@ export default function BookingParticipantsPanel({ booking }) {
       {/* Ingresso em reserva aberta */}
       {joinable && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5">
-          <span className="text-sm text-blue-800">Esta reserva está aberta para novos participantes.</span>
-          <V2Button size="sm" onClick={() => doAction(join, { booking }, 'Você entrou na reserva.')} disabled={join.isPending || isFull(booking)}>
-            <DoorOpen className="h-4 w-4" /> Entrar
+          <span className="text-sm text-blue-800">{t('Esta reserva está aberta para novos participantes.')}</span>
+          <V2Button size="sm" onClick={() => doAction(join, { booking }, t('Você entrou na reserva.'))} disabled={join.isPending || isFull(booking)}>
+            <DoorOpen className="h-4 w-4" /> {t('Entrar')}
           </V2Button>
         </div>
       )}
@@ -108,7 +109,7 @@ export default function BookingParticipantsPanel({ booking }) {
               <div className="flex items-center gap-2">
                 <V2Avatar name={p.name} photoUrl={p.photo} size="sm" />
                 <div>
-                  <p className="text-sm font-semibold text-ink">{p.name}{p.athlete_id === uid ? ' (você)' : ''}{p.is_initiator ? ' · dono' : ''}{!p.athlete_id ? ' · avulso' : ''}</p>
+                  <p className="text-sm font-semibold text-ink">{p.name}{p.athlete_id === uid ? t(' (você)') : ''}{p.is_initiator ? t(' · dono') : ''}{!p.athlete_id ? t(' · avulso') : ''}</p>
                   {p.slot && <p className="text-[11px] text-gray-500">{p.slot.start}–{p.slot.end}</p>}
                 </div>
               </div>
@@ -122,7 +123,7 @@ export default function BookingParticipantsPanel({ booking }) {
           <div key={p.athlete_id || `pending-${i}`} className="flex items-center gap-2 rounded-xl bg-paper px-2.5 py-1.5 opacity-70">
             <V2Avatar name={p.name} photoUrl={p.photo} size="sm" />
             <p className="flex-1 text-sm text-gray-600">{p.name}</p>
-            <V2Badge tone="amber">Convidado</V2Badge>
+            <V2Badge tone="amber">{t('Convidado')}</V2Badge>
           </div>
         ))}
       </div>
@@ -134,30 +135,30 @@ export default function BookingParticipantsPanel({ booking }) {
             <div className="space-y-2">
               <AthleteMultiPicker value={newInvites} onChange={setNewInvites} exclude={existingIds} />
               <div className="flex justify-end gap-2">
-                <V2Button size="sm" variant="ghost" onClick={() => { setInviting(false); setNewInvites([]); }}>Cancelar</V2Button>
-                <V2Button size="sm" onClick={sendInvites} disabled={invite.isPending}>Convidar</V2Button>
+                <V2Button size="sm" variant="ghost" onClick={() => { setInviting(false); setNewInvites([]); }}>{t('Cancelar')}</V2Button>
+                <V2Button size="sm" onClick={sendInvites} disabled={invite.isPending}>{t('Convidar')}</V2Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               <V2Button size="sm" variant="ghost" onClick={() => setInviting(true)}>
-                <UserPlus className="h-4 w-4" /> Convidar atletas
+                <UserPlus className="h-4 w-4" /> {t('Convidar atletas')}
               </V2Button>
               <button
                 type="button"
                 onClick={() => doAction(settings, { booking, patch: { open_join: !booking.open_join } }, 'Reserva atualizada.')}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-white"
               >
-                <DoorOpen className="h-3.5 w-3.5" /> {booking.open_join ? 'Fechar reserva' : 'Abrir reserva'}
+                <DoorOpen className="h-3.5 w-3.5" /> {booking.open_join ? t('Fechar reserva') : t('Abrir reserva')}
               </button>
               <ConfirmDialog
-                title="Sair da reserva?"
-                description="Você deixa de ser participante. Os demais mantêm a reserva."
-                confirmLabel="Sair"
-                onConfirm={() => doAction(leave, { booking }, 'Você saiu da reserva.')}
+                title={t('Sair da reserva?')}
+                description={t('Você deixa de ser participante. Os demais mantêm a reserva.')}
+                confirmLabel={t('Sair')}
+                onConfirm={() => doAction(leave, { booking }, t('Você saiu da reserva.'))}
                 trigger={(
                   <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
-                    <LogOut className="h-3.5 w-3.5" /> Sair
+                    <LogOut className="h-3.5 w-3.5" /> {t('Sair')}
                   </button>
                 )}
               />

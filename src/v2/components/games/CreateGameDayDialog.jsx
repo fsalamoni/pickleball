@@ -20,6 +20,7 @@ import {
 import { useCreateGameDay } from '@/modules/games/hooks/useGameDays';
 import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { t } from '@/core/i18n';
 
 const EMPTY_FORM = {
   title: '', visibility: GAME_DAY_VISIBILITY.PRIVATE, date: '', time: '',
@@ -71,19 +72,19 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
   const busy = create.isPending;
 
   const handleSubmit = async () => {
-    if (!form.title.trim()) { toast.error('Dê um nome ao seu dia de jogo.'); return; }
+    if (!form.title.trim()) { toast.error(t('Dê um nome ao seu dia de jogo.')); return; }
     try {
       const { id } = await create.mutateAsync(form);
       toast.success(
         form.visibility === GAME_DAY_VISIBILITY.PUBLIC
-          ? 'Dia de jogo criado! Um convite foi publicado em "Procura-se jogo".'
-          : 'Dia de jogo criado!',
+          ? t('Dia de jogo criado! Um convite foi publicado em "Procura-se jogo".')
+          : t('Dia de jogo criado!'),
       );
       onCreated?.(id);
       onOpenChange(false);
       setForm(defaultsForNew());
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível criar o dia de jogo.');
+      toast.error(err?.message || t('Não foi possível criar o dia de jogo.'));
     }
   };
 
@@ -91,20 +92,20 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo dia de jogo</DialogTitle>
+          <DialogTitle>{t('Novo dia de jogo')}</DialogTitle>
           <DialogDescription>
-            Organize sua rodada, convide atletas e (se quiser) publique os resultados no ranking.
+            {t('Organize sua rodada, convide atletas e (se quiser) publique os resultados no ranking.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div data-dica="dia-de-jogo-nome">
-            <Label className="text-xs">Nome*</Label>
-            <Input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={80} placeholder="Ex.: Dia de jogo de sábado" />
+            <Label className="text-xs">{t('Nome*')}</Label>
+            <Input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={80} placeholder={t('Ex.: Dia de jogo de sábado')} />
           </div>
 
           <div data-dica="dia-de-jogo-visibilidade">
-            <Label className="text-xs">Visibilidade</Label>
+            <Label className="text-xs">{t('Visibilidade')}</Label>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
               {Object.values(GAME_DAY_VISIBILITY).map((v) => (
                 <button
@@ -116,7 +117,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                     form.visibility === v ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-600 hover:bg-paper',
                   )}
                 >
-                  {GAME_DAY_VISIBILITY_LABELS[v]}
+                  {t(GAME_DAY_VISIBILITY_LABELS[v])}
                 </button>
               ))}
             </div>
@@ -132,7 +133,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
               exatamente assim que o dia de jogo do clube ficou sem "quem
               organiza". */}
           <div data-dica="dia-de-jogo-quem-organiza">
-            <Label className="text-xs">Quem pode organizar as partidas</Label>
+            <Label className="text-xs">{t('Quem pode organizar as partidas')}</Label>
             <div className="mt-1 grid gap-2">
               {Object.values(GAME_DAY_MANAGE_MODE).map((m) => (
                 <button
@@ -145,70 +146,66 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                     form.manage_mode === m ? 'border-ink bg-ink text-white' : 'border-gray-200 hover:bg-paper',
                   )}
                 >
-                  <span className="block text-sm font-semibold">{GAME_DAY_MANAGE_MODE_LABELS[m]}</span>
+                  <span className="block text-sm font-semibold">{t(GAME_DAY_MANAGE_MODE_LABELS[m])}</span>
                   <span className={cn('mt-0.5 block text-2xs', form.manage_mode === m ? 'text-white/70' : 'text-gray-500')}>
-                    {GAME_DAY_MANAGE_MODE_HINTS[m]}
+                    {t(GAME_DAY_MANAGE_MODE_HINTS[m])}
                   </span>
                 </button>
               ))}
             </div>
             <p className="mt-1 text-2xs text-gray-500">
-              Editar o dia de jogo, arquivar, publicar no ranking e nomear organizadores continuam só com você.
+              {t('Editar o dia de jogo, arquivar, publicar no ranking e nomear organizadores continuam só com você.')}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3" data-dica="dia-de-jogo-data">
             <div>
-              <Label className="text-xs">Data</Label>
+              <Label className="text-xs">{t('Data')}</Label>
               <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
             </div>
             <div>
-              <Label className="text-xs">Horário</Label>
+              <Label className="text-xs">{t('Horário')}</Label>
               <Input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
             </div>
           </div>
 
           <div>
-            <Label className="text-xs">Local</Label>
-            <Input value={form.location} onChange={(e) => set('location', e.target.value)} maxLength={160} placeholder="Arena, quadra, endereço…" />
+            <Label className="text-xs">{t('Local')}</Label>
+            <Input value={form.location} onChange={(e) => set('location', e.target.value)} maxLength={160} placeholder={t('Arena, quadra, endereço…')} />
           </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
             <div>
-              <Label className="text-xs">Cidade</Label>
+              <Label className="text-xs">{t('Cidade')}</Label>
               <Input value={form.city} onChange={(e) => set('city', e.target.value)} maxLength={80} />
             </div>
             <div className="w-20">
-              <Label className="text-xs">UF</Label>
+              <Label className="text-xs">{t('UF')}</Label>
               <Input value={form.state} onChange={(e) => set('state', e.target.value)} maxLength={2} placeholder="SP" />
             </div>
           </div>
 
           {showFormatSelect && (
             <div data-dica="dia-de-jogo-formato">
-              <Label className="text-xs">Formato do dia de jogo</Label>
+              <Label className="text-xs">{t('Formato do dia de jogo')}</Label>
               <select
                 value={form.format}
                 onChange={(e) => set('format', e.target.value)}
                 className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 {formatOptions.map((f) => (
-                  <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
+                  <option key={f} value={f}>{t(GAME_DAY_FORMAT_LABELS[f])}</option>
                 ))}
               </select>
               {playOn && isPlayFormat(form.format) && (
                 <p className="mt-1 text-2xs text-gray-500">
-                  No Play, os jogos são criados por ordem de chegada, quadra a quadra, sem sorteio de grade e sem
-                  resultados. Ao concluir um jogo, o próximo entra automaticamente na quadra liberada.
+                  {t('No Play, os jogos são criados por ordem de chegada, quadra a quadra, sem sorteio de grade e sem')}{' '}
+                  {t('resultados. Ao concluir um jogo, o próximo entra automaticamente na quadra liberada.')}
                 </p>
               )}
               {isAmericanoLiveFormat(form.format) && (
                 <p className="mt-1 text-2xs leading-5 text-gray-500">
-                  No <strong>Americano aprimorado</strong>, as partidas são sorteadas <strong>uma a uma</strong>,
-                  quadra por quadra, sempre com quem está disponível naquele momento — usando as mesmas regras do
-                  Americano (duplas inéditas, adversários inéditos, participação e nível equilibrados).
-                  Cada partida tem <strong>placar</strong>, entra no ranking do dia e pode ir para o ranking da
-                  plataforma e o DUPR. Quem chega, sai ou pausa no meio do dia não bagunça nada.
+                  {t('No')} <strong>{t('Americano aprimorado')}</strong>{t(', as partidas são sorteadas')} <strong>{t('uma a uma')}</strong>{t(', quadra por quadra, sempre com quem está disponível naquele momento — usando as mesmas regras do Americano (duplas inéditas, adversários inéditos, participação e nível equilibrados). Cada partida tem')} <strong>{t('placar')}</strong>{t(', entra no ranking do dia e pode ir para o ranking da plataforma e o DUPR. Quem chega, sai ou pausa no meio do dia não bagunça nada.')}
                 </p>
               )}
               {/* Tutorial do formato SELECIONADO, ainda na hora de escolher.
@@ -219,7 +216,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                 <div className="mt-2">
                   <V2TutorialLauncher
                     tutorialId={tutorialIdForGameDayFormat(form.format)}
-                    label="Como funciona este formato"
+                    label={t('Como funciona este formato')}
                     autoOpen={false}
                     // O dia ainda não existe: aqui é leitura para escolher o formato.
                     explicar
@@ -231,7 +228,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
 
           {mostrarQuadras && (
             <div className="w-40">
-              <Label className="text-xs">Quadras disponíveis</Label>
+              <Label className="text-xs">{t('Quadras disponíveis')}</Label>
               <Input
                 type="number"
                 min={1}
@@ -243,22 +240,22 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
           )}
 
           <div>
-            <Label className="text-xs">Observações (opcional)</Label>
+            <Label className="text-xs">{t('Observações (opcional)')}</Label>
             <textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
               rows={2}
               maxLength={1000}
-              placeholder="Nível, valor da quadra, o que levar…"
+              placeholder={t('Nível, valor da quadra, o que levar…')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
         </div>
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={() => onOpenChange(false)}>{t('Cancelar')}</V2Button>
           <V2Button onClick={handleSubmit} disabled={busy || !form.title.trim()} data-dica="dia-de-jogo-confirmar">
-            {busy ? 'Criando…' : 'Criar dia de jogo'}
+            {busy ? t('Criando…') : t('Criar dia de jogo')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

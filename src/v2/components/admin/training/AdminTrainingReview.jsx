@@ -25,13 +25,14 @@ import { ReasonDialog, mensagemDeErro } from '@/v2/components/training/item/Item
 import { quandoFoi } from '@/v2/components/training/questions/questionsView';
 import { ITEM_KIND_LABELS } from '@/modules/training/domain/taxonomy';
 import { reviewQueue } from './adminTrainingView';
+import { t, tn } from '@/core/i18n';
 
 function NaFila({ item, acoes, verificar, settings }) {
   const [recusando, setRecusando] = useState(false);
   const podeVerificar = item.author_role === AUTHOR_ROLE.PROFESSOR && !!item.author_uid
     && settings?.public_review_professor !== false && !isVerifiedProfessor(item.author_uid, settings);
   const q = itemQuality(item);
-  const falhou = (err) => toast.error(mensagemDeErro(err, 'Não foi possível salvar agora.'));
+  const falhou = (err) => toast.error(mensagemDeErro(err, t('Não foi possível salvar agora.')));
   const enviado = quandoFoi(item.updated_at || item.created_at);
   return (
     <li>
@@ -40,40 +41,40 @@ function NaFila({ item, acoes, verificar, settings }) {
           <KindIcon kind={item.kind} />
           <div className="min-w-0 flex-1">
             <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
-              {ITEM_KIND_LABELS[item.kind] || 'Item'}{enviado ? ` · enviado ${enviado}` : ''}
+              {t(ITEM_KIND_LABELS[item.kind]) || t('Item')}{enviado ? ` · ${t('enviado {data}', { data: enviado })}` : ''}
             </p>
             <h3 className="font-display text-lg font-bold text-ink">{item.title}</h3>
             <AuthorLine item={item} />
-            {item.reviewed_at && <p className="mt-1 text-xs text-gray-500">Nova versão: já passou pela equipe antes e voltou depois de editado.</p>}
+            {item.reviewed_at && <p className="mt-1 text-xs text-gray-500">{t('Nova versão: já passou pela equipe antes e voltou depois de editado.')}</p>}
           </div>
         </div>
         {item.summary && <p className="text-sm text-gray-700">{item.summary}</p>}
-        {item.objective && <p className="text-sm text-gray-700"><span className="font-semibold text-ink">Objetivo:</span> {item.objective}</p>}
+        {item.objective && <p className="text-sm text-gray-700"><span className="font-semibold text-ink">{t('Objetivo:')}</span> {item.objective}</p>}
         <div className="rounded-3xl bg-gray-50 p-3">
-          <p className="text-sm font-semibold text-ink">Qualidade: {q.score} de {q.total}</p>
+          <p className="text-sm font-semibold text-ink">{t('Qualidade: {n} de {total}', { n: q.score, total: q.total })}</p>
           {q.missing.length ? (
             <ul className="mt-1 space-y-0.5">
               {q.missing.map((m) => (
-                <li key={m} className="flex items-center gap-1.5 text-sm text-gray-600"><CircleDashed className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" /> Falta: {m}</li>
+                <li key={m} className="flex items-center gap-1.5 text-sm text-gray-600"><CircleDashed className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" /> {t('Falta: {campo}', { campo: m })}</li>
               ))}
             </ul>
           ) : (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" aria-hidden="true" /> Tem tudo o que um bom item pede.</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-600"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" aria-hidden="true" />{' '}{t('Tem tudo o que um bom item pede.')}</p>
           )}
-          <p className="mt-1 text-xs text-gray-500">O checklist orienta; não impede aprovar.</p>
+          <p className="mt-1 text-xs text-gray-500">{t('O checklist orienta; não impede aprovar.')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={`/treino/item/${item.id}`}><ExternalLink className="h-4 w-4" aria-hidden="true" /> Ver a ficha inteira</Link>
+            <Link to={`/treino/item/${item.id}`}><ExternalLink className="h-4 w-4" aria-hidden="true" />{' '}{t('Ver a ficha inteira')}</Link>
           </V2Button>
           <V2Button
             size="sm"
             disabled={acoes.review.isPending}
             onClick={() => acoes.review.mutate({ item, decision: REVIEW.APROVADO, note: '' }, {
-              onSuccess: () => toast.success('Publicado. O autor foi avisado.'), onError: falhou,
+              onSuccess: () => toast.success(t('Publicado. O autor foi avisado.')), onError: falhou,
             })}
           >
-            Aprovar e publicar
+            {t('Aprovar e publicar')}
           </V2Button>
           {podeVerificar && (
             <V2Button
@@ -82,30 +83,30 @@ function NaFila({ item, acoes, verificar, settings }) {
               disabled={acoes.review.isPending || verificar.isPending}
               onClick={() => acoes.review.mutate({ item, decision: REVIEW.APROVADO, note: '' }, {
                 onSuccess: () => verificar.mutate({ uid: item.author_uid, verified: true, name: item.author_name }, {
-                  onSuccess: () => toast.success('Publicado, e o professor foi verificado: o que ele publicar daqui em diante entra direto.'),
-                  onError: (err) => toast.error(mensagemDeErro(err, 'O item foi publicado, mas o professor não foi verificado. Tente de novo.')),
+                  onSuccess: () => toast.success(t('Publicado, e o professor foi verificado: o que ele publicar daqui em diante entra direto.')),
+                  onError: (err) => toast.error(mensagemDeErro(err, t('O item foi publicado, mas o professor não foi verificado. Tente de novo.'))),
                 }),
                 onError: falhou,
               })}
             >
-              Aprovar e verificar o professor
+              {t('Aprovar e verificar o professor')}
             </V2Button>
           )}
-          <V2Button size="sm" variant="secondary" onClick={() => setRecusando(true)}>Recusar</V2Button>
+          <V2Button size="sm" variant="secondary" onClick={() => setRecusando(true)}>{t('Recusar')}</V2Button>
         </div>
       </V2Surface>
       <ReasonDialog
         open={recusando}
         onOpenChange={setRecusando}
-        title="Recusar a publicação"
-        description="O item continua do autor, só não entra na biblioteca. Ele lê a sua nota e pode editar e reenviar."
-        label="O que precisa mudar (o autor vai ler)"
-        confirmLabel="Recusar"
+        title={t('Recusar a publicação')}
+        description={t('O item continua do autor, só não entra na biblioteca. Ele lê a sua nota e pode editar e reenviar.')}
+        label={t('O que precisa mudar (o autor vai ler)')}
+        confirmLabel={t('Recusar')}
         required
         maxLength={500}
         pending={acoes.review.isPending}
         onConfirm={(nota, fechar) => acoes.review.mutate({ item, decision: REVIEW.RECUSADO, note: nota }, {
-          onSuccess: () => { toast.success('Recusado. O autor foi avisado.'); fechar(); }, onError: falhou,
+          onSuccess: () => { toast.success(t('Recusado. O autor foi avisado.')); fechar(); }, onError: falhou,
         })}
       />
     </li>
@@ -118,20 +119,20 @@ export default function AdminTrainingReview({ identity, settingsQ, itens }) {
   const fila = useMemo(() => reviewQueue(itens.data || []), [itens.data]);
 
   if (itens.isPending) return <V2Skeleton className="h-64 rounded-4xl" />;
-  if (itens.isError) return <V2Surface><V2ErrorState title="A fila de revisão não carregou" onRetry={() => itens.refetch()} /></V2Surface>;
+  if (itens.isError) return <V2Surface><V2ErrorState title={t('A fila de revisão não carregou')} onRetry={() => itens.refetch()} /></V2Surface>;
 
   return (
-    <section className="space-y-4" aria-label="Fila de revisão" data-dica="admin-treino-revisao">
+    <section className="space-y-4" aria-label={t('Fila de revisão')} data-dica="admin-treino-revisao">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-xl font-bold text-ink">Fila de revisão</h2>
-        <V2Badge tone={fila.length ? 'amber' : 'green'}>{fila.length === 1 ? '1 item' : `${fila.length} itens`}</V2Badge>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Fila de revisão')}</h2>
+        <V2Badge tone={fila.length ? 'amber' : 'green'}>{tn(fila.length, '{n} item', '{n} itens')}</V2Badge>
       </div>
       <p className="max-w-2xl text-sm text-gray-500">
-        Itens públicos que ainda não estão na biblioteca. Quem decide o que passa pela fila são as Configurações (atletas, professores). Professor que a equipe verificou publica direto.
+        {t('Itens públicos que ainda não estão na biblioteca. Quem decide o que passa pela fila são as Configurações (atletas, professores). Professor que a equipe verificou publica direto.')}
       </p>
       {podeAfirmarVazio(itens) && !fila.length ? (
         <V2Surface>
-          <V2EmptyState icon={ClipboardCheck} title="Fila vazia" description="Nenhum item esperando a equipe agora. Quando alguém publicar, ele aparece aqui." />
+          <V2EmptyState icon={ClipboardCheck} title={t('Fila vazia')} description={t('Nenhum item esperando a equipe agora. Quando alguém publicar, ele aparece aqui.')} />
         </V2Surface>
       ) : (
         <ul className="space-y-3">

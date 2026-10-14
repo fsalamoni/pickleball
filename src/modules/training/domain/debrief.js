@@ -15,6 +15,7 @@
  * mesmo dia ⇒ mesma sugestão.
  */
 
+import { fmtLista, t, tk, tn } from '@/core/i18n';
 import { addDays, daysBetween, isISODate, todayLocal, weekdayOf, weekKeyOf, WEEKDAY_SHORT } from './dates.js';
 import { fitsLevel } from './trainingItem.js';
 import { ITEM_KIND } from './taxonomy.js';
@@ -26,41 +27,41 @@ import { PLAN_LIMITS, PLAN_STATUS, planEndDate, seededOrder } from './plan.js';
  * gravado no banco: nunca renomeie.
  */
 export const GAME_ASPECTS = Object.freeze([
-  { id: 'saque', label: 'Saque', skills: ['serve.saque_profundo', 'serve.consistencia'] },
-  { id: 'devolucao', label: 'Devolução', skills: ['serve.devolucao_profunda'] },
-  { id: 'terceira_bola', label: 'Terceira bola', skills: ['groundstrokes.terceira_bola_drop', 'groundstrokes.terceira_bola_drive'] },
-  { id: 'drive', label: 'Drive', skills: ['groundstrokes.drive'] },
-  { id: 'transicao', label: 'Chegar à rede', skills: ['groundstrokes.transicao', 'net.reset'] },
-  { id: 'dink', label: 'Dink e jogo curto', skills: ['kitchen.dink_cruzado', 'kitchen.dink_paralelo', 'kitchen.paciencia'] },
-  { id: 'ataque_rede', label: 'Atacar na rede', skills: ['net.voleio', 'net.speed_up', 'kitchen.dink_atacavel'] },
-  { id: 'defesa', label: 'Defesa e reset', skills: ['net.reset', 'net.contra_ataque'] },
-  { id: 'lob_smash', label: 'Lob e smash', skills: ['groundstrokes.lob', 'net.smash'] },
-  { id: 'posicionamento', label: 'Posição da dupla', skills: ['doubles.posicionamento', 'doubles.cobertura_meio', 'doubles.comunicacao'] },
-  { id: 'escolha_golpe', label: 'Escolha do golpe', skills: ['tactics.selecao_golpe', 'tactics.alvo', 'tactics.leitura_adversario'] },
-  { id: 'mental', label: 'Cabeça e foco', skills: ['mental.foco', 'mental.pressao', 'mental.rotina_entre_pontos'] },
-  { id: 'fisico', label: 'Físico e deslocamento', skills: ['physical.agilidade', 'physical.condicionamento'] },
+  { id: 'saque', label: tk('Saque'), skills: ['serve.saque_profundo', 'serve.consistencia'] },
+  { id: 'devolucao', label: tk('Devolução'), skills: ['serve.devolucao_profunda'] },
+  { id: 'terceira_bola', label: tk('Terceira bola'), skills: ['groundstrokes.terceira_bola_drop', 'groundstrokes.terceira_bola_drive'] },
+  { id: 'drive', label: tk('Drive'), skills: ['groundstrokes.drive'] },
+  { id: 'transicao', label: tk('Chegar à rede'), skills: ['groundstrokes.transicao', 'net.reset'] },
+  { id: 'dink', label: tk('Dink e jogo curto'), skills: ['kitchen.dink_cruzado', 'kitchen.dink_paralelo', 'kitchen.paciencia'] },
+  { id: 'ataque_rede', label: tk('Atacar na rede'), skills: ['net.voleio', 'net.speed_up', 'kitchen.dink_atacavel'] },
+  { id: 'defesa', label: tk('Defesa e reset'), skills: ['net.reset', 'net.contra_ataque'] },
+  { id: 'lob_smash', label: tk('Lob e smash'), skills: ['groundstrokes.lob', 'net.smash'] },
+  { id: 'posicionamento', label: tk('Posição da dupla'), skills: ['doubles.posicionamento', 'doubles.cobertura_meio', 'doubles.comunicacao'] },
+  { id: 'escolha_golpe', label: tk('Escolha do golpe'), skills: ['tactics.selecao_golpe', 'tactics.alvo', 'tactics.leitura_adversario'] },
+  { id: 'mental', label: tk('Cabeça e foco'), skills: ['mental.foco', 'mental.pressao', 'mental.rotina_entre_pontos'] },
+  { id: 'fisico', label: tk('Físico e deslocamento'), skills: ['physical.agilidade', 'physical.condicionamento'] },
 ]);
 
 const ASPECT_BY_ID = Object.freeze(Object.fromEntries(GAME_ASPECTS.map((a) => [a.id, a])));
-export const aspectLabel = (id) => ASPECT_BY_ID[id]?.label || id;
+export const aspectLabel = (id) => (ASPECT_BY_ID[id] ? t(ASPECT_BY_ID[id].label) : id);
 
 export const DEBRIEF_RATING_LABELS = Object.freeze({
-  1: 'Muito abaixo', 2: 'Abaixo', 3: 'No meu normal', 4: 'Bem', 5: 'Muito bem',
+  1: tk('Muito abaixo'), 2: tk('Abaixo'), 3: tk('No meu normal'), 4: tk('Bem'), 5: tk('Muito bem'),
 });
 export const DEBRIEF_ENERGY_LABELS = Object.freeze({
-  1: 'Esgotado', 2: 'Cansado', 3: 'Normal', 4: 'Bem', 5: 'Ótimo',
+  1: tk('Esgotado'), 2: tk('Cansado'), 3: tk('Normal'), 4: tk('Bem'), 5: tk('Ótimo'),
 });
 
 export const EVOLUTION = Object.freeze({ MELHOROU: 'melhorou', IGUAL: 'igual', PIOROU: 'piorou', NAO_SEI: 'nao_sei' });
 export const EVOLUTION_LABELS = Object.freeze({
-  melhorou: 'Evoluí', igual: 'Fiquei igual', piorou: 'Caí de rendimento', nao_sei: 'Não sei dizer',
+  melhorou: tk('Evoluí'), igual: tk('Fiquei igual'), piorou: tk('Caí de rendimento'), nao_sei: tk('Não sei dizer'),
 });
 
 export const DEBRIEF_SOURCE = Object.freeze({
   DIA_DE_JOGO: 'dia_de_jogo', TORNEIO: 'torneio', RESERVA: 'reserva', AVULSO: 'avulso',
 });
 export const DEBRIEF_SOURCE_LABELS = Object.freeze({
-  dia_de_jogo: 'Dia de jogo', torneio: 'Torneio', reserva: 'Jogo na arena', avulso: 'Jogo avulso',
+  dia_de_jogo: tk('Dia de jogo'), torneio: tk('Torneio'), reserva: tk('Jogo na arena'), avulso: tk('Jogo avulso'),
 });
 
 export const DEBRIEF_STATUS = Object.freeze({ RESPONDIDO: 'respondido', DISPENSADO: 'dispensado' });
@@ -124,9 +125,9 @@ function aspectList(list) {
  */
 export function normalizeDebrief(input = {}) {
   const source = normalizeSource(input.source);
-  if (!source) return { valid: false, error: 'Escolha o jogo e a data.', value: {} };
+  if (!source) return { valid: false, error: t('Escolha o jogo e a data.'), value: {} };
   const rating = scale(input.rating);
-  if (!rating) return { valid: false, error: 'Diga como foi o seu jogo.', value: {} };
+  if (!rating) return { valid: false, error: t('Diga como foi o seu jogo.'), value: {} };
   const strengths = aspectList(input.strengths);
   const weaknesses = aspectList(input.weaknesses).filter((a) => !strengths.includes(a));
   return {
@@ -208,9 +209,9 @@ export function debriefFocus(debrief, history = []) {
     .map(([id]) => {
       const vezes = why.get(id) || 0;
       let reason;
-      if (hoje.has(id) && vezes > 0) reason = `Você marcou hoje e em mais ${vezes} balanço${vezes > 1 ? 's' : ''} recente${vezes > 1 ? 's' : ''}.`;
-      else if (hoje.has(id)) reason = 'Você marcou como ponto a melhorar neste jogo.';
-      else reason = `Apareceu em ${vezes} dos seus balanços recentes.`;
+      if (hoje.has(id) && vezes > 0) reason = tn(vezes, 'Você marcou hoje e em mais {n} balanço recente.', 'Você marcou hoje e em mais {n} balanços recentes.');
+      else if (hoje.has(id)) reason = t('Você marcou como ponto a melhorar neste jogo.');
+      else reason = t('Apareceu em {n} dos seus balanços recentes.', { n: vezes });
       return { id, label: aspectLabel(id), reason };
     });
   const forte = (debrief?.strengths || [])[0];
@@ -286,14 +287,15 @@ export function suggestWeek({ debrief, history = [], items = [], level = null, r
       used.add(it.id);
       left -= it.duration_min || 15;
     }
-    const titulo = focus.length ? `Balanço: ${focus.map((f) => f.label.toLowerCase()).join(' e ')}` : 'Balanço: treino geral';
-    return { date, label: `${WEEKDAY_SHORT[weekdayOf(date)]} ${date.slice(8, 10)}/${date.slice(5, 7)}`, title: str(titulo, 80), item_ids: ids, minutes };
+    // O título é GRAVADO no plano: fica em português, com o rótulo original.
+    const titulo = focus.length ? `Balanço: ${focus.map((f) => ASPECT_BY_ID[f.id].label.toLowerCase()).join(' e ')}` : 'Balanço: treino geral';
+    return { date, label: `${t(WEEKDAY_SHORT[weekdayOf(date)])} ${date.slice(8, 10)}/${date.slice(5, 7)}`, title: str(titulo, 80), item_ids: ids, minutes };
   });
   const semItens = days.every((d) => d.item_ids.filter((id) => !warmups.some((w) => w.id === id)).length === 0);
   let message;
-  if (light) message = 'Semana mais leve: você contou que o corpo ou a cabeça estavam no limite. Menos dias e menos intensidade.';
-  else if (focus.length) message = `Foco da semana: ${focus.map((f) => f.label.toLowerCase()).join(' e ')}.`;
-  else message = 'Você não marcou nada a melhorar: uma semana para manter o ritmo.';
+  if (light) message = t('Semana mais leve: você contou que o corpo ou a cabeça estavam no limite. Menos dias e menos intensidade.');
+  else if (focus.length) message = t('Foco da semana: {foco}.', { foco: fmtLista(focus.map((f) => f.label.toLowerCase())) });
+  else message = t('Você não marcou nada a melhorar: uma semana para manter o ritmo.');
   return {
     focus,
     maintain,

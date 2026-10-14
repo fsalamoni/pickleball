@@ -49,11 +49,12 @@ import {
   GROUP_FORMATION, GROUP_POLICY, NO_GROUP, groupById, groupIdOf, fitsFormation, fitsLevelGap,
   genderOfParticipant, applyGroupNumbers,
 } from './playGroups.js';
+import { t, tn, tk, fmtLista } from '@/core/i18n';
 
 /** O grupo implícito de quem não está em nenhum: livre, sem regra, qualquer quadra. */
 const UNGROUPED = Object.freeze({
   id: null,
-  name: 'Sem grupo',
+  name: tk('Sem grupo'),
   color: 'gray',
   level_min: null,
   level_max: null,
@@ -288,8 +289,6 @@ export function makeGroupsDrawer(config, { games = [], courtGroups = {}, partici
 
 /* ------------------------------- explicações -------------------------------- */
 
-const plural = (n, um, varios) => (n === 1 ? um : varios);
-const faltaFalta = (n) => (n === 1 ? 'Falta' : 'Faltam');
 
 /** Por que uma proposta com regras não saiu — em linguagem de quadra. */
 function motivoDoBloqueio(g, waiting, slots) {
@@ -297,7 +296,7 @@ function motivoDoBloqueio(g, waiting, slots) {
   const homens = sexos.filter((s) => s === 'male').length;
   const mulheres = sexos.filter((s) => s === 'female').length;
   const semSexo = sexos.filter((s) => s == null).length;
-  const nota = semSexo > 0 ? ` (${semSexo} sem sexo informado)` : '';
+  const nota = semSexo > 0 ? ` (${t('{n} sem sexo informado', { n: semSexo })})` : '';
 
   if (g.formation === GROUP_FORMATION.MIXED) {
     const metade = slots / 2;
@@ -305,21 +304,21 @@ function motivoDoBloqueio(g, waiting, slots) {
     const fm = Math.max(0, metade - mulheres);
     if (fh + fm > 0) {
       const partes = [];
-      if (fh > 0) partes.push(`${fh} ${plural(fh, 'homem', 'homens')}`);
-      if (fm > 0) partes.push(`${fm} ${plural(fm, 'mulher', 'mulheres')}`);
-      return `${faltaFalta(fh + fm)} ${partes.join(' e ')} para duplas mistas${nota}.`;
+      if (fh > 0) partes.push(tn(fh, '{n} homem', '{n} homens'));
+      if (fm > 0) partes.push(tn(fm, '{n} mulher', '{n} mulheres'));
+      return tn(fh + fm, 'Falta {quem} para duplas mistas{nota}.', 'Faltam {quem} para duplas mistas{nota}.', { quem: fmtLista(partes), nota });
     }
   }
   if (g.formation === GROUP_FORMATION.SAME_SEX) {
     const falta = Math.max(0, slots - Math.max(homens, mulheres));
     if (falta > 0) {
-      return `${faltaFalta(falta)} ${falta} do mesmo sexo para completar uma partida${nota}.`;
+      return tn(falta, 'Falta {n} do mesmo sexo para completar uma partida{nota}.', 'Faltam {n} do mesmo sexo para completar uma partida{nota}.', { nota });
     }
   }
   if (g.max_level_gap != null) {
-    return `A diferença de nível entre quem espera passa de ${g.max_level_gap.toFixed(1)} — não há quatro dentro do limite.`;
+    return t('A diferença de nível entre quem espera passa de {n} — não há quatro dentro do limite.', { n: g.max_level_gap.toFixed(1) });
   }
-  return 'As regras do grupo não fecham uma partida com quem está esperando.';
+  return t('As regras do grupo não fecham uma partida com quem está esperando.');
 }
 
 /**
@@ -354,24 +353,24 @@ export function explainGroups({
     const pausados = contar(view?.unavailable, g.id);
     const total = waiting.length + inCourt + pausados;
     const base = {
-      id: g.id, name: g.name, color: g.color, total, waiting: waiting.length, inCourt, pausados,
+      id: g.id, name: g.id === null ? t(g.name) : g.name, color: g.color, total, waiting: waiting.length, inCourt, pausados,
       status: 'ready', missing: 0, reason: '', group: g,
     };
 
     if (g.id === null && total === 0) return null;
-    if (g.paused) return { ...base, status: 'paused', reason: 'Grupo em pausa — fora do sorteio.' };
-    if (total === 0) return { ...base, status: 'empty', reason: 'Ninguém neste grupo ainda.' };
+    if (g.paused) return { ...base, status: 'paused', reason: t('Grupo em pausa — fora do sorteio.') };
+    if (total === 0) return { ...base, status: 'empty', reason: t('Ninguém neste grupo ainda.') };
     if (waiting.length === 0) {
       return {
         ...base, status: 'idle',
-        reason: inCourt > 0 ? 'Todos estão em quadra ou em pausa.' : 'Todos estão em pausa.',
+        reason: inCourt > 0 ? t('Todos estão em quadra ou em pausa.') : t('Todos estão em pausa.'),
       };
     }
     if (freeCourts && freeCourts.length > 0 && g.courts.length > 0
       && !freeCourts.some((c) => g.courts.includes(c))) {
       return {
         ...base, status: 'no_court',
-        reason: `As quadras livres agora não são deste grupo (ele joga ${g.courts.length === 1 ? 'na quadra' : 'nas quadras'} ${g.courts.join(', ')}).`,
+        reason: tn(g.courts.length, 'As quadras livres agora não são deste grupo (ele joga na quadra {lista}).', 'As quadras livres agora não são deste grupo (ele joga nas quadras {lista}).', { lista: g.courts.join(', ') }),
       };
     }
 
@@ -379,7 +378,7 @@ export function explainGroups({
       const proprio = escolherNoGrupo(semVinculoEntreGrupos(waiting, grupoNaFila), g, ctx);
       return {
         ...base, status: 'ready',
-        reason: proprio ? 'Pronto para a próxima quadra livre.' : 'Pronto — completa com quem está sem grupo.',
+        reason: proprio ? t('Pronto para a próxima quadra livre.') : t('Pronto — completa com quem está sem grupo.'),
       };
     }
 
@@ -388,7 +387,7 @@ export function explainGroups({
       const falta = slots - disponiveis;
       return {
         ...base, status: 'short', missing: falta,
-        reason: `${faltaFalta(falta)} ${falta} ${plural(falta, 'jogador', 'jogadores')}.`,
+        reason: tn(falta, 'Falta {n} jogador.', 'Faltam {n} jogadores.'),
       };
     }
     return { ...base, status: 'blocked', reason: motivoDoBloqueio(g, waiting, slots) };
@@ -401,8 +400,8 @@ export function explainGroups({
  */
 export function describeNoMatch(explanations) {
   const comGente = (explanations || []).filter((e) => e.waiting > 0 && e.status !== 'ready');
-  if (comGente.length === 0) return 'Ninguém aguardando no momento.';
-  return `Nenhum grupo tem partida pronta. ${comGente.map((e) => `${e.name}: ${e.reason}`).join(' ')}`;
+  if (comGente.length === 0) return t('Ninguém aguardando no momento.');
+  return `${t('Nenhum grupo tem partida pronta.')} ${comGente.map((e) => `${e.name}: ${e.reason}`).join(' ')}`;
 }
 
 /* ----------------------------- a visão com grupos --------------------------- */

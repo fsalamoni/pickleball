@@ -37,6 +37,7 @@ import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import { isOpenMatchGameDay, arenaGameDayEditLink } from '@/modules/arenas/domain/openMatchGameDay';
 import GameDayJoinPanel from '@/v2/components/games/GameDayJoinPanel';
 import OpenGameDaysForMe from '@/v2/components/games/play/OpenGameDaysForMe';
+import { t } from '@/core/i18n';
 
 // O painel do JOGO ABERTO (Onda CA) só existe no dia de jogo que nasceu de um
 // jogo aberto — e ele puxa os hooks da arena. Sob demanda, para o dia de jogo
@@ -69,12 +70,10 @@ function GameDayCard({ g, onOpen, muted }) {
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{g.title}</h3>
         {isOpenMatchGameDay(g)
-          ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> Jogo aberto</V2Badge>
-          : isArenaGameDay(g)
-          ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
-          : isPublicGameDay(g)
-            ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-            : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+          ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {t('Jogo aberto')}</V2Badge>
+          : isArenaGameDay(g) ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> {t('Da arena')}</V2Badge>
+          : isPublicGameDay(g) ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> {t('Público')}</V2Badge>
+            : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> {t('Privado')}</V2Badge>}
       </div>
       {isArenaGameDay(g)
         ? <p className="mt-2 text-sm text-gray-500">{arenaGameDayWhenText(g)}</p>
@@ -86,7 +85,7 @@ function GameDayCard({ g, onOpen, muted }) {
       )}
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">
         <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(g.member_uids || []).length} atleta(s)</span>
-        {g.publish_to_ranking && <V2Badge tone="green">No ranking</V2Badge>}
+        {g.publish_to_ranking && <V2Badge tone="green">{t('No ranking')}</V2Badge>}
       </div>
     </button>
   );
@@ -130,9 +129,9 @@ function GameDayList() {
   return (
     <div className="mx-auto max-w-[1000px] pb-16 lg:pb-0">
       <V2PageIntro
-        title="Dia de jogo"
-        subtitle="Os seus dias de jogo, os com vaga para você entrar — e o seu, se quiser organizar a rodada."
-        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar"><Plus className="h-4 w-4" /> Novo dia de jogo</V2Button>}
+        title={t('Dia de jogo')}
+        subtitle={t('Os seus dias de jogo, os com vaga para você entrar — e o seu, se quiser organizar a rodada.')}
+        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar"><Plus className="h-4 w-4" /> {t('Novo dia de jogo')}</V2Button>}
       />
 
       {isLoading ? (
@@ -142,8 +141,8 @@ function GameDayList() {
       ) : isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar seus dias de jogo"
-            description="A conexão falhou. Os seus dias de jogo continuam lá — isso quase sempre se resolve tentando de novo."
+            title={t('Não foi possível carregar seus dias de jogo')}
+            description={t('A conexão falhou. Os seus dias de jogo continuam lá — isso quase sempre se resolve tentando de novo.')}
             onRetry={refetch}
           />
         </V2Surface>
@@ -158,12 +157,12 @@ function GameDayList() {
               <p className="flex items-start gap-2 text-sm text-gray-600">
                 <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
                 <span>
-                  <strong className="font-semibold text-ink">Você ainda não tem dia de jogo.</strong>{' '}
-                  Crie o seu: público (aparece para quem procura jogo) ou privado (só convidados).
+                  <strong className="font-semibold text-ink">{t('Você ainda não tem dia de jogo.')}</strong>{' '}
+                  {t('Crie o seu: público (aparece para quem procura jogo) ou privado (só convidados).')}
                 </span>
               </p>
               <V2Button size="sm" className="shrink-0" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" aria-hidden="true" /> Criar dia de jogo
+                <Plus className="h-4 w-4" aria-hidden="true" /> {t('Criar dia de jogo')}
               </V2Button>
             </div>
           </V2Surface>
@@ -178,8 +177,8 @@ function GameDayList() {
 
           {past.length > 0 && (
             <V2CollapsibleSection
-              title={`Dias de jogo passados (${past.length})`}
-              eyebrow="Encerrados"
+              title={t('Dias de jogo passados ({n})', { n: past.length })}
+              eyebrow={t('Encerrados')}
               collapseId="game-days-past"
               defaultCollapsed
               headerAction={<History className="h-5 w-5 text-gray-300" />}
@@ -209,7 +208,7 @@ function GameDayList() {
           style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
         >
           <V2Button className="pointer-events-auto shadow-organic" onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar-fixo">
-            <Plus className="h-4 w-4" aria-hidden="true" /> Criar dia de jogo
+            <Plus className="h-4 w-4" aria-hidden="true" /> {t('Criar dia de jogo')}
           </V2Button>
         </div>
       )}
@@ -253,9 +252,9 @@ function GameDayDetail({ gameDayId }) {
         <V2Surface>
           <V2EmptyState
             icon={Lock}
-            title="Este dia de jogo não está aberto para você"
-            description="Ele é privado: só entra quem foi convidado ou quem é do clube dono dele. Se era para você estar nele, peça a quem organiza. (Ele também pode ter sido removido.)"
-            action={<V2Button asChild><Link to="/dia-de-jogo">Ver os dias com vaga para você</Link></V2Button>}
+            title={t('Este dia de jogo não está aberto para você')}
+            description={t('Ele é privado: só entra quem foi convidado ou quem é do clube dono dele. Se era para você estar nele, peça a quem organiza. (Ele também pode ter sido removido.)')}
+            action={<V2Button asChild><Link to="/dia-de-jogo">{t('Ver os dias com vaga para você')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -266,8 +265,8 @@ function GameDayDetail({ gameDayId }) {
       <div className="mx-auto max-w-[900px]">
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar este dia de jogo"
-            description="A conexão falhou no meio do caminho. Ele continua lá — tente de novo."
+            title={t('Não foi possível carregar este dia de jogo')}
+            description={t('A conexão falhou no meio do caminho. Ele continua lá — tente de novo.')}
             onRetry={refetch}
           />
         </V2Surface>
@@ -280,9 +279,9 @@ function GameDayDetail({ gameDayId }) {
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
-            title="Dia de jogo não encontrado"
-            description="Ele pode ter sido removido ou você não tem acesso."
-            action={<V2Button asChild><Link to="/dia-de-jogo">Voltar</Link></V2Button>}
+            title={t('Dia de jogo não encontrado')}
+            description={t('Ele pode ter sido removido ou você não tem acesso.')}
+            action={<V2Button asChild><Link to="/dia-de-jogo">{t('Voltar')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -301,17 +300,17 @@ function GameDayDetail({ gameDayId }) {
   const handleDelete = async () => {
     try {
       await del.mutateAsync(gameDay.id);
-      toast.success('Dia de jogo arquivado.');
+      toast.success(t('Dia de jogo arquivado.'));
       navigate('/dia-de-jogo');
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível arquivar.');
+      toast.error(err?.message || t('Não foi possível arquivar.'));
     }
   };
 
   return (
     <div className="mx-auto max-w-[900px]">
       <button type="button" onClick={() => navigate('/dia-de-jogo')} className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
-        <ChevronLeft className="h-4 w-4" /> Dias de jogo
+        <ChevronLeft className="h-4 w-4" /> {t('Dias de jogo')}
       </button>
 
       {/* `mb-4` = o mesmo intervalo que o módulo usa entre os cartões. Um
@@ -322,14 +321,11 @@ function GameDayDetail({ gameDayId }) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
               {isOpenMatchGameDay(gameDay)
-                ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> Jogo aberto da arena</V2Badge>
-                : daArena
-                ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
-                : doClube
-                  ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {gameDay.club_name || 'Do clube'}</V2Badge>
-                  : isPublicGameDay(gameDay)
-                    ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-                    : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+                ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {t('Jogo aberto da arena')}</V2Badge>
+                : daArena ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> {t('Da arena')}</V2Badge>
+                : doClube ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {gameDay.club_name || t('Do clube')}</V2Badge>
+                  : isPublicGameDay(gameDay) ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> {t('Público')}</V2Badge>
+                    : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> {t('Privado')}</V2Badge>}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {daArena ? arenaGameDayWhenText(gameDay) : gameDayWhenText(gameDay)}
@@ -343,14 +339,14 @@ function GameDayDetail({ gameDayId }) {
             {daArena && podeConfigurar && (
               <V2Button asChild variant="ghost" size="sm">
                 <Link to={arenaGameDayEditLink(gameDay)}>
-                  <Building2 className="mr-1.5 h-4 w-4" /> {isOpenMatchGameDay(gameDay) ? 'Gerir o jogo aberto' : 'Gerir na arena'}
+                  <Building2 className="mr-1.5 h-4 w-4" /> {isOpenMatchGameDay(gameDay) ? t('Gerir o jogo aberto') : t('Gerir na arena')}
                 </Link>
               </V2Button>
             )}
             {doClube && podeConfigurar && gameDay.club_event_id && (
               <V2Button asChild variant="ghost" size="sm">
                 <Link to={`/clubes/${gameDay.club_id}/eventos/${gameDay.club_event_id}`}>
-                  <Users className="mr-1.5 h-4 w-4" /> Gerir no clube
+                  <Users className="mr-1.5 h-4 w-4" /> {t('Gerir no clube')}
                 </Link>
               </V2Button>
             )}
@@ -361,7 +357,7 @@ function GameDayDetail({ gameDayId }) {
                 é o único ato que TIRA o dia da tela, e não é configuração. */}
             {ehCriador && (
               <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
-                <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
+                <Trash2 className="mr-1.5 h-4 w-4" /> {t('Arquivar')}
               </V2Button>
             )}
           </div>
@@ -369,19 +365,19 @@ function GameDayDetail({ gameDayId }) {
         {daArena && gameDay.arena_name && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
             <Building2 className="h-3.5 w-3.5" />
-            Organizado por <Link to={`/arenas/${gameDay.arena_id}`} className="font-semibold text-ink underline">{gameDay.arena_name}</Link>
+            {t('Organizado por')} <Link to={`/arenas/${gameDay.arena_id}`} className="font-semibold text-ink underline">{gameDay.arena_name}</Link>
           </p>
         )}
         {doClube && gameDay.club_name && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
             <Users className="h-3.5 w-3.5" />
-            Organizado por{' '}
+            {t('Organizado por')}{' '}
             <Link to={`/clubes/${gameDay.club_id}`} className="font-semibold text-ink underline">{gameDay.club_name}</Link>
           </p>
         )}
         {isPublicGameDay(gameDay) && ehCriador && !daArena && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
-            <ExternalLink className="h-3.5 w-3.5" /> Este dia de jogo aparece como convite em &quot;Procura-se jogo&quot;.
+            <ExternalLink className="h-3.5 w-3.5" /> {t('Este dia de jogo aparece como convite em "Procura-se jogo".')}
           </p>
         )}
       </V2Surface>
@@ -406,9 +402,9 @@ function GameDayDetail({ gameDayId }) {
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         destructive
-        title="Arquivar dia de jogo?"
-        description="O dia de jogo sai da sua lista, o convite público é removido e os resultados saem do ranking. Esta ação não pode ser desfeita."
-        confirmLabel="Arquivar"
+        title={t('Arquivar dia de jogo?')}
+        description={t('O dia de jogo sai da sua lista, o convite público é removido e os resultados saem do ranking. Esta ação não pode ser desfeita.')}
+        confirmLabel={t('Arquivar')}
         loading={del.isPending}
         onConfirm={handleDelete}
       />

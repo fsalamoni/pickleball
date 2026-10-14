@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useAddCoachResidency } from '../hooks/useCoaches.js';
 import { V2Button, V2Field, V2Input, V2ErrorState } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function CoachAddArenaForm({ coachId, onClose }) {
   const { data: arenas = [], isLoading, isError, refetch } = useArenas();
@@ -38,27 +39,27 @@ export default function CoachAddArenaForm({ coachId, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!selectedId) {
-      toast.error('Selecione uma arena para vincular.');
+      toast.error(t('Selecione uma arena para vincular.'));
       return;
     }
     try {
       await add.mutateAsync({ coach_id: coachId, arena_id: selectedId, notes });
-      toast.success('Solicitação enviada! A arena vai avaliar.');
+      toast.success(t('Solicitação enviada! A arena vai avaliar.'));
       onClose?.();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível solicitar parceria.');
+      toast.error(err?.message || t('Não foi possível solicitar parceria.'));
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <V2Field label="Buscar arena">
+      <V2Field label={t('Buscar arena')}>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <V2Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Nome, cidade ou estado…"
+            placeholder={t('Nome, cidade ou estado…')}
             className="pl-9"
           />
         </div>
@@ -66,12 +67,12 @@ export default function CoachAddArenaForm({ coachId, onClose }) {
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando arenas…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('Carregando arenas…')}
         </div>
       ) : isError ? (
-        <V2ErrorState inline title="Não foi possível carregar as arenas" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar as arenas')} onRetry={() => refetch()} />
       ) : results.length === 0 ? (
-        <p className="text-xs text-gray-500">Nenhuma arena encontrada.</p>
+        <p className="text-xs text-gray-500">{t('Nenhuma arena encontrada.')}</p>
       ) : (
         <div className="max-h-60 space-y-1.5 overflow-y-auto rounded-2xl border border-gray-100 bg-paper p-2">
           {results.map((a) => {
@@ -98,26 +99,26 @@ export default function CoachAddArenaForm({ coachId, onClose }) {
         </div>
       )}
 
-      <V2Field label="Mensagem para a arena (opcional)">
+      <V2Field label={t('Mensagem para a arena (opcional)')}>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           maxLength={500}
-          placeholder="Apresente-se, diga onde e como pode atender…"
+          placeholder={t('Apresente-se, diga onde e como pode atender…')}
           className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm"
         />
       </V2Field>
 
       <div className="flex justify-end gap-2">
         <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Cancelar
+          {t('Cancelar')}
         </V2Button>
         <V2Button type="submit" size="sm" disabled={add.isPending || !selectedId}>
           {add.isPending ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Enviando…</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> {t('Enviando…')}</>
           ) : (
-            <><Plus className="h-4 w-4" /> Solicitar parceria</>
+            <><Plus className="h-4 w-4" /> {t('Solicitar parceria')}</>
           )}
         </V2Button>
       </div>

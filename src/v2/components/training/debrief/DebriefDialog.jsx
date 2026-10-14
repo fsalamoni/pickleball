@@ -29,6 +29,7 @@ import {
   V2Button, V2Field, V2FilterChip, V2Input, V2Textarea,
 } from '@/v2/ui/primitives';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t } from '@/core/i18n';
 
 const NOTAS = [1, 2, 3, 4, 5];
 
@@ -45,8 +46,8 @@ function Escala({ id, label, value, onChange, labels }) {
               type="button"
               role="radio"
               aria-checked={marcado}
-              aria-label={`${n}, ${labels[n]}`}
-              title={labels[n]}
+              aria-label={`${n}, ${t(labels[n])}`}
+              title={t(labels[n])}
               onClick={() => onChange(marcado ? null : n)}
               className={cn(
                 'h-9 w-9 rounded-full text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink',
@@ -80,7 +81,7 @@ function Aspectos({ legenda, dica, marcados, outros, onChange, dataDica }) {
               onClick={() => onChange(ativo ? marcados.filter((x) => x !== a.id) : [...marcados, a.id], a.id)}
               className={cn('px-3 py-1.5 text-xs', outros.includes(a.id) && !ativo && 'opacity-60')}
             >
-              {a.label}
+              {t(a.label)}
             </V2FilterChip>
           );
         })}
@@ -134,7 +135,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     const { valid, error, value } = normalizeDebrief(input);
     if (!valid) { setErro(error); return; }
     // Sem a biblioteca inteira a sugestão sairia vazia e diria que não há drills.
-    if (visiveis.incompleto || meta.isError) { setErro('Parte da biblioteca não carregou. Tente de novo em instantes para a semana sugerida sair completa.'); return; }
+    if (visiveis.incompleto || meta.isError) { setErro(t('Parte da biblioteca não carregou. Tente de novo em instantes para a semana sugerida sair completa.')); return; }
     const chave = debriefSourceKey(value.source);
     const anteriores = answeredDebriefs(history).filter((d) => debriefSourceKey(d.source) !== chave);
     const sugestao = suggestWeek({
@@ -142,7 +143,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     });
     acoes.save.mutate({ input, suggestion: sugestao }, {
       onSuccess: (id) => { setSalvo({ id, sugestao }); setFora([]); },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar o balanço agora.')),
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar o balanço agora.'))),
     });
   };
 
@@ -153,7 +154,8 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
   const mudanca = useMemo(() => (salvo ? debriefPlanChange({
     days: dias,
     plans: planos.data || [],
-    focus: salvo.sugestao.focus.map((x) => x.label.toLowerCase()),
+    // O objetivo vai gravado no plano: sempre em português, como o resto do que é salvo.
+    focus: salvo.sugestao.focus.map((x) => (GAME_ASPECTS.find((a) => a.id === x.id)?.label || x.label).toLowerCase()),
     skills: salvo.sugestao.skills,
     today: hoje,
   }) : null), [salvo, dias, planos.data, hoje]);
@@ -164,7 +166,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     { id: salvo.id, planId, mode, dates: dias.map((d) => d.date) },
     {
       onSettled: () => {
-        toast.success(`A semana entrou nos seus treinos.${extra}`);
+        toast.success(`${t('A semana entrou nos seus treinos.')}${extra}`);
         onOpenChange(false);
       },
     },
@@ -172,12 +174,12 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
 
   const adicionar = () => {
     if (!mudanca) return;
-    const falhou = (err) => setErro(mensagemDeErro(err, 'Não foi possível adicionar aos treinos agora.'));
+    const falhou = (err) => setErro(mensagemDeErro(err, t('Não foi possível adicionar aos treinos agora.')));
     if (mudanca.mode === 'plano') {
       const plano = (planos.data || []).find((p) => p.id === mudanca.planId);
       planAcoes.update.mutate({ plan: plano, input: mudanca.patch }, {
         onSuccess: () => registrar(mudanca.planId, 'plano', mudanca.full.length
-          ? ` ${mudanca.full.length === 1 ? 'Um dia já estava cheio' : `${mudanca.full.length} dias já estavam cheios`} e ficou como estava.`
+          ? ` ${mudanca.full.length === 1 ? t('Um dia já estava cheio e ficou como estava.') : t('{n} dias já estavam cheios e ficaram como estavam.', { n: mudanca.full.length })}`
           : ''),
         onError: falhou,
       });
@@ -191,19 +193,19 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
     onOpenChange(o);
   };
 
-  const resumo = fonte.games ? `${fonte.games} ${fonte.games === 1 ? 'jogo' : 'jogos'}${Number.isFinite(fonte.wins) ? `, ${fonte.wins} ${fonte.wins === 1 ? 'vitória' : 'vitórias'}` : ''}` : '';
+  const resumo = fonte.games ? `${fonte.games} ${fonte.games === 1 ? 'jogo' : 'jogos'}${Number.isFinite(fonte.wins) ? `, ${fonte.wins} ${fonte.wins === 1 ? t('vitória') : t('vitórias')}` : ''}` : '';
 
   return (
     <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{salvo ? 'Sugestão para esta semana' : 'Balanço do jogo'}</DialogTitle>
+          <DialogTitle>{salvo ? t('Sugestão para esta semana') : t('Balanço do jogo')}</DialogTitle>
           <DialogDescription>
             {salvo
-              ? 'Escolha os dias que entram nos seus treinos. Você muda qualquer coisa depois, no plano.'
+              ? t('Escolha os dias que entram nos seus treinos. Você muda qualquer coisa depois, no plano.')
               : source
                 ? `${source.title} · ${formatDayLabel(source.date, hoje)}${resumo ? ` · ${resumo}` : ''}`
-                : 'Um jogo que a plataforma não registrou: diga quando foi.'}
+                : t('Um jogo que a plataforma não registrou: diga quando foi.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -211,55 +213,55 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
           <form className="space-y-5" onSubmit={enviar} noValidate>
             {!source && (
               <div className="grid gap-3 sm:grid-cols-2">
-                <V2Field label="Quando" htmlFor="balanco-data" required>
+                <V2Field label={t('Quando')} htmlFor="balanco-data" required>
                   <V2Input id="balanco-data" type="date" max={hoje} value={avulso.date} onChange={(e) => setAvulso((x) => ({ ...x, date: e.target.value }))} />
                 </V2Field>
-                <V2Field label="Que jogo foi (opcional)" htmlFor="balanco-titulo">
-                  <V2Input id="balanco-titulo" maxLength={DEBRIEF_LIMITS.title} value={avulso.title} onChange={(e) => setAvulso((x) => ({ ...x, title: e.target.value }))} placeholder="Ex.: Jogo com os amigos no clube" />
+                <V2Field label={t('Que jogo foi (opcional)')} htmlFor="balanco-titulo">
+                  <V2Input id="balanco-titulo" maxLength={DEBRIEF_LIMITS.title} value={avulso.title} onChange={(e) => setAvulso((x) => ({ ...x, title: e.target.value }))} placeholder={t('Ex.: Jogo com os amigos no clube')} />
                 </V2Field>
               </div>
             )}
             <div data-dica="treino-balanco-nota">
-              <Escala id="balanco-nota" label="Como foi o seu jogo?" value={f.rating} onChange={(v) => set({ rating: v })} labels={DEBRIEF_RATING_LABELS} />
+              <Escala id="balanco-nota" label={t('Como foi o seu jogo?')} value={f.rating} onChange={(v) => set({ rating: v })} labels={DEBRIEF_RATING_LABELS} />
             </div>
             <Aspectos
-              legenda="O que funcionou"
-              dica={`Até ${DEBRIEF_LIMITS.aspects}. É o que a semana vai manter.`}
+              legenda={t('O que funcionou')}
+              dica={t('Até {n}. É o que a semana vai manter.', { n: DEBRIEF_LIMITS.aspects })}
               marcados={f.strengths}
               outros={f.weaknesses}
               dataDica="treino-balanco-fortes"
               onChange={(lista, id) => set({ strengths: lista, weaknesses: f.weaknesses.filter((x) => x !== id) })}
             />
             <Aspectos
-              legenda="O que faltou"
-              dica={`Até ${DEBRIEF_LIMITS.aspects}. É daqui que sai o foco da semana.`}
+              legenda={t('O que faltou')}
+              dica={t('Até {n}. É daqui que sai o foco da semana.', { n: DEBRIEF_LIMITS.aspects })}
               marcados={f.weaknesses}
               outros={f.strengths}
               dataDica="treino-balanco-fracos"
               onChange={(lista, id) => set({ weaknesses: lista, strengths: f.strengths.filter((x) => x !== id) })}
             />
             <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold text-ink">Comparando com os últimos jogos</legend>
+              <legend className="text-sm font-semibold text-ink">{t('Comparando com os últimos jogos')}</legend>
               <div className="flex flex-wrap gap-1.5">
                 {Object.values(EVOLUTION).map((ev) => (
                   <V2FilterChip key={ev} active={f.evolution === ev} aria-pressed={f.evolution === ev} onClick={() => set({ evolution: ev })} className="px-3 py-1.5 text-xs">
-                    {EVOLUTION_LABELS[ev]}
+                    {t(EVOLUTION_LABELS[ev])}
                   </V2FilterChip>
                 ))}
               </div>
             </fieldset>
             <div className="space-y-3">
-              <Escala id="balanco-corpo" label="Corpo (opcional)" value={f.body} onChange={(v) => set({ body: v })} labels={DEBRIEF_ENERGY_LABELS} />
-              <Escala id="balanco-cabeca" label="Cabeça (opcional)" value={f.mind} onChange={(v) => set({ mind: v })} labels={DEBRIEF_ENERGY_LABELS} />
+              <Escala id="balanco-corpo" label={t('Corpo (opcional)')} value={f.body} onChange={(v) => set({ body: v })} labels={DEBRIEF_ENERGY_LABELS} />
+              <Escala id="balanco-cabeca" label={t('Cabeça (opcional)')} value={f.mind} onChange={(v) => set({ mind: v })} labels={DEBRIEF_ENERGY_LABELS} />
             </div>
-            <V2Field label="Anotação (opcional)" htmlFor="balanco-nota-texto" hint="Só você lê.">
-              <V2Textarea id="balanco-nota-texto" rows={2} maxLength={DEBRIEF_LIMITS.note} value={f.note} onChange={(e) => set({ note: e.target.value })} placeholder="Ex.: errei muitas devoluções na paralela" />
+            <V2Field label={t('Anotação (opcional)')} htmlFor="balanco-nota-texto" hint={t('Só você lê.')}>
+              <V2Textarea id="balanco-nota-texto" rows={2} maxLength={DEBRIEF_LIMITS.note} value={f.note} onChange={(e) => set({ note: e.target.value })} placeholder={t('Ex.: errei muitas devoluções na paralela')} />
             </V2Field>
             {erro && <p className="text-sm font-medium text-red-500" role="alert">{erro}</p>}
             <div className="flex flex-wrap justify-end gap-2">
-              <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>Cancelar</V2Button>
+              <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>{t('Cancelar')}</V2Button>
               <V2Button type="submit" disabled={carregando || acoes.save.isPending}>
-                {acoes.save.isPending ? 'Salvando…' : carregando ? 'Carregando a biblioteca…' : 'Salvar e ver a sugestão'}
+                {acoes.save.isPending ? t('Salvando…') : carregando ? t('Carregando a biblioteca…') : t('Salvar e ver a sugestão')}
               </V2Button>
             </div>
           </form>
@@ -267,16 +269,16 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
           <div className="space-y-4" data-dica="treino-balanco-sugestao">
             <p className="text-sm text-gray-600">{salvo.sugestao.message}</p>
             {salvo.sugestao.maintain && (
-              <p className="text-xs text-gray-500">Para manter: {salvo.sugestao.maintain.label.toLowerCase()}.</p>
+              <p className="text-xs text-gray-500">{t('Para manter: {aspecto}.', { aspecto: salvo.sugestao.maintain.label.toLowerCase() })}</p>
             )}
             {visiveis.incompleto && (
-              <p className="text-xs text-amber-700">Parte da biblioteca não carregou; a sugestão usou o que veio.</p>
+              <p className="text-xs text-amber-700">{t('Parte da biblioteca não carregou; a sugestão usou o que veio.')}</p>
             )}
             {salvo.sugestao.empty ? (
               <p className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
-                A biblioteca ainda não tem drills para esse foco no seu nível. O balanço ficou salvo; procure na{' '}
-                <Link className="font-semibold text-ink underline" to="/treino?aba=biblioteca" onClick={() => fechar(false)}>biblioteca</Link>
-                {' '}ou peça ao seu professor.
+                {t('A biblioteca ainda não tem drills para esse foco no seu nível. O balanço ficou salvo; procure na')}{' '}
+                <Link className="font-semibold text-ink underline" to="/treino?aba=biblioteca" onClick={() => fechar(false)}>{t('biblioteca')}</Link>
+                {' '}{t('ou peça ao seu professor.')}
               </p>
             ) : (
               <ul className="space-y-2">
@@ -294,7 +296,7 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold text-ink">{d.label} · {d.minutes} min</span>
                           <span className="block text-xs text-gray-500">
-                            {d.item_ids.map((id) => visiveis.byId[id]?.title || 'Drill').join(' · ')}
+                            {d.item_ids.map((id) => visiveis.byId[id]?.title || t('Drill')).join(' · ')}
                           </span>
                         </span>
                       </label>
@@ -306,19 +308,19 @@ export default function DebriefDialog({ open, onOpenChange, identity, source = n
             {mudanca && (
               <p className="text-xs text-gray-500">
                 {mudanca.mode === 'plano'
-                  ? `Os dias entram no seu plano ativo, “${mudanca.planTitle}”.`
+                  ? t('Os dias entram no seu plano ativo, “{titulo}”.', { titulo: mudanca.planTitle })
                   : mudanca.pauses
-                    ? `Vira um plano curto, “Semana do balanço”. O plano “${mudanca.pauses.title}” fica pausado — dá para reativar quando quiser.`
-                    : 'Vira um plano curto, “Semana do balanço”, que aparece no Hoje e no Diário.'}
+                    ? t('Vira um plano curto, “Semana do balanço”. O plano “{titulo}” fica pausado — dá para reativar quando quiser.', { titulo: mudanca.pauses.title })
+                    : t('Vira um plano curto, “Semana do balanço”, que aparece no Hoje e no Diário.')}
               </p>
             )}
-            {planos.isError && <p className="text-xs text-amber-700">Seus planos não carregaram; tente de novo antes de adicionar.</p>}
+            {planos.isError && <p className="text-xs text-amber-700">{t('Seus planos não carregaram; tente de novo antes de adicionar.')}</p>}
             {erro && <p className="text-sm font-medium text-red-500" role="alert">{erro}</p>}
             <div className="flex flex-wrap justify-end gap-2">
-              <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>Agora não</V2Button>
+              <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>{t('Agora não')}</V2Button>
               {!salvo.sugestao.empty && (
                 <V2Button type="button" onClick={adicionar} disabled={!mudanca || ocupado || !planos.isSuccess}>
-                  {ocupado ? 'Adicionando…' : 'Adicionar aos meus treinos'}
+                  {ocupado ? t('Adicionando…') : t('Adicionar aos meus treinos')}
                 </V2Button>
               )}
             </div>

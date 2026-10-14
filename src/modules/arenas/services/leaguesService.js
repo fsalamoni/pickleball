@@ -32,6 +32,7 @@ import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
 import { todayISO } from '../domain/calendar.js';
+import { t } from '@/core/i18n';
 
 const COL_TOURNAMENTS = 'arena_internal_tournaments';
 const COL_LADDERS = 'arena_ladders';
@@ -102,9 +103,9 @@ async function recusarSeQuadraOcupada(arenaId, value, { exceptId } = {}) {
 }
 
 export async function createInternalTournament(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeInternalTournamentInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await recusarSeQuadraOcupada(arenaId, value);
   const id = doc(collection(db, COL_TOURNAMENTS)).id;
   await setDoc(doc(db, COL_TOURNAMENTS, id), {
@@ -119,15 +120,15 @@ export async function createInternalTournament(arenaId, input, actor) {
 }
 
 export async function joinTournament(tid, user, profile) {
-  if (!tid || !user?.uid) throw new Error('Parâmetros obrigatórios.');
+  if (!tid || !user?.uid) throw new Error(t('Parâmetros obrigatórios.'));
   const ref = doc(db, COL_TOURNAMENTS, tid);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Torneio não encontrado.');
-  const t = { id: snap.id, ...snap.data() };
-  if (!isTournamentOpen(t)) throw new Error('As inscrições deste torneio já fecharam.');
-  if ((t.participants || []).includes(user.uid)) throw new Error('Você já está inscrito.');
-  const vagas = tournamentSeatsLeft(t);
-  if (vagas !== null && vagas <= 0) throw new Error('Torneio lotado.');
+  if (!snap.exists()) throw new Error(t('Torneio não encontrado.'));
+  const tor = { id: snap.id, ...snap.data() };
+  if (!isTournamentOpen(tor)) throw new Error(t('As inscrições deste torneio já fecharam.'));
+  if ((tor.participants || []).includes(user.uid)) throw new Error(t('Você já está inscrito.'));
+  const vagas = tournamentSeatsLeft(tor);
+  if (vagas !== null && vagas <= 0) throw new Error(t('Torneio lotado.'));
 
   // O `roster` guarda NOME e FOTO junto do uid. Sem isso, começar o torneio
   // criaria um dia de jogo com uma lista de identificadores — e o organizador
@@ -157,18 +158,18 @@ export async function leaveTournament(tid, user) {
   const ref = doc(db, COL_TOURNAMENTS, tid);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
-  const t = { id: snap.id, ...snap.data() };
-  if (!(t.participants || []).includes(user.uid)) return;
-  if (!isTournamentOpen(t)) throw new Error('O torneio já começou — fale com a arena.');
+  const tor = { id: snap.id, ...snap.data() };
+  if (!(tor.participants || []).includes(user.uid)) return;
+  if (!isTournamentOpen(tor)) throw new Error(t('O torneio já começou — fale com a arena.'));
 
   // `arrayRemove` num objeto exige igualdade EXATA de todos os campos, e o
   // `roster` pode ter mudado de forma. Reescrever a lista filtrada é o que
   // funciona sempre.
-  const roster = (Array.isArray(t.roster) ? t.roster : []).filter((r) => r?.user_id !== user.uid);
+  const roster = (Array.isArray(tor.roster) ? tor.roster : []).filter((r) => r?.user_id !== user.uid);
   await updateDoc(ref, {
     participants: arrayRemove(user.uid),
     roster,
-    enrolled: Math.max(0, (Number(t.enrolled) || 1) - 1),
+    enrolled: Math.max(0, (Number(tor.enrolled) || 1) - 1),
     updated_at: serverTimestamp(),
   });
   await createAuditLog({ action: 'arena_internal_tournament_left', actor: user, details: { tournament_id: tid } });
@@ -204,16 +205,16 @@ async function torneioPorId(tid) {
 export async function updateInternalTournament(tid, input, actor) {
   if (!tid) return;
   const atual = await torneioPorId(tid);
-  if (!atual) throw new Error('Torneio não encontrado.');
+  if (!atual) throw new Error(t('Torneio não encontrado.'));
   if (atual.game_day_id) {
-    throw new Error('O torneio já começou: mude a data e as quadras pelo dia de jogo.');
+    throw new Error(t('O torneio já começou: mude a data e as quadras pelo dia de jogo.'));
   }
   const { valid, errors, value } = normalizeInternalTournamentInput({ ...atual, ...input });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   // Reduzir o teto abaixo de quem já se inscreveu deixaria gente de fora sem
   // que ninguém fosse avisado.
   if (value.max_participants < (Number(atual.enrolled) || 0)) {
-    throw new Error(`Já há ${atual.enrolled} inscrito(s): o limite não pode ser menor.`);
+    throw new Error(t('Já há {enrolled} inscrito(s): o limite não pode ser menor.', { enrolled: atual.enrolled }));
   }
   await recusarSeQuadraOcupada(atual.arena_id, value, { exceptId: tid });
   await updateDoc(doc(db, COL_TOURNAMENTS, tid), { ...value, updated_at: serverTimestamp() });
@@ -226,21 +227,21 @@ export async function updateInternalTournament(tid, input, actor) {
 /** Cancela e avisa quem estava inscrito. */
 export async function cancelInternalTournament(tid, motivo, actor) {
   if (!tid) return;
-  const t = await torneioPorId(tid);
+  const tor = await torneioPorId(tid);
   if (!t) return;
   await updateDoc(doc(db, COL_TOURNAMENTS, tid), {
     status: INTERNAL_TOURNAMENT_STATUS.CANCELLED,
     cancel_reason: String(motivo || '').trim().slice(0, 200),
     updated_at: serverTimestamp(),
   });
-  const uids = (t.participants || []).filter(Boolean);
+  const uids = (tor.participants || []).filter(Boolean);
   if (uids.length > 0) {
     try {
       await notifyUsers(uids, {
         title: 'Torneio cancelado',
-        message: `"${t.name}" foi cancelado${motivo ? `: ${motivo}` : '.'}`,
+        message: `"${tor.name}" foi cancelado${motivo ? `: ${motivo}` : '.'}`,
         type: NOTIFICATION_TYPE.GENERIC,
-        link: `/arenas/${t.arena_id}/torneios`,
+        link: `/arenas/${tor.arena_id}/torneios`,
         actor,
       });
     } catch (err) {
@@ -249,13 +250,13 @@ export async function cancelInternalTournament(tid, motivo, actor) {
   }
   await createAuditLog({
     action: 'arena_internal_tournament_cancelled', actor,
-    details: { tournament_id: tid, arena_id: t.arena_id, inscritos: uids.length },
+    details: { tournament_id: tid, arena_id: tor.arena_id, inscritos: uids.length },
   });
 }
 
 export async function deleteInternalTournament(tid, actor) {
   if (!tid) return;
-  const t = await torneioPorId(tid);
+  const tor = await torneioPorId(tid);
   await deleteDoc(doc(db, COL_TOURNAMENTS, tid));
   await createAuditLog({
     action: 'arena_internal_tournament_deleted', actor,
@@ -287,12 +288,12 @@ export async function deleteInternalTournament(tid, actor) {
  * @returns {Promise<{ gameDayId: string }>}
  */
 export async function startInternalTournament(tournament, { arena = null, courts = [] } = {}, actor) {
-  if (!tournament?.id) throw new Error('Torneio inválido.');
-  if (tournament.game_day_id) throw new Error('Este torneio já começou.');
+  if (!tournament?.id) throw new Error(t('Torneio inválido.'));
+  if (tournament.game_day_id) throw new Error(t('Este torneio já começou.'));
   const inscritos = Array.isArray(tournament.roster) ? tournament.roster : [];
-  if (inscritos.length < 2) throw new Error('São necessárias pelo menos 2 pessoas inscritas.');
+  if (inscritos.length < 2) throw new Error(t('São necessárias pelo menos 2 pessoas inscritas.'));
   if (!tournament.court_ids?.length || !tournament.start_time || !tournament.end_time) {
-    throw new Error('Escolha as quadras e o horário antes de começar.');
+    throw new Error(t('Escolha as quadras e o horário antes de começar.'));
   }
 
   const { createArenaGameDay } = await import('@/modules/games/services/arenaGameDayService.js');
@@ -383,17 +384,17 @@ function ladderId(arenaId, period) {
  * @param {object} actor
  */
 export async function finishInternalTournament(tournament, classificacao = [], { period = 'geral' } = {}, actor) {
-  if (!tournament?.id) throw new Error('Torneio inválido.');
+  if (!tournament?.id) throw new Error(t('Torneio inválido.'));
   // Conferido no BANCO, não no que a tela tem em mãos: encerrar duas vezes
   // (dois cliques, duas abas) somaria os pontos duas vezes no ladder — e
   // ninguém confere a acumulação de olho.
   const atualNoBanco = await torneioPorId(tournament.id);
-  if (!atualNoBanco) throw new Error('Torneio não encontrado.');
+  if (!atualNoBanco) throw new Error(t('Torneio não encontrado.'));
   if (atualNoBanco.status === INTERNAL_TOURNAMENT_STATUS.FINISHED) {
-    throw new Error('Este torneio já foi encerrado.');
+    throw new Error(t('Este torneio já foi encerrado.'));
   }
   if (atualNoBanco.status !== INTERNAL_TOURNAMENT_STATUS.RUNNING) {
-    throw new Error('Só dá para encerrar um torneio que já começou.');
+    throw new Error(t('Só dá para encerrar um torneio que já começou.'));
   }
   const arenaId = atualNoBanco.arena_id;
 

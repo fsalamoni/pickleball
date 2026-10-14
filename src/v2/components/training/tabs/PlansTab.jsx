@@ -26,6 +26,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t, tn } from '@/core/i18n';
 
 const CreatePlanDialog = lazy(() => import('@/v2/components/training/plan/CreatePlanDialog'));
 
@@ -42,20 +43,20 @@ function PlanCard({ plan, sessoes, hoje }) {
     >
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <V2Badge tone={TOM[plan.status]}>{PLAN_STATUS_LABELS[plan.status]}</V2Badge>
-          {semana && <span className="text-xs font-semibold text-gray-500">Semana {semana} de {plan.weeks}</span>}
+          <V2Badge tone={TOM[plan.status]}>{t(PLAN_STATUS_LABELS[plan.status])}</V2Badge>
+          {semana && <span className="text-xs font-semibold text-gray-500">{t('Semana {n} de {total}', { n: semana, total: plan.weeks })}</span>}
         </div>
         <h3 className="font-display text-lg font-bold text-ink">{plan.title}</h3>
         {plan.goal && <p className="line-clamp-2 text-sm text-gray-500">{plan.goal}</p>}
         <p className="text-sm text-gray-500">
-          {plan.weeks} {plan.weeks === 1 ? 'semana' : 'semanas'} · {plan.days.length} {plan.days.length === 1 ? 'dia' : 'dias'} por semana · {plan.minutes} min
+          {tn(plan.weeks, '{n} semana', '{n} semanas')} · {tn(plan.days.length, '{n} dia por semana', '{n} dias por semana')} · {plan.minutes} min
         </p>
         {prog && prog.total > 0 && (
           <div className="space-y-1">
             <div className="h-2 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
               <div className="h-full rounded-full bg-acid" style={{ width: `${prog.pct}%` }} />
             </div>
-            <p className="text-xs text-gray-500">{prog.done} de {prog.total} treinos feitos</p>
+            <p className="text-xs text-gray-500">{t('{n} de {total} treinos feitos', { n: prog.done, total: prog.total })}</p>
           </div>
         )}
       </div>
@@ -67,7 +68,7 @@ function PlanCard({ plan, sessoes, hoje }) {
 /** "Pôr no meu treino": o item vindo da ficha entra num dia do plano ativo. */
 function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje, carregandoItem }) {
   const padrao = ativo ? nextPlanSlot(ativo, hoje) : null;
-  const titulo = item?.title || (carregandoItem ? 'Carregando…' : 'Este item');
+  const titulo = item?.title || (carregandoItem ? t('Carregando…') : t('Este item'));
 
   const opcoes = useMemo(() => {
     if (!ativo) return [];
@@ -79,8 +80,8 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
           const ids = (ativo.slots || []).find((s) => s.week === week && s.day === day)?.item_ids || [];
           const ja = ids.includes(itemId);
           const cheio = ids.length >= PLAN_LIMITS.itemsPerSlot;
-          const estado = ja ? ' · já está neste dia' : cheio ? ' · dia cheio' : ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'item' : 'itens'}` : ' · livre';
-          out.push({ value: `${week}-${day}`, label: `Semana ${week} · ${WEEKDAY_LONG[day]}, ${formatDayLabel(date, hoje).split(', ')[1]}${estado}`, disabled: ja || cheio });
+          const estado = ja ? t(' · já está neste dia') : cheio ? ` · ${t('dia cheio')}` : ids.length ? ` · ${tn(ids.length, '{n} item', '{n} itens')}` : ` · ${t('livre')}`;
+          out.push({ value: `${week}-${day}`, label: `${t('Semana {n}', { n: week })} · ${t(WEEKDAY_LONG[day])}, ${formatDayLabel(date, hoje).split(', ')[1]}${estado}`, disabled: ja || cheio });
         }
       }
     }
@@ -99,8 +100,8 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
     const r = addItemToSlot(ativo, { week, day }, itemId);
     if (!r.ok) { setErro(r.error); return; }
     acoes.update.mutate({ plan: ativo, input: { slots: r.slots } }, {
-      onSuccess: () => { toast.success('Item colocado no plano.'); onFechar(); },
-      onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível salvar agora.')),
+      onSuccess: () => { toast.success(t('Item colocado no plano.')); onFechar(); },
+      onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível salvar agora.'))),
     });
   };
 
@@ -108,17 +109,17 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
     <V2Surface className="space-y-4 border-acid/40" data-dica="treino-planos-adicionar">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Pôr no meu treino</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Pôr no meu treino')}</p>
           <h2 className="mt-1 font-display text-lg font-bold text-ink">{titulo}</h2>
         </div>
-        <button type="button" onClick={onFechar} aria-label="Fechar" className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+        <button type="button" onClick={onFechar} aria-label={t('Fechar')} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
       {ativo ? (
         <>
           <label className="block space-y-1 text-sm font-semibold text-ink">
-            Em que dia do plano “{ativo.title}”?
+            {t('Em que dia do plano “{titulo}”?', { titulo: ativo.title })}
             <V2Select value={escolha} onChange={(e) => { setErro(''); setEscolha(e.target.value); }}>
               {opcoes.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
             </V2Select>
@@ -126,15 +127,15 @@ function AdicionarAoPlano({ itemId, item, ativo, acoes, onCriar, onFechar, hoje,
           {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
           <div className="flex flex-wrap gap-2">
             <V2Button onClick={salvar} disabled={!escolha || acoes.update.isPending}>
-              <CalendarPlus className="h-4 w-4" aria-hidden="true" /> {acoes.update.isPending ? 'Salvando…' : 'Colocar neste dia'}
+              <CalendarPlus className="h-4 w-4" aria-hidden="true" /> {acoes.update.isPending ? t('Salvando…') : t('Colocar neste dia')}
             </V2Button>
-            <V2Button variant="ghost" onClick={onCriar}>Criar outro plano com ele</V2Button>
+            <V2Button variant="ghost" onClick={onCriar}>{t('Criar outro plano com ele')}</V2Button>
           </div>
         </>
       ) : (
         <>
-          <p className="text-sm text-gray-600">Você não tem um plano ativo. Crie um e este item entra no primeiro dia.</p>
-          <V2Button onClick={onCriar}><Plus className="h-4 w-4" aria-hidden="true" /> Criar plano com este item</V2Button>
+          <p className="text-sm text-gray-600">{t('Você não tem um plano ativo. Crie um e este item entra no primeiro dia.')}</p>
+          <V2Button onClick={onCriar}><Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Criar plano com este item')}</V2Button>
         </>
       )}
     </V2Surface>
@@ -165,7 +166,7 @@ export default function PlansTab({ identity, params, irPara }) {
   if (planos.isError) {
     return (
       <V2Surface>
-        <V2ErrorState title="Os seus planos não carregaram" onRetry={() => planos.refetch()} />
+        <V2ErrorState title={t('Os seus planos não carregaram')} onRetry={() => planos.refetch()} />
       </V2Surface>
     );
   }
@@ -188,32 +189,32 @@ export default function PlansTab({ identity, params, irPara }) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-gray-500">
-          Um plano dá a cada dia de treino o que fazer, por algumas semanas. O plano ativo é o que aparece em “Hoje”.
+          {t('Um plano dá a cada dia de treino o que fazer, por algumas semanas. O plano ativo é o que aparece em “Hoje”.')}
         </p>
         <V2Button onClick={() => setCriar(true)} data-dica="treino-planos-criar">
-          <Plus className="h-4 w-4" aria-hidden="true" /> Novo plano
+          <Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Novo plano')}
         </V2Button>
       </div>
 
       {sessoes.isError && (
-        <V2ErrorState inline title="O progresso dos planos não carregou" description="Os planos estão aqui; o quanto já foi feito aparece quando o diário carregar." onRetry={() => sessoes.refetch()} />
+        <V2ErrorState inline title={t('O progresso dos planos não carregou')} description={t('Os planos estão aqui; o quanto já foi feito aparece quando o diário carregar.')} onRetry={() => sessoes.refetch()} />
       )}
 
       {podeAfirmarVazio(planos) && lista.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={CalendarRange}
-            title="Você ainda não tem um plano"
-            description="Diga em que dias treina e por quanto tempo; o assistente monta as semanas com drills da biblioteca, e você ajusta o que quiser."
-            action={<V2Button onClick={() => setCriar(true)}><Plus className="h-4 w-4" aria-hidden="true" /> Criar o primeiro plano</V2Button>}
+            title={t('Você ainda não tem um plano')}
+            description={t('Diga em que dias treina e por quanto tempo; o assistente monta as semanas com drills da biblioteca, e você ajusta o que quiser.')}
+            action={<V2Button onClick={() => setCriar(true)}><Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Criar o primeiro plano')}</V2Button>}
           />
         </V2Surface>
       ) : (
         grupos.map((g) => (
-          <section key={g.status} className="space-y-3" aria-label={PLAN_STATUS_LABELS[g.status]}>
+          <section key={g.status} className="space-y-3" aria-label={t(PLAN_STATUS_LABELS[g.status])}>
             {g.status !== PLAN_STATUS.ATIVO && (
               <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                {g.status === PLAN_STATUS.PAUSADO ? 'Pausados' : 'Concluídos'}
+                {g.status === PLAN_STATUS.PAUSADO ? t('Pausados') : t('Concluídos')}
               </h2>
             )}
             <div className="grid gap-3 lg:grid-cols-2">

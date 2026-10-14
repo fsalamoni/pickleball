@@ -47,6 +47,7 @@ import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
 import { applyBookingReferral } from './bookingReferralService.js';
 import { BOOKING_REFERRAL_STATUS, normalizeReferralCode, referralCodeProblem } from '../domain/marketing.js';
 import { listArenaManagerIds } from './arenaService.js';
+import { t } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -236,7 +237,7 @@ function recusarSeBloqueado(candidateSlots, bloqueios) {
  * @param input { kind, date, start, end, recurring:{weekday,start,end,weeks,fromDate}, notes, proposed_price }
  */
 export async function createBooking(arena, user, profile, input) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const kind = input.kind === BOOKING_KIND.RECURRING ? BOOKING_KIND.RECURRING : BOOKING_KIND.SINGLE;
   // 'multi' = vários horários avulsos selecionados no calendário (uma reserva
   // cobrindo múltiplos slots). Persistida como SINGLE com `slots` múltiplos.
@@ -253,15 +254,15 @@ export async function createBooking(arena, user, profile, input) {
       fromDate: str(input.recurring?.fromDate),
     };
     slots = expandRecurring(recurrence);
-    if (slots.length === 0) throw new Error('Preencha o dia da semana, os horários e o número de semanas.');
+    if (slots.length === 0) throw new Error(t('Preencha o dia da semana, os horários e o número de semanas.'));
   } else if (isMultiSlot) {
     slots = input.slots
       .map((s) => ({ date: str(s.date), start: str(s.start), end: str(s.end) }))
       .filter((s) => isValidSlot(s));
-    if (slots.length === 0) throw new Error('Selecione ao menos um horário válido.');
+    if (slots.length === 0) throw new Error(t('Selecione ao menos um horário válido.'));
   } else {
     const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
-    if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+    if (!isValidSlot(slot)) throw new Error(t('Preencha a data e um horário válido (fim depois do início).'));
     slots = [slot];
   }
 
@@ -298,15 +299,15 @@ export async function createBooking(arena, user, profile, input) {
       const names = busy.map((id) => actives.find((c) => c.id === id)?.name || 'quadra').join(', ');
       throw new Error(
         explicitCourtIds.length > 1
-          ? `Estas quadras não estão livres no período escolhido: ${names}. Ajuste o horário ou remova-as da seleção.`
-          : 'A quadra escolhida não está livre no período. Escolha outro horário ou quadra.',
+          ? t('Estas quadras não estão livres no período escolhido: {names}. Ajuste o horário ou remova-as da seleção.', { names })
+          : t('A quadra escolhida não está livre no período. Escolha outro horário ou quadra.'),
       );
     }
     targetCourtIds = explicitCourtIds;
   } else if (actives.length > 0) {
     // "Qualquer disponível": atribui uma quadra livre para todos os slots.
     const auto = pickAvailableCourtForSlots(courts, slots, existingBookings, allSchedules);
-    if (!auto) throw new Error('Nenhuma quadra livre nesse horário. Escolha outro período ou uma quadra específica.');
+    if (!auto) throw new Error(t('Nenhuma quadra livre nesse horário. Escolha outro período ou uma quadra específica.'));
     targetCourtIds = [auto];
   } else {
     // Arena sem quadras cadastradas: reserva sem court_id (comportamento legado).
@@ -339,7 +340,7 @@ export async function createBooking(arena, user, profile, input) {
       const candidateSlots = slots.map((s) => ({ ...s, court_id: cid }));
       const conflict = checkBookingConflict(candidateSlots, existingBookings);
       if (conflict.hasConflict) {
-        throw new Error('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.');
+        throw new Error(t('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.'));
       }
       recusarSeBloqueado(candidateSlots, bloqueios);
     }
@@ -474,9 +475,9 @@ export async function createBooking(arena, user, profile, input) {
  * @returns {Promise<Array<string>>} ids criados
  */
 export async function createBookingsForSelection(arena, user, profile, input) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const grupos = Array.isArray(input.groups) ? input.groups : [];
-  if (grupos.length === 0) throw new Error('Selecione ao menos um horário.');
+  if (grupos.length === 0) throw new Error(t('Selecione ao menos um horário.'));
 
   const existingBookings = await listArenaBookings(arena.id);
   const courts = await listArenaCourts(arena.id).catch(() => []);
@@ -496,13 +497,13 @@ export async function createBookingsForSelection(arena, user, profile, input) {
     const slots = (grupo.slots || [])
       .map((sl) => ({ date: str(sl.date), start: str(sl.start), end: str(sl.end) }))
       .filter((sl) => isValidSlot(sl));
-    if (slots.length === 0) throw new Error('Selecione ao menos um horário válido.');
+    if (slots.length === 0) throw new Error(t('Selecione ao menos um horário válido.'));
 
     const explicitas = (grupo.courtIds || [])
       .map((c) => (c == null ? null : str(c)))
       .filter((c) => c === null || activeIdSet.has(c));
 
-    if (explicitas.length === 0) throw new Error('Quadra inválida na seleção.');
+    if (explicitas.length === 0) throw new Error(t('Quadra inválida na seleção.'));
 
     if (explicitas[0] === null) {
       if (actives.length === 0) {
@@ -519,7 +520,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
           courts, slots, [...existingBookings, ...jaNoLote], allSchedules,
         );
         if (!auto) {
-          throw new Error(`Nenhuma quadra livre em ${slots[0].date} ${slots[0].start}. Escolha outro horário ou uma quadra específica.`);
+          throw new Error(t('Nenhuma quadra livre em {date} {start}. Escolha outro horário ou uma quadra específica.', { date: slots[0].date, start: slots[0].start }));
         }
         resolvidos.push({ courtIds: [auto], slots });
         ocupadasNesteLote.push({ court_id: auto, slots });
@@ -528,7 +529,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
       const busy = unavailableCourtsForSlots(explicitas, slots, existingBookings, allSchedules);
       if (busy.length > 0) {
         const nomes = busy.map(nomeDe).join(', ');
-        throw new Error(`Não está livre no horário escolhido: ${nomes}. Ajuste o horário ou tire da seleção.`);
+        throw new Error(t('Não está livre no horário escolhido: {nomes}. Ajuste o horário ou tire da seleção.', { nomes }));
       }
       resolvidos.push({ courtIds: explicitas, slots });
       explicitas.forEach((cid) => ocupadasNesteLote.push({ court_id: cid, slots }));
@@ -544,7 +545,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
       const candidatos = slots.map((sl) => ({ ...sl, court_id: cid }));
       const conflito = checkBookingConflict(candidatos, existingBookings);
       if (conflito.hasConflict) {
-        throw new Error(`Já existe reserva ativa em ${conflito.conflicts[0].candidate.date} ${conflito.conflicts[0].candidate.start} na ${nomeDe(cid)}. Escolha outro horário.`);
+        throw new Error(t('Já existe reserva ativa em {date} {start} na {cid}. Escolha outro horário.', { date: conflito.conflicts[0].candidate.date, start: conflito.conflicts[0].candidate.start, cid: nomeDe(cid) }));
       }
       // Horário que a arena fechou (bloqueio à mão ou dia de jogo) não vira
       // pedido: recusar aqui poupa a pessoa de esperar por uma recusa.
@@ -691,12 +692,12 @@ export async function createBookingsForSelection(arena, user, profile, input) {
  * @returns {Promise<string>} id da reserva criada
  */
 export async function createManualBooking(arena, actor, input) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const clientName = str(input.client_name);
-  if (!clientName) throw new Error('Informe o nome do cliente da reserva.');
+  if (!clientName) throw new Error(t('Informe o nome do cliente da reserva.'));
 
   const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
-  if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+  if (!isValidSlot(slot)) throw new Error(t('Preencha a data e um horário válido (fim depois do início).'));
 
   const existingBookings = await listArenaBookings(arena.id);
   // Quadra escolhida OU atribuição automática de uma quadra livre.
@@ -705,7 +706,7 @@ export async function createManualBooking(arena, actor, input) {
     const courts = await listArenaCourts(arena.id).catch(() => []);
     const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
     courtId = pickAvailableCourt(courts, slot, existingBookings, allSchedules);
-    if (!courtId) throw new Error('Nenhuma quadra livre neste horário. Escolha outro horário.');
+    if (!courtId) throw new Error(t('Nenhuma quadra livre neste horário. Escolha outro horário.'));
   }
   // Mescla schedules da quadra + da arena (sem court_id), igual ao filtro do
   // calendário admin, para a validação de janela refletir o que o admin vê.
@@ -792,7 +793,7 @@ export async function listArenaBookings(arenaId) {
  */
 export async function updateBookingStatus(booking, nextStatus, actor, { agreedPrice, byManager = true } = {}) {
   if (!canTransition(booking.status, nextStatus)) {
-    throw new Error(`Transição inválida (${BOOKING_STATUS_LABELS[booking.status]} → ${BOOKING_STATUS_LABELS[nextStatus] || nextStatus}).`);
+    throw new Error(t('Transição inválida ({valor} → {valor2}).', { valor: BOOKING_STATUS_LABELS[booking.status], valor2: BOOKING_STATUS_LABELS[nextStatus] || nextStatus }));
   }
   if (nextStatus === BOOKING_STATUS.CONFIRMED) {
     const existingBookings = await listArenaBookings(booking.arena_id);
@@ -802,7 +803,7 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
     const candidateSlots = (booking.slots || []).map((s) => ({ ...s, court_id: booking.court_id || null }));
     const conflict = checkBookingConflict(candidateSlots, others);
     if (conflict.hasConflict) {
-      throw new Error('Não é possível confirmar: já existe outra reserva ativa em conflito nesta quadra e horário.');
+      throw new Error(t('Não é possível confirmar: já existe outra reserva ativa em conflito nesta quadra e horário.'));
     }
   }
   const patch = { status: nextStatus, updated_at: serverTimestamp() };
@@ -970,16 +971,16 @@ export async function setBookingNoShow(booking, actor, isNoShow) {
  * @param {{ byManager?: boolean }} opts
  */
 export async function editBookingSlot(booking, actor, input, { byManager = false } = {}) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (booking.kind === BOOKING_KIND.RECURRING) {
-    throw new Error('Reservas recorrentes não podem ser editadas aqui — cancele e crie novamente.');
+    throw new Error(t('Reservas recorrentes não podem ser editadas aqui — cancele e crie novamente.'));
   }
   if ([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.DECLINED, BOOKING_STATUS.COMPLETED].includes(booking.status)) {
-    throw new Error('Esta reserva não pode mais ser alterada.');
+    throw new Error(t('Esta reserva não pode mais ser alterada.'));
   }
   let courtId = input.court_id !== undefined ? str(input.court_id) : (booking.court_id || '');
   const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
-  if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+  if (!isValidSlot(slot)) throw new Error(t('Preencha a data e um horário válido (fim depois do início).'));
 
   const existing = await listArenaBookings(booking.arena_id);
   const others = existing.filter((b) => b.id !== booking.id);
@@ -1039,9 +1040,9 @@ export async function editBookingSlot(booking, actor, input, { byManager = false
  * @param {{ athlete_id?: string|null, athlete_name: string, athlete_photo?: string }} target
  */
 export async function transferBooking(booking, actor, target) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const name = str(target.athlete_name);
-  if (!name) throw new Error('Informe o novo responsável pela reserva.');
+  if (!name) throw new Error(t('Informe o novo responsável pela reserva.'));
   const previousAthleteId = booking.athlete_id || null;
   await updateDoc(doc(db, COL.bookings, booking.id), {
     athlete_id: str(target.athlete_id) || null,

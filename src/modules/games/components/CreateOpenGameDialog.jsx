@@ -14,6 +14,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 import { OPEN_GAME_FORMAT_LABELS, normalizeOpenGameInput } from '../domain/openGames.js';
 import { useCreateOpenGame } from '../hooks/useOpenGames.js';
+import { t } from '@/core/i18n';
 
 export default function CreateOpenGameDialog({ open, onOpenChange }) {
   const { user, userProfile } = useAuth();
@@ -41,14 +42,14 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
         creator_name: userProfile?.platform_name || user?.displayName || null,
         creator_photo: userProfile?.photo_url || user?.photoURL || null,
       });
-      toast.success('Convite publicado no mural.');
+      toast.success(t('Convite publicado no mural.'));
       setDate('');
       setWhenText('');
       setNotes('');
       setErrors({});
       onOpenChange(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível publicar o convite.');
+      toast.error(err?.message || t('Não foi possível publicar o convite.'));
     }
   }
 
@@ -56,13 +57,13 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Procuro jogo</DialogTitle>
-          <DialogDescription>Publique um convite e encontre parceiros para jogar.</DialogDescription>
+          <DialogTitle>{t('Procuro jogo')}</DialogTitle>
+          <DialogDescription>{t('Publique um convite e encontre parceiros para jogar.')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Data</Label>
+            <Label htmlFor="date">{t('Data')}</Label>
             <Input
               id="date"
               type="date"
@@ -72,12 +73,12 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="when_text">Horário / descrição (opcional)</Label>
+            <Label htmlFor="when_text">{t('Horário / descrição (opcional)')}</Label>
             <Input
               id="when_text"
               value={whenText}
               onChange={(e) => setWhenText(e.target.value)}
-              placeholder="Ex.: 19h, manhã, tenho quadra reservada"
+              placeholder={t('Ex.: 19h, manhã, tenho quadra reservada')}
               maxLength={100}
             />
             {errors.when_text && <p className="text-xs text-red-600">{errors.when_text}</p>}
@@ -85,33 +86,33 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
             <div className="space-y-2">
-              <Label htmlFor="city">Cidade</Label>
-              <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} placeholder="Sua cidade" />
+              <Label htmlFor="city">{t('Cidade')}</Label>
+              <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} placeholder={t('Sua cidade')} />
               {errors.city && <p className="text-xs text-red-600">{errors.city}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="state">UF</Label>
+              <Label htmlFor="state">{t('UF')}</Label>
               <Input id="state" value={stateUf} onChange={(e) => setStateUf(e.target.value)} maxLength={2} placeholder="SP" className="w-16" />
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="level">Nível</Label>
+              <Label htmlFor="level">{t('Nível')}</Label>
               <select
                 id="level"
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <option value="">Qualquer nível</option>
+                <option value="">{t('Qualquer nível')}</option>
                 {LEVEL_OPTIONS.map((o) => (
                   <option key={o.code} value={o.code}>{o.label}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="format">Formato</Label>
+              <Label htmlFor="format">{t('Formato')}</Label>
               <select
                 id="format"
                 value={format}
@@ -119,27 +120,27 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {Object.entries(OPEN_GAME_FORMAT_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>{t(label)}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Observações (opcional)</Label>
+            <Label htmlFor="notes">{t('Observações (opcional)')}</Label>
             <textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               maxLength={400}
               rows={3}
-              placeholder="Ex.: Tenho quadra reservada, procuro mais 2 pessoas nível intermediário."
+              placeholder={t('Ex.: Tenho quadra reservada, procuro mais 2 pessoas nível intermediário.')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
 
           <Button type="submit" disabled={create.isPending} className="w-full">
-            {create.isPending ? 'Publicando…' : 'Publicar convite'}
+            {create.isPending ? t('Publicando…') : t('Publicar convite')}
           </Button>
         </form>
       </DialogContent>

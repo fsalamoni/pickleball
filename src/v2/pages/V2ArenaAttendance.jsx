@@ -42,13 +42,14 @@ import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton,
   V2StatCard, V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tk } from '@/core/i18n';
 
 const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
 const SITUACAO = {
-  presente: { label: 'Chegou', tone: 'green' },
-  faltou: { label: 'Não veio', tone: 'red' },
-  aguardando: { label: 'Aguardando', tone: 'neutral' },
+  presente: { label: tk('Chegou'), tone: 'green' },
+  faltou: { label: tk('Não veio'), tone: 'red' },
+  aguardando: { label: tk('Aguardando'), tone: 'neutral' },
 };
 
 function LinhaPresenca({ linha, onConfirmar, onDesfazer, ocupado }) {
@@ -60,7 +61,7 @@ function LinhaPresenca({ linha, onConfirmar, onDesfazer, ocupado }) {
     <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 py-3 last:border-0">
       <V2Avatar name={b.athlete_name || 'Reserva'} photoUrl={b.athlete_photo} size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-ink">{b.athlete_name || 'Reserva da arena'}</p>
+        <p className="truncate text-sm font-bold text-ink">{b.athlete_name || t('Reserva da arena')}</p>
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" /> {hhmm(linha.start)}–{hhmm(linha.end)}
@@ -68,19 +69,19 @@ function LinhaPresenca({ linha, onConfirmar, onDesfazer, ocupado }) {
           {b.court_name && <span>· {b.court_name}</span>}
           {linha.situacao === 'presente' && (
             <span className={porTotem ? 'text-green-700' : 'text-gray-500'}>
-              · {porTotem ? 'pelo totem' : 'confirmado na recepção'}
+              · {porTotem ? t('pelo totem') : t('confirmado na recepção')}
             </span>
           )}
         </p>
       </div>
-      <V2Badge tone={meta.tone}>{meta.label}</V2Badge>
+      <V2Badge tone={meta.tone}>{t(meta.label)}</V2Badge>
       {linha.situacao === 'presente' ? (
         <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onDesfazer(b)}>
-          <RotateCcw className="h-3.5 w-3.5" /> Desfazer
+          <RotateCcw className="h-3.5 w-3.5" /> {t('Desfazer')}
         </V2Button>
       ) : (
         <V2Button variant="secondary" size="sm" disabled={ocupado} onClick={() => onConfirmar(b)}>
-          <UserCheck className="h-3.5 w-3.5" /> Chegou
+          <UserCheck className="h-3.5 w-3.5" /> {t('Chegou')}
         </V2Button>
       )}
     </div>
@@ -107,7 +108,7 @@ export function ArenaAttendancePanel({ arena }) {
       await fn();
       toast.success(msgOk);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível concluir.');
+      toast.error(err?.message || t('Não foi possível concluir.'));
     }
   };
 
@@ -115,36 +116,36 @@ export function ArenaAttendancePanel({ arena }) {
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-bold tracking-tight text-ink">Presença</h2>
+          <h2 className="font-display text-xl font-bold tracking-tight text-ink">{t('Presença')}</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Quem chegou, quem não veio. A chegada entra sozinha quando o atleta usa o totem.
+            {t('Quem chegou, quem não veio. A chegada entra sozinha quando o atleta usa o totem.')}
           </p>
         </div>
         <V2Button asChild>
           <Link to={`/arenas/${arena.id}/totem`} target="_blank" rel="noopener noreferrer">
-            <Monitor className="h-4 w-4" /> Abrir o totem
+            <Monitor className="h-4 w-4" /> {t('Abrir o totem')}
           </Link>
         </V2Button>
       </div>
 
       <V2Surface className="mb-6">
         <div className="flex flex-wrap items-end gap-3">
-          <V2Field label="Dia" htmlFor="dia-presenca" className="w-44">
+          <V2Field label={t('Dia')} htmlFor="dia-presenca" className="w-44">
             <V2Input id="dia-presenca" type="date" value={dia} onChange={(e) => setDia(e.target.value || isoDay())} />
           </V2Field>
           <p className="pb-2 text-xs text-gray-500">
-            {formatDateShortBR(dia)} · {resumo.total} {resumo.total === 1 ? 'reserva confirmada' : 'reservas confirmadas'}
+            {formatDateShortBR(dia)} · {resumo.total} {resumo.total === 1 ? t('reserva confirmada') : t('reservas confirmadas')}
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <V2StatCard icon={UserCheck} label="Chegaram" value={resumo.presentes} accent="green" />
-          <V2StatCard icon={UserX} label="Não vieram" value={resumo.faltas} />
-          <V2StatCard icon={Clock} label="Aguardando" value={resumo.aguardando} />
+          <V2StatCard icon={UserCheck} label={t('Chegaram')} value={resumo.presentes} accent="green" />
+          <V2StatCard icon={UserX} label={t('Não vieram')} value={resumo.faltas} />
+          <V2StatCard icon={Clock} label={t('Aguardando')} value={resumo.aguardando} />
           <V2StatCard
             icon={Users}
-            label="Taxa de falta"
+            label={t('Taxa de falta')}
             value={`${resumo.taxaFalta}%`}
-            hint="Sobre o que já foi decidido no dia"
+            hint={t('Sobre o que já foi decidido no dia')}
           />
         </div>
       </V2Surface>
@@ -152,7 +153,7 @@ export function ArenaAttendancePanel({ arena }) {
       {/* Falha não é "nenhuma reserva": a taxa de falta e a lista do dia
           seriam números de um dia vazio que não aconteceu. */}
       {isError && (
-        <V2ErrorState inline className="mb-6" title="Não foi possível carregar as reservas" onRetry={() => refetch()} />
+        <V2ErrorState inline className="mb-6" title={t('Não foi possível carregar as reservas')} onRetry={() => refetch()} />
       )}
 
       {!isError && pendentes.length > 0 && (
@@ -160,22 +161,21 @@ export function ArenaAttendancePanel({ arena }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-ink">
-                {pendentes.length} {pendentes.length === 1 ? 'horário passou sem ninguém confirmar chegada' : 'horários passaram sem ninguém confirmar chegada'}
+                {pendentes.length} {pendentes.length === 1 ? t('horário passou sem ninguém confirmar chegada') : t('horários passaram sem ninguém confirmar chegada')}
               </p>
               <p className="text-xs text-gray-600">
-                Marcar como falta alimenta o painel semanal e a ficha do cliente. Você pode
-                desfazer depois.
+                {t('Marcar como falta alimenta o painel semanal e a ficha do cliente. Você pode desfazer depois.')}
               </p>
             </div>
             <ConfirmDialog
               trigger={(
                 <V2Button variant="secondary" size="sm" disabled={emLote.isPending}>
-                  <UserX className="h-3.5 w-3.5" /> Marcar {pendentes.length} como falta
+                  <UserX className="h-3.5 w-3.5" /> {t('Marcar {length} como falta', { length: pendentes.length })}
                 </V2Button>
               )}
-              title="Marcar as faltas do dia?"
-              description={`${pendentes.length} reserva(s) sem chegada confirmada serão marcadas como não comparecimento.`}
-              confirmLabel="Marcar faltas"
+              title={t('Marcar as faltas do dia?')}
+              description={t('{length} reserva(s) sem chegada confirmada serão marcadas como não comparecimento.', { length: pendentes.length })}
+              confirmLabel={t('Marcar faltas')}
               onConfirm={() => acao(
                 () => emLote.mutateAsync({ bookings: pendentes, arenaId: arena.id }),
                 'Faltas registradas.',
@@ -186,16 +186,16 @@ export function ArenaAttendancePanel({ arena }) {
       )}
 
       <V2Surface>
-        <h2 className="mb-1 font-display text-lg font-bold text-ink">O dia, horário a horário</h2>
+        <h2 className="mb-1 font-display text-lg font-bold text-ink">{t('O dia, horário a horário')}</h2>
         {rvCarregando ? (
           <V2Skeleton lines={4} />
         ) : isError ? (
-          <p className="mt-2 text-sm text-gray-500">A lista volta assim que as reservas carregarem.</p>
+          <p className="mt-2 text-sm text-gray-500">{t('A lista volta assim que as reservas carregarem.')}</p>
         ) : resumo.linhas.length === 0 ? (
           <V2EmptyState
             icon={QrCode}
-            title="Nenhuma reserva confirmada neste dia"
-            description="A presença aparece aqui assim que houver reserva confirmada para a data escolhida."
+            title={t('Nenhuma reserva confirmada neste dia')}
+            description={t('A presença aparece aqui assim que houver reserva confirmada para a data escolhida.')}
           />
         ) : (
           <div>
@@ -214,10 +214,7 @@ export function ArenaAttendancePanel({ arena }) {
 
       <p className="mt-6 flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
         <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        A falta só é afirmada <strong className="text-ink">depois que a janela fecha</strong> (o
-        horário mais 30 minutos). Enquanto ela está aberta, a pessoa ainda pode estar
-        estacionando — e cobrar multa de quem chegou no horário é o tipo de erro que custa o
-        cliente, não a reserva.
+        {t('A falta só é afirmada')} <strong className="text-ink">{t('depois que a janela fecha')}</strong> {t('(o horário mais 30 minutos). Enquanto ela está aberta, a pessoa ainda pode estar estacionando — e cobrar multa de quem chegou no horário é o tipo de erro que custa o cliente, não a reserva.')}
       </p>
     </div>
   );

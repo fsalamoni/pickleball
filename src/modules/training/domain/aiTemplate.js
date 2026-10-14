@@ -16,6 +16,7 @@ import {
   EQUIPMENT, ITEM_KIND, ITEM_KIND_LABELS, ITEM_KINDS, METRIC_TYPES, MOTOR_ABILITIES, PLACES,
   PRACTICE_MODES, SKILLS, SKILL_AREAS, TECHNIQUE_PARTS,
 } from './taxonomy.js';
+import { t } from '@/core/i18n';
 import { blankItem, itemQuality, normalizeItemInput } from './trainingItem.js';
 
 /** Itens por importação (proteção da tela e da escrita em lote). */
@@ -35,11 +36,11 @@ export function cueWarnings(cues = []) {
     const texto = String(c ?? '').trim();
     if (!texto) return;
     const palavras = texto.split(/\s+/).length;
-    if (palavras > 8) out.push(`Dica ${i + 1} tem ${palavras} palavras — dica boa cabe em 8.`);
+    if (palavras > 8) out.push(t('Dica {n} tem {palavras} palavras — dica boa cabe em 8.', { n: i + 1, palavras }));
     const lower = texto.toLowerCase();
     const parte = BODY_PARTS.find((p) => new RegExp(`(^|[^a-zà-ú])${p}`, 'i').test(lower));
-    if (parte) out.push(`Dica ${i + 1} fala do corpo ("${parte}"). Prefira apontar para a bola, o alvo ou a raquete.`);
-    if (/^(não|nunca)\b/i.test(texto)) out.push(`Dica ${i + 1} começa com negação. Diga o que FAZER.`);
+    if (parte) out.push(t('Dica {n} fala do corpo ("{parte}"). Prefira apontar para a bola, o alvo ou a raquete.', { n: i + 1, parte }));
+    if (/^(não|nunca)\b/i.test(texto)) out.push(t('Dica {n} começa com negação. Diga o que FAZER.', { n: i + 1 }));
   });
   return out;
 }
@@ -49,7 +50,7 @@ export function positioningWarnings(positioning = []) {
   const list = Array.isArray(positioning) ? positioning : [];
   const certos = list.filter((p) => p?.type === 'certo').length;
   const errados = list.filter((p) => p?.type === 'errado').length;
-  return errados > certos ? ['Há mais "errado" do que "certo". Mostre sempre o certo ao lado de cada errado.'] : [];
+  return errados > certos ? [t('Há mais "errado" do que "certo". Mostre sempre o certo ao lado de cada errado.')] : [];
 }
 
 /** Exemplo completo (passa em todas as regras do pedido). */
@@ -201,13 +202,13 @@ export function buildAiPrompt({ kind = ITEM_KIND.DRILL, skills = [], level = nul
 
 /** Tira cercas de código (```json … ```) e texto em volta do JSON. */
 function extractJson(text) {
-  const t = String(text ?? '').trim();
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const txt = String(text ?? '').trim();
+  const fence = txt.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) return fence[1].trim();
-  const first = Math.min(...['{', '['].map((c) => t.indexOf(c)).filter((i) => i >= 0));
-  if (!Number.isFinite(first)) return t;
-  const last = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'));
-  return last > first ? t.slice(first, last + 1) : t;
+  const first = Math.min(...['{', '['].map((c) => txt.indexOf(c)).filter((i) => i >= 0));
+  if (!Number.isFinite(first)) return txt;
+  const last = Math.max(txt.lastIndexOf('}'), txt.lastIndexOf(']'));
+  return last > first ? txt.slice(first, last + 1) : txt;
 }
 
 /**
@@ -224,13 +225,13 @@ export function parseItemsJson(text, { fromAi = false } = {}) {
   try {
     data = JSON.parse(extractJson(text));
   } catch {
-    return { ok: false, error: 'Não consegui ler o JSON. Confira se você colou a resposta inteira, do primeiro { ao último }.', items: [] };
+    return { ok: false, error: t('Não consegui ler o JSON. Confira se você colou a resposta inteira, do primeiro { ao último }.'), items: [] };
   }
   const raw = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [data];
   const objs = raw.filter((x) => x && typeof x === 'object' && !Array.isArray(x));
-  if (!objs.length) return { ok: false, error: 'O JSON não tem nenhum item.', items: [] };
+  if (!objs.length) return { ok: false, error: t('O JSON não tem nenhum item.'), items: [] };
   if (objs.length > MAX_IMPORT_ITEMS) {
-    return { ok: false, error: `São ${objs.length} itens. Importe no máximo ${MAX_IMPORT_ITEMS} por vez.`, items: [] };
+    return { ok: false, error: t('São {n} itens. Importe no máximo {max} por vez.', { n: objs.length, max: MAX_IMPORT_ITEMS }), items: [] };
   }
   const items = objs.map((o) => {
     const input = fromAi ? { ...o, media: [], link: '' } : o;

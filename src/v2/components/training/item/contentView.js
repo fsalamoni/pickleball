@@ -15,6 +15,7 @@ import { REVIEW, VISIBILITY } from '@/modules/training/domain/visibility';
 import { SHARE_KIND, sortInbox } from '@/modules/training/domain/share';
 import { formatDayLabel, toISODate, todayLocal } from '@/modules/training/domain/dates';
 import { instanteEmMs } from '@/core/domain/instant';
+import { t, tk, tn } from '@/core/i18n';
 
 // ── Biblioteca ──────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ export const LIBRARY_PARAMS = Object.freeze({
 export const MY_LEVEL = 'meu';
 
 /** Origem em uma palavra (o filtro usa as mesmas). */
-export const ORIGIN_LABELS = Object.freeze({ plataforma: 'PickleRush', professor: 'Professores', atleta: 'Comunidade' });
+export const ORIGIN_LABELS = Object.freeze({ plataforma: 'PickleRush', professor: tk('Professores'), atleta: tk('Comunidade') });
 
 const EMPTY_FILTERS = Object.freeze({
   text: '', kind: '', skill: '', level: null, players: null, place: '', maxMinutes: null, origin: '', saved: false,
@@ -117,12 +118,12 @@ export function buildLibrary({ publicItems = [], coachItems = [], filters = {}, 
 
 export const MY_STATES = Object.freeze(['rascunho', 'alunos', 'revisao', 'aprovado', 'recusado', 'oculto']);
 export const MY_STATE_LABELS = Object.freeze({
-  rascunho: 'Só eu',
-  alunos: 'Meus alunos',
-  revisao: 'Em revisão',
-  aprovado: 'Publicado',
-  recusado: 'Não aprovado',
-  oculto: 'Oculto pela equipe',
+  rascunho: tk('Só eu'),
+  alunos: tk('Meus alunos'),
+  revisao: tk('Em revisão'),
+  aprovado: tk('Publicado'),
+  recusado: tk('Não aprovado'),
+  oculto: tk('Oculto pela equipe'),
 });
 
 /** Em que estado está um item meu (o filtro da lista "Meus"). */
@@ -173,7 +174,7 @@ export function shareAvailability(share = {}, visible = {}) {
   return 'indisponivel';
 }
 
-export const SENT_STATE_LABELS = Object.freeze({ enviado: 'Enviado', visto: 'Visto', feito: 'Feito' });
+export const SENT_STATE_LABELS = Object.freeze({ enviado: tk('Enviado'), visto: tk('Visto'), feito: tk('Feito') });
 
 export function sentState(share = {}) {
   if (share.done_at) return 'feito';
@@ -185,7 +186,7 @@ export function sentState(share = {}) {
 export function groupSent(shares = []) {
   const grupos = new Map();
   for (const s of shares) {
-    const g = grupos.get(s.item_id) || { itemId: s.item_id, title: s.item_title || 'Item', kind: s.item_kind || '', shares: [], last: 0 };
+    const g = grupos.get(s.item_id) || { itemId: s.item_id, title: s.item_title || t('Item'), kind: s.item_kind || '', shares: [], last: 0 };
     g.shares.push(s);
     g.last = Math.max(g.last, timeMs(s.created_at));
     grupos.set(s.item_id, g);
@@ -206,21 +207,19 @@ export function dayOf(ts, today = todayLocal()) {
   return Number.isFinite(ms) ? formatDayLabel(toISODate(new Date(ms)), today) : '';
 }
 
-const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
-
 /** O resultado de `shareItem` em pt-BR. */
 export function shareResultText({ sent = 0, skipped = 0, failed = 0, notified = 0 } = {}, { kind = SHARE_KIND.INDICACAO } = {}) {
   const aluno = kind === SHARE_KIND.ALUNO;
   const partes = [];
-  if (sent > 0) partes.push(`${aluno ? 'Enviado a' : 'Indicado a'} ${plural(sent, aluno ? 'aluno' : 'pessoa', aluno ? 'alunos' : 'pessoas')}.`);
-  else if (skipped > 0 && failed === 0) partes.push('Ninguém recebeu de novo: todos já tinham este item em aberto.');
+  if (sent > 0) partes.push(aluno ? tn(sent, 'Enviado a {n} aluno.', 'Enviado a {n} alunos.') : tn(sent, 'Indicado a {n} pessoa.', 'Indicado a {n} pessoas.'));
+  else if (skipped > 0 && failed === 0) partes.push(t('Ninguém recebeu de novo: todos já tinham este item em aberto.'));
   if (skipped > 0 && sent > 0) {
-    partes.push(skipped === 1 ? '1 já tinha este item em aberto e não recebeu de novo.' : `${skipped} já tinham este item em aberto e não receberam de novo.`);
+    partes.push(skipped === 1 ? t('1 já tinha este item em aberto e não recebeu de novo.') : t('{n} já tinham este item em aberto e não receberam de novo.', { n: skipped }));
   }
-  if (failed > 0) partes.push(failed === 1 ? '1 envio não saiu — tente de novo.' : `${failed} envios não saíram — tente de novo.`);
+  if (failed > 0) partes.push(failed === 1 ? t('1 envio não saiu — tente de novo.') : t('{n} envios não saíram — tente de novo.', { n: failed }));
   if (sent > 0 && notified < sent) {
     const sem = sent - notified;
-    partes.push(`${sem === 1 ? '1 pessoa não recebeu' : `${sem} pessoas não receberam`} o aviso, mas o item já está em Recebidos.`);
+    partes.push(tn(sem, '{n} pessoa não recebeu o aviso, mas o item já está em Recebidos.', '{n} pessoas não receberam o aviso, mas o item já está em Recebidos.'));
   }
   return partes.join(' ');
 }
@@ -229,11 +228,11 @@ export function shareResultText({ sent = 0, skipped = 0, failed = 0, notified = 
 
 /** Os nomes das seções da ficha, para o índice "Nesta ficha". */
 export const SECTION_TITLES = Object.freeze({
-  diagramas: 'Diagrama', objetivo: 'Objetivo', quando: 'Quando usar', pratica: 'Para praticar',
-  seguranca: 'Segurança', blocos: 'Blocos', fisico: 'Séries', montagem: 'Montagem', passos: 'Passo a passo',
-  tecnica: 'O corpo, ponto a ponto', dicas: 'Dicas', certoErrado: 'Certo e errado', erros: 'Erros comuns',
-  autoavaliacao: 'Fiz certo?', motor: 'O movimento', variacoes: 'Variações', meta: 'Meta', estudo: 'Para estudar',
-  midia: 'Fotos e vídeos', conteudo: 'Conteúdo',
+  diagramas: tk('Diagrama'), objetivo: tk('Objetivo'), quando: tk('Quando usar'), pratica: tk('Para praticar'),
+  seguranca: tk('Segurança'), blocos: tk('Blocos'), fisico: tk('Séries'), montagem: tk('Montagem'), passos: tk('Passo a passo'),
+  tecnica: tk('O corpo, ponto a ponto'), dicas: tk('Dicas'), certoErrado: tk('Certo e errado'), erros: tk('Erros comuns'),
+  autoavaliacao: tk('Fiz certo?'), motor: tk('O movimento'), variacoes: tk('Variações'), meta: tk('Meta'), estudo: tk('Para estudar'),
+  midia: tk('Fotos e vídeos'), conteudo: tk('Conteúdo'),
 });
 
 /** A ficha é longa o bastante para um índice no topo? */

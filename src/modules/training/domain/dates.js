@@ -3,8 +3,9 @@
  * é a data de Greenwich, e das 21h à meia-noite no Brasil já seria amanhã.
  * A semana começa na segunda (como a sequência da gamificação).
  */
+import { t, tk } from '@/core/i18n';
 
-const pad = (n) => String(n).padStart(2, '0');
+const pad =(n) => String(n).padStart(2, '0');
 
 export function toISODate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -49,13 +50,14 @@ export function daysBetween(a, b) {
   return Math.round((at(b) - at(a)) / 86400000);
 }
 
-export const WEEKDAY_SHORT = Object.freeze(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']);
-export const WEEKDAY_LONG = Object.freeze(['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']);
+// Rótulos marcados: a tela traduz ao desenhar, com t().
+export const WEEKDAY_SHORT = Object.freeze([tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')]);
+export const WEEKDAY_LONG = Object.freeze([tk('Domingo'), tk('Segunda'), tk('Terça'), tk('Quarta'), tk('Quinta'), tk('Sexta'), tk('Sábado')]);
 
 /** "Qua, 08/10" (e o ano quando não é o corrente). */
 export function formatDayLabel(iso, today = todayLocal()) {
   if (!isISODate(iso)) return '';
   const [y, m, d] = iso.split('-');
   const ano = y !== today.slice(0, 4) ? `/${y}` : '';
-  return `${WEEKDAY_SHORT[weekdayOf(iso)]}, ${d}/${m}${ano}`;
+  return `${t(WEEKDAY_SHORT[weekdayOf(iso)])}, ${d}/${m}${ano}`;
 }

@@ -36,6 +36,7 @@ import TeamRegistrationDialog from './TeamRegistrationDialog';
 import TeamConfrontationCard from './TeamConfrontationCard';
 import TeamStandingsTable from './TeamStandingsTable';
 import V2BracketTree from './V2BracketTree';
+import { t } from '@/core/i18n';
 
 function TeamCard({ team, config, canEdit, onEdit }) {
   const required = buildRosterSlots(config).length;
@@ -43,8 +44,8 @@ function TeamCard({ team, config, canEdit, onEdit }) {
   return (
     <V2Surface className="space-y-2 p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0 font-bold text-ink">{team.team_name || 'Equipe'}</div>
-        {canEdit && <V2Button size="sm" variant="ghost" onClick={() => onEdit(team)}>Editar</V2Button>}
+        <div className="min-w-0 font-bold text-ink">{team.team_name || t('Equipe')}</div>
+        {canEdit && <V2Button size="sm" variant="ghost" onClick={() => onEdit(team)}>{t('Editar')}</V2Button>}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {(team.members || []).map((m, i) => (
@@ -55,7 +56,7 @@ function TeamCard({ team, config, canEdit, onEdit }) {
       </div>
       {size < required && (
         <p className="text-xs font-semibold text-amber-600">
-          Elenco incompleto: {size}/{required} atletas.
+          {t('Elenco incompleto: {size}/{required} atletas.', { size, required })}
         </p>
       )}
     </V2Surface>
@@ -68,7 +69,7 @@ function StructureSection({ section, modality, teamById }) {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-ink">{section.name}</span>
-        <V2Badge tone="neutral">{section.matches.length} confronto(s)</V2Badge>
+        <V2Badge tone="neutral">{t('{n} confronto(s)', { n: section.matches.length })}</V2Badge>
       </div>
       <div className="space-y-2">
         {section.matches.map((m) => (
@@ -99,13 +100,13 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
     data: matches = [], isLoading: loadingMatches, isError: falhouConfrontos, refetch: recarregarConfrontos,
   } = useAllModalityMatches(modality.id);
 
-  const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
+  const teamById = useMemo(() => new Map(teams.map((tt) => [tt.id, tt])), [teams]);
   const teamNameById = useMemo(
-    () => new Map(teams.map((t) => [t.id, t.team_name || 'Equipe'])),
+    () => new Map(teams.map((tt) => [tt.id, tt.team_name || t('Equipe')])),
     [teams],
   );
   const myTeam = useMemo(
-    () => teams.find((t) => t.created_by === user?.uid || registrationIncludesUid(t, user?.uid)),
+    () => teams.find((tt) => tt.created_by === user?.uid || registrationIncludesUid(tt, user?.uid)),
     [teams, user?.uid],
   );
 
@@ -116,12 +117,12 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
   );
   const confrontationCount = useMemo(() => matches.filter(isTeamConfrontation).length, [matches]);
 
-  const stageLabel = (stage) => TOURNAMENT_STAGE_TYPE_LABELS[stage.stageType] || 'Fase';
+  const stageLabel = (stage) => TOURNAMENT_STAGE_TYPE_LABELS[stage.stageType] || t('Fase');
 
   const tabs = [
-    { value: 'equipes', label: `Equipes (${teams.length})`, icon: Users },
-    { value: 'confrontos', label: `Confrontos (${confrontationCount})`, icon: Swords },
-    { value: 'classificacao', label: 'Classificação', icon: Trophy },
+    { value: 'equipes', label: t('Equipes ({n})', { n: teams.length }), icon: Users },
+    { value: 'confrontos', label: t('Confrontos ({confrontationCount})', { confrontationCount }), icon: Swords },
+    { value: 'classificacao', label: t('Classificação'), icon: Trophy },
   ];
 
   function closeForm() {
@@ -134,12 +135,12 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
       {/* O que a modalidade define — a regra que vale para tudo abaixo. */}
       <V2Surface className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <V2Badge tone="acid">Equipes</V2Badge>
+          <V2Badge tone="acid">{t('Equipes')}</V2Badge>
           <V2Badge tone="neutral">{TEAM_GENDER_LABELS[config.gender]}</V2Badge>
-          <V2Badge tone="neutral">{config.team_size} atletas/equipe</V2Badge>
-          <V2Badge tone="neutral">{(config.etapas || []).length} etapas/confronto</V2Badge>
+          <V2Badge tone="neutral">{t('{team_size} atletas/equipe', { team_size: config.team_size })}</V2Badge>
+          <V2Badge tone="neutral">{t('{n} etapas/confronto', { n: (config.etapas || []).length })}</V2Badge>
           <V2Badge tone="neutral">
-            {config.win_rule === TEAM_WIN_RULE.BEST_OF ? `Melhor de ${config.win_target}` : 'Todas as etapas'}
+            {config.win_rule === TEAM_WIN_RULE.BEST_OF ? t('Melhor de {win_target}', { win_target: config.win_target }) : t('Todas as etapas')}
           </V2Badge>
         </div>
         <div className="flex flex-wrap gap-1.5 text-2xs text-gray-500">
@@ -155,27 +156,26 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-3xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
           <span className="inline-flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 shrink-0" />
-            Esta é a visão do atleta: os confrontos aqui são só para consulta. Escalar as
-            partidas e lançar os resultados é no painel do organizador.
+            {t('Esta é a visão do atleta: os confrontos aqui são só para consulta. Escalar as partidas e lançar os resultados é no painel do organizador.')}
           </span>
           <V2Button size="sm" variant="secondary" asChild>
-            <Link to={`/torneios/${tournament?.id}/gerenciar`}>Abrir painel do organizador</Link>
+            <Link to={`/torneios/${tournament?.id}/gerenciar`}>{t('Abrir painel do organizador')}</Link>
           </V2Button>
         </div>
       )}
 
       <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5">
-        {tabs.map((t) => {
-          const Icon = t.icon;
+        {tabs.map((tt) => {
+          const Icon = tt.icon;
           return (
             <button
-              key={t.value}
+              key={tt.value}
               type="button"
-              onClick={() => setTab(t.value)}
+              onClick={() => setTab(tt.value)}
               className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
-                tab === t.value ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}
+                tab === tt.value ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}
             >
-              <Icon className="h-4 w-4" /> {t.label}
+              <Icon className="h-4 w-4" /> {tt.label}
             </button>
           );
         })}
@@ -187,18 +187,18 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-gray-500">
               {isAdmin
-                ? 'Equipes inscritas nesta modalidade. Para incluir ou editar equipes, use a aba Inscrições do painel.'
-                : 'Inscreva sua equipe e veja as demais.'}
+                ? t('Equipes inscritas nesta modalidade. Para incluir ou editar equipes, use a aba Inscrições do painel.')
+                : t('Inscreva sua equipe e veja as demais.')}
             </p>
             {/* Só o atleta age aqui: inscreve a sua equipe ou edita o elenco dela. */}
             {!isAdmin && !myTeam && (
               <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
-                <Plus className="h-4 w-4" /> Inscrever equipe
+                <Plus className="h-4 w-4" /> {t('Inscrever equipe')}
               </V2Button>
             )}
             {!isAdmin && myTeam && (
               <V2Button size="sm" variant="ghost" onClick={() => { setEditingTeam(myTeam); setShowForm(true); }}>
-                Editar minha equipe
+                {t('Editar minha equipe')}
               </V2Button>
             )}
           </div>
@@ -210,23 +210,23 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                inscrita se inscrever de novo. */
             <V2Surface>
               <V2ErrorState
-                title="As equipes não carregaram"
-                description="Nenhuma inscrição foi perdida — o que falhou foi a consulta."
+                title={t('As equipes não carregaram')}
+                description={t('Nenhuma inscrição foi perdida — o que falhou foi a consulta.')}
                 onRetry={() => recarregarEquipes()}
               />
             </V2Surface>
           ) : teams.length === 0 ? (
             <V2Surface>
-              <V2EmptyState icon={Users} title="Nenhuma equipe inscrita" description="As equipes inscritas aparecem aqui." />
+              <V2EmptyState icon={Users} title={t('Nenhuma equipe inscrita')} description={t('As equipes inscritas aparecem aqui.')} />
             </V2Surface>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {teams.map((t) => (
+              {teams.map((tt) => (
                 <TeamCard
-                  key={t.id}
-                  team={t}
+                  key={tt.id}
+                  team={tt}
                   config={config}
-                  canEdit={!isAdmin && t.id === myTeam?.id}
+                  canEdit={!isAdmin && tt.id === myTeam?.id}
                   onEdit={(team) => { setEditingTeam(team); setShowForm(true); }}
                 />
               ))}
@@ -244,8 +244,8 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
              sortear de novo — e o sorteio apaga os confrontos da fase. */
           <V2Surface>
             <V2ErrorState
-              title="Os confrontos não carregaram"
-              description="Não dá para saber o que já foi sorteado. Nada foi apagado."
+              title={t('Os confrontos não carregaram')}
+              description={t('Não dá para saber o que já foi sorteado. Nada foi apagado.')}
               onRetry={() => recarregarConfrontos()}
             />
           </V2Surface>
@@ -253,10 +253,10 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
           <V2Surface>
             <V2EmptyState
               icon={Swords}
-              title="Confrontos ainda não sorteados"
+              title={t('Confrontos ainda não sorteados')}
               description={isAdmin
-                ? 'Faça o sorteio na aba Sorteio do painel do organizador: as equipes entram no formato definido nesta modalidade (grupo único, grupos ou chave).'
-                : 'Aguarde o organizador sortear os confrontos.'}
+                ? t('Faça o sorteio na aba Sorteio do painel do organizador: as equipes entram no formato definido nesta modalidade (grupo único, grupos ou chave).')
+                : t('Aguarde o organizador sortear os confrontos.')}
             />
           </V2Surface>
         ) : (
@@ -266,7 +266,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                 <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                   <ListTree className="h-4 w-4 text-gray-400" />
                   <span className="font-display text-base font-bold text-ink">
-                    {structure.length > 1 ? `Fase ${stage.stageIndex + 1} — ` : ''}{stageLabel(stage)}
+                    {structure.length > 1 ? t('Fase {v1} — ', { v1: stage.stageIndex + 1 }) : ''}{stageLabel(stage)}
                   </span>
                 </div>
                 {stage.sections.map((section) => (
@@ -291,8 +291,8 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
           <V2Surface>
             <V2EmptyState
               icon={Trophy}
-              title="Sem classificação ainda"
-              description="A tabela aparece quando o sorteio for feito e os confrontos começarem."
+              title={t('Sem classificação ainda')}
+              description={t('A tabela aparece quando o sorteio for feito e os confrontos começarem.')}
             />
           </V2Surface>
         ) : (
@@ -304,7 +304,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                   <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                     <Trophy className="h-4 w-4 text-gray-400" />
                     <span className="font-display text-base font-bold text-ink">
-                      {structure.length > 1 ? `Fase ${stage.stageIndex + 1} — ` : ''}{stageLabel(stage)}
+                      {structure.length > 1 ? t('Fase {v1} — ', { v1: stage.stageIndex + 1 }) : ''}{stageLabel(stage)}
                     </span>
                   </div>
                   {stage.isBracket ? (

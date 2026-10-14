@@ -15,6 +15,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeContent } from '../domain/content.js';
+import { t } from '@/core/i18n';
 
 export const COACH_CONTENT_COLLECTION = 'coach_content';
 
@@ -44,8 +45,8 @@ export async function listPublicCoachContent(coachId) {
 }
 
 export async function createContent(coachId, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   const { valid, error, value } = normalizeContent({ ...input, coach_id: coachId });
   if (!valid) throw new Error(error);
   const id = doc(collection(db, COACH_CONTENT_COLLECTION)).id;
@@ -57,8 +58,8 @@ export async function createContent(coachId, input, actor) {
 }
 
 export async function updateContent(content, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== content.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== content.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   const { valid, error, value } = normalizeContent({ ...content, ...input, coach_id: content.coach_id });
   if (!valid) throw new Error(error);
   await updateDoc(doc(db, COACH_CONTENT_COLLECTION, content.id), {
@@ -73,8 +74,8 @@ export async function updateContent(content, input, actor) {
 }
 
 export async function deleteContent(content, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== content.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== content.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   await deleteDoc(doc(db, COACH_CONTENT_COLLECTION, content.id));
   await createAuditLog({ action: 'coach_content_deleted', actor, details: { content_id: content.id } });
 }

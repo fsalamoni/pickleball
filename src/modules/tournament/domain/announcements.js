@@ -6,6 +6,7 @@
  */
 
 import { REGISTRATION_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 /**
  * Destinatários únicos de um aviso: uids vinculados a inscrições ativas do
@@ -31,8 +32,8 @@ export function announcementRecipients(registrations = [], { modalityId = null }
 /** Valida o conteúdo de um aviso antes do envio. */
 export function validateAnnouncement({ title, message } = {}) {
   const errors = {};
-  if (!String(title || '').trim()) errors.title = 'Informe o título do aviso.';
-  if (!String(message || '').trim()) errors.message = 'Escreva a mensagem do aviso.';
+  if (!String(title || '').trim()) errors.title = t('Informe o título do aviso.');
+  if (!String(message || '').trim()) errors.message = t('Escreva a mensagem do aviso.');
   return { isValid: Object.keys(errors).length === 0, errors };
 }
 

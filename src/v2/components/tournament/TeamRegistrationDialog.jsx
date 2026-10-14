@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import TeamRegistrationForm from './TeamRegistrationForm';
+import { t } from '@/core/i18n';
 
 export default function TeamRegistrationDialog({
   tournament, modality, editingTeam = null, open, onClose,
@@ -27,11 +28,10 @@ export default function TeamRegistrationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            {isEditing ? 'Editar equipe' : 'Inscrever equipe'}
+            {isEditing ? t('Editar equipe') : t('Inscrever equipe')}
           </DialogTitle>
           <DialogDescription>
-            {modality.name} — dê um nome à equipe e preencha todas as vagas do elenco
-            definidas nesta modalidade.
+            {t('{name} — dê um nome à equipe e preencha todas as vagas do elenco definidas nesta modalidade.', { name: modality.name })}
           </DialogDescription>
         </DialogHeader>
         <TeamRegistrationForm

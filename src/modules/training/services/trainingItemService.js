@@ -28,6 +28,7 @@ import {
 import { derivedFromFor } from '../domain/copy.js';
 import { deleteTrainingMedia } from './mediaUploadService.js';
 import { markSeed } from './settingsService.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_ITEMS = 'training_items';
 const SHARES = 'training_shares';
@@ -126,7 +127,7 @@ async function assertPendingRoom(uid, settings, ignoreId = null) {
   const pendentes = (await listMyItems(uid)).filter((i) => i.review === REVIEW.PENDENTE && i.id !== ignoreId);
   if (pendentes.length >= limite) {
     throw new TrainingItemError(
-      `Você já tem ${pendentes.length} itens esperando revisão. Aguarde a equipe revisar antes de publicar outro — ou salve como "Só eu".`,
+      t('Você já tem {n} itens esperando revisão. Aguarde a equipe revisar antes de publicar outro — ou salve como "Só eu".', { n: pendentes.length }),
     );
   }
 }
@@ -148,11 +149,11 @@ function assertVisibility(visibility, role, settings, { isAdmin }) {
   const options = role === AUTHOR_ROLE.PLATAFORMA ? [VISIBILITY.PUBLICO, VISIBILITY.PRIVADO] : visibilityOptionsFor(role);
   if (!options.includes(visibility)) {
     throw new TrainingItemError(visibility === VISIBILITY.ALUNOS
-      ? 'Só professores podem deixar um item visível aos alunos.'
-      : 'Escolha quem pode ver este item.');
+      ? t('Só professores podem deixar um item visível aos alunos.')
+      : t('Escolha quem pode ver este item.'));
   }
   if (visibility === VISIBILITY.PUBLICO && role === AUTHOR_ROLE.ATLETA && settings?.allow_public_athlete === false && !isAdmin) {
-    throw new TrainingItemError('A publicação de itens por atletas está pausada. Salve como "Só eu" e compartilhe com quem quiser.');
+    throw new TrainingItemError(t('A publicação de itens por atletas está pausada. Salve como "Só eu" e compartilhe com quem quiser.'));
   }
 }
 
@@ -173,9 +174,9 @@ function assertVisibility(visibility, role, settings, { isAdmin }) {
  * @returns {Promise<string>} id criado
  */
 export async function createItem(input, { identity, settings, asPlatform = false, source = null, aiAssisted = false, featured = false, seed = null, silent = false }) {
-  if (!identity?.uid) throw new TrainingItemError('Entre na sua conta.');
+  if (!identity?.uid) throw new TrainingItemError(t('Entre na sua conta.'));
   const { valid, errors, value } = normalizeItemInput(input);
-  if (!valid) throw new TrainingItemError('Revise os campos destacados.', errors);
+  if (!valid) throw new TrainingItemError(t('Revise os campos destacados.'), errors);
 
   const role = authorRoleFor({ asPlatform, isAdmin: identity.isAdmin, isCoach: identity.isCoach });
   const visibility = input.visibility || VISIBILITY.PRIVADO;
@@ -183,7 +184,7 @@ export async function createItem(input, { identity, settings, asPlatform = false
 
   const derived_from = source ? derivedFromFor(source, identity.uid) : null;
   if (derived_from?.locked && visibility === VISIBILITY.PUBLICO) {
-    throw new TrainingItemError('Esta é a adaptação de um item que não é público. Ela pode ser sua ou dos seus alunos, mas não pode ir para a biblioteca.');
+    throw new TrainingItemError(t('Esta é a adaptação de um item que não é público. Ela pode ser sua ou dos seus alunos, mas não pode ir para a biblioteca.'));
   }
 
   const review = decideReview({ visibility, role, settings, identity });
@@ -228,16 +229,16 @@ export async function createItem(input, { identity, settings, asPlatform = false
  * @returns {Promise<{ review: string }>}
  */
 export async function updateItem(item, input, { identity, settings, aiAssisted = false }) {
-  if (!canEditItem(item, { uid: identity?.uid, isAdmin: identity?.isAdmin })) throw new TrainingItemError('Você não pode editar este item.');
-  if (item.legacy) throw new TrainingItemError('Este conteúdo antigo é editado na área do professor.');
+  if (!canEditItem(item, { uid: identity?.uid, isAdmin: identity?.isAdmin })) throw new TrainingItemError(t('Você não pode editar este item.'));
+  if (item.legacy) throw new TrainingItemError(t('Este conteúdo antigo é editado na área do professor.'));
   const { valid, errors, value } = normalizeItemInput(input);
-  if (!valid) throw new TrainingItemError('Revise os campos destacados.', errors);
+  if (!valid) throw new TrainingItemError(t('Revise os campos destacados.'), errors);
 
   const role = item.author_role;
   const visibility = input.visibility || item.visibility;
   assertVisibility(visibility, role, settings, { isAdmin: identity.isAdmin });
   if (item.derived_from?.locked && visibility === VISIBILITY.PUBLICO && !identity.isAdmin) {
-    throw new TrainingItemError('Esta é a adaptação de um item que não é público e não pode ir para a biblioteca.');
+    throw new TrainingItemError(t('Esta é a adaptação de um item que não é público e não pode ir para a biblioteca.'));
   }
 
   const review = decideReview({
@@ -274,7 +275,7 @@ export async function updateItem(item, input, { identity, settings, aiAssisted =
  * fica com um item que não abre). Nada disso derruba a exclusão.
  */
 export async function deleteItem(item, { identity }) {
-  if (!canEditItem(item, { uid: identity?.uid, isAdmin: identity?.isAdmin })) throw new TrainingItemError('Você não pode excluir este item.');
+  if (!canEditItem(item, { uid: identity?.uid, isAdmin: identity?.isAdmin })) throw new TrainingItemError(t('Você não pode excluir este item.'));
   await deleteDoc(doc(db, TRAINING_ITEMS, item.id));
 
   const isOwn = item.author_uid === identity.uid;
@@ -313,7 +314,7 @@ export async function addSharedReaders(item, uids = []) {
   const novos = uids.filter((u) => u && !atual.includes(u));
   if (!novos.length) return;
   if (atual.length + novos.length > 50) {
-    throw new TrainingItemError('Este item já foi compartilhado com muitas pessoas. Deixe-o visível aos seus alunos ou publique na biblioteca.');
+    throw new TrainingItemError(t('Este item já foi compartilhado com muitas pessoas. Deixe-o visível aos seus alunos ou publique na biblioteca.'));
   }
   await updateDoc(doc(db, TRAINING_ITEMS, item.id), { shared_uids: arrayUnion(...novos), updated_at: serverTimestamp() });
 }
@@ -339,8 +340,8 @@ const notifyAuthor = (item, { title, message, link }, identity) => {
 
 /** Aprova ou recusa um item da fila, com nota ao autor (que é avisado). */
 export async function reviewItem(item, decision, note, { identity }) {
-  if (!identity?.isAdmin) throw new TrainingItemError('Só a equipe da plataforma revisa.');
-  if (![REVIEW.APROVADO, REVIEW.RECUSADO].includes(decision)) throw new TrainingItemError('Decisão inválida.');
+  if (!identity?.isAdmin) throw new TrainingItemError(t('Só a equipe da plataforma revisa.'));
+  if (![REVIEW.APROVADO, REVIEW.RECUSADO].includes(decision)) throw new TrainingItemError(t('Decisão inválida.'));
   const review_note = str(note, 500);
   await updateDoc(doc(db, TRAINING_ITEMS, item.id), {
     review: decision, review_note, reviewed_by: identity.uid, reviewed_at: serverTimestamp(), updated_at: serverTimestamp(),
@@ -358,9 +359,9 @@ export async function reviewItem(item, decision, note, { identity }) {
 
 /** Oculta (com motivo) ou volta a mostrar. Oculto some de todo lugar, menos para o autor e o admin. */
 export async function setItemHidden(item, hidden, reason, { identity }) {
-  if (!identity?.isAdmin) throw new TrainingItemError('Só a equipe da plataforma oculta itens.');
+  if (!identity?.isAdmin) throw new TrainingItemError(t('Só a equipe da plataforma oculta itens.'));
   const hidden_reason = hidden ? str(reason, 300) : '';
-  if (hidden && !hidden_reason) throw new TrainingItemError('Diga o motivo — o autor vai ler.');
+  if (hidden && !hidden_reason) throw new TrainingItemError(t('Diga o motivo — o autor vai ler.'));
   await updateDoc(doc(db, TRAINING_ITEMS, item.id), { hidden: !!hidden, hidden_reason, updated_at: serverTimestamp() });
   await createAuditLog({
     action: hidden ? 'training_item_hidden' : 'training_item_unhidden',
@@ -375,7 +376,7 @@ export async function setItemHidden(item, hidden, reason, { identity }) {
 
 /** Destaca (ou tira o destaque) na biblioteca. */
 export async function setItemFeatured(item, featured, { identity }) {
-  if (!identity?.isAdmin) throw new TrainingItemError('Só a equipe da plataforma destaca itens.');
+  if (!identity?.isAdmin) throw new TrainingItemError(t('Só a equipe da plataforma destaca itens.'));
   await updateDoc(doc(db, TRAINING_ITEMS, item.id), { featured: !!featured, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'training_item_featured', actor: identity.actor, details: { item_id: item.id, featured: !!featured } });
 }

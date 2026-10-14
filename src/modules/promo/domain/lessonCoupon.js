@@ -6,6 +6,7 @@
  * marketing inteiro das arenas para toda tela que mostra uma aula. A conta do
  * desconto e a conferência do cupom moram em `promo.js`.
  */
+import { t, tk } from '@/core/i18n';
 
 export const LESSON_COUPON_STATUS = Object.freeze({
   PENDING: 'pending',
@@ -62,30 +63,35 @@ const reais = (n) => `R$ ${(Number(n) || 0).toFixed(2).replace('.', ',')}`;
  * (aula recorrente), o cupom vale para UMA aula, e a linha diz qual.
  *
  * @param {object} coupon o cupom gravado na aula
- * @param {{ lessonStatus?: string }} [ctx] o status da aula, para dizer que o
- *   uso voltou quando ela foi desfeita
+ * @param {{ lessonStatus?: string, traduzir?: boolean }} [ctx] o status da aula, para dizer que o
+ *   uso voltou quando ela foi desfeita; `traduzir` só na TELA — o aviso gravado fica em português
  */
-export function lessonCouponLine(coupon, { lessonStatus } = {}) {
+export function lessonCouponLine(coupon, { lessonStatus, traduzir = false } = {}) {
   if (!coupon?.code) return '';
+  const tx = traduzir ? t : (k, p) => k.replace(/\{(\w+)\}/g, (m, n) => (p?.[n] ?? m));
+  const codigo = coupon.code;
   if (coupon.status === LESSON_COUPON_STATUS.APPLIED) {
     if (AULA_DESFEITA.has(lessonStatus)) {
       // Neutra de propósito: a mesma linha aparece para o aluno e na agenda do
       // professor.
-      return `Cupom ${coupon.code} devolvido: a aula não vai acontecer, e o cupom volta a valer`;
+      return tx(tk('Cupom {codigo} devolvido: a aula não vai acontecer, e o cupom volta a valer'), { codigo });
     }
-    const onde = Number(coupon.lessons_count) > 1 ? ' na 1ª aula' : '';
+    const serie = Number(coupon.lessons_count) > 1;
+    const aplicado = serie ? tx(tk('Cupom {codigo} aplicado na 1ª aula'), { codigo }) : tx(tk('Cupom {codigo} aplicado'), { codigo });
     if (coupon.discount_value == null) {
-      return `Cupom ${coupon.code} aplicado${onde}: ${coupon.benefit || 'desconto combinado na aula'}`;
+      return `${aplicado}: ${coupon.benefit || tx(tk('desconto combinado na aula'))}`;
     }
-    const base = `Cupom ${coupon.code} aplicado${onde}: −${reais(coupon.discount_value)}`;
+    const base = `${aplicado}: −${reais(coupon.discount_value)}`;
     const original = Number(coupon.original_price);
     if (coupon.original_price == null || !Number.isFinite(original) || original <= 0) return base;
     const final = Math.max(0, Math.round((original - Number(coupon.discount_value)) * 100) / 100);
-    const rotulo = Number(coupon.lessons_count) > 1 ? 'série' : 'aula';
-    return `${base} · ${rotulo} de ${reais(original)} por ${reais(final)}`;
+    const valores = { de: reais(original), por: reais(final) };
+    return `${base} · ${serie ? tx(tk('série de {de} por {por}'), valores) : tx(tk('aula de {de} por {por}'), valores)}`;
   }
   if (coupon.status === LESSON_COUPON_STATUS.REJECTED) {
-    return `Cupom ${coupon.code} não aplicado${coupon.reason ? `: ${coupon.reason}` : ''}`;
+    return coupon.reason
+      ? tx(tk('Cupom {codigo} não aplicado: {motivo}'), { codigo, motivo: traduzir ? t(coupon.reason) : coupon.reason })
+      : tx(tk('Cupom {codigo} não aplicado'), { codigo });
   }
-  return `Cupom ${coupon.code} · ${coupon.benefit || 'desconto'} — aplicado quando o professor confirmar`;
+  return tx(tk('Cupom {codigo} · {beneficio} — aplicado quando o professor confirmar'), { codigo, beneficio: coupon.benefit || tx(tk('desconto')) });
 }

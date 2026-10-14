@@ -27,6 +27,7 @@ import {
   validateConfrontationLineup, formatEtapaScoringLabel, confrontationLineupStatus,
 } from '@/modules/tournament/domain/teamFormat';
 import { useRecordConfrontation } from '@/modules/tournament/hooks/useTeams';
+import { t } from '@/core/i18n';
 
 /* ----------------------------- compartilhado ----------------------------- */
 
@@ -35,7 +36,7 @@ function rosterOptions(team, prefix) {
   const members = Array.isArray(team?.members) ? team.members : [];
   return members.map((m, idx) => ({
     id: m.user_id || `${prefix}${idx}`,
-    name: m.name || `Atleta ${idx + 1}`,
+    name: m.name || t('Atleta {v1}', { v1: idx + 1 }),
     gender: m.gender || null,
   }));
 }
@@ -106,7 +107,7 @@ function useConfrontationDraft({ modality, match, teamA, teamB, onClose }) {
       onClose?.();
       return true;
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar o confronto.');
+      toast.error(err.message || t('Não foi possível salvar o confronto.'));
       return false;
     }
   }
@@ -119,7 +120,7 @@ function ConfrontationHeading({ teamAName, teamBName, result }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
       <span className="text-sm font-bold text-ink">
-        {teamAName} <span className="font-normal text-gray-400">vs</span> {teamBName}
+        {teamAName} <span className="font-normal text-gray-400">{t('vs')}</span> {teamBName}
       </span>
       <span className="font-display text-lg font-bold tabular-nums text-ink">
         {result.etapaWins.a} – {result.etapaWins.b}
@@ -135,8 +136,8 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
     config, optsA, optsB, etapas, setEtapas, lineupCheck, liveResult, record, salvar,
   } = useConfrontationDraft({ modality, match, teamA, teamB, onClose });
 
-  const teamAName = teamA?.team_name || 'Equipe A';
-  const teamBName = teamB?.team_name || 'Equipe B';
+  const teamAName = teamA?.team_name || t('Equipe A');
+  const teamBName = teamB?.team_name || t('Equipe B');
   const jaIniciada = confrontationLineupStatus(match, config, {
     rosterASize: optsA.length, rosterBSize: optsB.length,
   }).iniciada;
@@ -156,7 +157,7 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
     const a = suggestSideLineup(config, optsA);
     const b = suggestSideLineup(config, optsB);
     setEtapas((list) => list.map((e, i) => ({ ...e, side_a: a[i] || [], side_b: b[i] || [] })));
-    toast.success('Escalação sugerida — ajuste o que precisar.');
+    toast.success(t('Escalação sugerida — ajuste o que precisar.'));
   }
 
   function renderSide(etapa, ei, side, options) {
@@ -195,11 +196,10 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" /> {jaIniciada ? 'Editar escalação' : 'Iniciar partida'}
+            <Users className="h-5 w-5" /> {jaIniciada ? t('Editar escalação') : t('Iniciar partida')}
           </DialogTitle>
           <DialogDescription>
-            Defina quem joga cada etapa deste confronto. O placar é lançado depois,
-            em “Lançar resultado”.
+            {t('Defina quem joga cada etapa deste confronto. O placar é lançado depois, em “Lançar resultado”.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -210,8 +210,8 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
             && (config.etapas || []).some((e) => e.type === TEAM_ETAPA_TYPE.SINGLES) && (
             <p className="inline-flex items-center gap-1.5 text-xs text-gray-500">
               <Repeat className="h-3.5 w-3.5" />
-              No simples, todos jogam em rodízio: defina a ORDEM de entrada — troca a cada{' '}
-              {config.singles_rotation_points} pontos.
+              {t('No simples, todos jogam em rodízio: defina a ORDEM de entrada — troca a cada')}{' '}
+              {t('{singles_rotation_points} pontos.', { singles_rotation_points: config.singles_rotation_points })}
             </p>
           )}
 
@@ -239,7 +239,7 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
           {lineupCheck.errors.length > 0 && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <div className="mb-1 flex items-center gap-1.5 font-semibold">
-                <AlertTriangle className="h-3.5 w-3.5" /> Confira a escalação
+                <AlertTriangle className="h-3.5 w-3.5" /> {t('Confira a escalação')}
               </div>
               {lineupCheck.errors.map((msg) => <div key={msg}>• {msg}</div>)}
             </div>
@@ -248,14 +248,14 @@ export function TeamLineupDialog({ modality, match, teamA, teamB, open, onClose 
 
         <DialogFooter className="gap-2">
           <V2Button variant="ghost" onClick={suggestLineup} disabled={record.isPending}>
-            <Wand2 className="h-4 w-4" /> Escalação sugerida
+            <Wand2 className="h-4 w-4" /> {t('Escalação sugerida')}
           </V2Button>
-          <V2Button variant="ghost" onClick={onClose} disabled={record.isPending}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose} disabled={record.isPending}>{t('Cancelar')}</V2Button>
           <V2Button
-            onClick={() => salvar(jaIniciada ? 'Escalação atualizada.' : 'Partida iniciada — boa sorte!')}
+            onClick={() => salvar(jaIniciada ? t('Escalação atualizada.') : t('Partida iniciada — boa sorte!'))}
             disabled={record.isPending || !lineupCheck.valid}
           >
-            {record.isPending ? 'Salvando…' : jaIniciada ? 'Salvar escalação' : 'Iniciar partida'}
+            {record.isPending ? t('Salvando…') : jaIniciada ? t('Salvar escalação') : t('Iniciar partida')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
@@ -272,8 +272,8 @@ export function TeamResultDialog({
     config, optsA, optsB, etapas, setEtapas, lineupCheck, liveResult, record, salvar,
   } = useConfrontationDraft({ modality, match, teamA, teamB, onClose });
 
-  const teamAName = teamA?.team_name || 'Equipe A';
-  const teamBName = teamB?.team_name || 'Equipe B';
+  const teamAName = teamA?.team_name || t('Equipe A');
+  const teamBName = teamB?.team_name || t('Equipe B');
   const nameById = useMemo(
     () => new Map([...optsA, ...optsB].map((o) => [o.id, o.name])),
     [optsA, optsB],
@@ -295,10 +295,10 @@ export function TeamResultDialog({
 
   const lineupText = (ids, etapa) => {
     const list = (ids || []).map((id) => nameById.get(id)).filter(Boolean);
-    if (list.length === 0) return 'a definir';
+    if (list.length === 0) return t('a definir');
     const rotation = etapa.type === TEAM_ETAPA_TYPE.SINGLES
       && config.singles_mode === TEAM_SINGLES_MODE.ROTATING;
-    return rotation ? list.map((n, i) => `${i + 1}º ${n}`).join(' · ') : list.join(' / ');
+    return rotation ? list.map((n, i) => `${t('{n}º', { n: i + 1 })} ${n}`).join(' · ') : list.join(' / ');
   };
 
   return (
@@ -306,11 +306,10 @@ export function TeamResultDialog({
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Swords className="h-5 w-5" /> Lançar resultado
+            <Swords className="h-5 w-5" /> {t('Lançar resultado')}
           </DialogTitle>
           <DialogDescription>
-            Registre os games de cada etapa. O confronto é apurado pela regra da
-            modalidade assim que as etapas necessárias forem decididas.
+            {t('Registre os games de cada etapa. O confronto é apurado pela regra da modalidade assim que as etapas necessárias forem decididas.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -322,12 +321,12 @@ export function TeamResultDialog({
               <span className="inline-flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {lineup.iniciada
-                  ? `${lineup.pendentes} etapa(s) ainda sem escalação completa.`
-                  : 'Este confronto ainda não foi escalado.'}
+                  ? t('{pendentes} etapa(s) ainda sem escalação completa.', { pendentes: lineup.pendentes })
+                  : t('Este confronto ainda não foi escalado.')}
               </span>
               {onEditLineup && (
                 <V2Button size="sm" variant="ghost" onClick={onEditLineup}>
-                  <Users className="h-4 w-4" /> {lineup.iniciada ? 'Editar escalação' : 'Iniciar partida'}
+                  <Users className="h-4 w-4" /> {lineup.iniciada ? t('Editar escalação') : t('Iniciar partida')}
                 </V2Button>
               )}
             </div>
@@ -360,14 +359,14 @@ export function TeamResultDialog({
                         <div key={gi} className="flex items-center gap-1">
                           {etapa.games.length > 1 && (
                             <span className="w-10 text-right text-2xs font-semibold uppercase text-gray-500">
-                              Game {gi + 1}
+                              {t('Game')} {gi + 1}
                             </span>
                           )}
                           <input
                             type="number" min="0" inputMode="numeric"
                             value={g.a}
                             onChange={(e) => setGame(ei, gi, 'a', e.target.value)}
-                            aria-label={`${etapa.label} — game ${gi + 1}, ${teamAName}`}
+                            aria-label={t('{label} — game {v2}, {teamAName}', { label: etapa.label, v2: gi + 1, teamAName })}
                             className={scoreCls}
                           />
                           <span className="text-gray-300">×</span>
@@ -375,13 +374,13 @@ export function TeamResultDialog({
                             type="number" min="0" inputMode="numeric"
                             value={g.b}
                             onChange={(e) => setGame(ei, gi, 'b', e.target.value)}
-                            aria-label={`${etapa.label} — game ${gi + 1}, ${teamBName}`}
+                            aria-label={t('{label} — game {v2}, {teamBName}', { label: etapa.label, v2: gi + 1, teamBName })}
                             className={scoreCls}
                           />
                         </div>
                       ))}
                       {etapa.games.length > 1 && (
-                        <span className="text-2xs text-gray-500">games {res.sets_a}–{res.sets_b}</span>
+                        <span className="text-2xs text-gray-500">{t('games {sets_a}–{sets_b}', { sets_a: res.sets_a, sets_b: res.sets_b })}</span>
                       )}
                     </div>
 
@@ -397,14 +396,13 @@ export function TeamResultDialog({
 
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3 text-xs">
             <span className="font-semibold text-gray-500">
-              Etapas {liveResult.etapaWins.a}–{liveResult.etapaWins.b} · games {liveResult.sets.a}–{liveResult.sets.b} ·
-              pontos {liveResult.points.a}–{liveResult.points.b}
+              {t('Etapas {a}–{b} · games {a2}–{b2} · pontos {a3}–{b3}', { a: liveResult.etapaWins.a, b: liveResult.etapaWins.b, a2: liveResult.sets.a, b2: liveResult.sets.b, a3: liveResult.points.a, b3: liveResult.points.b })}
             </span>
             {liveResult.decided && (
               <V2Badge tone={liveResult.winner ? 'green' : 'amber'}>
                 {liveResult.winner
-                  ? `Vencedor: ${liveResult.winner === 'a' ? teamAName : teamBName}`
-                  : 'Empate em etapas'}
+                  ? t('Vencedor: {v1}', { v1: liveResult.winner === 'a' ? teamAName : teamBName })
+                  : t('Empate em etapas')}
               </V2Badge>
             )}
           </div>
@@ -412,7 +410,7 @@ export function TeamResultDialog({
           {(scoreIssues.length > 0 || lineupCheck.errors.length > 0) && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <div className="mb-1 flex items-center gap-1.5 font-semibold">
-                <AlertTriangle className="h-3.5 w-3.5" /> Confira antes de salvar
+                <AlertTriangle className="h-3.5 w-3.5" /> {t('Confira antes de salvar')}
               </div>
               {[...lineupCheck.errors, ...scoreIssues].map((msg) => <div key={msg}>• {msg}</div>)}
             </div>
@@ -420,12 +418,12 @@ export function TeamResultDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <V2Button variant="ghost" onClick={onClose} disabled={record.isPending}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose} disabled={record.isPending}>{t('Cancelar')}</V2Button>
           <V2Button
-            onClick={() => salvar(liveResult.decided ? 'Confronto encerrado e classificação atualizada.' : 'Parcial salva.')}
+            onClick={() => salvar(liveResult.decided ? t('Confronto encerrado e classificação atualizada.') : t('Parcial salva.'))}
             disabled={record.isPending || !lineupCheck.valid}
           >
-            {record.isPending ? 'Salvando…' : 'Salvar resultado'}
+            {record.isPending ? t('Salvando…') : t('Salvar resultado')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

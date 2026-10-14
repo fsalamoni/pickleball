@@ -12,6 +12,7 @@
  * - Evolução: o domínio dos itens agrupado por nível.
  */
 
+import { t } from '@/core/i18n';
 import { addDays, weekKeyOf } from './dates.js';
 import { isValidSkill, PLACES, BLOCK_TYPE_LABELS, ITEM_KIND } from './taxonomy.js';
 import { PLAN_LIMITS, slotDate } from './plan.js';
@@ -54,12 +55,12 @@ export function courtBlocks(items = [], total = null) {
   const parte = semTempo ? Math.max(5, Math.round(sobra / semTempo) || MIN_FALLBACK) : 0;
   return items.map((it) => ({
     id: it.id,
-    title: it.title || 'Item',
+    title: it.title || t('Item'),
     minutes: it.duration_min || parte,
     objective: it.objective || it.summary || '',
     setup: it.setup || '',
     steps: it.kind === ITEM_KIND.TREINO && (it.blocks || []).length
-      ? it.blocks.map((b) => `${BLOCK_TYPE_LABELS[b.type] || 'Bloco'}: ${b.title || ''}${b.duration_min ? ` (${b.duration_min} min)` : ''}`.trim())
+      ? it.blocks.map((b) => `${(BLOCK_TYPE_LABELS[b.type] ? t(BLOCK_TYPE_LABELS[b.type]) : t('Bloco'))}: ${b.title || ''}${b.duration_min ? ` (${b.duration_min} min)` : ''}`.trim())
       : (it.steps || []).filter(Boolean),
     cues: (it.cues || []).filter(Boolean),
     success: it.success_criteria || '',
@@ -100,7 +101,7 @@ export function normalizeRoutine(input = {}) {
     place: PLACES.includes(input.place) ? input.place : '',
     focus: [...new Set((Array.isArray(input.focus) ? input.focus : []).filter(isValidSkill))].slice(0, 6),
   };
-  if (!days.length) return { valid: false, error: 'Escolha pelo menos um dia da semana.', value };
+  if (!days.length) return { valid: false, error: t('Escolha pelo menos um dia da semana.'), value };
   return { valid: true, error: '', value };
 }
 
@@ -110,7 +111,7 @@ export const WEEK_ORDER = Object.freeze([1, 2, 3, 4, 5, 6, 0]);
 /** "06/10 a 12/10". */
 export function weekRangeLabel(weekKey) {
   const fmt = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-  return `${fmt(weekKey)} a ${fmt(addDays(weekKey, 6))}`;
+  return t('{inicio} a {fim}', { inicio: fmt(weekKey), fim: fmt(addDays(weekKey, 6)) });
 }
 
 /**
@@ -152,15 +153,15 @@ export function setSlotItems(plan, { week, day }, itemIds = []) {
   const ids = [...new Set((itemIds || []).filter(Boolean))];
   const slots = (plan?.slots || []).map((s) => ({ ...s }));
   if (ids.length > PLAN_LIMITS.itemsPerSlot) {
-    return { ok: false, error: `Um dia do plano tem no máximo ${PLAN_LIMITS.itemsPerSlot} itens.`, slots };
+    return { ok: false, error: t('Um dia do plano tem no máximo {n} itens.', { n: PLAN_LIMITS.itemsPerSlot }), slots };
   }
   if (!(plan?.days || []).includes(day) || week < 1 || week > (plan?.weeks || 0)) {
-    return { ok: false, error: 'Este dia não faz parte do plano.', slots };
+    return { ok: false, error: t('Este dia não faz parte do plano.'), slots };
   }
   const i = slots.findIndex((s) => s.week === week && s.day === day);
   if (i >= 0) slots[i] = { ...slots[i], item_ids: ids };
   else {
-    if (slots.length >= PLAN_LIMITS.slots) return { ok: false, error: 'O plano já tem o máximo de dias.', slots };
+    if (slots.length >= PLAN_LIMITS.slots) return { ok: false, error: t('O plano já tem o máximo de dias.'), slots };
     slots.push({ week, day, title: 'Treino', item_ids: ids, duration_min: plan.minutes || 0 });
   }
   return { ok: true, error: '', slots };
@@ -169,7 +170,7 @@ export function setSlotItems(plan, { week, day }, itemIds = []) {
 /** Acrescenta um item a um dia do plano (sem repetir; respeitando o limite). */
 export function addItemToSlot(plan, { week, day }, itemId) {
   const atual = (plan?.slots || []).find((s) => s.week === week && s.day === day)?.item_ids || [];
-  if (atual.includes(itemId)) return { ok: false, error: 'Este item já está nesse dia.', slots: plan?.slots || [] };
+  if (atual.includes(itemId)) return { ok: false, error: t('Este item já está nesse dia.'), slots: plan?.slots || [] };
   return setSlotItems(plan, { week, day }, [...atual, itemId]);
 }
 
@@ -194,7 +195,7 @@ export function masteryGroups(mastery = {}, byId = {}) {
   const out = { [MASTERY.APRENDENDO]: [], [MASTERY.CONSISTENTE]: [], [MASTERY.DOMINADO]: [] };
   for (const [id, nivel] of Object.entries(mastery || {})) {
     if (!(nivel in out)) continue;
-    out[nivel].push({ id, title: byId[id]?.title || 'Item indisponível', available: !!byId[id] });
+    out[nivel].push({ id, title: byId[id]?.title || t('Item indisponível'), available: !!byId[id] });
   }
   for (const k of Object.keys(out)) out[k].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
   return out;

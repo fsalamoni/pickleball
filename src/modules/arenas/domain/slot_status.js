@@ -16,6 +16,7 @@
 import { timeToMinutes } from './pricing.js';
 import { weekdayOf } from './booking.js';
 import { BOOKING_STATUS } from './constants.js';
+import { tk } from '@/core/i18n';
 
 export const SLOT_STATUS = Object.freeze({
   CLOSED: 'closed',
@@ -27,12 +28,12 @@ export const SLOT_STATUS = Object.freeze({
 });
 
 export const SLOT_STATUS_LABELS = Object.freeze({
-  closed: 'Fechado',
-  unavailable: 'Indisponível',
-  pending: 'Reserva pendente',
-  confirmed: 'Reservado',
-  completed: 'Concluído',
-  available: 'Disponível',
+  closed: tk('Fechado'),
+  unavailable: tk('Indisponível'),
+  pending: tk('Reserva pendente'),
+  confirmed: tk('Reservado'),
+  completed: tk('Concluído'),
+  available: tk('Disponível'),
 });
 
 export const SLOT_STATUS_COLORS = Object.freeze({

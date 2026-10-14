@@ -13,6 +13,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useClubMembers, useSetMemberRole, useRemoveMember } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_ROLE, CLUB_ROLE_LABELS } from '@/modules/clubs/domain/constants';
 import { V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ClubMembers({ clubId, isAdmin }) {
   const { user } = useAuth();
@@ -29,9 +30,9 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
   const handleRole = async (member, role) => {
     try {
       await setRole.mutateAsync({ member, role });
-      toast.success(role === CLUB_ROLE.ADMIN ? 'Membro promovido a administrador.' : 'Administrador rebaixado a membro.');
+      toast.success(role === CLUB_ROLE.ADMIN ? t('Membro promovido a administrador.') : t('Administrador rebaixado a membro.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível alterar a função.');
+      toast.error(err.message || t('Não foi possível alterar a função.'));
     }
   };
 
@@ -39,10 +40,10 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
     if (!confirmRemove) return;
     try {
       await removeMember.mutateAsync(confirmRemove);
-      toast.success('Membro removido do clube.');
+      toast.success(t('Membro removido do clube.'));
       setConfirmRemove(null);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover o membro.');
+      toast.error(err.message || t('Não foi possível remover o membro.'));
     }
   };
 
@@ -51,7 +52,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
   }
 
   if (members.length === 0) {
-    return <V2EmptyState icon={Users} title="Sem membros" description="Convide atletas com o código do clube." />;
+    return <V2EmptyState icon={Users} title={t('Sem membros')} description={t('Convide atletas com o código do clube.')} />;
   }
 
   return (
@@ -64,7 +65,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-bold text-ink">{member.user_name}</span>
-                {isSelf && <span className="text-xs text-gray-500">(você)</span>}
+                {isSelf && <span className="text-xs text-gray-500">{t('(você)')}</span>}
               </div>
               {/* P1-01: o e-mail saiu daqui. `club_members` é lido por
                   qualquer conta da plataforma, então exibi-lo — mesmo vindo de
@@ -72,7 +73,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
                   visível. Para falar com um membro, use o chat. */}
             </div>
             <V2Badge tone={member.role === CLUB_ROLE.ADMIN ? 'amber' : 'neutral'}>
-              {CLUB_ROLE_LABELS[member.role] || member.role}
+              {t(CLUB_ROLE_LABELS[member.role] || member.role)}
             </V2Badge>
 
             {isAdmin && !isSelf && (
@@ -80,7 +81,7 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    aria-label={`Ações para ${member.user_name || 'este membro'}`}
+                    aria-label={t('Ações para {nome}', { nome: member.user_name || t('este membro') })}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"
                   >
                     <MoreVertical className="h-4 w-4" aria-hidden="true" />
@@ -89,15 +90,15 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
                 <DropdownMenuContent align="end">
                   {member.role === CLUB_ROLE.ADMIN ? (
                     <DropdownMenuItem onClick={() => handleRole(member, CLUB_ROLE.MEMBER)}>
-                      <Shield className="mr-2 h-4 w-4" /> Rebaixar a membro
+                      <Shield className="mr-2 h-4 w-4" /> {t('Rebaixar a membro')}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem onClick={() => handleRole(member, CLUB_ROLE.ADMIN)}>
-                      <ShieldCheck className="mr-2 h-4 w-4" /> Tornar administrador
+                      <ShieldCheck className="mr-2 h-4 w-4" /> {t('Tornar administrador')}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setConfirmRemove(member)}>
-                    <UserMinus className="mr-2 h-4 w-4" /> Remover do clube
+                    <UserMinus className="mr-2 h-4 w-4" /> {t('Remover do clube')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -109,9 +110,9 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
       <ConfirmDialog
         open={!!confirmRemove}
         onOpenChange={(v) => !v && setConfirmRemove(null)}
-        title="Remover membro"
-        description={confirmRemove ? `Tem certeza que deseja remover ${confirmRemove.user_name} do clube?` : ''}
-        confirmLabel="Remover"
+        title={t('Remover membro')}
+        description={confirmRemove ? t('Tem certeza que deseja remover {nome} do clube?', { nome: confirmRemove.user_name }) : ''}
+        confirmLabel={t('Remover')}
         destructive
         loading={removeMember.isPending}
         onConfirm={handleRemove}

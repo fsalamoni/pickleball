@@ -24,6 +24,7 @@ import {
   V2Button, V2Field, V2FilterChip, V2Input, V2Select, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 import { mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t, tn } from '@/core/i18n';
 
 const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -80,11 +81,11 @@ export default function CreatePlanDialog({ open, onOpenChange, identity, plans, 
 
   const criar = () => acoes.create.mutate(input, {
     onSuccess: (id) => {
-      toast.success('Plano criado e ativo.');
+      toast.success(t('Plano criado e ativo.'));
       onOpenChange(false);
       navigate(`/treino/planos/${id}`);
     },
-    onError: (err) => setErro(mensagemDeErro(err, 'Não foi possível criar o plano agora.')),
+    onError: (err) => setErro(mensagemDeErro(err, t('Não foi possível criar o plano agora.'))),
   });
 
   const semana1 = slots.filter((s) => s.week === 1);
@@ -94,54 +95,54 @@ export default function CreatePlanDialog({ open, onOpenChange, identity, plans, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Novo plano de treino</DialogTitle>
-          <DialogDescription>Um plano dá a cada dia de treino o que fazer. Você pode mudar qualquer dia depois.</DialogDescription>
+          <DialogTitle>{t('Novo plano de treino')}</DialogTitle>
+          <DialogDescription>{t('Um plano dá a cada dia de treino o que fazer. Você pode mudar qualquer dia depois.')}</DialogDescription>
         </DialogHeader>
         {!previa ? (
           <form className="space-y-5" onSubmit={verPrevia} noValidate>
-            <V2Field label="Nome do plano" htmlFor="plano-nome" required>
-              <V2Input id="plano-nome" maxLength={PLAN_LIMITS.title} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder="Ex.: Dink consistente em 4 semanas" />
+            <V2Field label={t('Nome do plano')} htmlFor="plano-nome" required>
+              <V2Input id="plano-nome" maxLength={PLAN_LIMITS.title} value={f.title} onChange={(e) => set({ title: e.target.value })} placeholder={t('Ex.: Dink consistente em 4 semanas')} />
             </V2Field>
-            <V2Field label="Objetivo (opcional)" htmlFor="plano-obj">
-              <V2Textarea id="plano-obj" rows={2} maxLength={PLAN_LIMITS.goal} value={f.goal} onChange={(e) => set({ goal: e.target.value })} placeholder="O que você quer conseguir no fim?" />
+            <V2Field label={t('Objetivo (opcional)')} htmlFor="plano-obj">
+              <V2Textarea id="plano-obj" rows={2} maxLength={PLAN_LIMITS.goal} value={f.goal} onChange={(e) => set({ goal: e.target.value })} placeholder={t('O que você quer conseguir no fim?')} />
             </V2Field>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold text-ink">Dias da semana</legend>
+              <legend className="text-sm font-semibold text-ink">{t('Dias da semana')}</legend>
               <div className="flex flex-wrap gap-1.5">
                 {WEEK_ORDER.map((d) => (
-                  <V2FilterChip key={d} active={f.days.includes(d)} aria-pressed={f.days.includes(d)} aria-label={WEEKDAY_LONG[d]} onClick={() => set({ days: toggle(f.days, d) })} className="min-w-[3rem] justify-center px-3 py-1.5">
-                    {WEEKDAY_SHORT[d]}
+                  <V2FilterChip key={d} active={f.days.includes(d)} aria-pressed={f.days.includes(d)} aria-label={t(WEEKDAY_LONG[d])} onClick={() => set({ days: toggle(f.days, d) })} className="min-w-[3rem] justify-center px-3 py-1.5">
+                    {t(WEEKDAY_SHORT[d])}
                   </V2FilterChip>
                 ))}
               </div>
             </fieldset>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="space-y-1 text-sm font-semibold text-ink">
-                Semanas
+                {t('Semanas')}
                 <V2Select value={f.weeks} onChange={(e) => set({ weeks: Number(e.target.value) })}>
                   {Array.from({ length: PLAN_LIMITS.weeks }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                 </V2Select>
               </label>
               <label className="space-y-1 text-sm font-semibold text-ink">
-                Minutos por dia
+                {t('Minutos por dia')}
                 <V2Select value={f.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })}>
                   {[30, 45, 60, 75, 90, 120].map((m) => <option key={m} value={m}>{m}</option>)}
                 </V2Select>
               </label>
               <label className="space-y-1 text-sm font-semibold text-ink">
-                Onde
+                {t('Onde')}
                 <V2Select value={f.place} onChange={(e) => set({ place: e.target.value })}>
-                  <option value="">Qualquer</option>
-                  {PLACES.map((p) => <option key={p} value={p}>{PLACE_LABELS[p]}</option>)}
+                  <option value="">{t('Qualquer')}</option>
+                  {PLACES.map((p) => <option key={p} value={p}>{t(PLACE_LABELS[p])}</option>)}
                 </V2Select>
               </label>
             </div>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold text-ink">Foco (opcional)</legend>
+              <legend className="text-sm font-semibold text-ink">{t('Foco (opcional)')}</legend>
               <div className="flex flex-wrap gap-1.5">
                 {SKILL_AREAS.map((a) => (
                   <V2FilterChip key={a} active={f.focus.includes(a)} aria-pressed={f.focus.includes(a)} disabled={!f.focus.includes(a) && f.focus.length >= 6} onClick={() => set({ focus: toggle(f.focus, a) })} className="px-3 py-1.5">
-                    {SKILL_AREA_LABELS[a]}
+                    {t(SKILL_AREA_LABELS[a])}
                   </V2FilterChip>
                 ))}
               </div>
@@ -150,48 +151,48 @@ export default function CreatePlanDialog({ open, onOpenChange, identity, plans, 
               id="plano-auto"
               checked={f.auto}
               onChange={(v) => set({ auto: typeof v === 'boolean' ? v : !f.auto })}
-              label="Montar com a biblioteca"
-              hint="Escolhe drills do seu foco e do seu nível para cada dia. Desligado, os dias começam vazios."
+              label={t('Montar com a biblioteca')}
+              hint={t('Escolhe drills do seu foco e do seu nível para cada dia. Desligado, os dias começam vazios.')}
             />
             {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
             <div className="flex justify-end gap-2">
-              <V2Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</V2Button>
-              <V2Button type="submit">Ver prévia</V2Button>
+              <V2Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t('Cancelar')}</V2Button>
+              <V2Button type="submit">{t('Ver prévia')}</V2Button>
             </div>
           </form>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              {f.weeks} {f.weeks === 1 ? 'semana' : 'semanas'} · {f.days.length} {f.days.length === 1 ? 'dia' : 'dias'} por semana · {f.minutes} min
+              {tn(f.weeks, '{n} semana', '{n} semanas')} · {tn(f.days.length, '{n} dia por semana', '{n} dias por semana')} · {f.minutes} min
             </p>
             {f.auto && visiveis.incompleto && (
-              <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Parte da biblioteca não carregou; a prévia usou só o que chegou.</p>
+              <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">{t('Parte da biblioteca não carregou; a prévia usou só o que chegou.')}</p>
             )}
             {f.auto ? (
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-ink">A primeira semana</p>
+                <p className="text-sm font-semibold text-ink">{t('A primeira semana')}</p>
                 <ul className="space-y-2">
                   {semana1.map((s) => (
                     <li key={s.day} className="rounded-2xl bg-gray-50 p-3 text-sm">
-                      <p className="font-semibold text-ink">{WEEKDAY_LONG[s.day]}</p>
+                      <p className="font-semibold text-ink">{t(WEEKDAY_LONG[s.day])}</p>
                       <p className="text-gray-600">
                         {s.item_ids.length
-                          ? s.item_ids.map((id) => visiveis.byId[id]?.title || 'Item').join(' · ')
-                          : 'Vazio — você escolhe os itens depois.'}
+                          ? s.item_ids.map((id) => visiveis.byId[id]?.title || t('Item')).join(' · ')
+                          : t('Vazio — você escolhe os itens depois.')}
                       </p>
                     </li>
                   ))}
                 </ul>
-                {vazios > 0 && <p className="text-xs text-gray-500">{vazios} {vazios === 1 ? 'dia ficou vazio' : 'dias ficaram vazios'}: não há itens suficientes que combinem; complete depois.</p>}
-                <p className="text-xs text-gray-500">As semanas seguintes avançam do mais simples para o mais desafiador.</p>
+                {vazios > 0 && <p className="text-xs text-gray-500">{tn(vazios, '{n} dia ficou vazio: não há itens suficientes que combinem; complete depois.', '{n} dias ficaram vazios: não há itens suficientes que combinem; complete depois.')}</p>}
+                <p className="text-xs text-gray-500">{t('As semanas seguintes avançam do mais simples para o mais desafiador.')}</p>
               </div>
             ) : (
-              <p className="text-sm text-gray-600">Os dias começam vazios. Depois de criar, abra cada dia para escolher os itens.</p>
+              <p className="text-sm text-gray-600">{t('Os dias começam vazios. Depois de criar, abra cada dia para escolher os itens.')}</p>
             )}
             {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
             <div className="flex justify-end gap-2">
-              <V2Button variant="ghost" onClick={() => setPrevia(false)}>Voltar</V2Button>
-              <V2Button onClick={criar} disabled={acoes.create.isPending}>{acoes.create.isPending ? 'Criando…' : 'Criar plano'}</V2Button>
+              <V2Button variant="ghost" onClick={() => setPrevia(false)}>{t('Voltar')}</V2Button>
+              <V2Button onClick={criar} disabled={acoes.create.isPending}>{acoes.create.isPending ? t('Criando…') : t('Criar plano')}</V2Button>
             </div>
           </div>
         )}

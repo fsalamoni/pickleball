@@ -37,6 +37,7 @@ import { isTournamentRankingEligible } from '@/modules/tournament/domain/ranking
 import { LADDER_POINTS, LADDER_POINTS_PARTICIPATION, ladderPointsFor } from './leagues.js';
 import { isOpenMatchGameDay, openMatchFormatLabel } from './openMatchGameDay.js';
 import { houseEventDate, tournamentHouseDate } from './houseTournaments.js';
+import { t } from '@/core/i18n';
 
 // As funções de LISTAR torneios moram em `houseTournaments.js` (leve, sem o
 // motor). Reexportadas aqui para quem já importa tudo do ranking.
@@ -75,20 +76,20 @@ export function houseRankingPointsTable() {
   return {
     gameDay: [
       ...posicoes.map((p) => ({ label: `${p}º`, points: LADDER_POINTS[p] })),
-      { label: 'Jogou', points: LADDER_POINTS_PARTICIPATION },
+      { label: t('Jogou'), points: LADDER_POINTS_PARTICIPATION },
     ],
     tournament: [
       ...posicoes.map((p) => ({ label: `${p}º`, points: LADDER_POINTS[p] * HOUSE_TOURNAMENT_WEIGHT })),
-      { label: 'Jogou', points: LADDER_POINTS_PARTICIPATION * HOUSE_TOURNAMENT_WEIGHT },
+      { label: t('Jogou'), points: LADDER_POINTS_PARTICIPATION * HOUSE_TOURNAMENT_WEIGHT },
     ],
   };
 }
 
 /** O nome do filtro de modalidade. */
 export function houseFormatLabel(format) {
-  if (format === HOUSE_ALL) return 'Tudo';
-  if (format === HOUSE_FORMAT_TOURNAMENT) return 'Torneios';
-  return openMatchFormatLabel(format) || 'Outro';
+  if (format === HOUSE_ALL) return t('Tudo');
+  if (format === HOUSE_FORMAT_TOURNAMENT) return t('Torneios');
+  return openMatchFormatLabel(format) || t('Outro');
 }
 
 /* ------------------------------------------------------------------ */
@@ -174,7 +175,7 @@ export function gameDayHouseEvent({ gameDay, participants = [], games = [] } = {
     key: `gd:${gameDay?.id}`,
     kind: HOUSE_EVENT_KIND.GAME_DAY,
     id: gameDay?.id,
-    title: gameDay?.title || (isOpenMatchGameDay(gameDay) ? 'Jogo aberto' : 'Dia de jogo'),
+    title: gameDay?.title || (isOpenMatchGameDay(gameDay) ? t('Jogo aberto') : t('Dia de jogo')),
     date: houseEventDate(gameDay?.date),
     format: gameDay?.format || '',
     formatLabel: openMatchFormatLabel(gameDay?.format),
@@ -290,7 +291,7 @@ export function tournamentHouseEvents({ tournament, modalities = [], registratio
       kind: HOUSE_EVENT_KIND.TOURNAMENT,
       id: tournament.id,
       modalityId: modality.id,
-      title: tournament.name || 'Torneio',
+      title: tournament.name || t('Torneio'),
       subtitle: modality.name || '',
       date: data,
       format: HOUSE_FORMAT_TOURNAMENT,
@@ -331,7 +332,7 @@ export function legacyLadderHouseEvent(ladderDoc) {
     key: 'legacy',
     kind: HOUSE_EVENT_KIND.LEGACY,
     id: 'legacy',
-    title: 'Torneios internos (formato antigo)',
+    title: t('Torneios internos (formato antigo)'),
     date: houseEventDate(ladderDoc?.updated_at),
     format: '',
     formatLabel: 'Torneio interno',
@@ -506,23 +507,23 @@ export function houseRankingWaiting({
 } = {}) {
   const saida = [];
   (tournaments || [])
-    .filter((t) => t?.id && isTournamentRankingEligible(t) && !isHouseTournamentCounted(t)
-      && naTemporada(tournamentHouseDate(t), season))
-    .forEach((t) => saida.push({
-      key: `t:${t.id}`,
-      title: t.name || 'Torneio',
-      date: tournamentHouseDate(t),
-      link: `/torneios/${t.id}`,
-      reason: t.status === TOURNAMENT_STATUS.IN_PROGRESS
-        ? 'Em andamento — entra quando o torneio terminar.'
-        : 'Ainda não começou — entra quando terminar.',
+    .filter((tor) => tor?.id && isTournamentRankingEligible(tor) && !isHouseTournamentCounted(tor)
+      && naTemporada(tournamentHouseDate(tor), season))
+    .forEach((tor) => saida.push({
+      key: `t:${tor.id}`,
+      title: tor.name || t('Torneio'),
+      date: tournamentHouseDate(tor),
+      link: `/torneios/${tor.id}`,
+      reason: tor.status === TOURNAMENT_STATUS.IN_PROGRESS
+        ? t('Em andamento — entra quando o torneio terminar.')
+        : t('Ainda não começou — entra quando terminar.'),
     }));
 
   (events || [])
     .filter((e) => e?.kind === HOUSE_EVENT_KIND.GAME_DAY && e.status === 'no_results' && naTemporada(e.date, season))
     .forEach((e) => saida.push({
       key: e.key, title: e.title, date: e.date, link: e.link,
-      reason: 'Nenhum resultado lançado neste dia.',
+      reason: t('Nenhum resultado lançado neste dia.'),
     }));
 
   (gameDays || [])
@@ -531,10 +532,10 @@ export function houseRankingWaiting({
       && g.date && (!today || String(g.date) <= today) && naTemporada(g.date, season))
     .forEach((g) => saida.push({
       key: `gd:${g.id}`,
-      title: g.title || 'Dia de jogo',
+      title: g.title || t('Dia de jogo'),
       date: houseEventDate(g.date),
       link: `/dia-de-jogo/${g.id}`,
-      reason: 'Play não tem placar, então não pontua.',
+      reason: t('Play não tem placar, então não pontua.'),
     }));
 
   return saida.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));

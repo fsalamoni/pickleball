@@ -25,6 +25,7 @@ import {
   CHECKLIST_KIND, MAINTENANCE_STATUS, STAFF_MAX,
 } from '../domain/operations.js';
 import { ARENA_COLLECTIONS } from '../domain/constants.js';
+import { t } from '@/core/i18n';
 
 const COL_CHECKLISTS = 'arena_checklists';
 const COL_MAINTENANCE = 'arena_maintenance_orders';
@@ -50,7 +51,7 @@ export async function listArenaChecklists(arenaId, { kind, onlyActive = false, l
 }
 
 export async function createChecklist(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const items = (Array.isArray(input.items) ? input.items : []).map(normalizeChecklistItem);
   const kind = Object.values(CHECKLIST_KIND).includes(input.kind) ? input.kind : CHECKLIST_KIND.OPENING;
   const id = doc(collection(db, COL_CHECKLISTS)).id;
@@ -121,9 +122,9 @@ export async function syncMaintenanceBlocks(order) {
 }
 
 export async function createMaintenance(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeMaintenanceInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   const id = doc(collection(db, COL_MAINTENANCE)).id;
   const ordem = {
     id, arena_id: arenaId, ...value,
@@ -152,9 +153,9 @@ async function ordemPorId(orderId) {
 export async function updateMaintenance(orderId, input, actor) {
   if (!orderId) return;
   const atual = await ordemPorId(orderId);
-  if (!atual) throw new Error('Ordem não encontrada.');
+  if (!atual) throw new Error(t('Ordem não encontrada.'));
   const { valid, errors, value } = normalizeMaintenanceInput({ ...atual, ...input });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await updateDoc(doc(db, COL_MAINTENANCE, orderId), { ...value, updated_at: serverTimestamp() });
   await syncMaintenanceBlocks({ ...atual, ...value, id: orderId });
   await createAuditLog({
@@ -166,7 +167,7 @@ export async function updateMaintenance(orderId, input, actor) {
 
 export async function updateMaintenanceStatus(orderId, status, actor) {
   if (!orderId) return;
-  if (!Object.values(MAINTENANCE_STATUS).includes(status)) throw new Error('Status inválido.');
+  if (!Object.values(MAINTENANCE_STATUS).includes(status)) throw new Error(t('Status inválido.'));
   const atual = await ordemPorId(orderId);
   await updateDoc(doc(db, COL_MAINTENANCE, orderId), {
     status,
@@ -267,12 +268,12 @@ export async function getArenaStaff(arenaId) {
 }
 
 export async function saveArenaStaff(arenaId, staff, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const lista = (Array.isArray(staff) ? staff : [])
     .slice(0, STAFF_MAX)
     .map((m, i) => {
       const { valid, errors, value } = normalizeStaffMember(m);
-      if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+      if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
       return { ...value, id: value.id || `s${Date.now().toString(36)}${i}` };
     });
   await setDoc(doc(db, COL_SETTINGS, arenaId), {

@@ -12,6 +12,7 @@ import { Medal, Trophy } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { V2EmptyState, V2Surface } from '@/v2/ui/primitives';
 import { buildTeamGroupStandings } from '@/modules/tournament/services/teamService';
+import { t } from '@/core/i18n';
 
 const ROW_TONE = { 1: 'bg-amber-50/70', 2: 'bg-gray-100/60', 3: 'bg-amber-50/50' };
 const MEDAL_COLOR = { 1: 'text-amber-500', 2: 'text-gray-400', 3: 'text-amber-700' };
@@ -29,13 +30,13 @@ function GroupTable({ name, rows }) {
           <thead>
             <tr className="border-b border-gray-100 text-left text-2xs font-bold uppercase tracking-widest text-gray-500">
               <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Equipe</th>
-              <th className="px-4 py-3 text-center" title="Confrontos disputados">CJ</th>
-              <th className="px-4 py-3 text-center" title="Confrontos vencidos">V</th>
-              <th className="px-4 py-3 text-center" title="Confrontos perdidos">D</th>
-              <th className="px-4 py-3 text-center">Etapas (V–D)</th>
-              <th className="px-4 py-3 text-center">Saldo etapas</th>
-              <th className="px-4 py-3 text-center">Saldo pts</th>
+              <th className="px-4 py-3">{t('Equipe')}</th>
+              <th className="px-4 py-3 text-center" title={t('Confrontos disputados')}>{t('CJ')}</th>
+              <th className="px-4 py-3 text-center" title={t('Confrontos vencidos')}>V</th>
+              <th className="px-4 py-3 text-center" title={t('Confrontos perdidos')}>D</th>
+              <th className="px-4 py-3 text-center">{t('Etapas (V–D)')}</th>
+              <th className="px-4 py-3 text-center">{t('Saldo etapas')}</th>
+              <th className="px-4 py-3 text-center">{t('Saldo pts')}</th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +72,7 @@ function GroupTable({ name, rows }) {
 export default function TeamStandingsTable({ matches = [], teamRegistrations = [], config = {}, singleGroup = false }) {
   const tables = useMemo(
     () => buildTeamGroupStandings({ matches, teamRegistrations, config, singleGroup })
-      .filter((t) => t.rows.length > 0),
+      .filter((tt) => tt.rows.length > 0),
     [matches, teamRegistrations, config, singleGroup],
   );
 
@@ -80,8 +81,8 @@ export default function TeamStandingsTable({ matches = [], teamRegistrations = [
       <V2Surface>
         <V2EmptyState
           icon={Trophy}
-          title="Sem classificação ainda"
-          description="A classificação aparece quando houver equipes e confrontos sorteados."
+          title={t('Sem classificação ainda')}
+          description={t('A classificação aparece quando houver equipes e confrontos sorteados.')}
         />
       </V2Surface>
     );
@@ -89,9 +90,9 @@ export default function TeamStandingsTable({ matches = [], teamRegistrations = [
 
   return (
     <div className="space-y-4">
-      {tables.map((t, i) => <GroupTable key={t.name || i} name={t.name} rows={t.rows} />)}
+      {tables.map((tt, i) => <GroupTable key={tt.name || i} name={tt.name} rows={tt.rows} />)}
       <p className="text-2xs leading-5 text-gray-500">
-        Critérios de desempate: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.
+        {t('Critérios de desempate: vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.')}
       </p>
     </div>
   );

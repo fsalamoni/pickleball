@@ -40,6 +40,7 @@ import {
   campoId, clearDraft, draftKey, fillFromAi, firstErrorKey, formFromItem, orphanUploads, readDraft,
   sameForm, saveNotice, secaoPreenchida, secoesVisiveis, writeDraft,
 } from '@/v2/components/training/editor/editorForm';
+import { fmtData, t } from '@/core/i18n';
 
 const LEGADO = 'cc_';
 
@@ -51,7 +52,7 @@ export default function V2TrainingEditor() {
   );
 }
 
-function Voltar({ to = '/treino', children = 'Voltar ao treino' }) {
+function Voltar({ to = '/treino', children = t('Voltar ao treino') }) {
   return (
     <V2BackLink to={to} className="mb-4">{children}</V2BackLink>
   );
@@ -84,10 +85,10 @@ function EditorPage() {
       <div className="mx-auto max-w-3xl">
         <Voltar />
         <Recado
-          titulo="Conteúdo da área do professor"
-          acoes={<V2Button asChild><Link to="/aulas?aba=conteudo">Abrir a área do professor</Link></V2Button>}
+          titulo={t('Conteúdo da área do professor')}
+          acoes={<V2Button asChild><Link to="/aulas?aba=conteudo">{t('Abrir a área do professor')}</Link></V2Button>}
         >
-          Este é um conteúdo antigo, publicado pela área do professor. Ele é editado lá, em Conteúdo.
+          {t('Este é um conteúdo antigo, publicado pela área do professor. Ele é editado lá, em Conteúdo.')}
         </Recado>
       </div>
     );
@@ -107,8 +108,8 @@ function EditorPage() {
       <div className="mx-auto max-w-3xl">
         <Voltar />
         <V2ErrorState
-          title="Não foi possível abrir o item"
-          description="A conexão falhou no meio do caminho. O item continua lá; tente de novo."
+          title={t('Não foi possível abrir o item')}
+          description={t('A conexão falhou no meio do caminho. O item continua lá; tente de novo.')}
           onRetry={() => leitura.refetch()}
         />
       </div>
@@ -119,8 +120,8 @@ function EditorPage() {
     return (
       <div className="mx-auto max-w-3xl">
         <Voltar />
-        <Recado titulo="Este item não está disponível">
-          Ele pode ter sido apagado pelo autor, ou não foi compartilhado com a sua conta.
+        <Recado titulo={t('Este item não está disponível')}>
+          {t('Ele pode ter sido apagado pelo autor, ou não foi compartilhado com a sua conta.')}
         </Recado>
       </div>
     );
@@ -131,10 +132,10 @@ function EditorPage() {
       <div className="mx-auto max-w-3xl">
         <Voltar />
         <Recado
-          titulo="Conteúdo da área do professor"
-          acoes={<V2Button asChild><Link to="/aulas?aba=conteudo">Abrir a área do professor</Link></V2Button>}
+          titulo={t('Conteúdo da área do professor')}
+          acoes={<V2Button asChild><Link to="/aulas?aba=conteudo">{t('Abrir a área do professor')}</Link></V2Button>}
         >
-          Este conteúdo antigo é editado na área do professor, em Conteúdo.
+          {t('Este conteúdo antigo é editado na área do professor, em Conteúdo.')}
         </Recado>
       </div>
     );
@@ -144,17 +145,17 @@ function EditorPage() {
     const copia = canCopyItem(item, { uid: identity.uid });
     return (
       <div className="mx-auto max-w-3xl">
-        <Voltar to={`/treino/item/${item.id}`}>Voltar ao item</Voltar>
+        <Voltar to={`/treino/item/${item.id}`}>{t('Voltar ao item')}</Voltar>
         <Recado
-          titulo="Só quem criou pode editar"
+          titulo={t('Só quem criou pode editar')}
           acoes={(
             <>
-              <V2Button asChild variant="secondary"><Link to={`/treino/item/${item.id}`}>Abrir o item</Link></V2Button>
-              {copia.ok && <V2Button asChild><Link to={`/treino/novo?copiar=${item.id}`}>Copiar e adaptar</Link></V2Button>}
+              <V2Button asChild variant="secondary"><Link to={`/treino/item/${item.id}`}>{t('Abrir o item')}</Link></V2Button>
+              {copia.ok && <V2Button asChild><Link to={`/treino/novo?copiar=${item.id}`}>{t('Copiar e adaptar')}</Link></V2Button>}
             </>
           )}
         >
-          “{item.title}” é de {authorBadge(item).label}. Você pode fazer uma cópia sua e adaptar como quiser — o crédito à origem fica na ficha.
+          {t('“{titulo}” é de {autor}. Você pode fazer uma cópia sua e adaptar como quiser — o crédito à origem fica na ficha.', { titulo: item.title, autor: authorBadge(item).label })}
         </Recado>
       </div>
     );
@@ -166,7 +167,7 @@ function EditorPage() {
       return (
         <div className="mx-auto max-w-3xl">
           <Voltar />
-          <Recado titulo="Não dá para copiar este item">{copia.reason}</Recado>
+          <Recado titulo={t('Não dá para copiar este item')}>{copia.reason}</Recado>
         </div>
       );
     }
@@ -218,8 +219,8 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
   useEffect(() => {
     if (oferta || !chave) return undefined;
     if (!alterado) { clearDraft(chave); return undefined; }
-    const t = setTimeout(() => writeDraft(chave, { form, aiAssisted: comIa }), 600);
-    return () => clearTimeout(t);
+    const espera = setTimeout(() => writeDraft(chave, { form, aiAssisted: comIa }), 600);
+    return () => clearTimeout(espera);
   }, [form, comIa, oferta, chave, alterado]);
 
   // Fechar a aba com alterações: o navegador pergunta antes.
@@ -241,9 +242,9 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
     ? derivedFromFor(source, identity.uid).locked
     : !!item?.derived_from?.locked && !identity.isAdmin;
   const publicoTravado = travadaPorCopia
-    ? 'Esta é a adaptação de um item que não é público: ela pode ser sua ou dos seus alunos, mas não vai para a biblioteca.'
+    ? t('Esta é a adaptação de um item que não é público: ela pode ser sua ou dos seus alunos, mas não vai para a biblioteca.')
     : role === AUTHOR_ROLE.ATLETA && settings?.allow_public_athlete === false && !identity.isAdmin
-      ? 'A publicação de itens por atletas está pausada. Salve como "Só eu" e compartilhe com quem quiser.'
+      ? t('A publicação de itens por atletas está pausada. Salve como "Só eu" e compartilhe com quem quiser.')
       : '';
   const aviso = saveNotice({
     visibility: form.visibility,
@@ -292,14 +293,14 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
     if (salvando || enviando || esperandoPapel) return;
     setTentou(true);
     const errs = { ...validacao.errors };
-    if (!tipoEscolhido) errs.kind = 'Escolha o tipo.';
+    if (!tipoEscolhido) errs.kind = t('Escolha o tipo.');
     if (!opcoes.includes(form.visibility) || (form.visibility === VISIBILITY.PUBLICO && publicoTravado)) {
-      errs.visibility = 'Escolha quem pode ver este item.';
+      errs.visibility = t('Escolha quem pode ver este item.');
     }
     if (Object.keys(errs).length) {
       setErrosServidor(errs.visibility ? { visibility: errs.visibility } : {});
       irPara(firstErrorKey(errs));
-      toast.error('Revise os campos destacados.');
+      toast.error(t('Revise os campos destacados.'));
       return;
     }
     try {
@@ -307,10 +308,10 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
       let mensagem;
       if (item) {
         const { review } = await atualizar.mutateAsync({ item, input: form, aiAssisted: comIa });
-        mensagem = review === REVIEW.PENDENTE ? 'Salvo. A equipe revisa antes de publicar; enquanto isso, só você vê.' : 'Alterações salvas.';
+        mensagem = review === REVIEW.PENDENTE ? t('Salvo. A equipe revisa antes de publicar; enquanto isso, só você vê.') : t('Alterações salvas.');
       } else {
         id = await criar.mutateAsync({ input: form, source: source || null, aiAssisted: comIa, asPlatform: !!asPlatform });
-        mensagem = aviso ? `Item salvo. ${aviso}` : 'Item salvo.';
+        mensagem = aviso ? `${t('Item salvo.')} ${aviso}` : t('Item salvo.');
       }
       clearDraft(chave);
       orphanUploads({
@@ -323,14 +324,14 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
         setErrosServidor(err.fieldErrors);
         irPara(firstErrorKey(err.fieldErrors));
       }
-      toast.error(err?.message || 'Não foi possível salvar. Tente de novo.');
+      toast.error(err?.message || t('Não foi possível salvar. Tente de novo.'));
     }
   };
 
-  const titulo = item ? 'Editar item' : source ? 'Copiar e adaptar' : 'Novo item de treino';
+  const titulo = item ? t('Editar item') : source ? t('Copiar e adaptar') : t('Novo item de treino');
   const subtitulo = item
-    ? 'Mude o que precisar. O que está na ficha é o que vai para quem treina.'
-    : 'Escolha o tipo e preencha o que fizer sentido. Só nome e resumo são obrigatórios; o medidor mostra o que deixa a ficha completa.';
+    ? t('Mude o que precisar. O que está na ficha é o que vai para quem treina.')
+    : t('Escolha o tipo e preencha o que fizer sentido. Só nome e resumo são obrigatórios; o medidor mostra o que deixa a ficha completa.');
   const secoes = tipoEscolhido ? secoesVisiveis(form.kind, form) : [];
   const itemDaPrevia = previa ? {
     ...validacao.value,
@@ -345,7 +346,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Voltar to={item ? `/treino/item/${item.id}` : '/treino'}>{item ? 'Voltar ao item' : 'Voltar ao treino'}</Voltar>
+      <Voltar to={item ? `/treino/item/${item.id}` : '/treino'}>{item ? t('Voltar ao item') : t('Voltar ao treino')}</Voltar>
       <V2PageIntro title={titulo} subtitle={subtitulo} />
 
       <div className="space-y-6">
@@ -353,27 +354,27 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
           <div role="status" className="flex flex-wrap items-center gap-3 rounded-3xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-800">
             <History className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span className="min-w-0 flex-1">
-              Você tem um rascunho deste item, de {new Date(oferta.savedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.
+              {t('Você tem um rascunho deste item, de {data}.', { data: fmtData(new Date(oferta.savedAt), { dateStyle: 'short', timeStyle: 'short' }) })}
             </span>
-            <V2Button type="button" size="sm" onClick={continuarRascunho}>Continuar rascunho</V2Button>
-            <V2Button type="button" size="sm" variant="ghost" onClick={descartarRascunho}>Descartar</V2Button>
+            <V2Button type="button" size="sm" onClick={continuarRascunho}>{t('Continuar rascunho')}</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" onClick={descartarRascunho}>{t('Descartar')}</V2Button>
           </div>
         )}
 
         {source && (
           <p className="rounded-3xl border border-gray-100 bg-paper px-5 py-4 text-sm text-gray-600">
-            Cópia de <strong className="text-ink">“{source.title}”</strong>, de {authorBadge(source).label}. A ficha mostra de onde veio.
+            {t('Cópia de')}{' '}<strong className="text-ink">“{source.title}”</strong>{t(', de {autor}. A ficha mostra de onde veio.', { autor: authorBadge(source).label })}
           </p>
         )}
         {asPlatform && (
           <p className="rounded-3xl border border-gray-100 bg-paper px-5 py-4 text-sm text-gray-600">
-            Você está criando como <strong className="text-ink">Equipe PickleRush</strong>: é essa a autoria que aparece na ficha.
+            {t('Você está criando como')}{' '}<strong className="text-ink">{t('Equipe PickleRush')}</strong>{t(': é essa a autoria que aparece na ficha.')}
           </p>
         )}
         {comIa && (
           <p className="flex gap-2 rounded-3xl border border-amber-100 bg-amber-50 px-5 py-4 text-sm text-amber-800">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            Feito com ajuda de IA. Revise cada parte antes de publicar: quem assina a ficha é você.
+            {t('Feito com ajuda de IA. Revise cada parte antes de publicar: quem assina a ficha é você.')}
           </p>
         )}
 
@@ -385,7 +386,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
 
         {tipoEscolhido && (
           <>
-            <nav aria-label="Partes da ficha" className="flex flex-wrap gap-2">
+            <nav aria-label={t('Partes da ficha')} className="flex flex-wrap gap-2">
               {secoes.map((s) => (
                 <button
                   key={s.id}
@@ -396,7 +397,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
                     secaoPreenchida(s, form) ? 'border-transparent bg-acid/30 text-ink' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
                   )}
                 >
-                  {secaoPreenchida(s, form) ? '✓ ' : ''}{s.titulo}
+                  {secaoPreenchida(s, form) ? '✓ ' : ''}{t(s.titulo)}
                 </button>
               ))}
             </nav>
@@ -426,23 +427,23 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
             <div className="sticky bottom-20 z-10 flex flex-wrap items-center gap-3 rounded-3xl border border-gray-200 bg-paper-pure p-3 shadow-organic-sm lg:bottom-4">
               <details data-dica="treino-editor-qualidade" className="min-w-0 flex-1 text-sm">
                 <summary className="flex min-h-[44px] cursor-pointer items-center gap-2 font-bold text-ink">
-                  <span>Ficha {qualidade.score} de {qualidade.total}</span>
+                  <span>{t('Ficha {n} de {total}', { n: qualidade.score, total: qualidade.total })}</span>
                   <span className="h-2 w-16 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
                     <span className="block h-full bg-acid" style={{ width: `${qualidade.total ? (qualidade.score / qualidade.total) * 100 : 0}%` }} />
                   </span>
-                  {qualidade.missing.length > 0 && <span className="truncate text-xs font-medium text-gray-500">· o que falta</span>}
+                  {qualidade.missing.length > 0 && <span className="truncate text-xs font-medium text-gray-500">{t('· o que falta')}</span>}
                 </summary>
                 {qualidade.missing.length > 0 ? (
-                  <p className="pb-2 text-xs text-gray-500">Falta: {qualidade.missing.join(', ')}. Não impede salvar.</p>
+                  <p className="pb-2 text-xs text-gray-500">{t('Falta: {lista}. Não impede salvar.', { lista: qualidade.missing.join(', ') })}</p>
                 ) : (
-                  <p className="pb-2 text-xs text-gray-500">A ficha está completa.</p>
+                  <p className="pb-2 text-xs text-gray-500">{t('A ficha está completa.')}</p>
                 )}
               </details>
               <V2Button type="button" variant="secondary" size="sm" onClick={() => setPrevia(true)}>
-                <Eye className="h-4 w-4" aria-hidden="true" /> Ver prévia
+                <Eye className="h-4 w-4" aria-hidden="true" />{' '}{t('Ver prévia')}
               </V2Button>
               <V2Button type="button" size="sm" data-dica="treino-editor-salvar" onClick={salvar} disabled={salvando || enviando || esperandoPapel}>
-                <Save className="h-4 w-4" aria-hidden="true" /> {salvando ? 'Salvando…' : enviando ? 'Enviando arquivo…' : esperandoPapel ? 'Carregando…' : 'Salvar'}
+                <Save className="h-4 w-4" aria-hidden="true" /> {salvando ? t('Salvando…') : enviando ? t('Enviando arquivo…') : esperandoPapel ? t('Carregando…') : t('Salvar')}
               </V2Button>
             </div>
           </>

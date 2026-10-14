@@ -10,12 +10,13 @@ import {
   useDeleteEventMessage,
 } from '@/modules/clubs/hooks/useClubs';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function dayLabel(ms) {
   if (!ms) return '';
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return fmtData(d, { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 export default function V2EventChat({ eventId }) {
@@ -40,7 +41,7 @@ export default function V2EventChat({ eventId }) {
       await send.mutateAsync(text);
     } catch (err) {
       setDraft(text);
-      toast.error(err.message || 'Não foi possível enviar a mensagem.');
+      toast.error(err.message || t('Não foi possível enviar a mensagem.'));
     }
   };
 
@@ -55,12 +56,12 @@ export default function V2EventChat({ eventId }) {
         ) : isError ? (
           // Falha não é "nenhuma mensagem ainda" (docs/27-FALHA-NAO-E-VAZIO.md).
           <V2ErrorState
-            title="Não foi possível carregar as mensagens"
-            description="A conversa continua lá — só não conseguimos buscá-la agora."
+            title={t('Não foi possível carregar as mensagens')}
+            description={t('A conversa continua lá — só não conseguimos buscá-la agora.')}
             onRetry={() => refetch()}
           />
         ) : messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-500">Nenhuma mensagem ainda. Comece a conversa com os participantes.</p>
+          <p className="py-10 text-center text-sm text-gray-500">{t('Nenhuma mensagem ainda. Comece a conversa com os participantes.')}</p>
         ) : (
           messages.map((m, i) => {
             const prev = messages[i - 1];
@@ -94,10 +95,10 @@ export default function V2EventChat({ eventId }) {
             }
           }}
           rows={1}
-          placeholder="Escreva uma mensagem…"
+          placeholder={t('Escreva uma mensagem…')}
           className="max-h-32 flex-1 resize-none rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
         />
-        <V2Button type="submit" size="icon" disabled={send.isPending || !draft.trim()} aria-label="Enviar mensagem">
+        <V2Button type="submit" size="icon" disabled={send.isPending || !draft.trim()} aria-label={t('Enviar mensagem')}>
           <Send className="h-4 w-4" />
         </V2Button>
       </form>

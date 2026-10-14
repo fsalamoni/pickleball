@@ -33,6 +33,7 @@ import { debitForLesson } from './packageService.js';
 import { COACH_STUDENT_COLLECTION } from './studentService.js';
 import { logger } from '@/core/lib/logger';
 import { LESSON_COUPON_STATUS, lessonCouponLine, pendingCouponReturn } from '../../promo/domain/lessonCoupon.js';
+import { t } from '@/core/i18n';
 
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
@@ -53,9 +54,9 @@ export async function getAvailability(coachId) {
 
 /** Salva (merge) a disponibilidade. Só o próprio professor ou platform admin. */
 export async function saveAvailability(coachId, input, actor) {
-  if (!coachId) throw new Error('coachId é obrigatório.');
+  if (!coachId) throw new Error(t('coachId é obrigatório.'));
   if (actor?.uid !== coachId && !actor?.isPlatformAdmin) {
-    throw new Error('Sem permissão para editar esta disponibilidade.');
+    throw new Error(t('Sem permissão para editar esta disponibilidade.'));
   }
   const value = normalizeAvailability({ ...input, coach_id: coachId });
   await setDoc(doc(db, COACH_LESSON_COLLECTIONS.availability, coachId), {
@@ -123,8 +124,8 @@ export async function getBusySlots(coachId) {
  * @returns {Promise<string>} id da aula
  */
 export async function requestLesson(coachId, actor, input) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (!coachId) throw new Error('coachId é obrigatório.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!coachId) throw new Error(t('coachId é obrigatório.'));
 
   const isCoach = actor.uid === coachId || actor.isPlatformAdmin;
   const requestedBy = isCoach ? 'coach' : 'student';
@@ -141,7 +142,7 @@ export async function requestLesson(coachId, actor, input) {
       fromDate: str(input.recurring?.fromDate),
     };
     slots = expandRecurring(recurrence);
-    if (slots.length === 0) throw new Error('Preencha o dia da semana, os horários e o número de semanas.');
+    if (slots.length === 0) throw new Error(t('Preencha o dia da semana, os horários e o número de semanas.'));
   }
 
   const { valid, error, value } = normalizeLesson({
@@ -200,17 +201,17 @@ export async function requestLesson(coachId, actor, input) {
  * @param {object} actor
  */
 export async function respondLesson(lesson, nextStatus, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (!lesson?.id) throw new Error('Aula inválida.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!lesson?.id) throw new Error(t('Aula inválida.'));
   const isCoach = actor.uid === lesson.coach_id || actor.isPlatformAdmin;
   const isStudent = actor.uid === lesson.student_id;
-  if (!isCoach && !isStudent) throw new Error('Sem permissão para alterar esta aula.');
+  if (!isCoach && !isStudent) throw new Error(t('Sem permissão para alterar esta aula.'));
   if (!canTransition(lesson.status, nextStatus)) {
-    throw new Error('Transição de status inválida.');
+    throw new Error(t('Transição de status inválida.'));
   }
   // Aluno só pode cancelar.
   if (!isCoach && nextStatus !== LESSON_STATUS.CANCELLED) {
-    throw new Error('Sem permissão para esta ação.');
+    throw new Error(t('Sem permissão para esta ação.'));
   }
 
   // O cupom do pedido (Onda CG) é resolvido na CONFIRMAÇÃO, pelo professor —

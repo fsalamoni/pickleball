@@ -8,6 +8,7 @@ import { arrayRemove, arrayUnion, doc, getDoc, serverTimestamp, setDoc } from 'f
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeTrainingSettings, settingsPatch, TRAINING_SETTINGS_DOC } from '../domain/settings.js';
+import { t } from '@/core/i18n';
 
 const ref = () => doc(db, 'platform_settings', TRAINING_SETTINGS_DOC);
 
@@ -34,8 +35,8 @@ export async function saveTrainingSettings(input, atual, { identity }) {
  * aprovado não muda; a próxima edição de quem saiu da lista volta à fila.
  */
 export async function setProfessorVerified(uid, verified, { identity, name = '' }) {
-  if (!identity?.isAdmin) throw new Error('Só a equipe da plataforma verifica professores.');
-  if (!uid) throw new Error('Professor sem conta.');
+  if (!identity?.isAdmin) throw new Error(t('Só a equipe da plataforma verifica professores.'));
+  if (!uid) throw new Error(t('Professor sem conta.'));
   await setDoc(ref(), {
     verified_professors: verified ? arrayUnion(uid) : arrayRemove(uid),
     updated_at: serverTimestamp(),

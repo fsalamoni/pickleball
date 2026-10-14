@@ -7,6 +7,7 @@ import {
   useMatchesByTournament,
 } from '@/modules/tournament/hooks/useTournament';
 import { computeTournamentOps } from '@/modules/tournament/domain/ops';
+import { t } from '@/core/i18n';
 
 const ALERT_TONES = {
   amber: 'border-amber-200 bg-amber-50 text-amber-900',
@@ -69,41 +70,41 @@ export default function V2TournamentOpsTab({ tournament }) {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-        <OpsTile icon={Users} label="Inscrições" value={ops.registrations.total} hint={`${ops.registrations.cancelled} cancelada(s)`} />
+        <OpsTile icon={Users} label={t('Inscrições')} value={ops.registrations.total} hint={t('{cancelled} cancelada(s)', { cancelled: ops.registrations.cancelled })} />
         <OpsTile
           icon={CheckCircle2}
-          label="Confirmadas"
+          label={t('Confirmadas')}
           value={ops.registrations.confirmed}
-          hint={ops.registrations.checkedIn > 0 ? `${ops.registrations.checkedIn} com check-in` : null}
+          hint={ops.registrations.checkedIn > 0 ? t('{checkedIn} com check-in', { checkedIn: ops.registrations.checkedIn }) : null}
         />
         <OpsTile
           icon={Wallet}
-          label="Aguardando pgto."
+          label={t('Aguardando pgto.')}
           value={ops.registrations.pendingPayment}
-          hint={ops.registrations.paymentDeclared > 0 ? `${ops.registrations.paymentDeclared} declararam ter pago` : null}
+          hint={ops.registrations.paymentDeclared > 0 ? t('{paymentDeclared} declararam ter pago', { paymentDeclared: ops.registrations.paymentDeclared }) : null}
         />
-        <OpsTile icon={Hourglass} label="Lista de espera" value={ops.registrations.waitlist} />
+        <OpsTile icon={Hourglass} label={t('Lista de espera')} value={ops.registrations.waitlist} />
         <OpsTile
           icon={ListChecks}
-          label="Jogos concluídos"
+          label={t('Jogos concluídos')}
           value={`${ops.matches.done}/${ops.matches.total}`}
-          hint={`${ops.matches.completionPct}% · ${ops.matches.inProgress} em andamento`}
+          hint={t('{completionPct}% · {inProgress} em andamento', { completionPct: ops.matches.completionPct, inProgress: ops.matches.inProgress })}
         />
-        <OpsTile icon={CalendarClock} label="Sem horário" value={ops.matches.unscheduled} />
+        <OpsTile icon={CalendarClock} label={t('Sem horário')} value={ops.matches.unscheduled} />
       </div>
 
       <V2Surface className="p-5 sm:p-6">
-        <h4 className="font-display text-lg font-bold text-ink">Por modalidade</h4>
+        <h4 className="font-display text-lg font-bold text-ink">{t('Por modalidade')}</h4>
         {ops.perModality.length === 0 ? (
           falhouModalidades ? (
             <V2ErrorState
               inline
               className="mt-3"
-              title="Não foi possível carregar as modalidades"
-              description="Elas continuam lá — a conexão é que falhou."
+              title={t('Não foi possível carregar as modalidades')}
+              description={t('Elas continuam lá — a conexão é que falhou.')}
               onRetry={recarregarModalidades}
             />
-          ) : <p className="mt-3 text-sm text-gray-500">Nenhuma modalidade cadastrada ainda.</p>
+          ) : <p className="mt-3 text-sm text-gray-500">{t('Nenhuma modalidade cadastrada ainda.')}</p>
         ) : (
           <ul className="mt-4 space-y-4">
             {ops.perModality.map((entry) => (
@@ -111,9 +112,9 @@ export default function V2TournamentOpsTab({ tournament }) {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-ink">{entry.name}</span>
                   <span className="text-xs font-medium text-gray-500">
-                    {entry.registrations.confirmed} confirmada(s)
-                    {entry.registrations.pendingPayment > 0 ? ` · ${entry.registrations.pendingPayment} aguardando pgto.` : ''}
-                    {entry.registrations.waitlist > 0 ? ` · ${entry.registrations.waitlist} em espera` : ''}
+                    {t('{confirmed} confirmada(s)', { confirmed: entry.registrations.confirmed })}
+                    {entry.registrations.pendingPayment > 0 ? t('· {pendingPayment} aguardando pgto.', { pendingPayment: entry.registrations.pendingPayment }) : ''}
+                    {entry.registrations.waitlist > 0 ? t('· {waitlist} em espera', { waitlist: entry.registrations.waitlist }) : ''}
                   </span>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
@@ -121,7 +122,7 @@ export default function V2TournamentOpsTab({ tournament }) {
                     <ProgressBar pct={entry.matches.completionPct} />
                   </div>
                   <span className="shrink-0 text-xs font-bold text-gray-500">
-                    {entry.matches.total === 0 ? 'sem sorteio' : `${entry.matches.done}/${entry.matches.total} jogos`}
+                    {entry.matches.total === 0 ? t('sem sorteio') : t('{done}/{total} jogos', { done: entry.matches.done, total: entry.matches.total })}
                   </span>
                 </div>
               </li>

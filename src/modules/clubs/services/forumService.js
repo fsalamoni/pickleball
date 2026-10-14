@@ -34,6 +34,7 @@ import { deleteAttachment } from '@/core/services/storageService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { CLUB_COLLECTIONS, FORUM_LIMITS } from '../domain/constants.js';
 import { buildPoll, isPollClosed } from '../domain/forumPoll.js';
+import { t } from '@/core/i18n';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -81,10 +82,10 @@ export async function getThread(threadId) {
 }
 
 export async function createThread(clubId, input, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const title = trimmed(input.title, FORUM_LIMITS.TITLE_MAX);
   const body = trimmed(input.body, FORUM_LIMITS.BODY_MAX);
-  if (!title) throw new Error('Informe um título para o tópico.');
+  if (!title) throw new Error(t('Informe um título para o tópico.'));
 
   const poll = input.poll ? buildPoll(input.poll) : null; // valida e normaliza
   const attachments = sanitizeAttachments(input.attachments);
@@ -165,11 +166,11 @@ export async function listComments(threadId) {
 }
 
 export async function addComment(thread, input, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!thread?.id) throw new Error('Tópico inválido.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!thread?.id) throw new Error(t('Tópico inválido.'));
   const body = trimmed(input.body, FORUM_LIMITS.COMMENT_MAX);
   const attachments = sanitizeAttachments(input.attachments);
-  if (!body && attachments.length === 0) throw new Error('Escreva um comentário ou anexe um arquivo.');
+  if (!body && attachments.length === 0) throw new Error(t('Escreva um comentário ou anexe um arquivo.'));
 
   const nowMs = Date.now();
   const ref = doc(collection(db, COL.forumThreads, thread.id, COL.forumComments));
@@ -245,9 +246,9 @@ export async function getMyPollVote(threadId, userId) {
 }
 
 export async function setPollVote(thread, optionIds, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!thread?.id || !thread.poll) throw new Error('Enquete indisponível.');
-  if (isPollClosed(thread.poll)) throw new Error('Esta enquete está encerrada.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!thread?.id || !thread.poll) throw new Error(t('Enquete indisponível.'));
+  if (isPollClosed(thread.poll)) throw new Error(t('Esta enquete está encerrada.'));
 
   const valid = new Set((thread.poll.options || []).map((o) => o.id));
   const ids = Array.from(new Set((optionIds || []).filter((id) => valid.has(id))));

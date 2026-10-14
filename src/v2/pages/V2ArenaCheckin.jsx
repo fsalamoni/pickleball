@@ -42,6 +42,7 @@ import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
@@ -66,7 +67,7 @@ function CartaoReserva({ booking, selecionado, onSelecionar, unica }) {
           <Clock className="h-4 w-4 text-gray-400" />
           {janela ? `${hhmm(janela.start)}–${hhmm(janela.end)}` : '—'}
         </p>
-        {chegou && <V2Badge tone="green">Chegada confirmada</V2Badge>}
+        {chegou && <V2Badge tone="green">{t('Chegada confirmada')}</V2Badge>}
       </div>
       <p className="mt-1 text-xs text-gray-500">
         {booking.court_name ? `${booking.court_name} · ` : ''}
@@ -122,7 +123,7 @@ export default function V2ArenaCheckin() {
       await checkin.mutateAsync({ booking, deviceId: deviceId || undefined, code });
       setPronto(true);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível confirmar sua chegada.');
+      toast.error(err?.message || t('Não foi possível confirmar sua chegada.'));
       throw err;
     }
   };
@@ -150,17 +151,17 @@ export default function V2ArenaCheckin() {
           <CheckCircle2 className="h-10 w-10 text-green-600" />
         </div>
         <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-ink">
-          Chegada confirmada
+          {t('Chegada confirmada')}
         </h1>
         <p className="mt-2 text-gray-500">
-          Bom jogo em {arena.name}. A recepção já sabe que você está aqui.
+          {t('Bom jogo em {name}. A recepção já sabe que você está aqui.', { name: arena.name })}
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <V2Button asChild>
-            <Link to={`/arenas/${arenaId}`}>Ver a arena</Link>
+            <Link to={`/arenas/${arenaId}`}>{t('Ver a arena')}</Link>
           </V2Button>
           <V2Button variant="ghost" asChild>
-            <Link to="/minhas-reservas">Minhas reservas</Link>
+            <Link to="/minhas-reservas">{t('Minhas reservas')}</Link>
           </V2Button>
         </div>
       </div>
@@ -172,25 +173,25 @@ export default function V2ArenaCheckin() {
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
       <V2BackLink to={`/arenas/${arenaId}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Chegada</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Chegada')}</h1>
       <p className="mt-2 font-medium text-gray-500">
-        Confirme sua presença com o código do totem da recepção.
+        {t('Confirme sua presença com o código do totem da recepção.')}
       </p>
 
       {carregandoAutomatico ? (
         <V2Surface className="mt-6 flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          <p className="text-sm text-gray-600">Procurando a sua reserva de hoje…</p>
+          <p className="text-sm text-gray-600">{t('Procurando a sua reserva de hoje…')}</p>
         </V2Surface>
       ) : minhas.length === 0 ? (
         <V2Surface className="mt-6">
           <V2EmptyState
             icon={CalendarClock}
-            title="Você não tem horário aqui hoje"
-            description="A chegada só pode ser confirmada no dia da reserva, a partir de uma hora antes do horário."
+            title={t('Você não tem horário aqui hoje')}
+            description={t('A chegada só pode ser confirmada no dia da reserva, a partir de uma hora antes do horário.')}
             action={(
               <Link to={`/arenas/${arenaId}`} className="text-sm font-bold text-ink underline">
-                Ver os horários da arena
+                {t('Ver os horários da arena')}
               </Link>
             )}
           />
@@ -211,16 +212,16 @@ export default function V2ArenaCheckin() {
 
           {abertas.length > 1 && !escolhida && (
             <p className="mt-3 text-xs text-gray-500">
-              Você tem mais de um horário agora. Toque no que você veio jogar.
+              {t('Você tem mais de um horário agora. Toque no que você veio jogar.')}
             </p>
           )}
 
           {abertas.length > 0 && (
             <V2Surface className="mt-6">
               <V2Field
-                label="Código do totem"
+                label={t('Código do totem')}
                 htmlFor="codigo-totem"
-                hint={`${KIOSK_CODE_LEN} caracteres, na tela da recepção. Ele muda a cada minuto e meio.`}
+                hint={t('{KIOSK_CODE_LEN} caracteres, na tela da recepção. Ele muda a cada minuto e meio.', { KIOSK_CODE_LEN })}
               >
                 <V2Input
                   id="codigo-totem"
@@ -239,7 +240,7 @@ export default function V2ArenaCheckin() {
                 onClick={() => confirmar(alvo, codigo).catch(() => {})}
               >
                 {checkin.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                Confirmar minha chegada
+                {t('Confirmar minha chegada')}
               </V2Button>
             </V2Surface>
           )}
@@ -247,8 +248,7 @@ export default function V2ArenaCheckin() {
       )}
 
       <p className="mt-6 text-xs leading-5 text-gray-500">
-        A confirmação vale só para o seu horário, e é o que faz a arena saber que a quadra
-        está em uso. Esqueceu de confirmar? A recepção resolve na hora.
+        {t('A confirmação vale só para o seu horário, e é o que faz a arena saber que a quadra está em uso. Esqueceu de confirmar? A recepção resolve na hora.')}
       </p>
     </div>
   );

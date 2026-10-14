@@ -7,6 +7,7 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { VISIBILITY, VISIBILITY_HINTS, VISIBILITY_LABELS } from '@/modules/training/domain/visibility';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ value: string, onChange: (v: string) => void, options: string[],
@@ -16,8 +17,8 @@ import { VISIBILITY, VISIBILITY_HINTS, VISIBILITY_LABELS } from '@/modules/train
 export default function VisibilityPicker({ value, onChange, options = [], notice = '', publicoTravado = '' }) {
   return (
     <fieldset id="campo-visibility" data-dica="treino-editor-visibilidade" className="scroll-mt-4">
-      <legend className="mb-1 font-display text-xl font-bold text-ink">Quem pode ver</legend>
-      <p className="mb-4 text-sm text-gray-500">Dá para mudar depois. “Só eu” também serve de rascunho guardado na sua conta.</p>
+      <legend className="mb-1 font-display text-xl font-bold text-ink">{t('Quem pode ver')}</legend>
+      <p className="mb-4 text-sm text-gray-500">{t('Dá para mudar depois. “Só eu” também serve de rascunho guardado na sua conta.')}</p>
       <div className="grid gap-3 sm:grid-cols-3">
         {options.map((v) => {
           const travado = v === VISIBILITY.PUBLICO && !!publicoTravado;
@@ -41,8 +42,8 @@ export default function VisibilityPicker({ value, onChange, options = [], notice
                 className="mt-1 h-4 w-4 shrink-0 accent-ink"
               />
               <span className="min-w-0">
-                <span className="block font-bold text-ink">{VISIBILITY_LABELS[v]}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-gray-500">{VISIBILITY_HINTS[v]}</span>
+                <span className="block font-bold text-ink">{t(VISIBILITY_LABELS[v])}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-gray-500">{t(VISIBILITY_HINTS[v])}</span>
               </span>
             </label>
           );

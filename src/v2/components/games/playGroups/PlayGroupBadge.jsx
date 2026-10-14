@@ -7,6 +7,7 @@
 import React from 'react';
 import { cn } from '@/core/lib/utils';
 import { themeOf } from './playGroupTheme';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ name?: string|null, color?: string, variant?: 'light'|'dark',
@@ -35,7 +36,7 @@ export function PlayGroupBadge({ name, color, variant = 'light', size = 'sm', cl
 
 /** O selo de "quem está sem grupo". */
 export function NoGroupBadge(props) {
-  return <PlayGroupBadge name="Sem grupo" color="gray" title="Sem grupo" {...props} />;
+  return <PlayGroupBadge name={t('Sem grupo')} color="gray" title={t('Sem grupo')} {...props} />;
 }
 
 /**

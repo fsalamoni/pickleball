@@ -33,6 +33,7 @@
 
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
+import { t } from '@/core/i18n';
 
 /** Limites do título gerado (o mesmo teto de `normalizeGameDayInput`). */
 export const CLUB_GAME_DAY_TITLE_MAX = 80;
@@ -90,7 +91,7 @@ export function canUpgradeLegacyDate({ dateId, participants = [], games = [] } =
   if (jogos > 0) {
     return {
       ok: false,
-      motivo: 'Esta data já tem partidas registradas. Convertê-la esconderia o que já foi jogado.',
+      motivo: t('Esta data já tem partidas registradas. Convertê-la esconderia o que já foi jogado.'),
       participantes,
       jogos,
     };
@@ -98,7 +99,7 @@ export function canUpgradeLegacyDate({ dateId, participants = [], games = [] } =
   if (participantes > 0) {
     return {
       ok: false,
-      motivo: 'Esta data já tem atletas inseridos. Convertê-la esconderia a lista de quem está nela.',
+      motivo: t('Esta data já tem atletas inseridos. Convertê-la esconderia a lista de quem está nela.'),
       participantes,
       jogos,
     };
@@ -176,7 +177,7 @@ export function normalizeClubGameDayInput(input = {}, { event = null } = {}) {
   };
 
   const errors = {};
-  if (!value.date) errors.date_time = 'Informe a data e o horário.';
+  if (!value.date) errors.date_time = t('Informe a data e o horário.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

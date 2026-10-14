@@ -24,6 +24,7 @@ import { unreadCount } from '@/modules/training/domain/share';
 import { V2Button, V2PageIntro, V2Skeleton } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import TrainingGate from '@/v2/components/training/TrainingGate';
+import { t, tk } from '@/core/i18n';
 
 const TABS = {
   hoje: lazy(() => import('@/v2/components/training/tabs/TodayTab')),
@@ -39,30 +40,30 @@ const TABS = {
 };
 
 const GRUPOS = [
-  { id: 'treinar', label: 'Treinar' },
-  { id: 'conteudo', label: 'Conteúdo' },
-  { id: 'conversa', label: 'Conversa' },
+  { id: 'treinar', label: tk('Treinar') },
+  { id: 'conteudo', label: tk('Conteúdo') },
+  { id: 'conversa', label: tk('Conversa') },
 ];
 
 /** As abas que esta pessoa vê (a de alunos só para professor; a de balanço só com a flag). */
 export function trainingSections({ isCoach = false, recebidosNovos = 0, balanco = false } = {}) {
   return [
-    { id: 'hoje', label: 'Hoje', icon: Zap, grupo: 'treinar', dica: 'treino-aba-hoje' },
-    { id: 'planos', label: 'Planos', icon: CalendarRange, grupo: 'treinar', dica: 'treino-aba-planos' },
-    { id: 'diario', label: 'Diário', icon: NotebookPen, grupo: 'treinar', dica: 'treino-aba-diario' },
-    { id: 'evolucao', label: 'Evolução', icon: TrendingUp, grupo: 'treinar', dica: 'treino-aba-evolucao' },
-    ...(balanco ? [{ id: 'balanco', label: 'Balanço', icon: ClipboardCheck, grupo: 'treinar', dica: 'treino-aba-balanco' }] : []),
-    { id: 'biblioteca', label: 'Biblioteca', icon: Library, grupo: 'conteudo', dica: 'treino-aba-biblioteca' },
-    { id: 'meus', label: 'Meus', icon: PenLine, grupo: 'conteudo', dica: 'treino-aba-meus' },
+    { id: 'hoje', label: t('Hoje'), icon: Zap, grupo: 'treinar', dica: 'treino-aba-hoje' },
+    { id: 'planos', label: t('Planos'), icon: CalendarRange, grupo: 'treinar', dica: 'treino-aba-planos' },
+    { id: 'diario', label: t('Diário'), icon: NotebookPen, grupo: 'treinar', dica: 'treino-aba-diario' },
+    { id: 'evolucao', label: t('Evolução'), icon: TrendingUp, grupo: 'treinar', dica: 'treino-aba-evolucao' },
+    ...(balanco ? [{ id: 'balanco', label: t('Balanço'), icon: ClipboardCheck, grupo: 'treinar', dica: 'treino-aba-balanco' }] : []),
+    { id: 'biblioteca', label: t('Biblioteca'), icon: Library, grupo: 'conteudo', dica: 'treino-aba-biblioteca' },
+    { id: 'meus', label: t('Meus'), icon: PenLine, grupo: 'conteudo', dica: 'treino-aba-meus' },
     {
       id: 'recebidos',
-      label: recebidosNovos > 0 ? `Recebidos (${recebidosNovos})` : 'Recebidos',
+      label: recebidosNovos > 0 ? t('Recebidos ({n})', { n: recebidosNovos }) : t('Recebidos'),
       icon: Inbox,
       grupo: 'conteudo',
       dica: 'treino-aba-recebidos',
     },
-    { id: 'duvidas', label: 'Dúvidas', icon: MessageCircleQuestion, grupo: 'conversa', dica: 'treino-aba-duvidas' },
-    ...(isCoach ? [{ id: 'alunos', label: 'Alunos', icon: Users, grupo: 'conversa', dica: 'treino-aba-alunos' }] : []),
+    { id: 'duvidas', label: t('Dúvidas'), icon: MessageCircleQuestion, grupo: 'conversa', dica: 'treino-aba-duvidas' },
+    ...(isCoach ? [{ id: 'alunos', label: t('Alunos'), icon: Users, grupo: 'conversa', dica: 'treino-aba-alunos' }] : []),
   ];
 }
 
@@ -92,19 +93,19 @@ function TrainingHub() {
   return (
     <div className="space-y-6">
       <V2PageIntro
-        title="Treino"
-        subtitle="O que treinar hoje, a biblioteca de drills e o seu diário — no mesmo lugar."
+        title={t('Treino')}
+        subtitle={t('O que treinar hoje, a biblioteca de drills e o seu diário — no mesmo lugar.')}
         action={(
           <V2Button asChild size="sm" data-dica="treino-criar">
-            <Link to="/treino/novo"><Plus className="h-4 w-4" aria-hidden="true" /> Criar drill ou treino</Link>
+            <Link to="/treino/novo"><Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Criar drill ou treino')}</Link>
           </V2Button>
         )}
       />
       <V2SectionNav
         sections={sections}
         activeId={ativa}
-        grupos={GRUPOS}
-        ariaLabel="Seções do treino"
+        grupos={GRUPOS.map((g) => ({ ...g, label: t(g.label) }))}
+        ariaLabel={t('Seções do treino')}
         dica="treino-secoes"
         onSelect={(s) => irPara(s.id)}
       />

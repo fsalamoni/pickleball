@@ -10,6 +10,7 @@ import { promoDestinationCta, promoDestinationLink } from '@/modules/promo/domai
 import { cn } from '@/core/lib/utils';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import { issuerDisplayName } from './promoUi';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ campaign: object, inArt?: boolean, ratio?: string, className?: string }} props
@@ -22,7 +23,7 @@ export default function PromoCampaignBanner({ campaign, inArt = true, ratio = 'a
     issuerType: campaign.issuer_type, issuerId: campaign.issuer_id, campaignId: campaign.id,
   });
   const cta = promoDestinationCta(campaign.destination, campaign.banner.design);
-  const alt = bannerAltText(campaign.banner) || campaign.name || 'Campanha';
+  const alt = bannerAltText(campaign.banner) || campaign.name || t('Campanha');
   const dono = issuerDisplayName(campaign);
   return (
     <Link

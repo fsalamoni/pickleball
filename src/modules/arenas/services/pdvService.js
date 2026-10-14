@@ -70,6 +70,7 @@ import { formatPrice } from '../domain/pricing.js';
 import {
   listInventoryProducts, listInventoryEntries, listInventoryExits, listArenaManagerIds,
 } from './arenaService.js';
+import { t } from '@/core/i18n';
 
 const COL_PRODUCTS = 'arena_products';
 const COL_SALES = 'arena_sales';
@@ -176,9 +177,9 @@ async function produtosDaArena(arenaId, ids) {
  * @param {Array<string>} splitWith uids que dividem a conta (inclusive o comprador)
  */
 export async function createSale(arenaId, items, paymentMethod, splitWith, user, profile) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
-  if (!user?.uid) throw new Error('Faça login.');
-  if (!Array.isArray(items) || items.length === 0) throw new Error('Carrinho vazio.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
+  if (!user?.uid) throw new Error(t('Faça login.'));
+  if (!Array.isArray(items) || items.length === 0) throw new Error(t('Carrinho vazio.'));
 
   const pedidos = [...quantitiesByProduct(items)].map(([product_id, quantity]) => ({ product_id, quantity }));
   const porId = await produtosDaArena(arenaId, pedidos.map((i) => i.product_id));
@@ -194,7 +195,7 @@ export async function createSale(arenaId, items, paymentMethod, splitWith, user,
   // O comprador SEMPRE entra na divisão, uma vez só.
   const outrosPedidos = (Array.isArray(splitWith) ? splitWith : []).filter((uid) => uid && uid !== user.uid);
   const participantes = outrosPedidos.length > 0 ? [...new Set([user.uid, ...outrosPedidos])] : [];
-  if (participantes.length > MAX_SPLIT) throw new Error(`Divida entre no máximo ${MAX_SPLIT} pessoas.`);
+  if (participantes.length > MAX_SPLIT) throw new Error(t('Divida entre no máximo {MAX_SPLIT} pessoas.', { MAX_SPLIT }));
   const splits = participantes.length > 1 ? splitAmount(total, participantes) : null;
   const minhaParte = splits
     ? (splits.find((x) => x.user_id === user.uid)?.amount ?? 0)
@@ -300,14 +301,14 @@ export function myShareOf(sale, uid) {
  * está em `split_with`.
  */
 export async function payMyShare(saleId, user) {
-  if (!saleId || !user?.uid) throw new Error('Parâmetros obrigatórios.');
+  if (!saleId || !user?.uid) throw new Error(t('Parâmetros obrigatórios.'));
   const snap = await getDoc(doc(db, COL_SALES, saleId));
-  if (!snap.exists()) throw new Error('Compra não encontrada.');
+  if (!snap.exists()) throw new Error(t('Compra não encontrada.'));
   const sale = { id: snap.id, ...snap.data() };
-  if (sale.status === SALE_STATUS.CANCELLED) throw new Error('Esta compra foi cancelada.');
+  if (sale.status === SALE_STATUS.CANCELLED) throw new Error(t('Esta compra foi cancelada.'));
 
   const valor = myShareOf(sale, user.uid);
-  if (valor == null) throw new Error('Você não faz parte desta conta.');
+  if (valor == null) throw new Error(t('Você não faz parte desta conta.'));
 
   const payId = `${saleId}_${user.uid}`;
   const jaTem = await getDoc(doc(db, COL_PAYMENTS, payId));
@@ -354,7 +355,7 @@ async function entregarPedidoDoMercado(ref, sale, actor) {
   for (const [pid, q] of qtd) {
     const estoque = trackedStock(pid, entradas, saidas);
     if (estoque != null && estoque < q) {
-      throw new Error(`Acabou o estoque de ${nomeDe(pid)} (restam ${Math.max(0, estoque)}). Registre a compra no Mercado ou cancele o pedido.`);
+      throw new Error(t('Acabou o estoque de {pid} (restam {valor}). Registre a compra no Mercado ou cancele o pedido.', { pid: nomeDe(pid), valor: Math.max(0, estoque) }));
     }
   }
 
@@ -366,9 +367,9 @@ async function entregarPedidoDoMercado(ref, sale, actor) {
 
   await runTransaction(db, async (tx) => {
     const atual = await tx.get(ref);
-    if (!atual.exists()) throw new Error('Pedido não encontrado.');
+    if (!atual.exists()) throw new Error(t('Pedido não encontrado.'));
     const d = atual.data();
-    if (d.status === SALE_STATUS.CANCELLED) throw new Error('Este pedido foi cancelado.');
+    if (d.status === SALE_STATUS.CANCELLED) throw new Error(t('Este pedido foi cancelado.'));
     if (d.stock_applied) return; // já entregue: nada a fazer
 
     novasSaidas.forEach((value) => {
@@ -406,12 +407,12 @@ async function entregarPedidoDoMercado(ref, sale, actor) {
  * levado a última unidade.
  */
 export async function confirmSale(saleId, actor) {
-  if (!saleId) throw new Error('saleId obrigatório.');
+  if (!saleId) throw new Error(t('saleId obrigatório.'));
   const ref = doc(db, COL_SALES, saleId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Venda não encontrada.');
+  if (!snap.exists()) throw new Error(t('Venda não encontrada.'));
   const sale = { id: snap.id, ...snap.data() };
-  if (sale.status === SALE_STATUS.CANCELLED) throw new Error('Esta venda foi cancelada.');
+  if (sale.status === SALE_STATUS.CANCELLED) throw new Error(t('Esta venda foi cancelada.'));
   if (sale.stock_applied) return;
 
   if (sale.catalog === SHOP_CATALOG) {
@@ -424,7 +425,7 @@ export async function confirmSale(saleId, actor) {
       if (!psnap.exists()) continue;
       const p = psnap.data();
       if (!hasStock(p, item.quantity || 1)) {
-        throw new Error(`Acabou o estoque de ${p.name} — ajuste a compra antes de entregar.`);
+        throw new Error(t('Acabou o estoque de {name} — ajuste a compra antes de entregar.', { name: p.name }));
       }
     }
 
@@ -547,17 +548,17 @@ export async function cancelSale(saleId, motivo, actor) {
  * se cancela no balcão.) A regra confere as mesmas condições.
  */
 export async function cancelMyOrder(saleId, user, profile) {
-  if (!saleId || !user?.uid) throw new Error('Parâmetros obrigatórios.');
+  if (!saleId || !user?.uid) throw new Error(t('Parâmetros obrigatórios.'));
   const ref = doc(db, COL_SALES, saleId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Pedido não encontrado.');
+  if (!snap.exists()) throw new Error(t('Pedido não encontrado.'));
   const sale = { id: snap.id, ...snap.data() };
-  if (sale.buyer_id !== user.uid) throw new Error('Só quem fez o pedido pode desistir dele.');
+  if (sale.buyer_id !== user.uid) throw new Error(t('Só quem fez o pedido pode desistir dele.'));
   if (sale.status === SALE_STATUS.CANCELLED) return;
-  if (sale.stock_applied) throw new Error('Este pedido já foi entregue. Fale com a arena.');
-  if (sale.status !== SALE_STATUS.PENDING) throw new Error('Este pedido já foi pago. Fale com a arena.');
+  if (sale.stock_applied) throw new Error(t('Este pedido já foi entregue. Fale com a arena.'));
+  if (sale.status !== SALE_STATUS.PENDING) throw new Error(t('Este pedido já foi pago. Fale com a arena.'));
   if (Array.isArray(sale.split_with) && sale.split_with.length > 1) {
-    throw new Error('Conta dividida se cancela no balcão — alguém pode já ter pago a parte dele.');
+    throw new Error(t('Conta dividida se cancela no balcão — alguém pode já ter pago a parte dele.'));
   }
 
   const batch = writeBatch(db);
@@ -696,13 +697,13 @@ export async function confirmPayment(paymentId, actor) {
  * pago, em nome de quem pagou — a regra deixa a arena, e só a arena.
  */
 export async function receiveShareAtCounter(saleId, payerId, actor) {
-  if (!saleId || !payerId) throw new Error('Parâmetros obrigatórios.');
+  if (!saleId || !payerId) throw new Error(t('Parâmetros obrigatórios.'));
   const snap = await getDoc(doc(db, COL_SALES, saleId));
-  if (!snap.exists()) throw new Error('Pedido não encontrado.');
+  if (!snap.exists()) throw new Error(t('Pedido não encontrado.'));
   const sale = { id: snap.id, ...snap.data() };
-  if (sale.status === SALE_STATUS.CANCELLED) throw new Error('Este pedido foi cancelado.');
+  if (sale.status === SALE_STATUS.CANCELLED) throw new Error(t('Este pedido foi cancelado.'));
   const valor = myShareOf(sale, payerId);
-  if (valor == null) throw new Error('Esta pessoa não faz parte da conta.');
+  if (valor == null) throw new Error(t('Esta pessoa não faz parte da conta.'));
 
   const payId = `${saleId}_${payerId}`;
   await setDoc(doc(db, COL_PAYMENTS, payId), {

@@ -20,7 +20,9 @@
 import {
   GENDER_CATEGORY, COMPETITION_GENDER, TARGET_SCORE, TOURNAMENT_STAGE_TYPE,
   PHASE_DIVISION_MODE,
+  rotulos,
 } from './constants.js';
+import { t, tk } from '@/core/i18n';
 
 /** Gênero da equipe (composição do elenco). Reaproveita os valores de categoria. */
 export const TEAM_GENDER = Object.freeze({
@@ -29,10 +31,10 @@ export const TEAM_GENDER = Object.freeze({
   MIXED: GENDER_CATEGORY.MIXED, // 'mixed'
 });
 
-export const TEAM_GENDER_LABELS = Object.freeze({
-  [TEAM_GENDER.MALE]: 'Masculina',
-  [TEAM_GENDER.FEMALE]: 'Feminina',
-  [TEAM_GENDER.MIXED]: 'Mista',
+export const TEAM_GENDER_LABELS = rotulos({
+  [TEAM_GENDER.MALE]: tk('Masculina'),
+  [TEAM_GENDER.FEMALE]: tk('Feminina'),
+  [TEAM_GENDER.MIXED]: tk('Mista'),
 });
 
 /** Tipo de cada ETAPA (sub-jogo) de um confronto de equipes. */
@@ -43,11 +45,11 @@ export const TEAM_ETAPA_TYPE = Object.freeze({
   SINGLES: 'singles', // simples (1 jogador por lado)
 });
 
-export const TEAM_ETAPA_TYPE_LABELS = Object.freeze({
-  [TEAM_ETAPA_TYPE.MENS_DOUBLES]: 'Dupla masculina',
-  [TEAM_ETAPA_TYPE.WOMENS_DOUBLES]: 'Dupla feminina',
-  [TEAM_ETAPA_TYPE.MIXED_DOUBLES]: 'Dupla mista',
-  [TEAM_ETAPA_TYPE.SINGLES]: 'Simples',
+export const TEAM_ETAPA_TYPE_LABELS = rotulos({
+  [TEAM_ETAPA_TYPE.MENS_DOUBLES]: tk('Dupla masculina'),
+  [TEAM_ETAPA_TYPE.WOMENS_DOUBLES]: tk('Dupla feminina'),
+  [TEAM_ETAPA_TYPE.MIXED_DOUBLES]: tk('Dupla mista'),
+  [TEAM_ETAPA_TYPE.SINGLES]: tk('Simples'),
 });
 
 /** Como o confronto é decidido. */
@@ -56,9 +58,9 @@ export const TEAM_WIN_RULE = Object.freeze({
   BEST_OF: 'best_of', // primeira equipe a vencer `win_target` etapas
 });
 
-export const TEAM_WIN_RULE_LABELS = Object.freeze({
-  [TEAM_WIN_RULE.ALL]: 'Disputar todas as etapas',
-  [TEAM_WIN_RULE.BEST_OF]: 'Melhor de X (primeira a atingir o alvo)',
+export const TEAM_WIN_RULE_LABELS = rotulos({
+  [TEAM_WIN_RULE.ALL]: tk('Disputar todas as etapas'),
+  [TEAM_WIN_RULE.BEST_OF]: tk('Melhor de X (primeira a atingir o alvo)'),
 });
 
 /** Modo do SIMPLES dentro do confronto de equipes. */
@@ -67,9 +69,9 @@ export const TEAM_SINGLES_MODE = Object.freeze({
   ROTATING: 'rotating_points', // todos jogam, trocando a cada X pontos
 });
 
-export const TEAM_SINGLES_MODE_LABELS = Object.freeze({
-  [TEAM_SINGLES_MODE.SINGLE]: 'Um jogador por equipe',
-  [TEAM_SINGLES_MODE.ROTATING]: 'Todos jogam (rodízio por pontos)',
+export const TEAM_SINGLES_MODE_LABELS = rotulos({
+  [TEAM_SINGLES_MODE.SINGLE]: tk('Um jogador por equipe'),
+  [TEAM_SINGLES_MODE.ROTATING]: tk('Todos jogam (rodízio por pontos)'),
 });
 
 /** Limites de segurança (evitam configurações abusivas). */
@@ -94,17 +96,17 @@ export const TEAM_TARGET_SCORE_OPTIONS = Object.freeze([
   TARGET_SCORE.ELEVEN, TARGET_SCORE.FIFTEEN, TARGET_SCORE.TWENTY_ONE,
 ]);
 
-export const TEAM_SETS_LABELS = Object.freeze({
-  1: 'Game único',
-  3: 'Melhor de 3 games',
-  5: 'Melhor de 5 games',
+export const TEAM_SETS_LABELS = rotulos({
+  1: tk('Game único'),
+  3: tk('Melhor de 3 games'),
+  5: tk('Melhor de 5 games'),
 });
 
 /** Rótulo curto da regra de placar de uma etapa (ex.: "11 pts · melhor de 3"). */
 export function formatEtapaScoringLabel(scoring) {
   const sets = Number(scoring?.sets_per_match) || 1;
   const target = Number(scoring?.target_score) || TARGET_SCORE.ELEVEN;
-  return sets === 1 ? `${target} pontos · game único` : `${target} pontos · melhor de ${sets}`;
+  return sets === 1 ? t('{target} pontos · game único', { target }) : t('{target} pontos · melhor de {sets}', { target, sets });
 }
 
 const ETAPA_TYPES = new Set(Object.values(TEAM_ETAPA_TYPE));
@@ -174,7 +176,7 @@ export function normalizeTeamConfig(input = {}) {
     femaleSlots = teamSize;
   } else {
     if (teamSize % 2 !== 0) {
-      errors.team_size = 'Equipes mistas precisam de um número par de atletas (metade masculina, metade feminina).';
+      errors.team_size = t('Equipes mistas precisam de um número par de atletas (metade masculina, metade feminina).');
     }
     maleSlots = Math.floor(teamSize / 2);
     femaleSlots = teamSize - maleSlots;
@@ -196,17 +198,17 @@ export function normalizeTeamConfig(input = {}) {
     .filter(Boolean);
 
   if (etapas.length < TEAM_LIMITS.MIN_ETAPAS) {
-    errors.etapas = 'Defina ao menos uma etapa (sub-jogo) para o confronto.';
+    errors.etapas = t('Defina ao menos uma etapa (sub-jogo) para o confronto.');
   }
 
   // Coerência de gênero: uma equipe só masculina não pode ter etapa feminina/mista.
   const usesFemale = etapas.some((e) => e.type === TEAM_ETAPA_TYPE.WOMENS_DOUBLES || e.type === TEAM_ETAPA_TYPE.MIXED_DOUBLES);
   const usesMale = etapas.some((e) => e.type === TEAM_ETAPA_TYPE.MENS_DOUBLES || e.type === TEAM_ETAPA_TYPE.MIXED_DOUBLES);
   if (gender === TEAM_GENDER.MALE && usesFemale) {
-    errors.etapas = 'Equipe masculina não pode ter etapa feminina ou mista.';
+    errors.etapas = t('Equipe masculina não pode ter etapa feminina ou mista.');
   }
   if (gender === TEAM_GENDER.FEMALE && usesMale) {
-    errors.etapas = 'Equipe feminina não pode ter etapa masculina ou mista.';
+    errors.etapas = t('Equipe feminina não pode ter etapa masculina ou mista.');
   }
 
   const winRule = Object.values(TEAM_WIN_RULE).includes(input.win_rule)
@@ -313,21 +315,21 @@ export function validateTeamRoster(members = [], config = {}) {
   const females = list.filter((m) => m.gender === COMPETITION_GENDER.FEMALE).length;
 
   if (list.length !== config.team_size) {
-    errors.push(`A equipe precisa de exatamente ${config.team_size} atleta(s).`);
+    errors.push(t('A equipe precisa de exatamente {team_size} atleta(s).', { team_size: config.team_size }));
   }
   if (config.gender === TEAM_GENDER.MIXED) {
     if (males !== config.male_slots || females !== config.female_slots) {
-      errors.push(`Equipe mista: ${config.male_slots} masculino(s) e ${config.female_slots} feminino(s).`);
+      errors.push(t('Equipe mista: {male_slots} masculino(s) e {female_slots} feminino(s).', { male_slots: config.male_slots, female_slots: config.female_slots }));
     }
   } else if (config.gender === TEAM_GENDER.MALE && females > 0) {
-    errors.push('Equipe masculina só aceita atletas masculinos.');
+    errors.push(t('Equipe masculina só aceita atletas masculinos.'));
   } else if (config.gender === TEAM_GENDER.FEMALE && males > 0) {
-    errors.push('Equipe feminina só aceita atletas femininas.');
+    errors.push(t('Equipe feminina só aceita atletas femininas.'));
   }
   // Sem repetição de atleta no mesmo elenco.
   const ids = list.map((m) => m.user_id).filter(Boolean);
   if (new Set(ids).size !== ids.length) {
-    errors.push('Há atleta repetido no elenco.');
+    errors.push(t('Há atleta repetido no elenco.'));
   }
 
   return { valid: errors.length === 0, errors, males, females };
@@ -359,7 +361,7 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
 
   (Array.isArray(lineup) ? lineup : []).forEach((etapa, i) => {
     const type = etapa?.type;
-    const label = TEAM_ETAPA_TYPE_LABELS[type] || `Etapa ${i + 1}`;
+    const label = TEAM_ETAPA_TYPE_LABELS[type] || t('Etapa {v1}', { v1: i + 1 });
     const a = (etapa?.side_a || []).filter(Boolean);
     const b = (etapa?.side_b || []).filter(Boolean);
 
@@ -368,30 +370,30 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
     if (a.length === 0 && b.length === 0 && etapaGames(etapa).length === 0) return;
 
     // Pertencimento ao elenco.
-    if (a.some((id) => !rosterA.has(id))) errors.push(`${label}: jogador do lado A fora do elenco.`);
-    if (b.some((id) => !rosterB.has(id))) errors.push(`${label}: jogador do lado B fora do elenco.`);
+    if (a.some((id) => !rosterA.has(id))) errors.push(t('{label}: jogador do lado A fora do elenco.', { label }));
+    if (b.some((id) => !rosterB.has(id))) errors.push(t('{label}: jogador do lado B fora do elenco.', { label }));
 
     // Sem repetir o mesmo jogador dentro do mesmo lado da etapa.
     if (new Set(a).size !== a.length || new Set(b).size !== b.length) {
-      errors.push(`${label}: jogador repetido na mesma dupla.`);
+      errors.push(t('{label}: jogador repetido na mesma dupla.', { label }));
     }
 
     if (type === TEAM_ETAPA_TYPE.SINGLES) {
       // Um jogador (modo single) ou uma ORDEM de rodízio (todos jogam,
       // trocando a cada X pontos) — nesta a ordem precisa de ao menos 2.
       if (config.singles_mode === TEAM_SINGLES_MODE.SINGLE) {
-        if (a.length !== 1) errors.push(`${label}: escale 1 jogador no lado A.`);
-        if (b.length !== 1) errors.push(`${label}: escale 1 jogador no lado B.`);
+        if (a.length !== 1) errors.push(t('{label}: escale 1 jogador no lado A.', { label }));
+        if (b.length !== 1) errors.push(t('{label}: escale 1 jogador no lado B.', { label }));
       } else {
-        if (a.length < 2) errors.push(`${label}: defina a ordem do rodízio do lado A (ao menos 2 atletas).`);
-        if (b.length < 2) errors.push(`${label}: defina a ordem do rodízio do lado B (ao menos 2 atletas).`);
+        if (a.length < 2) errors.push(t('{label}: defina a ordem do rodízio do lado A (ao menos 2 atletas).', { label }));
+        if (b.length < 2) errors.push(t('{label}: defina a ordem do rodízio do lado B (ao menos 2 atletas).', { label }));
       }
       return;
     }
 
     const perSide = etapaPlayersPerSide(type);
-    if (a.length !== perSide) errors.push(`${label}: o lado A precisa de ${perSide} jogador(es).`);
-    if (b.length !== perSide) errors.push(`${label}: o lado B precisa de ${perSide} jogador(es).`);
+    if (a.length !== perSide) errors.push(t('{label}: o lado A precisa de {perSide} jogador(es).', { label, perSide }));
+    if (b.length !== perSide) errors.push(t('{label}: o lado B precisa de {perSide} jogador(es).', { label, perSide }));
 
     // Checagem de gênero por etapa (quando o mapa de gênero é fornecido).
     const needs = etapaGenderNeeds(type);
@@ -400,7 +402,7 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
       [['A', a], ['B', b]].forEach(([sideLabel, ids]) => {
         if (countGender(ids, COMPETITION_GENDER.MALE) !== needs.male
           || countGender(ids, COMPETITION_GENDER.FEMALE) !== needs.female) {
-          errors.push(`${label}: composição de gênero inválida no lado ${sideLabel}.`);
+          errors.push(t('{label}: composição de gênero inválida no lado {sideLabel}.', { label, sideLabel }));
         }
       });
     }
@@ -412,8 +414,8 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
   });
 
   // Duplas mistas não repetem jogadores (entre as mistas do mesmo lado).
-  if (new Set(mixedA).size !== mixedA.length) errors.push('As duplas mistas do lado A repetem jogador(es).');
-  if (new Set(mixedB).size !== mixedB.length) errors.push('As duplas mistas do lado B repetem jogador(es).');
+  if (new Set(mixedA).size !== mixedA.length) errors.push(t('As duplas mistas do lado A repetem jogador(es).'));
+  if (new Set(mixedB).size !== mixedB.length) errors.push(t('As duplas mistas do lado B repetem jogador(es).'));
 
   return { valid: errors.length === 0, errors };
 }
@@ -532,15 +534,15 @@ export function etapaScoreIssues(etapa, config = {}) {
   const { target_score: target } = res.scoring;
   const issues = [];
   res.games.forEach((g, i) => {
-    const rotulo = res.games.length > 1 ? `Game ${i + 1}: ` : '';
+    const rotulo = res.games.length > 1 ? t('Game {v1}: ', { v1: i + 1 }) : '';
     if (g.a === g.b) {
-      issues.push(`${rotulo}empate não decide um game.`);
+      issues.push(t('{rotulo}empate não decide um game.', { rotulo }));
       return;
     }
     const hi = Math.max(g.a, g.b);
     const lo = Math.min(g.a, g.b);
-    if (hi < target) issues.push(`${rotulo}nenhum lado chegou a ${target} pontos.`);
-    else if (hi - lo < 2) issues.push(`${rotulo}é preciso vencer por 2 pontos de vantagem.`);
+    if (hi < target) issues.push(t('{rotulo}nenhum lado chegou a {target} pontos.', { rotulo, target }));
+    else if (hi - lo < 2) issues.push(t('{rotulo}é preciso vencer por 2 pontos de vantagem.', { rotulo }));
   });
   return issues;
 }
@@ -891,13 +893,13 @@ export function buildRosterSlots(config = {}) {
   return genders.map((g, index) => {
     const isMale = g === COMPETITION_GENDER.MALE;
     const n = isMale ? (male += 1) : (female += 1);
-    const noun = isMale ? 'Atleta masculino' : 'Atleta feminina';
+    const noun = isMale ? t('Atleta masculino') : t('Atleta feminina');
     return {
       key: `slot_${index + 1}`,
       index,
       gender: g,
       // Em equipes de um só gênero não faz sentido repetir o gênero em cada vaga.
-      label: gender === TEAM_GENDER.MIXED ? `${noun} ${n}` : `Atleta ${index + 1}`,
+      label: gender === TEAM_GENDER.MIXED ? `${noun} ${n}` : t('Atleta {v1}', { v1: index + 1 }),
       short: gender === TEAM_GENDER.MIXED ? `${isMale ? 'M' : 'F'}${n}` : `${index + 1}`,
     };
   });
@@ -1011,22 +1013,22 @@ export function validateTeamAgainstExisting({
 } = {}) {
   const errors = [];
   const others = (Array.isArray(existingTeams) ? existingTeams : [])
-    .filter((t) => t && t.id !== currentTeamId);
+    .filter((tt) => tt && tt.id !== currentTeamId);
 
   const name = normalizeTeamName(teamName);
-  if (name && others.some((t) => normalizeTeamName(t.team_name || t.label) === name)) {
-    errors.push('Já existe uma equipe com esse nome nesta modalidade.');
+  if (name && others.some((tt) => normalizeTeamName(tt.team_name || tt.label) === name)) {
+    errors.push(t('Já existe uma equipe com esse nome nesta modalidade.'));
   }
 
   const takenBy = new Map();
-  others.forEach((t) => {
-    (t.member_uids || (t.members || []).map((m) => m?.user_id) || []).filter(Boolean).forEach((uid) => {
-      if (!takenBy.has(uid)) takenBy.set(uid, t.team_name || t.label || 'outra equipe');
+  others.forEach((tt) => {
+    (tt.member_uids || (tt.members || []).map((m) => m?.user_id) || []).filter(Boolean).forEach((uid) => {
+      if (!takenBy.has(uid)) takenBy.set(uid, tt.team_name || tt.label || t('outra equipe'));
     });
   });
   (Array.isArray(members) ? members : []).forEach((m) => {
     if (m?.user_id && takenBy.has(m.user_id)) {
-      errors.push(`${m.name || 'Atleta'} já está inscrito(a) na equipe "${takenBy.get(m.user_id)}".`);
+      errors.push(t('{nome} já está inscrito(a) na equipe "{equipe}".', { nome: m.name || t('Atleta'), equipe: takenBy.get(m.user_id) }));
     }
   });
 
@@ -1043,10 +1045,10 @@ export function validateTeamAgainstExisting({
  */
 export function uidsInOtherTeams(existingTeams = [], currentTeamId = null) {
   return (Array.isArray(existingTeams) ? existingTeams : [])
-    .filter((t) => t && t.id !== currentTeamId)
-    .flatMap((t) => (t.member_uids && t.member_uids.length
-      ? t.member_uids
-      : (t.members || []).map((m) => m?.user_id)))
+    .filter((tt) => tt && tt.id !== currentTeamId)
+    .flatMap((tt) => (tt.member_uids && tt.member_uids.length
+      ? tt.member_uids
+      : (tt.members || []).map((m) => m?.user_id)))
     .filter(Boolean);
 }
 
@@ -1098,22 +1100,22 @@ export function etapaLineupSlots(spec, config = {}, rosterSize = 0) {
     if (config.singles_mode === TEAM_SINGLES_MODE.ROTATING) {
       const n = Math.max(2, Number(rosterSize) || Number(config.team_size) || 2);
       return Array.from({ length: n }, (_, i) => ({
-        index: i, gender: null, label: `${i + 1}º a jogar`,
+        index: i, gender: null, label: t('{v1}º a jogar', { v1: i + 1 }),
       }));
     }
-    return [{ index: 0, gender: null, label: 'Atleta' }];
+    return [{ index: 0, gender: null, label: t('Atleta') }];
   }
   if (type === TEAM_ETAPA_TYPE.MIXED_DOUBLES) {
     return [
-      { index: 0, gender: COMPETITION_GENDER.MALE, label: 'Masculino' },
-      { index: 1, gender: COMPETITION_GENDER.FEMALE, label: 'Feminina' },
+      { index: 0, gender: COMPETITION_GENDER.MALE, label: t('Masculino') },
+      { index: 1, gender: COMPETITION_GENDER.FEMALE, label: t('Feminina') },
     ];
   }
   const needs = etapaGenderNeeds(type);
   const gender = needs && needs.female > 0 ? COMPETITION_GENDER.FEMALE : COMPETITION_GENDER.MALE;
   return [
-    { index: 0, gender, label: 'Atleta 1' },
-    { index: 1, gender, label: 'Atleta 2' },
+    { index: 0, gender, label: t('Atleta 1') },
+    { index: 1, gender, label: t('Atleta 2') },
   ];
 }
 
@@ -1290,7 +1292,7 @@ export function buildConfrontationStructure(matches = [], stages = []) {
       }));
       const semGrupo = list.filter((m) => !m.group);
       if (semGrupo.length > 0) {
-        sections.push({ key: 'g:sem', kind: 'group', name: 'Sem grupo', matches: sortConfrontations(semGrupo) });
+        sections.push({ key: 'g:sem', kind: 'group', name: t('Sem grupo'), matches: sortConfrontations(semGrupo) });
       }
     } else {
       const rounds = [...new Set(list.map((m) => `${m.bracket || ''}|${m.round || 1}`))];
@@ -1338,16 +1340,16 @@ function sortConfrontations(list) {
 export function confrontationRoundLabel(ref, allMatches = []) {
   const bracket = ref?.bracket || null;
   const round = Number(ref?.round) || 1;
-  if (bracket === 'gf') return round === 2 ? 'Grande final (reset)' : 'Grande final';
-  if (bracket === 'wb') return `Chave dos vencedores — rodada ${round}`;
-  if (bracket === 'lb') return `Repescagem — rodada ${round}`;
+  if (bracket === 'gf') return round === 2 ? t('Grande final (reset)') : t('Grande final');
+  if (bracket === 'wb') return t('Chave dos vencedores — rodada {round}', { round });
+  if (bracket === 'lb') return t('Repescagem — rodada {round}', { round });
   const rounds = (allMatches || []).map((m) => Number(m.round) || 1);
   const last = rounds.length ? Math.max(...rounds) : round;
   const fromEnd = last - round;
-  const named = ['Final', 'Semifinais', 'Quartas de final', 'Oitavas de final'];
+  const named = [t('Final'), t('Semifinais'), t('Quartas de final'), t('Oitavas de final')];
   const isBracketLike = (allMatches || []).some((m) => BRACKET_STAGE_TYPES.has(m.stage_type));
   if (isBracketLike && fromEnd < named.length) return named[fromEnd];
-  return `Rodada ${round}`;
+  return t('Rodada {round}', { round });
 }
 
 /**
@@ -1365,7 +1367,7 @@ export function confrontationRoundLabel(ref, allMatches = []) {
  * @returns {Array<{ name: string|null, rows: Array<object> }>}
  */
 export function buildTeamGroupTables({ matches = [], teamRegistrations = [], config = {}, singleGroup = false } = {}) {
-  const nameById = new Map(teamRegistrations.map((t) => [t.id, t.team_name || t.label || 'Equipe']));
+  const nameById = new Map(teamRegistrations.map((tt) => [tt.id, tt.team_name || tt.label || t('Equipe')]));
   const playable = (Array.isArray(matches) ? matches : []).filter(isTeamConfrontation);
   const groups = [...new Set(playable.map((m) => m.group).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
@@ -1375,7 +1377,7 @@ export function buildTeamGroupTables({ matches = [], teamRegistrations = [], con
     const ids = [...new Set(confrontations.flatMap((c) => [c.team_a_id, c.team_b_id]).filter(Boolean))];
     const rows = buildTeamRanking(confrontations, ids, config).map((row) => ({
       ...row,
-      team_name: nameById.get(row.team_id) || 'Equipe',
+      team_name: nameById.get(row.team_id) || t('Equipe'),
     }));
     return { name, rows };
   };
@@ -1474,10 +1476,10 @@ export function confrontationSnapshot(match, config = {}, sizes = {}) {
   else if (lineup.iniciada) stage = 'escalado';
 
   const label = {
-    pendente: 'Aguardando escalação',
-    escalado: 'Escalado — aguardando resultado',
-    em_andamento: `Em andamento (${result.etapasDecided}/${result.etapasTotal} etapas)`,
-    encerrado: result.winner ? 'Encerrado' : 'Encerrado (empate em etapas)',
+    pendente: t('Aguardando escalação'),
+    escalado: t('Escalado — aguardando resultado'),
+    em_andamento: t('Em andamento ({etapasDecided}/{etapasTotal} etapas)', { etapasDecided: result.etapasDecided, etapasTotal: result.etapasTotal }),
+    encerrado: result.winner ? t('Encerrado') : t('Encerrado (empate em etapas)'),
   }[stage];
 
   return { lineup, result, stage, label };

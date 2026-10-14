@@ -46,6 +46,7 @@ import {
   buildPublishableMatches,
   summarizeResult,
 } from '../domain/rankingPublishing.js';
+import { t } from '@/core/i18n';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -179,11 +180,11 @@ async function applyEventDateMirror(event, dateId, clubId, actor) {
  * @returns {Promise<{ published: number, skipped: number, already_published: number, removed: number }>}
  */
 export async function publishEventDateToRanking(event, dateId, clubId, actor) {
-  if (!event?.id) throw new Error('Evento inválido.');
-  if (!dateId) throw new Error('Dia de jogo inválido.');
-  if (!clubId) throw new Error('Clube inválido.');
+  if (!event?.id) throw new Error(t('Evento inválido.'));
+  if (!dateId) throw new Error(t('Dia de jogo inválido.'));
+  if (!clubId) throw new Error(t('Clube inválido.'));
   if (event.club_id && event.club_id !== clubId) {
-    throw new Error('O evento não pertence ao clube informado.');
+    throw new Error(t('O evento não pertence ao clube informado.'));
   }
 
   const { result } = await applyEventDateMirror(event, dateId, clubId, actor);
@@ -292,8 +293,8 @@ export async function syncEventDateRankingIfPublished(eventId, dateId, actor) {
  * @returns {Promise<{ removed: number }>}
  */
 export async function unpublishEventDateFromRanking(event, dateId, actor) {
-  if (!event?.id) throw new Error('Evento inválido.');
-  if (!dateId) throw new Error('Dia de jogo inválido.');
+  if (!event?.id) throw new Error(t('Evento inválido.'));
+  if (!dateId) throw new Error(t('Dia de jogo inválido.'));
 
   const publishedIds = await listPublishedIdsForDate(event.id, dateId);
   if (publishedIds.length > 0) {

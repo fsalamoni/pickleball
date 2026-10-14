@@ -42,6 +42,7 @@ import BannerUploader from '@/v2/components/arenas/marketing/campaigns/BannerUpl
 import PromoDestinationPicker from './PromoDestinationPicker';
 import PromoReachPicker from './PromoReachPicker';
 import { issuerBrand, pessoas, uploadFolderFor } from './promoUi';
+import { t, tk, fmtLista } from '@/core/i18n';
 
 const SEM_BANNER = 'none';
 
@@ -97,24 +98,24 @@ function DetalheDoPublico({ audience, detail, onChange }) {
   const set = (patch) => onChange({ ...detail, ...patch });
   if (precisa === 'interest') {
     return (
-      <V2Field label="Interesse" htmlFor="pcamp-interesse" hint="O que a pessoa marcou no perfil.">
+      <V2Field label={t('Interesse')} htmlFor="pcamp-interesse" hint={t('O que a pessoa marcou no perfil.')}>
         <V2Select id="pcamp-interesse" value={detail.interest} onChange={(e) => set({ interest: e.target.value })}>
-          <option value="">Escolha…</option>
-          {PLATFORM_INTEREST_META.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          <option value="">{t('Escolha…')}</option>
+          {PLATFORM_INTEREST_META.map((m) => <option key={m.value} value={m.value}>{t(m.label)}</option>)}
         </V2Select>
       </V2Field>
     );
   }
   return (
     <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]">
-      <V2Field label="Estado" htmlFor="pcamp-uf">
+      <V2Field label={t('Estado')} htmlFor="pcamp-uf">
         <V2Select id="pcamp-uf" value={detail.state} onChange={(e) => set({ state: e.target.value })}>
-          <option value="">UF…</option>
+          <option value="">{t('UF…')}</option>
           {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
         </V2Select>
       </V2Field>
       {precisa === 'city' && (
-        <V2Field label="Cidade" htmlFor="pcamp-cidade">
+        <V2Field label={t('Cidade')} htmlFor="pcamp-cidade">
           <V2Input id="pcamp-cidade" maxLength={80} placeholder="Porto Alegre" value={detail.city}
             onChange={(e) => set({ city: e.target.value })} />
         </V2Field>
@@ -158,29 +159,32 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
   const vLugar = banner ? normalizePromoPlacement(f, { today }) : { valid: true, errors: {} };
   const vAlcance = banner && f.show_home ? normalizeReach(f.reach) : { valid: true, errors: {} };
   const cta = promoDestinationCta(f.destination, f.design);
-  const pagina = ehProfessor ? 'no seu perfil' : 'na vitrine de promoções';
+  const pagina = ehProfessor ? t('no seu perfil') : t('na vitrine de promoções');
 
   const falta = [
-    ...(!editando && !f.name.trim() ? ['o nome da campanha'] : []),
+    ...(!editando && !f.name.trim() ? [t('o nome da campanha')] : []),
     ...Object.values(vDestino.errors),
     ...Object.values(vBanner.errors),
     ...Object.values(vLugar.errors),
     ...Object.values(vAlcance.errors),
-    ...(!editando && f.notify && !f.message.trim() ? ['a mensagem do aviso'] : []),
-    ...(!editando && f.notify && publicoCarregando ? ['carregar o público do aviso'] : []),
-    ...(!editando && f.notify && publicoFalhou ? ['carregar o público do aviso'] : []),
-    ...(!editando && f.notify && !publicoFalhou && !publicoCarregando && destinatarios.length === 0 ? ['alguém no público do aviso'] : []),
-    ...(!editando && !f.notify && !banner ? ['um banner ou um aviso — a campanha precisa aparecer em algum lugar'] : []),
-    ...(editando && !banner ? ['o banner'] : []),
+    ...(!editando && f.notify && !f.message.trim() ? [t('a mensagem do aviso')] : []),
+    ...(!editando && f.notify && publicoCarregando ? [t('carregar o público do aviso')] : []),
+    ...(!editando && f.notify && publicoFalhou ? [t('carregar o público do aviso')] : []),
+    ...(!editando && f.notify && !publicoFalhou && !publicoCarregando && destinatarios.length === 0 ? [t('alguém no público do aviso')] : []),
+    ...(!editando && !f.notify && !banner ? [t('um banner ou um aviso — a campanha precisa aparecer em algum lugar')] : []),
+    ...(editando && !banner ? [t('o banner')] : []),
   ];
 
   const resumo = [
     banner
-      ? `Banner ${[f.show_on_page ? pagina : null, f.show_home ? `na tela inicial (${reachLabel(f.reach)})` : null].filter(Boolean).join(' e ')} até ${formatDateShortBR(f.banner_until)}.`
+      ? t('Banner {onde} até {data}.', {
+        onde: fmtLista([f.show_on_page ? pagina : null, f.show_home ? t('na tela inicial ({regiao})', { regiao: reachLabel(f.reach) }) : null].filter(Boolean)),
+        data: formatDateShortBR(f.banner_until),
+      })
       : null,
-    `Leva a: ${PROMO_DESTINATION_META[vDestino.value.type].label}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}.`,
-    ehProfessor && banner && f.visibility === PROMO_VISIBILITY.STUDENTS ? 'O banner aparece só para os seus alunos.' : null,
-    !editando && f.notify ? `Aviso no aplicativo para ${pessoas(destinatarios.length)} — não dá para cancelar depois. Mantenha esta tela aberta até terminar de enviar.` : null,
+    t('Leva a: {destino}.', { destino: `${t(PROMO_DESTINATION_META[vDestino.value.type].label)}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}` }),
+    ehProfessor && banner && f.visibility === PROMO_VISIBILITY.STUDENTS ? t('O banner aparece só para os seus alunos.') : null,
+    !editando && f.notify ? t('Aviso no aplicativo para {publico} — não dá para cancelar depois. Mantenha esta tela aberta até terminar de enviar.', { publico: pessoas(destinatarios.length) }) : null,
   ].filter(Boolean);
 
   const enviar = async () => {
@@ -191,7 +195,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
     try {
       if (editando) {
         await editar.mutateAsync({ campaignId: campaign.id, patch: { banner, destination: f.destination, ...lugar } });
-        toast.success('Banner atualizado.');
+        toast.success(t('Banner atualizado.'));
       } else {
         const { sent, recipients } = await publicar.mutateAsync({
           issuer,
@@ -201,58 +205,58 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
           },
           recipients: f.notify ? destinatarios : [],
         });
-        if (!f.notify) toast.success('Campanha publicada.');
+        if (!f.notify) toast.success(t('Campanha publicada.'));
         else if (Number(recipients) > 0 && Number(sent) < Number(recipients)) {
           // Parte dos avisos não foi gravada (conexão): a campanha diz isso, em
           // vez de "enviado para todos".
-          toast.warning(`Campanha publicada, mas o aviso só foi confirmado para ${sent} de ${pessoas(Number(recipients))}. Confira a conexão.`);
-        } else toast.success(`Campanha publicada. Aviso enviado para ${pessoas(sent)}.`);
+          toast.warning(t('Campanha publicada, mas o aviso só foi confirmado para {enviados} de {publico}. Confira a conexão.', { enviados: sent, publico: pessoas(Number(recipients)) }));
+        } else toast.success(t('Campanha publicada. Aviso enviado para {publico}.', { publico: pessoas(sent) }));
       }
       setConfirmar(false);
       onClose?.();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível publicar.');
+      toast.error(err?.message || t('Não foi possível publicar.'));
       setConfirmar(false);
     }
   };
 
   const FONTES = [
-    [BANNER_SOURCE.DESIGN, Paintbrush, 'Criar na plataforma'],
-    [BANNER_SOURCE.UPLOAD, ImagePlus, 'Enviar a minha imagem'],
-    [SEM_BANNER, Ban, 'Sem banner'],
+    [BANNER_SOURCE.DESIGN, Paintbrush, tk('Criar na plataforma')],
+    [BANNER_SOURCE.UPLOAD, ImagePlus, tk('Enviar a minha imagem')],
+    [SEM_BANNER, Ban, tk('Sem banner')],
   ];
 
   return (
     <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="font-display text-lg font-bold text-ink">{editando ? `Banner de “${campaign.name}”` : 'Nova campanha'}</h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+        <h3 className="font-display text-lg font-bold text-ink">{editando ? t('Banner de “{nome}”', { nome: campaign.name }) : t('Nova campanha')}</h3>
+        <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="space-y-5">
         {!editando && (
-          <Secao n={1} titulo="O que é" descricao="O nome aparece para você na lista e é o título do aviso.">
-            <V2Field label="Nome da campanha" htmlFor="pcamp-nome" required>
+          <Secao n={1} titulo={t('O que é')} descricao={t('O nome aparece para você na lista e é o título do aviso.')}>
+            <V2Field label={t('Nome da campanha')} htmlFor="pcamp-nome" required>
               <V2Input id="pcamp-nome" maxLength={80}
-                placeholder={ehProfessor ? 'Turma nova de iniciantes' : 'Inscrições abertas para o Open'}
+                placeholder={ehProfessor ? t('Turma nova de iniciantes') : t('Inscrições abertas para o Open')}
                 value={f.name} onChange={(e) => set({ name: e.target.value })} />
             </V2Field>
           </Secao>
         )}
 
-        <Secao n={editando ? 1 : 2} titulo="Para onde leva" descricao="O que a pessoa vai fazer ao tocar no banner (ou no aviso).">
+        <Secao n={editando ? 1 : 2} titulo={t('Para onde leva')} descricao={t('O que a pessoa vai fazer ao tocar no banner (ou no aviso).')}>
           <PromoDestinationPicker issuerType={issuer.type} value={f.destination} onChange={(destination) => set({ destination })} />
         </Secao>
 
-        <Secao n={editando ? 2 : 3} titulo="Banner">
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="De onde vem o banner">
+        <Secao n={editando ? 2 : 3} titulo={t('Banner')}>
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('De onde vem o banner')}>
             {FONTES.filter(([k]) => !(editando && k === SEM_BANNER)).map(([k, Icone, rotulo]) => (
               <button key={k} type="button" role="radio" aria-checked={f.source === k} onClick={() => set({ source: k })}
                 className={cn('inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-bold transition',
                   f.source === k ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink')}>
-                <Icone className="h-4 w-4" aria-hidden /> {rotulo}
+                <Icone className="h-4 w-4" aria-hidden /> {t(rotulo)}
               </button>
             ))}
           </div>
@@ -266,20 +270,20 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
               onChange={(patch) => set({ upload: { ...f.upload, ...patch } })} />
           )}
           {f.source === SEM_BANNER && (
-            <p className="rounded-2xl bg-paper px-3 py-2 text-sm text-gray-600">A campanha vai só como aviso no aplicativo.</p>
+            <p className="rounded-2xl bg-paper px-3 py-2 text-sm text-gray-600">{t('A campanha vai só como aviso no aplicativo.')}</p>
           )}
         </Secao>
 
         {banner && (
-          <Secao n={editando ? 3 : 4} titulo="Onde aparece e até quando">
+          <Secao n={editando ? 3 : 4} titulo={t('Onde aparece e até quando')}>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex cursor-pointer items-start gap-2 rounded-2xl border border-gray-200 p-3">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_on_page}
                   onChange={(e) => set({ show_on_page: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">{ehProfessor ? 'No seu perfil' : 'Na vitrine de promoções'}</span>
+                  <span className="block text-sm font-bold text-ink">{ehProfessor ? t('No seu perfil') : t('Na vitrine de promoções')}</span>
                   <span className="block text-xs text-gray-500">
-                    {ehProfessor ? 'No topo do seu perfil de professor — e na vitrine de promoções.' : 'A página de promoções da plataforma.'}
+                    {ehProfessor ? t('No topo do seu perfil de professor — e na vitrine de promoções.') : t('A página de promoções da plataforma.')}
                   </span>
                 </span>
               </label>
@@ -287,8 +291,8 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={f.show_home}
                   onChange={(e) => set({ show_home: e.target.checked })} />
                 <span>
-                  <span className="block text-sm font-bold text-ink">Também na tela inicial</span>
-                  <span className="block text-xs text-gray-500">No carrossel de destaques, na região que você escolher.</span>
+                  <span className="block text-sm font-bold text-ink">{t('Também na tela inicial')}</span>
+                  <span className="block text-xs text-gray-500">{t('No carrossel de destaques, na região que você escolher.')}</span>
                 </span>
               </label>
             </div>
@@ -300,12 +304,12 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                 <input type="checkbox" className="mt-0.5 h-4 w-4 accent-ink" checked={f.visibility === PROMO_VISIBILITY.STUDENTS}
                   onChange={(e) => set({ visibility: e.target.checked ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL })} />
                 <span>
-                  Mostrar o banner só para os meus alunos
-                  <span className="block text-xs text-gray-500">Útil para avisos da turma. Desmarcado, é para atrair gente nova.</span>
+                  {t('Mostrar o banner só para os meus alunos')}
+                  <span className="block text-xs text-gray-500">{t('Útil para avisos da turma. Desmarcado, é para atrair gente nova.')}</span>
                 </span>
               </label>
             )}
-            <V2Field label="No ar até" htmlFor="pcamp-ate" error={vLugar.errors.banner_until} hint="Depois dessa data o banner sai sozinho.">
+            <V2Field label={t('No ar até')} htmlFor="pcamp-ate" error={vLugar.errors.banner_until} hint={t('Depois dessa data o banner sai sozinho.')}>
               <V2Input id="pcamp-ate" type="date" min={today} value={f.banner_until}
                 onChange={(e) => set({ banner_until: e.target.value })} className="max-w-[12rem]" />
             </V2Field>
@@ -313,16 +317,16 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
         )}
 
         {!editando && (
-          <Secao n={banner ? 5 : 4} titulo="Aviso no aplicativo" descricao="Chega na hora para o público escolhido, e leva ao mesmo destino do banner.">
+          <Secao n={banner ? 5 : 4} titulo={t('Aviso no aplicativo')} descricao={t('Chega na hora para o público escolhido, e leva ao mesmo destino do banner.')}>
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.notify} onChange={(e) => set({ notify: e.target.checked })} />
-              <span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><Bell className="h-4 w-4" aria-hidden /> Avisar pelo aplicativo</span>
+              <span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><Bell className="h-4 w-4" aria-hidden /> {t('Avisar pelo aplicativo')}</span>
             </label>
             {f.notify && (
               <>
                 {publicoFalhou ? (
-                  <V2ErrorState inline title="Não foi possível carregar o público"
-                    description="Sem ele não dá para saber quem recebe o aviso." onRetry={() => publicoQ.refetch()} />
+                  <V2ErrorState inline title={t('Não foi possível carregar o público')}
+                    description={t('Sem ele não dá para saber quem recebe o aviso.')} onRetry={() => publicoQ.refetch()} />
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {PROMO_AUDIENCES_BY_ISSUER[issuer.type].map((a) => {
@@ -335,21 +339,21 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
                           className={cn('rounded-2xl border p-3 text-left transition',
                             marcado ? 'border-ink bg-ink/5' : 'border-gray-200 bg-paper-pure hover:border-gray-300')}>
                           <span className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-ink">{meta.label}</span>
+                            <span className="font-bold text-ink">{t(meta.label)}</span>
                             {quantos == null ? <V2Badge tone="neutral">…</V2Badge>
-                              : (precisa && !marcado) ? <V2Badge tone="neutral">escolher</V2Badge>
+                              : (precisa && !marcado) ? <V2Badge tone="neutral">{t('escolher')}</V2Badge>
                                 : <V2Badge tone={quantos > 0 ? 'green' : 'neutral'}>{pessoas(quantos)}</V2Badge>}
                           </span>
-                          <span className="mt-1 block text-xs text-gray-500">{meta.hint}</span>
+                          <span className="mt-1 block text-xs text-gray-500">{t(meta.hint)}</span>
                         </button>
                       );
                     })}
                   </div>
                 )}
                 <DetalheDoPublico audience={f.audience} detail={f.detail} onChange={(detail) => set({ detail })} />
-                <V2Field label="Mensagem" htmlFor="pcamp-msg" required>
+                <V2Field label={t('Mensagem')} htmlFor="pcamp-msg" required>
                   <V2Textarea id="pcamp-msg" rows={3} maxLength={1000}
-                    placeholder="Diga o que é, quando vale e o que a pessoa precisa fazer."
+                    placeholder={t('Diga o que é, quando vale e o que a pessoa precisa fazer.')}
                     value={f.message} onChange={(e) => set({ message: e.target.value })} />
                 </V2Field>
               </>
@@ -360,15 +364,15 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
         <div className="flex flex-wrap items-end justify-between gap-3 border-t border-gray-100 pt-4">
           <div className="min-w-0 text-xs text-gray-600">
             {falta.length > 0 ? (
-              <p><strong className="text-amber-700">Falta:</strong> {[...new Set(falta)].join('; ')}.</p>
+              <p><strong className="text-amber-700">{t('Falta:')}</strong> {[...new Set(falta)].join('; ')}.</p>
             ) : (
               <ul className="space-y-0.5">{resumo.map((l) => <li key={l}>{l}</li>)}</ul>
             )}
           </div>
           <div className="flex gap-2">
-            <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+            <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
             <V2Button disabled={falta.length > 0 || salvando} onClick={() => setConfirmar(true)}>
-              <Send className="mr-1.5 h-4 w-4" aria-hidden /> {editando ? 'Salvar o banner' : 'Publicar campanha'}
+              <Send className="mr-1.5 h-4 w-4" aria-hidden /> {editando ? t('Salvar o banner') : t('Publicar campanha')}
             </V2Button>
           </div>
         </div>
@@ -377,9 +381,9 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
       <ConfirmDialog
         open={confirmar}
         onOpenChange={setConfirmar}
-        title={editando ? 'Salvar o banner?' : 'Publicar esta campanha?'}
+        title={editando ? t('Salvar o banner?') : t('Publicar esta campanha?')}
         description={resumo.join(' ')}
-        confirmLabel={editando ? 'Salvar' : 'Publicar agora'}
+        confirmLabel={editando ? t('Salvar') : t('Publicar agora')}
         loading={salvando}
         destructive={false}
         onConfirm={enviar}

@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Domínio puro de Court (quadra) — validação/normalização de input,
  * ordenação e helpers de apresentação. Sem I/O, testável isoladamente.
@@ -34,16 +35,16 @@ const SURFACE_TYPES = Object.freeze({
 });
 
 const COURT_TYPE_LABELS = Object.freeze({
-  indoor: 'Coberta',
-  outdoor: 'Descoberta',
-  covered: 'Coberta com laterais',
+  indoor: tk('Coberta'),
+  outdoor: tk('Descoberta'),
+  covered: tk('Coberta com laterais'),
 });
 
 const SURFACE_TYPE_LABELS = Object.freeze({
-  concrete: 'Concreto',
-  synthetic: 'Sintético',
-  wood: 'Madeira',
-  asphalt: 'Asfalto',
+  concrete: tk('Concreto'),
+  synthetic: tk('Sintético'),
+  wood: tk('Madeira'),
+  asphalt: tk('Asfalto'),
 });
 
 function str(v) { return String(v ?? '').trim(); }

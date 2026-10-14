@@ -39,6 +39,7 @@ import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
 import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
 import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
 import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { t, fmtLista } from '@/core/i18n';
 
 const PREVIEW_PLAYER_COUNT = 8;
 
@@ -195,13 +196,13 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   }
 
   async function handleSave() {
-    if (!form.name.trim()) return toast.error('Informe um nome.');
+    if (!form.name.trim()) return toast.error(t('Informe um nome.'));
     if (
       form.play_start_time &&
       form.play_end_time &&
       form.play_end_time <= form.play_start_time
     ) {
-      return toast.error('O horário de término deve ser depois do horário de início.');
+      return toast.error(t('O horário de término deve ser depois do horário de início.'));
     }
 
     // Formato de equipes (flag): valida a config antes de montar o payload.
@@ -209,14 +210,14 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
     if (teamOn) {
       const teamCheck = normalizeTeamConfig(form.team_config);
       if (!teamCheck.valid) {
-        return toast.error(Object.values(teamCheck.errors)[0] || 'Configuração de equipes inválida.');
+        return toast.error(Object.values(teamCheck.errors)[0] || t('Configuração de equipes inválida.'));
       }
     }
 
     let stages;
     if (multiPhaseEnabled) {
       const { valid, errors } = validatePhases(form.phases, form.format);
-      if (!valid) return toast.error(errors[0] || 'Configuração de fases inválida.');
+      if (!valid) return toast.error(errors[0] || t('Configuração de fases inválida.'));
       stages = form.phases;
     } else {
       stages = [
@@ -251,7 +252,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
     try {
       if (isEditing) {
         await updateMutation.mutateAsync({ id: editingModality.id, updates: payload });
-        toast.success('Modalidade atualizada.');
+        toast.success(t('Modalidade atualizada.'));
         // Auto-correção (opção "a"): se alguma fase salva é GRUPO ÚNICO, remove
         // resíduos de sorteios antigos (marcadores `m.group` + docs de grupo
         // órfãos) para o dado nunca ficar inconsistente. A rotina é idempotente
@@ -264,32 +265,32 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               ...payload,
             });
             const partes = [];
-            if (cleared > 0) partes.push(`${cleared} confronto(s) alinhado(s) ao grupo único`);
-            if (groupsRemoved > 0) partes.push(`${groupsRemoved} grupo(s) órfão(s) removido(s)`);
+            if (cleared > 0) partes.push(t('{cleared} confronto(s) alinhado(s) ao grupo único', { cleared }));
+            if (groupsRemoved > 0) partes.push(t('{groupsRemoved} grupo(s) órfão(s) removido(s)', { groupsRemoved }));
             if (partes.length > 0) {
-              toast.success(`Grupos corrigidos automaticamente: ${partes.join(' e ')}.`);
+              toast.success(t('Grupos corrigidos automaticamente: {v1}.', { v1: fmtLista(partes) }));
             }
           } catch {
-            toast.message('Modalidade salva. Não foi possível corrigir os grupos agora — use "Corrigir grupos" na aba Sorteio.');
+            toast.message(t('Modalidade salva. Não foi possível corrigir os grupos agora — use "Corrigir grupos" na aba Sorteio.'));
           }
         }
       } else {
         await createMutation.mutateAsync(payload);
-        toast.success('Modalidade criada.');
+        toast.success(t('Modalidade criada.'));
       }
       closeDialog();
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar modalidade.');
+      toast.error(err.message || t('Erro ao salvar modalidade.'));
     }
   }
 
   async function handleDelete() {
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Modalidade removida.');
+      toast.success(t('Modalidade removida.'));
       setDeleteTarget(null);
     } catch (err) {
-      toast.error(err.message || 'Falha ao remover modalidade.');
+      toast.error(err.message || t('Falha ao remover modalidade.'));
     }
   }
 
@@ -299,25 +300,25 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-xl font-bold text-ink">{isEditing ? 'Editar modalidade' : 'Nova modalidade'}</h3>
-          <V2Button variant="ghost" size="sm" onClick={closeDialog}>Cancelar</V2Button>
+          <h3 className="font-display text-xl font-bold text-ink">{isEditing ? t('Editar modalidade') : t('Nova modalidade')}</h3>
+          <V2Button variant="ghost" size="sm" onClick={closeDialog}>{t('Cancelar')}</V2Button>
         </div>
 
         <V2Surface className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nome (ex.: Duplas Mistas Inic.) *</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Nome (ex.: Duplas Mistas Inic.) *')}</label>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Formato</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Formato')}</label>
               <select
                 value={form.team_enabled ? 'team' : form.format}
                 onChange={(e) => handleFormatSelect(e.target.value)}
                 className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
               >
                 {Object.entries(MODALITY_FORMAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                {teamsEnabled && <option value="team">Equipes</option>}
+                {teamsEnabled && <option value="team">{t('Equipes')}</option>}
               </select>
             </div>
           </div>
@@ -332,19 +333,19 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         <V2Surface className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Nível / Perfil</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Nível / Perfil')}</label>
               <select value={form.skill_level} onChange={(e) => set('skill_level', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(SKILL_LEVEL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Gênero</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Gênero')}</label>
               <select value={form.gender_category} onChange={(e) => set('gender_category', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(GENDER_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Faixa Etária</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Faixa Etária')}</label>
               <select value={form.age_category} onChange={(e) => set('age_category', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                 {Object.entries(AGE_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
@@ -353,20 +354,20 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><Ticket className="h-4 w-4" /> Vagas e Ingresso</div>
+          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><Ticket className="h-4 w-4" /> {t('Vagas e Ingresso')}</div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-2xs font-bold uppercase tracking-widest text-gray-500 flex justify-between">
-                <span>Vagas (inscrições / {form.team_enabled ? 'equipes' : (form.format === MODALITY_FORMAT.SINGLES ? 'atletas' : 'duplas')})</span>
+                <span>{t('Vagas (inscrições /')} {form.team_enabled ? t('equipes') : (form.format === MODALITY_FORMAT.SINGLES ? t('atletas') : t('duplas'))})</span>
                 <label className="flex items-center gap-1.5 text-xs normal-case tracking-normal">
                   <input type="checkbox" checked={form.has_unlimited_entries} onChange={(e) => set('has_unlimited_entries', e.target.checked)} />
-                  Sem limite
+                  {t('Sem limite')}
                 </label>
               </label>
               <input type="number" min="2" max={MAX_REGISTRATIONS_PER_MODALITY} value={form.max_entries} onChange={(e) => set('max_entries', e.target.value)} disabled={form.has_unlimited_entries} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30 disabled:opacity-50" />
             </div>
             <div className="space-y-2">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Valor da inscrição (R$)</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Valor da inscrição (R$)')}</label>
               <input type="number" min="0" step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
@@ -374,7 +375,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
 
         <V2Surface className="p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-ink flex items-center gap-2"><Layers className="h-4 w-4" /> Formato da Competição</h3>
+            <h3 className="font-bold text-ink flex items-center gap-2"><Layers className="h-4 w-4" /> {t('Formato da Competição')}</h3>
           </div>
           {multiPhaseEnabled ? (
             <PhasesEditor
@@ -387,21 +388,21 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Modelo da chave</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Modelo da chave')}</label>
                   <select value={form.stage_type} onChange={(e) => setStageType(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                     {Object.entries(stageOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
                 {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
                   <div className="space-y-2">
-                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Qtd. de grupos</label>
+                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Qtd. de grupos')}</label>
                     <input type="number" min="2" max="16" value={form.group_count} onChange={(e) => set('group_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
-                    <p className="text-2xs leading-relaxed text-gray-500">Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.</p>
+                    <p className="text-2xs leading-relaxed text-gray-500">{t('Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.')}</p>
                   </div>
                 )}
                 {[TOURNAMENT_STAGE_TYPE.SINGLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.DOUBLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.TWO_STAGE].includes(form.stage_type) && (
                   <div className="space-y-2">
-                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Cabeças de chave (Seeds)</label>
+                    <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Cabeças de chave (Seeds)')}</label>
                     <input type="number" min="0" max="32" value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
                   </div>
                 )}
@@ -422,40 +423,40 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><CalendarClock className="h-4 w-4" /> Horário e Quadras (Opcional)</div>
-          <p className="mb-4 text-sm text-gray-500">Se preenchido, os jogos gerados calcularão automaticamente sua estimativa de horário e distribuição nas quadras.</p>
+          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><CalendarClock className="h-4 w-4" /> {t('Horário e Quadras (Opcional)')}</div>
+          <p className="mb-4 text-sm text-gray-500">{t('Se preenchido, os jogos gerados calcularão automaticamente sua estimativa de horário e distribuição nas quadras.')}</p>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
             <div className="space-y-2 md:col-span-1">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Data Base</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Data Base')}</label>
               <input type="date" value={form.play_date} onChange={(e) => set('play_date', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Início</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Início')}</label>
               <input type="time" value={form.play_start_time} onChange={(e) => set('play_start_time', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Fim (Teto)</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Fim (Teto)')}</label>
               <input type="time" value={form.play_end_time} onChange={(e) => set('play_end_time', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Quadras</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Quadras')}</label>
               <input type="number" min="1" max={MAX_COURT_COUNT} value={form.court_count} onChange={(e) => set('court_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2 md:col-span-1">
-              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">Min/Jogo</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Min/Jogo')}</label>
               <input type="number" min="10" max="180" step="5" value={form.match_duration_minutes} onChange={(e) => set('match_duration_minutes', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
           </div>
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><BookOpen className="h-4 w-4" /> Instruções (Opcional)</div>
-          <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} maxLength={500} placeholder="Recomendações visíveis para os atletas na aba Informações desta modalidade." className="w-full resize-y rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+          <div className="flex items-center gap-2 mb-4 text-ink font-bold"><BookOpen className="h-4 w-4" /> {t('Instruções (Opcional)')}</div>
+          <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} maxLength={500} placeholder={t('Recomendações visíveis para os atletas na aba Informações desta modalidade.')} className="w-full resize-y rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
         </V2Surface>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-          <V2Button variant="ghost" onClick={closeDialog} disabled={saving}>Cancelar</V2Button>
-          <V2Button onClick={handleSave} disabled={saving}>{saving ? 'Salvando…' : 'Salvar modalidade'}</V2Button>
+          <V2Button variant="ghost" onClick={closeDialog} disabled={saving}>{t('Cancelar')}</V2Button>
+          <V2Button onClick={handleSave} disabled={saving}>{saving ? t('Salvando…') : t('Salvar modalidade')}</V2Button>
         </div>
       </div>
     );
@@ -464,8 +465,8 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">Defina as categorias, perfis, regras e horários de cada bloco de jogos.</p>
-        {isAdmin && <V2Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" /> Nova modalidade</V2Button>}
+        <p className="text-sm text-gray-500">{t('Defina as categorias, perfis, regras e horários de cada bloco de jogos.')}</p>
+        {isAdmin && <V2Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" /> {t('Nova modalidade')}</V2Button>}
       </div>
 
       {isLoading ? (
@@ -476,12 +477,12 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         /* ⚠️ "Comece criando a primeira modalidade" numa falha convida quem
            organiza a CRIAR UMA MODALIDADE DUPLICADA, com inscrições abertas. */
         <V2ErrorState
-          title="As modalidades não carregaram"
-          description="Nenhuma modalidade foi perdida — o que falhou foi a consulta."
+          title={t('As modalidades não carregaram')}
+          description={t('Nenhuma modalidade foi perdida — o que falhou foi a consulta.')}
           onRetry={() => recarregarModalidades()}
         />
       ) : modalities.length === 0 ? (
-        <V2EmptyState icon={Layers} title="Nenhuma modalidade" description="Comece criando a primeira modalidade para abrir inscrições." />
+        <V2EmptyState icon={Layers} title={t('Nenhuma modalidade')} description={t('Comece criando a primeira modalidade para abrir inscrições.')} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {modalities.map((m) => (
@@ -489,7 +490,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               <div className="flex flex-col justify-between flex-1">
                 <div>
                   <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    <V2Badge tone={m.team_config ? 'acid' : 'neutral'}>{m.team_config ? 'Equipes' : MODALITY_FORMAT_LABELS[m.format]}</V2Badge>
+                    <V2Badge tone={m.team_config ? 'acid' : 'neutral'}>{m.team_config ? t('Equipes') : MODALITY_FORMAT_LABELS[m.format]}</V2Badge>
                     <V2Badge tone="neutral">{SKILL_LEVEL_LABELS[m.skill_level]}</V2Badge>
                     <V2Badge tone="neutral">{GENDER_CATEGORY_LABELS[m.gender_category]}</V2Badge>
                   </div>
@@ -497,17 +498,17 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                   <div className="mt-2 space-y-1">
                     <div className="text-sm text-gray-600">
                       <span className="font-semibold text-ink">
-                        {hasUnlimitedEntries(m.max_entries) ? 'Ilimitado' : `${m.max_entries} vagas`}
+                        {hasUnlimitedEntries(m.max_entries) ? t('Ilimitado') : t('{max_entries} vagas', { max_entries: m.max_entries })}
                       </span>{' '}
-                      · {Number(m.entry_fee_cents) > 0 ? `R$ ${(m.entry_fee_cents / 100).toFixed(2).replace('.', ',')}` : 'Gratuito'}
+                      · {Number(m.entry_fee_cents) > 0 ? `R$ ${(m.entry_fee_cents / 100).toFixed(2).replace('.', ',')}` : t('Gratuito')}
                     </div>
                     <div className="text-sm text-gray-600">
                       {(m.stages?.length || 0) > 1
-                        ? `${m.stages.length} fases: ${m.stages.map((s) => TOURNAMENT_STAGE_TYPE_LABELS[s.type] || '—').join(' → ')}`
-                        : `Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}`}
+                        ? t('{n} fases: {v2}', { n: m.stages.length, v2: m.stages.map((s) => TOURNAMENT_STAGE_TYPE_LABELS[s.type] || '—').join(' → ') })
+                        : t('Fase: {v1}', { v1: TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—' })}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 leading-5">
-                      {m.court_count || DEFAULT_COURT_COUNT} quadra(s) · {m.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES} min/jogo
+                      {m.court_count || DEFAULT_COURT_COUNT} {t('quadra(s) ·')} {m.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES} {t('min/jogo')}
                       {m.play_start_time ? ` · ${m.play_start_time}` : ''}
                       {m.play_start_time && m.play_end_time ? `–${m.play_end_time}` : ''}
                       {m.play_date ? ` · ${m.play_date}` : ''}
@@ -516,7 +517,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {m.stages.map((stage, index) => (
                           <V2Badge key={`${m.id}-${index}`} tone="neutral" className="px-2 py-0.5 text-2xs">
-                            Fase {index + 1}: {formatScoringSummary(stage.scoring_override || {})}
+                            {t('Fase')} {index + 1}: {formatScoringSummary(stage.scoring_override || {})}
                           </V2Badge>
                         ))}
                       </div>
@@ -525,8 +526,8 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                 </div>
                 {isAdmin && (
                   <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <V2Button variant="ghost" size="sm" onClick={() => openEdit(m)}><Pencil className="h-3.5 w-3.5" /> Editar</V2Button>
-                    <V2Button variant="ghost" size="sm" onClick={() => setDeleteTarget(m)} className="text-red-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /> Remover</V2Button>
+                    <V2Button variant="ghost" size="sm" onClick={() => openEdit(m)}><Pencil className="h-3.5 w-3.5" /> {t('Editar')}</V2Button>
+                    <V2Button variant="ghost" size="sm" onClick={() => setDeleteTarget(m)} className="text-red-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /> {t('Remover')}</V2Button>
                   </div>
                 )}
               </div>
@@ -538,9 +539,9 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
-        title="Excluir modalidade"
-        description="Atenção: inscrições, jogos e resultados atrelados a esta modalidade serão removidos e o processo é irreversível."
-        confirmLabel="Excluir"
+        title={t('Excluir modalidade')}
+        description={t('Atenção: inscrições, jogos e resultados atrelados a esta modalidade serão removidos e o processo é irreversível.')}
+        confirmLabel={t('Excluir')}
         destructive
         loading={deleteMutation.isPending}
         onConfirm={handleDelete}

@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import PromoMarketingConsole from './PromoMarketingConsole';
 import { coachIssuer } from './promoUi';
+import { t } from '@/core/i18n';
 
 export default function CoachPromoConsole({ coachId, coach }) {
   const issuer = useMemo(() => coachIssuer(coachId, coach), [coachId, coach]);
@@ -19,10 +20,9 @@ export default function CoachPromoConsole({ coachId, coach }) {
       issuer={issuer}
       intro={(
         <p className="max-w-3xl text-sm text-gray-600">
-          Cupons e campanhas <strong>seus</strong>, com as mesmas ferramentas das arenas. O cupom de desconto entra no
-          pedido de aula e é contado quando você confirma; o banner aparece no{' '}
-          <Link to={`/coaches/${coachId}`} className="font-bold text-ink underline">seu perfil</Link> e, se quiser, na tela
-          inicial; o aviso vai para os seus alunos.
+          {t('Seus cupons e campanhas, com as mesmas ferramentas das arenas. O cupom de desconto entra no pedido de aula e é contado quando você confirma; o banner aparece no')}{' '}
+          <Link to={`/coaches/${coachId}`} className="font-bold text-ink underline">{t('seu perfil')}</Link>{' '}
+          {t('e, se quiser, na tela inicial; o aviso vai para os seus alunos.')}
         </p>
       )}
     />

@@ -21,6 +21,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 // Atividade do clube (gamificação V2, flag `gamification_v2`): só para quem administra, sob demanda.
 const ClubEngagementPanel = lazy(() => import('@/v2/components/gamification/issuer/ClubEngagementPanel'));
@@ -68,28 +69,28 @@ export default function V2ClubDetail() {
     if (!code.trim()) return;
     try {
       await joinClub.mutateAsync(code.trim());
-      toast.success('Você entrou no clube!');
+      toast.success(t('Você entrou no clube!'));
       setCode('');
     } catch (err) {
-      toast.error(err.message || 'Código inválido para este clube.');
+      toast.error(err.message || t('Código inválido para este clube.'));
     }
   };
   const handleLeave = async () => {
     try {
       await leaveClub.mutateAsync();
-      toast.success('Você saiu do clube.');
+      toast.success(t('Você saiu do clube.'));
       navigate('/clubes');
     } catch (err) {
-      toast.error(err.message || 'Não foi possível sair do clube.');
+      toast.error(err.message || t('Não foi possível sair do clube.'));
     }
   };
   const handleRequestJoin = async () => {
     try {
       const res = await requestToJoin.mutateAsync(club);
-      if (res?.alreadyMember) toast.success('Você já é membro deste clube.');
-      else toast.success('Pedido enviado! Os administradores foram avisados.');
+      if (res?.alreadyMember) toast.success(t('Você já é membro deste clube.'));
+      else toast.success(t('Pedido enviado! Os administradores foram avisados.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível enviar o pedido.');
+      toast.error(err.message || t('Não foi possível enviar o pedido.'));
     }
   };
 
@@ -106,9 +107,9 @@ export default function V2ClubDetail() {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
-          <V2EmptyState icon={Building2} title="Clube não encontrado"
-            description="O clube que você procura não existe ou foi removido."
-            action={<Link to="/clubes" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar para clubes</Link>} />
+          <V2EmptyState icon={Building2} title={t('Clube não encontrado')}
+            description={t('O clube que você procura não existe ou foi removido.')}
+            action={<Link to="/clubes" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar para clubes')}</Link>} />
         </V2Surface>
       </div>
     );
@@ -116,20 +117,20 @@ export default function V2ClubDetail() {
 
   const location = [club.city, club.state].filter(Boolean).join(' / ');
   const tabs = [
-    { value: 'members', label: 'Membros', icon: Users },
-    { value: 'events', label: 'Eventos', icon: CalendarDays },
-    ...(clubRankingOn ? [{ value: 'ranking', label: 'Ranking', icon: Medal }] : []),
-    { value: 'feed', label: 'Mural', icon: MessageSquare },
-    { value: 'forums', label: 'Fóruns', icon: MessagesSquare },
-    ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: 'Atividade', icon: Trophy, dica: 'clube-aba-atividade' }] : []),
-    ...(isAdmin ? [{ value: 'admin', label: 'Administração', icon: Settings }] : []),
+    { value: 'members', label: t('Membros'), icon: Users },
+    { value: 'events', label: t('Eventos'), icon: CalendarDays },
+    ...(clubRankingOn ? [{ value: 'ranking', label: t('Ranking'), icon: Medal }] : []),
+    { value: 'feed', label: t('Mural'), icon: MessageSquare },
+    { value: 'forums', label: t('Fóruns'), icon: MessagesSquare },
+    ...(isAdmin && gamificationOn ? [{ value: 'atividade', label: t('Atividade'), icon: Trophy, dica: 'clube-aba-atividade' }] : []),
+    ...(isAdmin ? [{ value: 'admin', label: t('Administração'), icon: Settings }] : []),
   ];
   const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'atividade' && !(isAdmin && gamificationOn)) || (activeTab === 'ranking' && !clubRankingOn)
     ? 'members' : activeTab;
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <V2BackLink to="/clubes" className="mb-5">Voltar para clubes</V2BackLink>
+      <V2BackLink to="/clubes" className="mb-5">{t('Voltar para clubes')}</V2BackLink>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
@@ -146,7 +147,7 @@ export default function V2ClubDetail() {
               </div>
               {isMember && (
                 <span className={cn('mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold', isAdmin ? 'bg-acid text-ink' : 'bg-white/15 text-white')}>
-                  {isAdmin ? 'Você é admin' : 'Você é membro'}
+                  {isAdmin ? t('Você é admin') : t('Você é membro')}
                 </span>
               )}
             </div>
@@ -157,15 +158,15 @@ export default function V2ClubDetail() {
                 onClick={() => {
                   const link = `${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(inviteCode)}`;
                   navigator.clipboard?.writeText(link)
-                    .then(() => toast.success('Link de convite copiado!'))
-                    .catch(() => toast.error('Não foi possível copiar.'));
+                    .then(() => toast.success(t('Link de convite copiado!')))
+                    .catch(() => toast.error(t('Não foi possível copiar.')));
                 }}>
-                <Share2 className="h-4 w-4" /> Copiar link de convite
+                <Share2 className="h-4 w-4" /> {t('Copiar link de convite')}
               </V2Button>
             )}
             {isMember && (
               <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
-                Sair do clube
+                {t('Sair do clube')}
               </V2Button>
             )}
           </div>
@@ -185,36 +186,36 @@ export default function V2ClubDetail() {
         <V2Surface className="mt-6">
           {myInvite ? (
             <>
-              <h3 className="font-display text-lg font-bold text-ink">Você foi convidado para este clube</h3>
-              <p className="mt-1 text-sm text-gray-500">{myInvite.inviter_name || 'Um administrador'} convidou você a participar.</p>
+              <h3 className="font-display text-lg font-bold text-ink">{t('Você foi convidado para este clube')}</h3>
+              <p className="mt-1 text-sm text-gray-500">{t('{nome} convidou você a participar.', { nome: myInvite.inviter_name || t('Um administrador') })}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <V2Button onClick={async () => { try { await acceptInvite.mutateAsync(myInvite); toast.success('Convite aceito!'); } catch (err) { toast.error(err.message); } }} disabled={acceptInvite.isPending}>Aceitar convite</V2Button>
-                <V2Button variant="ghost" onClick={async () => { try { await declineInvite.mutateAsync(myInvite); toast.success('Convite recusado.'); } catch (err) { toast.error(err.message); } }} disabled={declineInvite.isPending}>Recusar</V2Button>
+                <V2Button onClick={async () => { try { await acceptInvite.mutateAsync(myInvite); toast.success(t('Convite aceito!')); } catch (err) { toast.error(err.message); } }} disabled={acceptInvite.isPending}>{t('Aceitar convite')}</V2Button>
+                <V2Button variant="ghost" onClick={async () => { try { await declineInvite.mutateAsync(myInvite); toast.success(t('Convite recusado.')); } catch (err) { toast.error(err.message); } }} disabled={declineInvite.isPending}>{t('Recusar')}</V2Button>
               </div>
             </>
           ) : (
             <>
-              <h3 className="font-display text-lg font-bold text-ink">Participe deste clube</h3>
+              <h3 className="font-display text-lg font-bold text-ink">{t('Participe deste clube')}</h3>
               {myRequest?.status === JOIN_REQUEST_STATUS.PENDING ? (
-                <p className="mt-2 inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">Pedido enviado — aguardando aprovação.</p>
+                <p className="mt-2 inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">{t('Pedido enviado — aguardando aprovação.')}</p>
               ) : (
                 <>
                   <p className="mt-1 text-sm text-gray-500">
-                    {myRequest?.status === JOIN_REQUEST_STATUS.REJECTED ? 'Seu pedido anterior não foi aprovado. Você pode pedir novamente.' : 'Peça para ingressar ou entre direto com o código de convite.'}
+                    {myRequest?.status === JOIN_REQUEST_STATUS.REJECTED ? t('Seu pedido anterior não foi aprovado. Você pode pedir novamente.') : t('Peça para ingressar ou entre direto com o código de convite.')}
                   </p>
                   <V2Button className="mt-4" onClick={handleRequestJoin} disabled={requestToJoin.isPending || !isAuthenticated} data-dica="clube-entrar">
-                    {requestToJoin.isPending ? 'Enviando…' : 'Pedir para ingressar'}
+                    {requestToJoin.isPending ? t('Enviando…') : t('Pedir para ingressar')}
                   </V2Button>
                 </>
               )}
               <form onSubmit={handleJoin} data-dica="clube-codigo" className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row">
                 <div className="relative flex-1">
                   <Hash className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="TENHO UM CÓDIGO" maxLength={12}
+                  <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder={t('TENHO UM CÓDIGO')} maxLength={12}
                     className="w-full rounded-full border border-gray-200 bg-paper-pure py-3 pl-11 pr-4 text-sm uppercase tracking-[0.2em] text-ink focus:border-gray-300 focus:ring-4 focus:ring-gray-100" disabled={!isAuthenticated} />
                 </div>
                 <V2Button type="submit" variant="ghost" disabled={joinClub.isPending || !code.trim() || !isAuthenticated}>
-                  {joinClub.isPending ? 'Entrando…' : 'Entrar com código'}
+                  {joinClub.isPending ? t('Entrando…') : t('Entrar com código')}
                 </V2Button>
               </form>
             </>
@@ -268,8 +269,8 @@ function ClubRankingTab({ clubId, isAdmin }) {
       <div className="border-b border-gray-100 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
-            <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
+            <h3 className="font-display text-lg font-bold text-ink">{t('Ranking interno')}</h3>
+            <p className="text-sm text-gray-500">{t('Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.')}</p>
             {/* Não há "Materializar ranking agora": o ranking interno é
                 refeito pelo servidor a cada placar gravado, a cada publicação
                 e a cada entrada/saída de membro. Vazio aqui significa que
@@ -278,7 +279,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
           <div className="flex flex-wrap items-center gap-2">
             <V2Badge tone="neutral" className="rounded-full">
               <Users2 className="mr-1 h-3 w-3" />
-              {data?.clubUids?.length || 0} atletas do clube
+              {t('{n} atletas do clube', { n: data?.clubUids?.length || 0 })}
             </V2Badge>
             {data?.sources && (
               <>
@@ -308,7 +309,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
                 tab === 'individual' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink',
               )}
             >
-              <User className="h-3.5 w-3.5" /> Individual
+              <User className="h-3.5 w-3.5" /> {t('Individual')}
             </button>
             <button
               type="button"
@@ -318,7 +319,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
                 tab === 'doubles' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink',
               )}
             >
-              <Users2 className="h-3.5 w-3.5" /> Duplas
+              <Users2 className="h-3.5 w-3.5" /> {t('Duplas')}
             </button>
           </div>
         )}
@@ -334,7 +335,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
       {tab === 'individual' && (
         <IndividualRankingTable
           ranking={data?.individual || []}
-          emptyMessage="Registre placares nos dias de jogo do clube para montar o ranking interno. Ele se atualiza sozinho, a cada resultado."
+          emptyMessage={t('Registre placares nos dias de jogo do clube para montar o ranking interno. Ele se atualiza sozinho, a cada resultado.')}
         />
       )}
       {tab === 'doubles' && doublesOn && (
@@ -342,8 +343,8 @@ function ClubRankingTab({ clubId, isAdmin }) {
           ranking={data?.doubles || []}
           emptyMessage={
             isAdmin
-              ? 'Nenhuma dupla ranqueada ainda — materialize o ranking para começar.'
-              : 'Nenhuma dupla com jogos suficientes no clube.'
+              ? t('Nenhuma dupla ranqueada ainda — materialize o ranking para começar.')
+              : t('Nenhuma dupla com jogos suficientes no clube.')
           }
         />
       )}
@@ -366,7 +367,7 @@ function ExternalToggle({ includeExternal, onChange, isAdmin }) {
         />
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
-            <Globe2 className="h-4 w-4 text-amber-600" /> Incluir resultados externos
+            <Globe2 className="h-4 w-4 text-amber-600" /> {t('Incluir resultados externos')}
             {includeExternal && (
               <V2Badge tone="amber" className="rounded-full text-2xs">
                 ON
@@ -374,10 +375,7 @@ function ExternalToggle({ includeExternal, onChange, isAdmin }) {
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
-            Quando ligado, o ranking do clube também considera os placares
-            dos atletas do clube em <strong>torneios da plataforma</strong> e
-            em <strong>dias de jogo de outros clubes</strong>. Útil para
-            ter um retrato completo do desempenho dos associados.
+            {t('Quando ligado, o ranking do clube também considera os placares dos atletas do clube em torneios da plataforma e em dias de jogo de outros clubes. Útil para ter um retrato completo do desempenho dos associados.')}
           </p>
         </div>
       </label>
@@ -391,7 +389,7 @@ function IndividualRankingTable({ ranking, emptyMessage, action }) {
       <div className="p-4">
         <V2EmptyState
           icon={Medal}
-          title="Sem ranking ainda"
+          title={t('Sem ranking ainda')}
           description={emptyMessage}
           action={action}
         />
@@ -404,12 +402,12 @@ function IndividualRankingTable({ ranking, emptyMessage, action }) {
         <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
           <tr>
             <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">Atleta</th>
+            <th className="px-4 py-3">{t('Atleta')}</th>
             <th className="px-4 py-3 text-center">J</th>
             <th className="px-4 py-3 text-center">V</th>
             <th className="px-4 py-3 text-center">D</th>
-            <th className="px-4 py-3 text-center">Aprov.</th>
-            <th className="px-4 py-3 text-center">Saldo</th>
+            <th className="px-4 py-3 text-center">{t('Aprov.')}</th>
+            <th className="px-4 py-3 text-center">{t('Saldo')}</th>
           </tr>
         </thead>
         <tbody>
@@ -436,7 +434,7 @@ function DoublesRankingTable({ ranking, emptyMessage }) {
   if (ranking.length === 0) {
     return (
       <div className="p-4">
-        <V2EmptyState icon={Users2} title="Sem duplas ranqueadas" description={emptyMessage} />
+        <V2EmptyState icon={Users2} title={t('Sem duplas ranqueadas')} description={emptyMessage} />
       </div>
     );
   }
@@ -446,12 +444,12 @@ function DoublesRankingTable({ ranking, emptyMessage }) {
         <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
           <tr>
             <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">Dupla</th>
+            <th className="px-4 py-3">{t('Dupla')}</th>
             <th className="px-4 py-3 text-center">J</th>
             <th className="px-4 py-3 text-center">V</th>
             <th className="px-4 py-3 text-center">D</th>
-            <th className="px-4 py-3 text-center">Aprov.</th>
-            <th className="px-4 py-3 text-center">Saldo</th>
+            <th className="px-4 py-3 text-center">{t('Aprov.')}</th>
+            <th className="px-4 py-3 text-center">{t('Saldo')}</th>
           </tr>
         </thead>
         <tbody>

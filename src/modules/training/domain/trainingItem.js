@@ -16,6 +16,7 @@ import { normalizeDiagrams } from './diagram.js';
 import { normalizeMediaList } from './media.js';
 import { VISIBILITY } from './visibility.js';
 import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { fmtNumero, t, tk, tn } from '@/core/i18n';
 
 export const ITEM_LIMITS = Object.freeze({
   title: 120, summary: 280, objective: 300, setup: 1000, step: 300, steps: 15,
@@ -92,12 +93,12 @@ function normalizeBlocks(list) {
 export function normalizeItemInput(input = {}) {
   const errors = {};
   const kind = oneOf(ITEM_KINDS, input.kind, null);
-  if (!kind) errors.kind = 'Escolha o tipo.';
+  if (!kind) errors.kind = t('Escolha o tipo.');
 
   const title = str(input.title, ITEM_LIMITS.title);
-  if (title.length < 3) errors.title = 'Dê um nome com pelo menos 3 letras.';
+  if (title.length < 3) errors.title = t('Dê um nome com pelo menos 3 letras.');
   const summary = str(input.summary, ITEM_LIMITS.summary);
-  if (summary.length < 10) errors.summary = 'Escreva um resumo de uma ou duas frases.';
+  if (summary.length < 10) errors.summary = t('Escreva um resumo de uma ou duas frases.');
 
   let level_min = normalizeLevel(input.level_min);
   let level_max = normalizeLevel(input.level_max);
@@ -145,19 +146,19 @@ export function normalizeItemInput(input = {}) {
   const study_type = kind === ITEM_KIND.ESTUDO ? oneOf(STUDY_TYPES, input.study_type, 'leitura') : '';
   const rules_edition = kind === ITEM_KIND.ESTUDO ? str(input.rules_edition, ITEM_LIMITS.rulesEdition) : '';
   if (study_type === 'regra' && !rules_edition) {
-    errors.rules_edition = 'Diga de qual edição do regulamento é a regra (ex.: "USA Pickleball 2026").';
+    errors.rules_edition = t('Diga de qual edição do regulamento é a regra (ex.: "USA Pickleball 2026").');
   }
   const rawLink = str(input.link, ITEM_LIMITS.link);
   const safeLink = rawLink ? safeHttpUrl(rawLink, { maxLength: ITEM_LIMITS.link }) : '';
   const link = safeLink.startsWith('https://') ? safeLink : '';
-  if (rawLink && !link) errors.link = 'Use um link que comece com https://';
+  if (rawLink && !link) errors.link = t('Use um link que comece com https://');
 
   const blocks = kind === ITEM_KIND.TREINO ? normalizeBlocks(input.blocks) : [];
-  if (kind === ITEM_KIND.TREINO && blocks.length === 0) errors.blocks = 'Um treino precisa de pelo menos um bloco.';
+  if (kind === ITEM_KIND.TREINO && blocks.length === 0) errors.blocks = t('Um treino precisa de pelo menos um bloco.');
 
   const steps = strList(input.steps, ITEM_LIMITS.steps, ITEM_LIMITS.step);
   if ((kind === ITEM_KIND.DRILL || kind === ITEM_KIND.FISICO) && steps.length === 0) {
-    errors.steps = 'Escreva o passo a passo (pelo menos um passo).';
+    errors.steps = t('Escreva o passo a passo (pelo menos um passo).');
   }
 
   const value = {
@@ -215,35 +216,35 @@ export function normalizeItemInput(input = {}) {
  */
 export function itemQuality(item = {}) {
   const checks = [];
-  const add = (ok, label) => checks.push({ ok: !!ok, label });
-  add(item.objective, 'Objetivo');
-  add(item.skills?.length, 'Habilidades');
-  add(item.level_min !== null && item.level_min !== undefined, 'Nível indicado');
+  const add = (ok, label) => checks.push({ ok: !!ok, label: t(label) });
+  add(item.objective, tk('Objetivo'));
+  add(item.skills?.length, tk('Habilidades'));
+  add(item.level_min !== null && item.level_min !== undefined, tk('Nível indicado'));
   if (item.kind === ITEM_KIND.TREINO) {
-    add(item.blocks?.length >= 3, 'Pelo menos 3 blocos');
-    add(item.duration_min, 'Duração');
+    add(item.blocks?.length >= 3, tk('Pelo menos 3 blocos'));
+    add(item.duration_min, tk('Duração'));
   } else if (item.kind === ITEM_KIND.ESTUDO) {
-    add(item.link || item.media?.length, 'Link ou mídia');
-    add(item.questions?.length, 'Perguntas para fixar');
+    add(item.link || item.media?.length, tk('Link ou mídia'));
+    add(item.questions?.length, tk('Perguntas para fixar'));
   } else {
-    add(item.steps?.length >= 2, 'Passo a passo');
-    add(item.cues?.length, 'Dicas curtas');
-    add(item.common_errors?.length, 'Erros comuns e correção');
-    add(item.diagrams?.length || item.media?.length, 'Diagrama ou mídia');
+    add(item.steps?.length >= 2, tk('Passo a passo'));
+    add(item.cues?.length, tk('Dicas curtas'));
+    add(item.common_errors?.length, tk('Erros comuns e correção'));
+    add(item.diagrams?.length || item.media?.length, tk('Diagrama ou mídia'));
     if (item.kind === ITEM_KIND.DRILL) {
-      add(item.setup, 'Montagem');
-      add(item.success_criteria || item.metric?.type, 'Meta ou critério de sucesso');
-      add(item.variations?.easier || item.variations?.harder, 'Variações');
+      add(item.setup, tk('Montagem'));
+      add(item.success_criteria || item.metric?.type, tk('Meta ou critério de sucesso'));
+      add(item.variations?.easier || item.variations?.harder, tk('Variações'));
     }
     if (item.kind === ITEM_KIND.FUNDAMENTO || item.kind === ITEM_KIND.JOGADA) {
       // O errado só ensina AO LADO do certo (sozinho, atrapalha).
       const certos = (item.positioning || []).filter((p) => p.type === 'certo').length;
       const errados = (item.positioning || []).filter((p) => p.type === 'errado').length;
-      add(certos > 0 && errados > 0 && certos >= errados, 'Certo e errado lado a lado');
-      add(item.when_to_use, 'Quando usar');
+      add(certos > 0 && errados > 0 && certos >= errados, tk('Certo e errado lado a lado'));
+      add(item.when_to_use, tk('Quando usar'));
     }
-    if (item.kind === ITEM_KIND.FUNDAMENTO) add(item.technique?.checkpoints?.length, 'Técnica ponto a ponto');
-    if (item.kind === ITEM_KIND.FISICO) add(item.sets || item.reps, 'Séries e repetições');
+    if (item.kind === ITEM_KIND.FUNDAMENTO) add(item.technique?.checkpoints?.length, tk('Técnica ponto a ponto'));
+    if (item.kind === ITEM_KIND.FISICO) add(item.sets || item.reps, tk('Séries e repetições'));
   }
   const ok = checks.filter((c) => c.ok).length;
   return { score: ok, total: checks.length, missing: checks.filter((c) => !c.ok).map((c) => c.label) };
@@ -252,15 +253,15 @@ export function itemQuality(item = {}) {
 /** Texto curto de duração/jogadores para o cartão. */
 export function itemMetaLine(item = {}) {
   const partes = [];
-  if (item.duration_min) partes.push(`${item.duration_min} min`);
+  if (item.duration_min) partes.push(t('{n} min', { n: item.duration_min }));
   if (item.players_min) {
     partes.push(item.players_max && item.players_max !== item.players_min
-      ? `${item.players_min}–${item.players_max} jogadores`
-      : `${item.players_min} jogador${item.players_min > 1 ? 'es' : ''}`);
+      ? t('{min}–{max} jogadores', { min: item.players_min, max: item.players_max })
+      : tn(item.players_min, '{n} jogador', '{n} jogadores'));
   }
   if (item.level_min) {
-    const fmt = (n) => Number(n).toFixed(1).replace('.', ',');
-    partes.push(item.level_max && item.level_max !== item.level_min ? `nível ${fmt(item.level_min)}–${fmt(item.level_max)}` : `nível ${fmt(item.level_min)}+`);
+    const fmt = (n) => fmtNumero(n, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    partes.push(item.level_max && item.level_max !== item.level_min ? t('nível {min}–{max}', { min: fmt(item.level_min), max: fmt(item.level_max) }) : t('nível {min}+', { min: fmt(item.level_min) }));
   }
   return partes.join(' · ');
 }

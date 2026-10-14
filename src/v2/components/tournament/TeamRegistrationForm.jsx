@@ -34,6 +34,7 @@ import {
 import {
   useRegisterTeam, useUpdateTeamRoster, useTeamRegistrations,
 } from '@/modules/tournament/hooks/useTeams';
+import { t, fmtLista } from '@/core/i18n';
 
 /** Gênero competitivo declarado no perfil público do diretório. */
 function athleteGender(profile) {
@@ -70,12 +71,12 @@ function RosterSlot({
           <>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-ink">{slot.label}</div>
-              <div className="text-xs text-gray-500">Vaga livre</div>
+              <div className="text-xs text-gray-500">{t('Vaga livre')}</div>
             </div>
             <V2Button size="sm" variant="ghost" onClick={isOpen ? onClose : onOpen}>
-              <Search className="h-4 w-4" /> Escolher
+              <Search className="h-4 w-4" /> {t('Escolher')}
             </V2Button>
-            <V2Button size="sm" variant="ghost" onClick={onGuest}>Convidado</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={onGuest}>{t('Convidado')}</V2Button>
           </>
         ) : (
           <>
@@ -87,8 +88,8 @@ function RosterSlot({
                   value={value.name}
                   onChange={(e) => onGuestName(e.target.value)}
                   maxLength={60}
-                  placeholder="Nome do convidado"
-                  aria-label={`${slot.label} — nome do convidado`}
+                  placeholder={t('Nome do convidado')}
+                  aria-label={t('{label} — nome do convidado', { label: slot.label })}
                   className="w-full rounded-xl border border-gray-200 bg-paper-pure px-3 py-2 text-sm text-ink outline-none focus:ring-4 focus:ring-gray-100"
                 />
               ) : (
@@ -96,14 +97,14 @@ function RosterSlot({
               )}
               <div className="truncate text-xs text-gray-500">
                 {slot.label}
-                {isGuest ? ' · convidado (sem conta)' : ''}
-                {value.level ? ` · nível ${value.level}` : ''}
+                {isGuest ? t(' · convidado (sem conta)') : ''}
+                {value.level ? t('· nível {level}', { level: value.level }) : ''}
               </div>
             </div>
             <button
               type="button"
               onClick={onClear}
-              aria-label={`Liberar ${slot.label}`}
+              aria-label={t('Liberar {label}', { label: slot.label })}
               className="rounded-full p-1.5 text-gray-400 hover:bg-white hover:text-red-500"
             >
               <X className="h-4 w-4" />
@@ -120,8 +121,8 @@ function RosterSlot({
               autoFocus
               value={term}
               onChange={(e) => onTerm(e.target.value)}
-              placeholder="Buscar atleta por nome ou cidade…"
-              aria-label={`Buscar atleta para ${slot.label}`}
+              placeholder={t('Buscar atleta por nome ou cidade…')}
+              aria-label={t('Buscar atleta para {label}', { label: slot.label })}
               className="w-full rounded-2xl border border-gray-200 bg-paper-pure py-2.5 pl-9 pr-3 text-sm text-ink outline-none focus:ring-4 focus:ring-gray-100"
             />
           </div>
@@ -130,14 +131,13 @@ function RosterSlot({
               /* ⚠️ Sugerir “Convidado” numa falha cria um convidado para quem
                  JÁ tem conta — e a equipe nasce sem o vínculo com o perfil. */
               <p className="p-3 text-center text-xs text-amber-700">
-                A lista de atletas não carregou — não dá para saber se essa pessoa já
-                tem conta. Tente de novo antes de incluir como convidado.
+                {t('A lista de atletas não carregou — não dá para saber se essa pessoa já tem conta. Tente de novo antes de incluir como convidado.')}
               </p>
             ) : candidates.length === 0 ? (
               <p className="p-3 text-center text-xs text-gray-500">
                 {term.trim()
-                  ? 'Nenhum atleta disponível com esse nome. Use “Convidado” para incluir quem não tem conta.'
-                  : 'Digite para buscar entre os atletas cadastrados.'}
+                  ? t('Nenhum atleta disponível com esse nome. Use “Convidado” para incluir quem não tem conta.')
+                  : t('Digite para buscar entre os atletas cadastrados.')}
               </p>
             ) : candidates.map((profile) => {
               const uid = profile.uid || profile.id;
@@ -262,12 +262,12 @@ export default function TeamRegistrationForm({
 
   async function handleSave() {
     if (!teamName.trim()) {
-      toast.error('Dê um nome à equipe.');
+      toast.error(t('Dê um nome à equipe.'));
       return;
     }
     const roster = validateTeamRoster(members, config);
     if (!roster.valid) {
-      toast.error(roster.errors[0] || 'Elenco incompleto.');
+      toast.error(roster.errors[0] || t('Elenco incompleto.'));
       return;
     }
     const clash = validateTeamAgainstExisting({
@@ -282,66 +282,66 @@ export default function TeamRegistrationForm({
         await updateMutation.mutateAsync({
           regId: editingTeam.id, input: { team_name: teamName, members }, modality,
         });
-        toast.success('Equipe atualizada.');
+        toast.success(t('Equipe atualizada.'));
       } else {
         await registerMutation.mutateAsync({
           tournament, modality, input: { team_name: teamName, members },
         });
-        toast.success('Equipe inscrita!');
+        toast.success(t('Equipe inscrita!'));
       }
       onDone?.();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar a equipe.');
+      toast.error(err.message || t('Não foi possível salvar a equipe.'));
     }
   }
 
   const missingHint = config.gender === TEAM_GENDER.MIXED
-    ? [
-        progress.missingMale > 0 ? `${progress.missingMale} masculina(s)` : null,
-        progress.missingFemale > 0 ? `${progress.missingFemale} feminina(s)` : null,
-      ].filter(Boolean).join(' e ')
-    : `${progress.missing} vaga(s)`;
+    ? fmtLista([
+        progress.missingMale > 0 ? t('{n} masculina(s)', { n: progress.missingMale }) : null,
+        progress.missingFemale > 0 ? t('{n} feminina(s)', { n: progress.missingFemale }) : null,
+      ].filter(Boolean))
+    : t('{missing} vaga(s)', { missing: progress.missing });
 
   return (
     <div className="space-y-4">
       {/* O que a modalidade exige — a regra que o elenco precisa cumprir. */}
       <div className="flex flex-wrap gap-1.5">
-        <V2Badge tone="acid">Equipe {TEAM_GENDER_LABELS[config.gender]?.toLowerCase()}</V2Badge>
-        <V2Badge tone="neutral">{config.team_size} atletas</V2Badge>
+        <V2Badge tone="acid">{t('Equipe')} {TEAM_GENDER_LABELS[config.gender]?.toLowerCase()}</V2Badge>
+        <V2Badge tone="neutral">{t('{team_size} atletas', { team_size: config.team_size })}</V2Badge>
         {config.gender === TEAM_GENDER.MIXED && (
           <V2Badge tone="neutral">{config.male_slots}M + {config.female_slots}F</V2Badge>
         )}
-        <V2Badge tone="neutral">{(config.etapas || []).length} etapas/confronto</V2Badge>
+        <V2Badge tone="neutral">{t('{n} etapas/confronto', { n: (config.etapas || []).length })}</V2Badge>
         <V2Badge tone="neutral">
-          {config.win_rule === TEAM_WIN_RULE.BEST_OF ? `Melhor de ${config.win_target}` : 'Todas as etapas'}
+          {config.win_rule === TEAM_WIN_RULE.BEST_OF ? t('Melhor de {win_target}', { win_target: config.win_target }) : t('Todas as etapas')}
         </V2Badge>
       </div>
 
-      <V2Field label="Nome da equipe" htmlFor="team-name" required hint="É como a equipe aparece nos confrontos e na classificação.">
+      <V2Field label={t('Nome da equipe')} htmlFor="team-name" required hint={t('É como a equipe aparece nos confrontos e na classificação.')}>
         <V2Input
           id="team-name"
           value={teamName}
           onChange={(e) => setTeamName(e.target.value)}
           maxLength={80}
-          placeholder="Ex.: Fera do Ataque"
+          placeholder={t('Ex.: Fera do Ataque')}
         />
       </V2Field>
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm font-semibold text-ink">
-            Elenco ({progress.filled}/{progress.required})
+            {t('Elenco ({filled}/{required})', { filled: progress.filled, required: progress.required })}
           </span>
           <div className="flex items-center gap-2">
             {mySlotIndex >= 0 && (
               <V2Button size="sm" variant="ghost" onClick={addSelf}>
-                <UserPlus className="h-4 w-4" /> Sou eu
+                <UserPlus className="h-4 w-4" /> {t('Sou eu')}
               </V2Button>
             )}
             <span className={cn('text-xs font-semibold', progress.complete ? 'text-green-600' : 'text-gray-500')}>
               {progress.complete ? (
-                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Elenco completo</span>
-              ) : `Faltam ${missingHint}`}
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> {t('Elenco completo')}</span>
+              ) : t('Faltam {missingHint}', { missingHint })}
             </span>
           </div>
         </div>
@@ -367,7 +367,7 @@ export default function TeamRegistrationForm({
           ))}
           {slots.length === 0 && (
             <p className="text-xs text-red-500">
-              A modalidade ainda não define o tamanho da equipe. Peça ao organizador para revisar a configuração.
+              {t('A modalidade ainda não define o tamanho da equipe. Peça ao organizador para revisar a configuração.')}
             </p>
           )}
         </div>
@@ -377,10 +377,10 @@ export default function TeamRegistrationForm({
       {initial.extras.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           <div className="flex items-center gap-1.5 font-semibold">
-            <AlertTriangle className="h-3.5 w-3.5" /> A composição da modalidade mudou
+            <AlertTriangle className="h-3.5 w-3.5" /> {t('A composição da modalidade mudou')}
           </div>
           <p className="mt-1">
-            {initial.extras.map((m) => m.name).join(', ')} não cabe(m) nas vagas atuais e sai(em) do elenco ao salvar.
+            {initial.extras.map((m) => m.name).join(', ')} {t('não cabe(m) nas vagas atuais e sai(em) do elenco ao salvar.')}
           </p>
         </div>
       )}
@@ -393,10 +393,10 @@ export default function TeamRegistrationForm({
 
       <div className="flex flex-wrap justify-end gap-2">
         {(onCancel || onDone) && (
-          <V2Button variant="ghost" onClick={onCancel || onDone} disabled={saving}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onCancel || onDone} disabled={saving}>{t('Cancelar')}</V2Button>
         )}
         <V2Button onClick={handleSave} disabled={saving || !progress.complete || problems.length > 0}>
-          {saving ? 'Salvando…' : isEditing ? 'Salvar equipe' : 'Inscrever equipe'}
+          {saving ? t('Salvando…') : isEditing ? t('Salvar equipe') : t('Inscrever equipe')}
         </V2Button>
       </div>
     </div>

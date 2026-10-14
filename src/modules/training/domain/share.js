@@ -10,10 +10,11 @@
  * (`shared_uids`); indicar um item público não muda o item.
  */
 
+import { t, tk } from '@/core/i18n';
 import { isPubliclyListed, VISIBILITY } from './visibility.js';
 
 export const SHARE_KIND = Object.freeze({ INDICACAO: 'indicacao', ALUNO: 'aluno' });
-export const SHARE_KIND_LABELS = Object.freeze({ indicacao: 'Indicação', aluno: 'Do seu professor' });
+export const SHARE_KIND_LABELS = Object.freeze({ indicacao: tk('Indicação'), aluno: tk('Do seu professor') });
 export const SHARE_NOTE_MAX = 500;
 export const SHARE_DONE_NOTE_MAX = 300;
 export const MAX_RECIPIENTS = 30;
@@ -38,16 +39,16 @@ export function needsSharedAccess(item = {}, { kind } = {}) {
  * @returns {{ ok: boolean, reason: string }}
  */
 export function canShareItem(item = {}, { uid } = {}) {
-  if (!uid) return { ok: false, reason: 'Entre na sua conta.' };
-  if (item.legacy) return { ok: false, reason: 'Este conteúdo antigo não pode ser compartilhado por aqui.' };
+  if (!uid) return { ok: false, reason: t('Entre na sua conta.') };
+  if (item.legacy) return { ok: false, reason: t('Este conteúdo antigo não pode ser compartilhado por aqui.') };
   // A cópia travada (de um conteúdo que não estava aberto a quem copiou) fica
   // com quem copiou — a regra recusa indicar ou enviar.
   if (item.author_uid === uid && item.derived_from?.locked) {
-    return { ok: false, reason: 'Esta cópia é de um conteúdo exclusivo e fica só com você.' };
+    return { ok: false, reason: t('Esta cópia é de um conteúdo exclusivo e fica só com você.') };
   }
   if (item.author_uid === uid) return { ok: true, reason: '' };
   if (isPubliclyListed(item)) return { ok: true, reason: '' };
-  return { ok: false, reason: 'Só dá para indicar os seus itens ou os públicos da biblioteca.' };
+  return { ok: false, reason: t('Só dá para indicar os seus itens ou os públicos da biblioteca.') };
 }
 
 /** Monta os documentos de compartilhamento para cada destinatário. */
@@ -95,9 +96,9 @@ export function dueLabel(dueDate, today) {
   if (!dueDate) return '';
   const d = (s) => new Date(`${s}T12:00:00`);
   const diff = Math.round((d(dueDate) - d(today)) / 86400000);
-  if (diff === 0) return 'para hoje';
-  if (diff === 1) return 'para amanhã';
-  if (diff < 0) return diff === -1 ? 'era para ontem' : `era para ${-diff} dias atrás`;
+  if (diff === 0) return t('para hoje');
+  if (diff === 1) return t('para amanhã');
+  if (diff < 0) return diff === -1 ? t('era para ontem') : t('era para {n} dias atrás', { n: -diff });
   const [, m, dd] = dueDate.split('-');
-  return `até ${dd}/${m}`;
+  return t('até {data}', { data: `${dd}/${m}` });
 }

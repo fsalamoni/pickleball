@@ -31,6 +31,7 @@ import { TOURNAMENT_STAGE_TYPE, TOURNAMENT_STAGE_TYPE_LABELS } from './constants
 import { americanoMatchCount } from './draw.js';
 import { etapaGroupSizes } from './americanoEtapas.js';
 import { buildNextPhaseEntrants } from './phaseProgression.js';
+import { t, tn } from '@/core/i18n';
 
 /**
  * Confere se cada grupo comporta o formato escolhido.
@@ -42,36 +43,36 @@ import { buildNextPhaseEntrants } from './phaseProgression.js';
  */
 export function phaseDrawIssues(phase, groups, { isTeam = false } = {}) {
   const issues = [];
-  const unidade = isTeam ? 'equipe(s)' : 'atleta(s)';
+  const unidade = isTeam ? t('equipe(s)') : t('atleta(s)');
   // Americano em etapas: os grupos são do próprio formato (refeitos a cada
   // etapa), então o que se confere é o TOTAL de atletas, não cada grupo.
   if (phase?.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
     const todos = (groups || []).flatMap((g) => g.entrants || []);
-    if (isTeam) issues.push('o Americano em etapas é individual e não vale para modalidades de equipes');
+    if (isTeam) issues.push(t('o Americano em etapas é individual e não vale para modalidades de equipes'));
     if (todos.some((e) => (e.members || [e.id]).length !== 1)) {
-      issues.push('o Americano em etapas é individual: cada participante precisa ser um atleta, não uma dupla formada');
+      issues.push(t('o Americano em etapas é individual: cada participante precisa ser um atleta, não uma dupla formada'));
     }
     if (!etapaGroupSizes(todos.length, phase.max_per_group)) {
-      issues.push(`com ${todos.length} atleta(s) os grupos do Americano não fecham (eles fecham com 4, 5, 8, 9, 12, 13… atletas)`);
+      issues.push(t('com {n} atleta(s) os grupos do Americano não fecham (eles fecham com 4, 5, 8, 9, 12, 13… atletas)', { n: todos.length }));
     }
     return issues;
   }
   (groups || []).forEach((g) => {
     const n = (g.entrants || []).length;
-    const name = g.name || 'único';
+    const name = g.name || t('único');
     if (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO) {
       if (n < 4) {
-        issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e o Americano exige ao menos 4`);
+        issues.push(t('o grupo "{name}" ficaria com {n} atleta(s), e o Americano exige ao menos 4', { name, n }));
       } else if (!americanoMatchCount(n).exact) {
         issues.push(
-          `o grupo "${name}" ficaria com ${n} atletas, número incompatível com o Americano `
-          + '(use 4, 5, 8, 9, 12, 13, 16, 17…)',
+          t('o grupo "{name}" ficaria com {n} atletas, número incompatível com o Americano ', { name, n })
+          + t('(use 4, 5, 8, 9, 12, 13, 16, 17…)'),
         );
       }
     } else if (phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO) {
-      if (n < 4) issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e o Mexicano exige ao menos 4`);
+      if (n < 4) issues.push(t('o grupo "{name}" ficaria com {n} atleta(s), e o Mexicano exige ao menos 4', { name, n }));
     } else if (n < 2) {
-      issues.push(`o grupo "${name}" ficaria com ${n} ${unidade}, e são necessários ao menos 2`);
+      issues.push(t('o grupo "{name}" ficaria com {n} {unidade}, e são necessários ao menos 2', { name, n, unidade }));
     }
   });
   return issues;
@@ -110,7 +111,7 @@ export function previewPhaseAdvance(params) {
     directEntrants = [], isTeam = false,
   } = params;
 
-  const nextLabel = TOURNAMENT_STAGE_TYPE_LABELS[nextPhase?.type] || nextPhase?.type || 'próxima fase';
+  const nextLabel = TOURNAMENT_STAGE_TYPE_LABELS[nextPhase?.type] || nextPhase?.type || t('próxima fase');
   const vazio = {
     ok: false,
     entrants: [],
@@ -131,9 +132,9 @@ export function previewPhaseAdvance(params) {
       blocked: {
         code: 'sem_classificados',
         message: isTeam
-          ? 'Nenhuma equipe se classificou para a próxima fase. Revise quantas equipes cada grupo classifica.'
-          : 'Nenhum atleta se classificou para a próxima fase. Revise o critério de classificação — '
-            + 'em especial "por gênero", que exige o gênero informado em cada inscrição.',
+          ? t('Nenhuma equipe se classificou para a próxima fase. Revise quantas equipes cada grupo classifica.')
+          : t('Nenhum atleta se classificou para a próxima fase. Revise o critério de classificação — ')
+            + t('em especial "por gênero", que exige o gênero informado em cada inscrição.'),
       },
     };
   }
@@ -167,9 +168,9 @@ export function previewPhaseAdvance(params) {
       ok: false,
       blocked: {
         code: 'formato_incompativel',
-        message: `Não é possível gerar a próxima fase (${nextLabel}): ${issues[0]}. `
-          + 'Ajuste os classificados por grupo na fase anterior, o número de grupos desta fase '
-          + 'ou escolha outro formato.',
+        message: t('Não é possível gerar a próxima fase ({nextLabel}): {v2}. ', { nextLabel, v2: issues[0] })
+          + t('Ajuste os classificados por grupo na fase anterior, o número de grupos desta fase ')
+          + t('ou escolha outro formato.'),
       },
     };
   }
@@ -184,11 +185,12 @@ export function previewPhaseAdvance(params) {
  * @returns {string}
  */
 export function describePhaseAdvance(preview, { isTeam = false } = {}) {
-  if (!preview || preview.counts.total === 0) return 'Ninguém se classificou ainda.';
-  const unidade = isTeam ? 'equipe' : 'atleta';
-  const plural = preview.counts.total === 1 ? unidade : `${unidade}s`;
-  const partes = [`${preview.counts.qualifiers} classificado(s)`];
-  if (preview.counts.wildcards > 0) partes.push(`${preview.counts.wildcards} por repescagem`);
-  if (preview.counts.directs > 0) partes.push(`${preview.counts.directs} entrando direto`);
-  return `${preview.counts.total} ${plural} na ${preview.nextLabel.toLowerCase()}: ${partes.join(', ')}.`;
+  if (!preview || preview.counts.total === 0) return t('Ninguém se classificou ainda.');
+  const partes = [t('{qualifiers} classificado(s)', { qualifiers: preview.counts.qualifiers })];
+  if (preview.counts.wildcards > 0) partes.push(t('{wildcards} por repescagem', { wildcards: preview.counts.wildcards }));
+  if (preview.counts.directs > 0) partes.push(t('{directs} entrando direto', { directs: preview.counts.directs }));
+  const params = { fase: preview.nextLabel.toLowerCase(), partes: partes.join(', ') };
+  return isTeam
+    ? tn(preview.counts.total, '{n} equipe na {fase}: {partes}.', '{n} equipes na {fase}: {partes}.', params)
+    : tn(preview.counts.total, '{n} atleta na {fase}: {partes}.', '{n} atletas na {fase}: {partes}.', params);
 }

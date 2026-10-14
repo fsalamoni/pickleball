@@ -27,6 +27,7 @@ import {
 } from '../domain/shared_booking.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
+import { t } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 const str = (v) => String(v ?? '').trim();
@@ -82,9 +83,9 @@ async function courtSchedulesFor(arenaId, courtId) {
  * }} input
  */
 export async function createSharedBooking(arena, user, profile, input) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
-  if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+  if (!isValidSlot(slot)) throw new Error(t('Preencha a data e um horário válido (fim depois do início).'));
 
   const existing = await listArenaBookings(arena.id);
   // Quadra escolhida OU atribuição automática de uma quadra livre.
@@ -93,7 +94,7 @@ export async function createSharedBooking(arena, user, profile, input) {
     const courts = await listArenaCourts(arena.id).catch(() => []);
     const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
     courtId = pickAvailableCourt(courts, slot, existing, allSchedules);
-    if (!courtId) throw new Error('Nenhuma quadra livre neste horário. Escolha outro horário.');
+    if (!courtId) throw new Error(t('Nenhuma quadra livre neste horário. Escolha outro horário.'));
   }
   const v = validateBookingRequest({
     date: slot.date, start_time: slot.start, end_time: slot.end,
@@ -174,14 +175,14 @@ export async function createSharedBooking(arena, user, profile, input) {
 
 async function reload(bookingId) {
   const snap = await getDoc(doc(db, COL.bookings, bookingId));
-  if (!snap.exists()) throw new Error('Reserva não encontrada.');
+  if (!snap.exists()) throw new Error(t('Reserva não encontrada.'));
   return { id: snap.id, ...snap.data() };
 }
 
 /** Aceita um convite (opcionalmente com sub-horário próprio). */
 export async function acceptBookingInvite(booking, user, profile, { slot = null } = {}) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!isInvited(booking, user.uid)) throw new Error('Você não tem convite para esta reserva.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!isInvited(booking, user.uid)) throw new Error(t('Você não tem convite para esta reserva.'));
   // Garante que o participante tem nome/foto atualizados.
   let participants = booking.participants.map((p) => (
     p.athlete_id === user.uid
@@ -202,8 +203,8 @@ export async function acceptBookingInvite(booking, user, profile, { slot = null 
 
 /** Recusa um convite. */
 export async function declineBookingInvite(booking, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!isInvited(booking, user.uid)) throw new Error('Você não tem convite para esta reserva.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!isInvited(booking, user.uid)) throw new Error(t('Você não tem convite para esta reserva.'));
   const participants = declineInvite(booking.participants, user.uid);
   await updateDoc(doc(db, COL.bookings, booking.id), { ...denorm(participants), updated_at: serverTimestamp() });
   await createAuditLog({ action: 'arena_booking_invite_declined', actor: user, details: { booking_id: booking.id } });
@@ -211,8 +212,8 @@ export async function declineBookingInvite(booking, user) {
 
 /** Ingressa numa reserva aberta como co-proprietário. */
 export async function joinOpenBooking(booking, user, profile, { slot = null } = {}) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!canJoin(booking, user.uid)) throw new Error('Não é possível entrar nesta reserva.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!canJoin(booking, user.uid)) throw new Error(t('Não é possível entrar nesta reserva.'));
   const participants = joinOpen(booking.participants, {
     athlete_id: user.uid, name: displayName(user, profile), photo: profile?.photo_url || user.photoURL || '',
   }, slot);
@@ -229,7 +230,7 @@ export async function joinOpenBooking(booking, user, profile, { slot = null } = 
 
 /** Sai da reserva (remove-se dos participantes). Qualquer participante pode. */
 export async function leaveBooking(booking, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const participants = removeParticipant(booking.participants || [], user.uid);
   const patch = { ...denorm(participants), updated_at: serverTimestamp() };
   // Se era o dono original, transfere a titularidade nominal para outro dono.
@@ -242,8 +243,8 @@ export async function leaveBooking(booking, user) {
 
 /** Convida mais atletas (qualquer co-proprietário ou o professor). */
 export async function inviteToBooking(booking, user, invitees = []) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!isOwner(booking, user.uid) && booking.coach_id !== user.uid) throw new Error('Sem permissão para convidar.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!isOwner(booking, user.uid) && booking.coach_id !== user.uid) throw new Error(t('Sem permissão para convidar.'));
   let participants = booking.participants || [];
   invitees.forEach((inv) => { participants = addInvite(participants, inv, user.uid); });
   await updateDoc(doc(db, COL.bookings, booking.id), { ...denorm(participants), updated_at: serverTimestamp() });
@@ -275,14 +276,14 @@ export async function inviteToBooking(booking, user, invitees = []) {
  * @param {{ byManager?: boolean }} opts
  */
 export async function addBookingResponsibles(booking, actor, { invites = [], names = [] } = {}, { byManager = false } = {}) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (!byManager && !isOwner(booking, actor.uid) && booking.coach_id !== actor.uid) {
-    throw new Error('Sem permissão para adicionar responsáveis.');
+    throw new Error(t('Sem permissão para adicionar responsáveis.'));
   }
   const cleanInvites = (invites || []).filter((i) => i && i.athlete_id);
   const cleanNames = (names || []).map(str).filter(Boolean);
   if (cleanInvites.length === 0 && cleanNames.length === 0) {
-    throw new Error('Escolha ao menos um atleta ou informe um nome.');
+    throw new Error(t('Escolha ao menos um atleta ou informe um nome.'));
   }
   let participants = seedParticipantsFromOwner(booking);
   cleanInvites.forEach((inv) => { participants = addInvite(participants, inv, actor.uid); });
@@ -316,14 +317,14 @@ export async function addBookingResponsibles(booking, actor, { invites = [], nam
  * por índice na lista de participantes. Gestor/admin (byManager) ou co-proprietário.
  */
 export async function removeBookingResponsible(booking, actor, { athlete_id = null, index = null } = {}, { byManager = false } = {}) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (!byManager && !isOwner(booking, actor.uid) && booking.coach_id !== actor.uid) {
-    throw new Error('Sem permissão para remover responsáveis.');
+    throw new Error(t('Sem permissão para remover responsáveis.'));
   }
   let participants = seedParticipantsFromOwner(booking);
   if (athlete_id) participants = removeParticipant(participants, athlete_id);
   else if (index != null) participants = removeParticipantAt(participants, index);
-  else throw new Error('Informe o responsável a remover.');
+  else throw new Error(t('Informe o responsável a remover.'));
 
   const patch = { ...denorm(participants), updated_at: serverTimestamp() };
   // Se removeu o dono nominal, promove outro co-proprietário a titular.
@@ -340,8 +341,8 @@ export async function removeBookingResponsible(booking, actor, { athlete_id = nu
 
 /** Edita configurações da reserva (aberta/limite/notas). Qualquer co-proprietário. */
 export async function updateSharedBookingSettings(booking, user, patch = {}) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!isOwner(booking, user.uid) && booking.coach_id !== user.uid) throw new Error('Sem permissão para editar.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!isOwner(booking, user.uid) && booking.coach_id !== user.uid) throw new Error(t('Sem permissão para editar.'));
   const update = { updated_at: serverTimestamp() };
   if (patch.open_join !== undefined) update.open_join = patch.open_join === true;
   if (patch.max_participants !== undefined) update.max_participants = num(patch.max_participants);
@@ -352,10 +353,10 @@ export async function updateSharedBookingSettings(booking, user, patch = {}) {
 
 /** Define/atualiza o sub-horário de um participante (self ou, se dono, de outro). */
 export async function setParticipantSlot(booking, user, athleteId, slot) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const target = athleteId || user.uid;
   if (target !== user.uid && !isOwner(booking, user.uid) && booking.coach_id !== user.uid) {
-    throw new Error('Sem permissão.');
+    throw new Error(t('Sem permissão.'));
   }
   const participants = (booking.participants || []).map((p) => (
     p.athlete_id === target ? { ...p, slot: slot && slot.start && slot.end ? { start: str(slot.start), end: str(slot.end) } : null } : p

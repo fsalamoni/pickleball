@@ -128,7 +128,7 @@ describe('⭐ a página da arena marca as seções dos módulos', () => {
   });
   for (const rotulo of ['Dia de jogo', 'Jogos abertos', 'Reservar', 'Torneios da casa', 'Aulas e professores', 'Preços', 'Promoções', 'Planos', 'Loja', 'Avaliações']) {
     it(`marca "${rotulo}"`, () => {
-      expect(src).toContain(`data-secao-arena="${rotulo}"`);
+      expect(src).toContain(`data-secao-arena={t('${rotulo}')}`);
     });
   }
   it('todo id de seção é único', () => {

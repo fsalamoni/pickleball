@@ -13,6 +13,7 @@ import {
   ACCEPTED_IMAGE_ATTR,
 } from '@/core/services/storageService';
 import { V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 const MAX_IMAGES_PER_POST = 10;
 
@@ -20,13 +21,13 @@ function timeAgo(ms) {
   if (!ms) return '';
   const diff = Date.now() - ms;
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'agora';
-  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 1) return t('agora');
+  if (minutes < 60) return t('há {n} min', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
+  if (hours < 24) return t('há {n} h', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `há ${days} d`;
-  return new Date(ms).toLocaleDateString('pt-BR');
+  if (days < 30) return t('há {n} d', { n: days });
+  return fmtData(new Date(ms), {});
 }
 
 export default function V2ClubFeed({ clubId, isAdmin }) {
@@ -46,7 +47,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
     if (files.length === 0) return;
     const remaining = MAX_IMAGES_PER_POST - pendingImages.length;
     if (remaining <= 0) {
-      toast.error(`Máximo de ${MAX_IMAGES_PER_POST} imagens por publicação.`);
+      toast.error(t('Máximo de {n} imagens por publicação.', { n: MAX_IMAGES_PER_POST }));
       return;
     }
     setUploading(true);
@@ -56,7 +57,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
           const meta = await uploadImage(file, { uid: user?.uid, folder: 'posts' });
           setPendingImages((prev) => [...prev, meta]);
         } catch (err) {
-          toast.error(err.message || `Falha ao enviar ${file.name}.`);
+          toast.error(err.message || t('Falha ao enviar {arquivo}.', { arquivo: file.name }));
         }
       }
     } finally {
@@ -77,7 +78,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
       setContent('');
       setPendingImages([]);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível publicar.');
+      toast.error(err.message || t('Não foi possível publicar.'));
     }
   };
 
@@ -88,7 +89,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
       (confirmDelete.images || []).forEach((img) => img.path && deleteImage(img.path));
       setConfirmDelete(null);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
+      toast.error(err.message || t('Não foi possível remover.'));
     }
   };
 
@@ -103,7 +104,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
             onChange={(e) => setContent(e.target.value)}
             rows={3}
             maxLength={2000}
-            placeholder="Compartilhe um aviso, combine um jogo, comemore uma vitória…"
+            placeholder={t('Compartilhe um aviso, combine um jogo, comemore uma vitória…')}
             className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
           />
 
@@ -115,7 +116,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
                   <button
                     type="button"
                     onClick={() => removePending(image)}
-                    aria-label="Remover imagem"
+                    aria-label={t('Remover imagem')}
                     className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -135,14 +136,14 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
               disabled={uploading || pendingImages.length >= MAX_IMAGES_PER_POST}
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-              {uploading ? 'Enviando…' : 'Adicionar imagens'}
+              {uploading ? t('Enviando…') : t('Adicionar imagens')}
             </V2Button>
             <V2Button type="submit" size="sm" disabled={!canSubmit}>
-              <Send className="h-4 w-4" /> {createPost.isPending ? 'Publicando…' : 'Publicar'}
+              <Send className="h-4 w-4" /> {createPost.isPending ? t('Publicando…') : t('Publicar')}
             </V2Button>
           </div>
           <p className="text-xs text-gray-500">
-            Até {MAX_IMAGES_PER_POST} imagens por publicação, {maxImageMb()} MB cada. As imagens podem ser baixadas em alta qualidade pelos membros.
+            {t('Até {n} imagens por publicação, {mb} MB cada. As imagens podem ser baixadas em alta qualidade pelos membros.', { n: MAX_IMAGES_PER_POST, mb: maxImageMb() })}
           </p>
         </form>
       </V2Surface>
@@ -150,7 +151,7 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
       {isLoading ? (
         <div className="space-y-3">{[1, 2].map((i) => <V2Skeleton key={i} className="h-24 rounded-4xl" />)}</div>
       ) : posts.length === 0 ? (
-        <V2EmptyState icon={MessageSquare} title="Mural vazio" description="Seja o primeiro a publicar algo para o clube." />
+        <V2EmptyState icon={MessageSquare} title={t('Mural vazio')} description={t('Seja o primeiro a publicar algo para o clube.')} />
       ) : (
         <div className="space-y-3">
           {posts.map((post) => {
@@ -184,9 +185,9 @@ export default function V2ClubFeed({ clubId, isAdmin }) {
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={(v) => !v && setConfirmDelete(null)}
-        title="Remover publicação"
-        description="Tem certeza que deseja remover esta publicação do mural? As imagens anexadas também serão removidas."
-        confirmLabel="Remover"
+        title={t('Remover publicação')}
+        description={t('Tem certeza que deseja remover esta publicação do mural? As imagens anexadas também serão removidas.')}
+        confirmLabel={t('Remover')}
         destructive
         loading={deletePost.isPending}
         onConfirm={handleDelete}
@@ -201,9 +202,9 @@ function PostImages({ images }) {
 
   const handleDownload = (image) => {
     toast.promise(downloadImage(image.url, image.name), {
-      loading: 'Baixando imagem…',
-      success: 'Download iniciado.',
-      error: 'Não foi possível baixar a imagem.',
+      loading: t('Baixando imagem…'),
+      success: t('Download iniciado.'),
+      error: t('Não foi possível baixar a imagem.'),
     });
   };
 
@@ -222,8 +223,8 @@ function PostImages({ images }) {
           <button
             type="button"
             onClick={() => handleDownload(image)}
-            aria-label="Baixar imagem"
-            title="Baixar em alta qualidade"
+            aria-label={t('Baixar imagem')}
+            title={t('Baixar em alta qualidade')}
             className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity hover:bg-ink/90 group-hover:opacity-100"
           >
             <Download className="h-4 w-4" />

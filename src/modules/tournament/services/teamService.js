@@ -27,6 +27,7 @@ import {
   buildConfrontationRankingMirror, validateTeamAgainstExisting, buildTeamGroupTables,
   matchToConfrontation, isTeamConfrontation,
 } from '../domain/teamFormat.js';
+import { t } from '@/core/i18n';
 
 const REG_COL = 'tournament_registrations';
 const MATCH_COL = 'tournament_matches';
@@ -54,10 +55,10 @@ function normalizeMember(m) {
  * @param {object} args.actor
  */
 export async function registerTeam({ tournament, modality, input, actor } = {}) {
-  if (!modality?.team_config) throw new Error('Modalidade não é de equipes.');
+  if (!modality?.team_config) throw new Error(t('Modalidade não é de equipes.'));
   const members = (input?.members || []).map(normalizeMember);
   const check = validateTeamRoster(members, modality.team_config);
-  if (!check.valid) throw new Error(check.errors[0] || 'Elenco inválido.');
+  if (!check.valid) throw new Error(check.errors[0] || t('Elenco inválido.'));
 
   const teamName = String(input?.team_name || '').trim().slice(0, 80) || 'Equipe';
   // Nome único na modalidade e nenhum atleta com conta em duas equipes.
@@ -95,11 +96,11 @@ export async function registerTeam({ tournament, modality, input, actor } = {}) 
 
 /** Edita o nome/elenco de uma equipe já inscrita (revalida o elenco). */
 export async function updateTeamRoster(regId, { team_name, members }, modality, actor) {
-  if (!regId) throw new Error('Inscrição inválida.');
-  if (!modality?.team_config) throw new Error('Modalidade não é de equipes.');
+  if (!regId) throw new Error(t('Inscrição inválida.'));
+  if (!modality?.team_config) throw new Error(t('Modalidade não é de equipes.'));
   const normalized = (members || []).map(normalizeMember);
   const check = validateTeamRoster(normalized, modality.team_config);
-  if (!check.valid) throw new Error(check.errors[0] || 'Elenco inválido.');
+  if (!check.valid) throw new Error(check.errors[0] || t('Elenco inválido.'));
   const existing = await listTeamRegistrations(modality.id);
   const clash = validateTeamAgainstExisting({
     teamName: team_name != null ? String(team_name) : '',
@@ -147,10 +148,10 @@ export async function recordConfrontation(matchId, {
   etapas = [], config = {}, rosterAIds = [], rosterBIds = [], genderById = new Map(), validate = false,
   tournamentId = null, modalityId = null, eventTitle = '', validUids = [],
 } = {}, actor) {
-  if (!matchId) throw new Error('Confronto inválido.');
+  if (!matchId) throw new Error(t('Confronto inválido.'));
   if (validate) {
     const v = validateConfrontationLineup(etapas, config, rosterAIds, rosterBIds, genderById);
-    if (!v.valid) throw new Error(v.errors[0] || 'Escalação inválida.');
+    if (!v.valid) throw new Error(v.errors[0] || t('Escalação inválida.'));
   }
   const result = computeConfrontationResult({ etapas }, config);
   const updates = {
@@ -225,9 +226,9 @@ export async function getMatch(id) {
  * @returns {Array} classificação ordenada
  */
 export function buildTeamStandingsFromMatches({ matches = [], teamRegistrations = [], config = {} } = {}) {
-  const teamIds = teamRegistrations.map((t) => t.id);
+  const teamIds = teamRegistrations.map((tt) => tt.id);
   const confrontations = matches.filter(isTeamConfrontation).map(matchToConfrontation);
-  const nameById = new Map(teamRegistrations.map((t) => [t.id, t.team_name || t.label || 'Equipe']));
+  const nameById = new Map(teamRegistrations.map((tt) => [tt.id, tt.team_name || tt.label || 'Equipe']));
   return buildTeamRanking(confrontations, teamIds, config).map((row) => ({
     ...row,
     team_name: nameById.get(row.team_id) || 'Equipe',

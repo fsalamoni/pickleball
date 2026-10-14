@@ -17,8 +17,9 @@ import { buildRanking } from './ranking.js';
 import { resolveStageScoringConfig } from './scoring.js';
 import { normalizePhases } from './phases.js';
 import { isMatchDecided, matchLoserIds, matchWinnerIds } from './progression.js';
-import { MATCH_STATUS, TOURNAMENT_STAGE_TYPE } from './constants.js';
+import { MATCH_STATUS, TOURNAMENT_STAGE_TYPE, rotulos } from './constants.js';
 import { isModalityComplete } from './tournamentCompletion.js';
+import { t, tk } from '@/core/i18n';
 
 function idsDoLado(m, lado) {
   const ids = m?.[lado === 'a' ? 'side_a_ids' : 'side_b_ids'];
@@ -107,14 +108,14 @@ export function registrationPeople(reg) {
   if (reg.kind === 'team') {
     return (reg.members || [])
       .filter((m) => m?.user_id)
-      .map((m) => ({ user_id: m.user_id, name: m.name || 'Atleta', photo_url: m.photo_url || null }));
+      .map((m) => ({ user_id: m.user_id, name: m.name || t('Atleta'), photo_url: m.photo_url || null }));
   }
   return [
     reg.player_a_user_id || reg.user_id
-      ? { user_id: reg.player_a_user_id || reg.user_id, name: reg.player_a_name || 'Atleta', photo_url: reg.player_a_photo || null }
+      ? { user_id: reg.player_a_user_id || reg.user_id, name: reg.player_a_name || t('Atleta'), photo_url: reg.player_a_photo || null }
       : null,
     reg.player_b_user_id
-      ? { user_id: reg.player_b_user_id, name: reg.player_b_name || 'Atleta', photo_url: reg.player_b_photo || null }
+      ? { user_id: reg.player_b_user_id, name: reg.player_b_name || t('Atleta'), photo_url: reg.player_b_photo || null }
       : null,
   ].filter(Boolean);
 }
@@ -126,20 +127,20 @@ export function registrationPeople(reg) {
 export function registrationAllPeople(reg) {
   if (!reg) return [];
   if (reg.kind === 'team') {
-    return (reg.members || []).map((m) => ({ user_id: m?.user_id || null, name: m?.name || 'Atleta', photo_url: m?.photo_url || null }));
+    return (reg.members || []).map((m) => ({ user_id: m?.user_id || null, name: m?.name || t('Atleta'), photo_url: m?.photo_url || null }));
   }
-  const a = { user_id: reg.player_a_user_id || reg.user_id || null, name: reg.player_a_name || 'Atleta', photo_url: reg.player_a_photo || null };
+  const a = { user_id: reg.player_a_user_id || reg.user_id || null, name: reg.player_a_name || t('Atleta'), photo_url: reg.player_a_photo || null };
   const b = reg.player_b_name || reg.player_b_user_id
-    ? { user_id: reg.player_b_user_id || null, name: reg.player_b_name || 'Atleta', photo_url: reg.player_b_photo || null }
+    ? { user_id: reg.player_b_user_id || null, name: reg.player_b_name || t('Atleta'), photo_url: reg.player_b_photo || null }
     : null;
   return [a, b].filter(Boolean);
 }
 
 /** O nome de cada degrau — singular e plural, sem gênero marcado onde dá. */
 export const PODIUM_PLACE = Object.freeze({
-  1: { um: 'Campeão', varios: 'Campeões', fem: 'Campeã', femVarias: 'Campeãs', curto: 'Ouro' },
-  2: { um: 'Vice-campeão', varios: 'Vice-campeões', fem: 'Vice-campeã', femVarias: 'Vice-campeãs', curto: 'Prata' },
-  3: { um: '3º lugar', varios: '3º lugar', fem: '3º lugar', femVarias: '3º lugar', curto: 'Bronze' },
+  1: rotulos({ um: tk('Campeão'), varios: tk('Campeões'), fem: tk('Campeã'), femVarias: tk('Campeãs'), curto: tk('Ouro') }),
+  2: rotulos({ um: tk('Vice-campeão'), varios: tk('Vice-campeões'), fem: tk('Vice-campeã'), femVarias: tk('Vice-campeãs'), curto: tk('Prata') }),
+  3: rotulos({ um: tk('3º lugar'), varios: tk('3º lugar'), fem: tk('3º lugar'), femVarias: tk('3º lugar'), curto: tk('Bronze') }),
 });
 
 /**

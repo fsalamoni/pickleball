@@ -18,6 +18,7 @@
  */
 
 import { REGISTRATION_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 const DEFAULT_COPY_SUFFIX = ' (cópia)';
 
@@ -136,7 +137,7 @@ export function duplicatedRegistrationFields(reg = {}) {
 export function validateDuplicationPlan(plan = {}) {
   const anyModality = (plan.modalitySelections || []).some((m) => m.selected);
   if (!plan.copyDefinitions && !anyModality) {
-    return 'Selecione ao menos as definições ou uma modalidade para duplicar.';
+    return t('Selecione ao menos as definições ou uma modalidade para duplicar.');
   }
   return null;
 }

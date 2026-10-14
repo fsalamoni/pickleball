@@ -40,6 +40,7 @@ import { useAssignPlayGroups, useSetPlayGroups } from '@/modules/games/hooks/use
 import { PlayGroupBadge, NoGroupBadge } from './PlayGroupBadge';
 import GroupEditor from './GroupEditor';
 import DistributePanel from './DistributePanel';
+import { t, tn } from '@/core/i18n';
 
 const NOVO = '__novo__';
 
@@ -54,13 +55,11 @@ const STATUS = {
   idle: { Icone: Info, classe: 'text-gray-500' },
 };
 
-const plural = (n, um, varios) => (n === 1 ? um : varios);
-
 function contagem(ex) {
-  const partes = [`${ex.total} ${plural(ex.total, 'pessoa', 'pessoas')}`];
-  if (ex.waiting > 0) partes.push(`${ex.waiting} aguardando`);
-  if (ex.inCourt > 0) partes.push(`${ex.inCourt} em quadra`);
-  if (ex.pausados > 0) partes.push(`${ex.pausados} ${plural(ex.pausados, 'pausado', 'pausados')}`);
+  const partes = [tn(ex.total, '{n} pessoa', '{n} pessoas')];
+  if (ex.waiting > 0) partes.push(t('{n} aguardando', { n: ex.waiting }));
+  if (ex.inCourt > 0) partes.push(t('{n} em quadra', { n: ex.inCourt }));
+  if (ex.pausados > 0) partes.push(tn(ex.pausados, '{n} pausado', '{n} pausados'));
   return partes.join(' · ');
 }
 
@@ -116,7 +115,7 @@ function LinhaDoGrupo({
         {politica !== GROUP_POLICY.QUEUE && (
           <span
             className="w-5 text-xs font-bold tabular-nums text-gray-500"
-            title={politica === GROUP_POLICY.PRIORITY ? 'Posição na prioridade' : 'Posição no revezamento'}
+            title={politica === GROUP_POLICY.PRIORITY ? t('Posição na prioridade') : t('Posição no revezamento')}
           >
             {indice + 1}º
           </span>
@@ -127,16 +126,16 @@ function LinhaDoGrupo({
           <div className="flex items-center">
             {total > 1 && (
               <>
-                <BotaoIcone label={`Subir ${group.name} na lista`} onClick={() => onMover(-1)} disabled={salvando || indice === 0}>
+                <BotaoIcone label={t('Subir {nome} na lista', { nome: group.name })} onClick={() => onMover(-1)} disabled={salvando || indice === 0}>
                   <ArrowUp aria-hidden="true" className="h-4 w-4" />
                 </BotaoIcone>
-                <BotaoIcone label={`Descer ${group.name} na lista`} onClick={() => onMover(1)} disabled={salvando || indice === total - 1}>
+                <BotaoIcone label={t('Descer {nome} na lista', { nome: group.name })} onClick={() => onMover(1)} disabled={salvando || indice === total - 1}>
                   <ArrowDown aria-hidden="true" className="h-4 w-4" />
                 </BotaoIcone>
               </>
             )}
             <BotaoIcone
-              label={group.paused ? `Retomar o grupo ${group.name}` : `Pausar o grupo ${group.name}`}
+              label={group.paused ? t('Retomar o grupo {nome}', { nome: group.name }) : t('Pausar o grupo {nome}', { nome: group.name })}
               onClick={onPausar}
               disabled={salvando}
             >
@@ -144,10 +143,10 @@ function LinhaDoGrupo({
                 ? <PlayCircle aria-hidden="true" className="h-4 w-4" />
                 : <PauseCircle aria-hidden="true" className="h-4 w-4" />}
             </BotaoIcone>
-            <BotaoIcone label={`Editar o grupo ${group.name}`} onClick={onEditar} disabled={salvando}>
+            <BotaoIcone label={t('Editar o grupo {nome}', { nome: group.name })} onClick={onEditar} disabled={salvando}>
               <Pencil aria-hidden="true" className="h-4 w-4" />
             </BotaoIcone>
-            <BotaoIcone label={`Remover o grupo ${group.name}`} onClick={onRemover} disabled={salvando} className="hover:text-red-600">
+            <BotaoIcone label={t('Remover o grupo {nome}', { nome: group.name })} onClick={onRemover} disabled={salvando} className="hover:text-red-600">
               <Trash2 aria-hidden="true" className="h-4 w-4" />
             </BotaoIcone>
           </div>
@@ -164,29 +163,28 @@ function Convite({ podeConfigurar, salvando, onModelo, onZero }) {
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="text-base font-bold text-ink">Divida o Play em grupos</h4>
+        <h4 className="text-base font-bold text-ink">{t('Divida o Play em grupos')}</h4>
         <p className="mt-1 text-sm leading-6 text-gray-600">
-          Cada grupo tem a sua fila e joga entre si — por nível, por tipo de dupla ou só uma turma. As
-          quadras, a ordem e as regras de cada um você ajusta depois.
+          {t('Cada grupo tem a sua fila e joga entre si — por nível, por tipo de dupla ou só uma turma. As quadras, a ordem e as regras de cada um você ajusta depois.')}
         </p>
       </div>
       <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white">
-        {PLAY_GROUP_TEMPLATES.map((t) => (
-          <li key={t.id} className="flex flex-wrap items-center gap-3 p-3">
+        {PLAY_GROUP_TEMPLATES.map((modelo) => (
+          <li key={modelo.id} className="flex flex-wrap items-center gap-3 p-3">
             <div className="min-w-[12rem] flex-1">
-              <p className="text-sm font-semibold text-ink">{t.label}</p>
-              <p className="text-xs leading-5 text-gray-500">{t.description}</p>
+              <p className="text-sm font-semibold text-ink">{t(modelo.label)}</p>
+              <p className="text-xs leading-5 text-gray-500">{t(modelo.description)}</p>
             </div>
-            <V2Button size="sm" variant="ghost" onClick={() => onModelo(t.id)} disabled={salvando}>
-              Usar este
+            <V2Button size="sm" variant="ghost" onClick={() => onModelo(modelo.id)} disabled={salvando}>
+              {t('Usar este')}
             </V2Button>
           </li>
         ))}
       </ul>
       <p className="text-xs text-gray-500">
-        Prefere montar do zero?{' '}
+        {t('Prefere montar do zero?')}{' '}
         <button type="button" onClick={onZero} className="font-semibold text-ink underline underline-offset-2">
-          Criar um grupo
+          {t('Criar um grupo')}
         </button>
         .
       </p>
@@ -198,13 +196,13 @@ function Politica({ valor, podeConfigurar, salvando, onChange }) {
   if (!podeConfigurar) {
     return (
       <p className="text-xs leading-5 text-gray-500">
-        <strong className="font-semibold text-ink">{GROUP_POLICY_LABELS[valor]}.</strong> {GROUP_POLICY_HINTS[valor]}
+        <strong className="font-semibold text-ink">{t(GROUP_POLICY_LABELS[valor])}.</strong> {t(GROUP_POLICY_HINTS[valor])}
       </p>
     );
   }
   return (
-    <div role="radiogroup" aria-label="Quando mais de um grupo quer a quadra" className="space-y-2">
-      <p className="text-sm font-bold text-ink">Quando mais de um grupo quer a quadra</p>
+    <div role="radiogroup" aria-label={t('Quando mais de um grupo quer a quadra')} className="space-y-2">
+      <p className="text-sm font-bold text-ink">{t('Quando mais de um grupo quer a quadra')}</p>
       {Object.values(GROUP_POLICY).map((p) => (
         <label key={p} className="flex cursor-pointer items-start gap-2.5">
           <input
@@ -216,8 +214,8 @@ function Politica({ valor, podeConfigurar, salvando, onChange }) {
             className="mt-1 h-4 w-4 accent-[#0B0F19]"
           />
           <span>
-            <span className="text-sm font-semibold text-ink">{GROUP_POLICY_LABELS[p]}</span>
-            <span className="block text-xs leading-5 text-gray-500">{GROUP_POLICY_HINTS[p]}</span>
+            <span className="text-sm font-semibold text-ink">{t(GROUP_POLICY_LABELS[p])}</span>
+            <span className="block text-xs leading-5 text-gray-500">{t(GROUP_POLICY_HINTS[p])}</span>
           </span>
         </label>
       ))}
@@ -266,7 +264,7 @@ export default function PlayGroupsCard({
       if (sucesso) toast.success(sucesso);
       return true;
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar os grupos.');
+      toast.error(err?.message || t('Não foi possível salvar os grupos.'));
       return false;
     }
   };
@@ -275,7 +273,7 @@ export default function PlayGroupsCard({
     const lista = editando === NOVO
       ? [...config.groups, grupo]
       : config.groups.map((g) => (g.id === grupo.id ? grupo : g));
-    const ok = await salvar(lista, config.policy, editando === NOVO ? 'Grupo criado.' : 'Grupo salvo.');
+    const ok = await salvar(lista, config.policy, editando === NOVO ? t('Grupo criado.') : t('Grupo salvo.'));
     if (ok) setEditando(null);
   };
 
@@ -295,17 +293,17 @@ export default function PlayGroupsCard({
   const aplicarDistribuicao = async (assignments) => {
     try {
       const r = await assign.mutateAsync(assignments);
-      toast.success(`${r.updated} ${plural(r.updated, 'pessoa colocada', 'pessoas colocadas')} nos grupos.`);
+      toast.success(tn(r.updated, '{n} pessoa colocada nos grupos.', '{n} pessoas colocadas nos grupos.'));
       setDistribuindo(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível distribuir.');
+      toast.error(err?.message || t('Não foi possível distribuir.'));
     }
   };
 
   const confirmarRemocao = async () => {
     const g = removendo;
     setRemovendo(null);
-    if (g) await salvar(config.groups.filter((x) => x.id !== g.id), config.policy, `Grupo ${g.name} removido.`);
+    if (g) await salvar(config.groups.filter((x) => x.id !== g.id), config.policy, t('Grupo {nome} removido.', { nome: g.name }));
   };
 
   const semGrupo = exDe(null);
@@ -313,16 +311,16 @@ export default function PlayGroupsCard({
   const noMaximo = config.groups.length >= PLAY_GROUP_LIMITS.MAX_GROUPS;
   const resumo = temGrupos
     ? [
-      `${config.groups.length} ${plural(config.groups.length, 'grupo', 'grupos')}`,
-      `${prontos} ${plural(prontos, 'pronto', 'prontos')}`,
-      semGrupo ? `${semGrupo.total} sem grupo` : null,
+      tn(config.groups.length, '{n} grupo', '{n} grupos'),
+      tn(prontos, '{n} pronto', '{n} prontos'),
+      semGrupo ? t('{n} sem grupo', { n: semGrupo.total }) : null,
     ].filter(Boolean).join(' · ')
-    : 'Nenhum grupo ainda';
+    : t('Nenhum grupo ainda');
 
   return (
     <V2CollapsibleCard
       icon={UsersRound}
-      title="Grupos"
+      title={t('Grupos')}
       count={temGrupos ? config.groups.length : null}
       dica="dia-de-jogo-grupos"
       sectionId={GAME_DAY_SECTION.PLAY_GROUPS}
@@ -331,12 +329,12 @@ export default function PlayGroupsCard({
         <>
           {canManage && (
             <V2Button size="sm" variant="ghost" onClick={() => setDistribuindo((v) => !v)} data-dica="dia-de-jogo-grupos-distribuir">
-              <Wand2 className="mr-1.5 h-4 w-4" aria-hidden="true" /> Distribuir por nível
+              <Wand2 className="mr-1.5 h-4 w-4" aria-hidden="true" /> {t('Distribuir por nível')}
             </V2Button>
           )}
           {podeConfigurar && (
             <V2Button size="sm" variant="ghost" onClick={() => setEditando(NOVO)} disabled={noMaximo} data-dica="dia-de-jogo-grupos-novo">
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" /> Novo grupo
+              <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" /> {t('Novo grupo')}
             </V2Button>
           )}
         </>
@@ -357,7 +355,7 @@ export default function PlayGroupsCard({
           <Convite
             podeConfigurar={podeConfigurar}
             salvando={salvando}
-            onModelo={(id) => salvar(buildTemplateGroups(id), config.policy, 'Grupos criados — ajuste o que precisar.')}
+            onModelo={(id) => salvar(buildTemplateGroups(id), config.policy, t('Grupos criados — ajuste o que precisar.'))}
             onZero={() => setEditando(NOVO)}
           />
         )}
@@ -381,7 +379,7 @@ export default function PlayGroupsCard({
                 valor={config.policy}
                 podeConfigurar={podeConfigurar}
                 salvando={salvando}
-                onChange={(p) => salvar(config.groups, p, 'Política atualizada.')}
+                onChange={(p) => salvar(config.groups, p, t('Política atualizada.'))}
               />
             )}
 
@@ -411,7 +409,7 @@ export default function PlayGroupsCard({
                   onPausar={() => salvar(
                     config.groups.map((x) => (x.id === g.id ? { ...x, paused: !x.paused } : x)),
                     config.policy,
-                    g.paused ? `Grupo ${g.name} de volta ao sorteio.` : `Grupo ${g.name} em pausa.`,
+                    g.paused ? t('Grupo {nome} de volta ao sorteio.', { nome: g.name }) : t('Grupo {nome} em pausa.', { nome: g.name }),
                   )}
                   onMover={(d) => mover(i, d)}
                   onRemover={() => setRemovendo(g)}
@@ -439,15 +437,15 @@ export default function PlayGroupsCard({
                     <span className="min-w-0 flex-1 text-xs tabular-nums text-gray-500">{contagem(semGrupo)}</span>
                   </div>
                   <p className="mt-2 text-xs leading-5 text-gray-500">
-                    Jogam entre si, em qualquer quadra livre — e podem completar um grupo que tenha esse ajuste.
-                    {canManage && ' Use “Distribuir por nível” para colocá-los nos grupos.'}
+                    {t('Jogam entre si, em qualquer quadra livre — e podem completar um grupo que tenha esse ajuste.')}
+                    {canManage && ` ${t('Use “Distribuir por nível” para colocá-los nos grupos.')}`}
                   </p>
                 </li>
               )}
             </ul>
 
             {avisos.length > 0 && (
-              <ul className="space-y-1.5" aria-label="Avisos sobre os grupos">
+              <ul className="space-y-1.5" aria-label={t('Avisos sobre os grupos')}>
                 {avisos.map((a) => (
                   <li
                     key={a.key}
@@ -467,7 +465,7 @@ export default function PlayGroupsCard({
 
             {!podeConfigurar && (
               <p className="text-2xs leading-5 text-gray-500">
-                Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos. Você move as pessoas entre eles.
+                {t('Só quem criou o dia, ou foi nomeado administrador dele, cria, edita e pausa os grupos. Você move as pessoas entre eles.')}
               </p>
             )}
           </>
@@ -479,8 +477,8 @@ export default function PlayGroupsCard({
         onOpenChange={(v) => !v && setRemovendo(null)}
         destructive
         title={`Remover o grupo ${removendo?.name ?? ''}?`}
-        description="Quem está nele fica sem grupo e passa a jogar na fila de quem está sem grupo. Nenhuma partida é apagada."
-        confirmLabel="Remover grupo"
+        description={t('Quem está nele fica sem grupo e passa a jogar na fila de quem está sem grupo. Nenhuma partida é apagada.')}
+        confirmLabel={t('Remover grupo')}
         onConfirm={confirmarRemocao}
       />
     </V2CollapsibleCard>

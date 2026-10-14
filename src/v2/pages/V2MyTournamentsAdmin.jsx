@@ -12,12 +12,13 @@ import { useMyManagedTournaments } from '@/modules/tournament/hooks/useTournamen
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
-function whenText(t) {
-  const raw = t?.starts_at || t?.start_date || t?.created_at;
+function whenText(tt) {
+  const raw = tt?.starts_at || tt?.start_date || tt?.created_at;
   const d = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
   if (!d || Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return fmtData(d, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export default function V2MyTournamentsAdmin() {
@@ -33,11 +34,11 @@ export default function V2MyTournamentsAdmin() {
     <div className="mx-auto max-w-[900px] space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink">{userHubOn ? 'Torneios que organizo' : 'Meus torneios'}</h1>
-          <p className="mt-1 text-sm text-gray-500">Gerencie os torneios que você criou.</p>
+          <h1 className="font-display text-2xl font-bold text-ink">{userHubOn ? t('Torneios que organizo') : t('Meus torneios')}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t('Gerencie os torneios que você criou.')}</p>
         </div>
         <V2Button asChild size="sm">
-          <Link to="/torneios/criar"><Plus className="h-4 w-4" /> Criar torneio</Link>
+          <Link to="/torneios/criar"><Plus className="h-4 w-4" /> {t('Criar torneio')}</Link>
         </V2Button>
       </div>
 
@@ -46,8 +47,8 @@ export default function V2MyTournamentsAdmin() {
       ) : isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os seus torneios"
-            description="Os torneios que você organiza continuam lá — tente de novo."
+            title={t('Não foi possível carregar os seus torneios')}
+            description={t('Os torneios que você organiza continuam lá — tente de novo.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -55,34 +56,34 @@ export default function V2MyTournamentsAdmin() {
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
-            title="Você ainda não criou torneios"
-            description="Crie um torneio para gerenciá-lo aqui."
-            action={<V2Button asChild><Link to="/torneios/criar">Criar torneio</Link></V2Button>}
+            title={t('Você ainda não criou torneios')}
+            description={t('Crie um torneio para gerenciá-lo aqui.')}
+            action={<V2Button asChild><Link to="/torneios/criar">{t('Criar torneio')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
         <div className="space-y-3">
-          {tournaments.map((t) => {
-            const when = whenText(t);
+          {tournaments.map((tt) => {
+            const when = whenText(tt);
             return (
-              <V2Surface key={t.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <V2Surface key={tt.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-gray-400" />
-                    <span className="truncate font-semibold text-ink">{t.name}</span>
-                    {t.archived && <V2Badge tone="neutral">Arquivado</V2Badge>}
+                    <span className="truncate font-semibold text-ink">{tt.name}</span>
+                    {tt.archived && <V2Badge tone="neutral">{t('Arquivado')}</V2Badge>}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
-                    <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[t.status] || t.status || '—'}</V2Badge>
+                    <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[tt.status] || tt.status || '—'}</V2Badge>
                     {when && <span>· {when}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <V2Button asChild size="sm" variant="ghost">
-                    <Link to={`/torneios/${t.id}`}><Eye className="h-4 w-4" /> Público</Link>
+                    <Link to={`/torneios/${tt.id}`}><Eye className="h-4 w-4" /> {t('Público')}</Link>
                   </V2Button>
                   <V2Button asChild size="sm">
-                    <Link to={`/torneios/${t.id}/gerenciar`}><Settings2 className="h-4 w-4" /> Gerenciar</Link>
+                    <Link to={`/torneios/${tt.id}/gerenciar`}><Settings2 className="h-4 w-4" /> {t('Gerenciar')}</Link>
                   </V2Button>
                 </div>
               </V2Surface>

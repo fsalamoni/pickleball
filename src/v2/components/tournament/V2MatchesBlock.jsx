@@ -36,19 +36,20 @@ import { confrontationSnapshot, buildEtapaDrafts, computeEtapaResult } from '@/m
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
 import PodiumBlock from '@/v2/components/trophies/PodiumBlock';
+import { t, fmtData } from '@/core/i18n';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 function roundLabel(m) {
-  if (m.third_place) return '3º lugar';
-  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
-  if (m.bracket === 'wb') return `Venc. R${m.round}`;
-  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  if (m.third_place) return t('3º lugar');
+  if (m.bracket === 'gf') return m.round === 2 ? t('Final (reset)') : t('Grande final');
+  if (m.bracket === 'wb') return t('Venc. R{round}', { round: m.round });
+  if (m.bracket === 'lb') return t('Repesc. R{round}', { round: m.round });
   return m.round;
 }
 
@@ -65,7 +66,7 @@ function MatchSide({ people = [], fallback, win }) {
     <div className={cn('space-y-1', win ? 'font-bold text-green-700' : 'font-medium text-ink')}>
       {list.map((person, index) => (
         <div key={`${person.name || 'p'}-${index}`} className="flex items-center gap-1.5">
-          {win && index === 0 && <Trophy className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Vencedor" />}
+          {win && index === 0 && <Trophy className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label={t('Vencedor')} />}
           <UserAvatar name={person.name} photoUrl={person.photoUrl} size="xs" />
           <span className="leading-tight">{person.name}</span>
         </div>
@@ -79,7 +80,7 @@ function scoreCell(m) {
   if (m.team_confrontation) {
     const total = (Array.isArray(m.etapas) ? m.etapas : []).length;
     if (!total) return '—';
-    return `${Number(m.etapa_wins_a) || 0}–${Number(m.etapa_wins_b) || 0} etapas`;
+    return t('{v1}–{v2} etapas', { v1: Number(m.etapa_wins_a) || 0, v2: Number(m.etapa_wins_b) || 0 });
   }
   if ((m.games || []).length === 0) return '—';
   return m.games.map((g, i) => <span key={i} className="mr-2">{g.a}-{g.b}</span>);
@@ -136,7 +137,7 @@ export function TeamConfrontationScore({ match, config }) {
           </div>
         ))}
       </div>
-      <div className="text-2xs font-bold text-ink">{winsA}–{winsB} etapas</div>
+      <div className="text-2xs font-bold text-ink">{t('{winsA}–{winsB} etapas', { winsA, winsB })}</div>
     </div>
   );
 }
@@ -164,8 +165,8 @@ function MatchesTable({
 
   function undoStart(id) {
     revertInProgress.mutate(id, {
-      onSuccess: () => toast.success('Início desfeito — jogo voltou para “Agendado”.'),
-      onError: (err) => toast.error(err?.message || 'Não foi possível desfazer o início.'),
+      onSuccess: () => toast.success(t('Início desfeito — jogo voltou para “Agendado”.')),
+      onError: (err) => toast.error(err?.message || t('Não foi possível desfazer o início.')),
     });
   }
 
@@ -186,16 +187,16 @@ function MatchesTable({
         <table className="w-full text-sm">
           <thead className="bg-paper text-gray-500">
             <tr className="text-left">
-              {hasGroups && <th className="px-3 py-2 font-semibold">Grupo</th>}
-              <th className="px-3 py-2 font-semibold">Rod.</th>
-              {hasSchedule && <th className="px-3 py-2 font-semibold">Quadra</th>}
-              {hasSchedule && <th className="px-3 py-2 font-semibold">Horário</th>}
-              <th className="px-3 py-2 font-semibold">Lado A</th>
-              <th className="px-3 py-2 text-center font-semibold">vs</th>
-              <th className="px-3 py-2 font-semibold">Lado B</th>
-              <th className="px-3 py-2 font-semibold">Placar</th>
-              <th className="px-3 py-2 font-semibold">Status</th>
-              {canEdit && <th className="px-3 py-2 text-right font-semibold">Resultado</th>}
+              {hasGroups && <th className="px-3 py-2 font-semibold">{t('Grupo')}</th>}
+              <th className="px-3 py-2 font-semibold">{t('Rod.')}</th>
+              {hasSchedule && <th className="px-3 py-2 font-semibold">{t('Quadra')}</th>}
+              {hasSchedule && <th className="px-3 py-2 font-semibold">{t('Horário')}</th>}
+              <th className="px-3 py-2 font-semibold">{t('Lado A')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t('vs')}</th>
+              <th className="px-3 py-2 font-semibold">{t('Lado B')}</th>
+              <th className="px-3 py-2 font-semibold">{t('Placar')}</th>
+              <th className="px-3 py-2 font-semibold">{t('Status')}</th>
+              {canEdit && <th className="px-3 py-2 text-right font-semibold">{t('Resultado')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -216,7 +217,7 @@ function MatchesTable({
                   {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
                   {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideAPeople} fallback={sideA} win={winA} /></td>
-                  <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-500">vs</td>
+                  <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-500">{t('vs')}</td>
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideBPeople} fallback={sideB} win={winB} /></td>
                   <td className="px-3 py-2 tabular-nums text-ink">
                     {m.team_confrontation && teamConfig
@@ -239,21 +240,21 @@ function MatchesTable({
                         <div className="inline-flex items-center gap-1">
                           {m.status === MATCH_STATUS.SCHEDULED && (
                             <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
-                              <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
+                              <Play className="h-3.5 w-3.5 mr-1" /> {t('Iniciar')}
                             </V2Button>
                           )}
                           {inProgress && (
-                            <V2Button size="sm" variant="ghost" onClick={() => undoStart(m.id)} disabled={revertInProgress.isPending} title="Voltar o jogo para “Agendado”">
-                              <Undo2 className="h-3.5 w-3.5 mr-1" /> Desfazer início
+                            <V2Button size="sm" variant="ghost" onClick={() => undoStart(m.id)} disabled={revertInProgress.isPending} title={t('Voltar o jogo para “Agendado”')}>
+                              <Undo2 className="h-3.5 w-3.5 mr-1" /> {t('Desfazer início')}
                             </V2Button>
                           )}
                           {courtsideOn && (
-                            <V2Button size="sm" variant="ghost" onClick={() => setCourtsideMatch(m)} title="Abrir placar ao vivo em tela cheia">
-                              <Monitor className="h-3.5 w-3.5 mr-1" /> Placar ao vivo
+                            <V2Button size="sm" variant="ghost" onClick={() => setCourtsideMatch(m)} title={t('Abrir placar ao vivo em tela cheia')}>
+                              <Monitor className="h-3.5 w-3.5 mr-1" /> {t('Placar ao vivo')}
                             </V2Button>
                           )}
                           <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
-                            <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar' : 'Lançar'}
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? t('Editar') : t('Lançar')}
                           </V2Button>
                         </div>
                       )}
@@ -283,7 +284,7 @@ function MatchesTable({
             <div key={m.id} className={cn('rounded-2xl border p-3', inProgress ? 'border-amber-200 bg-amber-50/70' : 'border-gray-100 bg-white')}>
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
                 {hasGroups && m.group && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{m.group}</span>}
-                <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">Rod. {roundLabel(m)}</span>
+                <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{t('Rod. {m}', { m: roundLabel(m) })}</span>
                 {hasSchedule && m.court && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium text-gray-600">{m.court}</span>}
                 {hasSchedule && m.scheduled_at && <span className="rounded-full bg-paper px-2 py-0.5 text-2xs font-medium tabular-nums text-gray-600">{formatMatchTime(m.scheduled_at)}</span>}
                 <V2Badge tone={statusTone(m.status)} className="ml-auto">{MATCH_STATUS_LABELS[m.status] || m.status}</V2Badge>
@@ -296,7 +297,7 @@ function MatchesTable({
                   ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.a).join('  ')}</span>}
                 </div>
                 <div className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-gray-300">
-                  <span className="h-px flex-1 bg-gray-100" />vs<span className="h-px flex-1 bg-gray-100" />
+                  <span className="h-px flex-1 bg-gray-100" />{t('vs')}<span className="h-px flex-1 bg-gray-100" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <MatchSide people={sideBPeople} fallback={sideB} win={winB} />
@@ -324,21 +325,21 @@ function MatchesTable({
                 <div className="mt-2 flex flex-wrap justify-end gap-1">
                   {m.status === MATCH_STATUS.SCHEDULED && (
                     <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
-                      <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
+                      <Play className="h-3.5 w-3.5 mr-1" /> {t('Iniciar')}
                     </V2Button>
                   )}
                   {inProgress && (
                     <V2Button size="sm" variant="ghost" onClick={() => undoStart(m.id)} disabled={revertInProgress.isPending}>
-                      <Undo2 className="h-3.5 w-3.5 mr-1" /> Desfazer início
+                      <Undo2 className="h-3.5 w-3.5 mr-1" /> {t('Desfazer início')}
                     </V2Button>
                   )}
                   {courtsideOn && (
                     <V2Button size="sm" variant="ghost" onClick={() => setCourtsideMatch(m)}>
-                      <Monitor className="h-3.5 w-3.5 mr-1" /> Placar ao vivo
+                      <Monitor className="h-3.5 w-3.5 mr-1" /> {t('Placar ao vivo')}
                     </V2Button>
                   )}
                   <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
-                    <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar resultado' : 'Lançar resultado'}
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? t('Editar resultado') : t('Lançar resultado')}
                   </V2Button>
                 </div>
               )}
@@ -417,37 +418,37 @@ function MatchesTable({
 function MatchActionsDialog({
   match, labelById, team, onClose, onStart, onUndoStart, onCourtside, onEdit, onLineup, onResult,
 }) {
-  const nome = (ids, raw) => (ids || []).map((id) => labelById.get(id) || id).join(' + ') || raw || 'A definir';
+  const nome = (ids, raw) => (ids || []).map((id) => labelById.get(id) || id).join(' + ') || raw || t('A definir');
   const finished = match.status === MATCH_STATUS.FINISHED || match.status === MATCH_STATUS.WALKOVER;
   const ladoVazio = !match.side_a_ids?.length || !match.side_b_ids?.length;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{match.third_place ? 'Disputa de 3º lugar' : `Jogo ${match.number || ''}`.trim()}</DialogTitle>
+          <DialogTitle>{match.third_place ? t('Disputa de 3º lugar') : `Jogo ${match.number || ''}`.trim()}</DialogTitle>
         </DialogHeader>
         <div className="space-y-1 rounded-2xl border border-gray-100 bg-paper p-3 text-sm">
           <div className="font-semibold text-ink">{nome(match.side_a_ids, match.side_a)}</div>
-          <div className="text-2xs font-semibold uppercase tracking-wider text-gray-500">contra</div>
+          <div className="text-2xs font-semibold uppercase tracking-wider text-gray-500">{t('contra')}</div>
           <div className="font-semibold text-ink">{nome(match.side_b_ids, match.side_b)}</div>
           <div className="pt-1"><V2Badge tone={statusTone(match.status)}>{MATCH_STATUS_LABELS[match.status] || match.status}</V2Badge></div>
         </div>
         {ladoVazio && !finished ? (
-          <p className="text-sm text-gray-500">O jogo ainda espera os dois lados. Ele fica pronto assim que os jogos anteriores terminarem.</p>
+          <p className="text-sm text-gray-500">{t('O jogo ainda espera os dois lados. Ele fica pronto assim que os jogos anteriores terminarem.')}</p>
         ) : team ? (
           <TeamMatchActions match={match} team={team} onLineup={onLineup} onResult={onResult} />
         ) : (
           <div className="flex flex-col gap-2">
             <V2Button onClick={onEdit}>
-              <Pencil className="mr-1 h-4 w-4" /> {finished ? 'Editar resultado' : 'Lançar resultado'}
+              <Pencil className="mr-1 h-4 w-4" /> {finished ? t('Editar resultado') : t('Lançar resultado')}
             </V2Button>
             {match.status === MATCH_STATUS.SCHEDULED && (
-              <V2Button variant="secondary" onClick={onStart}><Play className="mr-1 h-4 w-4" /> Iniciar jogo</V2Button>
+              <V2Button variant="secondary" onClick={onStart}><Play className="mr-1 h-4 w-4" /> {t('Iniciar jogo')}</V2Button>
             )}
             {match.status === MATCH_STATUS.IN_PROGRESS && (
-              <V2Button variant="secondary" onClick={onUndoStart}><Undo2 className="mr-1 h-4 w-4" /> Desfazer início</V2Button>
+              <V2Button variant="secondary" onClick={onUndoStart}><Undo2 className="mr-1 h-4 w-4" /> {t('Desfazer início')}</V2Button>
             )}
-            <V2Button variant="ghost" onClick={onCourtside}><Monitor className="mr-1 h-4 w-4" /> Placar ao vivo</V2Button>
+            <V2Button variant="ghost" onClick={onCourtside}><Monitor className="mr-1 h-4 w-4" /> {t('Placar ao vivo')}</V2Button>
           </div>
         )}
       </DialogContent>
@@ -464,7 +465,7 @@ function TeamMatchActions({ match, team, onLineup, onResult }) {
   const teamA = team.teamById.get(match.side_a_ids?.[0]);
   const teamB = team.teamById.get(match.side_b_ids?.[0]);
   if (!teamA || !teamB) {
-    return <span className="text-xs text-gray-500">Aguarda definição das equipes</span>;
+    return <span className="text-xs text-gray-500">{t('Aguarda definição das equipes')}</span>;
   }
   const snap = confrontationSnapshot(match, team.modality.team_config, {
     rosterASize: (teamA.members || []).length,
@@ -474,11 +475,11 @@ function TeamMatchActions({ match, team, onLineup, onResult }) {
     <div className="inline-flex flex-wrap items-center justify-end gap-1">
       <V2Button size="sm" variant="ghost" onClick={onLineup}>
         <Users className="mr-1 h-3.5 w-3.5" />
-        {snap.lineup.iniciada ? 'Editar escalação' : 'Iniciar partida'}
+        {snap.lineup.iniciada ? t('Editar escalação') : t('Iniciar partida')}
       </V2Button>
       <V2Button size="sm" variant="ghost" onClick={onResult}>
         <Pencil className="mr-1 h-3.5 w-3.5" />
-        {snap.result.etapasDecided > 0 ? 'Editar resultado' : 'Lançar resultado'}
+        {snap.result.etapasDecided > 0 ? t('Editar resultado') : t('Lançar resultado')}
       </V2Button>
     </div>
   );
@@ -500,7 +501,7 @@ function ScoreStepper({ value, onChange, label }) {
     <div className="flex items-center gap-1.5">
       <button
         type="button"
-        aria-label={`Diminuir ${label}`}
+        aria-label={t('Diminuir {label}', { label })}
         disabled={current <= 0}
         onClick={() => onChange(String(Math.max(0, current - 1)))}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-paper disabled:opacity-40"
@@ -518,7 +519,7 @@ function ScoreStepper({ value, onChange, label }) {
       />
       <button
         type="button"
-        aria-label={`Aumentar ${label}`}
+        aria-label={t('Aumentar {label}', { label })}
         onClick={() => onChange(String(current + 1))}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-paper"
       >
@@ -552,10 +553,10 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
               .filter((g) => Number.isFinite(g.a) && Number.isFinite(g.b)),
           };
       await recordMutation.mutateAsync({ matchId: match.id, payload });
-      toast.success('Resultado lançado.');
+      toast.success(t('Resultado lançado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Falha ao salvar.');
+      toast.error(err?.message || t('Falha ao salvar.'));
     }
   }
 
@@ -576,7 +577,7 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Lançar resultado</DialogTitle>
+          <DialogTitle>{t('Lançar resultado')}</DialogTitle>
         </DialogHeader>
 
         {/* Cabeçalho objetivo: lados + sets vencidos (quando há mais de 1 set) */}
@@ -602,15 +603,15 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
                 return (
                   <div key={i} className="rounded-2xl border border-gray-100 p-3">
                     {setsCount > 1 && (
-                      <div className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">Set {i + 1}</div>
+                      <div className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Set')} {i + 1}</div>
                     )}
                     <div className="flex items-center justify-between gap-2">
                       <div className={cn('rounded-lg px-1', aWins && 'bg-green-50')}>
-                        <ScoreStepper value={g.a} onChange={(v) => updateSet(i, 'a', v)} label={`${sideA} — Set ${i + 1}`} />
+                        <ScoreStepper value={g.a} onChange={(v) => updateSet(i, 'a', v)} label={t('{sideA} — Set {v2}', { sideA, v2: i + 1 })} />
                       </div>
                       <span className="shrink-0 text-sm font-medium text-gray-400">×</span>
                       <div className={cn('rounded-lg px-1', bWins && 'bg-green-50')}>
-                        <ScoreStepper value={g.b} onChange={(v) => updateSet(i, 'b', v)} label={`${sideB} — Set ${i + 1}`} />
+                        <ScoreStepper value={g.b} onChange={(v) => updateSet(i, 'b', v)} label={t('{sideB} — Set {v2}', { sideB, v2: i + 1 })} />
                       </div>
                     </div>
                   </div>
@@ -620,23 +621,23 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
           )}
 
           <div>
-            <Label>Walkover (WO) — opcional</Label>
+            <Label>{t('Walkover (WO) — opcional')}</Label>
             <V2Select
               className="h-10 px-3"
               value={walkover}
               onChange={(e) => setWalkover(e.target.value)}
             >
-              <option value="">— sem WO —</option>
-              <option value="a">WO para {sideA}</option>
-              <option value="b">WO para {sideB}</option>
+              <option value="">{t('— sem WO —')}</option>
+              <option value="a">{t('WO para {sideA}', { sideA })}</option>
+              <option value="b">{t('WO para {sideB}', { sideB })}</option>
             </V2Select>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>{t('Cancelar')}</Button>
           <Button onClick={handleSave} disabled={recordMutation.isPending}>
-            {recordMutation.isPending ? 'Salvando…' : 'Salvar'}
+            {recordMutation.isPending ? t('Salvando…') : t('Salvar')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -659,8 +660,8 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
   const [walkover, setWalkover] = useState(match.walkover || '');
   const recordMutation = useRecordMatchResult(modalityId, scoringConfig);
 
-  const sideA = match.side_a_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_a || 'Lado A';
-  const sideB = match.side_b_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_b || 'Lado B';
+  const sideA = match.side_a_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_a || t('Lado A');
+  const sideB = match.side_b_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_b || t('Lado B');
 
   const bump = (setIdx, side, delta) => setGames((arr) => arr.map((g, i) => (
     i === setIdx ? { ...g, [side]: Math.max(0, (Number(g[side]) || 0) + delta) } : g
@@ -672,10 +673,10 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
         ? { walkover, games: [] }
         : { walkover: null, games: games.map((g) => ({ a: Number(g.a) || 0, b: Number(g.b) || 0 })) };
       await recordMutation.mutateAsync({ matchId: match.id, payload });
-      toast.success('Resultado lançado.');
+      toast.success(t('Resultado lançado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Falha ao salvar.');
+      toast.error(err?.message || t('Falha ao salvar.'));
     }
   }
 
@@ -684,7 +685,7 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
       <div className="text-center text-lg font-bold text-white sm:text-2xl">{name}</div>
       {games.map((g, i) => (
         <div key={i} className="flex flex-col items-center gap-2">
-          {setsCount > 1 && <span className="text-xs uppercase tracking-widest text-white/50">Set {i + 1}</span>}
+          {setsCount > 1 && <span className="text-xs uppercase tracking-widest text-white/50">{t('Set')} {i + 1}</span>}
           <div className="font-display text-6xl font-bold text-acid tabular-nums sm:text-7xl">{g[side]}</div>
           <div className="flex gap-2">
             <button type="button" onClick={() => bump(i, side, -1)}
@@ -700,8 +701,8 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink p-4 sm:p-8">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold uppercase tracking-widest text-acid">Placar courtside</span>
-        <button onClick={onClose} className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Fechar">
+        <span className="text-sm font-bold uppercase tracking-widest text-acid">{t('Placar courtside')}</span>
+        <button onClick={onClose} className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label={t('Fechar')}>
           <X className="h-6 w-6" />
         </button>
       </div>
@@ -715,19 +716,19 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
       ) : (
         <div className="flex flex-1 items-center justify-center">
           <p className="text-2xl font-bold text-white">
-            WO — vitória de {walkover === 'a' ? sideA : sideB}
+            {t('WO — vitória de')} {walkover === 'a' ? sideA : sideB}
           </p>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button type="button" onClick={() => setWalkover(walkover === 'a' ? '' : 'a')}
-          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'a' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>WO Lado A</button>
+          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'a' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>{t('WO Lado A')}</button>
         <button type="button" onClick={() => setWalkover(walkover === 'b' ? '' : 'b')}
-          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'b' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>WO Lado B</button>
+          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'b' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>{t('WO Lado B')}</button>
         <button type="button" onClick={handleSave} disabled={recordMutation.isPending}
           className="rounded-full bg-acid px-8 py-2 text-sm font-bold text-ink disabled:opacity-60">
-          {recordMutation.isPending ? 'Salvando…' : 'Salvar resultado'}
+          {recordMutation.isPending ? t('Salvando…') : t('Salvar resultado')}
         </button>
       </div>
     </div>
@@ -768,7 +769,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   // a tabela abre os diálogos de escalação e de placar (nunca o modal de games,
   // que não se aplica a um confronto).
   const team = modality.team_config
-    ? { modality, teamById: new Map(teamRegistrations.map((t) => [t.id, t])) }
+    ? { modality, teamById: new Map(teamRegistrations.map((tt) => [tt.id, tt])) }
     : null;
 
   const phases = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
@@ -785,8 +786,8 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
 
   const doneCount = matches.filter((m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER).length;
   const subtitle = falhouJogos
-    ? 'Não foi possível carregar os jogos'
-    : (matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`);
+    ? t('Não foi possível carregar os jogos')
+    : (matches.length === 0 ? t('Nenhum jogo gerado ainda') : t('{doneCount}/{n} jogos concluídos', { doneCount, n: matches.length }));
 
   return (
     <V2Collapsible defaultOpen={false} persistId={`result:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
@@ -796,11 +797,11 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
         falhouJogos ? (
           <V2ErrorState
             inline
-            title="Não foi possível carregar os jogos"
-            description="Eles continuam lá — a conexão é que falhou."
+            title={t('Não foi possível carregar os jogos')}
+            description={t('Eles continuam lá — a conexão é que falhou.')}
             onRetry={recarregarJogos}
           />
-        ) : <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
+        ) : <p className="text-sm text-gray-500">{t('Nenhum jogo gerado ainda.')}</p>
       ) : (
         <div className="space-y-3">
           {byStage.map(([stageIndex, stageMatches]) => {
@@ -827,7 +828,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                 tone="nested"
                 defaultOpen={false}
                 persistId={`result:${modality.id}:fase:${stageIndex}`}
-                title={`Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`}
+                title={t('Fase {v1} · {v2}', { v1: stageIndex + 1, v2: TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || '' })}
                 badges={(
                   <>
                     <V2Badge tone="neutral">{formatScoringSummary(phaseScoring)}</V2Badge>
@@ -857,7 +858,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
 export function V2TournamentMatches({ tournament, isAdmin = false }) {
   const { data: modalities = [] } = useModalities(tournament.id);
   if (modalities.length === 0) {
-    return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Sem modalidades.</p></V2Surface>;
+    return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">{t('Sem modalidades.')}</p></V2Surface>;
   }
   return (
     <div className="space-y-4">

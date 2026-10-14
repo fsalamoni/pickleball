@@ -57,6 +57,7 @@ import { resolveRegistrationContact } from '@/modules/tournament/domain/registra
 import { hasCheckedIn, isActiveRegistration } from '@/modules/tournament/domain/checkin';
 import { registrationSlotsWithoutAccount } from '@/modules/tournament/domain/registrationAccounts';
 import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility';
+import { t, fmtLista } from '@/core/i18n';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
@@ -87,7 +88,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error('Não foi possível gerar o CSV.');
+      toast.error(t('Não foi possível gerar o CSV.'));
     }
   }
 
@@ -96,14 +97,14 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
       {isAdmin && csvOn && registrations.length > 0 && (
         <div className="flex justify-end">
           <V2Button size="sm" variant="secondary" onClick={exportCsv}>
-            <Download className="h-4 w-4" /> Exportar inscrições (CSV)
+            <Download className="h-4 w-4" /> {t('Exportar inscrições (CSV)')}
           </V2Button>
         </div>
       )}
       {modalities.length === 0 ? (
         <V2Surface>
           <div className="p-6 text-sm text-gray-500 text-center">
-            Aguardando o admin cadastrar modalidades.
+            {t('Aguardando o admin cadastrar modalidades.')}
           </div>
         </V2Surface>
       ) : (
@@ -148,9 +149,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   // igual (`isActiveRegistration`). Falha não passa calada.
   const setCheckIn = (r, checkedIn) => checkInMutation.mutate({ id: r.id, checkedIn }, {
     onSuccess: () => toast.success(checkedIn
-      ? `Check-in feito: ${r.label || r.player_a_name || 'inscrição'}.`
-      : 'Check-in desfeito. A inscrição segue confirmada.'),
-    onError: (err) => toast.error(err?.message || 'Não foi possível registrar o check-in.'),
+      ? t('Check-in feito: {v1}.', { v1: r.label || r.player_a_name || t('inscrição') })
+      : t('Check-in desfeito. A inscrição segue confirmada.')),
+    onError: (err) => toast.error(err?.message || t('Não foi possível registrar o check-in.')),
   });
   const waitlistOn = true;
   const checkinOn = true;
@@ -187,39 +188,37 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
       persistId={`insc:${modality.id}`}
       title={modality.name}
       subtitle={`${MODALITY_FORMAT_LABELS[modality.format]} · ${hasUnlimitedEntries(modality.max_entries)
-        ? `${confirmed} confirmados · vagas abertas`
-        : `${confirmed}/${modality.max_entries} confirmados`}${checkinOn && checkedInCount > 0 ? ` · ${checkedInCount} com check-in` : ''}`}
+        ? t('{confirmed} confirmados · vagas abertas', { confirmed })
+        : t('{confirmed}/{max_entries} confirmados', { confirmed, max_entries: modality.max_entries })}${checkinOn && checkedInCount > 0 ? t(' · {checkedInCount} com check-in', { checkedInCount }) : ''}`}
     >
       <div className="mb-3 flex justify-end">
         {canJoin ? (
           <V2Button size="sm" onClick={() => onJoin(modality)} disabled={slotsFull && !alreadyRegistered}>
-            <Plus className="w-4 h-4 mr-1" /> {slotsFull && !alreadyRegistered ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
+            <Plus className="w-4 h-4 mr-1" /> {slotsFull && !alreadyRegistered ? t('Modalidade lotada') : isAdmin ? t('Inscrever jogador') : t('Inscrever-se')}
           </V2Button>
         ) : (
-          <V2Badge tone="neutral">Privado: exige código</V2Badge>
+          <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
         )}
       </div>
         {ownPendingPayment && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <span>
               {ownPendingPayment.payment_declared_at
-                ? 'Pagamento informado — aguardando confirmação do organizador.'
-                : 'Sua inscrição aguarda pagamento.'}
+                ? t('Pagamento informado — aguardando confirmação do organizador.')
+                : t('Sua inscrição aguarda pagamento.')}
             </span>
             <V2Button size="sm" variant="secondary" onClick={() => setPayOpen(true)}>
-              Ver dados de pagamento
+              {t('Ver dados de pagamento')}
             </V2Button>
           </div>
         )}
         {isAdmin && semContaCount > 0 && (
           <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-3 text-sm text-gray-700">
             <p className="font-semibold text-ink">
-              {semContaCount} inscrição(ões) com jogador sem conta na plataforma
+              {t('{semContaCount} inscrição(ões) com jogador sem conta na plataforma', { semContaCount })}
             </p>
             <p className="mt-1 text-xs leading-5">
-              As partidas dessas inscrições <strong>não entram no ranking nem no rating</strong> — de
-              ninguém da partida, nem do adversário. Se o jogador tem conta, toque no lápis da
-              inscrição e escolha a conta dele: os jogos já lançados passam a contar sozinhos.
+              {t('As partidas dessas inscrições')} <strong>{t('não entram no ranking nem no rating')}</strong> {t('— de ninguém da partida, nem do adversário. Se o jogador tem conta, toque no lápis da inscrição e escolha a conta dele: os jogos já lançados passam a contar sozinhos.')}
             </p>
           </div>
         )}
@@ -228,9 +227,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             <table className="w-full text-sm">
               <thead className="bg-paper">
                 <tr className="text-left">
-                  <th className="px-3 py-2">Inscrição</th>
-                  <th className="px-3 py-2">Status</th>
-                  {isAdmin && <th className="px-3 py-2 text-right">Ações</th>}
+                  <th className="px-3 py-2">{t('Inscrição')}</th>
+                  <th className="px-3 py-2">{t('Status')}</th>
+                  {isAdmin && <th className="px-3 py-2 text-right">{t('Ações')}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -261,14 +260,14 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                           {isAdmin && r.status !== REGISTRATION_STATUS.CANCELLED
                             && registrationSlotsWithoutAccount(r).length > 0 && (
                             <div className="mt-0.5 text-2xs font-medium text-amber-700">
-                              {registrationSlotsWithoutAccount(r).map((lado) => (lado === 'a' ? r.player_a_name : r.player_b_name) || `jogador ${lado.toUpperCase()}`).join(' e ')}
-                              {' '}sem conta · não pontua no ranking
+                              {fmtLista(registrationSlotsWithoutAccount(r).map((lado) => (lado === 'a' ? r.player_a_name : r.player_b_name) || t('jogador {lado}', { lado: lado.toUpperCase() })))}
+                              {' '}{t('sem conta · não pontua no ranking')}
                             </div>
                           )}
                           {(() => {
                             const duprs = [duprByUid.get(r.player_a_user_id), duprByUid.get(r.player_b_user_id)].filter(Boolean);
                             return duprs.length > 0 ? (
-                              <div className="text-xs text-gray-500">DUPR: {duprs.join(' / ')}</div>
+                              <div className="text-xs text-gray-500">{t('DUPR:')} {duprs.join(' / ')}</div>
                             ) : null;
                           })()}
                         </div>
@@ -279,7 +278,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                         {REGISTRATION_STATUS_LABELS[r.status] || r.status}
                       </V2Badge>
                       {paymentOn && isAdmin && r.status === REGISTRATION_STATUS.PENDING_PAYMENT && r.payment_declared_at && (
-                        <div className="mt-1 text-2xs font-medium text-amber-700">pagamento informado</div>
+                        <div className="mt-1 text-2xs font-medium text-amber-700">{t('pagamento informado')}</div>
                       )}
                       {partnerInvitesOn && (() => {
                         const invite = partnerInviteBadge(r);
@@ -294,41 +293,41 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                     </td>
                     {isAdmin && (
                       <td className="px-3 py-2 text-right space-x-1">
-                        <V2Button size="icon" variant="ghost" title={r.kind === 'team' ? 'Editar nome e elenco da equipe' : 'Editar dados do(s) jogador(es)'} aria-label="Editar inscrição" onClick={() => setEditTarget(r)}>
+                        <V2Button size="icon" variant="ghost" title={r.kind === 'team' ? t('Editar nome e elenco da equipe') : t('Editar dados do(s) jogador(es)')} aria-label={t('Editar inscrição')} onClick={() => setEditTarget(r)}>
                           <Pencil className="w-4 h-4 text-gray-500" />
                         </V2Button>
                         {r.status === REGISTRATION_STATUS.PENDING_PAYMENT && (
-                          <V2Button size="icon" variant="ghost" title="Confirmar pagamento" onClick={() => confirmMutation.mutate(r.id)}>
+                          <V2Button size="icon" variant="ghost" title={t('Confirmar pagamento')} onClick={() => confirmMutation.mutate(r.id)}>
                             <Check className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {checkinOn && r.status === REGISTRATION_STATUS.CONFIRMED && (
-                          <V2Button size="icon" variant="ghost" title="Fazer check-in" aria-label="Fazer check-in" disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, true)}>
+                          <V2Button size="icon" variant="ghost" title={t('Fazer check-in')} aria-label={t('Fazer check-in')} disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, true)}>
                             <UserCheck className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {checkinOn && r.status === REGISTRATION_STATUS.CHECKED_IN && (
-                          <V2Button size="icon" variant="ghost" title="Desfazer check-in" aria-label="Desfazer check-in" disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, false)}>
+                          <V2Button size="icon" variant="ghost" title={t('Desfazer check-in')} aria-label={t('Desfazer check-in')} disabled={checkInMutation.isPending} onClick={() => setCheckIn(r, false)}>
                             <Undo2 className="w-4 h-4 text-amber-600" />
                           </V2Button>
                         )}
                         {waitlistOn && r.status === REGISTRATION_STATUS.WAITLIST && (
-                          <V2Button size="icon" variant="ghost" title="Promover da lista de espera" onClick={() => promoteMutation.mutate(r.id)}>
+                          <V2Button size="icon" variant="ghost" title={t('Promover da lista de espera')} onClick={() => promoteMutation.mutate(r.id)}>
                             <ArrowUp className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {r.status !== REGISTRATION_STATUS.CANCELLED && (
-                          <V2Button size="icon" variant="ghost" title="Cancelar" onClick={() => cancelMutation.mutate(r.id)}>
+                          <V2Button size="icon" variant="ghost" title={t('Cancelar')} onClick={() => cancelMutation.mutate(r.id)}>
                             <X className="w-4 h-4 text-amber-600" />
                           </V2Button>
                         )}
                         <ConfirmDialog
-                          title="Remover inscrição?"
-                          description="A inscrição será removida permanentemente deste torneio."
-                          confirmLabel="Remover"
+                          title={t('Remover inscrição?')}
+                          description={t('A inscrição será removida permanentemente deste torneio.')}
+                          confirmLabel={t('Remover')}
                           onConfirm={() => deleteMutation.mutate(r.id)}
                           trigger={(
-                            <V2Button size="icon" variant="ghost" title="Remover" aria-label="Remover inscrição">
+                            <V2Button size="icon" variant="ghost" title={t('Remover')} aria-label={t('Remover inscrição')}>
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </V2Button>
                           )}
@@ -383,34 +382,34 @@ function PlayerFields({ prefix, value, onChange }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="sm:col-span-2">
-        <Label>{prefix} — Nome</Label>
+        <Label>{t('{prefix} — Nome', { prefix })}</Label>
         <Input value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} />
       </div>
       <div>
-        <Label>E-mail</Label>
+        <Label>{t('E-mail')}</Label>
         <Input type="email" value={value.email} onChange={(e) => onChange({ ...value, email: e.target.value })} />
       </div>
       <div>
-        <Label>Nível</Label>
+        <Label>{t('Nível')}</Label>
         <V2Select
           className="h-10 px-3"
           value={value.level}
           onChange={(e) => onChange({ ...value, level: e.target.value })}
         >
-          <option value="">— sem nível —</option>
+          <option value="">{t('— sem nível —')}</option>
           {LEVEL_OPTIONS.map((o) => (
             <option key={o.code} value={o.code}>{o.label}</option>
           ))}
         </V2Select>
       </div>
       <div>
-        <Label>Gênero (categoria)</Label>
+        <Label>{t('Gênero (categoria)')}</Label>
         <V2Select
           className="h-10 px-3"
           value={value.competition_gender}
           onChange={(e) => onChange({ ...value, competition_gender: e.target.value })}
         >
-          <option value="">— não informado —</option>
+          <option value="">{t('— não informado —')}</option>
           {Object.entries(COMPETITION_GENDER_LABELS).map(([k, label]) => (
             <option key={k} value={k}>{label}</option>
           ))}
@@ -440,28 +439,28 @@ function AccountLinkField({ label, nome, athletes, ready, failed, excluded, onPi
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
-      <Label>{label} — conta na plataforma</Label>
+      <Label>{t('{label} — conta na plataforma', { label })}</Label>
       <p className="mb-2 text-xs text-gray-600">
-        Sem conta, as partidas desta inscrição não entram no ranking. Se {nome || 'o jogador'} tem conta, escolha-a.
+        {t('Sem conta, as partidas desta inscrição não entram no ranking. Se')} {nome || t('o jogador')} {t('tem conta, escolha-a.')}
       </p>
       {picked ? (
         <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-sm">
           <span className="font-semibold text-ink">{picked.name}{picked.city ? <span className="font-normal text-gray-400"> · {picked.city}</span> : null}</span>
-          <V2Button size="sm" variant="ghost" onClick={() => onPick(null)}>Trocar</V2Button>
+          <V2Button size="sm" variant="ghost" onClick={() => onPick(null)}>{t('Trocar')}</V2Button>
         </div>
       ) : (
         <>
-          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar atleta pelo nome…" />
+          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar atleta pelo nome…')} />
           {busca.trim() && (
             <div className="mt-1.5 space-y-1">
               {failed ? (
-                <p className="py-2 text-xs text-red-600">A lista de atletas não carregou. Feche e abra de novo para tentar.</p>
+                <p className="py-2 text-xs text-red-600">{t('A lista de atletas não carregou. Feche e abra de novo para tentar.')}</p>
               ) : !ready ? (
                 // Sem a lista de atletas na mão, "nenhum atleta" seria mentira
                 // (docs/27-FALHA-NAO-E-VAZIO.md).
-                <p className="py-2 text-xs text-gray-500">A lista de atletas ainda não chegou — feche e abra de novo em instantes.</p>
+                <p className="py-2 text-xs text-gray-500">{t('A lista de atletas ainda não chegou — feche e abra de novo em instantes.')}</p>
               ) : pessoas.length === 0 ? (
-                <p className="py-2 text-xs text-gray-500">Nenhum atleta com esse nome. Busque só pelo primeiro nome.</p>
+                <p className="py-2 text-xs text-gray-500">{t('Nenhum atleta com esse nome. Busque só pelo primeiro nome.')}</p>
               ) : pessoas.map((p) => (
                 <button
                   key={p.user_id}
@@ -492,10 +491,9 @@ function OfficialDataNote({ prefix, nome, onUndo }) {
     <div className="rounded-2xl border border-green-200 bg-green-50/70 p-3 text-sm">
       <p className="font-semibold text-ink">{prefix}: {nome}</p>
       <p className="mt-1 text-xs leading-5 text-gray-600">
-        Ao salvar, a inscrição passa a usar os dados do cadastro: conta, nome, e-mail, nível, categoria e foto.
-        O e-mail provisório deixa de valer. Os jogos já lançados passam a contar no ranking.
+        {t('Ao salvar, a inscrição passa a usar os dados do cadastro: conta, nome, e-mail, nível, categoria e foto. O e-mail provisório deixa de valer. Os jogos já lançados passam a contar no ranking.')}
       </p>
-      <V2Button size="sm" variant="ghost" className="mt-1" onClick={onUndo}>Desfazer</V2Button>
+      <V2Button size="sm" variant="ghost" className="mt-1" onClick={onUndo}>{t('Desfazer')}</V2Button>
     </div>
   );
 }
@@ -544,11 +542,11 @@ function RegistrationEditDialog({
 
   async function handleSave() {
     if (!oficial('a') && !playerA.name.trim()) {
-      toast.error('Informe o nome do jogador A.');
+      toast.error(t('Informe o nome do jogador A.'));
       return;
     }
     if (isDoubles && !oficial('b') && !playerB.name.trim()) {
-      toast.error('Informe o nome do jogador B.');
+      toast.error(t('Informe o nome do jogador B.'));
       return;
     }
     try {
@@ -572,20 +570,20 @@ function RegistrationEditDialog({
       const ligou = feitos.some((f) => !f?.refresh);
       const semEmail = feitos.some((f) => f && !f.hasEmail);
       toast.success(feitos.length === 0
-        ? 'Dados da inscrição atualizados.'
-        : `${ligou ? 'Inscrição ligada à conta' : 'Inscrição atualizada'} com os dados do cadastro (${feitos.map((f) => f?.name).filter(Boolean).join(' e ')}).${ligou ? ' As partidas dela entram no ranking em instantes.' : ''}${semEmail ? ' Este cadastro não tem e-mail: o contato ficou vazio.' : ''}`);
+        ? t('Dados da inscrição atualizados.')
+        : t('{v1} com os dados do cadastro ({v2}).{v3}{v4}', { v1: ligou ? t('Inscrição ligada à conta') : t('Inscrição atualizada'), v2: fmtLista(feitos.map((f) => f?.name).filter(Boolean)), v3: ligou ? t(' As partidas dela entram no ranking em instantes.') : '', v4: semEmail ? t(' Este cadastro não tem e-mail: o contato ficou vazio.') : '' }));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Falha ao salvar os dados.');
+      toast.error(err?.message || t('Falha ao salvar os dados.'));
     }
   }
 
   const ladoComConta = (lado, prefix) => (
     !semConta.includes(lado) && registration[`player_${lado}_user_id`] && !atualizar[lado] ? (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3 text-xs text-gray-600">
-        <span>{prefix} está ligado a uma conta da plataforma.</span>
+        <span>{t('{prefix} está ligado a uma conta da plataforma.', { prefix })}</span>
         <V2Button size="sm" variant="secondary" onClick={() => setAtualizar((x) => ({ ...x, [lado]: true }))}>
-          Usar os dados do cadastro
+          {t('Usar os dados do cadastro')}
         </V2Button>
       </div>
     ) : null
@@ -599,7 +597,7 @@ function RegistrationEditDialog({
       return (
         <OfficialDataNote
           prefix={prefix}
-          nome={registration[`player_${lado}_name`] || 'conta ligada'}
+          nome={registration[`player_${lado}_name`] || t('conta ligada')}
           onUndo={() => setAtualizar((x) => ({ ...x, [lado]: false }))}
         />
       );
@@ -628,24 +626,23 @@ function RegistrationEditDialog({
     <Dialog open onOpenChange={(o) => !o && !salvando && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar dados da inscrição</DialogTitle>
+          <DialogTitle>{t('Editar dados da inscrição')}</DialogTitle>
           <DialogDescription>
-            Os nomes aparecem por referência nos grupos, jogos e ranking — a edição reflete em todos.
-            Para trocar um inscrito provisório pelo atleta que se cadastrou, escolha a conta dele.
+            {t('Os nomes aparecem por referência nos grupos, jogos e ranking — a edição reflete em todos. Para trocar um inscrito provisório pelo atleta que se cadastrou, escolha a conta dele.')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {blocoDoLado('a', 'Jogador A', playerA, setPlayerA)}
+          {blocoDoLado('a', t('Jogador A'), playerA, setPlayerA)}
           {isDoubles && (
             <div className="space-y-4 border-t pt-3">
-              {blocoDoLado('b', 'Jogador B', playerB, setPlayerB)}
+              {blocoDoLado('b', t('Jogador B'), playerB, setPlayerB)}
             </div>
           )}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose} disabled={salvando}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose} disabled={salvando}>{t('Cancelar')}</V2Button>
           <V2Button onClick={handleSave} disabled={salvando}>
-            {salvando ? 'Salvando…' : 'Salvar'}
+            {salvando ? t('Salvando…') : t('Salvar')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

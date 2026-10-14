@@ -23,6 +23,7 @@ import {
   V2Surface, V2ErrorState,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, fmtData } from '@/core/i18n';
 
 const STATUS_TONE = {
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'blue',
@@ -49,7 +50,7 @@ function formatDateRange(startsAt, endsAt) {
   const start = parseDate(startsAt);
   const end = parseDate(endsAt);
   if (!start && !end) return null;
-  const fmt = (v) => v.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  const fmt = (v) => fmtData(v, { day: '2-digit', month: 'short' });
   if (start && end) return start.toDateString() === end.toDateString() ? fmt(start) : `${fmt(start)} – ${fmt(end)}`;
   return fmt(start || end);
 }
@@ -76,7 +77,7 @@ export default function V2Tournaments() {
   // a pessoa pedir. Meus: tudo, com o que pede atenção primeiro.
   const publicos = useMemo(() => discoverTournaments(publicTournaments, hoje), [publicTournaments, hoje]);
   const meus = useMemo(() => sortMyTournaments(myTournaments, hoje), [myTournaments, hoje]);
-  const regional = useRegionalList(publicos.atuais, (t) => ({ city: t.city, state: t.state }));
+  const regional = useRegionalList(publicos.atuais, (tt) => ({ city: tt.city, state: tt.state }));
   const [verEncerrados, setVerEncerrados] = useState(false);
 
   const sorted = tab === 'mine' ? meus : regional.itens;
@@ -86,14 +87,14 @@ export default function V2Tournaments() {
   return (
     <div className="mx-auto max-w-[1400px]">
       <V2PageIntro
-        title="Torneios"
-        subtitle="Descubra eventos abertos e acompanhe os seus."
-        action={<V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
+        title={t('Torneios')}
+        subtitle={t('Descubra eventos abertos e acompanhe os seus.')}
+        action={<V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> {t('Criar torneio')}</Link></V2Button>}
       />
 
       <div data-dica="torneios-abas" className="mb-4 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-        <TabButton active={tab === 'public'} onClick={() => setTab('public')}>Públicos</TabButton>
-        <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>Meus torneios</TabButton>
+        <TabButton active={tab === 'public'} onClick={() => setTab('public')}>{t('Públicos')}</TabButton>
+        <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>{t('Meus torneios')}</TabButton>
       </div>
 
       {tab === 'public' && <RegionBar regional={regional} className="mb-6" nomeItens={['torneio', 'torneios']} />}
@@ -106,8 +107,8 @@ export default function V2Tournaments() {
       ) : falhou ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os torneios"
-            description="A conexão falhou no meio do caminho. Nenhum torneio foi perdido."
+            title={t('Não foi possível carregar os torneios')}
+            description={t('A conexão falhou no meio do caminho. Nenhum torneio foi perdido.')}
             onRetry={() => recarregar()}
           />
         </V2Surface>
@@ -115,23 +116,23 @@ export default function V2Tournaments() {
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
-            title={tab === 'mine' ? 'Você ainda não tem torneios' : 'Nenhum torneio aberto ou por vir'}
+            title={tab === 'mine' ? t('Você ainda não tem torneios') : t('Nenhum torneio aberto ou por vir')}
             description={tab === 'mine'
-              ? 'Crie o seu primeiro evento ou ingresse com um código de convite.'
-              : `Nenhum torneio acontecendo ou com data pela frente${regional.limita ? ` ${regional.frase}` : ''}. Assim que houver, ele aparece aqui.`}
-            action={<V2Button asChild><Link to="/torneios/criar">Criar torneio</Link></V2Button>}
+              ? t('Crie o seu primeiro evento ou ingresse com um código de convite.')
+              : t('Nenhum torneio acontecendo ou com data pela frente{v1}. Assim que houver, ele aparece aqui.', { v1: regional.limita ? ` ${regional.frase}` : '' })}
+            action={<V2Button asChild><Link to="/torneios/criar">{t('Criar torneio')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
         <>
-          <RegionEmptyHint regional={tab === 'public' ? regional : null} oque="Nenhum torneio aberto ou por vir" className="mb-6" />
+          <RegionEmptyHint regional={tab === 'public' ? regional : null} oque={t('Nenhum torneio aberto ou por vir')} className="mb-6" />
           {sorted.length > 0 && (
             <div data-dica="torneios-lista" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {sorted.map((t) => (
+              {sorted.map((tt) => (
                 <TournamentCard
-                  key={t.id}
-                  tournament={t}
-                  distancia={tab === 'public' && regional.ativa ? distanceLabel(regional.infoDe(t)?.km) : null}
+                  key={tt.id}
+                  tournament={tt}
+                  distancia={tab === 'public' && regional.ativa ? distanceLabel(regional.infoDe(tt)?.km) : null}
                 />
               ))}
             </div>
@@ -146,16 +147,16 @@ export default function V2Tournaments() {
           {verEncerrados ? (
             <>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">Encerrados ({encerrados.length})</p>
-                <V2Button variant="ghost" size="sm" onClick={() => setVerEncerrados(false)}>Esconder encerrados</V2Button>
+                <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Encerrados ({n})', { n: encerrados.length })}</p>
+                <V2Button variant="ghost" size="sm" onClick={() => setVerEncerrados(false)}>{t('Esconder encerrados')}</V2Button>
               </div>
               <div className="grid gap-6 opacity-80 lg:grid-cols-2 xl:grid-cols-3">
-                {encerrados.map((t) => <TournamentCard key={t.id} tournament={t} />)}
+                {encerrados.map((tt) => <TournamentCard key={tt.id} tournament={tt} />)}
               </div>
             </>
           ) : (
             <V2Button variant="secondary" size="sm" onClick={() => setVerEncerrados(true)}>
-              <Archive className="h-4 w-4" aria-hidden="true" /> Ver os {encerrados.length} torneios encerrados
+              <Archive className="h-4 w-4" aria-hidden="true" /> {t('Ver os {n} torneios encerrados', { n: encerrados.length })}
             </V2Button>
           )}
         </div>
@@ -181,7 +182,7 @@ function TabButton({ active, onClick, children }) {
 
 function TournamentCard({ tournament, distancia = null }) {
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
-  const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local a definir';
+  const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : t('Local a definir');
 
   return (
     <Link
@@ -201,7 +202,7 @@ function TournamentCard({ tournament, distancia = null }) {
           </V2Badge>
           {tournament.archived && (
             <V2Badge tone="neutral">
-              <Archive className="h-3 w-3" /> Arquivado
+              <Archive className="h-3 w-3" /> {t('Arquivado')}
             </V2Badge>
           )}
         </div>
@@ -222,7 +223,7 @@ function TournamentCard({ tournament, distancia = null }) {
       {/* Com a inscrição aberta, o cartão diz o que dá para FAZER nele: é lá
           dentro, em cada modalidade, que fica o "Inscrever-se". */}
       <div className="mt-auto flex items-center justify-between pt-6 text-sm font-bold text-ink">
-        <span>{isTournamentOpen(tournament, hojeLocal()) ? 'Ver modalidades e se inscrever' : 'Abrir torneio'}</span>
+        <span>{isTournamentOpen(tournament, hojeLocal()) ? t('Ver modalidades e se inscrever') : t('Abrir torneio')}</span>
         <span className="transition-transform group-hover:translate-x-1">→</span>
       </div>
     </Link>

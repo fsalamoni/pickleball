@@ -22,6 +22,7 @@ import AdminTrainingReview from './AdminTrainingReview';
 import AdminTrainingReports from './AdminTrainingReports';
 import AdminTrainingSeed from './AdminTrainingSeed';
 import AdminTrainingSettings from './AdminTrainingSettings';
+import { t, tn } from '@/core/i18n';
 
 function Numero({ icon: Icon, label, value, detalhe, alerta, onClick }) {
   return (
@@ -45,35 +46,35 @@ function Numero({ icon: Icon, label, value, detalhe, alerta, onClick }) {
 function VisaoGeral({ itens, denuncias, settingsQ, onTab }) {
   if (itens.isPending) return <V2Skeleton className="h-28 rounded-3xl" />;
   if (itens.isError) {
-    return <V2ErrorState inline title="Os itens de treino não carregaram" onRetry={() => itens.refetch()} />;
+    return <V2ErrorState inline title={t('Os itens de treino não carregaram')} onRetry={() => itens.refetch()} />;
   }
   const c = adminItemCounts(itens.data || []);
   const abertas = denuncias.isSuccess ? (denuncias.data || []).filter((r) => r.status === 'aberta').length : null;
-  const porTipo = Object.entries(c.byKind).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${ITEM_KIND_LABELS[k].toLowerCase()}`).join(' · ');
-  const porAutor = Object.entries(c.byRole).filter(([, n]) => n > 0).map(([r, n]) => `${n} ${AUTHOR_ROLE_LABELS[r]}`).join(' · ');
+  const porTipo = Object.entries(c.byKind).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${t(ITEM_KIND_LABELS[k]).toLowerCase()}`).join(' · ');
+  const porAutor = Object.entries(c.byRole).filter(([, n]) => n > 0).map(([r, n]) => `${n} ${t(AUTHOR_ROLE_LABELS[r])}`).join(' · ');
   const versao = settingsQ.isSuccess ? settingsQ.data.seed_installed_version : undefined;
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Numero icon={Library} label="Itens" value={c.total} detalhe={porAutor || 'Nenhum item ainda'} onClick={() => onTab('treino-conteudo')} />
-        <Numero icon={ClipboardCheck} label="Em revisão" value={c.pendentes} alerta={c.pendentes > 0} detalhe={c.pendentes ? 'Esperando a equipe' : 'Fila vazia'} onClick={() => onTab('treino-revisao')} />
+        <Numero icon={Library} label={t('Itens')} value={c.total} detalhe={porAutor || t('Nenhum item ainda')} onClick={() => onTab('treino-conteudo')} />
+        <Numero icon={ClipboardCheck} label={t('Em revisão')} value={c.pendentes} alerta={c.pendentes > 0} detalhe={c.pendentes ? t('Esperando a equipe') : t('Fila vazia')} onClick={() => onTab('treino-revisao')} />
         <Numero
           icon={Flag}
-          label="Denúncias abertas"
+          label={t('Denúncias abertas')}
           value={abertas ?? '—'}
           alerta={abertas > 0}
-          detalhe={denuncias.isError ? 'Não carregaram' : abertas === null ? 'Carregando…' : abertas ? 'Para decidir' : 'Nada para decidir'}
+          detalhe={denuncias.isError ? t('Não carregaram') : abertas === null ? t('Carregando…') : abertas ? t('Para decidir') : t('Nada para decidir')}
           onClick={() => onTab('treino-denuncias')}
         />
         <Numero
           icon={BookOpenCheck}
-          label="Biblioteca inicial"
-          value={versao === undefined ? '—' : versao ? `v${versao}` : 'Não instalada'}
-          detalhe={settingsQ.isError ? 'Configuração não carregou' : `${c.semente} itens da biblioteca`}
+          label={t('Biblioteca inicial')}
+          value={versao === undefined ? '—' : versao ? `v${versao}` : t('Não instalada')}
+          detalhe={settingsQ.isError ? t('Configuração não carregou') : t('{n} itens da biblioteca', { n: c.semente })}
           onClick={() => onTab('treino-biblioteca')}
         />
       </div>
-      {porTipo && <p className="text-xs text-gray-500">Por tipo: {porTipo}{c.ocultos ? ` · ${c.ocultos} oculto${c.ocultos === 1 ? '' : 's'}` : ''}{c.destaques ? ` · ${c.destaques} em destaque` : ''}</p>}
+      {porTipo && <p className="text-xs text-gray-500">{t('Por tipo: {lista}', { lista: porTipo })}{c.ocultos ? ` · ${tn(c.ocultos, '{n} oculto', '{n} ocultos')}` : ''}{c.destaques ? ` · ${t('{n} em destaque', { n: c.destaques })}` : ''}</p>}
     </div>
   );
 }

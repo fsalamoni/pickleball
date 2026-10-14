@@ -16,6 +16,7 @@ import {
   useEnrollInClinic, useCancelEnrollment,
 } from '../hooks/useClinics.js';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 function ClinicCard({ clinic, mySignups, onEnroll, onCancel, isPending, isAuthenticated }) {
   const { data: signups = [] } = useClinicSignups(clinic.id);
@@ -30,25 +31,25 @@ function ClinicCard({ clinic, mySignups, onEnroll, onCancel, isPending, isAuthen
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-bold text-ink">{clinic.title}</p>
             {clinic.level && <V2Badge tone="blue">{clinic.level}</V2Badge>}
-            <V2Badge tone={left > 0 ? 'green' : 'neutral'}>{left} vaga(s)</V2Badge>
+            <V2Badge tone={left > 0 ? 'green' : 'neutral'}>{tn(left, '{n} vaga', '{n} vagas')}</V2Badge>
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
             {clinicWhenLabel(clinic)}
             {clinic.location ? ` · ${clinic.location}` : ''}
-            {Number(clinic.price) > 0 ? ` · R$ ${Number(clinic.price).toFixed(2)}` : ' · Gratuita'}
+            {Number(clinic.price) > 0 ? ` · R$ ${Number(clinic.price).toFixed(2)}` : ` · ${t('Gratuita')}`}
           </p>
           {clinic.description && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{clinic.description}</p>}
         </div>
         <div className="shrink-0">
           {enrolled ? (
             <V2Button size="sm" variant="ghost" disabled={isPending} onClick={() => onCancel(clinic)}>
-              <Check className="h-4 w-4 text-green-600" /> Inscrito · cancelar
+              <Check className="h-4 w-4 text-green-600" /> {t('Inscrito · cancelar')}
             </V2Button>
           ) : !isAuthenticated ? (
-            <V2Button asChild size="sm" variant="secondary"><Link to="/login">Entrar para se inscrever</Link></V2Button>
+            <V2Button asChild size="sm" variant="secondary"><Link to="/login">{t('Entrar para se inscrever')}</Link></V2Button>
           ) : (
             <V2Button size="sm" disabled={isPending || !check.ok} onClick={() => onEnroll(clinic)} title={check.ok ? '' : check.reason}>
-              {check.ok ? 'Inscrever-se' : check.reason}
+              {check.ok ? t('Inscrever-se') : check.reason}
             </V2Button>
           )}
         </div>
@@ -69,19 +70,19 @@ export default function CoachClinicsPublic({ coachId }) {
   if (open.length === 0) return null;
 
   const handleEnroll = async (clinic) => {
-    try { await enroll.mutateAsync(clinic); toast.success('Inscrição confirmada!'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível inscrever.'); }
+    try { await enroll.mutateAsync(clinic); toast.success(t('Inscrição confirmada!')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível inscrever.')); }
   };
   const handleCancel = async (clinic) => {
-    try { await cancel.mutateAsync({ clinic, athleteId: user?.uid }); toast.success('Inscrição cancelada.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível cancelar.'); }
+    try { await cancel.mutateAsync({ clinic, athleteId: user?.uid }); toast.success(t('Inscrição cancelada.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível cancelar.')); }
   };
 
   return (
     <V2Surface>
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-ink" />
-        <h3 className="font-display text-base font-bold text-ink">Clínicas e workshops abertos</h3>
+        <h3 className="font-display text-base font-bold text-ink">{t('Clínicas e workshops abertos')}</h3>
       </div>
       <div className="mt-3 space-y-2">
         {open.map((c) => (

@@ -21,6 +21,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizeStudent, studentDocId, canSetStudentStatus, canCoachRemoveStudent, isLinkEndedHistory, STUDENT_STATUS,
 } from '../domain/student.js';
+import { t } from '@/core/i18n';
 
 export const COACH_STUDENT_COLLECTION = 'coach_students';
 /**
@@ -96,9 +97,9 @@ export async function getStudent(coachId, studentId) {
  * status atual se o vínculo já existir e o input não trouxer status novo.
  */
 export async function upsertStudent(coachId, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (actor.uid !== coachId && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão para editar este aluno.');
+    throw new Error(t('Sem permissão para editar este aluno.'));
   }
   const { valid, error, value: completo } = normalizeStudent({ ...input, coach_id: coachId });
   if (!valid) throw new Error(error);
@@ -178,17 +179,17 @@ function statusNotice(link, nextStatus, { byStudent, actor }) {
  * convite e encerra o vínculo.
  */
 export async function setStudentStatus(student, nextStatus, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (!student?.coach_id || !student?.student_id) throw new Error('Vínculo inválido.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!student?.coach_id || !student?.student_id) throw new Error(t('Vínculo inválido.'));
   const isCoach = actor.uid === student.coach_id || actor.isPlatformAdmin;
   const isStudent = actor.uid === student.student_id;
-  if (!isCoach && !isStudent) throw new Error('Sem permissão.');
+  if (!isCoach && !isStudent) throw new Error(t('Sem permissão.'));
   // Quem é o aluno age como aluno mesmo sendo admin: o fim é dele.
   const role = isStudent ? 'aluno' : 'professor';
   if (!canSetStudentStatus(student, nextStatus, role)) {
     throw new Error(isLinkEndedHistory(student) && role === 'professor'
-      ? 'O vínculo foi encerrado: só volta se o aluno aceitar um novo convite.'
-      : 'Sem permissão para esta ação.');
+      ? t('O vínculo foi encerrado: só volta se o aluno aceitar um novo convite.')
+      : t('Sem permissão para esta ação.'));
   }
 
   const id = studentDocId(student.coach_id, student.student_id);
@@ -209,12 +210,12 @@ export async function setStudentStatus(student, nextStatus, actor) {
 
 /** Remove o vínculo (só o professor/admin; o encerrado fica no histórico). */
 export async function removeStudent(student, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (actor.uid !== student.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão para remover este aluno.');
+    throw new Error(t('Sem permissão para remover este aluno.'));
   }
   if (!actor.isPlatformAdmin && !canCoachRemoveStudent(student)) {
-    throw new Error('O vínculo encerrado fica no histórico.');
+    throw new Error(t('O vínculo encerrado fica no histórico.'));
   }
   const id = studentDocId(student.coach_id, student.student_id);
   await deleteDoc(doc(db, COACH_STUDENT_NOTES, id)).catch(() => {});

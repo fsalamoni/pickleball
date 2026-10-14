@@ -7,6 +7,7 @@
  * de descanso — com "treinar mesmo assim".
  */
 
+import { t, tk } from '@/core/i18n';
 import { slotForDate, seededOrder } from './plan.js';
 import { weekdayOf } from './dates.js';
 import { fitsLevel } from './trainingItem.js';
@@ -33,7 +34,7 @@ export function todaySession({ today, uid, plan = null, inbox = [], items = [], 
       title: slot.title || plan.title,
       itemIds: slot.item_ids,
       minutes: slot.duration_min || plan.minutes || null,
-      note: `Do plano "${plan.title}".`,
+      note: t('Do plano "{plano}".', { plano: plan.title }),
     };
   }
   const pending = inbox.filter((s) => s.kind === 'aluno' && !s.done_at && (!s.due_date || s.due_date <= today))
@@ -42,16 +43,16 @@ export function todaySession({ today, uid, plan = null, inbox = [], items = [], 
     const first = pending.slice(0, 3);
     return {
       source: TODAY_SOURCE.PROFESSOR,
-      title: 'Do seu professor',
+      title: tk('Do seu professor'),
       itemIds: first.map((s) => s.item_id),
       shareIds: first.map((s) => s.id),
       minutes: null,
-      note: `${first[0].from_name} mandou para você treinar.`,
+      note: t('{nome} mandou para você treinar.', { nome: first[0].from_name }),
     };
   }
   const days = Array.isArray(routine?.days) ? routine.days : [];
   if (!force && days.length && !days.includes(weekdayOf(today))) {
-    return { source: TODAY_SOURCE.DESCANSO, title: 'Dia de descanso', itemIds: [], minutes: null, note: 'Hoje não está na sua rotina. Descansar também é treino.' };
+    return { source: TODAY_SOURCE.DESCANSO, title: tk('Dia de descanso'), itemIds: [], minutes: null, note: t('Hoje não está na sua rotina. Descansar também é treino.') };
   }
   const focus = Array.isArray(routine?.focus) ? routine.focus : [];
   const minutes = Number.isFinite(routine?.minutes) ? routine.minutes : 45;
@@ -59,7 +60,7 @@ export function todaySession({ today, uid, plan = null, inbox = [], items = [], 
   const usable = items.filter((it) => !it.legacy && fitsLevel(it, level) && it.kind !== ITEM_KIND.ESTUDO && it.kind !== ITEM_KIND.TREINO
     && (!place || !(it.place || []).length || it.place.includes(place)));
   if (!usable.length) {
-    return { source: TODAY_SOURCE.VAZIO, title: 'Monte o seu treino', itemIds: [], minutes, note: 'Ainda não há itens na biblioteca que combinem com a sua rotina.' };
+    return { source: TODAY_SOURCE.VAZIO, title: tk('Monte o seu treino'), itemIds: [], minutes, note: t('Ainda não há itens na biblioteca que combinem com a sua rotina.') };
   }
   const seed = `${today}:${uid}`;
   const warm = seededOrder(usable.filter((it) => (it.skills || []).includes('physical.aquecimento')), `${seed}:aq`)[0];
@@ -74,9 +75,10 @@ export function todaySession({ today, uid, plan = null, inbox = [], items = [], 
   }
   return {
     source: TODAY_SOURCE.RECOMENDACAO,
-    title: focus.length ? 'Treino do seu foco' : 'Treino sugerido',
+    // O título vai para o diário ao registrar: fica em português; a tela traduz com t().
+    title: focus.length ? tk('Treino do seu foco') : tk('Treino sugerido'),
     itemIds: ids,
     minutes,
-    note: 'Sugestão a partir da sua rotina e do seu nível. Troque o que quiser.',
+    note: t('Sugestão a partir da sua rotina e do seu nível. Troque o que quiser.'),
   };
 }

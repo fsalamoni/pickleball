@@ -26,6 +26,7 @@ import { hojeLocal } from '@/modules/home/domain/freshness';
 import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { RegionForaNote } from '@/v2/components/region/RegionBar';
 import PlayGameDayCard from './PlayGameDayCard';
+import { t } from '@/core/i18n';
 
 /** Quantos cabem aqui (o resto está em Procura-se jogo). */
 const LIMITE = 4;
@@ -52,29 +53,29 @@ export default function OpenGameDaysForMe() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-            <Dices className="h-3.5 w-3.5" aria-hidden="true" /> Com vaga para você
+            <Dices className="h-3.5 w-3.5" aria-hidden="true" /> {t('Com vaga para você')}
           </p>
-          <h2 id="com-vaga-titulo" className="mt-1 font-display text-xl font-bold text-ink">Dias de jogo para entrar</h2>
+          <h2 id="com-vaga-titulo" className="mt-1 font-display text-xl font-bold text-ink">{t('Dias de jogo para entrar')}</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Os públicos, dos atletas e das arenas, e os dos seus clubes — entre direto.
+            {t('Os públicos, dos atletas e das arenas, e os dos seus clubes — entre direto.')}
           </p>
         </div>
         <V2Button asChild variant="ghost" size="sm">
-          <Link to="/procura-jogo">Procura-se jogo <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+          <Link to="/procura-jogo">{t('Procura-se jogo')} <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </V2Button>
       </div>
 
       {jogos.falhas.dias && (
-        <V2ErrorState inline title="Não carregou os dias de jogo com vaga" description="Pode haver dia de jogo esperando gente." onRetry={jogos.recarregar.dias} />
+        <V2ErrorState inline title={t('Não carregou os dias de jogo com vaga')} description={t('Pode haver dia de jogo esperando gente.')} onRetry={jogos.recarregar.dias} />
       )}
       {jogos.falhas.clubes && (
-        <V2ErrorState inline title="Não carregou os dias de jogo dos seus clubes" description="Pode haver dia marcado no seu clube." onRetry={jogos.recarregar.clubes} />
+        <V2ErrorState inline title={t('Não carregou os dias de jogo dos seus clubes')} description={t('Pode haver dia marcado no seu clube.')} onRetry={jogos.recarregar.clubes} />
       )}
       {jogos.falhas.vagas && (
-        <V2ErrorState inline title="Não carregou os jogos das arenas" description="Tente de novo em instantes." onRetry={jogos.recarregar.vagas} />
+        <V2ErrorState inline title={t('Não carregou os jogos das arenas')} description={t('Tente de novo em instantes.')} onRetry={jogos.recarregar.vagas} />
       )}
 
-      <RegionForaNote regional={regional} nomeItens={['dia de jogo', 'dias de jogo']} className="block text-sm" />
+      <RegionForaNote regional={regional} nomeItens={[t('dia de jogo'), t('dias de jogo')]} className="block text-sm" />
 
       {carregando ? (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -84,8 +85,8 @@ export default function OpenGameDaysForMe() {
         <p className="flex items-start gap-2 rounded-3xl bg-paper p-4 text-sm text-gray-600">
           <Search className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
           <span>
-            Nenhum dia de jogo com vaga para você nos próximos dias{regional.limita ? ` ${regional.frase}` : ''}.
-            Em <Link to="/procura-jogo" className="font-bold text-ink underline">Procura-se jogo</Link> há também os convites de quem procura parceiro.
+            {t('Nenhum dia de jogo com vaga para você nos próximos dias')}{regional.limita ? ` ${regional.frase}` : ''}.
+            {' '}{t('Em')} <Link to="/procura-jogo" className="font-bold text-ink underline">{t('Procura-se jogo')}</Link> {t('há também os convites de quem procura parceiro.')}
           </span>
         </p>
       ) : mostrados.length > 0 ? (
@@ -102,7 +103,7 @@ export default function OpenGameDaysForMe() {
 
       {resto > 0 && (
         <V2Button asChild variant="secondary" size="sm">
-          <Link to="/procura-jogo">Ver todos os {regional.itens.length} <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+          <Link to="/procura-jogo">{t('Ver todos os {n}', { n: regional.itens.length })} <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </V2Button>
       )}
     </section>

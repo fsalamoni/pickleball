@@ -15,6 +15,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeCoachProduct } from '../domain/coachProduct.js';
+import { t } from '@/core/i18n';
 
 export const COACH_PRODUCT_COLLECTION = 'coach_products';
 
@@ -39,8 +40,8 @@ export async function listPublicCoachProducts(coachId) {
 }
 
 export async function createCoachProduct(coachId, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   const { valid, error, value } = normalizeCoachProduct({ ...input, coach_id: coachId });
   if (!valid) throw new Error(error);
   const id = doc(collection(db, COACH_PRODUCT_COLLECTION)).id;
@@ -52,8 +53,8 @@ export async function createCoachProduct(coachId, input, actor) {
 }
 
 export async function updateCoachProduct(product, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== product.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== product.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   const { valid, error, value } = normalizeCoachProduct({ ...product, ...input, coach_id: product.coach_id });
   if (!valid) throw new Error(error);
   await updateDoc(doc(db, COACH_PRODUCT_COLLECTION, product.id), {
@@ -69,8 +70,8 @@ export async function updateCoachProduct(product, input, actor) {
 }
 
 export async function deleteCoachProduct(product, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== product.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== product.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   await deleteDoc(doc(db, COACH_PRODUCT_COLLECTION, product.id));
   await createAuditLog({ action: 'coach_product_deleted', actor, details: { product_id: product.id } });
 }

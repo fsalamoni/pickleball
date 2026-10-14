@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Domínio: Operações da arena — checklist, manutenção e equipe.
  *
@@ -123,9 +124,9 @@ export function checklistProgress(items = []) {
 export const CHECKLIST_HISTORY_MAX = 30;
 
 export const CHECKLIST_KIND_META = Object.freeze({
-  [CHECKLIST_KIND.OPENING]: { label: 'Abertura', hint: 'O que precisa estar pronto antes de o primeiro jogador chegar.' },
-  [CHECKLIST_KIND.CLOSING]: { label: 'Fechamento', hint: 'O que não pode ficar para amanhã depois do último jogo.' },
-  [CHECKLIST_KIND.MAINTENANCE]: { label: 'Manutenção', hint: 'A conferência periódica de quadra e equipamento.' },
+  [CHECKLIST_KIND.OPENING]: { label: tk('Abertura'), hint: tk('O que precisa estar pronto antes de o primeiro jogador chegar.') },
+  [CHECKLIST_KIND.CLOSING]: { label: tk('Fechamento'), hint: tk('O que não pode ficar para amanhã depois do último jogo.') },
+  [CHECKLIST_KIND.MAINTENANCE]: { label: tk('Manutenção'), hint: tk('A conferência periódica de quadra e equipamento.') },
 });
 
 /**
@@ -231,7 +232,7 @@ export function checklistsPendingToday(checklists = [], todayISO) {
     .map((c) => {
       const estado = checklistRunState(c, todayISO);
       const pending = estado.total - estado.done;
-      return { id: c.id, title: c.title || 'Checklist', kind: c.kind, pending, total: estado.total };
+      return { id: c.id, title: c.title || t('Checklist'), kind: c.kind, pending, total: estado.total };
     })
     .filter((c) => c.total > 0 && c.pending > 0);
   return { total: pendentes.reduce((a, c) => a + c.pending, 0), pendentes };
@@ -242,17 +243,17 @@ export function checklistsPendingToday(checklists = [], todayISO) {
 /* ================================================================== */
 
 export const MAINTENANCE_STATUS_META = Object.freeze({
-  [MAINTENANCE_STATUS.PENDING]: { label: 'Pendente', tone: 'amber' },
-  [MAINTENANCE_STATUS.IN_PROGRESS]: { label: 'Em andamento', tone: 'blue' },
-  [MAINTENANCE_STATUS.DONE]: { label: 'Concluída', tone: 'green' },
-  [MAINTENANCE_STATUS.CANCELLED]: { label: 'Cancelada', tone: 'neutral' },
+  [MAINTENANCE_STATUS.PENDING]: { label: tk('Pendente'), tone: 'amber' },
+  [MAINTENANCE_STATUS.IN_PROGRESS]: { label: tk('Em andamento'), tone: 'blue' },
+  [MAINTENANCE_STATUS.DONE]: { label: tk('Concluída'), tone: 'green' },
+  [MAINTENANCE_STATUS.CANCELLED]: { label: tk('Cancelada'), tone: 'neutral' },
 });
 
 export const MAINTENANCE_PRIORITY_META = Object.freeze({
-  [MAINTENANCE_PRIORITY.LOW]: { label: 'Baixa', tone: 'neutral' },
-  [MAINTENANCE_PRIORITY.MEDIUM]: { label: 'Média', tone: 'blue' },
-  [MAINTENANCE_PRIORITY.HIGH]: { label: 'Alta', tone: 'amber' },
-  [MAINTENANCE_PRIORITY.URGENT]: { label: 'Urgente', tone: 'red' },
+  [MAINTENANCE_PRIORITY.LOW]: { label: tk('Baixa'), tone: 'neutral' },
+  [MAINTENANCE_PRIORITY.MEDIUM]: { label: tk('Média'), tone: 'blue' },
+  [MAINTENANCE_PRIORITY.HIGH]: { label: tk('Alta'), tone: 'amber' },
+  [MAINTENANCE_PRIORITY.URGENT]: { label: tk('Urgente'), tone: 'red' },
 });
 
 /** A ordem ainda está viva? Concluída e cancelada não bloqueiam nada. */
@@ -350,12 +351,12 @@ export const STAFF_ROLE = Object.freeze({
 });
 
 export const STAFF_ROLE_META = Object.freeze({
-  [STAFF_ROLE.MANAGER]: { label: 'Gerência' },
-  [STAFF_ROLE.RECEPTION]: { label: 'Recepção' },
-  [STAFF_ROLE.MAINTENANCE]: { label: 'Manutenção' },
-  [STAFF_ROLE.CLEANING]: { label: 'Limpeza' },
-  [STAFF_ROLE.COACH]: { label: 'Professor' },
-  [STAFF_ROLE.OTHER]: { label: 'Outros' },
+  [STAFF_ROLE.MANAGER]: { label: tk('Gerência') },
+  [STAFF_ROLE.RECEPTION]: { label: tk('Recepção') },
+  [STAFF_ROLE.MAINTENANCE]: { label: tk('Manutenção') },
+  [STAFF_ROLE.CLEANING]: { label: tk('Limpeza') },
+  [STAFF_ROLE.COACH]: { label: tk('Professor') },
+  [STAFF_ROLE.OTHER]: { label: tk('Outros') },
 });
 
 export const STAFF_SHIFT = Object.freeze({
@@ -366,10 +367,10 @@ export const STAFF_SHIFT = Object.freeze({
 });
 
 export const STAFF_SHIFT_META = Object.freeze({
-  [STAFF_SHIFT.MORNING]: { label: 'Manhã', from: '06:00', to: '12:00' },
-  [STAFF_SHIFT.AFTERNOON]: { label: 'Tarde', from: '12:00', to: '18:00' },
-  [STAFF_SHIFT.NIGHT]: { label: 'Noite', from: '18:00', to: '23:59' },
-  [STAFF_SHIFT.FULL]: { label: 'Dia inteiro', from: '00:00', to: '23:59' },
+  [STAFF_SHIFT.MORNING]: { label: tk('Manhã'), from: '06:00', to: '12:00' },
+  [STAFF_SHIFT.AFTERNOON]: { label: tk('Tarde'), from: '12:00', to: '18:00' },
+  [STAFF_SHIFT.NIGHT]: { label: tk('Noite'), from: '18:00', to: '23:59' },
+  [STAFF_SHIFT.FULL]: { label: tk('Dia inteiro'), from: '00:00', to: '23:59' },
 });
 
 export const STAFF_MAX = 40;
@@ -438,7 +439,7 @@ export function staffByRole(staff = []) {
   return Object.keys(STAFF_ROLE_META)
     .map((role) => ({
       role,
-      label: STAFF_ROLE_META[role].label,
+      label: t(STAFF_ROLE_META[role].label),
       people: (staff || []).filter((m) => (m?.role || STAFF_ROLE.OTHER) === role),
     }))
     .filter((g) => g.people.length > 0);

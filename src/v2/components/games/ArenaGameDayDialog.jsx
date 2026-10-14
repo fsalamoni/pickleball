@@ -49,6 +49,7 @@ import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import {
   useCreateArenaGameDay, useUpdateArenaGameDay,
 } from '@/modules/games/hooks/useArenaGameDays';
+import { t, tn } from '@/core/i18n';
 
 const HORA_PADRAO = { start: '18:00', end: '22:00' };
 
@@ -210,16 +211,16 @@ export default function ArenaGameDayDialog({
     try {
       if (editando) {
         await atualizar.mutateAsync({ gameDayId: gameDay.id, input: entrada, courts, bookings });
-        toast.success('Dia de jogo atualizado.');
+        toast.success(t('Dia de jogo atualizado.'));
         onSaved?.(gameDay.id);
       } else {
         const { id } = await criar.mutateAsync({ input: entrada, arena, courts, bookings });
-        toast.success('Dia de jogo criado. As quadras estão fechadas no calendário.');
+        toast.success(t('Dia de jogo criado. As quadras estão fechadas no calendário.'));
         onSaved?.(id);
       }
       onOpenChange(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -230,10 +231,9 @@ export default function ArenaGameDayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent sheet className="max-h-[90dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editando ? 'Editar dia de jogo' : 'Novo dia de jogo da arena'}</DialogTitle>
+          <DialogTitle>{editando ? t('Editar dia de jogo') : t('Novo dia de jogo da arena')}</DialogTitle>
           <DialogDescription>
-            As quadras e os horários escolhidos ficam <strong>fechados para reserva</strong> no
-            calendário da arena enquanto o dia de jogo existir.
+            {t('As quadras e os horários escolhidos ficam')} <strong>{t('fechados para reserva')}</strong> {t('no calendário da arena enquanto o dia de jogo existir.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -241,17 +241,17 @@ export default function ArenaGameDayDialog({
           {/* 1 — identidade -------------------------------------------------- */}
           <div className="grid gap-3 sm:grid-cols-[1fr,170px]">
             <div>
-              <Label htmlFor="agd-titulo">Nome do dia de jogo</Label>
+              <Label htmlFor="agd-titulo">{t('Nome do dia de jogo')}</Label>
               <Input
                 id="agd-titulo"
                 value={form.title}
                 onChange={(e) => set({ title: e.target.value })}
-                placeholder="Sexta de Americano"
+                placeholder={t('Sexta de Americano')}
                 className={cn('mt-1', erros.title && 'border-red-400')}
               />
             </div>
             <div>
-              <Label htmlFor="agd-data">Data</Label>
+              <Label htmlFor="agd-data">{t('Data')}</Label>
               <Input
                 id="agd-data"
                 type="date"
@@ -271,7 +271,7 @@ export default function ArenaGameDayDialog({
               que fecha a grade do calendário. */}
           {!editando && (
             <div>
-              <Label htmlFor="agd-formato">Formato</Label>
+              <Label htmlFor="agd-formato">{t('Formato')}</Label>
               <select
                 id="agd-formato"
                 value={form.format}
@@ -279,7 +279,7 @@ export default function ArenaGameDayDialog({
                 className="mt-1 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-2.5 text-sm text-ink"
               >
                 {formatos.map((f) => (
-                  <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f] || f}</option>
+                  <option key={f} value={f}>{t(GAME_DAY_FORMAT_LABELS[f]) || f}</option>
                 ))}
               </select>
             </div>
@@ -288,19 +288,19 @@ export default function ArenaGameDayDialog({
           {/* 2 — quadras e horários ------------------------------------------ */}
           <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
-              <LayoutGrid className="h-4 w-4 text-gray-400" /> Quadras e horários
+              <LayoutGrid className="h-4 w-4 text-gray-400" /> {t('Quadras e horários')}
             </h3>
 
             {falhouQuadras ? (
               /* ⚠️ Mandar a arena "cadastrar as quadras" numa falha de rede é
                  mandá-la cadastrar de novo quadras que já existem. */
               <p className="mt-2 text-sm text-amber-700">
-                A lista de quadras não carregou. Tente de novo — suas quadras continuam lá.
+                {t('A lista de quadras não carregou. Tente de novo — suas quadras continuam lá.')}
               </p>
             ) : courts.length === 0 ? (
               <p className="mt-2 text-sm text-gray-500">
-                Esta arena ainda não tem quadras cadastradas. Cadastre as quadras em
-                {' '}<strong>Estrutura e preços → Quadras</strong> antes de marcar um dia de jogo.
+                {t('Esta arena ainda não tem quadras cadastradas. Cadastre as quadras em')}
+                {' '}<strong>{t('Estrutura e preços → Quadras')}</strong> {t('antes de marcar um dia de jogo.')}
               </p>
             ) : (
               <>
@@ -309,27 +309,27 @@ export default function ArenaGameDayDialog({
                     ativo={form.horarioUnico}
                     onClick={() => usarHorarioUnico(true)}
                     icone={Clock}
-                    titulo="Um horário para o dia todo"
-                    descricao="Todas as quadras começam e terminam juntas."
+                    titulo={t('Um horário para o dia todo')}
+                    descricao={t('Todas as quadras começam e terminam juntas.')}
                   />
                   <Escolha
                     ativo={!form.horarioUnico}
                     onClick={() => usarHorarioUnico(false)}
                     icone={Clock}
-                    titulo="Um horário por quadra"
-                    descricao="Cada quadra com o seu início e fim."
+                    titulo={t('Um horário por quadra')}
+                    descricao={t('Cada quadra com o seu início e fim.')}
                   />
                 </div>
 
                 {form.horarioUnico && (
                   <div className="mt-3 flex flex-wrap items-end gap-3">
                     <div>
-                      <Label htmlFor="agd-ini">Início</Label>
+                      <Label htmlFor="agd-ini">{t('Início')}</Label>
                       <Input id="agd-ini" type="time" value={form.janela.start}
                         onChange={(e) => mudarJanela({ start: e.target.value })} className="mt-1 w-32" />
                     </div>
                     <div>
-                      <Label htmlFor="agd-fim">Fim</Label>
+                      <Label htmlFor="agd-fim">{t('Fim')}</Label>
                       <Input id="agd-fim" type="time" value={form.janela.end}
                         onChange={(e) => mudarJanela({ end: e.target.value })} className="mt-1 w-32" />
                     </div>
@@ -352,20 +352,20 @@ export default function ArenaGameDayDialog({
                             onChange={() => alternarQuadra(c.id)}
                             className="h-4 w-4 rounded border-gray-300"
                           />
-                          <span className="text-sm font-semibold text-ink">{c.name || 'Quadra'}</span>
+                          <span className="text-sm font-semibold text-ink">{c.name || t('Quadra')}</span>
                           {c.surface && <span className="text-xs text-gray-500">{c.surface}</span>}
                         </label>
 
                         {escolhida && !form.horarioUnico && (
                           <div className="mt-2 flex flex-wrap items-end gap-2 pl-7">
                             <div>
-                              <Label htmlFor={`ini-${c.id}`} className="text-xs">Início</Label>
+                              <Label htmlFor={`ini-${c.id}`} className="text-xs">{t('Início')}</Label>
                               <Input id={`ini-${c.id}`} type="time" value={escolhida.start_time || ''}
                                 onChange={(e) => mudarQuadra(c.id, { start_time: e.target.value })}
                                 className="mt-1 w-28" />
                             </div>
                             <div>
-                              <Label htmlFor={`fim-${c.id}`} className="text-xs">Fim</Label>
+                              <Label htmlFor={`fim-${c.id}`} className="text-xs">{t('Fim')}</Label>
                               <Input id={`fim-${c.id}`} type="time" value={escolhida.end_time || ''}
                                 onChange={(e) => mudarQuadra(c.id, { end_time: e.target.value })}
                                 className="mt-1 w-28" />
@@ -375,12 +375,12 @@ export default function ArenaGameDayDialog({
 
                         {escolhida && porQuadra && (
                           <div className="mt-2 pl-7">
-                            <Label htmlFor={`cap-${c.id}`} className="text-xs">Limite de atletas nesta quadra</Label>
+                            <Label htmlFor={`cap-${c.id}`} className="text-xs">{t('Limite de atletas nesta quadra')}</Label>
                             <Input
                               id={`cap-${c.id}`} type="number" min="1" inputMode="numeric"
                               value={escolhida.capacity ?? ''}
                               onChange={(e) => mudarQuadra(c.id, { capacity: e.target.value })}
-                              placeholder="sem limite"
+                              placeholder={t('sem limite')}
                               className="mt-1 w-36"
                             />
                           </div>
@@ -397,7 +397,7 @@ export default function ArenaGameDayDialog({
           {/* 3 — inscrição ---------------------------------------------------- */}
           <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
-              <Users className="h-4 w-4 text-gray-400" /> Como o atleta se inscreve
+              <Users className="h-4 w-4 text-gray-400" /> {t('Como o atleta se inscreve')}
             </h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {Object.values(ARENA_SIGNUP_MODE).map((m) => (
@@ -405,21 +405,21 @@ export default function ArenaGameDayDialog({
                   key={m}
                   ativo={form.signup_mode === m}
                   onClick={() => set({ signup_mode: m })}
-                  titulo={ARENA_SIGNUP_MODE_LABELS[m]}
-                  descricao={ARENA_SIGNUP_MODE_HINTS[m]}
+                  titulo={t(ARENA_SIGNUP_MODE_LABELS[m])}
+                  descricao={t(ARENA_SIGNUP_MODE_HINTS[m])}
                 />
               ))}
             </div>
             {!porQuadra && (
               <div className="mt-3">
-                <Label htmlFor="agd-cap">Limite de atletas no dia</Label>
+                <Label htmlFor="agd-cap">{t('Limite de atletas no dia')}</Label>
                 <Input
                   id="agd-cap" type="number" min="1" inputMode="numeric"
                   value={form.capacity} onChange={(e) => set({ capacity: e.target.value })}
-                  placeholder="sem limite" className="mt-1 w-40"
+                  placeholder={t('sem limite')} className="mt-1 w-40"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Deixe em branco para não limitar. O limite vale para a lista do dia inteiro.
+                  {t('Deixe em branco para não limitar. O limite vale para a lista do dia inteiro.')}
                 </p>
               </div>
             )}
@@ -429,31 +429,31 @@ export default function ArenaGameDayDialog({
           {!editando && (
           <V2Surface as="section" variant="plano">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
-              <ShieldCheck className="h-4 w-4 text-gray-400" /> Quem conduz o dia de jogo
+              <ShieldCheck className="h-4 w-4 text-gray-400" /> {t('Quem conduz o dia de jogo')}
             </h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <Escolha
                 ativo={form.manage_mode === GAME_DAY_MANAGE_MODE.OWNER_ONLY}
                 onClick={() => set({ manage_mode: GAME_DAY_MANAGE_MODE.OWNER_ONLY })}
-                titulo="Só a equipe da arena"
-                descricao="Sortear, criar e cancelar partidas, substituir atleta, lançar resultado e mexer na lista ficam com quem gerencia a arena."
+                titulo={t('Só a equipe da arena')}
+                descricao={t('Sortear, criar e cancelar partidas, substituir atleta, lançar resultado e mexer na lista ficam com quem gerencia a arena.')}
               />
               <Escolha
                 ativo={form.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS}
                 onClick={() => set({ manage_mode: GAME_DAY_MANAGE_MODE.PARTICIPANTS })}
-                titulo="A equipe e os inscritos"
-                descricao="Os atletas inscritos também conduzem as partidas, na conta deles. Bom para um Play em que a turma se organiza sozinha."
+                titulo={t('A equipe e os inscritos')}
+                descricao={t('Os atletas inscritos também conduzem as partidas, na conta deles. Bom para um Play em que a turma se organiza sozinha.')}
               />
             </div>
           </V2Surface>
           )}
 
           <div>
-            <Label htmlFor="agd-obs">Observações (opcional)</Label>
+            <Label htmlFor="agd-obs">{t('Observações (opcional)')}</Label>
             <textarea
               id="agd-obs" rows={2} value={form.notes}
               onChange={(e) => set({ notes: e.target.value })}
-              placeholder="Traga sua raquete. Bolas por conta da arena."
+              placeholder={t('Traga sua raquete. Bolas por conta da arena.')}
               className="mt-1 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-2.5 text-sm text-ink"
             />
           </div>
@@ -463,20 +463,19 @@ export default function ArenaGameDayDialog({
             <p className="flex items-start gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-xs leading-5 text-amber-800">
               <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
-                {previa.value.arena_slots.length === 1 ? 'Uma quadra ficará fechada' : `${previa.value.arena_slots.length} quadras ficarão fechadas`}
-                {' '}para reserva em {previa.value.date}
+                {tn(previa.value.arena_slots.length, 'Uma quadra ficará fechada para reserva em {data}', '{n} quadras ficarão fechadas para reserva em {data}', { data: previa.value.date })}
                 {arenaGameDaySingleWindow({ arena_slots: previa.value.arena_slots })
-                  ? `, das ${previa.value.arena_slots[0].start_time} às ${previa.value.arena_slots[0].end_time}.`
-                  : ', cada uma no seu horário.'}
+                  ? t(', das {inicio} às {fim}.', { inicio: previa.value.arena_slots[0].start_time, fim: previa.value.arena_slots[0].end_time })
+                  : t(', cada uma no seu horário.')}
               </span>
             </p>
           )}
         </div>
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={() => onOpenChange(false)} disabled={salvando}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={() => onOpenChange(false)} disabled={salvando}>{t('Cancelar')}</V2Button>
           <V2Button onClick={salvar} disabled={salvando || courts.length === 0}>
-            {salvando ? 'Salvando…' : (editando ? 'Salvar' : 'Criar dia de jogo')}
+            {salvando ? t('Salvando…') : (editando ? t('Salvar') : t('Criar dia de jogo'))}
           </V2Button>
         </DialogFooter>
       </DialogContent>

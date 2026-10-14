@@ -16,6 +16,7 @@
  */
 
 import { RULESET, TARGET_SCORE, MATCH_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 /** Configuração padrão de pontuação do torneio. */
 export const DEFAULT_SCORING_CONFIG = Object.freeze({
@@ -109,12 +110,12 @@ export function resolveStageScoringConfig(modality, tournament, stageIndex = 0) 
 
 export function formatSetsPerMatchLabel(setsPerMatch) {
   const cfg = normalizeScoringConfig({ sets_per_match: setsPerMatch });
-  return cfg.sets_per_match === 1 ? '1 set' : `Melhor de ${cfg.sets_per_match}`;
+  return cfg.sets_per_match === 1 ? t('1 set') : t('Melhor de {sets_per_match}', { sets_per_match: cfg.sets_per_match });
 }
 
 export function formatScoringSummary(config) {
   const cfg = normalizeScoringConfig(config);
-  return `${cfg.target_score} pontos · ${formatSetsPerMatchLabel(cfg.sets_per_match)}`;
+  return t('{target_score} pontos · {sets_per_match}', { target_score: cfg.target_score, sets_per_match: formatSetsPerMatchLabel(cfg.sets_per_match) });
 }
 
 /**
@@ -128,18 +129,18 @@ export function getGameWinner(game, config) {
   const a = Number(game?.a ?? 0);
   const b = Number(game?.b ?? 0);
   if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
-    return { winner: null, valid: false, reason: 'Placar inválido.' };
+    return { winner: null, valid: false, reason: t('Placar inválido.') };
   }
-  if (a === b) return { winner: null, valid: false, reason: 'Empate não permitido em pickleball.' };
+  if (a === b) return { winner: null, valid: false, reason: t('Empate não permitido em pickleball.') };
   const target = cfg.target_score;
   const cap = cfg.max_score_cap;
   const hi = Math.max(a, b);
   const lo = Math.min(a, b);
   const winner = a > b ? 'a' : 'b';
-  if (hi < target) return { winner: null, valid: false, reason: `Nenhum lado atingiu ${target}.` };
+  if (hi < target) return { winner: null, valid: false, reason: t('Nenhum lado atingiu {target}.', { target }) };
   if (cfg.win_by_two) {
     if (cap && hi >= cap) return { winner, valid: true };
-    if (hi - lo < 2) return { winner: null, valid: false, reason: 'É necessária vantagem de 2 pontos.' };
+    if (hi - lo < 2) return { winner: null, valid: false, reason: t('É necessária vantagem de 2 pontos.') };
   }
   return { winner, valid: true };
 }

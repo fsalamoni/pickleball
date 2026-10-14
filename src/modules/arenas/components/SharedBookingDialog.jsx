@@ -14,6 +14,7 @@ import { BOOKING_TYPE, computeSplit, PARTICIPANT_STATUS } from '../domain/shared
 import { useArenaCourts } from '../hooks/useArenas.js';
 import { useCreateSharedBooking } from '../hooks/useSharedBookings.js';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
+import { t } from '@/core/i18n';
 
 /**
  * Diálogo de reserva compartilhada. O solicitante escolhe quadra e horário,
@@ -50,7 +51,7 @@ export default function SharedBookingDialog({
   // Prévia do rateio: assume que todos aceitam (self + convidados/alunos).
   const previewParticipants = useMemo(() => {
     const list = [];
-    if (!asCoach) list.push({ athlete_id: user?.uid, name: 'Você', status: PARTICIPANT_STATUS.ACCEPTED });
+    if (!asCoach) list.push({ athlete_id: user?.uid, name: t('Você'), status: PARTICIPANT_STATUS.ACCEPTED });
     selectedStudents.forEach((p) => list.push({ athlete_id: p.athlete_id, name: p.name, status: PARTICIPANT_STATUS.ACCEPTED }));
     return list;
   }, [asCoach, user?.uid, selectedStudents]);
@@ -65,8 +66,8 @@ export default function SharedBookingDialog({
     : null;
 
   async function handleSubmit() {
-    if (!courtId) { toast.error('Escolha a quadra.'); return; }
-    if (!slot.date) { toast.error('Escolha a data.'); return; }
+    if (!courtId) { toast.error(t('Escolha a quadra.')); return; }
+    if (!slot.date) { toast.error(t('Escolha a data.')); return; }
     try {
       await create.mutateAsync({
         arena,
@@ -84,11 +85,11 @@ export default function SharedBookingDialog({
           proposed_price: estimate?.price ?? null,
         },
       });
-      toast.success(asCoach ? 'Aula reservada! A arena confirma o valor.' : 'Reserva solicitada! Convites enviados.');
+      toast.success(asCoach ? t('Aula reservada! A arena confirma o valor.') : t('Reserva solicitada! Convites enviados.'));
       onOpenChange(false);
       setInvitees([]); setNotes('');
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível criar a reserva.');
+      toast.error(err?.message || t('Não foi possível criar a reserva.'));
     }
   }
 
@@ -98,54 +99,54 @@ export default function SharedBookingDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {asCoach ? <GraduationCap className="h-5 w-5" /> : <Users className="h-5 w-5" />}
-            {asCoach ? `Reservar quadra para aula · ${arena?.name}` : `Reserva compartilhada · ${arena?.name}`}
+            {asCoach ? t('Reservar quadra para aula · {name}', { name: arena?.name }) : t('Reserva compartilhada · {name}', { name: arena?.name })}
           </DialogTitle>
           <DialogDescription>
             {asCoach
-              ? 'Reserve a quadra para uma aula e adicione alunos (ou deixe aberto para eles entrarem).'
-              : 'Convide outros atletas para dividir a quadra e o valor, ou deixe a reserva aberta.'}
+              ? t('Reserve a quadra para uma aula e adicione alunos (ou deixe aberto para eles entrarem).')
+              : t('Convide outros atletas para dividir a quadra e o valor, ou deixe a reserva aberta.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <Label className="text-xs">Quadra</Label>
+            <Label className="text-xs">{t('Quadra')}</Label>
             <select value={courtId} onChange={(e) => setCourtId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-              <option value="">Selecione…</option>
+              <option value="">{t('Selecione…')}</option>
               {activeCourts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3 sm:col-span-1">
-              <Label className="text-xs">Data</Label>
+              <Label className="text-xs">{t('Data')}</Label>
               <Input type="date" value={slot.date} onChange={(e) => setSlot((s) => ({ ...s, date: e.target.value }))} />
             </div>
-            <div><Label className="text-xs">Início</Label><Input type="time" value={slot.start} onChange={(e) => setSlot((s) => ({ ...s, start: e.target.value }))} /></div>
-            <div><Label className="text-xs">Fim</Label><Input type="time" value={slot.end} onChange={(e) => setSlot((s) => ({ ...s, end: e.target.value }))} /></div>
+            <div><Label className="text-xs">{t('Início')}</Label><Input type="time" value={slot.start} onChange={(e) => setSlot((s) => ({ ...s, start: e.target.value }))} /></div>
+            <div><Label className="text-xs">{t('Fim')}</Label><Input type="time" value={slot.end} onChange={(e) => setSlot((s) => ({ ...s, end: e.target.value }))} /></div>
           </div>
 
           <div>
-            <Label className="text-xs">{asCoach ? 'Alunos nesta aula (opcional)' : 'Convidar atletas (opcional)'}</Label>
+            <Label className="text-xs">{asCoach ? t('Alunos nesta aula (opcional)') : t('Convidar atletas (opcional)')}</Label>
             <div className="mt-1">
               {asCoach ? (
-                <AthleteMultiPicker value={studentSel} onChange={setStudentSel} exclude={coachId ? [coachId] : []} placeholder="Buscar aluno…" />
+                <AthleteMultiPicker value={studentSel} onChange={setStudentSel} exclude={coachId ? [coachId] : []} placeholder={t('Buscar aluno…')} />
               ) : (
                 <AthleteMultiPicker value={invitees} onChange={setInvitees} exclude={[user?.uid]} />
               )}
-              {asCoach && <p className="mt-1 text-xs text-gray-400">Deixe vazio para reservar sem aluno, ou marque a reserva como aberta abaixo.</p>}
+              {asCoach && <p className="mt-1 text-xs text-gray-400">{t('Deixe vazio para reservar sem aluno, ou marque a reserva como aberta abaixo.')}</p>}
             </div>
           </div>
 
           <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper p-3">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={openJoin} onChange={(e) => setOpenJoin(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
-              Deixar a reserva aberta {asCoach ? 'para alunos entrarem' : 'para outros atletas entrarem'}
+              {t('Deixar a reserva aberta')} {asCoach ? t('para alunos entrarem') : t('para outros atletas entrarem')}
             </label>
             {openJoin && (
               <div className="pl-6">
                 <label className="flex items-center gap-2 text-sm text-gray-600">
                   <input type="checkbox" checked={limited} onChange={(e) => setLimited(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
-                  Definir limite de participantes
+                  {t('Definir limite de participantes')}
                 </label>
                 {limited && (
                   <Input type="number" min="2" max="50" value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} className="mt-1 w-24" />
@@ -155,26 +156,26 @@ export default function SharedBookingDialog({
           </div>
 
           <div>
-            <Label className="text-xs">Observações</Label>
+            <Label className="text-xs">{t('Observações')}</Label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </div>
 
           {estimate && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
-              Valor da quadra: <strong>{formatPrice(estimate.price)}</strong>
+              {t('Valor da quadra:')} <strong>{formatPrice(estimate.price)}</strong>
               {perHead != null && previewParticipants.length > 1 && (
-                <span className="text-ink/70"> · ~{formatPrice(perHead)} por pessoa ({previewParticipants.length} confirmando)</span>
+                <span className="text-ink/70"> · ~{t('{perHead} por pessoa ({length} confirmando)', { perHead: formatPrice(perHead), length: previewParticipants.length })}</span>
               )}
-              <span className="block text-xs text-ink/60">O valor final é confirmado pela arena; o rateio recalcula conforme quem aceita.</span>
+              <span className="block text-xs text-ink/60">{t('O valor final é confirmado pela arena; o rateio recalcula conforme quem aceita.')}</span>
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Cancelar')}</Button>
           <Button onClick={handleSubmit} disabled={create.isPending || !courtId || !slot.date}>
-            {create.isPending ? 'Enviando…' : asCoach ? 'Reservar aula' : 'Solicitar reserva'}
+            {create.isPending ? t('Enviando…') : asCoach ? t('Reservar aula') : t('Solicitar reserva')}
           </Button>
         </DialogFooter>
       </DialogContent>

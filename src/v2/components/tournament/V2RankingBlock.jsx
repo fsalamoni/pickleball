@@ -10,6 +10,7 @@ import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { V2Badge, V2Surface } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 const MEDAL_COLOR = { 1: 'text-amber-500', 2: 'text-gray-400', 3: 'text-amber-700' };
 const ROW_TONE = { 1: 'bg-amber-50/70', 2: 'bg-gray-100/70', 3: 'bg-amber-50/60' };
@@ -55,15 +56,15 @@ function GroupRanking({ group, showName, isTeam = false }) {
           </colgroup>
           <thead className="bg-paper text-gray-500">
             <tr className="text-left">
-              <th className="px-3 py-2 font-semibold">Pos.</th>
-              <th className="px-3 py-2 font-semibold">{isTeam ? 'Equipe' : 'Participante'}</th>
-              <th className="px-3 py-2 text-center font-semibold">PJ</th>
-              <th className="px-3 py-2 text-center font-semibold" title="Vitórias">V</th>
+              <th className="px-3 py-2 font-semibold">{t('Pos.')}</th>
+              <th className="px-3 py-2 font-semibold">{isTeam ? t('Equipe') : t('Participante')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t('PJ')}</th>
+              <th className="px-3 py-2 text-center font-semibold" title={t('Vitórias')}>V</th>
               <th className="px-3 py-2 text-center font-semibold">D</th>
-              <th className="px-3 py-2 text-center font-semibold">{isTeam ? 'Etapas' : 'Sets'}</th>
-              <th className="px-3 py-2 text-center font-semibold">PF</th>
-              <th className="px-3 py-2 text-center font-semibold">PC</th>
-              <th className="px-3 py-2 text-center font-semibold">Saldo</th>
+              <th className="px-3 py-2 text-center font-semibold">{isTeam ? t('Etapas') : t('Sets')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t('PF')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t('PC')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t('Saldo')}</th>
             </tr>
           </thead>
           <tbody>
@@ -106,13 +107,13 @@ function GroupRanking({ group, showName, isTeam = false }) {
                 <span className="min-w-0 flex-1 truncate font-medium text-ink">{r.label}</span>
               </div>
               <div className="mt-2.5 grid grid-cols-4 gap-1.5 text-center">
-                <RankStat label="PJ" value={r.played} />
+                <RankStat label={t('PJ')} value={r.played} />
                 <RankStat label="V" value={r.wins} strong />
                 <RankStat label="D" value={r.losses} />
-                <RankStat label={isTeam ? 'Etapas' : 'Sets'} value={`${r.sets_won}–${r.sets_lost}`} />
-                <RankStat label="PF" value={r.points_for} />
-                <RankStat label="PC" value={r.points_against} />
-                <RankStat label="Saldo" value={balance > 0 ? `+${balance}` : balance} tone={balance > 0 ? 'text-green-600' : balance < 0 ? 'text-red-500' : 'text-gray-700'} />
+                <RankStat label={isTeam ? t('Etapas') : t('Sets')} value={`${r.sets_won}–${r.sets_lost}`} />
+                <RankStat label={t('PF')} value={r.points_for} />
+                <RankStat label={t('PC')} value={r.points_against} />
+                <RankStat label={t('Saldo')} value={balance > 0 ? `+${balance}` : balance} tone={balance > 0 ? 'text-green-600' : balance < 0 ? 'text-red-500' : 'text-gray-700'} />
               </div>
             </div>
           );
@@ -138,14 +139,14 @@ export function V2ModalityRanking({ modality }) {
     () => new Map(registrations.map((r) => [r.id, r.label || r.player_a_name])),
     [registrations],
   );
-  const subtitle = isLoading ? 'Carregando…' : phases.length === 0 ? 'Aguardando resultados' : showPhaseHeaders ? `${phases.length} fases com resultados` : 'Classificação';
+  const subtitle = isLoading ? t('Carregando…') : phases.length === 0 ? t('Aguardando resultados') : showPhaseHeaders ? t('{n} fases com resultados', { n: phases.length }) : t('Classificação');
 
   return (
     <V2Collapsible defaultOpen={false} persistId={`rank:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Trophy className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
       {isLoading ? (
-        <p className="text-sm text-gray-500">Carregando…</p>
+        <p className="text-sm text-gray-500">{t('Carregando…')}</p>
       ) : phases.length === 0 ? (
-        <p className="text-sm text-gray-500">Aguardando resultados.</p>
+        <p className="text-sm text-gray-500">{t('Aguardando resultados.')}</p>
       ) : (
         <div className="space-y-3">
           {phases.map((phase) => {
@@ -154,7 +155,7 @@ export function V2ModalityRanking({ modality }) {
             const faseChave = fase.type === 'knockout' || fase.type === 'double_knockout';
             const chave = faseChave && stageMatches.length > 0 && isKnockoutStage(fase, stageMatches);
             const body = faseChave && carregandoChave ? (
-              <p className="text-sm text-gray-500">Carregando a chave…</p>
+              <p className="text-sm text-gray-500">{t('Carregando a chave…')}</p>
             ) : chave ? (
               <V2BracketTree
                 matches={stageMatches}
@@ -176,7 +177,7 @@ export function V2ModalityRanking({ modality }) {
             );
             if (!showPhaseHeaders) return <div key={phase.stageIndex}>{body}</div>;
             return (
-              <V2Collapsible key={phase.stageIndex} tone="nested" defaultOpen={false} persistId={`rank:${modality.id}:fase:${phase.stageIndex}`} title={`Fase ${phase.stageIndex + 1}`} badges={<V2Badge tone="neutral">{phase.typeLabel}</V2Badge>}>
+              <V2Collapsible key={phase.stageIndex} tone="nested" defaultOpen={false} persistId={`rank:${modality.id}:fase:${phase.stageIndex}`} title={t('Fase {v1}', { v1: phase.stageIndex + 1 })} badges={<V2Badge tone="neutral">{phase.typeLabel}</V2Badge>}>
                 {body}
               </V2Collapsible>
             );
@@ -190,16 +191,15 @@ export function V2ModalityRanking({ modality }) {
 export function V2TournamentRanking({ tournament }) {
   const { data: modalities = [] } = useModalities(tournament.id);
   if (modalities.length === 0) {
-    return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Sem modalidades.</p></V2Surface>;
+    return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">{t('Sem modalidades.')}</p></V2Surface>;
   }
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-2 rounded-3xl border border-acid/30 bg-acid/10 p-4 text-sm text-ink">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
         <div>
-          <strong>Como funciona a classificação:</strong> a posição é definida pelo número de vitórias. Em caso de empate, valem na ordem:
-          <strong> saldo de pontos</strong> (a favor − contra), <strong>pontos marcados</strong> e, por fim, <strong>menor número de pontos sofridos</strong>.
-          Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo; no mata-mata, pela chave.
+          <strong>{t('Como funciona a classificação:')}</strong> {t('a posição é definida pelo número de vitórias. Em caso de empate, valem na ordem:')}
+          <strong> {t('saldo de pontos')}</strong> {t('(a favor − contra),')} <strong>{t('pontos marcados')}</strong> {t('e, por fim,')} <strong>{t('menor número de pontos sofridos')}</strong>{t('. Em torneios com fases e grupos, a classificação é mostrada por fase e por grupo; no mata-mata, pela chave.')}
         </div>
       </div>
       {modalities.map((m) => <V2ModalityRanking key={m.id} modality={m} />)}

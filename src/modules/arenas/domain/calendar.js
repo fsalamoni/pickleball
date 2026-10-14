@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Domínio puro de calendário de arena.
  *
@@ -21,10 +22,10 @@
  *   componente — domain fica testável
  */
 
-const WEEKDAY_HEADERS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_HEADERS_PT = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
 const MONTH_LABELS_PT = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  tk('Janeiro'), tk('Fevereiro'), tk('Março'), tk('Abril'), tk('Maio'), tk('Junho'),
+  tk('Julho'), tk('Agosto'), tk('Setembro'), tk('Outubro'), tk('Novembro'), tk('Dezembro'),
 ];
 
 /** 'YYYY-MM-DD' -> Date local (meia-noite) ou null. Valida mês/dia. */
@@ -150,12 +151,12 @@ export function addMonths(year, month, delta) {
 
 /** Headers de dias da semana em pt-BR. */
 export function getWeekdayHeaders() {
-  return [...WEEKDAY_HEADERS_PT];
+  return WEEKDAY_HEADERS_PT.map((d) => t(d));
 }
 
 /** Label do mês em pt-BR (ex: 'Janeiro 2026'). */
 export function getMonthLabel(year, month) {
-  const m = MONTH_LABELS_PT[month - 1] || '';
+  const m = MONTH_LABELS_PT[month - 1] ? t(MONTH_LABELS_PT[month - 1]) : '';
   return `${m} ${year}`;
 }
 

@@ -10,6 +10,7 @@
  */
 
 import { TOURNAMENT_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 /**
  * @param {object|null|undefined} tournament — doc do torneio (precisa ter
@@ -18,17 +19,17 @@ import { TOURNAMENT_STATUS } from './constants.js';
  */
 export function validateArchiveRequest(tournament) {
   if (!tournament) {
-    return { ok: false, reason: 'Torneio não encontrado.', code: 'NOT_FOUND' };
+    return { ok: false, reason: t('Torneio não encontrado.'), code: 'NOT_FOUND' };
   }
   if (tournament.archived) {
-    return { ok: false, reason: 'Torneio já está arquivado.', code: 'ALREADY_ARCHIVED' };
+    return { ok: false, reason: t('Torneio já está arquivado.'), code: 'ALREADY_ARCHIVED' };
   }
   if (tournament.status !== TOURNAMENT_STATUS.CANCELLED) {
     return {
       ok: false,
       reason:
-        'Para arquivar, o torneio precisa estar cancelado. '
-        + 'Cancele o torneio primeiro (status → "Cancelado") e só depois arquive.',
+        t('Para arquivar, o torneio precisa estar cancelado. ')
+        + t('Cancele o torneio primeiro (status → "Cancelado") e só depois arquive.'),
       code: 'NOT_CANCELLED',
     };
   }
@@ -41,10 +42,10 @@ export function validateArchiveRequest(tournament) {
  */
 export function validateUnarchiveRequest(tournament) {
   if (!tournament) {
-    return { ok: false, reason: 'Torneio não encontrado.', code: 'NOT_FOUND' };
+    return { ok: false, reason: t('Torneio não encontrado.'), code: 'NOT_FOUND' };
   }
   if (!tournament.archived) {
-    return { ok: false, reason: 'Torneio não está arquivado.', code: 'NOT_ARCHIVED' };
+    return { ok: false, reason: t('Torneio não está arquivado.'), code: 'NOT_ARCHIVED' };
   }
   return { ok: true };
 }

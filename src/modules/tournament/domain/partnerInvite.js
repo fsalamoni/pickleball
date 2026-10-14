@@ -8,7 +8,8 @@
  * paralela e puramente aditiva. Puro — sem Firebase.
  */
 
-import { COMPETITION_GENDER, REGISTRATION_STATUS } from './constants.js';
+import { COMPETITION_GENDER, REGISTRATION_STATUS, rotulos } from './constants.js';
+import { tk } from '@/core/i18n';
 
 export const PARTNER_INVITE_STATUS = Object.freeze({
   PENDING: 'pending',
@@ -16,10 +17,10 @@ export const PARTNER_INVITE_STATUS = Object.freeze({
   DECLINED: 'declined',
 });
 
-export const PARTNER_INVITE_STATUS_LABELS = Object.freeze({
-  [PARTNER_INVITE_STATUS.PENDING]: 'Aguardando a dupla confirmar',
-  [PARTNER_INVITE_STATUS.ACCEPTED]: 'Dupla confirmou',
-  [PARTNER_INVITE_STATUS.DECLINED]: 'Dupla recusou',
+export const PARTNER_INVITE_STATUS_LABELS = rotulos({
+  [PARTNER_INVITE_STATUS.PENDING]: tk('Aguardando a dupla confirmar'),
+  [PARTNER_INVITE_STATUS.ACCEPTED]: tk('Dupla confirmou'),
+  [PARTNER_INVITE_STATUS.DECLINED]: tk('Dupla recusou'),
 });
 
 /**

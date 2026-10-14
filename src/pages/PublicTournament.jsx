@@ -27,19 +27,20 @@ import BrandMark from '@/v2/ui/BrandMark';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
 import { isKnockoutStage } from '@/modules/tournament/domain/bracketLayout';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
+import { t, fmtData } from '@/core/i18n';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 function roundLabel(m) {
-  if (m.third_place) return '3º lugar';
-  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
-  if (m.bracket === 'wb') return `Venc. R${m.round}`;
-  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  if (m.third_place) return t('3º lugar');
+  if (m.bracket === 'gf') return m.round === 2 ? t('Final (reset)') : t('Grande final');
+  if (m.bracket === 'wb') return t('Venc. R{round}', { round: m.round });
+  if (m.bracket === 'lb') return t('Repesc. R{round}', { round: m.round });
   return m.round;
 }
 
@@ -58,13 +59,13 @@ export default function PublicTournament() {
   async function handleShare() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'Torneio PickleRush', url: publicUrl });
+        await navigator.share({ title: t('Torneio PickleRush'), url: publicUrl });
         return;
       } catch {
         // usuário cancelou ou share não disponível → cai no copy
       }
     }
-    copy(publicUrl, 'Link público copiado!');
+    copy(publicUrl, t('Link público copiado!'));
   }
 
   const {
@@ -78,7 +79,7 @@ export default function PublicTournament() {
   useDocumentMeta({
     title: tournament?.name,
     description: tournament?.description
-      || (tournament ? `Torneio de pickleball${tournament.city ? ` em ${tournament.city}` : ''}. Acompanhe modalidades, jogos e ranking.` : ''),
+      || (tournament ? t('Torneio de pickleball{v1}. Acompanhe modalidades, jogos e ranking.', { v1: tournament.city ? t(' em {city}', { city: tournament.city }) : '' }) : ''),
     url: publicUrl,
   }, !!tournament);
   const {
@@ -107,8 +108,8 @@ export default function PublicTournament() {
     return (
       <div className="v2-root min-h-screen bg-paper font-inter text-ink">
         <V2ErrorState
-          title="Não foi possível carregar o torneio"
-          description="A conexão falhou no meio do caminho. O link continua valendo."
+          title={t('Não foi possível carregar o torneio')}
+          description={t('A conexão falhou no meio do caminho. O link continua valendo.')}
           onRetry={() => recarregarTorneio()}
         />
       </div>
@@ -119,9 +120,9 @@ export default function PublicTournament() {
     return (
       <div className="max-w-md mx-auto p-6 text-center">
         <Trophy className="w-10 h-10 mx-auto text-gray-300" />
-        <h2 className="mt-3 font-semibold">Torneio não encontrado</h2>
+        <h2 className="mt-3 font-semibold">{t('Torneio não encontrado')}</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Verifique o link recebido. <Link to="/" className="text-green-700 underline">Voltar</Link>.
+          {t('Verifique o link recebido.')} <Link to="/" className="text-green-700 underline">{t('Voltar')}</Link>.
         </p>
       </div>
     );
@@ -133,7 +134,7 @@ export default function PublicTournament() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <Link to="/" className="flex items-center gap-3">
             <BrandMark className="h-7 w-auto" />
-            <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
+            <span className="font-display text-xl font-bold tracking-tight text-ink">{t('PickleRush')}</span>
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {shareCardsOn ? (
@@ -141,15 +142,15 @@ export default function PublicTournament() {
             ) : (
               <Button size="sm" variant="outline" onClick={handleShare}>
                 {copied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
-                <span className="ml-1 hidden sm:inline">Compartilhar</span>
+                <span className="ml-1 hidden sm:inline">{t('Compartilhar')}</span>
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => copy(publicUrl, 'Link copiado!')}>
+            <Button size="sm" variant="outline" onClick={() => copy(publicUrl, t('Link copiado!'))}>
               <Copy className="w-4 h-4" />
-              <span className="ml-1 hidden sm:inline">Copiar link</span>
+              <span className="ml-1 hidden sm:inline">{t('Copiar link')}</span>
             </Button>
             <Badge variant="success" className="text-xs">
-              <Eye className="w-3 h-3 mr-1" /> Visão pública
+              <Eye className="w-3 h-3 mr-1" /> {t('Visão pública')}
             </Badge>
           </div>
         </div>
@@ -173,7 +174,7 @@ export default function PublicTournament() {
               )}
               {tournament.invite_code && (
                 <span className="inline-flex items-center gap-1">
-                  <Hash className="w-3 h-3" /> Código: <strong className="text-ink">{tournament.invite_code}</strong>
+                  <Hash className="w-3 h-3" /> {t('Código:')} <strong className="text-ink">{tournament.invite_code}</strong>
                 </span>
               )}
               <span className="inline-flex items-center gap-1">
@@ -184,7 +185,7 @@ export default function PublicTournament() {
                 to={`/torneios/${tournament.id}/imprimir`}
                 className="inline-flex items-center gap-1 font-bold text-ink hover:underline"
               >
-                <Printer className="w-3 h-3" /> Versão para impressão
+                <Printer className="w-3 h-3" /> {t('Versão para impressão')}
               </Link>
             </div>
           </CardContent>
@@ -193,8 +194,8 @@ export default function PublicTournament() {
         {falhouModalidades && (
           <V2ErrorState
             inline
-            title="As modalidades não carregaram"
-            description="O torneio existe; o que falhou foi a lista."
+            title={t('As modalidades não carregaram')}
+            description={t('O torneio existe; o que falhou foi a lista.')}
             onRetry={() => recarregarModalidades()}
           />
         )}
@@ -202,7 +203,7 @@ export default function PublicTournament() {
         {!falhouModalidades && modalities.length === 0 && (
           <Card>
             <CardContent className="p-6 text-sm text-gray-500 text-center">
-              Nenhuma modalidade publicada ainda.
+              {t('Nenhuma modalidade publicada ainda.')}
             </CardContent>
           </Card>
         )}
@@ -215,7 +216,7 @@ export default function PublicTournament() {
       </main>
 
       <footer className="text-center text-xs text-gray-400 py-6">
-        Plataforma PickleRush · Atualização automática a cada 30s
+        {t('Plataforma PickleRush · Atualização automática a cada 30s')}
       </footer>
     </div>
   );
@@ -244,14 +245,14 @@ function PublicRankingTable({ rows }) {
           <thead className="bg-paper">
             <tr className="text-left">
               <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Participante</th>
-              <th className="px-3 py-2 text-center" title="Partidas jogadas">PJ</th>
-              <th className="px-3 py-2 text-center" title="Vitórias">V</th>
-              <th className="px-3 py-2 text-center" title="Derrotas">D</th>
-              <th className="px-3 py-2 text-center">Sets</th>
-              <th className="px-3 py-2 text-center" title="Pontos a favor">PF</th>
-              <th className="px-3 py-2 text-center" title="Pontos contra">PC</th>
-              <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
+              <th className="px-3 py-2">{t('Participante')}</th>
+              <th className="px-3 py-2 text-center" title={t('Partidas jogadas')}>{t('PJ')}</th>
+              <th className="px-3 py-2 text-center" title={t('Vitórias')}>V</th>
+              <th className="px-3 py-2 text-center" title={t('Derrotas')}>D</th>
+              <th className="px-3 py-2 text-center">{t('Sets')}</th>
+              <th className="px-3 py-2 text-center" title={t('Pontos a favor')}>{t('PF')}</th>
+              <th className="px-3 py-2 text-center" title={t('Pontos contra')}>{t('PC')}</th>
+              <th className="px-3 py-2 text-right" title={t('Saldo de pontos (PF − PC)')}>{t('Saldo')}</th>
             </tr>
           </thead>
           <tbody>
@@ -292,14 +293,14 @@ function PublicRankingTable({ rows }) {
                 <span className="min-w-0 flex-1 truncate font-medium">{r.label}</span>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                <span>PJ <strong className="tabular-nums text-ink">{r.played}</strong></span>
+                <span>{t('PJ')} <strong className="tabular-nums text-ink">{r.played}</strong></span>
                 <span>V <strong className="tabular-nums text-ink">{r.wins}</strong></span>
                 <span>D <strong className="tabular-nums text-ink">{r.losses}</strong></span>
-                <span>Sets <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
-                <span>PF <strong className="tabular-nums text-ink">{r.points_for}</strong></span>
-                <span>PC <strong className="tabular-nums text-ink">{r.points_against}</strong></span>
+                <span>{t('Sets')} <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
+                <span>{t('PF')} <strong className="tabular-nums text-ink">{r.points_for}</strong></span>
+                <span>{t('PC')} <strong className="tabular-nums text-ink">{r.points_against}</strong></span>
                 <span className={`font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                  Saldo {balance > 0 ? `+${balance}` : balance}
+                  {t('Saldo')} {balance > 0 ? `+${balance}` : balance}
                 </span>
               </div>
             </div>
@@ -398,9 +399,9 @@ function PublicModalityBlock({ tournament, modality }) {
   // inscritos, `renderSide` cai no `id` e o público lê identificadores do
   // banco no lugar dos nomes. Um aviso só, dizendo o que faltou.
   const partesQueFalharam = [
-    falhouJogos && 'os jogos',
-    falhouRanking && 'o ranking',
-    falhouInscritos && 'os nomes dos inscritos',
+    falhouJogos && t('os jogos'),
+    falhouRanking && t('o ranking'),
+    falhouInscritos && t('os nomes dos inscritos'),
   ].filter(Boolean);
 
   function recarregarOqueFalhou() {
@@ -425,19 +426,19 @@ function PublicModalityBlock({ tournament, modality }) {
         {partesQueFalharam.length > 0 && (
           <V2ErrorState
             inline
-            title={`Não carregou ${partesQueFalharam.join(' nem ')}`}
-            description="O resto desta modalidade continua na tela."
+            title={t('Não carregou {v1}', { v1: partesQueFalharam.join(' nem ') })}
+            description={t('O resto desta modalidade continua na tela.')}
             onRetry={recarregarOqueFalhou}
           />
         )}
         {rankingPhases.length > 0 && (
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold">Ranking</h4>
+            <h4 className="text-sm font-semibold">{t('Ranking')}</h4>
             {rankingPhases.map((phase) => (
               <div key={phase.stageIndex} className="space-y-3">
                 {showRankingPhaseHeaders && (
                   <div className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Fase {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
+                    {t('Fase')} {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
                   </div>
                 )}
                 {phase.groups.filter((g) => (g.rows || []).length > 0).map((group, gi) => (
@@ -455,7 +456,7 @@ function PublicModalityBlock({ tournament, modality }) {
 
         {chavesPorFase.length > 0 && (
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Chave</h4>
+            <h4 className="text-sm font-semibold">{t('Chave')}</h4>
             {chavesPorFase.map(([stageIndex, stageMatches]) => (
               <V2BracketTree
                 key={stageIndex}
@@ -463,7 +464,7 @@ function PublicModalityBlock({ tournament, modality }) {
                 labelById={labelById}
                 thirdPlace={Boolean(fasesConfig[stageIndex]?.third_place)}
                 double={fasesConfig[stageIndex]?.type === 'double_knockout'}
-                title={multiPhase ? `Fase ${Number(stageIndex) + 1}` : undefined}
+                title={multiPhase ? t('Fase {v1}', { v1: Number(stageIndex) + 1 }) : undefined}
               />
             ))}
           </div>
@@ -471,24 +472,24 @@ function PublicModalityBlock({ tournament, modality }) {
 
         {jogosEmLista.length > 0 ? (
           <div>
-            <h4 className="text-sm font-semibold mb-2">Jogos</h4>
+            <h4 className="text-sm font-semibold mb-2">{t('Jogos')}</h4>
             <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
               <table className="w-full text-sm">
                 <thead className="bg-paper">
                   <tr className="text-left">
-                    {multiPhase && <th className="px-3 py-2">Fase</th>}
-                    <th className="px-3 py-2">Rod.</th>
-                    {jogosEmLista.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
+                    {multiPhase && <th className="px-3 py-2">{t('Fase')}</th>}
+                    <th className="px-3 py-2">{t('Rod.')}</th>
+                    {jogosEmLista.some((m) => m.group) && <th className="px-3 py-2">{t('Grupo')}</th>}
                     {jogosEmLista.some((m) => m.court || m.scheduled_at) && (
                       <>
-                        <th className="px-3 py-2">Quadra</th>
-                        <th className="px-3 py-2">Horário</th>
+                        <th className="px-3 py-2">{t('Quadra')}</th>
+                        <th className="px-3 py-2">{t('Horário')}</th>
                       </>
                     )}
-                    <th className="px-3 py-2">Lado A</th>
-                    <th className="px-3 py-2">Lado B</th>
-                    <th className="px-3 py-2 text-right">Placar</th>
-                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">{t('Lado A')}</th>
+                    <th className="px-3 py-2">{t('Lado B')}</th>
+                    <th className="px-3 py-2 text-right">{t('Placar')}</th>
+                    <th className="px-3 py-2">{t('Status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -543,9 +544,9 @@ function PublicModalityBlock({ tournament, modality }) {
                   <div key={m.id} className="rounded-2xl border border-gray-200 bg-white p-3">
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
                       {multiPhase && (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Fase {(m.stage_index ?? 0) + 1}</span>
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">{t('Fase')} {(m.stage_index ?? 0) + 1}</span>
                       )}
-                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">Rod. {roundLabel(m)}</span>
+                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{t('Rod. {m}', { m: roundLabel(m) })}</span>
                       {hasGroup && (
                         <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{m.group}</span>
                       )}
@@ -570,7 +571,7 @@ function PublicModalityBlock({ tournament, modality }) {
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-300">
-                        <span className="h-px flex-1 bg-paper" />vs<span className="h-px flex-1 bg-paper" />
+                        <span className="h-px flex-1 bg-paper" />{t('vs')}<span className="h-px flex-1 bg-paper" />
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-1.5">
@@ -588,7 +589,7 @@ function PublicModalityBlock({ tournament, modality }) {
             </div>
           </div>
         ) : (
-          matches.length === 0 && !falhouJogos && <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
+          matches.length === 0 && !falhouJogos && <p className="text-sm text-gray-500">{t('Jogos ainda não publicados.')}</p>
         )}
       </CardContent>
     </Card>

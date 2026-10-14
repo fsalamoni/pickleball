@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, X } from 'lucide-react';
 import { V2Input } from '@/v2/ui/primitives';
 import { MAX_SETS, resultFromSets } from '@/modules/games/domain/gameSets';
+import { t } from '@/core/i18n';
 
 /**
  * O placar de uma partida, por sets. Começa com UM set (a regra) e oferece
@@ -13,7 +14,7 @@ import { MAX_SETS, resultFromSets } from '@/modules/games/domain/gameSets';
  * (`resultFromSets`), a mesma que o serviço refaz antes de gravar.
  */
 export default function SetScoreEditor({
-  value, onChange, labelA = 'Lado A', labelB = 'Lado B', disabled = false, size = 'md',
+  value, onChange, labelA = t('Lado A'), labelB = t('Lado B'), disabled = false, size = 'md',
 }) {
   const sets = Array.isArray(value) && value.length > 0 ? value : [{ a: '', b: '' }];
   const varios = sets.length > 1;
@@ -79,13 +80,13 @@ export default function SetScoreEditor({
             disabled={disabled}
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink disabled:opacity-50"
           >
-            <Plus className="h-3 w-3" /> Adicionar set
+            <Plus className="h-3 w-3" /> {t('Adicionar set')}
           </button>
         )}
         {resumo && (
           <p className={`text-2xs ${resumo.ok ? 'text-gray-500' : 'text-amber-700'}`} role="status">
             {resumo.ok
-              ? `Por sets: ${resumo.fields.score_a} × ${resumo.fields.score_b} (${resumo.fields.points_a} × ${resumo.fields.points_b} em pontos)`
+              ? t('Por sets: {sa} × {sb} ({pa} × {pb} em pontos)', { sa: resumo.fields.score_a, sb: resumo.fields.score_b, pa: resumo.fields.points_a, pb: resumo.fields.points_b })
               : resumo.error}
           </p>
         )}

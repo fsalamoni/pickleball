@@ -59,6 +59,7 @@ import {
   ARENA_SIGNUP_MODE, arenaSignupMode,
 } from './arenaGameDay.js';
 import { isClubGameDay } from './clubGameDay.js';
+import { t, tn } from '@/core/i18n';
 
 export const PLAY_KIND = Object.freeze({
   DIA: 'dia',
@@ -157,7 +158,7 @@ export function gameDayVacanciesLeft(gd, participants) {
 /** Instante que ordena: desconhecido vai para o fim. */
 const ordem = (ms) => (Number.isFinite(ms) ? ms : Infinity);
 
-const vagasTexto = (n) => (n == null ? null : `${n} ${n === 1 ? 'vaga' : 'vagas'}`);
+const vagasTexto = (n) => (n == null ? null : tn(n, '{n} vaga', '{n} vagas'));
 
 /**
  * A lista única de jogos com vaga, do mais cedo para o mais tarde.
@@ -239,11 +240,11 @@ export function buildPlayList({
       id: gd.id,
       link: `/dia-de-jogo/${gd.id}`,
       inicio: ordem(gameDayStartsAt(gd)),
-      title: gd.title || 'Dia de jogo',
+      title: gd.title || t('Dia de jogo'),
       subtitle: [formatDateShortBR(gd.date, { hoje }), hora, onde].filter(Boolean).join(' · '),
       place,
       vagas: vagasLivres,
-      badge: estou ? 'Você vai' : vagasTexto(vagasLivres),
+      badge: estou ? t('Você vai') : vagasTexto(vagasLivres),
       daArena,
       estou,
       cabe: true,
@@ -272,11 +273,11 @@ export function buildPlayList({
       id: gd.id,
       link: `/dia-de-jogo/${gd.id}`,
       inicio: ordem(gameDayStartsAt(gd)),
-      title: gd.title || 'Dia de jogo do clube',
+      title: gd.title || t('Dia de jogo do clube'),
       subtitle: [formatDateShortBR(gd.date, { hoje }), gd.time || '', nomeDoClube].filter(Boolean).join(' · '),
       place: { city: clube?.city || '', state: clube?.state || '' },
       vagas: null,
-      badge: estou ? 'Você vai' : 'Do seu clube',
+      badge: estou ? t('Você vai') : t('Do seu clube'),
       daArena: false,
       estou,
       cabe: true,
@@ -300,12 +301,12 @@ export function buildPlayList({
       id: s.id,
       link: s.game_day_id ? `/dia-de-jogo/${s.game_day_id}` : `/arenas/${s.arena_id}#arena-jogos-abertos`,
       inicio: ordem(instante(s.date, s.start, { fimDoDia: false })),
-      title: `Jogo aberto · ${s.arena_name || arena?.name || 'Arena'}`,
+      title: `${t('Jogo aberto')} · ${s.arena_name || arena?.name || t('Arena')}`,
       subtitle: [formatDateShortBR(s.date, { hoje }), s.start && s.end ? `${s.start}–${s.end}` : s.start, s.court || s.format]
         .filter(Boolean).join(' · '),
       place: { city: arena?.city || '', state: arena?.state || '' },
       vagas: livres,
-      badge: estou ? 'Você vai' : vagasTexto(livres),
+      badge: estou ? t('Você vai') : vagasTexto(livres),
       daArena: true,
       estou,
       cabe: fit.ok,
@@ -338,7 +339,7 @@ export function buildPlayList({
       id: g.id,
       link: g.kind === 'game_day' && g.game_day_id ? `/dia-de-jogo/${g.game_day_id}` : '/procura-jogo',
       inicio: g.date ? ordem(instante(g.date, null, { fimDoDia: false })) : Infinity,
-      title: g.when_text || (g.date ? formatDateShortBR(g.date, { hoje }) : 'Procura-se jogo'),
+      title: g.when_text || (g.date ? formatDateShortBR(g.date, { hoje }) : t('Procura-se jogo')),
       subtitle: [g.date && g.when_text ? formatDateShortBR(g.date, { hoje }) : null, g.creator_name, lugar]
         .filter(Boolean).join(' · '),
       place: { city: g.city || '', state: g.state || '' },

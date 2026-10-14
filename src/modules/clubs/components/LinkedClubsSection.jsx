@@ -14,6 +14,7 @@ import { CLUB_ROLE } from '../domain/constants';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function ClubCard({ club }) {
   return (
@@ -31,7 +32,7 @@ function ClubCard({ club }) {
   );
 }
 
-export default function LinkedClubsSection({ ownerType, ownerId, canManage = false, title = 'Clubes' }) {
+export default function LinkedClubsSection({ ownerType, ownerId, canManage = false, title }) {
   const navigate = useNavigate();
   const isCoach = ownerType === 'coach';
   const coachClubs = useClubsByCoach(isCoach ? ownerId : null);
@@ -58,10 +59,10 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
     if (!selClub) return;
     try {
       await link.mutateAsync({ clubId: selClub, patch: { [linkField]: ownerId } });
-      toast.success('Clube vinculado.');
+      toast.success(t('Clube vinculado.'));
       setSelClub('');
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível vincular.');
+      toast.error(err?.message || t('Não foi possível vincular.'));
     }
   };
 
@@ -72,11 +73,11 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-ink" />
-          <h3 className="font-display text-base font-bold text-ink">{title}</h3>
+          <h3 className="font-display text-base font-bold text-ink">{title || t('Clubes')}</h3>
         </div>
         {canManage && !isError && (
           <V2Button size="sm" variant="secondary" onClick={() => navigate(createHref)}>
-            <Plus className="h-4 w-4" /> Criar clube
+            <Plus className="h-4 w-4" /> {t('Criar clube')}
           </V2Button>
         )}
       </div>
@@ -87,16 +88,16 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
         // Sem a lista, "Criar clube" e "vincular" repetiriam o que já existe.
         <V2ErrorState
           inline
-          title="Não foi possível carregar os clubes vinculados"
-          description="Os vínculos continuam lá — só não conseguimos buscá-los agora."
+          title={t('Não foi possível carregar os clubes vinculados')}
+          description={t('Os vínculos continuam lá — só não conseguimos buscá-los agora.')}
           onRetry={() => refetch()}
         />
       ) : clubs.length === 0 ? (
         canManage ? (
           <V2EmptyState
             icon={Users}
-            title="Nenhum clube vinculado"
-            description="Crie um clube próprio para promover eventos, times e treinos — ou vincule um clube que você já administra."
+            title={t('Nenhum clube vinculado')}
+            description={t('Crie um clube próprio para promover eventos, times e treinos — ou vincule um clube que você já administra.')}
           />
         ) : null
       ) : (
@@ -108,14 +109,14 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
       {canManage && !isError && linkable.length > 0 && (
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400">Vincular clube existente</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400">{t('Vincular clube existente')}</label>
             <V2Select value={selClub} onChange={(e) => setSelClub(e.target.value)}>
-              <option value="">Selecione um clube que você administra…</option>
+              <option value="">{t('Selecione um clube que você administra…')}</option>
               {linkable.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </V2Select>
           </div>
           <V2Button onClick={handleLink} disabled={!selClub || link.isPending}>
-            <Link2 className="h-4 w-4" /> Vincular
+            <Link2 className="h-4 w-4" /> {t('Vincular')}
           </V2Button>
         </div>
       )}

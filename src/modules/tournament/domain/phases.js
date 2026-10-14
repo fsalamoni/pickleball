@@ -32,6 +32,7 @@ import { normalizeDirectEntry } from './directEntry.js';
 import { normalizeTiebreakOrder } from './tiebreak.js';
 import { normalizeCrossGroupMethod } from './crossGroup.js';
 import { normalizeEtapaCount, normalizeEtapaGroupSize } from './americanoEtapasConfig.js';
+import { t } from '@/core/i18n';
 
 /** Formatos que se dividem naturalmente em grupos paralelos. */
 const GROUPED_FORMATS = new Set([
@@ -217,41 +218,41 @@ export function validatePhases(stages, format) {
   const allowed = new Set(STAGE_TYPES_BY_FORMAT[format] || []);
 
   phases.forEach((p, i) => {
-    const human = `Fase ${i + 1}`;
+    const human = t('Fase {v1}', { v1: i + 1 });
     if (!allowed.has(p.type)) {
-      errors.push(`${human}: formato incompatível com a inscrição (${format}).`);
+      errors.push(t('{human}: formato incompatível com a inscrição ({format}).', { human, format }));
     }
     if (p.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT && p.group_count < 1) {
-      errors.push(`${human}: número de grupos inválido.`);
+      errors.push(t('{human}: número de grupos inválido.', { human }));
     }
     if (p.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP && p.max_per_group < 2) {
-      errors.push(`${human}: máximo por grupo deve ser ao menos 2.`);
+      errors.push(t('{human}: máximo por grupo deve ser ao menos 2.', { human }));
     }
     const manuais2 = Array.isArray(p.custom_group_sizes) ? p.custom_group_sizes : [];
     if (manuais2.length > 0 && manuais2.some((v) => v < 2)) {
-      errors.push(`${human}: um grupo escrito à mão ficou com menos de 2 — grupo de 1 não tem jogo.`);
+      errors.push(t('{human}: um grupo escrito à mão ficou com menos de 2 — grupo de 1 não tem jogo.', { human }));
     }
     if (Array.isArray(p.qualifiers_by_group) && p.qualifiers_by_group.length > 0) {
       const gruposPrevistos = manuais2.length || (p.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT ? p.group_count : 0);
       if (gruposPrevistos > 0 && p.qualifiers_by_group.length !== gruposPrevistos) {
-        errors.push(`${human}: a lista de classificados por grupo tem ${p.qualifiers_by_group.length} número(s) para ${gruposPrevistos} grupo(s).`);
+        errors.push(t('{human}: a lista de classificados por grupo tem {n} número(s) para {gruposPrevistos} grupo(s).', { human, n: p.qualifiers_by_group.length, gruposPrevistos }));
       }
     }
     if (i === 0 && p.direct_entry && p.direct_entry.mode !== 'none') {
-      errors.push(`${human}: entrada direta não faz sentido na 1ª fase — todos já entram nela.`);
+      errors.push(t('{human}: entrada direta não faz sentido na 1ª fase — todos já entram nela.', { human }));
     }
 
     // Toda fase, exceto a última, precisa classificar alguém.
     const isLast = i === phases.length - 1;
     if (!isLast && p.qualifiers_per_group < 1) {
-      errors.push(`${human}: defina quantos classificados avançam para a próxima fase.`);
+      errors.push(t('{human}: defina quantos classificados avançam para a próxima fase.', { human }));
     }
     // Coerência da formação de duplas mistas.
     if (
       p.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP
       && p.qualifier_mode !== PHASE_QUALIFIER_MODE.BY_GENDER
     ) {
-      errors.push(`${human}: formar dupla mista por grupo exige classificação por gênero (M e F).`);
+      errors.push(t('{human}: formar dupla mista por grupo exige classificação por gênero (M e F).', { human }));
     }
   });
 

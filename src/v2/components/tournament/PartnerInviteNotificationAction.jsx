@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { V2Button } from '@/v2/ui/primitives';
 import { useRespondPartnerInvite } from '@/modules/tournament/hooks/useTournament';
 import { partnerInviteNotificationRegistrationId } from '@/modules/tournament/domain/partnerInvite';
+import { t } from '@/core/i18n';
 
 /**
  * Ação inline de convite de dupla dentro do sino de notificações
@@ -35,12 +36,12 @@ export default function PartnerInviteNotificationAction({ notification, onResolv
     try {
       await respondMutation.mutateAsync({ id: registrationId, accept });
       setDone(accept ? 'accepted' : 'declined');
-      toast.success(accept ? 'Dupla confirmada! Boa sorte no torneio.' : 'Convite de dupla recusado.');
+      toast.success(accept ? t('Dupla confirmada! Boa sorte no torneio.') : t('Convite de dupla recusado.'));
       onResolved?.();
     } catch (err) {
       // Ex.: o convite já foi respondido em outro lugar. Marca como lida para
       // não insistir e explica o motivo.
-      toast.error(err?.message || 'Não foi possível responder ao convite.');
+      toast.error(err?.message || t('Não foi possível responder ao convite.'));
       onResolved?.();
     }
   }
@@ -48,7 +49,7 @@ export default function PartnerInviteNotificationAction({ notification, onResolv
   if (done) {
     return (
       <p className="mt-1 text-xs font-semibold text-gray-500">
-        {done === 'accepted' ? 'Dupla confirmada.' : 'Convite recusado.'}
+        {done === 'accepted' ? t('Dupla confirmada.') : t('Convite recusado.')}
       </p>
     );
   }
@@ -70,7 +71,7 @@ export default function PartnerInviteNotificationAction({ notification, onResolv
         disabled={respondMutation.isPending}
         onClick={(e) => handleRespond(e, true)}
       >
-        Confirmar dupla
+        {t('Confirmar dupla')}
       </V2Button>
       <V2Button
         size="sm"
@@ -78,7 +79,7 @@ export default function PartnerInviteNotificationAction({ notification, onResolv
         disabled={respondMutation.isPending}
         onClick={(e) => handleRespond(e, false)}
       >
-        Recusar
+        {t('Recusar')}
       </V2Button>
     </div>
   );

@@ -6,6 +6,7 @@
  */
 
 import { toMillis } from '@/modules/tournament/domain/participation';
+import { t, tk } from '@/core/i18n';
 
 export const OPEN_GAME_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' });
 
@@ -17,9 +18,9 @@ export const OPEN_GAME_FORMAT = Object.freeze({
 });
 
 export const OPEN_GAME_FORMAT_LABELS = Object.freeze({
-  [OPEN_GAME_FORMAT.ANY]: 'Tanto faz',
-  [OPEN_GAME_FORMAT.SINGLES]: 'Simples',
-  [OPEN_GAME_FORMAT.DOUBLES]: 'Duplas',
+  [OPEN_GAME_FORMAT.ANY]: tk('Tanto faz'),
+  [OPEN_GAME_FORMAT.SINGLES]: tk('Simples'),
+  [OPEN_GAME_FORMAT.DOUBLES]: tk('Duplas'),
 });
 
 function trimmed(value) {
@@ -44,8 +45,8 @@ export function normalizeOpenGameInput(input = {}) {
 
   const errors = {};
   // Aceita a data OU a descrição livre ("quando"); ao menos uma é obrigatória.
-  if (!value.date && !value.when_text) errors.when_text = 'Informe a data ou quando você quer jogar.';
-  if (!value.city) errors.city = 'Informe a cidade.';
+  if (!value.date && !value.when_text) errors.when_text = t('Informe a data ou quando você quer jogar.');
+  if (!value.city) errors.city = t('Informe a cidade.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

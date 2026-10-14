@@ -22,6 +22,7 @@ import {
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { rolarAte } from '@/v2/ui/rolarAte';
+import { t, tn } from '@/core/i18n';
 
 const menosMovimento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -29,7 +30,7 @@ const TOM = { [MASTERY.DOMINADO]: 'green', [MASTERY.CONSISTENTE]: 'acid', [MASTE
 
 function Voltar() {
   return (
-    <V2BackLink to="/treino?aba=biblioteca">Biblioteca</V2BackLink>
+    <V2BackLink to="/treino?aba=biblioteca">{t('Biblioteca')}</V2BackLink>
   );
 }
 
@@ -64,7 +65,7 @@ function Golpe({ item, mastery, ordem, comDominio }) {
             <span className="line-clamp-2 block text-sm text-gray-500">{item.summary || itemMetaLine(item)}</span>
           )}
         </span>
-        {comDominio && mastery && <V2Badge tone={TOM[mastery]} className="shrink-0">{MASTERY_LABELS[mastery]}</V2Badge>}
+        {comDominio && mastery && <V2Badge tone={TOM[mastery]} className="shrink-0">{t(MASTERY_LABELS[mastery])}</V2Badge>}
         <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
       </Link>
     </li>
@@ -84,7 +85,7 @@ function Trilha() {
 
   if (visiveis.isLoading) return <V2Skeleton className="h-96 rounded-4xl" />;
   if (visiveis.isError) {
-    return <V2Surface><V2ErrorState title="A trilha não carregou" onRetry={() => visiveis.refetch()} /></V2Surface>;
+    return <V2Surface><V2ErrorState title={t('A trilha não carregou')} onRetry={() => visiveis.refetch()} /></V2Surface>;
   }
 
   const { counts } = trilha;
@@ -98,23 +99,22 @@ function Trilha() {
       <V2Surface className="space-y-4">
         <div className="space-y-2">
           <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500">
-            <Route className="h-4 w-4" aria-hidden="true" /> Trilha dos golpes
+            <Route className="h-4 w-4" aria-hidden="true" />{' '}{t('Trilha dos golpes')}
           </p>
-          <h1 className="font-display text-3xl font-bold text-ink">Aprenda cada golpe, do jeito certo</h1>
+          <h1 className="font-display text-3xl font-bold text-ink">{t('Aprenda cada golpe, do jeito certo')}</h1>
           <p className="max-w-2xl text-gray-600">
-            Os golpes e movimentos do pickleball numa ordem de aprender: o que vem antes é a base do que vem depois.
-            Cada um traz o passo a passo, o corpo ponto a ponto, o certo e o errado e como saber se você fez certo.
+            {t('Os golpes e movimentos do pickleball numa ordem de aprender: o que vem antes é a base do que vem depois. Cada um traz o passo a passo, o corpo ponto a ponto, o certo e o errado e como saber se você fez certo.')}
           </p>
         </div>
-        {visiveis.incompleto && <p className="text-sm text-amber-700">Parte da biblioteca não carregou; a trilha pode estar incompleta.</p>}
+        {visiveis.incompleto && <p className="text-sm text-amber-700">{t('Parte da biblioteca não carregou; a trilha pode estar incompleta.')}</p>}
         {meta.isError && (
-          <V2ErrorState inline title="O seu domínio dos golpes não carregou" description="A trilha está aqui; o que você já marcou aparece quando carregar." onRetry={() => meta.refetch()} />
+          <V2ErrorState inline title={t('O seu domínio dos golpes não carregou')} description={t('A trilha está aqui; o que você já marcou aparece quando carregar.')} onRetry={() => meta.refetch()} />
         )}
         {comDominio && counts.total > 0 && (
           <div className="space-y-1.5">
             <Barra feitos={avancando} total={counts.total} />
             <p className="text-sm text-gray-500">
-              {counts.dominado} {counts.dominado === 1 ? 'dominado' : 'dominados'} · {counts.consistente} {counts.consistente === 1 ? 'consistente' : 'consistentes'} · {counts.aprendendo} aprendendo · de {counts.total} golpes
+              {tn(counts.dominado, '{n} dominado', '{n} dominados')} · {tn(counts.consistente, '{n} consistente', '{n} consistentes')} · {t('{n} aprendendo', { n: counts.aprendendo })} · {t('de {n} golpes', { n: counts.total })}
             </p>
           </div>
         )}
@@ -124,11 +124,11 @@ function Trilha() {
         <V2Surface>
           <V2EmptyState
             icon={Route}
-            title="A trilha ainda não tem golpes"
+            title={t('A trilha ainda não tem golpes')}
             description={visiveis.incompleto
-              ? 'Parte da biblioteca não carregou. Tente de novo em instantes.'
-              : 'Os golpes da Equipe PickleRush ainda não foram publicados na biblioteca.'}
-            action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">Ver a biblioteca</Link></V2Button>}
+              ? t('Parte da biblioteca não carregou. Tente de novo em instantes.')
+              : t('Os golpes da Equipe PickleRush ainda não foram publicados na biblioteca.')}
+            action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">{t('Ver a biblioteca')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -137,28 +137,28 @@ function Trilha() {
             <V2Surface className="flex flex-wrap items-center justify-between gap-4 border-ink" data-dica="treino-golpes-proximo">
               <div className="min-w-0 space-y-1">
                 <p className="text-sm font-semibold text-gray-500">
-                  {meta.data?.mastery?.[trilha.next.id] === MASTERY.APRENDENDO ? 'Continue de onde parou' : 'Seu próximo golpe'}
+                  {meta.data?.mastery?.[trilha.next.id] === MASTERY.APRENDENDO ? t('Continue de onde parou') : t('Seu próximo golpe')}
                 </p>
                 <p className="font-display text-xl font-bold text-ink">{trilha.next.title}</p>
                 {trilha.next.summary && <p className="text-sm text-gray-600">{trilha.next.summary}</p>}
               </div>
               <V2Button asChild>
-                <Link to={`/treino/item/${trilha.next.id}`}>Abrir o golpe <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+                <Link to={`/treino/item/${trilha.next.id}`}>{t('Abrir o golpe')}{' '}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
               </V2Button>
             </V2Surface>
           )}
           {comDominio && !trilha.next && (
-            <V2Surface><p className="font-semibold text-ink">Você marcou todos os golpes da trilha. Agora é repetir nos drills para manter.</p></V2Surface>
+            <V2Surface><p className="font-semibold text-ink">{t('Você marcou todos os golpes da trilha. Agora é repetir nos drills para manter.')}</p></V2Surface>
           )}
 
           {comDominio && (
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Mostrar">
-              <V2FilterChip active={!faltam} aria-pressed={!faltam} onClick={() => setFaltam(false)} className="px-3 py-1.5">Todos os golpes</V2FilterChip>
-              <V2FilterChip active={faltam} aria-pressed={faltam} onClick={() => setFaltam(true)} className="px-3 py-1.5">Só os que faltam dominar</V2FilterChip>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('Mostrar')}>
+              <V2FilterChip active={!faltam} aria-pressed={!faltam} onClick={() => setFaltam(false)} className="px-3 py-1.5">{t('Todos os golpes')}</V2FilterChip>
+              <V2FilterChip active={faltam} aria-pressed={faltam} onClick={() => setFaltam(true)} className="px-3 py-1.5">{t('Só os que faltam dominar')}</V2FilterChip>
             </div>
           )}
 
-          <nav aria-label="Famílias de golpes" className="flex flex-wrap gap-1.5" data-dica="treino-golpes-familias">
+          <nav aria-label={t('Famílias de golpes')} className="flex flex-wrap gap-1.5" data-dica="treino-golpes-familias">
             {familias.map((f) => (
               <button
                 key={f.id}
@@ -166,7 +166,7 @@ function Trilha() {
                 onClick={() => rolarAte(document.getElementById(`familia-${f.id}`), { suave: !menosMovimento() })}
                 className="rounded-full border border-gray-200 bg-paper-pure px-3 py-1.5 text-sm font-semibold text-gray-600 hover:border-ink hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
               >
-                {f.title}
+                {t(f.title)}
               </button>
             ))}
           </nav>
@@ -175,12 +175,12 @@ function Trilha() {
             <section key={f.id} id={`familia-${f.id}`} className="scroll-mt-4 space-y-3" aria-labelledby={`familia-${f.id}-titulo`}>
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 id={`familia-${f.id}-titulo`} className="font-display text-xl font-bold text-ink">{f.title}</h2>
-                  <p className="text-sm text-gray-500">{f.description}</p>
+                  <h2 id={`familia-${f.id}-titulo`} className="font-display text-xl font-bold text-ink">{t(f.title)}</h2>
+                  <p className="text-sm text-gray-500">{t(f.description)}</p>
                 </div>
                 {comDominio && (
                   <div className="w-32 space-y-1 text-right">
-                    <p className="text-xs font-semibold text-gray-500">{f.counts.dominado} de {f.counts.total} dominados</p>
+                    <p className="text-xs font-semibold text-gray-500">{t('{n} de {total} dominados', { n: f.counts.dominado, total: f.counts.total })}</p>
                     <Barra feitos={f.counts.dominado} total={f.counts.total} />
                   </div>
                 )}
@@ -199,7 +199,7 @@ function Trilha() {
             </section>
           ))}
           {faltam && familias.length === 0 && (
-            <V2Surface><p className="text-gray-600">Nada faltando: você marcou todos como dominados.</p></V2Surface>
+            <V2Surface><p className="text-gray-600">{t('Nada faltando: você marcou todos como dominados.')}</p></V2Surface>
           )}
         </>
       )}

@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Domínio: Settings por arena (Arena V3).
  *
@@ -178,17 +179,17 @@ export function canBookSlot({ settings, slotStart, now = Date.now() }) {
   const nowMs = now instanceof Date ? now.getTime() : Number(now);
 
   if (!Number.isFinite(startMs) || startMs < nowMs) {
-    return { ok: false, reason: 'Horário passado.' };
+    return { ok: false, reason: t('Horário passado.') };
   }
 
   const minutesAhead = (startMs - nowMs) / 60_000;
   if (minutesAhead < op.min_booking_lead_minutes) {
-    return { ok: false, reason: `Antecedência mínima de ${op.min_booking_lead_minutes} min não respeitada.` };
+    return { ok: false, reason: t('Antecedência mínima de {min_booking_lead_minutes} min não respeitada.', { min_booking_lead_minutes: op.min_booking_lead_minutes }) };
   }
 
   const daysAhead = (startMs - nowMs) / 86_400_000;
   if (daysAhead > op.booking_window_days) {
-    return { ok: false, reason: `Janela de reserva de ${op.booking_window_days} dias excedida.` };
+    return { ok: false, reason: t('Janela de reserva de {booking_window_days} dias excedida.', { booking_window_days: op.booking_window_days }) };
   }
 
   return { ok: true };

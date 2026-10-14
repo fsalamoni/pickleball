@@ -45,6 +45,8 @@
  *   warnings: string[],
  * }}
  */
+import { t } from '@/core/i18n';
+
 export function scheduleMatches(matches, options) {
   const { courts, slotMinutes = 45, restSlots = 0, startAt = null, maxSlots = null } = options;
   // Janela de término (maxSlots) é um ALVO, não um corte: TODOS os jogos são
@@ -55,7 +57,7 @@ export function scheduleMatches(matches, options) {
   const windowSlots = Number.isFinite(maxSlots) && maxSlots >= 0 ? Math.floor(maxSlots) : null;
   const slotCap = 100000;
   if (!Array.isArray(courts) || courts.length === 0) {
-    return { assignments: [], totalSlots: 0, warnings: ['Nenhuma quadra disponível.'] };
+    return { assignments: [], totalSlots: 0, warnings: [t('Nenhuma quadra disponível.')] };
   }
 
   // Ordem estável (round, position): a grade é montada rodada a rodada, em
@@ -129,13 +131,13 @@ export function scheduleMatches(matches, options) {
       // Todos os jogos são agendados; se passou do término planejado, avisa.
       if (windowSlots != null && slot + m.duration > windowSlots) {
         warnings.push(
-          `O jogo ${m.id} foi agendado após o horário de término planejado — há mais jogos do que a janela/quadras comportam. Adicione quadras ou estenda o horário.`,
+          t('O jogo {id} foi agendado após o horário de término planejado — há mais jogos do que a janela/quadras comportam. Adicione quadras ou estenda o horário.', { id: m.id }),
         );
       }
       break;
     }
     if (!placed) {
-      warnings.push(`Sem horário disponível para o jogo ${m.id}.`);
+      warnings.push(t('Sem horário disponível para o jogo {id}.', { id: m.id }));
     }
   }
 

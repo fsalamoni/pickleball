@@ -26,10 +26,11 @@ import {
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import ItemCard from '@/v2/components/training/ItemCard';
 import { ConfirmDialog, ReasonDialog } from '@/v2/components/training/item/ItemActionDialogs';
+import { fmtData, t, tk } from '@/core/i18n';
 
-const quando = (t) => {
-  const ms = instanteEmMs(t);
-  return ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+const quando = (valor) => {
+  const ms = instanteEmMs(valor);
+  return ms ? fmtData(new Date(ms), { day: '2-digit', month: '2-digit' }) : '';
 };
 
 const linkBtn = 'inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-gray-200 px-3 text-sm font-semibold text-ink hover:border-ink';
@@ -41,28 +42,28 @@ function Recebido({ share, item, sumiu, hoje, acoes, onFeito, onRemover }) {
   const atrasado = prazo.startsWith('era para');
   const novo = !share.read_at && !share.done_at;
   const marcarLido = () => { if (novo) acoes.markRead.mutate(share); };
-  const fallback = { id: share.item_id, kind: share.item_kind, title: share.item_title || 'Item', author_name: share.from_name, author_role: share.from_role };
+  const fallback = { id: share.item_id, kind: share.item_kind, title: share.item_title || t('Item'), author_name: share.from_name, author_role: share.from_role };
 
   const extra = (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-semibold text-gray-600">
-          {doProfessor ? `Do professor ${share.from_name}` : `Indicação de ${share.from_name}`}
+          {doProfessor ? t('Do professor {nome}', { nome: share.from_name }) : t('Indicação de {nome}', { nome: share.from_name })}
           {quando(share.created_at) && ` · ${quando(share.created_at)}`}
         </span>
-        {novo && <V2Badge tone="acid">Novo</V2Badge>}
+        {novo && <V2Badge tone="acid">{t('Novo')}</V2Badge>}
         {prazo && (
           <V2Badge tone={atrasado ? 'red' : 'amber'}>
             <Clock className="h-3 w-3" aria-hidden="true" /> {prazo}
           </V2Badge>
         )}
         {share.done_at && (
-          <V2Badge tone="green"><CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Feito</V2Badge>
+          <V2Badge tone="green"><CheckCircle2 className="h-3 w-3" aria-hidden="true" />{' '}{t('Feito')}</V2Badge>
         )}
       </div>
       {share.note && <p className="rounded-2xl bg-gray-50 px-3 py-2 text-sm text-gray-700">“{share.note}”</p>}
       {sumiu && (
-        <p className="text-sm text-gray-500">Este item não está mais disponível: o autor o apagou ou mudou quem pode ver.</p>
+        <p className="text-sm text-gray-500">{t('Este item não está mais disponível: o autor o apagou ou mudou quem pode ver.')}</p>
       )}
     </div>
   );
@@ -79,10 +80,10 @@ function Recebido({ share, item, sumiu, hoje, acoes, onFeito, onRemover }) {
             {!sumiu && (
               <>
                 <Link to={`/treino?aba=planos&adicionar=${encodeURIComponent(share.item_id)}`} className={linkBtn}>
-                  <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Pôr no meu treino
+                  <CalendarPlus className="h-4 w-4" aria-hidden="true" />{' '}{t('Pôr no meu treino')}
                 </Link>
                 <Link to={`/treino?aba=diario&registrar=${encodeURIComponent(share.item_id)}`} className={linkBtn}>
-                  <NotebookPen className="h-4 w-4" aria-hidden="true" /> Registrar que fiz
+                  <NotebookPen className="h-4 w-4" aria-hidden="true" />{' '}{t('Registrar que fiz')}
                 </Link>
               </>
             )}
@@ -91,17 +92,17 @@ function Recebido({ share, item, sumiu, hoje, acoes, onFeito, onRemover }) {
                 variant="ghost"
                 size="sm"
                 disabled={acoes.setDone.isPending}
-                onClick={() => acoes.setDone.mutate({ share, done: false }, { onError: () => toast.error('Não foi possível desfazer agora.') })}
+                onClick={() => acoes.setDone.mutate({ share, done: false }, { onError: () => toast.error(t('Não foi possível desfazer agora.')) })}
               >
-                <RotateCcw className="h-4 w-4" aria-hidden="true" /> Desfazer feito
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />{' '}{t('Desfazer feito')}
               </V2Button>
             ) : (
               <V2Button variant="ghost" size="sm" onClick={() => onFeito(share)}>
-                <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Feito
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Feito')}
               </V2Button>
             )}
-            <V2Button variant="ghost" size="sm" onClick={() => onRemover(share)} aria-label={`Remover "${share.item_title}" dos recebidos`}>
-              <Trash2 className="h-4 w-4" aria-hidden="true" /> Remover
+            <V2Button variant="ghost" size="sm" onClick={() => onRemover(share)} aria-label={t('Remover "{titulo}" dos recebidos', { titulo: share.item_title })}>
+              <Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Remover')}
             </V2Button>
           </>
         )}
@@ -121,16 +122,16 @@ function Recebidos({ identity }) {
 
   if (inbox.isPending) return <V2Skeleton className="h-64 rounded-4xl" />;
   if (inbox.isError) {
-    return <V2Surface><V2ErrorState title="Não foi possível carregar o que você recebeu" onRetry={() => inbox.refetch()} /></V2Surface>;
+    return <V2Surface><V2ErrorState title={t('Não foi possível carregar o que você recebeu')} onRetry={() => inbox.refetch()} /></V2Surface>;
   }
   if (lista.length === 0) {
     return (
       <V2Surface>
         <V2EmptyState
           icon={Inbox}
-          title="Nada recebido ainda"
-          description="Quando o seu professor enviar um treino, ou outro atleta indicar um drill, ele aparece aqui."
-          action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">Ver a biblioteca</Link></V2Button>}
+          title={t('Nada recebido ainda')}
+          description={t('Quando o seu professor enviar um treino, ou outro atleta indicar um drill, ele aparece aqui.')}
+          action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">{t('Ver a biblioteca')}</Link></V2Button>}
         />
       </V2Surface>
     );
@@ -158,21 +159,21 @@ function Recebidos({ identity }) {
       {visiveis.incompleto && !visiveis.isLoading && (
         <V2ErrorState
           inline
-          title="Parte dos itens não carregou"
-          description="Os envios aparecem com o nome; abra cada um para ver o conteúdo."
+          title={t('Parte dos itens não carregou')}
+          description={t('Os envios aparecem com o nome; abra cada um para ver o conteúdo.')}
           onRetry={visiveis.refetch}
         />
       )}
       {doProfessor.length > 0 && (
         <section aria-labelledby="recebidos-professor" className="space-y-3">
-          <h2 id="recebidos-professor" className="font-display text-lg font-bold text-ink">Do seu professor</h2>
+          <h2 id="recebidos-professor" className="font-display text-lg font-bold text-ink">{t('Do seu professor')}</h2>
           <div className="grid gap-3 md:grid-cols-2">{doProfessor.map(cartao)}</div>
         </section>
       )}
       {resto.length > 0 && (
         <section aria-labelledby="recebidos-resto" className="space-y-3">
           <h2 id="recebidos-resto" className="font-display text-lg font-bold text-ink">
-            {doProfessor.length > 0 ? 'Indicações e concluídos' : 'Recebidos'}
+            {doProfessor.length > 0 ? t('Indicações e concluídos') : t('Recebidos')}
           </h2>
           <div className="grid gap-3 md:grid-cols-2">{resto.map(cartao)}</div>
         </section>
@@ -181,27 +182,27 @@ function Recebidos({ identity }) {
       <ReasonDialog
         open={!!feito}
         onOpenChange={(o) => { if (!o) setFeito(null); }}
-        title="Marcar como feito"
-        description={feito?.kind === SHARE_KIND.ALUNO ? 'Se quiser, deixe um recado: o professor vê que você fez e o que escreveu.' : 'Se quiser, anote como foi.'}
-        label="Como foi (opcional)"
-        confirmLabel="Marcar como feito"
+        title={t('Marcar como feito')}
+        description={feito?.kind === SHARE_KIND.ALUNO ? t('Se quiser, deixe um recado: o professor vê que você fez e o que escreveu.') : t('Se quiser, anote como foi.')}
+        label={t('Como foi (opcional)')}
+        confirmLabel={t('Marcar como feito')}
         maxLength={300}
         pending={acoes.setDone.isPending}
         onConfirm={(nota, fechar) => acoes.setDone.mutate({ share: feito, done: true, note: nota }, {
-          onSuccess: () => { toast.success('Marcado como feito.'); fechar(); },
-          onError: () => toast.error('Não foi possível salvar agora.'),
+          onSuccess: () => { toast.success(t('Marcado como feito.')); fechar(); },
+          onError: () => toast.error(t('Não foi possível salvar agora.')),
         })}
       />
       <ConfirmDialog
         open={!!remover}
         onOpenChange={(o) => { if (!o) setRemover(null); }}
-        title="Remover dos recebidos?"
-        description={remover?.kind === SHARE_KIND.ALUNO ? 'O professor deixa de ver se você fez este item.' : 'O item continua na biblioteca, se for público.'}
-        confirmLabel="Remover"
+        title={t('Remover dos recebidos?')}
+        description={remover?.kind === SHARE_KIND.ALUNO ? t('O professor deixa de ver se você fez este item.') : t('O item continua na biblioteca, se for público.')}
+        confirmLabel={t('Remover')}
         pending={acoes.remove.isPending}
         onConfirm={() => acoes.remove.mutate(remover, {
-          onSuccess: () => { toast.success('Removido.'); setRemover(null); },
-          onError: () => toast.error('Não foi possível remover agora.'),
+          onSuccess: () => { toast.success(t('Removido.')); setRemover(null); },
+          onError: () => toast.error(t('Não foi possível remover agora.')),
         })}
       />
     </div>
@@ -217,18 +218,18 @@ function Enviados({ identity }) {
 
   if (sent.isPending) return <V2Skeleton className="h-64 rounded-4xl" />;
   if (sent.isError) {
-    return <V2Surface><V2ErrorState title="Não foi possível carregar o que você enviou" onRetry={() => sent.refetch()} /></V2Surface>;
+    return <V2Surface><V2ErrorState title={t('Não foi possível carregar o que você enviou')} onRetry={() => sent.refetch()} /></V2Surface>;
   }
   if (lista.length === 0) {
     return (
       <V2Surface>
         <V2EmptyState
           icon={Send}
-          title="Você ainda não enviou nada"
+          title={t('Você ainda não enviou nada')}
           description={identity.isCoach
-            ? 'Abra um item e toque em "Enviar" para mandar aos seus alunos, com prazo e recado.'
-            : 'Abra um item e toque em "Indicar" para mandar a outros atletas.'}
-          action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">Ver a biblioteca</Link></V2Button>}
+            ? t('Abra um item e toque em "Enviar" para mandar aos seus alunos, com prazo e recado.')
+            : t('Abra um item e toque em "Indicar" para mandar a outros atletas.')}
+          action={<V2Button asChild variant="secondary"><Link to="/treino?aba=biblioteca">{t('Ver a biblioteca')}</Link></V2Button>}
         />
       </V2Surface>
     );
@@ -240,24 +241,24 @@ function Enviados({ identity }) {
       <p className="text-sm text-gray-500">{lista.length} {lista.length === 1 ? 'envio' : 'envios'} · {feitos} {feitos === 1 ? 'feito' : 'feitos'}</p>
       <ul className="divide-y divide-gray-100 rounded-3xl border border-gray-100 bg-paper-pure">
         {lista.map((s) => {
-          const nome = people.get(s.to_uid)?.name || 'Atleta';
+          const nome = people.get(s.to_uid)?.name || t('Atleta');
           return (
             <li key={s.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <Link to={`/treino/item/${s.item_id}`} className="font-semibold text-ink hover:underline">{s.item_title || 'Item'}</Link>
+                <Link to={`/treino/item/${s.item_id}`} className="font-semibold text-ink hover:underline">{s.item_title || t('Item')}</Link>
                 <p className="text-sm text-gray-500">
-                  {s.kind === SHARE_KIND.ALUNO ? 'Enviado ao aluno' : 'Indicado a'} {nome}
+                  {s.kind === SHARE_KIND.ALUNO ? t('Enviado ao aluno') : t('Indicado a')} {nome}
                   {quando(s.created_at) && ` · ${quando(s.created_at)}`}
-                  {s.due_date && ` · prazo ${s.due_date.split('-').reverse().slice(0, 2).join('/')}`}
+                  {s.due_date && ` · ${t('prazo {data}', { data: s.due_date.split('-').reverse().slice(0, 2).join('/') })}`}
                 </p>
                 {s.done_at && s.done_note && <p className="mt-1 text-sm text-gray-700">“{s.done_note}”</p>}
               </div>
               <div className="flex items-center gap-2">
                 {s.done_at
-                  ? <V2Badge tone="green"><CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Feito</V2Badge>
-                  : <V2Badge tone="neutral">{s.read_at ? 'Visto' : 'Não visto'}</V2Badge>}
+                  ? <V2Badge tone="green"><CheckCircle2 className="h-3 w-3" aria-hidden="true" />{' '}{t('Feito')}</V2Badge>
+                  : <V2Badge tone="neutral">{s.read_at ? t('Visto') : t('Não visto')}</V2Badge>}
                 {!s.done_at && (
-                  <V2Button variant="ghost" size="icon" aria-label={`Cancelar o envio de "${s.item_title}" para ${nome}`} onClick={() => setCancelar(s)}>
+                  <V2Button variant="ghost" size="icon" aria-label={t('Cancelar o envio de "{titulo}" para {nome}', { titulo: s.item_title, nome })} onClick={() => setCancelar(s)}>
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </V2Button>
                 )}
@@ -269,13 +270,13 @@ function Enviados({ identity }) {
       <ConfirmDialog
         open={!!cancelar}
         onOpenChange={(o) => { if (!o) setCancelar(null); }}
-        title="Cancelar este envio?"
-        description="O item sai da caixa de quem recebeu."
-        confirmLabel="Cancelar envio"
+        title={t('Cancelar este envio?')}
+        description={t('O item sai da caixa de quem recebeu.')}
+        confirmLabel={t('Cancelar envio')}
         pending={acoes.remove.isPending}
         onConfirm={() => acoes.remove.mutate(cancelar, {
-          onSuccess: () => { toast.success('Envio cancelado.'); setCancelar(null); },
-          onError: () => toast.error('Não foi possível cancelar agora.'),
+          onSuccess: () => { toast.success(t('Envio cancelado.')); setCancelar(null); },
+          onError: () => toast.error(t('Não foi possível cancelar agora.')),
         })}
       />
     </div>
@@ -283,15 +284,15 @@ function Enviados({ identity }) {
 }
 
 const PARTES = [
-  { value: 'recebidos', label: 'Recebidos' },
-  { value: 'enviados', label: 'Enviados' },
+  { value: 'recebidos', label: tk('Recebidos') },
+  { value: 'enviados', label: tk('Enviados') },
 ];
 
 export default function ReceivedTab({ identity, params, irPara }) {
   const parte = params.get('parte') === 'enviados' ? 'enviados' : 'recebidos';
   return (
     <div className="space-y-4">
-      <V2SubTabs tabs={PARTES} activeValue={parte} ariaLabel="Recebidos ou enviados" onSelect={(t) => irPara('recebidos', { parte: t.value === 'enviados' ? 'enviados' : '' })} />
+      <V2SubTabs tabs={PARTES.map((p) => ({ ...p, label: t(p.label) }))} activeValue={parte} ariaLabel={t('Recebidos ou enviados')} onSelect={(aba) => irPara('recebidos', { parte: aba.value === 'enviados' ? 'enviados' : '' })} />
       {parte === 'enviados' ? <Enviados identity={identity} /> : <Recebidos identity={identity} />}
     </div>
   );

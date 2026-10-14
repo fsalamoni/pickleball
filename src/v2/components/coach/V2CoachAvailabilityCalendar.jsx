@@ -26,8 +26,9 @@ import { generateWeekSlots } from '@/modules/coaches/domain/availability';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tk } from '@/core/i18n';
 
-const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_SHORT = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
 
 function todayISO() {
   const d = new Date();
@@ -37,7 +38,7 @@ function todayISO() {
 function fmtDay(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return `${WEEKDAY_SHORT[date.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+  return `${t(WEEKDAY_SHORT[date.getDay()])} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
 export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) {
@@ -65,13 +66,13 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
     return (
       <V2Surface>
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <CalendarDays className="h-4 w-4" /> Disponibilidade
+          <CalendarDays className="h-4 w-4" /> {t('Disponibilidade')}
         </h3>
         <div className="mt-3">
           <V2EmptyState
             icon={Clock}
-            title="Horários em breve"
-            description="Este professor ainda não publicou uma agenda. Você pode propor um horário mesmo assim."
+            title={t('Horários em breve')}
+            description={t('Este professor ainda não publicou uma agenda. Você pode propor um horário mesmo assim.')}
             compact
           />
         </div>
@@ -84,11 +85,11 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
 
   function handleSlotClick(slot) {
     if (isOwn) {
-      toast.info('Você não pode marcar aula com você mesmo.');
+      toast.info(t('Você não pode marcar aula com você mesmo.'));
       return;
     }
     if (!isAuthenticated) {
-      toast.info('Entre na plataforma para marcar uma aula.');
+      toast.info(t('Entre na plataforma para marcar uma aula.'));
       navigate('/login');
       return;
     }
@@ -101,12 +102,12 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
     <V2Surface>
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <CalendarDays className="h-4 w-4" /> Disponibilidade
+          <CalendarDays className="h-4 w-4" /> {t('Disponibilidade')}
         </h3>
-        <span className="text-xs text-gray-500">próximos 14 dias</span>
+        <span className="text-xs text-gray-500">{t('próximos 14 dias')}</span>
       </div>
       <p className="mt-1 text-sm text-gray-500">
-        Selecione um horário livre e o professor confirma a aula.
+        {t('Selecione um horário livre e o professor confirma a aula.')}
       </p>
 
       <div className="mt-3 space-y-3">
@@ -138,7 +139,7 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
       {hasMore && (
         <div className="mt-3 flex justify-center">
           <V2Button variant="ghost" size="sm" onClick={() => setExpanded((e) => !e)}>
-            {expanded ? 'Mostrar menos' : `Mostrar todos (${freeDays.length} dias)`}
+            {expanded ? t('Mostrar menos') : t('Mostrar todos ({n} dias)', { n: freeDays.length })}
           </V2Button>
         </div>
       )}
@@ -146,7 +147,7 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
       {!isOwn && isAuthenticated && (
         <div className="mt-4">
           <V2Button onClick={() => onRequestLesson && onRequestLesson(null)} variant="secondary" className="w-full">
-            Propor outro horário
+            {t('Propor outro horário')}
           </V2Button>
         </div>
       )}

@@ -22,6 +22,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import ArenaModulesPanel from '@/v2/components/arenas/ArenaModulesPanel';
 import { V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ArenaModules() {
   const { arenaId } = useParams();
@@ -45,8 +46,8 @@ export default function V2ArenaModules() {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2ErrorState
-          title="Não foi possível abrir os módulos desta arena"
-          description="A conexão falhou no meio do caminho. Tente de novo."
+          title={t('Não foi possível abrir os módulos desta arena')}
+          description={t('A conexão falhou no meio do caminho. Tente de novo.')}
           onRetry={() => recarregarArena()}
         />
       </div>
@@ -58,9 +59,9 @@ export default function V2ArenaModules() {
       <div className="mx-auto max-w-[700px]">
         <V2Surface className="text-center">
           <Building2 className="mx-auto h-10 w-10 text-gray-300" />
-          <h2 className="mt-3 font-display text-lg font-bold text-ink">Arena não encontrada</h2>
+          <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Arena não encontrada')}</h2>
           <Link to="/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">
-            Voltar ao diretório
+            {t('Voltar ao diretório')}
           </Link>
         </V2Surface>
       </div>
@@ -74,9 +75,9 @@ export default function V2ArenaModules() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Central da arena</V2BackLink>
+      <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">{t('Central da arena')}</V2BackLink>
       <h1 className="mb-5 font-display text-3xl font-bold tracking-tight text-ink">
-        Módulos · {arena.name}
+        {t('Módulos · {name}', { name: arena.name })}
       </h1>
       <ArenaModulesPanel arenaId={arena.id} canManage={canManage} />
     </div>

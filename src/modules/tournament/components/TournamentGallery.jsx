@@ -10,6 +10,7 @@ import {
   useAddTournamentPhoto,
   useDeleteTournamentPhoto,
 } from '../hooks/useTournamentPhotos.js';
+import { t } from '@/core/i18n';
 
 /**
  * Galeria de fotos do torneio. Fechada pela flag `tournament_gallery`. Quando
@@ -29,8 +30,8 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
   function handleUpload(url) {
     if (url) {
       add.mutate(url, {
-        onSuccess: () => toast.success('Foto adicionada à galeria.'),
-        onError: (err) => toast.error(err?.message || 'Falha ao adicionar foto.'),
+        onSuccess: () => toast.success(t('Foto adicionada à galeria.')),
+        onError: (err) => toast.error(err?.message || t('Falha ao adicionar foto.')),
       });
     }
     setPending('');
@@ -40,10 +41,10 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
     <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
       <CardContent className="p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
-          <Images className="h-4 w-4 text-green-600" /> Galeria de fotos
+          <Images className="h-4 w-4 text-green-600" /> {t('Galeria de fotos')}
         </h2>
         <p className="mb-4 text-sm leading-6 text-gray-500">
-          Esta visão reúne as fotos enviadas na galeria geral do torneio e nas galerias das modalidades.
+          {t('Esta visão reúne as fotos enviadas na galeria geral do torneio e nas galerias das modalidades.')}
         </p>
 
         {canManage && (
@@ -52,33 +53,33 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
               value={pending}
               onChange={handleUpload}
               folder={`tournaments/${tournamentId}`}
-              label="Enviar foto"
-              hint="As fotos aparecem na página do torneio e na visão pública."
+              label={t('Enviar foto')}
+              hint={t('As fotos aparecem na página do torneio e na visão pública.')}
             />
           </div>
         )}
 
         {photos.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma foto do torneio ou das modalidades ainda.</p>
+          <p className="text-sm text-gray-500">{t('Nenhuma foto do torneio ou das modalidades ainda.')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((p) => (
               <div key={p.id} className="group relative overflow-hidden rounded-lg">
                 <PhotoLightbox
                   src={p.url}
-                  alt="Foto do torneio"
+                  alt={t('Foto do torneio')}
                   trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in object-cover" />}
                 />
                 {canManage && (
                   <ConfirmDialog
-                    title="Remover foto?"
-                    description="A foto será removida da galeria."
-                    confirmLabel="Remover"
+                    title={t('Remover foto?')}
+                    description={t('A foto será removida da galeria.')}
+                    confirmLabel={t('Remover')}
                     onConfirm={() => remove.mutate(p.id)}
                     trigger={(
                       <button
                         type="button"
-                        aria-label="Remover foto"
+                        aria-label={t('Remover foto')}
                         className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

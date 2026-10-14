@@ -29,6 +29,7 @@ import { BOOKING_STATUS } from './constants.js';
 import { SALE_STATUS } from './pdv.js';
 import { timeToMinutes, normalizeWeekdays } from './court_schedule.js';
 import { todayISO, weekdayOf } from './calendar.js';
+import { t, tk } from '@/core/i18n';
 
 /** Converte valor em número seguro (null/undefined/NaN → 0). */
 function num(v) {
@@ -234,12 +235,12 @@ export function calculateArenaMetrics({
 
 /** Formata mês/ano em pt-BR (ex: 'Agosto 2026'). */
 const MONTH_LABELS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  tk('Janeiro'), tk('Fevereiro'), tk('Março'), tk('Abril'), tk('Maio'), tk('Junho'),
+  tk('Julho'), tk('Agosto'), tk('Setembro'), tk('Outubro'), tk('Novembro'), tk('Dezembro'),
 ];
 export function formatPeriodLabel(year, month) {
-  if (!year || !month) return 'Período';
-  return `${MONTH_LABELS[month - 1] || ''} ${year}`;
+  if (!year || !month) return t('Período');
+  return `${MONTH_LABELS[month - 1] ? t(MONTH_LABELS[month - 1]) : ''} ${year}`;
 }
 
 /** Mês/ano atual. */

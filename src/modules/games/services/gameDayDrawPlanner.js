@@ -31,6 +31,7 @@ import {
 } from '@/modules/clubs/domain/gameDayFormats';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { GAME_KIND, isSinglesGame, normalizeGameKind } from '@/modules/games/domain/gameKind';
+import { t } from '@/core/i18n';
 
 /**
  * As DUPLAS VINCULADAS de uma lista de participantes — só os vínculos MÚTUOS.
@@ -189,7 +190,7 @@ export async function buildGameDayDraw({
     removeIds: plan.removeIds,
     orderBase: plan.orderBase,
     kind: tipo,
-    label: simples ? 'Americano de simples' : (GAME_DAY_FORMAT_LABELS[format] || 'Americano'),
+    label: simples ? t('Americano de simples') : (t(GAME_DAY_FORMAT_LABELS[format]) || t('Americano')),
     fixedPairs,
     fixedPairsIgnored: fixedPairsReason != null,
     fixedPairsReason,

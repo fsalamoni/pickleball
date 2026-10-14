@@ -19,13 +19,14 @@
 import { getAvailableSpots, slotLevelFit, slotStartMs } from './openMatch.js';
 import { WAITLIST_STATUS, DEFAULT_PROMOTION_WINDOW_MINUTES } from './waitlist.js';
 import { instanteEmMs } from '@/core/domain/instant';
+import { tk } from '@/core/i18n';
 
 const CANCELADA = 'cancelled';
 
 /** Os formatos da vaga, como a tela os diz. */
 export const OPEN_SLOT_FORMAT_LABEL = Object.freeze({
-  duplas: 'Duplas', simples: 'Simples', mistas: 'Duplas mistas',
-  open: 'Livre', treino: 'Treino',
+  duplas: tk('Duplas'), simples: tk('Simples'), mistas: tk('Duplas mistas'),
+  open: tk('Livre'), treino: tk('Treino'),
 });
 
 /** A vaga ainda vai acontecer (não cancelada, não começou). */

@@ -12,6 +12,7 @@ import {
   useAddModalityPhoto,
 } from '@/modules/tournament/hooks/useTournamentPhotos';
 import { V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function PhotoGrid({ photos, canManage, onRemove, alt, emptyText, removeText }) {
   if (photos.length === 0) return <p className="text-sm text-gray-500">{emptyText}</p>;
@@ -22,14 +23,14 @@ function PhotoGrid({ photos, canManage, onRemove, alt, emptyText, removeText }) 
           <PhotoLightbox src={p.url} alt={alt} trigger={<img src={p.url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in object-cover" />} />
           {canManage && (
             <ConfirmDialog
-              title="Remover foto?"
+              title={t('Remover foto?')}
               description={removeText}
-              confirmLabel="Remover"
+              confirmLabel={t('Remover')}
               onConfirm={() => onRemove(p.id)}
               trigger={(
                 <button
                   type="button"
-                  aria-label="Remover foto"
+                  aria-label={t('Remover foto')}
                   className="absolute right-1 top-1 rounded-full bg-ink/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -56,8 +57,8 @@ export function V2TournamentGallery({ tournamentId, canManage = false }) {
   function handleUpload(url) {
     if (url) {
       add.mutate(url, {
-        onSuccess: () => toast.success('Foto adicionada à galeria.'),
-        onError: (err) => toast.error(err?.message || 'Falha ao adicionar foto.'),
+        onSuccess: () => toast.success(t('Foto adicionada à galeria.')),
+        onError: (err) => toast.error(err?.message || t('Falha ao adicionar foto.')),
       });
     }
     setPending('');
@@ -66,10 +67,10 @@ export function V2TournamentGallery({ tournamentId, canManage = false }) {
   return (
     <V2Surface>
       <h2 className="mb-2 flex items-center gap-2 font-display text-base font-bold text-ink">
-        <Images className="h-4 w-4 text-ink" /> Galeria de fotos
+        <Images className="h-4 w-4 text-ink" /> {t('Galeria de fotos')}
       </h2>
       <p className="mb-4 text-sm leading-6 text-gray-500">
-        Esta visão reúne as fotos enviadas na galeria geral do torneio e nas galerias das modalidades.
+        {t('Esta visão reúne as fotos enviadas na galeria geral do torneio e nas galerias das modalidades.')}
       </p>
       {canManage && (
         <div className="mb-4">
@@ -77,8 +78,8 @@ export function V2TournamentGallery({ tournamentId, canManage = false }) {
             value={pending}
             onChange={handleUpload}
             folder={`tournaments/${tournamentId}`}
-            label="Enviar foto"
-            hint="As fotos aparecem na página do torneio e na visão pública."
+            label={t('Enviar foto')}
+            hint={t('As fotos aparecem na página do torneio e na visão pública.')}
           />
         </div>
       )}
@@ -86,9 +87,9 @@ export function V2TournamentGallery({ tournamentId, canManage = false }) {
         photos={photos}
         canManage={canManage}
         onRemove={(id) => remove.mutate(id)}
-        alt="Foto do torneio"
-        emptyText="Nenhuma foto do torneio ou das modalidades ainda."
-        removeText="A foto será removida da galeria."
+        alt={t('Foto do torneio')}
+        emptyText={t('Nenhuma foto do torneio ou das modalidades ainda.')}
+        removeText={t('A foto será removida da galeria.')}
       />
     </V2Surface>
   );
@@ -103,8 +104,8 @@ export function V2ModalityGallery({ tournamentId, modalityId, canManage = false 
   function handleUpload(url) {
     if (url) {
       add.mutate(url, {
-        onSuccess: () => toast.success('Foto adicionada à modalidade.'),
-        onError: (err) => toast.error(err?.message || 'Falha ao adicionar foto.'),
+        onSuccess: () => toast.success(t('Foto adicionada à modalidade.')),
+        onError: (err) => toast.error(err?.message || t('Falha ao adicionar foto.')),
       });
     }
     setPending('');
@@ -113,7 +114,7 @@ export function V2ModalityGallery({ tournamentId, modalityId, canManage = false 
   return (
     <V2Surface>
       <h2 className="mb-3 flex items-center gap-2 font-display text-base font-bold text-ink">
-        <Images className="h-4 w-4 text-ink" /> Fotos da modalidade
+        <Images className="h-4 w-4 text-ink" /> {t('Fotos da modalidade')}
       </h2>
       {canManage && (
         <div className="mb-4">
@@ -121,8 +122,8 @@ export function V2ModalityGallery({ tournamentId, modalityId, canManage = false 
             value={pending}
             onChange={handleUpload}
             folder={`tournaments/${tournamentId}/modalidades/${modalityId}`}
-            label="Enviar foto"
-            hint="As fotos aparecem nesta modalidade, para atletas e público."
+            label={t('Enviar foto')}
+            hint={t('As fotos aparecem nesta modalidade, para atletas e público.')}
           />
         </div>
       )}
@@ -130,9 +131,9 @@ export function V2ModalityGallery({ tournamentId, modalityId, canManage = false 
         photos={photos}
         canManage={canManage}
         onRemove={(id) => remove.mutate(id)}
-        alt="Foto da modalidade"
-        emptyText="Nenhuma foto desta modalidade ainda."
-        removeText="A foto será removida desta modalidade."
+        alt={t('Foto da modalidade')}
+        emptyText={t('Nenhuma foto desta modalidade ainda.')}
+        removeText={t('A foto será removida desta modalidade.')}
       />
     </V2Surface>
   );

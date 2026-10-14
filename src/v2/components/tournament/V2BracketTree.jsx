@@ -19,6 +19,7 @@ import { cn } from '@/core/lib/utils';
 import {
   buildKnockoutDiagram, layoutBracketColumns, refLabel,
 } from '@/modules/tournament/domain/bracketLayout';
+import { t } from '@/core/i18n';
 
 const CARD_W = 212;
 const CARD_H = 88;
@@ -57,13 +58,13 @@ function statusChip(m) {
   if (m.status === 'in_progress') {
     return (
       <span className="inline-flex items-center gap-1 text-ink">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-acid ring-2 ring-acid/30" /> Em quadra
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-acid ring-2 ring-acid/30" /> {t('Em quadra')}
       </span>
     );
   }
-  if (m.bye) return 'Passa direto';
+  if (m.bye) return t('Passa direto');
   if (m.status === 'walkover') return 'W.O.';
-  if (m.winner_side) return 'Encerrado';
+  if (m.winner_side) return t('Encerrado');
   return m.court ? String(m.court) : null;
 }
 
@@ -74,21 +75,21 @@ function MatchCard({ m, nameOf, onClick }) {
   const ehBye = m.bye === true || m.status === 'walkover';
   // Lado vazio: num bye é "passa direto"; senão é a vaga de quem ainda vai
   // chegar — e aí o título diz DE ONDE ("Vencedor do jogo 3").
-  const vazioDe = (i) => (ehBye && !m.placeholder ? 'Passa direto (bye)' : refLabel(m.refs?.[i]));
+  const vazioDe = (i) => (ehBye && !m.placeholder ? t('Passa direto (bye)') : refLabel(m.refs?.[i]));
   const passouDireto = ehBye && (Boolean(aNome) !== Boolean(bNome));
   const aWon = m.winner_side === 'a' || (passouDireto && Boolean(aNome));
   const bWon = m.winner_side === 'b' || (passouDireto && Boolean(bNome));
   const chip = statusChip(m);
   const clicavel = onClick && !m.placeholder && !(ehBye && passouDireto);
   const Tag = clicavel ? 'button' : 'div';
-  const titulo = m.third_place ? 'Disputa de 3º lugar' : `Jogo ${m.number}`;
+  const titulo = m.third_place ? t('Disputa de 3º lugar') : t('Jogo {number}', { number: m.number });
 
   return (
     <Tag
       {...(clicavel ? {
         type: 'button',
         onClick: () => onClick(m),
-        'aria-label': `${titulo}: ${aNome || vazioDe(0)} contra ${bNome || vazioDe(1)}. Abrir ações do jogo`,
+        'aria-label': t('{titulo}: {v2} contra {v3}. Abrir ações do jogo', { titulo, v2: aNome || vazioDe(0), v3: bNome || vazioDe(1) }),
       } : {})}
       style={{ width: CARD_W, height: CARD_H }}
       className={cn(
@@ -131,7 +132,7 @@ function ChampionCard({ nome, aguardando }) {
       )}
     >
       <span className={cn('inline-flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest', nome ? 'text-acid' : 'text-gray-500')}>
-        <Trophy className="h-3.5 w-3.5" aria-hidden /> Campeão
+        <Trophy className="h-3.5 w-3.5" aria-hidden /> {t('Campeão')}
       </span>
       <span className={cn('w-full truncate font-display text-sm font-bold', nome ? 'text-white' : 'italic text-gray-500')} title={nome || aguardando}>
         {nome || aguardando}
@@ -271,8 +272,8 @@ export default function V2BracketTree({
         </div>
       </div>
       <p className="mt-2 text-xs text-gray-500">
-        O próximo confronto nasce sozinho assim que os dois jogos que o alimentam terminam.
-        <span className="sm:hidden"> Arraste para o lado para ver a chave inteira.</span>
+        {t('O próximo confronto nasce sozinho assim que os dois jogos que o alimentam terminam.')}
+        <span className="sm:hidden"> {t('Arraste para o lado para ver a chave inteira.')}</span>
       </p>
     </div>
   );

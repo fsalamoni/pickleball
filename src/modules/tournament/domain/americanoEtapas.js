@@ -55,6 +55,7 @@ import {
   ETAPAS_MIN, ETAPAS_MAX, ETAPAS_PADRAO, TAMANHOS_DE_GRUPO, TAMANHO_PADRAO,
   normalizeEtapaCount, normalizeEtapaGroupSize,
 } from './americanoEtapasConfig.js';
+import { t, tn, fmtLista } from '@/core/i18n';
 
 export const AMERICANO_ETAPAS = TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS;
 
@@ -253,8 +254,8 @@ export function planEtapas(ids, opts = {}) {
   const atletas = (ids || []).map(String);
   const sizes = opts.sizes || [];
   const n = atletas.length;
-  if (sizes.reduce((s, t) => s + t, 0) !== n) {
-    throw new Error('Os tamanhos dos grupos não somam o número de atletas.');
+  if (sizes.reduce((s, tt) => s + tt, 0) !== n) {
+    throw new Error(t('Os tamanhos dos grupos não somam o número de atletas.'));
   }
   const R = Math.max(1, Math.floor(Number(opts.etapas)) || 1);
   const legs = opts.legs === 2 ? 2 : 1;
@@ -271,11 +272,11 @@ export function planEtapas(ids, opts = {}) {
   });
 
   // Jogos: com grupos de tamanhos diferentes, quem cai no maior joga mais.
-  const inc = sizes.map((t) => jogosNoGrupo(t, legs));
+  const inc = sizes.map((tt) => jogosNoGrupo(tt, legs));
   const variosTamanhos = new Set(sizes).size > 1;
   const G = new Float64Array(n);
   atletas.forEach((id, i) => { G[i] = (opts.gamesPlayed && opts.gamesPlayed.get(id)) || 0; });
-  const media = (G.reduce((s, v) => s + v, 0) + R * sizes.reduce((s, t, g) => s + t * inc[g], 0)) / Math.max(1, n);
+  const media = (G.reduce((s, v) => s + v, 0) + R * sizes.reduce((s, tt, g) => s + tt * inc[g], 0)) / Math.max(1, n);
 
   const juntar = (membros, d) => {
     for (let x = 0; x < membros.length; x += 1) {
@@ -519,8 +520,8 @@ export function etapaParticipants(matches = [], { excluir = [] } = {}) {
 export function mensagemSemDivisao(n, alvo) {
   const { abaixo, acima } = numerosQueFecham(n, alvo);
   const opcoes = [abaixo, acima].filter(Boolean).join(' ou ');
-  return `Com ${n} atletas não dá para montar grupos de Americano (que fecham com 4, 5, 8, 9… atletas).`
-    + (opcoes ? ` Com ${opcoes} atletas, fecha.` : '');
+  return t('Com {n} atletas não dá para montar grupos de Americano (que fecham com 4, 5, 8, 9… atletas).', { n })
+    + (opcoes ? t(' Com {opcoes} atletas, fecha.', { opcoes }) : '');
 }
 
 /**
@@ -639,7 +640,7 @@ export function simulateEtapas(n, phase = {}) {
     sizes,
     etapas,
     jogosPorAtleta: { min: Math.min(...porAtleta), max: Math.max(...porAtleta) },
-    totalJogos: sizes.reduce((s, t) => s + (t * (t - 1)) / 4, 0) * legs * etapas,
+    totalJogos: sizes.reduce((s, tt) => s + (tt * (tt - 1)) / 4, 0) * legs * etapas,
     encontrosPossiveis: totalPares,
     encontrosIneditos: juntos.size,
     reencontros: coGrupos.filter((v) => v > 1).length,
@@ -662,41 +663,41 @@ export function explainAmericanoEtapas(n, phase = {}) {
       totalMatches: 0,
       rounds: 0,
       lines: [mensagemSemDivisao(n, alvo)],
-      recommendation: 'O Americano de cada grupo só fecha com 4, 5, 8, 9, 12, 13… atletas. Ajuste o tamanho dos grupos ou o número de inscritos.',
+      recommendation: t('O Americano de cada grupo só fecha com 4, 5, 8, 9, 12, 13… atletas. Ajuste o tamanho dos grupos ou o número de inscritos.'),
     };
   }
   const sim = simulateEtapas(n, { ...phase, etapa_count: etapas, max_per_group: alvo, round_robin_legs: legs });
   const tamanhos = new Set(sizes).size === 1
-    ? `${sizes.length} ${sizes.length === 1 ? 'grupo' : 'grupos'} de ${sizes[0]}`
-    : `grupos de ${sizes.join(', ').replace(/, (\d+)$/, ' e $1')}`;
+    ? tn(sizes.length, '{n} grupo de {tam}', '{n} grupos de {tam}', { tam: sizes[0] })
+    : t('grupos de {tamanhos}', { tamanhos: fmtLista(sizes.map(String)) });
   const jogosEtapa = new Set(sizes).size === 1
-    ? `${jogosNoGrupo(sizes[0], legs)} jogos`
-    : `${jogosNoGrupo(Math.min(...sizes), legs)} ou ${jogosNoGrupo(Math.max(...sizes), legs)} jogos`;
+    ? t('{n} jogos', { n: jogosNoGrupo(sizes[0], legs) })
+    : t('{v1} ou {v2} jogos', { v1: jogosNoGrupo(Math.min(...sizes), legs), v2: jogosNoGrupo(Math.max(...sizes), legs) });
   const totalPorAtleta = sim.jogosPorAtleta.min === sim.jogosPorAtleta.max
-    ? `${sim.jogosPorAtleta.max} jogos`
-    : `${sim.jogosPorAtleta.min} a ${sim.jogosPorAtleta.max} jogos`;
+    ? t('{n} jogos', { n: sim.jogosPorAtleta.max })
+    : t('{min} a {max} jogos', { min: sim.jogosPorAtleta.min, max: sim.jogosPorAtleta.max });
   const outros = n - 1;
   const conhecidos = Math.round((2 * sim.encontrosIneditos) / n);
 
   const lines = [
-    `${n} atletas → em cada etapa, ${tamanhos}; cada um faz ${jogosEtapa} na etapa${legs === 2 ? ' (ida e volta)' : ''}.`,
-    `${etapas} ${etapas === 1 ? 'etapa' : 'etapas'} → ${totalPorAtleta} para cada atleta, ${sim.totalJogos} jogos no total.`,
-    'A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou — e a classificação é uma só, somando todas as etapas.',
+    t('{n} atletas → em cada etapa, {tamanhos}; cada um faz {jogosEtapa} na etapa{v4}.', { n, tamanhos, jogosEtapa, v4: legs === 2 ? t(' (ida e volta)') : '' }),
+    tn(etapas, '{n} etapa → {totalPorAtleta} para cada atleta, {totalJogos} jogos no total.', '{n} etapas → {totalPorAtleta} para cada atleta, {totalJogos} jogos no total.', { totalPorAtleta, totalJogos: sim.totalJogos }),
+    t('A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou — e a classificação é uma só, somando todas as etapas.'),
     sizes.length > 1
-      ? `Previsão da mistura: cada atleta encontra, em média, ${Math.min(conhecidos, outros)} dos outros ${outros}${sim.conheceTodos ? ` — todos se encontram até a etapa ${sim.conheceTodos}` : ''}.`
-      : 'Com um grupo só, todas as etapas reúnem as mesmas pessoas: é como jogar o mesmo Americano várias vezes.',
+      ? t('Previsão da mistura: cada atleta encontra, em média, {conhecidos} dos outros {outros}{v3}.', { conhecidos: Math.min(conhecidos, outros), outros, v3: sim.conheceTodos ? t(' — todos se encontram até a etapa {conheceTodos}', { conheceTodos: sim.conheceTodos }) : '' })
+      : t('Com um grupo só, todas as etapas reúnem as mesmas pessoas: é como jogar o mesmo Americano várias vezes.'),
   ];
   let status = 'ok';
   let recommendation;
   if (new Set(sizes).size > 1) {
     status = 'info';
     recommendation = sim.jogosPorAtleta.min === sim.jogosPorAtleta.max
-      ? 'Os grupos têm tamanhos diferentes, mas a mistura reveza quem fica no maior: no fim, todos jogam o mesmo número de jogos.'
-      : 'Os grupos têm tamanhos diferentes e o total de jogos não fecha igual para todos. Se quiser comparar por percentual, use o desempate por aproveitamento nas regras avançadas da fase.';
+      ? t('Os grupos têm tamanhos diferentes, mas a mistura reveza quem fica no maior: no fim, todos jogam o mesmo número de jogos.')
+      : t('Os grupos têm tamanhos diferentes e o total de jogos não fecha igual para todos. Se quiser comparar por percentual, use o desempate por aproveitamento nas regras avançadas da fase.');
   }
   if (sizes.length === 1 && n > 0) {
     status = 'warn';
-    recommendation = 'Para haver mistura entre as etapas são precisos ao menos 2 grupos (8 atletas com grupos de 4).';
+    recommendation = t('Para haver mistura entre as etapas são precisos ao menos 2 grupos (8 atletas com grupos de 4).');
   }
   return {
     status,
@@ -713,20 +714,20 @@ export function explainAmericanoEtapas(n, phase = {}) {
  */
 export function etapasResumo(prog) {
   if (!prog || prog.atual === 0) return null;
-  const jogos = (n) => `${n} ${n === 1 ? 'jogo' : 'jogos'}`;
+  const jogos = (n) => tn(n, '{n} jogo', '{n} jogos');
   if (prog.completa) {
-    return `As ${prog.total} ${prog.total === 1 ? 'etapa foi jogada' : 'etapas foram jogadas'} — a classificação final está valendo.`;
+    return tn(prog.total, 'A {n} etapa foi jogada — a classificação final está valendo.', 'As {n} etapas foram jogadas — a classificação final está valendo.');
   }
   if (prog.pendentes > 0) {
     return prog.atual < prog.total
-      ? `Etapa ${prog.atual} de ${prog.total} em andamento: ${prog.pendentes === 1 ? 'falta 1 jogo' : `faltam ${jogos(prog.pendentes)}`} para gerar a etapa ${prog.atual + 1}.`
-      : `Última etapa (${prog.atual} de ${prog.total}) em andamento: ${prog.pendentes === 1 ? 'falta 1 jogo' : `faltam ${jogos(prog.pendentes)}`}.`;
+      ? t('Etapa {atual} de {total} em andamento: {v3} para gerar a etapa {v4}.', { atual: prog.atual, total: prog.total, v3: prog.pendentes === 1 ? t('falta 1 jogo') : t('faltam {pendentes}', { pendentes: jogos(prog.pendentes) }), v4: prog.atual + 1 })
+      : t('Última etapa ({atual} de {total}) em andamento: {v3}.', { atual: prog.atual, total: prog.total, v3: prog.pendentes === 1 ? t('falta 1 jogo') : t('faltam {pendentes}', { pendentes: jogos(prog.pendentes) }) });
   }
-  return `Etapa ${prog.atual} de ${prog.total} concluída — a etapa ${prog.proxima} pode ser gerada.`;
+  return t('Etapa {atual} de {total} concluída — a etapa {proxima} pode ser gerada.', { atual: prog.atual, total: prog.total, proxima: prog.proxima });
 }
 
 /** O rótulo do botão de avançar: "Gerar etapa 2 de 3". */
 export function etapaBotaoTexto(prog) {
-  if (!prog || !prog.proxima) return 'Gerar próxima etapa';
-  return `Gerar etapa ${prog.proxima} de ${prog.total}`;
+  if (!prog || !prog.proxima) return t('Gerar próxima etapa');
+  return t('Gerar etapa {proxima} de {total}', { proxima: prog.proxima, total: prog.total });
 }

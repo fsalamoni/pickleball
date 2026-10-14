@@ -16,6 +16,7 @@ import { ITEM_KIND_LABELS } from '@/modules/training/domain/taxonomy';
 import { authorBadge, itemStatusLabel } from '@/modules/training/domain/visibility';
 import { itemMetaLine } from '@/modules/training/domain/trainingItem';
 import { V2Badge } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const KIND_ICON = {
   drill: Target,
@@ -62,8 +63,8 @@ export function AuthorLine({ item, className }) {
       {Icon && <Icon className={cn('h-3.5 w-3.5 shrink-0', a.role === 'plataforma' ? 'text-green-600' : 'text-blue-600')} aria-hidden="true" />}
       <span className="truncate">{a.label}</span>
       {item?.ai_assisted && (
-        <span className="inline-flex shrink-0 items-center gap-0.5 text-gray-400" title="Criado com ajuda de IA e revisado pelo autor">
-          <Sparkles className="h-3 w-3" aria-hidden="true" /> IA
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-gray-400" title={t('Criado com ajuda de IA e revisado pelo autor')}>
+          <Sparkles className="h-3 w-3" aria-hidden="true" />{' '}{t('IA')}
         </span>
       )}
     </span>
@@ -90,10 +91,10 @@ export default function ItemCard({ item, to, showStatus = false, actions, extra,
       <KindIcon kind={item.kind} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">{ITEM_KIND_LABELS[item.kind] || 'Item'}</span>
+          <span className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t(ITEM_KIND_LABELS[item.kind]) || t('Item')}</span>
           {item.featured && (
             <span className="inline-flex items-center gap-0.5 text-2xs font-bold text-amber-600">
-              <Star className="h-3 w-3 fill-current" aria-hidden="true" /> Destaque
+              <Star className="h-3 w-3 fill-current" aria-hidden="true" />{' '}{t('Destaque')}
             </span>
           )}
         </div>

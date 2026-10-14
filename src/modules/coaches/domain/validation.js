@@ -11,6 +11,7 @@
  */
 
 import { LEVEL_TABLE } from '../../leveling/data/levels.js';
+import { t } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -47,11 +48,11 @@ export function normalizeValidation(input = {}) {
   const level_id = str(input.level_id);
 
   if (!coach_id || !student_id) {
-    return { valid: false, error: 'Professor e aluno são obrigatórios.', value: {} };
+    return { valid: false, error: t('Professor e aluno são obrigatórios.'), value: {} };
   }
   const level = LEVEL_BY_ID[level_id];
   if (!level) {
-    return { valid: false, error: 'Selecione um nível válido.', value: {} };
+    return { valid: false, error: t('Selecione um nível válido.'), value: {} };
   }
 
   const value = {

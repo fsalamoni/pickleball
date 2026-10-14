@@ -31,6 +31,7 @@ import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { categorizeBoardMatches } from '@/modules/tournament/domain/tournamentBoard';
+import { t, fmtData } from '@/core/i18n';
 
 function regLabel(reg) {
   if (!reg) return '';
@@ -38,7 +39,7 @@ function regLabel(reg) {
 }
 
 function sideLabel(ids, labelById) {
-  return (ids || []).map((id) => labelById.get(id) || '—').join(' / ') || 'A definir';
+  return (ids || []).map((id) => labelById.get(id) || '—').join(' / ') || t('A definir');
 }
 
 async function loadBoard(tournamentId) {
@@ -74,7 +75,7 @@ function scoreText(m) {
 function timeText(value) {
   if (!value) return '';
   const d = typeof value === 'object' && value.toDate ? value.toDate() : new Date(value);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(d.getTime()) ? '' : fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function Telao() {
@@ -103,7 +104,7 @@ export default function Telao() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink text-2xl text-white/50">
-        Carregando o torneio…
+        {t('Carregando o torneio…')}
       </div>
     );
   }
@@ -112,18 +113,18 @@ export default function Telao() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-6 text-center">
         <p className="text-2xl font-bold text-white">
-          {isError ? 'Não foi possível carregar o torneio' : 'Torneio não encontrado'}
+          {isError ? t('Não foi possível carregar o torneio') : t('Torneio não encontrado')}
         </p>
         <p className="max-w-md text-lg text-white/50">
           {isError
-            ? 'A conexão falhou. O telão volta sozinho assim que a rede voltar.'
-            : 'Confira o link recebido — ele pode apontar para um torneio removido.'}
+            ? t('A conexão falhou. O telão volta sozinho assim que a rede voltar.')
+            : t('Confira o link recebido — ele pode apontar para um torneio removido.')}
         </p>
         <Link
           to={`/p/${tournamentId}`}
           className="rounded-full bg-acid px-5 py-2.5 font-bold text-ink"
         >
-          Ver a página do torneio
+          {t('Ver a página do torneio')}
         </Link>
       </div>
     );
@@ -149,7 +150,7 @@ export default function Telao() {
             <h1 className="truncate font-display text-4xl font-bold text-acid">
               {data.tournament.name}
             </h1>
-            <p className="mt-1 text-lg text-gray-300">Acompanhe os jogos ao vivo</p>
+            <p className="mt-1 text-lg text-gray-300">{t('Acompanhe os jogos ao vivo')}</p>
           </div>
 
           <div className="ml-auto flex items-center gap-4">
@@ -160,7 +161,7 @@ export default function Telao() {
                   deixar o tablet sozinho e voltar para uma tela preta. */}
               {podeManterAcesa && telaAcesa && (
                 <div className="flex items-center justify-end gap-1.5 text-xs text-white/40">
-                  <Sun aria-hidden="true" className="h-3.5 w-3.5" /> Tela sempre acesa
+                  <Sun aria-hidden="true" className="h-3.5 w-3.5" /> {t('Tela sempre acesa')}
                 </div>
               )}
             </div>
@@ -175,7 +176,7 @@ export default function Telao() {
                 className={`h-5 w-5 ${
                   conexao.mode === 'stale' ? 'text-amber-300' : 'animate-pulse text-acid'}`}
               />
-              {conexao.mode === 'stale' ? 'Sem conexão' : 'Atualiza automaticamente'}
+              {conexao.mode === 'stale' ? t('Sem conexão') : t('Atualiza automaticamente')}
             </div>
           </div>
         </header>
@@ -184,10 +185,10 @@ export default function Telao() {
             {/* Em andamento */}
             <section className="lg:col-span-2">
               <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-acid">
-                <Radio className="h-5 w-5" /> Em andamento ({board.inProgress.length})
+                <Radio className="h-5 w-5" /> {t('Em andamento ({n})', { n: board.inProgress.length })}
               </h2>
               {board.inProgress.length === 0 ? (
-                <p className="rounded-2xl border border-white/10 bg-white/5 p-6 text-lg text-gray-400">Nenhum jogo em andamento.</p>
+                <p className="rounded-2xl border border-white/10 bg-white/5 p-6 text-lg text-gray-400">{t('Nenhum jogo em andamento.')}</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {board.inProgress.map((m) => (
@@ -197,7 +198,7 @@ export default function Telao() {
                           {m.modality_name}
                           {m.group && <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-acid">{m.group}</span>}
                         </span>
-                        {m.court && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> Quadra {m.court}</span>}
+                        {m.court && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {t('Quadra {court}', { court: m.court })}</span>}
                       </div>
                       <div className="space-y-1 text-2xl font-bold">
                         <div className="truncate">{m.side_a_label}</div>
@@ -214,11 +215,11 @@ export default function Telao() {
             <aside className="space-y-6">
               <section>
                 <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-white">
-                  <Clock className="h-5 w-5" /> Próximos
+                  <Clock className="h-5 w-5" /> {t('Próximos')}
                 </h2>
                 <div className="space-y-2">
                   {board.upcoming.length === 0 ? (
-                    <p className="text-gray-500">Sem próximos jogos.</p>
+                    <p className="text-gray-500">{t('Sem próximos jogos.')}</p>
                   ) : board.upcoming.map((m) => (
                     <div key={m.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="flex items-center justify-between text-xs text-gray-400">
@@ -226,7 +227,7 @@ export default function Telao() {
                           {m.modality_name}
                           {m.group && <span className="rounded-full bg-white/10 px-1.5 py-0.5 font-semibold text-acid">{m.group}</span>}
                         </span>
-                        <span>{m.court ? `Quadra ${m.court}` : ''} {timeText(m.scheduled_at)}</span>
+                        <span>{m.court ? t('Quadra {court}', { court: m.court }) : ''} {timeText(m.scheduled_at)}</span>
                       </div>
                       <div className="mt-1 truncate text-lg font-semibold">{m.side_a_label}</div>
                       <div className="truncate text-lg text-gray-300">{m.side_b_label}</div>
@@ -237,11 +238,11 @@ export default function Telao() {
 
               <section>
                 <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-white">
-                  <CheckCircle2 className="h-5 w-5" /> Resultados recentes
+                  <CheckCircle2 className="h-5 w-5" /> {t('Resultados recentes')}
                 </h2>
                 <div className="space-y-2">
                   {board.recent.length === 0 ? (
-                    <p className="text-gray-500">Sem resultados ainda.</p>
+                    <p className="text-gray-500">{t('Sem resultados ainda.')}</p>
                   ) : board.recent.map((m) => (
                     <div key={m.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="min-w-0">
@@ -250,7 +251,7 @@ export default function Telao() {
                         <div className="truncate text-base text-gray-300">{m.side_b_label}</div>
                       </div>
                       <div className="ml-3 shrink-0 font-display text-xl font-bold text-acid">
-                        {m.status === 'walkover' ? 'WO' : scoreText(m)}
+                        {m.status === 'walkover' ? t('WO') : scoreText(m)}
                       </div>
                     </div>
                   ))}

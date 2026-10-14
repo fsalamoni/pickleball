@@ -36,6 +36,7 @@ import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant
 import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayRulesCard from '@/v2/components/games/GameDayRulesCard';
 import GameDaySettingsCard from '@/v2/components/games/GameDaySettingsCard';
+import { t } from '@/core/i18n';
 
 /**
  * As ferramentas que acompanham o dia de jogo: o tutorial do FORMATO e o
@@ -71,7 +72,7 @@ export function GameDayModuleTools({ gameDay, podeGerenciar = false, showTelao =
           data-dica="dia-de-jogo-telao"
           onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener,noreferrer')}
         >
-          <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
+          <MonitorPlay className="mr-1.5 h-4 w-4" /> {t('Abrir telão')}
         </V2Button>
       )}
     </>

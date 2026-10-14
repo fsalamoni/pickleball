@@ -5,7 +5,7 @@ import { CalendarDays, MapPin, Plus, Trash2, Check, X, Pencil, ChevronDown, Chev
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { V2Surface, V2Button, V2Badge, V2Select } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -29,6 +29,7 @@ import {
   useCreateEventGameDay, useSyncEventGameDay, useArchiveEventGameDay,
 } from '@/modules/games/hooks/useClubGameDay';
 import { isModularEventDate } from '@/modules/games/domain/clubGameDay';
+import { t, tn, fmtData } from '@/core/i18n';
 
 // A organização de jogos carrega o módulo inteiro (as três visões por formato,
 // o organizador legado, tutorial e telão) — dezenas de kB que só fazem sentido
@@ -37,10 +38,10 @@ import { isModularEventDate } from '@/modules/games/domain/clubGameDay';
 const ClubGameDayTab = lazy(() => import('@/v2/components/clubs/ClubGameDayTab'));
 
 function formatDateTime(value) {
-  if (!value) return 'Data a definir';
+  if (!value) return t('Data a definir');
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'Data a definir';
-  return d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  if (Number.isNaN(d.getTime())) return t('Data a definir');
+  return fmtData(d, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /**
@@ -51,8 +52,8 @@ function formatDateTime(value) {
 export default function EventDatesPanel({ event, clubId, showGames = false }) {
   const eventId = event.id;
   const term = showGames ? 'dia de jogo' : 'data';
-  const termPlural = showGames ? 'Dias de jogo' : 'Datas';
-  const { data: dates = [], isLoading } = useEventDates(eventId);
+  const termPlural = showGames ? t('Dias de jogo') : t('Datas');
+  const { data: dates = [], isLoading, isError, refetch } = useEventDates(eventId);
   const { data: rsvps = [] } = useEventDateRsvps(eventId);
   const addDate = useAddEventDate(eventId);
   // O clube também é a ORIGEM de um dia de jogo. Com `showGames`, cada data
@@ -87,7 +88,7 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!form.date_time) {
-      toast.error('Informe a data e o horário.');
+      toast.error(t('Informe a data e o horário.'));
       return;
     }
     try {
@@ -104,11 +105,13 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
           ? createGameDay.mutateAsync({ ...payload, format: form.format, play_courts: form.play_courts })
           : addDate.mutateAsync(payload));
       }
-      toast.success(weeks > 1 ? `${weeks} ${showGames ? 'dias de jogo' : 'datas'} adicionados.` : `${showGames ? 'Dia de jogo' : 'Data'} adicionado.`);
+      toast.success(showGames
+          ? tn(weeks, 'Dia de jogo adicionado.', '{n} dias de jogo adicionados.')
+          : tn(weeks, 'Data adicionada.', '{n} datas adicionadas.'));
       setForm((p) => ({ ...p, date_time: '', location: event.location || '', note: '', repeat_weeks: 1 }));
       setAdding(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível adicionar.');
+      toast.error(err.message || t('Não foi possível adicionar.'));
     }
   };
 
@@ -116,14 +119,16 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-ink">{termPlural} do evento</h3>
+          <h3 className="text-base font-semibold text-ink">{t('{grupo} do evento', { grupo: termPlural })}</h3>
           <p className="text-sm text-gray-500">
-            Cada {term} tem local, horário, sua resposta de presença{showGames ? ' e organização de jogos própria.' : '.'}
+              {showGames
+                ? t('Cada dia de jogo tem local, horário, sua resposta de presença e organização de jogos própria.')
+                : t('Cada data tem local, horário e sua resposta de presença.')}
           </p>
         </div>
         {!adding && (
           <V2Button size="sm" onClick={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> {showGames ? 'Novo dia de jogo' : 'Nova data'}
+            <Plus className="mr-1.5 h-4 w-4" /> {showGames ? t('Novo dia de jogo') : t('Nova data')}
           </V2Button>
         )}
       </div>
@@ -133,21 +138,21 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
           <div className="p-4">
             <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="new_date_time">Data e hora *</Label>
+                <Label htmlFor="new_date_time">{t('Data e hora *')}</Label>
                 <Input id="new_date_time" type="datetime-local" value={form.date_time} onChange={(e) => setForm((p) => ({ ...p, date_time: e.target.value }))} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="new_date_location">Local</Label>
+                <Label htmlFor="new_date_location">{t('Local')}</Label>
                 <Input id="new_date_location" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} maxLength={160} />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="new_date_note">Observação</Label>
-                <Input id="new_date_note" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} maxLength={200} placeholder="Ex.: levar bola, quadra 2…" />
+                <Label htmlFor="new_date_note">{t('Observação')}</Label>
+                <Input id="new_date_note" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} maxLength={200} placeholder={t('Ex.: levar bola, quadra 2…')} />
               </div>
               {showGames && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="new_date_format">Formato</Label>
+                    <Label htmlFor="new_date_format">{t('Formato')}</Label>
                     <V2Select
                       id="new_date_format"
                       className="h-10 bg-white px-3"
@@ -155,14 +160,14 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                       onChange={(e) => setForm((p) => ({ ...p, format: e.target.value }))}
                     >
                       {formatosOferecidos.map((value) => (
-                        <option key={value} value={value}>{GAME_DAY_FORMAT_LABELS[value]}</option>
+                        <option key={value} value={value}>{t(GAME_DAY_FORMAT_LABELS[value])}</option>
                       ))}
                     </V2Select>
-                    <p className="text-xs text-gray-500">Dá para mudar na aba de jogos, enquanto não houver partidas.</p>
+                    <p className="text-xs text-gray-500">{t('Dá para mudar na aba de jogos, enquanto não houver partidas.')}</p>
                   </div>
                   {isCourtByCourtFormat(form.format) && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="new_date_courts">Quadras</Label>
+                      <Label htmlFor="new_date_courts">{t('Quadras')}</Label>
                       <Input
                         id="new_date_courts"
                         type="number"
@@ -171,23 +176,23 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                         value={form.play_courts}
                         onChange={(e) => setForm((p) => ({ ...p, play_courts: e.target.value }))}
                       />
-                      <p className="text-xs text-gray-500">Quantas quadras rodam ao mesmo tempo.</p>
+                      <p className="text-xs text-gray-500">{t('Quantas quadras rodam ao mesmo tempo.')}</p>
                     </div>
                   )}
                 </>
               )}
               {recurringOn && (
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="new_date_repeat">Repetir semanalmente por (semanas)</Label>
+                  <Label htmlFor="new_date_repeat">{t('Repetir semanalmente por (semanas)')}</Label>
                   <Input id="new_date_repeat" type="number" min={1} max={52}
                     value={form.repeat_weeks}
                     onChange={(e) => setForm((p) => ({ ...p, repeat_weeks: e.target.value }))} />
-                  <p className="text-xs text-gray-500">1 = só esta data. Ex.: 4 cria esta e mais 3 semanas seguidas.</p>
+                  <p className="text-xs text-gray-500">{t('1 = só esta data. Ex.: 4 cria esta e mais 3 semanas seguidas.')}</p>
                 </div>
               )}
               <div className="flex justify-end gap-2 sm:col-span-2">
-                <V2Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</V2Button>
-                <V2Button type="submit" size="sm" disabled={addDate.isPending || createGameDay.isPending}>Adicionar</V2Button>
+                <V2Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>{t('Cancelar')}</V2Button>
+                <V2Button type="submit" size="sm" disabled={addDate.isPending || createGameDay.isPending}>{t('Adicionar')}</V2Button>
               </div>
             </form>
           </div>
@@ -196,11 +201,17 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
 
       {isLoading ? (
         <div className="space-y-3">{[1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+      ) : isError ? (
+        <V2ErrorState
+          title={t('Não foi possível carregar as datas do evento')}
+          description={t('A conexão falhou. Elas continuam lá.')}
+          onRetry={refetch}
+        />
       ) : dates.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
-          title={`Nenhum ${term} cadastrado`}
-          description={`Adicione o primeiro ${term} com local e horário.`}
+          title={showGames ? t('Nenhum dia de jogo cadastrado') : t('Nenhuma data cadastrada')}
+          description={showGames ? t('Adicione o primeiro dia de jogo com local e horário.') : t('Adicione a primeira data com local e horário.')}
         />
       ) : (
         <div className="space-y-3">
@@ -253,7 +264,7 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
     try {
       await setRsvp.mutateAsync({ dateId: date.id, status });
     } catch (err) {
-      toast.error(err.message || 'Não foi possível responder.');
+      toast.error(err.message || t('Não foi possível responder.'));
     }
   };
 
@@ -266,10 +277,10 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
       if (gameDayId) {
         await syncGameDay.mutateAsync({ gameDayId, date: { ...date, ...form } }).catch(() => {});
       }
-      toast.success('Atualizado.');
+      toast.success(t('Atualizado.'));
       setEditing(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar.');
+      toast.error(err.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -280,10 +291,10 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
       // publicado contando no rating sem nada apontando para ele.
       if (gameDayId) await archiveGameDay.mutateAsync(gameDayId);
       await deleteDate.mutateAsync(date.id);
-      toast.success(`${term === 'dia de jogo' ? 'Dia de jogo' : 'Data'} removido.`);
+      toast.success(term === 'dia de jogo' ? t('Dia de jogo removido.') : t('Data removida.'));
       setConfirmDelete(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
+      toast.error(err.message || t('Não foi possível remover.'));
     }
   };
 
@@ -307,7 +318,7 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
           </div>
         </div>
         <V2Badge variant={myStatus === RSVP_STATUS.GOING ? 'success' : 'secondary'} className="shrink-0 rounded-full">
-          {myStatus ? RSVP_STATUS_LABELS[myStatus] : 'Responder'}
+          {myStatus ? t(RSVP_STATUS_LABELS[myStatus]) : t('Responder')}
         </V2Badge>
       </V2Button>
 
@@ -316,8 +327,8 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
           {showGames ? (
             <Tabs value={tab} onValueChange={setTab} className="w-full">
               <TabsList className="mb-4 grid w-full grid-cols-2">
-                <TabsTrigger value="presenca"><Users className="mr-1.5 h-4 w-4" /> Participação</TabsTrigger>
-                <TabsTrigger value="jogos"><Swords className="mr-1.5 h-4 w-4" /> Organização de jogos</TabsTrigger>
+                <TabsTrigger value="presenca"><Users className="mr-1.5 h-4 w-4" /> {t('Participação')}</TabsTrigger>
+                <TabsTrigger value="jogos"><Swords className="mr-1.5 h-4 w-4" /> {t('Organização de jogos')}</TabsTrigger>
               </TabsList>
               <TabsContent value="presenca">
                 <PresenceSection
@@ -365,9 +376,9 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Remover ${term}`}
-        description={`O ${term}, suas respostas, participantes e jogos serão removidos.`}
-        confirmLabel="Remover"
+        title={term === 'dia de jogo' ? t('Remover dia de jogo') : t('Remover data')}
+        description={term === 'dia de jogo' ? t('O dia de jogo, suas respostas, participantes e jogos serão removidos.') : t('A data, suas respostas, participantes e jogos serão removidos.')}
+        confirmLabel={t('Remover')}
         destructive
         loading={deleteDate.isPending || archiveGameDay.isPending}
         onConfirm={handleDelete}
@@ -382,32 +393,32 @@ function PresenceSection({ date, editing, setEditing, form, setForm, onSave, sav
       {editing ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Data e hora</Label>
+            <Label>{t('Data e hora')}</Label>
             <Input type="datetime-local" value={form.date_time} onChange={(e) => setForm((p) => ({ ...p, date_time: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
-            <Label>Local</Label>
+            <Label>{t('Local')}</Label>
             <Input value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} maxLength={160} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Observação</Label>
+            <Label>{t('Observação')}</Label>
             <Input value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} maxLength={200} />
           </div>
           <div className="flex justify-end gap-2 sm:col-span-2">
-            <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)}><X className="mr-1 h-3.5 w-3.5" /> Cancelar</V2Button>
-            <V2Button size="sm" onClick={onSave} disabled={saving}><Check className="mr-1 h-3.5 w-3.5" /> Salvar</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)}><X className="mr-1 h-3.5 w-3.5" /> {t('Cancelar')}</V2Button>
+            <V2Button size="sm" onClick={onSave} disabled={saving}><Check className="mr-1 h-3.5 w-3.5" /> {t('Salvar')}</V2Button>
           </div>
         </div>
       ) : (
         <div className="flex items-start justify-between gap-3">
           <div className="text-sm text-gray-500">
-            {date.note ? <p>{date.note}</p> : <p className="text-gray-400">Sem observações.</p>}
+            {date.note ? <p>{date.note}</p> : <p className="text-gray-400">{t('Sem observações.')}</p>}
           </div>
           <div className="flex shrink-0 gap-1">
-            <V2Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(true)} title="Editar">
+            <V2Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(true)} title={t('Editar')}>
               <Pencil className="h-4 w-4" />
             </V2Button>
-            <V2Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={onDeleteRequest} title="Excluir">
+            <V2Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={onDeleteRequest} title={t('Excluir')}>
               <Trash2 className="h-4 w-4" />
             </V2Button>
           </div>
@@ -415,7 +426,7 @@ function PresenceSection({ date, editing, setEditing, form, setForm, onSave, sav
       )}
 
       <div>
-        <Label className="text-xs uppercase tracking-wide text-gray-500">Sua presença</Label>
+        <Label className="text-xs uppercase tracking-wide text-gray-500">{t('Sua presença')}</Label>
         <div className="mt-2 flex flex-wrap gap-2">
           {Object.values(RSVP_STATUS).map((status) => (
             <V2Button
@@ -425,7 +436,7 @@ function PresenceSection({ date, editing, setEditing, form, setForm, onSave, sav
               disabled={rsvpPending}
               onClick={() => onRsvp(status)}
             >
-              {RSVP_STATUS_LABELS[status]} · {grouped[status].length}
+              {t(RSVP_STATUS_LABELS[status])} · {grouped[status].length}
             </V2Button>
           ))}
         </div>

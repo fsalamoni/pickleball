@@ -23,6 +23,7 @@
  */
 
 import { MATCH_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 /** Um jogo com resultado: disputado ou W.O. */
 export function isDecidedMatch(match) {
@@ -54,8 +55,8 @@ export function canDiscardStageMatches(matches = [], options = {}) {
   return {
     allowed: false,
     decided,
-    reason: `Esta fase já tem ${decided} jogo(s) com resultado, e sortear apagaria todos. `
-      + 'Recarregue a página para ver o que está lançado antes de decidir — '
-      + 'se a intenção é mesmo refazer a fase, o botão passa a ser "Re-sortear".',
+    reason: t('Esta fase já tem {decided} jogo(s) com resultado, e sortear apagaria todos. ', { decided })
+      + t('Recarregue a página para ver o que está lançado antes de decidir — ')
+      + t('se a intenção é mesmo refazer a fase, o botão passa a ser "Re-sortear".'),
   };
 }

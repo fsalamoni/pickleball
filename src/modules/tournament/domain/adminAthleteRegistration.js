@@ -7,11 +7,13 @@
  */
 
 /** Nome de exibição preferido de um usuário da plataforma. */
+import { t } from '@/core/i18n';
+
 export function platformUserDisplayName(user = {}) {
   const name = String(user.platform_name || '').trim()
     || String(user.full_name || '').trim()
     || String(user.email || '').trim().split('@')[0];
-  return name || 'Atleta';
+  return name || t('Atleta');
 }
 
 /**

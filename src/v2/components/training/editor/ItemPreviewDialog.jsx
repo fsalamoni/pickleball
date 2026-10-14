@@ -9,6 +9,7 @@ import { useVisibleTrainingItems } from '@/modules/training/hooks/useTrainingIte
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
 import { V2Skeleton } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const TrainingItemView = lazy(() => import('@/v2/components/training/item/TrainingItemView'));
 
@@ -23,8 +24,8 @@ export default function ItemPreviewDialog({ open, onOpenChange, item, identity }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Prévia da ficha</DialogTitle>
-          <DialogDescription>É assim que quem treina vai ver. Nada foi salvo ainda.</DialogDescription>
+          <DialogTitle>{t('Prévia da ficha')}</DialogTitle>
+          <DialogDescription>{t('É assim que quem treina vai ver. Nada foi salvo ainda.')}</DialogDescription>
         </DialogHeader>
         {open && item && (
           <V2RouteBoundary name="treino-previa">

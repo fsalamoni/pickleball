@@ -10,6 +10,7 @@
  */
 
 import { formatPrice } from '../../arenas/domain/pricing.js';
+import { t } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -29,20 +30,20 @@ function toISODate(d) {
 /** Normaliza/valida a definição de um pacote. */
 export function normalizePackage(input = {}) {
   const coach_id = str(input.coach_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
   const name = str(input.name).slice(0, PACKAGE_NAME_MAX);
-  if (!name) return { valid: false, error: 'Informe o nome do pacote.', value: { coach_id } };
+  if (!name) return { valid: false, error: t('Informe o nome do pacote.'), value: { coach_id } };
   const lessons_count = Math.trunc(num(input.lessons_count, 0));
   if (!(lessons_count >= 1 && lessons_count <= PACKAGE_LESSONS_MAX)) {
-    return { valid: false, error: `Número de aulas deve estar entre 1 e ${PACKAGE_LESSONS_MAX}.`, value: { coach_id, name } };
+    return { valid: false, error: t('Número de aulas deve estar entre 1 e {n}.', { n: PACKAGE_LESSONS_MAX }), value: { coach_id, name } };
   }
   const price = num(input.price, null);
   if (price == null || price < 0) {
-    return { valid: false, error: 'Informe um preço válido.', value: { coach_id, name, lessons_count } };
+    return { valid: false, error: t('Informe um preço válido.'), value: { coach_id, name, lessons_count } };
   }
   const validity_days = Math.trunc(num(input.validity_days, 0));
   if (!(validity_days >= 1 && validity_days <= PACKAGE_VALIDITY_MAX)) {
-    return { valid: false, error: `Validade deve estar entre 1 e ${PACKAGE_VALIDITY_MAX} dias.`, value: { coach_id, name, lessons_count, price } };
+    return { valid: false, error: t('Validade deve estar entre 1 e {n} dias.', { n: PACKAGE_VALIDITY_MAX }), value: { coach_id, name, lessons_count, price } };
   }
   return {
     valid: true,
@@ -77,11 +78,11 @@ export function normalizePackageSale(input = {}) {
   const coach_id = str(input.coach_id);
   const student_id = str(input.student_id);
   const package_id = str(input.package_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
-  if (!student_id) return { valid: false, error: 'student_id é obrigatório.', value: { coach_id } };
-  if (!package_id) return { valid: false, error: 'package_id é obrigatório.', value: { coach_id, student_id } };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
+  if (!student_id) return { valid: false, error: t('student_id é obrigatório.'), value: { coach_id } };
+  if (!package_id) return { valid: false, error: t('package_id é obrigatório.'), value: { coach_id, student_id } };
   const credits_total = Math.trunc(num(input.credits_total, 0));
-  if (!(credits_total >= 1)) return { valid: false, error: 'Créditos totais inválidos.', value: { coach_id, student_id, package_id } };
+  if (!(credits_total >= 1)) return { valid: false, error: t('Créditos totais inválidos.'), value: { coach_id, student_id, package_id } };
   const credits_used = Math.min(credits_total, Math.max(0, Math.trunc(num(input.credits_used, 0))));
   const price = Math.max(0, num(input.price, 0));
   return {

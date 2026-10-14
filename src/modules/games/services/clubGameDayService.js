@@ -24,6 +24,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { GAME_DAY_STATUS, GAME_DAY_VISIBILITY, normalizePlayCourts } from '../domain/gameDay.js';
 import { normalizeClubGameDayInput } from '../domain/clubGameDay.js';
 import { getGameDay, deleteGameDay } from './gameDayService.js';
+import { t } from '@/core/i18n';
 
 const COL = 'game_days';
 
@@ -46,12 +47,12 @@ const COL = 'game_days';
  * @returns {Promise<{ id: string }>}
  */
 export async function createClubGameDay({ clubId, club = null, event, input }, actor) {
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
-  if (!clubId) throw new Error('Clube inválido.');
-  if (!event?.id) throw new Error('Evento inválido.');
+  if (!actor?.uid) throw new Error(t('É preciso estar autenticado.'));
+  if (!clubId) throw new Error(t('Clube inválido.'));
+  if (!event?.id) throw new Error(t('Evento inválido.'));
 
   const { valid, errors, value } = normalizeClubGameDayInput(input, { event });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const id = doc(collection(db, COL)).id;
   const payload = {

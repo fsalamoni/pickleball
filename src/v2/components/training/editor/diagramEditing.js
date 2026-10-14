@@ -7,19 +7,20 @@
 import {
   ARROW_STYLE_LABELS, ELEMENT_LABELS, VIEW_BOUNDS, normalizeElement, zoneOf,
 } from '@/modules/training/domain/diagram';
+import { t, tk } from '@/core/i18n';
 
 /** As ferramentas, na ordem da paleta. Seta e zona pedem dois toques (início e fim). */
 export const TOOLS = Object.freeze([
-  { id: 'selecionar', label: 'Mover' },
-  { id: 'jogador_a', label: 'Jogador A' },
-  { id: 'jogador_b', label: 'Jogador B' },
-  { id: 'bola', label: 'Bola' },
-  { id: 'cone', label: 'Cone' },
-  { id: 'alvo', label: 'Alvo' },
-  { id: 'seta_bola', label: 'Seta da bola' },
-  { id: 'seta_mov', label: 'Deslocamento' },
-  { id: 'zona', label: 'Zona' },
-  { id: 'texto', label: 'Texto' },
+  { id: 'selecionar', label: tk('Mover') },
+  { id: 'jogador_a', label: tk('Jogador A') },
+  { id: 'jogador_b', label: tk('Jogador B') },
+  { id: 'bola', label: tk('Bola') },
+  { id: 'cone', label: tk('Cone') },
+  { id: 'alvo', label: tk('Alvo') },
+  { id: 'seta_bola', label: tk('Seta da bola') },
+  { id: 'seta_mov', label: tk('Deslocamento') },
+  { id: 'zona', label: tk('Zona') },
+  { id: 'texto', label: tk('Texto') },
 ]);
 
 export const TWO_TAP = new Set(['seta_bola', 'seta_mov', 'zona']);
@@ -131,29 +132,41 @@ export function popHistory(stack = []) {
 
 // ── Leitura ──────────────────────────────────────────────────────────────
 
-const LUGAR = {
-  fundo_superior: 'fundo de cima',
-  cozinha_superior: 'cozinha de cima',
-  cozinha_inferior: 'cozinha de baixo',
-  fundo_inferior: 'fundo de baixo',
+// A frase inteira por zona: a preposição muda com o gênero e com o idioma.
+const EM = {
+  fundo_superior: tk('no fundo de cima'),
+  cozinha_superior: tk('na cozinha de cima'),
+  cozinha_inferior: tk('na cozinha de baixo'),
+  fundo_inferior: tk('no fundo de baixo'),
 };
-const fem = (z) => z.startsWith('cozinha');
-const em = (y) => { const z = zoneOf(y); return `${fem(z) ? 'na' : 'no'} ${LUGAR[z]}`; };
-const de = (y) => { const z = zoneOf(y); return `${fem(z) ? 'da' : 'do'} ${LUGAR[z]}`; };
-const ate = (y) => { const z = zoneOf(y); return `${fem(z) ? 'a' : 'o'} ${LUGAR[z]}`; };
+const DE = {
+  fundo_superior: tk('do fundo de cima'),
+  cozinha_superior: tk('da cozinha de cima'),
+  cozinha_inferior: tk('da cozinha de baixo'),
+  fundo_inferior: tk('do fundo de baixo'),
+};
+const ATE = {
+  fundo_superior: tk('o fundo de cima'),
+  cozinha_superior: tk('a cozinha de cima'),
+  cozinha_inferior: tk('a cozinha de baixo'),
+  fundo_inferior: tk('o fundo de baixo'),
+};
+const em = (y) => t(EM[zoneOf(y)]);
+const de = (y) => t(DE[zoneOf(y)]);
+const ate = (y) => t(ATE[zoneOf(y)]);
 
-const lado = (x) => (x < 40 ? ', à esquerda' : x > 60 ? ', à direita' : ', no meio');
+const lado = (x) => (x < 40 ? t(', à esquerda') : x > 60 ? t(', à direita') : t(', no meio'));
 
 /** Nome acessível: "Jogador A1, na cozinha de baixo, à esquerda". */
 export function elementName(el) {
   if (!el) return '';
   if (el.t === 'seta') {
-    const tipo = ARROW_STYLE_LABELS[el.style] || 'Seta';
-    return `${tipo}${el.label ? ` ${el.label}` : ''}, ${de(el.y)} até ${ate(el.y2)}`;
+    const tipo = t(ARROW_STYLE_LABELS[el.style]) || t('Seta');
+    return `${tipo}${el.label ? ` ${el.label}` : ''}, ${t('{de} até {ate}', { de: de(el.y), ate: ate(el.y2) })}`;
   }
-  if (el.t === 'zona') return `Zona${el.label ? ` ${el.label}` : ''}, ${em((el.y + el.y2) / 2)}`;
+  if (el.t === 'zona') return `${t('Zona')}${el.label ? ` ${el.label}` : ''}, ${em((el.y + el.y2) / 2)}`;
   const nome = el.t === 'jogador'
-    ? `Jogador ${el.label || (el.team === 'b' ? 'B' : 'A')}`
-    : el.t === 'texto' ? `Texto "${el.label || ''}"` : ELEMENT_LABELS[el.t] || 'Elemento';
+    ? t('Jogador {nome}', { nome: el.label || (el.team === 'b' ? 'B' : 'A') })
+    : el.t === 'texto' ? t('Texto "{texto}"', { texto: el.label || '' }) : t(ELEMENT_LABELS[el.t]) || t('Elemento');
   return `${nome}, ${em(el.y)}${lado(el.x)}`;
 }

@@ -28,12 +28,13 @@ import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import BannerThumb from '@/v2/components/arenas/marketing/campaigns/BannerThumb';
 import PromoCampaignForm from './PromoCampaignForm';
 import { avisoEnviado } from './promoUi';
+import { t } from '@/core/i18n';
 
 const ESTADO = {
-  [BANNER_STATE.LIVE]: { tone: 'green', rotulo: (c) => `Banner no ar até ${formatDateShortBR(c.banner_until)}` },
-  [BANNER_STATE.PAUSED]: { tone: 'amber', rotulo: () => 'Banner pausado' },
-  [BANNER_STATE.ENDED]: { tone: 'neutral', rotulo: () => 'Banner encerrado' },
-  [BANNER_STATE.NONE]: { tone: 'neutral', rotulo: () => 'Só aviso' },
+  [BANNER_STATE.LIVE]: { tone: 'green', rotulo: (c) => t('Banner no ar até {data}', { data: formatDateShortBR(c.banner_until) }) },
+  [BANNER_STATE.PAUSED]: { tone: 'amber', rotulo: () => t('Banner pausado') },
+  [BANNER_STATE.ENDED]: { tone: 'neutral', rotulo: () => t('Banner encerrado') },
+  [BANNER_STATE.NONE]: { tone: 'neutral', rotulo: () => t('Só aviso') },
 };
 
 function dataISO(v) {
@@ -53,22 +54,23 @@ function LinhaDaCampanha({ campaign, today, onEditar }) {
   const ctx = { issuerType: campaign.issuer_type, issuerId: campaign.issuer_id, campaignId: campaign.id };
   const link = promoDestinationLink({ type: 'details' }, ctx);
   const cta = campaign.banner?.source === 'upload' ? '' : promoDestinationCta(campaign.destination, campaign.banner?.design);
-  const publico = PROMO_AUDIENCE_META[campaign.target_audience]?.label;
+  const publicoRotulo = PROMO_AUDIENCE_META[campaign.target_audience]?.label;
+  const publico = publicoRotulo ? t(publicoRotulo) : '';
 
   const alternar = async () => {
     try {
       await atualizar.mutateAsync({ campaignId: campaign.id, patch: { banner_active: estado !== BANNER_STATE.LIVE } });
-      toast.success(estado === BANNER_STATE.LIVE ? 'Banner pausado.' : 'Banner de volta ao ar.');
+      toast.success(estado === BANNER_STATE.LIVE ? t('Banner pausado.') : t('Banner de volta ao ar.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível mudar o banner.');
+      toast.error(err?.message || t('Não foi possível mudar o banner.'));
     }
   };
   const remover = async () => {
     try {
       await apagar.mutateAsync({ campaignId: campaign.id });
-      toast.success('Campanha apagada.');
+      toast.success(t('Campanha apagada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível apagar.');
+      toast.error(err?.message || t('Não foi possível apagar.'));
     }
   };
 
@@ -95,35 +97,35 @@ function LinhaDaCampanha({ campaign, today, onEditar }) {
             </span>
           )}
           {enviadaEm && <span>{formatDateShortBR(enviadaEm)}</span>}
-          {campaign.banner && campaign.show_home && <span>Tela inicial: {reachLabel(campaign.reach)}</span>}
+          {campaign.banner && campaign.show_home && <span>{t('Tela inicial: {regiao}', { regiao: reachLabel(campaign.reach) })}</span>}
           {campaign.issuer_type === PROMO_ISSUER.COACH && campaign.visibility === PROMO_VISIBILITY.STUDENTS && (
-            <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> Só alunos</span>
+            <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> {t('Só alunos')}</span>
           )}
         </p>
         {campaign.banner && <p className="mt-0.5 text-xs text-gray-500">{promoPlacementText(campaign)}</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={link}><ExternalLink className="h-3.5 w-3.5" aria-hidden /> Ver como é vista</Link>
+            <Link to={link}><ExternalLink className="h-3.5 w-3.5" aria-hidden /> {t('Ver como é vista')}</Link>
           </V2Button>
           <V2Button size="sm" variant="ghost" onClick={() => onEditar(campaign)}>
-            <Pencil className="h-3.5 w-3.5" aria-hidden /> {campaign.banner ? 'Editar o banner' : 'Pôr um banner'}
+            <Pencil className="h-3.5 w-3.5" aria-hidden /> {campaign.banner ? t('Editar o banner') : t('Pôr um banner')}
           </V2Button>
           {campaign.banner && estado !== BANNER_STATE.ENDED && (
             <V2Button size="sm" variant="ghost" disabled={atualizar.isPending} onClick={alternar}>
               {estado === BANNER_STATE.LIVE
-                ? <><Pause className="h-3.5 w-3.5" aria-hidden /> Pausar</>
-                : <><Play className="h-3.5 w-3.5" aria-hidden /> Voltar ao ar</>}
+                ? <><Pause className="h-3.5 w-3.5" aria-hidden /> {t('Pausar')}</>
+                : <><Play className="h-3.5 w-3.5" aria-hidden /> {t('Voltar ao ar')}</>}
             </V2Button>
           )}
           <ConfirmDialog
-            title={`Apagar a campanha “${campaign.name}”?`}
-            description="O banner sai do ar e a campanha some da lista. O aviso já enviado continua no sino de quem recebeu. Se a ideia é só tirar o banner do ar, use “Pausar”."
-            confirmLabel="Apagar"
+            title={t('Apagar a campanha “{nome}”?', { nome: campaign.name })}
+            description={t('O banner sai do ar e a campanha some da lista. O aviso já enviado continua no sino de quem recebeu. Se a ideia é só tirar o banner do ar, use “Pausar”.')}
+            confirmLabel={t('Apagar')}
             destructive
             onConfirm={remover}
             trigger={(
               <V2Button size="sm" variant="ghost" className="text-red-600">
-                <Trash2 className="h-3.5 w-3.5" aria-hidden /> Apagar
+                <Trash2 className="h-3.5 w-3.5" aria-hidden /> {t('Apagar')}
               </V2Button>
             )}
           />
@@ -152,18 +154,18 @@ export default function PromoCampaignsPanel({ issuer }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-ink" aria-hidden />
-            <h2 className="font-display text-lg font-bold text-ink">Campanhas</h2>
-            {noAr > 0 && <V2Badge tone="green">{noAr} no ar</V2Badge>}
+            <h2 className="font-display text-lg font-bold text-ink">{t('Campanhas')}</h2>
+            {noAr > 0 && <V2Badge tone="green">{t('{n} no ar', { n: noAr })}</V2Badge>}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
             {ehProfessor
-              ? 'Banner no seu perfil e na tela inicial, levando a marcar aula, clínicas, loja ou conteúdo — e aviso para os seus alunos.'
-              : 'Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.'}
+              ? t('Banner no seu perfil e na tela inicial, levando a marcar aula, clínicas, loja ou conteúdo — e aviso para os seus alunos.')
+              : t('Banner na vitrine de promoções e na tela inicial, levando a torneios, jogos, arenas, professores e ranking — e aviso para a comunidade.')}
           </p>
         </div>
         {!form && !q.isError && !q.isLoading && (
           <V2Button size="sm" onClick={() => setForm({ campaign: null })}>
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden /> Nova campanha
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden /> {t('Nova campanha')}
           </V2Button>
         )}
       </div>
@@ -178,18 +180,18 @@ export default function PromoCampaignsPanel({ issuer }) {
         <V2Skeleton lines={3} />
       ) : q.isError ? (
         <V2ErrorState
-          title="Não foi possível carregar as campanhas"
-          description="A conexão falhou. As campanhas continuam lá — tente de novo antes de criar outra."
+          title={t('Não foi possível carregar as campanhas')}
+          description={t('A conexão falhou. As campanhas continuam lá — tente de novo antes de criar outra.')}
           onRetry={() => q.refetch()}
         />
       ) : campanhas.length === 0 ? (
         !form && (
           <V2EmptyState
             icon={Megaphone}
-            title="Nenhuma campanha ainda"
+            title={t('Nenhuma campanha ainda')}
             description={ehProfessor
-              ? 'Uma campanha põe um banner no seu perfil (e, se quiser, na tela inicial) e avisa os seus alunos. Comece por um dos cinco modelos.'
-              : 'Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.'}
+              ? t('Uma campanha põe um banner no seu perfil (e, se quiser, na tela inicial) e avisa os seus alunos. Comece por um dos cinco modelos.')
+              : t('Uma campanha põe um banner na vitrine e na tela inicial e avisa a comunidade — toda ou só uma região. Comece por um dos cinco modelos.')}
           />
         )
       ) : (

@@ -19,6 +19,7 @@
  *  - club_forum_threads/{id}/comments    (subcoleção de comentários do tópico)
  *  - club_forum_threads/{id}/poll_votes  (subcoleção de votos; id do doc = uid)
  */
+import { t, tk } from '@/core/i18n';
 
 export const CLUB_COLLECTIONS = Object.freeze({
   clubs: 'clubs',
@@ -74,8 +75,8 @@ export const CLUB_ROLE = Object.freeze({
 });
 
 export const CLUB_ROLE_LABELS = Object.freeze({
-  [CLUB_ROLE.ADMIN]: 'Administrador',
-  [CLUB_ROLE.MEMBER]: 'Membro',
+  [CLUB_ROLE.ADMIN]: tk('Administrador'),
+  [CLUB_ROLE.MEMBER]: tk('Membro'),
 });
 
 /** Estado de um pedido de ingresso (não-membro pede para entrar no clube). */
@@ -102,11 +103,11 @@ export const CLUB_EVENT_TYPE = Object.freeze({
 });
 
 export const CLUB_EVENT_TYPE_LABELS = Object.freeze({
-  [CLUB_EVENT_TYPE.GAME_DAY]: 'Dia de jogo',
-  [CLUB_EVENT_TYPE.SOCIAL]: 'Confraternização',
-  [CLUB_EVENT_TYPE.TOURNAMENT]: 'Torneio interno',
-  [CLUB_EVENT_TYPE.MEETING]: 'Reunião',
-  [CLUB_EVENT_TYPE.OTHER]: 'Outro',
+  [CLUB_EVENT_TYPE.GAME_DAY]: tk('Dia de jogo'),
+  [CLUB_EVENT_TYPE.SOCIAL]: tk('Confraternização'),
+  [CLUB_EVENT_TYPE.TOURNAMENT]: tk('Torneio interno'),
+  [CLUB_EVENT_TYPE.MEETING]: tk('Reunião'),
+  [CLUB_EVENT_TYPE.OTHER]: tk('Outro'),
 });
 
 /**
@@ -114,8 +115,8 @@ export const CLUB_EVENT_TYPE_LABELS = Object.freeze({
  * `training` passa a ser apresentado como "Dia de jogo").
  */
 export function eventTypeLabel(type) {
-  if (type === 'training') return CLUB_EVENT_TYPE_LABELS[CLUB_EVENT_TYPE.GAME_DAY];
-  return CLUB_EVENT_TYPE_LABELS[type] || 'Evento';
+  if (type === 'training') return t(CLUB_EVENT_TYPE_LABELS[CLUB_EVENT_TYPE.GAME_DAY]);
+  return t(CLUB_EVENT_TYPE_LABELS[type] || 'Evento');
 }
 
 /** Indica se o evento é um "Dia de jogo" (inclui o tipo legado `training`). */
@@ -131,9 +132,9 @@ export const RSVP_STATUS = Object.freeze({
 });
 
 export const RSVP_STATUS_LABELS = Object.freeze({
-  [RSVP_STATUS.GOING]: 'Vou',
-  [RSVP_STATUS.MAYBE]: 'Talvez',
-  [RSVP_STATUS.NOT_GOING]: 'Não vou',
+  [RSVP_STATUS.GOING]: tk('Vou'),
+  [RSVP_STATUS.MAYBE]: tk('Talvez'),
+  [RSVP_STATUS.NOT_GOING]: tk('Não vou'),
 });
 
 /** Visibilidade do evento. */
@@ -143,8 +144,8 @@ export const EVENT_VISIBILITY = Object.freeze({
 });
 
 export const EVENT_VISIBILITY_LABELS = Object.freeze({
-  [EVENT_VISIBILITY.PUBLIC]: 'Público (todo o clube)',
-  [EVENT_VISIBILITY.PRIVATE]: 'Privado (somente convidados)',
+  [EVENT_VISIBILITY.PUBLIC]: tk('Público (todo o clube)'),
+  [EVENT_VISIBILITY.PRIVATE]: tk('Privado (somente convidados)'),
 });
 
 /** Trata a ausência do campo como público (compatibilidade com eventos antigos). */
@@ -164,10 +165,10 @@ export const INVITE_STATUS = Object.freeze({
 });
 
 export const INVITE_STATUS_LABELS = Object.freeze({
-  [INVITE_STATUS.INVITED]: 'Convidado',
-  [INVITE_STATUS.GOING]: 'Vou',
-  [INVITE_STATUS.MAYBE]: 'Talvez',
-  [INVITE_STATUS.NOT_GOING]: 'Não vou',
+  [INVITE_STATUS.INVITED]: tk('Convidado'),
+  [INVITE_STATUS.GOING]: tk('Vou'),
+  [INVITE_STATUS.MAYBE]: tk('Talvez'),
+  [INVITE_STATUS.NOT_GOING]: tk('Não vou'),
 });
 
 /** Origem do participante do evento. */

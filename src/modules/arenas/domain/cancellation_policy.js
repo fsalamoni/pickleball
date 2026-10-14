@@ -9,6 +9,7 @@
  */
 
 import { timeToMinutes } from './pricing.js';
+import { t } from '@/core/i18n';
 
 export const DEFAULT_CANCELLATION_HOURS = 12;
 
@@ -59,5 +60,5 @@ export function evaluateCancellation(slot, policy, nowMs = Date.now()) {
 export function lateCancellationMessage(policy) {
   const p = policy && policy.deadlineHours != null ? policy : normalizeCancellationPolicy(policy || {});
   const base = `A arena pede cancelamento com pelo menos ${p.deadlineHours}h de antecedência.`;
-  return p.notes ? `${base} ${p.notes}` : `${base} Este é um cancelamento tardio.`;
+  return p.notes ? `${base} ${p.notes}` : t('{base} Este é um cancelamento tardio.', { base });
 }

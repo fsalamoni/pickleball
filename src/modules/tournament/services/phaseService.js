@@ -55,6 +55,7 @@ import {
 } from './matchService.js';
 import { planDirectEntries } from '../domain/directEntry.js';
 import { headToHeadFromMatches } from '../domain/ranking.js';
+import { t } from '@/core/i18n';
 
 const GROUPS_COL = 'tournament_groups';
 
@@ -153,14 +154,14 @@ function groupEntrants(group) {
 export async function movePhaseEntrantBetweenGroups(params, actor) {
   const { tournamentId, modalityId, stageIndex, entrantId, toGroupName } = params;
   const persisted = await listPhaseGroups(modalityId, stageIndex);
-  if (persisted.length === 0) throw new Error('Nenhum grupo sorteado nesta fase.');
+  if (persisted.length === 0) throw new Error(t('Nenhum grupo sorteado nesta fase.'));
 
   const rebuilt = persisted.map((g) => ({ name: g.name, entrants: [...groupEntrants(g)] }));
   const target = rebuilt.find((g) => g.name === toGroupName);
-  if (!target) throw new Error('Grupo de destino não encontrado.');
+  if (!target) throw new Error(t('Grupo de destino não encontrado.'));
 
   const source = rebuilt.find((g) => g.entrants.some((e) => e.id === entrantId));
-  if (!source) throw new Error('Participante não encontrado nos grupos desta fase.');
+  if (!source) throw new Error(t('Participante não encontrado nos grupos desta fase.'));
   if (source.name === toGroupName) return { moved: false };
 
   const moving = source.entrants.find((e) => e.id === entrantId);
@@ -297,12 +298,12 @@ export async function runPhaseDraw(params, actor) {
     replacesKnownMatches,
   } = params;
   const modality = await getModality(modalityId);
-  if (!modality) throw new Error('Modalidade não encontrada.');
-  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
+  if (modality.tournament_id !== tournamentId) throw new Error(t('Modalidade não pertence ao torneio.'));
 
   const lockCheck = await getTournament(tournamentId);
   if (lockCheck?.results_locked) {
-    throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
+    throw new Error(t('Torneio bloqueado: desbloqueie as alterações para sortear.'));
   }
 
   // ⚠️ Sortear APAGA os jogos da fase — ver `assertCanDiscardStageMatches`.
@@ -315,7 +316,7 @@ export async function runPhaseDraw(params, actor) {
 
   const phases = normalizePhases(modality.stages);
   const phase = phases[stageIndex];
-  if (!phase) throw new Error('Fase não encontrada na modalidade.');
+  if (!phase) throw new Error(t('Fase não encontrada na modalidade.'));
 
   const isTeam = Boolean(modality.team_config);
   if (isTeam && (
@@ -324,8 +325,7 @@ export async function runPhaseDraw(params, actor) {
     || phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS
   )) {
     throw new Error(
-      'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
-      + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+      t('Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'),
     );
   }
   const compat = stageFormatCompatibility(modality.format, phase.type);
@@ -337,10 +337,10 @@ export async function runPhaseDraw(params, actor) {
     if (stageIndex === 0) {
       entrants = await getFirstPhaseEntrants(modalityId, modality);
     } else {
-      throw new Error('Defina os classificados desta fase avançando a fase anterior.');
+      throw new Error(t('Defina os classificados desta fase avançando a fase anterior.'));
     }
   }
-  if (entrants.length < 2) throw new Error('São necessários ao menos 2 participantes confirmados.');
+  if (entrants.length < 2) throw new Error(t('São necessários ao menos 2 participantes confirmados.'));
 
   const seed = providedSeed || `${tournamentId}_${modalityId}_${stageIndex}_${Date.now()}`;
 
@@ -368,8 +368,7 @@ export async function runPhaseDraw(params, actor) {
   if (drawIssues.length > 0) {
     const label = TOURNAMENT_STAGE_TYPE_LABELS[phase.type] || phase.type;
     throw new Error(
-      `Não é possível sortear esta fase (${label}): ${drawIssues[0]}. `
-      + 'Ajuste o número de grupos, o número de inscritos ou o formato da fase.',
+      t('Não é possível sortear esta fase ({label}): {problema}. Ajuste o número de grupos, o número de inscritos ou o formato da fase.', { label, problema: drawIssues[0] }),
     );
   }
 
@@ -447,31 +446,31 @@ export async function runPhaseDraw(params, actor) {
 export async function advanceToNextPhase(params, actor) {
   const { tournamentId, modalityId, stageIndex, seed: providedSeed } = params;
   const modality = await getModality(modalityId);
-  if (!modality) throw new Error('Modalidade não encontrada.');
+  if (!modality) throw new Error(t('Modalidade não encontrada.'));
   const tournament = await getTournament(tournamentId);
 
   const phases = normalizePhases(modality.stages);
   const prevPhase = phases[stageIndex];
   const nextPhase = phases[stageIndex + 1];
-  if (!prevPhase) throw new Error('Fase atual não encontrada.');
-  if (!nextPhase) throw new Error('Esta já é a última fase — não há próxima fase para gerar.');
+  if (!prevPhase) throw new Error(t('Fase atual não encontrada.'));
+  if (!nextPhase) throw new Error(t('Esta já é a última fase — não há próxima fase para gerar.'));
 
   const scoringConfig = resolveStageScoringConfig(modality, tournament, stageIndex);
   const matches = await listMatches(modalityId, stageIndex);
-  if (matches.length === 0) throw new Error('Sorteie e dispute a fase atual antes de avançar.');
+  if (matches.length === 0) throw new Error(t('Sorteie e dispute a fase atual antes de avançar.'));
 
   const undecided = matches.filter(
     (m) => m.status !== 'finished' && m.status !== 'walkover',
   );
   if (undecided.length > 0) {
-    throw new Error(`Conclua todos os jogos da fase atual (${undecided.length} pendente(s)).`);
+    throw new Error(t('Conclua todos os jogos da fase atual ({n} pendente(s)).', { n: undecided.length }));
   }
   // Americano em etapas: entre uma etapa e a próxima não há jogo pendente, e
   // a fase ainda não acabou. A próxima fase só sai depois da ÚLTIMA etapa.
   if (prevPhase.type === TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS) {
     const prog = etapasProgress(matches, prevPhase);
     if (!prog.completa) {
-      throw new Error(`Jogue as ${prog.total} etapas antes de gerar a próxima fase (a fase está na etapa ${prog.atual}).`);
+      throw new Error(t('Jogue as {total} etapas antes de gerar a próxima fase (a fase está na etapa {atual}).', { total: prog.total, atual: prog.atual }));
     }
   }
 

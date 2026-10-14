@@ -14,12 +14,13 @@ import {
 } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function formatDateTime(value) {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 const TYPE_TONE = {
@@ -38,8 +39,8 @@ export default function V2ClubEvents({ clubId, isAdmin }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-gray-500">Dias de jogo, confraternizações, torneios internos e reuniões do clube.</p>
-        <V2Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Novo evento</V2Button>
+        <p className="text-sm text-gray-500">{t('Dias de jogo, confraternizações, torneios internos e reuniões do clube.')}</p>
+        <V2Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> {t('Novo evento')}</V2Button>
       </div>
 
       {isLoading ? (
@@ -48,16 +49,16 @@ export default function V2ClubEvents({ clubId, isAdmin }) {
         // Falha não é "nenhum evento — crie o primeiro": isso convidaria a
         // duplicar um evento que existe (docs/27-FALHA-NAO-E-VAZIO.md).
         <V2ErrorState
-          title="Não foi possível carregar os eventos"
-          description="Os eventos continuam lá — só não conseguimos buscá-los agora."
+          title={t('Não foi possível carregar os eventos')}
+          description={t('Os eventos continuam lá — só não conseguimos buscá-los agora.')}
           onRetry={() => refetch()}
         />
       ) : events.length === 0 ? (
         <V2EmptyState
           icon={CalendarDays}
-          title="Nenhum evento planejado"
-          description="Crie o primeiro evento do clube e convide os membros."
-          action={<V2Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Criar evento</V2Button>}
+          title={t('Nenhum evento planejado')}
+          description={t('Crie o primeiro evento do clube e convide os membros.')}
+          action={<V2Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> {t('Criar evento')}</V2Button>}
         />
       ) : (
         <div className="space-y-3">
@@ -86,10 +87,10 @@ function EventCard({ event, clubId, isAdmin }) {
   const handleDelete = async () => {
     try {
       await deleteEvent.mutateAsync(event.id);
-      toast.success('Evento removido.');
+      toast.success(t('Evento removido.'));
       setConfirmDelete(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover o evento.');
+      toast.error(err.message || t('Não foi possível remover o evento.'));
     }
   };
 
@@ -101,9 +102,9 @@ function EventCard({ event, clubId, isAdmin }) {
             <V2Badge tone={TYPE_TONE[event.type] || 'neutral'}>{eventTypeLabel(event.type)}</V2Badge>
             <V2Badge tone="neutral">
               {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-              {isPrivate ? 'Privado' : 'Público'}
+              {isPrivate ? t('Privado') : t('Público')}
             </V2Badge>
-            {event.recurring && <V2Badge tone="neutral"><Repeat className="h-3 w-3" /> Recorrente</V2Badge>}
+            {event.recurring && <V2Badge tone="neutral"><Repeat className="h-3 w-3" /> {t('Recorrente')}</V2Badge>}
             <h4 className="font-display text-base font-bold text-ink">{event.title}</h4>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -122,10 +123,10 @@ function EventCard({ event, clubId, isAdmin }) {
       {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-600">{event.description}</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-        <V2Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Pencil className="h-3.5 w-3.5" /> Editar</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Pencil className="h-3.5 w-3.5" /> {t('Editar')}</V2Button>
         <V2Button asChild size="sm" variant="secondary" className="ml-auto">
           <Link to={`/clubes/${clubId}/eventos/${event.id}`}>
-            {gameDay ? 'Organizar / ingressar' : 'Ingressar no evento'} <ArrowRight className="h-3.5 w-3.5" />
+            {gameDay ? t('Organizar / ingressar') : t('Ingressar no evento')} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </V2Button>
       </div>
@@ -134,9 +135,9 @@ function EventCard({ event, clubId, isAdmin }) {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Remover evento"
-        description={`Tem certeza que deseja remover "${event.title}"?`}
-        confirmLabel="Remover"
+        title={t('Remover evento')}
+        description={t('Tem certeza que deseja remover “{titulo}”?', { titulo: event.title })}
+        confirmLabel={t('Remover')}
         destructive
         loading={deleteEvent.isPending}
         onConfirm={handleDelete}

@@ -6,6 +6,7 @@
  */
 
 import { instanteEmMs } from '@/core/domain/instant';
+import { t } from '@/core/i18n';
 
 export const WAITLIST_STATUS = Object.freeze({
   WAITING: 'waiting',
@@ -95,9 +96,9 @@ export function compactPositions(waitlist) {
  * Valida se user pode entrar na fila.
  */
 export function canJoinWaitlist(slot, user, existingEntry) {
-  if (!user?.uid) return { ok: false, reason: 'Faça login.' };
+  if (!user?.uid) return { ok: false, reason: t('Faça login.') };
   if (existingEntry && existingEntry.status !== WAITLIST_STATUS.DECLINED && existingEntry.status !== WAITLIST_STATUS.EXPIRED && existingEntry.status !== WAITLIST_STATUS.CANCELLED) {
-    return { ok: false, reason: 'Você já está na fila.' };
+    return { ok: false, reason: t('Você já está na fila.') };
   }
   return { ok: true };
 }

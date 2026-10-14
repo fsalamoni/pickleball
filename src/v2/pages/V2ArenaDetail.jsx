@@ -44,6 +44,7 @@ import ArenaPageIndex from '@/v2/components/arenas/ArenaPageIndex';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 
 // O banner de campanha (desenho, modelos, especificação) pesa ~25 kB: vem sob
@@ -119,8 +120,8 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
     return (
       <div className="mx-auto max-w-[700px]">
         <V2ErrorState
-          title="Não foi possível abrir esta arena"
-          description="A conexão falhou no meio do caminho. A arena continua lá — tente de novo."
+          title={t('Não foi possível abrir esta arena')}
+          description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => recarregarArena?.()}
         />
       </div>
@@ -133,9 +134,9 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         <V2Surface>
           <V2EmptyState
             icon={Building2}
-            title="Arena não encontrada"
-            description="A arena que você procura não existe ou foi removida."
-            action={<Link to="/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar às arenas</Link>}
+            title={t('Arena não encontrada')}
+            description={t('A arena que você procura não existe ou foi removida.')}
+            action={<Link to="/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar às arenas')}</Link>}
           />
         </V2Surface>
       </div>
@@ -154,7 +155,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
   return (
     <div ref={paginaRef} className="mx-auto max-w-[900px]">
-      <V2BackLink to="/arenas" className="mb-5">Voltar às arenas</V2BackLink>
+      <V2BackLink to="/arenas" className="mb-5">{t('Voltar às arenas')}</V2BackLink>
 
       {/* Hero — com a MARCA da arena, quando ela tem uma.
           A cor vem de `arenas.branding` (documento público); antes ela era
@@ -194,23 +195,23 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             {arena.rating_avg != null && (
               <V2Badge tone="amber"><Star className="h-3 w-3 fill-amber-500" /> {arena.rating_avg} ({arena.rating_count})</V2Badge>
             )}
-            {arena.court_count > 0 && <V2Badge tone="neutral"><Trophy className="h-3 w-3" /> {arena.court_count} quadra(s)</V2Badge>}
+            {arena.court_count > 0 && <V2Badge tone="neutral"><Trophy className="h-3 w-3" /> {t('{n} quadra(s)', { n: arena.court_count })}</V2Badge>}
             {arena.hours && <V2Badge tone="neutral"><Clock className="h-3 w-3" /> {arena.hours}</V2Badge>}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <V2Button onClick={() => setBookingOpen(true)} data-dica="arena-solicitar"><CalendarPlus className="h-4 w-4" /> Solicitar reserva</V2Button>
+            <V2Button onClick={() => setBookingOpen(true)} data-dica="arena-solicitar"><CalendarPlus className="h-4 w-4" /> {t('Solicitar reserva')}</V2Button>
             {arena.owner_id && arena.owner_id !== user?.uid && (
               <V2ChatLauncherButton
                 athlete={{ id: arena.owner_id, platform_name: arena.name, photo_url: cover }}
                 variant="outline"
-                label="Falar com a arena"
+                label={t('Falar com a arena')}
               />
             )}
             <V2FavoriteArenaButton arena={arena} />
             <V2ArenaShareButton arena={arena} />
             {canManage && (
-              <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`} data-dica="arena-gerir"><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`} data-dica="arena-gerir"><Settings className="h-4 w-4" /> {t('Gerir')}</Link></V2Button>
             )}
             {/* As telas públicas dos módulos que esta arena ligou (jogos
                 abertos, encontrar parceiro, membros…). A lista vem do catálogo. */}
@@ -245,51 +246,51 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           Depois das duas perguntas pessoais (chegada e "como foi?"), que somem
           quase sempre, e antes de tudo o mais — é o espaço da arena falar
           primeiro. Some sem banner no ar. */}
-      <div id="arena-campanhas" data-secao-arena="Em destaque" className="scroll-mt-4"><Suspense fallback={null}><ArenaCampaignsSection arena={arena} /></Suspense></div>
+      <div id="arena-campanhas" data-secao-arena={t('Em destaque')} className="scroll-mt-4"><Suspense fallback={null}><ArenaCampaignsSection arena={arena} /></Suspense></div>
 
       {/* Dia de jogo da arena vem ANTES do calendário de reservas: quem chega
           na página e encontra uma rodada marcada para o dia seguinte tem uma
           decisão mais simples (marcar presença) do que escolher horário e
           pedir uma quadra. Some sozinha quando não há nada marcado. */}
-      <div id="arena-dia-de-jogo" data-secao-arena="Dia de jogo" className="scroll-mt-4"><ArenaGameDaysSection arenaId={arenaId} /></div>
+      <div id="arena-dia-de-jogo" data-secao-arena={t('Dia de jogo')} className="scroll-mt-4"><ArenaGameDaysSection arenaId={arenaId} /></div>
 
       {/* Jogos abertos (módulos de matchmaking) — pela mesma razão do dia de
           jogo: entrar num jogo pronto é uma decisão mais simples do que
           escolher horário e pedir uma quadra. Some sozinha com os módulos
           desligados ou sem nada para oferecer. */}
-      <div id="arena-jogos-abertos" data-secao-arena="Jogos abertos" className="scroll-mt-4"><ArenaOpenMatchSection arena={arena} /></div>
+      <div id="arena-jogos-abertos" data-secao-arena={t('Jogos abertos')} className="scroll-mt-4"><ArenaOpenMatchSection arena={arena} /></div>
 
       {/* Reservar é a ação principal do visitante: o calendário interativo
           vem logo após o hero, antes de regras/contato. */}
-      <div id="arena-reservar" data-secao-arena="Reservar" className="scroll-mt-4"><V2BookingCalendarSection arenaId={arenaId} arena={arena} /></div>
+      <div id="arena-reservar" data-secao-arena={t('Reservar')} className="scroll-mt-4"><V2BookingCalendarSection arenaId={arenaId} arena={arena} /></div>
 
       {sharedBookingsOn && user && (
         <div className="mt-3 flex flex-col items-center gap-1">
           <V2Button variant="secondary" onClick={() => setSharedOpen(true)}>
-            <Users className="h-4 w-4" /> Reserva compartilhada — dividir a quadra
+            <Users className="h-4 w-4" /> {t('Reserva compartilhada — dividir a quadra')}
           </V2Button>
-          <p className="text-xs text-gray-500">Convide atletas e divida o valor, ou deixe a reserva aberta.</p>
+          <p className="text-xs text-gray-500">{t('Convide atletas e divida o valor, ou deixe a reserva aberta.')}</p>
         </div>
       )}
       {sharedBookingsOn && <SharedBookingDialog arena={arena} open={sharedOpen} onOpenChange={setSharedOpen} />}
 
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
-      <div id="arena-regras" data-secao-arena="Regras" className="scroll-mt-4"><ArenaRulesSection arena={arena} /></div>
+      <div id="arena-regras" data-secao-arena={t('Regras')} className="scroll-mt-4"><ArenaRulesSection arena={arena} /></div>
 
       {/* Contact + hours */}
-      <div id="arena-contato" data-secao-arena="Contato" className="mt-6 grid scroll-mt-4 gap-6 sm:grid-cols-2">
-        <V2Surface collapsible collapseId="arena-contato" title="Contato e redes">
+      <div id="arena-contato" data-secao-arena={t('Contato')} className="mt-6 grid scroll-mt-4 gap-6 sm:grid-cols-2">
+        <V2Surface collapsible collapseId="arena-contato" title={t('Contato e redes')}>
           <div className="flex flex-col gap-2">
-            <ContactRow icon={MessageCircle} href={links.whatsapp} label="WhatsApp" />
-            <ContactRow icon={Phone} href={links.phone} label={arena.contact_phone || 'Telefone'} />
-            <ContactRow icon={Mail} href={links.email} label={arena.contact_email || 'E-mail'} />
-            <ContactRow icon={Instagram} href={links.instagram} label={arena.instagram ? `@${arena.instagram}` : 'Instagram'} />
-            <ContactRow icon={Globe} href={links.website} label="Site" />
-            {!hasContacts && <p className="text-sm text-gray-400">Sem contatos informados.</p>}
+            <ContactRow icon={MessageCircle} href={links.whatsapp} label={t('WhatsApp')} />
+            <ContactRow icon={Phone} href={links.phone} label={arena.contact_phone || t('Telefone')} />
+            <ContactRow icon={Mail} href={links.email} label={arena.contact_email || t('E-mail')} />
+            <ContactRow icon={Instagram} href={links.instagram} label={arena.instagram ? `@${arena.instagram}` : t('Instagram')} />
+            <ContactRow icon={Globe} href={links.website} label={t('Site')} />
+            {!hasContacts && <p className="text-sm text-gray-400">{t('Sem contatos informados.')}</p>}
           </div>
         </V2Surface>
-        <V2Surface collapsible collapseId="arena-funcionamento" title="Funcionamento">
-          <p className="text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
+        <V2Surface collapsible collapseId="arena-funcionamento" title={t('Funcionamento')}>
+          <p className="text-sm text-gray-500">{arena.hours || t('Horário não informado.')}</p>
         </V2Surface>
       </div>
 
@@ -301,18 +302,18 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           invólucro mantém a âncora antiga `#arena-torneios-da-casa` viva — o id
           é contrato de link. */}
       <div id="arena-torneios-da-casa" className="scroll-mt-4">
-        <div id="arena-torneios" data-secao-arena="Torneios da casa" className="scroll-mt-4"><HouseTournamentsSection arenaId={arenaId} /></div>
-        <div id="arena-ranking-da-casa" data-secao-arena="Ranking da casa" className="scroll-mt-4"><HouseRankingTeaser arenaId={arenaId} /></div>
+        <div id="arena-torneios" data-secao-arena={t('Torneios da casa')} className="scroll-mt-4"><HouseTournamentsSection arenaId={arenaId} /></div>
+        <div id="arena-ranking-da-casa" data-secao-arena={t('Ranking da casa')} className="scroll-mt-4"><HouseRankingTeaser arenaId={arenaId} /></div>
       </div>
-      <div id="arena-aulas" data-secao-arena="Aulas e professores" className="scroll-mt-4"><ArenaTeachingSection arena={arena} /></div>
+      <div id="arena-aulas" data-secao-arena={t('Aulas e professores')} className="scroll-mt-4"><ArenaTeachingSection arena={arena} /></div>
       {linkedClubsOn && (
         <div className="mt-6">
-          <LinkedClubsSection ownerType="arena" ownerId={arenaId} title="Clubes da arena" />
+          <LinkedClubsSection ownerType="arena" ownerId={arenaId} title={t('Clubes da arena')} />
         </div>
       )}
 
       {upcomingSlots.length > 0 && (
-        <V2Surface collapsible collapseId="arena-agenda" eyebrow="Agenda" title="Próximos horários confirmados" className="mt-6">
+        <V2Surface collapsible collapseId="arena-agenda" eyebrow={t('Agenda')} title={t('Próximos horários confirmados')} className="mt-6">
           <div className="flex flex-wrap gap-2">
             {upcomingSlots.map((slot) => (
               <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-xs text-gray-600">
@@ -323,19 +324,19 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </V2Surface>
       )}
 
-      <div id="arena-precos" data-secao-arena="Preços" className="scroll-mt-4">
+      <div id="arena-precos" data-secao-arena={t('Preços')} className="scroll-mt-4">
       {(arena.base_price != null || (arena.price_rules || []).length > 0 || (arena.price_overrides || []).length > 0) && (
         <V2Surface className="mt-6">
-          <h3 className="font-display text-base font-bold text-ink">Preços</h3>
+          <h3 className="font-display text-base font-bold text-ink">{t('Preços')}</h3>
           {arena.base_price != null && (
-            <p className="mt-2 text-sm text-gray-500">Preço base: <strong className="text-ink">{formatPrice(arena.base_price)}</strong></p>
+            <p className="mt-2 text-sm text-gray-500">{t('Preço base:')} <strong className="text-ink">{formatPrice(arena.base_price)}</strong></p>
           )}
           {(arena.price_rules || []).length > 0 && (
             <div className="mt-3 space-y-2">
               {(arena.price_rules || []).map((r) => (
                 <div key={r.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
                   <span className="text-gray-500">
-                    {(r.weekdays || []).map((d) => WEEKDAY_SHORT[d]).join(', ')} · {r.start}–{r.end}{r.label ? ` · ${r.label}` : ''}
+                    {(r.weekdays || []).map((d) => t(WEEKDAY_SHORT[d])).join(', ')} · {r.start}–{r.end}{r.label ? ` · ${r.label}` : ''}
                   </span>
                   <strong className="text-ink">{formatPrice(r.price)}</strong>
                 </div>
@@ -344,12 +345,12 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           )}
           {(arena.price_overrides || []).length > 0 && (
             <div className="mt-3">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">Datas especiais</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Datas especiais')}</h4>
               <div className="mt-2 space-y-2">
                 {(arena.price_overrides || []).map((o) => (
                   <div key={o.id} className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-2.5 text-sm">
                     <span className="text-gray-700">
-                      {o.date ? `${formatDateShortBR(o.date)}${o.label ? ` · ${o.label}` : ''}` : o.label || 'Data especial'}
+                      {o.date ? `${formatDateShortBR(o.date)}${o.label ? ` · ${o.label}` : ''}` : o.label || t('Data especial')}
                       {o.note ? <span className="ml-1 text-xs text-gray-500">— {o.note}</span> : null}
                     </span>
                     <strong className="text-ink">{formatPrice(o.price)}</strong>
@@ -358,19 +359,19 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
               </div>
             </div>
           )}
-          <p className="mt-3 text-xs text-gray-500">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
+          <p className="mt-3 text-xs text-gray-500">{t('Valores de referência; o valor final é confirmado pela arena na reserva.')}</p>
         </V2Surface>
       )}
       </div>
 
       {/* Promoções (módulo Marketing → cupons divulgados) — logo depois dos
           preços, que é onde se decide. Some sem promoção divulgada valendo. */}
-      <div id="arena-promocoes" data-secao-arena="Promoções" className="scroll-mt-4"><ArenaPromosSection arena={arena} /></div>
+      <div id="arena-promocoes" data-secao-arena={t('Promoções')} className="scroll-mt-4"><ArenaPromosSection arena={arena} /></div>
 
       {/* Planos e vantagens (módulo Membros) — logo depois dos preços, porque é
           olhando o preço da hora avulsa que se decide comprar pacote. Some
           sozinha com o módulo desligado. */}
-      <div id="arena-planos" data-secao-arena="Planos" className="mt-6 scroll-mt-4 empty:mt-0">
+      <div id="arena-planos" data-secao-arena={t('Planos')} className="mt-6 scroll-mt-4 empty:mt-0">
         <ArenaMembershipSection arena={arena} />
       </div>
 
@@ -380,11 +381,11 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
       {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
           vende. Some sozinha com o módulo desligado ou sem nada à venda. */}
-      <div id="arena-loja" data-secao-arena="Loja" className="scroll-mt-4"><ArenaShopSection arena={arena} /></div>
+      <div id="arena-loja" data-secao-arena={t('Loja')} className="scroll-mt-4"><ArenaShopSection arena={arena} /></div>
 
       {/* Também no Mercado (flag `marketplace`) — some sem anúncio no ar. */}
       {mercadoOn && (
-        <div id="arena-mercado" data-secao-arena="No Mercado" className="scroll-mt-4">
+        <div id="arena-mercado" data-secao-arena={t('No Mercado')} className="scroll-mt-4">
           <Suspense fallback={null}><SellerMarketTeaser sellerKey={`arena_${arenaId}`} quem={arena.name} /></Suspense>
         </div>
       )}
@@ -393,15 +394,15 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           saber que existem irmãs. Some sem rede ou sem outra unidade. */}
       <ArenaNetworkSection arena={arena} />
 
-      <div id="arena-fotos" data-secao-arena="Fotos" className="scroll-mt-4">
+      <div id="arena-fotos" data-secao-arena={t('Fotos')} className="scroll-mt-4">
       {(arena.photos || []).length > 0 && (
         <V2Surface className="mt-6">
-          <h3 className="font-display text-base font-bold text-ink">Fotos</h3>
+          <h3 className="font-display text-base font-bold text-ink">{t('Fotos')}</h3>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {arena.photos.map((p, i) => {
               const url = arenaPhotoUrl(p);
               return (
-                <PhotoLightbox key={p.path || i} src={url} alt={`Foto ${i + 1} da arena`}
+                <PhotoLightbox key={p.path || i} src={url} alt={t('Foto {valor} da arena', { valor: i + 1 })}
                   trigger={<img src={url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
               );
             })}
@@ -410,14 +411,14 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       )}
       </div>
 
-      <div id="arena-avaliacoes" data-secao-arena="Avaliações" className="mt-6 scroll-mt-4">
+      <div id="arena-avaliacoes" data-secao-arena={t('Avaliações')} className="mt-6 scroll-mt-4">
         <V2ArenaReviews arena={arena} />
       </div>
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
 
       {/* Quadras (item 2 — preço e regras completos) */}
-      <div id="arena-quadras" data-secao-arena="Quadras" className="scroll-mt-4"><ArenaCourtsSection arenaId={arenaId} /></div>
+      <div id="arena-quadras" data-secao-arena={t('Quadras')} className="scroll-mt-4"><ArenaCourtsSection arenaId={arenaId} /></div>
     </div>
   );
 }
@@ -452,9 +453,9 @@ function ArenaCoachesSection({ arenaId }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <GraduationCap className="h-4 w-4" /> Professores parceiros
+        <GraduationCap className="h-4 w-4" /> {t('Professores parceiros')}
       </h3>
-      <p className="mt-1 text-sm text-gray-500">Profissionais que dão aula nesta arena. Toque para ver o perfil.</p>
+      <p className="mt-1 text-sm text-gray-500">{t('Profissionais que dão aula nesta arena. Toque para ver o perfil.')}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {coaches.slice(0, 6).map((c) => (
           <div key={c.id} className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
@@ -476,7 +477,7 @@ function ArenaCoachesSection({ arenaId }) {
               to={`/coaches/${c.id}`}
               className="inline-flex items-center justify-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-acid transition-colors hover:bg-ink/90"
             >
-              <MessageCircle className="h-3.5 w-3.5" /> Ver perfil e contato
+              <MessageCircle className="h-3.5 w-3.5" /> {t('Ver perfil e contato')}
             </Link>
           </div>
         ))}
@@ -491,10 +492,10 @@ function V2BookingCalendarSection({ arenaId, arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Calendar className="h-4 w-4" /> Reserve sua quadra
+        <Calendar className="h-4 w-4" /> {t('Reserve sua quadra')}
       </h3>
       <p className="mt-1 text-sm text-gray-500">
-        Clique nos horários disponíveis para selecioná-los. Você pode escolher mais de um.
+        {t('Clique nos horários disponíveis para selecioná-los. Você pode escolher mais de um.')}
       </p>
       <div className="mt-3">
         <V2BookingCalendar arenaId={arenaId} arena={arena} />
@@ -518,37 +519,37 @@ function V2ArenaPaymentSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <CreditCard className="h-4 w-4" /> Pagar com PIX
+        <CreditCard className="h-4 w-4" /> {t('Pagar com PIX')}
       </h3>
       {payment.receiver_name && (
-        <p className="mt-1 text-sm text-gray-500">Recebedor: <span className="font-bold text-ink">{payment.receiver_name}</span></p>
+        <p className="mt-1 text-sm text-gray-500">{t('Recebedor:')} <span className="font-bold text-ink">{payment.receiver_name}</span></p>
       )}
       {payment.description && (
         <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{payment.description}</p>
       )}
       {payment.qr_code_url && (
         <div className="mt-3 flex justify-center">
-          <img src={payment.qr_code_url} alt="QR Code PIX" className="max-w-[240px] rounded-2xl border border-gray-200 bg-white p-3" />
+          <img src={payment.qr_code_url} alt={t('QR Code PIX')} className="max-w-[240px] rounded-2xl border border-gray-200 bg-white p-3" />
         </div>
       )}
       {payment.pix_key && (
         <div className="mt-3">
           <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
-            Chave PIX ({PIX_KEY_TYPE_LABELS[payment.pix_key_type] || payment.pix_key_type})
+            {t('Chave PIX ({tipo})', { tipo: PIX_KEY_TYPE_LABELS[payment.pix_key_type] ? t(PIX_KEY_TYPE_LABELS[payment.pix_key_type]) : payment.pix_key_type })}
           </p>
           <div className="mt-1 flex items-center gap-2">
             <code className="flex-1 break-all rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm font-mono">
               {payment.pix_key}
             </code>
             <V2Button size="sm" variant="secondary" onClick={copyKey}>
-              {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+              {copied ? <><Check className="h-3.5 w-3.5" /> {t('Copiado')}</> : <><Copy className="h-3.5 w-3.5" /> {t('Copiar')}</>}
             </V2Button>
           </div>
         </div>
       )}
       {payment.instructions && (
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-          <p className="text-xs font-bold uppercase text-amber-800">Instruções</p>
+          <p className="text-xs font-bold uppercase text-amber-800">{t('Instruções')}</p>
           <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{payment.instructions}</p>
         </div>
       )}
@@ -567,8 +568,8 @@ function ArenaCourtsSection({ arenaId }) {
   };
   return (
     <V2Surface className="mt-6">
-      <h3 className="font-display text-base font-bold text-ink">Quadras</h3>
-      <p className="mt-1 text-sm text-gray-500">{courts.length} quadra(s) disponíve{(courts.length === 1 ? 'l' : 'is')}.</p>
+      <h3 className="font-display text-base font-bold text-ink">{t('Quadras')}</h3>
+      <p className="mt-1 text-sm text-gray-500">{tn(courts.length, '{n} quadra disponível.', '{n} quadras disponíveis.')}</p>
       <ul className="mt-3 space-y-2">
         {courts.map((c) => (
           <li key={c.id} className="flex items-start justify-between gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
@@ -580,7 +581,7 @@ function ArenaCourtsSection({ arenaId }) {
               </p>
               {c.notes && <p className="mt-1 text-xs text-gray-500">{c.notes}</p>}
             </div>
-            {c.is_active === false && <V2Badge tone="neutral">Inativa</V2Badge>}
+            {c.is_active === false && <V2Badge tone="neutral">{t('Inativa')}</V2Badge>}
           </li>
         ))}
       </ul>
@@ -596,7 +597,7 @@ function ArenaRulesSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <ClipboardList className="h-4 w-4" /> Regras da arena
+        <ClipboardList className="h-4 w-4" /> {t('Regras da arena')}
       </h3>
       {grouped ? (
         <div className="mt-3 space-y-4">

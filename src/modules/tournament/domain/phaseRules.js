@@ -37,6 +37,7 @@ import { supportsGroups, normalizePhase, BRACKET_FORMATS } from './phases.js';
 import { describeTiebreakOrder, DEFAULT_TIEBREAK_ORDER } from './tiebreak.js';
 import { CROSS_GROUP_METHOD, CROSS_GROUP_METHOD_LABELS } from './crossGroup.js';
 import { DIRECT_ENTRY_MODE, DIRECT_ENTRY_MODE_LABELS, normalizeDirectEntry } from './directEntry.js';
+import { t, tn } from '@/core/i18n';
 
 /** Lista "1, 2 e 3" — no Brasil ninguém lê "1, 2, 3" numa frase. */
 function listar(valores) {
@@ -80,16 +81,16 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     const volta = phase.round_robin_legs === 2;
     add(
       'etapas',
-      'Etapas',
-      `${phase.etapa_count} ${phase.etapa_count === 1 ? 'etapa' : 'etapas'}, grupos de ${phase.max_per_group}`,
-      'Em cada etapa, um Americano em cada grupo. A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou — e a próxima etapa só é gerada quando a anterior termina.',
+      t('Etapas'),
+      tn(phase.etapa_count, '{n} etapa, grupos de {tam}', '{n} etapas, grupos de {tam}', { tam: phase.max_per_group }),
+      t('Em cada etapa, um Americano em cada grupo. A cada etapa os grupos são refeitos, misturando quem ainda não se encontrou — e a próxima etapa só é gerada quando a anterior termina.'),
       true,
     );
     add(
       'turnos',
-      'Turnos',
-      volta ? '2 turnos — cada dupla joga junta 2 vezes por etapa' : '1 turno — cada dupla joga junta 1 vez por etapa',
-      volta ? 'No returno, os mesmos parceiros e adversários, com os lados trocados.' : 'O padrão do Americano.',
+      t('Turnos'),
+      volta ? t('2 turnos — cada dupla joga junta 2 vezes por etapa') : t('1 turno — cada dupla joga junta 1 vez por etapa'),
+      volta ? t('No returno, os mesmos parceiros e adversários, com os lados trocados.') : t('O padrão do Americano.'),
       volta,
     );
     const ordem = describeTiebreakOrder(phase.tiebreak_order);
@@ -97,13 +98,13 @@ export function describePhaseRules(rawPhase, ctx = {}) {
       && phase.tiebreak_order.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
     add(
       'desempate',
-      'Classificação',
-      `Uma só, somando todas as etapas: ${ordem.map((c) => c.label).join(' → ')}`,
-      'O campeão é quem foi melhor no total. Com grupos de tamanhos diferentes alguém pode ter um jogo a mais — se quiser comparar por percentual, use o aproveitamento.',
+      t('Classificação'),
+      t('Uma só, somando todas as etapas: {v1}', { v1: ordem.map((c) => c.label).join(' → ') }),
+      t('O campeão é quem foi melhor no total. Com grupos de tamanhos diferentes alguém pode ter um jogo a mais — se quiser comparar por percentual, use o aproveitamento.'),
       mudou,
     );
     if (!isLast) {
-      add('classificados', 'Quem passa de fase', `Os ${phase.qualifiers_per_group} melhores da classificação geral`, 'Depois da última etapa.', phase.qualifiers_per_group !== 2);
+      add('classificados', t('Quem passa de fase'), t('Os {qualifiers_per_group} melhores da classificação geral', { qualifiers_per_group: phase.qualifiers_per_group }), t('Depois da última etapa.'), phase.qualifiers_per_group !== 2);
     }
     return { rows, changedCount: rows.filter((r) => r.changed).length };
   }
@@ -112,17 +113,17 @@ export function describePhaseRules(rawPhase, ctx = {}) {
   if (agrupada && gruposManuais > 0) {
     add(
       'divisao',
-      'Divisão dos grupos',
-      `À mão: ${listar(phase.custom_group_sizes)} atleta(s)`,
-      'Você fixou o tamanho de cada grupo. Se o número de inscritos mudar, o último grupo cresce ou encolhe para caber todo mundo — ninguém fica de fora.',
+      t('Divisão dos grupos'),
+      t('À mão: {custom_group_sizes} atleta(s)', { custom_group_sizes: listar(phase.custom_group_sizes) }),
+      t('Você fixou o tamanho de cada grupo. Se o número de inscritos mudar, o último grupo cresce ou encolhe para caber todo mundo — ninguém fica de fora.'),
       true,
     );
   } else if (agrupada && grupos > 1) {
     add(
       'divisao',
-      'Divisão dos grupos',
-      `${grupos} grupos, equilibrados automaticamente`,
-      'Os inscritos são distribuídos o mais igualmente possível. Grupos de tamanhos diferentes são normais — a comparação entre eles é feita por aproveitamento.',
+      t('Divisão dos grupos'),
+      t('{grupos} grupos, equilibrados automaticamente', { grupos }),
+      t('Os inscritos são distribuídos o mais igualmente possível. Grupos de tamanhos diferentes são normais — a comparação entre eles é feita por aproveitamento.'),
     );
   }
 
@@ -131,11 +132,11 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     const volta = phase.round_robin_legs === 2;
     add(
       'turnos',
-      'Turnos',
-      volta ? 'Ida e volta — cada dupla se enfrenta 2 vezes' : 'Só ida — cada dupla se enfrenta 1 vez',
+      t('Turnos'),
+      volta ? t('Ida e volta — cada dupla se enfrenta 2 vezes') : t('Só ida — cada dupla se enfrenta 1 vez'),
       volta
-        ? 'Cada confronto acontece duas vezes, com os lados invertidos na volta. É a saída para o grupo de 3, que só na ida daria 2 jogos por atleta.'
-        : 'O padrão. Num grupo de 3 isso dá apenas 2 jogos por atleta — considere ida e volta.',
+        ? t('Cada confronto acontece duas vezes, com os lados invertidos na volta. É a saída para o grupo de 3, que só na ida daria 2 jogos por atleta.')
+        : t('O padrão. Num grupo de 3 isso dá apenas 2 jogos por atleta — considere ida e volta.'),
       volta,
     );
   }
@@ -146,19 +147,19 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     if (porGrupo.length > 0) {
       add(
         'classificados',
-        'Quem passa de fase',
-        `Grupo a grupo: ${listar(porGrupo)}`,
-        'Você definiu um número por grupo. É o que se usa quando os grupos têm tamanhos diferentes: passam 2 do grupo de 5 e 1 do de 3.',
+        t('Quem passa de fase'),
+        t('Grupo a grupo: {porGrupo}', { porGrupo: listar(porGrupo) }),
+        t('Você definiu um número por grupo. É o que se usa quando os grupos têm tamanhos diferentes: passam 2 do grupo de 5 e 1 do de 3.'),
         true,
       );
     } else {
       add(
         'classificados',
-        'Quem passa de fase',
+        t('Quem passa de fase'),
         agrupada && grupos > 1
-          ? `Os ${phase.qualifiers_per_group} melhores de cada grupo`
-          : `Os ${phase.qualifiers_per_group} melhores`,
-        'Classificados diretos, antes da repescagem.',
+          ? t('Os {qualifiers_per_group} melhores de cada grupo', { qualifiers_per_group: phase.qualifiers_per_group })
+          : t('Os {qualifiers_per_group} melhores', { qualifiers_per_group: phase.qualifiers_per_group }),
+        t('Classificados diretos, antes da repescagem.'),
         phase.qualifiers_per_group !== 2,
       );
     }
@@ -172,17 +173,17 @@ export function describePhaseRules(rawPhase, ctx = {}) {
         : ordinal(phase.qualifiers_per_group + 1);
       add(
         'repescagem',
-        'Repescagem',
-        `${phase.wildcard_slots} vaga(s), entre os melhores ${de} colocados`,
-        'As vagas extras vão para os melhores da colocação seguinte ao corte, comparados só ENTRE IGUAIS — um 4º nunca entra na frente de um 3º.',
+        t('Repescagem'),
+        t('{wildcard_slots} vaga(s), entre os melhores {de} colocados', { wildcard_slots: phase.wildcard_slots, de }),
+        t('As vagas extras vão para os melhores da colocação seguinte ao corte, comparados só ENTRE IGUAIS — um 4º nunca entra na frente de um 3º.'),
         true,
       );
     } else {
       add(
         'repescagem',
-        'Repescagem',
-        'Nenhuma — passam só os classificados diretos',
-        'Se os classificados não fecharem a chave, a repescagem é o caminho para encher as vagas que sobrarem.',
+        t('Repescagem'),
+        t('Nenhuma — passam só os classificados diretos'),
+        t('Se os classificados não fecharem a chave, a repescagem é o caminho para encher as vagas que sobrarem.'),
       );
     }
   }
@@ -194,11 +195,11 @@ export function describePhaseRules(rawPhase, ctx = {}) {
       && phase.tiebreak_order.join('|') !== DEFAULT_TIEBREAK_ORDER.join('|');
     add(
       'desempate',
-      'Desempate dentro do grupo',
+      t('Desempate dentro do grupo'),
       ordem.map((c) => c.label).join(' → '),
       mudou
-        ? 'Ordem escolhida por você. Critério que não se aplica (quem não se enfrentou, por exemplo) é PULADO, nunca inventado.'
-        : 'A ordem do regulamento (USA Pickleball 15.B.4). O confronto direto vem logo depois das vitórias — é a reclamação nº 1 de quadra, "mas eu ganhei dele".',
+        ? t('Ordem escolhida por você. Critério que não se aplica (quem não se enfrentou, por exemplo) é PULADO, nunca inventado.')
+        : t('A ordem do regulamento (USA Pickleball 15.B.4). O confronto direto vem logo depois das vitórias — é a reclamação nº 1 de quadra, "mas eu ganhei dele".'),
       mudou,
     );
   }
@@ -208,11 +209,11 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     const mudou = phase.cross_group_method !== CROSS_GROUP_METHOD.RATE;
     add(
       'entre_grupos',
-      'Comparação entre grupos',
+      t('Comparação entre grupos'),
       CROSS_GROUP_METHOD_LABELS[phase.cross_group_method] || phase.cross_group_method,
       mudou
-        ? 'Método escolhido por você para ordenar quem veio de grupos diferentes.'
-        : 'O padrão, e o único justo com grupos de tamanhos diferentes: 3 vitórias em 3 jogos valem mais que 3 em 4. A colocação vem sempre primeiro — todos os 1ºs, depois os 2ºs.',
+        ? t('Método escolhido por você para ordenar quem veio de grupos diferentes.')
+        : t('O padrão, e o único justo com grupos de tamanhos diferentes: 3 vitórias em 3 jogos valem mais que 3 em 4. A colocação vem sempre primeiro — todos os 1ºs, depois os 2ºs.'),
       mudou,
     );
   }
@@ -222,15 +223,15 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     const cfg = normalizeDirectEntry(phase.direct_entry);
     const nenhuma = cfg.mode === DIRECT_ENTRY_MODE.NONE;
     let valor = DIRECT_ENTRY_MODE_LABELS[cfg.mode];
-    if (cfg.mode === DIRECT_ENTRY_MODE.SEEDS) valor = `Os ${cfg.count} melhores cabeças entram direto aqui`;
-    if (cfg.mode === DIRECT_ENTRY_MODE.MANUAL) valor = `${cfg.ids.length} escolhido(s) a dedo entram direto aqui`;
+    if (cfg.mode === DIRECT_ENTRY_MODE.SEEDS) valor = t('Os {count} melhores cabeças entram direto aqui', { count: cfg.count });
+    if (cfg.mode === DIRECT_ENTRY_MODE.MANUAL) valor = t('{n} escolhido(s) a dedo entram direto aqui', { n: cfg.ids.length });
     add(
       'entrada_direta',
-      'Entrada direta',
+      t('Entrada direta'),
       valor,
       nenhuma
-        ? 'Ninguém pula fases: esta fase é formada só por quem se classificou na anterior.'
-        : 'Quem entra direto aqui NÃO joga as fases anteriores — não entra no sorteio nem na classificação delas.',
+        ? t('Ninguém pula fases: esta fase é formada só por quem se classificou na anterior.')
+        : t('Quem entra direto aqui NÃO joga as fases anteriores — não entra no sorteio nem na classificação delas.'),
       !nenhuma,
     );
   }
@@ -239,9 +240,9 @@ export function describePhaseRules(rawPhase, ctx = {}) {
   if (phase.seed_count > 0) {
     add(
       'cabecas',
-      'Cabeças de chave',
-      `${phase.seed_count} protegido(s)`,
-      'Os cabeças entram por posições que só os fazem se cruzar o mais tarde possível — e, numa chave incompleta, são eles que recebem os byes.',
+      t('Cabeças de chave'),
+      t('{seed_count} protegido(s)', { seed_count: phase.seed_count }),
+      t('Os cabeças entram por posições que só os fazem se cruzar o mais tarde possível — e, numa chave incompleta, são eles que recebem os byes.'),
       true,
     );
   }
@@ -251,13 +252,13 @@ export function describePhaseRules(rawPhase, ctx = {}) {
     const mudou = phase.bracket_seeding !== PHASE_BRACKET_SEEDING.STANDARD;
     add(
       'chave',
-      'Montagem da chave',
+      t('Montagem da chave'),
       PHASE_BRACKET_SEEDING_LABELS[phase.bracket_seeding] || phase.bracket_seeding,
-      'Todo mundo entra pela posição canônica do seu número. É o que garante byes exatamente onde faltam inscritos, sem partida de ninguém contra ninguém.',
+      t('Todo mundo entra pela posição canônica do seu número. É o que garante byes exatamente onde faltam inscritos, sem partida de ninguém contra ninguém.'),
       mudou,
     );
     if (phase.type === TOURNAMENT_STAGE_TYPE.KNOCKOUT && phase.third_place) {
-      add('terceiro', 'Disputa de 3º lugar', 'Sim', 'Os perdedores das semifinais se enfrentam por mais uma partida.', true);
+      add('terceiro', t('Disputa de 3º lugar'), t('Sim'), t('Os perdedores das semifinais se enfrentam por mais uma partida.'), true);
     }
   }
 

@@ -21,6 +21,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeCircuitInput, normalizeCircuitResult, pointsForPosition } from '../domain/circuit.js';
+import { t } from '@/core/i18n';
 
 export const CIRCUIT_COLLECTIONS = {
   circuits: 'circuits',
@@ -76,7 +77,7 @@ export async function createCircuit(input, actor) {
 /** Atualiza circuito (apenas admins). */
 export async function updateCircuit(circuitId, updates, actor) {
   if (!await isCircuitAdmin(circuitId, actor)) {
-    throw new Error('Sem permissão para editar este circuito.');
+    throw new Error(t('Sem permissão para editar este circuito.'));
   }
   const { valid, error, value } = normalizeCircuitInput({ ...updates, name: updates.name || 'placeholder' });
   // re-valida campos críticos
@@ -130,7 +131,7 @@ export async function getCircuit(circuitId) {
 /** Adiciona torneio ao circuito. */
 export async function addTournamentToCircuit(circuitId, tournamentId, actor) {
   if (!await isCircuitAdmin(circuitId, actor)) {
-    throw new Error('Sem permissão para adicionar torneio a este circuito.');
+    throw new Error(t('Sem permissão para adicionar torneio a este circuito.'));
   }
   await setDoc(doc(db, CIRCUIT_COLLECTIONS.tournaments, tournamentLinkId(circuitId, tournamentId)), {
     circuit_id: circuitId, tournament_id: tournamentId,
@@ -145,7 +146,7 @@ export async function addTournamentToCircuit(circuitId, tournamentId, actor) {
 
 export async function removeTournamentFromCircuit(circuitId, tournamentId, actor) {
   if (!await isCircuitAdmin(circuitId, actor)) {
-    throw new Error('Sem permissão para remover torneio deste circuito.');
+    throw new Error(t('Sem permissão para remover torneio deste circuito.'));
   }
   await deleteDoc(doc(db, CIRCUIT_COLLECTIONS.tournaments, tournamentLinkId(circuitId, tournamentId)));
   await createAuditLog({
@@ -171,7 +172,7 @@ export async function listCircuitTournaments(circuitId) {
 /** Registra resultado de 1 atleta em 1 torneio do circuito. */
 export async function recordCircuitResult(circuitId, tournamentId, input, actor) {
   if (!await isCircuitAdmin(circuitId, actor)) {
-    throw new Error('Sem permissão para registrar resultados neste circuito.');
+    throw new Error(t('Sem permissão para registrar resultados neste circuito.'));
   }
   const { valid, error, value } = normalizeCircuitResult({ ...input, tournament_id: tournamentId });
   if (!valid) throw new Error(error);
@@ -189,7 +190,7 @@ export async function recordCircuitResult(circuitId, tournamentId, input, actor)
 /** Registra vários resultados em batch (1 torneio). */
 export async function recordCircuitResultsBatch(circuitId, tournamentId, results, actor) {
   if (!await isCircuitAdmin(circuitId, actor)) {
-    throw new Error('Sem permissão para registrar resultados neste circuito.');
+    throw new Error(t('Sem permissão para registrar resultados neste circuito.'));
   }
   let count = 0;
   for (const r of results) {

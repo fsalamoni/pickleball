@@ -54,6 +54,7 @@ import {
   useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
+import { t, tn } from '@/core/i18n';
 
 /**
  * Organizador do dia de jogo no formato PLAY (open play) do atleta.
@@ -137,8 +138,8 @@ export default function AthletePlayOrganizer({ gameDay }) {
       {falhouEstado && (
         <V2ErrorState
           inline
-          title="Não foi possível carregar o dia de jogo"
-          description="Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu."
+          title={t('Não foi possível carregar o dia de jogo')}
+          description={t('Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu.')}
           onRetry={recarregarEstado}
         />
       )}
@@ -194,19 +195,21 @@ function ParticipantGroupSelect({ gameDayId, participant: p, config }) {
       const r = await setGroup.mutateAsync({ pid: p.id, groupId });
       const alvo = groupId ? config.groups.find((g) => g.id === groupId)?.name : null;
       if (r.moved.length > 1) {
-        toast.success(`${p.name} e a dupla vinculada foram juntos${alvo ? ` para o grupo ${alvo}` : ' para quem está sem grupo'}.`);
+        toast.success(alvo
+          ? t('{nome} e a dupla vinculada foram juntos para o grupo {grupo}.', { nome: p.name, grupo: alvo })
+          : t('{nome} e a dupla vinculada foram juntos para quem está sem grupo.', { nome: p.name }));
       } else {
-        toast.success(alvo ? `${p.name} agora é do grupo ${alvo}.` : `${p.name} ficou sem grupo.`);
+        toast.success(alvo ? t('{nome} agora é do grupo {grupo}.', { nome: p.name, grupo: alvo }) : t('{nome} ficou sem grupo.', { nome: p.name }));
       }
     } catch (err) {
-      toast.error(err.message || 'Não foi possível mudar o grupo.');
+      toast.error(err.message || t('Não foi possível mudar o grupo.'));
     }
   };
   return (
     <GroupSelect
       value={groupIdOf(p, config)}
       groups={config.groups}
-      label={`Grupo de ${p.name}`}
+      label={t('Grupo de {nome}', { nome: p.name })}
       disabled={setGroup.isPending}
       onChange={mover}
     />
@@ -221,16 +224,16 @@ function ParticipantGroupSelect({ gameDayId, participant: p, config }) {
 function avisoDeGrupo(p, participants, config) {
   const g = (config?.groups || []).find((x) => x.id === groupIdOf(p, config)) || null;
   const fora = profileMismatch(p, g);
-  if (fora === 'nivel') return 'nível fora do grupo';
-  if (fora === 'sexo') return 'sexo diferente do grupo';
-  if (linkedPartnerInOtherGroup(p, participants, config)) return 'dupla em outro grupo';
+  if (fora === 'nivel') return t('nível fora do grupo');
+  if (fora === 'sexo') return t('sexo diferente do grupo');
+  if (linkedPartnerInOtherGroup(p, participants, config)) return t('dupla em outro grupo');
   return null;
 }
 
 export function statusBadge(p) {
-  if (p.status === PLAY_STATUS.IN_COURT) return <V2Badge tone="acid">Em quadra</V2Badge>;
+  if (p.status === PLAY_STATUS.IN_COURT) return <V2Badge tone="acid">{t('Em quadra')}</V2Badge>;
   if (p.status === PLAY_STATUS.UNAVAILABLE) {
-    return <V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>;
+    return <V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>;
   }
   // Com grupos, o número é a posição NA FILA DO GRUPO (`groupNo`); sem eles,
   // a ordem de sempre.
@@ -295,7 +298,7 @@ export function PlayParticipantsSection({
     try {
       await addParticipant.mutateAsync({ ...entry, source: GD_PARTICIPANT_SOURCE.INVITED });
     } catch (err) {
-      toast.error(err.message || 'Não foi possível inserir.');
+      toast.error(err.message || t('Não foi possível inserir.'));
     }
   };
 
@@ -303,7 +306,7 @@ export function PlayParticipantsSection({
     e.preventDefault();
     const name = guestName.trim();
     if (!name) return;
-    if (addedNames.has(name.toLowerCase())) { toast.error('Já existe um participante com esse nome.'); return; }
+    if (addedNames.has(name.toLowerCase())) { toast.error(t('Já existe um participante com esse nome.')); return; }
     try {
       // Nível e sexo do convidado só são pedidos com a flag de grupos ligada:
       // sem conta, é a única forma de o sorteio saber em que grupo ele cabe.
@@ -316,15 +319,15 @@ export function PlayParticipantsSection({
       });
       setGuestName('');
     } catch (err) {
-      toast.error(err.message || 'Não foi possível inserir.');
+      toast.error(err.message || t('Não foi possível inserir.'));
     }
   };
 
   // Remover com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
   const handleRemove = (id) => {
     const p = participants.find((x) => x.id === id);
-    desfazivel.agendar(id, `${p?.name || 'Participante'} removido do dia de jogo.`, () => removeParticipant.mutateAsync(id), {
-      aoFalhar: (err) => toast.error(err.message || 'Não foi possível remover.'),
+    desfazivel.agendar(id, t('{nome} removido do dia de jogo.', { nome: p?.name || t('Participante') }), () => removeParticipant.mutateAsync(id), {
+      aoFalhar: (err) => toast.error(err.message || t('Não foi possível remover.')),
     });
   };
 
@@ -340,16 +343,16 @@ export function PlayParticipantsSection({
   return (
     <V2CollapsibleCard
       icon={Users}
-      title="Participantes"
+      title={t('Participantes')}
       count={participants.length}
       dica="dia-de-jogo-participantes"
       sectionId={GAME_DAY_SECTION.PLAY_PARTICIPANTS}
       summary={participants.length === 0
-        ? 'Nenhum participante ainda'
-        : `${view.order.length} na fila · ${view.inCourt.length} em quadra · ${view.unavailable.length} pausado(s)`}
+        ? t('Nenhum participante ainda')
+        : t('{a} na fila · {b} em quadra · {c} pausado(s)', { a: view.order.length, b: view.inCourt.length, c: view.unavailable.length })}
       actions={canManage && (
         <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit} data-dica="dia-de-jogo-inserir-atletas">
-          <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
+          <UserPlus className="mr-1.5 h-4 w-4" /> {t('Inserir atletas')}
         </V2Button>
       )}
     >
@@ -357,7 +360,7 @@ export function PlayParticipantsSection({
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
         ) : participants.length === 0 ? (
-          <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar." />
+          <EmptyState icon={Users} title={t('Sem participantes')} description={t('Insira os atletas que vão jogar.')} />
         ) : (
           <div className="space-y-2">
             {participants.filter((p) => !desfazivel.ocultos.has(p.id)).map((p) => {
@@ -378,12 +381,12 @@ export function PlayParticipantsSection({
                       {comGrupos && !editable && (
                         <PlayGroupBadgeById groupId={groupIdOf(p, configGrupos)} config={configGrupos} mostrarSemGrupo size="xs" />
                       )}
-                      <span>{GD_PARTICIPANT_SOURCE_LABELS[p.source] || 'Atleta'}</span>
-                      {p.play_level && <span>· Nível {p.play_level}</span>}
+                      <span>{t(GD_PARTICIPANT_SOURCE_LABELS[p.source]) || t('Atleta')}</span>
+                      {p.play_level && <span>· {t('Nível {n}', { n: p.play_level })}</span>}
                       {genderLabel(p.play_gender) && <span>· {genderLabel(p.play_gender)}</span>}
                       {partnerName && (
                         <span className="inline-flex items-center gap-1 text-blue-600">
-                          · <Link2 className="h-3 w-3" /> dupla com {partnerName}
+                          · <Link2 className="h-3 w-3" /> {t('dupla com {nome}', { nome: partnerName })}
                         </span>
                       )}
                       {comGrupos && editable && avisoDeGrupo(p, participants, configGrupos) && (
@@ -398,23 +401,23 @@ export function PlayParticipantsSection({
                         <ParticipantGroupSelect gameDayId={gameDay.id} participant={p} config={configGrupos} />
                       )}
                       {st.status === PLAY_STATUS.UNAVAILABLE ? (
-                        <V2Button size="sm" variant="ghost" onClick={() => setSkip.mutate({ pid: p.id, count: 0 })} title="Voltar a jogar">
-                          <PlayCircle className="mr-1 h-3.5 w-3.5" /> Voltar
+                        <V2Button size="sm" variant="ghost" onClick={() => setSkip.mutate({ pid: p.id, count: 0 })} title={t('Voltar a jogar')}>
+                          <PlayCircle className="mr-1 h-3.5 w-3.5" /> {t('Voltar')}
                         </V2Button>
                       ) : (
-                        <V2Button size="sm" variant="ghost" onClick={() => setSkipFor(p)} title="Pausar participação">
+                        <V2Button size="sm" variant="ghost" onClick={() => setSkipFor(p)} title={t('Pausar participação')}>
                           <Pause className="h-3.5 w-3.5" />
                         </V2Button>
                       )}
                       <V2Button
                         size="sm" variant="ghost"
                         onClick={() => (p.partner_id ? setPartner.mutate({ pid: p.id, partnerId: null }) : setPartnerFor(p))}
-                        title={p.partner_id ? 'Desfazer dupla' : 'Formar dupla fixa'}
+                        title={p.partner_id ? t('Desfazer dupla') : t('Formar dupla fixa')}
                       >
                         {p.partner_id ? <Unlink className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
                       </V2Button>
                       {isOwner && (
-                        <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 hover:text-red-600" title="Remover">
+                        <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 hover:text-red-600" title={t('Remover')}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </V2Button>
                       )}
@@ -433,7 +436,7 @@ export function PlayParticipantsSection({
                 <Input
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Adicionar convidado pelo nome (fora da plataforma)"
+                  placeholder={t('Adicionar convidado pelo nome (fora da plataforma)')}
                   maxLength={60}
                   disabled={atLimit}
                 />
@@ -443,8 +446,8 @@ export function PlayParticipantsSection({
                   type="submit"
                   tone="neutral"
                   disabled={!guestName.trim() || atLimit}
-                  aria-label="Incluir convidado"
-                  title="Incluir convidado"
+                  aria-label={t('Incluir convidado')}
+                  title={t('Incluir convidado')}
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
                 </V2Button>
@@ -456,45 +459,44 @@ export function PlayParticipantsSection({
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     <select
-                      aria-label="Nível do convidado"
+                      aria-label={t('Nível do convidado')}
                       value={guestLevel}
                       onChange={(e) => setGuestLevel(e.target.value)}
                       className={SELECT_COMPACTO}
                       disabled={atLimit}
                     >
-                      <option value="">Nível não informado</option>
-                      {PLAY_GROUP_LEVEL_STEPS.map((n) => <option key={n} value={n}>Nível {n.toFixed(1)}</option>)}
+                      <option value="">{t('Nível não informado')}</option>
+                      {PLAY_GROUP_LEVEL_STEPS.map((n) => <option key={n} value={n}>{t('Nível {n}', { n: n.toFixed(1) })}</option>)}
                     </select>
                     <select
-                      aria-label="Sexo do convidado"
+                      aria-label={t('Sexo do convidado')}
                       value={guestGender}
                       onChange={(e) => setGuestGender(e.target.value)}
                       className={SELECT_COMPACTO}
                       disabled={atLimit}
                     >
-                      <option value="">Sexo não informado</option>
-                      <option value="male">Masculino</option>
-                      <option value="female">Feminino</option>
+                      <option value="">{t('Sexo não informado')}</option>
+                      <option value="male">{t('Masculino')}</option>
+                      <option value="female">{t('Feminino')}</option>
                     </select>
                     {comGrupos && (
                       <GroupSelect
                         value={guestGroup}
                         groups={configGrupos.groups}
-                        label="Grupo do convidado"
-                        autoLabel="Grupo automático (pelo nível)"
+                        label={t('Grupo do convidado')}
+                        autoLabel={t('Grupo automático (pelo nível)')}
                         onChange={setGuestGroup}
                         disabled={atLimit}
                       />
                     )}
                   </div>
                   <p className="text-2xs leading-5 text-gray-500">
-                    O nível e o sexo ajudam o sorteio a achar o grupo e a formar as duplas. Sem eles, o convidado
-                    entra sem grupo — e você move depois.
+                    {t('O nível e o sexo ajudam o sorteio a achar o grupo e a formar as duplas. Sem eles, o convidado entra sem grupo — e você move depois.')}
                   </p>
                 </>
               )}
             </form>
-            {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}
+            {atLimit && <p className="text-xs text-amber-600">{t('Limite de {n} participantes atingido.', { n: GAME_DAY_LIMITS.MAX_PARTICIPANTS })}</p>}
           </>
         )}
       </div>
@@ -534,25 +536,25 @@ function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Inserir atletas</DialogTitle>
-          <DialogDescription>Convide qualquer atleta da plataforma para o Play.</DialogDescription>
+          <DialogTitle>{t('Inserir atletas')}</DialogTitle>
+          <DialogDescription>{t('Convide qualquer atleta da plataforma para o Play.')}</DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
         {groups && (
           <label className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-            Colocar no grupo:
+            {t('Colocar no grupo:')}
             <GroupSelect
               value={grupoDoLote}
               groups={groups}
-              label="Grupo dos atletas inseridos"
-              autoLabel="Automático (pelo nível)"
+              label={t('Grupo dos atletas inseridos')}
+              autoLabel={t('Automático (pelo nível)')}
               onChange={setGrupoDoLote}
             />
           </label>
         )}
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {people.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta disponível.</p>
+            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum atleta disponível.')}</p>
           ) : people.map((p) => (
             <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">
@@ -560,13 +562,13 @@ function AddAthletesDialog({ open, onClose, pool, onAdd, groups = null }) {
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => onAdd(grupoDoLote !== undefined ? { ...p, play_group_id: grupoDoLote } : p)}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> Inserir
+                <Plus className="mr-1 h-3.5 w-3.5" /> {t('Inserir')}
               </V2Button>
             </div>
           ))}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -581,29 +583,28 @@ export function SkipDialog({ participant, onClose, onConfirm }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Pausar participação</DialogTitle>
+          <DialogTitle>{t('Pausar participação')}</DialogTitle>
           <DialogDescription>
-            {participant?.name} vai ficar de fora das próximas partidas. Enquanto pausado, não entra na ordem
-            nem em novos jogos.
+            {t('{nome} vai ficar de fora das próximas partidas. Enquanto pausado, não entra na ordem nem em novos jogos.', { nome: participant?.name })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="flex gap-2">
             {[1, 2, 3, 5].map((n) => (
               <V2Button key={n} size="sm" variant={count === n ? 'default' : 'outline'} onClick={() => setCount(n)}>
-                {n} partida{n > 1 ? 's' : ''}
+                {tn(n, '{n} partida', '{n} partidas')}
               </V2Button>
             ))}
           </div>
           <div className="w-40">
-            <Label className="text-xs">Ou informe</Label>
+            <Label className="text-xs">{t('Ou informe')}</Label>
             <Input type="number" min={1} max={50} value={count}
               onChange={(e) => setCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))} />
           </div>
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button onClick={() => onConfirm(count)}>Pausar por {count}</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button onClick={() => onConfirm(count)}>{t('Pausar por {n}', { n: count })}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -650,7 +651,7 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
 
   if (!target) return null;
 
-  const nome = target.player?.name || 'Jogador';
+  const nome = target.player?.name || t('Jogador');
   const proximo = elegiveis[0] || null;
   const semSubstituto = elegiveis.length === 0;
   const q = search.trim().toLowerCase();
@@ -669,14 +670,14 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
           <DialogTitle>{nome}</DialogTitle>
           <DialogDescription>
             {step === 'escolha'
-              ? 'O que você quer fazer com este jogador nesta partida?'
-              : `Escolha quem entra no lugar de ${nome}. Os dois trocam de posição na fila.`}
+              ? t('O que você quer fazer com este jogador nesta partida?')
+              : t('Escolha quem entra no lugar de {nome}. Os dois trocam de posição na fila.', { nome })}
           </DialogDescription>
         </DialogHeader>
 
         {semSubstituto ? (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-            Não há ninguém disponível na ordem de participação para entrar no lugar dele agora.
+            {t('Não há ninguém disponível na ordem de participação para entrar no lugar dele agora.')}
           </p>
         ) : step === 'escolha' ? (
           <div className="flex flex-col gap-2">
@@ -687,9 +688,9 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
             >
               <UserX className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-ink">Indisponível para esta partida</span>
+                <span className="block text-sm font-semibold text-ink">{t('Indisponível para esta partida')}</span>
                 <span className="block text-xs leading-snug text-gray-500">
-                  {nome} sai e entra automaticamente o próximo da ordem
+                  {t('{nome} sai e entra automaticamente o próximo da ordem', { nome })}
                   {proximo ? <> — <strong className="font-semibold text-ink">{proximo.name}</strong></> : null}.
                 </span>
               </span>
@@ -702,9 +703,9 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
             >
               <ArrowRightLeft className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-ink">Substituir por outro jogador</span>
+                <span className="block text-sm font-semibold text-ink">{t('Substituir por outro jogador')}</span>
                 <span className="block text-xs leading-snug text-gray-500">
-                  Você escolhe quem entra, entre os {elegiveis.length} disponíveis na ordem de participação.
+                  {t('Você escolhe quem entra, entre os {n} disponíveis na ordem de participação.', { n: elegiveis.length })}
                 </span>
               </span>
             </button>
@@ -712,11 +713,11 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
         ) : (
           <>
             {elegiveis.length > 6 && (
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
             )}
             <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
               {filtrados.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-400">Nenhum jogador encontrado.</p>
+                <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum jogador encontrado.')}</p>
               ) : filtrados.map((p) => (
                 <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
                   <div className="flex min-w-0 items-center gap-2">
@@ -728,11 +729,11 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
                     <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                     <span className="truncate text-sm font-medium text-ink">{p.name}</span>
                     {game?.group_id && p.group_id === game.group_id && (
-                      <span className="shrink-0 text-2xs font-semibold text-green-700">do grupo</span>
+                      <span className="shrink-0 text-2xs font-semibold text-green-700">{t('do grupo')}</span>
                     )}
                   </div>
                   <V2Button size="sm" variant="ghost" onClick={() => confirmar(p.id)}>
-                    <ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Entra
+                    <ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> {t('Entra')}
                   </V2Button>
                 </div>
               ))}
@@ -742,9 +743,9 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
 
         <DialogFooter>
           {step === 'lista' && !semSubstituto && (
-            <V2Button variant="ghost" onClick={() => setStep('escolha')}>Voltar</V2Button>
+            <V2Button variant="ghost" onClick={() => setStep('escolha')}>{t('Voltar')}</V2Button>
           )}
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -773,35 +774,34 @@ export function PartnerDialog({ participant, participants, view, onClose, onConf
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Formar dupla fixa</DialogTitle>
+          <DialogTitle>{t('Formar dupla fixa')}</DialogTitle>
           <DialogDescription>
             {description || (
               <>
-                {participant.name} vai entrar SEMPRE junto com o parceiro escolhido, respeitando a ordem de
-                participação. Se a dupla furar a ordem, ela é empurrada para a próxima partida.
+                {t('{nome} vai entrar SEMPRE junto com o parceiro escolhido, respeitando a ordem de participação. Se a dupla furar a ordem, ela é empurrada para a próxima partida.', { nome: participant.name })}
               </>
             )}
           </DialogDescription>
         </DialogHeader>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Buscar por nome…')} />
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {candidates.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">Nenhum participante disponível.</p>
+            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum participante disponível.')}</p>
           ) : candidates.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
                 <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-                {p.partner_id && <span className="text-2xs text-amber-600">já tem dupla</span>}
+                {p.partner_id && <span className="text-2xs text-amber-600">{t('já tem dupla')}</span>}
               </div>
               <V2Button size="sm" variant="ghost" onClick={() => onConfirm(p.id)}>
-                <Link2 className="mr-1 h-3.5 w-3.5" /> Escolher
+                <Link2 className="mr-1 h-3.5 w-3.5" /> {t('Escolher')}
               </V2Button>
             </div>
           ))}
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -947,12 +947,12 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         ...(grupoDaQuadra !== undefined ? { groupId: grupoDaQuadra } : {}),
       });
       const doGrupo = res.groupId ? configGrupos.groups.find((g) => g.id === res.groupId)?.name : null;
-      const sufixo = doGrupo ? ` (grupo ${doGrupo})` : '';
+      const sufixo = doGrupo ? ` ${t('(grupo {nome})', { nome: doGrupo })}` : '';
       toast.success(res.kind === GAME_KIND.SINGLES
-        ? `Jogo simples criado na quadra ${res.court}${sufixo}.`
-        : `Jogo criado na quadra ${res.court}${sufixo}.`);
+        ? `${t('Jogo simples criado na quadra {n}', { n: res.court })}${sufixo}.`
+        : `${t('Jogo criado na quadra {n}', { n: res.court })}${sufixo}.`);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível criar o jogo.');
+      toast.error(err.message || t('Não foi possível criar o jogo.'));
     } finally { setBusy(false); }
   };
 
@@ -966,11 +966,11 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       const res = await finishGame.mutateAsync({
         gid, createNext, ...(trocou ? { kind: tipoDaQuadra } : {}),
       });
-      if (res?.next) toast.success(`Partida encerrada. Próxima criada na quadra ${res.next.court}.`);
-      else if (createNext) toast.success('Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.');
-      else toast.success('Partida encerrada. A quadra ficou livre para o sorteio da rodada.');
+      if (res?.next) toast.success(t('Partida encerrada. Próxima criada na quadra {n}.', { n: res.next.court }));
+      else if (createNext) toast.success(t('Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.'));
+      else toast.success(t('Partida encerrada. A quadra ficou livre para o sorteio da rodada.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível concluir o jogo.');
+      toast.error(err.message || t('Não foi possível concluir o jogo.'));
     }
   };
 
@@ -990,37 +990,37 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       });
       const n = res?.created?.length || 0;
       toast.success(n === 1
-        ? `Jogo criado na quadra ${res.courts[0]}.`
-        : `${n} jogos criados (quadras ${res.courts.join(', ')}), com os grupos misturados.`);
+        ? t('Jogo criado na quadra {n}.', { n: res.courts[0] })
+        : t('{n} jogos criados (quadras {lista}), com os grupos misturados.', { n, lista: res.courts.join(', ') }));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível sortear a rodada.');
+      toast.error(err.message || t('Não foi possível sortear a rodada.'));
     } finally { setBusy(false); }
   };
 
   return (
     <V2CollapsibleCard
       icon={LayoutGrid}
-      title="Quadras e jogos"
+      title={t('Quadras e jogos')}
       count={courts}
       dica="dia-de-jogo-quadras"
       sectionId={GAME_DAY_SECTION.PLAY_COURTS}
       summary={openGames.length === 0
-        ? `${courts} quadra(s) livre(s)`
-        : `${openGames.length} em quadra · ${finishedGames.length} concluído(s)`}
+        ? t('{n} quadra(s) livre(s)', { n: courts })
+        : t('{a} em quadra · {b} concluído(s)', { a: openGames.length, b: finishedGames.length })}
       actions={canManage && (
         <>
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
-            <Plus className="mr-1.5 h-4 w-4" /> Criação manual
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Criação manual')}
           </V2Button>
           {/* Só aparece onde faz diferença: com uma quadra, "sortear todas" é
               o mesmo que "criar próximo jogo". */}
           {courts > 1 && (
             <V2Button size="sm" variant="secondary" onClick={handleCreateRound} disabled={!podeSortearRodada || busy} data-dica="dia-de-jogo-sortear-rodada">
-              <Shuffle className="mr-1.5 h-4 w-4" /> {busy ? 'Sorteando…' : 'Sortear todas as quadras'}
+              <Shuffle className="mr-1.5 h-4 w-4" /> {busy ? t('Sorteando…') : t('Sortear todas as quadras')}
             </V2Button>
           )}
           <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy} data-dica="dia-de-jogo-criar-partida">
-            <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? 'Criando…' : 'Criar próximo jogo'}
+            <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? t('Criando…') : t('Criar próximo jogo')}
           </V2Button>
         </>
       )}
@@ -1032,14 +1032,12 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         {canManage && participants.length === 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
             <Users aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
-            As quadras só liberam partida com <strong>pelo menos 4 atletas</strong> no dia de jogo — e
-            ainda não há ninguém. Use <strong>Inserir atletas</strong>, em Participantes, logo acima.
+            {t('As quadras só liberam partida com')} <strong>{t('pelo menos 4 atletas')}</strong> {t('no dia de jogo — e ainda não há ninguém. Use')} <strong>{t('Inserir atletas')}</strong>{t(', em Participantes, logo acima.')}
           </p>
         )}
         {canManage && participants.length > 0 && participants.length < 4 && (
           <p className="text-xs text-gray-500">
-            Com {participants.length} no dia dá para <strong>jogo simples</strong> (2 atletas) — troque a quadra
-            para <strong>Simples</strong>. Duplas pedem ao menos 4.
+            {t('Com {n} no dia dá para', { n: participants.length })} <strong>{t('jogo simples')}</strong> {t('(2 atletas) — troque a quadra para')} <strong>{t('Simples')}</strong>{t('. Duplas pedem ao menos 4.')}
           </p>
         )}
         {/* COM grupos, "aguardando jogadores" seria mentira: pode haver gente de
@@ -1048,27 +1046,26 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         {canManage && comGrupos && participants.length >= 2 && !canCreateNext && free.length > 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
             <UsersRound aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
-            Nenhum grupo tem partida pronta para a quadra {free[0]} agora. O cartão <strong>Grupos</strong>, acima,
-            diz o que falta em cada um.
+            {t('Nenhum grupo tem partida pronta para a quadra {n} agora. O cartão', { n: free[0] })} <strong>{t('Grupos')}</strong>{t(', acima, diz o que falta em cada um.')}
           </p>
         )}
         {canManage && !comGrupos && participants.length >= 2 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">
-            Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo {vagasDa(free[0])} para
-            {' '}{kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.SINGLES ? 'um jogo simples' : 'um jogo de duplas'}).
+            {kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.SINGLES
+              ? t('Aguardando jogadores disponíveis: há {n} na ordem (mínimo {min} para um jogo simples).', { n: availableCount, min: vagasDa(free[0]) })
+              : t('Aguardando jogadores disponíveis: há {n} na ordem (mínimo {min} para um jogo de duplas).', { n: availableCount, min: vagasDa(free[0]) })}
             {/* Com 2 ou 3 na fila, a quadra de duplas espera — mas um simples
                 já põe gente para jogar. A tela oferece o caminho em vez de
                 deixar a pessoa procurando. */}
             {availableCount >= 2 && kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.DOUBLES && (
-              <> Ou troque a <strong>quadra {free[0]}</strong> para <strong>Simples</strong> e os dois primeiros já jogam.</>
+              <> {t('Ou troque a')} <strong>{t('quadra {n}', { n: free[0] })}</strong> {t('para')} <strong>{t('Simples')}</strong> {t('e os dois primeiros já jogam.')}</>
             )}
           </p>
         )}
         {canManage && (
           <p className="text-2xs leading-5 text-gray-500">
-            Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
-            <strong className="text-gray-500">simples</strong> — escolha na própria quadra. A quadra mantém o tipo
-            do último jogo até você trocar; no simples entram os dois primeiros da fila, e a dupla vinculada não vale.
+            {t('Cada quadra pode ser de')} <strong className="text-gray-500">{t('duplas')}</strong> {t('ou de')}{' '}
+            <strong className="text-gray-500">{t('simples')}</strong> {t('— escolha na própria quadra. A quadra mantém o tipo do último jogo até você trocar; no simples entram os dois primeiros da fila, e a dupla vinculada não vale.')}
           </p>
         )}
         {/* A dica que evita o congelamento dos grupos. Aparece quando há mais
@@ -1078,9 +1075,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         {canManage && !comGrupos && courts > 1 && !podeSortearRodada && openGames.length > 0 && (
           <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
             <Shuffle aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
-            Para <strong>misturar os grupos entre as quadras</strong>, encerre as partidas sem sortear
-            (a opção aparece ao encerrar) e, com as quadras livres, use <strong>Sortear todas as quadras</strong>.
-            Sorteando uma quadra por vez, os mesmos quatro voltam para ela — são os únicos na fila naquele instante.
+            {t('Para')} <strong>{t('misturar os grupos entre as quadras')}</strong>{t(', encerre as partidas sem sortear (a opção aparece ao encerrar) e, com as quadras livres, use')} <strong>{t('Sortear todas as quadras')}</strong>{t('. Sorteando uma quadra por vez, os mesmos quatro voltam para ela — são os únicos na fila naquele instante.')}
           </p>
         )}
 
@@ -1089,13 +1084,13 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
           <table className="w-full min-w-[680px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-2xs uppercase tracking-wide text-gray-500">
-                <th className="py-2 pr-2 text-left font-semibold">Quadra</th>
-                <th className="py-2 px-2 text-left font-semibold">Início</th>
-                <th className="py-2 px-2 text-right font-semibold">Lado A</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t('Quadra')}</th>
+                <th className="py-2 px-2 text-left font-semibold">{t('Início')}</th>
+                <th className="py-2 px-2 text-right font-semibold">{t('Lado A')}</th>
                 <th className="py-2 px-1 text-center font-semibold" />
-                <th className="py-2 px-2 text-left font-semibold">Lado B</th>
-                <th className="py-2 px-2 text-left font-semibold">Status</th>
-                <th className="py-2 pl-2 text-right font-semibold">Ações</th>
+                <th className="py-2 px-2 text-left font-semibold">{t('Lado B')}</th>
+                <th className="py-2 px-2 text-left font-semibold">{t('Status')}</th>
+                <th className="py-2 pl-2 text-right font-semibold">{t('Ações')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1146,13 +1141,13 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       <ConfirmDialog
         open={!!finishTarget}
         onOpenChange={(v) => !v && setFinishTarget(null)}
-        title={`Encerrar a partida da quadra ${finishTarget?.court ?? ''}?`}
+        title={t('Encerrar a partida da quadra {n}?', { n: finishTarget?.court ?? '' })}
         description={courts > 1
-          ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
-          : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).'}
-        confirmLabel="Criar próxima aqui"
+          ? t('Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.')
+          : t('A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).')}
+        confirmLabel={t('Criar próxima aqui')}
         onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid, { court: g.court }); }}
-        secondaryLabel={courts > 1 ? 'Só encerrar' : null}
+        secondaryLabel={courts > 1 ? t('Só encerrar') : null}
         onSecondary={courts > 1
           ? () => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid, { createNext: false }); }
           : null}
@@ -1161,9 +1156,9 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         open={!!cancelTarget}
         onOpenChange={(v) => !v && setCancelTarget(null)}
         destructive
-        title="Cancelar jogo?"
-        description="O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado."
-        confirmLabel="Cancelar jogo"
+        title={t('Cancelar jogo?')}
+        description={t('O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado.')}
+        confirmLabel={t('Cancelar jogo')}
         onConfirm={() => { const g = cancelTarget; setCancelTarget(null); if (g) cancelGame.mutate(g); }}
       />
       {/* Clicar num jogador em quadra NÃO executa mais nada direto: abre a
@@ -1193,7 +1188,7 @@ function SideCell({ side, align, canManage, onPlayer }) {
           key={pl.id}
           type="button"
           onClick={() => onPlayer(pl)}
-          title={`Opções para ${pl.name}: indisponível para esta partida ou substituir por outro jogador`}
+          title={t('Opções para {nome}: indisponível para esta partida ou substituir por outro jogador', { nome: pl.name })}
           className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-gray-100"
         >
           <UserAvatar name={pl.name} photoUrl={pl.photo_url} size="xs" />
@@ -1220,7 +1215,7 @@ function CourtRow({
       <td className="py-2.5 pr-2">
         <div className="flex flex-col items-start gap-1">
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
-            Quadra {court}
+            {t('Quadra {n}', { n: court })}
           </span>
           {/* O tipo da PRÓXIMA partida desta quadra. Com a partida em andamento
               ele vale para a seguinte; a atual mostra o próprio tipo no selo. */}
@@ -1229,7 +1224,7 @@ function CourtRow({
               size="xs"
               value={kind}
               onChange={onKind}
-              label={`Tipo de jogo da quadra ${court}`}
+              label={t('Tipo de jogo da quadra {n}', { n: court })}
             />
           ) : (
             <GameKindBadge kind={game ? gameKindOf(game) : kind} />
@@ -1242,8 +1237,8 @@ function CourtRow({
             <GroupSelect
               value={grupoEscolhido}
               groups={groups}
-              autoLabel="Grupo automático"
-              label={`Grupo da próxima partida da quadra ${court}`}
+              autoLabel={t('Grupo automático')}
+              label={t('Grupo da próxima partida da quadra {n}', { n: court })}
               onChange={onGrupo}
             />
           )}
@@ -1259,8 +1254,8 @@ function CourtRow({
       </td>
       <td className="py-2.5 px-2">
         {game
-          ? <V2Badge tone="acid">Em quadra</V2Badge>
-          : <V2Badge tone="neutral">Livre</V2Badge>}
+          ? <V2Badge tone="acid">{t('Em quadra')}</V2Badge>
+          : <V2Badge tone="neutral">{t('Livre')}</V2Badge>}
       </td>
       <td className="py-2.5 pl-2 text-right">
         {game ? (
@@ -1270,17 +1265,17 @@ function CourtRow({
                   próxima nesta quadra. O rótulo diz o resultado da ação, não o
                   passo intermediário — é o que quem organiza está buscando. */}
               <V2Button size="sm" onClick={onFinish}>
-                <Check className="mr-1 h-3.5 w-3.5" /> Criar próxima partida
+                <Check className="mr-1 h-3.5 w-3.5" /> {t('Criar próxima partida')}
               </V2Button>
               <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={onCancel}>
-                Cancelar
+                {t('Cancelar')}
               </V2Button>
             </div>
           )
         ) : (
           canManage && (
             <V2Button size="sm" variant="secondary" onClick={onCreate} disabled={!canCreate}>
-              <PlayCircle className="mr-1 h-3.5 w-3.5" /> Criar jogo
+              <PlayCircle className="mr-1 h-3.5 w-3.5" /> {t('Criar jogo')}
             </V2Button>
           )
         )}
@@ -1299,19 +1294,18 @@ function PlayForecastByCourt({ forecast }) {
     <div className="space-y-2 rounded-xl border border-gray-100 bg-paper p-3">
       <div className="flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-gray-400" />
-        <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
+        <h4 className="text-sm font-semibold text-ink">{t('Próximos participantes (previsão)')}</h4>
       </div>
       <p className="text-2xs text-gray-500">
-        Quem entra em cada quadra, dentro do grupo que a política escolheria. Só indica quem entra — as duplas
-        saem na hora de criar. A previsão de uma quadra ocupada depende de qual partida terminar primeiro.
+        {t('Quem entra em cada quadra, dentro do grupo que a política escolheria. Só indica quem entra — as duplas saem na hora de criar. A previsão de uma quadra ocupada depende de qual partida terminar primeiro.')}
       </p>
       <ul className="space-y-1.5">
         {forecast.map((b) => (
           <li key={b.court} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-gray-100 bg-white p-2.5">
             <span className="inline-flex items-center rounded-full bg-paper px-2 py-0.5 text-2xs font-bold text-gray-600">
-              Quadra {b.court}
+              {t('Quadra {n}', { n: b.court })}
             </span>
-            <span className="text-2xs text-gray-500">{b.free ? 'livre agora' : 'quando liberar'}</span>
+            <span className="text-2xs text-gray-500">{b.free ? t('livre agora') : t('quando liberar')}</span>
             <GameKindBadge kind={b.kind} />
             {b.group && <PlayGroupBadge name={b.group.name} color={b.group.color} size="xs" />}
             {b.full ? (
@@ -1319,13 +1313,13 @@ function PlayForecastByCourt({ forecast }) {
                 {b.players.map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white py-0.5 pl-0.5 pr-2 text-xs">
                     <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
-                    <span className="font-medium text-ink">{p.name || 'Jogador'}</span>
+                    <span className="font-medium text-ink">{p.name || t('Jogador')}</span>
                     {p.partner_id && <Link2 className="h-3 w-3 text-blue-500" />}
                   </span>
                 ))}
               </span>
             ) : (
-              <span className="w-full text-xs text-gray-500">Nenhum grupo tem partida pronta para esta quadra.</span>
+              <span className="w-full text-xs text-gray-500">{t('Nenhum grupo tem partida pronta para esta quadra.')}</span>
             )}
           </li>
         ))}
@@ -1339,24 +1333,23 @@ function PlayForecastTable({ forecast, availableCount }) {
     <div className="space-y-2 rounded-xl border border-gray-100 bg-paper p-3">
       <div className="flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-gray-400" />
-        <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
+        <h4 className="text-sm font-semibold text-ink">{t('Próximos participantes (previsão)')}</h4>
       </div>
       <p className="text-2xs text-gray-500">
-        Ordem prevista para as próximas partidas conforme a fila — só indica quem entra (não define as duplas).
-        Na quadra de simples entram dois.
+        {t('Ordem prevista para as próximas partidas conforme a fila — só indica quem entra (não define as duplas). Na quadra de simples entram dois.')}
       </p>
 
       {forecast.length === 0 ? (
         <p className="py-2 text-sm text-gray-400">
-          {availableCount === 0 ? 'Ninguém aguardando no momento.' : 'Sem previsão disponível.'}
+          {availableCount === 0 ? t('Ninguém aguardando no momento.') : t('Sem previsão disponível.')}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-2xs uppercase tracking-wide text-gray-500">
-                <th className="w-28 py-2 pr-2 text-left font-semibold">Previsão</th>
-                <th className="py-2 pl-2 text-left font-semibold">Participantes previstos</th>
+                <th className="w-28 py-2 pr-2 text-left font-semibold">{t('Previsão')}</th>
+                <th className="py-2 pl-2 text-left font-semibold">{t('Participantes previstos')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1365,7 +1358,7 @@ function PlayForecastTable({ forecast, availableCount }) {
                   <td className="py-2 pr-2">
                     <div className="flex flex-col items-start gap-1">
                       <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-2xs font-bold text-gray-600">
-                        {i + 1}ª próxima
+                        {t('{n}ª próxima', { n: i + 1 })}
                       </span>
                       <GameKindBadge kind={block.kind} />
                     </div>
@@ -1381,7 +1374,7 @@ function PlayForecastTable({ forecast, availableCount }) {
                       ))}
                       {block.waiting > 0 && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-200 bg-amber-50 px-2 py-0.5 text-2xs text-amber-700">
-                          +{block.waiting} aguardando conclusão de partida em andamento
+                          {t('+{n} aguardando conclusão de partida em andamento', { n: block.waiting })}
                         </span>
                       )}
                     </div>
@@ -1414,7 +1407,7 @@ function FinishedGamesList({ games }) {
             <div key={g.id} className="flex items-center gap-2 text-xs text-gray-500">
               <span className="rounded-full bg-gray-100 px-1.5 py-0.5 font-bold text-gray-500">Q{g.court}</span>
               <span className="flex-1 text-right">{sideNames(g.side_a)}</span>
-              <span className="text-gray-300">vs</span>
+              <span className="text-gray-300">{t('vs')}</span>
               <span className="flex-1">{sideNames(g.side_b)}</span>
             </div>
           ))}
@@ -1447,7 +1440,7 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
   const chosen = new Set([...sideA, ...sideB].filter(Boolean));
   const PlayerSelect = ({ value, onChange }) => (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-      <option value="">— jogador —</option>
+      <option value="">{t('— jogador —')}</option>
       {participants.filter((p) => p.id === value || !chosen.has(p.id)).map((p) => (
         <option key={p.id} value={p.id}>{p.name}</option>
       ))}
@@ -1458,17 +1451,17 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
     const sideAIds = sideA.slice(0, porLado).filter(Boolean);
     const sideBIds = sideB.slice(0, porLado).filter(Boolean);
     if (sideAIds.length < porLado || sideBIds.length < porLado) {
-      toast.error(porLado === 1 ? 'Selecione 1 jogador de cada lado.' : 'Selecione 2 jogadores de cada lado.');
+      toast.error(porLado === 1 ? t('Selecione 1 jogador de cada lado.') : t('Selecione 2 jogadores de cada lado.'));
       return;
     }
     const all = [...sideAIds, ...sideBIds];
-    if (new Set(all).size !== all.length) { toast.error('Um jogador não pode aparecer duas vezes.'); return; }
+    if (new Set(all).size !== all.length) { toast.error(t('Um jogador não pode aparecer duas vezes.')); return; }
     try {
       await createManual.mutateAsync({ court: Number(court) || null, sideAIds, sideBIds });
-      toast.success('Jogo criado.');
+      toast.success(t('Jogo criado.'));
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível criar o jogo.');
+      toast.error(err.message || t('Não foi possível criar o jogo.'));
     }
   };
 
@@ -1478,18 +1471,18 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Criação manual de jogo</DialogTitle>
+          <DialogTitle>{t('Criação manual de jogo')}</DialogTitle>
           <DialogDescription>
-            Escolha a quadra, se é de duplas ou simples, e os jogadores de cada lado. Sem resultado — é um jogo de Play.
+            {t('Escolha a quadra, se é de duplas ou simples, e os jogadores de cada lado. Sem resultado — é um jogo de Play.')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-32">
-              <Label className="text-xs">Quadra</Label>
+              <Label className="text-xs">{t('Quadra')}</Label>
               <select value={court} onChange={(e) => setCourt(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
                 {Array.from({ length: courts }, (_, i) => i + 1).map((c) => (
-                  <option key={c} value={c}>Quadra {c}{freeCourts.includes(c) ? '' : ' (ocupada)'}</option>
+                  <option key={c} value={c}>{t('Quadra {n}', { n: c })}{freeCourts.includes(c) ? '' : ` ${t('(ocupada)')}`}</option>
                 ))}
               </select>
             </div>
@@ -1499,14 +1492,14 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
           </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-gray-500">Lado A</Label>
+              <Label className="text-xs uppercase text-gray-500">{t('Lado A')}</Label>
               {Array.from({ length: porLado }, (_, i) => (
                 <PlayerSelect key={i} value={sideA[i] || ''} onChange={(v) => setSideA((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
             </div>
-            <div className="pt-7 text-xs font-medium text-gray-500">vs</div>
+            <div className="pt-7 text-xs font-medium text-gray-500">{t('vs')}</div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-gray-500">Lado B</Label>
+              <Label className="text-xs uppercase text-gray-500">{t('Lado B')}</Label>
               {Array.from({ length: porLado }, (_, i) => (
                 <PlayerSelect key={i} value={sideB[i] || ''} onChange={(v) => setSideB((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
@@ -1514,8 +1507,8 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
           </div>
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button onClick={handleSave} disabled={createManual.isPending}>Criar jogo</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button onClick={handleSave} disabled={createManual.isPending}>{t('Criar jogo')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1532,23 +1525,22 @@ export function PlayOrderSection({ view, grupos = null }) {
   return (
     <V2CollapsibleCard
       icon={ListOrdered}
-      title="Ordem de participação"
+      title={t('Ordem de participação')}
       count={total || null}
       dica="dia-de-jogo-ordem"
       sectionId={GAME_DAY_SECTION.PLAY_ORDER}
       summary={total === 0
-        ? 'Ninguém na ordem ainda'
-        : `${order.length} aguardando · ${inCourt.length} em quadra · ${unavailable.length} pausado(s)`}
+        ? t('Ninguém na ordem ainda')
+        : t('{a} aguardando · {b} em quadra · {c} pausado(s)', { a: order.length, b: inCourt.length, c: unavailable.length })}
     >
       <div className="space-y-3">
         <p className="text-xs text-gray-500">
-          Atualizada em tempo real. Só quem está disponível recebe número na ordem; quem está em quadra ou
-          pausado aparece sem número.
-          {comGrupos && ' Cada grupo tem a sua fila: o número é a posição dentro do grupo.'}
+          {t('Atualizada em tempo real. Só quem está disponível recebe número na ordem; quem está em quadra ou pausado aparece sem número.')}
+          {comGrupos && ` ${t('Cada grupo tem a sua fila: o número é a posição dentro do grupo.')}`}
         </p>
 
         {total === 0 ? (
-          <EmptyState icon={ListOrdered} title="Ninguém ainda" description="Insira participantes para montar a ordem." />
+          <EmptyState icon={ListOrdered} title={t('Ninguém ainda')} description={t('Insira participantes para montar a ordem.')} />
         ) : comGrupos ? (
           <OrdemPorGrupo view={view} config={grupos.config} />
         ) : (
@@ -1557,10 +1549,10 @@ export function PlayOrderSection({ view, grupos = null }) {
               <OrderRow key={p.id} p={p} badge={<V2Badge tone="green">#{p.orderNo}</V2Badge>} />
             ))}
             {inCourt.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">Em quadra</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">{t('Em quadra')}</V2Badge>} />
             ))}
             {unavailable.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>} />
             ))}
           </div>
         )}
@@ -1581,26 +1573,26 @@ function OrdemPorGrupo({ view, config }) {
         const pausados = doGrupo(view.unavailable, id);
         if (id === null && fila.length + jogando.length + pausados.length === 0) return null;
         return (
-          <section key={id ?? 'sem-grupo'} aria-label={g ? `Fila do grupo ${g.name}` : 'Fila de quem está sem grupo'} className="space-y-1.5">
+          <section key={id ?? 'sem-grupo'} aria-label={g ? t('Fila do grupo {nome}', { nome: g.name }) : t('Fila de quem está sem grupo')} className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               {g ? <PlayGroupBadge name={g.name} color={g.color} /> : <NoGroupBadge />}
               <span className="text-xs text-gray-500">
-                {fila.length} aguardando{jogando.length > 0 ? ` · ${jogando.length} em quadra` : ''}
-                {pausados.length > 0 ? ` · ${pausados.length} pausado(s)` : ''}
-                {g?.paused ? ' · grupo em pausa' : ''}
+                {t('{n} aguardando', { n: fila.length })}{jogando.length > 0 ? ` · ${t('{n} em quadra', { n: jogando.length })}` : ''}
+                {pausados.length > 0 ? ` · ${t('{n} pausado(s)', { n: pausados.length })}` : ''}
+                {g?.paused ? ` · ${t('grupo em pausa')}` : ''}
               </span>
             </div>
             {fila.length === 0 && jogando.length + pausados.length === 0 && (
-              <p className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500">Ninguém neste grupo ainda.</p>
+              <p className="rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500">{t('Ninguém neste grupo ainda.')}</p>
             )}
             {fila.map((p) => (
               <OrderRow key={p.id} p={p} badge={<V2Badge tone="green">#{p.groupNo}</V2Badge>} />
             ))}
             {jogando.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">Em quadra</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="acid">{t('Em quadra')}</V2Badge>} />
             ))}
             {pausados.map((p) => (
-              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>} />
+              <OrderRow key={p.id} p={p} muted badge={<V2Badge tone="amber">{t('Pausado ({n})', { n: Number(p.skip_remaining) || 0 })}</V2Badge>} />
             ))}
           </section>
         );
@@ -1615,7 +1607,7 @@ function OrderRow({ p, badge, muted }) {
       <div className="w-8 shrink-0 text-center">{badge}</div>
       <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{p.name}</span>
-      {p.partner_id && <Link2 className="h-3.5 w-3.5 text-blue-500" title="Dupla fixa" />}
+      {p.partner_id && <Link2 className="h-3.5 w-3.5 text-blue-500" title={t('Dupla fixa')} />}
     </div>
   );
 }

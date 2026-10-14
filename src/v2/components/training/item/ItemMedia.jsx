@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { CircleCheck, CircleX, ImageOff, Play } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { MEDIA_TAG_LABELS, formatTimeSeconds, parseVideoUrl } from '@/modules/training/domain/media';
+import { t } from '@/core/i18n';
 
 /** "Certo"/"Errado" com ícone e palavra — nunca só a cor. */
 export function TagChip({ tag, className }) {
@@ -27,20 +28,20 @@ export function TagChip({ tag, className }) {
         className,
       )}
     >
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {MEDIA_TAG_LABELS[tag]}
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {t(MEDIA_TAG_LABELS[tag])}
     </span>
   );
 }
 
 function trechoTexto(start, end) {
-  if (start && end) return `Trecho ${formatTimeSeconds(start)}–${formatTimeSeconds(end)}`;
-  if (start) return `A partir de ${formatTimeSeconds(start)}`;
+  if (start && end) return t('Trecho {de}–{ate}', { de: formatTimeSeconds(start), ate: formatTimeSeconds(end) });
+  if (start) return t('A partir de {tempo}', { tempo: formatTimeSeconds(start) });
   return '';
 }
 
 function VideoFacade({ video, caption }) {
   const [tocando, setTocando] = useState(false);
-  const nome = caption || 'vídeo do item';
+  const nome = caption || t('vídeo do item');
   // O fim do trecho no Vimeo não tem parâmetro: fica no texto ao lado.
   return (
     <div className="tema-claro">
@@ -48,7 +49,7 @@ function VideoFacade({ video, caption }) {
         {tocando ? (
           <iframe
             src={video.embedUrl}
-            title={`Vídeo: ${nome}`}
+            title={t('Vídeo: {nome}', { nome })}
             className="absolute inset-0 h-full w-full"
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             allowFullScreen
@@ -58,7 +59,7 @@ function VideoFacade({ video, caption }) {
           <button
             type="button"
             data-dica="treino-item-video"
-            aria-label={`Reproduzir vídeo: ${nome}`}
+            aria-label={t('Reproduzir vídeo: {nome}', { nome })}
             onClick={() => setTocando(true)}
             className="group absolute inset-0 flex h-full w-full items-center justify-center focus:outline-none focus-visible:ring-4 focus-visible:ring-acid"
           >
@@ -69,7 +70,7 @@ function VideoFacade({ video, caption }) {
               <Play className="ml-1 h-7 w-7 fill-current" aria-hidden="true" />
             </span>
             <span className="absolute bottom-2 left-2 rounded-full bg-ink/80 px-2 py-0.5 text-xs font-semibold text-white">
-              {video.provider === 'vimeo' ? 'Vimeo' : 'YouTube'}
+              {video.provider === 'vimeo' ? t('Vimeo') : 'YouTube'}
             </span>
           </button>
         )}
@@ -84,14 +85,14 @@ function ImageTile({ media }) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 text-sm text-gray-500">
         <ImageOff className="h-5 w-5" aria-hidden="true" />
-        Não foi possível carregar a imagem.
+        {t('Não foi possível carregar a imagem.')}
       </div>
     );
   }
   return (
     <img
       src={media.url}
-      alt={media.caption || 'Imagem do item'}
+      alt={media.caption || t('Imagem do item')}
       loading="lazy"
       onError={() => setFalhou(true)}
       className="block w-full rounded-2xl border border-gray-100 object-contain"
@@ -106,7 +107,7 @@ function UploadedVideo({ src, caption }) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 text-sm text-gray-500">
         <ImageOff className="h-5 w-5" aria-hidden="true" />
-        Não foi possível carregar o vídeo.
+        {t('Não foi possível carregar o vídeo.')}
       </div>
     );
   }
@@ -118,7 +119,7 @@ function UploadedVideo({ src, caption }) {
         playsInline
         src={src}
         onError={() => setFalhou(true)}
-        aria-label={caption ? `Vídeo: ${caption}` : 'Vídeo do item'}
+        aria-label={caption ? t('Vídeo: {nome}', { nome: caption }) : t('Vídeo do item')}
         className="block aspect-video w-full rounded-2xl bg-ink"
       />
     </div>

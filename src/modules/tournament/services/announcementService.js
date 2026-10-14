@@ -17,6 +17,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { validateAnnouncement } from '../domain/announcements.js';
+import { t } from '@/core/i18n';
 
 const COL = 'tournament_announcements';
 
@@ -36,7 +37,7 @@ export async function sendTournamentAnnouncement(input, actor) {
   const validation = validateAnnouncement({ title, message });
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0]);
   if (recipients.length === 0) {
-    throw new Error('Nenhum destinatário com conta vinculada para receber o aviso.');
+    throw new Error(t('Nenhum destinatário com conta vinculada para receber o aviso.'));
   }
 
   await notifyUsers(recipients, {

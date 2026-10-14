@@ -6,15 +6,16 @@
 import { ITEM_KINDS } from '@/modules/training/domain/taxonomy';
 import { normalizeText, timeMs } from '@/modules/training/domain/trainingItem';
 import { REVIEW, VISIBILITY } from '@/modules/training/domain/visibility';
+import { tk } from '@/core/i18n';
 
 export const EMPTY_ADMIN_FILTERS = Object.freeze({ q: '', kind: '', role: '', visibility: '', review: '', estado: '' });
 
 /** Estados que viram chip (cada um é um recorte, não uma exclusão). */
 export const ADMIN_ESTADOS = Object.freeze({
-  ocultos: 'Ocultos',
-  destaques: 'Destaques',
-  semente: 'Biblioteca inicial',
-  ia: 'Com ajuda de IA',
+  ocultos: tk('Ocultos'),
+  destaques: tk('Destaques'),
+  semente: tk('Biblioteca inicial'),
+  ia: tk('Com ajuda de IA'),
 });
 
 const ESTADO_TESTE = {
@@ -35,7 +36,7 @@ export function filterAdminItems(items = [], f = EMPTY_ADMIN_FILTERS) {
     if (f.estado && !ESTADO_TESTE[f.estado]?.(it)) return false;
     if (!termos.length) return true;
     const alvo = normalizeText([it.title, it.author_name, it.id, it.seed_slug].filter(Boolean).join(' '));
-    return termos.every((t) => alvo.includes(t));
+    return termos.every((termo) => alvo.includes(termo));
   });
 }
 
@@ -54,7 +55,7 @@ export function reviewQueue(items = []) {
 
 /**
  * Totais para o topo do painel.
- * @returns {{ total: number, byKind: Record<string, number>, byRole: Record<string, number>,
+ * @returns {{ total: number, byKind: Record<string, number>{t(', byRole: Record')}<string, number>,
  *   pendentes: number, ocultos: number, destaques: number, semente: number }}
  */
 export function adminItemCounts(items = []) {

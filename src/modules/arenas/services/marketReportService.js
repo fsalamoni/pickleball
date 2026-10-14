@@ -15,6 +15,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { ARENA_COLLECTIONS } from '../domain/constants.js';
 import { reportDocId, computeReportTotals, REPORT_STATUS } from '../domain/marketReports.js';
+import { t } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS.market_reports;
 
@@ -41,7 +42,7 @@ export async function getSavedReport(arenaId, periodType, periodKey) {
  * usado ao fechar o período ou ao "regerar do zero".
  */
 export async function saveReportSnapshot(arenaId, report, actor) {
-  if (!db || !arenaId || !report) throw new Error('Dados inválidos.');
+  if (!db || !arenaId || !report) throw new Error(t('Dados inválidos.'));
   const id = reportDocId(arenaId, report.period_type, report.period_key);
   const payload = {
     arena_id: arenaId,
@@ -72,7 +73,7 @@ export async function saveReportSnapshot(arenaId, report, actor) {
  * plataforma. Não toca nos registros de entrada/saída.
  */
 export async function saveReportEdits(arenaId, id, lines, actor, { note } = {}) {
-  if (!db || !arenaId || !id) throw new Error('Relatório inválido.');
+  if (!db || !arenaId || !id) throw new Error(t('Relatório inválido.'));
   const ref = doc(db, COL, id);
   await setDoc(ref, {
     lines,
@@ -87,7 +88,7 @@ export async function saveReportEdits(arenaId, id, lines, actor, { note } = {}) 
 
 /** Exclui um snapshot salvo (não afeta entradas/saídas). */
 export async function deleteSavedReport(arenaId, id, actor) {
-  if (!db || !id) throw new Error('Relatório inválido.');
+  if (!db || !id) throw new Error(t('Relatório inválido.'));
   await deleteDoc(doc(db, COL, id));
   await createAuditLog({ action: 'arena_market_report_deleted', actor, details: { arena_id: arenaId, id } }).catch(() => {});
 }

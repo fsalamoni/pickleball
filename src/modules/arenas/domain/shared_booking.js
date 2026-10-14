@@ -16,6 +16,7 @@
  */
 
 import { timeToMinutes } from './pricing.js';
+import { t, tk } from '@/core/i18n';
 
 export const BOOKING_TYPE = Object.freeze({
   COURT: 'court',
@@ -29,9 +30,9 @@ export const PARTICIPANT_STATUS = Object.freeze({
 });
 
 export const PARTICIPANT_STATUS_LABELS = Object.freeze({
-  [PARTICIPANT_STATUS.INVITED]: 'Convidado',
-  [PARTICIPANT_STATUS.ACCEPTED]: 'Confirmado',
-  [PARTICIPANT_STATUS.DECLINED]: 'Recusou',
+  [PARTICIPANT_STATUS.INVITED]: tk('Convidado'),
+  [PARTICIPANT_STATUS.ACCEPTED]: tk('Confirmado'),
+  [PARTICIPANT_STATUS.DECLINED]: tk('Recusou'),
 });
 
 const str = (v) => String(v ?? '').trim();
@@ -297,5 +298,5 @@ export function computeSplit(window = {}, participants = [], totalPrice) {
 
 /** Rótulo de status do participante. */
 export function participantStatusLabel(status) {
-  return PARTICIPANT_STATUS_LABELS[status] || status;
+  return PARTICIPANT_STATUS_LABELS[status] ? t(PARTICIPANT_STATUS_LABELS[status]) : status;
 }

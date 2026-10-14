@@ -20,6 +20,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function PartnerArenaCard({ coachId, residency }) {
   const { data: arena } = useArena(residency.arena_id);
@@ -40,23 +41,23 @@ function PartnerArenaCard({ coachId, residency }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Link to={`/arenas/${arena.id}`} className="font-bold text-ink hover:underline">{arena.name}</Link>
-              <V2Badge tone="amber">Convite pendente</V2Badge>
+              <V2Badge tone="amber">{t('Convite pendente')}</V2Badge>
             </div>
-            <p className="mt-1 text-xs text-amber-800">Esta arena convidou você como professor parceiro.</p>
+            <p className="mt-1 text-xs text-amber-800">{t('Esta arena convidou você como professor parceiro.')}</p>
           </div>
         </div>
         <div className="mt-2 flex justify-end gap-2">
           <V2Button size="sm" variant="ghost" onClick={async () => {
-            try { await decline.mutateAsync({ coachId, arenaId: arena.id }); toast.success('Convite recusado.'); }
-            catch (err) { toast.error(err?.message || 'Não foi possível recusar.'); }
+            try { await decline.mutateAsync({ coachId, arenaId: arena.id }); toast.success(t('Convite recusado.')); }
+            catch (err) { toast.error(err?.message || t('Não foi possível recusar.')); }
           }} disabled={decline.isPending}>
-            <X className="h-3.5 w-3.5" /> Recusar
+            <X className="h-3.5 w-3.5" /> {t('Recusar')}
           </V2Button>
           <V2Button size="sm" onClick={async () => {
-            try { await accept.mutateAsync({ coachId, arenaId: arena.id }); toast.success('Parceria aceita!'); }
-            catch (err) { toast.error(err?.message || 'Não foi possível aceitar.'); }
+            try { await accept.mutateAsync({ coachId, arenaId: arena.id }); toast.success(t('Parceria aceita!')); }
+            catch (err) { toast.error(err?.message || t('Não foi possível aceitar.')); }
           }} disabled={accept.isPending}>
-            <Check className="h-3.5 w-3.5" /> Aceitar
+            <Check className="h-3.5 w-3.5" /> {t('Aceitar')}
           </V2Button>
         </div>
       </div>
@@ -72,22 +73,22 @@ function PartnerArenaCard({ coachId, residency }) {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Link to={`/arenas/${arena.id}`} className="font-bold text-ink hover:underline">{arena.name}</Link>
-            {isPaused ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="green">Ativo</V2Badge>}
+            {isPaused ? <V2Badge tone="amber">{t('Pausado')}</V2Badge> : <V2Badge tone="green">{t('Ativo')}</V2Badge>}
           </div>
           {arena.city && <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3 w-3" /> {arena.city}{arena.state ? `, ${arena.state}` : ''}</p>}
           {residency.notes && <p className="mt-1 text-xs text-gray-500">{residency.notes}</p>}
         </div>
       </div>
       <ConfirmDialog
-        title="Sair da parceria?"
-        description={`Você deixará de aparecer como professor parceiro de ${arena.name}.`}
-        confirmLabel="Sair"
+        title={t('Sair da parceria?')}
+        description={t('Você deixará de aparecer como professor parceiro de {arena}.', { arena: arena.name })}
+        confirmLabel={t('Sair')}
         onConfirm={async () => {
-          try { await remove.mutateAsync({ coachId, arenaId: arena.id }); toast.success('Você saiu da parceria.'); }
-          catch (err) { toast.error(err?.message || 'Não foi possível sair.'); }
+          try { await remove.mutateAsync({ coachId, arenaId: arena.id }); toast.success(t('Você saiu da parceria.')); }
+          catch (err) { toast.error(err?.message || t('Não foi possível sair.')); }
         }}
         trigger={(
-          <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Sair da parceria">
+          <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label={t('Sair da parceria')}>
             <LogOut className="h-3.5 w-3.5" />
           </button>
         )}
@@ -105,18 +106,17 @@ export default function CoachPartnersSection({ coachId }) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Handshake className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Parceiros</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Parceiros')}</h2>
         </div>
         {/* Sem a lista, "Adicionar arena" pediria de novo uma parceria que já existe. */}
         {!isError && (
           <V2Button size="sm" variant="ghost" onClick={() => setAdding((s) => !s)}>
-            <Plus className="h-4 w-4" /> {adding ? 'Fechar' : 'Adicionar arena'}
+            <Plus className="h-4 w-4" /> {adding ? t('Fechar') : t('Adicionar arena')}
           </V2Button>
         )}
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
-        Arenas onde você atende. Você pode ser convidado por uma arena ou
-        solicitar a parceria (item 4.2) — a arena avalia antes de publicar.
+        {t('Arenas onde você atende. Você pode ser convidado por uma arena ou solicitar a parceria (item 4.2) — a arena avalia antes de publicar.')}
       </p>
 
       {adding && (
@@ -128,12 +128,12 @@ export default function CoachPartnersSection({ coachId }) {
       {isLoading ? (
         <V2Skeleton lines={3} />
       ) : isError ? (
-        <V2ErrorState inline title="Não foi possível carregar as suas parcerias" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar as suas parcerias')} onRetry={() => refetch()} />
       ) : residencies.length === 0 ? (
         <V2EmptyState
           icon={Handshake}
-          title="Nenhuma parceria ainda"
-          description="Adicione uma arena parceira ou aguarde um convite. As parcerias aparecem no seu perfil público."
+          title={t('Nenhuma parceria ainda')}
+          description={t('Adicione uma arena parceira ou aguarde um convite. As parcerias aparecem no seu perfil público.')}
         />
       ) : (
         <div className="space-y-2">

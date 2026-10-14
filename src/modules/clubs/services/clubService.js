@@ -44,6 +44,7 @@ import {
   MEMBER_INVITE_STATUS,
 } from '../domain/constants.js';
 import { sealParticipantUidIntoGames } from '../domain/rankingPublishing.js';
+import { t } from '@/core/i18n';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -132,8 +133,8 @@ function memberPayload(clubId, user, profile, role) {
 /* --------------------------------- Clubs -------------------------------- */
 
 export async function createClub(creator, profile, data) {
-  if (!creator?.uid) throw new Error('Usuário não autenticado.');
-  if (!trimmed(data.name)) throw new Error('Informe o nome do clube.');
+  if (!creator?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!trimmed(data.name)) throw new Error(t('Informe o nome do clube.'));
 
   const id = doc(collection(db, COL.clubs)).id;
   const payload = {
@@ -311,9 +312,9 @@ export async function getMembership(clubId, userId) {
 }
 
 export async function joinClubByCode(code, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const club = await getClubByInviteCode(code);
-  if (!club) throw new Error('Código de convite inválido.');
+  if (!club) throw new Error(t('Código de convite inválido.'));
 
   const existing = await getMembership(club.id, user.uid);
   if (existing) return club;
@@ -336,13 +337,13 @@ export async function joinClubByCode(code, user, profile) {
 }
 
 export async function leaveClub(clubId, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const members = await listClubMembers(clubId);
   const me = members.find((m) => m.user_id === user.uid);
   if (!me) return;
   const admins = members.filter((m) => m.role === CLUB_ROLE.ADMIN);
   if (me.role === CLUB_ROLE.ADMIN && admins.length === 1 && members.length > 1) {
-    throw new Error('Você é o único administrador. Promova outro membro a administrador antes de sair.');
+    throw new Error(t('Você é o único administrador. Promova outro membro a administrador antes de sair.'));
   }
 
   await deleteDoc(doc(db, COL.members, memberDocId(clubId, user.uid)));
@@ -352,12 +353,12 @@ export async function leaveClub(clubId, user, profile) {
 }
 
 export async function setMemberRole(clubId, member, role, actor) {
-  if (!member?.user_id) throw new Error('Membro inválido.');
+  if (!member?.user_id) throw new Error(t('Membro inválido.'));
   if (role !== CLUB_ROLE.ADMIN && member.role === CLUB_ROLE.ADMIN) {
     // Impede remover o último administrador.
     const members = await listClubMembers(clubId);
     const admins = members.filter((m) => m.role === CLUB_ROLE.ADMIN);
-    if (admins.length <= 1) throw new Error('O clube precisa ter pelo menos um administrador.');
+    if (admins.length <= 1) throw new Error(t('O clube precisa ter pelo menos um administrador.'));
   }
   await updateDoc(doc(db, COL.members, memberDocId(clubId, member.user_id)), { role, updated_at: serverTimestamp() });
   await createAuditLog({
@@ -368,11 +369,11 @@ export async function setMemberRole(clubId, member, role, actor) {
 }
 
 export async function removeMember(clubId, member, actor) {
-  if (!member?.user_id) throw new Error('Membro inválido.');
+  if (!member?.user_id) throw new Error(t('Membro inválido.'));
   if (member.role === CLUB_ROLE.ADMIN) {
     const members = await listClubMembers(clubId);
     const admins = members.filter((m) => m.role === CLUB_ROLE.ADMIN);
-    if (admins.length <= 1) throw new Error('Não é possível remover o último administrador.');
+    if (admins.length <= 1) throw new Error(t('Não é possível remover o último administrador.'));
   }
   await deleteDoc(doc(db, COL.members, memberDocId(clubId, member.user_id)));
   // Um convite que ficou pendente seria a porta de volta de quem foi removido.
@@ -394,8 +395,8 @@ async function listClubAdminIds(clubId) {
  * pendente e notifica os administradores. Id determinístico evita duplicidade.
  */
 export async function requestToJoinClub(club, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!club?.id) throw new Error('Clube inválido.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!club?.id) throw new Error(t('Clube inválido.'));
   const existingMember = await getMembership(club.id, user.uid).catch(() => null);
   if (existingMember) return { alreadyMember: true };
 
@@ -450,7 +451,7 @@ export async function listJoinRequests(clubId) {
 }
 
 export async function approveJoinRequest(request, actor) {
-  if (!request?.club_id || !request?.user_id) throw new Error('Pedido inválido.');
+  if (!request?.club_id || !request?.user_id) throw new Error(t('Pedido inválido.'));
   // Admin cria a associação do solicitante (regra permite admin criar membro).
   await setDoc(doc(db, COL.members, memberDocId(request.club_id, request.user_id)), {
     club_id: request.club_id,
@@ -479,7 +480,7 @@ export async function approveJoinRequest(request, actor) {
 }
 
 export async function rejectJoinRequest(request, actor) {
-  if (!request?.club_id || !request?.user_id) throw new Error('Pedido inválido.');
+  if (!request?.club_id || !request?.user_id) throw new Error(t('Pedido inválido.'));
   await updateDoc(doc(db, COL.joinRequests, memberDocId(request.club_id, request.user_id)), {
     status: JOIN_REQUEST_STATUS.REJECTED,
     responded_by: actor?.uid || null,
@@ -500,10 +501,10 @@ export async function rejectJoinRequest(request, actor) {
  * user_email, photo_url }. O convidado recebe notificação e decide aceitar.
  */
 export async function inviteMemberToClub(club, target, inviter, profile) {
-  if (!inviter?.uid) throw new Error('Usuário não autenticado.');
-  if (!target?.user_id) throw new Error('Selecione um atleta para convidar.');
+  if (!inviter?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!target?.user_id) throw new Error(t('Selecione um atleta para convidar.'));
   const existingMember = await getMembership(club.id, target.user_id).catch(() => null);
-  if (existingMember) throw new Error('Este atleta já é membro do clube.');
+  if (existingMember) throw new Error(t('Este atleta já é membro do clube.'));
 
   const id = memberDocId(club.id, target.user_id);
   const inviterName = profile?.platform_name || inviter.displayName || inviter.email || 'Um administrador';
@@ -559,8 +560,8 @@ export async function getMyClubInvite(clubId, userId) {
 }
 
 export async function acceptClubInvite(invite, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!invite?.club_id) throw new Error('Convite inválido.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!invite?.club_id) throw new Error(t('Convite inválido.'));
   // O próprio convidado cria sua associação (regra permite user_id==uid && member).
   await setDoc(doc(db, COL.members, memberDocId(invite.club_id, user.uid)), memberPayload(invite.club_id, user, profile, CLUB_ROLE.MEMBER));
   await updateDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, user.uid)), {
@@ -583,7 +584,7 @@ export async function acceptClubInvite(invite, user, profile) {
 }
 
 export async function declineClubInvite(invite, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   await updateDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, user.uid)), {
     status: MEMBER_INVITE_STATUS.DECLINED,
     updated_at: serverTimestamp(),
@@ -597,7 +598,7 @@ export async function declineClubInvite(invite, user) {
  */
 export async function inviteMembersToClub(club, targets, inviter, profile) {
   const list = (Array.isArray(targets) ? targets : [targets]).filter((t) => t?.user_id);
-  if (list.length === 0) throw new Error('Selecione ao menos um atleta.');
+  if (list.length === 0) throw new Error(t('Selecione ao menos um atleta.'));
   const results = await Promise.allSettled(
     list.map((t) => inviteMemberToClub(club, t, inviter, profile)),
   );
@@ -607,7 +608,7 @@ export async function inviteMembersToClub(club, targets, inviter, profile) {
 
 /** Admin cancela um convite pendente. */
 export async function cancelClubInvite(invite, actor) {
-  if (!invite?.club_id || !invite?.user_id) throw new Error('Convite inválido.');
+  if (!invite?.club_id || !invite?.user_id) throw new Error(t('Convite inválido.'));
   await deleteDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, invite.user_id)));
   await createAuditLog({ action: 'club_invite_cancelled', actor, details: { club_id: invite.club_id, user_id: invite.user_id } });
 }
@@ -664,8 +665,8 @@ export async function getClubEvent(eventId) {
 }
 
 export async function createClubEvent(clubId, data, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!trimmed(data.title)) throw new Error('Informe o título do evento.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!trimmed(data.title)) throw new Error(t('Informe o título do evento.'));
   const id = doc(collection(db, COL.events)).id;
   const visibility = data.visibility === EVENT_VISIBILITY.PRIVATE ? EVENT_VISIBILITY.PRIVATE : EVENT_VISIBILITY.PUBLIC;
   await setDoc(doc(db, COL.events, id), {
@@ -808,8 +809,8 @@ export async function getMyEventInvite(eventId, userId) {
  * `target` = { user_id, user_name, user_photo, source }.
  */
 export async function inviteToEvent(event, target, inviter, profile) {
-  if (!inviter?.uid) throw new Error('Usuário não autenticado.');
-  if (!target?.user_id) throw new Error('Selecione um atleta para convidar.');
+  if (!inviter?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!target?.user_id) throw new Error(t('Selecione um atleta para convidar.'));
   const id = eventInviteId(event.id, target.user_id);
   // Verificação best-effort: se já existe, não sobrescreve a resposta atual.
   try {
@@ -848,7 +849,7 @@ export async function inviteToEvent(event, target, inviter, profile) {
 
 /** Resposta do próprio usuário (Vou/Talvez/Não vou) — cria ou atualiza o convite. */
 export async function setMyEventResponse(event, status, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const id = eventInviteId(event.id, user.uid);
   await setDoc(
     doc(db, COL.eventInvites, id),
@@ -911,7 +912,7 @@ export async function listEventDates(eventId) {
 }
 
 export async function addEventDate(eventId, data, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const ref = doc(collection(db, COL.events, eventId, COL.eventDates));
   await setDoc(ref, {
     id: ref.id,
@@ -946,7 +947,7 @@ export async function addEventDate(eventId, data, user) {
  * gente ou jogo esconderia esses documentos da tela.
  */
 export async function setEventDateGameDay(eventId, dateId, gameDayId) {
-  if (!eventId || !dateId || !gameDayId) throw new Error('Dados insuficientes.');
+  if (!eventId || !dateId || !gameDayId) throw new Error(t('Dados insuficientes.'));
   await updateDoc(doc(db, COL.events, eventId, COL.eventDates, dateId), {
     game_day_id: gameDayId,
     updated_at: serverTimestamp(),
@@ -977,7 +978,7 @@ export async function listEventDateRsvps(eventId) {
 }
 
 export async function setEventDateRsvp(eventId, dateId, status, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   await setDoc(doc(db, COL.events, eventId, COL.eventDateRsvps, `${dateId}_${user.uid}`), {
     event_id: eventId,
     date_id: dateId,
@@ -1000,9 +1001,9 @@ export async function listEventMessages(eventId) {
 }
 
 export async function sendEventMessage(eventId, text, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const body = trimmed(text, GAME_DAY_LIMITS.MESSAGE_MAX);
-  if (!body) throw new Error('Escreva uma mensagem.');
+  if (!body) throw new Error(t('Escreva uma mensagem.'));
   const ref = doc(collection(db, COL.events, eventId, COL.eventMessages));
   await setDoc(ref, {
     id: ref.id,
@@ -1041,9 +1042,9 @@ export async function listEventParticipants(eventId) {
 }
 
 export async function addEventParticipant(eventId, data, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const name = trimmed(data.name);
-  if (!name) throw new Error('Informe o nome do participante.');
+  if (!name) throw new Error(t('Informe o nome do participante.'));
   const ref = doc(collection(db, COL.events, eventId, COL.eventParticipants));
   await setDoc(ref, {
     id: ref.id,
@@ -1075,12 +1076,12 @@ export async function addEventParticipant(eventId, data, user) {
  * @param {string|null} partnerId  null desfaz o vínculo
  */
 export async function setEventParticipantPartner(eventId, participantId, partnerId) {
-  if (!eventId || !participantId) throw new Error('Participante inválido.');
-  if (partnerId && partnerId === participantId) throw new Error('Escolha outro participante.');
+  if (!eventId || !participantId) throw new Error(t('Participante inválido.'));
+  if (partnerId && partnerId === participantId) throw new Error(t('Escolha outro participante.'));
   const todos = await listEventParticipants(eventId);
   const porId = new Map(todos.map((p) => [p.id, p]));
   const eu = porId.get(participantId);
-  if (!eu) throw new Error('Participante não encontrado.');
+  if (!eu) throw new Error(t('Participante não encontrado.'));
 
   const ref = (pid) => doc(db, COL.events, eventId, COL.eventParticipants, pid);
   const batch = writeBatch(db);
@@ -1097,7 +1098,7 @@ export async function setEventParticipantPartner(eventId, participantId, partner
     batch.update(ref(participantId), { partner_id: null });
   } else {
     const parceiro = porId.get(partnerId);
-    if (!parceiro) throw new Error('Parceiro não encontrado.');
+    if (!parceiro) throw new Error(t('Parceiro não encontrado.'));
     soltar(eu);
     soltar(parceiro);
     batch.update(ref(participantId), { partner_id: partnerId });
@@ -1194,7 +1195,7 @@ function autoSyncEventDateRanking(eventId, dateId, user) {
 }
 
 export async function addEventGame(eventId, data, user) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
   await setDoc(ref, buildGamePayload(ref.id, eventId, data, user));
   autoSyncEventDateRanking(eventId, data.date_id || null, user);
@@ -1274,7 +1275,7 @@ export async function deleteEventGame(eventId, gameId, user) {
  * Apaga apenas os jogos daquele dia e grava os novos em lote.
  */
 export async function replaceEventGames(eventId, games, user, dateId = null) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const existing = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
   const ops = existing.docs
     .filter((d) => (d.data().date_id || null) === (dateId || null))
@@ -1299,7 +1300,7 @@ export async function replaceEventGames(eventId, games, user, dateId = null) {
  * @param {string|null} dateId
  */
 export async function appendEventGames(eventId, { removeIds = [], games = [], orderBase = 0 } = {}, user, dateId = null) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   const base = Number.isFinite(orderBase) ? orderBase : 0;
   const ops = [];
   removeIds.forEach((id) => {
@@ -1356,7 +1357,7 @@ export async function listEventRsvps(eventId) {
 }
 
 export async function setEventRsvp(event, status, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   await setDoc(doc(db, COL.rsvps, rsvpDocId(event.id, user.uid)), {
     event_id: event.id,
     club_id: event.club_id,
@@ -1378,7 +1379,7 @@ export async function listClubPosts(clubId) {
 }
 
 export async function createClubPost(clubId, input, user, profile) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
   // Aceita string (mensagem) ou objeto { content, images }.
   const payload = typeof input === 'string' ? { content: input } : (input || {});
   const text = trimmed(payload.content);
@@ -1395,7 +1396,7 @@ export async function createClubPost(clubId, input, user, profile) {
         }))
     : [];
 
-  if (!text && images.length === 0) throw new Error('Escreva uma mensagem ou anexe uma imagem.');
+  if (!text && images.length === 0) throw new Error(t('Escreva uma mensagem ou anexe uma imagem.'));
 
   const id = doc(collection(db, COL.posts)).id;
   await setDoc(doc(db, COL.posts, id), {

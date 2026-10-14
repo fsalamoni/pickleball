@@ -17,6 +17,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function locationText(club) {
   return [club.city, club.state].filter(Boolean).join(' / ') || null;
@@ -46,33 +47,33 @@ export default function V2Clubs() {
   return (
     <div className="mx-auto max-w-[1400px]">
       <V2PageIntro
-        title="Clubes"
-        subtitle="Descubra clubes, crie o seu e organize sua turma."
-        action={<V2Button asChild><Link to="/clubes/criar" data-dica="clubes-criar"><Plus className="h-4 w-4" /> Criar clube</Link></V2Button>}
+        title={t('Clubes')}
+        subtitle={t('Descubra clubes, crie o seu e organize sua turma.')}
+        action={<V2Button asChild><Link to="/clubes/criar" data-dica="clubes-criar"><Plus className="h-4 w-4" /> {t('Criar clube')}</Link></V2Button>}
       />
 
       {myClubs.length > 0 && (
         <div className="mb-8">
-          <V2SectionHeader eyebrow="Meus clubes" title="Clubes em que você participa" className="mb-4" />
+          <V2SectionHeader eyebrow={t('Meus clubes')} title={t('Clubes em que você participa')} className="mb-4" />
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {myClubs.map((club) => <ClubCard key={club.id} club={club} mine />)}
           </div>
         </div>
       )}
 
-      <V2Surface collapsible collapseId="clubs-busca" title="Buscar clubes" className="mb-8" data-dica="clubes-busca">
+      <V2Surface collapsible collapseId="clubs-busca" title={t('Buscar clubes')} className="mb-8" data-dica="clubes-busca">
         <V2SearchInput
           icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar clube por nome, cidade ou descrição"
+          placeholder={t('Buscar clube por nome, cidade ou descrição')}
         />
         {/* A contagem só é afirmada com a lista na mão: carregando ou com a
             consulta falhando, "0" seria mentira. */}
         {!isLoading && !isError && (
           <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-            <span className="font-bold text-ink">{filtered.length}</span> clube(s)
-            {regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : ' na plataforma'}.
+            <span className="font-bold text-ink">{filtered.length}</span> {t('clube(s)')}
+            {regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : ` ${t('na plataforma')}`}.
           </p>
         )}
       </V2Surface>
@@ -89,20 +90,20 @@ export default function V2Clubs() {
         // um clube que existe (docs/27-FALHA-NAO-E-VAZIO.md).
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os clubes"
-            description="Os clubes continuam lá — só não conseguimos buscá-los agora."
+            title={t('Não foi possível carregar os clubes')}
+            description={t('Os clubes continuam lá — só não conseguimos buscá-los agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
       ) : filtered.length === 0 && regional.fora > 0 ? (
-        <RegionEmptyHint regional={regional} oque="Nenhum clube" />
+        <RegionEmptyHint regional={regional} oque={t('Nenhum clube')} />
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={Building2}
-            title="Nenhum clube encontrado"
-            description="Ajuste a busca ou crie o primeiro clube e convide sua turma."
-            action={<V2Button asChild><Link to="/clubes/criar">Criar clube</Link></V2Button>}
+            title={t('Nenhum clube encontrado')}
+            description={t('Ajuste a busca ou crie o primeiro clube e convide sua turma.')}
+            action={<V2Button asChild><Link to="/clubes/criar">{t('Criar clube')}</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -135,18 +136,18 @@ function ClubCard({ club, mine, distancia = null }) {
             : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink text-white"><Building2 className="h-6 w-6" /></span>}
           <h3 className="truncate font-display text-lg font-bold text-ink">{club.name}</h3>
         </div>
-        {mine && <V2Badge tone={club.my_role === 'admin' ? 'amber' : 'green'}>{club.my_role === 'admin' ? 'Admin' : 'Membro'}</V2Badge>}
+        {mine && <V2Badge tone={club.my_role === 'admin' ? 'amber' : 'green'}>{club.my_role === 'admin' ? t('Admin') : t('Membro')}</V2Badge>}
       </div>
 
       <div className="mt-4 space-y-2 text-sm text-gray-500">
-        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-gray-400" /> {location || 'Cidade não informada'}{location && distancia ? ` · ${distancia}` : ''}</div>
+        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-gray-400" /> {location || t('Cidade não informada')}{location && distancia ? ` · ${distancia}` : ''}</div>
         <div className="flex items-center gap-2"><Users className="h-4 w-4 shrink-0 text-gray-400" /> {club.member_count || 0} membro(s)</div>
       </div>
 
       {club.description && <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{club.description}</p>}
 
       <div className="mt-auto flex items-center justify-between pt-6 text-sm font-bold text-ink">
-        <span>Abrir clube</span>
+        <span>{t('Abrir clube')}</span>
         <span className="transition-transform group-hover:translate-x-1">→</span>
       </div>
     </Link>

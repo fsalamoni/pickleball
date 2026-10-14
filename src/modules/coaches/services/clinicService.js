@@ -21,6 +21,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizeClinic, clinicSignupDocId, CLINIC_STATUS,
 } from '../domain/clinic.js';
+import { t } from '@/core/i18n';
 
 export const COACH_CLINIC_COLLECTION = 'coach_clinics';
 export const COACH_CLINIC_SIGNUP_COLLECTION = 'coach_clinic_signups';
@@ -60,11 +61,11 @@ export async function listMyClinicSignups(athleteId) {
 
 /** Cria uma clínica (só o professor/admin). */
 export async function createClinic(input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const { valid, error, value } = normalizeClinic(input);
   if (!valid) throw new Error(error);
   if (actor.uid !== value.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão para criar esta clínica.');
+    throw new Error(t('Sem permissão para criar esta clínica.'));
   }
   const ref = await addDoc(collection(db, COACH_CLINIC_COLLECTION), {
     ...value,
@@ -78,11 +79,11 @@ export async function createClinic(input, actor) {
 
 /** Atualiza uma clínica (só o professor/admin). */
 export async function updateClinic(clinicId, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const existing = await getClinic(clinicId);
-  if (!existing) throw new Error('Clínica não encontrada.');
+  if (!existing) throw new Error(t('Clínica não encontrada.'));
   if (actor.uid !== existing.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão.');
+    throw new Error(t('Sem permissão.'));
   }
   const { valid, error, value } = normalizeClinic({ ...existing, ...input, coach_id: existing.coach_id });
   if (!valid) throw new Error(error);
@@ -99,11 +100,11 @@ export async function updateClinic(clinicId, input, actor) {
 
 /** Cancela uma clínica e avisa os inscritos (só o professor/admin). */
 export async function cancelClinic(clinicId, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const existing = await getClinic(clinicId);
-  if (!existing) throw new Error('Clínica não encontrada.');
+  if (!existing) throw new Error(t('Clínica não encontrada.'));
   if (actor.uid !== existing.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão.');
+    throw new Error(t('Sem permissão.'));
   }
   await updateDoc(doc(db, COACH_CLINIC_COLLECTION, clinicId), {
     status: CLINIC_STATUS.CANCELLED,
@@ -124,11 +125,11 @@ export async function cancelClinic(clinicId, actor) {
 
 /** Remove uma clínica (só o professor/admin). */
 export async function deleteClinic(clinicId, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const existing = await getClinic(clinicId);
   if (!existing) return;
   if (actor.uid !== existing.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão.');
+    throw new Error(t('Sem permissão.'));
   }
   await deleteDoc(doc(db, COACH_CLINIC_COLLECTION, clinicId));
   await createAuditLog({ action: 'coach_clinic_removed', actor, details: { clinic_id: clinicId } });
@@ -136,8 +137,8 @@ export async function deleteClinic(clinicId, actor) {
 
 /** Inscreve o próprio atleta numa clínica (auto-inscrição). */
 export async function enrollInClinic(clinic, athlete) {
-  if (!athlete?.uid) throw new Error('Usuário não autenticado.');
-  if (!clinic?.id || !clinic?.coach_id) throw new Error('Clínica inválida.');
+  if (!athlete?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!clinic?.id || !clinic?.coach_id) throw new Error(t('Clínica inválida.'));
   const id = clinicSignupDocId(clinic.id, athlete.uid);
   // A inscrição e a vaga no mesmo lote: a regra recusa as duas quando a
   // clínica lotou, mesmo que a tela ainda mostrasse vaga.
@@ -155,7 +156,7 @@ export async function enrollInClinic(clinic, athlete) {
     await batch.commit();
   } catch (err) {
     if (err?.code === 'permission-denied') {
-      throw new Error('Não foi possível se inscrever: a clínica lotou ou não está mais aberta.');
+      throw new Error(t('Não foi possível se inscrever: a clínica lotou ou não está mais aberta.'));
     }
     throw err;
   }
@@ -171,10 +172,10 @@ export async function enrollInClinic(clinic, athlete) {
 
 /** Cancela a inscrição (o próprio atleta ou o professor/admin). */
 export async function cancelEnrollment(clinic, athleteId, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const isSelf = actor.uid === athleteId;
   const isCoach = actor.uid === clinic?.coach_id || actor.isPlatformAdmin;
-  if (!isSelf && !isCoach) throw new Error('Sem permissão.');
+  if (!isSelf && !isCoach) throw new Error(t('Sem permissão.'));
   const ref = doc(db, COACH_CLINIC_SIGNUP_COLLECTION, clinicSignupDocId(clinic.id, athleteId));
   const [snap, atual] = await Promise.all([getDoc(ref), getClinic(clinic.id)]);
   if (!snap.exists()) return;

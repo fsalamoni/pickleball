@@ -45,6 +45,7 @@ import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/ho
 import { toast } from 'sonner';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, fmtData } from '@/core/i18n';
 
 function formatDate(value) {
   if (!value) return null;
@@ -55,7 +56,7 @@ function formatDate(value) {
         ? value.toDate()
         : new Date(value);
     if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleDateString('pt-BR');
+    return fmtData(date, { dateStyle: 'short' });
   } catch {
     return null;
   }
@@ -126,39 +127,39 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
 
   const datesText = startsAt || endsAt
     ? (startsAt && endsAt ? (startsAt === endsAt ? startsAt : `${startsAt} a ${endsAt}`) : startsAt || endsAt)
-    : 'Período ainda não definido.';
+    : t('Período ainda não definido.');
 
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
         <V2Surface className="bg-mesh shadow-glow">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-acid">
-            <Sparkles className="h-3.5 w-3.5" /> Visão geral do evento
+            <Sparkles className="h-3.5 w-3.5" /> {t('Visão geral do evento')}
           </div>
-          <h3 className="mt-5 font-display text-3xl font-bold text-white">Tudo o que atletas e organização precisam ler primeiro</h3>
+          <h3 className="mt-5 font-display text-3xl font-bold text-white">{t('Tudo o que atletas e organização precisam ler primeiro')}</h3>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-            Datas, local, regra esportiva e contexto das modalidades do torneio.
+            {t('Datas, local, regra esportiva e contexto das modalidades do torneio.')}
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <SummaryTile icon={Trophy} label="Modalidades" value={modalities.length} description="frentes esportivas ativas neste torneio" />
-            <SummaryTile icon={Users} label="Inscrições confirmadas" value={confirmedRegistrations} description="confirmadas no panorama atual do evento" />
+            <SummaryTile icon={Trophy} label={t('Modalidades')} value={modalities.length} description={t('frentes esportivas ativas neste torneio')} />
+            <SummaryTile icon={Users} label={t('Inscrições confirmadas')} value={confirmedRegistrations} description={t('confirmadas no panorama atual do evento')} />
             <SummaryTile
               icon={isPublic ? Globe : ShieldCheck}
-              label="Acesso"
-              value={isPublic ? 'Público' : 'Privado'}
-              description={isPublic ? 'qualquer atleta pode explorar e seguir para inscrição' : 'exige código para liberar as modalidades'}
+              label={t('Acesso')}
+              value={isPublic ? t('Público') : t('Privado')}
+              description={isPublic ? t('qualquer atleta pode explorar e seguir para inscrição') : t('exige código para liberar as modalidades')}
             />
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <InfoSurface icon={Calendar} title="Datas do torneio" description={datesText} />
-            <InfoSurface icon={Clock} title="Inscrições até" description={deadline || 'Prazo ainda não definido pelo admin.'} />
-            <InfoSurface icon={MapPin} title="Local da competição" description={tournament.venue || 'Quadra ou clube ainda não informado.'} />
+            <InfoSurface icon={Calendar} title={t('Datas do torneio')} description={datesText} />
+            <InfoSurface icon={Clock} title={t('Inscrições até')} description={deadline || t('Prazo ainda não definido pelo admin.')} />
+            <InfoSurface icon={MapPin} title={t('Local da competição')} description={tournament.venue || t('Quadra ou clube ainda não informado.')} />
             <InfoSurface
               icon={Trophy}
-              title="Regras-base do torneio"
-              description={`${RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—'} · a pontuação é definida dentro de cada modalidade e fase`}
+              title={t('Regras-base do torneio')}
+              description={t('{v1} · a pontuação é definida dentro de cada modalidade e fase', { v1: RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—' })}
             />
           </div>
 
@@ -170,15 +171,15 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
         </V2Surface>
 
         <div className="rounded-4xl bg-ink p-6 text-white shadow-organic sm:p-8">
-          <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">Critério de classificação</div>
-          <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">Como o ranking é calculado.</h3>
+          <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">{t('Critério de classificação')}</div>
+          <h3 className="mt-4 font-display text-3xl font-bold leading-tight text-white">{t('Como o ranking é calculado.')}</h3>
           <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-            A plataforma usa o mesmo critério em todas as modalidades do torneio.
+            {t('A plataforma usa o mesmo critério em todas as modalidades do torneio.')}
           </p>
           <div className="mt-6 space-y-3">
-            <RankingRule order="01" title="Vitórias" description="A posição inicial no ranking sempre parte do número de vitórias." />
-            <RankingRule order="02" title="Saldo de pontos" description="Empates são resolvidos primeiro pelo saldo entre pontos marcados e sofridos." />
-            <RankingRule order="03" title="Pontos marcados e sofridos" description="Se o empate persistir, valem maior pontuação a favor e, por fim, menor pontuação contra." />
+            <RankingRule order="01" title={t('Vitórias')} description={t('A posição inicial no ranking sempre parte do número de vitórias.')} />
+            <RankingRule order="02" title={t('Saldo de pontos')} description={t('Empates são resolvidos primeiro pelo saldo entre pontos marcados e sofridos.')} />
+            <RankingRule order="03" title={t('Pontos marcados e sofridos')} description={t('Se o empate persistir, valem maior pontuação a favor e, por fim, menor pontuação contra.')} />
           </div>
         </div>
       </section>
@@ -186,15 +187,15 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="font-display text-xs font-bold uppercase tracking-widest text-gray-500">Modalidades</div>
-            <h3 className="mt-2 font-display text-2xl font-bold text-ink">Escolha onde jogar ou o que acompanhar</h3>
+            <div className="font-display text-xs font-bold uppercase tracking-widest text-gray-500">{t('Modalidades')}</div>
+            <h3 className="mt-2 font-display text-2xl font-bold text-ink">{t('Escolha onde jogar ou o que acompanhar')}</h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">
-              Cada card mostra formato, nível, capacidade e ação disponível para cada modalidade.
+              {t('Cada card mostra formato, nível, capacidade e ação disponível para cada modalidade.')}
             </p>
           </div>
           {!isPublic && !hasPrivateAccess && !isAdmin && (
             <div className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
-              Torneio privado: use o código recebido em <strong>Ingressar com código</strong> para liberar inscrições.
+              {t('Torneio privado: use o código recebido em')} <strong>{t('Ingressar com código')}</strong> {t('para liberar inscrições.')}
             </div>
           )}
         </div>
@@ -203,8 +204,8 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
           <V2Surface className="text-center">
             <p className="py-6 text-sm text-gray-500">
               {isAdmin
-                ? 'Vá em "Admin" para criar a primeira modalidade e abrir a experiência competitiva do torneio.'
-                : 'O admin ainda não cadastrou modalidades para este torneio.'}
+                ? t('Vá em "Admin" para criar a primeira modalidade e abrir a experiência competitiva do torneio.')
+                : t('O admin ainda não cadastrou modalidades para este torneio.')}
             </p>
           </V2Surface>
         ) : (
@@ -248,7 +249,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   const fee = Number(modality.entry_fee_cents || 0);
   const stageCount = modality.stages?.length || 0;
   const stageType = modality.stages?.[0]?.type;
-  const stageBadgeLabel = stageCount > 1 ? `${stageCount} fases` : (stageType ? TOURNAMENT_STAGE_TYPE_LABELS[stageType] : null);
+  const stageBadgeLabel = stageCount > 1 ? t('{stageCount} fases', { stageCount }) : (stageType ? TOURNAMENT_STAGE_TYPE_LABELS[stageType] : null);
   const hasPrivateAccess =
     typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
@@ -294,9 +295,9 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
     if (!myRegistration) return;
     try {
       await selfCheckInMutation.mutateAsync(myRegistration.id);
-      toast.success('Check-in feito. Bom jogo!');
+      toast.success(t('Check-in feito. Bom jogo!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível fazer o check-in.');
+      toast.error(err?.message || t('Não foi possível fazer o check-in.'));
     }
   }
 
@@ -304,9 +305,9 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
     if (!inviteForMe) return;
     try {
       await respondMutation.mutateAsync({ id: inviteForMe.id, accept });
-      toast.success(accept ? 'Dupla confirmada! Boa sorte no torneio.' : 'Convite recusado.');
+      toast.success(accept ? t('Dupla confirmada! Boa sorte no torneio.') : t('Convite recusado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível responder ao convite.');
+      toast.error(err?.message || t('Não foi possível responder ao convite.'));
     }
   }
   const occupied = countOccupiedRegistrations(modalityRegs);
@@ -336,7 +337,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
             ) : (
               <h4 className="font-display text-xl font-bold text-ink">{modality.name}</h4>
             )}
-            {alreadyRegistered && <V2Badge tone="green">Você está inscrito</V2Badge>}
+            {alreadyRegistered && <V2Badge tone="green">{t('Você está inscrito')}</V2Badge>}
             {myInviteBadge && <V2Badge tone={myInviteBadge.tone}>{myInviteBadge.text}</V2Badge>}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -355,14 +356,14 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
       {inviteForMe && (
         <div className="mt-4 rounded-3xl border border-acid/40 bg-acid/10 p-4">
           <p className="text-sm font-semibold text-ink">
-            {inviteForMe.player_a_name || 'Um atleta'} te convidou para jogar como dupla nesta modalidade.
+            {inviteForMe.player_a_name || t('Um atleta')} {t('te convidou para jogar como dupla nesta modalidade.')}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <V2Button size="sm" disabled={respondMutation.isPending} onClick={() => handleRespondInvite(true)}>
-              Aceitar convite
+              {t('Aceitar convite')}
             </V2Button>
             <V2Button size="sm" variant="ghost" disabled={respondMutation.isPending} onClick={() => handleRespondInvite(false)}>
-              Recusar
+              {t('Recusar')}
             </V2Button>
           </div>
         </div>
@@ -370,17 +371,17 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <V2Surface variant="plano">
-          <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">Capacidade</div>
+          <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Capacidade')}</div>
           <div className="mt-2 text-sm font-medium text-ink">
             {hasUnlimitedEntries(modality.max_entries)
-              ? `${confirmed} inscritos confirmados`
-              : `${confirmed} / ${modality.max_entries} inscritos confirmados`}
+              ? t('{confirmed} inscritos confirmados', { confirmed })
+              : t('{confirmed} / {max_entries} inscritos confirmados', { confirmed, max_entries: modality.max_entries })}
           </div>
           <div className="mt-3">
             {pct !== null ? (
               <>
                 <div className="mb-1 flex items-center justify-between text-2xs text-gray-500">
-                  <span>{slotsFull ? 'Capacidade esgotada' : 'Leitura atual da ocupação'}</span>
+                  <span>{slotsFull ? t('Capacidade esgotada') : t('Leitura atual da ocupação')}</span>
                   <span>{pct}%</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
@@ -396,22 +397,22 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
               </>
             ) : (
               <div className="rounded-2xl border border-dashed border-acid/40 bg-acid/10 px-3 py-2 text-2xs text-ink">
-                Vagas abertas sem limite definido para esta modalidade.
+                {t('Vagas abertas sem limite definido para esta modalidade.')}
               </div>
             )}
           </div>
         </V2Surface>
 
         <V2Surface variant="plano">
-          <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">Inscrição</div>
+          <div className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Inscrição')}</div>
           <div className="mt-2 flex items-center gap-2 text-sm font-medium text-ink">
             <Wallet className="h-4 w-4 text-ink" />
-            {fee > 0 ? formatBRL(fee) : 'Gratuita'}
+            {fee > 0 ? formatBRL(fee) : t('Gratuita')}
           </div>
           <p className="mt-3 text-xs leading-5 text-gray-500">
             {pendingRegistrations > 0
-              ? `Há ${pendingRegistrations} inscrição(ões) adicional(is) aguardando confirmação ou processamento.`
-              : 'Sem pendências extras registradas no momento.'}
+              ? t('Há {pendingRegistrations} inscrição(ões) adicional(is) aguardando confirmação ou processamento.', { pendingRegistrations })
+              : t('Sem pendências extras registradas no momento.')}
           </p>
         </V2Surface>
       </div>
@@ -419,70 +420,70 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
       <div className="mt-auto pt-5">
         <div className="mb-4 text-xs leading-5 text-gray-500">
           {alreadyRegistered
-            ? 'Sua participação nesta modalidade já está registrada.'
+            ? t('Sua participação nesta modalidade já está registrada.')
             : canRegister
               ? slotsFull
-                ? 'A modalidade atingiu a capacidade configurada para novas confirmações.'
+                ? t('A modalidade atingiu a capacidade configurada para novas confirmações.')
                 : isAdmin
-                  ? 'Como admin, você pode adicionar jogadores diretamente por aqui.'
-                  : 'Abra o diálogo para concluir sua inscrição nesta modalidade.'
-              : 'Modalidade bloqueada até que o código de acesso do torneio privado seja validado.'}
+                  ? t('Como admin, você pode adicionar jogadores diretamente por aqui.')
+                  : t('Abra o diálogo para concluir sua inscrição nesta modalidade.')
+              : t('Modalidade bloqueada até que o código de acesso do torneio privado seja validado.')}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           {modalityPagesOn ? (
             <V2Button asChild variant="ghost" size="sm">
-              <Link to={modalityHref}><Info className="h-4 w-4" /> Ver modalidade</Link>
+              <Link to={modalityHref}><Info className="h-4 w-4" /> {t('Ver modalidade')}</Link>
             </V2Button>
           ) : (
-            <V2Button variant="ghost" size="sm" onClick={onInfo}><Info className="h-4 w-4" /> Informações</V2Button>
+            <V2Button variant="ghost" size="sm" onClick={onInfo}><Info className="h-4 w-4" /> {t('Informações')}</V2Button>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
             {alreadyRegistered && canPayOwn && (
               <V2Button size="sm" variant="secondary" onClick={() => setPayOpen(true)}>
                 <Wallet className="h-4 w-4" />
-                {myRegistration?.payment_declared_at ? 'Pagamento informado' : 'Pagar inscrição'}
+                {myRegistration?.payment_declared_at ? t('Pagamento informado') : t('Pagar inscrição')}
               </V2Button>
             )}
             {canCheckInOwn && (
               <V2Button size="sm" onClick={handleSelfCheckIn} disabled={selfCheckInMutation.isPending}>
-                {selfCheckInMutation.isPending ? 'Confirmando…' : 'Fazer check-in'}
+                {selfCheckInMutation.isPending ? t('Confirmando…') : t('Fazer check-in')}
               </V2Button>
             )}
             {selfCheckinOn && hasCheckedIn(myRegistration) && (
-              <V2Badge tone="green">Check-in feito</V2Badge>
+              <V2Badge tone="green">{t('Check-in feito')}</V2Badge>
             )}
             {checkInWithOthers && (
-              <span className="text-xs font-medium text-gray-500">Check-in com quem fez a inscrição ou na mesa da organização</span>
+              <span className="text-xs font-medium text-gray-500">{t('Check-in com quem fez a inscrição ou na mesa da organização')}</span>
             )}
             {isTeam ? (
               /* Equipes: inscreve pelo modal de equipes; a gestão do elenco e
                  os confrontos ficam na página da modalidade. */
               <>
                 <V2Button asChild size="sm" variant="ghost">
-                  <Link to={modalityHref}><Users className="h-4 w-4" /> Ver equipes</Link>
+                  <Link to={modalityHref}><Users className="h-4 w-4" /> {t('Ver equipes')}</Link>
                 </V2Button>
                 {alreadyRegistered ? (
-                  <V2Badge tone="green">Sua equipe está inscrita</V2Badge>
+                  <V2Badge tone="green">{t('Sua equipe está inscrita')}</V2Badge>
                 ) : canRegister ? (
                   <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !isAdmin} data-dica="torneio-inscrever">
                     <Plus className="h-4 w-4" />
-                    {slotsFull && !isAdmin ? 'Modalidade lotada' : 'Inscrever equipe'}
+                    {slotsFull && !isAdmin ? t('Modalidade lotada') : t('Inscrever equipe')}
                   </V2Button>
                 ) : (
-                  <V2Badge tone="neutral">Privado: exige código</V2Badge>
+                  <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
                 )}
               </>
             ) : alreadyRegistered ? (
-              <V2Badge tone="green">Inscrito</V2Badge>
+              <V2Badge tone="green">{t('Inscrito')}</V2Badge>
             ) : canRegister ? (
               <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !canWaitlist} data-dica="torneio-inscrever">
                 <Plus className="h-4 w-4" />
-                {canWaitlist ? 'Entrar na lista de espera' : slotsFull ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
+                {canWaitlist ? t('Entrar na lista de espera') : slotsFull ? t('Modalidade lotada') : isAdmin ? t('Inscrever jogador') : t('Inscrever-se')}
               </V2Button>
             ) : (
-              <V2Badge tone="neutral">Privado: exige código</V2Badge>
+              <V2Badge tone="neutral">{t('Privado: exige código')}</V2Badge>
             )}
           </div>
         </div>

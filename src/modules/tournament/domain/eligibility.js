@@ -34,6 +34,7 @@ import {
   SKILL_LEVEL_USAP_RANGE,
 } from './constants.js';
 import { calculateAge } from '@/core/lib/profileValidation';
+import { t } from '@/core/i18n';
 
 const MIN_AGE_BY_CATEGORY = Object.freeze({
   [AGE_CATEGORY.A35]: 35,
@@ -51,13 +52,13 @@ function ageIssue(category, age) {
   const min = MIN_AGE_BY_CATEGORY[category];
   const max = MAX_AGE_BY_CATEGORY[category];
   if (age == null) {
-    return `Esta modalidade tem categoria de idade (${label}). Informe sua data de nascimento no perfil para se inscrever.`;
+    return t('Esta modalidade tem categoria de idade ({label}). Informe sua data de nascimento no perfil para se inscrever.', { label });
   }
   if (min != null && age < min) {
-    return `Categoria ${label} exige idade mínima de ${min} anos (você tem ${age}).`;
+    return t('Categoria {label} exige idade mínima de {min} anos (você tem {age}).', { label, min, age });
   }
   if (max != null && age > max) {
-    return `Categoria ${label} exige idade máxima de ${max} anos (você tem ${age}).`;
+    return t('Categoria {label} exige idade máxima de {max} anos (você tem {age}).', { label, max, age });
   }
   return null;
 }
@@ -66,10 +67,10 @@ function genderIssueForSingle(category, profile) {
   const label = GENDER_CATEGORY_LABELS[category];
   const declared = profile?.competition_gender;
   if (category === GENDER_CATEGORY.MALE && declared !== COMPETITION_GENDER.MALE) {
-    return `Esta modalidade é ${label}. Defina "Competir na categoria masculina" no seu perfil.`;
+    return t('Esta modalidade é {label}. Defina "Competir na categoria masculina" no seu perfil.', { label });
   }
   if (category === GENDER_CATEGORY.FEMALE && declared !== COMPETITION_GENDER.FEMALE) {
-    return `Esta modalidade é ${label}. Defina "Competir na categoria feminina" no seu perfil.`;
+    return t('Esta modalidade é {label}. Defina "Competir na categoria feminina" no seu perfil.', { label });
   }
   return null;
 }
@@ -83,10 +84,10 @@ function levelWarning(modality, profile) {
   if (!playerRange) return null;
   // Aviso: nível do jogador fora do intervalo da modalidade.
   if (playerRange[1] < range[0]) {
-    return `O nível recomendado é ${SKILL_LEVEL_LABELS[modality.skill_level]}. Seu nível atual (${SKILL_LEVEL_LABELS[profile.leveling_level]}) é inferior — a organização pode validar a inscrição.`;
+    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é inferior — a organização pode validar a inscrição.', { v1: SKILL_LEVEL_LABELS[modality.skill_level], v2: SKILL_LEVEL_LABELS[profile.leveling_level] });
   }
   if (playerRange[0] > range[1]) {
-    return `O nível recomendado é ${SKILL_LEVEL_LABELS[modality.skill_level]}. Seu nível atual (${SKILL_LEVEL_LABELS[profile.leveling_level]}) é superior — a organização pode validar a inscrição.`;
+    return t('O nível recomendado é {v1}. Seu nível atual ({v2}) é superior — a organização pode validar a inscrição.', { v1: SKILL_LEVEL_LABELS[modality.skill_level], v2: SKILL_LEVEL_LABELS[profile.leveling_level] });
   }
   return null;
 }
@@ -138,15 +139,15 @@ export function evaluateMixedDoublesEligibility(modality, profileA, profileB) {
   const b = profileB?.competition_gender;
 
   if (!profileB) {
-    warnings.push('Duplas Mistas exigem um jogador masculino e outra feminina. Como o parceiro(a) ainda não tem perfil na plataforma, a organização pode pedir confirmação na hora.');
+    warnings.push(t('Duplas Mistas exigem um jogador masculino e outra feminina. Como o parceiro(a) ainda não tem perfil na plataforma, a organização pode pedir confirmação na hora.'));
     return { errors, warnings };
   }
   if (!a || !b) {
-    errors.push('Para Duplas Mistas é necessário que ambos os jogadores tenham definido a categoria competitiva (masculino/feminino) no perfil.');
+    errors.push(t('Para Duplas Mistas é necessário que ambos os jogadores tenham definido a categoria competitiva (masculino/feminino) no perfil.'));
     return { errors, warnings };
   }
   if (a === b) {
-    errors.push('Duplas Mistas exigem um jogador masculino e outra feminina.');
+    errors.push(t('Duplas Mistas exigem um jogador masculino e outra feminina.'));
   }
   return { errors, warnings };
 }
@@ -202,11 +203,11 @@ export function genderRegistrationErrors(modality, { aGender, bGender, isDoubles
   if (cat === GENDER_CATEGORY.MALE || cat === GENDER_CATEGORY.FEMALE) {
     const required = cat === GENDER_CATEGORY.MALE ? COMPETITION_GENDER.MALE : COMPETITION_GENDER.FEMALE;
     const label = GENDER_CATEGORY_LABELS[cat];
-    if (aGender && aGender !== required) errors.push(`Jogador A: esta modalidade é ${label} — só aceita atletas dessa categoria.`);
-    if (isDoubles && bGender && bGender !== required) errors.push(`Jogador B: esta modalidade é ${label} — só aceita atletas dessa categoria.`);
+    if (aGender && aGender !== required) errors.push(t('Jogador A: esta modalidade é {label} — só aceita atletas dessa categoria.', { label }));
+    if (isDoubles && bGender && bGender !== required) errors.push(t('Jogador B: esta modalidade é {label} — só aceita atletas dessa categoria.', { label }));
   } else if (cat === GENDER_CATEGORY.MIXED && isDoubles) {
     if (aGender && bGender && aGender === bGender) {
-      errors.push('Duplas Mistas exigem um jogador masculino e uma feminina.');
+      errors.push(t('Duplas Mistas exigem um jogador masculino e uma feminina.'));
     }
   }
   return errors;
@@ -218,14 +219,14 @@ export function genderRegistrationErrors(modality, { aGender, bGender, isDoubles
 export function evaluateRegistrationEligibility(modality, profileA, profileB) {
   const issues = { errors: [], warnings: [] };
   const a = evaluatePlayerEligibility(modality, profileA);
-  a.errors.forEach((e) => issues.errors.push(`Jogador A: ${e}`));
-  a.warnings.forEach((w) => issues.warnings.push(`Jogador A: ${w}`));
+  a.errors.forEach((e) => issues.errors.push(t('Jogador A: {e}', { e })));
+  a.warnings.forEach((w) => issues.warnings.push(t('Jogador A: {w}', { w })));
 
   if (modality?.format === MODALITY_FORMAT.DOUBLES && profileB !== undefined) {
     if (profileB) {
       const b = evaluatePlayerEligibility(modality, profileB);
-      b.errors.forEach((e) => issues.errors.push(`Jogador B: ${e}`));
-      b.warnings.forEach((w) => issues.warnings.push(`Jogador B: ${w}`));
+      b.errors.forEach((e) => issues.errors.push(t('Jogador B: {e}', { e })));
+      b.warnings.forEach((w) => issues.warnings.push(t('Jogador B: {w}', { w })));
     }
     const mixed = evaluateMixedDoublesEligibility(modality, profileA, profileB);
     issues.errors.push(...mixed.errors);

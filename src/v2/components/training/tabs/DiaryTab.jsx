@@ -31,6 +31,7 @@ import {
 import WeekStrip from '@/v2/components/training/WeekStrip';
 import SessionComments from '@/v2/components/training/SessionComments';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t } from '@/core/i18n';
 
 const LogSessionDialog = lazy(() => import('@/v2/components/training/LogSessionDialog'));
 
@@ -43,30 +44,30 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
     <V2Surface as="li" className="space-y-3 p-5 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {SESSION_KIND_LABELS[s.kind] || 'Treino'}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{formatDayLabel(s.date, hoje)} · {t(SESSION_KIND_LABELS[s.kind]) || t('Treino')}</p>
           <h3 className="mt-1 font-display text-lg font-bold text-ink">{s.title}</h3>
           <p className="mt-0.5 text-sm text-gray-500">
             {s.duration_min} min
-            {Number.isFinite(s.rpe) ? ` · esforço ${s.rpe} (${rpeLabel(s.rpe).toLowerCase()})` : ''}
-            {carga !== null ? ` · carga ${carga}` : ''}
+            {Number.isFinite(s.rpe) ? ` · ${t('esforço {n} ({rotulo})', { n: s.rpe, rotulo: rpeLabel(s.rpe).toLowerCase() })}` : ''}
+            {carga !== null ? ` · ${t('carga {n}', { n: carga })}` : ''}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {s.status !== SESSION_STATUS.FEITO && <V2Badge>{SESSION_STATUS_LABELS[s.status]}</V2Badge>}
+          {s.status !== SESSION_STATUS.FEITO && <V2Badge>{t(SESSION_STATUS_LABELS[s.status])}</V2Badge>}
           {s.coach_confirmed_at && (
-            <V2Badge tone="green"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /> {coachName ? `${coachName} viu` : 'O professor viu'}</V2Badge>
+            <V2Badge tone="green"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /> {coachName ? t('{nome} viu', { nome: coachName }) : t('O professor viu')}</V2Badge>
           )}
         </div>
       </div>
 
       {s.item_ids?.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Itens do treino">
+        <ul className="flex flex-wrap gap-1.5" aria-label={t('Itens do treino')}>
           {s.item_ids.map((id) => (
             <li key={id}>
               {byId[id] ? (
                 <Link to={`/treino/item/${id}`} className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs font-semibold text-ink hover:bg-gray-100">{byId[id].title}</Link>
               ) : (
-                <span className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs text-gray-500">{itensIncompletos ? 'Item (não carregou)' : 'Item indisponível'}</span>
+                <span className="inline-block rounded-full bg-gray-50 px-3 py-1 text-xs text-gray-500">{itensIncompletos ? t('Item (não carregou)') : t('Item indisponível')}</span>
               )}
             </li>
           ))}
@@ -74,15 +75,15 @@ function Sessao({ s, hoje, byId, itensIncompletos, coachName, identity, onEditar
       )}
       {s.notes && <p className="whitespace-pre-line text-sm text-gray-700">{s.notes}</p>}
       {s.shared_coach_id && (
-        <p className="text-xs text-gray-500">Visível para {coachName || 'o seu professor'}.</p>
+        <p className="text-xs text-gray-500">{t('Visível para {nome}.', { nome: coachName || t('o seu professor') })}</p>
       )}
 
       <div className="flex flex-wrap gap-2">
-        <V2Button size="sm" variant="ghost" onClick={() => onEditar(s)}><Pencil className="h-4 w-4" aria-hidden="true" /> Editar</V2Button>
-        <V2Button size="sm" variant="ghost" onClick={() => onApagar(s)}><Trash2 className="h-4 w-4" aria-hidden="true" /> Apagar</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={() => onEditar(s)}><Pencil className="h-4 w-4" aria-hidden="true" />{' '}{t('Editar')}</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={() => onApagar(s)}><Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Apagar')}</V2Button>
         {s.shared_coach_id && (
           <V2Button size="sm" variant="ghost" aria-expanded={conversa} onClick={() => setConversa((c) => !c)}>
-            <MessageCircle className="h-4 w-4" aria-hidden="true" /> {conversa ? 'Fechar a conversa' : 'Conversa com o professor'}
+            <MessageCircle className="h-4 w-4" aria-hidden="true" /> {conversa ? t('Fechar a conversa') : t('Conversa com o professor')}
           </V2Button>
         )}
       </div>
@@ -126,21 +127,21 @@ export default function DiaryTab({ identity, params, irPara }) {
 
   const botaoRegistrar = (
     <V2Button onClick={() => setRegistro({ initial: {} })} data-dica="treino-diario-registrar">
-      <Plus className="h-4 w-4" aria-hidden="true" /> Registrar treino
+      <Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Registrar treino')}
     </V2Button>
   );
 
   let corpo;
   if (sessoes.isPending) corpo = <V2Skeleton className="h-72 rounded-4xl" />;
   else if (sessoes.isError) {
-    corpo = <V2Surface><V2ErrorState title="O seu diário não carregou" onRetry={() => sessoes.refetch()} /></V2Surface>;
+    corpo = <V2Surface><V2ErrorState title={t('O seu diário não carregou')} onRetry={() => sessoes.refetch()} /></V2Surface>;
   } else if (podeAfirmarVazio(sessoes) && lista.length === 0) {
     corpo = (
       <V2Surface>
         <V2EmptyState
           icon={NotebookPen}
-          title="Nenhum treino registrado ainda"
-          description="Registrar leva poucos segundos: quanto tempo durou e quão puxado foi. Com algumas semanas, a aba Evolução mostra o seu ritmo."
+          title={t('Nenhum treino registrado ainda')}
+          description={t('Registrar leva poucos segundos: quanto tempo durou e quão puxado foi. Com algumas semanas, a aba Evolução mostra o seu ritmo.')}
           action={botaoRegistrar}
         />
       </V2Surface>
@@ -149,11 +150,11 @@ export default function DiaryTab({ identity, params, irPara }) {
     corpo = (
       <div className="space-y-8">
         {porSemana.slice(0, semanas).map((g) => {
-          const min = g.sessions.reduce((t, s) => t + (s.duration_min || 0), 0);
+          const min = g.sessions.reduce((soma, s) => soma + (s.duration_min || 0), 0);
           return (
-            <section key={g.weekKey} className="space-y-3" aria-label={`Semana de ${weekRangeLabel(g.weekKey)}`}>
+            <section key={g.weekKey} className="space-y-3" aria-label={t('Semana de {periodo}', { periodo: weekRangeLabel(g.weekKey) })}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-sm font-bold text-ink">{g.weekKey === weekKeyOf(hoje) ? 'Esta semana' : weekRangeLabel(g.weekKey)}</h2>
+                <h2 className="text-sm font-bold text-ink">{g.weekKey === weekKeyOf(hoje) ? t('Esta semana') : weekRangeLabel(g.weekKey)}</h2>
                 <p className="text-xs text-gray-500">{g.sessions.length} {g.sessions.length === 1 ? 'treino' : 'treinos'} · {min} min</p>
               </div>
               <ul className="space-y-3">
@@ -176,7 +177,7 @@ export default function DiaryTab({ identity, params, irPara }) {
         })}
         {porSemana.length > semanas && (
           <div className="flex justify-center">
-            <V2Button variant="secondary" onClick={() => setSemanas((n) => n + SEMANAS_POR_VEZ)}>Mostrar semanas anteriores</V2Button>
+            <V2Button variant="secondary" onClick={() => setSemanas((n) => n + SEMANAS_POR_VEZ)}>{t('Mostrar semanas anteriores')}</V2Button>
           </div>
         )}
       </div>
@@ -186,18 +187,18 @@ export default function DiaryTab({ identity, params, irPara }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-sm text-gray-500">O que você treinou, semana a semana. Só você vê — a não ser a sessão que você escolher mostrar ao seu professor.</p>
+        <p className="max-w-xl text-sm text-gray-500">{t('O que você treinou, semana a semana. Só você vê — a não ser a sessão que você escolher mostrar ao seu professor.')}</p>
         {botaoRegistrar}
       </div>
 
       {resumo && (
         <V2Surface className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-display text-lg font-bold text-ink">Esta semana</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Esta semana')}</h2>
             <p className="text-sm text-gray-500">{resumo.sessionsCount} {resumo.sessionsCount === 1 ? 'treino' : 'treinos'} · {resumo.minutes} min</p>
           </div>
           <WeekStrip summary={resumo} />
-          {planos.isError && <p className="text-xs text-gray-500">Os planos não carregaram; os dias planejados não aparecem.</p>}
+          {planos.isError && <p className="text-xs text-gray-500">{t('Os planos não carregaram; os dias planejados não aparecem.')}</p>}
         </V2Surface>
       )}
 
@@ -206,16 +207,16 @@ export default function DiaryTab({ identity, params, irPara }) {
       <ConfirmDialog
         open={!!apagar}
         onOpenChange={(o) => { if (!o) setApagar(null); }}
-        title="Apagar este registro?"
-        description="Ele sai do diário e da evolução. A conversa com o professor sobre ele também é apagada."
-        confirmLabel="Apagar"
+        title={t('Apagar este registro?')}
+        description={t('Ele sai do diário e da evolução. A conversa com o professor sobre ele também é apagada.')}
+        confirmLabel={t('Apagar')}
         pending={acoes.remove.isPending}
         onConfirm={() => {
           // Apagar com "Desfazer" (Fase 4.2): some na hora, grava depois da janela.
           const alvo = apagar;
           setApagar(null);
-          desfazivel.agendar(alvo.id, 'Registro apagado.', () => acoes.remove.mutateAsync(alvo), {
-            aoFalhar: (err) => toast.error(mensagemDeErro(err, 'Não foi possível apagar agora.')),
+          desfazivel.agendar(alvo.id, t('Registro apagado.'), () => acoes.remove.mutateAsync(alvo), {
+            aoFalhar: (err) => toast.error(mensagemDeErro(err, t('Não foi possível apagar agora.'))),
           });
         }}
       />

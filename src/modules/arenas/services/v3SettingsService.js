@@ -18,6 +18,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeArenaSettings } from '../domain/settings.js';
+import { t } from '@/core/i18n';
 
 const COL = 'arena_settings';
 
@@ -34,7 +35,7 @@ function str(v) {
  */
 export async function getOrCreateArenaSettings(arenaId) {
   if (!db || !arenaId) {
-    throw new Error('arenaId é obrigatório.');
+    throw new Error(t('arenaId é obrigatório.'));
   }
   const ref = doc(db, COL, arenaId);
   const snap = await getDoc(ref);
@@ -67,9 +68,9 @@ export async function getArenaSettings(arenaId) {
  * Atualiza settings (merge profundo).
  */
 export async function updateArenaSettings(arenaId, updates, actor) {
-  if (!arenaId) throw new Error('arenaId é obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId é obrigatório.'));
   if (!updates || typeof updates !== 'object') {
-    throw new Error('Updates inválidos.');
+    throw new Error(t('Updates inválidos.'));
   }
 
   // Garante que existe antes de atualizar

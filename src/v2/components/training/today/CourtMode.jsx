@@ -12,6 +12,7 @@ import { useWakeLock } from '@/core/lib/useWakeLock';
 import { formatClock } from '@/modules/training/domain/treinar';
 import { V2Button } from '@/v2/ui/primitives';
 import CourtDiagram from '@/v2/components/training/CourtDiagram';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ blocks: ReturnType<import('@/modules/training/domain/treinar').courtBlocks>,
@@ -27,11 +28,11 @@ export default function CourtMode({ blocks, onClose, onFinish }) {
 
   useEffect(() => {
     if (!rodando) return undefined;
-    const t = setInterval(() => {
+    const relogio = setInterval(() => {
       totalRef.current += 1;
       setBlocoSeg((s) => s + 1);
     }, 1000);
-    return () => clearInterval(t);
+    return () => clearInterval(relogio);
   }, [rodando]);
 
   // Esc fecha; o foco começa no botão de fechar (diálogo de tela cheia).
@@ -55,18 +56,18 @@ export default function CourtMode({ blocks, onClose, onFinish }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Modo quadra"
+      aria-label={t('Modo quadra')}
       data-dica="treino-modo-quadra"
       className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-paper-pure"
     >
       <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
         <p className="text-sm font-bold text-gray-500">
-          {i + 1} de {blocks.length}{telaAcesa ? ' · tela acesa' : ''}
+          {t('{n} de {total}', { n: i + 1, total: blocks.length })}{telaAcesa ? ` · ${t('tela acesa')}` : ''}
         </p>
         <button
           ref={fecharRef}
           type="button"
-          aria-label="Sair do modo quadra"
+          aria-label={t('Sair do modo quadra')}
           onClick={onClose}
           className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
@@ -82,29 +83,29 @@ export default function CourtMode({ blocks, onClose, onFinish }) {
           <p className="font-display text-6xl font-bold tabular-nums text-ink sm:text-7xl">{formatClock(blocoSeg)}</p>
           {alvo > 0 && (
             <p className="mt-1 text-base font-semibold text-gray-600">
-              {passou ? 'Tempo do bloco cumprido' : `de ${b.minutes} min`}
+              {passou ? t('Tempo do bloco cumprido') : t('de {n} min', { n: b.minutes })}
             </p>
           )}
           <div className="mt-4 flex justify-center gap-3">
             <V2Button size="lg" onClick={() => setRodando((r) => !r)}>
               {rodando ? <Pause className="h-5 w-5" aria-hidden="true" /> : <Play className="h-5 w-5" aria-hidden="true" />}
-              {rodando ? 'Pausar' : blocoSeg ? 'Continuar' : 'Começar'}
+              {rodando ? t('Pausar') : blocoSeg ? t('Continuar') : t('Começar')}
             </V2Button>
-            <V2Button size="lg" variant="secondary" onClick={() => setBlocoSeg(0)} aria-label="Zerar o cronômetro do bloco">
+            <V2Button size="lg" variant="secondary" onClick={() => setBlocoSeg(0)} aria-label={t('Zerar o cronômetro do bloco')}>
               <RotateCcw className="h-5 w-5" aria-hidden="true" />
             </V2Button>
           </div>
         </div>
 
         {b?.cues?.length > 0 && (
-          <ul className="flex flex-wrap gap-2" aria-label="Dicas">
+          <ul className="flex flex-wrap gap-2" aria-label={t('Dicas')}>
             {b.cues.map((c) => (
               <li key={c} className="rounded-full bg-acid/20 px-4 py-2 text-lg font-bold text-ink">{c}</li>
             ))}
           </ul>
         )}
 
-        {b?.setup && <p className="text-lg text-gray-700"><span className="font-bold">Montagem: </span>{b.setup}</p>}
+        {b?.setup && <p className="text-lg text-gray-700"><span className="font-bold">{t('Montagem:')}{' '}</span>{b.setup}</p>}
 
         {b?.steps?.length > 0 && (
           <ol className="space-y-3">
@@ -118,18 +119,18 @@ export default function CourtMode({ blocks, onClose, onFinish }) {
         )}
 
         {b?.diagram && <CourtDiagram diagram={b.diagram} className="mx-auto max-w-sm" />}
-        {b?.success && <p className="rounded-3xl bg-gray-50 p-4 text-lg text-ink"><span className="font-bold">Meta: </span>{b.success}</p>}
+        {b?.success && <p className="rounded-3xl bg-gray-50 p-4 text-lg text-ink"><span className="font-bold">{t('Meta:')}{' '}</span>{b.success}</p>}
       </main>
 
       <footer className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-paper-pure px-4 py-3">
         <V2Button variant="secondary" size="lg" disabled={i === 0} onClick={() => ir(i - 1)}>
-          <ChevronLeft className="h-5 w-5" aria-hidden="true" /> Anterior
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />{' '}{t('Anterior')}
         </V2Button>
         {ultimo ? (
-          <V2Button size="lg" onClick={() => { setRodando(false); onFinish(totalRef.current); }}>Terminei</V2Button>
+          <V2Button size="lg" onClick={() => { setRodando(false); onFinish(totalRef.current); }}>{t('Terminei')}</V2Button>
         ) : (
           <V2Button size="lg" onClick={() => ir(i + 1)}>
-            Próximo <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            {t('Próximo')}{' '}<ChevronRight className="h-5 w-5" aria-hidden="true" />
           </V2Button>
         )}
       </footer>

@@ -35,6 +35,9 @@
  */
 
 /** De onde saem os que entram direto. */
+import { t, tk } from '@/core/i18n';
+import { rotulos } from './constants.js';
+
 export const DIRECT_ENTRY_MODE = Object.freeze({
   /** Ninguém entra direto: todos começam na primeira fase. */
   NONE: 'none',
@@ -44,19 +47,19 @@ export const DIRECT_ENTRY_MODE = Object.freeze({
   MANUAL: 'manual',
 });
 
-export const DIRECT_ENTRY_MODE_LABELS = Object.freeze({
-  [DIRECT_ENTRY_MODE.NONE]: 'Ninguém — todos começam na 1ª fase',
-  [DIRECT_ENTRY_MODE.SEEDS]: 'Os melhores cabeças entram direto aqui',
-  [DIRECT_ENTRY_MODE.MANUAL]: 'Uma lista que eu escolho',
+export const DIRECT_ENTRY_MODE_LABELS = rotulos({
+  [DIRECT_ENTRY_MODE.NONE]: tk('Ninguém — todos começam na 1ª fase'),
+  [DIRECT_ENTRY_MODE.SEEDS]: tk('Os melhores cabeças entram direto aqui'),
+  [DIRECT_ENTRY_MODE.MANUAL]: tk('Uma lista que eu escolho'),
 });
 
-export const DIRECT_ENTRY_MODE_HELP = Object.freeze({
+export const DIRECT_ENTRY_MODE_HELP = rotulos({
   [DIRECT_ENTRY_MODE.NONE]:
-    'O padrão: a fase é formada só pelos classificados da fase anterior.',
+    tk('O padrão: a fase é formada só pelos classificados da fase anterior.'),
   [DIRECT_ENTRY_MODE.SEEDS]:
-    'Os mais fortes (pelo nível/ranking usado no sorteio) pulam as fases anteriores e entram aqui. É o modelo de qualificatória: os cabeças esperam, os demais disputam as vagas.',
+    tk('Os mais fortes (pelo nível/ranking usado no sorteio) pulam as fases anteriores e entram aqui. É o modelo de qualificatória: os cabeças esperam, os demais disputam as vagas.'),
   [DIRECT_ENTRY_MODE.MANUAL]:
-    'Você escolhe nome por nome. Serve para campeão defendendo título, convidado da organização ou qualquer critério que não seja o ranking.',
+    tk('Você escolhe nome por nome. Serve para campeão defendendo título, convidado da organização ou qualquer critério que não seja o ranking.'),
 });
 
 /**
@@ -128,7 +131,7 @@ export function planDirectEntries(entrants, phases) {
       if (escolhidos.length < cfg.count) {
         warnings.push({
           level: 'warn',
-          text: `Fase ${i + 1}: pedidos ${cfg.count} entrando direto, mas só ${escolhidos.length} inscrito(s) sobram para isso.`,
+          text: t('Fase {v1}: pedidos {count} entrando direto, mas só {n} inscrito(s) sobram para isso.', { v1: i + 1, count: cfg.count, n: escolhidos.length }),
         });
       }
     } else {
@@ -137,14 +140,14 @@ export function planDirectEntries(entrants, phases) {
         if (!e) {
           warnings.push({
             level: 'warn',
-            text: `Fase ${i + 1}: um dos escolhidos para entrar direto não está mais inscrito e foi ignorado.`,
+            text: t('Fase {v1}: um dos escolhidos para entrar direto não está mais inscrito e foi ignorado.', { v1: i + 1 }),
           });
           return;
         }
         if (phaseOfEntrant.has(String(id))) {
           warnings.push({
             level: 'warn',
-            text: `Fase ${i + 1}: ${e.label || id} já entra direto numa fase anterior — vale a entrada mais cedo.`,
+            text: t('Fase {v1}: {v2} já entra direto numa fase anterior — vale a entrada mais cedo.', { v1: i + 1, v2: e.label || id }),
           });
           return;
         }
@@ -164,7 +167,7 @@ export function planDirectEntries(entrants, phases) {
   if (lista.length > 0 && naPrimeira.length < 2) {
     warnings.push({
       level: 'error',
-      text: `Sobram ${naPrimeira.length} inscrito(s) para a 1ª fase — ela precisa de ao menos 2. Reduza quem entra direto nas fases seguintes.`,
+      text: t('Sobram {n} inscrito(s) para a 1ª fase — ela precisa de ao menos 2. Reduza quem entra direto nas fases seguintes.', { n: naPrimeira.length }),
     });
   }
 
@@ -184,9 +187,9 @@ export function describeDirectEntries(plan, phases) {
     if (i === 0) {
       saida.push({
         phase: 0,
-        label: fases[0]?.name || 'Fase 1',
+        label: fases[0]?.name || t('Fase 1'),
         count: lista.length,
-        text: `${lista.length} começam na 1ª fase.`,
+        text: t('{n} começam na 1ª fase.', { n: lista.length }),
       });
       return;
     }
@@ -194,9 +197,9 @@ export function describeDirectEntries(plan, phases) {
     const puladas = i;
     saida.push({
       phase: i,
-      label: fases[i]?.name || `Fase ${i + 1}`,
+      label: fases[i]?.name || t('Fase {v1}', { v1: i + 1 }),
       count: lista.length,
-      text: `${lista.length} entram direto na fase ${i + 1}, pulando ${puladas} fase(s).`,
+      text: t('{n} entram direto na fase {v2}, pulando {puladas} fase(s).', { n: lista.length, v2: i + 1, puladas }),
     });
   });
   return saida.sort((a, b) => a.phase - b.phase);

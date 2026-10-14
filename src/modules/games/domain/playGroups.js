@@ -38,6 +38,7 @@ import { isPlayFormat } from '@/modules/clubs/domain/gameDayFormats.js';
 import { UNIFIED_MIN, UNIFIED_MAX } from '@/modules/rating/domain/unifiedLevel.js';
 import { playLevelOrNull } from './gamePlay.js';
 import { GAME_DAY_LIMITS } from './gameDay.js';
+import { t, tn, tk } from '@/core/i18n';
 
 /* -------------------------------- constantes ------------------------------- */
 
@@ -49,27 +50,27 @@ export const GROUP_FORMATION = Object.freeze({
 });
 
 export const GROUP_FORMATION_LABELS = Object.freeze({
-  [GROUP_FORMATION.FREE]: 'Livre',
-  [GROUP_FORMATION.MIXED]: 'Duplas mistas',
-  [GROUP_FORMATION.SAME_SEX]: 'Duplas do mesmo sexo',
+  [GROUP_FORMATION.FREE]: tk('Livre'),
+  [GROUP_FORMATION.MIXED]: tk('Duplas mistas'),
+  [GROUP_FORMATION.SAME_SEX]: tk('Duplas do mesmo sexo'),
 });
 
 export const GROUP_FORMATION_HINTS = Object.freeze({
   [GROUP_FORMATION.FREE]:
-    'Sem regra de sexo: o sorteio equilibra o nível e, quando sabe o sexo de todos, prefere duplas mistas — como o Play sempre fez.',
+    tk('Sem regra de sexo: o sorteio equilibra o nível e, quando sabe o sexo de todos, prefere duplas mistas — como o Play sempre fez.'),
   [GROUP_FORMATION.MIXED]:
-    'Cada dupla com um homem e uma mulher. A partida leva dois homens e duas mulheres (num jogo simples, um de cada).',
+    tk('Cada dupla com um homem e uma mulher. A partida leva dois homens e duas mulheres (num jogo simples, um de cada).'),
   [GROUP_FORMATION.SAME_SEX]:
-    'Os quatro da partida são do mesmo sexo: ou só homens, ou só mulheres. Nunca mistura.',
+    tk('Os quatro da partida são do mesmo sexo: ou só homens, ou só mulheres. Nunca mistura.'),
 });
 
 /** Para quem é o grupo (perfil — sugere, não barra). */
 export const GROUP_GENDER = Object.freeze({ ANY: 'any', MALE: 'male', FEMALE: 'female' });
 
 export const GROUP_GENDER_LABELS = Object.freeze({
-  [GROUP_GENDER.ANY]: 'Todos',
-  [GROUP_GENDER.MALE]: 'Só homens',
-  [GROUP_GENDER.FEMALE]: 'Só mulheres',
+  [GROUP_GENDER.ANY]: tk('Todos'),
+  [GROUP_GENDER.MALE]: tk('Só homens'),
+  [GROUP_GENDER.FEMALE]: tk('Só mulheres'),
 });
 
 /** O que decide quando mais de um grupo pode ocupar a quadra. */
@@ -80,18 +81,18 @@ export const GROUP_POLICY = Object.freeze({
 });
 
 export const GROUP_POLICY_LABELS = Object.freeze({
-  [GROUP_POLICY.QUEUE]: 'Por tempo de espera',
-  [GROUP_POLICY.ROTATE]: 'Revezar os grupos',
-  [GROUP_POLICY.PRIORITY]: 'Por prioridade',
+  [GROUP_POLICY.QUEUE]: tk('Por tempo de espera'),
+  [GROUP_POLICY.ROTATE]: tk('Revezar os grupos'),
+  [GROUP_POLICY.PRIORITY]: tk('Por prioridade'),
 });
 
 export const GROUP_POLICY_HINTS = Object.freeze({
   [GROUP_POLICY.QUEUE]:
-    'Entra o grupo cujo primeiro da fila espera há mais tempo. É a regra do Play de sempre, entre todos os grupos: nenhum fica esquecido.',
+    tk('Entra o grupo cujo primeiro da fila espera há mais tempo. É a regra do Play de sempre, entre todos os grupos: nenhum fica esquecido.'),
   [GROUP_POLICY.ROTATE]:
-    'Os grupos se revezam em círculo: terminou a vez de um, a próxima quadra é do seguinte — mesmo que o outro tenha gente esperando há menos tempo.',
+    tk('Os grupos se revezam em círculo: terminou a vez de um, a próxima quadra é do seguinte — mesmo que o outro tenha gente esperando há menos tempo.'),
   [GROUP_POLICY.PRIORITY]:
-    'Vale a ordem da lista de grupos: o de cima ocupa a quadra sempre que tiver partida pronta. Os de baixo jogam quando o de cima não preencher.',
+    tk('Vale a ordem da lista de grupos: o de cima ocupa a quadra sempre que tiver partida pronta. Os de baixo jogam quando o de cima não preencher.'),
 });
 
 /** O grupo pode ser escolhido pela própria pessoa (e recebê-la na entrada)? */
@@ -232,13 +233,13 @@ export function validatePlayGroups(input = {}) {
   const bruto = Array.isArray(input.groups) ? input.groups : [];
   const errors = [];
   if (bruto.length > PLAY_GROUP_LIMITS.MAX_GROUPS) {
-    errors.push(`No máximo ${PLAY_GROUP_LIMITS.MAX_GROUPS} grupos por dia.`);
+    errors.push(t('No máximo {n} grupos por dia.', { n: PLAY_GROUP_LIMITS.MAX_GROUPS }));
   }
   const nomes = new Set();
   bruto.filter(isObject).forEach((g) => {
     const nome = chave(g.name);
-    if (!nome) { errors.push('Dê um nome a cada grupo.'); return; }
-    if (nomes.has(nome)) errors.push(`Dois grupos com o mesmo nome (“${String(g.name).trim()}”): a tela não os distinguiria.`);
+    if (!nome) { errors.push(t('Dê um nome a cada grupo.')); return; }
+    if (nomes.has(nome)) errors.push(t('Dois grupos com o mesmo nome (“{nome}”): a tela não os distinguiria.', { nome: String(g.name).trim() }));
     nomes.add(nome);
   });
   const cfg = normalizePlayGroupsConfig({ play_groups: bruto, play_groups_policy: input.policy });
@@ -339,7 +340,7 @@ export function fitsLevelGap(players, maxGap) {
  */
 export function matchGroupFor(entity, config, { onlyOpen = false } = {}) {
   const candidatos = (config?.groups || []).filter((g) => !onlyOpen || g.join === GROUP_JOIN.OPEN);
-  if (candidatos.length === 0) return { group: null, reason: 'Não há grupo disponível.' };
+  if (candidatos.length === 0) return { group: null, reason: t('Não há grupo disponível.') };
 
   const nivel = typeof entity?.level === 'number' && Number.isFinite(entity.level) ? entity.level : null;
   const sexo = entity?.gender === 'male' || entity?.gender === 'female' ? entity.gender : null;
@@ -356,18 +357,18 @@ export function matchGroupFor(entity, config, { onlyOpen = false } = {}) {
   const geraisOk = gerais.filter(sexoOk);
   if (geraisOk.length === 1) return { group: geraisOk[0], reason: null };
   if (geraisOk.length > 1) {
-    return { group: null, reason: 'Há vários grupos livres — escolha à mão.' };
+    return { group: null, reason: t('Há vários grupos livres — escolha à mão.') };
   }
 
   // Nada combinou: o motivo é o primeiro dado que falta, na ordem em que a
   // pessoa consegue consertar — nível, depois sexo, depois a faixa em si.
   if (nivel == null) {
-    return { group: null, reason: 'Nível não informado — não dá para escolher a faixa.' };
+    return { group: null, reason: t('Nível não informado — não dá para escolher a faixa.') };
   }
   if (sexo == null && candidatos.some((g) => g.gender !== GROUP_GENDER.ANY)) {
-    return { group: null, reason: 'Sexo não informado — há grupos que dependem dele.' };
+    return { group: null, reason: t('Sexo não informado — há grupos que dependem dele.') };
   }
-  return { group: null, reason: `O nível ${nivel.toFixed(1)} não cabe em nenhuma faixa dos grupos.` };
+  return { group: null, reason: t('O nível {nivel} não cabe em nenhuma faixa dos grupos.', { nivel: nivel.toFixed(1) }) };
 }
 
 /**
@@ -442,7 +443,7 @@ export function suggestPlayGroupAssignments({
     // Um da dupla já tem grupo e o outro não: o que está sem grupo acompanha.
     if (scope !== 'all' && par && mexiveis.length === 1) {
       const fixo = unidade.find((x) => atual(x) !== null);
-      atribuir(mexiveis[0], atual(fixo), 'Acompanha a dupla.');
+      atribuir(mexiveis[0], atual(fixo), t('Acompanha a dupla.'));
       return;
     }
 
@@ -456,7 +457,7 @@ export function suggestPlayGroupAssignments({
     mexiveis.forEach((x) => atribuir(
       x,
       group.id,
-      par ? 'Dupla vinculada, pelo nível médio.' : (nivel != null ? `Nível ${nivel.toFixed(1)}.` : 'Grupo livre.'),
+      par ? t('Dupla vinculada, pelo nível médio.') : (nivel != null ? t('Nível {nivel}.', { nivel: nivel.toFixed(1) }) : t('Grupo livre.')),
     ));
   });
   return out;
@@ -467,18 +468,18 @@ export function suggestPlayGroupAssignments({
 export const PLAY_GROUP_TEMPLATES = Object.freeze([
   {
     id: 'by_level',
-    label: 'Por nível',
-    description: 'Iniciante, Intermediário e Avançado — cada um joga entre os seus.',
+    label: tk('Por nível'),
+    description: tk('Iniciante, Intermediário e Avançado — cada um joga entre os seus.'),
   },
   {
     id: 'by_formation',
-    label: 'Por tipo de dupla',
-    description: 'Mistas, masculinas e femininas — a partida sai sempre do tipo do grupo.',
+    label: tk('Por tipo de dupla'),
+    description: tk('Mistas, masculinas e femininas — a partida sai sempre do tipo do grupo.'),
   },
   {
     id: 'blank',
-    label: 'Em branco',
-    description: 'Dois grupos livres para você configurar do seu jeito (a turma A e a turma B).',
+    label: tk('Em branco'),
+    description: tk('Dois grupos livres para você configurar do seu jeito (a turma A e a turma B).'),
   },
 ]);
 
@@ -606,7 +607,7 @@ export function groupsConfigWarnings(config, { courts = 1, participants = [] } =
     if (!alguem) {
       avisos.push({
         key: `quadra-${c}`, tone: 'amber',
-        text: `A quadra ${c} não está liberada para nenhum grupo — só quem está sem grupo joga nela.`,
+        text: t('A quadra {c} não está liberada para nenhum grupo — só quem está sem grupo joga nela.', { c }),
       });
     }
   }
@@ -621,7 +622,7 @@ export function groupsConfigWarnings(config, { courts = 1, participants = [] } =
       if (faixas[i][0] > ate + EPS) {
         avisos.push({
           key: `faixa-${nivelTxt(ate)}-${nivelTxt(faixas[i][0])}`, tone: 'amber',
-          text: `Nenhum grupo cobre os níveis de ${nivelTxt(ate)} a ${nivelTxt(faixas[i][0])} — quem estiver nessa faixa fica sem grupo.`,
+          text: t('Nenhum grupo cobre os níveis de {de} a {ate} — quem estiver nessa faixa fica sem grupo.', { de: nivelTxt(ate), ate: nivelTxt(faixas[i][0]) }),
         });
       }
       ate = Math.max(ate, faixas[i][1]);
@@ -635,7 +636,7 @@ export function groupsConfigWarnings(config, { courts = 1, participants = [] } =
   if (gente.length > 0) {
     grupos.forEach((g) => {
       if (membrosDe(g).length === 0) {
-        avisos.push({ key: `vazio-${g.id}`, tone: 'info', text: `O grupo ${g.name} ainda não tem ninguém.` });
+        avisos.push({ key: `vazio-${g.id}`, tone: 'info', text: t('O grupo {nome} ainda não tem ninguém.', { nome: g.name }) });
       }
     });
   }
@@ -647,7 +648,7 @@ export function groupsConfigWarnings(config, { courts = 1, participants = [] } =
     if (sem > 0) {
       avisos.push({
         key: `sexo-${g.id}`, tone: 'amber',
-        text: `${sem} ${sem === 1 ? 'pessoa' : 'pessoas'} do grupo ${g.name} sem sexo informado — ${sem === 1 ? 'não entra' : 'não entram'} na conta de duplas mistas ou do mesmo sexo.`,
+        text: tn(sem, '{n} pessoa do grupo {nome} sem sexo informado — não entra na conta de duplas mistas ou do mesmo sexo.', '{n} pessoas do grupo {nome} sem sexo informado — não entram na conta de duplas mistas ou do mesmo sexo.', { nome: g.name }),
       });
     }
   });
@@ -656,7 +657,7 @@ export function groupsConfigWarnings(config, { courts = 1, participants = [] } =
   if (grupos.every((g) => g.paused)) {
     avisos.push({
       key: 'todos-pausados', tone: 'amber',
-      text: 'Todos os grupos estão em pausa — só quem está sem grupo joga.',
+      text: t('Todos os grupos estão em pausa — só quem está sem grupo joga.'),
     });
   }
   return avisos;
@@ -676,24 +677,24 @@ export function describeGroupRules(group) {
   const add = (key, label) => chips.push({ key, label });
 
   if (group.level_min != null && group.level_max != null) {
-    add('nivel', `Nível ${nivelTxt(group.level_min)}–${nivelTxt(group.level_max)}`);
+    add('nivel', t('Nível {de}–{ate}', { de: nivelTxt(group.level_min), ate: nivelTxt(group.level_max) }));
   } else if (group.level_min != null) {
-    add('nivel', `Nível ${nivelTxt(group.level_min)}+`);
+    add('nivel', t('Nível {de}+', { de: nivelTxt(group.level_min) }));
   } else if (group.level_max != null) {
-    add('nivel', `Nível até ${nivelTxt(group.level_max)}`);
+    add('nivel', t('Nível até {ate}', { ate: nivelTxt(group.level_max) }));
   }
-  if (group.gender !== GROUP_GENDER.ANY) add('sexo', GROUP_GENDER_LABELS[group.gender]);
-  if (group.formation !== GROUP_FORMATION.FREE) add('formacao', GROUP_FORMATION_LABELS[group.formation]);
-  if (group.max_level_gap != null) add('gap', `Diferença máx. de nível ${nivelTxt(group.max_level_gap)}`);
+  if (group.gender !== GROUP_GENDER.ANY) add('sexo', t(GROUP_GENDER_LABELS[group.gender]));
+  if (group.formation !== GROUP_FORMATION.FREE) add('formacao', t(GROUP_FORMATION_LABELS[group.formation]));
+  if (group.max_level_gap != null) add('gap', t('Diferença máx. de nível {n}', { n: nivelTxt(group.max_level_gap) }));
   if ((group.formation !== GROUP_FORMATION.FREE || group.max_level_gap != null) && group.strict) {
-    add('exige', 'Exige essas regras');
+    add('exige', t('Exige essas regras'));
   }
   if (group.courts.length > 0) {
-    add('quadras', `${group.courts.length === 1 ? 'Quadra' : 'Quadras'} ${group.courts.join(', ')}`);
+    add('quadras', tn(group.courts.length, 'Quadra {lista}', 'Quadras {lista}', { lista: group.courts.join(', ') }));
   }
-  if (group.fill) add('completa', 'Completa com quem está sem grupo');
-  if (group.join === GROUP_JOIN.CLOSED) add('fechado', 'Só a organização coloca');
-  if (group.paused) add('pausa', 'Em pausa');
+  if (group.fill) add('completa', t('Completa com quem está sem grupo'));
+  if (group.join === GROUP_JOIN.CLOSED) add('fechado', t('Só a organização coloca'));
+  if (group.paused) add('pausa', t('Em pausa'));
   return chips;
 }
 

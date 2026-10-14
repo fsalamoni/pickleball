@@ -7,12 +7,13 @@ import React from 'react';
 import { cn } from '@/core/lib/utils';
 import { ITEM_KINDS, ITEM_KIND_HINTS, ITEM_KIND_LABELS } from '@/modules/training/domain/taxonomy';
 import { KindIcon } from '@/v2/components/training/ItemCard';
+import { t } from '@/core/i18n';
 
 export default function KindPicker({ value, onChange, erro }) {
   return (
     <fieldset id="campo-kind" data-dica="treino-editor-tipo" className="scroll-mt-4">
-      <legend className="mb-1 font-display text-xl font-bold text-ink">Que tipo de item?</legend>
-      <p className="mb-4 text-sm text-gray-500">Escolha pelo que a pessoa vai FAZER com ele. O tipo decide quais partes da ficha aparecem.</p>
+      <legend className="mb-1 font-display text-xl font-bold text-ink">{t('Que tipo de item?')}</legend>
+      <p className="mb-4 text-sm text-gray-500">{t('Escolha pelo que a pessoa vai FAZER com ele. O tipo decide quais partes da ficha aparecem.')}</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ITEM_KINDS.map((k) => {
           const ativo = value === k;
@@ -34,8 +35,8 @@ export default function KindPicker({ value, onChange, erro }) {
               />
               <KindIcon kind={k} size="sm" />
               <span className="min-w-0">
-                <span className="block font-bold text-ink">{ITEM_KIND_LABELS[k]}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-gray-500">{ITEM_KIND_HINTS[k]}</span>
+                <span className="block font-bold text-ink">{t(ITEM_KIND_LABELS[k])}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-gray-500">{t(ITEM_KIND_HINTS[k])}</span>
               </span>
             </label>
           );

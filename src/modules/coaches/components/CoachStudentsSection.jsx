@@ -30,6 +30,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
   V2Surface, V2Textarea, V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 /** Alunos distintos derivados do histórico de aulas (com id conhecido). */
 function candidatesFromLessons(lessons) {
@@ -63,33 +64,33 @@ function FichaEditor({ coachId, student, onDone }) {
           student_name: student.student_name,
           student_email: student.student_email,
           level: form.level,
-          tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+          tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
           private_notes: form.private_notes,
         },
       });
-      toast.success('Ficha atualizada.');
+      toast.success(t('Ficha atualizada.'));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
   return (
     <div className="mt-3 space-y-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Nível">
-          <V2Input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} maxLength={40} placeholder="Ex.: 3.5 / Intermediário" />
+        <V2Field label={t('Nível')}>
+          <V2Input value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} maxLength={40} placeholder={t('Ex.: 3.5 / Intermediário')} />
         </V2Field>
-        <V2Field label="Tags (separadas por vírgula)">
-          <V2Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="saque, rede, defesa" />
+        <V2Field label={t('Tags (separadas por vírgula)')}>
+          <V2Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder={t('saque, rede, defesa')} />
         </V2Field>
       </div>
-      <V2Field label="Notas privadas (só você vê)">
+      <V2Field label={t('Notas privadas (só você vê)')}>
         <V2Textarea value={form.private_notes} onChange={(e) => setForm({ ...form, private_notes: e.target.value })} rows={3} maxLength={2000} />
       </V2Field>
       <div className="flex justify-end gap-2">
-        <V2Button size="sm" variant="ghost" onClick={onDone}>Cancelar</V2Button>
-        <V2Button size="sm" onClick={save} disabled={upsert.isPending}>{upsert.isPending ? 'Salvando…' : 'Salvar ficha'}</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={onDone}>{t('Cancelar')}</V2Button>
+        <V2Button size="sm" onClick={save} disabled={upsert.isPending}>{upsert.isPending ? t('Salvando…') : t('Salvar ficha')}</V2Button>
       </div>
     </div>
   );
@@ -101,7 +102,7 @@ function ValidationEditor({ coachId, coachName, student, current, onDone }) {
   const [note, setNote] = useState(current?.note || '');
 
   const save = async () => {
-    if (!levelId) { toast.error('Selecione um nível.'); return; }
+    if (!levelId) { toast.error(t('Selecione um nível.')); return; }
     try {
       await upsert.mutateAsync({
         coach_id: coachId,
@@ -111,32 +112,32 @@ function ValidationEditor({ coachId, coachName, student, current, onDone }) {
         level_id: levelId,
         note,
       });
-      toast.success('Nível validado.');
+      toast.success(t('Nível validado.'));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível validar.');
+      toast.error(err?.message || t('Não foi possível validar.'));
     }
   };
 
   return (
     <div className="mt-3 space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-3">
       <p className="text-xs text-gray-600">
-        Ao validar, o aluno recebe um selo público de nível validado por professor no perfil dele.
+        {t('Ao validar, o aluno recebe um selo público de nível validado por professor no perfil dele.')}
       </p>
-      <V2Field label="Nível atestado">
+      <V2Field label={t('Nível atestado')}>
         <V2Select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
-          <option value="">Selecione…</option>
+          <option value="">{t('Selecione…')}</option>
           {VALIDATION_LEVEL_OPTIONS.map((l) => (
             <option key={l.id} value={l.id}>{l.badge ? `${l.badge} — ${l.name}` : l.name}</option>
           ))}
         </V2Select>
       </V2Field>
-      <V2Field label="Observação (opcional, pública)">
-        <V2Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} placeholder="Ex.: dink e voleio consistentes" />
+      <V2Field label={t('Observação (opcional, pública)')}>
+        <V2Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} placeholder={t('Ex.: dink e voleio consistentes')} />
       </V2Field>
       <div className="flex justify-end gap-2">
-        <V2Button size="sm" variant="ghost" onClick={onDone}>Cancelar</V2Button>
-        <V2Button size="sm" onClick={save} disabled={upsert.isPending}>{upsert.isPending ? 'Salvando…' : 'Validar nível'}</V2Button>
+        <V2Button size="sm" variant="ghost" onClick={onDone}>{t('Cancelar')}</V2Button>
+        <V2Button size="sm" onClick={save} disabled={upsert.isPending}>{upsert.isPending ? t('Salvando…') : t('Validar nível')}</V2Button>
       </div>
     </div>
   );
@@ -144,10 +145,10 @@ function ValidationEditor({ coachId, coachName, student, current, onDone }) {
 
 /** De onde veio o fim do vínculo, na voz do professor. */
 function endedLine(student, coachId) {
-  if (student.ended_reason === 'conta_excluida') return 'A conta do aluno foi excluída.';
-  if (student.ended_by === coachId) return 'Você encerrou o vínculo.';
-  if (student.ended_by === student.student_id) return 'O aluno encerrou o vínculo.';
-  return 'Vínculo encerrado.';
+  if (student.ended_reason === 'conta_excluida') return t('A conta do aluno foi excluída.');
+  if (student.ended_by === coachId) return t('Você encerrou o vínculo.');
+  if (student.ended_by === student.student_id) return t('O aluno encerrou o vínculo.');
+  return t('Vínculo encerrado.');
 }
 
 function StudentCard({ coachId, coachName, student, completedCount, validation, rating, levelingOn, vinculoOn, onStatus, onRemove, isPending }) {
@@ -164,22 +165,22 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-bold text-ink">{student.student_name || 'Aluno'}</p>
-              <V2Badge tone={studentStatusTone(student.status)}>{studentStatusLabel(student.status)}</V2Badge>
+              <p className="font-bold text-ink">{student.student_name || t('Aluno')}</p>
+              <V2Badge tone={studentStatusTone(student.status)}>{t(studentStatusLabel(student.status))}</V2Badge>
             </div>
             <p className="text-xs text-gray-500">
-              {student.level ? `${student.level} · ` : ''}{completedCount} aula(s) concluída(s)
+              {student.level ? `${student.level} · ` : ''}{tn(completedCount, '{n} aula concluída', '{n} aulas concluídas')}
             </p>
             {student.tags?.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {student.tags.map((t) => <V2Badge key={t} tone="blue">{t}</V2Badge>)}
+                {student.tags.map((tag) => <V2Badge key={tag} tone="blue">{tag}</V2Badge>)}
               </div>
             )}
             {levelingOn && validation?.level_id && (
               <div className="mt-1">
                 <V2Badge tone="green">
                   <ShieldCheck className="mr-1 inline h-3 w-3" />
-                  Nível {validation.level_badge || validation.level_name} validado
+                  {t('Nível {nivel} validado', { nivel: validation.level_badge || validation.level_name })}
                 </V2Badge>
               </div>
             )}
@@ -187,7 +188,7 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
               <div className="mt-1">
                 <V2Badge tone="acid">
                   <TrendingUp className="mr-1 inline h-3 w-3" />
-                  Rating {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
+                  {t('Rating')} {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
                 </V2Badge>
               </div>
             )}
@@ -195,21 +196,21 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
         </div>
         <div className="flex items-center gap-1.5">
           {levelingOn && (
-            <button type="button" onClick={() => setValidating((v) => !v)} className="rounded-full border border-blue-200 p-1.5 text-blue-600 hover:bg-blue-50" aria-label="Validar nível">
+            <button type="button" onClick={() => setValidating((v) => !v)} className="rounded-full border border-blue-200 p-1.5 text-blue-600 hover:bg-blue-50" aria-label={t('Validar nível')}>
               <ShieldCheck className="h-3.5 w-3.5" />
             </button>
           )}
-          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar ficha">
+          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label={t('Editar ficha')}>
             <Pencil className="h-3.5 w-3.5" />
           </button>
           {canCoachRemoveStudent(student) && (
             <ConfirmDialog
-              title="Remover aluno?"
-              description={`${student.student_name || 'O aluno'} será removido do seu roster. As aulas não são afetadas.`}
-              confirmLabel="Remover"
+              title={t('Remover aluno?')}
+              description={t('{nome} será removido do seu roster. As aulas não são afetadas.', { nome: student.student_name || t('O aluno') })}
+              confirmLabel={t('Remover')}
               onConfirm={() => onRemove(student)}
               trigger={(
-                <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Remover aluno">
+                <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label={t('Remover aluno')}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -225,7 +226,7 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
         {student.status === STUDENT_STATUS.INVITED && (
           <span className="text-xs text-amber-600">
-            {reconvite ? 'Convite enviado de novo. Esperando o aluno aceitar.' : 'Aguardando o aluno aceitar o convite.'}
+            {reconvite ? t('Convite enviado de novo. Esperando o aluno aceitar.') : t('Aguardando o aluno aceitar o convite.')}
           </span>
         )}
         {student.status === STUDENT_STATUS.ENDED && (
@@ -233,35 +234,35 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
         )}
         {student.status === STUDENT_STATUS.ACTIVE && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.PAUSED)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50">
-            Pausar
+            {t('Pausar')}
           </button>
         )}
         {student.status === STUDENT_STATUS.PAUSED && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.ACTIVE)} className="rounded-full border border-ink bg-ink px-3 py-1 text-xs font-bold text-white hover:bg-ink/90 disabled:opacity-50">
-            <Check className="mr-1 inline h-3 w-3" /> Reativar
+            <Check className="mr-1 inline h-3 w-3" /> {t('Reativar')}
           </button>
         )}
         {vinculoOn && (student.status === STUDENT_STATUS.ACTIVE || student.status === STUDENT_STATUS.PAUSED) && (
           <ConfirmDialog
-            title="Encerrar o vínculo de aluno?"
-            description={`${nome} deixa de ser seu aluno: você não vê mais o diário dele, não envia treinos e ele perde o conteúdo só para alunos. A ficha fica no seu histórico, e o vínculo só volta se ele aceitar um novo convite. Aulas e pacotes não mudam.`}
-            confirmLabel="Encerrar vínculo"
+            title={t('Encerrar o vínculo de aluno?')}
+            description={t('{nome} deixa de ser seu aluno: você não vê mais o diário dele, não envia treinos e ele perde o conteúdo só para alunos. A ficha fica no seu histórico, e o vínculo só volta se ele aceitar um novo convite. Aulas e pacotes não mudam.', { nome })}
+            confirmLabel={t('Encerrar vínculo')}
             onConfirm={() => onStatus(student, STUDENT_STATUS.ENDED)}
             trigger={(
               <button type="button" disabled={isPending} className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
-                Encerrar vínculo
+                {t('Encerrar vínculo')}
               </button>
             )}
           />
         )}
         {vinculoOn && reconvite && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.ENDED)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50">
-            Cancelar convite
+            {t('Cancelar convite')}
           </button>
         )}
         {vinculoOn && student.status === STUDENT_STATUS.ENDED && student.ended_reason !== 'conta_excluida' && (
           <button type="button" disabled={isPending} onClick={() => onStatus(student, STUDENT_STATUS.INVITED)} className="rounded-full border border-ink px-3 py-1 text-xs font-bold text-ink hover:bg-white disabled:opacity-50">
-            <UserPlus className="mr-1 inline h-3 w-3" /> Convidar de novo
+            <UserPlus className="mr-1 inline h-3 w-3" /> {t('Convidar de novo')}
           </button>
         )}
       </div>
@@ -341,31 +342,31 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
           status: STUDENT_STATUS.ACTIVE, // veio de aula real, já é aluno ativo
         },
       });
-      toast.success('Aluno adicionado ao roster.');
+      toast.success(t('Aluno adicionado ao roster.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível adicionar.');
+      toast.error(err?.message || t('Não foi possível adicionar.'));
     }
   };
 
   const handleStatus = async (student, next) => {
     const feito = {
-      [STUDENT_STATUS.ENDED]: student.status === STUDENT_STATUS.INVITED ? 'Convite cancelado.' : 'Vínculo encerrado.',
-      [STUDENT_STATUS.INVITED]: 'Convite enviado. O vínculo volta quando o aluno aceitar.',
+      [STUDENT_STATUS.ENDED]: student.status === STUDENT_STATUS.INVITED ? t('Convite cancelado.') : t('Vínculo encerrado.'),
+      [STUDENT_STATUS.INVITED]: t('Convite enviado. O vínculo volta quando o aluno aceitar.'),
     };
     try {
       await setStatus.mutateAsync({ student, nextStatus: next });
-      toast.success(feito[next] || 'Status atualizado.');
+      toast.success(feito[next] || t('Status atualizado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar.');
+      toast.error(err?.message || t('Não foi possível atualizar.'));
     }
   };
 
   const handleRemove = async (student) => {
     try {
       await remove.mutateAsync({ student });
-      toast.success('Aluno removido.');
+      toast.success(t('Aluno removido.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover.');
+      toast.error(err?.message || t('Não foi possível remover.'));
     }
   };
 
@@ -376,7 +377,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Alunos</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Alunos')}</h2>
           {summary.total > 0 && (
             <span className="text-xs text-gray-500">
               {summary.active} ativo(s) · {summary.invited} convidado(s) · {summary.paused} pausado(s)
@@ -385,7 +386,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
           )}
         </div>
         {students.length > 0 && (
-          <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar aluno…" className="w-44" />
+          <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('Buscar aluno…')} className="w-44" />
         )}
       </div>
 
@@ -393,7 +394,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
           adicionar regravaria como ativo quem está pausado. */}
       {candidates.length > 0 && !alunosFalharam && (
         <div className="mb-4 rounded-2xl border border-green-100 bg-green-50/50 p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-green-700">Do seu histórico de aulas</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-green-700">{t('Do seu histórico de aulas')}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {candidates.map((c) => (
               <button
@@ -403,7 +404,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
                 onClick={() => handleAdd(c)}
                 className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-white px-3 py-1 text-xs font-semibold text-green-800 hover:bg-green-100 disabled:opacity-50"
               >
-                <UserPlus className="h-3 w-3" /> {c.student_name || 'Aluno'}
+                <UserPlus className="h-3 w-3" /> {c.student_name || t('Aluno')}
               </button>
             ))}
           </div>
@@ -413,14 +414,14 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
       {isLoading ? (
         <V2Skeleton lines={3} />
       ) : alunosFalharam ? (
-        <V2ErrorState inline title="Não foi possível carregar os seus alunos" onRetry={() => recarregarAlunos()} />
+        <V2ErrorState inline title={t('Não foi possível carregar os seus alunos')} onRetry={() => recarregarAlunos()} />
       ) : visible.length === 0 ? (
         <V2EmptyState
           icon={Users}
-          title={students.length === 0 ? 'Nenhum aluno ainda' : 'Nenhum aluno encontrado'}
+          title={students.length === 0 ? t('Nenhum aluno ainda') : t('Nenhum aluno encontrado')}
           description={students.length === 0
-            ? 'Conforme você der aulas, adicione os alunos aqui para acompanhar a evolução.'
-            : 'Ajuste a busca para encontrar o aluno.'}
+            ? t('Conforme você der aulas, adicione os alunos aqui para acompanhar a evolução.')
+            : t('Ajuste a busca para encontrar o aluno.')}
         />
       ) : (
         <div className="space-y-2">

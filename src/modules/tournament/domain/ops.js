@@ -7,6 +7,7 @@
  */
 
 import { MATCH_STATUS, REGISTRATION_STATUS, TOURNAMENT_STATUS } from './constants.js';
+import { t } from '@/core/i18n';
 
 const DONE_MATCH_STATUSES = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
 
@@ -83,7 +84,7 @@ function countMatches(matches) {
 export function computeTournamentOps({ tournament = {}, modalities = [], registrations = [], matches = [] } = {}) {
   const perModality = modalities.map((modality) => ({
     id: modality.id,
-    name: modality.name || 'Modalidade',
+    name: modality.name || t('Modalidade'),
     registrations: countRegistrations(registrations.filter((r) => r.modality_id === modality.id)),
     matches: countMatches(matches.filter((m) => m.modality_id === modality.id)),
   }));
@@ -98,20 +99,20 @@ export function computeTournamentOps({ tournament = {}, modalities = [], registr
     const declared = totals.registrations.paymentDeclared;
     alerts.push({
       severity: 'amber',
-      text: `${totals.registrations.pendingPayment} inscrição(ões) aguardando confirmação de pagamento`
-        + (declared > 0 ? ` — ${declared} já declararam ter pago` : ''),
+      text: t('{pendingPayment} inscrição(ões) aguardando confirmação de pagamento', { pendingPayment: totals.registrations.pendingPayment })
+        + (declared > 0 ? t(' — {declared} já declararam ter pago', { declared }) : ''),
     });
   }
   if (totals.registrations.waitlist > 0) {
-    alerts.push({ severity: 'blue', text: `${totals.registrations.waitlist} inscrição(ões) na lista de espera` });
+    alerts.push({ severity: 'blue', text: t('{waitlist} inscrição(ões) na lista de espera', { waitlist: totals.registrations.waitlist }) });
   }
   if (totals.matches.unscheduled > 0) {
-    alerts.push({ severity: 'amber', text: `${totals.matches.unscheduled} jogo(s) sem data/horário definido` });
+    alerts.push({ severity: 'amber', text: t('{unscheduled} jogo(s) sem data/horário definido', { unscheduled: totals.matches.unscheduled }) });
   }
   const started = tournament.status === TOURNAMENT_STATUS.IN_PROGRESS;
   perModality.forEach((entry) => {
     if (entry.matches.total === 0 && entry.registrations.confirmed > 0 && started) {
-      alerts.push({ severity: 'red', text: `Modalidade "${entry.name}" ainda sem sorteio` });
+      alerts.push({ severity: 'red', text: t('Modalidade "{name}" ainda sem sorteio', { name: entry.name }) });
     }
   });
 

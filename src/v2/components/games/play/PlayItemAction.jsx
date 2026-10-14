@@ -34,9 +34,10 @@ import { SlotAction } from '@/v2/components/arenas/openMatch/OpenSlotCard';
 import { useOpenSlotActions } from '@/v2/components/arenas/openMatch/useOpenSlotActions';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** O link para dentro do jogo — sempre ao lado do botão, para ver antes de entrar. */
-function Abrir({ item, size, rotulo = 'Abrir' }) {
+function Abrir({ item, size, rotulo = t('Abrir') }) {
   return (
     <V2Button asChild variant="ghost" size={size}>
       <Link to={item.link} aria-label={`${rotulo}: ${item.title}`}>
@@ -58,19 +59,19 @@ function AcaoDoDia({ item, size, mostrarAbrir }) {
     const onSair = async () => {
       try {
         await sair.mutateAsync(item.id);
-        toast.success(daArena ? 'Presença desmarcada.' : 'Você saiu do dia de jogo.');
+        toast.success(daArena ? t('Presença desmarcada.') : t('Você saiu do dia de jogo.'));
       } catch (err) {
-        toast.error(err?.message || 'Não foi possível sair.');
+        toast.error(err?.message || t('Não foi possível sair.'));
       }
     };
     return (
       <>
         <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
-          <Check className="h-3.5 w-3.5" aria-hidden="true" /> Você vai
+          <Check className="h-3.5 w-3.5" aria-hidden="true" /> {t('Você vai')}
         </span>
         {mostrarAbrir && <Abrir item={item} size={size} />}
-        <V2Button variant="ghost" size={size} onClick={onSair} disabled={ocupado} aria-label={`Sair de ${item.title}`}>
-          <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {sair.isPending ? 'Saindo…' : (daArena ? 'Desmarcar' : 'Sair')}
+        <V2Button variant="ghost" size={size} onClick={onSair} disabled={ocupado} aria-label={t('Sair de {titulo}', { titulo: item.title })}>
+          <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {sair.isPending ? t('Saindo…') : (daArena ? t('Desmarcar') : t('Sair'))}
         </V2Button>
       </>
     );
@@ -80,8 +81,8 @@ function AcaoDoDia({ item, size, mostrarAbrir }) {
   if (daArena && item.porQuadra) {
     return (
       <V2Button asChild size={size}>
-        <Link to={item.link} aria-label={`Escolher a quadra e entrar em ${item.title}`}>
-          <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> Escolher a quadra
+        <Link to={item.link} aria-label={t('Escolher a quadra e entrar em {titulo}', { titulo: item.title })}>
+          <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> {t('Escolher a quadra')}
         </Link>
       </V2Button>
     );
@@ -91,23 +92,23 @@ function AcaoDoDia({ item, size, mostrarAbrir }) {
     try {
       if (daArena) {
         await marcar.mutateAsync({ gameDay: item.fonte, courtId: null });
-        toast.success('Presença confirmada. Bom jogo!');
+        toast.success(t('Presença confirmada. Bom jogo!'));
       } else {
         await entrar.mutateAsync(item.fonte);
-        toast.success('Você entrou no dia de jogo. Bom jogo!');
+        toast.success(t('Você entrou no dia de jogo. Bom jogo!'));
       }
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível entrar.');
+      toast.error(err?.message || t('Não foi possível entrar.'));
     }
   };
   const pendente = entrar.isPending || marcar.isPending;
   return (
     <>
-      <V2Button size={size} onClick={onEntrar} disabled={ocupado} aria-label={`${daArena ? 'Marcar presença em' : 'Participar de'} ${item.title}`}>
+      <V2Button size={size} onClick={onEntrar} disabled={ocupado} aria-label={daArena ? t('Marcar presença em {titulo}', { titulo: item.title }) : t('Participar de {titulo}', { titulo: item.title })}>
         <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
-        {pendente ? 'Entrando…' : (daArena ? 'Marcar presença' : 'Participar')}
+        {pendente ? t('Entrando…') : (daArena ? t('Marcar presença') : t('Participar'))}
       </V2Button>
-      {mostrarAbrir && <Abrir item={item} size={size} rotulo="Ver" />}
+      {mostrarAbrir && <Abrir item={item} size={size} rotulo={t('Ver')} />}
     </>
   );
 }
@@ -130,7 +131,7 @@ function AcaoDoJogoAberto({ item, size, mostrarAbrir }) {
         onSair={() => acoes.onSair(slot)}
         onFila={() => acoes.onFila(slot)}
       />
-      {mostrarAbrir && <Abrir item={item} size={size} rotulo="Ver" />}
+      {mostrarAbrir && <Abrir item={item} size={size} rotulo={t('Ver')} />}
     </>
   );
 }
@@ -139,13 +140,13 @@ function AcaoDoJogoAberto({ item, size, mostrarAbrir }) {
 function AcaoDoConvite({ item, size }) {
   const g = item.fonte || {};
   if (g.kind === 'game_day' && g.game_day_id) {
-    return <Abrir item={item} size={size} rotulo="Ver e participar" />;
+    return <Abrir item={item} size={size} rotulo={t('Ver e participar')} />;
   }
   return (
     <V2ChatLauncherButton
       athlete={{ id: g.created_by, platform_name: g.creator_name, photo_url: g.creator_photo }}
       size={size}
-      label="Chamar para jogar"
+      label={t('Chamar para jogar')}
     />
   );
 }

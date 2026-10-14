@@ -31,6 +31,7 @@ import { WAITLIST_STATUS } from '@/modules/arenas/domain/waitlist';
 import { OpenSlotCard as VagaCard, WaitlistCallCard as ChamadaDaFila } from '@/v2/components/arenas/openMatch/OpenSlotCard';
 import { useOpenSlotActions } from '@/v2/components/arenas/openMatch/useOpenSlotActions';
 import { V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ArenaOpenMatch() {
   const { arenaId } = useParams();
@@ -80,16 +81,15 @@ export default function V2ArenaOpenMatch() {
   return (
     <div className="mx-auto max-w-[820px]">
       <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Jogos abertos</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Jogos abertos')}</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Horários que a arena abriu para quem quiser entrar. Não precisa levar dupla.
+        {t('Horários que a arena abriu para quem quiser entrar. Não precisa levar dupla.')}
       </p>
 
       {!isAuthenticated && (
         <V2Surface className="mt-4">
           <p className="text-sm text-gray-600">
-            <Link to="/entrar" className="font-bold text-ink underline">Entre na sua conta</Link>{' '}
-            para se inscrever nos jogos.
+            <Link to="/entrar" className="font-bold text-ink underline">{t('Entre na sua conta')}</Link>{t(' para se inscrever nos jogos.')}
           </p>
         </V2Surface>
       )}
@@ -113,9 +113,9 @@ export default function V2ArenaOpenMatch() {
         {isError ? (
           <V2Surface>
             <p className="text-sm text-red-700">
-              Não foi possível carregar os jogos abertos.{' '}
+              {t('Não foi possível carregar os jogos abertos. ')}
               <button type="button" className="font-bold underline" onClick={() => refetch()}>
-                Tentar de novo
+                {t('Tentar de novo')}
               </button>
             </p>
           </V2Surface>
@@ -126,7 +126,7 @@ export default function V2ArenaOpenMatch() {
             {meus.length > 0 && (
               <div className="space-y-3">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                  Você vai jogar
+                  {t('Você vai jogar')}
                 </h2>
                 {meus.map((s) => (
                   <VagaCard
@@ -142,11 +142,11 @@ export default function V2ArenaOpenMatch() {
               <V2Surface>
                 <V2EmptyState
                   icon={Users}
-                  title="Nenhum jogo aberto agora"
-                  description={`A ${arena.name} ainda não publicou horários com vagas. Volte mais tarde ou reserve uma quadra.`}
+                  title={t('Nenhum jogo aberto agora')}
+                  description={t('A {name} ainda não publicou horários com vagas. Volte mais tarde ou reserve uma quadra.', { name: arena.name })}
                   action={(
                     <V2Button asChild variant="secondary">
-                      <Link to={`/arenas/${arena.id}`}>Ver a arena</Link>
+                      <Link to={`/arenas/${arena.id}`}>{t('Ver a arena')}</Link>
                     </V2Button>
                   )}
                 />
@@ -155,7 +155,7 @@ export default function V2ArenaOpenMatch() {
               <div className="space-y-3">
                 {meus.length > 0 && (
                   <h2 className="pt-2 text-xs font-bold uppercase tracking-widest text-gray-500">
-                    Outros jogos
+                    {t('Outros jogos')}
                   </h2>
                 )}
                 {disponiveis.map((s) => (

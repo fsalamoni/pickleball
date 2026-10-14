@@ -62,6 +62,7 @@ import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tn, tk } from '@/core/i18n';
 
 /** `Timestamp | Date | number` → ms, ou `null`. */
 function ms(v) {
@@ -94,7 +95,7 @@ function iso(v) {
 /* ========================================================== 3. NPS ====== */
 
 const NPS_TONE = { promoter: 'green', passive: 'amber', detractor: 'red' };
-const NPS_LABEL = { promoter: 'Promotor', passive: 'Neutro', detractor: 'Detrator' };
+const NPS_LABEL = { promoter: tk('Promotor'), passive: tk('Neutro'), detractor: tk('Detrator') };
 
 function NpsSecao({ arenaId }) {
   const { data: resumo } = useArenaNps(arenaId);
@@ -121,7 +122,7 @@ function NpsSecao({ arenaId }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Star className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Satisfação (NPS)</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Satisfação (NPS)')}</h2>
       </div>
 
       {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
@@ -129,8 +130,8 @@ function NpsSecao({ arenaId }) {
       {!isLoading && total === 0 && (
         <V2EmptyState
           icon={Star}
-          title="Ninguém respondeu ainda"
-          description="A pergunta aparece sozinha para quem jogou aqui nos últimos 30 dias, uma vez a cada 90 dias. Ela não é feita a quem nunca veio."
+          title={t('Ninguém respondeu ainda')}
+          description={t('A pergunta aparece sozinha para quem jogou aqui nos últimos 30 dias, uma vez a cada 90 dias. Ela não é feita a quem nunca veio.')}
         />
       )}
 
@@ -138,9 +139,9 @@ function NpsSecao({ arenaId }) {
         <>
           <div className="flex flex-wrap items-end gap-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">NPS</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('NPS')}</p>
               <p className="font-display text-4xl font-bold text-ink">{temNota ? nota : '—'}</p>
-              <p className="text-xs text-gray-500">{total} {total === 1 ? 'resposta' : 'respostas'}</p>
+              <p className="text-xs text-gray-500">{tn(total, '{n} resposta', '{n} respostas')}</p>
             </div>
             <div className="flex-1 space-y-1.5">
               {['promoter', 'passive', 'detractor'].map((k) => {
@@ -148,7 +149,7 @@ function NpsSecao({ arenaId }) {
                 const pct = total > 0 ? Math.round((n / total) * 100) : 0;
                 return (
                   <div key={k} className="flex items-center gap-2">
-                    <span className="w-20 shrink-0 text-xs text-gray-500">{NPS_LABEL[k]}</span>
+                    <span className="w-20 shrink-0 text-xs text-gray-500">{t(NPS_LABEL[k])}</span>
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
                       <div
                         className={`h-full rounded-full ${k === 'promoter' ? 'bg-green-500' : k === 'passive' ? 'bg-amber-400' : 'bg-red-400'}`}
@@ -164,18 +165,16 @@ function NpsSecao({ arenaId }) {
 
           <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
             <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            O NPS é a diferença entre a fatia de promotores (9-10) e a de detratores (0-6).
-            Vai de −100 a 100; acima de 50 é considerado muito bom.
+            {t('O NPS é a diferença entre a fatia de promotores (9-10) e a de detratores (0-6). Vai de −100 a 100; acima de 50 é considerado muito bom.')}
           </p>
 
           <div className="mt-4">
             <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">
-              O que estão dizendo
+              {t('O que estão dizendo')}
             </p>
             {comentarios.length === 0 ? (
               <p className="text-sm text-gray-500">
-                As notas vieram sem comentário. O número diz que algo mudou; o comentário é o
-                que diz o quê.
+                {t('As notas vieram sem comentário. O número diz que algo mudou; o comentário é o que diz o quê.')}
               </p>
             ) : (
               <ul className="space-y-2">
@@ -183,7 +182,7 @@ function NpsSecao({ arenaId }) {
                   <li key={r.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <V2Badge tone={NPS_TONE[classifyNps(r.score)]}>
-                        {r.score} · {NPS_LABEL[classifyNps(r.score)]}
+                        {r.score} · {t(NPS_LABEL[classifyNps(r.score)])}
                       </V2Badge>
                       {iso(r.created_at) && (
                         <span className="text-xs text-gray-500">{formatDateShortBR(iso(r.created_at))}</span>
@@ -230,10 +229,10 @@ function IndicacoesSecao({ arenaId }) {
         referredReward: Number(valores.quemChega) || 0,
         program: programa,
       });
-      toast.success(`Indicação registrada. ${formatPrice(r.referrerReward)} para quem indicou e ${formatPrice(r.referredReward)} para quem chegou.`);
+      toast.success(t('Indicação registrada. {referrerReward} para quem indicou e {referredReward} para quem chegou.', { referrerReward: formatPrice(r.referrerReward), referredReward: formatPrice(r.referredReward) }));
       setCode(''); setIndicado(null); setPremios(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar a indicação.');
+      toast.error(err?.message || t('Não foi possível registrar a indicação.'));
     }
   };
 
@@ -244,11 +243,10 @@ function IndicacoesSecao({ arenaId }) {
     <V2Surface>
       <div className="mb-2 flex items-center gap-2">
         <Gift className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Indique e ganhe</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Indique e ganhe')}</h2>
       </div>
       <p className="mb-4 text-sm text-gray-500">
-        Cada atleta pega o próprio código na página da arena, em &quot;Indique e ganhe&quot;. As regras abaixo dizem o
-        que cada lado ganha. O crédito é lançado pela arena porque só ela pode creditar saldo.
+        {t('Cada atleta pega o próprio código na página da arena, em "Indique e ganhe". As regras abaixo dizem o que cada lado ganha. O crédito é lançado pela arena porque só ela pode creditar saldo.')}
       </p>
 
       <ReferralRulesCard
@@ -262,36 +260,35 @@ function IndicacoesSecao({ arenaId }) {
 
       <BookingReferralsToRegister arenaId={arenaId} />
 
-      <h3 className="mb-2 mt-5 font-display text-base font-bold text-ink">Registrar uma indicação no balcão</h3>
+      <h3 className="mb-2 mt-5 font-display text-base font-bold text-ink">{t('Registrar uma indicação no balcão')}</h3>
       <p className="mb-3 text-xs text-gray-500">
-        Quem digita o código ao pedir a reserva é conferido sozinho, na confirmação. Aqui é para quem chegou no
-        balcão dizendo que foi indicado: informe o código e quem chegou.
-        {programa ? ' As regras do programa são conferidas (limite por pessoa e, se valer, "só quem nunca reservou aqui").' : ''}
+        {t('Quem digita o código ao pedir a reserva é conferido sozinho, na confirmação. Aqui é para quem chegou no balcão dizendo que foi indicado: informe o código e quem chegou.')}
+        {programa ? t(' As regras do programa são conferidas (limite por pessoa e, se valer, "só quem nunca reservou aqui").') : ''}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <V2Field label="Código de indicação" htmlFor="ref-code">
+        <V2Field label={t('Código de indicação')} htmlFor="ref-code">
           <V2Input id="ref-code" maxLength={20} placeholder="ABC123XYZW"
             value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s+/g, ''))} />
         </V2Field>
-        <V2Field label="Crédito para quem indicou (R$)" htmlFor="ref-premio-indica">
+        <V2Field label={t('Crédito para quem indicou (R$)')} htmlFor="ref-premio-indica">
           <V2Input id="ref-premio-indica" type="number" min="0" step="0.01"
             value={valores.quemIndica} onChange={(e) => setPremios({ ...valores, quemIndica: e.target.value })} />
         </V2Field>
-        <V2Field label="Crédito para quem chegou (R$)" htmlFor="ref-premio-chega">
+        <V2Field label={t('Crédito para quem chegou (R$)')} htmlFor="ref-premio-chega">
           <V2Input id="ref-premio-chega" type="number" min="0" step="0.01"
             value={valores.quemChega} onChange={(e) => setPremios({ ...valores, quemChega: e.target.value })} />
         </V2Field>
       </div>
 
-      <V2Field label="Quem foi indicado" htmlFor="ref-quem" className="mt-3">
+      <V2Field label={t('Quem foi indicado')} htmlFor="ref-quem" className="mt-3">
         <AthletePicker value={indicado} onChange={setIndicado} inputId="ref-quem" />
       </V2Field>
 
       <div className="mt-3 flex justify-end">
         <V2Button disabled={!pronto || resgatar.isPending} onClick={enviar}>
           <Check className="mr-1.5 h-4 w-4" />
-          {resgatar.isPending ? 'Registrando…' : 'Registrar indicação'}
+          {resgatar.isPending ? t('Registrando…') : t('Registrar indicação')}
         </V2Button>
       </div>
 
@@ -320,11 +317,11 @@ export function ArenaMarketingPanel({ arena, view }) {
     <V2Surface>
       <V2EmptyState
         icon={MessageSquare}
-        title="Nenhuma ferramenta de marketing ativa"
-        description="Cupons, campanhas, pesquisa de satisfação e indique-e-ganhe ligam separadamente, em Configurações → Módulos. Cada uma ligada vira uma aba aqui."
+        title={t('Nenhuma ferramenta de marketing ativa')}
+        description={t('Cupons, campanhas, pesquisa de satisfação e indique-e-ganhe ligam separadamente, em Configurações → Módulos. Cada uma ligada vira uma aba aqui.')}
         action={(
           <Link to={`/arenas/${arena.id}/gerir?aba=modulos`} className="text-sm font-bold text-ink underline">
-            Abrir os módulos
+            {t('Abrir os módulos')}
           </Link>
         )}
       />

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FORUM_POLL } from '@/modules/clubs/domain/constants';
+import { t } from '@/core/i18n';
 
 /**
  * Construtor de enquete (controlado). `value` = { question, options[], multiple,
@@ -35,29 +36,29 @@ export default function PollBuilder({ value, onChange }) {
   return (
     <div className="space-y-3 rounded-xl border border-gray-100 bg-paper p-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <BarChart3 className="h-4 w-4 text-green-700" /> Enquete
+        <BarChart3 className="h-4 w-4 text-green-700" /> {t('Enquete')}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="poll-question">Pergunta</Label>
+        <Label htmlFor="poll-question">{t('Pergunta')}</Label>
         <Input
           id="poll-question"
           value={value.question}
           onChange={(e) => setField('question', e.target.value)}
           maxLength={FORUM_POLL.QUESTION_MAX_CHARS}
-          placeholder="Ex.: Qual o melhor dia para o torneio interno?"
+          placeholder={t('Ex.: Qual o melhor dia para o torneio interno?')}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Opções</Label>
+        <Label>{t('Opções')}</Label>
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-2">
             <Input
               value={option}
               onChange={(e) => setOption(index, e.target.value)}
               maxLength={FORUM_POLL.OPTION_MAX_CHARS}
-              placeholder={`Opção ${index + 1}`}
+              placeholder={t('Opção {n}', { n: index + 1 })}
             />
             <Button
               type="button"
@@ -66,7 +67,7 @@ export default function PollBuilder({ value, onChange }) {
               className="h-9 w-9 shrink-0 text-gray-400 hover:text-red-600"
               onClick={() => removeOption(index)}
               disabled={options.length <= FORUM_POLL.MIN_OPTIONS}
-              aria-label="Remover opção"
+              aria-label={t('Remover opção')}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -74,28 +75,28 @@ export default function PollBuilder({ value, onChange }) {
         ))}
         {options.length < FORUM_POLL.MAX_OPTIONS && (
           <Button type="button" variant="outline" size="sm" onClick={addOption}>
-            <Plus className="mr-1.5 h-4 w-4" /> Adicionar opção
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Adicionar opção')}
           </Button>
         )}
       </div>
 
       <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white/60 px-3 py-2">
         <div>
-          <div className="text-sm font-medium text-ink">Permitir múltiplas escolhas</div>
-          <div className="text-xs text-gray-500">Cada participante pode marcar mais de uma opção.</div>
+          <div className="text-sm font-medium text-ink">{t('Permitir múltiplas escolhas')}</div>
+          <div className="text-xs text-gray-500">{t('Cada participante pode marcar mais de uma opção.')}</div>
         </div>
         <Switch checked={!!value.multiple} onCheckedChange={(checked) => setField('multiple', checked)} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="poll-closes">Encerrar automaticamente em (opcional)</Label>
+        <Label htmlFor="poll-closes">{t('Encerrar automaticamente em (opcional)')}</Label>
         <Input
           id="poll-closes"
           type="datetime-local"
           value={value.closesAt || ''}
           onChange={(e) => setField('closesAt', e.target.value)}
         />
-        <p className="text-xs text-gray-500">Após esta data a votação é encerrada automaticamente.</p>
+        <p className="text-xs text-gray-500">{t('Após esta data a votação é encerrada automaticamente.')}</p>
       </div>
     </div>
   );

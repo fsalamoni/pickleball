@@ -23,6 +23,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Cor do selo de compatibilidade conforme a força do match. */
 function compatTone(score) {
@@ -101,7 +102,7 @@ export default function V2FindPlayers() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1100px]">
-        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível, prontos para um jogo." />
+        <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível, prontos para um jogo.')} />
         <V2Skeleton className="h-64 rounded-4xl" />
       </div>
     );
@@ -112,11 +113,11 @@ export default function V2FindPlayers() {
   if (isError) {
     return (
       <div className="mx-auto max-w-[900px]">
-        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível." />
+        <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar as sugestões"
-            description="Seu rating continua o mesmo — só não conseguimos buscar o ranking agora."
+            title={t('Não foi possível carregar as sugestões')}
+            description={t('Seu rating continua o mesmo — só não conseguimos buscar o ranking agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -127,12 +128,12 @@ export default function V2FindPlayers() {
   if (!me) {
     return (
       <div className="mx-auto max-w-[900px]">
-        <V2PageIntro title={rotulos.pessoas} subtitle="Parceiros e adversários do seu nível." />
+        <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2EmptyState
             icon={Medal}
-            title="Você ainda não tem rating"
-            description="Dispute jogos em torneios da plataforma para receber seu rating e liberar as sugestões de parceiros do seu nível."
+            title={t('Você ainda não tem rating')}
+            description={t('Dispute jogos em torneios da plataforma para receber seu rating e liberar as sugestões de parceiros do seu nível.')}
           />
         </V2Surface>
       </div>
@@ -144,41 +145,41 @@ export default function V2FindPlayers() {
       <V2PageIntro
         title={rotulos.pessoas}
         subtitle={smartOn
-          ? 'Compatibilidade calculada pelo seu nível, lado da quadra, cidade e interesses.'
-          : 'A leitura parte do seu rating atual para sugerir parcerias coerentes.'}
+          ? t('Compatibilidade calculada pelo seu nível, lado da quadra, cidade e interesses.')
+          : t('A leitura parte do seu rating atual para sugerir parcerias coerentes.')}
       />
 
       <V2Surface className="mb-8" data-dica="jogadores-filtros">
         <p className="text-sm text-gray-500">
-          Seu rating: <strong className="text-ink">{me.rating}</strong>{myCity ? <> · {myCity}</> : null}.
+          {t('Seu rating:')} <strong className="text-ink">{me.rating}</strong>{myCity ? <> · {myCity}</> : null}.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <V2FilterChip active={closeLevelOnly} onClick={() => setCloseLevelOnly((v) => !v)}>
-            Nível parecido (±{DEFAULT_MAX_RATING_DIFF})
+            {t('Nível parecido (±{n})', { n: DEFAULT_MAX_RATING_DIFF })}
           </V2FilterChip>
           {regiaoOn ? (
             <V2FilterChip active={soRegiao} onClick={() => setSoRegiao((v) => !v)}>
-              <MapPin className="h-3.5 w-3.5" /> Na minha região
+              <MapPin className="h-3.5 w-3.5" /> {t('Na minha região')}
             </V2FilterChip>
           ) : (
             <V2FilterChip active={sameCityOnly} onClick={() => setSameCityOnly((v) => !v)} disabled={!myCity}>
-              <MapPin className="h-3.5 w-3.5" /> Minha cidade
+              <MapPin className="h-3.5 w-3.5" /> {t('Minha cidade')}
             </V2FilterChip>
           )}
         </div>
-        {regiaoOn && soRegiao && <RegionBar regional={regional} className="mt-4" nomeItens={['jogador', 'jogadores']} />}
+        {regiaoOn && soRegiao && <RegionBar regional={regional} className="mt-4" nomeItens={[t('jogador'), t('jogadores')]} />}
       </V2Surface>
 
       {lista.length === 0 && regional.fora > 0 ? (
-        <RegionEmptyHint regional={regional} oque="Nenhum jogador para os filtros atuais" />
+        <RegionEmptyHint regional={regional} oque={t('Nenhum jogador para os filtros atuais')} />
       ) : lista.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={Swords}
-            title="Nenhum jogador para os filtros atuais"
+            title={t('Nenhum jogador para os filtros atuais')}
             description={regiaoOn
-              ? 'Amplie a faixa de nível ou a sua região para ver mais combinações.'
-              : 'Amplie a faixa de nível ou remova a restrição de cidade para ver mais combinações.'}
+              ? t('Amplie a faixa de nível ou a sua região para ver mais combinações.')
+              : t('Amplie a faixa de nível ou remova a restrição de cidade para ver mais combinações.')}
           />
         </V2Surface>
       ) : (

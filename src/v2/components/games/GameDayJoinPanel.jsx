@@ -34,6 +34,7 @@ import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
 import { V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import ArenaGameDaySignupCard from '@/v2/components/arenas/ArenaGameDaySignupCard';
+import { t, tn } from '@/core/i18n';
 
 function Cabecalho({ children }) {
   return (
@@ -56,8 +57,8 @@ function EntrarNoDia({ gameDay, uid }) {
     return (
       <V2ErrorState
         inline
-        title="Não carregou quem vai"
-        description="Sem a lista não dá para saber se você já está nela. Tente de novo."
+        title={t('Não carregou quem vai')}
+        description={t('Sem a lista não dá para saber se você já está nela. Tente de novo.')}
         onRetry={() => inscritosQ.refetch()}
       />
     );
@@ -67,17 +68,17 @@ function EntrarNoDia({ gameDay, uid }) {
   const onEntrar = async () => {
     try {
       await entrar.mutateAsync(gameDay);
-      toast.success('Você entrou no dia de jogo. Bom jogo!');
+      toast.success(t('Você entrou no dia de jogo. Bom jogo!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível entrar.');
+      toast.error(err?.message || t('Não foi possível entrar.'));
     }
   };
   const onSair = async () => {
     try {
       await sair.mutateAsync(gameDay.id);
-      toast.success('Você saiu do dia de jogo.');
+      toast.success(t('Você saiu do dia de jogo.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível sair.');
+      toast.error(err?.message || t('Não foi possível sair.'));
     }
   };
 
@@ -85,20 +86,20 @@ function EntrarNoDia({ gameDay, uid }) {
     <div className="space-y-3">
       <p className="flex items-center gap-1.5 text-sm text-gray-600">
         <Users className="h-4 w-4 text-gray-400" aria-hidden="true" />
-        {inscritos.length === 0 ? 'Ninguém inscrito ainda — seja o primeiro.' : `${inscritos.length} ${inscritos.length === 1 ? 'pessoa inscrita' : 'pessoas inscritas'}.`}
+        {inscritos.length === 0 ? t('Ninguém inscrito ainda — seja o primeiro.') : tn(inscritos.length, '{n} pessoa inscrita.', '{n} pessoas inscritas.')}
       </p>
       {jaEstou ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
-            <Check className="h-4 w-4" aria-hidden="true" /> Você está inscrito.
+            <Check className="h-4 w-4" aria-hidden="true" /> {t('Você está inscrito.')}
           </span>
           <V2Button variant="ghost" size="sm" onClick={onSair} disabled={sair.isPending}>
-            <LogOut className="h-4 w-4" aria-hidden="true" /> {sair.isPending ? 'Saindo…' : 'Sair do dia de jogo'}
+            <LogOut className="h-4 w-4" aria-hidden="true" /> {sair.isPending ? t('Saindo…') : t('Sair do dia de jogo')}
           </V2Button>
         </div>
       ) : (
         <V2Button onClick={onEntrar} disabled={entrar.isPending}>
-          <LogIn className="h-4 w-4" aria-hidden="true" /> {entrar.isPending ? 'Entrando…' : 'Participar do dia de jogo'}
+          <LogIn className="h-4 w-4" aria-hidden="true" /> {entrar.isPending ? t('Entrando…') : t('Participar do dia de jogo')}
         </V2Button>
       )}
     </div>
@@ -115,14 +116,14 @@ export default function GameDayJoinPanel({ gameDay, podeConfigurar = false, agor
   if (terminou) {
     return (
       <V2Surface className={className}>
-        <p className="text-sm text-gray-500">Este dia de jogo já aconteceu — a inscrição está encerrada.</p>
+        <p className="text-sm text-gray-500">{t('Este dia de jogo já aconteceu — a inscrição está encerrada.')}</p>
       </V2Surface>
     );
   }
 
   return (
     <V2Surface className={className} data-dica="dia-participar">
-      <Cabecalho>{isClubGameDay(gameDay) ? 'Participar · dia de jogo do seu clube' : 'Participar'}</Cabecalho>
+      <Cabecalho>{isClubGameDay(gameDay) ? t('Participar · dia de jogo do seu clube') : t('Participar')}</Cabecalho>
       {isArenaGameDay(gameDay)
         ? <ArenaGameDaySignupCard gameDay={gameDay} naPaginaDoDia as="div" />
         : <EntrarNoDia gameDay={gameDay} uid={uid} />}

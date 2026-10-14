@@ -9,12 +9,13 @@ import V2EventParticipantsPanel from '@/v2/components/clubs/V2EventParticipantsP
 import V2EventChat from '@/v2/components/clubs/V2EventChat';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, fmtData } from '@/core/i18n';
 
 function formatDateTime(value) {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function V2EventDetail() {
@@ -39,11 +40,11 @@ export default function V2EventDetail() {
         <V2Surface>
           <V2EmptyState
             icon={membership ? CalendarDays : Lock}
-            title={membership ? 'Evento não encontrado' : 'Evento indisponível'}
+            title={membership ? t('Evento não encontrado') : t('Evento indisponível')}
             description={membership
-              ? 'O evento que você procura não existe ou foi removido.'
-              : 'Este evento é privado ou foi removido. Você precisa de convite ou de ser membro do clube para acessá-lo.'}
-            action={<Link to={membership ? `/clubes/${clubId}?tab=events` : `/clubes/${clubId}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{membership ? 'Voltar para eventos' : 'Ir para o clube'}</Link>}
+              ? t('O evento que você procura não existe ou foi removido.')
+              : t('Este evento é privado ou foi removido. Você precisa de convite ou de ser membro do clube para acessá-lo.')}
+            action={<Link to={membership ? `/clubes/${clubId}?tab=events` : `/clubes/${clubId}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{membership ? t('Voltar para eventos') : t('Ir para o clube')}</Link>}
           />
         </V2Surface>
       </div>
@@ -56,14 +57,14 @@ export default function V2EventDetail() {
   const when = formatDateTime(event.starts_at);
 
   const tabs = [
-    { value: 'detalhes', label: showGames ? 'Detalhes e dias de jogo' : 'Detalhes e datas', icon: Info },
-    { value: 'participantes', label: 'Participantes', icon: Users },
-    { value: 'conversa', label: 'Conversa', icon: MessageSquare },
+    { value: 'detalhes', label: showGames ? t('Detalhes e dias de jogo') : t('Detalhes e datas'), icon: Info },
+    { value: 'participantes', label: t('Participantes'), icon: Users },
+    { value: 'conversa', label: t('Conversa'), icon: MessageSquare },
   ];
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <V2BackLink to={`/clubes/${clubId}?tab=events`} className="mb-5">Voltar para eventos</V2BackLink>
+      <V2BackLink to={`/clubes/${clubId}?tab=events`} className="mb-5">{t('Voltar para eventos')}</V2BackLink>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
@@ -72,9 +73,9 @@ export default function V2EventDetail() {
             <div className="flex flex-wrap items-center gap-2">
               <V2Badge tone="acid">{eventTypeLabel(event.type)}</V2Badge>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">
-                {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />} {isPrivate ? 'Privado' : 'Público'}
+                {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />} {isPrivate ? t('Privado') : t('Público')}
               </span>
-              {event.recurring && <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white"><Repeat className="h-3 w-3" /> Recorrente</span>}
+              {event.recurring && <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white"><Repeat className="h-3 w-3" /> {t('Recorrente')}</span>}
             </div>
             <h1 className="mt-3 font-display text-3xl font-bold text-white">{event.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
@@ -83,7 +84,7 @@ export default function V2EventDetail() {
             </div>
           </div>
           <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)} className="border-white/20 bg-white/10 text-white hover:border-white/40">
-            <Pencil className="h-4 w-4" /> Editar evento
+            <Pencil className="h-4 w-4" /> {t('Editar evento')}
           </V2Button>
         </div>
         {event.description && <p className="relative z-10 mt-4 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-gray-300">{event.description}</p>}
@@ -107,7 +108,7 @@ export default function V2EventDetail() {
           <>
             {event.description && (
               <V2Surface className="mb-4">
-                <h3 className="font-display text-base font-bold text-ink">Sobre o evento</h3>
+                <h3 className="font-display text-base font-bold text-ink">{t('Sobre o evento')}</h3>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-gray-600">{event.description}</p>
               </V2Surface>
             )}

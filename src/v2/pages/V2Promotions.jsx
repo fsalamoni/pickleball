@@ -31,6 +31,7 @@ import {
 } from '@/v2/ui/primitives';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
+import { t } from '@/core/i18n';
 
 export default function V2Promotions() {
   const { flags, isLoading: flagsCarregando } = useFeatureFlags();
@@ -88,11 +89,11 @@ export default function V2Promotions() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
       <V2PageIntro
-        title="Promoções"
-        subtitle="Cupons e campanhas da plataforma e dos professores que estão valendo agora. Toque no código para copiar."
+        title={t('Promoções')}
+        subtitle={t('Cupons e campanhas da plataforma e dos professores que estão valendo agora. Toque no código para copiar.')}
       />
 
-      <RegionBar regional={regional} className="mb-6" nomeItens={['promoção', 'promoções']} />
+      <RegionBar regional={regional} className="mb-6" nomeItens={[t('promoção'), t('promoções')]} />
 
       {flagsCarregando || q.isLoading ? (
         <div className="space-y-3">
@@ -101,8 +102,8 @@ export default function V2Promotions() {
         </div>
       ) : q.isError ? (
         <V2ErrorState
-          title="Não foi possível carregar as promoções"
-          description="A conexão falhou — isso não quer dizer que não haja promoção no ar. Tente de novo em instantes."
+          title={t('Não foi possível carregar as promoções')}
+          description={t('A conexão falhou — isso não quer dizer que não haja promoção no ar. Tente de novo em instantes.')}
           onRetry={() => q.refetch()}
         />
       ) : (
@@ -110,8 +111,8 @@ export default function V2Promotions() {
           {quem.falhou && professoresOn && (
             <V2ErrorState
               inline
-              title="Não deu para conferir de quem você é aluno"
-              description="Promoções só para alunos podem não aparecer."
+              title={t('Não deu para conferir de quem você é aluno')}
+              description={t('Promoções só para alunos podem não aparecer.')}
               onRetry={() => quem.recarregar()}
             />
           )}
@@ -120,10 +121,10 @@ export default function V2Promotions() {
             <V2Surface>
               <V2EmptyState
                 icon={Tag}
-                title={fora > 0 && filtraRegiao ? `Nenhuma promoção ${minha.frase} agora` : 'Nenhuma promoção no ar agora'}
+                title={fora > 0 && filtraRegiao ? t('Nenhuma promoção {regiao} agora', { regiao: minha.frase }) : t('Nenhuma promoção no ar agora')}
                 description={fora > 0 && filtraRegiao
-                  ? `Há ${fora} em outras regiões — toque em "Ver também", acima, para vê-las.`
-                  : 'Quando a plataforma ou um professor lançar um cupom ou campanha, ele aparece aqui — e na sua tela inicial, se for da sua região.'}
+                  ? t('Há {n} em outras regiões — toque em “Ver também”, acima, para vê-las.', { n: fora })
+                  : t('Quando a plataforma ou um professor lançar um cupom ou campanha, ele aparece aqui — e na sua tela inicial, se for da sua região.')}
               />
             </V2Surface>
           )}
@@ -131,7 +132,7 @@ export default function V2Promotions() {
           {banners.length > 0 && (
             <section aria-labelledby="promo-destaques" className="space-y-3">
               <h2 id="promo-destaques" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-                <Megaphone className="h-5 w-5" aria-hidden /> Em destaque
+                <Megaphone className="h-5 w-5" aria-hidden /> {t('Em destaque')}
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {banners.map((c) => <PromoCampaignBanner key={c.id} campaign={c} />)}
@@ -142,7 +143,7 @@ export default function V2Promotions() {
           {cuponsPlataforma.length > 0 && (
             <section aria-labelledby="promo-plataforma" className="space-y-3">
               <h2 id="promo-plataforma" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-                <Tag className="h-5 w-5" aria-hidden /> Da plataforma
+                <Tag className="h-5 w-5" aria-hidden /> {t('Da plataforma')}
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {cuponsPlataforma.map((c) => <PromoCouponCard key={c.id} coupon={c} />)}
@@ -153,14 +154,14 @@ export default function V2Promotions() {
           {cuponsProfessores.length > 0 && (
             <section aria-labelledby="promo-professores" className="space-y-3">
               <h2 id="promo-professores" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-                <GraduationCap className="h-5 w-5" aria-hidden /> Dos professores
+                <GraduationCap className="h-5 w-5" aria-hidden /> {t('Dos professores')}
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {cuponsProfessores.map((c) => <PromoCouponCard key={c.id} coupon={c} />)}
               </div>
               <p className="text-xs text-gray-500">
-                O desconto na aula entra quando você informa o código ao{' '}
-                <Link to="/coaches" className="font-semibold text-ink underline">pedir a aula</Link>.
+                {t('O desconto na aula entra quando você informa o código ao')}{' '}
+                <Link to="/coaches" className="font-semibold text-ink underline">{t('pedir a aula')}</Link>.
               </p>
             </section>
           )}

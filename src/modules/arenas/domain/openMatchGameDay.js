@@ -50,6 +50,7 @@ import { GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/
 import { GAME_DAY_MANAGE_MODE } from '@/modules/games/domain/gameDayRoles.js';
 import { ARENA_SIGNUP_MODE } from '@/modules/games/domain/arenaGameDay.js';
 import { normalizeOpenSlotInput, getAvailableSpots } from './openMatch.js';
+import { t, tn, tk } from '@/core/i18n';
 
 export const OPEN_MATCH_DEFAULT_TITLE = 'Jogo aberto';
 
@@ -64,16 +65,16 @@ export const OPEN_MATCH_GAME_FORMATS = Object.freeze([
 
 /** Os nomes curtos, para cartões — os longos de `GAME_DAY_FORMAT_LABELS` quebram linha. */
 export const OPEN_MATCH_FORMAT_SHORT = Object.freeze({
-  [GAME_DAY_FORMAT.AMERICANO]: 'Americano',
-  [GAME_DAY_FORMAT.AMERICANO_LIVE]: 'Americano aprimorado',
-  [GAME_DAY_FORMAT.PLAY]: 'Play',
-  [GAME_DAY_FORMAT.MEXICANO]: 'Mexicano',
-  [GAME_DAY_FORMAT.KING_OF_COURT]: 'Rei da Quadra',
+  [GAME_DAY_FORMAT.AMERICANO]: tk('Americano'),
+  [GAME_DAY_FORMAT.AMERICANO_LIVE]: tk('Americano aprimorado'),
+  [GAME_DAY_FORMAT.PLAY]: tk('Play'),
+  [GAME_DAY_FORMAT.MEXICANO]: tk('Mexicano'),
+  [GAME_DAY_FORMAT.KING_OF_COURT]: tk('Rei da Quadra'),
 });
 
 /** O nome curto do formato do dia de jogo. */
 export function openMatchFormatLabel(format) {
-  return OPEN_MATCH_FORMAT_SHORT[format] || GAME_DAY_FORMAT_LABELS[format] || '';
+  return t(OPEN_MATCH_FORMAT_SHORT[format] || GAME_DAY_FORMAT_LABELS[format] || '');
 }
 
 /** A vaga já é um dia de jogo? */
@@ -207,12 +208,12 @@ export function linkedOccupancy(slot, gameDayParticipants) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 export function canJoinLinkedGameDay({ slot, gameDay, participants = [], uid }) {
-  if (!gameDay) return { ok: false, reason: 'O dia de jogo deste jogo aberto não foi encontrado.' };
-  if (gameDay.status === 'archived') return { ok: false, reason: 'Este jogo foi encerrado.' };
+  if (!gameDay) return { ok: false, reason: t('O dia de jogo deste jogo aberto não foi encontrado.') };
+  if (gameDay.status === 'archived') return { ok: false, reason: t('Este jogo foi encerrado.') };
   const jaNoDia = (participants || []).some((p) => p?.user_id === uid);
   if (jaNoDia) return { ok: true };
   if (linkedOccupancy(slot, participants).cheio || getAvailableSpots(slot) <= 0) {
-    return { ok: false, reason: 'As vagas deste jogo acabaram.' };
+    return { ok: false, reason: t('As vagas deste jogo acabaram.') };
   }
   return { ok: true };
 }
@@ -242,8 +243,8 @@ export function openMatchGameSummary(gameDay) {
   const quadras = Array.isArray(gameDay.arena_slots) ? gameDay.arena_slots.length : 0;
   return [
     openMatchFormatLabel(gameDay.format),
-    quadras > 0 ? `${quadras} ${quadras === 1 ? 'quadra' : 'quadras'}` : null,
-    gameDay.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS ? 'os inscritos conduzem' : 'a arena conduz',
+    quadras > 0 ? tn(quadras, '{n} quadra', '{n} quadras') : null,
+    gameDay.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS ? t('os inscritos conduzem') : t('a arena conduz'),
   ].filter(Boolean).join(' · ');
 }
 

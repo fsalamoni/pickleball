@@ -36,6 +36,7 @@ import {
   duplicatedRegistrationFields,
   copyableRegistrations,
 } from '../domain/duplication.js';
+import { t } from '@/core/i18n';
 
 const REGISTRATIONS_COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -53,9 +54,9 @@ const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por ba
  * @returns {Promise<{ tournamentId: string, modalityCount: number, registrationCount: number }>}
  */
 export async function duplicateTournament(actor, params) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const { source, copyDefinitions = true, name, modalities = [] } = params || {};
-  if (!source?.id) throw new Error('Torneio de origem inválido.');
+  if (!source?.id) throw new Error(t('Torneio de origem inválido.'));
 
   // 1) Novo torneio + owner (o commit interno habilita o ator como admin).
   const tournamentId = await createTournament(

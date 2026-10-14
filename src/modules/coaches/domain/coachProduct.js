@@ -7,6 +7,7 @@
  */
 
 import { formatPrice } from '../../arenas/domain/pricing.js';
+import { t, tk } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -22,11 +23,11 @@ export const COACH_PRODUCT_CATEGORY = Object.freeze({
 });
 
 export const COACH_PRODUCT_CATEGORY_LABELS = Object.freeze({
-  [COACH_PRODUCT_CATEGORY.EQUIPMENT]: 'Equipamentos',
-  [COACH_PRODUCT_CATEGORY.APPAREL]: 'Vestuário',
-  [COACH_PRODUCT_CATEGORY.ACCESSORY]: 'Acessórios',
-  [COACH_PRODUCT_CATEGORY.MATERIAL]: 'Material',
-  [COACH_PRODUCT_CATEGORY.OTHER]: 'Outros',
+  [COACH_PRODUCT_CATEGORY.EQUIPMENT]: tk('Equipamentos'),
+  [COACH_PRODUCT_CATEGORY.APPAREL]: tk('Vestuário'),
+  [COACH_PRODUCT_CATEGORY.ACCESSORY]: tk('Acessórios'),
+  [COACH_PRODUCT_CATEGORY.MATERIAL]: tk('Material'),
+  [COACH_PRODUCT_CATEGORY.OTHER]: tk('Outros'),
 });
 
 function num(value, fallback = null) {
@@ -42,11 +43,11 @@ function normCategory(value) {
 /** Normaliza/valida um produto da loja do professor. */
 export function normalizeCoachProduct(input = {}) {
   const coach_id = str(input.coach_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
   const name = str(input.name).slice(0, COACH_PRODUCT_NAME_MAX);
-  if (!name) return { valid: false, error: 'Informe o nome do produto.', value: { coach_id } };
+  if (!name) return { valid: false, error: t('Informe o nome do produto.'), value: { coach_id } };
   const price = num(input.price, null);
-  if (price == null) return { valid: false, error: 'Informe um preço válido.', value: { coach_id, name } };
+  if (price == null) return { valid: false, error: t('Informe um preço válido.'), value: { coach_id, name } };
   return {
     valid: true,
     error: null,
@@ -68,7 +69,7 @@ export function publicCoachProducts(list = []) {
 }
 
 export function coachProductCategoryLabel(category) {
-  return COACH_PRODUCT_CATEGORY_LABELS[normCategory(category)] || category;
+  return t(COACH_PRODUCT_CATEGORY_LABELS[normCategory(category)] || category);
 }
 
 /** Formata o preço (BRL) — conveniência. */

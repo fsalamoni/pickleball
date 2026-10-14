@@ -23,6 +23,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
   V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function ProductForm({ coachId, product, onClose }) {
   const create = useCreateCoachProduct();
@@ -43,39 +44,39 @@ function ProductForm({ coachId, product, onClose }) {
       const input = { ...form, price: Number(form.price) };
       if (editing) await update.mutateAsync({ product, input });
       else await create.mutateAsync({ coachId, input });
-      toast.success(editing ? 'Produto atualizado.' : 'Produto criado.');
+      toast.success(editing ? t('Produto atualizado.') : t('Produto criado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
-      <h3 className="font-display text-base font-bold text-ink">{editing ? 'Editar produto' : 'Novo produto'}</h3>
-      <V2Field label="Nome">
-        <V2Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={80} placeholder="Ex.: Overgrip, camiseta, apostila…" />
+      <h3 className="font-display text-base font-bold text-ink">{editing ? t('Editar produto') : t('Novo produto')}</h3>
+      <V2Field label={t('Nome')}>
+        <V2Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={80} placeholder={t('Ex.: Overgrip, camiseta, apostila…')} />
       </V2Field>
-      <V2Field label="Descrição (opcional)">
+      <V2Field label={t('Descrição (opcional)')}>
         <V2Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} maxLength={400} />
       </V2Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Preço (R$)">
+        <V2Field label={t('Preço (R$)')}>
           <V2Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
         </V2Field>
-        <V2Field label="Categoria">
+        <V2Field label={t('Categoria')}>
           <V2Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            {Object.entries(COACH_PRODUCT_CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {Object.entries(COACH_PRODUCT_CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
           </V2Select>
         </V2Field>
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-600">
         <input type="checkbox" checked={form.visible_public} onChange={(e) => setForm({ ...form, visible_public: e.target.checked })} className="h-4 w-4 rounded border-gray-300" />
-        Exibir no meu perfil público
+        {t('Exibir no meu perfil público')}
       </label>
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={pending}>{pending ? 'Salvando…' : editing ? 'Salvar' : 'Criar'}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" disabled={pending}>{pending ? t('Salvando…') : editing ? t('Salvar') : t('Criar')}</V2Button>
       </div>
     </form>
   );
@@ -95,8 +96,8 @@ export default function CoachStoreSection({ coachId }) {
   const close = () => { setShowForm(false); setEditing(null); };
 
   const handleDelete = async (product) => {
-    try { await del.mutateAsync({ product }); toast.success('Produto excluído.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível excluir.'); }
+    try { await del.mutateAsync({ product }); toast.success(t('Produto excluído.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível excluir.')); }
   };
 
   return (
@@ -104,13 +105,13 @@ export default function CoachStoreSection({ coachId }) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Store className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Minha loja</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Minha loja')}</h2>
         </div>
-        {!showForm && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Novo produto</V2Button>}
+        {!showForm && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> {t('Novo produto')}</V2Button>}
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
-        Cadastre itens que você vende. Marque como público para exibir no seu perfil profissional.
-        {mercadoOn && ' Para vender com carrinho e Pix para todo o PickleRush, anuncie no Mercado.'}
+        {t('Cadastre itens que você vende. Marque como público para exibir no seu perfil profissional.')}
+        {mercadoOn && ` ${t('Para vender com carrinho e Pix para todo o PickleRush, anuncie no Mercado.')}`}
       </p>
 
       {showForm && <div className="mb-4"><ProductForm coachId={coachId} product={editing} onClose={close} /></div>}
@@ -118,7 +119,7 @@ export default function CoachStoreSection({ coachId }) {
       {isLoading ? (
         <V2Skeleton lines={3} />
       ) : products.length === 0 ? (
-        <V2EmptyState icon={Store} title="Loja vazia" description="Cadastre o primeiro produto. Você decide se ele aparece no seu perfil público." />
+        <V2EmptyState icon={Store} title={t('Loja vazia')} description={t('Cadastre o primeiro produto. Você decide se ele aparece no seu perfil público.')} />
       ) : (
         <div className="space-y-2">
           {products.map((p) => (
@@ -128,8 +129,8 @@ export default function CoachStoreSection({ coachId }) {
                   <p className="font-bold text-ink">{p.name}</p>
                   <V2Badge tone="neutral">{coachProductCategoryLabel(p.category)}</V2Badge>
                   {p.visible_public
-                    ? <V2Badge tone="green"><Eye className="mr-1 inline h-3 w-3" />Público</V2Badge>
-                    : <V2Badge tone="amber"><EyeOff className="mr-1 inline h-3 w-3" />Oculto</V2Badge>}
+                    ? <V2Badge tone="green"><Eye className="mr-1 inline h-3 w-3" />{t('Público')}</V2Badge>
+                    : <V2Badge tone="amber"><EyeOff className="mr-1 inline h-3 w-3" />{t('Oculto')}</V2Badge>}
                 </div>
                 <p className="text-xs text-gray-500">{formatCoachProductPrice(p.price)}{p.description ? ` · ${p.description}` : ''}</p>
               </div>
@@ -140,19 +141,19 @@ export default function CoachStoreSection({ coachId }) {
                     state={{ rascunho: draftFromCoachProduct(p) }}
                     className="inline-flex min-h-9 items-center gap-1 rounded-full border border-gray-200 px-3 text-xs font-bold text-ink hover:bg-white"
                   >
-                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" /> Anunciar no Mercado
+                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" /> {t('Anunciar no Mercado')}
                   </Link>
                 )}
-                <button type="button" onClick={() => openEdit(p)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar">
+                <button type="button" onClick={() => openEdit(p)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label={t('Editar')}>
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <ConfirmDialog
-                  title="Excluir produto?"
-                  description={`"${p.name}" será removido da sua loja.`}
-                  confirmLabel="Excluir"
+                  title={t('Excluir produto?')}
+                  description={t('“{nome}” será removido da sua loja.', { nome: p.name })}
+                  confirmLabel={t('Excluir')}
                   onConfirm={() => handleDelete(p)}
                   trigger={(
-                    <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Excluir">
+                    <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label={t('Excluir')}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}

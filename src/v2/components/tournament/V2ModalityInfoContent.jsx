@@ -14,6 +14,7 @@ import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tourn
 import { describeFormat, describeStage } from '@/modules/tournament/domain/formatExplain';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import { V2Badge } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function formatBRL(cents) {
   const value = Number(cents || 0) / 100;
@@ -21,7 +22,7 @@ function formatBRL(cents) {
 }
 
 function formatConfirmedCount(count) {
-  return `${count} ${count === 1 ? 'inscrição confirmada' : 'inscrições confirmadas'}`;
+  return `${count} ${count === 1 ? t('inscrição confirmada') : t('inscrições confirmadas')}`;
 }
 
 export default function V2ModalityInfoContent({ modality, tournament, registrationsCount = 0 }) {
@@ -44,7 +45,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
           <V2Badge tone="neutral">{GENDER_CATEGORY_LABELS[modality.gender_category]}</V2Badge>
           <V2Badge tone="neutral">{AGE_CATEGORY_LABELS[modality.age_category]}</V2Badge>
           {isMultiPhase ? (
-            <V2Badge tone="neutral">{stages.length} fases</V2Badge>
+            <V2Badge tone="neutral">{t('{n} fases', { n: stages.length })}</V2Badge>
           ) : (
             stageType && <V2Badge tone="neutral">{TOURNAMENT_STAGE_TYPE_LABELS[stageType]}</V2Badge>
           )}
@@ -53,33 +54,33 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
 
       <section className="space-y-2">
         <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-          <Users className="h-4 w-4 text-ink" /> Inscrições e formato
+          <Users className="h-4 w-4 text-ink" /> {t('Inscrições e formato')}
         </h4>
         <p>{describeFormat(modality.format)}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong className="text-ink">Vagas:</strong>{' '}
+            <strong className="text-ink">{t('Vagas:')}</strong>{' '}
             {hasUnlimitedEntries(modality.max_entries)
-              ? `abertas. O sistema organizará a modalidade com base nas ${formatConfirmedCount(registrationsCount)} ao encerrar as inscrições.`
-              : `até ${modality.max_entries} inscrições. Atualmente ${formatConfirmedCount(registrationsCount)}.`}
+              ? t('abertas. O sistema organizará a modalidade com base nas {registrationsCount} ao encerrar as inscrições.', { registrationsCount: formatConfirmedCount(registrationsCount) })
+              : t('até {max_entries} inscrições. Atualmente {registrationsCount}.', { max_entries: modality.max_entries, registrationsCount: formatConfirmedCount(registrationsCount) })}
           </li>
-          <li><strong className="text-ink">Categoria de gênero:</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
-          <li><strong className="text-ink">Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-500">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
-          <li><strong className="text-ink">Nível recomendado:</strong> {SKILL_LEVEL_LABELS[modality.skill_level]}</li>
-          <li className="flex items-center gap-1"><Wallet className="h-3 w-3" /> <strong className="text-ink">Taxa de inscrição:</strong> {fee > 0 ? formatBRL(fee) : 'Gratuita'}</li>
+          <li><strong className="text-ink">{t('Categoria de gênero:')}</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
+          <li><strong className="text-ink">{t('Faixa etária:')}</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-500">{t('(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)')}</span></li>
+          <li><strong className="text-ink">{t('Nível recomendado:')}</strong> {SKILL_LEVEL_LABELS[modality.skill_level]}</li>
+          <li className="flex items-center gap-1"><Wallet className="h-3 w-3" /> <strong className="text-ink">{t('Taxa de inscrição:')}</strong> {fee > 0 ? formatBRL(fee) : t('Gratuita')}</li>
         </ul>
       </section>
 
       {isMultiPhase ? (
         <section className="space-y-2">
           <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-            <Layers className="h-4 w-4 text-ink" /> Como funciona a competição ({stages.length} fases)
+            <Layers className="h-4 w-4 text-ink" /> {t('Como funciona a competição ({n} fases)', { n: stages.length })}
           </h4>
-          <p className="text-xs text-gray-500">A inscrição é única; a cada fase os classificados avançam para a fase seguinte.</p>
+          <p className="text-xs text-gray-500">{t('A inscrição é única; a cada fase os classificados avançam para a fase seguinte.')}</p>
           <ol className="space-y-2">
             {stages.map((s, i) => (
               <li key={i} className="rounded-2xl border border-gray-100 bg-paper p-3">
-                <div className="font-bold text-ink">Fase {i + 1}: {TOURNAMENT_STAGE_TYPE_LABELS[s.type] || s.type}</div>
+                <div className="font-bold text-ink">{t('Fase')} {i + 1}: {TOURNAMENT_STAGE_TYPE_LABELS[s.type] || s.type}</div>
                 <p className="mt-0.5 text-xs text-gray-500">{describeStage(s.type)}</p>
                 <p className="mt-1 text-xs font-bold text-ink">
                   {RULESET_LABELS[resolveStageScoringConfig(modality, tournament, i).ruleset] || resolveStageScoringConfig(modality, tournament, i).ruleset}
@@ -90,14 +91,14 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
             ))}
           </ol>
           <Link to="/torneios/guia" className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-            <BookOpen className="h-3.5 w-3.5" /> Guia completo de formatos e modelos
+            <BookOpen className="h-3.5 w-3.5" /> {t('Guia completo de formatos e modelos')}
           </Link>
         </section>
       ) : (
         stageType && (
           <section className="space-y-2">
             <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-              <Layers className="h-4 w-4 text-ink" /> Como funciona a competição
+              <Layers className="h-4 w-4 text-ink" /> {t('Como funciona a competição')}
             </h4>
             <p>{describeStage(stageType)}</p>
             {/* Para o atleta a pergunta é "como vai ser", não "em quantos
@@ -121,26 +122,26 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
       {(modality.court_count || modality.play_start_time || modality.play_date) && (
         <section className="space-y-2">
           <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-            <CalendarClock className="h-4 w-4 text-ink" /> Quadras e horários
+            <CalendarClock className="h-4 w-4 text-ink" /> {t('Quadras e horários')}
           </h4>
           <ul className="list-disc space-y-1 pl-5">
-            {modality.play_date && <li><strong className="text-ink">Data:</strong> {modality.play_date}</li>}
+            {modality.play_date && <li><strong className="text-ink">{t('Data:')}</strong> {modality.play_date}</li>}
             {modality.play_start_time && (
               <li>
-                <strong className="text-ink">Horário:</strong> a partir das {modality.play_start_time}
-                {modality.play_end_time ? ` até ${modality.play_end_time}` : ''}
+                <strong className="text-ink">{t('Horário:')}</strong> {t('a partir das {play_start_time}', { play_start_time: modality.play_start_time })}
+                {modality.play_end_time ? t('até {play_end_time}', { play_end_time: modality.play_end_time }) : ''}
               </li>
             )}
-            {modality.court_count && <li><strong className="text-ink">Quadras disponíveis:</strong> {modality.court_count}</li>}
-            {modality.match_duration_minutes && <li><strong className="text-ink">Duração média do jogo:</strong> {modality.match_duration_minutes} minutos</li>}
+            {modality.court_count && <li><strong className="text-ink">{t('Quadras disponíveis:')}</strong> {modality.court_count}</li>}
+            {modality.match_duration_minutes && <li><strong className="text-ink">{t('Duração média do jogo:')}</strong> {t('{match_duration_minutes} minutos', { match_duration_minutes: modality.match_duration_minutes })}</li>}
           </ul>
-          <p className="text-xs text-gray-500">Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem conflito de jogadores.</p>
+          <p className="text-xs text-gray-500">{t('Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem conflito de jogadores.')}</p>
         </section>
       )}
 
       <section className="space-y-2">
         <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-          <BookOpen className="h-4 w-4 text-ink" /> Regras de pontuação
+          <BookOpen className="h-4 w-4 text-ink" /> {t('Regras de pontuação')}
         </h4>
         {stages.length > 0 ? (
           <ul className="list-disc space-y-1 pl-5">
@@ -148,31 +149,31 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
               const scoring = resolveStageScoringConfig(modality, tournament, index);
               return (
                 <li key={`${stage.type}-${index}`}>
-                  <strong className="text-ink">Fase {index + 1}:</strong> {RULESET_LABELS[scoring.ruleset] || scoring.ruleset} · {formatScoringSummary(scoring)}
+                  <strong className="text-ink">{t('Fase')} {index + 1}:</strong> {RULESET_LABELS[scoring.ruleset] || scoring.ruleset} · {formatScoringSummary(scoring)}
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400">A pontuação desta modalidade ainda não foi configurada.</p>
+          <p className="text-sm text-gray-400">{t('A pontuação desta modalidade ainda não foi configurada.')}</p>
         )}
       </section>
 
       <section className="space-y-2">
         <h4 className="flex items-center gap-2 font-display font-bold text-ink">
-          <Trophy className="h-4 w-4 text-ink" /> Critério de classificação
+          <Trophy className="h-4 w-4 text-ink" /> {t('Critério de classificação')}
         </h4>
-        <p>A classificação é feita pelo número de vitórias. Em caso de empate valem, nesta ordem:</p>
+        <p>{t('A classificação é feita pelo número de vitórias. Em caso de empate valem, nesta ordem:')}</p>
         <ol className="list-decimal space-y-1 pl-5">
-          <li><strong className="text-ink">Saldo de pontos</strong> — diferença entre pontos a favor e pontos sofridos.</li>
-          <li><strong className="text-ink">Maior número de pontos marcados</strong> (a favor).</li>
-          <li><strong className="text-ink">Menor número de pontos sofridos</strong>.</li>
+          <li><strong className="text-ink">{t('Saldo de pontos')}</strong> {t('— diferença entre pontos a favor e pontos sofridos.')}</li>
+          <li><strong className="text-ink">{t('Maior número de pontos marcados')}</strong> {t('(a favor).')}</li>
+          <li><strong className="text-ink">{t('Menor número de pontos sofridos')}</strong>.</li>
         </ol>
       </section>
 
       {modality.notes && (
         <section className="space-y-1">
-          <h4 className="font-display font-bold text-ink">Observações do organizador</h4>
+          <h4 className="font-display font-bold text-ink">{t('Observações do organizador')}</h4>
           <p className="whitespace-pre-line">{modality.notes}</p>
         </section>
       )}

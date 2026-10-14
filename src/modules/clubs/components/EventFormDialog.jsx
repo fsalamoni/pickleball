@@ -23,6 +23,7 @@ import {
   EVENT_VISIBILITY_LABELS,
   isGameDayEvent,
 } from '@/modules/clubs/domain/constants';
+import { t } from '@/core/i18n';
 
 /*
  * O formulário de criar/editar evento de clube. A lista de eventos que
@@ -68,20 +69,20 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) {
-      toast.error('Informe o título do evento.');
+      toast.error(t('Informe o título do evento.'));
       return;
     }
     try {
       if (isEdit) {
         await updateEvent.mutateAsync({ eventId: event.id, updates: form });
-        toast.success('Evento atualizado.');
+        toast.success(t('Evento atualizado.'));
       } else {
         await createEvent.mutateAsync(form);
-        toast.success('Evento criado.');
+        toast.success(t('Evento criado.'));
       }
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar o evento.');
+      toast.error(err.message || t('Não foi possível salvar o evento.'));
     }
   };
 
@@ -92,19 +93,19 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar evento' : 'Novo evento'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('Editar evento') : t('Novo evento')}</DialogTitle>
           <DialogDescription>
-            Organize um dia de jogo, confraternização, torneio interno ou reunião.
+            {t('Organize um dia de jogo, confraternização, torneio interno ou reunião.')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="event_title">Título *</Label>
+            <Label htmlFor="event_title">{t('Título *')}</Label>
             <Input id="event_title" value={form.title} onChange={setField('title')} maxLength={120} required />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="event_type">Tipo</Label>
+              <Label htmlFor="event_type">{t('Tipo')}</Label>
               <select
                 id="event_type"
                 value={form.type}
@@ -112,24 +113,24 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {Object.entries(CLUB_EVENT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>{t(label)}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="event_when">{form.recurring ? 'Primeira data e hora' : 'Data e hora'}</Label>
+              <Label htmlFor="event_when">{form.recurring ? t('Primeira data e hora') : t('Data e hora')}</Label>
               <Input id="event_when" type="datetime-local" value={form.starts_at} onChange={setField('starts_at')} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event_location">Local</Label>
+            <Label htmlFor="event_location">{t('Local')}</Label>
             <Input id="event_location" value={form.location} onChange={setField('location')} maxLength={160} />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
             <div>
-              <Label htmlFor="event_recurring" className="font-medium">Evento recorrente</Label>
+              <Label htmlFor="event_recurring" className="font-medium">{t('Evento recorrente')}</Label>
               <p className="text-xs text-gray-500">
-                {gameDay ? 'Permite adicionar várias datas na página do dia de jogo.' : 'Permite cadastrar mais de uma data na página do evento.'}
+                {gameDay ? t('Permite adicionar várias datas na página do dia de jogo.') : t('Permite cadastrar mais de uma data na página do evento.')}
               </p>
             </div>
             <Switch
@@ -139,7 +140,7 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event_visibility">Visibilidade</Label>
+            <Label htmlFor="event_visibility">{t('Visibilidade')}</Label>
             <select
               id="event_visibility"
               value={form.visibility}
@@ -147,17 +148,17 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {Object.entries(EVENT_VISIBILITY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value}>{t(label)}</option>
               ))}
             </select>
             <p className="text-xs text-gray-500">
               {form.visibility === EVENT_VISIBILITY.PRIVATE
-                ? 'Apenas atletas convidados verão e participarão do evento.'
-                : 'Todos os atletas do clube poderão ver e participar.'}
+                ? t('Apenas atletas convidados verão e participarão do evento.')
+                : t('Todos os atletas do clube poderão ver e participar.')}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event_description">Descrição</Label>
+            <Label htmlFor="event_description">{t('Descrição')}</Label>
             <textarea
               id="event_description"
               value={form.description}
@@ -168,8 +169,8 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={pending}>{pending ? 'Salvando…' : (isEdit ? 'Salvar' : 'Criar evento')}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t('Cancelar')}</Button>
+            <Button type="submit" disabled={pending}>{pending ? t('Salvando…') : (isEdit ? t('Salvar') : t('Criar evento'))}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

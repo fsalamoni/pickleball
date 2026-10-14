@@ -29,6 +29,7 @@ import {
   V2Skeleton, V2Surface, V2Textarea,
   V2ErrorState, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /* ----------------------- Adicionar parceiro ----------------------- */
 
@@ -51,17 +52,17 @@ export function AddPartner({ arenaId, linkedIds, onDone }) {
     if (!selected) return;
     try {
       await add.mutateAsync({ coach_id: selected.id, arena_id: arenaId, notes });
-      toast.success(`${selected.display_name} vinculado como parceiro.`);
+      toast.success(t('{display_name} vinculado como parceiro.', { display_name: selected.display_name }));
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível vincular.');
+      toast.error(err?.message || t('Não foi possível vincular.'));
     }
   };
 
   return (
     <V2Surface className="border-green-200 bg-green-50/40">
-      <h3 className="font-display text-base font-bold text-ink">Vincular professor parceiro</h3>
-      <p className="mt-1 text-xs text-gray-500">Busque um professor cadastrado na plataforma e vincule à sua arena.</p>
+      <h3 className="font-display text-base font-bold text-ink">{t('Vincular professor parceiro')}</h3>
+      <p className="mt-1 text-xs text-gray-500">{t('Busque um professor cadastrado na plataforma e vincule à sua arena.')}</p>
 
       {selected ? (
         <div className="mt-3 space-y-3">
@@ -73,34 +74,34 @@ export function AddPartner({ arenaId, linkedIds, onDone }) {
               <p className="font-bold text-ink">{selected.display_name}</p>
               {selected.modalities?.length > 0 && <p className="text-xs text-gray-500">{selected.modalities.join(' · ')}</p>}
             </div>
-            <button type="button" onClick={() => setSelected(null)} className="text-xs font-bold text-gray-500 hover:text-ink">Trocar</button>
+            <button type="button" onClick={() => setSelected(null)} className="text-xs font-bold text-gray-500 hover:text-ink">{t('Trocar')}</button>
           </div>
-          <V2Field label="Notas (opcional)" hint="Ex.: atende terças e quintas; foco em iniciantes.">
+          <V2Field label={t('Notas (opcional)')} hint={t('Ex.: atende terças e quintas; foco em iniciantes.')}>
             <V2Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} />
           </V2Field>
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={onDone}>Cancelar</V2Button>
-            <V2Button onClick={handleAdd} disabled={add.isPending}>{add.isPending ? 'Vinculando…' : 'Vincular parceiro'}</V2Button>
+            <V2Button type="button" variant="ghost" onClick={onDone}>{t('Cancelar')}</V2Button>
+            <V2Button onClick={handleAdd} disabled={add.isPending}>{add.isPending ? t('Vinculando…') : t('Vincular parceiro')}</V2Button>
           </div>
         </div>
       ) : (
         <div className="mt-3">
-          <V2SearchInput icon={Search} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar professor por nome, modalidade ou região…" />
+          <V2SearchInput icon={Search} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Buscar professor por nome, modalidade ou região…')} />
           <div className="mt-3 space-y-2">
             {isLoading ? (
               <V2Skeleton lines={3} />
             ) : buscaFalhou ? (
               <V2ErrorState
                 inline
-                title="Não foi possível buscar os professores"
-                description="A lista de professores da plataforma não chegou."
+                title={t('Não foi possível buscar os professores')}
+                description={t('A lista de professores da plataforma não chegou.')}
                 onRetry={() => refazerBusca()}
               />
             ) : results.length === 0 ? (
               <p className="text-sm text-gray-500">
                 {coaches.filter((c) => !linkedIds.has(c.id)).length === 0
-                  ? 'Todos os professores disponíveis já são parceiros.'
-                  : 'Nenhum professor encontrado. Ele precisa ter um perfil de professor na plataforma.'}
+                  ? t('Todos os professores disponíveis já são parceiros.')
+                  : t('Nenhum professor encontrado. Ele precisa ter um perfil de professor na plataforma.')}
               </p>
             ) : (
               results.map((c) => (
@@ -123,7 +124,7 @@ export function AddPartner({ arenaId, linkedIds, onDone }) {
             )}
           </div>
           <div className="mt-3 flex justify-end">
-            <V2Button type="button" variant="ghost" onClick={onDone}>Fechar</V2Button>
+            <V2Button type="button" variant="ghost" onClick={onDone}>{t('Fechar')}</V2Button>
           </div>
         </div>
       )}
@@ -152,18 +153,18 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
       // Pausar guarda o estado anterior; retomar devolve exatamente ele — um
       // convite pendente não vira parceria ativa sem o professor aceitar.
       await update.mutateAsync({ coachId: coach.id, arenaId, patch: partnershipToggle(residency) });
-      toast.success(isPaused ? 'Parceria reativada.' : 'Parceria pausada.');
+      toast.success(isPaused ? t('Parceria reativada.') : t('Parceria pausada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar.');
+      toast.error(err?.message || t('Não foi possível atualizar.'));
     }
   };
   const saveNotes = async () => {
     try {
       await update.mutateAsync({ coachId: coach.id, arenaId, patch: { notes } });
-      toast.success('Notas salvas.');
+      toast.success(t('Notas salvas.'));
       setEditingNotes(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -178,7 +179,7 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
             <div className="flex flex-wrap items-center gap-2">
               <Link to={`/coaches/${coach.id}`} className="font-bold text-ink hover:underline">{coach.display_name}</Link>
               {/* 🐞 Um convite ainda não aceito aparecia como "Ativo". */}
-              <V2Badge tone={status === 'active' ? 'green' : 'amber'}>{PARTNERSHIP_LABEL[status]}</V2Badge>
+              <V2Badge tone={status === 'active' ? 'green' : 'amber'}>{t(PARTNERSHIP_LABEL[status])}</V2Badge>
               {extraBadges}
             </div>
             {coach.modalities?.length > 0 && <p className="text-xs text-gray-500">{coach.modalities.join(' · ')}</p>}
@@ -188,19 +189,19 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <button type="button" onClick={toggle} disabled={update.isPending} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white disabled:opacity-50" aria-label={isPaused ? 'Reativar' : 'Pausar'}>
+          <button type="button" onClick={toggle} disabled={update.isPending} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white disabled:opacity-50" aria-label={isPaused ? t('Reativar') : t('Pausar')}>
             {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
           </button>
           <ConfirmDialog
-            title="Remover parceiro?"
-            description={`${coach.display_name} deixará de aparecer como professor parceiro da arena.`}
-            confirmLabel="Remover"
+            title={t('Remover parceiro?')}
+            description={t('{display_name} deixará de aparecer como professor parceiro da arena.', { display_name: coach.display_name })}
+            confirmLabel={t('Remover')}
             onConfirm={async () => {
-              try { await remove.mutateAsync({ coachId: coach.id, arenaId }); toast.success('Parceiro removido.'); }
-              catch (err) { toast.error(err?.message || 'Não foi possível remover.'); }
+              try { await remove.mutateAsync({ coachId: coach.id, arenaId }); toast.success(t('Parceiro removido.')); }
+              catch (err) { toast.error(err?.message || t('Não foi possível remover.')); }
             }}
             trigger={(
-              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Remover">
+              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label={t('Remover')}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
@@ -210,15 +211,15 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
 
       {editingNotes ? (
         <div className="mt-3 space-y-2">
-          <V2Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} placeholder="Notas sobre a parceria (visíveis só no admin)" />
+          <V2Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} placeholder={t('Notas sobre a parceria (visíveis só no admin)')} />
           <div className="flex justify-end gap-2">
-            <V2Button size="sm" variant="ghost" onClick={() => { setNotes(residency.notes || ''); setEditingNotes(false); }}>Cancelar</V2Button>
-            <V2Button size="sm" onClick={saveNotes} disabled={update.isPending}>Salvar notas</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={() => { setNotes(residency.notes || ''); setEditingNotes(false); }}>{t('Cancelar')}</V2Button>
+            <V2Button size="sm" onClick={saveNotes} disabled={update.isPending}>{t('Salvar notas')}</V2Button>
           </div>
         </div>
       ) : (
         <button type="button" onClick={() => setEditingNotes(true)} className="mt-2 text-xs font-bold text-gray-500 hover:text-ink">
-          {residency.notes ? `Notas: ${residency.notes}` : '+ Adicionar notas'}
+          {residency.notes ? t('Notas: {notes}', { notes: residency.notes }) : t('+ Adicionar notas')}
         </button>
       )}
       {children}
@@ -246,17 +247,17 @@ export function ArenaCoachesManager({ arena, showTitle = true }) {
           <div className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">
-              {showTitle ? 'Professores parceiros' : 'Parceiros'} ({partners.length})
+              {showTitle ? t('Professores parceiros') : t('Parceiros')} ({partners.length})
             </h2>
           </div>
           {/* Sem a lista de parceiros, a busca ofereceria vincular de novo quem
               já é parceiro. */}
           {!adding && !parceirosFalharam && (
-            <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-4 w-4" /> Vincular professor</V2Button>
+            <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-4 w-4" /> {t('Vincular professor')}</V2Button>
           )}
         </div>
         <p className="-mt-2 mb-3 text-sm text-gray-500">
-          Vincule professores cadastrados na plataforma. Os parceiros ativos aparecem na página pública da arena.
+          {t('Vincule professores cadastrados na plataforma. Os parceiros ativos aparecem na página pública da arena.')}
         </p>
 
         {adding && (
@@ -270,14 +271,14 @@ export function ArenaCoachesManager({ arena, showTitle = true }) {
         ) : parceirosFalharam ? (
           <V2ErrorState
             inline
-            title="Não foi possível carregar os professores parceiros"
+            title={t('Não foi possível carregar os professores parceiros')}
             onRetry={() => recarregarParceiros()}
           />
         ) : partners.length === 0 ? (
           <V2EmptyState
             icon={GraduationCap}
-            title="Nenhum professor parceiro"
-            description="Vincule professores cadastrados na plataforma para divulgá-los na página da arena."
+            title={t('Nenhum professor parceiro')}
+            description={t('Vincule professores cadastrados na plataforma para divulgá-los na página da arena.')}
           />
         ) : (
           <div className="space-y-2">
@@ -301,7 +302,7 @@ function V2ArenaCoachesContent() {
   if (!arena && arenaFalhou) {
     return (
       <div className="mx-auto max-w-[700px]">
-        <V2ErrorState title="Não foi possível abrir esta arena" onRetry={() => recarregarArena()} />
+        <V2ErrorState title={t('Não foi possível abrir esta arena')} onRetry={() => recarregarArena()} />
       </div>
     );
   }
@@ -309,7 +310,7 @@ function V2ArenaCoachesContent() {
     return (
       <div className="mx-auto max-w-[700px]">
         <V2Surface>
-          <V2EmptyState title="Arena não encontrada" action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar</Link>} />
+          <V2EmptyState title={t('Arena não encontrada')} action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← {t('Voltar')}</Link>} />
         </V2Surface>
       </div>
     );
@@ -320,9 +321,9 @@ function V2ArenaCoachesContent() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
-        <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">Voltar ao hub admin</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Professores parceiros · {arena.name}</h1>
-        <p className="mt-2 font-medium text-gray-500">Vincule professores à arena. Os parceiros ativos aparecem na página pública.</p>
+        <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">{t('Voltar ao hub admin')}</V2BackLink>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Professores parceiros · {name}', { name: arena.name })}</h1>
+        <p className="mt-2 font-medium text-gray-500">{t('Vincule professores à arena. Os parceiros ativos aparecem na página pública.')}</p>
       </div>
       <ArenaCoachesManager arena={arena} showTitle={false} />
     </div>

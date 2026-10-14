@@ -48,19 +48,20 @@ import { buildRosterSlots } from '@/modules/tournament/domain/teamFormat';
 import MultiPhaseDrawBlock from '@/modules/tournament/components/MultiPhaseDrawBlock';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import DirectEntryPanel from '@/v2/components/tournament/DirectEntryPanel';
+import { t, fmtData, fmtLista } from '@/core/i18n';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { hour: '2-digit', minute: '2-digit' });
 }
 
 function roundLabel(m) {
-  if (m.third_place) return 'Disputa de 3º lugar';
-  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
-  if (m.bracket === 'wb') return `Vencedores R${m.round}`;
-  if (m.bracket === 'lb') return `Repescagem R${m.round}`;
+  if (m.third_place) return t('Disputa de 3º lugar');
+  if (m.bracket === 'gf') return m.round === 2 ? t('Final (reset)') : t('Grande final');
+  if (m.bracket === 'wb') return t('Vencedores R{round}', { round: m.round });
+  if (m.bracket === 'lb') return t('Repescagem R{round}', { round: m.round });
   return m.round;
 }
 
@@ -72,7 +73,7 @@ export default function TournamentDrawTab({ tournament, isAdmin }) {
     return (
       <V2Surface>
         <div className="p-6 text-sm text-gray-500 text-center">
-          Crie modalidades antes de sortear.
+          {t('Crie modalidades antes de sortear.')}
         </div>
       </V2Surface>
     );
@@ -159,19 +160,19 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     try {
       const res = await ensurePlaceholdersMutation.mutateAsync(modality);
       toast.success(res.created > 0
-        ? `Vagas preenchidas com ${res.created} atleta(s) fictício(s).`
-        : 'Nenhuma vaga faltante para preencher.');
+        ? t('Vagas preenchidas com {created} atleta(s) fictício(s).', { created: res.created })
+        : t('Nenhuma vaga faltante para preencher.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível preencher as vagas.');
+      toast.error(err?.message || t('Não foi possível preencher as vagas.'));
     }
   }
 
   async function removePlaceholders() {
     try {
       const res = await clearPlaceholdersMutation.mutateAsync();
-      toast.success(res.cleared > 0 ? 'Atletas fictícios removidos.' : 'Não havia atletas fictícios.');
+      toast.success(res.cleared > 0 ? t('Atletas fictícios removidos.') : t('Não havia atletas fictícios.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover os atletas fictícios.');
+      toast.error(err?.message || t('Não foi possível remover os atletas fictícios.'));
     }
   }
 
@@ -212,18 +213,18 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         tournament,
       });
       if (res.complete) {
-        toast.success(ehEtapas ? 'Todas as etapas foram jogadas — a classificação final está valendo. 🏆' : 'Fase concluída — campeão definido! 🏆');
+        toast.success(ehEtapas ? t('Todas as etapas foram jogadas — a classificação final está valendo. 🏆') : t('Fase concluída — campeão definido! 🏆'));
       } else {
         const warns = res.scheduleWarnings || [];
         toast.success(ehEtapas
-          ? `Etapa ${progEtapas?.proxima} gerada (${res.created} jogo(s)), com os grupos refeitos.`
-          : (res.created ? `${res.created} confronto(s) novo(s) na chave.` : 'Chave atualizada com os vencedores certos.'));
+          ? t('Etapa {proxima} gerada ({created} jogo(s)), com os grupos refeitos.', { proxima: progEtapas?.proxima, created: res.created })
+          : (res.created ? t('{created} confronto(s) novo(s) na chave.', { created: res.created }) : t('Chave atualizada com os vencedores certos.')));
         if (warns.length > 0) {
-          toast.warning(`${warns.length} jogo(s) sem horário — ajuste quadras/horário de término.`);
+          toast.warning(t('{n} jogo(s) sem horário — ajuste quadras/horário de término.', { n: warns.length }));
         }
       }
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível avançar a fase.');
+      toast.error(err?.message || t('Não foi possível avançar a fase.'));
     } finally {
       setRunning(false);
     }
@@ -240,13 +241,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       const warns = scheduleWarnings || [];
       if (warns.length > 0) {
         toast.warning(
-          `Jogos reagendados. ${warns.length} ficaram além do horário de término planejado — ajuste quadras ou horário para encaixá-los.`,
+          t('Jogos reagendados. {n} ficaram além do horário de término planejado — ajuste quadras ou horário para encaixá-los.', { n: warns.length }),
         );
       } else {
-        toast.success('Jogos reagendados nas quadras e horários.');
+        toast.success(t('Jogos reagendados nas quadras e horários.'));
       }
     } catch (err) {
-      toast.error(err?.message || 'Falha ao reagendar.');
+      toast.error(err?.message || t('Falha ao reagendar.'));
     } finally {
       setRunning(false);
     }
@@ -264,16 +265,16 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         // recusa descartar resultado sem isto.
         replacesKnownMatches: matches.length > 0,
       });
-      toast.success('Sorteio realizado!');
+      toast.success(t('Sorteio realizado!'));
       const warns = result?.scheduleWarnings || [];
       if (warns.length > 0) {
         toast.warning(
-          `Todos os jogos foram sorteados e agendados. ${warns.length} ficaram além do horário de término planejado — adicione quadras ou estenda o horário para encaixá-los na janela.`,
+          t('Todos os jogos foram sorteados e agendados. {n} ficaram além do horário de término planejado — adicione quadras ou estenda o horário para encaixá-los na janela.', { n: warns.length }),
         );
       }
       setConfirmOpen(false);
     } catch (err) {
-      const message = err?.message || 'Falha ao sortear.';
+      const message = err?.message || t('Falha ao sortear.');
       setError(message);
       toast.error(message);
     } finally {
@@ -289,16 +290,16 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         modalityId: modality.id,
         stageIndex: 0,
       });
-      toast.success(`Jogos re-sorteados (${result.matches}) mantendo os ${result.groups} grupo(s).`);
+      toast.success(t('Jogos re-sorteados ({matches}) mantendo os {groups} grupo(s).', { matches: result.matches, groups: result.groups }));
       const warns = result?.scheduleWarnings || [];
       if (warns.length > 0) {
         toast.warning(
-          `${warns.length} jogo(s) ficaram além do horário de término planejado — adicione quadras ou estenda o horário.`,
+          t('{n} jogo(s) ficaram além do horário de término planejado — adicione quadras ou estenda o horário.', { n: warns.length }),
         );
       }
       setKeepGroupsConfirmOpen(false);
     } catch (err) {
-      toast.error(err?.message || 'Falha ao re-sortear os jogos.');
+      toast.error(err?.message || t('Falha ao re-sortear os jogos.'));
     } finally {
       setRunning(false);
     }
@@ -308,10 +309,10 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     setRunning(true);
     try {
       const { count } = await reShuffleMutation.mutateAsync(0);
-      toast.success(`${count} jogo(s) restante(s) resorteados!`);
+      toast.success(t('{count} jogo(s) restante(s) resorteados!', { count }));
       setReshuffleConfirmOpen(false);
     } catch (err) {
-      toast.error(err?.message || 'Falha ao resortear.');
+      toast.error(err?.message || t('Falha ao resortear.'));
     } finally {
       setRunning(false);
     }
@@ -323,22 +324,22 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       const { cleared, groupsRemoved } = await clearGroupsMutation.mutateAsync(modality);
       const total = (cleared || 0) + (groupsRemoved || 0);
       if (total === 0) {
-        toast.success('Nada a corrigir — os confrontos já seguem o grupo único.');
+        toast.success(t('Nada a corrigir — os confrontos já seguem o grupo único.'));
       } else {
         const partes = [];
-        if (cleared > 0) partes.push(`${cleared} confronto(s) agora seguem o grupo único`);
-        if (groupsRemoved > 0) partes.push(`${groupsRemoved} grupo(s) órfão(s) removido(s)`);
-        toast.success(`Grupos corrigidos: ${partes.join(' e ')}.`);
+        if (cleared > 0) partes.push(t('{cleared} confronto(s) agora seguem o grupo único', { cleared }));
+        if (groupsRemoved > 0) partes.push(t('{groupsRemoved} grupo(s) órfão(s) removido(s)', { groupsRemoved }));
+        toast.success(t('Grupos corrigidos: {v1}.', { v1: fmtLista(partes) }));
       }
     } catch (err) {
-      toast.error(err?.message || 'Falha ao corrigir os grupos.');
+      toast.error(err?.message || t('Falha ao corrigir os grupos.'));
     } finally {
       setRunning(false);
       setClearGroupsConfirmOpen(false);
     }
   }
 
-  const stageName = modality.stages?.[0]?.name || 'fase 1';
+  const stageName = modality.stages?.[0]?.name || t('fase 1');
 
   // Salvar as fases a partir desta aba (usado pela entrada direta). Só toca em
   // `stages`; o resto da modalidade fica como está.
@@ -349,7 +350,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     try {
       await updateModality.mutateAsync({ id: modality.id, updates: { stages } });
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar a configuração das fases.');
+      toast.error(err?.message || t('Não foi possível salvar a configuração das fases.'));
     } finally {
       setSavingStages(false);
     }
@@ -372,25 +373,22 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       defaultOpen={false}
       persistId={`sorteio:${modality.id}`}
       title={modality.name}
-      subtitle={`Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || ''} · ${matches.length > 0
-        ? `${matches.length} ${isTeam ? 'confrontos gerados' : 'jogos gerados'}`
-        : 'Ainda não sorteado'}`}
+      subtitle={t('Fase: {v1} · {v2}', { v1: TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || '', v2: matches.length > 0
+        ? `${matches.length} ${isTeam ? t('confrontos gerados') : t('jogos gerados')}`
+        : t('Ainda não sorteado') })}
     >
       {isTeam && (
         <div className="mb-2 space-y-1 rounded-2xl border border-acid/30 bg-acid/5 p-3 text-xs text-ink">
           <div className="flex flex-wrap items-center gap-2">
-            <V2Badge tone="acid">Equipes</V2Badge>
+            <V2Badge tone="acid">{t('Equipes')}</V2Badge>
             <span>
-              {activeRegistrations.length} equipe(s) confirmada(s) — o sorteio monta{' '}
-              {TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || 'a fase'} com as equipes como
-              participantes; cada jogo é um confronto decidido pelas etapas.
+              {t('{n} equipe(s) confirmada(s) — o sorteio monta', { n: activeRegistrations.length })}{' '}
+              {TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || t('a fase')} {t('com as equipes como participantes; cada jogo é um confronto decidido pelas etapas.')}
             </span>
           </div>
           {incompleteTeams.length > 0 && (
             <p className="font-semibold text-amber-700">
-              Atenção: {incompleteTeams.length} equipe(s) com elenco incompleto
-              ({incompleteTeams.map((t) => t.team_name || t.label).join(', ')}) — dá para sortear,
-              mas complete os elencos antes de escalar os confrontos.
+              {t('Atenção: {n} equipe(s) com elenco incompleto (', { n: incompleteTeams.length })}{incompleteTeams.map((tt) => tt.team_name || tt.label).join(', ')}{t(') — dá para sortear, mas complete os elencos antes de escalar os confrontos.')}
             </p>
           )}
         </div>
@@ -433,8 +431,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           <V2ErrorState
             inline
             className="mb-2"
-            title="Não foi possível carregar os jogos desta fase"
-            description="Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar."
+            title={t('Não foi possível carregar os jogos desta fase')}
+            description={t('Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar.')}
             onRetry={recarregarJogos}
           />
         )}
@@ -454,9 +452,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={performAdvance}
                   disabled={running}
-                  title={ehEtapas ? 'Refaz os grupos, misturando quem ainda não se encontrou' : 'Gerar a próxima rodada com base nos resultados'}
+                  title={ehEtapas ? t('Refaz os grupos, misturando quem ainda não se encontrou') : t('Gerar a próxima rodada com base nos resultados')}
                 >
-                  <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : 'Avançar fase'}
+                  <ChevronsRight className="w-4 h-4 mr-1" /> {ehEtapas ? etapaBotaoTexto(progEtapas) : t('Avançar fase')}
                 </V2Button>
               )}
               {canReschedule && (
@@ -465,9 +463,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={performReschedule}
                   disabled={running}
-                  title="Recalcular quadras e horários sem alterar os confrontos"
+                  title={t('Recalcular quadras e horários sem alterar os confrontos')}
                 >
-                  <CalendarClock className="w-4 h-4 mr-1" /> Reagendar
+                  <CalendarClock className="w-4 h-4 mr-1" /> {t('Reagendar')}
                 </V2Button>
               )}
               {canReshuffleRemaining && (
@@ -477,7 +475,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   onClick={() => setReshuffleConfirmOpen(true)}
                   disabled={running}
                 >
-                  <ListRestart className="w-4 h-4 mr-1" /> Resortear restantes ({pendingCount})
+                  <ListRestart className="w-4 h-4 mr-1" /> {t('Resortear restantes ({pendingCount})', { pendingCount })}
                 </V2Button>
               )}
               {staleGroupIds.length > 0 && (
@@ -486,9 +484,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={() => setClearGroupsConfirmOpen(true)}
                   disabled={running}
-                  title="Esta fase é grupo único, mas há confrontos marcados com grupo (sorteio antigo). Corrige os dados para seguir a definição da modalidade, sem alterar os confrontos."
+                  title={t('Esta fase é grupo único, mas há confrontos marcados com grupo (sorteio antigo). Corrige os dados para seguir a definição da modalidade, sem alterar os confrontos.')}
                 >
-                  <Wrench className="w-4 h-4 mr-1" /> Corrigir grupos ({staleGroupIds.length})
+                  <Wrench className="w-4 h-4 mr-1" /> {t('Corrigir grupos ({n})', { n: staleGroupIds.length })}
                 </V2Button>
               )}
               {gruposEditaveis && staleGroupIds.length === 0 && (
@@ -497,9 +495,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={() => setGroupsEditorOpen(true)}
                   disabled={running}
-                  title="Mover participantes entre os grupos sorteados"
+                  title={t('Mover participantes entre os grupos sorteados')}
                 >
-                  <Users className="w-4 h-4 mr-1" /> Editar grupos
+                  <Users className="w-4 h-4 mr-1" /> {t('Editar grupos')}
                 </V2Button>
               )}
               {gruposEditaveis && staleGroupIds.length === 0 && (
@@ -508,13 +506,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={() => setKeepGroupsConfirmOpen(true)}
                   disabled={running}
-                  title="Gera novamente todos os jogos dos grupos atuais, sem alterar a composição dos grupos"
+                  title={t('Gera novamente todos os jogos dos grupos atuais, sem alterar a composição dos grupos')}
                 >
-                  <ListRestart className="w-4 h-4 mr-1" /> Re-sortear jogos (manter grupos)
+                  <ListRestart className="w-4 h-4 mr-1" /> {t('Re-sortear jogos (manter grupos)')}
                 </V2Button>
               )}
               <V2Button size="sm" onClick={() => setConfirmOpen(true)} disabled={running || locked}>
-                <Shuffle className="w-4 h-4 mr-1" /> {matches.length > 0 ? 'Re-sortear tudo' : 'Sortear'}
+                <Shuffle className="w-4 h-4 mr-1" /> {matches.length > 0 ? t('Re-sortear tudo') : t('Sortear')}
               </V2Button>
             </div>
           )}
@@ -523,7 +521,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         {locked && isAdmin && (
           <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <Lock className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>Torneio bloqueado. Desbloqueie as alterações (na aba Geral) para sortear ou ajustar.</span>
+            <span>{t('Torneio bloqueado. Desbloqueie as alterações (na aba Geral) para sortear ou ajustar.')}</span>
           </div>
         )}
 
@@ -531,22 +529,22 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           <div className="mt-3 rounded-2xl border border-gray-100 bg-paper p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0 text-xs text-gray-600">
-                <div className="font-medium text-ink">Vagas fictícias (“Atleta N”)</div>
+                <div className="font-medium text-ink">{t('Vagas fictícias (“Atleta N”)')}</div>
                 <div>
-                  {realConfirmedCount} inscrito(s) real(is) · {maxEntries} vaga(s) exata(s)
-                  {placeholderCount > 0 ? ` · ${placeholderCount} fictício(s) no momento` : ''}
-                  {missingSlots > 0 ? ` · faltam ${missingSlots}` : ''}
+                  {t('{realConfirmedCount} inscrito(s) real(is) · {maxEntries} vaga(s) exata(s)', { realConfirmedCount, maxEntries })}
+                  {placeholderCount > 0 ? t('· {placeholderCount} fictício(s) no momento', { placeholderCount }) : ''}
+                  {missingSlots > 0 ? t('· faltam {missingSlots}', { missingSlots }) : ''}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {missingSlots > 0 && (
                   <V2Button size="sm" variant="ghost" onClick={fillPlaceholders} disabled={ensurePlaceholdersMutation.isPending}>
-                    <Users className="w-4 h-4 mr-1" /> Preencher {missingSlots} vaga(s)
+                    <Users className="w-4 h-4 mr-1" /> {t('Preencher {missingSlots} vaga(s)', { missingSlots })}
                   </V2Button>
                 )}
                 {placeholderCount > 0 && (
                   <V2Button size="sm" variant="ghost" onClick={removePlaceholders} disabled={clearPlaceholdersMutation.isPending}>
-                    Remover fictícios
+                    {t('Remover fictícios')}
                   </V2Button>
                 )}
               </div>
@@ -558,15 +556,15 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 text-gray-500">
               <CalendarClock className="w-3.5 h-3.5" />
-              {modality.court_count || 1} quadra(s) · {modality.match_duration_minutes || 30} min/jogo
-              {modality.play_start_time ? ` · início ${modality.play_start_time}` : ''}
+              {modality.court_count || 1} {t('quadra(s) ·')} {modality.match_duration_minutes || 30} {t('min/jogo')}
+              {modality.play_start_time ? t('· início {play_start_time}', { play_start_time: modality.play_start_time }) : ''}
             </span>
             {scheduledCount > 0 && (
-              <V2Badge tone="neutral">{scheduledCount} jogo(s) com horário</V2Badge>
+              <V2Badge tone="neutral">{t('{scheduledCount} jogo(s) com horário', { scheduledCount })}</V2Badge>
             )}
             {unscheduledCount > 0 && (
               <V2Badge tone="neutral" className="bg-amber-100 text-amber-800">
-                {unscheduledCount} sem horário
+                {t('{unscheduledCount} sem horário', { unscheduledCount })}
               </V2Badge>
             )}
           </div>
@@ -576,7 +574,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           <div className="mt-3 flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <div>
-              <div className="font-medium">Não foi possível sortear.</div>
+              <div className="font-medium">{t('Não foi possível sortear.')}</div>
               <div>{error}</div>
             </div>
           </div>
@@ -588,13 +586,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
               <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-3 py-2">#</th>
-                  {hasGroups && <th className="px-3 py-2">Grupo</th>}
-                  <th className="px-3 py-2">Rod.</th>
-                  {hasSchedule && <th className="px-3 py-2">Quadra</th>}
-                  {hasSchedule && <th className="px-3 py-2">Horário</th>}
-                  <th className="px-3 py-2">Lado A</th>
-                  <th className="px-3 py-2">Lado B</th>
-                  <th className="px-3 py-2">Status</th>
+                  {hasGroups && <th className="px-3 py-2">{t('Grupo')}</th>}
+                  <th className="px-3 py-2">{t('Rod.')}</th>
+                  {hasSchedule && <th className="px-3 py-2">{t('Quadra')}</th>}
+                  {hasSchedule && <th className="px-3 py-2">{t('Horário')}</th>}
+                  <th className="px-3 py-2">{t('Lado A')}</th>
+                  <th className="px-3 py-2">{t('Lado B')}</th>
+                  <th className="px-3 py-2">{t('Status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -636,21 +634,21 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       <Dialog open={confirmOpen} onOpenChange={(o) => !running && setConfirmOpen(o)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sortear &quot;{stageName}&quot;</DialogTitle>
+            <DialogTitle>{t('Sortear "{stageName}"', { stageName })}</DialogTitle>
             <DialogDescription>
               {matches.length > 0
-                ? `Os ${isTeam ? 'confrontos' : 'jogos'} atuais desta fase serão apagados e novos serão gerados.`
+                ? t('Os {v1} atuais desta fase serão apagados e novos serão gerados.', { v1: isTeam ? t('confrontos') : t('jogos') })
                 : isTeam
-                  ? `Serão gerados os confrontos desta fase com as ${activeRegistrations.length} equipe(s) confirmada(s), no formato definido na modalidade.`
-                  : 'Serão gerados os jogos desta fase a partir das inscrições confirmadas.'}
+                  ? t('Serão gerados os confrontos desta fase com as {n} equipe(s) confirmada(s), no formato definido na modalidade.', { n: activeRegistrations.length })
+                  : t('Serão gerados os jogos desta fase a partir das inscrições confirmadas.')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <V2Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={running}>
-              Cancelar
+              {t('Cancelar')}
             </V2Button>
             <V2Button onClick={performDraw} disabled={running}>
-              {running ? 'Sorteando…' : 'Confirmar sorteio'}
+              {running ? t('Sorteando…') : t('Confirmar sorteio')}
             </V2Button>
           </DialogFooter>
         </DialogContent>
@@ -659,18 +657,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       <Dialog open={reshuffleConfirmOpen} onOpenChange={(o) => !running && setReshuffleConfirmOpen(o)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resortear jogos restantes</DialogTitle>
+            <DialogTitle>{t('Resortear jogos restantes')}</DialogTitle>
             <DialogDescription>
-              Os {pendingCount} jogo(s) ainda não disputado(s) serão resorteados em nova ordem.
-              Os {playedCount} jogo(s) já concluído(s) não serão alterados.
+              {t('Os {pendingCount} jogo(s) ainda não disputado(s) serão resorteados em nova ordem. Os {playedCount} jogo(s) já concluído(s) não serão alterados.', { pendingCount, playedCount })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <V2Button variant="ghost" onClick={() => setReshuffleConfirmOpen(false)} disabled={running}>
-              Cancelar
+              {t('Cancelar')}
             </V2Button>
             <V2Button onClick={performReshuffleRemaining} disabled={running}>
-              {running ? 'Resorteando…' : 'Confirmar'}
+              {running ? t('Resorteando…') : t('Confirmar')}
             </V2Button>
           </DialogFooter>
         </DialogContent>
@@ -679,19 +676,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       <Dialog open={keepGroupsConfirmOpen} onOpenChange={(o) => !running && setKeepGroupsConfirmOpen(o)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Re-sortear jogos (manter grupos)</DialogTitle>
+            <DialogTitle>{t('Re-sortear jogos (manter grupos)')}</DialogTitle>
             <DialogDescription>
-              Os grupos atuais e seus integrantes serão mantidos. Todos os jogos desta fase
-              serão gerados novamente (todos contra todos em cada grupo) e reagendados —
-              os placares já lançados nesta fase serão perdidos.
+              {t('Os grupos atuais e seus integrantes serão mantidos. Todos os jogos desta fase serão gerados novamente (todos contra todos em cada grupo) e reagendados — os placares já lançados nesta fase serão perdidos.')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <V2Button variant="ghost" onClick={() => setKeepGroupsConfirmOpen(false)} disabled={running}>
-              Cancelar
+              {t('Cancelar')}
             </V2Button>
             <V2Button onClick={performRedrawKeepingGroups} disabled={running}>
-              {running ? 'Re-sorteando…' : 'Confirmar'}
+              {running ? t('Re-sorteando…') : t('Confirmar')}
             </V2Button>
           </DialogFooter>
         </DialogContent>
@@ -700,13 +695,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       <ConfirmDialog
         open={clearGroupsConfirmOpen}
         onOpenChange={(o) => !running && setClearGroupsConfirmOpen(o)}
-        title="Corrigir grupos desta fase?"
+        title={t('Corrigir grupos desta fase?')}
         description={
-          'Esta fase é grupo único. A correção remove o rótulo de grupo dos confrontos '
-          + 'e apaga os metadados de grupo órfãos (sorteio antigo), sem alterar os '
-          + 'confrontos, as escalações nem os resultados já lançados.'
+          t('Esta fase é grupo único. A correção remove o rótulo de grupo dos confrontos ')
+          + t('e apaga os metadados de grupo órfãos (sorteio antigo), sem alterar os ')
+          + t('confrontos, as escalações nem os resultados já lançados.')
         }
-        confirmLabel="Corrigir grupos"
+        confirmLabel={t('Corrigir grupos')}
         loading={running}
         onConfirm={performClearGroups}
       />
@@ -750,8 +745,8 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
               <V2Button
                 type="button"
                 onClick={() => onSubstitute(regId)}
-                title={`Substituir ${name}`}
-                aria-label={`Substituir ${name}`}
+                title={t('Substituir {name}', { name })}
+                aria-label={t('Substituir {name}', { name })}
                 className="text-gray-400 hover:text-green-600 focus-visible:text-green-600 transition-colors ml-1"
               >
                 <Pencil className="w-3 h-3" />
@@ -779,9 +774,9 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
         registrationId,
         toGroupName,
       });
-      toast.success('Jogador movido e jogos da fase regerados.');
+      toast.success(t('Jogador movido e jogos da fase regerados.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível mover o jogador.');
+      toast.error(err?.message || t('Não foi possível mover o jogador.'));
     }
   }
 
@@ -803,17 +798,16 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
     <Dialog open onOpenChange={(o) => !moveMutation.isPending && !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar grupos · {modality.name}</DialogTitle>
+          <DialogTitle>{t('Editar grupos · {name}', { name: modality.name })}</DialogTitle>
           <DialogDescription>
-            Mova jogadores entre os grupos. Ao mover, os jogos da fase são regerados com a nova
-            composição{hasPlayedScores ? ' — os placares já lançados nesta fase serão perdidos' : ''}.
+            {t('Mova jogadores entre os grupos. Ao mover, os jogos da fase são regerados com a nova composição')}{hasPlayedScores ? t(' — os placares já lançados nesta fase serão perdidos') : ''}.
           </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-gray-500">Carregando grupos…</p>
+          <p className="text-sm text-gray-500">{t('Carregando grupos…')}</p>
         ) : groups.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum grupo sorteado nesta fase.</p>
+          <p className="text-sm text-gray-500">{t('Nenhum grupo sorteado nesta fase.')}</p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {groups.map((g) => (
@@ -823,7 +817,7 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
                 </div>
                 <div className="space-y-1.5">
                   {g.participants.length === 0 ? (
-                    <p className="text-xs text-gray-500">Grupo vazio</p>
+                    <p className="text-xs text-gray-500">{t('Grupo vazio')}</p>
                   ) : (
                     g.participants.map((pid) => (
                       <div key={pid} className="flex items-center justify-between gap-2">
@@ -833,12 +827,12 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
                           value={g.name}
                           disabled={moveMutation.isPending}
                           onChange={(e) => requestMove(pid, e.target.value, g.name)}
-                          aria-label={`Mover ${labelById.get(pid) || pid} para outro grupo`}
-                          title="Mover para outro grupo"
+                          aria-label={t('Mover {v1} para outro grupo', { v1: labelById.get(pid) || pid })}
+                          title={t('Mover para outro grupo')}
                         >
                           {groupNames.map((name) => (
                             <option key={name} value={name}>
-                              {name === g.name ? `${name} (atual)` : `Mover para ${name}`}
+                              {name === g.name ? t('{name} (atual)', { name }) : t('Mover para {name}', { name })}
                             </option>
                           ))}
                         </V2Select>
@@ -853,7 +847,7 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
 
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose} disabled={moveMutation.isPending}>
-            {moveMutation.isPending ? 'Movendo…' : 'Fechar'}
+            {moveMutation.isPending ? t('Movendo…') : t('Fechar')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
@@ -862,14 +856,14 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
         open={Boolean(pendingMove)}
         onOpenChange={(o) => !o && !moveMutation.isPending && setPendingMove(null)}
         destructive
-        title="Mover jogador e refazer os jogos?"
+        title={t('Mover jogador e refazer os jogos?')}
         description={
           pendingMove
-            ? `${pendingMove.name} vai do ${pendingMove.fromGroupName} para o ${pendingMove.toGroupName}. `
-              + 'Os jogos desta fase serão regerados e os placares já lançados nela serão perdidos.'
+            ? t('{name} vai do {fromGroupName} para o {toGroupName}. ', { name: pendingMove.name, fromGroupName: pendingMove.fromGroupName, toGroupName: pendingMove.toGroupName })
+              + t('Os jogos desta fase serão regerados e os placares já lançados nela serão perdidos.')
             : ''
         }
-        confirmLabel="Mover e refazer jogos"
+        confirmLabel={t('Mover e refazer jogos')}
         loading={moveMutation.isPending}
         onConfirm={async () => {
           if (!pendingMove) return;
@@ -909,10 +903,10 @@ function SubstitutePlayerDialog({
         oldRegistrationId: registrationId,
         newRegistrationId: selectedId,
       });
-      toast.success('Jogador substituído com sucesso.');
+      toast.success(t('Jogador substituído com sucesso.'));
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Falha ao substituir jogador.');
+      toast.error(err.message || t('Falha ao substituir jogador.'));
     }
   }
 
@@ -920,17 +914,17 @@ function SubstitutePlayerDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Substituir jogador</DialogTitle>
+          <DialogTitle>{t('Substituir jogador')}</DialogTitle>
           <DialogDescription>
-            Substituindo: <strong>{currentName}</strong>
+            {t('Substituindo:')} <strong>{currentName}</strong>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Substituto</Label>
+            <Label>{t('Substituto')}</Label>
             {available.length === 0 ? (
               <p className="text-sm text-gray-500 mt-1">
-                Nenhum jogador disponível para substituição.
+                {t('Nenhum jogador disponível para substituição.')}
               </p>
             ) : (
               <V2Select
@@ -938,7 +932,7 @@ function SubstitutePlayerDialog({
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
               >
-                <option value="">— selecione um jogador —</option>
+                <option value="">{t('— selecione um jogador —')}</option>
                 {available.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label || r.player_a_name}
@@ -950,13 +944,13 @@ function SubstitutePlayerDialog({
         </div>
         <DialogFooter>
           <V2Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('Cancelar')}
           </V2Button>
           <V2Button
             onClick={handleConfirm}
             disabled={!selectedId || substituteMutation.isPending}
           >
-            {substituteMutation.isPending ? 'Substituindo…' : 'Confirmar substituição'}
+            {substituteMutation.isPending ? t('Substituindo…') : t('Confirmar substituição')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

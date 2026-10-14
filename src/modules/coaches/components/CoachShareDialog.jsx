@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
+import { t } from '@/core/i18n';
 
 export default function CoachShareDialog({ coach, open, onOpenChange }) {
   const cardRef = useRef(null);
@@ -33,9 +34,11 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
   const { copied, copy } = useClipboard();
 
   const url = typeof window !== 'undefined' ? `${window.location.origin}/coaches/${coach.id}` : '';
-  const displayName = coach?.display_name || coach?.name || 'Professor';
+  const displayName = coach?.display_name || coach?.name || t('Professor');
   const region = Array.isArray(coach?.regions) && coach.regions.length > 0 ? coach.regions[0] : '';
-  const text = `Conheça o professor ${displayName}${region ? ` (${region})` : ''} no PickleRush: ${url}`;
+  const text = region
+    ? t('Conheça o professor {nome} ({regiao}) no PickleRush: {url}', { nome: displayName, regiao: region, url })
+    : t('Conheça o professor {nome} no PickleRush: {url}', { nome: displayName, url });
 
   useEffect(() => {
     if (!url) return;
@@ -54,7 +57,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
       a.download = `professor-${displayName.replace(/\s+/g, '-').toLowerCase() || 'card'}.png`;
       a.click();
     } catch (err) {
-      toast.error('Não foi possível gerar a imagem.');
+      toast.error(t('Não foi possível gerar a imagem.'));
     } finally {
       setBusy(false);
     }
@@ -64,9 +67,9 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Compartilhar perfil</DialogTitle>
+          <DialogTitle>{t('Compartilhar perfil')}</DialogTitle>
           <DialogDescription>
-            Mostre este professor para outros atletas.
+            {t('Mostre este professor para outros atletas.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -93,7 +96,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
           </div>
           {qr && (
             <div className="mt-4 flex justify-center">
-              <img src={qr} alt="QR Code do perfil" className="h-40 w-40 rounded-2xl border border-gray-100 bg-white p-2" />
+              <img src={qr} alt={t('QR Code do perfil')} className="h-40 w-40 rounded-2xl border border-gray-100 bg-white p-2" />
             </div>
           )}
           <p className="mt-3 text-center text-[10px] uppercase tracking-widest text-gray-400">
@@ -105,7 +108,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
           <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-3 py-2">
             <code className="flex-1 truncate text-xs text-gray-600">{url}</code>
             <Button size="sm" variant="ghost" onClick={() => copy(url)}>
-              {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+              {copied ? <><Check className="h-3.5 w-3.5" /> {t('Copiado')}</> : <><Copy className="h-3.5 w-3.5" /> {t('Copiar')}</>}
             </Button>
           </div>
           <div className="flex gap-2">
@@ -115,11 +118,11 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
                 target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-1.5"
               >
-                <MessageCircle className="h-4 w-4" /> WhatsApp
+                <MessageCircle className="h-4 w-4" /> {t('WhatsApp')}
               </a>
             </Button>
             <Button onClick={handleDownload} disabled={busy} className="flex-1">
-              <Download className="h-4 w-4" /> {busy ? 'Gerando…' : 'Baixar PNG'}
+              <Download className="h-4 w-4" /> {busy ? t('Gerando…') : t('Baixar PNG')}
             </Button>
           </div>
         </div>

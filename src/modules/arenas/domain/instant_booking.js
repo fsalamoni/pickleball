@@ -23,6 +23,7 @@ import { BOOKING_STATUS } from './constants.js';
 import { PAYMENT_METHOD } from './pdv.js';
 import { isValidSlot } from './booking.js';
 import { validateBookingRequest } from './booking_conflict.js';
+import { t, tk } from '@/core/i18n';
 
 /**
  * Verifica se um slot candidato pode ser reservado instantaneamente.
@@ -35,21 +36,21 @@ import { validateBookingRequest } from './booking_conflict.js';
 export function canBeInstantBooking({ date, start_time, end_time, court_id, proposed_price, payment_method } = {}, arena = {}, existingBookings = [], courtSchedules = []) {
   // 1. Arena permite?
   if (arena.allow_instant_booking !== true) {
-    return { ok: false, reason: 'arena_disabled', message: 'Esta arena não aceita reservas instantâneas.' };
+    return { ok: false, reason: 'arena_disabled', message: t('Esta arena não aceita reservas instantâneas.') };
   }
   // 2. Slot válido (formato)
   const slot = { date, start: start_time, end: end_time };
   if (!isValidSlot(slot)) {
-    return { ok: false, reason: 'invalid_slot', message: 'Horário inválido.' };
+    return { ok: false, reason: 'invalid_slot', message: t('Horário inválido.') };
   }
   // 3. Preço proposto > 0 (instant não pode ser grátis)
   const price = Number(proposed_price);
   if (!Number.isFinite(price) || price <= 0) {
-    return { ok: false, reason: 'no_price', message: 'Reserva instantânea requer valor definido (> 0).' };
+    return { ok: false, reason: 'no_price', message: t('Reserva instantânea requer valor definido (> 0).') };
   }
   // 4. Payment method obrigatório e válido
   if (!Object.values(PAYMENT_METHOD).includes(payment_method)) {
-    return { ok: false, reason: 'no_payment_method', message: 'Escolha um método de pagamento (PIX, cartão, etc).' };
+    return { ok: false, reason: 'no_payment_method', message: t('Escolha um método de pagamento (PIX, cartão, etc).') };
   }
   // 5. Slot está dentro de uma janela de schedule + sem conflito
   const v = validateBookingRequest({
@@ -77,16 +78,16 @@ export function getInitialBookingStatus(isInstant) {
 
 /** Labels de UI para o toggle. */
 export const INSTANT_BOOKING_LABELS = Object.freeze({
-  TITLE: 'Como você quer reservar?',
+  TITLE: tk('Como você quer reservar?'),
   REQUEST: {
     key: 'request',
-    title: 'Solicitar reserva',
-    description: 'A arena confirma o valor. Pode levar horas/dias para responder.',
+    title: tk('Solicitar reserva'),
+    description: tk('A arena confirma o valor. Pode levar horas/dias para responder.'),
   },
   INSTANT: {
     key: 'instant',
-    title: 'Reserva instantânea',
-    description: 'Confirmada na hora, sem esperar. Requer pagamento adiantado.',
+    title: tk('Reserva instantânea'),
+    description: tk('Confirmada na hora, sem esperar. Requer pagamento adiantado.'),
   },
 });
 

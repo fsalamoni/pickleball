@@ -13,6 +13,7 @@ import { Building2, MapPin, Mail, Phone, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getClub } from '@/modules/clubs/services/clubService';
 import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
+import { t } from '@/core/i18n';
 
 export default function PublicClub() {
   const { clubId } = useParams();
@@ -26,7 +27,7 @@ export default function PublicClub() {
 
   useDocumentMeta({
     title: club?.name,
-    description: club?.description || (club ? `Clube de pickleball${club.city ? ` em ${club.city}` : ''}.` : ''),
+    description: club?.description || (club ? t('Clube de pickleball{v1}.', { v1: club.city ? t(' em {city}', { city: club.city }) : '' }) : ''),
   }, publicOn && !!club);
 
   if (!publicOn) return <Navigate to="/login" replace />;
@@ -38,7 +39,7 @@ export default function PublicClub() {
     <div className="min-h-screen bg-paper">
       <div className="mx-auto max-w-[720px] px-4 py-10">
         {isLoading ? (
-          <p className="py-20 text-center text-gray-400">Carregando…</p>
+          <p className="py-20 text-center text-gray-400">{t('Carregando…')}</p>
         ) : isError && !club ? (
           /* ⚠️ Sem esta ramificação, uma falha de rede virava uma AFIRMAÇÃO
              sobre a escolha do clube — "não disponível publicamente" — e
@@ -47,24 +48,24 @@ export default function PublicClub() {
              consulta. */
           <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 text-center">
             <h1 className="font-display text-2xl font-bold text-ink">
-              Não foi possível carregar o clube
+              {t('Não foi possível carregar o clube')}
             </h1>
             <p className="mt-2 text-sm text-gray-500">
-              A conexão falhou no meio do caminho. O link continua valendo.
+              {t('A conexão falhou no meio do caminho. O link continua valendo.')}
             </p>
             <button
               type="button"
               onClick={() => refetch()}
               className="mt-4 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white"
             >
-              Tentar de novo
+              {t('Tentar de novo')}
             </button>
           </div>
         ) : !isPublic ? (
           <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 text-center">
-            <h1 className="font-display text-2xl font-bold text-ink">Clube não disponível publicamente</h1>
-            <p className="mt-2 text-sm text-gray-500">Entre na plataforma para ver os clubes.</p>
-            <Link to="/login" className="mt-4 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Entrar</Link>
+            <h1 className="font-display text-2xl font-bold text-ink">{t('Clube não disponível publicamente')}</h1>
+            <p className="mt-2 text-sm text-gray-500">{t('Entre na plataforma para ver os clubes.')}</p>
+            <Link to="/login" className="mt-4 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Entrar')}</Link>
           </div>
         ) : (
           <div className="overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
@@ -76,7 +77,7 @@ export default function PublicClub() {
                 <h1 className="font-display text-3xl font-bold text-white">{club.name}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
                   {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
-                  <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} membro(s)</span>
+                  <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} {t('membro(s)')}</span>
                 </div>
               </div>
             </div>
@@ -89,7 +90,7 @@ export default function PublicClub() {
             <div className="mt-6">
               <Link to={isAuthenticated ? `/clubes/${club.id}` : '/login'}
                 className="inline-flex rounded-full bg-acid px-6 py-3 text-sm font-bold text-ink">
-                {isAuthenticated ? 'Ver clube e participar' : 'Entrar para participar'}
+                {isAuthenticated ? t('Ver clube e participar') : t('Entrar para participar')}
               </Link>
             </div>
           </div>

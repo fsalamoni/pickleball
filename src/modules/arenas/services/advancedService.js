@@ -13,6 +13,7 @@ import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeDeviceInput, calculateDynamicPrice, aggregateNetworkStats, forecastDemand } from '../domain/arenaV3Advanced.js';
 import { normalizeBranding } from '../domain/whiteLabel.js';
+import { t } from '@/core/i18n';
 
 const COL_DEVICES = 'arena_devices';
 const COL_NETWORKS = 'arena_networks';
@@ -27,9 +28,9 @@ export async function listArenaDevices(arenaId, { lim = 50 } = {}) {
 }
 
 export async function createDevice(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizeDeviceInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   const id = doc(collection(db, COL_DEVICES)).id;
   await setDoc(doc(db, COL_DEVICES, id), {
     id, arena_id: arenaId, ...value, status: 'offline', last_seen: null, created_at: serverTimestamp(), updated_at: serverTimestamp(),
@@ -91,8 +92,8 @@ export async function getArenaNetwork(arenaId) {
  */
 export async function createNetwork(name, arenaId, actor) {
   const nome = String(name || '').trim().slice(0, 80);
-  if (!nome) throw new Error('Dê um nome à rede.');
-  if (!arenaId) throw new Error('Informe a arena que funda a rede.');
+  if (!nome) throw new Error(t('Dê um nome à rede.'));
+  if (!arenaId) throw new Error(t('Informe a arena que funda a rede.'));
   const id = doc(collection(db, COL_NETWORKS)).id;
   await setDoc(doc(db, COL_NETWORKS, id), {
     id,
@@ -120,7 +121,7 @@ export async function addArenaToNetwork(networkId, arenaId, actor) {
   if (!networkId || !arenaId) return;
   const ref = doc(db, COL_NETWORKS, networkId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Rede não encontrada.');
+  if (!snap.exists()) throw new Error(t('Rede não encontrada.'));
   const atuais = snap.data().arenas || [];
   if (atuais.includes(arenaId)) return;
 
@@ -170,7 +171,7 @@ export async function removeArenaFromNetwork(networkId, arenaId, actor) {
 export async function updateBranding(arenaId, branding, actor) {
   if (!arenaId) return;
   const { valid, errors, value } = normalizeBranding(branding);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await setDoc(doc(db, 'arenas', arenaId), {
     branding: value, updated_at: serverTimestamp(),
   }, { merge: true });

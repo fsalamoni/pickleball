@@ -42,6 +42,7 @@ import ItemCard from '@/v2/components/training/ItemCard';
 import {
   ConfirmDialog, ReasonDialog, ReportDialog, mensagemDeErro,
 } from '@/v2/components/training/item/ItemActionDialogs';
+import { t } from '@/core/i18n';
 
 const ShareDialog = lazy(() => import('@/v2/components/training/item/ShareDialog'));
 
@@ -49,7 +50,7 @@ const VOLTAR = '/treino?aba=biblioteca';
 
 function Voltar() {
   return (
-    <V2BackLink to={VOLTAR}>Biblioteca</V2BackLink>
+    <V2BackLink to={VOLTAR}>{t('Biblioteca')}</V2BackLink>
   );
 }
 
@@ -58,9 +59,9 @@ function Indisponivel() {
     <V2Surface>
       <V2EmptyState
         icon={EyeOff}
-        title="Este item não está disponível para você"
-        description="Ele pode ser privado do autor, ter sido removido ou ser só para os alunos de um professor."
-        action={<V2Button asChild variant="secondary"><Link to={VOLTAR}>Ir para a biblioteca</Link></V2Button>}
+        title={t('Este item não está disponível para você')}
+        description={t('Ele pode ser privado do autor, ter sido removido ou ser só para os alunos de um professor.')}
+        action={<V2Button asChild variant="secondary"><Link to={VOLTAR}>{t('Ir para a biblioteca')}</Link></V2Button>}
       />
     </V2Surface>
   );
@@ -81,18 +82,18 @@ function EstadoDoAutor({ item }) {
   return (
     <div className="space-y-2 rounded-3xl bg-gray-50 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-gray-600">Quem vê:</span>
+        <span className="text-sm font-semibold text-gray-600">{t('Quem vê:')}</span>
         <V2Badge tone={tom}>{itemStatusLabel(item)}</V2Badge>
       </div>
       {item.hidden && item.hidden_reason && (
-        <p className="text-sm text-gray-700"><span className="font-semibold">Motivo da equipe: </span>{item.hidden_reason}</p>
+        <p className="text-sm text-gray-700"><span className="font-semibold">{t('Motivo da equipe:')}{' '}</span>{item.hidden_reason}</p>
       )}
       {recusado && item.review_note && (
-        <p className="text-sm text-gray-700"><span className="font-semibold">Por que não foi aprovado: </span>{item.review_note}</p>
+        <p className="text-sm text-gray-700"><span className="font-semibold">{t('Por que não foi aprovado:')}{' '}</span>{item.review_note}</p>
       )}
       {recusado && !item.legacy && (
         <Link to={`/treino/item/${item.id}/editar`} className="inline-flex items-center gap-1 text-sm font-semibold text-ink underline underline-offset-4">
-          <Pencil className="h-4 w-4" aria-hidden="true" /> Editar e reenviar
+          <Pencil className="h-4 w-4" aria-hidden="true" />{' '}{t('Editar e reenviar')}
         </Link>
       )}
     </div>
@@ -104,25 +105,25 @@ function MeuDominio({ item, uid }) {
   const acoes = useMetaActions(uid);
   if (meta.isPending) return <V2Skeleton className="h-10 rounded-2xl" />;
   if (meta.isError) {
-    return <V2ErrorState inline title="Não foi possível carregar seus favoritos" onRetry={() => meta.refetch()} />;
+    return <V2ErrorState inline title={t('Não foi possível carregar seus favoritos')} onRetry={() => meta.refetch()} />;
   }
   const favorito = (meta.data?.favorites || []).includes(item.id);
   const nivel = meta.data?.mastery?.[item.id] || null;
   const salvarFav = () => acoes.favorite.mutate({ itemId: item.id, on: !favorito }, {
-    onSuccess: () => toast.success(favorito ? 'Tirado dos salvos.' : 'Salvo. Ele aparece em "Salvos" na biblioteca.'),
-    onError: () => toast.error('Não foi possível salvar agora.'),
+    onSuccess: () => toast.success(favorito ? t('Tirado dos salvos.') : t('Salvo. Ele aparece em "Salvos" na biblioteca.')),
+    onError: () => toast.error(t('Não foi possível salvar agora.')),
   });
   const marcar = (valor) => acoes.mastery.mutate({ itemId: item.id, level: valor === nivel ? null : valor }, {
-    onError: () => toast.error('Não foi possível salvar agora.'),
+    onError: () => toast.error(t('Não foi possível salvar agora.')),
   });
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
       <V2Button variant="secondary" size="sm" aria-pressed={favorito} onClick={salvarFav} disabled={acoes.favorite.isPending}>
         <Heart className={cn('h-4 w-4', favorito && 'fill-current text-red-500')} aria-hidden="true" />
-        {favorito ? 'Salvo' : 'Salvar'}
+        {favorito ? t('Salvo') : t('Salvar')}
       </V2Button>
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Meu domínio deste item">
-        <span className="text-sm font-semibold text-gray-600">Meu domínio:</span>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('Meu domínio deste item')}>
+        <span className="text-sm font-semibold text-gray-600">{t('Meu domínio:')}</span>
         {Object.values(MASTERY).map((m) => (
           <V2FilterChip
             key={m}
@@ -132,7 +133,7 @@ function MeuDominio({ item, uid }) {
             onClick={() => marcar(m)}
             className="px-3 py-1"
           >
-            {MASTERY_LABELS[m]}
+            {t(MASTERY_LABELS[m])}
           </V2FilterChip>
         ))}
       </div>
@@ -154,23 +155,23 @@ function Acoes({ item, identity, settings, onShare, onDelete, onReport, pedidoDe
       {(autor || identity.isAdmin) && !legado && <EstadoDoAutor item={item} />}
       {pedidoDeEnvio && !podeEnviar && (
         <p role="status" className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
-          {settings?.allow_sharing === false ? 'O compartilhamento de treinos está pausado no momento.' : share.reason}
+          {settings?.allow_sharing === false ? t('O compartilhamento de treinos está pausado no momento.') : share.reason}
         </p>
       )}
       <div className="flex flex-wrap gap-2">
         <V2Button asChild size="sm" data-dica="treino-item-registrar">
           <Link to={`/treino?aba=diario&registrar=${encodeURIComponent(item.id)}`} className={linkBtn}>
-            <NotebookPen className="h-4 w-4" aria-hidden="true" /> Registrar que fiz
+            <NotebookPen className="h-4 w-4" aria-hidden="true" />{' '}{t('Registrar que fiz')}
           </Link>
         </V2Button>
         <V2Button asChild size="sm" variant="secondary" data-dica="treino-item-plano">
           <Link to={`/treino?aba=planos&adicionar=${encodeURIComponent(item.id)}`} className={linkBtn}>
-            <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Pôr no plano
+            <CalendarPlus className="h-4 w-4" aria-hidden="true" />{' '}{t('Pôr no plano')}
           </Link>
         </V2Button>
         {podeEnviar && (
           <V2Button size="sm" variant="secondary" onClick={onShare} data-dica="treino-item-enviar">
-            <Send className="h-4 w-4" aria-hidden="true" /> {identity.isCoach ? 'Enviar ou indicar' : 'Indicar'}
+            <Send className="h-4 w-4" aria-hidden="true" /> {identity.isCoach ? t('Enviar ou indicar') : t('Indicar')}
           </V2Button>
         )}
       </div>
@@ -179,37 +180,37 @@ function Acoes({ item, identity, settings, onShare, onDelete, onReport, pedidoDe
         {identity.activeCoachIds.length > 0 && (
           <V2Button asChild size="sm" variant="ghost" data-dica="treino-item-perguntar">
             <Link to={`/treino?aba=duvidas&nova=1&item=${encodeURIComponent(item.id)}`} className={linkBtn}>
-              <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" /> Perguntar ao professor
+              <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" />{' '}{t('Perguntar ao professor')}
             </Link>
           </V2Button>
         )}
         {copia.ok && (
           <V2Button asChild size="sm" variant="ghost" data-dica="treino-item-copiar">
             <Link to={`/treino/novo?copiar=${encodeURIComponent(item.id)}`} className={linkBtn}>
-              <CopyPlus className="h-4 w-4" aria-hidden="true" /> Copiar e adaptar
+              <CopyPlus className="h-4 w-4" aria-hidden="true" />{' '}{t('Copiar e adaptar')}
             </Link>
           </V2Button>
         )}
         {edita && (
           <V2Button asChild size="sm" variant="ghost">
             <Link to={`/treino/item/${item.id}/editar`} className={linkBtn}>
-              <Pencil className="h-4 w-4" aria-hidden="true" /> Editar
+              <Pencil className="h-4 w-4" aria-hidden="true" />{' '}{t('Editar')}
             </Link>
           </V2Button>
         )}
         {legado && autor && (
           <V2Button asChild size="sm" variant="ghost">
-            <Link to="/aulas?aba=conteudo" className={linkBtn}><Pencil className="h-4 w-4" aria-hidden="true" /> Editar na área do professor</Link>
+            <Link to="/aulas?aba=conteudo" className={linkBtn}><Pencil className="h-4 w-4" aria-hidden="true" />{' '}{t('Editar na área do professor')}</Link>
           </V2Button>
         )}
         {edita && (
           <V2Button size="sm" variant="ghost" onClick={onDelete} className="text-red-600">
-            <Trash2 className="h-4 w-4" aria-hidden="true" /> Excluir
+            <Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Excluir')}
           </V2Button>
         )}
         {!autor && !legado && (
           <V2Button size="sm" variant="ghost" onClick={onReport}>
-            <Flag className="h-4 w-4" aria-hidden="true" /> Denunciar
+            <Flag className="h-4 w-4" aria-hidden="true" />{' '}{t('Denunciar')}
           </V2Button>
         )}
       </div>
@@ -222,68 +223,68 @@ function PainelDaEquipe({ item, identity, settings }) {
   const acoes = useTrainingAdminActions(identity, settings);
   const [pedido, setPedido] = useState(null); // 'ocultar' | 'recusar'
   const publico = item.visibility === VISIBILITY.PUBLICO;
-  const falhou = (err) => toast.error(mensagemDeErro(err, 'Não foi possível salvar agora.'));
+  const falhou = (err) => toast.error(mensagemDeErro(err, t('Não foi possível salvar agora.')));
   return (
     <V2Surface className="space-y-4">
       <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <ShieldCheck className="h-5 w-5" aria-hidden="true" /> Equipe da plataforma
+        <ShieldCheck className="h-5 w-5" aria-hidden="true" />{' '}{t('Equipe da plataforma')}
       </h2>
       <div className="flex flex-wrap gap-2">
         {publico && item.review !== REVIEW.APROVADO && (
           <V2Button size="sm" disabled={acoes.review.isPending} onClick={() => acoes.review.mutate({ item, decision: REVIEW.APROVADO, note: '' }, {
-            onSuccess: () => toast.success('Aprovado. O autor foi avisado.'), onError: falhou,
+            onSuccess: () => toast.success(t('Aprovado. O autor foi avisado.')), onError: falhou,
           })}
           >
-            Aprovar
+            {t('Aprovar')}
           </V2Button>
         )}
         {publico && item.review !== REVIEW.RECUSADO && (
-          <V2Button size="sm" variant="secondary" onClick={() => setPedido('recusar')}>Recusar</V2Button>
+          <V2Button size="sm" variant="secondary" onClick={() => setPedido('recusar')}>{t('Recusar')}</V2Button>
         )}
         {item.hidden ? (
           <V2Button size="sm" variant="secondary" disabled={acoes.hide.isPending} onClick={() => acoes.hide.mutate({ item, hidden: false, reason: '' }, {
-            onSuccess: () => toast.success('Visível de novo.'), onError: falhou,
+            onSuccess: () => toast.success(t('Visível de novo.')), onError: falhou,
           })}
           >
-            Mostrar de novo
+            {t('Mostrar de novo')}
           </V2Button>
         ) : (
           <V2Button size="sm" variant="secondary" onClick={() => setPedido('ocultar')}>
-            <EyeOff className="h-4 w-4" aria-hidden="true" /> Ocultar
+            <EyeOff className="h-4 w-4" aria-hidden="true" />{' '}{t('Ocultar')}
           </V2Button>
         )}
         <V2Button size="sm" variant="ghost" disabled={acoes.feature.isPending} onClick={() => acoes.feature.mutate({ item, featured: !item.featured }, {
-          onSuccess: () => toast.success(item.featured ? 'Saiu dos destaques.' : 'Em destaque na biblioteca.'), onError: falhou,
+          onSuccess: () => toast.success(item.featured ? t('Saiu dos destaques.') : t('Em destaque na biblioteca.')), onError: falhou,
         })}
         >
-          <Star className="h-4 w-4" aria-hidden="true" /> {item.featured ? 'Tirar do destaque' : 'Destacar'}
+          <Star className="h-4 w-4" aria-hidden="true" /> {item.featured ? t('Tirar do destaque') : t('Destacar')}
         </V2Button>
       </div>
       <ReasonDialog
         open={pedido === 'ocultar'}
         onOpenChange={(a) => !a && setPedido(null)}
-        title="Ocultar este item"
-        description="Ele sai da biblioteca e de quem o recebeu. O autor é avisado com o motivo."
-        label="Motivo (o autor vai ler)"
-        confirmLabel="Ocultar"
+        title={t('Ocultar este item')}
+        description={t('Ele sai da biblioteca e de quem o recebeu. O autor é avisado com o motivo.')}
+        label={t('Motivo (o autor vai ler)')}
+        confirmLabel={t('Ocultar')}
         required
         pending={acoes.hide.isPending}
         onConfirm={(motivo, fechar) => acoes.hide.mutate({ item, hidden: true, reason: motivo }, {
-          onSuccess: () => { toast.success('Ocultado. O autor foi avisado.'); fechar(); }, onError: falhou,
+          onSuccess: () => { toast.success(t('Ocultado. O autor foi avisado.')); fechar(); }, onError: falhou,
         })}
       />
       <ReasonDialog
         open={pedido === 'recusar'}
         onOpenChange={(a) => !a && setPedido(null)}
-        title="Recusar a publicação"
-        description="O item continua do autor, só não entra na biblioteca. Ele pode editar e reenviar."
-        label="O que precisa mudar (o autor vai ler)"
-        confirmLabel="Recusar"
+        title={t('Recusar a publicação')}
+        description={t('O item continua do autor, só não entra na biblioteca. Ele pode editar e reenviar.')}
+        label={t('O que precisa mudar (o autor vai ler)')}
+        confirmLabel={t('Recusar')}
         required
         maxLength={500}
         pending={acoes.review.isPending}
         onConfirm={(nota, fechar) => acoes.review.mutate({ item, decision: REVIEW.RECUSADO, note: nota }, {
-          onSuccess: () => { toast.success('Recusado. O autor foi avisado.'); fechar(); }, onError: falhou,
+          onSuccess: () => { toast.success(t('Recusado. O autor foi avisado.')); fechar(); }, onError: falhou,
         })}
       />
     </V2Surface>
@@ -339,13 +340,13 @@ function Ficha({ item, identity, settings }) {
       <ConfirmDialog
         open={apagando}
         onOpenChange={setApagando}
-        title="Excluir este item?"
-        description="Ele some da biblioteca, dos planos e de quem o recebeu. Não dá para desfazer."
-        confirmLabel="Excluir"
+        title={t('Excluir este item?')}
+        description={t('Ele some da biblioteca, dos planos e de quem o recebeu. Não dá para desfazer.')}
+        confirmLabel={t('Excluir')}
         pending={excluir.isPending}
         onConfirm={() => excluir.mutate(item, {
-          onSuccess: () => { toast.success('Item excluído.'); setApagando(false); navigate('/treino?aba=meus'); },
-          onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível excluir agora. Tente de novo.')),
+          onSuccess: () => { toast.success(t('Item excluído.')); setApagando(false); navigate('/treino?aba=meus'); },
+          onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível excluir agora. Tente de novo.'))),
         })}
       />
     </>
@@ -360,7 +361,7 @@ function NaTrilha({ item, identity }) {
   const visiveis = useVisibleTrainingItems(identity);
   if (visiveis.isLoading) return <V2Skeleton className="h-32 rounded-4xl" />;
   if (visiveis.isError) {
-    return <V2ErrorState inline title="A trilha dos golpes não carregou" onRetry={() => visiveis.refetch()} />;
+    return <V2ErrorState inline title={t('A trilha dos golpes não carregou')} onRetry={() => visiveis.refetch()} />;
   }
   const pos = trailPosition(item, visiveis.items);
   const drills = relatedDrills(item, visiveis.items);
@@ -380,21 +381,21 @@ function NaTrilha({ item, identity }) {
       <V2Surface className="space-y-4" data-dica="treino-item-trilha">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500">
-            <Route className="h-4 w-4" aria-hidden="true" /> Trilha dos golpes · {pos.family.title} · {pos.index} de {pos.total}
+            <Route className="h-4 w-4" aria-hidden="true" /> {t('Trilha dos golpes')} · {t(pos.family.title)} · {t('{n} de {total}', { n: pos.index, total: pos.total })}
           </p>
-          <Link to="/treino/golpes" className="text-sm font-semibold text-ink underline underline-offset-4">Ver a trilha</Link>
+          <Link to="/treino/golpes" className="text-sm font-semibold text-ink underline underline-offset-4">{t('Ver a trilha')}</Link>
         </div>
         {(pos.prev || pos.next) && (
           <div className="flex flex-col gap-2 sm:flex-row">
-            {vizinho(pos.prev, 'Antes', ChevronLeft, false)}
-            {vizinho(pos.next, 'A seguir', ChevronRight, true)}
+            {vizinho(pos.prev, t('Antes'), ChevronLeft, false)}
+            {vizinho(pos.next, t('A seguir'), ChevronRight, true)}
           </div>
         )}
       </V2Surface>
       {drills.length > 0 && (
         <section className="space-y-3" aria-labelledby="drills-do-golpe">
-          <h2 id="drills-do-golpe" className="font-display text-xl font-bold text-ink">Drills para treinar este golpe</h2>
-          <p className="text-sm text-gray-500">Aprender o gesto é o começo; repetir num drill é o que o leva para o jogo.</p>
+          <h2 id="drills-do-golpe" className="font-display text-xl font-bold text-ink">{t('Drills para treinar este golpe')}</h2>
+          <p className="text-sm text-gray-500">{t('Aprender o gesto é o começo; repetir num drill é o que o leva para o jogo.')}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {drills.map((d) => <ItemCard key={d.id} item={d} />)}
           </div>
@@ -411,18 +412,18 @@ function FichaLegada({ itemId, identity, settings }) {
   const conteudo = useCoachTrainingItems(ids);
   if (vinculos.isPending) return <Carregando />;
   if (vinculos.isError) {
-    return <V2ErrorState title="Não foi possível abrir o item" onRetry={() => vinculos.refetch()} />;
+    return <V2ErrorState title={t('Não foi possível abrir o item')} onRetry={() => vinculos.refetch()} />;
   }
   if (ids.length === 0) return <Indisponivel />;
   if (conteudo.isPending) return <Carregando />;
   if (conteudo.isError) {
-    return <V2ErrorState title="Não foi possível abrir o item" onRetry={() => conteudo.refetch()} />;
+    return <V2ErrorState title={t('Não foi possível abrir o item')} onRetry={() => conteudo.refetch()} />;
   }
   const item = (conteudo.data?.items || []).find((i) => i.id === itemId);
   if (!item) {
     // Uma fonte faltou: não dá para afirmar que o item não existe.
     if (conteudo.data?.incompleto) {
-      return <V2ErrorState title="Não foi possível abrir o item" onRetry={() => conteudo.refetch()} />;
+      return <V2ErrorState title={t('Não foi possível abrir o item')} onRetry={() => conteudo.refetch()} />;
     }
     return <Indisponivel />;
   }
@@ -435,8 +436,8 @@ function FichaDoBanco({ itemId, identity, settings }) {
   if (leitura.isError) {
     return (
       <V2ErrorState
-        title="Não foi possível abrir o item"
-        description="A conexão falhou. O item continua lá — tente de novo."
+        title={t('Não foi possível abrir o item')}
+        description={t('A conexão falhou. O item continua lá — tente de novo.')}
         onRetry={() => leitura.refetch()}
       />
     );

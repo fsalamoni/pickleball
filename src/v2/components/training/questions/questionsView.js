@@ -6,6 +6,7 @@
 import { instanteEmMs } from '@/core/domain/instant';
 import { addDays, toISODate } from '@/modules/training/domain/dates';
 import { QUESTION_STATUS } from '@/modules/training/domain/question';
+import { t } from '@/core/i18n';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -17,8 +18,8 @@ export function souProfessorDa(question, uid) {
 /** O nome de quem está do OUTRO lado: o professor para o aluno, o aluno para o professor. */
 export function outroLado(question, uid) {
   return souProfessorDa(question, uid)
-    ? (question?.asker_name || 'Aluno')
-    : (question?.coach_name || 'Professor');
+    ? (question?.asker_name || t('Aluno'))
+    : (question?.coach_name || t('Professor'));
 }
 
 /** A conversa espera uma resposta MINHA? Encerrada nunca espera. */
@@ -40,8 +41,8 @@ export function quandoFoi(valor, agora = new Date()) {
   const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const dia = toISODate(d);
   const hoje = toISODate(agora);
-  if (dia === hoje) return `hoje, ${hora}`;
-  if (dia === addDays(hoje, -1)) return `ontem, ${hora}`;
+  if (dia === hoje) return t('hoje, {hora}', { hora });
+  if (dia === addDays(hoje, -1)) return t('ontem, {hora}', { hora });
   const ano = d.getFullYear() !== agora.getFullYear() ? `/${d.getFullYear()}` : '';
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}${ano}, ${hora}`;
 }

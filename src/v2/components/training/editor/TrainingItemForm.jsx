@@ -22,6 +22,7 @@ import { Avisos, EditorSection, ErroDoCampo, ListEditor, MultiChips, SkillPicker
 import {
   campoId, campoVisivel, formatLevel, levelOptions, secaoPreenchida, secoesVisiveis,
 } from './editorForm';
+import { t } from '@/core/i18n';
 
 const NIVEIS = levelOptions();
 const numOuNulo = (v) => (v === '' ? null : Number(v));
@@ -59,49 +60,49 @@ export default function TrainingItemForm({
   const conteudo = {
     basico: () => (
       <>
-        {campoTexto({ key: 'title', label: 'Nome', max: ITEM_LIMITS.title, required: true, placeholder: 'Ex.: Dink cruzado no pé de dentro' })}
-        {campoTexto({ key: 'summary', label: 'Resumo', max: ITEM_LIMITS.summary, rows: 2, required: true, hint: 'Uma ou duas frases: o que é e para quem serve.' })}
-        {campoTexto({ key: 'objective', label: 'Objetivo', max: ITEM_LIMITS.objective, rows: 2, hint: 'Uma frase que dá para observar: "Ao final, o atleta consegue…".' })}
+        {campoTexto({ key: 'title', label: t('Nome'), max: ITEM_LIMITS.title, required: true, placeholder: t('Ex.: Dink cruzado no pé de dentro') })}
+        {campoTexto({ key: 'summary', label: t('Resumo'), max: ITEM_LIMITS.summary, rows: 2, required: true, hint: t('Uma ou duas frases: o que é e para quem serve.') })}
+        {campoTexto({ key: 'objective', label: t('Objetivo'), max: ITEM_LIMITS.objective, rows: 2, hint: t('Uma frase que dá para observar: "Ao final, o atleta consegue…".') })}
         <SkillPicker id={campoId('skills')} value={form.skills} onChange={(v) => setField('skills', v)} max={ITEM_LIMITS.skills} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="Nível mínimo" htmlFor={campoId('level_min')}>
+          <V2Field label={t('Nível mínimo')} htmlFor={campoId('level_min')}>
             <V2Select id={campoId('level_min')} value={form.level_min ?? ''} onChange={(e) => setField('level_min', numOuNulo(e.target.value))}>
-              <option value="">Qualquer</option>
+              <option value="">{t('Qualquer')}</option>
               {NIVEIS.map((n) => <option key={n} value={n}>{formatLevel(n)}</option>)}
             </V2Select>
           </V2Field>
-          <V2Field label="Nível máximo" htmlFor={campoId('level_max')}>
+          <V2Field label={t('Nível máximo')} htmlFor={campoId('level_max')}>
             <V2Select id={campoId('level_max')} value={form.level_max ?? ''} onChange={(e) => setField('level_max', numOuNulo(e.target.value))}>
-              <option value="">Qualquer</option>
+              <option value="">{t('Qualquer')}</option>
               {NIVEIS.map((n) => <option key={n} value={n}>{formatLevel(n)}</option>)}
             </V2Select>
           </V2Field>
           {ve('players_min') && (
             <>
-              <V2Field label="Jogadores (mínimo)" htmlFor={campoId('players_min')}>
+              <V2Field label={t('Jogadores (mínimo)')} htmlFor={campoId('players_min')}>
                 <V2Input id={campoId('players_min')} type="number" inputMode="numeric" min={1} max={8} value={form.players_min ?? ''} onChange={(e) => setField('players_min', numOuNulo(e.target.value))} />
               </V2Field>
-              <V2Field label="Jogadores (máximo)" htmlFor={campoId('players_max')}>
+              <V2Field label={t('Jogadores (máximo)')} htmlFor={campoId('players_max')}>
                 <V2Input id={campoId('players_max')} type="number" inputMode="numeric" min={1} max={8} value={form.players_max ?? ''} onChange={(e) => setField('players_max', numOuNulo(e.target.value))} />
               </V2Field>
             </>
           )}
-          <V2Field label="Duração (minutos)" htmlFor={campoId('duration_min')}>
+          <V2Field label={t('Duração (minutos)')} htmlFor={campoId('duration_min')}>
             <V2Input id={campoId('duration_min')} type="number" inputMode="numeric" min={0} max={240} value={form.duration_min ?? ''} onChange={(e) => setField('duration_min', numOuNulo(e.target.value))} />
           </V2Field>
           {ve('intensity') && (
-            <V2Field label="Esforço (0 a 10)" htmlFor={campoId('intensity')} hint="Quanto o exercício cansa, na escala de esforço percebido.">
+            <V2Field label={t('Esforço (0 a 10)')} htmlFor={campoId('intensity')} hint={t('Quanto o exercício cansa, na escala de esforço percebido.')}>
               <V2Select id={campoId('intensity')} value={form.intensity ?? ''} onChange={(e) => setField('intensity', numOuNulo(e.target.value))}>
-                <option value="">Não informar</option>
+                <option value="">{t('Não informar')}</option>
                 {Array.from({ length: 11 }, (_, n) => <option key={n} value={n}>{n} · {rpeLabel(n)}</option>)}
               </V2Select>
             </V2Field>
           )}
           {ve('practice_mode') && (
-            <V2Field label="Como a prática é organizada" htmlFor={campoId('practice_mode')} className="sm:col-span-2">
+            <V2Field label={t('Como a prática é organizada')} htmlFor={campoId('practice_mode')} className="sm:col-span-2">
               <V2Select id={campoId('practice_mode')} value={form.practice_mode || ''} onChange={(e) => setField('practice_mode', e.target.value)}>
-                <option value="">Não informar</option>
-                {PRACTICE_MODES.map((m) => <option key={m} value={m}>{PRACTICE_MODE_LABELS[m]}</option>)}
+                <option value="">{t('Não informar')}</option>
+                {PRACTICE_MODES.map((m) => <option key={m} value={m}>{t(PRACTICE_MODE_LABELS[m])}</option>)}
               </V2Select>
             </V2Field>
           )}
@@ -109,8 +110,8 @@ export default function TrainingItemForm({
         {ve('place') && (
           <MultiChips
             id={campoId('place')}
-            legend="Onde dá para fazer"
-            options={PLACES.map((p) => ({ value: p, label: PLACE_LABELS[p] }))}
+            legend={t('Onde dá para fazer')}
+            options={PLACES.map((p) => ({ value: p, label: t(PLACE_LABELS[p]) }))}
             value={form.place}
             onChange={(v) => setField('place', v)}
           />
@@ -118,8 +119,8 @@ export default function TrainingItemForm({
         {ve('equipment') && (
           <MultiChips
             id={campoId('equipment')}
-            legend="Equipamento"
-            options={EQUIPMENT.map((e) => ({ value: e, label: EQUIPMENT_LABELS[e] }))}
+            legend={t('Equipamento')}
+            options={EQUIPMENT.map((e) => ({ value: e, label: t(EQUIPMENT_LABELS[e]) }))}
             value={form.equipment}
             onChange={(v) => setField('equipment', v)}
             max={ITEM_LIMITS.equipment}
@@ -130,23 +131,23 @@ export default function TrainingItemForm({
 
     como: () => (
       <>
-        {ve('setup') && campoTexto({ key: 'setup', label: 'Montagem', max: ITEM_LIMITS.setup, rows: 3, hint: 'Onde cada jogador fica, onde vão cones e alvos, quem começa.' })}
+        {ve('setup') && campoTexto({ key: 'setup', label: t('Montagem'), max: ITEM_LIMITS.setup, rows: 3, hint: t('Onde cada jogador fica, onde vão cones e alvos, quem começa.') })}
         {ve('steps') && (
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">Passo a passo</p>
-            <p className="text-xs text-gray-500">Um verbo por passo, na ordem. O último diz quando trocar de lado ou de papel.</p>
+            <p className="text-sm font-semibold text-ink">{t('Passo a passo')}</p>
+            <p className="text-xs text-gray-500">{t('Um verbo por passo, na ordem. O último diz quando trocar de lado ou de papel.')}</p>
             <ListEditor
               id={campoId('steps')}
               items={form.steps}
               onChange={(v) => setField('steps', v)}
               max={ITEM_LIMITS.steps}
-              addLabel="Adicionar passo"
+              addLabel={t('Adicionar passo')}
               makeNew={() => ''}
-              itemLabel="passo"
+              itemLabel={t('passo')}
               renderItem={(s, i, set) => (
                 <V2Textarea
                   rows={2}
-                  aria-label={`Passo ${i + 1}`}
+                  aria-label={t('Passo {n}', { n: i + 1 })}
                   maxLength={ITEM_LIMITS.step}
                   value={s}
                   onChange={(e) => set(e.target.value)}
@@ -159,18 +160,18 @@ export default function TrainingItemForm({
         )}
         {ve('cues') && (
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">Dicas curtas</p>
-            <p className="text-xs text-gray-500">Até 8 palavras, apontando para fora do corpo: a bola, o alvo, a raquete.</p>
+            <p className="text-sm font-semibold text-ink">{t('Dicas curtas')}</p>
+            <p className="text-xs text-gray-500">{t('Até 8 palavras, apontando para fora do corpo: a bola, o alvo, a raquete.')}</p>
             <ListEditor
               id={campoId('cues')}
               items={form.cues}
               onChange={(v) => setField('cues', v)}
               max={ITEM_LIMITS.cues}
-              addLabel="Adicionar dica"
+              addLabel={t('Adicionar dica')}
               makeNew={() => ''}
-              itemLabel="dica"
+              itemLabel={t('dica')}
               renderItem={(c, i, set) => (
-                <V2Input aria-label={`Dica ${i + 1}`} maxLength={ITEM_LIMITS.cue} value={c} onChange={(e) => set(e.target.value)} />
+                <V2Input aria-label={t('Dica {n}', { n: i + 1 })} maxLength={ITEM_LIMITS.cue} value={c} onChange={(e) => set(e.target.value)} />
               )}
             />
             <Avisos itens={cueWarnings(form.cues)} />
@@ -187,58 +188,58 @@ export default function TrainingItemForm({
         currentItemId={currentItemId}
         erro={erro('blocks')}
         duration={form.duration_min}
-        onUseTotal={(t) => setField('duration_min', t)}
+        onUseTotal={(total) => setField('duration_min', total)}
       />
     ),
 
     fisico: () => (
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Séries" htmlFor={campoId('sets')}>
+        <V2Field label={t('Séries')} htmlFor={campoId('sets')}>
           <V2Input id={campoId('sets')} type="number" inputMode="numeric" min={0} max={20} value={form.sets ?? ''} onChange={(e) => setField('sets', numOuNulo(e.target.value))} />
         </V2Field>
-        {campoTexto({ key: 'reps', label: 'Repetições', max: ITEM_LIMITS.reps, placeholder: 'Ex.: 12 ou 30 s' })}
-        <V2Field label="Descanso (segundos)" htmlFor={campoId('rest_sec')}>
+        {campoTexto({ key: 'reps', label: t('Repetições'), max: ITEM_LIMITS.reps, placeholder: t('Ex.: 12 ou 30 s') })}
+        <V2Field label={t('Descanso (segundos)')} htmlFor={campoId('rest_sec')}>
           <V2Input id={campoId('rest_sec')} type="number" inputMode="numeric" min={0} max={600} value={form.rest_sec ?? ''} onChange={(e) => setField('rest_sec', numOuNulo(e.target.value))} />
         </V2Field>
-        {campoTexto({ key: 'tempo', label: 'Ritmo', max: ITEM_LIMITS.tempo, placeholder: 'Ex.: 2 s descendo, 1 s subindo' })}
+        {campoTexto({ key: 'tempo', label: t('Ritmo'), max: ITEM_LIMITS.tempo, placeholder: t('Ex.: 2 s descendo, 1 s subindo') })}
       </div>
     ),
 
     estudo: () => (
       <>
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="Tipo de estudo" htmlFor={campoId('study_type')}>
+          <V2Field label={t('Tipo de estudo')} htmlFor={campoId('study_type')}>
             <V2Select
               id={campoId('study_type')}
               value={form.study_type || 'leitura'}
               onChange={(e) => setField('study_type', e.target.value)}
-              options={STUDY_TYPES.map((t) => ({ value: t, label: STUDY_TYPE_LABELS[t] }))}
+              options={STUDY_TYPES.map((tipo) => ({ value: tipo, label: t(STUDY_TYPE_LABELS[tipo]) }))}
             />
           </V2Field>
-          {campoTexto({ key: 'rules_edition', label: 'Edição do regulamento', max: ITEM_LIMITS.rulesEdition, placeholder: 'Ex.: USA Pickleball 2026', required: form.study_type === 'regra' })}
-          {campoTexto({ key: 'rules_section', label: 'Seção da regra', max: ITEM_LIMITS.rulesSection, placeholder: 'Ex.: 9.B' })}
-          {campoTexto({ key: 'link', label: 'Link', max: ITEM_LIMITS.link, placeholder: 'https://', hint: 'O texto ou o vídeo original. Só https://.' })}
+          {campoTexto({ key: 'rules_edition', label: t('Edição do regulamento'), max: ITEM_LIMITS.rulesEdition, placeholder: t('Ex.: USA Pickleball 2026'), required: form.study_type === 'regra' })}
+          {campoTexto({ key: 'rules_section', label: t('Seção da regra'), max: ITEM_LIMITS.rulesSection, placeholder: t('Ex.: 9.B') })}
+          {campoTexto({ key: 'link', label: t('Link'), max: ITEM_LIMITS.link, placeholder: 'https://', hint: t('O texto ou o vídeo original. Só https://.') })}
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-ink">Perguntas para fixar</p>
-          <p className="text-xs text-gray-500">Situações de jogo: “a bola quicou na linha da cozinha; pode volear?”</p>
+          <p className="text-sm font-semibold text-ink">{t('Perguntas para fixar')}</p>
+          <p className="text-xs text-gray-500">{t('Situações de jogo: “a bola quicou na linha da cozinha; pode volear?”')}</p>
           <ListEditor
             id={campoId('questions')}
             items={form.questions}
             onChange={(v) => setField('questions', v)}
             max={ITEM_LIMITS.questions}
-            addLabel="Adicionar pergunta"
+            addLabel={t('Adicionar pergunta')}
             makeNew={() => ''}
-            itemLabel="pergunta"
+            itemLabel={t('pergunta')}
             renderItem={(q, i, set) => (
-              <V2Input aria-label={`Pergunta ${i + 1}`} maxLength={ITEM_LIMITS.question} value={q} onChange={(e) => set(e.target.value)} />
+              <V2Input aria-label={t('Pergunta {n}', { n: i + 1 })} maxLength={ITEM_LIMITS.question} value={q} onChange={(e) => set(e.target.value)} />
             )}
           />
         </div>
       </>
     ),
 
-    quando: () => campoTexto({ key: 'when_to_use', label: 'Quando usar', max: ITEM_LIMITS.whenToUse, rows: 3, hint: 'A situação de jogo: "quando o adversário devolve alto na cozinha…".' }),
+    quando: () => campoTexto({ key: 'when_to_use', label: t('Quando usar'), max: ITEM_LIMITS.whenToUse, rows: 3, hint: t('A situação de jogo: "quando o adversário devolve alto na cozinha…".') }),
 
     certo: () => (
       <div className="space-y-2">
@@ -247,9 +248,9 @@ export default function TrainingItemForm({
           items={form.positioning}
           onChange={(v) => setField('positioning', v)}
           max={ITEM_LIMITS.positioning}
-          addLabel="Adicionar certo"
+          addLabel={t('Adicionar certo')}
           makeNew={() => ({ type: 'certo', text: '' })}
-          itemLabel="item"
+          itemLabel={t('item')}
           extraActions={(
             <V2Button
               type="button"
@@ -258,23 +259,23 @@ export default function TrainingItemForm({
               disabled={form.positioning.length >= ITEM_LIMITS.positioning}
               onClick={() => setField('positioning', [...form.positioning, { type: 'errado', text: '' }])}
             >
-              <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar errado
+              <Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Adicionar errado')}
             </V2Button>
           )}
           renderItem={(p, i, set) => (
             <div className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
               <V2Select
-                aria-label={`Certo ou errado ${i + 1}`}
+                aria-label={t('Certo ou errado {n}', { n: i + 1 })}
                 value={p.type === 'errado' ? 'errado' : 'certo'}
                 onChange={(e) => set({ ...p, type: e.target.value })}
-                options={[{ value: 'certo', label: 'Certo' }, { value: 'errado', label: 'Errado' }]}
+                options={[{ value: 'certo', label: t('Certo') }, { value: 'errado', label: t('Errado') }]}
               />
               <V2Textarea
                 rows={2}
-                aria-label={`Texto ${i + 1}`}
+                aria-label={t('Texto {n}', { n: i + 1 })}
                 maxLength={ITEM_LIMITS.positioningText}
                 value={p.text || ''}
-                placeholder={p.type === 'errado' ? 'O que se vê e o porquê: "… → a bola sobe".' : 'Como é a forma certa.'}
+                placeholder={p.type === 'errado' ? t('O que se vê e o porquê: "… → a bola sobe".') : t('Como é a forma certa.')}
                 onChange={(e) => set({ ...p, text: e.target.value })}
                 className="min-h-[4rem]"
               />
@@ -291,15 +292,15 @@ export default function TrainingItemForm({
         items={form.common_errors}
         onChange={(v) => setField('common_errors', v)}
         max={ITEM_LIMITS.errors}
-        addLabel="Adicionar erro"
+        addLabel={t('Adicionar erro')}
         makeNew={() => ({ error: '', fix: '' })}
-        itemLabel="erro"
+        itemLabel={t('erro')}
         renderItem={(e, i, set) => (
           <div className="grid gap-2">
-            <V2Field label={`Erro ${i + 1}: o que se vê`} htmlFor={`erro-${i}`}>
+            <V2Field label={t('Erro {n}: o que se vê', { n: i + 1 })} htmlFor={`erro-${i}`}>
               <V2Input id={`erro-${i}`} maxLength={ITEM_LIMITS.error} value={e.error || ''} onChange={(ev) => set({ ...e, error: ev.target.value })} />
             </V2Field>
-            <V2Field label="Correção" htmlFor={`erro-${i}-fix`}>
+            <V2Field label={t('Correção')} htmlFor={`erro-${i}-fix`}>
               <V2Input id={`erro-${i}-fix`} maxLength={ITEM_LIMITS.fix} value={e.fix || ''} onChange={(ev) => set({ ...e, fix: ev.target.value })} />
             </V2Field>
           </div>
@@ -314,27 +315,27 @@ export default function TrainingItemForm({
       return (
         <>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">Ponto a ponto</p>
-            <p className="text-xs text-gray-500">Ex.: Pernas — “joelhos flexionados, quadril baixo; a força sobe das pernas, não do braço”.</p>
+            <p className="text-sm font-semibold text-ink">{t('Ponto a ponto')}</p>
+            <p className="text-xs text-gray-500">{t('Ex.: Pernas — “joelhos flexionados, quadril baixo; a força sobe das pernas, não do braço”.')}</p>
             <ListEditor
               id={campoId('technique')}
               items={tec.checkpoints}
               onChange={(v) => setTec('checkpoints', v)}
               max={ITEM_LIMITS.checkpoints}
-              addLabel="Adicionar parte do corpo"
+              addLabel={t('Adicionar parte do corpo')}
               makeNew={() => ({ part: proximaParte(), text: '' })}
-              itemLabel="ponto"
+              itemLabel={t('ponto')}
               renderItem={(c, i, set) => (
                 <div className="grid gap-2 sm:grid-cols-[11rem_minmax(0,1fr)]">
                   <V2Select
-                    aria-label={`Parte do corpo ${i + 1}`}
+                    aria-label={t('Parte do corpo {n}', { n: i + 1 })}
                     value={c.part}
                     onChange={(e) => set({ ...c, part: e.target.value })}
-                    options={TECHNIQUE_PARTS.map((pt) => ({ value: pt, label: TECHNIQUE_PART_LABELS[pt] }))}
+                    options={TECHNIQUE_PARTS.map((pt) => ({ value: pt, label: t(TECHNIQUE_PART_LABELS[pt]) }))}
                   />
                   <V2Textarea
                     rows={2}
-                    aria-label={`O que ${TECHNIQUE_PART_LABELS[c.part] || 'esta parte'} faz`}
+                    aria-label={t('O que {parte} faz', { parte: t(TECHNIQUE_PART_LABELS[c.part]) || t('esta parte') })}
                     maxLength={ITEM_LIMITS.checkpoint}
                     value={c.text || ''}
                     onChange={(e) => set({ ...c, text: e.target.value })}
@@ -345,18 +346,18 @@ export default function TrainingItemForm({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">Como saber se fez certo</p>
-            <p className="text-xs text-gray-500">O que a pessoa vê ou sente quando acerta: “a bola passa a um palmo da fita e cai na cozinha”.</p>
+            <p className="text-sm font-semibold text-ink">{t('Como saber se fez certo')}</p>
+            <p className="text-xs text-gray-500">{t('O que a pessoa vê ou sente quando acerta: “a bola passa a um palmo da fita e cai na cozinha”.')}</p>
             <ListEditor
               id={campoId('self_check')}
               items={tec.self_check}
               onChange={(v) => setTec('self_check', v)}
               max={ITEM_LIMITS.selfChecks}
-              addLabel="Adicionar sinal"
+              addLabel={t('Adicionar sinal')}
               makeNew={() => ''}
-              itemLabel="sinal"
-              renderItem={(t, i, set) => (
-                <V2Input aria-label={`Sinal de acerto ${i + 1}`} maxLength={ITEM_LIMITS.selfCheck} value={t} onChange={(e) => set(e.target.value)} />
+              itemLabel={t('sinal')}
+              renderItem={(sinal, i, set) => (
+                <V2Input aria-label={t('Sinal de acerto {n}', { n: i + 1 })} maxLength={ITEM_LIMITS.selfCheck} value={sinal} onChange={(e) => set(e.target.value)} />
               )}
             />
           </div>
@@ -367,9 +368,9 @@ export default function TrainingItemForm({
     movimento: () => (
       <>
         {[
-          ['preparacao', 'Preparação'],
-          ['execucao', 'Execução'],
-          ['finalizacao', 'Finalização'],
+          ['preparacao', t('Preparação')],
+          ['execucao', t('Execução')],
+          ['finalizacao', t('Finalização')],
         ].map(([fase, label]) => (
           <V2Field key={fase} label={label} htmlFor={`fase-${fase}`}>
             <V2Textarea
@@ -384,22 +385,22 @@ export default function TrainingItemForm({
         ))}
         <MultiChips
           id={campoId('abilities')}
-          legend="Capacidades que treina"
-          options={MOTOR_ABILITIES.map((a) => ({ value: a, label: MOTOR_ABILITY_LABELS[a] }))}
+          legend={t('Capacidades que treina')}
+          options={MOTOR_ABILITIES.map((a) => ({ value: a, label: t(MOTOR_ABILITY_LABELS[a]) }))}
           value={form.motor?.abilities}
           onChange={(v) => setField('motor', { ...form.motor, abilities: v })}
           max={ITEM_LIMITS.abilities}
-          hint={`Até ${ITEM_LIMITS.abilities}.`}
+          hint={t('Até {n}.', { n: ITEM_LIMITS.abilities })}
         />
       </>
     ),
 
     variacoes: () => (
       <>
-        <V2Field label="Mais fácil" htmlFor="variacao-facil" hint='Comece pela alavanca: "Espaço:", "Tarefa:", "Equipamento:" ou "Pessoas:".'>
+        <V2Field label={t('Mais fácil')} htmlFor="variacao-facil" hint={t('Comece pela alavanca: "Espaço:", "Tarefa:", "Equipamento:" ou "Pessoas:".')}>
           <V2Textarea id="variacao-facil" rows={2} maxLength={ITEM_LIMITS.variation} value={form.variations?.easier || ''} onChange={(e) => setIn('variations', 'easier', e.target.value)} className="min-h-[4rem]" />
         </V2Field>
-        <V2Field label="Mais difícil" htmlFor="variacao-dificil">
+        <V2Field label={t('Mais difícil')} htmlFor="variacao-dificil">
           <V2Textarea id="variacao-dificil" rows={2} maxLength={ITEM_LIMITS.variation} value={form.variations?.harder || ''} onChange={(e) => setIn('variations', 'harder', e.target.value)} className="min-h-[4rem]" />
         </V2Field>
       </>
@@ -408,21 +409,21 @@ export default function TrainingItemForm({
     meta: () => (
       <>
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="Tipo de meta" htmlFor="meta-tipo">
+          <V2Field label={t('Tipo de meta')} htmlFor="meta-tipo">
             <V2Select id="meta-tipo" value={form.metric?.type || ''} onChange={(e) => setIn('metric', 'type', e.target.value)}>
-              <option value="">Sem meta numérica</option>
-              {METRIC_TYPES.map((m) => <option key={m} value={m}>{METRIC_TYPE_LABELS[m]}</option>)}
+              <option value="">{t('Sem meta numérica')}</option>
+              {METRIC_TYPES.map((m) => <option key={m} value={m}>{t(METRIC_TYPE_LABELS[m])}</option>)}
             </V2Select>
           </V2Field>
-          <V2Field label="Alvo" htmlFor="meta-alvo" hint={form.metric?.type ? 'Algo que a pessoa conta sozinha: "10 seguidos".' : 'Escolha o tipo primeiro.'}>
+          <V2Field label={t('Alvo')} htmlFor="meta-alvo" hint={form.metric?.type ? t('Algo que a pessoa conta sozinha: "10 seguidos".') : t('Escolha o tipo primeiro.')}>
             <V2Input id="meta-alvo" maxLength={ITEM_LIMITS.metricTarget} disabled={!form.metric?.type} value={form.metric?.target || ''} onChange={(e) => setIn('metric', 'target', e.target.value)} />
           </V2Field>
         </div>
-        {campoTexto({ key: 'success_criteria', label: 'Critério de sucesso', max: ITEM_LIMITS.success, rows: 2, hint: 'O que conta como acerto e quando subir de nível.' })}
+        {campoTexto({ key: 'success_criteria', label: t('Critério de sucesso'), max: ITEM_LIMITS.success, rows: 2, hint: t('O que conta como acerto e quando subir de nível.') })}
       </>
     ),
 
-    seguranca: () => campoTexto({ key: 'safety', label: 'Cuidados', max: ITEM_LIMITS.safety, rows: 2, hint: 'O risco real e o que fazer para evitar. Deixe em branco se não houver.' }),
+    seguranca: () => campoTexto({ key: 'safety', label: t('Cuidados'), max: ITEM_LIMITS.safety, rows: 2, hint: t('O risco real e o que fazer para evitar. Deixe em branco se não houver.') }),
 
     diagramas: () => <DiagramEditor value={form.diagrams} onChange={(v) => setField('diagrams', v)} />,
 
@@ -444,8 +445,8 @@ export default function TrainingItemForm({
         <EditorSection
           key={s.id}
           id={s.id}
-          titulo={s.titulo}
-          porque={s.porque}
+          titulo={t(s.titulo)}
+          porque={t(s.porque)}
           feito={secaoPreenchida(s, form)}
           dica={s.dica}
         >

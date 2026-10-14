@@ -31,6 +31,7 @@ import { isActiveRegistration } from '../domain/checkin.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { logger } from '@/core/lib/logger';
+import { t } from '@/core/i18n';
 
 const COL = 'tournament_matches';
 const GROUPS_COL = 'tournament_groups';
@@ -191,10 +192,10 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
   if (res.pending) {
     const stageType = modality?.stages?.[stageIndex]?.type;
     throw new Error(stageType === 'americano_etapas'
-      ? 'Conclua todos os jogos da etapa atual antes de gerar a próxima.'
+      ? t('Conclua todos os jogos da etapa atual antes de gerar a próxima.')
       : (BRACKET_TYPES.has(stageType)
-        ? 'A chave já está em dia: o próximo confronto nasce sozinho quando os dois jogos que o alimentam terminarem.'
-        : 'Conclua todos os jogos da rodada atual antes de avançar.'));
+        ? t('A chave já está em dia: o próximo confronto nasce sozinho quando os dois jogos que o alimentam terminarem.')
+        : t('Conclua todos os jogos da rodada atual antes de avançar.')));
   }
   return res;
 }
@@ -246,11 +247,11 @@ async function applyStageAdvance(tournamentId, modalityId, stageIndex, modality,
   const stage = modality?.stages?.[stageIndex];
   const stageType = stage?.type;
   if (!stageSupportsAdvance(stageType)) {
-    throw new Error('Este formato gera todos os jogos no sorteio — não há rodadas a avançar.');
+    throw new Error(t('Este formato gera todos os jogos no sorteio — não há rodadas a avançar.'));
   }
 
   const matches = await listMatches(modalityId, stageIndex);
-  if (matches.length === 0) throw new Error('Faça o sorteio antes de avançar a fase.');
+  if (matches.length === 0) throw new Error(t('Faça o sorteio antes de avançar a fase.'));
 
   const ctx = {};
   // Disputa de 3º lugar (opcional) em fases de mata-mata.
@@ -536,9 +537,9 @@ export async function markMatchInProgress(matchId, actor) {
  */
 export async function revertMatchToScheduled(matchId, actor) {
   const match = await getMatch(matchId);
-  if (!match) throw new Error('Jogo não encontrado.');
+  if (!match) throw new Error(t('Jogo não encontrado.'));
   if (match.status === MATCH_STATUS.FINISHED || match.status === MATCH_STATUS.WALKOVER) {
-    throw new Error('Este jogo já tem resultado. Edite ou limpe o resultado antes de desfazer o início.');
+    throw new Error(t('Este jogo já tem resultado. Edite ou limpe o resultado antes de desfazer o início.'));
   }
   if (match.status === MATCH_STATUS.SCHEDULED) return; // já agendado — nada a fazer
   await updateDoc(doc(db, COL, matchId), {
@@ -564,14 +565,14 @@ export async function revertMatchToScheduled(matchId, actor) {
 export async function rescheduleMatches(modalityId, stageIndex, modality, tournament, actor) {
   const all = await listMatches(modalityId, stageIndex);
   if (all.length === 0) {
-    throw new Error('Não há jogos para reagendar. Faça o sorteio primeiro.');
+    throw new Error(t('Não há jogos para reagendar. Faça o sorteio primeiro.'));
   }
   const started = all.filter(
     (m) => m.status === MATCH_STATUS.IN_PROGRESS || m.status === MATCH_STATUS.FINISHED,
   );
   if (started.length > 0) {
     throw new Error(
-      'Já existem jogos em andamento ou encerrados. Não é possível reagendar sem afetar o andamento.',
+      t('Já existem jogos em andamento ou encerrados. Não é possível reagendar sem afetar o andamento.'),
     );
   }
 
@@ -610,7 +611,7 @@ export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
   const doneStatuses = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
   const pending = allMatches.filter((m) => !doneStatuses.has(m.status));
 
-  if (pending.length === 0) throw new Error('Nenhum jogo pendente para resortear.');
+  if (pending.length === 0) throw new Error(t('Nenhum jogo pendente para resortear.'));
 
   // 🐞 Nos formatos em que a RODADA nasce do resultado (chave, dupla
   // eliminação, suíço, Mexicano), o número da rodada é a estrutura: renumerar
@@ -619,7 +620,7 @@ export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
   const tipo = allMatches[0]?.stage_type;
   const ehEtapas = tipo === 'americano_etapas';
   if (stageSupportsAdvance(tipo) && !ehEtapas) {
-    throw new Error('Neste formato as rodadas saem dos resultados (chave, suíço ou Mexicano): a ordem dos jogos restantes não pode ser re-sorteada.');
+    throw new Error(t('Neste formato as rodadas saem dos resultados (chave, suíço ou Mexicano): a ordem dos jogos restantes não pode ser re-sorteada.'));
   }
 
   // Fisher-Yates inline com Math.random (reshuffle não precisa ser reproduzível)
@@ -679,7 +680,7 @@ export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
 
 export async function substitutePlayer(matchId, { oldRegistrationId, newRegistrationId }, actor) {
   const match = await getMatch(matchId);
-  if (!match) throw new Error('Jogo não encontrado.');
+  if (!match) throw new Error(t('Jogo não encontrado.'));
 
   const sideAIds = match.side_a_ids || [];
   const sideBIds = match.side_b_ids || [];
@@ -690,7 +691,7 @@ export async function substitutePlayer(matchId, { oldRegistrationId, newRegistra
   const unchanged =
     newSideAIds.every((id, i) => id === sideAIds[i]) &&
     newSideBIds.every((id, i) => id === sideBIds[i]);
-  if (unchanged) throw new Error('Jogador não encontrado no jogo.');
+  if (unchanged) throw new Error(t('Jogador não encontrado no jogo.'));
 
   const serializeIds = (ids) => {
     if (!ids || ids.length === 0) return null;

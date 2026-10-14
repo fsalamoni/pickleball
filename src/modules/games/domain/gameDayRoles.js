@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Quem pode fazer o quê num dia de jogo — lógica pura, sem I/O.
  *
@@ -77,15 +78,15 @@ export const GAME_DAY_MANAGE_MODE = Object.freeze({
 });
 
 export const GAME_DAY_MANAGE_MODE_LABELS = Object.freeze({
-  [GAME_DAY_MANAGE_MODE.OWNER_ONLY]: 'Só eu e quem eu autorizar',
-  [GAME_DAY_MANAGE_MODE.PARTICIPANTS]: 'Qualquer participante inscrito',
+  [GAME_DAY_MANAGE_MODE.OWNER_ONLY]: tk('Só eu e quem eu autorizar'),
+  [GAME_DAY_MANAGE_MODE.PARTICIPANTS]: tk('Qualquer participante inscrito'),
 });
 
 export const GAME_DAY_MANAGE_MODE_HINTS = Object.freeze({
   [GAME_DAY_MANAGE_MODE.OWNER_ONLY]:
-    'Sortear, criar partidas, substituir, pausar, vincular dupla e mexer na lista de participantes ficam com você e com os administradores que você nomear.',
+    tk('Sortear, criar partidas, substituir, pausar, vincular dupla e mexer na lista de participantes ficam com você e com os administradores que você nomear.'),
   [GAME_DAY_MANAGE_MODE.PARTICIPANTS]:
-    'Todo mundo que está no dia de jogo pode conduzir as partidas e a lista de participantes. Bom para um Play em que várias pessoas se revezam organizando.',
+    tk('Todo mundo que está no dia de jogo pode conduzir as partidas e a lista de participantes. Bom para um Play em que várias pessoas se revezam organizando.'),
 });
 
 /**

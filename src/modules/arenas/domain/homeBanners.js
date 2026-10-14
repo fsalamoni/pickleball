@@ -32,6 +32,7 @@
 import { publicPromos, promoConditions } from './marketing.js';
 import { homeCampaignBanners } from './campaignBanner.js';
 import { normalizeLocality, cityKey, ufOf } from '../../../core/domain/locality.js';
+import { t } from '@/core/i18n';
 
 /** 'YYYY-MM-DD' local de um instante (ms). */
 function isoLocal(ms) {
@@ -243,13 +244,13 @@ export function bannerCities(dados = {}) {
 /** A região em texto: "em Porto Alegre", "no RS", "em todo o Brasil". */
 export function regionLabel(region) {
   if (!region) return '';
-  if (region.mode === BANNER_REGION.ALL) return 'em todo o Brasil';
+  if (region.mode === BANNER_REGION.ALL) return t('em todo o Brasil');
   if (region.mode === BANNER_REGION.STATE) return `no ${region.state}`;
   if (region.mode === BANNER_REGION.CITY || region.mode === BANNER_REGION.OTHER) {
     return `em ${region.city}${region.state ? ` (${region.state})` : ''}`;
   }
   if (region.mode === BANNER_REGION.NEAR) {
-    return `em ${region.city}${region.state ? ` (${region.state})` : ''} e até ${region.raioKm} km`;
+    return t('em {city}{valor} e até {raioKm} km', { city: region.city, valor: region.state ? ` (${region.state})` : '', raioKm: region.raioKm });
   }
   return '';
 }

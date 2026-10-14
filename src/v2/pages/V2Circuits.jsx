@@ -14,6 +14,7 @@ import { Trophy, Plus, Calendar } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCircuits, useCreateCircuit } from '@/modules/circuits/hooks/useCircuits';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function CreateCircuitForm({ onClose }) {
   const [form, setForm] = useState({
@@ -27,14 +28,14 @@ function CreateCircuitForm({ onClose }) {
     e.preventDefault();
     const categories = form.categories.split(',').map((c) => c.trim()).filter(Boolean);
     if (categories.length === 0) {
-      toast.error('Informe ao menos uma categoria.');
+      toast.error(t('Informe ao menos uma categoria.'));
       return;
     }
     try {
       await create.mutateAsync({
         ...form, categories,
       });
-      toast.success('Circuito criado!');
+      toast.success(t('Circuito criado!'));
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -43,28 +44,28 @@ function CreateCircuitForm({ onClose }) {
 
   return (
     <V2Surface className="border-green-200 bg-green-50/40">
-      <h3 className="font-display text-base font-bold text-ink">Novo circuito</h3>
+      <h3 className="font-display text-base font-bold text-ink">{t('Novo circuito')}</h3>
       <form onSubmit={handleSubmit} className="mt-3 space-y-3">
-        <V2Field label="Nome do circuito" required>
-          <V2Input value={form.name} onChange={setField('name')} required maxLength={80} placeholder="Circuito Verão 2026" />
+        <V2Field label={t('Nome do circuito')} required>
+          <V2Input value={form.name} onChange={setField('name')} required maxLength={80} placeholder={t('Circuito Verão 2026')} />
         </V2Field>
-        <V2Field label="Temporada" required>
-          <V2Input value={form.season} onChange={setField('season')} required maxLength={40} placeholder="2026 Verão" />
+        <V2Field label={t('Temporada')} required>
+          <V2Input value={form.season} onChange={setField('season')} required maxLength={40} placeholder={t('2026 Verão')} />
         </V2Field>
-        <V2Field label="Categorias (separadas por vírgula)" required>
-          <V2Input value={form.categories} onChange={setField('categories')} required placeholder="Open Misto, Sênior" />
+        <V2Field label={t('Categorias (separadas por vírgula)')} required>
+          <V2Input value={form.categories} onChange={setField('categories')} required placeholder={t('Open Misto, Sênior')} />
         </V2Field>
-        <V2Field label="Descrição">
-          <V2Textarea value={form.description} onChange={setField('description')} maxLength={500} placeholder="4 etapas com pontuação acumulada" />
+        <V2Field label={t('Descrição')}>
+          <V2Textarea value={form.description} onChange={setField('description')} maxLength={500} placeholder={t('4 etapas com pontuação acumulada')} />
         </V2Field>
         <div className="grid grid-cols-2 gap-2">
-          <V2Field label="Início"><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
-          <V2Field label="Fim"><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
+          <V2Field label={t('Início')}><V2Input type="date" value={form.start_date} onChange={setField('start_date')} className="bg-paper px-3 py-2" /></V2Field>
+          <V2Field label={t('Fim')}><V2Input type="date" value={form.end_date} onChange={setField('end_date')} className="bg-paper px-3 py-2" /></V2Field>
         </div>
         <div className="flex justify-end gap-2">
-          <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+          <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button type="submit" size="sm" disabled={create.isPending}>
-            {create.isPending ? 'Criando…' : 'Criar circuito'}
+            {create.isPending ? t('Criando…') : t('Criar circuito')}
           </V2Button>
         </div>
       </form>
@@ -84,25 +85,22 @@ export default function V2Circuits() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-green-700" /> Circuitos
+            <Trophy className="h-6 w-6 text-green-700" /> {t('Circuitos')}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">Séries de torneios com ranking acumulado</p>
+          <p className="mt-1 text-sm text-gray-500">{t('Séries de torneios com ranking acumulado')}</p>
         </div>
         {!creating && (
           <V2Button size="sm" onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> Criar circuito
+            <Plus className="h-4 w-4" /> {t('Criar circuito')}
           </V2Button>
         )}
       </div>
 
       {creating && <CreateCircuitForm onClose={() => setCreating(false)} />}
 
-      <V2Surface collapsible collapseId="circuits-explicacao" title="O que é um circuito?" className="border-gray-100 bg-paper-pure">
+      <V2Surface collapsible collapseId="circuits-explicacao" title={t('O que é um circuito?')} className="border-gray-100 bg-paper-pure">
         <p className="text-sm leading-6 text-gray-600">
-          É uma série de torneios ligados por uma pontuação acumulada. Cada etapa (torneio)
-          distribui pontos conforme a colocação; ao final, um ranking geral consolida os melhores
-          da temporada por categoria. Crie o circuito, vincule os torneios que fazem parte dele e
-          acompanhe o ranking acumulado.
+          {t('É uma série de torneios ligados por uma pontuação acumulada. Cada etapa (torneio) distribui pontos conforme a colocação; ao final, um ranking geral consolida os melhores da temporada por categoria. Crie o circuito, vincule os torneios que fazem parte dele e acompanhe o ranking acumulado.')}
         </p>
       </V2Surface>
 
@@ -110,15 +108,15 @@ export default function V2Circuits() {
         <V2Skeleton lines={4} />
       ) : isError ? (
         <V2ErrorState
-          title="Não foi possível carregar os circuitos"
-          description="Os circuitos continuam lá — só não conseguimos buscá-los agora."
+          title={t('Não foi possível carregar os circuitos')}
+          description={t('Os circuitos continuam lá — só não conseguimos buscá-los agora.')}
           onRetry={() => refetch()}
         />
       ) : circuits.length === 0 ? (
         <V2EmptyState
           icon={Trophy}
-          title="Nenhum circuito ainda"
-          description="Crie o primeiro circuito para começar a somar pontos dos torneios."
+          title={t('Nenhum circuito ainda')}
+          description={t('Crie o primeiro circuito para começar a somar pontos dos torneios.')}
         />
       ) : (
         <div className="space-y-3">
@@ -134,7 +132,7 @@ export default function V2Circuits() {
                     <h3 className="font-display text-base font-bold text-ink">{c.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
                       <V2Badge tone="green"><Calendar className="h-3 w-3" /> {c.season}</V2Badge>
-                      {c.start_date && <span>· {c.start_date} → {c.end_date || 'em aberto'}</span>}
+                      {c.start_date && <span>· {c.start_date} → {c.end_date || t('em aberto')}</span>}
                     </div>
                     {c.description && (
                       <p className="mt-2 line-clamp-2 text-sm text-gray-600">{c.description}</p>
@@ -145,7 +143,7 @@ export default function V2Circuits() {
                       ))}
                     </div>
                   </div>
-                  {!c.active && <V2Badge tone="red">Inativo</V2Badge>}
+                  {!c.active && <V2Badge tone="red">{t('Inativo')}</V2Badge>}
                 </div>
               </V2Surface>
             </Link>

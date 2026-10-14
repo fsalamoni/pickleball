@@ -16,6 +16,7 @@ import {
   TEAM_LIMITS, TEAM_SETS_OPTIONS, TEAM_SETS_LABELS, TEAM_TARGET_SCORE_OPTIONS,
   normalizeTeamConfig, resolveEtapaScoring, formatEtapaScoringLabel,
 } from '@/modules/tournament/domain/teamFormat';
+import { t } from '@/core/i18n';
 
 /** Config inicial sugerida (exemplo clássico: 4 atletas, misto, 5 etapas, melhor de 3). */
 export function defaultTeamConfig() {
@@ -69,12 +70,12 @@ export default function TeamModalityConfig({ value, onChange }) {
   return (
     <div className="space-y-5 rounded-3xl border border-acid/30 bg-acid/5 p-5">
       <div className="flex items-center gap-2 font-bold text-ink">
-        <Users className="h-4 w-4" /> Configuração de equipes
+        <Users className="h-4 w-4" /> {t('Configuração de equipes')}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label className={labelCls}>Atletas por equipe</label>
+          <label className={labelCls}>{t('Atletas por equipe')}</label>
           <input
             type="number"
             min={TEAM_LIMITS.MIN_TEAM_SIZE}
@@ -84,17 +85,17 @@ export default function TeamModalityConfig({ value, onChange }) {
             className={inputCls}
           />
           <p className="text-xs text-gray-500">
-            Elenco de cada equipe. Se maior que o mínimo, o admin define quem joga cada etapa no confronto.
+            {t('Elenco de cada equipe. Se maior que o mínimo, o admin define quem joga cada etapa no confronto.')}
           </p>
         </div>
         <div className="space-y-2">
-          <label className={labelCls}>Composição</label>
+          <label className={labelCls}>{t('Composição')}</label>
           <select value={cfg.gender} onChange={(e) => set({ gender: e.target.value })} className={inputCls}>
             {Object.entries(TEAM_GENDER_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           {cfg.gender === TEAM_GENDER.MIXED && (
             <p className="text-xs text-gray-500">
-              Mista: {preview.value.male_slots} masculino(s) + {preview.value.female_slots} feminino(s).
+              {t('Mista: {male_slots} masculino(s) + {female_slots} feminino(s).', { male_slots: preview.value.male_slots, female_slots: preview.value.female_slots })}
             </p>
           )}
         </div>
@@ -103,9 +104,9 @@ export default function TeamModalityConfig({ value, onChange }) {
       {/* Etapas do confronto */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className={labelCls}>Etapas do confronto (ordem)</label>
+          <label className={labelCls}>{t('Etapas do confronto (ordem)')}</label>
           <V2Button size="sm" variant="ghost" onClick={addEtapa} disabled={etapas.length >= TEAM_LIMITS.MAX_ETAPAS}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar etapa
+            <Plus className="mr-1 h-3.5 w-3.5" /> {t('Adicionar etapa')}
           </V2Button>
         </div>
         <div className="space-y-2">
@@ -116,55 +117,55 @@ export default function TeamModalityConfig({ value, onChange }) {
                 <select
                   value={e.type}
                   onChange={(ev) => setEtapa(i, { type: ev.target.value })}
-                  aria-label={`Tipo da etapa ${i + 1}`}
+                  aria-label={t('Tipo da etapa {v1}', { v1: i + 1 })}
                   className={inputCls}
                 >
                   {Object.entries(TEAM_ETAPA_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
-                <V2Button size="sm" variant="ghost" onClick={() => removeEtapa(i)} aria-label="Remover etapa">
+                <V2Button size="sm" variant="ghost" onClick={() => removeEtapa(i)} aria-label={t('Remover etapa')}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </V2Button>
               </div>
               {/* Placar desta etapa: herda o padrão da modalidade ou sobrescreve. */}
               <div className="mt-2 grid gap-2 pl-8 sm:grid-cols-2">
                 <label className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-14 shrink-0">Games</span>
+                  <span className="w-14 shrink-0">{t('Games')}</span>
                   <select
                     value={e.sets_per_match ?? ''}
                     onChange={(ev) => setEtapa(i, { sets_per_match: ev.target.value === '' ? null : Number(ev.target.value) })}
-                    aria-label={`Games da etapa ${i + 1}`}
+                    aria-label={t('Games da etapa {v1}', { v1: i + 1 })}
                     className={smallSelectCls}
                   >
-                    <option value="">Padrão da modalidade</option>
+                    <option value="">{t('Padrão da modalidade')}</option>
                     {TEAM_SETS_OPTIONS.map((n) => <option key={n} value={n}>{TEAM_SETS_LABELS[n]}</option>)}
                   </select>
                 </label>
                 <label className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-14 shrink-0">Pontos</span>
+                  <span className="w-14 shrink-0">{t('Pontos')}</span>
                   <select
                     value={e.target_score ?? ''}
                     onChange={(ev) => setEtapa(i, { target_score: ev.target.value === '' ? null : Number(ev.target.value) })}
-                    aria-label={`Pontos por game da etapa ${i + 1}`}
+                    aria-label={t('Pontos por game da etapa {v1}', { v1: i + 1 })}
                     className={smallSelectCls}
                   >
-                    <option value="">Padrão da modalidade</option>
-                    {TEAM_TARGET_SCORE_OPTIONS.map((n) => <option key={n} value={n}>{n} pontos</option>)}
+                    <option value="">{t('Padrão da modalidade')}</option>
+                    {TEAM_TARGET_SCORE_OPTIONS.map((n) => <option key={n} value={n}>{t('{n} pontos', { n })}</option>)}
                   </select>
                 </label>
               </div>
               <p className="mt-1 pl-8 text-2xs text-gray-500">
-                Vale: {formatEtapaScoringLabel(resolveEtapaScoring(preview.value, { ...e, id: preview.value.etapas[i]?.id }))}
+                {t('Vale: {value}', { value: formatEtapaScoringLabel(resolveEtapaScoring(preview.value, { ...e, id: preview.value.etapas[i]?.id })) })}
               </p>
             </div>
           ))}
-          {etapas.length === 0 && <p className="text-xs text-red-500">Adicione ao menos uma etapa.</p>}
+          {etapas.length === 0 && <p className="text-xs text-red-500">{t('Adicione ao menos uma etapa.')}</p>}
         </div>
       </div>
 
       {/* Placar padrão das etapas */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label className={labelCls}>Placar padrão de cada etapa</label>
+          <label className={labelCls}>{t('Placar padrão de cada etapa')}</label>
           <select
             value={cfg.sets_per_etapa ?? 1}
             onChange={(e) => set({ sets_per_etapa: Number(e.target.value) })}
@@ -173,17 +174,17 @@ export default function TeamModalityConfig({ value, onChange }) {
             {TEAM_SETS_OPTIONS.map((n) => <option key={n} value={n}>{TEAM_SETS_LABELS[n]}</option>)}
           </select>
           <p className="text-xs text-gray-500">
-            Cada etapa é um jogo: pode ser decidida num game só ou em melhor de 3/5.
+            {t('Cada etapa é um jogo: pode ser decidida num game só ou em melhor de 3/5.')}
           </p>
         </div>
         <div className="space-y-2">
-          <label className={labelCls}>Pontos por game</label>
+          <label className={labelCls}>{t('Pontos por game')}</label>
           <select
             value={cfg.target_score ?? 11}
             onChange={(e) => set({ target_score: Number(e.target.value) })}
             className={inputCls}
           >
-            {TEAM_TARGET_SCORE_OPTIONS.map((n) => <option key={n} value={n}>{n} pontos</option>)}
+            {TEAM_TARGET_SCORE_OPTIONS.map((n) => <option key={n} value={n}>{t('{n} pontos', { n })}</option>)}
           </select>
         </div>
       </div>
@@ -191,14 +192,14 @@ export default function TeamModalityConfig({ value, onChange }) {
       {/* Regra de vitória */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label className={labelCls}>Como o confronto é decidido</label>
+          <label className={labelCls}>{t('Como o confronto é decidido')}</label>
           <select value={cfg.win_rule} onChange={(e) => set({ win_rule: e.target.value })} className={inputCls}>
             {Object.entries(TEAM_WIN_RULE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         {cfg.win_rule === TEAM_WIN_RULE.BEST_OF && (
           <div className="space-y-2">
-            <label className={labelCls}>Etapas para vencer (melhor de)</label>
+            <label className={labelCls}>{t('Etapas para vencer (melhor de)')}</label>
             <input
               type="number"
               min={1}
@@ -208,7 +209,7 @@ export default function TeamModalityConfig({ value, onChange }) {
               className={inputCls}
             />
             <p className="text-xs text-gray-500">
-              Ex.: {preview.value.win_target} de {etapas.length} — primeira equipe a atingir vence.
+              {t('Ex.: {win_target} de {n} — primeira equipe a atingir vence.', { win_target: preview.value.win_target, n: etapas.length })}
             </p>
           </div>
         )}
@@ -218,14 +219,14 @@ export default function TeamModalityConfig({ value, onChange }) {
       {hasSingles && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <label className={labelCls}>Simples</label>
+            <label className={labelCls}>{t('Simples')}</label>
             <select value={cfg.singles_mode} onChange={(e) => set({ singles_mode: e.target.value })} className={inputCls}>
               {Object.entries(TEAM_SINGLES_MODE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           {cfg.singles_mode === TEAM_SINGLES_MODE.ROTATING && (
             <div className="space-y-2">
-              <label className={labelCls}>Trocar a cada X pontos</label>
+              <label className={labelCls}>{t('Trocar a cada X pontos')}</label>
               <input
                 type="number"
                 min={TEAM_LIMITS.MIN_ROTATION_POINTS}
@@ -247,10 +248,10 @@ export default function TeamModalityConfig({ value, onChange }) {
 
       <div className="flex flex-wrap gap-2">
         <V2Badge tone="neutral">{TEAM_GENDER_LABELS[cfg.gender]}</V2Badge>
-        <V2Badge tone="neutral">{cfg.team_size} atletas/equipe</V2Badge>
-        <V2Badge tone="neutral">{etapas.length} etapa(s)</V2Badge>
+        <V2Badge tone="neutral">{t('{team_size} atletas/equipe', { team_size: cfg.team_size })}</V2Badge>
+        <V2Badge tone="neutral">{t('{n} etapa(s)', { n: etapas.length })}</V2Badge>
         <V2Badge tone="neutral">
-          {cfg.win_rule === TEAM_WIN_RULE.BEST_OF ? `Melhor de: ${preview.value.win_target}` : 'Todas as etapas'}
+          {cfg.win_rule === TEAM_WIN_RULE.BEST_OF ? t('Melhor de: {win_target}', { win_target: preview.value.win_target }) : t('Todas as etapas')}
         </V2Badge>
         <V2Badge tone="neutral">
           {formatEtapaScoringLabel({

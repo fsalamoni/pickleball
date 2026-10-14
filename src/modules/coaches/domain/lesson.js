@@ -23,6 +23,7 @@ import {
   sortSlots,
 } from '../../arenas/domain/booking.js';
 import { normalizeLessonCoupon } from '../../promo/domain/lessonCoupon.js';
+import { t, tk } from '@/core/i18n';
 
 // Reexporta para consumidores do módulo de aulas (não precisam conhecer arenas).
 export {
@@ -45,10 +46,10 @@ export const LESSON_FORMAT = Object.freeze({
 });
 
 export const LESSON_FORMAT_LABELS = Object.freeze({
-  [LESSON_FORMAT.PRIVATE]: 'Individual',
-  [LESSON_FORMAT.DUO]: 'Dupla',
-  [LESSON_FORMAT.GROUP]: 'Grupo',
-  [LESSON_FORMAT.CLINIC]: 'Clínica',
+  [LESSON_FORMAT.PRIVATE]: tk('Individual'),
+  [LESSON_FORMAT.DUO]: tk('Dupla'),
+  [LESSON_FORMAT.GROUP]: tk('Grupo'),
+  [LESSON_FORMAT.CLINIC]: tk('Clínica'),
 });
 
 /** Capacidade padrão de alunos por formato (turma). */
@@ -92,7 +93,7 @@ export function capacityFor(format, maxStudents) {
  */
 export function normalizeLesson(input = {}) {
   const coach_id = str(input.coach_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
 
   const kind = str(input.kind).toLowerCase() === BOOKING_KIND.RECURRING
     ? BOOKING_KIND.RECURRING
@@ -106,7 +107,7 @@ export function normalizeLesson(input = {}) {
     date: str(s.date), start: str(s.start), end: str(s.end),
   })));
   if (slots.length === 0) {
-    return { valid: false, error: 'Informe ao menos um horário válido (data, início e fim).', value: { coach_id } };
+    return { valid: false, error: t('Informe ao menos um horário válido (data, início e fim).'), value: { coach_id } };
   }
 
   const requestedBy = str(input.requested_by).toLowerCase();
@@ -168,7 +169,7 @@ export function isPastLesson(lesson = {}, nowDate = new Date()) {
 
 /** Rótulo legível do status. */
 export function lessonStatusLabel(status) {
-  return BOOKING_STATUS_LABELS[status] || status;
+  return t(BOOKING_STATUS_LABELS[status] || status);
 }
 
 /** Tom (V2Badge) do status. */
@@ -178,7 +179,7 @@ export function lessonStatusTone(status) {
 
 /** Rótulo do formato. */
 export function lessonFormatLabel(format) {
-  return LESSON_FORMAT_LABELS[normFormat(format)] || format;
+  return t(LESSON_FORMAT_LABELS[normFormat(format)] || format);
 }
 
 /**
@@ -190,13 +191,13 @@ export function availableActions(lesson = {}, actor = 'coach') {
   const from = lesson.status;
   const targets = [];
   if (actor === 'coach') {
-    if (canTransition(from, BOOKING_STATUS.CONFIRMED)) targets.push({ to: BOOKING_STATUS.CONFIRMED, label: 'Confirmar' });
-    if (canTransition(from, BOOKING_STATUS.DECLINED)) targets.push({ to: BOOKING_STATUS.DECLINED, label: 'Recusar' });
-    if (canTransition(from, BOOKING_STATUS.COMPLETED)) targets.push({ to: BOOKING_STATUS.COMPLETED, label: 'Concluir' });
-    if (canTransition(from, BOOKING_STATUS.CANCELLED)) targets.push({ to: BOOKING_STATUS.CANCELLED, label: 'Cancelar' });
+    if (canTransition(from, BOOKING_STATUS.CONFIRMED)) targets.push({ to: BOOKING_STATUS.CONFIRMED, label: t('Confirmar') });
+    if (canTransition(from, BOOKING_STATUS.DECLINED)) targets.push({ to: BOOKING_STATUS.DECLINED, label: t('Recusar') });
+    if (canTransition(from, BOOKING_STATUS.COMPLETED)) targets.push({ to: BOOKING_STATUS.COMPLETED, label: t('Concluir') });
+    if (canTransition(from, BOOKING_STATUS.CANCELLED)) targets.push({ to: BOOKING_STATUS.CANCELLED, label: t('Cancelar') });
   } else {
     // Aluno: só pode cancelar a própria solicitação/aula antes de concluída.
-    if (canTransition(from, BOOKING_STATUS.CANCELLED)) targets.push({ to: BOOKING_STATUS.CANCELLED, label: 'Cancelar' });
+    if (canTransition(from, BOOKING_STATUS.CANCELLED)) targets.push({ to: BOOKING_STATUS.CANCELLED, label: t('Cancelar') });
   }
   return targets;
 }

@@ -29,6 +29,7 @@ import {
 } from '../domain/subscription.js';
 import { redeemPoints, DEFAULT_POINTS_PER_REAL } from '../domain/marketing.js';
 import { applyPackageUse } from '../domain/memberBenefit.js';
+import { t } from '@/core/i18n';
 
 const COL_MEMBERS = 'arena_members';
 const COL_PACKAGES = 'arena_packages';
@@ -81,8 +82,8 @@ export async function getArenaMember(arenaId, userId) {
 }
 
 export async function addArenaMember(arenaId, target, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
-  if (!target?.user_id) throw new Error('user_id obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
+  if (!target?.user_id) throw new Error(t('user_id obrigatório.'));
   const norm = normalizeMemberInput(target);
   const id = memberId(arenaId, target.user_id);
   const ref = doc(db, COL_MEMBERS, id);
@@ -167,9 +168,9 @@ export async function listArenaPackages(arenaId, { onlyActive = true, lim = 100 
 }
 
 export async function createArenaPackage(arenaId, input, actor) {
-  if (!arenaId) throw new Error('arenaId obrigatório.');
+  if (!arenaId) throw new Error(t('arenaId obrigatório.'));
   const { valid, errors, value } = normalizePackageInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   const id = doc(collection(db, COL_PACKAGES)).id;
   await setDoc(doc(db, COL_PACKAGES, id), {
     id, arena_id: arenaId, ...value, sold_count: 0, created_at: serverTimestamp(), updated_at: serverTimestamp(),
@@ -202,13 +203,13 @@ export async function deleteArenaPackage(pkgId, actor) {
  * atleta pede) e `sellPackageToMember` (a arena confirma e credita).
  */
 export async function purchasePackage(arenaId, pkgId, user, profile) {
-  if (!arenaId || !pkgId) throw new Error('arenaId/pkgId obrigatórios.');
-  if (!user?.uid) throw new Error('Faça login.');
+  if (!arenaId || !pkgId) throw new Error(t('arenaId/pkgId obrigatórios.'));
+  if (!user?.uid) throw new Error(t('Faça login.'));
 
   const pkgSnap = await getDoc(doc(db, COL_PACKAGES, pkgId));
-  if (!pkgSnap.exists()) throw new Error('Pacote não encontrado.');
+  if (!pkgSnap.exists()) throw new Error(t('Pacote não encontrado.'));
   const pkg = { id: pkgSnap.id, ...pkgSnap.data() };
-  if (!pkg.active) throw new Error('Pacote indisponível.');
+  if (!pkg.active) throw new Error(t('Pacote indisponível.'));
 
   const expiresMs = Date.now() + (pkg.validity_days || 60) * 86_400_000;
   const walletRef = doc(db, COL_WALLETS, walletId(arenaId, user.uid));
@@ -534,9 +535,9 @@ export async function getMemberSubscription(arenaId, userId) {
  * valor não pode apagar o histórico de quem já pagou.
  */
 export async function setMemberSubscription(arenaId, userId, input, actor) {
-  if (!arenaId || !userId) throw new Error('arenaId e userId são obrigatórios.');
+  if (!arenaId || !userId) throw new Error(t('arenaId e userId são obrigatórios.'));
   const { valid, errors, value } = normalizeSubscriptionInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
 
   const id = subscriptionId(arenaId, userId);
   const ref = doc(db, COL_SUBSCRIPTIONS, id);
@@ -572,11 +573,11 @@ export async function setMemberSubscription(arenaId, userId, input, actor) {
  */
 export async function setSubscriptionMonthPaid(arenaId, userId, month, paid, actor) {
   if (!arenaId || !userId || !/^\d{4}-\d{2}$/.test(String(month || ''))) {
-    throw new Error('Informe o mês no formato AAAA-MM.');
+    throw new Error(t('Informe o mês no formato AAAA-MM.'));
   }
   const ref = doc(db, COL_SUBSCRIPTIONS, subscriptionId(arenaId, userId));
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Este membro não tem mensalidade.');
+  if (!snap.exists()) throw new Error(t('Este membro não tem mensalidade.'));
   const atual = new Set(snap.data()?.paid_months || []);
   if (paid) atual.add(month); else atual.delete(month);
 
@@ -643,9 +644,9 @@ export async function cancelMemberSubscription(arenaId, userId, actor) {
  * @returns {Promise<{ points: number, credit: number }>}
  */
 export async function redeemMemberPoints(arenaId, userId, points, opts = {}, actor = null) {
-  if (!arenaId || !userId) throw new Error('Arena e atleta são obrigatórios.');
+  if (!arenaId || !userId) throw new Error(t('Arena e atleta são obrigatórios.'));
   const membro = await getArenaMember(arenaId, userId);
-  if (!membro) throw new Error('Esta pessoa não é membro da arena.');
+  if (!membro) throw new Error(t('Esta pessoa não é membro da arena.'));
 
   const taxa = Number(opts.pointsPerReal) || DEFAULT_POINTS_PER_REAL;
   const { points: gastos, credit, error } = redeemPoints(points, {
@@ -686,19 +687,19 @@ export async function redeemMemberPoints(arenaId, userId, points, opts = {}, act
  * @returns {Promise<{ notified: number }>}
  */
 export async function requestPackagePurchase(arenaId, pkgId, user, profile) {
-  if (!arenaId || !pkgId) throw new Error('Pacote inválido.');
-  if (!user?.uid) throw new Error('Faça login.');
+  if (!arenaId || !pkgId) throw new Error(t('Pacote inválido.'));
+  if (!user?.uid) throw new Error(t('Faça login.'));
   const pkgSnap = await getDoc(doc(db, COL_PACKAGES, pkgId));
-  if (!pkgSnap.exists()) throw new Error('Pacote não encontrado.');
+  if (!pkgSnap.exists()) throw new Error(t('Pacote não encontrado.'));
   const pkg = pkgSnap.data();
-  if (pkg.active === false) throw new Error('Este pacote saiu da vitrine.');
+  if (pkg.active === false) throw new Error(t('Este pacote saiu da vitrine.'));
 
   // 🐞 Usava `listArenaManagers`, que devolve os DOCUMENTOS de gestor, não
   // os uids: o aviso era gravado para "[object Object]" e o pedido de pacote
   // nunca chegava a ninguém da arena.
   const { listArenaManagerIds } = await import('./arenaService.js');
   const gestores = await listArenaManagerIds(arenaId).catch(() => []);
-  if (gestores.length === 0) throw new Error('A arena ainda não tem quem receba o pedido. Fale com ela.');
+  if (gestores.length === 0) throw new Error(t('A arena ainda não tem quem receba o pedido. Fale com ela.'));
   const nome = displayName(user, profile);
   await notifyUsers(gestores, {
     title: 'Pedido de pacote de horas',
@@ -726,10 +727,10 @@ export async function requestPackagePurchase(arenaId, pkgId, user, profile) {
  * @param {object} actor  o gestor
  */
 export async function sellPackageToMember(arenaId, pkgId, target, actor) {
-  if (!arenaId || !pkgId) throw new Error('Pacote inválido.');
-  if (!target?.user_id) throw new Error('Escolha para quem é o pacote.');
+  if (!arenaId || !pkgId) throw new Error(t('Pacote inválido.'));
+  if (!target?.user_id) throw new Error(t('Escolha para quem é o pacote.'));
   const pkgSnap = await getDoc(doc(db, COL_PACKAGES, pkgId));
-  if (!pkgSnap.exists()) throw new Error('Pacote não encontrado.');
+  if (!pkgSnap.exists()) throw new Error(t('Pacote não encontrado.'));
   const pkg = { id: pkgSnap.id, ...pkgSnap.data() };
   const preco = Math.max(0, Number(pkg.price) || 0);
 

@@ -17,6 +17,7 @@ import {
 } from '@/v2/ui/primitives';
 import ItemCard from '@/v2/components/training/ItemCard';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
+import { t, tk, tn } from '@/core/i18n';
 
 /** Estado de um item meu, para o filtro (um valor só por item). */
 export function myItemState(item = {}) {
@@ -30,12 +31,12 @@ export function myItemState(item = {}) {
 }
 
 const ESTADOS = [
-  { value: 'privado', label: 'Só eu' },
-  { value: 'alunos', label: 'Meus alunos' },
-  { value: 'pendente', label: 'Em revisão' },
-  { value: 'aprovado', label: 'Publicados' },
-  { value: 'recusado', label: 'Recusados' },
-  { value: 'oculto', label: 'Ocultos' },
+  { value: 'privado', label: tk('Só eu') },
+  { value: 'alunos', label: tk('Meus alunos') },
+  { value: 'pendente', label: tk('Em revisão') },
+  { value: 'aprovado', label: tk('Publicados') },
+  { value: 'recusado', label: tk('Recusados') },
+  { value: 'oculto', label: tk('Ocultos') },
 ];
 
 export default function MyItemsTab({ identity, settings }) {
@@ -55,14 +56,14 @@ export default function MyItemsTab({ identity, settings }) {
   if (mine.isError) {
     return (
       <V2Surface>
-        <V2ErrorState title="Não foi possível carregar os seus itens" onRetry={() => mine.refetch()} />
+        <V2ErrorState title={t('Não foi possível carregar os seus itens')} onRetry={() => mine.refetch()} />
       </V2Surface>
     );
   }
 
   const criar = (
     <V2Button asChild>
-      <Link to="/treino/novo"><Plus className="h-4 w-4" aria-hidden="true" /> Criar drill ou treino</Link>
+      <Link to="/treino/novo"><Plus className="h-4 w-4" aria-hidden="true" />{' '}{t('Criar drill ou treino')}</Link>
     </V2Button>
   );
 
@@ -71,8 +72,8 @@ export default function MyItemsTab({ identity, settings }) {
       <V2Surface>
         <V2EmptyState
           icon={PenLine}
-          title="Você ainda não criou nada"
-          description="Crie o seu drill ou treino: guarde só para você, envie aos seus alunos ou publique na biblioteca."
+          title={t('Você ainda não criou nada')}
+          description={t('Crie o seu drill ou treino: guarde só para você, envie aos seus alunos ou publique na biblioteca.')}
           action={criar}
         />
       </V2Surface>
@@ -84,28 +85,28 @@ export default function MyItemsTab({ identity, settings }) {
   const visiveis = estado ? itens.filter((it) => myItemState(it) === estado) : itens;
 
   const confirmarExclusao = () => excluir.mutate(apagar, {
-    onSuccess: () => { toast.success('Item excluído.'); setApagar(null); },
-    onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível excluir agora. Tente de novo.')),
+    onSuccess: () => { toast.success(t('Item excluído.')); setApagar(null); },
+    onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível excluir agora. Tente de novo.'))),
   });
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-500">
-          {itens.length} {itens.length === 1 ? 'item seu' : 'itens seus'}
+          {tn(itens.length, '{n} item seu', '{n} itens seus')}
         </p>
         {criar}
       </div>
 
       {pendentes > 0 && (
         <p className="rounded-3xl bg-amber-50 p-4 text-sm text-amber-900">
-          {pendentes} {pendentes === 1 ? 'item espera' : 'itens esperam'} a revisão da equipe. Dá para ter até {limite} em revisão ao
-          mesmo tempo; enquanto isso, só você os vê.
+          {tn(pendentes, '{n} item espera a revisão da equipe.', '{n} itens esperam a revisão da equipe.')}{' '}
+          {t('Dá para ter até {limite} em revisão ao mesmo tempo; enquanto isso, só você os vê.', { limite })}
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar pelos estados">
-        <V2FilterChip active={!estado} onClick={() => setEstado('')} className="px-3 py-1.5">Todos ({itens.length})</V2FilterChip>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('Filtrar pelos estados')}>
+        <V2FilterChip active={!estado} onClick={() => setEstado('')} className="px-3 py-1.5">{t('Todos ({n})', { n: itens.length })}</V2FilterChip>
         {ESTADOS.filter((e) => contagem[e.value]).map((e) => (
           <V2FilterChip
             key={e.value}
@@ -114,7 +115,7 @@ export default function MyItemsTab({ identity, settings }) {
             onClick={() => setEstado(estado === e.value ? '' : e.value)}
             className="px-3 py-1.5"
           >
-            {e.label} ({contagem[e.value]})
+            {t(e.label)} ({contagem[e.value]})
           </V2FilterChip>
         ))}
       </div>
@@ -130,10 +131,10 @@ export default function MyItemsTab({ identity, settings }) {
               extra={(
                 <>
                   {st === 'recusado' && it.review_note && (
-                    <p className="text-sm text-red-700"><span className="font-semibold">Recado da equipe: </span>{it.review_note}</p>
+                    <p className="text-sm text-red-700"><span className="font-semibold">{t('Recado da equipe:')}{' '}</span>{it.review_note}</p>
                   )}
                   {st === 'oculto' && it.hidden_reason && (
-                    <p className="text-sm text-red-700"><span className="font-semibold">Motivo: </span>{it.hidden_reason}</p>
+                    <p className="text-sm text-red-700"><span className="font-semibold">{t('Motivo:')}{' '}</span>{it.hidden_reason}</p>
                   )}
                 </>
               )}
@@ -141,11 +142,11 @@ export default function MyItemsTab({ identity, settings }) {
                 <>
                   <V2Button asChild variant="secondary" size="sm">
                     <Link to={`/treino/item/${it.id}/editar`}>
-                      <Pencil className="h-4 w-4" aria-hidden="true" /> {st === 'recusado' ? 'Editar e reenviar' : 'Editar'}
+                      <Pencil className="h-4 w-4" aria-hidden="true" /> {st === 'recusado' ? t('Editar e reenviar') : t('Editar')}
                     </Link>
                   </V2Button>
-                  <V2Button variant="ghost" size="sm" onClick={() => setApagar(it)} aria-label={`Excluir "${it.title}"`}>
-                    <Trash2 className="h-4 w-4" aria-hidden="true" /> Excluir
+                  <V2Button variant="ghost" size="sm" onClick={() => setApagar(it)} aria-label={t('Excluir "{titulo}"', { titulo: it.title })}>
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />{' '}{t('Excluir')}
                   </V2Button>
                 </>
               )}
@@ -157,9 +158,9 @@ export default function MyItemsTab({ identity, settings }) {
       <ConfirmDialog
         open={!!apagar}
         onOpenChange={(o) => { if (!o) setApagar(null); }}
-        title="Excluir este item?"
-        description={apagar ? `"${apagar.title}" sai da biblioteca e dos envios. Quem já o copiou mantém a própria cópia. Isso não pode ser desfeito.` : ''}
-        confirmLabel="Excluir"
+        title={t('Excluir este item?')}
+        description={apagar ? t('"{titulo}" sai da biblioteca e dos envios. Quem já o copiou mantém a própria cópia. Isso não pode ser desfeito.', { titulo: apagar.title }) : ''}
+        confirmLabel={t('Excluir')}
         pending={excluir.isPending}
         onConfirm={confirmarExclusao}
       />

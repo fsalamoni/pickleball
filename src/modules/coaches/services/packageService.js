@@ -20,6 +20,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizePackage, normalizePackageSale, computeExpiresAt, creditsRemaining,
 } from '../domain/package.js';
+import { t } from '@/core/i18n';
 
 export const COACH_PACKAGE_COLLECTIONS = {
   packages: 'coach_packages',
@@ -37,8 +38,8 @@ export async function listCoachPackages(coachId, { onlyActive = false } = {}) {
 }
 
 export async function createPackage(coachId, input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   const { valid, error, value } = normalizePackage({ ...input, coach_id: coachId });
   if (!valid) throw new Error(error);
   const id = doc(collection(db, COACH_PACKAGE_COLLECTIONS.packages)).id;
@@ -50,8 +51,8 @@ export async function createPackage(coachId, input, actor) {
 }
 
 export async function deletePackage(pkg, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== pkg.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== pkg.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   await deleteDoc(doc(db, COACH_PACKAGE_COLLECTIONS.packages, pkg.id));
   await createAuditLog({ action: 'coach_package_deleted', actor, details: { package_id: pkg.id } });
 }
@@ -77,9 +78,9 @@ export async function listStudentSales(studentId) {
  * calculada a partir da definição do pacote.
  */
 export async function sellPackage(coachId, { pkg, studentId, studentName, paid = false }, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
-  if (!pkg?.id) throw new Error('Pacote inválido.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== coachId && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
+  if (!pkg?.id) throw new Error(t('Pacote inválido.'));
   const expires_at = computeExpiresAt(new Date(), pkg.validity_days);
   const { valid, error, value } = normalizePackageSale({
     coach_id: coachId,
@@ -113,21 +114,21 @@ export async function sellPackage(coachId, { pkg, studentId, studentName, paid =
 
 /** Marca uma venda como paga/não paga (professor/admin). */
 export async function setSalePaid(sale, paid, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (actor.uid !== sale.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (actor.uid !== sale.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
   await updateDoc(doc(db, COACH_PACKAGE_COLLECTIONS.sales, sale.id), { paid: paid === true, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'coach_package_payment', actor, details: { sale_id: sale.id, paid: paid === true } });
 }
 
 /** Debita 1 crédito de uma venda (uso de uma aula). */
 export async function consumeCredit(saleId, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const ref = doc(db, COACH_PACKAGE_COLLECTIONS.sales, saleId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('Venda não encontrada.');
+  if (!snap.exists()) throw new Error(t('Venda não encontrada.'));
   const sale = { id: snap.id, ...snap.data() };
-  if (actor.uid !== sale.coach_id && !actor.isPlatformAdmin) throw new Error('Sem permissão.');
-  if (creditsRemaining(sale) <= 0) throw new Error('Sem créditos disponíveis.');
+  if (actor.uid !== sale.coach_id && !actor.isPlatformAdmin) throw new Error(t('Sem permissão.'));
+  if (creditsRemaining(sale) <= 0) throw new Error(t('Sem créditos disponíveis.'));
   await updateDoc(ref, {
     credits_used: (Math.trunc(Number(sale.credits_used) || 0)) + 1,
     updated_at: serverTimestamp(),

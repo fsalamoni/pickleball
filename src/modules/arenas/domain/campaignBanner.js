@@ -20,6 +20,7 @@
  */
 import { normalizeBannerDesign, isAllowedImageUrl, platformTemplate, isArenaTemplateId } from './bannerArt.js';
 import { ARENA_MODULE_ID } from './modules.js';
+import { t, tk } from '@/core/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Destino                                                           */
@@ -46,62 +47,62 @@ export const CAMPAIGN_DESTINATION = Object.freeze({
  */
 export const CAMPAIGN_DESTINATION_META = Object.freeze({
   [CAMPAIGN_DESTINATION.DETAILS]: {
-    label: 'Página da campanha',
-    hint: 'Mostra o banner, a mensagem e o caminho para a arena.',
-    cta: 'Saiba mais',
+    label: tk('Página da campanha'),
+    hint: tk('Mostra o banner, a mensagem e o caminho para a arena.'),
+    cta: tk('Saiba mais'),
   },
   [CAMPAIGN_DESTINATION.BOOKING]: {
-    label: 'Reservar quadra',
-    hint: 'Leva direto ao calendário de reservas da arena.',
-    cta: 'Reservar agora',
+    label: tk('Reservar quadra'),
+    hint: tk('Leva direto ao calendário de reservas da arena.'),
+    cta: tk('Reservar agora'),
   },
   [CAMPAIGN_DESTINATION.OPEN_MATCH]: {
-    label: 'Jogos abertos',
-    hint: 'Os jogos com vaga que a arena publicou.',
-    cta: 'Quero jogar',
+    label: tk('Jogos abertos'),
+    hint: tk('Os jogos com vaga que a arena publicou.'),
+    cta: tk('Quero jogar'),
     module: ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH,
   },
   [CAMPAIGN_DESTINATION.GAME_DAY]: {
-    label: 'Um dia de jogo',
-    hint: 'A página de um dia de jogo específico: regras, quem vai e a inscrição.',
-    cta: 'Ver o jogo',
+    label: tk('Um dia de jogo'),
+    hint: tk('A página de um dia de jogo específico: regras, quem vai e a inscrição.'),
+    cta: tk('Ver o jogo'),
     target: 'game_day',
   },
   [CAMPAIGN_DESTINATION.TOURNAMENT]: {
-    label: 'Um torneio',
-    hint: 'A página de um torneio da casa, com a inscrição.',
-    cta: 'Inscrever-se',
+    label: tk('Um torneio'),
+    hint: tk('A página de um torneio da casa, com a inscrição.'),
+    cta: tk('Inscrever-se'),
     target: 'tournament',
   },
   [CAMPAIGN_DESTINATION.PRODUCT]: {
-    label: 'Um produto da loja',
-    hint: 'Abre a loja com o produto em destaque, pronto para pedir.',
-    cta: 'Ver o produto',
+    label: tk('Um produto da loja'),
+    hint: tk('Abre a loja com o produto em destaque, pronto para pedir.'),
+    cta: tk('Ver o produto'),
     target: 'product',
     module: ARENA_MODULE_ID.PDV,
   },
   [CAMPAIGN_DESTINATION.MEMBERS]: {
-    label: 'Planos e membros',
-    hint: 'Os planos e as vantagens de ser membro.',
-    cta: 'Conhecer os planos',
+    label: tk('Planos e membros'),
+    hint: tk('Os planos e as vantagens de ser membro.'),
+    cta: tk('Conhecer os planos'),
     module: ARENA_MODULE_ID.MEMBERS,
   },
   [CAMPAIGN_DESTINATION.CLASSES]: {
-    label: 'Aulas',
-    hint: 'As próximas aulas e os professores, com a matrícula.',
-    cta: 'Ver as aulas',
+    label: tk('Aulas'),
+    hint: tk('As próximas aulas e os professores, com a matrícula.'),
+    cta: tk('Ver as aulas'),
     module: ARENA_MODULE_ID.CLASSES,
   },
   [CAMPAIGN_DESTINATION.PROMOS]: {
-    label: 'Promoções',
-    hint: 'Os cupons que a arena divulga na página.',
-    cta: 'Ver as promoções',
+    label: tk('Promoções'),
+    hint: tk('Os cupons que a arena divulga na página.'),
+    cta: tk('Ver as promoções'),
     module: ARENA_MODULE_ID.MARKETING_COUPONS,
   },
   [CAMPAIGN_DESTINATION.RANKING]: {
-    label: 'Ranking da casa',
-    hint: 'A classificação da arena, com os torneios da casa.',
-    cta: 'Ver o ranking',
+    label: tk('Ranking da casa'),
+    hint: tk('A classificação da arena, com os torneios da casa.'),
+    cta: tk('Ver o ranking'),
     module: ARENA_MODULE_ID.LEAGUES,
   },
 });
@@ -165,7 +166,7 @@ export function normalizeDestination(input = {}) {
 export function destinationCta(destination, design) {
   const proprio = String(design?.cta || '').trim();
   if (proprio) return proprio;
-  return CAMPAIGN_DESTINATION_META[destination?.type]?.cta || 'Saiba mais';
+  return t(CAMPAIGN_DESTINATION_META[destination?.type]?.cta || 'Saiba mais');
 }
 
 /* ------------------------------------------------------------------ */
@@ -333,7 +334,7 @@ export function campaignPlacementText(campaign) {
     campaign.show_on_arena !== false ? 'página da arena' : null,
     campaign.show_home ? 'tela inicial' : null,
   ].filter(Boolean);
-  const destino = CAMPAIGN_DESTINATION_META[campaign.destination?.type]?.label || CAMPAIGN_DESTINATION_META.details.label;
+  const destino = t(CAMPAIGN_DESTINATION_META[campaign.destination?.type]?.label || CAMPAIGN_DESTINATION_META.details.label);
   const alvo = campaign.destination?.target_label ? ` (${campaign.destination.target_label})` : '';
-  return `Banner na ${onde.join(' e na ')} · leva a: ${destino}${alvo}`;
+  return t('Banner na {valor} · leva a: {destino}{alvo}', { valor: onde.join(' e na '), destino, alvo });
 }

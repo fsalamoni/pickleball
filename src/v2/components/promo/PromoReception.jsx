@@ -18,8 +18,9 @@ import { useFindPromoCoupon, useRedeemPromoCoupon } from '@/modules/promo/hooks/
 import { V2Button, V2Input } from '@/v2/ui/primitives';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import { PROMO_KIND_ICON } from './promoUi';
+import { t } from '@/core/i18n';
 
-const nomeDe = (a) => a?.platform_name || a?.full_name || 'Atleta';
+const nomeDe = (a) => a?.platform_name || a?.full_name || t('Atleta');
 
 /**
  * @param {{ issuer: object, cupom?: object|null, onDone?: Function }} props
@@ -52,18 +53,19 @@ export default function PromoReception({ issuer, cupom: cupomDado = null, onDone
     ? couponError(achado, {
       anyFamily: true,
       usedByUser: Boolean(quem?.id) && (achado.used_by || []).includes(quem.id),
-    })?.replace('Você já usou', 'Esta pessoa já usou')
+      byOther: true,
+    })
     : null;
 
   const confirmar = async () => {
     try {
       await registrar.mutateAsync({ issuer, couponId: achado.id, who: { userId: quem?.id || null, userName: quem ? nomeDe(quem) : '' } });
-      toast.success(`Uso registrado: ${promoBenefitText(achado)}.`);
+      toast.success(t('Uso registrado: {beneficio}.', { beneficio: promoBenefitText(achado) }));
       if (!cupomDado) { setCodigo(''); setAchado(null); }
       setQuem(null);
       onDone?.();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar o uso.');
+      toast.error(err?.message || t('Não foi possível registrar o uso.'));
     }
   };
 
@@ -73,28 +75,28 @@ export default function PromoReception({ issuer, cupom: cupomDado = null, onDone
     <div className="rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="mb-2 flex items-center gap-2">
         <ScanLine className="h-4 w-4 text-ink" aria-hidden />
-        <h3 className="font-display text-base font-bold text-ink">Registrar uso de um cupom</h3>
+        <h3 className="font-display text-base font-bold text-ink">{t('Registrar uso de um cupom')}</h3>
       </div>
       {ehProfessor && !cupomDado && (
         <p className="mb-2 text-xs text-gray-500">
-          O desconto que o aluno informa ao pedir a aula é contado sozinho quando você confirma a aula. Aqui é para o que você entrega em mãos.
+          {t('O desconto que o aluno informa ao pedir a aula é contado sozinho quando você confirma a aula. Aqui é para o que você entrega em mãos.')}
         </p>
       )}
 
       {!cupomDado && (
         <form onSubmit={conferir} className="flex flex-wrap gap-2">
-          <label htmlFor="promo-rec-codigo" className="sr-only">Código do cupom</label>
-          <V2Input id="promo-rec-codigo" className="min-w-0 flex-1" maxLength={30} placeholder="Código que a pessoa mostrou"
+          <label htmlFor="promo-rec-codigo" className="sr-only">{t('Código do cupom')}</label>
+          <V2Input id="promo-rec-codigo" className="min-w-0 flex-1" maxLength={30} placeholder={t('Código que a pessoa mostrou')}
             value={codigo} onChange={(e) => { setCodigo(e.target.value.toUpperCase().replace(/\s+/g, '')); limparBusca(); }} />
           <V2Button type="submit" variant="secondary" disabled={!codigo.trim() || buscar.isPending}>
-            {buscar.isPending ? 'Conferindo…' : 'Conferir'}
+            {buscar.isPending ? t('Conferindo…') : t('Conferir')}
           </V2Button>
         </form>
       )}
-      {buscar.isError && <p role="alert" className="mt-2 text-xs text-red-700">Não foi possível conferir agora — isso não quer dizer que o código não exista. Tente de novo.</p>}
+      {buscar.isError && <p role="alert" className="mt-2 text-xs text-red-700">{t('Não foi possível conferir agora — isso não quer dizer que o código não exista. Tente de novo.')}</p>}
       {naoAchou && !buscar.isError && (
         <p className="mt-2 text-xs text-red-700">
-          {ehProfessor ? 'Nenhum cupom seu com este código.' : 'Nenhum cupom da plataforma com este código.'}
+          {ehProfessor ? t('Nenhum cupom seu com este código.') : t('Nenhum cupom da plataforma com este código.')}
         </p>
       )}
 
@@ -106,27 +108,29 @@ export default function PromoReception({ issuer, cupom: cupomDado = null, onDone
               <p className="font-display text-sm font-bold tracking-wide text-ink">{achado.code}</p>
               <p className="text-sm text-ink">{promoBenefitText(achado)}</p>
               <p className="text-xs text-gray-500">
-                {Number(achado.used_count) || 0}{achado.max_uses ? ` de ${achado.max_uses}` : ''} usos
-                {achado.once_per_user !== false ? ' · uma vez por pessoa' : ''}
+                {achado.max_uses
+                  ? t('{usados} de {max} usos', { usados: Number(achado.used_count) || 0, max: achado.max_uses })
+                  : t('{usados} usos', { usados: Number(achado.used_count) || 0 })}
+                {achado.once_per_user !== false ? ` · ${t('uma vez por pessoa')}` : ''}
               </p>
             </div>
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink/60">Quem usou (opcional)</p>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink/60">{t('Quem usou (opcional)')}</p>
             <AthletePicker value={quem} onChange={setQuem} inputId="promo-rec-quem" />
             {!quem && achado.once_per_user !== false && (
-              <p className="mt-1 text-xs text-gray-500">Sem escolher a pessoa, &quot;uma vez por pessoa&quot; não tem como ser conferido.</p>
+              <p className="mt-1 text-xs text-gray-500">{t('Sem escolher a pessoa, “uma vez por pessoa” não tem como ser conferido.')}</p>
             )}
           </div>
 
-          {problema && <p role="alert" className="text-sm font-semibold text-red-700">{problema}</p>}
+          {problema && <p role="alert" className="text-sm font-semibold text-red-700">{t(problema)}</p>}
 
           <div className="flex justify-end gap-2">
-            {onDone && <V2Button type="button" variant="ghost" onClick={onDone}>Fechar</V2Button>}
+            {onDone && <V2Button type="button" variant="ghost" onClick={onDone}>{t('Fechar')}</V2Button>}
             <V2Button type="button" disabled={Boolean(problema) || registrar.isPending} onClick={confirmar}>
               <Check className="mr-1.5 h-4 w-4" aria-hidden />
-              {registrar.isPending ? 'Registrando…' : 'Entreguei — registrar uso'}
+              {registrar.isPending ? t('Registrando…') : t('Entreguei — registrar uso')}
             </V2Button>
           </div>
         </div>

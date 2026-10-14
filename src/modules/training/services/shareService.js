@@ -19,6 +19,7 @@ import {
   buildShares, canShareItem, MAX_RECIPIENTS, needsSharedAccess, SHARE_DONE_NOTE_MAX, SHARE_KIND,
 } from '../domain/share.js';
 import { TRAINING_ITEMS, TrainingItemError } from './trainingItemService.js';
+import { t } from '@/core/i18n';
 
 export const TRAINING_SHARES = 'training_shares';
 const toShare = (d) => ({ id: d.id, ...d.data() });
@@ -56,15 +57,15 @@ export async function listSent(uid) {
  * @returns {Promise<{ sent: number, skipped: number, failed: number, notified: number }>}
  */
 export async function shareItem({ item, toUids = [], kind = SHARE_KIND.INDICACAO, note = '', dueDate = null, activeStudentIds = [], identity, settings }) {
-  if (settings?.allow_sharing === false) throw new TrainingItemError('O compartilhamento de treinos está pausado no momento.');
+  if (settings?.allow_sharing === false) throw new TrainingItemError(t('O compartilhamento de treinos está pausado no momento.'));
   const can = canShareItem(item, { uid: identity?.uid });
   if (!can.ok) throw new TrainingItemError(can.reason);
   const isStudentSend = kind === SHARE_KIND.ALUNO;
-  if (isStudentSend && !identity.isCoach) throw new TrainingItemError('Só professores enviam para alunos.');
+  if (isStudentSend && !identity.isCoach) throw new TrainingItemError(t('Só professores enviam para alunos.'));
 
   let destinos = [...new Set(toUids.filter((u) => u && u !== identity.uid))];
   if (isStudentSend) destinos = destinos.filter((u) => activeStudentIds.includes(u));
-  if (!destinos.length) throw new TrainingItemError(isStudentSend ? 'Escolha pelo menos um aluno ativo.' : 'Escolha pelo menos uma pessoa.');
+  if (!destinos.length) throw new TrainingItemError(isStudentSend ? t('Escolha pelo menos um aluno ativo.') : t('Escolha pelo menos uma pessoa.'));
 
   // Não duplica o que a pessoa já tem em aberto deste mesmo item.
   const anteriores = await getDocs(query(collection(db, TRAINING_SHARES),
@@ -86,7 +87,7 @@ export async function shareItem({ item, toUids = [], kind = SHARE_KIND.INDICACAO
     const atual = Array.isArray(item.shared_uids) ? item.shared_uids : [];
     const faltam = novos.filter((u) => !atual.includes(u));
     if (atual.length + faltam.length > 50) {
-      throw new TrainingItemError('Este item já foi compartilhado com muitas pessoas. Deixe-o visível aos seus alunos ou publique na biblioteca.');
+      throw new TrainingItemError(t('Este item já foi compartilhado com muitas pessoas. Deixe-o visível aos seus alunos ou publique na biblioteca.'));
     }
     if (faltam.length) acesso = faltam;
   }

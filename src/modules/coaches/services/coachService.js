@@ -22,6 +22,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeCoachProfile, normalizeCoachResidency } from '../domain/coach.js';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
+import { t } from '@/core/i18n';
 
 export const COACH_COLLECTIONS = {
   coaches: 'coaches',
@@ -71,10 +72,10 @@ async function mirrorCoachToUser(coachId, value) {
 
 /** Cria ou atualiza perfil de coach. */
 export async function upsertCoachProfile(coachId, input, actor) {
-  if (!coachId) throw new Error('coachId é obrigatório.');
+  if (!coachId) throw new Error(t('coachId é obrigatório.'));
   // só o próprio coach (ou platform_admin) pode editar
   if (actor?.uid !== coachId && !actor?.isPlatformAdmin) {
-    throw new Error('Sem permissão para editar este perfil.');
+    throw new Error(t('Sem permissão para editar este perfil.'));
   }
   const { valid, error, value } = normalizeCoachProfile(input);
   if (!valid) throw new Error(error);
@@ -110,9 +111,9 @@ export async function upsertCoachProfile(coachId, input, actor) {
  * @param {object} actor
  */
 export async function syncCoachDocFromEssentials(coachId, essentials = {}, actor) {
-  if (!coachId) throw new Error('coachId é obrigatório.');
+  if (!coachId) throw new Error(t('coachId é obrigatório.'));
   if (actor?.uid !== coachId && !actor?.isPlatformAdmin) {
-    throw new Error('Sem permissão para editar este perfil.');
+    throw new Error(t('Sem permissão para editar este perfil.'));
   }
   const existing = await getCoach(coachId);
 
@@ -201,8 +202,8 @@ export async function listMyFavoriteCoaches(userId) {
 
 /** Adiciona professor aos favoritos. */
 export async function favoriteCoach(user, coach) {
-  if (!user?.uid) throw new Error('Usuário não autenticado.');
-  if (!coach?.id) throw new Error('Professor inválido.');
+  if (!user?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!coach?.id) throw new Error(t('Professor inválido.'));
   await setDoc(doc(db, COACH_COLLECTIONS.favorites, COACH_FAVORITE_ID(user.uid, coach.id)), {
     id: COACH_FAVORITE_ID(user.uid, coach.id),
     user_id: user.uid,
@@ -228,7 +229,7 @@ export async function addCoachResidency(input, actor, { requireAcceptance = fals
   // Permissão: coach OU arena manager OU platform_admin
   const isAuthorized = await isResidencyAuthorized(value.coach_id, value.arena_id, actor);
   if (!isAuthorized) {
-    throw new Error('Sem permissão para criar essa residência.');
+    throw new Error(t('Sem permissão para criar essa residência.'));
   }
   // Parceria mútua (flag): quando quem adiciona NÃO é o próprio professor, o
   // vínculo nasce pendente e só fica ativo após o professor aceitar.
@@ -267,7 +268,7 @@ export async function addCoachResidency(input, actor, { requireAcceptance = fals
 export async function removeCoachResidency(coachId, arenaId, actor) {
   const isAuthorized = await isResidencyAuthorized(coachId, arenaId, actor);
   if (!isAuthorized) {
-    throw new Error('Sem permissão para remover essa residência.');
+    throw new Error(t('Sem permissão para remover essa residência.'));
   }
   await deleteDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId)));
   await createAuditLog({
@@ -284,7 +285,7 @@ export async function removeCoachResidency(coachId, arenaId, actor) {
 export async function updateCoachResidency(coachId, arenaId, patch = {}, actor) {
   const isAuthorized = await isResidencyAuthorized(coachId, arenaId, actor);
   if (!isAuthorized) {
-    throw new Error('Sem permissão para editar essa residência.');
+    throw new Error(t('Sem permissão para editar essa residência.'));
   }
   const update = { updated_at: serverTimestamp() };
   // 🐞 Antes, todo status que não fosse "paused" virava "active": um convite
@@ -309,7 +310,7 @@ export async function updateCoachResidency(coachId, arenaId, patch = {}, actor) 
 
 /** O professor aceita um convite de parceria (status pending → active). */
 export async function acceptCoachResidency(coachId, arenaId, actor) {
-  if (!actor?.uid || actor.uid !== coachId) throw new Error('Apenas o professor pode aceitar a parceria.');
+  if (!actor?.uid || actor.uid !== coachId) throw new Error(t('Apenas o professor pode aceitar a parceria.'));
   const ref = doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId));
   await updateDoc(ref, { status: 'active', accepted_at: serverTimestamp(), updated_at: serverTimestamp() });
   // Avisa os gestores da arena.
@@ -331,7 +332,7 @@ export async function acceptCoachResidency(coachId, arenaId, actor) {
 
 /** O professor recusa um convite de parceria (remove o vínculo pendente). */
 export async function declineCoachResidency(coachId, arenaId, actor) {
-  if (!actor?.uid || actor.uid !== coachId) throw new Error('Apenas o professor pode recusar a parceria.');
+  if (!actor?.uid || actor.uid !== coachId) throw new Error(t('Apenas o professor pode recusar a parceria.'));
   await deleteDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId)));
   await createAuditLog({ action: 'coach_residency_declined', actor, details: { coach_id: coachId, arena_id: arenaId } });
 }

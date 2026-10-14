@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Domínio puro da lista de espera de RESERVAS (flag booking_waitlist).
  *
@@ -20,9 +21,9 @@ export function normalizeWaitlistEntry(input = {}) {
   const date = str(input.date);
   const start = str(input.start);
   const end = str(input.end);
-  if (!arena_id) return { valid: false, error: 'Arena inválida.', value: {} };
-  if (!user_id) return { valid: false, error: 'Usuário inválido.', value: {} };
-  if (!date || !start || !end) return { valid: false, error: 'Horário inválido.', value: {} };
+  if (!arena_id) return { valid: false, error: t('Arena inválida.'), value: {} };
+  if (!user_id) return { valid: false, error: t('Usuário inválido.'), value: {} };
+  if (!date || !start || !end) return { valid: false, error: t('Horário inválido.'), value: {} };
   return {
     valid: true,
     error: null,

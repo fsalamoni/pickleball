@@ -15,6 +15,7 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { V2Button, V2Field, V2Textarea } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export const mensagemDeErro = (err, padrao) => (err?.name === 'TrainingItemError' && err.message ? err.message : padrao);
 
@@ -28,8 +29,8 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <V2Button variant="danger" disabled={pending} onClick={onConfirm}>{pending ? 'Aguarde…' : confirmLabel}</V2Button>
+          <AlertDialogCancel>{t('Cancelar')}</AlertDialogCancel>
+          <V2Button variant="danger" disabled={pending} onClick={onConfirm}>{pending ? t('Aguarde…') : confirmLabel}</V2Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -62,8 +63,8 @@ export function ReasonDialog({
             <V2Textarea id="motivo-texto" rows={3} maxLength={maxLength} value={texto} onChange={(e) => setTexto(e.target.value)} />
           </V2Field>
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={pending || (required && vazio)}>{pending ? 'Salvando…' : confirmLabel}</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>{t('Cancelar')}</V2Button>
+            <V2Button type="submit" disabled={pending || (required && vazio)}>{pending ? t('Salvando…') : confirmLabel}</V2Button>
           </div>
         </form>
       </DialogContent>
@@ -81,22 +82,22 @@ export function ReportDialog({ open, onOpenChange, item, identity }) {
     if (!motivo) return;
     denunciar.mutate({ item, reason: motivo, text: texto }, {
       onSuccess: () => {
-        toast.success('Recebemos. A equipe analisa e o item continua visível enquanto isso.');
+        toast.success(t('Recebemos. A equipe analisa e o item continua visível enquanto isso.'));
         fechar(false);
       },
-      onError: (err) => toast.error(mensagemDeErro(err, 'Não foi possível enviar a denúncia. Tente de novo.')),
+      onError: (err) => toast.error(mensagemDeErro(err, t('Não foi possível enviar a denúncia. Tente de novo.'))),
     });
   };
   return (
     <Dialog open={open} onOpenChange={fechar}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Denunciar este item</DialogTitle>
-          <DialogDescription>Só a equipe da plataforma vê a denúncia. O autor não sabe quem denunciou.</DialogDescription>
+          <DialogTitle>{t('Denunciar este item')}</DialogTitle>
+          <DialogDescription>{t('Só a equipe da plataforma vê a denúncia. O autor não sabe quem denunciou.')}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={enviar}>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold text-ink">O que há de errado?</legend>
+            <legend className="text-sm font-semibold text-ink">{t('O que há de errado?')}</legend>
             {Object.entries(REPORT_REASONS).map(([valor, rotulo]) => (
               <label key={valor} className="flex items-center gap-3 rounded-2xl border border-gray-100 p-3 text-sm text-ink has-[:checked]:border-ink">
                 <input type="radio" name="motivo-denuncia" value={valor} checked={motivo === valor} onChange={() => setMotivo(valor)} className="h-4 w-4" />
@@ -104,12 +105,12 @@ export function ReportDialog({ open, onOpenChange, item, identity }) {
               </label>
             ))}
           </fieldset>
-          <V2Field label="Conte mais (opcional)" htmlFor="denuncia-texto">
+          <V2Field label={t('Conte mais (opcional)')} htmlFor="denuncia-texto">
             <V2Textarea id="denuncia-texto" rows={3} maxLength={500} value={texto} onChange={(e) => setTexto(e.target.value)} />
           </V2Field>
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={!motivo || denunciar.isPending}>{denunciar.isPending ? 'Enviando…' : 'Enviar denúncia'}</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => fechar(false)}>{t('Cancelar')}</V2Button>
+            <V2Button type="submit" disabled={!motivo || denunciar.isPending}>{denunciar.isPending ? t('Enviando…') : t('Enviar denúncia')}</V2Button>
           </div>
         </form>
       </DialogContent>
