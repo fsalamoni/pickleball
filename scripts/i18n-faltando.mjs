@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url';
 
 const listar = (p, out = []) => {
   if (!fs.existsSync(p)) return out;
-  if (fs.statSync(p).isFile()) return out.concat(p);
+  if (fs.statSync(p).isFile()) { out.push(p); return out; }
   for (const e of fs.readdirSync(p)) listar(path.join(p, e), out);
   return out;
 };
