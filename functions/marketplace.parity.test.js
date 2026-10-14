@@ -141,3 +141,16 @@ describe('servidor: o que fecha a compra', () => {
     expect(servidor.groupShipping([a], 'pickup').shipping_cents).toBe(0);
   });
 });
+
+describe('paridade: o frete do vendedor', async () => {
+  const { groupShippingCost } = await import('@/modules/marketplace/domain/cart.js');
+  const casos = [
+    [[{ shipping_cents: 1500 }, { shipping_cents: 2500 }], 'shipping'],
+    [[{ shipping_cents: 1500 }, { shipping_to_agree: true }], 'shipping'],
+    [[{ shipping_cents: 1500 }], 'pickup'],
+    [[{}], 'shipping'],
+  ];
+  it.each(casos)('mesmo frete no cliente e no servidor (%#)', (ls, f) => {
+    expect(groupShippingCost(ls, f)).toEqual(servidor.groupShipping(ls, f));
+  });
+});

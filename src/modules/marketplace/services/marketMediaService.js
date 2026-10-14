@@ -75,3 +75,9 @@ export async function listMyMarketUploads(uid) {
   const res = await listAll(ref(storage, `mercado/${uid}`));
   return res.items.map((i) => i.fullPath);
 }
+
+/** O link de um arquivo pelo caminho (o comprovante do Pix, que o pedido guarda só como caminho). */
+export async function getMarketFileUrl(path) {
+  if (!storage || !path || !String(path).startsWith('mercado/')) return null;
+  return getDownloadURL(ref(storage, path));
+}

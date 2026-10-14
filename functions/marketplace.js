@@ -831,10 +831,35 @@ async function moderateListing(ctx, listingId, listing) {
   return termo;
 }
 
+
+/* ------------------------------------------------------ perguntas ----- */
+
+/**
+ * Pergunta nova → avisa quem vende; resposta → avisa quem perguntou. O
+ * navegador não escreve aviso para outra pessoa sobre o Mercado.
+ */
+async function notifyQuestion(ctx, questionId, before, after) {
+  const { db, now = Date.now() } = ctx;
+  if (!after) return null;
+  const link = `/mercado/anuncio/${after.listing_id}?ancora=perguntas`;
+  const titulo = texto(after.listing_title, 80);
+  if (!before && after.status === 'open') {
+    const ops = await operatorUids(db, after.seller_key);
+    const alvos = ops.filter((u) => u !== after.asker_uid);
+    await notify(db, alvos, { title: 'Nova pergunta no Mercado', message: `Perguntaram sobre "${titulo}": ${texto(after.text, 140)}`, link }, now);
+    return 'seller';
+  }
+  if (before && before.status !== 'answered' && after.status === 'answered' && after.asker_uid) {
+    await notify(db, [after.asker_uid], { title: 'O vendedor respondeu', message: `Sua pergunta sobre "${titulo}" tem resposta.`, link }, now);
+    return 'asker';
+  }
+  return null;
+}
+
 module.exports = {
   ORDER_ACTIONS, OFFER_ACTIONS, OFFER_RULES, RESTOCK_ON, DEFAULT_BANNED_TERMS,
   checkOrderAction, applyOfferAction, validateOfferAmount, validateReview, findBannedTerm,
   serverSettings, commonFulfillment, groupShipping, validatePlaceRequest, cleanAddress,
   MarketError, placeOrders, orderAction, applyOrderAction, offerAction, submitReview,
-  housekeeping, moderateListing, recomputeSellerRating, operatorUids,
+  housekeeping, moderateListing, recomputeSellerRating, operatorUids, notifyQuestion,
 };

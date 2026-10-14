@@ -144,3 +144,16 @@ export function groupCartBySeller(cart, listings = {}) {
   const units = c.items.reduce((n, i) => n + i.quantity, 0);
   return { groups, total_cents: total, units, sellers: groups.length };
 }
+
+/**
+ * Frete de um vendedor para a entrega escolhida — a MESMA conta do servidor
+ * (`groupShipping` em `functions/marketplace.js`): um pacote só, vale o maior
+ * frete; se algum item é "a combinar", o frete do pedido é a combinar.
+ * @returns {{ shipping_cents: number, shipping_to_agree: boolean }}
+ */
+export function groupShippingCost(listings = [], fulfillment) {
+  if (fulfillment !== 'shipping') return { shipping_cents: 0, shipping_to_agree: false };
+  const ls = listings.filter(Boolean);
+  if (ls.some((l) => l.shipping_to_agree)) return { shipping_cents: 0, shipping_to_agree: true };
+  return { shipping_cents: Math.max(0, ...ls.map((l) => Math.round(Number(l.shipping_cents) || 0))), shipping_to_agree: false };
+}

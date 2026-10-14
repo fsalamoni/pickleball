@@ -13,6 +13,8 @@ import {
   RotateCcw, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
@@ -208,11 +210,13 @@ export default function SidebarSettingsCard() {
   const { user, isPlatformAdmin } = useAuth();
   const { arenas } = useMyArenaSummary();
   const coach = useCoach(user?.uid).data;
+  const mercado = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const papeis = useMemo(() => ({
     arenas: arenas.length > 0,
     professor: !!coach,
     admin: !!isPlatformAdmin,
-  }), [arenas.length, coach, isPlatformAdmin]);
+    mercado,
+  }), [arenas.length, coach, isPlatformAdmin, mercado]);
   const nomes = useMemo(() => (arenas.length === 1 ? { 'minha-arena': arenas[0].name || 'Minha arena' } : {}), [arenas]);
 
   const { itens, preset, padrao } = useSidebarNav(papeis);

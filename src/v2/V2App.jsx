@@ -90,6 +90,14 @@ const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
 const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
 const V2Notifications = lazy(() => import('@/v2/pages/V2Notifications'));
+const V2Market = lazy(() => import('@/v2/pages/V2Market'));
+const V2MarketListing = lazy(() => import('@/v2/pages/V2MarketListing'));
+const V2MarketSeller = lazy(() => import('@/v2/pages/V2MarketSeller'));
+const V2MarketFavorites = lazy(() => import('@/v2/pages/V2MarketFavorites'));
+const V2MarketCart = lazy(() => import('@/v2/pages/V2MarketCart'));
+const V2MarketOrders = lazy(() => import('@/v2/pages/V2MarketOrders'));
+const V2MarketOrder = lazy(() => import('@/v2/pages/V2MarketOrder'));
+const V2MarketOffer = lazy(() => import('@/v2/pages/V2MarketOffer'));
 // Centro de Treino (flag `training_center`): cada tela se fecha sozinha com a flag desligada.
 const V2Training = lazy(() => import('@/v2/pages/V2Training'));
 const V2TrainingItem = lazy(() => import('@/v2/pages/V2TrainingItem'));
@@ -249,6 +257,15 @@ export default function V2App() {
           <Route path="configuracoes" element={<V2Settings />} />
           {/* Central de notificações (flag notifications_center): todos os avisos, os novos e os antigos. */}
           <Route path="notificacoes" element={<Isolada nome="notificacoes"><V2Notifications /></Isolada>} />
+          <Route path="mercado" element={<Isolada nome="mercado"><V2Market /></Isolada>} />
+          <Route path="mercado/anuncio/:listingId" element={<Isolada nome="mercado"><V2MarketListing /></Isolada>} />
+          <Route path="mercado/vendedor/:sellerKey" element={<Isolada nome="mercado"><V2MarketSeller /></Isolada>} />
+          <Route path="mercado/favoritos" element={<Isolada nome="mercado"><V2MarketFavorites /></Isolada>} />
+          <Route path="mercado/carrinho" element={<Isolada nome="mercado"><V2MarketCart /></Isolada>} />
+          <Route path="mercado/pedidos" element={<Isolada nome="mercado"><V2MarketOrders /></Isolada>} />
+          <Route path="mercado/pedidos/:orderId" element={<Isolada nome="mercado"><V2MarketOrder /></Isolada>} />
+          <Route path="mercado/vendas/:orderId" element={<Isolada nome="mercado"><V2MarketOrder /></Isolada>} />
+          <Route path="mercado/ofertas/:offerId" element={<Isolada nome="mercado"><V2MarketOffer /></Isolada>} />
           <Route path="treino" element={<Isolada nome="treino"><V2Training /></Isolada>} />
           <Route path="treino/golpes" element={<Isolada nome="treino"><V2TrainingTechniques /></Isolada>} />
           <Route path="treino/novo" element={<Isolada nome="treino"><V2TrainingEditor /></Isolada>} />
