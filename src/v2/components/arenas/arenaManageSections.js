@@ -13,6 +13,7 @@ import {
   Network, Package, Palette, Puzzle, ShoppingBag, SlidersHorizontal, Smile, Sparkles, Star, Sun,
   Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench,
 } from 'lucide-react';
+import { tk } from '@/core/i18n';
 
 /**
  * As duas linhas da barra de seções. A ordem das seções dentro de cada linha é
@@ -24,8 +25,8 @@ import {
  * Atender vem em cima porque é por onde se entra (a aba padrão é Hoje).
  */
 export const ARENA_SECTION_GROUPS = Object.freeze([
-  { id: 'atender', label: 'Atender' },
-  { id: 'gerir', label: 'Gerir' },
+  { id: 'atender', label: tk('Atender') },
+  { id: 'gerir', label: tk('Gerir') },
 ]);
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -43,45 +44,45 @@ export function buildArenaSections({
   return [
     // Hoje (Fase 3.3): a abertura da Central — a agenda do dia e, com o módulo
     // de operação, a rotina. É por onde se entra; "Precisa de você" fica acima.
-    { id: 'hoje', grupo: 'atender', label: 'Hoje', icon: Sun, tabs: [{ value: 'hoje', label: 'Hoje', icon: Sun }] },
+    { id: 'hoje', grupo: 'atender', label: tk('Hoje'), icon: Sun, tabs: [{ value: 'hoje', label: tk('Hoje'), icon: Sun }] },
     {
       id: 'perfil',
       grupo: 'gerir',
-      label: 'Perfil',
+      label: tk('Perfil'),
       icon: Building2,
       tabs: [
-        { value: 'info', label: 'Informações', icon: Info },
-        { value: 'fotos', label: 'Fotos', icon: Image },
+        { value: 'info', label: tk('Informações'), icon: Info },
+        { value: 'fotos', label: tk('Fotos'), icon: Image },
         // A marca é a cara da arena: mora junto das informações e das fotos.
-        ...(modulos.marca ? [{ value: 'marca', label: 'Marca', icon: Palette }] : []),
+        ...(modulos.marca ? [{ value: 'marca', label: tk('Marca'), icon: Palette }] : []),
       ],
     },
     {
       id: 'estrutura',
       grupo: 'gerir',
-      label: 'Estrutura e preços',
+      label: tk('Estrutura e preços'),
       icon: LayoutGrid,
       // `dica`: âncora das dicas guiadas (a seta de "Cadastrar quadras e horários").
       dica: 'arena-secao-estrutura',
       tabs: [
-        { value: 'quadras', label: 'Quadras', icon: LayoutGrid, dica: 'arena-aba-quadras' },
-        { value: 'precos', label: 'Preços', icon: DollarSign },
-        { value: 'regras', label: 'Regras', icon: ClipboardList },
+        { value: 'quadras', label: tk('Quadras'), icon: LayoutGrid, dica: 'arena-aba-quadras' },
+        { value: 'precos', label: tk('Preços'), icon: DollarSign },
+        { value: 'regras', label: tk('Regras'), icon: ClipboardList },
       ],
     },
     {
       id: 'reservas',
       grupo: 'atender',
-      label: 'Reservas',
+      label: tk('Reservas'),
       icon: CalendarClock,
       dica: 'arena-secao-reservas',
       tabs: [
-        { value: 'reservas', label: 'Solicitações', icon: CalendarClock, dica: 'arena-aba-reservas' },
-        { value: 'calendario', label: 'Calendário', icon: CalendarDays },
-        { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
-        ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
+        { value: 'reservas', label: tk('Solicitações'), icon: CalendarClock, dica: 'arena-aba-reservas' },
+        { value: 'calendario', label: tk('Calendário'), icon: CalendarDays },
+        { value: 'calendario-admin', label: tk('Reservas (admin)'), icon: CalendarRange },
+        ...(crmOn ? [{ value: 'clientes', label: tk('Clientes'), icon: Users }] : []),
         // "Quem veio?" é uma pergunta sobre as reservas do dia.
-        ...(modulos.presenca ? [{ value: 'presenca', label: 'Presença', icon: UserCheck }] : []),
+        ...(modulos.presenca ? [{ value: 'presenca', label: tk('Presença'), icon: UserCheck }] : []),
       ],
     },
     // Jogo aberto: a arena publica horário com vaga e os atletas preenchem.
@@ -90,20 +91,20 @@ export function buildArenaSections({
     ...(modulos.jogoAberto ? [{
       id: 'jogo-aberto',
       grupo: 'atender',
-      label: 'Jogo aberto',
+      label: tk('Jogo aberto'),
       icon: Swords,
       tabs: [
-        { value: 'jogo-aberto', label: 'Jogos publicados', icon: Swords },
+        { value: 'jogo-aberto', label: tk('Jogos publicados'), icon: Swords },
       ],
     }] : []),
     ...(modulos.membros ? [{
       id: 'membros',
       grupo: 'atender',
-      label: 'Membros',
+      label: tk('Membros'),
       icon: Crown,
       tabs: [
-        { value: 'membros', label: 'Membros', icon: Crown },
-        ...(modulos.pacotes ? [{ value: 'planos', label: 'Pacotes de horas', icon: Package }] : []),
+        { value: 'membros', label: tk('Membros'), icon: Crown },
+        ...(modulos.pacotes ? [{ value: 'planos', label: tk('Pacotes de horas'), icon: Package }] : []),
       ],
     }] : []),
     // Aulas: a agenda E os professores. Com o módulo ligado, "Professores"
@@ -113,11 +114,11 @@ export function buildArenaSections({
     ...(modulos.aulas ? [{
       id: 'aulas',
       grupo: 'atender',
-      label: 'Aulas',
+      label: tk('Aulas'),
       icon: GraduationCap,
       tabs: [
-        { value: 'aulas', label: 'Agenda', icon: CalendarDays },
-        { value: 'professores', label: 'Professores', icon: GraduationCap },
+        { value: 'aulas', label: tk('Agenda'), icon: CalendarDays },
+        { value: 'professores', label: tk('Professores'), icon: GraduationCap },
       ],
     }] : []),
     // Torneios (Onda CB): os torneios DA CASA são os torneios da PLATAFORMA
@@ -130,11 +131,11 @@ export function buildArenaSections({
     ...(modulos.torneios || modulos.torneiosPlataforma ? [{
       id: 'torneios',
       grupo: 'atender',
-      label: 'Torneios',
+      label: tk('Torneios'),
       icon: Trophy,
       tabs: [
-        { value: 'torneios', label: 'Torneios da casa', icon: Trophy },
-        ...(modulos.torneios ? [{ value: 'ranking-da-casa', label: 'Ranking da casa', icon: Crown }] : []),
+        { value: 'torneios', label: tk('Torneios da casa'), icon: Trophy },
+        ...(modulos.torneios ? [{ value: 'ranking-da-casa', label: tk('Ranking da casa'), icon: Crown }] : []),
       ],
     }] : []),
     // Pagamentos e loja. Com a loja do app ligada (módulo `pdv`), o BALCÃO
@@ -147,27 +148,27 @@ export function buildArenaSections({
     ...(modulos.marketing ? [{
       id: 'marketing',
       grupo: 'gerir',
-      label: 'Marketing',
+      label: tk('Marketing'),
       icon: Megaphone,
       tabs: (() => {
         const ferramentas = [
-          ...(modulos.cupons ? [{ value: 'cupons', label: 'Cupons', icon: Tag }] : []),
-          ...(modulos.campanhas ? [{ value: 'campanhas', label: 'Campanhas', icon: Megaphone }] : []),
-          ...(modulos.satisfacao ? [{ value: 'satisfacao', label: 'Satisfação', icon: Smile }] : []),
-          ...(modulos.indicacoes ? [{ value: 'indicacoes', label: 'Indicações', icon: Gift }] : []),
+          ...(modulos.cupons ? [{ value: 'cupons', label: tk('Cupons'), icon: Tag }] : []),
+          ...(modulos.campanhas ? [{ value: 'campanhas', label: tk('Campanhas'), icon: Megaphone }] : []),
+          ...(modulos.satisfacao ? [{ value: 'satisfacao', label: tk('Satisfação'), icon: Smile }] : []),
+          ...(modulos.indicacoes ? [{ value: 'indicacoes', label: tk('Indicações'), icon: Gift }] : []),
         ];
-        return ferramentas.length > 0 ? ferramentas : [{ value: 'marketing', label: 'Ferramentas', icon: Megaphone }];
+        return ferramentas.length > 0 ? ferramentas : [{ value: 'marketing', label: tk('Ferramentas'), icon: Megaphone }];
       })(),
     }] : []),
     {
       id: 'comercial',
       grupo: 'atender',
-      label: 'Pagamentos e loja',
+      label: tk('Pagamentos e loja'),
       icon: Wallet,
       tabs: [
-        ...(modulos.loja ? [{ value: 'pedidos', label: 'Pedidos do app', icon: ShoppingBag }] : []),
-        { value: 'pagamento', label: 'Pagamento', icon: Wallet },
-        { value: 'mercado', label: 'Mercado', icon: Package },
+        ...(modulos.loja ? [{ value: 'pedidos', label: tk('Pedidos do app'), icon: ShoppingBag }] : []),
+        { value: 'pagamento', label: tk('Pagamento'), icon: Wallet },
+        { value: 'mercado', label: tk('Mercado'), icon: Package },
       ],
     },
     // Operação: a rotina de quem toca a arena. "Hoje" existe sempre que o
@@ -177,44 +178,44 @@ export function buildArenaSections({
     ...(modulos.operacao || modulos.equipamentos ? [{
       id: 'operacao',
       grupo: 'atender',
-      label: 'Operação',
+      label: tk('Operação'),
       icon: ClipboardCheck,
       tabs: [
-        ...(modulos.operacao ? [{ value: 'operacao', label: 'Rotina do dia', icon: Sun }] : []),
-        ...(modulos.checklists ? [{ value: 'checklists', label: 'Rotinas', icon: ClipboardList }] : []),
-        ...(modulos.manutencao ? [{ value: 'manutencao', label: 'Manutenção', icon: Wrench }] : []),
-        ...(modulos.equipamentos ? [{ value: 'equipamentos', label: 'Equipamentos', icon: Cpu }] : []),
+        ...(modulos.operacao ? [{ value: 'operacao', label: tk('Rotina do dia'), icon: Sun }] : []),
+        ...(modulos.checklists ? [{ value: 'checklists', label: tk('Rotinas'), icon: ClipboardList }] : []),
+        ...(modulos.manutencao ? [{ value: 'manutencao', label: tk('Manutenção'), icon: Wrench }] : []),
+        ...(modulos.equipamentos ? [{ value: 'equipamentos', label: tk('Equipamentos'), icon: Cpu }] : []),
       ],
     }] : []),
     {
       id: 'desempenho',
       grupo: 'gerir',
-      label: 'Desempenho',
+      label: tk('Desempenho'),
       icon: BarChart3,
       tabs: [
-        ...(opsKpisOn ? [{ value: 'semana', label: 'Semana', icon: CalendarRange }] : []),
-        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        ...(opsKpisOn ? [{ value: 'semana', label: tk('Semana'), icon: CalendarRange }] : []),
+        { value: 'metricas', label: tk('Métricas'), icon: BarChart3 },
         // Gamificação V2: saúde da arena, metas, desafios e recompensas (flag
         // `gamification_v2`). Mora com os números porque começa por eles.
-        ...(engajamentoOn ? [{ value: 'engajamento', label: 'Engajamento', icon: Trophy, dica: 'arena-aba-engajamento' }] : []),
-        { value: 'retornos', label: 'Retornos', icon: Star },
+        ...(engajamentoOn ? [{ value: 'engajamento', label: tk('Engajamento'), icon: Trophy, dica: 'arena-aba-engajamento' }] : []),
+        { value: 'retornos', label: tk('Retornos'), icon: Star },
         // Leituras do negócio: a rede somada e a leitura automática dos números.
-        ...(modulos.inteligencia ? [{ value: 'inteligencia', label: 'Inteligência', icon: Sparkles }] : []),
-        ...(modulos.rede ? [{ value: 'rede', label: 'Rede', icon: Network }] : []),
+        ...(modulos.inteligencia ? [{ value: 'inteligencia', label: tk('Inteligência'), icon: Sparkles }] : []),
+        ...(modulos.rede ? [{ value: 'rede', label: tk('Rede'), icon: Network }] : []),
       ],
     },
     {
       id: 'equipe',
       grupo: 'gerir',
-      label: 'Equipe e parceiros',
+      label: tk('Equipe e parceiros'),
       icon: Users,
       tabs: [
-        { value: 'admins', label: 'Admins', icon: Users },
+        { value: 'admins', label: tk('Admins'), icon: Users },
         // O plantão (módulo de operação): nome, função e turno de quem trabalha
         // aqui. Mora com a equipe, que é onde se procura quem trabalha na arena.
-        ...(modulos.plantao ? [{ value: 'plantao', label: 'Plantão', icon: Clock }] : []),
-        ...(coachResidentOn && !modulos.aulas ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
-        ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
+        ...(modulos.plantao ? [{ value: 'plantao', label: tk('Plantão'), icon: Clock }] : []),
+        ...(coachResidentOn && !modulos.aulas ? [{ value: 'professores', label: tk('Professores'), icon: GraduationCap }] : []),
+        ...(linkedClubsOn ? [{ value: 'clubes', label: tk('Clubes'), icon: Users }] : []),
       ],
     },
     // Configurações fecha o ciclo: o que a arena LIGA para si. Vem por último
@@ -223,11 +224,11 @@ export function buildArenaSections({
     ...(arenaModulesOn ? [{
       id: 'configuracoes',
       grupo: 'gerir',
-      label: 'Configurações',
+      label: tk('Configurações'),
       icon: SlidersHorizontal,
       dica: 'arena-secao-configuracoes',
       tabs: [
-        { value: 'modulos', label: 'Módulos', icon: Puzzle, dica: 'arena-aba-modulos' },
+        { value: 'modulos', label: tk('Módulos'), icon: Puzzle, dica: 'arena-aba-modulos' },
       ],
     }] : []),
   ];

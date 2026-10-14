@@ -9,6 +9,7 @@ import {
 import { computeDoublesRanking } from '../domain/doublesRanking.js';
 import { listDoublesRanking, listMyDoublesRankings } from '../services/doublesRankingService.js';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { t } from '@/core/i18n';
 
 /** Ranking nacional materializado (rating ELO). */
 export function useNationalRanking() {
@@ -46,7 +47,7 @@ export function useDoublesRanking(enabled = true) {
           // todo o resto da plataforma). Normaliza aqui, num lugar só.
           players: (row.players || []).map((p) => ({
             id: p.uid || p.id,
-            name: p.name || 'Atleta',
+            name: p.name || t('Atleta'),
             photo: p.photo || '',
             // Conta excluída: a parceria fica (é também de quem continua),
             // mas não há perfil para abrir.
@@ -62,7 +63,7 @@ export function useDoublesRanking(enabled = true) {
         ...row,
         players: row.player_ids.map((id) => ({
           id,
-          name: nameById.get(id)?.name || 'Atleta',
+          name: nameById.get(id)?.name || t('Atleta'),
           photo: nameById.get(id)?.photo || '',
         })),
       }));

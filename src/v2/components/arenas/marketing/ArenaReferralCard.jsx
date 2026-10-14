@@ -30,6 +30,7 @@ import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { referralInviteText, referralProgram, referralRulesText } from '@/modules/arenas/domain/marketing';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
   const arenaId = arena?.id;
@@ -50,9 +51,9 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(codigo);
-      toast.success('Código copiado.');
+      toast.success(t('Código copiado.'));
     } catch {
-      toast.error(`Não foi possível copiar. Anote: ${codigo}`);
+      toast.error(t('Não foi possível copiar. Anote: {codigo}', { codigo }));
     }
   };
 
@@ -62,7 +63,7 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
       if (navigator.share) await navigator.share({ text: texto });
       else {
         await navigator.clipboard.writeText(texto);
-        toast.success('Convite copiado.');
+        toast.success(t('Convite copiado.'));
       }
     } catch {
       /* a pessoa cancelou o compartilhamento — não é erro */
@@ -70,7 +71,7 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
   };
 
   const pedir = () => criar.mutateAsync({ arenaId })
-    .catch((e) => toast.error(e?.message || 'Não foi possível criar o seu código agora.'));
+    .catch((e) => toast.error(e?.message || t('Não foi possível criar o seu código agora.')));
 
   const usos = Number(consulta.data?.redeemed_count) || 0;
 
@@ -79,22 +80,22 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
       <div className="flex items-start gap-2">
         <Gift className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-base font-bold text-ink">Indique e ganhe</h3>
+          <h3 className="font-display text-base font-bold text-ink">{t('Indique e ganhe')}</h3>
           {programa ? (
             <>
               <p className="mt-0.5 text-sm text-gray-600">{referralRulesText(programa)}.</p>
               <p className="mt-0.5 text-xs text-gray-500">
                 {[
-                  programa.first_booking_only !== false ? 'Vale para quem nunca reservou aqui' : null,
-                  programa.min_amount ? `primeira reserva a partir de ${formatPrice(programa.min_amount)}` : null,
-                  programa.max_per_referrer ? `até ${programa.max_per_referrer} indicações por pessoa` : null,
+                  programa.first_booking_only !== false ? t('Vale para quem nunca reservou aqui') : null,
+                  programa.min_amount ? t('primeira reserva a partir de {valor}', { valor: formatPrice(programa.min_amount) }) : null,
+                  programa.max_per_referrer ? t('até {n} indicações por pessoa', { n: programa.max_per_referrer }) : null,
                 ].filter(Boolean).join(' · ')}
               </p>
               {programa.description && <p className="mt-1 text-sm text-gray-600">{programa.description}</p>}
             </>
           ) : (
             <p className="mt-0.5 text-sm text-gray-500">
-              Traga alguém para jogar aqui: quem chegar dizendo o seu código ganha crédito na arena — e você também.
+              {t('Traga alguém para jogar aqui: quem chegar dizendo o seu código ganha crédito na arena — e você também.')}
             </p>
           )}
 
@@ -104,7 +105,7 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
             <V2ErrorState
               inline
               className="mt-3"
-              title="Não foi possível buscar o seu código"
+              title={t('Não foi possível buscar o seu código')}
               onRetry={() => consulta.refetch()}
             />
           )}
@@ -115,24 +116,24 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
                 <span className="rounded-2xl border border-dashed border-gray-300 bg-paper px-4 py-2 font-display text-lg font-bold tracking-widest text-ink">
                   {codigo}
                 </span>
-                <V2Button size="sm" variant="ghost" onClick={copiar} aria-label={`Copiar o código ${codigo}`}>
-                  <Copy className="mr-1.5 h-4 w-4" /> Copiar
+                <V2Button size="sm" variant="ghost" onClick={copiar} aria-label={t('Copiar o código {codigo}', { codigo })}>
+                  <Copy className="mr-1.5 h-4 w-4" /> {t('Copiar')}
                 </V2Button>
                 <V2Button size="sm" variant="ghost" onClick={convidar}>
-                  <Share2 className="mr-1.5 h-4 w-4" /> Convidar
+                  <Share2 className="mr-1.5 h-4 w-4" /> {t('Convidar')}
                 </V2Button>
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 {usos > 0
-                  ? `${usos} ${usos === 1 ? 'pessoa já usou' : 'pessoas já usaram'} o seu código.`
-                  : 'Quem você indicar diz o código na recepção; a arena registra e credita os dois.'}
+                  ? tn(usos, '{n} pessoa já usou o seu código.', '{n} pessoas já usaram o seu código.')
+                  : t('Quem você indicar diz o código na recepção; a arena registra e credita os dois.')}
               </p>
             </>
           )}
 
           {consulta.isSuccess && !codigo && (
             <V2Button size="sm" className="mt-3" onClick={pedir} disabled={criar.isPending}>
-              {criar.isPending ? 'Criando…' : 'Quero meu código'}
+              {criar.isPending ? t('Criando…') : t('Quero meu código')}
             </V2Button>
           )}
         </div>

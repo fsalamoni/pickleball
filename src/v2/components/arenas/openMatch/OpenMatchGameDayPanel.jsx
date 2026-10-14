@@ -33,6 +33,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { SlotAction, WaitlistCallCard } from './OpenSlotCard';
 import { useOpenSlotActions } from './useOpenSlotActions';
+import { t, tn } from '@/core/i18n';
 
 export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
   const slotId = gameDay?.open_slot_id || null;
@@ -54,8 +55,8 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
   if (slotQ.isError) {
     return (
       <V2Surface className={className}>
-        <V2ErrorState inline title="Não foi possível carregar o jogo aberto"
-          description="As vagas continuam lá — tente de novo." onRetry={() => slotQ.refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar o jogo aberto')}
+          description={t('As vagas continuam lá — tente de novo.')} onRetry={() => slotQ.refetch()} />
       </V2Surface>
     );
   }
@@ -80,27 +81,27 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-            <Users className="h-4 w-4" aria-hidden="true" /> Jogo aberto
+            <Users className="h-4 w-4" aria-hidden="true" /> {t('Jogo aberto')}
           </h2>
           <p className="mt-0.5 text-xs text-gray-500">
             {[
-              slot.format ? (OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format) : null,
-              Number(slot.price) > 0 ? `${formatPrice(Number(slot.price))} por atleta` : 'valor a combinar na arena',
+              slot.format ? t(OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format) : null,
+              Number(slot.price) > 0 ? t('{valor} por atleta', { valor: formatPrice(Number(slot.price)) }) : t('valor a combinar na arena'),
             ].filter(Boolean).join(' · ')}
           </p>
         </div>
         {!cancelado && (
           <V2Badge tone={occ.cheio ? 'amber' : 'green'}>
-            {occ.cheio ? 'Lotado' : `${occ.livres} vaga${occ.livres === 1 ? '' : 's'} de ${occ.total}`}
+            {occ.cheio ? t('Lotado') : tn(occ.livres, '{n} vaga de {total}', '{n} vagas de {total}', { total: occ.total })}
           </V2Badge>
         )}
       </div>
 
       {cancelado ? (
         <p className="mt-3 text-sm text-gray-600">
-          Este jogo aberto foi cancelado pela arena.
+          {t('Este jogo aberto foi cancelado pela arena.')}
           {gameDay.arena_id && (
-            <> Veja outros jogos na <Link to={`/arenas/${gameDay.arena_id}#arena-jogos-abertos`} className="font-bold text-ink underline">página da arena</Link>.</>
+            <> {t('Veja outros jogos na')} <Link to={`/arenas/${gameDay.arena_id}#arena-jogos-abertos`} className="font-bold text-ink underline">{t('página da arena')}</Link>.</>
           )}
         </p>
       ) : (
@@ -112,11 +113,11 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
             >
               <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
-                Nível <strong>{faixa}</strong>
+                {t('Nível')} <strong>{faixa}</strong>
                 {Number.isFinite(level)
-                  ? ` · o seu é ${formatLevel(level)}`
-                  : ' · ainda não temos o seu nível, então você pode entrar'}
-                {!encaixe.ok && ' — fora da faixa deste jogo.'}
+                  ? ` · ${t('o seu é {nivel}', { nivel: formatLevel(level) })}`
+                  : ` · ${t('ainda não temos o seu nível, então você pode entrar')}`}
+                {!encaixe.ok && ` — ${t('fora da faixa deste jogo.')}`}
               </span>
             </p>
           )}
@@ -133,8 +134,8 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
               <SlotAction estado={estado} semConta={!isAuthenticated} ocupado={acoes.ocupado}
                 onEntrar={() => acoes.onEntrar(slot)} onSair={() => acoes.onSair(slot)}
                 onFila={() => acoes.onFila(slot)} />
-              {motivo && <span className="text-xs text-amber-700">{motivo}</span>}
-              {jaEstou && <span className="text-xs text-gray-500">Você está na lista abaixo.</span>}
+              {motivo && <span className="text-xs text-amber-700">{t(motivo)}</span>}
+              {jaEstou && <span className="text-xs text-gray-500">{t('Você está na lista abaixo.')}</span>}
             </div>
           )}
 
@@ -143,13 +144,13 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
               <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {formatHasScores(gameDay.format) ? (
                 <>
-                  <span>Este jogo conta no ranking da casa: cada colocação vale pontos.</span>
+                  <span>{t('Este jogo conta no ranking da casa: cada colocação vale pontos.')}</span>
                   <Link to={`/arenas/${gameDay.arena_id}/torneios`} className="inline-flex items-center gap-0.5 font-bold text-ink hover:underline">
-                    Ver o ranking <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                    {t('Ver o ranking')} <ArrowRight className="h-3 w-3" aria-hidden="true" />
                   </Link>
                 </>
               ) : (
-                <span>Play não tem placar, então este jogo não pontua no ranking da casa.</span>
+                <span>{t('Play não tem placar, então este jogo não pontua no ranking da casa.')}</span>
               )}
             </p>
           )}

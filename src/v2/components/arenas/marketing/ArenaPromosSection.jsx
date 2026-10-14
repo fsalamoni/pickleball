@@ -25,6 +25,7 @@ import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { promoConditions, publicPromos } from '@/modules/arenas/domain/marketing';
 import { V2Surface } from '@/v2/ui/primitives';
 import CouponArt from './coupons/CouponArt';
+import { t } from '@/core/i18n';
 
 export default function ArenaPromosSection({ arena }) {
   const arenaId = arena?.id;
@@ -41,13 +42,13 @@ export default function ArenaPromosSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Tag className="h-4 w-4" /> Promoções
+        <Tag className="h-4 w-4" /> {t('Promoções')}
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        Toque no código para copiar.{' '}
-        {temDesconto && 'Desconto na reserva: no pedido, toque na promoção para aplicar — ou cole o código.'}
+        {t('Toque no código para copiar.')}{' '}
+        {temDesconto && t('Desconto na reserva: no pedido, toque na promoção para aplicar — ou cole o código.')}
         {temDesconto && temVale && ' '}
-        {temVale && 'Vale: mostre o código na recepção da arena.'}
+        {temVale && t('Vale: mostre o código na recepção da arena.')}
       </p>
       <ul className="mt-3 grid gap-3 lg:grid-cols-2">
         {promos.map((p) => (
@@ -59,14 +60,14 @@ export default function ArenaPromosSection({ arena }) {
               code={p.code}
               benefit={p.discount}
               description={p.description}
-              kicker={p.bookable ? 'Desconto na reserva' : 'Vale na recepção'}
+              kicker={p.bookable ? t('Desconto na reserva') : t('Vale na recepção')}
               copyable
-              copyMessage={p.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'}
+              copyMessage={p.bookable ? t('Código copiado. Use no pedido de reserva.') : t('Código copiado. Mostre na recepção da arena.')}
               notch="bg-paper-pure"
             />
             {(promoConditions(p) || !p.bookable) && (
               <p className="mt-1.5 px-1 text-xs text-gray-500">
-                {!p.bookable && <span className="mr-1.5 rounded-full bg-paper px-2 py-0.5 text-2xs font-bold text-gray-600">vale na recepção</span>}
+                {!p.bookable && <span className="mr-1.5 rounded-full bg-paper px-2 py-0.5 text-2xs font-bold text-gray-600">{t('vale na recepção')}</span>}
                 {promoConditions(p)}
               </p>
             )}

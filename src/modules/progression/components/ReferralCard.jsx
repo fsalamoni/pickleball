@@ -8,6 +8,7 @@ import {
 import { ONBOARDING_STEPS } from '../domain/onboarding.js';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2.js';
 import TermHint from '@/v2/components/gamification/TermHint';
+import { t } from '@/core/i18n';
 
 /** O que o convite rende de verdade — lido das fontes (roteiro e catálogo de conquistas), nunca escrito aqui. */
 const ONBOARDING_REFERRAL_XP = ONBOARDING_STEPS.find((p) => p.id === 'share')?.xp ?? 0;
@@ -85,10 +86,10 @@ export default function ReferralCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Share2 className="h-4 w-4" /> Convide amigos <TermHint term="convite" />
+            <Share2 className="h-4 w-4" /> {t('Convide amigos')} <TermHint term="convite" />
           </h3>
           <p className="mt-1 text-sm text-gray-600">
-            Quem entra pelo seu código joga com você — e o convite conta como um dos primeiros passos.
+            {t('Quem entra pelo seu código joga com você — e o convite conta como um dos primeiros passos.')}
           </p>
         </div>
         {referralsCount > 0 && (
@@ -111,7 +112,7 @@ export default function ReferralCard({
           type="button"
           onClick={handleCopy}
           disabled={!finalCode}
-          aria-label="Copiar código de convite"
+          aria-label={t('Copiar código de convite')}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-pure text-gray-600 transition-colors hover:bg-gray-100 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           {copied ? <Check className="h-4 w-4 text-green-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
@@ -128,7 +129,7 @@ export default function ReferralCard({
       {/* Botão principal */}
       <div className="mt-4">
         <V2Button onClick={handleShare} disabled={!finalCode} className="w-full">
-          <MessageCircle className="h-4 w-4" aria-hidden="true" /> Compartilhar convite
+          <MessageCircle className="h-4 w-4" aria-hidden="true" /> {t('Compartilhar convite')}
         </V2Button>
       </div>
 
@@ -136,10 +137,10 @@ export default function ReferralCard({
           (Os valores de `REFERRAL_REWARDS` não são creditados por nada — prometê-los aqui
           era uma recompensa decorativa.) */}
       <div className="mt-4 space-y-1.5 border-t border-gray-100 pt-4 text-xs leading-5 text-gray-600" data-testid="referral-benefits">
-        <p className="font-bold text-ink">O que o convite rende</p>
-        <p>• O passo «Convide um amigo» dos primeiros passos vale <strong className="text-ink">{ONBOARDING_REFERRAL_XP} XP</strong> — uma vez, ao compartilhar.</p>
+        <p className="font-bold text-ink">{t('O que o convite rende')}</p>
+        <p>{t('• O passo «Convide um amigo» dos primeiros passos vale')} <strong className="text-ink">{ONBOARDING_REFERRAL_XP} XP</strong> {t('— uma vez, ao compartilhar.')}</p>
         {CONQUISTA_CONVITES && (
-          <p>• A conquista «{CONQUISTA_CONVITES.name}» ({CONQUISTA_CONVITES.description.replace(/\.$/, '').toLowerCase()}), com {CONQUISTA_CONVITES.xpBonus} XP de bônus.</p>
+          <p>{t('• A conquista «{nome}» ({descricao}), com {xp} XP de bônus.', { nome: t(CONQUISTA_CONVITES.name), descricao: t(CONQUISTA_CONVITES.description).replace(/\.$/, '').toLowerCase(), xp: CONQUISTA_CONVITES.xpBonus })}</p>
         )}
       </div>
     </V2Surface>

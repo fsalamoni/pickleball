@@ -33,14 +33,15 @@ import ProfessorForm from './ProfessorForm';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function SelosDasAulas({ row }) {
   if (!row.arenaCoach) return null;
-  if (row.arenaCoach.active === false) return <V2Badge tone="neutral">Fora das aulas</V2Badge>;
+  if (row.arenaCoach.active === false) return <V2Badge tone="neutral">{t('Fora das aulas')}</V2Badge>;
   return (
     <>
-      <V2Badge tone="acid">Dá aula aqui</V2Badge>
-      <V2Badge tone="neutral">{row.house ? 'Da casa' : 'Paga comissão'}</V2Badge>
+      <V2Badge tone="acid">{t('Dá aula aqui')}</V2Badge>
+      <V2Badge tone="neutral">{row.house ? t('Da casa') : t('Paga comissão')}</V2Badge>
     </>
   );
 }
@@ -53,13 +54,13 @@ function AcoesDasAulas({ row, arenaId, onEditar }) {
     return (
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-paper-pure px-3 py-2">
         <p className="text-xs text-gray-600">
-          Nas aulas: {nivel.label}
+          {t('Nas aulas: {nivel}', { nivel: t(nivel.label) })}
           {Number(c.price_per_hour) > 0 ? ` · ${formatPrice(c.price_per_hour)}/h` : ''}
-          {Number(c.sessions_given) > 0 ? ` · ${c.sessions_given} aula(s) dada(s)` : ''}
-          {!c.user_id ? ' · sem conta vinculada (não vê a própria agenda)' : ''}
+          {Number(c.sessions_given) > 0 ? ` · ${t('{n} aula(s) dada(s)', { n: c.sessions_given })}` : ''}
+          {!c.user_id ? ` · ${t('sem conta vinculada (não vê a própria agenda)')}` : ''}
         </p>
         <V2Button size="sm" variant="ghost" onClick={() => onEditar(c)}>
-          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar nas aulas
+          <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar nas aulas')}
         </V2Button>
       </div>
     );
@@ -67,16 +68,16 @@ function AcoesDasAulas({ row, arenaId, onEditar }) {
   if (row.canEnableClasses) {
     return (
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-paper-pure px-3 py-2">
-        <p className="text-xs text-gray-600">Ainda não dá aula na agenda da arena.</p>
+        <p className="text-xs text-gray-600">{t('Ainda não dá aula na agenda da arena.')}</p>
         <V2Button
           size="sm"
           variant="ghost"
           disabled={habilitar.isPending}
           onClick={() => habilitar.mutateAsync({ arenaId, input: arenaCoachFromPartner(row.partner) })
-            .then(() => toast.success(`${row.name} já pode receber aulas na agenda.`))
-            .catch((e) => toast.error(e?.message || 'Não foi possível.'))}
+            .then(() => toast.success(t('{nome} já pode receber aulas na agenda.', { nome: row.name })))
+            .catch((e) => toast.error(e?.message || t('Não foi possível.')))}
         >
-          <UserPlus className="mr-1 h-3.5 w-3.5" /> Colocar nas aulas
+          <UserPlus className="mr-1 h-3.5 w-3.5" /> {t('Colocar nas aulas')}
         </V2Button>
       </div>
     );
@@ -84,7 +85,7 @@ function AcoesDasAulas({ row, arenaId, onEditar }) {
   if (row.partner && row.partnership === 'pending') {
     return (
       <p className="mt-2 text-xs text-gray-500">
-        Quando o professor aceitar a parceria, dá para colocá-lo nas aulas.
+        {t('Quando o professor aceitar a parceria, dá para colocá-lo nas aulas.')}
       </p>
     );
   }
@@ -137,22 +138,21 @@ export default function ArenaCoachRoster({ arena }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <GraduationCap className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Professores ({rows.length})</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Professores ({n})', { n: rows.length })}</h2>
         </div>
         {!vinculando && !form && (
           <div className="flex flex-wrap gap-1.5">
             <V2Button size="sm" variant="ghost" onClick={() => setVinculando(true)}>
-              <UserPlus className="mr-1.5 h-4 w-4" /> Parceiro da plataforma
+              <UserPlus className="mr-1.5 h-4 w-4" /> {t('Parceiro da plataforma')}
             </V2Button>
             <V2Button size="sm" onClick={() => setForm('novo')}>
-              <Plus className="mr-1.5 h-4 w-4" /> Professor das aulas
+              <Plus className="mr-1.5 h-4 w-4" /> {t('Professor das aulas')}
             </V2Button>
           </div>
         )}
       </div>
       <p className="-mt-2 mb-4 text-sm text-gray-500">
-        Parceiros da plataforma aparecem na página da arena com o perfil deles. Quem dá aula
-        na agenda aparece nas aulas — e, com a conta vinculada, vê os próprios alunos.
+        {t('Parceiros da plataforma aparecem na página da arena com o perfil deles. Quem dá aula na agenda aparece nas aulas — e, com a conta vinculada, vê os próprios alunos.')}
       </p>
 
       {vinculando && (
@@ -174,19 +174,19 @@ export default function ArenaCoachRoster({ arena }) {
       ) : falhou ? (
         <V2EmptyState
           icon={GraduationCap}
-          title="Não foi possível carregar os professores"
-          description="Pode ser a conexão."
+          title={t('Não foi possível carregar os professores')}
+          description={t('Pode ser a conexão.')}
           action={(
             <V2Button size="sm" onClick={() => { parceirosQ.refetch(); aulasQ.refetch(); }}>
-              Tentar de novo
+              {t('Tentar de novo')}
             </V2Button>
           )}
         />
       ) : rows.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}
-          title="Nenhum professor ainda"
-          description="Vincule um professor que já tem perfil na plataforma, ou cadastre quem dá aula aqui — mesmo sem conta."
+          title={t('Nenhum professor ainda')}
+          description={t('Vincule um professor que já tem perfil na plataforma, ou cadastre quem dá aula aqui — mesmo sem conta.')}
         />
       ) : (
         <div className="space-y-2">

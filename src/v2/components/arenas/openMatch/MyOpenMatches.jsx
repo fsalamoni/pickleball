@@ -25,6 +25,7 @@ import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { OpenSlotCard, WaitlistCallCard } from './OpenSlotCard';
 import { useOpenSlotActions } from './useOpenSlotActions';
 import { V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function MyOpenMatches() {
   const meusQ = useMyOpenSlots();
@@ -50,8 +51,8 @@ export default function MyOpenMatches() {
   if (meusQ.isError) {
     return (
       <div className="mb-8">
-        <V2ErrorState inline title="Não foi possível carregar os seus jogos abertos"
-          description="Os seus jogos continuam marcados — tente de novo." onRetry={() => meusQ.refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar os seus jogos abertos')}
+          description={t('Os seus jogos continuam marcados — tente de novo.')} onRetry={() => meusQ.refetch()} />
       </div>
     );
   }
@@ -60,7 +61,7 @@ export default function MyOpenMatches() {
   return (
     <div className="mb-8 space-y-3">
       <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-        <Users className="h-3.5 w-3.5" /> Jogos abertos nas arenas
+        <Users className="h-3.5 w-3.5" /> {t('Jogos abertos nas arenas')}
       </p>
 
       {chamadas.map(({ entrada, slot }) => (
@@ -75,7 +76,7 @@ export default function MyOpenMatches() {
 
       {esperando.length > 0 && (
         <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Na fila de espera</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('Na fila de espera')}</p>
           <ul className="mt-2 space-y-2">
             {esperando.map(({ entrada, slot }) => (
               <li key={entrada.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -90,13 +91,13 @@ export default function MyOpenMatches() {
                 </span>
                 <V2Button variant="ghost" size="sm" disabled={acoes.ocupado}
                   onClick={() => acoes.onSairDaFila(slot.id)}>
-                  Sair da fila
+                  {t('Sair da fila')}
                 </V2Button>
               </li>
             ))}
           </ul>
           <p className="mt-2 text-xs text-gray-500">
-            Se alguém sair, a vaga é oferecida a você — e você tem {promotionWindowLabel()} para confirmar.
+            {t('Se alguém sair, a vaga é oferecida a você — e você tem {prazo} para confirmar.', { prazo: promotionWindowLabel() })}
           </p>
         </div>
       )}

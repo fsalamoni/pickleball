@@ -34,6 +34,7 @@ import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2ErrorState, V2StatCard, V2Surface, V2Skeleton,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2ArenaFinanceTab() {
   const { arenaId } = useParams();
@@ -96,23 +97,23 @@ export default function V2ArenaFinanceTab() {
     if (next === periodType) return;
     try {
       await updateSettings.mutateAsync({ arenaId, updates: { market: { ...(settings?.market || {}), report_period: next } } });
-      toast.success(next === REPORT_PERIOD.WEEKLY ? 'Relatórios agora são semanais.' : 'Relatórios agora são mensais.');
-    } catch (err) { toast.error(err.message || 'Não foi possível alterar a periodicidade.'); }
+      toast.success(next === REPORT_PERIOD.WEEKLY ? t('Relatórios agora são semanais.') : t('Relatórios agora são mensais.'));
+    } catch (err) { toast.error(err.message || t('Não foi possível alterar a periodicidade.')); }
   }
 
   async function handleClose() {
     if (!autoReport || falhou) return;
     try {
       await saveSnapshot.mutateAsync({ ...autoReport, status: 'closed' });
-      toast.success('Relatório do período fechado e enviado ao financeiro.');
-    } catch (err) { toast.error(err.message || 'Não foi possível fechar o relatório.'); }
+      toast.success(t('Relatório do período fechado e enviado ao financeiro.'));
+    } catch (err) { toast.error(err.message || t('Não foi possível fechar o relatório.')); }
   }
 
   async function handleRegenerate() {
     if (!autoReport || falhou) return;
     try {
       await saveSnapshot.mutateAsync({ ...autoReport, status: savedForPeriod?.status || 'closed' });
-      toast.success('Relatório regerado a partir dos registros da plataforma.');
+      toast.success(t('Relatório regerado a partir dos registros da plataforma.'));
       setEditMode(false);
     } catch (err) { toast.error(err.message); }
   }
@@ -133,9 +134,9 @@ export default function V2ArenaFinanceTab() {
       }
       const clean = draftLines.map(normalizeReportLine);
       await saveEdits.mutateAsync({ id, lines: clean });
-      toast.success('Ajustes salvos no relatório.');
+      toast.success(t('Ajustes salvos no relatório.'));
       setEditMode(false);
-    } catch (err) { toast.error(err.message || 'Não foi possível salvar os ajustes.'); }
+    } catch (err) { toast.error(err.message || t('Não foi possível salvar os ajustes.')); }
   }
 
   function updateDraft(key, field, val) {
@@ -150,14 +151,14 @@ export default function V2ArenaFinanceTab() {
 
   function exportCsv() {
     if (!report) return;
-    const rows = [['Produto', 'Marca', 'Categoria', 'Entrada (qtd)', 'Entrada (R$)', 'Vendas (qtd)', 'Vendas (R$)', 'Perdas', 'Consumo']];
+    const rows = [[t('Produto'), t('Marca'), t('Categoria'), t('Entrada (qtd)'), t('Entrada (R$)'), t('Vendas (qtd)'), t('Vendas (R$)'), t('Perdas'), t('Consumo')]];
     for (const l of report.lines) {
       rows.push([l.name, l.brand || '', l.category || '', l.entered_qty, l.entered_cost, l.sold_qty, l.sold_revenue, l.loss_qty, l.consumption_qty]);
     }
-    const t = report.totals;
+    const tot = report.totals;
     rows.push([]);
-    rows.push(['TOTAIS', '', '', t.entered_qty, t.entered_cost, t.sold_qty, t.sold_revenue, t.loss_qty, t.consumption_qty]);
-    rows.push(['Resultado (vendas - compras)', '', '', '', '', '', t.result]);
+    rows.push([t('TOTAIS'), '', '', tot.entered_qty, tot.entered_cost, tot.sold_qty, tot.sold_revenue, tot.loss_qty, tot.consumption_qty]);
+    rows.push([t('Resultado (vendas - compras)'), '', '', '', '', '', tot.result]);
     const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -174,17 +175,17 @@ export default function V2ArenaFinanceTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Wallet className="h-5 w-5 text-green-700" />
-        <h2 className="font-display text-xl font-bold text-ink">Financeiro — Relatórios do mercado</h2>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Financeiro — Relatórios do mercado')}</h2>
       </div>
 
       {/* Cadência (semanal/mensal) */}
       <V2Surface className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-ink">Periodicidade dos relatórios</p>
-          <p className="text-xs text-gray-500">Escolha como consolidar as entradas e saídas do mercado.</p>
+          <p className="text-sm font-bold text-ink">{t('Periodicidade dos relatórios')}</p>
+          <p className="text-xs text-gray-500">{t('Escolha como consolidar as entradas e saídas do mercado.')}</p>
         </div>
         <div className="flex gap-1.5">
-          {[[REPORT_PERIOD.MONTHLY, 'Mensal'], [REPORT_PERIOD.WEEKLY, 'Semanal']].map(([val, label]) => (
+          {[[REPORT_PERIOD.MONTHLY, t('Mensal')], [REPORT_PERIOD.WEEKLY, t('Semanal')]].map(([val, label]) => (
             <button
               key={val}
               type="button"
@@ -205,12 +206,12 @@ export default function V2ArenaFinanceTab() {
         <V2Skeleton lines={6} />
       ) : falhou ? (
         <V2ErrorState
-          title="Não foi possível carregar o financeiro do mercado"
-          description="Fechar ou regerar um relatório agora gravaria números incompletos por cima dos verdadeiros. Tente de novo."
+          title={t('Não foi possível carregar o financeiro do mercado')}
+          description={t('Fechar ou regerar um relatório agora gravaria números incompletos por cima dos verdadeiros. Tente de novo.')}
           onRetry={tentar}
         />
       ) : !report ? (
-        <V2Surface><p className="text-sm text-gray-500">Sem movimento de mercado ainda. Registre entradas e saídas na aba Mercado.</p></V2Surface>
+        <V2Surface><p className="text-sm text-gray-500">{t('Sem movimento de mercado ainda. Registre entradas e saídas na aba Mercado.')}</p></V2Surface>
       ) : (
         <>
           {/* Seletor de período */}
@@ -223,19 +224,19 @@ export default function V2ArenaFinanceTab() {
               {periods.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
             {savedForPeriod ? (
-              <V2Badge tone="green"><Lock className="mr-1 h-3 w-3" /> Fechado</V2Badge>
+              <V2Badge tone="green"><Lock className="mr-1 h-3 w-3" /> {t('Fechado')}</V2Badge>
             ) : (
-              <V2Badge tone="neutral">Em aberto (ao vivo)</V2Badge>
+              <V2Badge tone="neutral">{t('Em aberto (ao vivo)')}</V2Badge>
             )}
-            {savedForPeriod?.edited && <V2Badge tone="amber">Editado</V2Badge>}
+            {savedForPeriod?.edited && <V2Badge tone="amber">{t('Editado')}</V2Badge>}
             <div className="ml-auto flex flex-wrap gap-2">
               <V2Button size="sm" variant="secondary" onClick={exportCsv}><Download className="h-4 w-4" /> CSV</V2Button>
               {!editMode && (
                 savedForPeriod
-                  ? <V2Button size="sm" variant="secondary" onClick={handleRegenerate} disabled={saveSnapshot.isPending}><RefreshCw className="h-4 w-4" /> Regerar</V2Button>
-                  : <V2Button size="sm" onClick={handleClose} disabled={saveSnapshot.isPending}><Lock className="h-4 w-4" /> Fechar período</V2Button>
+                  ? <V2Button size="sm" variant="secondary" onClick={handleRegenerate} disabled={saveSnapshot.isPending}><RefreshCw className="h-4 w-4" /> {t('Regerar')}</V2Button>
+                  : <V2Button size="sm" onClick={handleClose} disabled={saveSnapshot.isPending}><Lock className="h-4 w-4" /> {t('Fechar período')}</V2Button>
               )}
-              {!editMode && <V2Button size="sm" variant="secondary" onClick={startEdit}><Pencil className="h-4 w-4" /> Editar</V2Button>}
+              {!editMode && <V2Button size="sm" variant="secondary" onClick={startEdit}><Pencil className="h-4 w-4" /> {t('Editar')}</V2Button>}
             </div>
           </div>
 
@@ -244,24 +245,22 @@ export default function V2ArenaFinanceTab() {
             <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Este relatório foi <strong>editado manualmente</strong>. O relatório automático corresponde à
-                <strong> integralidade</strong> do que foi realizado dentro da plataforma neste período. Use
-                &quot;Regerar&quot; para voltar ao automático.
+                {t('Este relatório foi editado manualmente. O relatório automático corresponde à integralidade do que foi realizado dentro da plataforma neste período. Use "Regerar" para voltar ao automático.')}
               </p>
             </div>
           ) : (
             <div className="flex items-start gap-2 rounded-2xl border border-green-200 bg-green-50/60 p-3 text-sm text-green-800">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>Este relatório reflete <strong>integralmente</strong> as entradas e saídas registradas na plataforma neste período.</p>
+              <p>{t('Este relatório reflete integralmente as entradas e saídas registradas na plataforma neste período.')}</p>
             </div>
           )}
 
           {/* Totais */}
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <V2StatCard icon={TrendingDown} label="Compras (saída de caixa)" value={formatPrice(totals.entered_cost)} accent="ink" />
-            <V2StatCard icon={TrendingUp} label="Vendas (entrada de caixa)" value={formatPrice(totals.sold_revenue)} accent="acid" />
-            <V2StatCard icon={DollarSign} label="Resultado do período" value={formatPrice(totals.result)} accent={totals.result >= 0 ? 'acid' : 'ink'} />
-            <V2StatCard icon={Boxes} label="Itens movimentados" value={String(totals.product_count ?? (editMode ? draftLines.length : report.lines.length))} accent="ink" />
+            <V2StatCard icon={TrendingDown} label={t('Compras (saída de caixa)')} value={formatPrice(totals.entered_cost)} accent="ink" />
+            <V2StatCard icon={TrendingUp} label={t('Vendas (entrada de caixa)')} value={formatPrice(totals.sold_revenue)} accent="acid" />
+            <V2StatCard icon={DollarSign} label={t('Resultado do período')} value={formatPrice(totals.result)} accent={totals.result >= 0 ? 'acid' : 'ink'} />
+            <V2StatCard icon={Boxes} label={t('Itens movimentados')} value={String(totals.product_count ?? (editMode ? draftLines.length : report.lines.length))} accent="ink" />
           </div>
 
           {/* Linhas */}
@@ -281,28 +280,28 @@ export default function V2ArenaFinanceTab() {
             )}
           </V2Surface>
 
-          {/* Histórico de relatórios fechados */}
+          {/* {t('Histórico de relatórios')} fechados */}
           {saved.length > 0 && (
             <V2Surface>
               <h3 className="mb-2 flex items-center gap-2 font-display text-base font-bold text-ink">
-                <Info className="h-4 w-4 text-gray-400" /> Histórico de relatórios
+                <Info className="h-4 w-4 text-gray-400" /> {t('Histórico de relatórios')}
               </h3>
               <div className="space-y-1.5">
                 {saved.map((r) => (
                   <div key={r.id} className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper p-2.5">
                     <button type="button" onClick={() => setPeriodKey(r.period_key)} className="min-w-0 flex-1 text-left">
                       <span className="text-sm font-semibold text-ink">{r.label}</span>
-                      {r.edited && <V2Badge tone="amber" className="ml-2">Editado</V2Badge>}
+                      {r.edited && <V2Badge tone="amber" className="ml-2">{t('Editado')}</V2Badge>}
                     </button>
                     <span className={cn('shrink-0 text-sm font-bold', (r.totals?.result || 0) >= 0 ? 'text-green-700' : 'text-red-600')}>
                       {formatPrice(r.totals?.result || 0)}
                     </span>
                     <ConfirmDialog
-                      title="Excluir relatório salvo?"
-                      description="Remove apenas o documento do relatório. As entradas e saídas registradas permanecem intactas e o relatório pode ser gerado de novo."
-                      confirmLabel="Excluir"
-                      onConfirm={() => deleteReport.mutateAsync(r.id).then(() => toast.success('Relatório excluído.')).catch((e) => toast.error(e.message))}
-                      trigger={<button type="button" className="shrink-0 text-red-500 hover:text-red-700" aria-label="Excluir relatório"><Trash2 className="h-4 w-4" /></button>}
+                      title={t('Excluir relatório salvo?')}
+                      description={t('Remove apenas o documento do relatório. As entradas e saídas registradas permanecem intactas e o relatório pode ser gerado de novo.')}
+                      confirmLabel={t('Excluir')}
+                      onConfirm={() => deleteReport.mutateAsync(r.id).then(() => toast.success(t('Relatório excluído.'))).catch((e) => toast.error(e.message))}
+                      trigger={<button type="button" className="shrink-0 text-red-500 hover:text-red-700" aria-label={t('Excluir relatório')}><Trash2 className="h-4 w-4" /></button>}
                     />
                   </div>
                 ))}
@@ -316,18 +315,18 @@ export default function V2ArenaFinanceTab() {
 }
 
 function ViewTable({ lines }) {
-  if (!lines.length) return <p className="text-sm text-gray-500">Nenhum movimento neste período.</p>;
+  if (!lines.length) return <p className="text-sm text-gray-500">{t('Nenhum movimento neste período.')}</p>;
   return (
     <table className="w-full min-w-[560px] text-sm">
       <thead>
         <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
-          <th className="py-2 pr-2">Produto</th>
-          <th className="px-2 text-right">Entrada</th>
-          <th className="px-2 text-right">Compra (R$)</th>
-          <th className="px-2 text-right">Vendas</th>
-          <th className="px-2 text-right">Receita (R$)</th>
-          <th className="px-2 text-right">Perdas</th>
-          <th className="pl-2 text-right">Consumo</th>
+          <th className="py-2 pr-2">{t('Produto')}</th>
+          <th className="px-2 text-right">{t('Entrada')}</th>
+          <th className="px-2 text-right">{t('Compra (R$)')}</th>
+          <th className="px-2 text-right">{t('Vendas')}</th>
+          <th className="px-2 text-right">{t('Receita (R$)')}</th>
+          <th className="px-2 text-right">{t('Perdas')}</th>
+          <th className="pl-2 text-right">{t('Consumo')}</th>
         </tr>
       </thead>
       <tbody>
@@ -335,7 +334,7 @@ function ViewTable({ lines }) {
           <tr key={l.key} className="border-b border-gray-50">
             <td className="py-2 pr-2">
               <span className="font-semibold text-ink">{l.name}</span>
-              {l.manual && <V2Badge tone="amber" className="ml-2">manual</V2Badge>}
+              {l.manual && <V2Badge tone="amber" className="ml-2">{t('manual')}</V2Badge>}
               {l.brand && <span className="block text-xs text-gray-500">{l.brand}</span>}
             </td>
             <td className="px-2 text-right">{l.entered_qty || '—'}</td>
@@ -363,18 +362,17 @@ function EditTable({ lines, onChange, onRemove, onAdd, onCancel, onSave, saving 
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500">
-        Ajuste os valores, exclua linhas ou adicione itens manuais. As alterações valem apenas para este
-        relatório — os registros de entrada e saída não são afetados.
+        {t('Ajuste os valores, exclua linhas ou adicione itens manuais. As alterações valem apenas para este relatório — os registros de entrada e saída não são afetados.')}
       </p>
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-gray-100 text-left text-xs uppercase text-gray-500">
-            <th className="py-2 pr-2">Produto</th>
-            <th className="px-2">Ent.</th>
-            <th className="px-2">Compra</th>
-            <th className="px-2">Vendas</th>
-            <th className="px-2">Receita</th>
-            <th className="px-2">Perdas</th>
+            <th className="py-2 pr-2">{t('Produto')}</th>
+            <th className="px-2">{t('Ent.')}</th>
+            <th className="px-2">{t('Compra')}</th>
+            <th className="px-2">{t('Vendas')}</th>
+            <th className="px-2">{t('Receita')}</th>
+            <th className="px-2">{t('Perdas')}</th>
             <th />
           </tr>
         </thead>
@@ -394,7 +392,7 @@ function EditTable({ lines, onChange, onRemove, onAdd, onCancel, onSave, saving 
               <td className="px-2">{numInput(l, 'sold_revenue')}</td>
               <td className="px-2">{numInput(l, 'loss_qty')}</td>
               <td className="text-right">
-                <button type="button" onClick={() => onRemove(l.key)} className="text-red-500 hover:text-red-700" aria-label="Remover linha">
+                <button type="button" onClick={() => onRemove(l.key)} className="text-red-500 hover:text-red-700" aria-label={t('Remover linha')}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </td>
@@ -403,11 +401,11 @@ function EditTable({ lines, onChange, onRemove, onAdd, onCancel, onSave, saving 
         </tbody>
       </table>
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-        <V2Button type="button" size="sm" variant="secondary" onClick={onAdd}><Plus className="h-4 w-4" /> Adicionar linha</V2Button>
+        <V2Button type="button" size="sm" variant="secondary" onClick={onAdd}><Plus className="h-4 w-4" /> {t('Adicionar linha')}</V2Button>
         <div className="flex gap-2">
-          <V2Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancelar</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" onClick={onCancel}>{t('Cancelar')}</V2Button>
           <V2Button type="button" size="sm" onClick={onSave} disabled={saving}>
-            <Save className="h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar ajustes'}
+            <Save className="h-4 w-4" /> {saving ? t('Salvando…') : t('Salvar ajustes')}
           </V2Button>
         </div>
       </div>

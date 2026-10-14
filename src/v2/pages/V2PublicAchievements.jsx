@@ -21,6 +21,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t, fmtNumero } from '@/core/i18n';
 
 /**
  * V2PublicAchievements — /conquistas/:uid
@@ -37,12 +38,12 @@ export default function V2PublicAchievements() {
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">
-        <V2PageIntro title="Conquistas" subtitle="Veja o perfil de outro atleta." />
+        <V2PageIntro title={t('Conquistas')} subtitle={t('Veja o perfil de outro atleta.')} />
         <V2Surface>
           <V2EmptyState
             icon={Award}
-            title="Conquistas V2 em construção"
-            description="Esta seção estará disponível em breve."
+            title={t('Conquistas V2 em construção')}
+            description={t('Esta seção estará disponível em breve.')}
           />
         </V2Surface>
       </div>
@@ -70,7 +71,7 @@ function V2PublicAchievementsOn() {
 
   const allAchievements = useMemo(() => [...ACHIEVEMENTS_V2], []);
   const isOwnProfile = me?.uid === uid;
-  const athleteName = athlete?.platform_name || 'Atleta';
+  const athleteName = athlete?.platform_name || t('Atleta');
 
   // A pessoa pode ter pedido para não mostrar tier e conquistas. Quem barra é a
   // REGRA do banco (permissão negada) — aqui só se diz isso com gentileza, sem
@@ -80,16 +81,16 @@ function V2PublicAchievementsOn() {
     return (
       <div className="mx-auto max-w-[1000px]" data-testid="achievements-private">
         <V2PageIntro
-          title="Conquistas"
-          subtitle={`Conquistas de ${athleteName}`}
-          action={<Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline"><ChevronLeft className="h-4 w-4" /> Voltar</Link>}
+          title={t('Conquistas')}
+          subtitle={t('Conquistas de {nome}', { nome: athleteName })}
+          action={<Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline"><ChevronLeft className="h-4 w-4" /> {t('Voltar')}</Link>}
         />
         <V2Surface>
           <V2EmptyState
             icon={Award}
-            title="Este perfil prefere manter as conquistas privadas"
-            description="A pessoa escolheu não mostrar tier e conquistas. Você ainda pode ver o perfil completo."
-            action={<V2Button asChild><Link to={`/atleta/${uid}`}>Ver perfil</Link></V2Button>}
+            title={t('Este perfil prefere manter as conquistas privadas')}
+            description={t('A pessoa escolheu não mostrar tier e conquistas. Você ainda pode ver o perfil completo.')}
+            action={<V2Button asChild><Link to={`/atleta/${uid}`}>{t('Ver perfil')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -99,7 +100,7 @@ function V2PublicAchievementsOn() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1000px]">
-        <V2PageIntro title="Conquistas" subtitle="..." />
+        <V2PageIntro title={t('Conquistas')} subtitle="..." />
         <V2Skeleton className="h-96 rounded-4xl" />
       </div>
     );
@@ -108,11 +109,11 @@ function V2PublicAchievementsOn() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
-        title="Conquistas"
-        subtitle={isOwnProfile ? 'Seu perfil público de conquistas' : `Conquistas de ${athleteName}`}
+        title={t('Conquistas')}
+        subtitle={isOwnProfile ? t('Seu perfil público de conquistas') : t('Conquistas de {nome}', { nome: athleteName })}
         action={
           <Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
-            <ChevronLeft className="h-4 w-4" /> Voltar
+            <ChevronLeft className="h-4 w-4" /> {t('Voltar')}
           </Link>
         }
       />
@@ -126,7 +127,7 @@ function V2PublicAchievementsOn() {
               <p className="truncate font-display text-lg font-bold text-ink">{athleteName}</p>
               {!isOwnProfile && (
                 <V2Button asChild variant="ghost" size="sm" className="mt-0.5 -ml-2">
-                  <Link to={`/atleta/${uid}`}>Ver perfil completo</Link>
+                  <Link to={`/atleta/${uid}`}>{t('Ver perfil completo')}</Link>
                 </V2Button>
               )}
             </div>
@@ -134,7 +135,7 @@ function V2PublicAchievementsOn() {
           <div className="flex items-center gap-2">
             <TierBadge xp={progression?.xpTotal || 0} size="sm" />
             <V2Badge tone="amber">
-              <Sparkles className="h-3.5 w-3.5" /> {progression?.xpTotal?.toLocaleString('pt-BR') || 0} XP
+              <Sparkles className="h-3.5 w-3.5" /> {fmtNumero(progression?.xpTotal || 0)} XP
             </V2Badge>
             <V2Badge tone="green">
               <Award className="h-3.5 w-3.5" /> {unlocked.length}/{progression?.achievementsTotal || ACHIEVEMENTS_V2.length}
@@ -165,14 +166,14 @@ function V2PublicAchievementsOn() {
       {stats && me?.uid === uid && (
         <V2Surface className="mb-6">
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Gift className="h-5 w-5" /> Estatísticas
+            <Gift className="h-5 w-5" /> {t('Estatísticas')}
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <Stat label="Torneios" value={stats.tournaments} />
-            <Stat label="Jogos" value={stats.played} />
-            <Stat label="Vitórias" value={stats.wins} />
-            <Stat label="Pódios" value={stats.podiums} />
-            <Stat label="Títulos" value={stats.titles} />
+            <Stat label={t('Torneios')} value={stats.tournaments} />
+            <Stat label={t('Jogos')} value={stats.played} />
+            <Stat label={t('Vitórias')} value={stats.wins} />
+            <Stat label={t('Pódios')} value={stats.podiums} />
+            <Stat label={t('Títulos')} value={stats.titles} />
           </div>
         </V2Surface>
       )}
@@ -187,7 +188,7 @@ function V2PublicAchievementsOn() {
             <div className="mb-4 flex items-center gap-2">
               <span className="text-2xl" aria-hidden>{meta.icon}</span>
               <div>
-                <h2 className="font-display text-lg font-bold text-ink">{meta.name}</h2>
+                <h2 className="font-display text-lg font-bold text-ink">{t(meta.name)}</h2>
                 <p className="text-xs text-gray-500">
                   {unlockedInFamily}/{familyAchievements.length} desbloqueadas
                 </p>
@@ -215,8 +216,8 @@ function V2PublicAchievementsOn() {
         <V2Surface>
           <V2EmptyState
             icon={Award}
-            title="Nenhuma conquista desbloqueada ainda"
-            description="Continue jogando e competindo para desbloquear suas primeiras conquistas!"
+            title={t('Nenhuma conquista desbloqueada ainda')}
+            description={t('Continue jogando e competindo para desbloquear suas primeiras conquistas!')}
           />
         </V2Surface>
       )}
@@ -253,7 +254,7 @@ function AchievementPublicCard({ achievement, unlocked }) {
       </div>
       <div className="flex-1">
         <p className={`text-sm font-bold ${unlocked ? 'text-ink' : 'text-gray-500'}`}>
-          {achievement.name}
+          {t(achievement.name)}
         </p>
         <p className="mt-0.5 text-2xs font-bold uppercase" style={{ color: rarity.color || '#666' }}>
           {rarity.label || achievement.rarity}

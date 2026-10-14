@@ -23,6 +23,7 @@ import {
 } from '@/core/domain/sidebarNav';
 import { useSidebarNav } from '@/core/lib/useSidebarNav';
 import SettingsSection from './SettingsSection';
+import { t, tn } from '@/core/i18n';
 
 const ICONES = {
   inicio: LayoutGrid, jogar: Swords, competir: Trophy, comunidade: Users, arenas: Building2, ensino: GraduationCap,
@@ -53,7 +54,7 @@ function BotaoMover({ direcao, label, ponta, onMover }) {
   return (
     <button
       type="button"
-      aria-label={`${direcao < 0 ? 'Subir' : 'Descer'} “${label}”`}
+      aria-label={direcao < 0 ? t('Subir “{item}”', { item: label }) : t('Descer “{item}”', { item: label })}
       aria-disabled={ponta || undefined}
       onClick={() => { if (!ponta) onMover(direcao); }}
       className={cn(
@@ -88,18 +89,18 @@ function Linha({ id, ligado, posicao, total, nome, onAlternar, onMover }) {
         <Icone className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p id={tituloId} className="font-display text-sm font-bold leading-tight text-ink sm:text-base">{nome || meta.label}</p>
-        <p className="mt-0.5 text-xs leading-snug text-gray-500">{meta.description}</p>
+        <p id={tituloId} className="font-display text-sm font-bold leading-tight text-ink sm:text-base">{nome || t(meta.label)}</p>
+        <p className="mt-0.5 text-xs leading-snug text-gray-500">{t(meta.description)}</p>
       </div>
       {podeMover && (
         <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
-          <BotaoMover direcao={-1} label={meta.label} ponta={posicao === 2} onMover={(d) => onMover(id, d)} />
-          <BotaoMover direcao={1} label={meta.label} ponta={posicao === total} onMover={(d) => onMover(id, d)} />
+          <BotaoMover direcao={-1} label={t(meta.label)} ponta={posicao === 2} onMover={(d) => onMover(id, d)} />
+          <BotaoMover direcao={1} label={t(meta.label)} ponta={posicao === total} onMover={(d) => onMover(id, d)} />
         </div>
       )}
       {meta.fixo ? (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-2xs font-bold text-gray-500" title="Este item fica sempre no menu">
-          <Lock className="h-3 w-3" aria-hidden="true" /> Fixo
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-2xs font-bold text-gray-500" title={t('Este item fica sempre no menu')}>
+          <Lock className="h-3 w-3" aria-hidden="true" /> {t('Fixo')}
         </span>
       ) : (
         <Interruptor ligado={ligado} onClick={() => onAlternar(id)} labelledBy={tituloId} />
@@ -108,7 +109,7 @@ function Linha({ id, ligado, posicao, total, nome, onAlternar, onMover }) {
   );
 }
 
-const ordinal = (n) => `${n}º`;
+const ordinal = (n) => t('{n}º', { n });
 
 /** O seletor em si (também serve a quem quiser montá-lo noutro lugar). */
 export function SidebarPicker({ papeis, nomes = {} }) {
@@ -118,18 +119,18 @@ export function SidebarPicker({ papeis, nomes = {} }) {
   const presets = Object.values(SIDEBAR_PRESET).filter((p) => sidebarPresetAvailable(p, papeis));
 
   const onAlternar = (id) => {
-    const label = SIDEBAR_ITEM_META[id].label;
+    const label = t(SIDEBAR_ITEM_META[id].label);
     const entra = !itens.includes(id);
     alternar(id);
-    setAviso(entra ? `${label} entrou no menu.` : `${label} saiu do menu.`);
+    setAviso(entra ? t('{item} entrou no menu.', { item: label }) : t('{item} saiu do menu.', { item: label }));
   };
   const onMover = (id, passo) => {
     mover(id, passo);
-    setAviso(`${SIDEBAR_ITEM_META[id].label} agora é o ${ordinal(itens.indexOf(id) + 1 + passo)}.`);
+    setAviso(t('{item} agora é o {posicao}.', { item: t(SIDEBAR_ITEM_META[id].label), posicao: ordinal(itens.indexOf(id) + 1 + passo) }));
   };
   const onPreset = (p) => {
     aplicarPreset(p);
-    setAviso(`Menu no padrão ${SIDEBAR_PRESET_META[p].label}.`);
+    setAviso(t('Menu no padrão {padrao}.', { padrao: t(SIDEBAR_PRESET_META[p].label) }));
   };
 
   return (
@@ -137,7 +138,7 @@ export function SidebarPicker({ papeis, nomes = {} }) {
       <p className="sr-only" aria-live="polite">{aviso}</p>
 
       <section aria-labelledby="menu-padroes" className="space-y-2">
-        <h3 id="menu-padroes" className="px-1 text-2xs font-bold uppercase tracking-widest text-gray-500">Comece por um padrão</h3>
+        <h3 id="menu-padroes" className="px-1 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Comece por um padrão')}</h3>
         <div className="grid gap-2 sm:grid-cols-3" role="group" aria-labelledby="menu-padroes">
           {presets.map((p) => {
             const ativo = preset === p && padrao;
@@ -152,21 +153,21 @@ export function SidebarPicker({ papeis, nomes = {} }) {
                   ativo ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure hover:border-ink/40',
                 )}
               >
-                <p className={cn('font-display text-sm font-bold', ativo ? 'text-acid' : 'text-ink')}>{SIDEBAR_PRESET_META[p].label}</p>
-                <p className={cn('mt-0.5 text-xs leading-snug', ativo ? 'text-white/80' : 'text-gray-500')}>{SIDEBAR_PRESET_META[p].description}</p>
+                <p className={cn('font-display text-sm font-bold', ativo ? 'text-acid' : 'text-ink')}>{t(SIDEBAR_PRESET_META[p].label)}</p>
+                <p className={cn('mt-0.5 text-xs leading-snug', ativo ? 'text-white/80' : 'text-gray-500')}>{t(SIDEBAR_PRESET_META[p].description)}</p>
               </button>
             );
           })}
         </div>
         {presets.length === 1 && (
-          <p className="px-1 text-xs text-gray-500">Os padrões Arena e Professor aparecem para quem gere uma arena ou dá aula.</p>
+          <p className="px-1 text-xs text-gray-500">{t('Os padrões Arena e Professor aparecem para quem gere uma arena ou dá aula.')}</p>
         )}
       </section>
 
       <section aria-labelledby="menu-ligados" className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-1">
-          <h3 id="menu-ligados" className="text-2xs font-bold uppercase tracking-widest text-gray-500">No seu menu, nesta ordem</h3>
-          <p className="text-xs text-gray-500">{itens.length} {itens.length === 1 ? 'item' : 'itens'}</p>
+          <h3 id="menu-ligados" className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('No seu menu, nesta ordem')}</h3>
+          <p className="text-xs text-gray-500">{tn(itens.length, '{n} item', '{n} itens')}</p>
         </div>
         <ol className="space-y-2">
           {itens.map((id, i) => (
@@ -176,17 +177,17 @@ export function SidebarPicker({ papeis, nomes = {} }) {
         {!padrao && (
           <button
             type="button"
-            onClick={() => { restaurar(); setAviso('O menu voltou ao padrão do seu papel.'); }}
+            onClick={() => { restaurar(); setAviso(t('O menu voltou ao padrão do seu papel.')); }}
             className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
           >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Restaurar o padrão
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> {t('Restaurar o padrão')}
           </button>
         )}
       </section>
 
       {escondidos.length > 0 && (
         <section aria-labelledby="menu-escondidos" className="space-y-2">
-          <h3 id="menu-escondidos" className="px-1 text-2xs font-bold uppercase tracking-widest text-gray-500">Para acrescentar</h3>
+          <h3 id="menu-escondidos" className="px-1 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Para acrescentar')}</h3>
           <ul className="space-y-2">
             {escondidos.map((id) => (
               <Linha key={id} id={id} ligado={false} nome={nomes[id]} onAlternar={onAlternar} />
@@ -198,8 +199,8 @@ export function SidebarPicker({ papeis, nomes = {} }) {
       <div className="flex items-start gap-2 rounded-3xl bg-paper p-4 text-xs leading-relaxed text-gray-500">
         <PanelLeft className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
         <p>
-          Início e Minha área ficam sempre: é na Minha área que moram a sua arena, o painel do professor e estas configurações.
-          O que você tirar do menu continua ao alcance por lá e pela busca (Ctrl K). A escolha fica salva neste aparelho, na sua conta.
+          {t('Início e Minha área ficam sempre: é na Minha área que moram a sua arena, o painel do professor e estas configurações.')}
+          {' '}{t('O que você tirar do menu continua ao alcance por lá e pela busca (Ctrl K). A escolha fica salva neste aparelho, na sua conta.')}
         </p>
       </div>
     </div>
@@ -217,15 +218,15 @@ export default function SidebarSettingsCard() {
     admin: !!isPlatformAdmin,
     mercado,
   }), [arenas.length, coach, isPlatformAdmin, mercado]);
-  const nomes = useMemo(() => (arenas.length === 1 ? { 'minha-arena': arenas[0].name || 'Minha arena' } : {}), [arenas]);
+  const nomes = useMemo(() => (arenas.length === 1 ? { 'minha-arena': arenas[0].name || t('Minha arena') } : {}), [arenas]);
 
   const { itens, preset, padrao } = useSidebarNav(papeis);
-  const resumo = `${itens.length} ${itens.length === 1 ? 'item' : 'itens'} · ${padrao ? `padrão ${SIDEBAR_PRESET_META[preset]?.label || ''}`.trim() : 'personalizado'}`;
+  const resumo = `${tn(itens.length, '{n} item', '{n} itens')} · ${padrao ? t('padrão {padrao}', { padrao: SIDEBAR_PRESET_META[preset]?.label ? t(SIDEBAR_PRESET_META[preset].label) : '' }).trim() : t('personalizado')}`;
 
   return (
-    <SettingsSection id="menu-lateral" dica="config-menu" icon={PanelLeft} title="Menu" summary={resumo}>
+    <SettingsSection id="menu-lateral" dica="config-menu" icon={PanelLeft} title={t('Menu')} summary={resumo}>
       <p className="text-sm text-gray-500">
-        O que aparece na barra lateral e na gaveta do celular, e em que ordem. Padrões para atleta, arena e professor — e o seu, por cima.
+        {t('O que aparece na barra lateral e na gaveta do celular, e em que ordem. Padrões para atleta, arena e professor — e o seu, por cima.')}
       </p>
       <div className="mt-5">
         <SidebarPicker papeis={papeis} nomes={nomes} />

@@ -29,6 +29,7 @@ import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { getArenaModule, listArenaModuleIds } from '@/modules/arenas/domain/moduleCatalog';
 import { moduleIcon } from '@/v2/components/arenas/moduleIcons';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * Os módulos ligados que têm tela para este público, sem repetir destino.
@@ -91,7 +92,7 @@ export default function ArenaModuleShortcuts({
     const Icon = moduleIcon(a.icon);
     return (
       <V2Button key={a.id} asChild variant={variant} size={size}>
-        <Link to={a.to}><Icon className="h-4 w-4" /> {a.label}</Link>
+        <Link to={a.to}><Icon className="h-4 w-4" /> {t(a.label)}</Link>
       </V2Button>
     );
   });

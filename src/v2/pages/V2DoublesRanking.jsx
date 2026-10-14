@@ -39,6 +39,7 @@ import {
 } from '@/v2/ui/primitives';
 import V2Pagination from '@/v2/ui/V2Pagination';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /**
  * Id da preferência salva. É um CONTRATO: mudar esta string apaga, de uma vez,
@@ -48,7 +49,7 @@ const PREF_MIN_JOGOS = 'ranking:duplas:min-jogos';
 
 /** Rótulo de cada mínimo oferecido. */
 function rotuloMinimo(n) {
-  return n <= 1 ? 'Todas as duplas' : `${n}+ jogos`;
+  return n <= 1 ? t('Todas as duplas') : `${n}+ jogos`;
 }
 
 function medalEmoji(position) {
@@ -145,11 +146,11 @@ export default function V2DoublesRanking() {
   return (
     <div className="mx-auto max-w-[900px]">
       <V2PageIntro
-        title="Ranking de duplas"
-        subtitle="Parcerias classificadas por aproveitamento. Empate é decidido por mais vitórias, menos derrotas e saldo de pontos, nessa ordem."
+        title={t('Ranking de duplas')}
+        subtitle={t('Parcerias classificadas por aproveitamento. Empate é decidido por mais vitórias, menos derrotas e saldo de pontos, nessa ordem.')}
         action={(
           <Link to="/ranking" className="text-sm font-semibold text-green-700 underline">
-            Ver ranking individual
+            {t('Ver ranking individual')}
           </Link>
         )}
       />
@@ -161,14 +162,14 @@ export default function V2DoublesRanking() {
             // Buscar volta para a primeira página: continuar na 5 depois de
             // filtrar quase sempre cai numa tela vazia.
             onChange={(e) => atualizar({ q: e.target.value, pag: null })}
-            placeholder="Buscar atleta na dupla…"
+            placeholder={t('Buscar atleta na dupla…')}
             icon={Search}
           />
         </div>
 
         <div className="shrink-0">
           <label htmlFor="duplas-min-jogos" className="mb-1 block text-xs font-semibold text-gray-500">
-            Amostra mínima
+            {t('Amostra mínima')}
           </label>
           <V2Select
             id="duplas-min-jogos"
@@ -184,9 +185,7 @@ export default function V2DoublesRanking() {
 
       {recorteAtivo && (
         <p className="mb-4 rounded-2xl bg-paper px-4 py-2.5 text-xs leading-5 text-gray-500">
-          Vendo apenas duplas com <strong className="text-ink">{minGames} jogos ou mais</strong>,
-          numeradas <strong className="text-ink">entre elas</strong>. A posição no ranking geral
-          aparece ao lado. Esta escolha fica salva para as suas próximas visitas.
+          {t('Vendo apenas duplas com {n} jogos ou mais, numeradas entre elas. A posição no ranking geral aparece ao lado. Esta escolha fica salva para as suas próximas visitas.', { n: minGames })}
         </p>
       )}
 
@@ -197,8 +196,8 @@ export default function V2DoublesRanking() {
         // "ainda não há parceria" aqui seria afirmar o que não se sabe.
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar o ranking de duplas"
-            description="As duplas continuam no ranking — só não conseguimos buscá-lo agora."
+            title={t('Não foi possível carregar o ranking de duplas')}
+            description={t('As duplas continuam no ranking — só não conseguimos buscá-lo agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -209,15 +208,15 @@ export default function V2DoublesRanking() {
           <V2EmptyState
             icon={Users2}
             title={
-              q ? 'Nenhuma dupla encontrada'
-                : recorteAtivo ? `Nenhuma dupla com ${minGames}+ jogos`
-                  : 'Sem duplas ranqueadas ainda'
+              q ? t('Nenhuma dupla encontrada')
+                : recorteAtivo ? t('Nenhuma dupla com {n}+ jogos', { n: minGames })
+                  : t('Sem duplas ranqueadas ainda')
             }
             description={
-              q ? 'Nenhuma parceria tem atleta com esse nome. Tente outro termo.'
+              q ? t('Nenhuma parceria tem atleta com esse nome. Tente outro termo.')
                 : recorteAtivo
-                  ? `Ainda não há parceria com ${minGames} jogos ou mais. Reduza a amostra mínima para ver as demais.`
-                  : 'Assim que houver jogos de duplas finalizados, as parcerias aparecem aqui.'
+                  ? t('Ainda não há parceria com {n} jogos ou mais. Reduza a amostra mínima para ver as demais.', { n: minGames })
+                  : t('Assim que houver jogos de duplas finalizados, as parcerias aparecem aqui.')
             }
           />
         </V2Surface>
@@ -226,18 +225,18 @@ export default function V2DoublesRanking() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <caption className="sr-only">
-                Ranking de duplas, classificado por aproveitamento
+                {t('Ranking de duplas, classificado por aproveitamento')}
               </caption>
               <thead className="bg-paper text-left text-2xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th scope="col" className="px-4 py-3">#</th>
-                  <th scope="col" className="px-4 py-3">Dupla</th>
-                  <th scope="col" className="px-4 py-3 text-center">J</th>
-                  <th scope="col" className="px-4 py-3 text-center">V</th>
-                  <th scope="col" className="px-4 py-3 text-center">D</th>
+                  <th scope="col" className="px-4 py-3">{t('Dupla')}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t('J')}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t('V')}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t('D')}</th>
                   {/* Aproveitamento é o critério principal — destacado na tabela. */}
-                  <th scope="col" className="px-4 py-3 text-center font-bold text-ink">Aprov.</th>
-                  <th scope="col" className="px-4 py-3 text-center">Saldo</th>
+                  <th scope="col" className="px-4 py-3 text-center font-bold text-ink">{t('Aprov.')}</th>
+                  <th scope="col" className="px-4 py-3 text-center">{t('Saldo')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,7 +253,7 @@ export default function V2DoublesRanking() {
                         {recorteAtivo && (
                           <span
                             className="ml-1.5 align-middle text-2xs font-normal text-gray-500"
-                            title={`Posição ${row.overall_position} no ranking geral`}
+                            title={t('Posição {n} no ranking geral', { n: row.overall_position })}
                           >
                             #{row.overall_position}
                           </span>

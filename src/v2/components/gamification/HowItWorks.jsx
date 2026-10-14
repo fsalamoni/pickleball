@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Lightbulb } from 'lucide-react';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { useGamificationGuide } from '@/modules/progression/hooks/useGamificationGuide';
+import { t } from '@/core/i18n';
 
 /**
  * O "Como funciona" no topo de cada aba do hub: três ou quatro frases e os
@@ -20,13 +21,13 @@ export default function HowItWorks({ tab }) {
   if (!intro) return null;
   const termos = intro.terms
     .map((id) => guide.byId[id])
-    .filter((t) => t && (!t.module || isModuleOn(t.module)));
+    .filter((termo) => termo && (!termo.module || isModuleOn(termo.module)));
 
   return (
     <V2CollapsibleCard
       icon={Lightbulb}
       title={intro.title}
-      summary="Entenda em um minuto"
+      summary={t('Entenda em um minuto')}
       sectionId={`gamification:como:${tab}`}
       dica="gamificacao-como-funciona"
       bodyClassName="space-y-3"
@@ -35,17 +36,17 @@ export default function HowItWorks({ tab }) {
         {intro.bullets.map((b) => <li key={b}>{b}</li>)}
       </ul>
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        {termos.map((t) => (
+        {termos.map((termo) => (
           <Link
-            key={t.id}
-            to={`/gamification/como-funciona?termo=${t.id}`}
+            key={termo.id}
+            to={`/gamification/como-funciona?termo=${termo.id}`}
             className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink hover:bg-gray-100"
           >
-            {t.title}
+            {termo.title}
           </Link>
         ))}
         <Link to="/gamification/como-funciona" className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-          Guia completo <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('Guia completo')} <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
     </V2CollapsibleCard>

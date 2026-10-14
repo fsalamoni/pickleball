@@ -32,6 +32,7 @@ import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { V2Badge, V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tn, tk } from '@/core/i18n';
 
 // Tons alinhados aos suportados pelo V2Badge (neutral/acid/ink/green/blue/amber/red).
 const STATUS_TONE = {
@@ -45,13 +46,13 @@ const STATUS_TONE = {
 };
 
 const STATUS_LABEL = {
-  requested: 'Solicitada',
-  negotiating: 'Em negociação',
-  confirmed: 'Confirmada',
-  declined: 'Recusada',
-  cancelled: 'Cancelada',
-  completed: 'Concluída',
-  no_show: 'Não compareceu',
+  requested: tk('Solicitada'),
+  negotiating: tk('Em negociação'),
+  confirmed: tk('Confirmada'),
+  declined: tk('Recusada'),
+  cancelled: tk('Cancelada'),
+  completed: tk('Concluída'),
+  no_show: tk('Não compareceu'),
 };
 
 function statusBadgeTone(status) {
@@ -140,24 +141,24 @@ export default function V2ArenaCalendar({ arena }) {
     <V2Surface className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <V2Button variant="ghost" size="sm" onClick={prevMonth} aria-label="Mês anterior">
+          <V2Button variant="ghost" size="sm" onClick={prevMonth} aria-label={t('Mês anterior')}>
             <ChevronLeft className="h-4 w-4" />
           </V2Button>
           <h3 className="font-display text-lg font-bold text-ink min-w-[160px] text-center">
             {getMonthLabel(cursor.year, cursor.month)}
           </h3>
-          <V2Button variant="ghost" size="sm" onClick={nextMonth} aria-label="Próximo mês">
+          <V2Button variant="ghost" size="sm" onClick={nextMonth} aria-label={t('Próximo mês')}>
             <ChevronRight className="h-4 w-4" />
           </V2Button>
-          <V2Button variant="ghost" size="sm" onClick={goToday}>Hoje</V2Button>
+          <V2Button variant="ghost" size="sm" onClick={goToday}>{t('Hoje')}</V2Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <V2Badge tone="blue">{stats.total} reservas</V2Badge>
-          <V2Badge tone="green">{stats.confirmed} confirmadas</V2Badge>
-          <V2Badge tone="amber">{stats.requested} pendentes</V2Badge>
+          <V2Badge tone="blue">{tn(stats.total, '{n} reserva', '{n} reservas')}</V2Badge>
+          <V2Badge tone="green">{tn(stats.confirmed, '{n} confirmada', '{n} confirmadas')}</V2Badge>
+          <V2Badge tone="amber">{tn(stats.requested, '{n} pendente', '{n} pendentes')}</V2Badge>
           {gameDaysNoMes > 0 && (
             <V2Badge tone="acid">
-              {gameDaysNoMes} {gameDaysNoMes === 1 ? 'dia de jogo' : 'dias de jogo'}
+              {tn(gameDaysNoMes, '{n} dia de jogo', '{n} dias de jogo')}
             </V2Badge>
           )}
           {courts.length > 0 && (
@@ -166,7 +167,7 @@ export default function V2ArenaCalendar({ arena }) {
               onChange={(e) => setCourtFilter(e.target.value)}
               className="h-8 rounded-full border border-gray-200 bg-white px-2 text-xs"
             >
-              <option value="">Todas as quadras</option>
+              <option value="">{t('Todas as quadras')}</option>
               {courts.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -176,14 +177,14 @@ export default function V2ArenaCalendar({ arena }) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Carregando reservas…</p>
+        <p className="text-sm text-gray-500">{t('Carregando reservas…')}</p>
       ) : isError ? (
         // Falha não é "mês sem reserva": o calendário vazio diria à arena que
         // todo horário está livre — e ela venderia por fora o que já vendeu.
         <V2ErrorState
           inline
-          title="Não foi possível carregar as reservas"
-          description="Sem elas, o calendário mostraria o mês inteiro livre. Tente de novo."
+          title={t('Não foi possível carregar as reservas')}
+          description={t('Sem elas, o calendário mostraria o mês inteiro livre. Tente de novo.')}
           onRetry={() => refetch()}
         />
       ) : (
@@ -229,9 +230,9 @@ export default function V2ArenaCalendar({ arena }) {
                           <div
                             key={g.id}
                             className="truncate rounded bg-acid px-1 py-0.5 text-2xs font-bold text-ink"
-                            title={`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`}
+                            title={`${t('Dia de jogo: {titulo}', { titulo: g.title })}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`}
                           >
-                            {faixa ? faixa.start : 'Dia de jogo'}
+                            {faixa ? faixa.start : t('Dia de jogo')}
                           </div>
                         );
                       })}
@@ -246,7 +247,7 @@ export default function V2ArenaCalendar({ arena }) {
                             (s.booking_status === 'cancelled' || s.booking_status === 'declined') && 'bg-gray-100 text-gray-500 line-through',
                             s.booking_status === 'completed' && 'bg-blue-100 text-blue-700',
                           )}
-                          title={`${s.start}–${s.end} · ${s.athlete_name || 'Atleta'} (${STATUS_LABEL[s.booking_status] || s.booking_status})`}
+                          title={`${s.start}–${s.end} · ${s.athlete_name || t('Atleta')} (${t(STATUS_LABEL[s.booking_status] || s.booking_status)})`}
                         >
                           {s.start}
                         </div>
@@ -264,7 +265,7 @@ export default function V2ArenaCalendar({ arena }) {
       )}
 
       <div className="text-2xs text-gray-500">
-        Período carregado: {rangeInfo.start} → {rangeInfo.end} ({rangeInfo.dates.length} dias)
+        {t('Período carregado: {inicio} → {fim} ({n} dias)', { inicio: rangeInfo.start, fim: rangeInfo.end, n: rangeInfo.dates.length })}
       </div>
 
       {dayModal && (
@@ -284,13 +285,13 @@ export default function V2ArenaCalendar({ arena }) {
                 type="button"
                 onClick={() => setDayModal(null)}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
-                aria-label="Fechar"
+                aria-label={t('Fechar')}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             {dayBookings.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhuma reserva nesta data.</p>
+              <p className="text-sm text-gray-500">{t('Nenhuma reserva nesta data.')}</p>
             ) : (
               <ul className="space-y-2">
                 {dayBookings.map((s, i) => {
@@ -301,12 +302,12 @@ export default function V2ArenaCalendar({ arena }) {
                         <div className="min-w-0">
                           <div className="font-semibold text-ink">{s.start}–{s.end}</div>
                           <div className="text-xs text-gray-500">
-                            {s.athlete_name || 'Atleta'}
+                            {s.athlete_name || t('Atleta')}
                             {court && <span> · {court.name}</span>}
                           </div>
                         </div>
                         <V2Badge tone={statusBadgeTone(s.booking_status)}>
-                          {STATUS_LABEL[s.booking_status] || s.booking_status}
+                          {t(STATUS_LABEL[s.booking_status] || s.booking_status)}
                         </V2Badge>
                       </div>
                     </li>

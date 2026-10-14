@@ -23,6 +23,7 @@ import { OPCOES_DE_TEMA, TEMA } from '@/core/theme/themePreference';
 import {
   DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { t } from '@/core/i18n';
 
 /** O ícone de cada aparência. */
 export const ICONE_DO_TEMA = Object.freeze({
@@ -60,12 +61,12 @@ export function ThemeMenuSection() {
     <>
       <DropdownMenuSeparator />
       <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-        Aparência
+        {t('Aparência')}
       </DropdownMenuLabel>
       <DropdownMenuRadioGroup
         value={escolha}
         onValueChange={setEscolha}
-        aria-label="Aparência"
+        aria-label={t('Aparência')}
         className="grid grid-cols-3 gap-1 px-1 pb-1"
       >
         {OPCOES_DE_TEMA.map(({ valor, rotulo }) => {
@@ -86,7 +87,7 @@ export function ThemeMenuSection() {
               )}
             >
               <Icone className="h-4 w-4" aria-hidden />
-              {rotulo}
+              {t(rotulo)}
             </DropdownMenuRadioItem>
           );
         })}
@@ -103,7 +104,7 @@ export function ThemeDrawerSwitcher() {
   if (!disponivel) return null;
   return (
     <div className="px-4 pb-3 pt-1">
-      <p id={rotuloId} className="mb-2 text-2xs font-bold uppercase tracking-widest text-white/40">Aparência</p>
+      <p id={rotuloId} className="mb-2 text-2xs font-bold uppercase tracking-widest text-white/40">{t('Aparência')}</p>
       <div role="radiogroup" aria-labelledby={rotuloId} className="grid grid-cols-3 gap-1 rounded-2xl bg-white/10 p-1">
         {OPCOES_DE_TEMA.map(({ valor, rotulo }, i) => {
           const Icone = ICONE_DO_TEMA[valor];
@@ -127,7 +128,7 @@ export function ThemeDrawerSwitcher() {
               )}
             >
               <Icone className="h-4 w-4 shrink-0" aria-hidden />
-              {rotulo}
+              {t(rotulo)}
             </button>
           );
         })}
@@ -195,15 +196,15 @@ export function ThemeSettingsCard() {
   const { refs, aoTeclar } = useTecladoDoGrupo(escolha, setEscolha);
   if (!disponivel) return null;
   const atual = OPCOES_DE_TEMA.find((o) => o.valor === escolha) || OPCOES_DE_TEMA[0];
-  const agora = escolha === TEMA.AUTOMATICO ? ` · agora no ${efetivo === TEMA.ESCURO ? 'escuro' : 'claro'}` : '';
+  const agora = escolha === TEMA.AUTOMATICO ? ` · ${efetivo === TEMA.ESCURO ? t('agora no escuro') : t('agora no claro')}` : '';
 
   return (
-    <SettingsSection id="aparencia" dica="config-aparencia" icon={Palette} title="Aparência" summary={`${atual.rotulo}${agora}`}>
+    <SettingsSection id="aparencia" dica="config-aparencia" icon={Palette} title={t('Aparência')} summary={`${t(atual.rotulo)}${agora}`}>
       <p className="text-sm text-gray-500">
-        Escolha como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.
+        {t('Escolha como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.')}
       </p>
 
-      <div role="radiogroup" aria-label="Aparência" className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+      <div role="radiogroup" aria-label={t('Aparência')} className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
         {OPCOES_DE_TEMA.map(({ valor, rotulo, descricao }, i) => {
           const Icone = ICONE_DO_TEMA[valor];
           const marcado = escolha === valor;
@@ -235,10 +236,10 @@ export function ThemeSettingsCard() {
               <span className="flex items-center gap-1.5 px-0.5 pt-2 sm:px-1">
                 {/* No celular o cartão é estreito: sem o ícone, "Automático" cabe inteiro. */}
                 <Icone className={cn('hidden h-4 w-4 shrink-0 sm:block', marcado ? 'text-ink' : 'text-gray-400')} aria-hidden />
-                <span className="truncate font-display text-2xs font-bold tracking-tight text-ink sm:text-sm sm:tracking-normal">{rotulo}</span>
+                <span className="truncate font-display text-2xs font-bold tracking-tight text-ink sm:text-sm sm:tracking-normal">{t(rotulo)}</span>
               </span>
               <span id={`${rotuloId}-${valor}`} className="hidden px-1 pb-1 pt-1 text-xs leading-snug text-gray-500 sm:block">
-                {descricao}
+                {t(descricao)}
               </span>
             </button>
           );
@@ -246,14 +247,14 @@ export function ThemeSettingsCard() {
       </div>
 
       {/* No celular os cartões são estreitos: a descrição da escolhida vem embaixo. */}
-      <p className="mt-3 text-xs leading-snug text-gray-500 sm:hidden">{atual.descricao}</p>
+      <p className="mt-3 text-xs leading-snug text-gray-500 sm:hidden">{t(atual.descricao)}</p>
       {escolha === TEMA.AUTOMATICO && (
         <p className="mt-2 text-xs text-gray-500">
-          Agora o aparelho está no {efetivo === TEMA.ESCURO ? 'escuro' : 'claro'}.
+          {efetivo === TEMA.ESCURO ? t('Agora o aparelho está no escuro.') : t('Agora o aparelho está no claro.')}
         </p>
       )}
       <p className="mt-3 text-xs text-gray-500">
-        O telão, o totem da arena e a impressão continuam claros, para quem está na quadra e no papel.
+        {t('O telão, o totem da arena e a impressão continuam claros, para quem está na quadra e no papel.')}
       </p>
     </SettingsSection>
   );

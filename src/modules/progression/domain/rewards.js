@@ -25,6 +25,7 @@
  * Lógica pura, sem I/O.
  */
 import { TIER_NAMES } from './tiers.js';
+import { t, tk, fmtLista } from '@/core/i18n';
 
 export const REWARD_KIND = Object.freeze({
   DISCOUNT: 'discount',
@@ -36,16 +37,16 @@ export const REWARD_KIND = Object.freeze({
 });
 
 export const REWARD_KIND_META = Object.freeze({
-  discount: { label: 'Desconto', emoji: '🏷️' },
-  free_class: { label: 'Aula grátis', emoji: '🎓' },
-  priority: { label: 'Prioridade', emoji: '⏩' },
-  gift: { label: 'Brinde', emoji: '🎁' },
-  access: { label: 'Acesso', emoji: '🔑' },
-  other: { label: 'Benefício', emoji: '⭐' },
+  discount: { label: tk('Desconto'), emoji: '🏷️' },
+  free_class: { label: tk('Aula grátis'), emoji: '🎓' },
+  priority: { label: tk('Prioridade'), emoji: '⏩' },
+  gift: { label: tk('Brinde'), emoji: '🎁' },
+  access: { label: tk('Acesso'), emoji: '🔑' },
+  other: { label: tk('Benefício'), emoji: '⭐' },
 });
 
 export const REWARD_ISSUER_LABEL = Object.freeze({
-  platform: 'PickleRush', arena: 'Arena', club: 'Clube', coach: 'Professor',
+  platform: 'PickleRush', arena: tk('Arena'), club: tk('Clube'), coach: tk('Professor'),
 });
 
 export const CLAIM_STATUS = Object.freeze({
@@ -57,11 +58,11 @@ export const CLAIM_STATUS = Object.freeze({
 });
 
 export const CLAIM_STATUS_LABEL = Object.freeze({
-  requested: 'Pedido enviado',
-  approved: 'Liberada — apresente o código',
-  redeemed: 'Usada',
-  rejected: 'Recusada',
-  cancelled: 'Cancelada',
+  requested: tk('Pedido enviado'),
+  approved: tk('Liberada — apresente o código'),
+  redeemed: tk('Usada'),
+  rejected: tk('Recusada'),
+  cancelled: tk('Cancelada'),
 });
 
 /** Os critérios que uma recompensa pode exigir (todos opcionais, todos somam). */
@@ -113,23 +114,23 @@ export function evaluateEligibility(eligibility, snapshot, { achievementName = (
   const snap = snapshot || buildEligibilitySnapshot();
   const checks = [];
   if (e.minTier) {
-    checks.push({ field: 'minTier', ok: tierRank(snap.tier) >= tierRank(e.minTier), label: 'Tier mínimo', have: snap.tier, need: e.minTier });
+    checks.push({ field: 'minTier', ok: tierRank(snap.tier) >= tierRank(e.minTier), label: t('Tier mínimo'), have: t(snap.tier), need: t(e.minTier) });
   }
   if (e.minLevel) {
-    checks.push({ field: 'minLevel', ok: snap.level >= e.minLevel, label: 'Nível mínimo', have: `nível ${snap.level}`, need: `nível ${e.minLevel}` });
+    checks.push({ field: 'minLevel', ok: snap.level >= e.minLevel, label: t('Nível mínimo'), have: t('nível {n}', { n: snap.level }), need: t('nível {n}', { n: e.minLevel }) });
   }
   if (e.achievementId) {
-    checks.push({ field: 'achievementId', ok: snap.achievementIds.has(e.achievementId), label: 'Conquista', have: snap.achievementIds.has(e.achievementId) ? 'desbloqueada' : 'ainda não', need: achievementName(e.achievementId) });
+    checks.push({ field: 'achievementId', ok: snap.achievementIds.has(e.achievementId), label: t('Conquista'), have: snap.achievementIds.has(e.achievementId) ? t('desbloqueada') : t('ainda não'), need: achievementName(e.achievementId) });
   }
   if (e.topPercent) {
     const ok = snap.seasonPercent != null && snap.seasonPercent <= e.topPercent;
-    checks.push({ field: 'topPercent', ok, label: 'Posição na temporada', have: snap.seasonPercent == null ? 'sem posição' : `top ${Math.max(1, Math.ceil(snap.seasonPercent))}%`, need: `top ${e.topPercent}%` });
+    checks.push({ field: 'topPercent', ok, label: t('Posição na temporada'), have: snap.seasonPercent == null ? t('sem posição') : t('top {n}%', { n: Math.max(1, Math.ceil(snap.seasonPercent)) }), need: t('top {n}%', { n: e.topPercent }) });
   }
   if (e.minStreakWeeks) {
-    checks.push({ field: 'minStreakWeeks', ok: snap.streakWeeks >= e.minStreakWeeks, label: 'Sequência', have: `${snap.streakWeeks} semanas`, need: `${e.minStreakWeeks} semanas` });
+    checks.push({ field: 'minStreakWeeks', ok: snap.streakWeeks >= e.minStreakWeeks, label: t('Sequência'), have: t('{n} semanas', { n: snap.streakWeeks }), need: t('{n} semanas', { n: e.minStreakWeeks }) });
   }
   if (e.minGames) {
-    checks.push({ field: 'minGames', ok: snap.games >= e.minGames, label: 'Jogos', have: `${snap.games}`, need: `${e.minGames}` });
+    checks.push({ field: 'minGames', ok: snap.games >= e.minGames, label: t('Jogos'), have: `${snap.games}`, need: `${e.minGames}` });
   }
   return { eligible: checks.every((c) => c.ok), checks };
 }
@@ -138,29 +139,29 @@ export function evaluateEligibility(eligibility, snapshot, { achievementName = (
 export function describeEligibility(eligibility, { achievementName = (id) => id } = {}) {
   const e = normalizeEligibility(eligibility);
   const partes = [];
-  if (e.minTier) partes.push(`tier ${e.minTier} ou acima`);
-  if (e.minLevel) partes.push(`nível ${e.minLevel}`);
-  if (e.minGames) partes.push(`${e.minGames} jogos`);
-  if (e.minStreakWeeks) partes.push(`${e.minStreakWeeks} semanas seguidas`);
-  if (e.topPercent) partes.push(`estar entre os ${e.topPercent}% da temporada`);
-  if (e.achievementId) partes.push(`a conquista ${achievementName(e.achievementId)}`);
-  if (partes.length === 0) return 'Aberta a todos os atletas';
-  if (partes.length === 1) return `Para quem tem ${partes[0]}`.replace('tem estar', 'está').replace('tem a conquista', 'tem a conquista');
-  return `Para quem tem ${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
+  if (e.minTier) partes.push(t('tier {tier} ou acima', { tier: t(e.minTier) }));
+  if (e.minLevel) partes.push(t('nível {n}', { n: e.minLevel }));
+  if (e.minGames) partes.push(t('{n} jogos', { n: e.minGames }));
+  if (e.minStreakWeeks) partes.push(t('{n} semanas seguidas', { n: e.minStreakWeeks }));
+  if (e.topPercent) partes.push(t('estar entre os {n}% da temporada', { n: e.topPercent }));
+  if (e.achievementId) partes.push(t('a conquista {nome}', { nome: achievementName(e.achievementId) }));
+  if (partes.length === 0) return t('Aberta a todos os atletas');
+  if (partes.length === 1 && e.topPercent) return t('Para quem está entre os {n}% da temporada', { n: e.topPercent });
+  return t('Para quem tem {criterios}', { criterios: fmtLista(partes) });
 }
 
 /** Valida/normaliza a definição de uma recompensa. */
 export function validateReward(input = {}, issuer = {}) {
   const errors = {};
   const titulo = String(input.title || '').trim();
-  if (titulo.length < 4) errors.title = 'Dê um nome à recompensa (ao menos 4 letras).';
-  if (titulo.length > 80) errors.title = 'O nome pode ter até 80 letras.';
+  if (titulo.length < 4) errors.title = t('Dê um nome à recompensa (ao menos 4 letras).');
+  if (titulo.length > 80) errors.title = t('O nome pode ter até 80 letras.');
   const kind = REWARD_KIND_META[input.kind] ? input.kind : 'other';
   const qtd = input.quantity === null || input.quantity === '' || input.quantity === undefined
     ? null : Math.round(Number(input.quantity));
-  if (qtd !== null && !(qtd >= 1 && qtd <= 10000)) errors.quantity = 'Informe uma quantidade entre 1 e 10.000 (ou deixe sem limite).';
+  if (qtd !== null && !(qtd >= 1 && qtd <= 10000)) errors.quantity = t('Informe uma quantidade entre 1 e 10.000 (ou deixe sem limite).');
   const validade = input.validUntil ? Number(input.validUntil) : null;
-  if (validade !== null && !Number.isFinite(validade)) errors.validUntil = 'Data de validade inválida.';
+  if (validade !== null && !Number.isFinite(validade)) errors.validUntil = t('Data de validade inválida.');
   if (Object.keys(errors).length) return { ok: false, errors };
   return {
     ok: true,
@@ -186,11 +187,11 @@ export function validateReward(input = {}, issuer = {}) {
 
 /** A recompensa está disponível para pedido agora? */
 export function rewardAvailability(reward, now = Date.now()) {
-  if (!reward) return { available: false, reason: 'Recompensa indisponível.' };
-  if (reward.status !== 'active') return { available: false, reason: 'Recompensa pausada pelo emissor.' };
-  if (reward.validUntil && now > Number(reward.validUntil)) return { available: false, reason: 'A validade acabou.' };
+  if (!reward) return { available: false, reason: t('Recompensa indisponível.') };
+  if (reward.status !== 'active') return { available: false, reason: t('Recompensa pausada pelo emissor.') };
+  if (reward.validUntil && now > Number(reward.validUntil)) return { available: false, reason: t('A validade acabou.') };
   if (reward.quantity != null && (Number(reward.approvedCount) || 0) >= Number(reward.quantity)) {
-    return { available: false, reason: 'Todas as unidades já foram liberadas.' };
+    return { available: false, reason: t('Todas as unidades já foram liberadas.') };
   }
   return { available: true, remaining: reward.quantity != null ? Number(reward.quantity) - (Number(reward.approvedCount) || 0) : null };
 }

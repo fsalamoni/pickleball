@@ -7,6 +7,7 @@ import {
   MAX_TREE_LEVEL,
 } from '../domain/skillTrees.js';
 import { XP_WEIGHTS_V2 } from '../domain/progressionV2.js';
+import { t } from '@/core/i18n';
 
 /**
  * Mapa de cor Tailwind por token de cor da skill tree.
@@ -69,16 +70,16 @@ export default function SkillTreeBars({
             aria-valuenow={item.level}
             aria-valuemin={0}
             aria-valuemax={MAX_TREE_LEVEL}
-            aria-label={`${item.name} — nível ${item.level}`}
+            aria-label={t('{nome} — nível {n}', { nome: t(item.name), n: item.level })}
             className="space-y-1"
           >
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5">
                 <span aria-hidden="true">{item.icon}</span>
-                <span className="font-semibold text-ink">{item.name}</span>
+                <span className="font-semibold text-ink">{t(item.name)}</span>
               </div>
               <div className={cn('tabular-nums font-bold', colors.text)}>
-                Nv {item.level}
+                {t('Nv {n}', { n: item.level })}
                 {!compact && (
                   <span className="ml-1.5 text-gray-500">{item.xp} XP</span>
                 )}

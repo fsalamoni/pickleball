@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Sparkles, Gift, X } from 'lucide-react';
+import { t } from '@/core/i18n';
 
 /**
  * MissionCompleteToast — toast pra missão completada.
@@ -32,7 +33,7 @@ export default function MissionCompleteToast({ mission, onClose, autoCloseMs = 4
       </div>
       <div className="flex-1">
         <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-emerald-700">
-          <Sparkles className="h-3 w-3" /> Missão completa
+          <Sparkles className="h-3 w-3" /> {t('Missão completa')}
         </p>
         <p className="mt-0.5 text-sm font-bold text-ink">{mission.title}</p>
         <div className="mt-1 flex items-center gap-2 text-xs">
@@ -41,7 +42,7 @@ export default function MissionCompleteToast({ mission, onClose, autoCloseMs = 4
           </span>
           {mission.bonus > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-bold text-amber-700">
-              <Gift className="h-3 w-3" /> bônus {mission.bonus}
+              <Gift className="h-3 w-3" /> {t('bônus {n}', { n: mission.bonus })}
             </span>
           )}
         </div>
@@ -50,7 +51,7 @@ export default function MissionCompleteToast({ mission, onClose, autoCloseMs = 4
         type="button"
         onClick={onClose}
         className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink"
-        aria-label="Fechar"
+        aria-label={t('Fechar')}
       >
         <X className="h-3.5 w-3.5" />
       </button>

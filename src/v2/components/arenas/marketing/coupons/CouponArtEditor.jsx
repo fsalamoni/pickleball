@@ -28,6 +28,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input } from '@/v2/ui/primi
 import { cn } from '@/core/lib/utils';
 import BannerUploader from '../campaigns/BannerUploader';
 import CouponArt from './CouponArt';
+import { t } from '@/core/i18n';
 
 /** A largura em que a miniatura é desenhada antes de reduzir (ver `Miniatura`). */
 const BASE = 460;
@@ -43,7 +44,7 @@ function Miniatura({ nome, design, ativo, seu, onClick, amostra }) {
       type="button"
       onClick={onClick}
       aria-pressed={ativo}
-      aria-label={`Modelo ${nome}`}
+      aria-label={t('Modelo {nome}', { nome })}
       className={cn(
         'w-[188px] shrink-0 snap-start rounded-2xl border-2 p-1 text-left transition',
         ativo ? 'border-ink' : 'border-transparent hover:border-gray-300',
@@ -56,7 +57,7 @@ function Miniatura({ nome, design, ativo, seu, onClick, amostra }) {
       </span>
       <span className="mt-1 flex items-center gap-1 px-1 text-xs font-bold text-ink">
         <span className="truncate">{nome}</span>
-        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-2xs">seu</V2Badge>}
+        {seu && <V2Badge tone="acid" className="px-1.5 py-0 text-2xs">{t('seu')}</V2Badge>}
       </span>
     </button>
   );
@@ -116,10 +117,10 @@ export default function CouponArtEditor({
     : couponDesignFromTemplate(couponTemplate(DEFAULT_COUPON_TEMPLATE_ID));
   const verif = normalizeCouponArtDesign(design);
   const corDaMarca = brand ? (brand.color || '') : (arena?.branding?.primary_color || '');
-  const rotuloDaCor = brand?.label || 'Usar a cor da arena';
+  const rotuloDaCor = brand?.label || t('Usar a cor da arena');
   const nomeDoDono = brand ? (brand.name || '') : (arena?.name || '');
   const modeloAtual = isArenaTemplateId(templateId)
-    ? meus.find((t) => t.id === templateId)?.design || null
+    ? meus.find((m) => m.id === templateId)?.design || null
     : couponTemplate(templateId)?.design || null;
 
   const porDesenho = (template_id, d) => onChange({ source: COUPON_ART_SOURCE.DESIGN, template_id, design: d });
@@ -132,41 +133,41 @@ export default function CouponArtEditor({
       toast.success(msg);
       return true;
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o modelo.');
+      toast.error(err?.message || t('Não foi possível salvar o modelo.'));
       return false;
     }
   };
   const salvarComoNovo = async () => {
     const r = saveArenaCouponTemplate(meus, { name: nomeNovo, design: verif.value });
     if (r.error) { toast.error(r.error); return; }
-    if (await gravar(r.list, `Modelo "${r.saved.name}" salvo. Os da plataforma continuam lá.`)) {
+    if (await gravar(r.list, t('Modelo "{nome}" salvo. Os da plataforma continuam lá.', { nome: r.saved.name }))) {
       porDesenho(r.saved.id, r.saved.design);
       setNomeNovo('');
       setSalvandoComo(false);
     }
   };
   const atualizar = async () => {
-    const atual = meus.find((t) => t.id === templateId);
+    const atual = meus.find((m) => m.id === templateId);
     if (!atual) return;
     const r = saveArenaCouponTemplate(meus, { id: atual.id, name: atual.name, design: verif.value });
     if (r.error) { toast.error(r.error); return; }
-    await gravar(r.list, `Modelo "${atual.name}" atualizado.`);
+    await gravar(r.list, t('Modelo "{nome}" atualizado.', { nome: atual.name }));
   };
   const apagar = async () => {
-    const atual = meus.find((t) => t.id === templateId);
+    const atual = meus.find((m) => m.id === templateId);
     if (!atual) return;
-    if (await gravar(removeArenaCouponTemplate(meus, atual.id), `Modelo "${atual.name}" apagado.`)) {
+    if (await gravar(removeArenaCouponTemplate(meus, atual.id), t('Modelo "{nome}" apagado.', { nome: atual.name }))) {
       porDesenho(null, verif.value);
     }
   };
 
   const upload = value?.source === COUPON_ART_SOURCE.UPLOAD ? value : {};
-  const ehMeu = isArenaTemplateId(templateId) && meus.some((t) => t.id === templateId);
+  const ehMeu = isArenaTemplateId(templateId) && meus.some((m) => m.id === templateId);
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="De onde vem a arte do cupom">
-        {[[COUPON_ART_SOURCE.DESIGN, Paintbrush, 'Usar um modelo'], [COUPON_ART_SOURCE.UPLOAD, ImagePlus, 'Enviar a minha imagem']].map(([k, Icone, rotulo]) => (
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('De onde vem a arte do cupom')}>
+        {[[COUPON_ART_SOURCE.DESIGN, Paintbrush, t('Usar um modelo')], [COUPON_ART_SOURCE.UPLOAD, ImagePlus, t('Enviar a minha imagem')]].map(([k, Icone, rotulo]) => (
           <button key={k} type="button" role="radio" aria-checked={origem === k}
             onClick={() => (k === origem ? null : k === COUPON_ART_SOURCE.UPLOAD
               ? onChange({ source: COUPON_ART_SOURCE.UPLOAD, image_url: '', alt: '' })
@@ -181,23 +182,23 @@ export default function CouponArtEditor({
       {origem === COUPON_ART_SOURCE.DESIGN ? (
         <>
           <div>
-            <p className="mb-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">Modelos da plataforma</p>
+            <p className="mb-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Modelos da plataforma')}</p>
             <div className="-mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 pb-1">
-              {COUPON_ART_TEMPLATES.map((t) => (
-                <Miniatura key={t.id} nome={t.name} design={t.design} amostra={amostra} ativo={templateId === t.id}
-                  onClick={() => escolher(t.id, t.design)} />
+              {COUPON_ART_TEMPLATES.map((m) => (
+                <Miniatura key={m.id} nome={t(m.name)} design={m.design} amostra={amostra} ativo={templateId === m.id}
+                  onClick={() => escolher(m.id, m.design)} />
               ))}
             </div>
             {modelosQ.isError ? (
-              <V2ErrorState inline className="mt-2" title="Não foi possível carregar os seus modelos"
-                description="Os da plataforma continuam aqui." onRetry={() => modelosQ.refetch()} />
+              <V2ErrorState inline className="mt-2" title={t('Não foi possível carregar os seus modelos')}
+                description={t('Os da plataforma continuam aqui.')} onRetry={() => modelosQ.refetch()} />
             ) : meus.length > 0 && (
               <>
-                <p className="mb-1.5 mt-2 text-2xs font-bold uppercase tracking-widest text-gray-500">Meus modelos</p>
+                <p className="mb-1.5 mt-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Meus modelos')}</p>
                 <div className="-mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 pb-1">
-                  {meus.map((t) => (
-                    <Miniatura key={t.id} nome={t.name} design={t.design} amostra={amostra} seu ativo={templateId === t.id}
-                      onClick={() => escolher(t.id, t.design)} />
+                  {meus.map((m) => (
+                    <Miniatura key={m.id} nome={m.name} design={m.design} amostra={amostra} seu ativo={templateId === m.id}
+                      onClick={() => escolher(m.id, m.design)} />
                   ))}
                 </div>
               </>
@@ -205,7 +206,7 @@ export default function CouponArtEditor({
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-semibold text-ink">Como fica</p>
+            <p className="mb-1.5 text-sm font-semibold text-ink">{t('Como fica')}</p>
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
               <CouponArt art={{ source: 'design', design: verif.value }} code={amostra.code || 'CODIGO'}
                 benefit={amostra.benefit} description={amostra.description} arenaName={nomeDoDono} notch="bg-paper" />
@@ -221,15 +222,15 @@ export default function CouponArtEditor({
 
           <button type="button" onClick={() => setPersonalizar((v) => !v)} aria-expanded={personalizar}
             className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-            <SlidersHorizontal className="h-3.5 w-3.5" /> {personalizar ? 'Fechar a personalização' : 'Personalizar textos e cores'}
+            <SlidersHorizontal className="h-3.5 w-3.5" /> {personalizar ? t('Fechar a personalização') : t('Personalizar textos e cores')}
           </button>
 
           {personalizar && (
             <div className="space-y-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
               {[
-                ['cup-art-chamada', 'Chamada', 'kicker', 'Cupom'],
-                ['cup-art-titulo', 'Título', 'title', `Em branco: ${amostra.benefit || 'o benefício do cupom'}`],
-                ['cup-art-texto', 'Texto', 'subtitle', `Em branco: ${amostra.description || 'a descrição do cupom'}`],
+                ['cup-art-chamada', t('Chamada'), 'kicker', t('Cupom')],
+                ['cup-art-titulo', t('Título'), 'title', t('Em branco: {valor}', { valor: amostra.benefit || t('o benefício do cupom') })],
+                ['cup-art-texto', t('Texto'), 'subtitle', t('Em branco: {valor}', { valor: amostra.description || t('a descrição do cupom') })],
               ].map(([id, label, campo, ph]) => (
                 <V2Field key={id} htmlFor={id}
                   label={<span className="flex w-full items-center justify-between gap-2"><span>{label}</span><Contador valor={design[campo]} max={COUPON_TEXT_LIMITS[campo]} /></span>}>
@@ -239,7 +240,7 @@ export default function CouponArtEditor({
               ))}
               <div>
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-ink">Cores</span>
+                  <span className="text-sm font-semibold text-ink">{t('Cores')}</span>
                   {corDaMarca && (
                     <button type="button" onClick={() => porDesenho(templateId, withArenaCouponColors(design, corDaMarca))}
                       className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
@@ -248,9 +249,9 @@ export default function CouponArtEditor({
                   )}
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  <CampoCor id="cup-art-fundo" label="Fundo" valor={verif.value.bg} onChange={(v) => muda('bg', v)} />
-                  <CampoCor id="cup-art-letra" label="Texto" valor={verif.value.fg} onChange={(v) => muda('fg', v)} />
-                  <CampoCor id="cup-art-canhoto" label="Canhoto do código" valor={verif.value.accent} onChange={(v) => muda('accent', v)} />
+                  <CampoCor id="cup-art-fundo" label={t('Fundo')} valor={verif.value.bg} onChange={(v) => muda('bg', v)} />
+                  <CampoCor id="cup-art-letra" label={t('Texto')} valor={verif.value.fg} onChange={(v) => muda('fg', v)} />
+                  <CampoCor id="cup-art-canhoto" label={t('Canhoto do código')} valor={verif.value.accent} onChange={(v) => muda('accent', v)} />
                 </div>
               </div>
 
@@ -258,31 +259,31 @@ export default function CouponArtEditor({
                 {ehMeu && (
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <V2Button type="button" size="sm" variant="secondary" disabled={salvando} onClick={atualizar}>
-                      <Save className="h-4 w-4" /> Atualizar o modelo
+                      <Save className="h-4 w-4" /> {t('Atualizar o modelo')}
                     </V2Button>
                     <V2Button type="button" size="sm" variant="ghost" disabled={salvando} onClick={() => setConfirmarApagar(true)}>
-                      <Trash2 className="h-4 w-4" /> Apagar o modelo
+                      <Trash2 className="h-4 w-4" /> {t('Apagar o modelo')}
                     </V2Button>
                   </div>
                 )}
                 {salvandoComo ? (
                   <div className="flex flex-wrap items-end gap-2">
-                    <V2Field label="Nome do modelo" htmlFor="cup-art-modelo" className="min-w-[12rem] flex-1">
-                      <V2Input id="cup-art-modelo" maxLength={40} value={nomeNovo} autoFocus placeholder="Vale da recepção"
+                    <V2Field label={t('Nome do modelo')} htmlFor="cup-art-modelo" className="min-w-[12rem] flex-1">
+                      <V2Input id="cup-art-modelo" maxLength={40} value={nomeNovo} autoFocus placeholder={t('Vale da recepção')}
                         onChange={(e) => setNomeNovo(e.target.value)} />
                     </V2Field>
                     <V2Button type="button" size="sm" disabled={!nomeNovo.trim() || salvando} onClick={salvarComoNovo}>
-                      Salvar
+                      {t('Salvar')}
                     </V2Button>
-                    <V2Button type="button" size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>Cancelar</V2Button>
+                    <V2Button type="button" size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>{t('Cancelar')}</V2Button>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setSalvandoComo(true)}
                     className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-                    <Save className="h-3.5 w-3.5" /> Salvar como meu modelo
+                    <Save className="h-3.5 w-3.5" /> {t('Salvar como meu modelo')}
                   </button>
                 )}
-                <p className="mt-1 text-2xs text-gray-500">Os modelos da plataforma nunca mudam — salvar cria um modelo seu.</p>
+                <p className="mt-1 text-2xs text-gray-500">{t('Os modelos da plataforma nunca mudam — salvar cria um modelo seu.')}</p>
               </div>
             </div>
           )}
@@ -295,10 +296,10 @@ export default function CouponArtEditor({
           guide={couponUploadGuide()}
           folder={uploadFolder}
           diagram={false}
-          altPlaceholder="1 água de coco grátis a partir do quinto jogo."
+          altPlaceholder={t('1 água de coco grátis a partir do quinto jogo.')}
           preview={(v) => (
             <div>
-              <p className="mb-1 text-xs font-bold text-gray-500">Como fica (o código entra no canhoto, copiável)</p>
+              <p className="mb-1 text-xs font-bold text-gray-500">{t('Como fica (o código entra no canhoto, copiável)')}</p>
               <CouponArt art={{ source: COUPON_ART_SOURCE.UPLOAD, image_url: v.image_url, alt: v.alt }}
                 code={amostra.code || 'CODIGO'} notch="bg-paper" />
             </div>
@@ -309,9 +310,9 @@ export default function CouponArtEditor({
       <ConfirmDialog
         open={confirmarApagar}
         onOpenChange={setConfirmarApagar}
-        title="Apagar este modelo?"
-        description="Some da lista “Meus modelos”. Os cupons que já usam este desenho continuam como estão."
-        confirmLabel="Apagar o modelo"
+        title={t('Apagar este modelo?')}
+        description={t('Some da lista “Meus modelos”. Os cupons que já usam este desenho continuam como estão.')}
+        confirmLabel={t('Apagar o modelo')}
         destructive
         onConfirm={async () => { await apagar(); setConfirmarApagar(false); }}
       />

@@ -10,10 +10,11 @@ import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surfac
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { Sparkles } from 'lucide-react';
 import MiniStat from '@/v2/components/gamification/MiniStat';
+import { t } from '@/core/i18n';
 
 const KINDS = [
-  { value: 'week', label: 'Semana' },
-  { value: 'month', label: 'Mês' },
+  { value: 'week', get label() { return t('Semana'); } },
+  { value: 'month', get label() { return t('Mês'); } },
 ];
 
 /** Revisão do período: semana ou mês, com navegação para os anteriores. */
@@ -22,8 +23,8 @@ export default function V2GamificationReview() {
   if (!on) {
     return (
       <div className="mx-auto max-w-[900px]">
-        <V2PageIntro title="Revisão" subtitle="O resumo do seu período." />
-        <V2Surface><V2EmptyState icon={Sparkles} title="Disponível em breve" description="A revisão da semana chega junto com a gamificação." /></V2Surface>
+        <V2PageIntro title={t('Revisão')} subtitle={t('O resumo do seu período.')} />
+        <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('A revisão da semana chega junto com a gamificação.')} /></V2Surface>
       </div>
     );
   }
@@ -41,17 +42,17 @@ function ReviewOn() {
 
   return (
     <div className="mx-auto max-w-[900px] space-y-5" data-testid="gamification-review">
-      <V2BackLink to="/gamification">Gamificação</V2BackLink>
-      <V2PageIntro title="Sua revisão" subtitle="O que você fez no período, comparado com o anterior. Nada aqui é cobrança." />
+      <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
+      <V2PageIntro title={t('Sua revisão')} subtitle={t('O que você fez no período, comparado com o anterior. Nada aqui é cobrança.')} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <V2SubTabs tabs={KINDS} activeValue={kind} onSelect={(t) => trocar(t.value)} ariaLabel="Tipo de período" dica="revisao-tipo" />
+        <V2SubTabs tabs={KINDS} activeValue={kind} onSelect={(aba) => trocar(aba.value)} ariaLabel={t('Tipo de período')} dica="revisao-tipo" />
         <div className="flex items-center gap-1" data-dica="revisao-periodo">
-          <V2Button variant="ghost" size="sm" onClick={() => setOffset((o) => o - 1)} aria-label="Período anterior">
+          <V2Button variant="ghost" size="sm" onClick={() => setOffset((o) => o - 1)} aria-label={t('Período anterior')}>
             <ChevronLeft className="h-4 w-4" />
           </V2Button>
           <span className="min-w-[10rem] text-center text-sm font-bold text-ink">{review?.window?.label || '…'}</span>
-          <V2Button variant="ghost" size="sm" disabled={offset >= 0} onClick={() => setOffset((o) => Math.min(0, o + 1))} aria-label="Período seguinte">
+          <V2Button variant="ghost" size="sm" disabled={offset >= 0} onClick={() => setOffset((o) => Math.min(0, o + 1))} aria-label={t('Período seguinte')}>
             <ChevronRight className="h-4 w-4" />
           </V2Button>
         </div>
@@ -60,20 +61,20 @@ function ReviewOn() {
       {isLoading ? (
         <V2Skeleton className="h-64 rounded-4xl" />
       ) : isError ? (
-        <V2Surface><V2ErrorState title="Não deu para montar a revisão" onRetry={refetch} /></V2Surface>
+        <V2Surface><V2ErrorState title={t('Não deu para montar a revisão')} onRetry={refetch} /></V2Surface>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MiniStat label="Jogos" value={review.games} />
-            <MiniStat label="Vitórias" value={review.wins} />
-            <MiniStat label="Dias ativos" value={review.activeDays} />
-            <MiniStat label="Missões" value={review.missionsDone} />
+            <MiniStat label={t('Jogos')} value={review.games} />
+            <MiniStat label={t('Vitórias')} value={review.wins} />
+            <MiniStat label={t('Dias ativos')} value={review.activeDays} />
+            <MiniStat label={t('Missões')} value={review.missionsDone} />
           </div>
           <V2Surface data-dica="revisao-corpo">
             <ReviewBody review={review} />
             {review.nextAchievement && (
               <p className="mt-4 rounded-2xl bg-paper p-3 text-sm text-gray-600">
-                Próxima conquista mais perto: <strong className="text-ink">{review.nextAchievement.name}</strong> ({Math.round(review.nextAchievement.progress * 100)}%).
+                {t('Próxima conquista mais perto:')} <strong className="text-ink">{t(review.nextAchievement.name)}</strong> ({Math.round(review.nextAchievement.progress * 100)}%).
               </p>
             )}
           </V2Surface>

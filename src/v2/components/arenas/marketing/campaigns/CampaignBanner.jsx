@@ -13,6 +13,7 @@ import {
 } from '@/modules/arenas/domain/campaignBanner';
 import { cn } from '@/core/lib/utils';
 import BannerArt from './BannerArt';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ campaign: object, arenaName?: string, arenaInArt?: boolean, ratio?: string, className?: string }} props
@@ -23,7 +24,7 @@ export default function CampaignBanner({ campaign, arenaName = '', arenaInArt = 
   if (!campaign?.banner) return null;
   const link = destinationLink(campaign.destination, { arenaId: campaign.arena_id, campaignId: campaign.id });
   const cta = destinationCta(campaign.destination, campaign.banner.design);
-  const alt = bannerAltText(campaign.banner) || campaign.name || 'Campanha';
+  const alt = bannerAltText(campaign.banner) || campaign.name || t('Campanha');
   return (
     <Link
       to={link}

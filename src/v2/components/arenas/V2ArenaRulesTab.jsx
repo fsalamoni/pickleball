@@ -22,6 +22,7 @@ import {
   V2ErrorState,
 } from '@/v2/ui/primitives';
 import { DEFAULT_CANCELLATION_HOURS } from '@/modules/arenas/domain/cancellation_policy';
+import { t } from '@/core/i18n';
 
 function newBlankRule() {
   return { id: `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, title: '', description: '', category: ARENA_RULE_CATEGORIES.GENERAL, order: 0 };
@@ -66,12 +67,12 @@ export default function V2ArenaRulesTab() {
     try {
       const normalized = normalizeArenaRules(rules);
       if (normalized.length === 0) {
-        toast.error('Adicione ao menos uma regra válida.');
+        toast.error(t('Adicione ao menos uma regra válida.'));
         setSaving(false);
         return;
       }
       await update.mutateAsync({ id: arenaId, updates: { rules: normalized } });
-      toast.success(`${normalized.length} regra(s) salvas.`);
+      toast.success(t('{n} regra(s) salvas.', { n: normalized.length }));
       setRules(normalized);
     } catch (err) {
       toast.error(err.message);
@@ -87,8 +88,8 @@ export default function V2ArenaRulesTab() {
   if (!arena && isError) {
     return (
       <V2ErrorState
-        title="Não foi possível carregar as regras da arena"
-        description="Tente de novo antes de editar."
+        title={t('Não foi possível carregar as regras da arena')}
+        description={t('Tente de novo antes de editar.')}
         onRetry={() => refetch()}
       />
     );
@@ -102,18 +103,18 @@ export default function V2ArenaRulesTab() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg font-bold text-ink flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-green-700" /> Regras da arena
+              <ListChecks className="h-5 w-5 text-green-700" /> {t('Regras da arena')}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Adicione regras uma a uma. Os atletas verão na página pública da arena.
+              {t('Adicione regras uma a uma. Os atletas verão na página pública da arena.')}
             </p>
           </div>
           <div className="flex gap-2">
             <V2Button size="sm" variant="secondary" onClick={addRule}>
-              <Plus className="h-4 w-4" /> Adicionar regra
+              <Plus className="h-4 w-4" /> {t('Adicionar regra')}
             </V2Button>
             <V2Button size="sm" onClick={handleSave} disabled={saving}>
-              <Save className="h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar todas'}
+              <Save className="h-4 w-4" /> {saving ? t('Salvando…') : t('Salvar todas')}
             </V2Button>
           </div>
         </div>
@@ -121,9 +122,9 @@ export default function V2ArenaRulesTab() {
         <div className="mt-4 space-y-3">
           {rules.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-paper p-6 text-center">
-              <p className="text-sm text-gray-500">Nenhuma regra cadastrada ainda.</p>
+              <p className="text-sm text-gray-500">{t('Nenhuma regra cadastrada ainda.')}</p>
               <V2Button size="sm" variant="secondary" onClick={addRule} className="mt-2">
-                <Plus className="h-4 w-4" /> Adicionar primeira regra
+                <Plus className="h-4 w-4" /> {t('Adicionar primeira regra')}
               </V2Button>
             </div>
           ) : (
@@ -135,7 +136,7 @@ export default function V2ArenaRulesTab() {
                       onClick={() => moveRule(idx, -1)}
                       disabled={idx === 0}
                       className="text-gray-400 hover:text-ink disabled:opacity-30"
-                      aria-label="Mover para cima"
+                      aria-label={t('Mover para cima')}
                     >
                       <ChevronUp className="h-4 w-4" />
                     </button>
@@ -144,7 +145,7 @@ export default function V2ArenaRulesTab() {
                       onClick={() => moveRule(idx, 1)}
                       disabled={idx === rules.length - 1}
                       className="text-gray-400 hover:text-ink disabled:opacity-30"
-                      aria-label="Mover para baixo"
+                      aria-label={t('Mover para baixo')}
                     >
                       <ChevronDown className="h-4 w-4" />
                     </button>
@@ -152,37 +153,37 @@ export default function V2ArenaRulesTab() {
                   <div className="flex-1 space-y-2">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <div className="sm:col-span-2">
-                        <V2Field label="Título">
+                        <V2Field label={t('Título')}>
                           <V2Input
                             value={r.title}
                             onChange={(e) => updateRule(idx, { title: e.target.value })}
                             maxLength={80}
-                            placeholder="Ex: Não fumar nas quadras"
+                            placeholder={t('Ex: Não fumar nas quadras')}
                           />
                         </V2Field>
                       </div>
-                      <V2Field label="Categoria">
+                      <V2Field label={t('Categoria')}>
                         <V2Select value={r.category} onChange={(e) => updateRule(idx, { category: e.target.value })}>
                           {Object.entries(ARENA_RULE_CATEGORIES).map(([k, v]) => (
-                            <option key={k} value={v}>{v}</option>
+                            <option key={k} value={v}>{t(v)}</option>
                           ))}
                         </V2Select>
                       </V2Field>
                     </div>
-                    <V2Field label="Descrição">
+                    <V2Field label={t('Descrição')}>
                       <V2Textarea
                         value={r.description}
                         onChange={(e) => updateRule(idx, { description: e.target.value })}
                         rows={2}
                         maxLength={500}
-                        placeholder="Detalhe: contexto, sanção, etc."
+                        placeholder={t('Detalhe: contexto, sanção, etc.')}
                       />
                     </V2Field>
                   </div>
                   <button
                     onClick={() => removeRule(idx)}
                     className="mt-1 text-red-500 hover:text-red-700"
-                    aria-label="Remover regra"
+                    aria-label={t('Remover regra')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -194,10 +195,9 @@ export default function V2ArenaRulesTab() {
       </V2Surface>
 
       <V2Surface className="border-amber-200 bg-amber-50/40">
-        <h4 className="flex items-center gap-1.5 text-sm font-bold text-amber-800"><Lightbulb className="h-4 w-4" /> Dica</h4>
+        <h4 className="flex items-center gap-1.5 text-sm font-bold text-amber-800"><Lightbulb className="h-4 w-4" /> {t('Dica')}</h4>
         <p className="mt-1 text-sm text-amber-900">
-          Use categorias para agrupar (ex: Pagamento → &quot;PIX antecipado&quot;, &quot;Sem devolução em 24h&quot;).
-          Regras curtas e diretas funcionam melhor.
+          {t('Use categorias para agrupar (ex: Pagamento → "PIX antecipado", "Sem devolução em 24h"). Regras curtas e diretas funcionam melhor.')}
         </p>
       </V2Surface>
     </div>
@@ -236,9 +236,9 @@ function CancellationPolicyCard({ arena, arenaId, update }) {
           cancellation_notes: form.notes,
         },
       });
-      toast.success('Política de cancelamento salva.');
+      toast.success(t('Política de cancelamento salva.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar.');
+      toast.error(err.message || t('Não foi possível salvar.'));
     } finally {
       setSaving(false);
     }
@@ -248,28 +248,28 @@ function CancellationPolicyCard({ arena, arenaId, update }) {
     <V2Surface>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg font-bold text-ink">Política de cancelamento</h3>
+          <h3 className="font-display text-lg font-bold text-ink">{t('Política de cancelamento')}</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Defina a antecedência esperada para cancelar. Cancelamentos fora do prazo recebem um aviso. Sem cobrança de taxa.
+            {t('Defina a antecedência esperada para cancelar. Cancelamentos fora do prazo recebem um aviso. Sem cobrança de taxa.')}
           </p>
         </div>
         <V2Toggle checked={form.enabled} onChange={(v) => setForm((f) => ({ ...f, enabled: v }))} />
       </div>
       {form.enabled && (
         <div className="mt-4 space-y-3">
-          <V2Field label="Prazo mínimo para cancelar (horas antes do início)">
+          <V2Field label={t('Prazo mínimo para cancelar (horas antes do início)')}>
             <V2Input
               type="number" min="0" max="336"
               value={form.hours}
               onChange={(e) => setForm((f) => ({ ...f, hours: e.target.value }))}
             />
           </V2Field>
-          <V2Field label="Observação (opcional)">
+          <V2Field label={t('Observação (opcional)')}>
             <V2Textarea
               value={form.notes}
               maxLength={500}
               rows={2}
-              placeholder="Ex.: Cancelamentos tardios podem impactar reservas futuras."
+              placeholder={t('Ex.: Cancelamentos tardios podem impactar reservas futuras.')}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             />
           </V2Field>
@@ -277,7 +277,7 @@ function CancellationPolicyCard({ arena, arenaId, update }) {
       )}
       <div className="mt-4 flex justify-end">
         <V2Button size="sm" onClick={save} disabled={saving}>
-          <Save className="h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar política'}
+          <Save className="h-4 w-4" /> {saving ? t('Salvando…') : t('Salvar política')}
         </V2Button>
       </div>
     </V2Surface>

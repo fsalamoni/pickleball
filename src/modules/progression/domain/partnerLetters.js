@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * partnerLetters — a carta ao companheiro.
  *
@@ -26,10 +27,10 @@ export const LETTER_MIN = 3;
 
 /** Sugestões de abertura — para quem trava diante do campo em branco. */
 export const LETTER_STARTERS = Object.freeze([
-  'Obrigado pela parceria! ',
-  'Adorei jogar com você. ',
-  'Valeu pela paciência e pela energia. ',
-  'Foi uma honra dividir a quadra. ',
+  tk('Obrigado pela parceria! '),
+  tk('Adorei jogar com você. '),
+  tk('Valeu pela paciência e pela energia. '),
+  tk('Foi uma honra dividir a quadra. '),
 ]);
 
 /**
@@ -51,11 +52,11 @@ export function letterDocId(matchKey, fromUid, toUid) {
  * @returns {{ ok: true, value: object } | { ok: false, error: string }}
  */
 export function validateLetter({ fromUid, toUid, matchKey, text, showName = false } = {}) {
-  if (!fromUid || !toUid || fromUid === toUid) return { ok: false, error: 'Escolha o companheiro da carta.' };
-  if (!matchKey) return { ok: false, error: 'Informe o jogo.' };
+  if (!fromUid || !toUid || fromUid === toUid) return { ok: false, error: t('Escolha o companheiro da carta.') };
+  if (!matchKey) return { ok: false, error: t('Informe o jogo.') };
   const limpo = String(text || '').replace(/\s+/g, ' ').trim().slice(0, LETTER_MAX);
-  if (limpo.length < LETTER_MIN) return { ok: false, error: 'Escreva ao menos uma frase.' };
-  if (/https?:\/\/|www\./i.test(limpo)) return { ok: false, error: 'Cartas não levam links.' };
+  if (limpo.length < LETTER_MIN) return { ok: false, error: t('Escreva ao menos uma frase.') };
+  if (/https?:\/\/|www\./i.test(limpo)) return { ok: false, error: t('Cartas não levam links.') };
   return { ok: true, value: { fromUid, toUid, matchKey, text: limpo, showName: Boolean(showName) } };
 }
 
@@ -69,7 +70,7 @@ export function letterForRecipient(letter, authorName = null) {
     text: letter.text,
     createdAt: letter.createdAt,
     readAt: letter.readAt || null,
-    from: letter.showName && authorName ? authorName : 'Um parceiro de dupla',
+    from: letter.showName && authorName ? authorName : t('Um parceiro de dupla'),
     anonymous: !(letter.showName && authorName),
   };
 }

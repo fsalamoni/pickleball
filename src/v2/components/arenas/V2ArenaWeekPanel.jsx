@@ -6,9 +6,10 @@ import { weekSummary, bookingsHeatmap } from '@/modules/arenas/domain/arena_week
 import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { formatDateISO } from '@/modules/arenas/domain/calendar';
+import { t, tn, tk, fmtNumero } from '@/core/i18n';
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const WEEKDAYS = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
+const BRL = { format: (v) => fmtNumero(v, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) };
 
 function isoDaysAgo(n) {
   const d = new Date();
@@ -53,16 +54,16 @@ export default function V2ArenaWeekPanel({ arenaId }) {
       <div>
         <div className="mb-4 flex items-center gap-2">
           <CalendarRange className="h-5 w-5 text-acid" />
-          <h2 className="font-display text-lg font-bold text-ink">Como foi sua semana</h2>
-          <span className="text-xs text-gray-500">últimos 7 dias</span>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Como foi sua semana')}</h2>
+          <span className="text-xs text-gray-500">{t('últimos 7 dias')}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Kpi icon={DollarSign} accent="acid" label="Receita confirmada" value={BRL.format(week.revenue)} />
-          <Kpi icon={CalendarRange} accent="ink" label="Reservas" value={week.bookings} hint={`${week.confirmed} confirmada(s)`} />
-          <Kpi icon={TrendingUp} accent="ink" label="Horas ocupadas" value={`${week.bookedHours}h`} />
-          <Kpi icon={UserX} accent="ink" label="No-show" value={week.noShowRate == null ? '—' : `${week.noShowRate}%`} hint={`${week.noShows} falta(s)`} />
-          <Kpi icon={Star} accent="acid" label="Avaliação" value={avgRating == null ? '—' : avgRating.toFixed(1)} hint={reviews.length ? `${reviews.length} avaliações` : 'sem avaliações'} />
+          <Kpi icon={DollarSign} accent="acid" label={t('Receita confirmada')} value={BRL.format(week.revenue)} />
+          <Kpi icon={CalendarRange} accent="ink" label={t('Reservas')} value={week.bookings} hint={t('{n} confirmada(s)', { n: week.confirmed })} />
+          <Kpi icon={TrendingUp} accent="ink" label={t('Horas ocupadas')} value={`${week.bookedHours}h`} />
+          <Kpi icon={UserX} accent="ink" label={t('No-show')} value={week.noShowRate == null ? '—' : `${week.noShowRate}%`} hint={t('{n} falta(s)', { n: week.noShows })} />
+          <Kpi icon={Star} accent="acid" label={t('Avaliação')} value={avgRating == null ? '—' : avgRating.toFixed(1)} hint={reviews.length ? tn(reviews.length, '{n} avaliação', '{n} avaliações') : t('sem avaliações')} />
         </div>
       </div>
 
@@ -70,10 +71,10 @@ export default function V2ArenaWeekPanel({ arenaId }) {
       <V2Surface>
         <div className="mb-3 flex items-center gap-2">
           <Percent className="h-4 w-4 text-ink" />
-          <h3 className="text-sm font-bold text-ink">Mapa de calor · horários mais cheios</h3>
+          <h3 className="text-sm font-bold text-ink">{t('Mapa de calor · horários mais cheios')}</h3>
         </div>
         {heat.max === 0 ? (
-          <p className="text-sm text-gray-500">Ainda sem reservas confirmadas para desenhar o mapa.</p>
+          <p className="text-sm text-gray-500">{t('Ainda sem reservas confirmadas para desenhar o mapa.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
@@ -85,7 +86,7 @@ export default function V2ArenaWeekPanel({ arenaId }) {
               </div>
               {heat.grid.map((row, dow) => (
                 <div key={dow} className="flex items-center">
-                  <div className="w-10 shrink-0 text-2xs font-semibold text-gray-500">{WEEKDAYS[dow]}</div>
+                  <div className="w-10 shrink-0 text-2xs font-semibold text-gray-500">{t(WEEKDAYS[dow])}</div>
                   {row.map((v, col) => {
                     const intensity = heat.max > 0 ? v / heat.max : 0;
                     return (
@@ -93,7 +94,7 @@ export default function V2ArenaWeekPanel({ arenaId }) {
                         <div
                           className={cn('h-6 w-6 rounded-md', v === 0 ? 'bg-paper' : '')}
                           style={v > 0 ? { backgroundColor: `rgba(166, 226, 46, ${0.25 + intensity * 0.75})` } : undefined}
-                          title={`${WEEKDAYS[dow]} ${heat.hours[col]}h · ${v} reserva(s)`}
+                          title={`${t(WEEKDAYS[dow])} ${heat.hours[col]}h · ${t('{n} reserva(s)', { n: v })}`}
                         />
                       </div>
                     );

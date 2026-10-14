@@ -1,5 +1,6 @@
 import React, { useState, cloneElement } from 'react';
 import { ConfirmDialog as ControlledConfirmDialog } from '@/components/ui/confirm-dialog';
+import { t } from '@/core/i18n';
 
 /**
  * Açúcar sintático "trigger-based" sobre o ConfirmDialog canônico
@@ -21,10 +22,10 @@ import { ConfirmDialog as ControlledConfirmDialog } from '@/components/ui/confir
  */
 export default function ConfirmDialog({
   trigger,
-  title = 'Tem certeza?',
+  title = t('Tem certeza?'),
   description,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel = t('Confirmar'),
+  cancelLabel = t('Cancelar'),
   destructive = true,
   onConfirm,
 }) {

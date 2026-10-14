@@ -20,34 +20,35 @@ import {
   HOUSE_TOURNAMENT_TONE, houseTournamentDateLabel, sortHouseTournaments,
 } from '@/modules/arenas/domain/houseTournaments';
 import { V2Badge, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Quantos cabem na página da arena; o resto está em "ver todos". */
 const NA_PAGINA = 4;
 
-export function HouseTournamentRow({ t }) {
-  const inicio = houseTournamentDateLabel(t.starts_at);
-  const fim = houseTournamentDateLabel(t.ends_at);
-  const periodo = inicio && fim && inicio !== fim ? `${inicio} a ${fim}` : (inicio || 'Data a definir');
+export function HouseTournamentRow({ t: torneio }) {
+  const inicio = houseTournamentDateLabel(torneio.starts_at);
+  const fim = houseTournamentDateLabel(torneio.ends_at);
+  const periodo = inicio && fim && inicio !== fim ? t('{inicio} a {fim}', { inicio, fim }) : (inicio || t('Data a definir'));
   return (
     <Link
-      to={`/torneios/${t.id}`}
+      to={`/torneios/${torneio.id}`}
       className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3 transition-colors hover:border-ink/30"
     >
       <div className="min-w-0">
-        <p className="line-clamp-1 font-bold text-ink">{t.name}</p>
+        <p className="line-clamp-1 font-bold text-ink">{torneio.name}</p>
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
           <span>{periodo}</span>
-          {t.city && (
+          {torneio.city && (
             <span className="inline-flex items-center gap-0.5">
-              <MapPin className="h-3 w-3" /> {t.city}{t.state ? `/${t.state}` : ''}
+              <MapPin className="h-3 w-3" /> {torneio.city}{torneio.state ? `/${torneio.state}` : ''}
             </span>
           )}
         </p>
       </div>
       <div className="flex items-center gap-2">
-        {t.status && (
-          <V2Badge tone={HOUSE_TOURNAMENT_TONE[t.status] || 'neutral'}>
-            {TOURNAMENT_STATUS_LABELS[t.status] || 'Torneio'}
+        {torneio.status && (
+          <V2Badge tone={HOUSE_TOURNAMENT_TONE[torneio.status] || 'neutral'}>
+            {t(TOURNAMENT_STATUS_LABELS[torneio.status] || 'Torneio')}
           </V2Badge>
         )}
         <ArrowRight className="h-4 w-4 text-gray-400" aria-hidden />
@@ -66,8 +67,8 @@ export default function HouseTournamentsSection({ arenaId }) {
       <div className="mt-6">
         <V2ErrorState
           inline
-          title="Não foi possível carregar os torneios da casa"
-          description="A conexão falhou. Os torneios continuam lá."
+          title={t('Não foi possível carregar os torneios da casa')}
+          description={t('A conexão falhou. Os torneios continuam lá.')}
           onRetry={() => q.refetch()}
         />
       </div>
@@ -79,17 +80,17 @@ export default function HouseTournamentsSection({ arenaId }) {
     <V2Surface className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <Trophy className="h-4 w-4" /> Torneios da casa
+          <Trophy className="h-4 w-4" /> {t('Torneios da casa')}
         </h3>
         <Link to={`/arenas/${arenaId}/torneios`} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-          {torneios.length > NA_PAGINA ? `Ver todos (${torneios.length})` : 'Ver torneios'} <ArrowRight className="h-3.5 w-3.5" />
+          {torneios.length > NA_PAGINA ? t('Ver todos ({n})', { n: torneios.length }) : t('Ver torneios')} <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
       <p className="mt-1 text-xs text-gray-500">
-        Torneios da plataforma sediados aqui, com inscrição, chaves e resultados pelas regras da plataforma.
+        {t('Torneios da plataforma sediados aqui, com inscrição, chaves e resultados pelas regras da plataforma.')}
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {torneios.slice(0, NA_PAGINA).map((t) => <HouseTournamentRow key={t.id} t={t} />)}
+        {torneios.slice(0, NA_PAGINA).map((tor) => <HouseTournamentRow key={tor.id} t={tor} />)}
       </div>
     </V2Surface>
   );

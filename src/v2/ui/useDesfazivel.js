@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { JANELA_DESFAZER_MS, agendarDesfazivel } from '@/core/domain/desfazer';
+import { t } from '@/core/i18n';
 
 export function useDesfazivel() {
   const [ocultos, setOcultos] = useState(() => new Set());
@@ -35,7 +36,7 @@ export function useDesfazivel() {
     toast(mensagem, {
       duration: JANELA_DESFAZER_MS,
       action: {
-        label: 'Desfazer',
+        label: t('Desfazer'),
         onClick: () => { if (agendado.cancelar()) { pendentes.current.delete(id); mostrar(id); } },
       },
     });

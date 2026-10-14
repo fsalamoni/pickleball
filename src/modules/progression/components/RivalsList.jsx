@@ -2,6 +2,7 @@ import React from 'react';
 import { Swords, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /**
  * RivalsList — seus confrontos diretos mais frequentes.
@@ -26,8 +27,8 @@ export default function RivalsList({ rivals = [], isLoading = false, className }
       <V2Surface className={className}>
         <V2EmptyState
           icon={Swords}
-          title="Ainda sem rivais"
-          description="Rival é quem você já enfrentou pelo menos duas vezes. Jogue mais e eles aparecem aqui."
+          title={t('Ainda sem rivais')}
+          description={t('Rival é quem você já enfrentou pelo menos duas vezes. Jogue mais e eles aparecem aqui.')}
         />
       </V2Surface>
     );

@@ -2,13 +2,14 @@ import React from 'react';
 import { GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const STATUS_META = {
-  pending: { label: 'Convite', tone: 'amber' },
-  active: { label: 'Ativa', tone: 'green' },
-  paused: { label: 'Pausada', tone: 'amber' },
-  completed: { label: 'Concluída', tone: 'blue' },
-  cancelled: { label: 'Cancelada', tone: 'neutral' },
+  pending: { get label() { return t('Convite'); }, tone: 'amber' },
+  active: { get label() { return t('Ativa'); }, tone: 'green' },
+  paused: { get label() { return t('Pausada'); }, tone: 'amber' },
+  completed: { get label() { return t('Concluída'); }, tone: 'blue' },
+  cancelled: { get label() { return t('Cancelada'); }, tone: 'neutral' },
 };
 
 /**
@@ -52,8 +53,8 @@ export default function MentorshipsPanel({
       <V2Surface className={className}>
         <V2EmptyState
           icon={GraduationCap}
-          title="Nenhuma mentoria"
-          description="Mentoria liga um atleta mais experiente a quem está começando. Combine com a pessoa e o vínculo aparece aqui."
+          title={t('Nenhuma mentoria')}
+          description={t('Mentoria liga um atleta mais experiente a quem está começando. Combine com a pessoa e o vínculo aparece aqui.')}
         />
       </V2Surface>
     );
@@ -84,26 +85,26 @@ export default function MentorshipsPanel({
                 <p className="text-sm font-semibold text-ink">
                   {pendente
                     ? (euConvidei
-                      ? `Convite enviado a ${outro}`
-                      : `${outro} convidou você para ser ${souMentor ? 'mentor' : 'aprendiz'}`)
-                    : (souMentor ? 'Você é o mentor' : 'Você é o aprendiz')}
+                      ? t('Convite enviado a {nome}', { nome: outro })
+                      : (souMentor ? t('{nome} convidou você para ser mentor', { nome: outro }) : t('{nome} convidou você para ser aprendiz', { nome: outro })))
+                    : (souMentor ? t('Você é o mentor') : t('Você é o aprendiz'))}
                 </p>
                 <p className="text-xs text-gray-500">
                   {pendente
-                    ? (euConvidei ? 'Aguardando a resposta. Você pode retirar o convite.' : 'Só começa se você aceitar.')
+                    ? (euConvidei ? t('Aguardando a resposta. Você pode retirar o convite.') : t('Só começa se você aceitar.'))
                     : `${m.lessonsCompleted} ${m.lessonsCompleted === 1 ? 'aula registrada' : 'aulas registradas'}`}
                 </p>
               </div>
-              <V2Badge tone={meta.tone}>{meta.label}</V2Badge>
+              <V2Badge tone={meta.tone}>{t(meta.label)}</V2Badge>
               {pendente && (
                 <div className="flex gap-2">
                   {!euConvidei && (
                     <V2Button size="sm" disabled={isBusy} onClick={() => onRespond?.(m.pairKey, true)} data-testid="mentorship-accept-btn">
-                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Aceitar
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> {t('Aceitar')}
                     </V2Button>
                   )}
                   <V2Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onRespond?.(m.pairKey, false)} data-testid="mentorship-decline-btn">
-                    <XCircle className="h-4 w-4" aria-hidden="true" /> {euConvidei ? 'Retirar' : 'Recusar'}
+                    <XCircle className="h-4 w-4" aria-hidden="true" /> {euConvidei ? t('Retirar') : t('Recusar')}
                   </V2Button>
                 </div>
               )}
@@ -116,7 +117,7 @@ export default function MentorshipsPanel({
                     onClick={() => onRecordLesson?.(m.pairKey)}
                     data-testid="mentorship-lesson-btn"
                   >
-                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Registrar aula
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> {t('Registrar aula')}
                   </V2Button>
                   <V2Button
                     variant="ghost"
@@ -125,7 +126,7 @@ export default function MentorshipsPanel({
                     onClick={() => onEnd?.(m.pairKey)}
                     data-testid="mentorship-end-btn"
                   >
-                    <XCircle className="h-4 w-4" aria-hidden="true" /> Encerrar
+                    <XCircle className="h-4 w-4" aria-hidden="true" /> {t('Encerrar')}
                   </V2Button>
                 </div>
               )}

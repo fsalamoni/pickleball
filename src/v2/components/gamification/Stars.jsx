@@ -1,9 +1,10 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /** Seletor de estrelas (1–5), acessível por teclado e leitor de tela. */
-export function StarPicker({ value = 0, onChange, label = 'Nota' }) {
+export function StarPicker({ value = 0, onChange, label = t('Nota') }) {
   return (
     <div role="radiogroup" aria-label={label} className="flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => (

@@ -20,23 +20,24 @@ import {
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { TermNote } from '@/v2/components/gamification/TermHint';
+import { t } from '@/core/i18n';
 
 const FAMILY_TABS = [
-  { key: 'all', label: 'Todas' },
-  { key: ACHIEVEMENT_FAMILY.CAREER, label: 'Carreira' },
-  { key: ACHIEVEMENT_FAMILY.SOCIAL, label: 'Social' },
-  { key: ACHIEVEMENT_FAMILY.DISCOVERY, label: 'Descoberta' },
-  { key: ACHIEVEMENT_FAMILY.SEASONAL, label: 'Sazonal' },
-  { key: ACHIEVEMENT_FAMILY.COMMUNITY, label: 'Comunidade' },
+  { key: 'all', get label() { return t('Todas'); } },
+  { key: ACHIEVEMENT_FAMILY.CAREER, get label() { return t('Carreira'); } },
+  { key: ACHIEVEMENT_FAMILY.SOCIAL, get label() { return t('Social'); } },
+  { key: ACHIEVEMENT_FAMILY.DISCOVERY, get label() { return t('Descoberta'); } },
+  { key: ACHIEVEMENT_FAMILY.SEASONAL, get label() { return t('Sazonal'); } },
+  { key: ACHIEVEMENT_FAMILY.COMMUNITY, get label() { return t('Comunidade'); } },
 ];
 
 const RARITY_FILTERS = [
-  { key: 'all', label: 'Todas raridades' },
-  { key: ACHIEVEMENT_RARITY.COMMON, label: 'Comum' },
-  { key: ACHIEVEMENT_RARITY.UNCOMMON, label: 'Incomum' },
-  { key: ACHIEVEMENT_RARITY.RARE, label: 'Rara' },
-  { key: ACHIEVEMENT_RARITY.EPIC, label: 'Épica' },
-  { key: ACHIEVEMENT_RARITY.LEGENDARY, label: 'Lendária' },
+  { key: 'all', get label() { return t('Todas raridades'); } },
+  { key: ACHIEVEMENT_RARITY.COMMON, get label() { return t('Comum'); } },
+  { key: ACHIEVEMENT_RARITY.UNCOMMON, get label() { return t('Incomum'); } },
+  { key: ACHIEVEMENT_RARITY.RARE, get label() { return t('Rara'); } },
+  { key: ACHIEVEMENT_RARITY.EPIC, get label() { return t('Épica'); } },
+  { key: ACHIEVEMENT_RARITY.LEGENDARY, get label() { return t('Lendária'); } },
 ];
 
 export default function V2Achievements() {
@@ -48,17 +49,17 @@ export default function V2Achievements() {
     return (
       <div className="mx-auto max-w-[1100px]">
         <V2PageIntro
-          title="Conquistas"
-          subtitle="Catálogo de troféus, medalhas e marcos da plataforma."
+          title={t('Conquistas')}
+          subtitle={t('Catálogo de troféus, medalhas e marcos da plataforma.')}
         />
         <V2Surface>
           <V2EmptyState
             icon={Lock}
-            title="Conquistas em breve"
-            description="O catálogo de conquistas V2 está em construção. Por enquanto, veja as 20 conquistas clássicas em 'Meu desempenho'."
+            title={t('Conquistas em breve')}
+            description={t('O catálogo de conquistas V2 está em construção. Por enquanto, veja as 20 conquistas clássicas em “Meu desempenho”.')}
             action={
               <V2Button asChild>
-                <Link to="/meu-desempenho">Ir para Meu desempenho</Link>
+                <Link to="/meu-desempenho">{t('Ir para Meu desempenho')}</Link>
               </V2Button>
             }
           />
@@ -98,7 +99,7 @@ function V2AchievementsOn({ user }) {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1200px]">
-        <V2PageIntro title="Conquistas" subtitle="Catálogo de troféus e marcos." />
+        <V2PageIntro title={t('Conquistas')} subtitle={t('Catálogo de troféus e marcos.')} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <V2Skeleton key={i} className="h-48 rounded-4xl" />)}
         </div>
@@ -109,11 +110,11 @@ function V2AchievementsOn({ user }) {
   return (
     <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
-        title="Conquistas"
-        subtitle={`${result.unlockedCount} de ${result.total} desbloqueadas — quanto mais você joga, mais você conquista.`}
+        title={t('Conquistas')}
+        subtitle={t('{n} de {total} desbloqueadas — quanto mais você joga, mais você conquista.', { n: result.unlockedCount, total: result.total })}
         action={
           <V2Badge tone="green">
-            <Sparkles className="h-3.5 w-3.5" /> +{result.unlocked.reduce((s, a) => s + (a.xpBonus || 0), 0)} XP bônus
+            <Sparkles className="h-3.5 w-3.5" /> +{result.unlocked.reduce((s, a) => s + (a.xpBonus || 0), 0)} {t('XP bônus')}
           </V2Badge>
         }
       />
@@ -122,22 +123,22 @@ function V2AchievementsOn({ user }) {
       {/* Filtros */}
       <V2Surface className="mb-6 space-y-4" data-dica="conquistas-filtros">
         <div>
-          <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">Família</p>
-          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por família">
-            {FAMILY_TABS.map((t) => (
+          <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">{t('Família')}</p>
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('Filtrar por família')}>
+            {FAMILY_TABS.map((aba) => (
               <button
-                key={t.key}
+                key={aba.key}
                 type="button"
                 role="tab"
-                aria-selected={family === t.key}
-                aria-label={`Filtrar por ${t.label}`}
-                onClick={() => setFamily(t.key)}
+                aria-selected={family === aba.key}
+                aria-label={t('Filtrar por {filtro}', { filtro: aba.label })}
+                onClick={() => setFamily(aba.key)}
                 className={cn(
                   'rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
-                  family === t.key ? 'bg-ink text-white' : 'bg-paper text-gray-600 hover:bg-gray-100',
+                  family === aba.key ? 'bg-ink text-white' : 'bg-paper text-gray-600 hover:bg-gray-100',
                 )}
               >
-                {t.label}
+                {aba.label}
               </button>
             ))}
           </div>
@@ -145,7 +146,7 @@ function V2AchievementsOn({ user }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">Raridade</p>
+            <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-gray-500">{t('Raridade')}</p>
             <div className="flex flex-wrap gap-1.5">
               {RARITY_FILTERS.map((r) => (
                 <button
@@ -171,7 +172,7 @@ function V2AchievementsOn({ user }) {
             )}
           >
             <Trophy className="mr-1 inline h-3.5 w-3.5" />
-            Só desbloqueadas
+            {t('Só desbloqueadas')}
           </button>
         </div>
 
@@ -182,7 +183,7 @@ function V2AchievementsOn({ user }) {
             return (
               <div key={key} className="rounded-2xl bg-paper p-3 text-center">
                 <p className="text-lg font-bold text-ink">{f.unlocked}<span className="text-xs text-gray-500">/{f.total}</span></p>
-                <p className="mt-0.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">{meta.name}</p>
+                <p className="mt-0.5 text-2xs font-semibold uppercase tracking-wide text-gray-500">{t(meta.name)}</p>
               </div>
             );
           })}
@@ -194,8 +195,8 @@ function V2AchievementsOn({ user }) {
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
-            title="Nenhuma conquista com esses filtros"
-            description="Tente outra família ou raridade."
+            title={t('Nenhuma conquista com esses filtros')}
+            description={t('Tente outra família ou raridade.')}
           />
         </V2Surface>
       ) : (
@@ -220,15 +221,15 @@ function V2AchievementsOn({ user }) {
         <V2Surface className="mt-8" data-testid="achievements-soon">
           <h2 className="font-display text-lg font-bold text-ink">Em breve ({result.soon.length})</h2>
           <p className="mb-4 mt-1 text-sm text-gray-500">
-            A plataforma ainda não consegue medir estas — elas não entram na sua conta de “x de y”. Quando o dado existir, elas se destravam sozinhas.
+            {t('A plataforma ainda não consegue medir estas — elas não entram na sua conta de “x de y”. Quando o dado existir, elas se destravam sozinhas.')}
           </p>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {result.soon.map((a) => (
               <li key={a.id} className="flex items-start gap-3 rounded-2xl border border-dashed border-gray-200 p-3">
                 <span className="text-2xl opacity-60" aria-hidden="true">{a.icon}</span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-600">{a.name}</p>
-                  <p className="text-xs text-gray-500">{a.description}</p>
+                  <p className="text-sm font-bold text-gray-600">{t(a.name)}</p>
+                  <p className="text-xs text-gray-500">{t(a.description)}</p>
                 </div>
               </li>
             ))}

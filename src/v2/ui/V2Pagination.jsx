@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PAGE_SIZES, pageNumbers } from '@/core/domain/pagination';
 import { V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 function BotaoPagina({ ativo, children, ...props }) {
   return (
@@ -48,7 +49,7 @@ function BotaoPagina({ ativo, children, ...props }) {
  * @param {string} [props.idPrefix='lista'] para o `id` do seletor
  */
 export default function V2Pagination({
-  data, onPage, onPageSize, itemLabel = 'itens', sizes = PAGE_SIZES, idPrefix = 'lista',
+  data, onPage, onPageSize, itemLabel = t('itens'), sizes = PAGE_SIZES, idPrefix = 'lista',
 }) {
   const { page, pageCount, pageSize, total, from, to } = data;
   const seletorId = `${idPrefix}-por-pagina`;
@@ -57,13 +58,13 @@ export default function V2Pagination({
     <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         {total > 0
-          ? `Mostrando ${from}–${to} de ${total} ${itemLabel}`
-          : `Nenhum resultado`}
+          ? t('Mostrando {de}–{ate} de {total} {itens}', { de: from, ate: to, total, itens: itemLabel })
+          : t('Nenhum resultado')}
       </p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
-          <label htmlFor={seletorId} className="text-sm text-gray-500">Por página</label>
+          <label htmlFor={seletorId} className="text-sm text-gray-500">{t('Por página')}</label>
           <V2Select
             id={seletorId}
             value={String(pageSize)}
@@ -74,11 +75,11 @@ export default function V2Pagination({
         </div>
 
         {pageCount > 1 && (
-          <nav aria-label="Navegação de páginas" className="flex items-center gap-1">
+          <nav aria-label={t('Navegação de páginas')} className="flex items-center gap-1">
             <BotaoPagina
               onClick={() => onPage(page - 1)}
               disabled={page <= 1}
-              aria-label="Página anterior"
+              aria-label={t('Página anterior')}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </BotaoPagina>
@@ -91,7 +92,7 @@ export default function V2Pagination({
                 key={n}
                 ativo={n === page}
                 onClick={() => onPage(n)}
-                aria-label={`Página ${n}`}
+                aria-label={t('Página {n}', { n })}
               >
                 {n}
               </BotaoPagina>
@@ -100,7 +101,7 @@ export default function V2Pagination({
             <BotaoPagina
               onClick={() => onPage(page + 1)}
               disabled={page >= pageCount}
-              aria-label="Próxima página"
+              aria-label={t('Próxima página')}
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </BotaoPagina>

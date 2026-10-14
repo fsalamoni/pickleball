@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Domínio PURO da CONFERÊNCIA e do REGISTRO de exportação DUPR.
  *
@@ -43,11 +44,11 @@ export const EXPORT_STATUS = Object.freeze({
 
 /** Rótulos pt-BR curtos (para badges/filtros). */
 export const EXPORT_STATUS_LABELS = Object.freeze({
-  [EXPORT_STATUS.PENDING]: 'Pendente',
-  [EXPORT_STATUS.EXPORTED]: 'Exportada',
-  [EXPORT_STATUS.SUBMITTED]: 'Lançada no DUPR',
-  [EXPORT_STATUS.CONFIRMED]: 'Confirmada no DUPR',
-  [EXPORT_STATUS.EXCLUDED]: 'Não lançar no DUPR',
+  [EXPORT_STATUS.PENDING]: tk('Pendente'),
+  [EXPORT_STATUS.EXPORTED]: tk('Exportada'),
+  [EXPORT_STATUS.SUBMITTED]: tk('Lançada no DUPR'),
+  [EXPORT_STATUS.CONFIRMED]: tk('Confirmada no DUPR'),
+  [EXPORT_STATUS.EXCLUDED]: tk('Não lançar no DUPR'),
 });
 
 /** Ordem/precedência das situações (maior = mais avançada). */

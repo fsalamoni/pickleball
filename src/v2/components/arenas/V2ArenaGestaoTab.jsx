@@ -25,6 +25,7 @@ import { daysToExpiry, stockPosition, STOCK_SITUATION } from '@/modules/arenas/d
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2ErrorState, V2StatCard, V2Surface, V2Skeleton } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 /** Quantos itens de cada alerta aparecem antes do "e mais N". */
 const MAX_ALERTAS = 12;
@@ -64,10 +65,10 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
 
     // Checklist de primeiros passos — cada ação leva à aba que a resolve.
     const steps = [
-      { key: 'produtos', label: 'Adicionar produtos ao mercado', hint: 'Puxe do catálogo ou cadastre manualmente.', done: products.length > 0, action: onGoToCatalog, actionLabel: 'Ir ao catálogo' },
-      { key: 'precos', label: 'Definir preços de venda', hint: 'Cada produto precisa de um preço para vender.', done: products.length > 0 && withSalePrice >= Math.max(1, Math.ceil(products.length * 0.5)), action: onGoToEstoque && (() => onGoToEstoque('todos')), actionLabel: 'Abrir o estoque' },
-      { key: 'entradas', label: 'Registrar entradas (compras)', hint: 'O produto só entra no estoque quando você registra a compra dele.', done: entries.length > 0, action: onGoToCompras, actionLabel: 'Registrar compra' },
-      { key: 'saidas', label: 'Registrar a primeira venda', hint: 'Saídas alimentam receita e margem.', done: exits.length > 0, action: onGoToVendas, actionLabel: 'Registrar venda' },
+      { key: 'produtos', label: t('Adicionar produtos ao mercado'), hint: t('Puxe do catálogo ou cadastre manualmente.'), done: products.length > 0, action: onGoToCatalog, actionLabel: t('Ir ao catálogo') },
+      { key: 'precos', label: t('Definir preços de venda'), hint: t('Cada produto precisa de um preço para vender.'), done: products.length > 0 && withSalePrice >= Math.max(1, Math.ceil(products.length * 0.5)), action: onGoToEstoque && (() => onGoToEstoque('todos')), actionLabel: t('Abrir o estoque') },
+      { key: 'entradas', label: t('Registrar entradas (compras)'), hint: t('O produto só entra no estoque quando você registra a compra dele.'), done: entries.length > 0, action: onGoToCompras, actionLabel: t('Registrar compra') },
+      { key: 'saidas', label: t('Registrar a primeira venda'), hint: t('Saídas alimentam receita e margem.'), done: exits.length > 0, action: onGoToVendas, actionLabel: t('Registrar venda') },
     ];
     const doneCount = steps.filter((s) => s.done).length;
 
@@ -83,8 +84,8 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
   if (falhou) {
     return (
       <V2ErrorState
-        title="Não foi possível carregar o estoque"
-        description="Os números desta tela dependem de produtos, compras e saídas. Tente de novo em instantes."
+        title={t('Não foi possível carregar o estoque')}
+        description={t('Os números desta tela dependem de produtos, compras e saídas. Tente de novo em instantes.')}
         onRetry={() => {
           if (qP.isError) qP.refetch();
           if (qE.isError) qE.refetch();
@@ -101,21 +102,21 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <ClipboardCheck className="h-5 w-5 text-green-700" />
-        <h2 className="font-display text-xl font-bold text-ink">Organização e Gestão</h2>
+        <h2 className="font-display text-xl font-bold text-ink">{t('Organização e Gestão')}</h2>
       </div>
 
       {/* Resumo */}
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <V2StatCard icon={Boxes} label="À venda agora" value={String(aVenda)} hint={`de ${model.rows.length} cadastrados`} accent="ink" />
-        <V2StatCard icon={DollarSign} label="Investido" value={formatPrice(totalInvested)} accent="ink" />
-        <V2StatCard icon={TrendingUp} label="Receita" value={formatPrice(totalRevenue)} accent="acid" />
-        <V2StatCard icon={AlertTriangle} label="Alertas" value={String(repor.length + validade.length)} accent="ink" />
+        <V2StatCard icon={Boxes} label={t('À venda agora')} value={String(aVenda)} hint={t('de {n} cadastrados', { n: model.rows.length })} accent="ink" />
+        <V2StatCard icon={DollarSign} label={t('Investido')} value={formatPrice(totalInvested)} accent="ink" />
+        <V2StatCard icon={TrendingUp} label={t('Receita')} value={formatPrice(totalRevenue)} accent="acid" />
+        <V2StatCard icon={AlertTriangle} label={t('Alertas')} value={String(repor.length + validade.length)} accent="ink" />
       </div>
 
       {/* Guia de primeiros passos */}
       <V2Surface>
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-base font-bold text-ink">Primeiros passos do mercado</h3>
+          <h3 className="font-display text-base font-bold text-ink">{t('Primeiros passos do mercado')}</h3>
           <V2Badge tone={pct === 100 ? 'green' : 'neutral'}>{doneCount}/{steps.length} · {pct}%</V2Badge>
         </div>
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
@@ -144,13 +145,13 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
       {/* Reposição: só o que a arena já comprou alguma vez */}
       <V2Surface>
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <AlertTriangle className="h-4 w-4 text-amber-600" /> Reposição de estoque
+          <AlertTriangle className="h-4 w-4 text-amber-600" /> {t('Reposição de estoque')}
         </h3>
         {repor.length === 0 ? (
           <p className="mt-2 text-sm text-gray-500">
             {aVenda > 0
-              ? 'Nada acabando nem esgotado. Estoque saudável. 👍'
-              : 'Nenhum produto esgotado — e nenhum à venda ainda.'}
+              ? t('Nada acabando nem esgotado. Estoque saudável. 👍')
+              : t('Nenhum produto esgotado — e nenhum à venda ainda.')}
           </p>
         ) : (
           <div className="mt-2 space-y-1.5">
@@ -159,13 +160,13 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
                 <Package className="h-4 w-4 shrink-0 text-gray-400" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.product.name}</span>
                 <V2Badge tone={r.situacao === STOCK_SITUATION.ESGOTADO ? 'red' : 'amber'}>
-                  {r.situacao === STOCK_SITUATION.ESGOTADO ? 'Esgotado' : `Acabando: ${r.quantity}`}
+                  {r.situacao === STOCK_SITUATION.ESGOTADO ? t('Esgotado') : t('Acabando: {n}', { n: r.quantity })}
                 </V2Badge>
               </div>
             ))}
             {repor.length > MAX_ALERTAS && (
               <button type="button" onClick={() => onGoToEstoque?.('esgotados')} className="text-xs font-bold text-green-700 hover:underline">
-                e mais {repor.length - MAX_ALERTAS} — ver no estoque
+                {t('e mais {n} — ver no estoque', { n: repor.length - MAX_ALERTAS })}
               </button>
             )}
           </div>
@@ -173,12 +174,11 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
         {semCompra > 0 && (
           <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
             <span>
-              {semCompra === 1 ? '1 produto cadastrado ainda não tem' : `${semCompra} produtos cadastrados ainda não têm`} compra
-              registrada — {semCompra === 1 ? 'ele não está' : 'eles não estão'} no estoque nem nos alertas.
+              {tn(semCompra, '{n} produto cadastrado ainda não tem compra registrada — ele não está no estoque nem nos alertas.', '{n} produtos cadastrados ainda não têm compra registrada — eles não estão no estoque nem nos alertas.')}
             </span>
             {onGoToEstoque && (
               <button type="button" onClick={() => onGoToEstoque('sem_compra')} className="font-bold text-green-700 hover:underline">
-                Ver quais
+                {t('Ver quais')}
               </button>
             )}
           </p>
@@ -188,29 +188,29 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
       {/* Validade: só do que está na prateleira */}
       <V2Surface>
         <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-          <CalendarClock className="h-4 w-4 text-amber-600" /> Validade
+          <CalendarClock className="h-4 w-4 text-amber-600" /> {t('Validade')}
         </h3>
         {validade.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500">Nada em estoque vencido ou perto de vencer.</p>
+          <p className="mt-2 text-sm text-gray-500">{t('Nada em estoque vencido ou perto de vencer.')}</p>
         ) : (
           <div className="mt-2 space-y-1.5">
             {validade.slice(0, MAX_ALERTAS).map((r) => (
               <div key={r.product.id} className={cn('flex items-center gap-2 rounded-2xl border p-2.5', r.validade === 'expired' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50/50')}>
                 <CalendarClock className="h-4 w-4 shrink-0 text-gray-400" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.product.name}</span>
-                <span className="shrink-0 text-xs text-gray-500">{r.quantity} na prateleira</span>
+                <span className="shrink-0 text-xs text-gray-500">{t('{n} na prateleira', { n: r.quantity })}</span>
                 <V2Badge tone={r.validade === 'expired' ? 'red' : 'amber'}>
-                  {r.validade === 'expired' ? `Vencido (${Math.abs(r.daysToExpiry)}d)` : `Vence em ${r.daysToExpiry}d`}
+                  {r.validade === 'expired' ? t('Vencido ({n}d)', { n: Math.abs(r.daysToExpiry) }) : t('Vence em {n}d', { n: r.daysToExpiry })}
                 </V2Badge>
               </div>
             ))}
             {validade.length > MAX_ALERTAS && (
-              <p className="text-xs text-gray-500">e mais {validade.length - MAX_ALERTAS}.</p>
+              <p className="text-xs text-gray-500">{t('e mais {n}.', { n: validade.length - MAX_ALERTAS })}</p>
             )}
             {validade.some((r) => r.validade === 'expired') && (
               <p className="text-xs text-gray-500">
-                Produto vencido sai da venda (e da loja do app). Se for descartar, registre a saída como{' '}
-                <strong>Perda</strong> em Vendas.
+                {t('Produto vencido sai da venda (e da loja do app). Se for descartar, registre a saída como')}{' '}
+                <strong>{t('Perda')}</strong> {t('em Vendas.')}
               </p>
             )}
           </div>
@@ -219,8 +219,7 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToEstoque, onGoToC
 
       <p className="text-center text-xs text-gray-500">
         <ShoppingBasket className="mr-1 inline h-3 w-3" />
-        Use a aba <strong>Estoque</strong> para puxar produtos do catálogo, <strong>Compras</strong> para registrar
-        o que entrou e <strong>Vendas</strong> para o que saiu.
+        {t('Use a aba')} <strong>{t('Estoque')}</strong> {t('para puxar produtos do catálogo,')} <strong>{t('Compras')}</strong> {t('para registrar o que entrou e')} <strong>{t('Vendas')}</strong> {t('para o que saiu.')}
       </p>
     </div>
   );

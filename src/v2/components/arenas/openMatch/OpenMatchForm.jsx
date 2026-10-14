@@ -44,13 +44,14 @@ import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { t, tn, tk } from '@/core/i18n';
 
 const MODALIDADES = [
-  { id: 'duplas', label: 'Duplas' },
-  { id: 'mistas', label: 'Duplas mistas' },
-  { id: 'simples', label: 'Simples' },
-  { id: 'open', label: 'Livre' },
-  { id: 'treino', label: 'Treino' },
+  { id: 'duplas', label: tk('Duplas') },
+  { id: 'mistas', label: tk('Duplas mistas') },
+  { id: 'simples', label: tk('Simples') },
+  { id: 'open', label: tk('Livre') },
+  { id: 'treino', label: tk('Treino') },
 ];
 
 /** Os degraus da régua: 2.0, 2.5, … 8.0. */
@@ -190,23 +191,23 @@ export default function OpenMatchForm({
     try {
       if (mode === 'edit') {
         await editar.mutateAsync({ slotId: slot.id, input: entrada(), ctx });
-        toast.success('Jogo aberto atualizado. O dia de jogo foi junto.');
+        toast.success(t('Jogo aberto atualizado. O dia de jogo foi junto.'));
       } else if (mode === 'link') {
         await ligar.mutateAsync({ slotId: slot.id, input: entrada(), ctx: { ...ctx, names } });
-        toast.success('Pronto: este jogo aberto agora tem o dia de jogo dele.');
+        toast.success(t('Pronto: este jogo aberto agora tem o dia de jogo dele.'));
       } else {
         await criar.mutateAsync({ arenaId, input: entrada(), ctx });
-        toast.success('Jogo aberto publicado. O dia de jogo foi criado e as quadras já constam ocupadas.');
+        toast.success(t('Jogo aberto publicado. O dia de jogo foi criado e as quadras já constam ocupadas.'));
       }
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
-  const titulo = mode === 'edit' ? 'Editar jogo aberto'
-    : mode === 'link' ? 'Criar o dia de jogo deste jogo aberto'
-      : 'Publicar jogo aberto';
+  const titulo = mode === 'edit' ? t('Editar jogo aberto')
+    : mode === 'link' ? t('Criar o dia de jogo deste jogo aberto')
+      : t('Publicar jogo aberto');
 
   return (
     <V2Surface>
@@ -215,12 +216,12 @@ export default function OpenMatchForm({
           <h3 className="font-display text-lg font-bold text-ink">{titulo}</h3>
           <p className="text-xs text-gray-500">
             {mode === 'link'
-              ? 'Quem já está inscrito entra no dia de jogo. Daí em diante, sorteio, placar e ranking do dia rodam como em qualquer dia de jogo.'
-              : 'Os atletas veem o jogo na página da arena e entram sozinhos. Por trás, ele é um dia de jogo: sorteio, placar, ranking do dia e telão.'}
+              ? t('Quem já está inscrito entra no dia de jogo. Daí em diante, sorteio, placar e ranking do dia rodam como em qualquer dia de jogo.')
+              : t('Os atletas veem o jogo na página da arena e entram sozinhos. Por trás, ele é um dia de jogo: sorteio, placar, ranking do dia e telão.')}
           </p>
         </div>
         <button
-          type="button" onClick={onClose} aria-label="Fechar"
+          type="button" onClick={onClose} aria-label={t('Fechar')}
           className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink"
         >
           <X className="h-4 w-4" />
@@ -228,26 +229,26 @@ export default function OpenMatchForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <Secao icone={CalendarDays} titulo="Quando e onde">
+        <Secao icone={CalendarDays} titulo={t('Quando e onde')}>
           <div className="grid gap-3 sm:grid-cols-3">
-            <V2Field label="Data" htmlFor="om-data">
+            <V2Field label={t('Data')} htmlFor="om-data">
               <V2Input id="om-data" type="date" required min={mode === 'create' ? todayISO() : undefined}
                 value={form.date} onChange={(e) => set({ date: e.target.value })} />
             </V2Field>
-            <V2Field label="Início" htmlFor="om-inicio">
+            <V2Field label={t('Início')} htmlFor="om-inicio">
               <V2Input id="om-inicio" type="time" required value={form.start} onChange={(e) => set({ start: e.target.value })} />
             </V2Field>
-            <V2Field label="Fim" htmlFor="om-fim">
+            <V2Field label={t('Fim')} htmlFor="om-fim">
               <V2Input id="om-fim" type="time" required value={form.end} onChange={(e) => set({ end: e.target.value })} />
             </V2Field>
           </div>
           <div>
-            <p className="text-sm font-semibold text-ink">Quadras</p>
-            <p className="text-xs text-gray-500">Ficam fechadas no calendário neste horário — ninguém consegue reservar a mesma hora.</p>
+            <p className="text-sm font-semibold text-ink">{t('Quadras')}</p>
+            <p className="text-xs text-gray-500">{t('Ficam fechadas no calendário neste horário — ninguém consegue reservar a mesma hora.')}</p>
             {courts.length === 0 ? (
-              <p className="mt-2 text-xs text-amber-800">Cadastre as quadras da arena para publicar um jogo aberto.</p>
+              <p className="mt-2 text-xs text-amber-800">{t('Cadastre as quadras da arena para publicar um jogo aberto.')}</p>
             ) : (
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Quadras do jogo">
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={t('Quadras do jogo')}>
                 {courts.map((c) => {
                   const ativa = form.court_ids.includes(c.id);
                   return (
@@ -266,7 +267,7 @@ export default function OpenMatchForm({
             {poucasQuadras && (
               <p className="mt-2 flex gap-1.5 text-xs text-amber-800">
                 <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-                {form.total_spots} atletas em duplas costumam precisar de {sugeridas} quadras — com menos, parte da turma espera a vez.
+                {t('{n} atletas em duplas costumam precisar de {q} quadras — com menos, parte da turma espera a vez.', { n: form.total_spots, q: sugeridas })}
               </p>
             )}
           </div>
@@ -274,10 +275,10 @@ export default function OpenMatchForm({
 
         <Secao
           icone={Swords}
-          titulo="Como se joga"
+          titulo={t('Como se joga')}
           descricao={comRanking
-            ? 'É o formato do dia de jogo — decide como as partidas saem e se há placar. Com placar, o resultado soma no ranking da casa.'
-            : 'É o formato do dia de jogo — decide como as partidas saem e se há placar.'}
+            ? t('É o formato do dia de jogo — decide como as partidas saem e se há placar. Com placar, o resultado soma no ranking da casa.')
+            : t('É o formato do dia de jogo — decide como as partidas saem e se há placar.')}
         >
           <div className="grid gap-2 sm:grid-cols-2">
             {formatos.map((f) => (
@@ -285,70 +286,70 @@ export default function OpenMatchForm({
                 key={f}
                 ativo={form.game_format === f}
                 onClick={() => set({ game_format: f })}
-                titulo={openMatchFormatLabel(f)}
-                descricao={formatRhythm(f)}
+                titulo={t(openMatchFormatLabel(f))}
+                descricao={t(formatRhythm(f) || '')}
                 selo={formatHasScores(f)
-                  ? <V2Badge tone="green">Com placar</V2Badge>
-                  : <V2Badge tone="neutral">Sem placar</V2Badge>}
+                  ? <V2Badge tone="green">{t('Com placar')}</V2Badge>
+                  : <V2Badge tone="neutral">{t('Sem placar')}</V2Badge>}
               />
             ))}
           </div>
           <div>
             <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-              <ShieldCheck className="h-4 w-4 text-gray-400" aria-hidden="true" /> Quem conduz as partidas
+              <ShieldCheck className="h-4 w-4 text-gray-400" aria-hidden="true" /> {t('Quem conduz as partidas')}
             </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <Escolha
                 ativo={form.manage_mode === GAME_DAY_MANAGE_MODE.OWNER_ONLY}
                 onClick={() => set({ manage_mode: GAME_DAY_MANAGE_MODE.OWNER_ONLY })}
-                titulo="Só a equipe da arena"
-                descricao="Sortear, criar partidas, substituir e lançar resultado ficam com quem gerencia a arena."
+                titulo={t('Só a equipe da arena')}
+                descricao={t('Sortear, criar partidas, substituir e lançar resultado ficam com quem gerencia a arena.')}
               />
               <Escolha
                 ativo={form.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS}
                 onClick={() => set({ manage_mode: GAME_DAY_MANAGE_MODE.PARTICIPANTS })}
-                titulo="A equipe e os inscritos"
-                descricao="Quem entrou no jogo também conduz, na conta dele. Bom para a turma que se organiza sozinha."
+                titulo={t('A equipe e os inscritos')}
+                descricao={t('Quem entrou no jogo também conduz, na conta dele. Bom para a turma que se organiza sozinha.')}
               />
             </div>
           </div>
-          <V2Field label="Nome do jogo (opcional)" htmlFor="om-titulo" hint={`Em branco, aparece como "${OPEN_MATCH_DEFAULT_TITLE}".`}>
-            <V2Input id="om-titulo" maxLength={80} placeholder="Ex.: Terça do Americano"
+          <V2Field label={t('Nome do jogo (opcional)')} htmlFor="om-titulo" hint={t('Em branco, aparece como "{titulo}".', { titulo: OPEN_MATCH_DEFAULT_TITLE })}>
+            <V2Input id="om-titulo" maxLength={80} placeholder={t('Ex.: Terça do Americano')}
               value={form.title} onChange={(e) => set({ title: e.target.value })} />
           </V2Field>
         </Secao>
 
-        <Secao icone={Users} titulo="Quem pode entrar">
+        <Secao icone={Users} titulo={t('Quem pode entrar')}>
           <div className="grid gap-3 sm:grid-cols-3">
-            <V2Field label="Vagas" htmlFor="om-vagas">
+            <V2Field label={t('Vagas')} htmlFor="om-vagas">
               <V2Input id="om-vagas" type="number" min="2" max="20" required
                 value={form.total_spots} onChange={(e) => set({ total_spots: e.target.value })} />
             </V2Field>
-            <V2Field label="Modalidade" htmlFor="om-modalidade">
+            <V2Field label={t('Modalidade')} htmlFor="om-modalidade">
               <select id="om-modalidade" value={form.format} onChange={(e) => set({ format: e.target.value })} className={SELECT}>
-                {MODALIDADES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                {MODALIDADES.map((m) => <option key={m.id} value={m.id}>{t(m.label)}</option>)}
               </select>
             </V2Field>
-            <V2Field label="Valor por atleta (R$)" htmlFor="om-preco">
-              <V2Input id="om-preco" type="number" min="0" step="0.01" placeholder="Vazio = combinar"
+            <V2Field label={t('Valor por atleta (R$)')} htmlFor="om-preco">
+              <V2Input id="om-preco" type="number" min="0" step="0.01" placeholder={t('Vazio = combinar')}
                 value={form.price} onChange={(e) => set({ price: e.target.value })} />
             </V2Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <V2Field label="Nível mínimo" htmlFor="om-min" hint="Régua 2.0–8.0">
-              <NivelSelect id="om-min" value={form.min_level} onChange={(v) => set({ min_level: v })} placeholder="Qualquer" />
+            <V2Field label={t('Nível mínimo')} htmlFor="om-min" hint={t('Régua 2.0–8.0')}>
+              <NivelSelect id="om-min" value={form.min_level} onChange={(v) => set({ min_level: v })} placeholder={t('Qualquer')} />
             </V2Field>
-            <V2Field label="Nível máximo" htmlFor="om-max" hint="Régua 2.0–8.0">
-              <NivelSelect id="om-max" value={form.max_level} onChange={(v) => set({ max_level: v })} placeholder="Qualquer" />
+            <V2Field label={t('Nível máximo')} htmlFor="om-max" hint={t('Régua 2.0–8.0')}>
+              <NivelSelect id="om-max" value={form.max_level} onChange={(v) => set({ max_level: v })} placeholder={t('Qualquer')} />
             </V2Field>
           </div>
           <p className="text-xs text-gray-500">
-            Atletas sem nível na plataforma também podem entrar — ela nunca inventa um nível.
+            {t('Atletas sem nível na plataforma também podem entrar — ela nunca inventa um nível.')}
           </p>
         </Secao>
 
-        <V2Field label="Observações" htmlFor="om-obs">
-          <V2Textarea id="om-obs" rows={2} placeholder="Ex.: traga raquete própria; bolas por conta da arena."
+        <V2Field label={t('Observações')} htmlFor="om-obs">
+          <V2Textarea id="om-obs" rows={2} placeholder={t('Ex.: traga raquete própria; bolas por conta da arena.')}
             value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
         </V2Field>
 
@@ -357,18 +358,18 @@ export default function OpenMatchForm({
           <p className="flex items-start gap-2 rounded-2xl bg-acid/15 px-3.5 py-2.5 text-xs leading-5 text-ink">
             <LayoutGrid aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              {mode === 'edit' ? 'Fica' : 'Vira'} um dia de jogo em <strong>{openMatchFormatLabel(previa.gameDay.format)}</strong>,{' '}
-              {previa.gameDay.arena_slots.length === 1 ? 'em 1 quadra' : `em ${previa.gameDay.arena_slots.length} quadras`},
-              {' '}para até <strong>{previa.slot.total_spots} atletas</strong>, em {formatDateShortBR(previa.slot.date)} das {previa.slot.start} às {previa.slot.end}.
-              {!formatHasScores(previa.gameDay.format) && ' No Play não há placar, então este jogo não alimenta ranking.'}
+              {mode === 'edit' ? t('Fica um dia de jogo em') : t('Vira um dia de jogo em')} <strong>{t(openMatchFormatLabel(previa.gameDay.format))}</strong>,{' '}
+              {tn(previa.gameDay.arena_slots.length, 'em {n} quadra', 'em {n} quadras')},
+              {' '}{t('para até')} <strong>{t('{n} atletas', { n: previa.slot.total_spots })}</strong>{t(', em {data} das {inicio} às {fim}.', { data: formatDateShortBR(previa.slot.date), inicio: previa.slot.start, fim: previa.slot.end })}
+              {!formatHasScores(previa.gameDay.format) && ` ${t('No Play não há placar, então este jogo não alimenta ranking.')}`}
             </span>
           </p>
         )}
 
         <div className="flex justify-end gap-2 pt-1">
-          <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button type="submit" disabled={salvando || courts.length === 0}>
-            {salvando ? 'Salvando…' : mode === 'edit' ? 'Salvar' : mode === 'link' ? 'Criar o dia de jogo' : 'Publicar'}
+            {salvando ? t('Salvando…') : mode === 'edit' ? t('Salvar') : mode === 'link' ? t('Criar o dia de jogo') : t('Publicar')}
           </V2Button>
         </div>
       </form>

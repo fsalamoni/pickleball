@@ -25,6 +25,7 @@ import { useArenaNetwork } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaPrefetch } from '@/modules/arenas/hooks/useArenaPrefetch';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 /** Uma unidade: nome e cidade vêm do documento público da arena. */
 function Unidade({ arenaId }) {
@@ -70,11 +71,11 @@ export default function ArenaNetworkSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Network className="h-4 w-4" /> Outras unidades da rede
+        <Network className="h-4 w-4" /> {t('Outras unidades da rede')}
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        {rede.name ? `Esta arena faz parte da rede “${rede.name}”.` : 'Esta arena faz parte de uma rede.'}
-        {' '}Se esta estiver lotada, vale olhar as outras.
+        {rede.name ? t('Esta arena faz parte da rede “{nome}”.', { nome: rede.name }) : t('Esta arena faz parte de uma rede.')}
+        {' '}{t('Se esta estiver lotada, vale olhar as outras.')}
       </p>
       <ul className="mt-3 grid gap-2 sm:grid-cols-2">
         {outras.map((id) => <Unidade key={id} arenaId={id} />)}

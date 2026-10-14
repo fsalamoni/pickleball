@@ -28,6 +28,7 @@ import { instanteEmMs } from '@/core/domain/instant';
 import { V2Button, V2Field, V2Input } from '@/v2/ui/primitives';
 import { COUPON_KIND_ICON, kindGroups } from './couponKindUi';
 import CouponArtEditor from './CouponArtEditor';
+import { t } from '@/core/i18n';
 
 /** ms → 'YYYY-MM-DD' para o campo de data. */
 function dataDoCampo(v) {
@@ -170,10 +171,10 @@ export default function CouponForm({
     try {
       if (cupom) await editar.mutateAsync({ arenaId, couponId: cupom.id, input });
       else await criar.mutateAsync({ arenaId, input });
-      toast.success(cupom ? 'Cupom atualizado.' : 'Cupom criado.');
+      toast.success(cupom ? t('Cupom atualizado.') : t('Cupom criado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o cupom.');
+      toast.error(err?.message || t('Não foi possível salvar o cupom.'));
     }
   };
 
@@ -181,17 +182,17 @@ export default function CouponForm({
     <div className="mb-3 flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
         {!cupom && kind && !initialKind && (
-          <button type="button" onClick={() => setKind(null)} aria-label="Escolher outro tipo"
+          <button type="button" onClick={() => setKind(null)} aria-label={t('Escolher outro tipo')}
             className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
             <ArrowLeft className="h-4 w-4" />
           </button>
         )}
         {Icone && <Icone className="h-4 w-4 shrink-0 text-ink" />}
         <h3 className="truncate font-display text-base font-bold text-ink">
-          {cupom ? `Editar ${cupom.code}` : kind ? `Novo cupom · ${meta.label}` : 'Novo cupom: o que ele dá?'}
+          {cupom ? t('Editar {codigo}', { codigo: cupom.code }) : kind ? `${t('Novo cupom')} · ${t(meta.label)}` : t('Novo cupom: o que ele dá?')}
         </h3>
       </div>
-      <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+      <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -209,11 +210,11 @@ export default function CouponForm({
   return (
     <form onSubmit={submit} className="rounded-2xl border border-gray-100 bg-paper p-4">
       {cabecalho}
-      {meta?.hint && <p className="mb-3 text-xs text-gray-500">{meta.hint}</p>}
+      {meta?.hint && <p className="mb-3 text-xs text-gray-500">{t(meta.hint)}</p>}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {familia !== COUPON_FAMILY.REFERRAL && (
-          <V2Field label="Código" htmlFor="cup-code" hint="É o que a pessoa digita ou mostra. Sempre em maiúsculas.">
+          <V2Field label={t('Código')} htmlFor="cup-code" hint={t('É o que a pessoa digita ou mostra. Sempre em maiúsculas.')}>
             <V2Input id="cup-code" required maxLength={30} placeholder={familia === COUPON_FAMILY.VOUCHER ? 'COCO' : 'VERAO10'}
               value={form.code} onChange={(e) => set({ code: e.target.value.toUpperCase().replace(/\s+/g, '') })} />
           </V2Field>
@@ -221,13 +222,13 @@ export default function CouponForm({
 
         {kind === COUPON_KIND.DISCOUNT && (
           <>
-            <V2Field label="Tipo de desconto" htmlFor="cup-tipo">
+            <V2Field label={t('Tipo de desconto')} htmlFor="cup-tipo">
               <select id="cup-tipo" value={form.type} onChange={(e) => set({ type: e.target.value })} className={inputClasse}>
-                <option value={COUPON_TYPE.PERCENT}>Percentual (%)</option>
-                <option value={COUPON_TYPE.FIXED}>Valor fixo (R$)</option>
+                <option value={COUPON_TYPE.PERCENT}>{t('Percentual (%)')}</option>
+                <option value={COUPON_TYPE.FIXED}>{t('Valor fixo (R$)')}</option>
               </select>
             </V2Field>
-            <V2Field label={form.type === COUPON_TYPE.PERCENT ? 'Desconto (%)' : 'Desconto (R$)'} htmlFor="cup-valor">
+            <V2Field label={form.type === COUPON_TYPE.PERCENT ? t('Desconto (%)') : t('Desconto (R$)')} htmlFor="cup-valor">
               <V2Input id="cup-valor" type="number" min="0.01" step="0.01" required
                 max={form.type === COUPON_TYPE.PERCENT ? '100' : undefined}
                 value={form.value} onChange={(e) => set({ value: e.target.value })} />
@@ -236,7 +237,7 @@ export default function CouponForm({
         )}
 
         {kind === COUPON_KIND.FREE_HOURS && (
-          <V2Field label="Horas grátis" htmlFor="cup-horas" hint="De meia em meia hora. Abate a proporção das horas da reserva.">
+          <V2Field label={t('Horas grátis')} htmlFor="cup-horas" hint={t('De meia em meia hora. Abate a proporção das horas da reserva.')}>
             <V2Input id="cup-horas" type="number" min="0.5" max="24" step="0.5" required
               value={form.value} onChange={(e) => set({ value: e.target.value })} />
           </V2Field>
@@ -244,18 +245,18 @@ export default function CouponForm({
 
         {familia === COUPON_FAMILY.VOUCHER && (
           <>
-            <V2Field label="O que o vale dá" htmlFor="cup-beneficio" className="sm:col-span-2"
-              hint="Escreva como a pessoa vai ler na recepção.">
+            <V2Field label={t('O que o vale dá')} htmlFor="cup-beneficio" className="sm:col-span-2"
+              hint={t('Escreva como a pessoa vai ler na recepção.')}>
               <V2Input id="cup-beneficio" required maxLength={120} placeholder={meta?.example || ''}
                 value={form.benefit} onChange={(e) => set({ benefit: e.target.value })} />
             </V2Field>
-            <V2Field label="Valor para o cliente (R$)" htmlFor="cup-face" hint="Quanto custaria sem o vale. Opcional.">
-              <V2Input id="cup-face" type="number" min="0" step="0.01" placeholder="Opcional"
+            <V2Field label={t('Valor para o cliente (R$)')} htmlFor="cup-face" hint={t('Quanto custaria sem o vale. Opcional.')}>
+              <V2Input id="cup-face" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.face_value} onChange={(e) => set({ face_value: e.target.value })} />
             </V2Field>
-            <V2Field label="Custo para a arena (R$)" htmlFor="cup-custo"
-              hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" /> Só a arena vê. Entra no controle de uso.</span>}>
-              <V2Input id="cup-custo" type="number" min="0" step="0.01" placeholder="Opcional"
+            <V2Field label={t('Custo para a arena (R$)')} htmlFor="cup-custo"
+              hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" /> {t('Só a arena vê. Entra no controle de uso.')}</span>}>
+              <V2Input id="cup-custo" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.unit_cost} onChange={(e) => set({ unit_cost: e.target.value })} />
             </V2Field>
           </>
@@ -263,72 +264,72 @@ export default function CouponForm({
 
         {familia === COUPON_FAMILY.REFERRAL && (
           <>
-            <V2Field label="Quem indica ganha (R$ em crédito)" htmlFor="ind-quem-indica"
-              hint="Creditado na carteira quando a indicação é registrada.">
+            <V2Field label={t('Quem indica ganha (R$ em crédito)')} htmlFor="ind-quem-indica"
+              hint={t('Creditado na carteira quando a indicação é registrada.')}>
               <V2Input id="ind-quem-indica" type="number" min="0" step="0.01"
                 value={form.referrer_reward} onChange={(e) => set({ referrer_reward: e.target.value })} />
             </V2Field>
-            <V2Field label="Quem chega ganha" htmlFor="ind-tipo">
+            <V2Field label={t('Quem chega ganha')} htmlFor="ind-tipo">
               <select id="ind-tipo" value={form.referred_reward_kind}
                 onChange={(e) => set({ referred_reward_kind: e.target.value })} className={inputClasse}>
-                <option value={REFERRED_REWARD.CREDIT}>Crédito em carteira (R$)</option>
-                <option value={REFERRED_REWARD.PERCENT}>Desconto na primeira reserva (%)</option>
-                <option value={REFERRED_REWARD.FIXED}>Desconto na primeira reserva (R$)</option>
-                <option value={REFERRED_REWARD.NONE}>Nada — só quem indica ganha</option>
+                <option value={REFERRED_REWARD.CREDIT}>{t('Crédito em carteira (R$)')}</option>
+                <option value={REFERRED_REWARD.PERCENT}>{t('Desconto na primeira reserva (%)')}</option>
+                <option value={REFERRED_REWARD.FIXED}>{t('Desconto na primeira reserva (R$)')}</option>
+                <option value={REFERRED_REWARD.NONE}>{t('Nada — só quem indica ganha')}</option>
               </select>
             </V2Field>
             {form.referred_reward_kind !== REFERRED_REWARD.NONE && (
-              <V2Field label={form.referred_reward_kind === REFERRED_REWARD.PERCENT ? 'Desconto (%)' : 'Valor (R$)'} htmlFor="ind-valor"
+              <V2Field label={form.referred_reward_kind === REFERRED_REWARD.PERCENT ? t('Desconto (%)') : t('Valor (R$)')} htmlFor="ind-valor"
                 hint={form.referred_reward_kind === REFERRED_REWARD.CREDIT
-                  ? 'Creditado na carteira de quem chegou.'
-                  : 'Abatido da primeira reserva, quando a arena confirma o código.'}>
+                  ? t('Creditado na carteira de quem chegou.')
+                  : t('Abatido da primeira reserva, quando a arena confirma o código.')}>
                 <V2Input id="ind-valor" type="number" min="0" step="0.01"
                   value={form.referred_reward_value} onChange={(e) => set({ referred_reward_value: e.target.value })} />
               </V2Field>
             )}
-            <V2Field label="Limite de indicações por pessoa" htmlFor="ind-limite" hint="Vazio = sem limite.">
-              <V2Input id="ind-limite" type="number" min="1" placeholder="Sem limite"
+            <V2Field label={t('Limite de indicações por pessoa')} htmlFor="ind-limite" hint={t('Vazio = sem limite.')}>
+              <V2Input id="ind-limite" type="number" min="1" placeholder={t('Sem limite')}
                 value={form.max_per_referrer} onChange={(e) => set({ max_per_referrer: e.target.value })} />
             </V2Field>
           </>
         )}
 
         {familia !== COUPON_FAMILY.VOUCHER && (
-          <V2Field label={familia === COUPON_FAMILY.REFERRAL ? 'Primeira reserva a partir de (R$)' : 'Valor mínimo da conta (R$)'}
-            htmlFor="cup-min" hint="Vazio = sem mínimo.">
-            <V2Input id="cup-min" type="number" min="0" step="0.01" placeholder="Sem mínimo"
+          <V2Field label={familia === COUPON_FAMILY.REFERRAL ? t('Primeira reserva a partir de (R$)') : t('Valor mínimo da conta (R$)')}
+            htmlFor="cup-min" hint={t('Vazio = sem mínimo.')}>
+            <V2Input id="cup-min" type="number" min="0" step="0.01" placeholder={t('Sem mínimo')}
               value={form.min_amount} onChange={(e) => set({ min_amount: e.target.value })} />
           </V2Field>
         )}
 
         {familia !== COUPON_FAMILY.REFERRAL && (
-          <V2Field label="Usos máximos" htmlFor="cup-max" hint="Vazio = ilimitado.">
-            <V2Input id="cup-max" type="number" min="1" placeholder="Ilimitado"
+          <V2Field label={t('Usos máximos')} htmlFor="cup-max" hint={t('Vazio = ilimitado.')}>
+            <V2Input id="cup-max" type="number" min="1" placeholder={t('Ilimitado')}
               value={form.max_uses} onChange={(e) => set({ max_uses: e.target.value })} />
           </V2Field>
         )}
 
-        <V2Field label="Vale até" htmlFor="cup-exp" hint="Vazio = sem prazo.">
+        <V2Field label={t('Vale até')} htmlFor="cup-exp" hint={t('Vazio = sem prazo.')}>
           <V2Input id="cup-exp" type="date" value={form.expires_at}
             onChange={(e) => set({ expires_at: e.target.value })} />
         </V2Field>
       </div>
 
-      <V2Field label="Descrição" htmlFor="cup-desc" className="mt-3"
-        hint={familia === COUPON_FAMILY.REFERRAL ? 'Aparece para o atleta no "Indique e ganhe".' : 'Aparece para quem usa o código. Diga a regra em uma linha.'}>
+      <V2Field label={t('Descrição')} htmlFor="cup-desc" className="mt-3"
+        hint={familia === COUPON_FAMILY.REFERRAL ? t('Aparece para o atleta no "Indique e ganhe".') : t('Aparece para quem usa o código. Diga a regra em uma linha.')}>
         <V2Input id="cup-desc" maxLength={160}
           placeholder={{
-            [COUPON_FAMILY.REFERRAL]: 'Traga um amigo que nunca jogou aqui',
-            [COUPON_FAMILY.VOUCHER]: 'Vale de segunda a quinta, até as 18h',
-          }[familia] || '10% na primeira reserva do mês'}
+            [COUPON_FAMILY.REFERRAL]: t('Traga um amigo que nunca jogou aqui'),
+            [COUPON_FAMILY.VOUCHER]: t('Vale de segunda a quinta, até as 18h'),
+          }[familia] || t('10% na primeira reserva do mês')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
 
       {familia !== COUPON_FAMILY.REFERRAL && (
-        <section className="mt-4 rounded-2xl border border-gray-100 bg-paper-pure p-3" aria-label="Arte do cupom">
-          <p className="font-display text-sm font-bold text-ink">Arte do cupom</p>
+        <section className="mt-4 rounded-2xl border border-gray-100 bg-paper-pure p-3" aria-label={t('Arte do cupom')}>
+          <p className="font-display text-sm font-bold text-ink">{t('Arte do cupom')}</p>
           <p className="mb-3 text-xs text-gray-500">
-            É como o cupom aparece na página da arena, na tela inicial e na lista. O código fica no canhoto — quem vê toca para copiar.
+            {t('É como o cupom aparece na página da arena, na tela inicial e na lista. O código fica no canhoto — quem vê toca para copiar.')}
           </p>
           <CouponArtEditor
             arenaId={arenaId}
@@ -339,7 +340,7 @@ export default function CouponForm({
               code: form.code,
               // O benefício aparece assim que ele é conhecido — não espera o
               // código (ou outro campo) estar preenchido.
-              benefit: previa.errors.value || previa.errors.benefit ? (meta?.label || '') : couponBenefitText(previa.value),
+              benefit: previa.errors.value || previa.errors.benefit ? t(meta?.label || '') : t(couponBenefitText(previa.value)),
               description: form.description,
             }}
           />
@@ -352,9 +353,9 @@ export default function CouponForm({
             onChange={(e) => set({ first_booking_only: e.target.checked })}
             className="mt-0.5 h-4 w-4 rounded border-gray-300" />
           <span>
-            Vale só para quem nunca reservou nesta arena
+            {t('Vale só para quem nunca reservou nesta arena')}
             <span className="block text-xs text-gray-500">
-              É o que faz a indicação trazer gente nova. Desmarcado, qualquer pessoa indicada conta.
+              {t('É o que faz a indicação trazer gente nova. Desmarcado, qualquer pessoa indicada conta.')}
             </span>
           </span>
         </label>
@@ -364,19 +365,19 @@ export default function CouponForm({
             <input type="checkbox" checked={form.once_per_user}
               onChange={(e) => set({ once_per_user: e.target.checked })}
               className="h-4 w-4 rounded border-gray-300" />
-            Cada pessoa pode usar uma vez só
+            {t('Cada pessoa pode usar uma vez só')}
           </label>
           <label className="mt-2 flex items-start gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.show_public}
               onChange={(e) => set({ show_public: e.target.checked, ...(e.target.checked ? {} : { show_home: false }) })}
               className="mt-0.5 h-4 w-4 rounded border-gray-300" />
             <span>
-              Divulgar na página da arena
+              {t('Divulgar na página da arena')}
               <span className="block text-xs text-gray-500">
                 {familia === COUPON_FAMILY.BOOKING
-                  ? 'Vira PROMOÇÃO: aparece na página da arena e no pedido de reserva, com um toque para aplicar.'
-                  : 'Aparece na página da arena com o código, para mostrar na recepção.'}
-                {' '}Sem marcar, o cupom é um código que você entrega a quem quiser.
+                  ? t('Vira PROMOÇÃO: aparece na página da arena e no pedido de reserva, com um toque para aplicar.')
+                  : t('Aparece na página da arena com o código, para mostrar na recepção.')}
+                {' '}{t('Sem marcar, o cupom é um código que você entrega a quem quiser.')}
               </span>
             </span>
           </label>
@@ -386,9 +387,9 @@ export default function CouponForm({
                 onChange={(e) => set({ show_home: e.target.checked })}
                 className="mt-0.5 h-4 w-4 rounded border-gray-300" />
               <span>
-                Também como banner na tela inicial
+                {t('Também como banner na tela inicial')}
                 <span className="block text-xs text-gray-500">
-                  Aparece para quem é da cidade da arena (ou escolheu ver essa região), no carrossel de promoções da tela inicial.
+                  {t('Aparece para quem é da cidade da arena (ou escolheu ver essa região), no carrossel de promoções da tela inicial.')}
                 </span>
               </span>
             </label>
@@ -398,20 +399,20 @@ export default function CouponForm({
 
       {previa.valid && (
         <p className="mt-3 rounded-2xl bg-paper-pure p-3 text-xs text-gray-600">
-          Vai valer como:{' '}
+          {t('Vai valer como:')}{' '}
           <strong className="text-ink">
-            {familia === COUPON_FAMILY.REFERRAL ? referralRulesText(previa.value) : couponLabel(previa.value)}
+            {familia === COUPON_FAMILY.REFERRAL ? t(referralRulesText(previa.value)) : t(couponLabel(previa.value))}
           </strong>
-          {previa.value.min_amount ? ` · a partir de ${formatPrice(previa.value.min_amount)}` : ''}
-          {familia !== COUPON_FAMILY.REFERRAL && (previa.value.max_uses ? ` · até ${previa.value.max_uses} usos` : ' · usos ilimitados')}
-          {familia === COUPON_FAMILY.REFERRAL && previa.value.max_per_referrer ? ` · até ${previa.value.max_per_referrer} por pessoa` : ''}
+          {previa.value.min_amount ? ` · ${t('a partir de {valor}', { valor: formatPrice(previa.value.min_amount) })}` : ''}
+          {familia !== COUPON_FAMILY.REFERRAL && (previa.value.max_uses ? ` · ${t('até {n} usos', { n: previa.value.max_uses })}` : ` · ${t('usos ilimitados')}`)}
+          {familia === COUPON_FAMILY.REFERRAL && previa.value.max_per_referrer ? ` · ${t('até {n} por pessoa', { n: previa.value.max_per_referrer })}` : ''}
         </p>
       )}
 
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={salvando}>
-          {salvando ? 'Salvando…' : cupom ? 'Salvar' : familia === COUPON_FAMILY.REFERRAL ? 'Salvar as regras' : 'Criar cupom'}
+          {salvando ? t('Salvando…') : cupom ? t('Salvar') : familia === COUPON_FAMILY.REFERRAL ? t('Salvar as regras') : t('Criar cupom')}
         </V2Button>
       </div>
     </form>

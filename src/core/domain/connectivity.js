@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * O que a faixa de conexão diz (Fase 4.1 do plano de UX).
  *
@@ -13,10 +14,10 @@ export const AVISO_DE_VOLTA_MS = 4000;
  */
 export function estadoDeConexao({ online, voltouEm = null, agora = Date.now() }) {
   if (!online) {
-    return { tipo: 'offline', texto: 'Você está sem conexão. O que aparece aqui pode estar desatualizado.' };
+    return { tipo: 'offline', texto: t('Você está sem conexão. O que aparece aqui pode estar desatualizado.') };
   }
   if (voltouEm != null && agora - voltouEm < AVISO_DE_VOLTA_MS) {
-    return { tipo: 'voltou', texto: 'Conexão de volta. Tentando de novo…' };
+    return { tipo: 'voltou', texto: t('Conexão de volta. Tentando de novo…') };
   }
   return null;
 }

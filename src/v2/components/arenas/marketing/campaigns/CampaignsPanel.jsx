@@ -32,12 +32,13 @@ import {
 import BannerArt from './BannerArt';
 import BannerThumb from './BannerThumb';
 import CampaignForm from './CampaignForm';
+import { t, tn } from '@/core/i18n';
 
 const ESTADO = {
-  [BANNER_STATE.LIVE]: { tone: 'green', rotulo: (c) => `Banner no ar até ${formatDateShortBR(c.banner_until)}` },
-  [BANNER_STATE.PAUSED]: { tone: 'amber', rotulo: () => 'Banner pausado' },
-  [BANNER_STATE.ENDED]: { tone: 'neutral', rotulo: () => 'Banner encerrado' },
-  [BANNER_STATE.NONE]: { tone: 'neutral', rotulo: () => 'Só aviso' },
+  [BANNER_STATE.LIVE]: { tone: 'green', rotulo: (c) => t('Banner no ar até {data}', { data: formatDateShortBR(c.banner_until) }) },
+  [BANNER_STATE.PAUSED]: { tone: 'amber', rotulo: () => t('Banner pausado') },
+  [BANNER_STATE.ENDED]: { tone: 'neutral', rotulo: () => t('Banner encerrado') },
+  [BANNER_STATE.NONE]: { tone: 'neutral', rotulo: () => t('Só aviso') },
 };
 
 function dataISO(v) {
@@ -58,9 +59,9 @@ function LinhaDaCampanha({ campaign, arenaId, today, onEditar }) {
       await atualizar.mutateAsync({
         arenaId, campaignId: campaign.id, patch: { banner_active: estado !== BANNER_STATE.LIVE },
       });
-      toast.success(estado === BANNER_STATE.LIVE ? 'Banner pausado.' : 'Banner de volta ao ar.');
+      toast.success(estado === BANNER_STATE.LIVE ? t('Banner pausado.') : t('Banner de volta ao ar.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível mudar o banner.');
+      toast.error(err?.message || t('Não foi possível mudar o banner.'));
     }
   };
   const link = destinationLink(campaign.destination, { arenaId, campaignId: campaign.id });
@@ -88,8 +89,8 @@ function LinhaDaCampanha({ campaign, arenaId, today, onEditar }) {
         <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
           {Number(campaign.sent_count) > 0 && (
             <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> Aviso para {campaign.sent_count} {campaign.sent_count === 1 ? 'pessoa' : 'pessoas'}
-              {CAMPAIGN_AUDIENCE_META[campaign.target_audience] ? ` (${CAMPAIGN_AUDIENCE_META[campaign.target_audience].label})` : ''}
+              <Users className="h-3.5 w-3.5" /> {tn(Number(campaign.sent_count), 'Aviso para {n} pessoa', 'Aviso para {n} pessoas')}
+              {CAMPAIGN_AUDIENCE_META[campaign.target_audience] ? ` (${t(CAMPAIGN_AUDIENCE_META[campaign.target_audience].label)})` : ''}
             </span>
           )}
           {enviadaEm && <span>{formatDateShortBR(enviadaEm)}</span>}
@@ -97,16 +98,16 @@ function LinhaDaCampanha({ campaign, arenaId, today, onEditar }) {
         {campaign.banner && <p className="mt-0.5 text-xs text-gray-500">{campaignPlacementText(campaign)}</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={link}><ExternalLink className="h-3.5 w-3.5" /> Ver como o atleta vê</Link>
+            <Link to={link}><ExternalLink className="h-3.5 w-3.5" /> {t('Ver como o atleta vê')}</Link>
           </V2Button>
           <V2Button size="sm" variant="ghost" onClick={() => onEditar(campaign)}>
-            <Pencil className="h-3.5 w-3.5" /> {campaign.banner ? 'Editar o banner' : 'Pôr um banner'}
+            <Pencil className="h-3.5 w-3.5" /> {campaign.banner ? t('Editar o banner') : t('Pôr um banner')}
           </V2Button>
           {campaign.banner && estado !== BANNER_STATE.ENDED && (
             <V2Button size="sm" variant="ghost" disabled={atualizar.isPending} onClick={alternar}>
               {estado === BANNER_STATE.LIVE
-                ? <><Pause className="h-3.5 w-3.5" /> Pausar</>
-                : <><Play className="h-3.5 w-3.5" /> Voltar ao ar</>}
+                ? <><Pause className="h-3.5 w-3.5" /> {t('Pausar')}</>
+                : <><Play className="h-3.5 w-3.5" /> {t('Voltar ao ar')}</>}
             </V2Button>
           )}
         </div>
@@ -133,16 +134,16 @@ export default function CampaignsPanel({ arena }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-ink" />
-            <h2 className="font-display text-lg font-bold text-ink">Campanhas</h2>
-            {noAr > 0 && <V2Badge tone="green">{noAr} no ar</V2Badge>}
+            <h2 className="font-display text-lg font-bold text-ink">{t('Campanhas')}</h2>
+            {noAr > 0 && <V2Badge tone="green">{t('{n} no ar', { n: noAr })}</V2Badge>}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
-            Banner na página da arena e na tela inicial, levando a reservas, jogos, torneios, produtos ou planos — e aviso no aplicativo.
+            {t('Banner na página da arena e na tela inicial, levando a reservas, jogos, torneios, produtos ou planos — e aviso no aplicativo.')}
           </p>
         </div>
         {!form && !q.isError && (
           <V2Button size="sm" onClick={() => setForm({ campaign: null })}>
-            <Plus className="mr-1.5 h-4 w-4" /> Nova campanha
+            <Plus className="mr-1.5 h-4 w-4" /> {t('Nova campanha')}
           </V2Button>
         )}
       </div>
@@ -157,16 +158,16 @@ export default function CampaignsPanel({ arena }) {
         <V2Skeleton lines={3} />
       ) : q.isError ? (
         <V2ErrorState
-          title="Não foi possível carregar as campanhas"
-          description="A conexão falhou. As campanhas continuam lá — tente de novo antes de criar outra."
+          title={t('Não foi possível carregar as campanhas')}
+          description={t('A conexão falhou. As campanhas continuam lá — tente de novo antes de criar outra.')}
           onRetry={() => q.refetch()}
         />
       ) : campanhas.length === 0 ? (
         !form && (
           <V2EmptyState
             icon={Megaphone}
-            title="Nenhuma campanha ainda"
-            description="Uma campanha põe um banner na página da arena (e, se quiser, na tela inicial) e avisa a sua comunidade. Comece por um dos cinco modelos."
+            title={t('Nenhuma campanha ainda')}
+            description={t('Uma campanha põe um banner na página da arena (e, se quiser, na tela inicial) e avisa a sua comunidade. Comece por um dos cinco modelos.')}
           />
         )
       ) : (

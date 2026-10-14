@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, RotateCw } from 'lucide-react';
 import { recordClientError } from '@/core/services/observabilityService';
 import { planErrorRecovery } from '@/core/domain/errorRecovery';
+import { t } from '@/core/i18n';
 
 /**
  * Isola UMA tela: um erro dentro dela não derruba o aplicativo.
@@ -132,7 +133,7 @@ export default class V2RouteBoundary extends React.Component {
                   onClick={() => window.location.reload()}
                   className="inline-flex items-center gap-1.5 rounded-2xl bg-ink px-4 py-2 text-sm font-bold text-white"
                 >
-                  <RotateCw className="h-4 w-4" /> Recarregar
+                  <RotateCw className="h-4 w-4" /> {t('Recarregar')}
                 </button>
               ) : (
                 !plano.autoRetry && (
@@ -143,7 +144,7 @@ export default class V2RouteBoundary extends React.Component {
                       ? 'inline-flex items-center gap-1.5 rounded-2xl bg-acid px-5 py-2.5 text-base font-bold text-ink'
                       : 'inline-flex items-center gap-1.5 rounded-2xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700'}
                   >
-                    <RefreshCw className="h-4 w-4" /> Tentar de novo
+                    <RefreshCw className="h-4 w-4" /> {t('Tentar de novo')}
                   </button>
                 )
               )}
@@ -153,7 +154,7 @@ export default class V2RouteBoundary extends React.Component {
                   onClick={onBack}
                   className="inline-flex items-center rounded-2xl border border-amber-300 px-4 py-2 text-sm font-bold text-amber-900"
                 >
-                  Voltar
+                  {t('Voltar')}
                 </button>
               )}
             </div>

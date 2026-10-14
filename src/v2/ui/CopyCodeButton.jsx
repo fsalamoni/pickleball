@@ -14,6 +14,7 @@ import React from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{
@@ -26,7 +27,7 @@ import { cn } from '@/core/lib/utils';
  * }} props
  */
 export default function CopyCodeButton({
-  code, successMessage = 'Código copiado.', size = 'md', tone = 'paper', className, label,
+  code, successMessage = t('Código copiado.'), size = 'md', tone = 'paper', className, label,
 }) {
   const { copy, copied } = useClipboard();
   if (!code) return null;
@@ -34,8 +35,8 @@ export default function CopyCodeButton({
   return (
     <button
       type="button"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); copy(code, successMessage, `Não foi possível copiar. O código é: ${code}`); }}
-      aria-label={label || `Copiar o código ${code}`}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); copy(code, successMessage, t('Não foi possível copiar. O código é: {codigo}', { codigo: code })); }}
+      aria-label={label || t('Copiar o código {codigo}', { codigo: code })}
       className={cn(
         'inline-flex max-w-full items-center gap-1.5 rounded-xl border border-dashed font-display font-bold tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1',
         size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
@@ -47,7 +48,7 @@ export default function CopyCodeButton({
     >
       <span className="truncate">{code}</span>
       <Icone className={size === 'sm' ? 'h-3.5 w-3.5 shrink-0' : 'h-4 w-4 shrink-0'} aria-hidden />
-      <span className="sr-only" aria-live="polite">{copied ? 'Copiado' : ''}</span>
+      <span className="sr-only" aria-live="polite">{copied ? t('Copiado') : ''}</span>
     </button>
   );
 }

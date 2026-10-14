@@ -5,17 +5,18 @@ import { MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
 import MissionList from '@/modules/progression/components/MissionList';
 import { V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import { t } from '@/core/i18n';
 
 const SCOPES = [
-  { value: 'daily', label: 'Hoje', icon: Sun, dica: 'missoes-hoje' },
-  { value: 'weekly', label: 'Semana', icon: CalendarDays, dica: 'missoes-semana', module: 'missions_weekly' },
-  { value: 'monthly', label: 'Mês', icon: CalendarRange, dica: 'missoes-mes', module: 'missions_monthly' },
+  { value: 'daily', get label() { return t('Hoje'); }, icon: Sun, dica: 'missoes-hoje' },
+  { value: 'weekly', get label() { return t('Semana'); }, icon: CalendarDays, dica: 'missoes-semana', module: 'missions_weekly' },
+  { value: 'monthly', get label() { return t('Mês'); }, icon: CalendarRange, dica: 'missoes-mes', module: 'missions_monthly' },
 ];
 
 const RESET_TEXT = {
-  daily: 'Novas missões à meia-noite (horário de Brasília)',
-  weekly: 'A semana vira na segunda-feira',
-  monthly: 'O mês vira no dia 1º',
+  get daily() { return t('Novas missões à meia-noite (horário de Brasília)'); },
+  get weekly() { return t('A semana vira na segunda-feira'); },
+  get monthly() { return t('O mês vira no dia 1º'); },
 };
 
 /** Tempo que falta para virar o período, atualizado a cada 30 s. */
@@ -39,7 +40,7 @@ function ScopeBody({ scope, m, onTrack }) {
   })), [m?.missions]);
 
   if (!m || m.isLoading) return <V2Skeleton className="h-48 rounded-3xl" />;
-  if (m.isError) return <V2ErrorState inline title="Não deu para carregar as missões" onRetry={m.refetch} />;
+  if (m.isError) return <V2ErrorState inline title={t('Não deu para carregar as missões')} onRetry={m.refetch} />;
   return (
     <div className="space-y-3" data-testid={`missions-${scope}`}>
       <p className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -52,9 +53,9 @@ function ScopeBody({ scope, m, onTrack }) {
         bonusClaimed={m.doc?.bonusClaimed || false}
         onClaimBonus={() => { onTrack?.(scope, MISSION_BONUS_XP[scope]); m.claimBonus(); }}
       />
-      {m.claimError && <p role="alert" className="text-xs text-red-600">Não deu para resgatar o bônus agora. Tente de novo.</p>}
+      {m.claimError && <p role="alert" className="text-xs text-red-600">{t('Não deu para resgatar o bônus agora. Tente de novo.')}</p>}
       <p className="text-2xs leading-4 text-gray-500">
-        O progresso é medido pela sua atividade real — jogos, torneios, reservas, avaliações. Não há botão de marcar.
+        {t('O progresso é medido pela sua atividade real — jogos, torneios, reservas, avaliações. Não há botão de marcar.')}
       </p>
     </div>
   );
@@ -78,7 +79,7 @@ export default function MissionsPanel({ scopes, isModuleOn, onTrack, initial = '
   return (
     <V2Surface className="space-y-4" data-dica="missoes">
       {tabs.length > 1 && (
-        <V2SubTabs tabs={tabs} activeValue={ativo} onSelect={(t) => setScope(t.value)} ariaLabel="Período das missões" />
+        <V2SubTabs tabs={tabs} activeValue={ativo} onSelect={(aba) => setScope(aba.value)} ariaLabel={t('Período das missões')} />
       )}
       <ScopeBody key={ativo} scope={ativo} m={scopes[ativo]} onTrack={onTrack} />
     </V2Surface>

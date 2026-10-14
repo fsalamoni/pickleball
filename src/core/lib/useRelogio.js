@@ -12,6 +12,7 @@
  * tolerâncias diferentes para a MESMA regra, sem nada na tela denunciando.
  */
 import { useEffect, useState } from 'react';
+import { fmtData } from '@/core/i18n';
 
 /** De quanto em quanto tempo o relógio anda (ms). */
 export const RELOGIO_TICK_MS = 30_000;
@@ -29,7 +30,7 @@ export function useRelogio(tickMs = RELOGIO_TICK_MS) {
   }, [tickMs]);
 
   return {
-    hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    hora: fmtData(agora, { hour: '2-digit', minute: '2-digit' }),
     ms: agora.getTime(),
   };
 }

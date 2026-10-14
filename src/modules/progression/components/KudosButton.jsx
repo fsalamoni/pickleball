@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /**
  * KudosButton — botão universal de "👏 dado".
@@ -52,7 +53,7 @@ export default function KudosButton({
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      aria-label={isGiven ? 'Kudos dado — clique para remover' : 'Dar kudos'}
+      aria-label={isGiven ? t('Kudos dado — clique para remover') : t('Dar kudos')}
       data-testid="kudos-button"
       data-target-type={targetType}
       data-target-id={targetId}
@@ -71,7 +72,7 @@ export default function KudosButton({
     >
       <ThumbsUp className={cn('h-3.5 w-3.5', isGiven && 'fill-current')} />
       <span className="tabular-nums">{displayCount || ''}</span>
-      {displayCount > 0 && size === 'lg' && <span className="ml-1 font-normal">kudos</span>}
+      {displayCount > 0 && size === 'lg' && <span className="ml-1 font-normal">{t('kudos')}</span>}
     </button>
   );
 }

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Zap, Flame } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { computeXp, levelFromXp, computeWeekStreak } from '../domain/progression.js';
+import { t } from '@/core/i18n';
 
 /**
  * XP/nível de perfil + streak de semanas ativas. Presentational — o gating pela
@@ -22,7 +23,7 @@ export default function ProgressionCard({ summary, matchDates = [] }) {
               <Zap className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-lg font-bold text-ink">Nível {level.level}</div>
+              <div className="text-lg font-bold text-ink">{t('Nível {n}', { n: level.level })}</div>
               <div className="text-xs text-gray-500 tabular-nums">{level.xp} XP</div>
             </div>
           </div>
@@ -36,7 +37,7 @@ export default function ProgressionCard({ summary, matchDates = [] }) {
             <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.round(level.progress * 100)}%` }} />
           </div>
           <div className="mt-1 text-right text-[11px] text-gray-400 tabular-nums">
-            {level.xpIntoLevel}/{level.xpForNext} XP para o nível {level.level + 1}
+            {t('{atual}/{proximo} XP para o nível {n}', { atual: level.xpIntoLevel, proximo: level.xpForNext, n: level.level + 1 })}
           </div>
         </div>
       </CardContent>

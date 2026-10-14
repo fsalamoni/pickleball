@@ -36,6 +36,7 @@ import { SUBSCRIPTION_STATUS, subscriptionState } from '@/modules/arenas/domain/
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2Surface } from '@/v2/ui/primitives';
 import PackageForSaleCard from '@/v2/components/arenas/PackageForSaleCard';
+import { t } from '@/core/i18n';
 
 const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink' };
 /** Na página da arena cabem poucos: o resto está em "Ver todos". */
@@ -72,36 +73,35 @@ export default function ArenaMembershipSection({ arena }) {
   if (!member && vitrine.length === 0) return null;
 
   const aoComprar = (pkg) => comprar.mutateAsync({ arenaId, pkgId: pkg.id })
-    .then(() => toast.success('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível enviar o pedido.'));
+    .then(() => toast.success(t('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.')))
+    .catch((e) => toast.error(e?.message || t('Não foi possível enviar o pedido.')));
 
   return (
     <V2Surface>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Crown className="h-5 w-5 text-acid-dark" /> Planos e vantagens
+          <Crown className="h-5 w-5 text-acid-dark" /> {t('Planos e vantagens')}
         </h2>
         <Link to={`/arenas/${arenaId}/membros`} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-          {member ? 'Ver meu plano' : 'Ver todos'} <ChevronRight className="h-3.5 w-3.5" />
+          {member ? t('Ver meu plano') : t('Ver todos')} <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
       {member && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl bg-paper px-4 py-3 text-sm text-ink">
-          <span className="font-semibold">Você é membro</span>
+          <span className="font-semibold">{t('Você é membro')}</span>
           {nivel && <V2Badge tone={TIER_TONE[nivel.id] || 'amber'}>{nivel.name}</V2Badge>}
-          {nivel?.discount_pct > 0 && <span className="text-xs text-gray-600">{nivel.discount_pct}% de desconto na reserva</span>}
-          {temPacotes && horas > 0 && <span className="text-xs text-gray-600">· {horas}h de pacote</span>}
-          {temCarteira && saldo > 0 && <span className="text-xs text-gray-600">· {formatPrice(saldo)} de saldo</span>}
-          {estadoMensal?.status === SUBSCRIPTION_STATUS.OVERDUE && <V2Badge tone="red">Mensalidade em atraso</V2Badge>}
+          {nivel?.discount_pct > 0 && <span className="text-xs text-gray-600">{t('{pct}% de desconto na reserva', { pct: nivel.discount_pct })}</span>}
+          {temPacotes && horas > 0 && <span className="text-xs text-gray-600">· {t('{n}h de pacote', { n: horas })}</span>}
+          {temCarteira && saldo > 0 && <span className="text-xs text-gray-600">· {t('{valor} de saldo', { valor: formatPrice(saldo) })}</span>}
+          {estadoMensal?.status === SUBSCRIPTION_STATUS.OVERDUE && <V2Badge tone="red">{t('Mensalidade em atraso')}</V2Badge>}
         </div>
       )}
 
       {vitrine.length > 0 && (
         <>
           <p className="mb-3 text-xs text-gray-500">
-            Horas compradas adiantado saem mais baratas e são abatidas sozinhas quando a arena confirma a
-            reserva. Você pede aqui; a arena credita quando receber o pagamento.
+            {t('Horas compradas adiantado saem mais baratas e são abatidas sozinhas quando a arena confirma a reserva. Você pede aqui; a arena credita quando receber o pagamento.')}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {vitrine.map((p) => (

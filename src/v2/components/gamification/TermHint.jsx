@@ -4,6 +4,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { ChevronRight, CircleHelp } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { buildGamificationGuide } from '@/modules/progression/domain/gamificationGuide';
+import { t } from '@/core/i18n';
 
 /** O guia com os padrões, montado uma vez: o balão só usa as frases curtas, que não trazem número de configuração. */
 let guiaPadrao = null;
@@ -25,17 +26,17 @@ const guia = () => guiaPadrao || (guiaPadrao = buildGamificationGuide(null));
  */
 export default function TermHint({ term, className, side = 'bottom', label }) {
   const dentroDoRoteador = useInRouterContext();
-  const t = guia().byId[term];
-  if (!t) return null;
-  const destino = `/gamification/como-funciona?termo=${t.id}`;
+  const termo = guia().byId[term];
+  if (!termo) return null;
+  const destino = `/gamification/como-funciona?termo=${termo.id}`;
   const classe = 'mt-3 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline';
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
           type="button"
-          aria-label={label || `O que é ${t.title}?`}
-          data-term={t.id}
+          aria-label={label || t('O que é {termo}?', { termo: termo.title })}
+          data-term={termo.id}
           className={cn(
             'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors',
             'hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40',
@@ -53,11 +54,11 @@ export default function TermHint({ term, className, side = 'bottom', label }) {
           data-testid="term-hint"
           className="z-[70] w-72 max-w-[calc(100vw-24px)] rounded-2xl border border-gray-100 bg-paper-pure p-4 text-left shadow-organic outline-none"
         >
-          <p className="font-display text-sm font-bold text-ink">{t.title}</p>
-          <p className="mt-1 text-xs leading-5 text-gray-600">{t.short}</p>
+          <p className="font-display text-sm font-bold text-ink">{termo.title}</p>
+          <p className="mt-1 text-xs leading-5 text-gray-600">{termo.short}</p>
           {dentroDoRoteador
-            ? <Link to={destino} className={classe}>Entender melhor <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
-            : <a href={destino} className={classe}>Entender melhor <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></a>}
+            ? <Link to={destino} className={classe}>{t('Entender melhor')} <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+            : <a href={destino} className={classe}>{t('Entender melhor')} <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></a>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -73,16 +74,16 @@ export default function TermHint({ term, className, side = 'bottom', label }) {
  */
 export function TermNote({ term, className }) {
   const dentroDoRoteador = useInRouterContext();
-  const t = guia().byId[term];
-  if (!t) return null;
-  const destino = `/gamification/como-funciona?termo=${t.id}`;
+  const termo = guia().byId[term];
+  if (!termo) return null;
+  const destino = `/gamification/como-funciona?termo=${termo.id}`;
   const classe = 'ml-1 inline-flex items-center gap-0.5 font-bold text-ink hover:underline';
-  const mais = <>Saiba mais <ChevronRight className="h-3 w-3" aria-hidden="true" /></>;
+  const mais = <>{t('Saiba mais')} <ChevronRight className="h-3 w-3" aria-hidden="true" /></>;
   return (
-    <p data-testid="term-note" data-term={t.id} className={cn('flex items-start gap-2 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-600', className)}>
+    <p data-testid="term-note" data-term={termo.id} className={cn('flex items-start gap-2 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-600', className)}>
       <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
       <span>
-        {t.short}
+        {termo.short}
         {dentroDoRoteador ? <Link to={destino} className={classe}>{mais}</Link> : <a href={destino} className={classe}>{mais}</a>}
       </span>
     </p>

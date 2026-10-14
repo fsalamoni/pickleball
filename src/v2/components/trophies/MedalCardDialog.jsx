@@ -21,6 +21,7 @@ import { buildMedalCard, CARD_MODE } from '@/modules/trophies/domain/medalCard.j
 import { buildWhatsAppShareUrl } from '@/modules/sharing/domain/shareLinks.js';
 import { V2Button, V2FilterChip, V2Toggle } from '@/v2/ui/primitives';
 import MedalCard, { METAL } from './MedalCard';
+import { t } from '@/core/i18n';
 
 const PIXEL_TRANSPARENTE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
@@ -69,7 +70,7 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
       setShowPhotos(false);
       await new Promise((r) => setTimeout(r, 50));
       const png = await toPng(cardRef.current, opts);
-      toast.message('As fotos não puderam entrar na imagem. O cartão saiu só com os nomes.');
+      toast.message(t('As fotos não puderam entrar na imagem. O cartão saiu só com os nomes.'));
       return png;
     }
   }
@@ -83,9 +84,9 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
       a.download = card.fileName;
       a.href = dataUrl;
       a.click();
-      toast.success('Cartão salvo. Poste nos stories ou mande no grupo.');
+      toast.success(t('Cartão salvo. Poste nos stories ou mande no grupo.'));
     } catch {
-      toast.error('Não foi possível gerar a imagem. Tente de novo.');
+      toast.error(t('Não foi possível gerar a imagem. Tente de novo.'));
     } finally { setBusy(''); }
   }
 
@@ -122,11 +123,11 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" sheet>
         <DialogHeader>
-          <DialogTitle>Cartão de {mode === CARD_MODE.PODIUM ? 'pódio' : 'campeões'}</DialogTitle>
-          <DialogDescription>Para os stories, o grupo, a parede da arena ou o PDF.</DialogDescription>
+          <DialogTitle>{mode === CARD_MODE.PODIUM ? t('Cartão de pódio') : t('Cartão de campeões')}</DialogTitle>
+          <DialogDescription>{t('Para os stories, o grupo, a parede da arena ou o PDF.')}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="O que vai no cartão">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('O que vai no cartão')}>
           {degraus.map((p) => (
             <V2FilterChip key={p} active={mode === CARD_MODE.PLACE && position === p} onClick={() => { setMode(CARD_MODE.PLACE); setPosition(p); }}>
               <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full" style={{ background: METAL[p].cor }} aria-hidden="true" />
@@ -134,11 +135,11 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
             </V2FilterChip>
           ))}
           {degraus.length > 1 && (
-            <V2FilterChip active={mode === CARD_MODE.PODIUM} onClick={() => setMode(CARD_MODE.PODIUM)}>Pódio inteiro</V2FilterChip>
+            <V2FilterChip active={mode === CARD_MODE.PODIUM} onClick={() => setMode(CARD_MODE.PODIUM)}>{t('Pódio inteiro')}</V2FilterChip>
           )}
         </div>
         {temFotos && (
-          <V2Toggle id="cartao-fotos" checked={showPhotos} onChange={setShowPhotos} label="Com as fotos" hint="Desligue para o cartão sair só com os nomes." />
+          <V2Toggle id="cartao-fotos" checked={showPhotos} onChange={setShowPhotos} label={t('Com as fotos')} hint={t('Desligue para o cartão sair só com os nomes.')} />
         )}
 
         <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-3xl shadow-organic">
@@ -147,20 +148,20 @@ export default function MedalCardDialog({ open, onOpenChange, places = [], event
 
         <div className="grid grid-cols-1 gap-2">
           <V2Button variant="primary" onClick={compartilhar} disabled={Boolean(busy)}>
-            <Share2 className="h-4 w-4" /> {busy === 'share' ? 'Preparando…' : 'Compartilhar'}
+            <Share2 className="h-4 w-4" /> {busy === 'share' ? t('Preparando…') : t('Compartilhar')}
           </V2Button>
           <div className="grid grid-cols-3 gap-2">
             <V2Button variant="secondary" onClick={baixar} disabled={Boolean(busy)}>
-              <Download className="h-4 w-4" /> {busy === 'png' ? 'Gerando…' : 'Imagem'}
+              <Download className="h-4 w-4" /> {busy === 'png' ? t('Gerando…') : t('Imagem')}
             </V2Button>
             <V2Button variant="secondary" onClick={imprimir}>
-              <Printer className="h-4 w-4" /> Imprimir / PDF
+              <Printer className="h-4 w-4" /> {t('Imprimir / PDF')}
             </V2Button>
-            <V2Button variant="secondary" onClick={() => copy(card.url || card.shareText, 'Link copiado!')}>
+            <V2Button variant="secondary" onClick={() => copy(card.url || card.shareText, t('Link copiado!'))}>
               {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />} Link
             </V2Button>
           </div>
-          <p className="text-center text-xs text-gray-500">Para o PDF, escolha “Salvar como PDF” na impressão.</p>
+          <p className="text-center text-xs text-gray-500">{t('Para o PDF, escolha “Salvar como PDF” na impressão.')}</p>
         </div>
       </DialogContent>
 

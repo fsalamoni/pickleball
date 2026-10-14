@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * Skill Trees do jogador (lógica pura, sem I/O).
  *
@@ -37,34 +38,34 @@ export const SKILL_TREE_KEYS = Object.freeze([
 /** Metadados de cada trilha (para UI, sem JSX). */
 export const SKILL_TREE_META = Object.freeze({
   tournament: {
-    name: 'Torneiro',
+    name: tk('Torneiro'),
     icon: '🏆',
     color: 'amber',
-    description: 'Participação e organização de torneios.',
+    description: tk('Participação e organização de torneios.'),
   },
   social: {
-    name: 'Social',
+    name: tk('Social'),
     icon: '🤝',
     color: 'blue',
-    description: 'Comunidade: follows, kudos, chat, mural, fórum.',
+    description: tk('Comunidade: follows, kudos, chat, mural, fórum.'),
   },
   arena: {
-    name: 'Arena',
+    name: tk('Arena'),
     icon: '🏟️',
     color: 'teal',
-    description: 'Reservas de quadras, reviews e comparecimento.',
+    description: tk('Reservas de quadras, reviews e comparecimento.'),
   },
   coach: {
-    name: 'Aulas',
+    name: tk('Aulas'),
     icon: '🎓',
     color: 'purple',
-    description: 'Aulas, pacotes e clínicas — como aluno e como professor.',
+    description: tk('Aulas, pacotes e clínicas — como aluno e como professor.'),
   },
   club: {
-    name: 'Clube',
+    name: tk('Clube'),
     icon: '👥',
     color: 'green',
-    description: 'Participação e organização de clubes e eventos.',
+    description: tk('Participação e organização de clubes e eventos.'),
   },
 });
 

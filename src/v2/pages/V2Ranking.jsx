@@ -15,6 +15,7 @@ import {
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import V2DuprRankingView from '@/v2/components/rating/V2DuprRankingView';
+import { t } from '@/core/i18n';
 
 function medalEmoji(position) {
   if (position === 1) return '🥇';
@@ -75,44 +76,32 @@ function RankingExplainer() {
     <V2Surface className="mb-8" data-dica="ranking-como-funciona">
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-          <span className="font-semibold text-ink">Como funciona o ranking?</span>
-          <span className="text-xs text-gray-500 group-open:hidden">ver explicação</span>
-          <span className="hidden text-xs text-gray-500 group-open:inline">ocultar</span>
+          <span className="font-semibold text-ink">{t('Como funciona o ranking?')}</span>
+          <span className="text-xs text-gray-500 group-open:hidden">{t('ver explicação')}</span>
+          <span className="hidden text-xs text-gray-500 group-open:inline">{t('ocultar')}</span>
         </summary>
         <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
           <p>
-            O ranking é um <strong>rating de habilidade calculado pela própria plataforma</strong> (estilo
-            Elo), a partir dos <strong>jogos já finalizados</strong>. A cada atualização, todos os jogos são
-            reprocessados do zero, em ordem cronológica — então o resultado é sempre consistente.
+            {t('O ranking é um rating de habilidade calculado pela própria plataforma (estilo Elo), a partir dos jogos já finalizados. A cada atualização, todos os jogos são reprocessados do zero, em ordem cronológica — então o resultado é sempre consistente.')}
           </p>
           <ul className="list-disc space-y-1.5 pl-5">
-            <li>Cada atleta começa com uma pontuação derivada do seu <strong>nível declarado</strong> (nível mais alto começa mais alto; sem nível, começa no meio).</li>
-            <li>A cada jogo, quem <strong>vence ganha pontos</strong> e quem perde cede pontos. O ajuste depende da <strong>força do adversário</strong>: vencer alguém mais forte vale mais; perder para alguém mais fraco custa mais.</li>
-            <li>Nos <strong>primeiros jogos</strong> a pontuação se move mais rápido e depois estabiliza.</li>
-            <li>Em <strong>duplas</strong>, a dupla é avaliada pela média e cada jogador recebe o próprio ajuste.</li>
+            <li>{t('Cada atleta começa com uma pontuação derivada do seu nível declarado (nível mais alto começa mais alto; sem nível, começa no meio).')}</li>
+            <li>{t('A cada jogo, quem vence ganha pontos e quem perde cede pontos. O ajuste depende da força do adversário: vencer alguém mais forte vale mais; perder para alguém mais fraco custa mais.')}</li>
+            <li>{t('Nos primeiros jogos a pontuação se move mais rápido e depois estabiliza.')}</li>
+            <li>{t('Em duplas, a dupla é avaliada pela média e cada jogador recebe o próprio ajuste.')}</li>
+            <li>{t('Entram os jogos de torneios públicos — a partir do momento em que o resultado é lançado, sem esperar o encerramento — e os de dias de jogo publicados por quem organiza. Torneio em rascunho, privado ou cancelado não conta.')}</li>
+            <li>{t('Só entram partidas em que todos os atletas têm conta na plataforma. Se alguém foi inscrito ou inserido só pelo nome, a partida fica de fora para todos — quem organiza resolve ligando essa pessoa à conta dela, e os jogos passam a contar sozinhos.')}</li>
             <li>
-              Entram os jogos de <strong>torneios públicos</strong> — a partir do momento em que o resultado
-              é lançado, sem esperar o encerramento — e os de <strong>dias de jogo publicados</strong> por quem
-              organiza. Torneio em rascunho, privado ou cancelado não conta.
-            </li>
-            <li>
-              Só entram partidas em que <strong>todos os atletas têm conta</strong> na plataforma. Se alguém foi
-              inscrito ou inserido só pelo nome, a partida fica de fora <strong>para todos</strong> — quem organiza
-              resolve ligando essa pessoa à conta dela, e os jogos passam a contar sozinhos.
-            </li>
-            <li>
-              A atualização é <strong>automática</strong>: cada resultado que entra, muda ou sai recalcula o
-              ranking em instantes. Em <Link to="/meu-desempenho" className="font-semibold text-ink underline">Meu desempenho</Link> você
-              vê todos os seus jogos e, se algum não estiver no ranking, o porquê.
+              {t('A atualização é automática: cada resultado que entra, muda ou sai recalcula o ranking em instantes.')}{' '}
+              <Link to="/meu-desempenho" className="font-semibold text-ink underline">{t('Meu desempenho')}</Link>
+              {': '}{t('você vê todos os seus jogos e, se algum não estiver no ranking, o porquê.')}
             </li>
           </ul>
           <p className="text-xs text-gray-500">
-            <strong>Colunas:</strong> Torneios (disputados), Jogos, V–D (vitórias–derrotas), Saldo (pontos
-            marcados − sofridos) e Rating (ordena o ranking).
+            <strong>{t('Colunas:')}</strong> {t('Torneios (disputados), Jogos, V–D (vitórias–derrotas), Saldo (pontos marcados − sofridos) e Rating (ordena o ranking).')}
           </p>
           <p className="text-xs text-gray-500">
-            É um rating <strong>próprio da plataforma</strong>, para leitura interna — não é um rating oficial
-            de federação (como DUPR ou UTPR).
+            {t('É um rating próprio da plataforma, para leitura interna — não é um rating oficial de federação (como DUPR ou UTPR).')}
           </p>
         </div>
       </details>
@@ -173,11 +162,11 @@ function NationalRankingView() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
-        title="Ranking nacional"
-        subtitle="Rating calculado a partir dos jogos de torneios e dias de jogo da plataforma."
+        title={t('Ranking nacional')}
+        subtitle={t('Rating calculado a partir dos jogos de torneios e dias de jogo da plataforma.')}
         action={doublesRankingOn ? (
           <Link to="/ranking/duplas" data-dica="ranking-duplas-link" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-semibold text-ink hover:bg-white">
-            <Users2 className="h-4 w-4" /> Ranking de duplas
+            <Users2 className="h-4 w-4" /> {t('Ranking de duplas')}
           </Link>
         ) : null}
       />
@@ -189,39 +178,39 @@ function NationalRankingView() {
           icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome, cidade, estado ou nível"
+          placeholder={t('Buscar por nome, cidade, estado ou nível')}
         />
         {rankingFiltersOn && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <FilterSelect
-              label="Estado"
+              label={t('Estado')}
               value={stateFilter}
               onChange={setStateFilter}
-              options={[{ value: ALL, label: 'Todos os estados' }, ...stateOptions.map((s) => ({ value: s, label: s }))]}
+              options={[{ value: ALL, label: t('Todos os estados') }, ...stateOptions.map((s) => ({ value: s, label: s }))]}
             />
             <FilterSelect
-              label="Nível"
+              label={t('Nível')}
               value={levelFilter}
               onChange={setLevelFilter}
-              options={[{ value: ALL, label: 'Todos os níveis' }, ...levelOptions.map((l) => ({ value: l, label: l }))]}
+              options={[{ value: ALL, label: t('Todos os níveis') }, ...levelOptions.map((l) => ({ value: l, label: l }))]}
             />
             <FilterSelect
-              label="Gênero"
+              label={t('Gênero')}
               value={genderFilter}
               onChange={setGenderFilter}
-              options={[{ value: ALL, label: 'Todos os gêneros' }, ...genderOptions.map((g) => ({ value: g, label: genderLabel(g) || g }))]}
+              options={[{ value: ALL, label: t('Todos os gêneros') }, ...genderOptions.map((g) => ({ value: g, label: genderLabel(g) || g }))]}
             />
             <FilterSelect
-              label="Clube"
+              label={t('Clube')}
               value={clubFilter}
               onChange={setClubFilter}
-              options={[{ value: ALL, label: 'Todos os clubes' }, ...clubOptions.map((c) => ({ value: c.id, label: c.name }))]}
+              options={[{ value: ALL, label: t('Todos os clubes') }, ...clubOptions.map((c) => ({ value: c.id, label: c.name }))]}
             />
             <FilterSelect
-              label="Faixa etária"
+              label={t('Faixa etária')}
               value={ageFilter}
               onChange={setAgeFilter}
-              options={[{ value: ALL, label: 'Todas as idades' }, ...AGE_BUCKETS.map((b) => ({ value: b.value, label: b.label }))]}
+              options={[{ value: ALL, label: t('Todas as idades') }, ...AGE_BUCKETS.map((b) => ({ value: b.value, label: b.label }))]}
             />
           </div>
         )}
@@ -233,8 +222,8 @@ function NationalRankingView() {
         // Falha não é "ranking ainda não calculado" (docs/27-FALHA-NAO-E-VAZIO.md).
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar o ranking"
-            description="O ranking continua calculado — só não conseguimos buscá-lo agora."
+            title={t('Não foi possível carregar o ranking')}
+            description={t('O ranking continua calculado — só não conseguimos buscá-lo agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -242,10 +231,10 @@ function NationalRankingView() {
         <V2Surface>
           <V2EmptyState
             icon={TrendingUp}
-            title={players.length === 0 ? 'O ranking ainda não foi calculado' : 'Nenhum atleta para o filtro'}
+            title={players.length === 0 ? t('O ranking ainda não foi calculado') : t('Nenhum atleta para o filtro')}
             description={players.length === 0
-              ? 'Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.'
-              : 'Ajuste a busca para ampliar a leitura do ranking.'}
+              ? t('Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.')
+              : t('Ajuste a busca para ampliar a leitura do ranking.')}
           />
         </V2Surface>
       ) : (
@@ -270,17 +259,17 @@ function NationalRankingView() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold text-ink">{p.platform_name}{isMe && <span className="ml-2 text-xs font-bold text-ink-lighter">(você)</span>}</p>
-                  <p className="text-xs text-gray-500">{[p.city, p.state].filter(Boolean).join(' / ') || 'Local não informado'}</p>
+                  <p className="truncate font-bold text-ink">{p.platform_name}{isMe && <span className="ml-2 text-xs font-bold text-ink-lighter">{t('(você)')}</span>}</p>
+                  <p className="text-xs text-gray-500">{[p.city, p.state].filter(Boolean).join(' / ') || t('Local não informado')}</p>
                 </div>
                 <div className="hidden items-center gap-4 sm:flex">
-                  <Stat label="Torneios" value={p.tournaments ?? '—'} />
-                  <Stat label="Jogos" value={p.games ?? '—'} />
-                  <Stat label="V–D" value={`${p.wins ?? 0}–${p.losses ?? 0}`} />
-                  <Stat label="Saldo" value={formatBalance(p.points_balance)} />
+                  <Stat label={t('Torneios')} value={p.tournaments ?? '—'} />
+                  <Stat label={t('Jogos')} value={p.games ?? '—'} />
+                  <Stat label={t('V–D')} value={`${p.wins ?? 0}–${p.losses ?? 0}`} />
+                  <Stat label={t('Saldo')} value={formatBalance(p.points_balance)} />
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Rating</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{t('Rating')}</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{p.rating}</p>
                 </div>
               </div>
@@ -314,8 +303,8 @@ export default function V2Ranking() {
   const setTab = (t) => setParams(t === 'dupr' ? { tab: 'dupr' } : {}, { replace: true });
 
   const TABS = [
-    { id: 'national', label: 'Nacional' },
-    { id: 'dupr', label: 'Nível 2.0–8.0' },
+    { id: 'national', get label() { return t('Nacional'); } },
+    { id: 'dupr', get label() { return t('Nível 2.0–8.0'); } },
   ];
 
   return (

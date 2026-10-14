@@ -27,6 +27,7 @@ import { SUBSCRIPTION_STATUS, subscriptionState } from '@/modules/arenas/domain/
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink' };
 
@@ -63,16 +64,16 @@ function PlanoNaArena({ plano }) {
       >
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-bold text-ink">{arena?.name || 'Arena'}</span>
+            <span className="truncate text-sm font-bold text-ink">{arena?.name || t('Arena')}</span>
             {nivel && <V2Badge tone={TIER_TONE[nivel.id] || 'amber'}>{nivel.name}</V2Badge>}
-            {mensal?.status === SUBSCRIPTION_STATUS.OVERDUE && <V2Badge tone="red">Mensalidade em atraso</V2Badge>}
+            {mensal?.status === SUBSCRIPTION_STATUS.OVERDUE && <V2Badge tone="red">{t('Mensalidade em atraso')}</V2Badge>}
           </span>
           <span className="mt-0.5 block text-xs text-gray-600">
             {[
-              horas > 0 ? `${horas}h de pacote${vence ? ` · a primeira vence ${vence}` : ''}` : null,
-              saldo > 0 ? `${formatPrice(saldo)} de saldo` : null,
-              mensal?.status === SUBSCRIPTION_STATUS.ACTIVE ? 'Mensalidade em dia' : null,
-            ].filter(Boolean).join(' · ') || 'Você é membro'}
+              horas > 0 ? `${t('{n}h de pacote', { n: horas })}${vence ? ` · ${t('a primeira vence {data}', { data: vence })}` : ''}` : null,
+              saldo > 0 ? t('{valor} de saldo', { valor: formatPrice(saldo) }) : null,
+              mensal?.status === SUBSCRIPTION_STATUS.ACTIVE ? t('Mensalidade em dia') : null,
+            ].filter(Boolean).join(' · ') || t('Você é membro')}
           </span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
@@ -89,8 +90,8 @@ export default function MyArenaPlans() {
       <V2ErrorState
         inline
         className="mb-6"
-        title="Não foi possível carregar os seus planos nas arenas"
-        description="As suas horas e o seu saldo continuam lá — tente de novo."
+        title={t('Não foi possível carregar os seus planos nas arenas')}
+        description={t('As suas horas e o seu saldo continuam lá — tente de novo.')}
         onRetry={() => refetch()}
       />
     );
@@ -100,10 +101,10 @@ export default function MyArenaPlans() {
   return (
     <V2Surface className="mb-6">
       <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-        <Crown className="h-4 w-4" /> Planos e saldo nas arenas
+        <Crown className="h-4 w-4" /> {t('Planos e saldo nas arenas')}
       </h2>
       <p className="mt-1 text-xs text-gray-500">
-        As horas de pacote e o saldo são abatidos sozinhos quando a arena confirma a reserva.
+        {t('As horas de pacote e o saldo são abatidos sozinhos quando a arena confirma a reserva.')}
       </p>
       <ul className="mt-3 space-y-2">
         {planos.map((p) => <PlanoNaArena key={p.arenaId} plano={p} />)}

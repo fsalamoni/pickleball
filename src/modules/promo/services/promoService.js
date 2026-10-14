@@ -270,8 +270,8 @@ export async function redeemPromoCoupon(issuer, couponId, { userId = null, userN
     if (!snap.exists()) throw new Error(t('Cupom não encontrado.'));
     const c = { id: snap.id, ...snap.data() };
     if (c.issuer_type !== e.type || c.issuer_id !== e.id) throw new Error(t('Este cupom é de outro emissor.'));
-    const erro = couponError(c, { anyFamily: true, usedByUser: Boolean(userId) && (c.used_by || []).includes(userId) });
-    if (erro) throw new Error(t(erro.replace('Você já usou', 'Esta pessoa já usou')));
+    const erro = couponError(c, { anyFamily: true, usedByUser: Boolean(userId) && (c.used_by || []).includes(userId), byOther: true });
+    if (erro) throw new Error(erro);
     const patch = { used_count: increment(1), last_used_at: serverTimestamp(), updated_at: serverTimestamp() };
     if (userId) patch.used_by = arrayUnion(userId);
     tx.update(ref, patch);

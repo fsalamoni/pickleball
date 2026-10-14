@@ -1,3 +1,4 @@
+import { t, tn, tk } from '@/core/i18n';
 /**
  * supplyHealth — a saúde de quem OFERECE: professor, arena e clube.
  *
@@ -30,11 +31,11 @@ const pct = (n) => Math.round(n);
 
 /** Faixas do total. */
 export function healthBand(score) {
-  if (score == null) return { id: 'unknown', label: 'Ainda sem dados', tone: 'neutral' };
-  if (score >= 85) return { id: 'excellent', label: 'Excelente', tone: 'green' };
-  if (score >= 70) return { id: 'good', label: 'Muito bom', tone: 'blue' };
-  if (score >= 50) return { id: 'growing', label: 'Em evolução', tone: 'amber' };
-  return { id: 'attention', label: 'Precisa de atenção', tone: 'red' };
+  if (score == null) return { id: 'unknown', label: t('Ainda sem dados'), tone: 'neutral' };
+  if (score >= 85) return { id: 'excellent', label: t('Excelente'), tone: 'green' };
+  if (score >= 70) return { id: 'good', label: t('Muito bom'), tone: 'blue' };
+  if (score >= 50) return { id: 'growing', label: t('Em evolução'), tone: 'amber' };
+  return { id: 'attention', label: t('Precisa de atenção'), tone: 'red' };
 }
 
 /**
@@ -88,11 +89,11 @@ export function computeArenaHealth(m = {}) {
   const comunidade = Number.isFinite(ev) ? (ev >= 4 ? 100 : ev >= 2 ? 75 : ev === 1 ? 50 : 10) : null;
 
   const dims = [
-    { id: 'demand', label: 'Demanda', weight: 30, score: demanda != null ? pct(demanda) : null, detail: demanda == null ? 'Sem reservas nas últimas 2 semanas.' : `${b7} ${b7 === 1 ? 'reserva' : 'reservas'} esta semana, ${p7} na anterior.` },
-    { id: 'reliability', label: 'Confiabilidade', weight: 25, score: confiab != null ? pct(confiab) : null, detail: m.noShowRate != null ? `${m.noShowRate}% de faltas${m.pendingOver24h ? `, ${m.pendingOver24h} ${m.pendingOver24h === 1 ? 'pedido' : 'pedidos'} sem resposta há mais de 24 h` : ''}.` : 'Ainda sem reservas decididas.' },
-    { id: 'satisfaction', label: 'Satisfação', weight: 20, score: satisf != null ? pct(satisf) : null, detail: satisf != null ? `Nota ${m.rating} em ${m.reviewsCount} avaliações.` : 'Precisa de ao menos 3 avaliações.' },
-    { id: 'loyalty', label: 'Fidelização', weight: 15, score: fideliz != null ? pct(fideliz) : null, detail: m.repeatRate != null ? `${pct(m.repeatRate)}% dos clientes voltaram a reservar.` : 'Sem clientes suficientes ainda.' },
-    { id: 'community', label: 'Comunidade', weight: 10, score: comunidade, detail: Number.isFinite(ev) ? `${ev} ${ev === 1 ? 'evento' : 'eventos'} (dia de jogo, jogo aberto ou aula) em 30 dias.` : 'Sem dados de eventos.' },
+    { id: 'demand', label: t('Demanda'), weight: 30, score: demanda != null ? pct(demanda) : null, detail: demanda == null ? t('Sem reservas nas últimas 2 semanas.') : tn(b7, '{n} reserva esta semana, {ant} na anterior.', '{n} reservas esta semana, {ant} na anterior.', { ant: p7 }) },
+    { id: 'reliability', label: t('Confiabilidade'), weight: 25, score: confiab != null ? pct(confiab) : null, detail: m.noShowRate != null ? (m.pendingOver24h ? tn(m.pendingOver24h, '{pct}% de faltas, {n} pedido sem resposta há mais de 24 h.', '{pct}% de faltas, {n} pedidos sem resposta há mais de 24 h.', { pct: m.noShowRate }) : t('{pct}% de faltas.', { pct: m.noShowRate })) : t('Ainda sem reservas decididas.') },
+    { id: 'satisfaction', label: t('Satisfação'), weight: 20, score: satisf != null ? pct(satisf) : null, detail: satisf != null ? t('Nota {nota} em {n} avaliações.', { nota: m.rating, n: m.reviewsCount }) : t('Precisa de ao menos 3 avaliações.') },
+    { id: 'loyalty', label: t('Fidelização'), weight: 15, score: fideliz != null ? pct(fideliz) : null, detail: m.repeatRate != null ? t('{pct}% dos clientes voltaram a reservar.', { pct: pct(m.repeatRate) }) : t('Sem clientes suficientes ainda.') },
+    { id: 'community', label: t('Comunidade'), weight: 10, score: comunidade, detail: Number.isFinite(ev) ? tn(ev, '{n} evento (dia de jogo, jogo aberto ou aula) em 30 dias.', '{n} eventos (dia de jogo, jogo aberto ou aula) em 30 dias.') : t('Sem dados de eventos.') },
   ];
   return combineHealth(dims);
 }
@@ -101,22 +102,22 @@ export function computeArenaHealth(m = {}) {
 export function arenaSuggestions(m = {}) {
   const out = [];
   if ((Number(m.pendingOver24h) || 0) > 0) {
-    out.push({ id: 'pending', tone: 'warn', text: `${m.pendingOver24h} ${m.pendingOver24h === 1 ? 'pedido de reserva está' : 'pedidos de reserva estão'} sem resposta há mais de 24 horas. Responder rápido é o que mais pesa na confiança do cliente.`, to: '?aba=reservas' });
+    out.push({ id: 'pending', tone: 'warn', text: tn(Number(m.pendingOver24h), '{n} pedido de reserva está sem resposta há mais de 24 horas. Responder rápido é o que mais pesa na confiança do cliente.', '{n} pedidos de reserva estão sem resposta há mais de 24 horas. Responder rápido é o que mais pesa na confiança do cliente.'), to: '?aba=reservas' });
   }
   if (m.noShowRate != null && Number(m.noShowRate) > 8) {
-    out.push({ id: 'noshow', tone: 'warn', text: `${m.noShowRate}% das reservas viraram falta. Vale ligar a política de cancelamento e o aviso de lembrete.`, to: '?aba=configuracoes' });
+    out.push({ id: 'noshow', tone: 'warn', text: t('{pct}% das reservas viraram falta. Vale ligar a política de cancelamento e o aviso de lembrete.', { pct: m.noShowRate }), to: '?aba=configuracoes' });
   }
   if ((Number(m.lapsedCustomers) || 0) >= 3) {
-    out.push({ id: 'lapsed', tone: 'idea', text: `${m.lapsedCustomers} clientes não voltam há mais de 30 dias. Uma campanha "sentimos sua falta" costuma recuperar parte deles.`, to: '?aba=marketing' });
+    out.push({ id: 'lapsed', tone: 'idea', text: t('{n} clientes não voltam há mais de 30 dias. Uma campanha "sentimos sua falta" costuma recuperar parte deles.', { n: m.lapsedCustomers }), to: '?aba=marketing' });
   }
   if (Number(m.eventsLast30) === 0) {
-    out.push({ id: 'events', tone: 'idea', text: 'Nenhum evento nos últimos 30 dias. Um dia de jogo aberto leva gente nova à quadra e enche os horários vagos.', to: '?aba=jogo-aberto' });
+    out.push({ id: 'events', tone: 'idea', text: t('Nenhum evento nos últimos 30 dias. Um dia de jogo aberto leva gente nova à quadra e enche os horários vagos.'), to: '?aba=jogo-aberto' });
   }
   if (m.reviewsCount != null && Number(m.reviewsCount) < 3) {
-    out.push({ id: 'reviews', tone: 'idea', text: 'Poucas avaliações. Peça a quem acabou de jogar para avaliar a arena — com 3, o selo de satisfação passa a contar.' });
+    out.push({ id: 'reviews', tone: 'idea', text: t('Poucas avaliações. Peça a quem acabou de jogar para avaliar a arena — com 3, o selo de satisfação passa a contar.') });
   }
   if (m.repeatRate != null && Number(m.repeatRate) < 30) {
-    out.push({ id: 'repeat', tone: 'idea', text: `Só ${pct(m.repeatRate)}% dos clientes voltam. Pacotes de horas e o programa de membros aumentam o retorno.`, to: '?aba=membros' });
+    out.push({ id: 'repeat', tone: 'idea', text: t('Só {pct}% dos clientes voltam. Pacotes de horas e o programa de membros aumentam o retorno.', { pct: pct(m.repeatRate) }), to: '?aba=membros' });
   }
   return out;
 }
@@ -154,11 +155,11 @@ export function computeCoachHealth(m = {}) {
   const oferta = Number.isFinite(ofertas) ? (ofertas >= 3 ? 100 : ofertas === 2 ? 75 : ofertas === 1 ? 50 : 15) : null;
 
   const dims = [
-    { id: 'activity', label: 'Atividade', weight: 30, score: atividade != null ? pct(atividade) : null, detail: atividade == null ? 'Sem aulas nos últimos 60 dias.' : `${l30} ${l30 === 1 ? 'aula' : 'aulas'} em 30 dias, ${lp} nos 30 anteriores.` },
-    { id: 'retention', label: 'Retenção', weight: 25, score: retencao != null ? pct(retencao) : null, detail: retencao != null ? `${m.activeStudents30 || 0} de ${total} alunos tiveram aula nos últimos 30 dias.` : 'Sem alunos no roster.' },
-    { id: 'responsiveness', label: 'Resposta', weight: 20, score: resposta != null ? pct(resposta) : null, detail: resposta != null ? `${m.respondedRate != null ? `${pct(m.respondedRate)}% dos pedidos respondidos em 24 h` : 'Pedidos aguardando resposta'}${m.pendingOver24h ? `; ${m.pendingOver24h} pendente(s) há mais de 24 h` : ''}.` : 'Sem pedidos de aula ainda.' },
-    { id: 'growth', label: 'Crescimento', weight: 15, score: crescimento, detail: Number.isFinite(novos) ? `${novos} ${novos === 1 ? 'aluno novo' : 'alunos novos'} em 30 dias.` : 'Sem dados.' },
-    { id: 'offer', label: 'Oferta', weight: 10, score: oferta, detail: Number.isFinite(ofertas) ? `${ofertas} ${ofertas === 1 ? 'oferta ativa' : 'ofertas ativas'} (pacote, clínica ou conteúdo).` : 'Sem dados.' },
+    { id: 'activity', label: t('Atividade'), weight: 30, score: atividade != null ? pct(atividade) : null, detail: atividade == null ? t('Sem aulas nos últimos 60 dias.') : tn(l30, '{n} aula em 30 dias, {ant} nos 30 anteriores.', '{n} aulas em 30 dias, {ant} nos 30 anteriores.', { ant: lp }) },
+    { id: 'retention', label: t('Retenção'), weight: 25, score: retencao != null ? pct(retencao) : null, detail: retencao != null ? t('{ativos} de {total} alunos tiveram aula nos últimos 30 dias.', { ativos: m.activeStudents30 || 0, total }) : t('Sem alunos no roster.') },
+    { id: 'responsiveness', label: t('Resposta'), weight: 20, score: resposta != null ? pct(resposta) : null, detail: resposta != null ? `${m.respondedRate != null ? t('{pct}% dos pedidos respondidos em 24 h', { pct: pct(m.respondedRate) }) : t('Pedidos aguardando resposta')}${m.pendingOver24h ? t('; {n} pendente(s) há mais de 24 h', { n: m.pendingOver24h }) : ''}.` : t('Sem pedidos de aula ainda.') },
+    { id: 'growth', label: t('Crescimento'), weight: 15, score: crescimento, detail: Number.isFinite(novos) ? tn(novos, '{n} aluno novo em 30 dias.', '{n} alunos novos em 30 dias.') : t('Sem dados.') },
+    { id: 'offer', label: t('Oferta'), weight: 10, score: oferta, detail: Number.isFinite(ofertas) ? tn(ofertas, '{n} oferta ativa (pacote, clínica ou conteúdo).', '{n} ofertas ativas (pacote, clínica ou conteúdo).') : t('Sem dados.') },
   ];
   return combineHealth(dims);
 }
@@ -167,16 +168,16 @@ export function computeCoachHealth(m = {}) {
 export function coachBadges(m = {}) {
   const out = [];
   if ((Number(m.validatedStudents) || 0) >= 5) {
-    out.push({ id: 'mentor', emoji: '🎓', label: 'Mentor', criterion: '5 ou mais alunos com o nível validado por você.' });
+    out.push({ id: 'mentor', emoji: '🎓', label: t('Mentor'), criterion: t('5 ou mais alunos com o nível validado por você.') });
   }
   if (m.respondedRate != null && Number(m.respondedRate) >= 90 && (Number(m.responseSample) || 0) >= 5) {
-    out.push({ id: 'fast', emoji: '⚡', label: 'Resposta rápida', criterion: '90% dos pedidos respondidos em até 24 horas (mínimo de 5 pedidos).' });
+    out.push({ id: 'fast', emoji: '⚡', label: t('Resposta rápida'), criterion: t('90% dos pedidos respondidos em até 24 horas (mínimo de 5 pedidos).') });
   }
   if ((Number(m.lessons30) || 0) >= 10) {
-    out.push({ id: 'veteran', emoji: '🏅', label: 'Veterano do ensino', criterion: '10 ou mais aulas em 30 dias.' });
+    out.push({ id: 'veteran', emoji: '🏅', label: t('Veterano do ensino'), criterion: t('10 ou mais aulas em 30 dias.') });
   }
   if ((Number(m.totalStudents) || 0) >= 20) {
-    out.push({ id: 'roster', emoji: '👥', label: 'Turma grande', criterion: '20 ou mais alunos no roster.' });
+    out.push({ id: 'roster', emoji: '👥', label: t('Turma grande'), criterion: t('20 ou mais alunos no roster.') });
   }
   return out;
 }
@@ -184,17 +185,17 @@ export function coachBadges(m = {}) {
 export function coachSuggestions(m = {}) {
   const out = [];
   if ((Number(m.pendingOver24h) || 0) > 0) {
-    out.push({ id: 'pending', tone: 'warn', text: `${m.pendingOver24h} ${m.pendingOver24h === 1 ? 'pedido de aula está' : 'pedidos de aula estão'} sem resposta há mais de 24 horas. Quem espera muito escolhe outro professor.` });
+    out.push({ id: 'pending', tone: 'warn', text: tn(Number(m.pendingOver24h), '{n} pedido de aula está sem resposta há mais de 24 horas. Quem espera muito escolhe outro professor.', '{n} pedidos de aula estão sem resposta há mais de 24 horas. Quem espera muito escolhe outro professor.') });
   }
   const inativos = Math.max(0, (Number(m.totalStudents) || 0) - (Number(m.activeStudents30) || 0));
   if (inativos >= 3) {
-    out.push({ id: 'inactive', tone: 'idea', text: `${inativos} alunos não têm aula há mais de 30 dias. Uma mensagem "volta pra quadra?" costuma reativar parte deles.` });
+    out.push({ id: 'inactive', tone: 'idea', text: t('{n} alunos não têm aula há mais de 30 dias. Uma mensagem "volta pra quadra?" costuma reativar parte deles.', { n: inativos }) });
   }
   if (Number(m.offers) === 0) {
-    out.push({ id: 'offer', tone: 'idea', text: 'Você ainda não tem pacote, clínica nem conteúdo ativos. Um pacote de 5 aulas é o que mais aumenta a retenção.' });
+    out.push({ id: 'offer', tone: 'idea', text: t('Você ainda não tem pacote, clínica nem conteúdo ativos. Um pacote de 5 aulas é o que mais aumenta a retenção.') });
   }
   if (Number(m.newStudents30) === 0 && (Number(m.totalStudents) || 0) > 0) {
-    out.push({ id: 'growth', tone: 'idea', text: 'Nenhum aluno novo em 30 dias. Uma clínica aberta ou um cupom de aula experimental atraem quem ainda não conhece você.' });
+    out.push({ id: 'growth', tone: 'idea', text: t('Nenhum aluno novo em 30 dias. Uma clínica aberta ou um cupom de aula experimental atraem quem ainda não conhece você.') });
   }
   return out;
 }
@@ -245,10 +246,10 @@ export function computeClubActivity({ games = [], members = [], startMs, endMs }
 
 /** As conquistas COLETIVAS do clube, com o progresso de cada uma. */
 export const CLUB_COLLECTIVE_GOALS = Object.freeze([
-  { id: 'week_10_games', scope: 'week', metric: 'games', target: 10, emoji: '🎾', label: '10 jogos na semana', hint: 'O clube jogou 10 partidas publicadas em uma semana.' },
-  { id: 'week_half_active', scope: 'week', metric: 'activeRate', target: 50, emoji: '🔥', label: 'Metade do clube jogou', hint: 'Ao menos 50% dos membros jogaram na semana.' },
-  { id: 'month_100_games', scope: 'month', metric: 'games', target: 100, emoji: '🏟️', label: '100 jogos no mês', hint: 'Marca histórica: 100 partidas publicadas no mês.' },
-  { id: 'month_5_new', scope: 'month', metric: 'newMembers', target: 5, emoji: '🌱', label: '5 membros novos no mês', hint: 'O clube está crescendo.' },
+  { id: 'week_10_games', scope: 'week', metric: 'games', target: 10, emoji: '🎾', label: tk('10 jogos na semana'), hint: tk('O clube jogou 10 partidas publicadas em uma semana.') },
+  { id: 'week_half_active', scope: 'week', metric: 'activeRate', target: 50, emoji: '🔥', label: tk('Metade do clube jogou'), hint: tk('Ao menos 50% dos membros jogaram na semana.') },
+  { id: 'month_100_games', scope: 'month', metric: 'games', target: 100, emoji: '🏟️', label: tk('100 jogos no mês'), hint: tk('Marca histórica: 100 partidas publicadas no mês.') },
+  { id: 'month_5_new', scope: 'month', metric: 'newMembers', target: 5, emoji: '🌱', label: tk('5 membros novos no mês'), hint: tk('O clube está crescendo.') },
 ]);
 
 export function evaluateClubGoals(activity, scope) {
@@ -265,22 +266,22 @@ export function evaluateClubGoals(activity, scope) {
 /** As medidas que cada frente pode escolher como meta. O id é contrato. */
 export const GOAL_METRICS = Object.freeze({
   coach: {
-    lessons: { label: 'Aulas concluídas no mês', unit: 'aulas', suggested: 20 },
-    new_students: { label: 'Alunos novos no mês', unit: 'alunos', suggested: 3 },
-    clinics: { label: 'Clínicas abertas no mês', unit: 'clínicas', suggested: 1 },
-    validations: { label: 'Níveis validados no mês', unit: 'validações', suggested: 5 },
+    lessons: { label: tk('Aulas concluídas no mês'), unit: tk('aulas'), suggested: 20 },
+    new_students: { label: tk('Alunos novos no mês'), unit: tk('alunos'), suggested: 3 },
+    clinics: { label: tk('Clínicas abertas no mês'), unit: tk('clínicas'), suggested: 1 },
+    validations: { label: tk('Níveis validados no mês'), unit: tk('validações'), suggested: 5 },
   },
   arena: {
-    bookings: { label: 'Reservas jogadas no mês', unit: 'reservas', suggested: 60 },
-    events: { label: 'Eventos abertos no mês', unit: 'eventos', suggested: 2 },
-    reviews: { label: 'Avaliações recebidas no mês', unit: 'avaliações', suggested: 5 },
-    new_customers: { label: 'Clientes novos no mês', unit: 'clientes', suggested: 10 },
+    bookings: { label: tk('Reservas jogadas no mês'), unit: tk('reservas'), suggested: 60 },
+    events: { label: tk('Eventos abertos no mês'), unit: tk('eventos'), suggested: 2 },
+    reviews: { label: tk('Avaliações recebidas no mês'), unit: tk('avaliações'), suggested: 5 },
+    new_customers: { label: tk('Clientes novos no mês'), unit: tk('clientes'), suggested: 10 },
   },
   club: {
-    games: { label: 'Jogos publicados no mês', unit: 'jogos', suggested: 40 },
-    new_members: { label: 'Membros novos no mês', unit: 'membros', suggested: 3 },
-    events: { label: 'Eventos no mês', unit: 'eventos', suggested: 2 },
-    active_rate: { label: 'Membros ativos no mês', unit: '%', suggested: 50 },
+    games: { label: tk('Jogos publicados no mês'), unit: tk('jogos'), suggested: 40 },
+    new_members: { label: tk('Membros novos no mês'), unit: tk('membros'), suggested: 3 },
+    events: { label: tk('Eventos no mês'), unit: tk('eventos'), suggested: 2 },
+    active_rate: { label: tk('Membros ativos no mês'), unit: '%', suggested: 50 },
   },
 });
 

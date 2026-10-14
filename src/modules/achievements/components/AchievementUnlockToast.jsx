@@ -6,6 +6,7 @@ import {
   ACHIEVEMENT_RARITY_META,
   ACHIEVEMENT_FAMILY_META,
 } from '../domain/achievementsV2.js';
+import { t } from '@/core/i18n';
 
 /**
  * Toast celebratório de conquista desbloqueada.
@@ -110,16 +111,16 @@ export default function AchievementUnlockToast({
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-                Conquista desbloqueada
+                {t('Conquista desbloqueada')}
               </p>
             </div>
-            <h4 className="mt-0.5 truncate font-display text-base font-bold text-ink">{name}</h4>
-            <p className="mt-0.5 text-xs text-gray-600">{description}</p>
+            <h4 className="mt-0.5 truncate font-display text-base font-bold text-ink">{t(name)}</h4>
+            <p className="mt-0.5 text-xs text-gray-600">{t(description)}</p>
 
             <div className="mt-2 flex items-center gap-1.5">
-              <V2Badge tone={RARITY_TONE_TO_BADGE[rarity] || 'neutral'}>{rarityMeta.name}</V2Badge>
+              <V2Badge tone={RARITY_TONE_TO_BADGE[rarity] || 'neutral'}>{t(rarityMeta.name)}</V2Badge>
               {family && ACHIEVEMENT_FAMILY_META[family] && (
-                <V2Badge tone="neutral">{ACHIEVEMENT_FAMILY_META[family].name}</V2Badge>
+                <V2Badge tone="neutral">{t(ACHIEVEMENT_FAMILY_META[family].name)}</V2Badge>
               )}
               {xpBonus > 0 && (
                 <V2Badge tone="amber">+{xpBonus} XP</V2Badge>
@@ -131,7 +132,7 @@ export default function AchievementUnlockToast({
             type="button"
             onClick={handleClose}
             className="shrink-0 rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-ink"
-            aria-label="Fechar notificação de conquista"
+            aria-label={t('Fechar notificação de conquista')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -144,7 +145,7 @@ export default function AchievementUnlockToast({
               onClick={() => onShare(achievement)}
               className="inline-flex items-center gap-1.5 rounded-full bg-acid px-3 py-1.5 text-xs font-bold text-ink transition-transform hover:scale-105"
             >
-              <Share2 className="h-3.5 w-3.5" /> Compartilhar
+              <Share2 className="h-3.5 w-3.5" /> {t('Compartilhar')}
             </button>
           </div>
         )}

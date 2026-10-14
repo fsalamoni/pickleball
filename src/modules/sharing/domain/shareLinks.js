@@ -1,3 +1,4 @@
+import { t } from '../../../core/i18n/index.js';
 /**
  * Lógica pura de compartilhamento (sem I/O nem DOM).
  *
@@ -5,7 +6,6 @@
  * compartilhamento (WhatsApp / Web Share) usados pelos cards de UGC.
  * Mantida pura para ser testável e reaproveitável por qualquer tela.
  */
-import { t } from '@/core/i18n';
 
 /** Remove barras finais para evitar `//` ao concatenar caminhos. */
 function trimTrailingSlash(value) {

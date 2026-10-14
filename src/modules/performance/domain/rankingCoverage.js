@@ -17,6 +17,7 @@
 import { isTournamentRankingEligible } from '@/modules/tournament/domain/rankingEligibility.js';
 import { registrationSlotsWithoutAccount } from '@/modules/tournament/domain/registrationAccounts.js';
 import { OUT_OF_RANKING_REASON } from '@/modules/games/domain/myGames.js';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ history?: Array, gameDayGames?: Array }} args
@@ -48,7 +49,7 @@ export function rankingCoverageSummary({ history = [], gameDayGames = [] } = {})
     else if (motivo === OUT_OF_RANKING_REASON.GUEST) diaDeJogo.convidado += 1;
     else diaDeJogo.pendente += 1;
     if (!g.gameDayId) return;
-    const atual = porDia.get(g.gameDayId) || { id: g.gameDayId, label: g.label || 'Dia de jogo', jogos: 0, motivo };
+    const atual = porDia.get(g.gameDayId) || { id: g.gameDayId, label: g.label || t('Dia de jogo'), jogos: 0, motivo };
     atual.jogos += 1;
     porDia.set(g.gameDayId, atual);
   });

@@ -66,6 +66,7 @@ import { issuerDisplayName } from '@/v2/components/promo/promoUi';
 import CampaignBanner from './campaigns/CampaignBanner';
 import CouponArt from './coupons/CouponArt';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
+import { t } from '@/core/i18n';
 
 const PREF = 'home:promocoes:regiao';
 const INTERVALO_MS = 7000;
@@ -84,17 +85,17 @@ function SeletorDeRegiao({ region, cidades, profile, onChange }) {
   return (
     <label className="inline-flex items-center gap-1.5 text-xs text-gray-500">
       <MapPin className="h-3.5 w-3.5" />
-      <span className="sr-only">Mostrar promoções de</span>
+      <span className="sr-only">{t('Mostrar promoções de')}</span>
       <select
         value={valor}
         onChange={(e) => onChange(e.target.value)}
         className="h-8 rounded-full border border-gray-200 bg-paper-pure px-3 text-xs font-bold text-ink"
       >
-        {region.mode === BANNER_REGION.UNKNOWN && <option value={BANNER_REGION.UNKNOWN}>Escolha a sua cidade…</option>}
-        {profile?.city && <option value={BANNER_REGION.CITY}>Minha cidade ({profile.city})</option>}
-        {profile?.state && <option value={BANNER_REGION.STATE}>Meu estado ({String(profile.state).toUpperCase()})</option>}
+        {region.mode === BANNER_REGION.UNKNOWN && <option value={BANNER_REGION.UNKNOWN}>{t('Escolha a sua cidade…')}</option>}
+        {profile?.city && <option value={BANNER_REGION.CITY}>{t('Minha cidade ({cidade})', { cidade: profile.city })}</option>}
+        {profile?.state && <option value={BANNER_REGION.STATE}>{t('Meu estado ({uf})', { uf: String(profile.state).toUpperCase() })}</option>}
         {cidades.length > 0 && (
-          <optgroup label="Outra cidade">
+          <optgroup label={t('Outra cidade')}>
             {cidades.map((c) => (
               <option key={c.key} value={`${BANNER_REGION.OTHER}:${c.key}`}>
                 {c.city}{c.state ? ` (${c.state})` : ''} · {c.count}
@@ -102,7 +103,7 @@ function SeletorDeRegiao({ region, cidades, profile, onChange }) {
             ))}
           </optgroup>
         )}
-        <option value={BANNER_REGION.ALL}>Todo o Brasil</option>
+        <option value={BANNER_REGION.ALL}>{t('Todo o Brasil')}</option>
       </select>
     </label>
   );
@@ -118,8 +119,8 @@ function BannerDeCampanha({ banner, posicao, total }) {
   return (
     <div
       role="group"
-      aria-roledescription="destaque"
-      aria-label={`${posicao} de ${total}: ${banner.campaign.name || 'Campanha'} — ${banner.arenaName}`}
+      aria-roledescription={t('destaque')}
+      aria-label={`${t('{posicao} de {total}', { posicao, total })}: ${banner.campaign.name || t('Campanha')} — ${banner.arenaName}`}
       className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]"
     >
       <CampaignBanner campaign={banner.campaign} ratio="phone" arenaInArt={false}
@@ -140,13 +141,13 @@ function PromocaoComArte({ banner, posicao, total }) {
   return (
     <div
       role="group"
-      aria-roledescription="promoção"
-      aria-label={`${posicao} de ${total}: ${banner.benefit} — ${banner.arenaName}`}
+      aria-roledescription={t('promoção')}
+      aria-label={`${t('{posicao} de {total}', { posicao, total })}: ${banner.benefit} — ${banner.arenaName}`}
       className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]"
     >
       <CouponArt art={banner.art} code={banner.code} benefit={banner.benefit} description={banner.description}
-        kicker={banner.bookable ? 'Desconto na reserva' : 'Vale na recepção'} copyable
-        copyMessage={banner.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'} />
+        kicker={banner.bookable ? t('Desconto na reserva') : t('Vale na recepção')} copyable
+        copyMessage={banner.bookable ? t('Código copiado. Use no pedido de reserva.') : t('Código copiado. Mostre na recepção da arena.')} />
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1">
         <p className="flex min-w-0 items-center gap-1 text-xs font-semibold text-gray-500">
           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -154,7 +155,7 @@ function PromocaoComArte({ banner, posicao, total }) {
         </p>
         <Link to={`/arenas/${banner.arenaId}#arena-promocoes`}
           className="text-xs font-bold text-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
-          {banner.bookable ? 'Reservar com esta promoção' : 'Ver na arena'}
+          {banner.bookable ? t('Reservar com esta promoção') : t('Ver na arena')}
         </Link>
       </div>
     </div>
@@ -179,7 +180,7 @@ function ItemDaDivulgacao({ banner, posicao, total }) {
   );
   if (banner.promo === 'campaign') {
     return (
-      <div role="group" aria-roledescription="destaque" aria-label={`${posicao} de ${total}: ${doc.name || 'Campanha'} — ${dono}`}
+      <div role="group" aria-roledescription={t('destaque')} aria-label={`${t('{posicao} de {total}', { posicao, total })}: ${doc.name || t('Campanha')} — ${dono}`}
         className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]">
         <PromoCampaignBanner campaign={doc} ratio="phone" inArt={false} />
         <div className="px-1">{legenda}</div>
@@ -188,15 +189,15 @@ function ItemDaDivulgacao({ banner, posicao, total }) {
   }
   const naAula = ehProfessor && LESSON_COUPON_KINDS.includes(couponKind(doc));
   const caminho = !ehProfessor
-    ? { to: '/promocoes', label: 'Ver promoções' }
+    ? { to: '/promocoes', label: t('Ver promoções') }
     : naAula
-      ? { to: `/coaches/${encodeURIComponent(doc.issuer_id)}?marcar=1&cupom=${encodeURIComponent(doc.code)}`, label: 'Pedir aula com este cupom' }
-      : { to: `/coaches/${encodeURIComponent(doc.issuer_id)}#professor-promocoes`, label: 'Ver no perfil' };
+      ? { to: `/coaches/${encodeURIComponent(doc.issuer_id)}?marcar=1&cupom=${encodeURIComponent(doc.code)}`, label: t('Pedir aula com este cupom') }
+      : { to: `/coaches/${encodeURIComponent(doc.issuer_id)}#professor-promocoes`, label: t('Ver no perfil') };
   return (
-    <div role="group" aria-roledescription="promoção" aria-label={`${posicao} de ${total}: ${promoBenefitText(doc)} — ${dono}`}
+    <div role="group" aria-roledescription={t('promoção')} aria-label={`${t('{posicao} de {total}', { posicao, total })}: ${promoBenefitText(doc)} — ${dono}`}
       className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]">
       <CouponArt coupon={doc} code={doc.code} benefit={promoBenefitText(doc)} description={doc.description}
-        arenaName={dono} copyable copyMessage={`Código copiado. ${promoUseHint(doc)}`} />
+        arenaName={dono} copyable copyMessage={`${t('Código copiado.')} ${t(promoUseHint(doc))}`} />
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1">
         {legenda}
         <Link to={caminho.to}
@@ -219,8 +220,8 @@ function Banner({ banner, posicao, total }) {
   return (
     <div
       role="group"
-      aria-roledescription="promoção"
-      aria-label={`${posicao} de ${total}: ${banner.benefit} — ${banner.arenaName}`}
+      aria-roledescription={t('promoção')}
+      aria-label={`${t('{posicao} de {total}', { posicao, total })}: ${banner.benefit} — ${banner.arenaName}`}
       className={cn(
         'relative flex w-[88%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-3xl p-5 sm:w-[62%] lg:w-[46%]',
         marca.on ? '' : 'bg-ink text-white',
@@ -239,7 +240,7 @@ function Banner({ banner, posicao, total }) {
       <div className="relative mt-4 flex flex-wrap items-center gap-2">
         {/* O código é o botão de copiar (Onda CD) — antes era só texto. */}
         <CopyCodeButton code={banner.code} size="sm" tone={marca.on ? 'clear' : 'ink'} className="rounded-full"
-          successMessage={banner.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'} />
+          successMessage={banner.bookable ? t('Código copiado. Use no pedido de reserva.') : t('Código copiado. Mostre na recepção da arena.')} />
         <Link
           to={`/arenas/${banner.arenaId}#arena-promocoes`}
           className={cn(
@@ -247,7 +248,7 @@ function Banner({ banner, posicao, total }) {
             marca.on ? 'bg-paper-pure text-ink' : 'bg-acid text-ink',
           )}
         >
-          {banner.bookable ? 'Reservar com esta promoção' : 'Ver na arena'}
+          {banner.bookable ? t('Reservar com esta promoção') : t('Ver na arena')}
         </Link>
       </div>
     </div>
@@ -333,11 +334,11 @@ export default function HomePromoBanners({
   }, [chaveRegiao]);
   useEffect(() => {
     if (pausado || interagindo || banners.length < 2) return undefined;
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       irPara((atual + 1) % banners.length);
     }, INTERVALO_MS);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [pausado, interagindo, banners.length, atual, irPara]);
   const aoRolar = () => {
     const el = trilho.current;
@@ -363,8 +364,8 @@ export default function HomePromoBanners({
 
   return (
     <section
-      aria-roledescription="carrossel"
-      aria-label={promosOn ? 'Promoções e destaques' : 'Promoções e destaques das arenas'}
+      aria-roledescription={t('carrossel')}
+      aria-label={promosOn ? t('Promoções e destaques') : t('Promoções e destaques das arenas')}
       className={className}
       onMouseEnter={() => setInteragindo(true)}
       onMouseLeave={() => setInteragindo(false)}
@@ -374,15 +375,15 @@ export default function HomePromoBanners({
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Tag className="h-4 w-4" /> {temCampanha ? 'Destaques' : 'Promoções'} {regionLabel(region.mode === BANNER_REGION.OTHER
+          <Tag className="h-4 w-4" /> {temCampanha ? t('Destaques') : t('Promoções')} {regionLabel(region.mode === BANNER_REGION.OTHER
             ? { ...region, city: cidades.find((c) => c.key === region.key)?.city || region.city }
-            : region) || (promosOn ? '' : 'das arenas')}
+            : region) || (promosOn ? '' : t('das arenas'))}
         </h2>
         <div className="flex items-center gap-1.5">
           {promosOn && (
             <Link to="/promocoes"
               className="rounded-full px-2 py-1 text-xs font-bold text-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
-              Ver todas
+              {t('Ver todas')}
             </Link>
           )}
           {minha.ativa
@@ -391,17 +392,17 @@ export default function HomePromoBanners({
           {banners.length > 1 && (
             <>
               <button type="button" onClick={() => setPausado((p) => !p)}
-                aria-label={pausado ? 'Retomar a troca automática' : 'Pausar a troca automática'}
+                aria-label={pausado ? t('Retomar a troca automática') : t('Pausar a troca automática')}
                 className="rounded-full p-1.5 text-gray-500 hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
                 {pausado ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </button>
               <button type="button" onClick={() => irPara((atual - 1 + banners.length) % banners.length)}
-                aria-label="Promoção anterior"
+                aria-label={t('Promoção anterior')}
                 className="hidden rounded-full p-1.5 text-gray-500 hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:inline-flex">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button type="button" onClick={() => irPara((atual + 1) % banners.length)}
-                aria-label="Próxima promoção"
+                aria-label={t('Próxima promoção')}
                 className="hidden rounded-full p-1.5 text-gray-500 hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:inline-flex">
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -412,8 +413,8 @@ export default function HomePromoBanners({
 
       {semRegiao && temRegional && (
         <p className="mb-3 rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-          Escolha a sua cidade acima para ver as promoções {promosOn ? 'da sua região' : 'das arenas perto de você'} — ou{' '}
-          <Link to="/perfil/editar" className="font-bold text-ink underline">informe a cidade no seu perfil</Link>.
+          {promosOn ? t('Escolha a sua cidade acima para ver as promoções da sua região — ou') : t('Escolha a sua cidade acima para ver as promoções das arenas perto de você — ou')}{' '}
+          <Link to="/perfil/editar" className="font-bold text-ink underline">{t('informe a cidade no seu perfil')}</Link>.
         </p>
       )}
       <div
@@ -430,7 +431,7 @@ export default function HomePromoBanners({
               key={b.id}
               type="button"
               onClick={() => irPara(i)}
-              aria-label={`Ir para a promoção ${i + 1} de ${banners.length}`}
+              aria-label={t('Ir para a promoção {n} de {total}', { n: i + 1, total: banners.length })}
               aria-current={i === atual ? 'true' : undefined}
               className={cn('h-1.5 rounded-full transition-all', i === atual ? 'w-5 bg-ink' : 'w-1.5 bg-gray-300 hover:bg-gray-400')}
             />

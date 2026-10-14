@@ -18,6 +18,7 @@ import { V2Avatar, V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { METAL } from './MedalCard';
 import CongratulateButton from './CongratulateButton';
+import { t } from '@/core/i18n';
 
 const MedalCardDialog = lazy(() => import('./MedalCardDialog'));
 
@@ -31,7 +32,7 @@ export function useHostOf(tournament) {
 
 export function eventOf(tournament, modality) {
   return {
-    title: tournament?.name || 'Torneio',
+    title: tournament?.name || t('Torneio'),
     subtitle: modality?.name || '',
     date: tournament?.ends_at || tournament?.starts_at || null,
     city: tournament?.city || '', state: tournament?.state || '',
@@ -54,13 +55,13 @@ export default function PodiumBlock({ tournament, modality, className }) {
   const uidsDe = (place) => (place?.entries || []).flatMap((e) => e.people.map((p) => p.user_id)).filter(Boolean);
 
   return (
-    <section className={cn('rounded-3xl border border-gray-100 bg-paper-pure p-4 sm:p-5', className)} aria-label={`Pódio de ${modality.name}`}>
+    <section className={cn('rounded-3xl border border-gray-100 bg-paper-pure p-4 sm:p-5', className)} aria-label={t('Pódio de {nome}', { nome: modality.name })}>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="inline-flex items-center gap-2 font-display text-base font-bold text-ink">
-          <Medal className="h-5 w-5 text-ink" aria-hidden="true" /> Pódio
+          <Medal className="h-5 w-5 text-ink" aria-hidden="true" /> {t('Pódio')}
         </h3>
         <V2Button size="sm" variant="primary" onClick={() => setDialogo({ mode: CARD_MODE.PODIUM, position: 1 })}>
-          <Share2 className="h-4 w-4" /> Cartão do pódio
+          <Share2 className="h-4 w-4" /> {t('Cartão do pódio')}
         </V2Button>
       </header>
 
@@ -89,7 +90,7 @@ export default function PodiumBlock({ tournament, modality, className }) {
                 {pos}º
               </div>
               <div className="mt-2 flex w-full flex-col gap-1">
-                <V2Button size="sm" variant="ghost" className="w-full" onClick={() => setDialogo({ mode: CARD_MODE.PLACE, position: pos })}>Cartão</V2Button>
+                <V2Button size="sm" variant="ghost" className="w-full" onClick={() => setDialogo({ mode: CARD_MODE.PLACE, position: pos })}>{t('Cartão')}</V2Button>
                 <CongratulateButton
                   className="w-full"
                   contextId={contextId(pos)}

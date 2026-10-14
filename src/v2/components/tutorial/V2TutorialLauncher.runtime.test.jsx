@@ -105,7 +105,7 @@ describe('tutorial — dispensar', () => {
     // mesma de quem clica em "Dispensar".
     await render();
     const fechar = [...dialogo().querySelectorAll('button')]
-      .find((b) => b.textContent.includes('Close'));
+      .find((b) => b.textContent.includes('Fechar'));
     expect(fechar, 'o diálogo precisa ter o botão X').toBeTruthy();
     click(fechar);
     await act(async () => { await Promise.resolve(); });

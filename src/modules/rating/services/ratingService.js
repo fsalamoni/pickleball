@@ -27,6 +27,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { MATCH_STATUS, MODALITY_FORMAT } from '@/modules/tournament/domain/constants';
 import { toMillis } from '@/modules/tournament/domain/participation';
+import { t } from '@/core/i18n';
 
 const RATINGS_COLLECTION = 'player_ratings';
 const HISTORY_COLLECTION = 'rating_history';
@@ -115,7 +116,7 @@ export async function listFinishedEngineMatches() {
   const nameById = new Map();
   profilesSnap.docs.forEach((d) => {
     const p = d.data();
-    nameById.set(d.id, { name: p.platform_name || p.full_name || 'Atleta', photo: p.photo_url || '' });
+    nameById.set(d.id, { name: p.platform_name || p.full_name || t('Atleta'), photo: p.photo_url || '' });
   });
 
   const matches = [];

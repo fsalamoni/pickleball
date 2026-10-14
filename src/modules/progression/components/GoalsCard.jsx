@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { GOAL_METRIC_LABELS, goalProgress } from '../domain/progression.js';
 import { useGoals, useCreateGoal, useDeleteGoal } from '../hooks/useProgression.js';
+import { t } from '@/core/i18n';
 
 /**
  * Metas pessoais do usuário. Presentational quanto ao gating (a flag
@@ -26,9 +27,9 @@ export default function GoalsCard({ uid, values }) {
     try {
       await create.mutateAsync({ metric, target });
       setTarget('');
-      toast.success('Meta criada.');
+      toast.success(t('Meta criada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível criar a meta.');
+      toast.error(err?.message || t('Não foi possível criar a meta.'));
     }
   }
 
@@ -36,33 +37,33 @@ export default function GoalsCard({ uid, values }) {
     <Card>
       <CardContent className="p-4">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
-          <Target className="h-4 w-4 text-green-600" /> Minhas metas
+          <Target className="h-4 w-4 text-green-600" /> {t('Minhas metas')}
         </h2>
 
         <form onSubmit={handleAdd} className="mb-4 flex flex-wrap items-end gap-2">
           <label className="flex-1">
-            <span className="mb-1 block text-xs text-gray-500">Métrica</span>
+            <span className="mb-1 block text-xs text-gray-500">{t('Métrica')}</span>
             <select
               value={metric}
               onChange={(e) => setMetric(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {Object.entries(GOAL_METRIC_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value}>{t(label)}</option>
               ))}
             </select>
           </label>
           <label className="w-24">
-            <span className="mb-1 block text-xs text-gray-500">Alvo</span>
+            <span className="mb-1 block text-xs text-gray-500">{t('Alvo')}</span>
             <Input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} />
           </label>
           <Button type="submit" disabled={create.isPending}>
-            <Plus className="h-4 w-4" /> <span className="ml-1">Adicionar</span>
+            <Plus className="h-4 w-4" /> <span className="ml-1">{t('Adicionar')}</span>
           </Button>
         </form>
 
         {goals.length === 0 ? (
-          <p className="text-sm text-gray-500">Você ainda não definiu metas. Crie uma acima.</p>
+          <p className="text-sm text-gray-500">{t('Você ainda não definiu metas. Crie uma acima.')}</p>
         ) : (
           <div className="space-y-2">
             {goals.map((g) => {
@@ -71,18 +72,18 @@ export default function GoalsCard({ uid, values }) {
                 <div key={g.id} className="rounded-md border border-gray-200 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-ink">
-                      {GOAL_METRIC_LABELS[g.metric] || g.metric}: {g.target}
+                      {GOAL_METRIC_LABELS[g.metric] ? t(GOAL_METRIC_LABELS[g.metric]) : g.metric}: {g.target}
                     </span>
                     <div className="flex items-center gap-2">
                       {p.done && <Check className="h-4 w-4 text-green-600" />}
                       <span className="text-xs text-gray-500 tabular-nums">{p.current}/{p.target}</span>
                       <ConfirmDialog
-                        title="Remover meta?"
-                        description="A meta será removida permanentemente."
-                        confirmLabel="Remover"
+                        title={t('Remover meta?')}
+                        description={t('A meta será removida permanentemente.')}
+                        confirmLabel={t('Remover')}
                         onConfirm={() => remove.mutate(g.id)}
                         trigger={(
-                          <button type="button" aria-label="Remover meta" className="text-gray-400 hover:text-red-600">
+                          <button type="button" aria-label={t('Remover meta')} className="text-gray-400 hover:text-red-600">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}

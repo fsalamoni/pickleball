@@ -5,6 +5,7 @@ import { V2Badge } from '@/v2/ui/primitives';
 import {
   MISSION_BONUS_XP,
 } from '../domain/missions.js';
+import { t } from '@/core/i18n';
 
 /**
  * MissionList — lista de missões (diárias / semanais / mensais).
@@ -38,10 +39,10 @@ export default function MissionList({
   const bonus = MISSION_BONUS_XP[scope] || 0;
 
   const scopeLabel = {
-    daily: 'Missões de hoje',
-    weekly: 'Missões da semana',
-    monthly: 'Missões do mês',
-  }[scope] || 'Missões';
+    daily: t('Missões de hoje'),
+    weekly: t('Missões da semana'),
+    monthly: t('Missões do mês'),
+  }[scope] || t('Missões');
 
   return (
     <div data-testid="mission-list" data-scope={scope} className={cn('space-y-3', className)}>
@@ -60,12 +61,12 @@ export default function MissionList({
           </button>
         )}
         {allDone && bonusClaimed && (
-          <V2Badge tone="green">Bônus resgatado</V2Badge>
+          <V2Badge tone="green">{t('Bônus resgatado')}</V2Badge>
         )}
       </div>
 
       {missions.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhuma missão disponível agora.</p>
+        <p className="text-sm text-gray-500">{t('Nenhuma missão disponível agora.')}</p>
       ) : (
         <ul className="space-y-2">
           {missions.map((m) => (

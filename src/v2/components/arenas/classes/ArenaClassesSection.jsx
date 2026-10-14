@@ -35,6 +35,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import { V2Avatar, V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function ProximaAula({ aula, arenaId, matriculado, isAuthenticated }) {
   const matricular = useBookClass();
@@ -48,24 +49,24 @@ function ProximaAula({ aula, arenaId, matriculado, isAuthenticated }) {
           {formatDateShortBR(aula.date)} · {aula.start}–{aula.end}
         </p>
         <p className="mt-0.5 text-xs text-gray-500">
-          {aula.coach_name || 'Professor a definir'} · {formato.label} · {nivel.label}
+          {aula.coach_name || t('Professor a definir')} · {t(formato.label)} · {t(nivel.label)}
         </p>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
-          <Users className="h-3 w-3" /> {vagas > 0 ? `${vagas} vaga(s)` : 'lotada'} ·{' '}
+          <Users className="h-3 w-3" /> {vagas > 0 ? t('{n} vaga(s)', { n: vagas }) : t('lotada')} ·{' '}
           <strong className="text-ink">{formatPrice(aula.price)}</strong>
         </p>
       </div>
       {matriculado ? (
-        <V2Badge tone="green">Você está nesta aula</V2Badge>
+        <V2Badge tone="green">{t('Você está nesta aula')}</V2Badge>
       ) : isAuthenticated ? (
         <V2Button
           size="sm"
           disabled={vagas <= 0 || matricular.isPending}
           onClick={() => matricular.mutateAsync({ arenaId, classId: aula.id })
-            .then(() => toast.success('Matrícula feita! Combine o pagamento com a arena.'))
-            .catch((e) => toast.error(e?.message || 'Não foi possível matricular.'))}
+            .then(() => toast.success(t('Matrícula feita! Combine o pagamento com a arena.')))
+            .catch((e) => toast.error(e?.message || t('Não foi possível matricular.')))}
         >
-          {vagas <= 0 ? 'Lotada' : 'Matricular-me'}
+          {vagas <= 0 ? t('Lotada') : t('Matricular-me')}
         </V2Button>
       ) : null}
     </li>
@@ -101,10 +102,10 @@ export default function ArenaClassesSection({ arena }) {
     <V2Surface>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <GraduationCap className="h-4 w-4" /> Aulas e professores
+          <GraduationCap className="h-4 w-4" /> {t('Aulas e professores')}
         </h3>
         <Link to={agenda} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-          Ver agenda completa <ArrowRight className="h-3.5 w-3.5" />
+          {t('Ver agenda completa')} <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
@@ -113,14 +114,14 @@ export default function ArenaClassesSection({ arena }) {
           to={agenda}
           className="mt-3 flex items-center justify-between gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-acid hover:bg-ink/90"
         >
-          <span className="inline-flex items-center gap-2"><CalendarCheck className="h-4 w-4" /> Você dá aula aqui — ver sua agenda e seus alunos</span>
+          <span className="inline-flex items-center gap-2"><CalendarCheck className="h-4 w-4" /> {t('Você dá aula aqui — ver sua agenda e seus alunos')}</span>
           <ArrowRight className="h-4 w-4" />
         </Link>
       )}
 
       {proximas.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">Próximas aulas</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Próximas aulas')}</p>
           <ul className="mt-2 space-y-2">
             {proximas.map((a) => (
               <ProximaAula key={a.id} aula={a} arenaId={arenaId}
@@ -132,13 +133,13 @@ export default function ArenaClassesSection({ arena }) {
 
       {!isAuthenticated && (
         <p className="mt-3 text-sm text-gray-500">
-          <Link to="/entrar" className="font-bold text-ink underline">Entre</Link> para ver os horários e se matricular.
+          <Link to="/entrar" className="font-bold text-ink underline">{t('Entre')}</Link> {t('para ver os horários e se matricular.')}
         </p>
       )}
 
       {professores.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">Professores</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Professores')}</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {professores.map((p) => {
               const conteudo = (
@@ -147,7 +148,7 @@ export default function ArenaClassesSection({ arena }) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-ink line-clamp-1">{p.name}</p>
                     <p className="text-xs text-gray-500 line-clamp-1">
-                      {p.teaches ? 'Dá aula na agenda da arena' : 'Professor parceiro'}
+                      {p.teaches ? t('Dá aula na agenda da arena') : t('Professor parceiro')}
                       {p.partner?.modalities?.length > 0 ? ` · ${p.partner.modalities.join(' · ')}` : ''}
                     </p>
                   </div>

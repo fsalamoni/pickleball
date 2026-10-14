@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * matchReviews — a avaliação pós-jogo.
  *
@@ -30,20 +31,20 @@
 
 /** Tags positivas — o id é contrato (está no documento). */
 export const REVIEW_TAGS = Object.freeze({
-  companheiro: { label: 'Bom companheiro', emoji: '🤝' },
-  educado: { label: 'Educado', emoji: '🙂' },
-  justo: { label: 'Joga limpo', emoji: '⚖️' },
-  pontual: { label: 'Pontual', emoji: '⏰' },
-  esportista: { label: 'Bom esportista', emoji: '🏅' },
-  energia: { label: 'Energia boa', emoji: '⚡' },
+  companheiro: { label: tk('Bom companheiro'), emoji: '🤝' },
+  educado: { label: tk('Educado'), emoji: '🙂' },
+  justo: { label: tk('Joga limpo'), emoji: '⚖️' },
+  pontual: { label: tk('Pontual'), emoji: '⏰' },
+  esportista: { label: tk('Bom esportista'), emoji: '🏅' },
+  energia: { label: tk('Energia boa'), emoji: '⚡' },
 });
 
 /** Categorias de problema — só aparecem quando a nota é baixa. */
 export const REVIEW_ISSUES = Object.freeze({
-  conduta: { label: 'Conduta', emoji: '🚫' },
-  pontualidade: { label: 'Atraso ou falta', emoji: '⌛' },
-  comunicacao: { label: 'Comunicação', emoji: '💬' },
-  esportividade: { label: 'Esportividade', emoji: '🎾' },
+  conduta: { label: tk('Conduta'), emoji: '🚫' },
+  pontualidade: { label: tk('Atraso ou falta'), emoji: '⌛' },
+  comunicacao: { label: tk('Comunicação'), emoji: '💬' },
+  esportividade: { label: tk('Esportividade'), emoji: '🎾' },
 });
 
 export const REVIEW_MAX_TAGS = 4;
@@ -79,14 +80,14 @@ export function reviewDocId(matchKey, fromUid, toUid) {
  * @returns {{ ok: true, value: object } | { ok: false, error: string }}
  */
 export function validateReview({ fromUid, toUid, matchKey, rating, tags = [], issues = [], relation = null } = {}) {
-  if (!fromUid || !toUid || fromUid === toUid) return { ok: false, error: 'Não dá para avaliar a si mesmo.' };
-  if (!matchKey) return { ok: false, error: 'Informe o jogo avaliado.' };
+  if (!fromUid || !toUid || fromUid === toUid) return { ok: false, error: t('Não dá para avaliar a si mesmo.') };
+  if (!matchKey) return { ok: false, error: t('Informe o jogo avaliado.') };
   const nota = Math.round(Number(rating));
-  if (!(nota >= 1 && nota <= 5)) return { ok: false, error: 'Escolha de 1 a 5 estrelas.' };
+  if (!(nota >= 1 && nota <= 5)) return { ok: false, error: t('Escolha de 1 a 5 estrelas.') };
   const tagsOk = [...new Set(tags)].filter((t) => REVIEW_TAGS[t]).slice(0, REVIEW_MAX_TAGS);
   const issuesOk = [...new Set(issues)].filter((t) => REVIEW_ISSUES[t]).slice(0, REVIEW_MAX_TAGS);
   if (nota <= LOW_RATING && issuesOk.length === 0) {
-    return { ok: false, error: 'Para uma nota baixa, escolha ao menos um motivo.' };
+    return { ok: false, error: t('Para uma nota baixa, escolha ao menos um motivo.') };
   }
   return {
     ok: true,

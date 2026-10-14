@@ -1,3 +1,4 @@
+import { t, tn } from '@/core/i18n';
 /**
  * missionDay — o "dia" das missões, no fuso do usuário brasileiro.
  *
@@ -156,13 +157,13 @@ export function msUntilReset(scope, date = new Date()) {
 
 /** "faltam 2 dias", "faltam 5 h", "faltam 12 min" — para o contador da missão. */
 export function formatTimeLeft(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return 'encerra agora';
+  if (!Number.isFinite(ms) || ms <= 0) return t('encerra agora');
   const min = Math.floor(ms / 60_000);
-  if (min < 60) return `faltam ${Math.max(1, min)} min`;
+  if (min < 60) return t('faltam {n} min', { n: Math.max(1, min) });
   const h = Math.floor(min / 60);
-  if (h < 24) return `faltam ${h} h`;
+  if (h < 24) return t('faltam {n} h', { n: h });
   const d = Math.floor(h / 24);
-  return `faltam ${d} ${d === 1 ? 'dia' : 'dias'}`;
+  return tn(d, 'faltam {n} dia', 'faltam {n} dias');
 }
 
 export { DIA_MS };

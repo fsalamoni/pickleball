@@ -14,12 +14,13 @@ import { instanteEmMs, instanteDoDiaEmMs } from '@/core/domain/instant.js';
 import { gameDayHouseEvents } from '@/modules/arenas/domain/houseRanking.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
 import { modalityPodium, PODIUM_PLACE } from '@/modules/tournament/domain/podium.js';
+import { t, tk } from '@/core/i18n';
 
 export const TROPHY_KIND = Object.freeze({ TOURNAMENT: 'torneio', GAME_DAY: 'dia_de_jogo' });
 
 export const TROPHY_KIND_LABEL = Object.freeze({
-  [TROPHY_KIND.TOURNAMENT]: 'Torneios',
-  [TROPHY_KIND.GAME_DAY]: 'Dias de jogo',
+  [TROPHY_KIND.TOURNAMENT]: tk('Torneios'),
+  [TROPHY_KIND.GAME_DAY]: tk('Dias de jogo'),
 });
 
 const ms = (v) => {
@@ -80,9 +81,9 @@ export function tournamentTrophies(uid, ctx) {
         id,
         kind: TROPHY_KIND.TOURNAMENT,
         position: place.position,
-        placeLabel: entry.people.length > 1 ? PODIUM_PLACE[place.position].varios : PODIUM_PLACE[place.position].um,
-        title: tournament.name || 'Torneio',
-        subtitle: modality.name || 'Categoria',
+        placeLabel: t(entry.people.length > 1 ? PODIUM_PLACE[place.position].varios : PODIUM_PLACE[place.position].um),
+        title: tournament.name || t('Torneio'),
+        subtitle: modality.name || t('Categoria'),
         date: dia(tournament.ends_at) || dia(tournament.starts_at),
         city: tournament.city || '', state: tournament.state || '',
         link: `/torneios/${tournament.id}`,
@@ -129,9 +130,9 @@ export function gameDayTrophies(uid, espelhoPorEvento, nomePorUid = new Map()) {
     const ids = new Set();
     lista.forEach((m) => [...(m.side_a_ids || []), ...(m.side_b_ids || [])].forEach((x) => ids.add(x)));
     if (!ids.has(uid)) return;
-    const participants = [...ids].map((id) => ({ id, user_id: id, name: nomePorUid.get(id) || 'Atleta' }));
+    const participants = [...ids].map((id) => ({ id, user_id: id, name: nomePorUid.get(id) || t('Atleta') }));
     const date = Math.max(...lista.map((m) => ms(m.result_recorded_at) || ms(m.created_at)));
-    const gameDay = { id: eventId, title: lista[0].event_title || 'Dia de jogo', date };
+    const gameDay = { id: eventId, title: lista[0].event_title || t('Dia de jogo'), date };
     gameDayHouseEvents({ gameDay, participants, games: lista.map(espelhoParaJogo) }).forEach((ev) => {
       const eu = ev.entries.find((e) => e.user_id === uid);
       if (!eu || eu.position > 3) return;
@@ -140,15 +141,15 @@ export function gameDayTrophies(uid, espelhoPorEvento, nomePorUid = new Map()) {
         id: `gd:${eventId}:${ev.gameKind || 'duplas'}:${eu.position}`,
         kind: TROPHY_KIND.GAME_DAY,
         position: eu.position,
-        placeLabel: PODIUM_PLACE[eu.position].um,
-        title: lista[0].event_title || 'Dia de jogo',
-        subtitle: `Ranking do dia${ev.gameKind ? ` · ${ev.gameKind === 'singles' ? 'simples' : 'duplas'}` : ''}`,
+        placeLabel: t(PODIUM_PLACE[eu.position].um),
+        title: lista[0].event_title || t('Dia de jogo'),
+        subtitle: ev.gameKind ? (ev.gameKind === 'singles' ? t('Ranking do dia · simples') : t('Ranking do dia · duplas')) : t('Ranking do dia'),
         date,
         link: modular ? `/dia-de-jogo/${eventId}` : null,
         publicLink: null,
         gameDayId: eventId,
         gameKind: ev.gameKind || null,
-        people: [{ user_id: uid, name: nomePorUid.get(uid) || 'Atleta', photo_url: null }],
+        people: [{ user_id: uid, name: nomePorUid.get(uid) || t('Atleta'), photo_url: null }],
         record: { played: eu.played, won: eu.won, decidedGames: ev.decidedGames, players: ev.entries.length },
         shared: empatados > 1,
       });
@@ -172,7 +173,7 @@ export function groupTrophies({ torneios, diasDeJogo } = {}) {
   return {
     torneios: torneios || [],
     diasDeJogo: diasDeJogo || [],
-    faltou: [torneios === undefined && 'os torneios', diasDeJogo === undefined && 'os dias de jogo'].filter(Boolean),
+    faltou: [torneios === undefined && t('os torneios'), diasDeJogo === undefined && t('os dias de jogo')].filter(Boolean),
     contagem: { ...conta(tudo), torneios: conta(torneios), diasDeJogo: conta(diasDeJogo) },
     destaque: [...tudo].sort((a, b) => a.position - b.position || b.date - a.date)[0] || null,
   };

@@ -23,6 +23,7 @@ import {
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const STATUS_TONE = {
   [BOOKING_STATUS.REQUESTED]: 'amber',
@@ -39,7 +40,7 @@ function SlotSummary({ booking }) {
     return (
       <span className="inline-flex items-center gap-1">
         <Repeat className="h-3.5 w-3.5" />
-        {WEEKDAY_LABELS[booking.recurrence.weekday]} {booking.recurrence.start}–{booking.recurrence.end} · {slots.length} semanas
+        {t(WEEKDAY_LABELS[booking.recurrence.weekday])} {booking.recurrence.start}–{booking.recurrence.end} · {t('{n} semanas', { n: slots.length })}
       </span>
     );
   }
@@ -86,8 +87,8 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
     uid: `booking-${booking.id}@picklerush`,
     start: brtDateTime(firstSlot.date, firstSlot.start),
     end: brtDateTime(firstSlot.date, firstSlot.end),
-    title: `Reserva — ${booking.arena_name || 'Arena'}`,
-    description: booking.notes || 'Reserva de quadra',
+    title: t('Reserva — {arena}', { arena: booking.arena_name || t('Arena') }),
+    description: booking.notes || t('Reserva de quadra'),
     location: booking.arena_name || '',
   } : null;
 
@@ -101,12 +102,12 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       await fn();
       if (okMsg) toast.success(okMsg);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível concluir a ação.');
+      toast.error(err?.message || t('Não foi possível concluir a ação.'));
     }
   }
 
   const handlePropose = () => {
-    act(() => proposePrice.mutateAsync({ booking, price, options }), 'Proposta enviada.');
+    act(() => proposePrice.mutateAsync({ booking, price, options }), t('Proposta enviada.'));
   };
 
   // O atleta confirma ACEITANDO a proposta da arena — pelo valor proposto,
@@ -116,24 +117,24 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
     && (booking.proposed_by || 'arena') === 'arena';
   const handleConfirm = () => {
     const agreedPrice = isArena ? (price || precoInfo.value || booking.proposed_price) : booking.proposed_price;
-    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CONFIRMED, options: { ...options, agreedPrice } }), 'Reserva confirmada.');
+    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CONFIRMED, options: { ...options, agreedPrice } }), t('Reserva confirmada.'));
   };
 
   const handleDecline = () => {
-    act(() => updateStatus.mutateAsync({ booking, status: isArena ? BOOKING_STATUS.DECLINED : BOOKING_STATUS.CANCELLED, options }), isArena ? 'Reserva recusada.' : 'Reserva cancelada.');
+    act(() => updateStatus.mutateAsync({ booking, status: isArena ? BOOKING_STATUS.DECLINED : BOOKING_STATUS.CANCELLED, options }), isArena ? t('Reserva recusada.') : t('Reserva cancelada.'));
   };
 
   const handlePayment = () => {
     const paymentStatus = booking.payment_status === PAYMENT_STATUS.PAID ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.PAID;
-    act(() => setPayment.mutateAsync({ booking, paymentStatus }), 'Pagamento atualizado.');
+    act(() => setPayment.mutateAsync({ booking, paymentStatus }), t('Pagamento atualizado.'));
   };
 
   const handleComplete = () => {
-    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.COMPLETED, options }), 'Reserva concluída.');
+    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.COMPLETED, options }), t('Reserva concluída.'));
   };
 
   const handleCancelConfirmed = () => {
-    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options }), 'Reserva cancelada.');
+    act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options }), t('Reserva cancelada.'));
   };
 
   return (
@@ -150,11 +151,11 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <V2Badge tone={STATUS_TONE[booking.status] || 'neutral'}>
-            {BOOKING_STATUS_LABELS[booking.status]}
+            {t(BOOKING_STATUS_LABELS[booking.status])}
           </V2Badge>
           {booking.payment_status && booking.payment_status !== PAYMENT_STATUS.NONE && (
             <V2Badge tone="neutral" className="text-2xs">
-              {PAYMENT_STATUS_LABELS[booking.payment_status]}
+              {t(PAYMENT_STATUS_LABELS[booking.payment_status])}
             </V2Badge>
           )}
         </div>
@@ -163,7 +164,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       {linhaIndicacao && (
         <div className="mt-3">
           <V2Badge tone={linhaIndicacao.tone} className="max-w-full whitespace-normal text-left">
-            <Handshake className="h-3.5 w-3.5 shrink-0" /> {linhaIndicacao.text}
+            <Handshake className="h-3.5 w-3.5 shrink-0" /> {t(linhaIndicacao.text)}
           </V2Badge>
         </div>
       )}
@@ -171,9 +172,9 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
         {precoInfo.value != null && (
           precoInfo.agreed ? (
-            <span className="text-green-700">Acordado: <strong>{precoInfo.text}</strong></span>
+            <span className="text-green-700">{t('Acordado:')} <strong>{precoInfo.text}</strong></span>
           ) : (
-            <span>Valor estimado: <strong className="text-ink">{precoInfo.text}</strong></span>
+            <span>{t('Valor estimado:')} <strong className="text-ink">{precoInfo.text}</strong></span>
           )
         )}
       </div>
@@ -181,7 +182,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
       {active && (
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
           <div>
-            <label className="mb-1 block text-2xs font-bold uppercase tracking-widest text-gray-500">Valor (R$)</label>
+            <label className="mb-1 block text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Valor (R$)')}</label>
             <input
               type="number"
               min="0"
@@ -192,20 +193,20 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
             />
           </div>
           <V2Button size="sm" variant="ghost" onClick={handlePropose}>
-            <DollarSign className="h-4 w-4" /> Propor
+            <DollarSign className="h-4 w-4" /> {t('Propor')}
           </V2Button>
           {(isArena || atletaPodeConfirmar) && (
             <V2Button size="sm" onClick={handleConfirm} data-dica="reserva-confirmar-pedido">
-              <CheckCircle2 className="h-4 w-4" /> {isArena ? 'Confirmar' : 'Aceitar proposta'}
+              <CheckCircle2 className="h-4 w-4" /> {isArena ? t('Confirmar') : t('Aceitar proposta')}
             </V2Button>
           )}
           {editable && (
             <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              <Pencil className="h-4 w-4" /> Alterar
+              <Pencil className="h-4 w-4" /> {t('Alterar')}
             </V2Button>
           )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleDecline}>
-            <XCircle className="h-4 w-4" /> {isArena ? 'Recusar' : 'Cancelar'}
+            <XCircle className="h-4 w-4" /> {isArena ? t('Recusar') : t('Cancelar')}
           </V2Button>
         </div>
       )}
@@ -215,23 +216,23 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
           {isArena && (
             <>
               <V2Button size="sm" variant="ghost" onClick={handlePayment}>
-                {booking.payment_status === PAYMENT_STATUS.PAID ? 'Marcar pendente' : 'Marcar pago'}
+                {booking.payment_status === PAYMENT_STATUS.PAID ? t('Marcar pendente') : t('Marcar pago')}
               </V2Button>
               <V2Button size="sm" variant="ghost" onClick={handleComplete}>
-                Concluir
+                {t('Concluir')}
               </V2Button>
             </>
           )}
           {editable && (
             <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              <Pencil className="h-4 w-4" /> Alterar
+              <Pencil className="h-4 w-4" /> {t('Alterar')}
             </V2Button>
           )}
           {calendarEvent && (
             <AddToCalendarButton event={calendarEvent} variant="ghost" />
           )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleCancelConfirmed}>
-            Cancelar
+            {t('Cancelar')}
           </V2Button>
         </div>
       )}

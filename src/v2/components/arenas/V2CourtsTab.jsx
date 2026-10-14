@@ -31,10 +31,11 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import V2CourtSchedulesModal from '@/v2/components/arenas/V2CourtSchedulesModal';
 import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { t, tn, tk } from '@/core/i18n';
 
 const COURT_TYPE_OPTIONS = Object.entries(COURT.TYPE_LABELS).map(([value, label]) => ({ value, label }));
 const SURFACE_TYPE_OPTIONS = [
-  { value: '', label: 'Não informado' },
+  { value: '', label: tk('Não informado') },
   ...Object.entries(COURT.SURFACE_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
@@ -64,27 +65,27 @@ function CourtForm({ initial = {}, onCancel, onSubmit, busy }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <V2Field label="Nome da quadra" required error={errors.name}>
-          <V2Input value={form.name} onChange={setField('name')} placeholder="Ex.: Quadra 1, Coberta A" maxLength={60} />
+        <V2Field label={t('Nome da quadra')} required error={errors.name}>
+          <V2Input value={form.name} onChange={setField('name')} placeholder={t('Ex.: Quadra 1, Coberta A')} maxLength={60} />
         </V2Field>
-        <V2Field label="Tipo" error={errors.court_type}>
-          <V2Select value={form.court_type} onChange={setField('court_type')} options={COURT_TYPE_OPTIONS} />
+        <V2Field label={t('Tipo')} error={errors.court_type}>
+          <V2Select value={form.court_type} onChange={setField('court_type')} options={COURT_TYPE_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))} />
         </V2Field>
-        <V2Field label="Superfície" error={errors.surface_type}>
-          <V2Select value={form.surface_type} onChange={setField('surface_type')} options={SURFACE_TYPE_OPTIONS} />
+        <V2Field label={t('Superfície')} error={errors.surface_type}>
+          <V2Select value={form.surface_type} onChange={setField('surface_type')} options={SURFACE_TYPE_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))} />
         </V2Field>
-        <V2Field label="Ordem" hint="Menor aparece primeiro. Deixe vazio para automático.">
+        <V2Field label={t('Ordem')} hint={t('Menor aparece primeiro. Deixe vazio para automático.')}>
           <V2Input
             type="number"
             min="0"
             max="9999"
             value={form.sort_order}
             onChange={setField('sort_order')}
-            placeholder="Auto"
+            placeholder={t('Auto')}
           />
         </V2Field>
       </div>
-      <V2Field label="Observações" hint="Opcional, até 500 chars.">
+      <V2Field label={t('Observações')} hint={t('Opcional, até 500 caracteres.')}>
         <V2Textarea value={form.notes} onChange={setField('notes')} maxLength={500} rows={2} />
       </V2Field>
       <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -94,15 +95,15 @@ function CourtForm({ initial = {}, onCancel, onSubmit, busy }) {
           onChange={(e) => setField('is_active')(e.target.checked)}
           className="h-4 w-4 rounded border-gray-300 text-ink focus:ring-ink"
         />
-        Quadra ativa (visível para reservas)
+        {t('Quadra ativa (visível para reservas)')}
       </label>
       {Object.keys(errors).length > 0 && (
         <p className="text-xs text-red-600">{Object.values(errors)[0]}</p>
       )}
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={busy}>
-          {busy ? 'Salvando…' : (initial.id ? 'Salvar alterações' : 'Adicionar quadra')}
+          {busy ? t('Salvando…') : (initial.id ? t('Salvar alterações') : t('Adicionar quadra'))}
         </V2Button>
       </div>
     </form>
@@ -142,10 +143,10 @@ export default function V2CourtsTab({ arena }) {
   async function handleAdd(value) {
     try {
       await createCourt.mutateAsync({ ...value, arena_id: arena.id });
-      toast.success(`Quadra "${value.name}" adicionada.`);
+      toast.success(t('Quadra "{nome}" adicionada.', { nome: value.name }));
       setAdding(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível adicionar a quadra.');
+      toast.error(err?.message || t('Não foi possível adicionar a quadra.'));
     }
   }
 
@@ -153,10 +154,10 @@ export default function V2CourtsTab({ arena }) {
     if (!editing) return;
     try {
       await updateCourt.mutateAsync({ courtId: editing.id, input: { ...value, arena_id: arena.id } });
-      toast.success('Quadra atualizada.');
+      toast.success(t('Quadra atualizada.'));
       setEditing(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível atualizar a quadra.');
+      toast.error(err?.message || t('Não foi possível atualizar a quadra.'));
     }
   }
 
@@ -164,10 +165,10 @@ export default function V2CourtsTab({ arena }) {
     if (!deleting) return;
     try {
       await deleteCourt.mutateAsync(deleting.id);
-      toast.success(`Quadra "${deleting.name}" removida.`);
+      toast.success(t('Quadra "{nome}" removida.', { nome: deleting.name }));
       setDeleting(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível remover a quadra.');
+      toast.error(err?.message || t('Não foi possível remover a quadra.'));
     }
   }
 
@@ -182,16 +183,16 @@ export default function V2CourtsTab({ arena }) {
     try {
       await reorder.mutateAsync(next.map((c) => c.id));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível reordenar.');
+      toast.error(err?.message || t('Não foi possível reordenar.'));
     }
   }
 
   async function handleNormalize() {
     try {
       await normalize.mutateAsync();
-      toast.success('Ordem das quadras normalizada.');
+      toast.success(t('Ordem das quadras normalizada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível normalizar.');
+      toast.error(err?.message || t('Não foi possível normalizar.'));
     }
   }
 
@@ -200,25 +201,25 @@ export default function V2CourtsTab({ arena }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-lg font-bold text-ink">Quadras</h3>
-            <V2Badge tone="neutral">{active} ativa{active === 1 ? '' : 's'}</V2Badge>
-            {inactive > 0 && <V2Badge tone="amber">{inactive} inativa{inactive === 1 ? '' : 's'}</V2Badge>}
+            <h3 className="font-display text-lg font-bold text-ink">{t('Quadras')}</h3>
+            <V2Badge tone="neutral">{tn(active, '{n} ativa', '{n} ativas')}</V2Badge>
+            {inactive > 0 && <V2Badge tone="amber">{tn(inactive, '{n} inativa', '{n} inativas')}</V2Badge>}
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Cadastre cada quadra individualmente. Atletas veem só as ativas.
+            {t('Cadastre cada quadra individualmente. Atletas veem só as ativas.')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {courts.length > 1 && (
             <V2Button variant="ghost" size="sm" onClick={handleNormalize} disabled={normalize.isPending}>
-              Reordenar
+              {t('Reordenar')}
             </V2Button>
           )}
           {/* Sem saber quais quadras existem, "Nova quadra" é convite a
               duplicar uma que já está cadastrada. */}
           {!adding && !quadrasFalharam && (
             <V2Button size="sm" onClick={() => setAdding(true)} data-dica="arena-nova-quadra">
-              <Plus className="mr-1 h-4 w-4" /> Nova quadra
+              <Plus className="mr-1 h-4 w-4" /> {t('Nova quadra')}
             </V2Button>
           )}
         </div>
@@ -238,36 +239,32 @@ export default function V2CourtsTab({ arena }) {
           <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <div className="text-sm text-amber-800">
             <p className="font-bold">
-              {semHorario.length === 1
-                ? '1 quadra sem horário de funcionamento'
-                : `${semHorario.length} quadras sem horário de funcionamento`}
+              {tn(semHorario.length, '{n} quadra sem horário de funcionamento', '{n} quadras sem horário de funcionamento')}
             </p>
             <p className="mt-0.5 text-xs leading-5">
-              {semHorario.map((c) => c.name).join(', ')} — sem horário definido,
-              {' '}<strong>ninguém consegue reservar</strong> e a quadra não aparece no calendário
-              da arena nem no dia de jogo. Abra o relógio (🕐) na linha da quadra e defina os dias
-              e horários em que ela funciona.
+              {semHorario.map((c) => c.name).join(', ')} {t('— sem horário definido,')}
+              {' '}<strong>{t('ninguém consegue reservar')}</strong> {t('e a quadra não aparece no calendário da arena nem no dia de jogo. Abra o relógio (🕐) na linha da quadra e defina os dias e horários em que ela funciona.')}
             </p>
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Carregando quadras…</p>
+        <p className="text-sm text-gray-500">{t('Carregando quadras…')}</p>
       ) : quadrasFalharam ? (
         <V2ErrorState
           inline
-          title="Não foi possível carregar as quadras"
-          description="Sem a lista, não dá para saber o que já está cadastrado. Tente de novo antes de adicionar."
+          title={t('Não foi possível carregar as quadras')}
+          description={t('Sem a lista, não dá para saber o que já está cadastrado. Tente de novo antes de adicionar.')}
           onRetry={() => recarregarQuadras()}
         />
       ) : courts.length === 0 && !adding ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-paper p-6 text-center">
           <p className="text-sm text-gray-500">
-            Nenhuma quadra cadastrada ainda. Comece adicionando a primeira.
+            {t('Nenhuma quadra cadastrada ainda. Comece adicionando a primeira.')}
           </p>
           <V2Button size="sm" onClick={() => setAdding(true)} className="mt-3" data-dica="arena-nova-quadra">
-            <Plus className="mr-1 h-4 w-4" /> Adicionar quadra
+            <Plus className="mr-1 h-4 w-4" /> {t('Adicionar quadra')}
           </V2Button>
         </div>
       ) : (
@@ -282,7 +279,7 @@ export default function V2CourtsTab({ arena }) {
                     onClick={() => move(c, -1)}
                     disabled={idx === 0 || reorder.isPending}
                     className="flex h-5 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-ink disabled:opacity-30"
-                    aria-label="Mover para cima"
+                    aria-label={t('Mover para cima')}
                   >
                     <ChevronUp className="h-3 w-3" />
                   </button>
@@ -291,7 +288,7 @@ export default function V2CourtsTab({ arena }) {
                     onClick={() => move(c, 1)}
                     disabled={idx === courts.length - 1 || reorder.isPending}
                     className="flex h-5 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-ink disabled:opacity-30"
-                    aria-label="Mover para baixo"
+                    aria-label={t('Mover para baixo')}
                   >
                     <ChevronDown className="h-3 w-3" />
                   </button>
@@ -301,12 +298,12 @@ export default function V2CourtsTab({ arena }) {
                     <span className={cn('truncate font-semibold text-ink', inactive && 'text-gray-400 line-through')}>
                       {c.name}
                     </span>
-                    {inactive && <V2Badge tone="neutral">Inativa</V2Badge>}
+                    {inactive && <V2Badge tone="neutral">{t('Inativa')}</V2Badge>}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
-                    <span>{COURT.TYPE_LABELS[c.court_type] || c.court_type}</span>
-                    {c.surface_type && <span>· {COURT.SURFACE_LABELS[c.surface_type]}</span>}
-                    <span>· ordem {c.sort_order ?? 0}</span>
+                    <span>{t(COURT.TYPE_LABELS[c.court_type] || c.court_type || '')}</span>
+                    {c.surface_type && <span>· {t(COURT.SURFACE_LABELS[c.surface_type] || '')}</span>}
+                    <span>· {t('ordem {n}', { n: c.sort_order ?? 0 })}</span>
                     {c.notes && <span className="truncate italic">· {c.notes}</span>}
                   </div>
                   {/* O horário é o que faz a quadra existir para o atleta.
@@ -321,7 +318,7 @@ export default function V2CourtsTab({ arena }) {
                         onClick={() => setSchedulesCourt(c)}
                         className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-800"
                       >
-                        {inactive ? 'Sem horário definido' : 'Sem horário — defina para aceitar reservas'}
+                        {inactive ? t('Sem horário definido') : t('Sem horário — defina para aceitar reservas')}
                       </button>
                     )}
                   </div>
@@ -331,8 +328,8 @@ export default function V2CourtsTab({ arena }) {
                     type="button"
                     onClick={() => setSchedulesCourt(c)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
-                    aria-label="Gerenciar horários"
-                    title="Gerenciar horários"
+                    aria-label={t('Gerenciar horários')}
+                    title={t('Gerenciar horários')}
                     data-dica="arena-horarios-quadra"
                   >
                     <Clock className="h-4 w-4" />
@@ -341,7 +338,7 @@ export default function V2CourtsTab({ arena }) {
                     type="button"
                     onClick={() => setEditing(c)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
-                    aria-label="Editar quadra"
+                    aria-label={t('Editar quadra')}
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -349,8 +346,8 @@ export default function V2CourtsTab({ arena }) {
                     type="button"
                     onClick={() => setDeleting(c)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
-                    aria-label="Excluir quadra"
-                    title="Excluir quadra"
+                    aria-label={t('Excluir quadra')}
+                    title={t('Excluir quadra')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -364,7 +361,7 @@ export default function V2CourtsTab({ arena }) {
       {editing && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 p-4 sm:items-center" onClick={() => setEditing(null)}>
           <div className="w-full max-w-2xl rounded-3xl bg-paper-pure p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-display text-lg font-bold text-ink">Editar quadra</h3>
+            <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('Editar quadra')}</h3>
             <CourtForm
               initial={editing}
               onCancel={() => setEditing(null)}
@@ -378,9 +375,9 @@ export default function V2CourtsTab({ arena }) {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={deleting ? `Excluir "${deleting.name}"?` : ''}
-        description="A quadra será removida permanentemente. Reservas existentes manterão referência histórica."
-        confirmLabel="Excluir"
+        title={deleting ? t('Excluir "{nome}"?', { nome: deleting.name }) : ''}
+        description={t('A quadra será removida permanentemente. Reservas existentes manterão referência histórica.')}
+        confirmLabel={t('Excluir')}
         onConfirm={handleDelete}
         loading={deleteCourt.isPending}
       />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { recordClientError } from '@/core/services/observabilityService';
+import { t } from '@/core/i18n';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -20,15 +21,15 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div className="min-h-screen flex items-center justify-center bg-paper p-6">
           <div className="max-w-md w-full bg-white rounded-lg shadow p-6 border">
-            <h1 className="text-xl font-semibold text-ink mb-2">Algo deu errado</h1>
+            <h1 className="text-xl font-semibold text-ink mb-2">{t('Algo deu errado')}</h1>
             <p className="text-sm text-gray-500 mb-4">
-              Ocorreu um erro inesperado. Recarregue a página para tentar novamente.
+              {t('Ocorreu um erro inesperado. Recarregue a página para tentar novamente.')}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90"
             >
-              Recarregar
+              {t('Recarregar')}
             </button>
             {import.meta.env.DEV && this.state.error && (
               <pre className="mt-4 p-3 bg-paper rounded text-xs overflow-auto max-h-64">

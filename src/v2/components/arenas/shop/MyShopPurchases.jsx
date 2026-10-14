@@ -20,6 +20,7 @@ import { useMyShopSales, useMyPayments } from '@/modules/arenas/hooks/useArenaV3
 import { myOrderView } from '@/modules/arenas/domain/shop';
 import MyOrderCard from './MyOrderCard';
 import { V2ErrorState, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const HISTORICO = 4;
 
@@ -44,8 +45,8 @@ export default function MyShopPurchases() {
 
   if (vendasQ.isError) {
     return (
-      <V2ErrorState inline className="mb-6" title="Não foi possível carregar as suas compras nas arenas"
-        description="Os pedidos continuam registrados — tente de novo." onRetry={() => vendasQ.refetch()} />
+      <V2ErrorState inline className="mb-6" title={t('Não foi possível carregar as suas compras nas arenas')}
+        description={t('Os pedidos continuam registrados — tente de novo.')} onRetry={() => vendasQ.refetch()} />
     );
   }
   if (!vendasQ.data || vendasQ.data.length === 0) return null;
@@ -53,13 +54,13 @@ export default function MyShopPurchases() {
   return (
     <V2Surface className="mb-6">
       <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
-        <ShoppingBag className="h-4 w-4" /> Compras nas arenas
+        <ShoppingBag className="h-4 w-4" /> {t('Compras nas arenas')}
       </h2>
-      <p className="mt-1 text-xs text-gray-500">Pedidos feitos pelo aplicativo e contas divididas com você.</p>
+      <p className="mt-1 text-xs text-gray-500">{t('Pedidos feitos pelo aplicativo e contas divididas com você.')}</p>
 
       {grupos.pendentes.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">Precisa de você</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Precisa de você')}</p>
           <div className="mt-2 space-y-2">
             {grupos.pendentes.map((s) => (
               <MyOrderCard key={s.id} sale={s} uid={user?.uid} myPayments={pagamentos} showArena />
@@ -72,7 +73,7 @@ export default function MyShopPurchases() {
         <>
           <button type="button" onClick={() => setVerHistorico((v) => !v)} aria-expanded={verHistorico}
             className="mt-4 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-            Últimas compras ({grupos.recentes.length})
+            {t('Últimas compras ({n})', { n: grupos.recentes.length })}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${verHistorico ? 'rotate-180' : ''}`} />
           </button>
           {verHistorico && (

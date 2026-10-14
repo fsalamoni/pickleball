@@ -19,6 +19,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { rolarAte } from '@/v2/ui/rolarAte';
+import { t } from '@/core/i18n';
 
 /** Com menos que isto, a página é curta e o índice só ocupa espaço. */
 export const MIN_SECOES_NO_INDICE = 3;
@@ -89,8 +90,8 @@ export default function ArenaPageIndex({ containerRef }) {
   if (secoes.length < MIN_SECOES_NO_INDICE) return null;
 
   return (
-    <nav aria-label="Seções desta arena" className="mt-4">
-      <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">Nesta página</p>
+    <nav aria-label={t('Seções desta arena')} className="mt-4">
+      <p className="mb-2 text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Nesta página')}</p>
       {/* No celular desliza (uma linha só, para não empurrar a reserva para
           baixo da dobra); da tela pequena para cima, quebra em linhas e mostra
           tudo — atalho escondido à direita é atalho que ninguém usa. */}
@@ -102,7 +103,7 @@ export default function ArenaPageIndex({ containerRef }) {
               onClick={(e) => { e.preventDefault(); irPara(s.id); }}
               className="inline-flex items-center rounded-full border border-gray-200 bg-paper-pure px-3 py-1.5 text-xs font-semibold text-ink hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
-              {s.rotulo}
+              {t(s.rotulo)}
             </a>
           </li>
         ))}

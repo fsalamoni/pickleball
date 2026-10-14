@@ -47,19 +47,20 @@ import { ModuleIcon } from './moduleIcons';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
+import { t, tn, tk } from '@/core/i18n';
 
 const AUDIENCE_LABEL = {
-  atleta: 'Para o atleta',
-  professor: 'Para o professor',
-  arena: 'Para a arena',
+  atleta: tk('Para o atleta'),
+  professor: tk('Para o professor'),
+  arena: tk('Para a arena'),
 };
 
 /** Lista de nomes de módulos em português corrido: "A, B e C". */
 function nameList(ids) {
-  const names = ids.map((id) => getArenaModule(id)?.label).filter(Boolean);
+  const names = ids.map((id) => getArenaModule(id)?.label).filter(Boolean).map((n) => t(n));
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+  return t('{lista} e {ultimo}', { lista: names.slice(0, -1).join(', '), ultimo: names[names.length - 1] });
 }
 
 /* ----------------------------- configuração ------------------------------- */
@@ -75,16 +76,16 @@ function ModuleConfig({ arenaId, mod, current }) {
   const handleSave = async () => {
     try {
       await save.mutateAsync({ arenaId, moduleId: mod.id, config: draft });
-      toast.success('Configuração salva.');
+      toast.success(t('Configuração salva.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
   return (
     <div className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
       <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-gray-500">
-        Como este módulo funciona nesta arena
+        {t('Como este módulo funciona nesta arena')}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {mod.config.map((field) => (
@@ -92,14 +93,14 @@ function ModuleConfig({ arenaId, mod, current }) {
             <div key={field.key} className="sm:col-span-2">
               <V2Toggle
                 id={`${mod.id}-${field.key}`}
-                label={field.label}
-                hint={field.hint}
+                label={t(field.label)}
+                hint={field.hint ? t(field.hint) : field.hint}
                 checked={Boolean(draft[field.key])}
                 onChange={(v) => setDraft((d) => ({ ...d, [field.key]: v }))}
               />
             </div>
           ) : (
-            <V2Field key={field.key} label={field.label} hint={field.hint} htmlFor={`${mod.id}-${field.key}`}>
+            <V2Field key={field.key} label={t(field.label)} hint={field.hint ? t(field.hint) : field.hint} htmlFor={`${mod.id}-${field.key}`}>
               <V2Input
                 id={`${mod.id}-${field.key}`}
                 type={field.type === 'number' ? 'number' : 'text'}
@@ -119,7 +120,7 @@ function ModuleConfig({ arenaId, mod, current }) {
       <div className="mt-3 flex justify-end">
         <V2Button size="sm" disabled={!dirty || save.isPending} onClick={handleSave}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar configuração
+          {t('Salvar configuração')}
         </V2Button>
       </div>
     </div>
@@ -151,21 +152,21 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={isFamily ? 'font-display text-base font-bold text-ink' : 'text-sm font-bold text-ink'}>
-              {mod.label}
+              {t(mod.label)}
             </span>
-            {on && <V2Badge tone="green"><Check className="h-3 w-3" /> Ativo</V2Badge>}
-            {forced && <V2Badge tone="blue">Incluído pela plataforma</V2Badge>}
-            {mod.status === ARENA_MODULE_STATUS.BETA && <V2Badge tone="amber">Novo</V2Badge>}
+            {on && <V2Badge tone="green"><Check className="h-3 w-3" /> {t('Ativo')}</V2Badge>}
+            {forced && <V2Badge tone="blue">{t('Incluído pela plataforma')}</V2Badge>}
+            {mod.status === ARENA_MODULE_STATUS.BETA && <V2Badge tone="amber">{t('Novo')}</V2Badge>}
           </div>
 
-          <p className="mt-1 text-xs leading-5 text-gray-600">{mod.summary || mod.description}</p>
+          <p className="mt-1 text-xs leading-5 text-gray-600">{t(mod.summary || mod.description || '')}</p>
 
           {/* A promessa, na voz de quem recebe. */}
           <ul className="mt-2 space-y-1">
             {Object.entries(mod.benefit).map(([who, text]) => (
               <li key={who} className="flex gap-1.5 text-2xs leading-4 text-gray-500">
-                <span className="shrink-0 font-bold text-gray-400">{AUDIENCE_LABEL[who] || who}:</span>
-                <span>{text}</span>
+                <span className="shrink-0 font-bold text-gray-400">{t(AUDIENCE_LABEL[who] || who)}:</span>
+                <span>{t(text)}</span>
               </li>
             ))}
           </ul>
@@ -173,7 +174,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
           {mod.status === ARENA_MODULE_STATUS.EXTERNAL && mod.externalNote && (
             <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-2xs leading-4 text-purple-800">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>{mod.externalNote}</span>
+              <span>{t(mod.externalNote)}</span>
             </p>
           )}
 
@@ -181,8 +182,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
             <p className="mt-2 flex gap-1.5 text-2xs leading-4 text-amber-700">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
               <span>
-                Precisa de <strong>{nameList(access.missingFor(mod.id))}</strong>. Ao ativar,
-                ligamos junto.
+                {t('Precisa de')} <strong>{nameList(access.missingFor(mod.id))}</strong>. {t('Ao ativar, ligamos junto.')}
               </span>
             </p>
           )}
@@ -194,7 +194,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
                   to={manageRoute}
                   className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-ink hover:border-ink"
                 >
-                  Gerenciar <ArrowUpRight className="h-3 w-3" />
+                  {t('Gerenciar')} <ArrowUpRight className="h-3 w-3" />
                 </Link>
               )}
               {publicRoute && (
@@ -202,7 +202,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
                   to={publicRoute}
                   className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-gray-600 hover:border-ink hover:text-ink"
                 >
-                  Ver como o atleta vê <ArrowUpRight className="h-3 w-3" />
+                  {t('Ver como o atleta vê')} <ArrowUpRight className="h-3 w-3" />
                 </Link>
               )}
               {mod.config.length > 0 && (
@@ -211,7 +211,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
                   onClick={() => setShowConfig((v) => !v)}
                   className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-2xs font-bold text-gray-600 hover:border-ink hover:text-ink"
                 >
-                  Configurar
+                  {t('Configurar')}
                   <ChevronDown className={`h-3 w-3 transition-transform ${showConfig ? 'rotate-180' : ''}`} />
                 </button>
               )}
@@ -227,7 +227,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
           {busy ? (
             <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
           ) : forced ? (
-            <span title="A plataforma incluiu este módulo para todas as arenas.">
+            <span title={t('A plataforma incluiu este módulo para todas as arenas.')}>
               <Lock className="h-4 w-4 text-gray-300" />
             </span>
           ) : (
@@ -235,7 +235,7 @@ function ModuleCard({ arenaId, mod, access, canManage, busy, onToggle, isFamily 
               checked={on}
               onChange={(v) => {
                 if (!canManage) {
-                  toast.error('Só quem administra a arena pode mexer nos módulos.');
+                  toast.error(t('Só quem administra a arena pode mexer nos módulos.'));
                   return;
                 }
                 onToggle(mod.id, v);
@@ -283,22 +283,22 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
         platformModules: access.platformModules,
         arenaStates: access.arenaStates,
       });
-      const label = getArenaModule(moduleId)?.label;
+      const label = t(getArenaModule(moduleId)?.label || '');
       if (enabled) {
         toast.success(
           res.together.length > 0
-            ? `${label} ativado, junto com ${nameList(res.together)}.`
-            : `${label} ativado.`,
+            ? t('{modulo} ativado, junto com {outros}.', { modulo: label, outros: nameList(res.together) })
+            : t('{modulo} ativado.', { modulo: label }),
         );
       } else {
         toast.success(
           res.together.length > 0
-            ? `${label} desativado, e com ele ${nameList(res.together)}.`
-            : `${label} desativado.`,
+            ? t('{modulo} desativado, e com ele {outros}.', { modulo: label, outros: nameList(res.together) })
+            : t('{modulo} desativado.', { modulo: label }),
         );
       }
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar o módulo.');
+      toast.error(err?.message || t('Não foi possível alterar o módulo.'));
     } finally {
       setBusyId(null);
       setConfirm(null);
@@ -329,9 +329,9 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
     return (
       <V2Surface>
         <p className="text-sm text-red-700">
-          Não foi possível carregar os módulos.{' '}
+          {t('Não foi possível carregar os módulos.')}{' '}
           <button type="button" className="font-bold underline" onClick={() => window.location.reload()}>
-            Tentar de novo
+            {t('Tentar de novo')}
           </button>
         </p>
       </V2Surface>
@@ -343,12 +343,8 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
       <V2Surface data-dica="arena-modulos">
         <V2EmptyState
           icon={Puzzle}
-          title="Nenhum módulo disponível ainda"
-          description={
-            'Os módulos adicionais são funcionalidades extras que a plataforma libera às arenas — '
-            + 'lista de espera, membros, pacotes, cupons, aulas, torneios internos e mais. '
-            + 'Assim que a plataforma liberar alguma, ela aparece aqui para você ativar.'
-          }
+          title={t('Nenhum módulo disponível ainda')}
+          description={t('Os módulos adicionais são funcionalidades extras que a plataforma libera às arenas — lista de espera, membros, pacotes, cupons, aulas, torneios internos e mais. Assim que a plataforma liberar alguma, ela aparece aqui para você ativar.')}
         />
       </V2Surface>
     );
@@ -364,24 +360,22 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
             <Sparkles className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-bold text-ink">Módulos adicionais</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Módulos adicionais')}</h2>
             <p className="max-w-2xl text-xs leading-5 text-gray-500">
-              Funcionalidades extras que você liga <strong>só para a sua arena</strong>. Ligar um
-              módulo faz a funcionalidade aparecer para você e para os seus atletas; desligar faz
-              sumir da tela — nada é apagado.
+              {t('Funcionalidades extras que você liga só para a sua arena. Ligar um módulo faz a funcionalidade aparecer para você e para os seus atletas; desligar faz sumir da tela — nada é apagado.')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <V2Badge tone={summary.enabled > 0 ? 'green' : 'neutral'}>
-                {summary.enabled} ativos
+                {tn(summary.enabled, '{n} ativo', '{n} ativos')}
               </V2Badge>
-              <V2Badge tone="neutral">{summary.released} disponíveis</V2Badge>
+              <V2Badge tone="neutral">{tn(summary.released, '{n} disponível', '{n} disponíveis')}</V2Badge>
             </div>
           </div>
         </div>
         {!canManage && (
           <p className="mt-4 flex gap-1.5 rounded-2xl bg-paper p-3 text-xs text-gray-500">
             <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-            Você está vendo em modo leitura. Só quem administra a arena pode ligar e desligar.
+            {t('Você está vendo em modo leitura. Só quem administra a arena pode ligar e desligar.')}
           </p>
         )}
       </V2Surface>
@@ -423,17 +417,15 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
         destructive={Boolean(confirm?.falls)}
         title={
           confirm?.falls
-            ? `Desativar ${getArenaModule(confirm.moduleId)?.label}?`
-            : `Ativar ${getArenaModule(confirm?.moduleId)?.label}?`
+            ? t('Desativar {modulo}?', { modulo: t(getArenaModule(confirm.moduleId)?.label || '') })
+            : t('Ativar {modulo}?', { modulo: t(getArenaModule(confirm?.moduleId)?.label || '') })
         }
         description={
           confirm?.falls
-            ? `Isto também desativa ${nameList(confirm.falls)}, porque dependem dele. `
-              + 'Nada é apagado — as funcionalidades somem da tela e voltam se você ativar de novo.'
-            : `Para funcionar, este módulo precisa de ${nameList(confirm?.rises || [])}. `
-              + 'Vamos ativar tudo junto.'
+            ? t('Isto também desativa {modulos}, porque dependem dele. Nada é apagado — as funcionalidades somem da tela e voltam se você ativar de novo.', { modulos: nameList(confirm.falls) })
+            : t('Para funcionar, este módulo precisa de {modulos}. Vamos ativar tudo junto.', { modulos: nameList(confirm?.rises || []) })
         }
-        confirmLabel={confirm?.falls ? 'Desativar tudo' : 'Ativar tudo'}
+        confirmLabel={confirm?.falls ? t('Desativar tudo') : t('Ativar tudo')}
         loading={Boolean(busyId)}
         onConfirm={() => confirm && apply(confirm.moduleId, !confirm.falls)}
       />

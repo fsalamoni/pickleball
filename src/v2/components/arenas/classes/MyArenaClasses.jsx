@@ -22,6 +22,7 @@ import { enrollmentRows, taughtClassRows } from '@/modules/arenas/domain/classAg
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import { V2Badge, V2Button, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const porId = (lista = []) => new Map(lista.map((x) => [x.id, x]));
 
@@ -61,7 +62,7 @@ export function MyArenaEnrollments() {
     return (
       <V2ErrorState
         inline
-        title="Não foi possível carregar as suas aulas nas arenas"
+        title={t('Não foi possível carregar as suas aulas nas arenas')}
         onRetry={() => refetch()}
       />
     );
@@ -73,33 +74,33 @@ export function MyArenaEnrollments() {
 
   return (
     <V2Surface>
-      <h2 className="mb-1 font-display text-lg font-bold text-ink">Aulas nas arenas</h2>
-      <p className="mb-4 text-sm text-gray-500">As aulas da agenda das arenas em que você se matriculou.</p>
+      <h2 className="mb-1 font-display text-lg font-bold text-ink">{t('Aulas nas arenas')}</h2>
+      <p className="mb-4 text-sm text-gray-500">{t('As aulas da agenda das arenas em que você se matriculou.')}</p>
       {vindo.length === 0 && (
-        <p className="mb-3 text-sm text-gray-500">Nenhuma aula marcada daqui para a frente.</p>
+        <p className="mb-3 text-sm text-gray-500">{t('Nenhuma aula marcada daqui para a frente.')}</p>
       )}
       <div className="space-y-2">
         {vindo.map((l) => (
           <LinhaDeAula key={l.key} aula={l.aula} arenaId={l.arenaId} arenaName={l.arenaName}>
             {l.cancelled
-              ? <V2Badge tone="red">Cancelada</V2Badge>
-              : <V2Badge tone={l.booking.paid ? 'green' : 'amber'}>{l.booking.paid ? 'Pago' : 'Pagar na arena'}</V2Badge>}
+              ? <V2Badge tone="red">{t('Cancelada')}</V2Badge>
+              : <V2Badge tone={l.booking.paid ? 'green' : 'amber'}>{l.booking.paid ? t('Pago') : t('Pagar na arena')}</V2Badge>}
           </LinhaDeAula>
         ))}
       </div>
       {foi.length > 0 && (
         <>
-          <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wider text-gray-500">Já aconteceram</p>
+          <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wider text-gray-500">{t('Já aconteceram')}</p>
           <div className="space-y-2">
             {passadasVisiveis.map((l) => (
               <LinhaDeAula key={l.key} aula={l.aula} arenaId={l.arenaId} arenaName={l.arenaName}>
-                {l.cancelled ? <V2Badge tone="neutral">Cancelada</V2Badge> : <V2Badge tone="neutral">Feita</V2Badge>}
+                {l.cancelled ? <V2Badge tone="neutral">{t('Cancelada')}</V2Badge> : <V2Badge tone="neutral">{t('Feita')}</V2Badge>}
               </LinhaDeAula>
             ))}
           </div>
           {foi.length > 3 && (
             <V2Button size="sm" variant="ghost" className="mt-2" onClick={() => setVerTodas((v) => !v)}>
-              {verTodas ? 'Mostrar menos' : `Ver todas (${foi.length})`}
+              {verTodas ? t('Mostrar menos') : t('Ver todas ({n})', { n: foi.length })}
             </V2Button>
           )}
         </>
@@ -123,22 +124,22 @@ export function MyTaughtArenaClasses() {
     return (
       <V2ErrorState
         inline
-        title="Não foi possível carregar as aulas que você dá nas arenas"
+        title={t('Não foi possível carregar as aulas que você dá nas arenas')}
         onRetry={() => refetch()}
       />
     );
   }
   if (isLoading || !data?.perfis?.length) return null;
-  const arenas = [...new Map((data.perfis || []).map((p) => [p.arena_id, porId(data.arenas).get(p.arena_id)?.name || 'Arena'])).entries()];
+  const arenas = [...new Map((data.perfis || []).map((p) => [p.arena_id, porId(data.arenas).get(p.arena_id)?.name || t('Arena')])).entries()];
 
   return (
     <V2Surface>
-      <h2 className="mb-1 font-display text-lg font-bold text-ink">Aulas que você dá nas arenas</h2>
+      <h2 className="mb-1 font-display text-lg font-bold text-ink">{t('Aulas que você dá nas arenas')}</h2>
       <p className="mb-4 text-sm text-gray-500">
-        A agenda que as arenas marcaram com você. Toque numa aula para ver os alunos.
+        {t('A agenda que as arenas marcaram com você. Toque numa aula para ver os alunos.')}
       </p>
       {proximas.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhuma aula marcada daqui para a frente.</p>
+        <p className="text-sm text-gray-500">{t('Nenhuma aula marcada daqui para a frente.')}</p>
       ) : (
         <div className="space-y-2">
           {proximas.slice(0, 10).map((l) => (
@@ -153,11 +154,11 @@ export function MyTaughtArenaClasses() {
       )}
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
         {passadas.filter((l) => l.given).length > 0 && (
-          <span>{passadas.filter((l) => l.given).length} aula(s) dada(s)</span>
+          <span>{t('{n} aula(s) dada(s)', { n: passadas.filter((l) => l.given).length })}</span>
         )}
         {arenas.map(([id, nome]) => (
           <Link key={id} to={`/arenas/${id}/aulas`} className="font-bold text-ink hover:underline">
-            Agenda em {nome} →
+            {t('Agenda em {nome} →', { nome })}
           </Link>
         ))}
       </div>

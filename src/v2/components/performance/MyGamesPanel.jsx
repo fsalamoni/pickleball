@@ -14,16 +14,17 @@ import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function formatDateTime(ms) {
   if (!ms) return '';
-  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return fmtData(new Date(ms), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Rótulo do MEU lado: "Você / Parceiro" nas duplas, "Você" no individual. */
 function mySideLabel(partner) {
   const p = String(partner || '').trim();
-  return p ? `Você / ${p}` : 'Você';
+  return p ? t('Você / {parceiro}', { parceiro: p }) : t('Você');
 }
 
 /** Confronto no formato "minha dupla vs dupla adversária". */
@@ -31,7 +32,7 @@ function MatchupLine({ partner, opponent }) {
   return (
     <div className="mt-1 font-bold text-ink">
       <span>{mySideLabel(partner)}</span>
-      <span className="mx-1.5 font-normal text-gray-400">vs</span>
+      <span className="mx-1.5 font-normal text-gray-400">{t('vs')}</span>
       <span>{opponent}</span>
     </div>
   );
@@ -45,15 +46,15 @@ function PostGameStrip() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-acid/30 bg-acid/10 p-5">
       <div className="min-w-0">
-        <p className="font-display text-base font-bold text-ink">Fechou mais um jogo? Mantenha o ritmo 🔥</p>
-        <p className="text-sm text-gray-600">Marque o próximo jogo ou veja como seu rating evoluiu.</p>
+        <p className="font-display text-base font-bold text-ink">{t('Fechou mais um jogo? Mantenha o ritmo 🔥')}</p>
+        <p className="text-sm text-gray-600">{t('Marque o próximo jogo ou veja como seu rating evoluiu.')}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <V2Button asChild size="sm">
-          <Link to="/encontrar-jogadores"><Swords className="h-4 w-4" /> Jogar de novo</Link>
+          <Link to="/encontrar-jogadores"><Swords className="h-4 w-4" /> {t('Jogar de novo')}</Link>
         </V2Button>
         <V2Button asChild variant="subtle" size="sm">
-          <Link to="/ranking"><TrendingUp className="h-4 w-4" /> Ver minha evolução</Link>
+          <Link to="/ranking"><TrendingUp className="h-4 w-4" /> {t('Ver minha evolução')}</Link>
         </V2Button>
       </div>
     </div>
@@ -124,9 +125,9 @@ export default function MyGamesPanel() {
     <div>
       {mergedHistory.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
-          <V2Badge tone="green">{record.wins} vitória{record.wins === 1 ? '' : 's'}</V2Badge>
-          <V2Badge tone="red">{record.losses} derrota{record.losses === 1 ? '' : 's'}</V2Badge>
-          <V2Badge tone="neutral">{record.total} jogo{record.total === 1 ? '' : 's'}</V2Badge>
+          <V2Badge tone="green">{tn(record.wins, '{n} vitória', '{n} vitórias')}</V2Badge>
+          <V2Badge tone="red">{tn(record.losses, '{n} derrota', '{n} derrotas')}</V2Badge>
+          <V2Badge tone="neutral">{tn(record.total, '{n} jogo', '{n} jogos')}</V2Badge>
         </div>
       )}
 
@@ -134,12 +135,12 @@ export default function MyGamesPanel() {
         <button type="button" onClick={() => setTab('proximos')}
           className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
             isUpcoming ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-          <CalendarClock className="h-4 w-4" /> Próximos ({upcoming.length})
+          <CalendarClock className="h-4 w-4" /> {t('Próximos ({n})', { n: upcoming.length })}
         </button>
         <button type="button" onClick={() => setTab('historico')}
           className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
             !isUpcoming ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-          <History className="h-4 w-4" /> Histórico ({mergedHistory.length})
+          <History className="h-4 w-4" /> {t('Histórico ({n})', { n: mergedHistory.length })}
         </button>
       </div>
 
@@ -151,16 +152,16 @@ export default function MyGamesPanel() {
              precisa ir à quadra hoje. */
           <V2Surface>
             <V2ErrorState
-              title="Seus jogos agendados não carregaram"
-              description="Eles continuam marcados — o que falhou foi a consulta."
+              title={t('Seus jogos agendados não carregaram')}
+              description={t('Eles continuam marcados — o que falhou foi a consulta.')}
               onRetry={() => recarregarAgendados()}
             />
           </V2Surface>
         ) : upcoming.length === 0 ? (
           <V2Surface>
-            <V2EmptyState icon={CalendarClock} title="Nenhum jogo agendado"
-              description="Quando você tiver jogos marcados nos torneios, eles aparecem aqui."
-              action={<V2Button asChild><Link to="/torneios">Ver torneios</Link></V2Button>} />
+            <V2EmptyState icon={CalendarClock} title={t('Nenhum jogo agendado')}
+              description={t('Quando você tiver jogos marcados nos torneios, eles aparecem aqui.')}
+              action={<V2Button asChild><Link to="/torneios">{t('Ver torneios')}</Link></V2Button>} />
           </V2Surface>
         ) : (
           <div className="space-y-3">
@@ -177,7 +178,7 @@ export default function MyGamesPanel() {
                     {m.court && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {m.court}</span>}
                   </div>
                 </div>
-                <V2Badge tone="amber">Agendado</V2Badge>
+                <V2Badge tone="amber">{t('Agendado')}</V2Badge>
               </V2Surface>
             ))}
           </div>
@@ -185,15 +186,15 @@ export default function MyGamesPanel() {
       ) : falhouHistorico ? (
         <V2Surface>
           <V2ErrorState
-            title="O histórico não carregou"
-            description="Seus jogos continuam registrados."
+            title={t('O histórico não carregou')}
+            description={t('Seus jogos continuam registrados.')}
             onRetry={() => recarregarHistorico()}
           />
         </V2Surface>
       ) : mergedHistory.length === 0 ? (
         <V2Surface>
-          <V2EmptyState icon={History} title="Sem histórico ainda"
-            description="Seus jogos finalizados (torneios e dias de jogo) aparecerão aqui com placar e resultado." />
+          <V2EmptyState icon={History} title={t('Sem histórico ainda')}
+            description={t('Seus jogos finalizados (torneios e dias de jogo) aparecerão aqui com placar e resultado.')} />
         </V2Surface>
       ) : (
         <div className="space-y-3">
@@ -209,7 +210,7 @@ export default function MyGamesPanel() {
                 <div className="mt-1 text-xs text-gray-500">
                   {formatDateTime(m.at)}
                   {/* Conta aqui, mas não no ranking — o porquê está na aba Estatística. */}
-                  {m.foraDoRanking && <span className="ml-2 font-medium text-amber-700">· fora do ranking</span>}
+                  {m.foraDoRanking && <span className="ml-2 font-medium text-amber-700">{t('· fora do ranking')}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -217,9 +218,9 @@ export default function MyGamesPanel() {
                   <span className="font-display text-lg font-bold tabular-nums text-ink">{m.myScore} × {m.oppScore}</span>
                 )}
                 {m.won ? (
-                  <V2Badge tone="green"><CheckCircle2 className="mr-1 inline h-3 w-3" />{m.walkover ? 'W.O. a favor' : 'Vitória'}</V2Badge>
+                  <V2Badge tone="green"><CheckCircle2 className="mr-1 inline h-3 w-3" />{m.walkover ? t('W.O. a favor') : t('Vitória')}</V2Badge>
                 ) : (
-                  <V2Badge tone="red"><XCircle className="mr-1 inline h-3 w-3" />{m.walkover ? 'W.O.' : 'Derrota'}</V2Badge>
+                  <V2Badge tone="red"><XCircle className="mr-1 inline h-3 w-3" />{m.walkover ? 'W.O.' : t('Derrota')}</V2Badge>
                 )}
               </div>
             </V2Surface>

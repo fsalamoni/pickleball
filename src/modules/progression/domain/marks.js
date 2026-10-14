@@ -22,6 +22,7 @@
  * Lógica pura, sem I/O.
  */
 import { TIERS } from './tiers.js';
+import { t } from '@/core/i18n';
 
 const GAME_MARKS = [10, 25, 50, 100, 250, 500, 1000];
 const WIN_MARKS = [10, 25, 50, 100, 250];
@@ -33,14 +34,14 @@ const LEVEL_MARKS = [5, 10, 15, 20, 25, 30, 40, 50];
 function tierMarks(tierName) {
   const idx = TIERS.findIndex((t) => t.name === tierName);
   if (idx <= 0) return []; // Calouro é o ponto de partida: não se comemora
-  return TIERS.slice(1, idx + 1).map((t, i) => ({
-    key: `tier_${t.name}`,
+  return TIERS.slice(1, idx + 1).map((tier, i) => ({
+    key: `tier_${tier.name}`,
     family: 'tier',
     rank: i + 1,
-    emoji: t.icon,
-    title: `Você subiu para ${t.name}!`,
-    message: t.description,
-    tone: t.tier >= 4 ? 'gold' : 'purple',
+    emoji: tier.icon,
+    title: t('Você subiu para {tier}!', { tier: t(tier.name) }),
+    message: t(tier.description),
+    tone: tier.tier >= 4 ? 'gold' : 'purple',
   }));
 }
 
@@ -61,19 +62,19 @@ export function reachedMarks(s = {}) {
   const marks = [
     ...tierMarks(s.tier),
     ...countMarks(Number(s.level) || 0, LEVEL_MARKS, 'level', '⚡',
-      (n) => `Nível ${n} alcançado!`, () => 'A curva de nível é longa — cada marco é seu.', 'blue'),
+      (n) => t('Nível {n} alcançado!', { n }), () => t('A curva de nível é longa — cada marco é seu.'), 'blue'),
     ...countMarks(Number(s.games) || 0, GAME_MARKS, 'games', '🎾',
-      (n) => `Seu ${n}º jogo!`, (n) => `${n} jogos disputados na plataforma.`, 'green'),
+      (n) => t('Seu {n}º jogo!', { n }), (n) => t('{n} jogos disputados na plataforma.', { n }), 'green'),
     ...countMarks(Number(s.wins) || 0, WIN_MARKS, 'wins', '🏆',
-      (n) => `${n} vitórias!`, () => 'Cada vitória foi conquistada em quadra.', 'gold'),
+      (n) => t('{n} vitórias!', { n }), () => t('Cada vitória foi conquistada em quadra.'), 'gold'),
     ...countMarks(Number(s.streakWeeks) || 0, STREAK_MARKS, 'streak', '🔥',
-      (n) => `${n} semanas seguidas!`, () => 'Constância é o que separa quem joga de quem evolui.', 'gold'),
+      (n) => t('{n} semanas seguidas!', { n }), () => t('Constância é o que separa quem joga de quem evolui.'), 'gold'),
   ];
   if ((Number(s.titles) || 0) >= 1) {
-    marks.push({ key: 'first_title', family: 'title', rank: 1, emoji: '👑', title: 'Seu primeiro título!', message: 'Campeão. Ninguém tira isso de você.', tone: 'gold' });
+    marks.push({ key: 'first_title', family: 'title', rank: 1, emoji: '👑', title: t('Seu primeiro título!'), message: t('Campeão. Ninguém tira isso de você.'), tone: 'gold' });
   }
   if ((Number(s.podiums) || 0) >= 1) {
-    marks.push({ key: 'first_podium', family: 'podium', rank: 1, emoji: '🥉', title: 'Seu primeiro pódio!', message: 'Entre os três melhores.', tone: 'gold' });
+    marks.push({ key: 'first_podium', family: 'podium', rank: 1, emoji: '🥉', title: t('Seu primeiro pódio!'), message: t('Entre os três melhores.'), tone: 'gold' });
   }
   return marks;
 }

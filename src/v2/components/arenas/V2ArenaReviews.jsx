@@ -10,6 +10,7 @@ import { aggregateRatings } from '@/modules/arenas/domain/arena';
 import { normalizeReviewResponse, hasResponse, responseAgeHours } from '@/modules/arenas/domain/review_response';
 import { useArenaReviews, useAddReview, useDeleteReview, useRespondToReview, useDeleteReviewResponse } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const TYPE_ICON = {
   [REVIEW_TYPE.REVIEW]: Star,
@@ -21,7 +22,7 @@ function StarPicker({ value, onChange }) {
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n} estrela(s)`} className="p-0.5">
+        <button key={n} type="button" onClick={() => onChange(n)} aria-label={t('{n} estrela(s)', { n })} className="p-0.5">
           <Star className={cn('h-6 w-6', n <= value ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />
         </button>
       ))}
@@ -47,19 +48,19 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
     e.preventDefault();
     try {
       await addReview.mutateAsync({ arena, input: { type, rating, comment } });
-      toast.success('Enviado. Obrigado pelo retorno!');
+      toast.success(t('Enviado. Obrigado pelo retorno!'));
       setRating(0);
       setComment('');
       setType(REVIEW_TYPE.REVIEW);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar.');
+      toast.error(err?.message || t('Não foi possível enviar.'));
     }
   }
 
   return (
     <V2Surface>
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-base font-bold text-ink">Avaliações e retornos</h3>
+        <h3 className="font-display text-base font-bold text-ink">{t('Avaliações e retornos')}</h3>
         {summary.average != null && (
           <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
             <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {summary.average}
@@ -71,17 +72,17 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
       {isAuthenticated && (
         <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-3xl border border-gray-100 bg-paper p-4">
           <div className="flex flex-wrap gap-2">
-            {Object.values(REVIEW_TYPE).map((t) => (
+            {Object.values(REVIEW_TYPE).map((tipo) => (
               <button
-                key={t}
+                key={tipo}
                 type="button"
-                onClick={() => setType(t)}
+                onClick={() => setType(tipo)}
                 className={cn(
                   'rounded-full border px-3 py-1 text-xs font-bold transition-colors',
-                  type === t ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-600 hover:bg-paper-dark',
+                  type === tipo ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-600 hover:bg-paper-dark',
                 )}
               >
-                {REVIEW_TYPE_LABELS[t]}
+                {t(REVIEW_TYPE_LABELS[tipo])}
               </button>
             ))}
           </div>
@@ -91,12 +92,12 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
             onChange={(e) => setComment(e.target.value)}
             rows={2}
             maxLength={1000}
-            placeholder={type === REVIEW_TYPE.REVIEW ? 'Conte como foi sua experiência (opcional)' : 'Descreva sua mensagem'}
+            placeholder={type === REVIEW_TYPE.REVIEW ? t('Conte como foi sua experiência (opcional)') : t('Descreva sua mensagem')}
             className="w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-2.5 text-sm text-ink placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
           />
           <div className="flex justify-end">
             <V2Button type="submit" size="sm" disabled={addReview.isPending}>
-              {addReview.isPending ? 'Enviando…' : 'Enviar'}
+              {addReview.isPending ? t('Enviando…') : t('Enviar')}
             </V2Button>
           </div>
         </form>
@@ -104,9 +105,9 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
 
       <div className="mt-4 space-y-2">
         {isLoading ? (
-          <p className="text-sm text-gray-500">Carregando…</p>
+          <p className="text-sm text-gray-500">{t('Carregando…')}</p>
         ) : reviews.length === 0 ? (
-          <p className="text-sm text-gray-500">Ainda não há avaliações. Seja o primeiro a comentar.</p>
+          <p className="text-sm text-gray-500">{t('Ainda não há avaliações. Seja o primeiro a comentar.')}</p>
         ) : (
           reviews.map((r) => {
             const Icon = TYPE_ICON[r.type] || Star;
@@ -120,18 +121,18 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                       <div className="text-sm font-bold text-ink">{r.user_name}</div>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Icon className="h-3 w-3" />
-                        {(r.type ?? 'review') !== 'review' ? REVIEW_TYPE_LABELS[r.type] : `${r.rating}★`}
+                        {(r.type ?? 'review') !== 'review' ? t(REVIEW_TYPE_LABELS[r.type]) : `${r.rating}★`}
                       </div>
                     </div>
                   </div>
                   {(mine || canModerate) && (
                     <ConfirmDialog
-                      title="Remover este item?"
-                      description="A mensagem será removida permanentemente."
-                      confirmLabel="Remover"
+                      title={t('Remover este item?')}
+                      description={t('A mensagem será removida permanentemente.')}
+                      confirmLabel={t('Remover')}
                       onConfirm={() => deleteReview.mutate(r)}
                       trigger={(
-                        <button aria-label="Remover" className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-red-500">
+                        <button aria-label={t('Remover')} className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-red-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -140,17 +141,17 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                 </div>
                 {r.comment && <p className="mt-2 text-sm text-gray-600">{r.comment}</p>}
                 {canModerate && (r.type ?? 'review') !== 'review' && (
-                  <V2Badge tone="amber" className="mt-2">Requer atenção da arena</V2Badge>
+                  <V2Badge tone="amber" className="mt-2">{t('Requer atenção da arena')}</V2Badge>
                 )}
 
-                {/* Resposta da arena (Sprint 3 ARE-09) */}
+                {/* {t('Resposta da arena')} (Sprint 3 ARE-09) */}
                 {hasResponse(r) && respondingTo !== r.id && (
                   <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-xs font-bold text-green-800">
-                        <Reply className="h-3 w-3" /> Resposta da arena
+                        <Reply className="h-3 w-3" /> {t('Resposta da arena')}
                         {responseAgeHours(r) != null && (
-                          <span className="text-green-600/70">· há {responseAgeHours(r)}h</span>
+                          <span className="text-green-600/70">· {t('há {n}h', { n: responseAgeHours(r) })}</span>
                         )}
                       </div>
                       {canModerate && (
@@ -159,21 +160,21 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                             type="button"
                             onClick={() => setRespondingTo(r.id)}
                             className="flex h-7 w-7 items-center justify-center rounded-full text-green-700 hover:bg-green-100"
-                            aria-label="Editar resposta"
-                            title="Editar resposta"
+                            aria-label={t('Editar resposta')}
+                            title={t('Editar resposta')}
                           >
                             <Edit3 className="h-3.5 w-3.5" />
                           </button>
                           <ConfirmDialog
-                            title="Remover resposta?"
-                            description="A resposta da arena será removida. O comentário original permanece."
-                            confirmLabel="Remover"
+                            title={t('Remover resposta?')}
+                            description={t('A resposta da arena será removida. O comentário original permanece.')}
+                            confirmLabel={t('Remover')}
                             onConfirm={() => deleteResponseMutation.mutate(r.id)}
                             trigger={(
                               <button
                                 type="button"
                                 className="flex h-7 w-7 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
-                                aria-label="Remover resposta"
+                                aria-label={t('Remover resposta')}
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>
@@ -195,10 +196,10 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                     onSubmit={async (text) => {
                       try {
                         await respondMutation.mutateAsync({ reviewId: r.id, response: text });
-                        toast.success('Resposta publicada.');
+                        toast.success(t('Resposta publicada.'));
                         setRespondingTo(null);
                       } catch (err) {
-                        toast.error(err?.message || 'Não foi possível publicar a resposta.');
+                        toast.error(err?.message || t('Não foi possível publicar a resposta.'));
                       }
                     }}
                   />
@@ -210,7 +211,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                     onClick={() => setRespondingTo(r.id)}
                     className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-800"
                   >
-                    <Reply className="h-3 w-3" /> Responder
+                    <Reply className="h-3 w-3" /> {t('Responder')}
                   </button>
                 )}
               </div>
@@ -239,21 +240,21 @@ function ResponseForm({ initial = '', busy, onCancel, onSubmit }) {
         onChange={(e) => setText(e.target.value)}
         rows={3}
         maxLength={500}
-        placeholder="Escreva a resposta pública da arena…"
+        placeholder={t('Escreva a resposta pública da arena…')}
         className="w-full rounded-xl border border-green-200 bg-white px-3 py-2 text-sm outline-none focus-visible:border-green-400"
       />
       <div className="flex items-center justify-between text-xs">
         <span className={cn(text.length > 500 ? 'text-red-600' : 'text-gray-400')}>
           {text.length}/500
         </span>
-        {error && <span className="text-red-600">{error}</span>}
+        {error && <span className="text-red-600">{t(error)}</span>}
       </div>
       <div className="flex justify-end gap-2">
         <V2Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
-          Cancelar
+          {t('Cancelar')}
         </V2Button>
         <V2Button type="submit" size="sm" disabled={busy}>
-          {busy ? 'Publicando…' : initial ? 'Atualizar resposta' : 'Publicar resposta'}
+          {busy ? t('Publicando…') : initial ? t('Atualizar resposta') : t('Publicar resposta')}
         </V2Button>
       </div>
     </form>

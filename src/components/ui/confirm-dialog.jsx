@@ -12,6 +12,7 @@ import {
 import { cn } from '@/core/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { t } from '@/core/i18n';
 
 /**
  * Alert-dialog reaproveitável para confirmações destrutivas.
@@ -34,8 +35,8 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel = t('Confirmar'),
+  cancelLabel = t('Cancelar'),
   destructive = false,
   onConfirm,
   loading = false,
@@ -71,7 +72,7 @@ export function ConfirmDialog({
             }}
             className={cn(destructive && buttonVariants({ variant: 'destructive' }))}
           >
-            {loading ? 'Aguarde…' : confirmLabel}
+            {loading ? t('Aguarde…') : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

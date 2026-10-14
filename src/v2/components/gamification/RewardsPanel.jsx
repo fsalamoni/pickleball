@@ -10,10 +10,11 @@ import {
 } from '@/modules/progression/domain/rewards';
 import { achievementName } from './achievementName';
 import TermHint from './TermHint';
+import { t, tn, fmtData } from '@/core/i18n';
 
 const TABS = [
-  { value: 'disponiveis', label: 'Disponíveis', icon: Gift },
-  { value: 'meus', label: 'Meus pedidos', icon: Ticket },
+  { value: 'disponiveis', get label() { return t('Disponíveis'); }, icon: Gift },
+  { value: 'meus', get label() { return t('Meus pedidos'); }, icon: Ticket },
 ];
 
 const STATUS_TONE = { requested: 'amber', approved: 'green', redeemed: 'neutral', rejected: 'red', cancelled: 'neutral' };
@@ -30,31 +31,31 @@ function RewardCard({ r, claim, snapshot, onRequest, requesting }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="font-display text-base font-bold text-ink">{r.title}</p>
-            <V2Badge tone="purple">{r.issuerName || REWARD_ISSUER_LABEL[r.issuerType]}</V2Badge>
-            <V2Badge>{meta.label}</V2Badge>
+            <V2Badge tone="purple">{r.issuerName || t(REWARD_ISSUER_LABEL[r.issuerType] || '')}</V2Badge>
+            <V2Badge>{t(meta.label)}</V2Badge>
           </div>
           {r.description && <p className="mt-0.5 text-sm text-gray-600">{r.description}</p>}
           <p className="mt-1 text-xs text-gray-500">{describeEligibility(r.eligibility, { achievementName })}</p>
-          {disp.available && disp.remaining != null && <p className="text-xs text-gray-500">{disp.remaining} {disp.remaining === 1 ? 'unidade restante' : 'unidades restantes'}</p>}
-          {r.instructions && <p className="mt-1 text-xs text-gray-500">Como usar: {r.instructions}</p>}
+          {disp.available && disp.remaining != null && <p className="text-xs text-gray-500">{tn(disp.remaining, '{n} unidade restante', '{n} unidades restantes')}</p>}
+          {r.instructions && <p className="mt-1 text-xs text-gray-500">{t('Como usar: {texto}', { texto: r.instructions })}</p>}
         </div>
       </div>
       <div className="mt-3 space-y-2">
         {claim ? (
           <div className="flex flex-wrap items-center gap-2">
-            <V2Badge tone={STATUS_TONE[claim.status]}>{CLAIM_STATUS_LABEL[claim.status]}</V2Badge>
+            <V2Badge tone={STATUS_TONE[claim.status]}>{t(CLAIM_STATUS_LABEL[claim.status] || '')}</V2Badge>
             {['requested', 'approved'].includes(claim.status) && <CopyCodeButton code={claim.code} />}
           </div>
         ) : !disp.available ? (
           <p className="flex items-center gap-1.5 text-xs text-gray-500"><Lock className="h-3.5 w-3.5" aria-hidden="true" /> {disp.reason}</p>
         ) : ev.eligible ? (
-          <V2Button size="sm" disabled={requesting} onClick={() => onRequest(r)}>Pedir esta recompensa</V2Button>
+          <V2Button size="sm" disabled={requesting} onClick={() => onRequest(r)}>{t('Pedir esta recompensa')}</V2Button>
         ) : (
-          <ul className="space-y-1" aria-label="O que falta">
+          <ul className="space-y-1" aria-label={t('O que falta')}>
             {falta.map((c) => (
               <li key={c.field} className="flex items-center gap-1.5 text-xs text-gray-600">
                 <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
-                {c.label}: você tem <strong className="text-ink">{c.have}</strong>, precisa de <strong className="text-ink">{c.need}</strong>
+                {c.label}{t(': você tem')} <strong className="text-ink">{c.have}</strong>{t(', precisa de')} <strong className="text-ink">{c.need}</strong>
               </li>
             ))}
           </ul>
@@ -92,9 +93,9 @@ export default function RewardsPanel({ uid, user, snapshot }) {
   const pedir = async (r) => {
     try {
       const { code } = await act.request.mutateAsync({ reward: r, user, snapshot });
-      toast.success(`Pedido enviado. Seu código: ${code}`);
+      toast.success(t('Pedido enviado. Seu código: {codigo}', { codigo: code }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível pedir agora.');
+      toast.error(e?.message || t('Não foi possível pedir agora.'));
     }
   };
 
@@ -103,34 +104,34 @@ export default function RewardsPanel({ uid, user, snapshot }) {
 
   return (
     <V2Surface data-testid="rewards-panel" data-dica="recompensas" className="space-y-4">
-      <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Gift className="h-5 w-5" aria-hidden="true" /> Recompensas <TermHint term="recompensas" /></h2>
-      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Recompensas" />
+      <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Gift className="h-5 w-5" aria-hidden="true" /> {t('Recompensas')} <TermHint term="recompensas" /></h2>
+      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(aba) => setAba(aba.value)} ariaLabel={t('Recompensas')} />
       {carregando ? <V2Skeleton lines={4} /> : falhou ? (
-        <V2ErrorState inline title="Não deu para carregar as recompensas" onRetry={() => { rewards.refetch(); claims.refetch(); }} />
+        <V2ErrorState inline title={t('Não deu para carregar as recompensas')} onRetry={() => { rewards.refetch(); claims.refetch(); }} />
       ) : aba === 'disponiveis' ? (
         ordenadas.length === 0 ? (
-          <V2EmptyState icon={Gift} title="Nenhuma recompensa por aqui ainda" description="Arenas, clubes e professores podem oferecer benefícios para quem joga e evolui. Quando houver, eles aparecem aqui." />
+          <V2EmptyState icon={Gift} title={t('Nenhuma recompensa por aqui ainda')} description={t('Arenas, clubes e professores podem oferecer benefícios para quem joga e evolui. Quando houver, eles aparecem aqui.')} />
         ) : (
           <ul className="space-y-3">
             {ordenadas.map((r) => <RewardCard key={r.id} r={r} claim={porReward.get(r.id)} snapshot={snapshot} onRequest={pedir} requesting={act.request.isPending} />)}
           </ul>
         )
       ) : meus.length === 0 ? (
-        <V2EmptyState icon={Check} title="Você ainda não pediu nada" description="Quando você pedir uma recompensa, o código dela fica guardado aqui." />
+        <V2EmptyState icon={Check} title={t('Você ainda não pediu nada')} description={t('Quando você pedir uma recompensa, o código dela fica guardado aqui.')} />
       ) : (
         <ul className="space-y-2">
           {meus.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 p-3">
               <div>
                 <p className="text-sm font-bold text-ink">{c.rewardTitle}</p>
-                <p className="text-xs text-gray-500">{new Date(Number(c.createdAt)).toLocaleDateString('pt-BR')}{c.note ? ` · ${c.note}` : ''}</p>
+                <p className="text-xs text-gray-500">{fmtData(new Date(Number(c.createdAt)), { day: '2-digit', month: '2-digit', year: 'numeric' })}{c.note ? ` · ${c.note}` : ''}</p>
               </div>
               <div className="flex items-center gap-2">
-                <V2Badge tone={STATUS_TONE[c.status]}>{CLAIM_STATUS_LABEL[c.status]}</V2Badge>
+                <V2Badge tone={STATUS_TONE[c.status]}>{t(CLAIM_STATUS_LABEL[c.status] || '')}</V2Badge>
                 {['requested', 'approved'].includes(c.status) && (
                   <>
                     <CopyCodeButton code={c.code} />
-                    <V2Button size="sm" variant="ghost" onClick={() => act.cancel.mutate(c.id)}>Cancelar</V2Button>
+                    <V2Button size="sm" variant="ghost" onClick={() => act.cancel.mutate(c.id)}>{t('Cancelar')}</V2Button>
                   </>
                 )}
               </div>

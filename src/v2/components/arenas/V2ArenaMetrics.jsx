@@ -41,6 +41,7 @@ import { V2Badge, V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
+import { t, tn } from '@/core/i18n';
 
 /** Lista vazia estável: um `[]` novo a cada render desfaria os `useMemo`. */
 const SEM_ITENS = [];
@@ -199,13 +200,13 @@ export default function V2ArenaMetrics({ arena }) {
   // e a tela diz qual parte ficou de fora.
   const nucleoFalhou = reservasFalharam || vendasFalharam;
   const partesQueFalharam = [
-    [qQuadras.isError || qJanelas.isError, 'ocupação (quadras e horários)', [qQuadras, qJanelas]],
-    [qAvaliacoes.isError, 'avaliações', [qAvaliacoes]],
-    [qEntradas.isError || qSaidas.isError, 'mercado', [qEntradas, qSaidas]],
-    [qAulas.isError || qMatriculas.isError, 'aulas', [qAulas, qMatriculas]],
-    [qCarteiras.isError, 'pacotes', [qCarteiras]],
-    [qMensalidades.isError, 'mensalidades', [qMensalidades]],
-    [qTorneios.isError, 'torneios da casa', [qTorneios]],
+    [qQuadras.isError || qJanelas.isError, t('ocupação (quadras e horários)'), [qQuadras, qJanelas]],
+    [qAvaliacoes.isError, t('avaliações'), [qAvaliacoes]],
+    [qEntradas.isError || qSaidas.isError, t('mercado'), [qEntradas, qSaidas]],
+    [qAulas.isError || qMatriculas.isError, t('aulas'), [qAulas, qMatriculas]],
+    [qCarteiras.isError, t('pacotes'), [qCarteiras]],
+    [qMensalidades.isError, t('mensalidades'), [qMensalidades]],
+    [qTorneios.isError, t('torneios da casa'), [qTorneios]],
   ].filter(([falhou]) => falhou);
   const tentarNucleo = () => {
     if (reservasFalharam) recarregarReservas();
@@ -220,25 +221,25 @@ export default function V2ArenaMetrics({ arena }) {
       {/* Header: navegação de mês */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <V2Button variant="ghost" size="sm" onClick={() => setCursor((c) => prevMonth(c))} aria-label="Mês anterior">
+          <V2Button variant="ghost" size="sm" onClick={() => setCursor((c) => prevMonth(c))} aria-label={t('Mês anterior')}>
             <ChevronLeft className="h-4 w-4" />
           </V2Button>
           <h3 className="font-display text-lg font-bold text-ink min-w-[160px] text-center">
             {formatPeriodLabel(cursor.year, cursor.month)}
           </h3>
-          <V2Button variant="ghost" size="sm" onClick={() => setCursor((c) => nextMonth(c))} aria-label="Próximo mês">
+          <V2Button variant="ghost" size="sm" onClick={() => setCursor((c) => nextMonth(c))} aria-label={t('Próximo mês')}>
             <ChevronRight className="h-4 w-4" />
           </V2Button>
         </div>
         <div className="text-xs text-gray-500">
-          {isLoading ? 'Carregando…' : `${bookingsInMonth.length} reservas · ${salesInMonth.length} pedidos da loja no mês`}
+          {isLoading ? t('Carregando…') : `${tn(bookingsInMonth.length, '{n} reserva', '{n} reservas')} · ${t('{n} pedidos da loja no mês', { n: salesInMonth.length })}`}
         </div>
       </div>
 
       {nucleoFalhou ? (
         <V2ErrorState
-          title="Não foi possível carregar as reservas e vendas do mês"
-          description="Sem elas, a receita e a ocupação sairiam zeradas. Tente de novo em instantes."
+          title={t('Não foi possível carregar as reservas e vendas do mês')}
+          description={t('Sem elas, a receita e a ocupação sairiam zeradas. Tente de novo em instantes.')}
           onRetry={tentarNucleo}
         />
       ) : (
@@ -246,8 +247,8 @@ export default function V2ArenaMetrics({ arena }) {
       {partesQueFalharam.length > 0 && (
         <V2ErrorState
           inline
-          title="Parte dos números não carregou"
-          description={`Ficou de fora: ${partesQueFalharam.map(([, rotulo]) => rotulo).join(', ')}. Os totais abaixo estão incompletos até carregar.`}
+          title={t('Parte dos números não carregou')}
+          description={t('Ficou de fora: {partes}. Os totais abaixo estão incompletos até carregar.', { partes: partesQueFalharam.map(([, rotulo]) => rotulo).join(', ') })}
           onRetry={tentarPartes}
         />
       )}
@@ -255,31 +256,31 @@ export default function V2ArenaMetrics({ arena }) {
       {/* Stats principais */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat
-          label="Receita total (mês)"
+          label={t('Receita total (mês)')}
           // 🐞 Somava `revenue_by_source.sales` por cima de `revenue.confirmed`,
           // que JÁ inclui as vendas pagas: toda venda da loja entrava duas vezes.
           value={formatPrice(metrics.revenue.confirmed + market.revenue + modulos.recebido)}
           tone="success"
           icon={TrendingUp}
-          sub={`Reservas${mostrarPdvAntigo ? ' + PDV' : ''} + Mercado${algumModulo ? ' + Planos e aulas' : ''}${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
+          sub={`${t('Reservas')}${mostrarPdvAntigo ? ' + PDV' : ''} + ${t('Mercado')}${algumModulo ? ` + ${t('Planos e aulas')}` : ''}${metrics.revenue.pending > 0 ? ` · +${t('{valor} pendente', { valor: formatPrice(metrics.revenue.pending) })}` : ''}`}
         />
         <Stat
-          label="Reservas"
+          label={t('Reservas')}
           value={metrics.bookings.total}
-          sub={metrics.bookings.conversion_rate != null ? `${metrics.bookings.conversion_rate}% conversão` : 'sem dados'}
+          sub={metrics.bookings.conversion_rate != null ? t('{n}% conversão', { n: metrics.bookings.conversion_rate }) : t('sem dados')}
           icon={Calendar}
         />
         <Stat
-          label="Ocupação"
+          label={t('Ocupação')}
           value={metrics.occupancy.rate != null ? `${metrics.occupancy.rate}%` : '—'}
           sub={metrics.occupancy.booked_hours != null ? `${metrics.occupancy.booked_hours}h / ${metrics.occupancy.available_hours}h` : null}
           tone="info"
           icon={Clock}
         />
         <Stat
-          label="Rating"
+          label={t('Rating')}
           value={metrics.rating.average != null ? metrics.rating.average.toFixed(1) : '—'}
-          sub={metrics.rating.count > 0 ? `${metrics.rating.count} avaliações` : 'sem reviews'}
+          sub={metrics.rating.count > 0 ? tn(metrics.rating.count, '{n} avaliação', '{n} avaliações') : t('sem avaliações')}
           tone="warning"
           icon={Star}
         />
@@ -290,51 +291,51 @@ export default function V2ArenaMetrics({ arena }) {
         <V2Surface className="p-4">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <Calendar className="h-4 w-4 text-gray-500" />
-            Receita de reservas
+            {t('Receita de reservas')}
           </div>
           <div className="mt-2 font-display text-2xl font-bold text-ink">
             {formatPrice(metrics.revenue_by_source.bookings)}
           </div>
           <div className="mt-1 text-xs text-gray-500">
-            Reservas confirmadas/concluídas no mês
+            {t('Reservas confirmadas/concluídas no mês')}
           </div>
         </V2Surface>
         {mostrarPdvAntigo ? (
           <V2Surface className="p-4">
             <div className="flex items-center gap-2 text-sm font-bold text-ink">
               <ShoppingBag className="h-4 w-4 text-gray-500" />
-              Receita de vendas (PDV)
+              {t('Receita de vendas (PDV)')}
             </div>
             <div className="mt-2 font-display text-2xl font-bold text-ink">
               {formatPrice(metrics.revenue_by_source.sales)}
             </div>
             <div className="mt-1 text-xs text-gray-500">
-              {metrics.sales.paid} de {metrics.sales.total} vendas pagas (catálogo antigo da loja)
+              {t('{pagas} de {total} vendas pagas (catálogo antigo da loja)', { pagas: metrics.sales.paid, total: metrics.sales.total })}
             </div>
           </V2Surface>
         ) : (
           <V2Surface className="p-4">
             <div className="flex items-center gap-2 text-sm font-bold text-ink">
               <ShoppingBag className="h-4 w-4 text-gray-500" />
-              Pedidos do app
+              {t('Pedidos do app')}
             </div>
             <div className="mt-2 font-display text-2xl font-bold text-ink">{pedidosApp.total}</div>
             <div className="mt-1 text-xs text-gray-500">
-              {pedidosApp.entregues} entregue(s) · {pedidosApp.pagos} pago(s) — o valor entra no Mercado ao entregar
+              {t('{entregues} entregue(s) · {pagos} pago(s) — o valor entra no Mercado ao entregar', { entregues: pedidosApp.entregues, pagos: pedidosApp.pagos })}
             </div>
           </V2Surface>
         )}
         <V2Surface className="p-4">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <ShoppingBag className="h-4 w-4 text-gray-500" />
-            Mercado / estoque
+            {t('Mercado / estoque')}
           </div>
           <div className="mt-2 font-display text-2xl font-bold text-ink">
             {formatPrice(market.revenue)}
           </div>
           <div className="mt-1 text-xs text-gray-500">
-            {market.count} venda(s) · {market.units} un{market.app > 0 ? ` (${formatPrice(market.app)} pelo app)` : ''} · investido {formatPrice(market.invested)}
-            {' · '}<span className={market.net >= 0 ? 'font-bold text-green-700' : 'font-bold text-red-600'}>líquido {formatPrice(market.net)}</span>
+            {t('{n} venda(s) · {un} un', { n: market.count, un: market.units })}{market.app > 0 ? ` (${t('{valor} pelo app', { valor: formatPrice(market.app) })})` : ''} · {t('investido {valor}', { valor: formatPrice(market.invested) })}
+            {' · '}<span className={market.net >= 0 ? 'font-bold text-green-700' : 'font-bold text-red-600'}>{t('líquido {valor}', { valor: formatPrice(market.net) })}</span>
           </div>
         </V2Surface>
       </div>
@@ -346,15 +347,15 @@ export default function V2ArenaMetrics({ arena }) {
             <V2Surface className="p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-ink">
                 <Crown className="h-4 w-4 text-gray-500" />
-                Planos (membros)
+                {t('Planos (membros)')}
               </div>
               <div className="mt-2 font-display text-2xl font-bold text-ink">
                 {formatPrice(modulos.pacotes.valor + modulos.mensalidades.recebido)}
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                {comPacotes && `${modulos.pacotes.vendidos} pacote(s) vendido(s)`}
+                {comPacotes && t('{n} pacote(s) vendido(s)', { n: modulos.pacotes.vendidos })}
                 {comPacotes && comMensalidade && ' · '}
-                {comMensalidade && `${modulos.mensalidades.pagantes} mensalidade(s) paga(s)`}
+                {comMensalidade && t('{n} mensalidade(s) paga(s)', { n: modulos.mensalidades.pagantes })}
               </div>
             </V2Surface>
           )}
@@ -362,14 +363,14 @@ export default function V2ArenaMetrics({ arena }) {
             <V2Surface className="p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-ink">
                 <GraduationCap className="h-4 w-4 text-gray-500" />
-                Aulas
+                {t('Aulas')}
               </div>
               <div className="mt-2 font-display text-2xl font-bold text-ink">
                 {formatPrice(modulos.aulas.arena)}
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                Fica com a arena · {formatPrice(modulos.aulas.recebido)} recebidos de {modulos.aulas.alunos} aluno(s)
-                {modulos.aulas.aReceber > 0 ? ` · ${formatPrice(modulos.aulas.aReceber)} a receber` : ''}
+                {t('Fica com a arena · {valor} recebidos de {n} aluno(s)', { valor: formatPrice(modulos.aulas.recebido), n: modulos.aulas.alunos })}
+                {modulos.aulas.aReceber > 0 ? ` · ${t('{valor} a receber', { valor: formatPrice(modulos.aulas.aReceber) })}` : ''}
               </div>
             </V2Surface>
           )}
@@ -377,13 +378,13 @@ export default function V2ArenaMetrics({ arena }) {
             <V2Surface className="p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-ink">
                 <Trophy className="h-4 w-4 text-gray-500" />
-                Torneios da casa
+                {t('Torneios da casa')}
               </div>
               <div className="mt-2 font-display text-2xl font-bold text-ink">
                 {formatPrice(modulos.torneios.previsto)}
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                Previsto em inscrições · {modulos.torneios.quantos} torneio(s), {modulos.torneios.inscritos} inscrito(s) — não entra no total
+                {t('Previsto em inscrições · {n} torneio(s), {inscritos} inscrito(s) — não entra no total', { n: modulos.torneios.quantos, inscritos: modulos.torneios.inscritos })}
               </div>
             </V2Surface>
           )}
@@ -394,27 +395,27 @@ export default function V2ArenaMetrics({ arena }) {
       <V2Surface className="p-4">
         <div className="flex items-center gap-2 text-sm font-bold text-ink">
           <Users className="h-4 w-4 text-gray-500" />
-          Status das reservas no mês
+          {t('Status das reservas no mês')}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {Object.entries(metrics.bookings.by_status).map(([status, count]) => (
             <V2Badge key={status} tone={count > 0 ? 'blue' : 'neutral'}>
               {/* O status vinha CRU do banco ("requested: 3"). O painel é da
                   arena, não do console. */}
-              {BOOKING_STATUS_LABELS[status] || status}: {count}
+              {t(BOOKING_STATUS_LABELS[status] || status)}: {count}
             </V2Badge>
           ))}
           {Object.keys(metrics.bookings.by_status).length === 0 && (
-            <span className="text-sm text-gray-500">Nenhuma reserva no período.</span>
+            <span className="text-sm text-gray-500">{t('Nenhuma reserva no período.')}</span>
           )}
         </div>
       </V2Surface>
 
       {/* Próximas reservas */}
       <V2Surface className="p-4">
-        <div className="text-sm font-bold text-ink">Próximas reservas confirmadas</div>
+        <div className="text-sm font-bold text-ink">{t('Próximas reservas confirmadas')}</div>
         {metrics.bookings.upcoming.length === 0 ? (
-          <div className="mt-2 text-sm text-gray-500">Nenhuma reserva futura.</div>
+          <div className="mt-2 text-sm text-gray-500">{t('Nenhuma reserva futura.')}</div>
         ) : (
           <ul className="mt-3 divide-y divide-gray-100">
             {metrics.bookings.upcoming.map((b) => (
@@ -423,7 +424,7 @@ export default function V2ArenaMetrics({ arena }) {
                   <div className="font-semibold text-ink">
                     {b.next_date ? formatDateShortBR(b.next_date) : ''} {b.next_start && `· ${b.next_start}–${b.next_end}`}
                   </div>
-                  <div className="text-xs text-gray-500">{b.athlete_name || 'Atleta'}</div>
+                  <div className="text-xs text-gray-500">{b.athlete_name || t('Atleta')}</div>
                 </div>
                 <div className="text-xs font-semibold text-green-700">
                   {b.agreed_price ? formatPrice(b.agreed_price) : b.proposed_price ? formatPrice(b.proposed_price) : '—'}

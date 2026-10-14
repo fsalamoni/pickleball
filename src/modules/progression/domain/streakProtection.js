@@ -28,6 +28,7 @@
  */
 
 import { computeWeekStreak } from './progression.js';
+import { tk } from '@/core/i18n';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -221,11 +222,11 @@ export function deactivateVacation(meta) {
  * XP bônus é cumulativo ao milestone base.
  */
 export const STREAK_MILESTONES = Object.freeze([
-  { weeks: 4, xpBonus: 100, label: 'Constância' },
-  { weeks: 8, xpBonus: 200, label: 'Frequência' },
-  { weeks: 12, xpBonus: 500, label: 'Rotina de atleta' },
-  { weeks: 26, xpBonus: 1000, label: 'Meio ano' },
-  { weeks: 52, xpBonus: 2500, label: 'Um ano de quadra' },
+  { weeks: 4, xpBonus: 100, label: tk('Constância') },
+  { weeks: 8, xpBonus: 200, label: tk('Frequência') },
+  { weeks: 12, xpBonus: 500, label: tk('Rotina de atleta') },
+  { weeks: 26, xpBonus: 1000, label: tk('Meio ano') },
+  { weeks: 52, xpBonus: 2500, label: tk('Um ano de quadra') },
 ]);
 
 /**

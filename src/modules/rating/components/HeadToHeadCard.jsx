@@ -1,6 +1,7 @@
 import React from 'react';
 import { Swords } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { t } from '@/core/i18n';
 
 /**
  * Lista de confrontos diretos do atleta (V/D por adversário). Presentational —
@@ -16,7 +17,7 @@ export default function HeadToHeadCard({ records = [], limit = 10 }) {
     <Card>
       <CardContent className="p-4">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
-          <Swords className="h-4 w-4 text-green-600" /> Confrontos diretos
+          <Swords className="h-4 w-4 text-green-600" /> {t('Confrontos diretos')}
         </h2>
         <div className="space-y-2">
           {rows.map((r) => {
@@ -26,7 +27,7 @@ export default function HeadToHeadCard({ records = [], limit = 10 }) {
               <div key={r.opponent} className="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3">
                 <span className="min-w-0 truncate text-sm text-ink">{r.opponent}</span>
                 <span className={`shrink-0 text-sm font-semibold tabular-nums ${positive ? 'text-green-700' : negative ? 'text-red-600' : 'text-gray-500'}`}>
-                  {r.wins}V – {r.losses}D
+                  {t('{v}V – {d}D', { v: r.wins, d: r.losses })}
                 </span>
               </div>
             );

@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * gamificationConfig — a configuração da gamificação que o ADMIN controla.
  *
@@ -23,77 +24,77 @@
  */
 export const GAMIFICATION_MODULES = Object.freeze({
   missions_weekly: {
-    label: 'Missões da semana',
-    description: 'Cinco missões por semana, medidas pela atividade real, com bônus ao completar todas.',
+    label: tk('Missões da semana'),
+    description: tk('Cinco missões por semana, medidas pela atividade real, com bônus ao completar todas.'),
     grupo: 'jornada',
   },
   missions_monthly: {
-    label: 'Missões do mês',
-    description: 'Missões longas, de acompanhamento mensal, com bônus ao completar todas.',
+    label: tk('Missões do mês'),
+    description: tk('Missões longas, de acompanhamento mensal, com bônus ao completar todas.'),
     grupo: 'jornada',
   },
   onboarding: {
-    label: 'Primeiros passos',
-    description: 'O roteiro dos primeiros dias para quem acabou de chegar, com XP por etapa.',
+    label: tk('Primeiros passos'),
+    description: tk('O roteiro dos primeiros dias para quem acabou de chegar, com XP por etapa.'),
     grupo: 'jornada',
   },
   weekly_review: {
-    label: 'Revisão da semana e do mês',
-    description: 'O resumo do que a pessoa fez, com marcos e comparação com o período anterior.',
+    label: tk('Revisão da semana e do mês'),
+    description: tk('O resumo do que a pessoa fez, com marcos e comparação com o período anterior.'),
     grupo: 'jornada',
   },
   celebrations: {
-    label: 'Celebrações (marcos)',
-    description: 'Avisos de comemoração quando alguém sobe de tier, bate recorde ou conquista algo raro.',
+    label: tk('Celebrações (marcos)'),
+    description: tk('Avisos de comemoração quando alguém sobe de tier, bate recorde ou conquista algo raro.'),
     grupo: 'jornada',
   },
   hall_of_fame: {
-    label: 'Hall da Fama e temporada',
-    description: 'Placar público da temporada, com nome e foto de quem aceitou aparecer.',
+    label: tk('Hall da Fama e temporada'),
+    description: tk('Placar público da temporada, com nome e foto de quem aceitou aparecer.'),
     grupo: 'competicao',
   },
   duels: {
-    label: 'Duelo da semana',
-    description: 'Cada semana o servidor emparelha atletas de nível parecido para um duelo de vitórias.',
+    label: tk('Duelo da semana'),
+    description: tk('Cada semana o servidor emparelha atletas de nível parecido para um duelo de vitórias.'),
     grupo: 'competicao',
   },
   challenges: {
-    label: 'Desafios e eventos',
-    description: 'Desafios da plataforma, de clubes, de arenas e de professores, com placar e prêmios.',
+    label: tk('Desafios e eventos'),
+    description: tk('Desafios da plataforma, de clubes, de arenas e de professores, com placar e prêmios.'),
     grupo: 'competicao',
   },
   rewards: {
-    label: 'Recompensas',
-    description: 'Benefícios reais (aula experimental, desconto, prioridade) liberados por marcos.',
+    label: tk('Recompensas'),
+    description: tk('Benefícios reais (aula experimental, desconto, prioridade) liberados por marcos.'),
     grupo: 'competicao',
   },
   match_reviews: {
-    label: 'Avaliação pós-jogo',
-    description: 'Depois do jogo, cada lado avalia o companheiro e os adversários com estrelas e tags.',
+    label: tk('Avaliação pós-jogo'),
+    description: tk('Depois do jogo, cada lado avalia o companheiro e os adversários com estrelas e tags.'),
     grupo: 'social',
   },
   partner_letters: {
-    label: 'Carta ao companheiro',
-    description: 'Uma frase para o parceiro de dupla, anônima por padrão.',
+    label: tk('Carta ao companheiro'),
+    description: tk('Uma frase para o parceiro de dupla, anônima por padrão.'),
     grupo: 'social',
   },
   social_bonds: {
-    label: 'Rivais, crews e mentorias',
-    description: 'Vínculos entre atletas: rivalidade saudável, grupos de dupla e mentoria.',
+    label: tk('Rivais, crews e mentorias'),
+    description: tk('Vínculos entre atletas: rivalidade saudável, grupos de dupla e mentoria.'),
     grupo: 'social',
   },
   supply_panels: {
-    label: 'Engajamento de professores, arenas e clubes',
-    description: 'Health score, metas do mês e sugestões para quem oferece aulas, quadras e comunidade.',
+    label: tk('Engajamento de professores, arenas e clubes'),
+    description: tk('Health score, metas do mês e sugestões para quem oferece aulas, quadras e comunidade.'),
     grupo: 'oferta',
   },
 });
 
 export const GAMIFICATION_MODULE_GROUPS = Object.freeze([
-  { id: 'jornada', label: 'Jornada do atleta' },
-  { id: 'competicao', label: 'Competição e recompensas' },
-  { id: 'social', label: 'Social' },
-  { id: 'oferta', label: 'Quem oferece (professor, arena, clube)' },
+  { id: 'jornada', label: tk('Jornada do atleta') },
+  { id: 'competicao', label: tk('Competição e recompensas') },
+  { id: 'social', label: tk('Social') },
+  { id: 'oferta', label: tk('Quem oferece (professor, arena, clube)') },
 ]);
 
 /** Padrões de tudo o que é numérico. Cada um tem faixa válida em `LIMITES`. */

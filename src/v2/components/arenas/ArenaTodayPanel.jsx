@@ -14,6 +14,7 @@ import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { todayISO, formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { arenaTodayAgenda } from '@/modules/arenas/domain/arenaToday';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function ArenaTodayPanel({ arena, onIrParaAba, children }) {
   const reservasQ = useArenaBookings(arena.id);
@@ -28,18 +29,18 @@ export default function ArenaTodayPanel({ arena, onIrParaAba, children }) {
     <div className="space-y-6" data-secao-arena-gerir="hoje">
       <V2Surface>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-ink">Agenda de hoje · {formatDateShortBR(hoje)}</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Agenda de hoje · {data}', { data: formatDateShortBR(hoje) })}</h2>
           <div className="flex gap-2">
-            <V2Button size="sm" variant="ghost" onClick={() => onIrParaAba('calendario')}>Calendário</V2Button>
-            <V2Button size="sm" variant="secondary" onClick={() => onIrParaAba('reservas')}>Solicitações</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={() => onIrParaAba('calendario')}>{t('Calendário')}</V2Button>
+            <V2Button size="sm" variant="secondary" onClick={() => onIrParaAba('reservas')}>{t('Solicitações')}</V2Button>
           </div>
         </div>
         {reservasQ.isError ? (
-          <V2ErrorState inline title="Não foi possível carregar as reservas de hoje" description="A agenda continua lá — tente de novo." onRetry={() => reservasQ.refetch()} />
+          <V2ErrorState inline title={t('Não foi possível carregar as reservas de hoje')} description={t('A agenda continua lá — tente de novo.')} onRetry={() => reservasQ.refetch()} />
         ) : agenda === undefined || reservasQ.isLoading ? (
           <V2Skeleton lines={3} />
         ) : agenda.length === 0 ? (
-          <V2EmptyState icon={CalendarDays} title="Nenhuma reserva confirmada para hoje" description="As solicitações pendentes aparecem em Reservas." />
+          <V2EmptyState icon={CalendarDays} title={t('Nenhuma reserva confirmada para hoje')} description={t('As solicitações pendentes aparecem em Reservas.')} />
         ) : (
           <ul className="divide-y divide-gray-100">
             {agenda.map((l) => (
@@ -47,7 +48,7 @@ export default function ArenaTodayPanel({ arena, onIrParaAba, children }) {
                 <span className="w-24 font-bold tabular-nums text-ink">{l.start}–{l.end}</span>
                 <span className="flex-1 truncate text-ink">{l.athleteName}</span>
                 {l.courtName && <V2Badge tone="neutral">{l.courtName}</V2Badge>}
-                {l.checkedIn && <V2Badge tone="green"><Check className="h-3 w-3" aria-hidden /> Chegou</V2Badge>}
+                {l.checkedIn && <V2Badge tone="green"><Check className="h-3 w-3" aria-hidden /> {t('Chegou')}</V2Badge>}
               </li>
             ))}
           </ul>

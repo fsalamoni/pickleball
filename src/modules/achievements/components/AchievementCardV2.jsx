@@ -6,6 +6,7 @@ import {
   ACHIEVEMENT_RARITY_META,
   ACHIEVEMENT_FAMILY_META,
 } from '../domain/achievementsV2.js';
+import { t } from '@/core/i18n';
 
 /**
  * Mapa de cor por família (visualmente distinto do rarity).
@@ -106,9 +107,9 @@ export default function AchievementCardV2({ achievement, onShare, compact = fals
           )}
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <V2Badge tone={tone}>{rarityMeta.name}</V2Badge>
+          <V2Badge tone={tone}>{t(rarityMeta.name)}</V2Badge>
           {family && ACHIEVEMENT_FAMILY_META[family] && (
-            <V2Badge tone="neutral">{ACHIEVEMENT_FAMILY_META[family].name}</V2Badge>
+            <V2Badge tone="neutral">{t(ACHIEVEMENT_FAMILY_META[family].name)}</V2Badge>
           )}
         </div>
       </div>
@@ -121,7 +122,7 @@ export default function AchievementCardV2({ achievement, onShare, compact = fals
             unlocked ? 'text-ink' : 'text-gray-500',
           )}
         >
-          {isHidden ? 'Conquista oculta' : name}
+          {isHidden ? t('Conquista oculta') : t(name)}
         </h3>
         <p
           className={cn(
@@ -129,10 +130,10 @@ export default function AchievementCardV2({ achievement, onShare, compact = fals
             unlocked ? 'text-gray-600' : 'text-gray-400',
           )}
         >
-          {isHidden ? 'Continue jogando para revelar.' : description}
+          {isHidden ? t('Continue jogando para revelar.') : t(description)}
         </p>
         {unlocked && lore && !compact && (
-          <p className="mt-2 italic text-xs text-gray-500">&ldquo;{lore}&rdquo;</p>
+          <p className="mt-2 italic text-xs text-gray-500">&ldquo;{t(lore)}&rdquo;</p>
         )}
       </div>
 
@@ -166,9 +167,9 @@ export default function AchievementCardV2({ achievement, onShare, compact = fals
               type="button"
               onClick={() => onShare(achievement)}
               className="inline-flex items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 hover:text-ink"
-              aria-label={`Compartilhar ${name}`}
+              aria-label={t('Compartilhar {nome}', { nome: t(name) })}
             >
-              <Share2 className="h-3 w-3" /> Compartilhar
+              <Share2 className="h-3 w-3" /> {t('Compartilhar')}
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /**
  * A navegação em dois níveis das centrais (arena, professor, torneio).
@@ -58,7 +59,7 @@ export function agruparSecoes(sections = [], grupos = []) {
   return linhas;
 }
 
-export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel = 'Seções', dica }) {
+export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel = t('Seções'), dica }) {
   const linhas = agruparSecoes(sections, grupos);
   const comNome = linhas.some((l) => l.label);
   return (
@@ -104,7 +105,7 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
   );
 }
 
-export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = 'Abas da seção', dica }) {
+export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = t('Abas da seção'), dica }) {
   return (
     <nav aria-label={ariaLabel} data-dica={dica} onKeyDown={moverFocoComSetas} className="flex flex-wrap gap-1.5 px-1">
       {tabs.map((t) => {

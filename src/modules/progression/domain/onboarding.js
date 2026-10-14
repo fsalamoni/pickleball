@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * onboarding — "Primeiros passos": o roteiro de quem acabou de chegar.
  *
@@ -38,57 +39,57 @@
 export const ONBOARDING_STEPS = Object.freeze([
   {
     id: 'level', kind: 'fact', xp: 50, day: 1,
-    label: 'Defina o seu nível',
-    hint: 'O nível equilibra duplas e sorteios. Leva um minuto.',
-    to: '/nivelamento', cta: 'Fazer o nivelamento',
+    label: tk('Defina o seu nível'),
+    hint: tk('O nível equilibra duplas e sorteios. Leva um minuto.'),
+    to: '/nivelamento', cta: tk('Fazer o nivelamento'),
   },
   {
     id: 'photo', kind: 'fact', xp: 30, day: 1,
-    label: 'Coloque uma foto de perfil',
-    hint: 'Quem joga com você reconhece você na lista.',
-    to: '/perfil/editar', cta: 'Adicionar foto',
+    label: tk('Coloque uma foto de perfil'),
+    hint: tk('Quem joga com você reconhece você na lista.'),
+    to: '/perfil/editar', cta: tk('Adicionar foto'),
   },
   {
     id: 'profile', kind: 'fact', xp: 40, day: 1,
-    label: 'Complete o seu cadastro',
-    hint: 'Cidade, lado da quadra e interesses ajudam a achar jogo perto de você.',
-    to: '/perfil/editar', cta: 'Completar cadastro',
+    label: tk('Complete o seu cadastro'),
+    hint: tk('Cidade, lado da quadra e interesses ajudam a achar jogo perto de você.'),
+    to: '/perfil/editar', cta: tk('Completar cadastro'),
   },
   {
     id: 'ranking', kind: 'visit', xp: 20, day: 2, visit: /^\/ranking(\/|$)/,
-    label: 'Veja o ranking',
-    hint: 'Descubra onde você se encaixa e quem joga no seu nível.',
-    to: '/ranking', cta: 'Abrir o ranking',
+    label: tk('Veja o ranking'),
+    hint: tk('Descubra onde você se encaixa e quem joga no seu nível.'),
+    to: '/ranking', cta: tk('Abrir o ranking'),
   },
   {
     id: 'follow', kind: 'fact', xp: 30, day: 2,
-    label: 'Siga 3 atletas',
-    hint: 'Acompanhe quem joga perto de você e veja os resultados deles.',
-    to: '/atletas', cta: 'Encontrar atletas',
+    label: tk('Siga 3 atletas'),
+    hint: tk('Acompanhe quem joga perto de você e veja os resultados deles.'),
+    to: '/atletas', cta: tk('Encontrar atletas'),
   },
   {
     id: 'club', kind: 'fact', xp: 50, day: 3,
-    label: 'Entre em um clube',
-    hint: 'Clubes têm eventos, dias de jogo e gente para jogar toda semana.',
-    to: '/clubes', cta: 'Ver clubes',
+    label: tk('Entre em um clube'),
+    hint: tk('Clubes têm eventos, dias de jogo e gente para jogar toda semana.'),
+    to: '/clubes', cta: tk('Ver clubes'),
   },
   {
     id: 'watch', kind: 'visit', xp: 30, day: 4, visit: /^\/torneios\/[^/]+/,
-    label: 'Acompanhe um torneio',
-    hint: 'Abra a página de um torneio para ver a tabela, os jogos e o placar.',
-    to: '/torneios', cta: 'Ver torneios',
+    label: tk('Acompanhe um torneio'),
+    hint: tk('Abra a página de um torneio para ver a tabela, os jogos e o placar.'),
+    to: '/torneios', cta: tk('Ver torneios'),
   },
   {
     id: 'tournament', kind: 'fact', xp: 50, day: 5,
-    label: 'Inscreva-se num torneio',
-    hint: 'Torneio é onde o seu nível vira ranking. Há categorias para iniciantes.',
-    to: '/torneios', cta: 'Ver torneios abertos',
+    label: tk('Inscreva-se num torneio'),
+    hint: tk('Torneio é onde o seu nível vira ranking. Há categorias para iniciantes.'),
+    to: '/torneios', cta: tk('Ver torneios abertos'),
   },
   {
     id: 'share', kind: 'event', xp: 50, day: 7,
-    label: 'Convide um amigo',
-    hint: 'Compartilhe o seu convite — quem entra por ele joga com você.',
-    to: '/gamification?aba=convite', cta: 'Compartilhar convite',
+    label: tk('Convide um amigo'),
+    hint: tk('Compartilhe o seu convite — quem entra por ele joga com você.'),
+    to: '/gamification?aba=convite', cta: tk('Compartilhar convite'),
   },
 ]);
 

@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * challenges — desafios e eventos (comunitários e do admin).
  *
@@ -32,9 +33,9 @@ export const CHALLENGE_ISSUER = Object.freeze({
 
 export const CHALLENGE_ISSUER_LABEL = Object.freeze({
   platform: 'PickleRush',
-  arena: 'Arena',
-  club: 'Clube',
-  coach: 'Professor',
+  arena: tk('Arena'),
+  club: tk('Clube'),
+  coach: tk('Professor'),
 });
 
 /**
@@ -44,23 +45,23 @@ export const CHALLENGE_ISSUER_LABEL = Object.freeze({
  */
 export const CHALLENGE_METRICS = Object.freeze({
   games_played: {
-    label: 'Jogos disputados', unit: 'jogos', description: 'Partidas de torneio e de dia de jogo com resultado publicado.',
+    label: tk('Jogos disputados'), unit: tk('jogos'), description: tk('Partidas de torneio e de dia de jogo com resultado publicado.'),
     issuers: ['platform', 'arena', 'club', 'coach'],
   },
   games_won: {
-    label: 'Vitórias', unit: 'vitórias', description: 'Partidas vencidas, de torneio e de dia de jogo publicado.',
+    label: tk('Vitórias'), unit: tk('vitórias'), description: tk('Partidas vencidas, de torneio e de dia de jogo publicado.'),
     issuers: ['platform', 'arena', 'club', 'coach'],
   },
   active_days: {
-    label: 'Dias com jogo', unit: 'dias', description: 'Dias diferentes em que a pessoa jogou — premia constância, não maratona.',
+    label: tk('Dias com jogo'), unit: tk('dias'), description: tk('Dias diferentes em que a pessoa jogou — premia constância, não maratona.'),
     issuers: ['platform', 'arena', 'club', 'coach'],
   },
   arena_bookings: {
-    label: 'Reservas jogadas na arena', unit: 'reservas', description: 'Reservas de quadra concluídas nesta arena.',
+    label: tk('Reservas jogadas na arena'), unit: tk('reservas'), description: tk('Reservas de quadra concluídas nesta arena.'),
     issuers: ['arena'],
   },
   coach_lessons: {
-    label: 'Aulas concluídas', unit: 'aulas', description: 'Aulas marcadas como concluídas pelo professor.',
+    label: tk('Aulas concluídas'), unit: tk('aulas'), description: tk('Aulas marcadas como concluídas pelo professor.'),
     issuers: ['coach'],
   },
 });
@@ -70,7 +71,7 @@ export const CHALLENGE_STATUS = Object.freeze({
 });
 
 export const CHALLENGE_STATUS_LABEL = Object.freeze({
-  draft: 'Rascunho', active: 'Ativo', finished: 'Encerrado', cancelled: 'Cancelado',
+  draft: tk('Rascunho'), active: tk('Ativo'), finished: tk('Encerrado'), cancelled: tk('Cancelado'),
 });
 
 /** Duração mínima e máxima (dias) — desafio de uma hora ou de um ano não é desafio. */
@@ -93,11 +94,11 @@ export function challengeTimeState(def, now = Date.now()) {
 /** O desafio aceita inscrição agora? (ativo, não cancelado, até 1 dia antes do fim). */
 export function canJoinChallenge(def, now = Date.now()) {
   const estado = challengeTimeState(def, now);
-  if (estado === 'live') return Number(def.endsAt) - now > 86_400_000 / 2 ? { ok: true } : { ok: false, reason: 'O desafio está terminando — a inscrição já fechou.' };
+  if (estado === 'live') return Number(def.endsAt) - now > 86_400_000 / 2 ? { ok: true } : { ok: false, reason: t('O desafio está terminando — a inscrição já fechou.') };
   if (estado === 'upcoming') return { ok: true };
-  if (estado === 'ended') return { ok: false, reason: 'Este desafio já terminou.' };
-  if (estado === 'cancelled') return { ok: false, reason: 'Este desafio foi cancelado.' };
-  return { ok: false, reason: 'Este desafio ainda não foi aberto.' };
+  if (estado === 'ended') return { ok: false, reason: t('Este desafio já terminou.') };
+  if (estado === 'cancelled') return { ok: false, reason: t('Este desafio foi cancelado.') };
+  return { ok: false, reason: t('Este desafio ainda não foi aberto.') };
 }
 
 /**
@@ -110,20 +111,20 @@ export function canJoinChallenge(def, now = Date.now()) {
 export function validateChallenge(input = {}, issuer = {}) {
   const errors = {};
   const titulo = String(input.title || '').trim();
-  if (titulo.length < 4) errors.title = 'Dê um nome ao desafio (ao menos 4 letras).';
-  if (titulo.length > 80) errors.title = 'O nome pode ter até 80 letras.';
+  if (titulo.length < 4) errors.title = t('Dê um nome ao desafio (ao menos 4 letras).');
+  if (titulo.length > 80) errors.title = t('O nome pode ter até 80 letras.');
   const metrica = CHALLENGE_METRICS[input.metric];
-  if (!metrica) errors.metric = 'Escolha o que será medido.';
-  else if (!metrica.issuers.includes(issuer.type)) errors.metric = 'Esta medida não vale para o seu tipo de desafio.';
+  if (!metrica) errors.metric = t('Escolha o que será medido.');
+  else if (!metrica.issuers.includes(issuer.type)) errors.metric = t('Esta medida não vale para o seu tipo de desafio.');
   const subject = input.subject === 'club' ? 'club' : 'athlete';
-  if (subject === 'club' && issuer.type !== 'platform') errors.subject = 'Só a plataforma cria desafio entre clubes.';
+  if (subject === 'club' && issuer.type !== 'platform') errors.subject = t('Só a plataforma cria desafio entre clubes.');
   const ini = Number(input.startsAt);
   const fim = Number(input.endsAt);
-  if (!Number.isFinite(ini) || !Number.isFinite(fim)) errors.period = 'Informe o início e o fim.';
+  if (!Number.isFinite(ini) || !Number.isFinite(fim)) errors.period = t('Informe o início e o fim.');
   else {
     const dias = (fim - ini) / 86_400_000;
-    if (dias < CHALLENGE_DURATION_DAYS.min) errors.period = 'O desafio precisa durar ao menos 1 dia.';
-    else if (dias > CHALLENGE_DURATION_DAYS.max) errors.period = `O desafio pode durar até ${CHALLENGE_DURATION_DAYS.max} dias.`;
+    if (dias < CHALLENGE_DURATION_DAYS.min) errors.period = t('O desafio precisa durar ao menos 1 dia.');
+    else if (dias > CHALLENGE_DURATION_DAYS.max) errors.period = t('O desafio pode durar até {n} dias.', { n: CHALLENGE_DURATION_DAYS.max });
   }
   const premios = (Array.isArray(input.prizes) ? input.prizes : []).slice(0, CHALLENGE_MAX_PRIZES).map((p, i) => ({
     place: i + 1,
@@ -211,13 +212,13 @@ export function challengeTimeLabel(def, now = Date.now()) {
   const dias = (ms) => Math.max(0, Math.ceil(ms / 86_400_000));
   if (estado === 'live') {
     const d = dias(Number(def.endsAt) - now);
-    return d <= 1 ? 'termina hoje' : `termina em ${d} dias`;
+    return d <= 1 ? t('termina hoje') : t('termina em {n} dias', { n: d });
   }
   if (estado === 'upcoming') {
     const d = dias(Number(def.startsAt) - now);
-    return d <= 1 ? 'começa amanhã' : `começa em ${d} dias`;
+    return d <= 1 ? t('começa amanhã') : t('começa em {n} dias', { n: d });
   }
-  if (estado === 'ended') return 'terminou';
+  if (estado === 'ended') return t('terminou');
   if (estado === 'cancelled') return 'cancelado';
   return 'rascunho';
 }

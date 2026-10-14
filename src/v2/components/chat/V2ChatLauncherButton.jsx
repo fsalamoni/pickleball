@@ -23,7 +23,7 @@ export default function V2ChatLauncherButton({
   variant = 'default',
   size = 'sm',
   className,
-  label = 'Conversar',
+  label,
   iconOnly = false,
   onStarted,
 }) {
@@ -32,6 +32,7 @@ export default function V2ChatLauncherButton({
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
+  const rotulo = label ? t(label) : t('Conversar');
   const targetId = athlete?.id || athlete?.uid;
   if (!targetId || targetId === user?.uid) return null;
 
@@ -63,10 +64,10 @@ export default function V2ChatLauncherButton({
       className={className}
       onClick={handleClick}
       disabled={busy}
-      title={label}
+      title={rotulo}
     >
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-      {!iconOnly && label}
+      {!iconOnly && rotulo}
     </V2Button>
   );
 }

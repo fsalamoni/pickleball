@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/core/lib/utils';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { t } from '@/core/i18n';
 
 const SIZES = {
   xs: 'h-6 w-6 text-[10px]',
@@ -49,7 +50,7 @@ export function UserAvatar({
         title={lightboxTitle || label}
         description={lightboxDescription}
         trigger={(
-          <button type="button" className="cursor-zoom-in" aria-label={`Ampliar foto de ${label || 'usuário'}`}>
+          <button type="button" className="cursor-zoom-in" aria-label={t('Ampliar foto de {nome}', { nome: label || t('usuário') })}>
             {avatar}
           </button>
         )}
