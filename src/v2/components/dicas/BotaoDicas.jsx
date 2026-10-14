@@ -29,7 +29,7 @@ export default function BotaoDicas() {
       )}
     >
       <Lightbulb className="h-5 w-5" aria-hidden="true" />
-      <span className="hidden md:inline">Dicas</span>
+      <span className="hidden xl:inline">Dicas</span>
     </button>
   );
 }
