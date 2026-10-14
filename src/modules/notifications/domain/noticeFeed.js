@@ -23,7 +23,7 @@
  *    do que já está gravado;
  *  - **os filtros** (não lidas, área, busca) e o estado deles na URL.
  */
-import { t, tn, tk } from '@/core/i18n';
+import { t, tn, tk, noticeText } from '@/core/i18n';
 import { instanteEmMs } from '@/core/domain/instant';
 
 /** Quantos avisos o sino mostra antes do "Ver todas". */
@@ -288,7 +288,8 @@ export function semAcento(texto) {
 }
 
 function textoDoAviso(n) {
-  return semAcento([n?.title, n?.message, n?.actor_name].filter(Boolean).join(' '));
+  // O texto como a pessoa o LÊ (no idioma dela), não o português gravado.
+  return semAcento([noticeText(n, 'title'), noticeText(n, 'message'), n?.actor_name].filter(Boolean).join(' '));
 }
 
 /**

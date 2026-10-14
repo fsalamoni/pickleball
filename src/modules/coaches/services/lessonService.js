@@ -33,7 +33,7 @@ import { debitForLesson } from './packageService.js';
 import { COACH_STUDENT_COLLECTION } from './studentService.js';
 import { logger } from '@/core/lib/logger';
 import { LESSON_COUPON_STATUS, lessonCouponLine, pendingCouponReturn } from '../../promo/domain/lessonCoupon.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
@@ -175,16 +175,18 @@ export async function requestLesson(coachId, actor, input) {
   const when = first ? `${first.date} ${first.start}` : 'horário combinado';
   if (requestedBy === 'student') {
     notifyUsers([coachId], {
-      title: 'Nova solicitação de aula',
-      message: `${value.student_name || 'Um aluno'} solicitou aula (${when}). Toque para responder.`,
+      title: tx('Nova solicitação de aula'),
+      message: tx('{nome} solicitou aula ({quando}). Toque para responder.', { nome: value.student_name || 'Um aluno', quando: when }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/aulas',
       actor: { uid: actor.uid, displayName: value.student_name },
     });
   } else if (value.student_id) {
     notifyUsers([value.student_id], {
-      title: 'Aula agendada pelo professor',
-      message: `Você tem uma aula ${value.status === LESSON_STATUS.CONFIRMED ? 'confirmada' : 'proposta'} (${when}).`,
+      title: tx('Aula agendada pelo professor'),
+      message: value.status === LESSON_STATUS.CONFIRMED
+        ? tx('Você tem uma aula confirmada ({quando}).', { quando: when })
+        : tx('Você tem uma aula proposta ({quando}).', { quando: when }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-aulas',
       actor: { uid: actor.uid },

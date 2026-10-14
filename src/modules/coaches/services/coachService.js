@@ -22,7 +22,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeCoachProfile, normalizeCoachResidency } from '../domain/coach.js';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_COLLECTIONS = {
   coaches: 'coaches',
@@ -249,10 +249,10 @@ export async function addCoachResidency(input, actor, { requireAcceptance = fals
       if (arenaSnap.exists()) arenaName = arenaSnap.data().name || arenaName;
     } catch { /* nome é opcional */ }
     notifyUsers([value.coach_id], {
-      title: value.status === 'pending' ? 'Convite de parceria de arena' : 'Você é professor parceiro de uma arena',
+      title: value.status === 'pending' ? tx('Convite de parceria de arena') : tx('Você é professor parceiro de uma arena'),
       message: value.status === 'pending'
-        ? `${arenaName} convidou você como professor parceiro. Aceite ou recuse no seu painel.`
-        : `${arenaName} adicionou você como professor parceiro. Veja no seu painel.`,
+        ? tx('{arena} convidou você como professor parceiro. Aceite ou recuse no seu painel.', { arena: arenaName })
+        : tx('{arena} adicionou você como professor parceiro. Veja no seu painel.', { arena: arenaName }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/aulas',
       actor: { uid: actor.uid },
@@ -319,8 +319,8 @@ export async function acceptCoachResidency(coachId, arenaId, actor) {
     const ids = mgrsSnap.docs.map((d) => d.data().user_id).filter(Boolean);
     if (ids.length > 0) {
       notifyUsers(ids, {
-        title: 'Professor aceitou a parceria',
-        message: 'O professor confirmou a parceria com a sua arena.',
+        title: tx('Professor aceitou a parceria'),
+        message: tx('O professor confirmou a parceria com a sua arena.'),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/arenas/${arenaId}/gerir`,
         actor: { uid: actor.uid },

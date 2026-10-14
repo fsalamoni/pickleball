@@ -43,7 +43,7 @@ import {
   validateArchiveRequest,
   validateUnarchiveRequest,
 } from '../domain/archiveValidation.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = {
   tournaments: 'tournaments',
@@ -128,8 +128,8 @@ export async function createTournament(creator, data) {
   });
   if (arenaId && !arenaConfirmada) {
     notifyUsers(gestores, {
-      title: `"${payload.name.slice(0, 60)}" quer a sua arena como sede`,
-      message: 'Confirme ou recuse em Torneios, na Central da arena. Até lá ele não aparece na página da arena.',
+      title: tx('"{torneio}" quer a sua arena como sede', { torneio: payload.name.slice(0, 60) }),
+      message: tx('Confirme ou recuse em Torneios, na Central da arena. Até lá ele não aparece na página da arena.'),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arenaId}/gerir?aba=torneios`,
       actor: { uid: creator.uid, displayName: payload.creator_name },
@@ -153,11 +153,11 @@ export async function decideTournamentArena(tournament, confirm, actor) {
   if (tournament.creator_uid) {
     notifyUsers([tournament.creator_uid], {
       title: confirm
-        ? `A arena confirmou a sede de "${String(tournament.name || 'seu torneio').slice(0, 60)}"`
-        : `A arena recusou a sede de "${String(tournament.name || 'seu torneio').slice(0, 60)}"`,
+        ? tx('A arena confirmou a sede de "{torneio}"', { torneio: String(tournament.name || 'seu torneio').slice(0, 60) })
+        : tx('A arena recusou a sede de "{torneio}"', { torneio: String(tournament.name || 'seu torneio').slice(0, 60) }),
       message: confirm
-        ? 'O torneio já aparece na página da arena e soma no ranking da casa.'
-        : 'O torneio segue de pé, sem sede vinculada. Fale com a arena ou escolha outra.',
+        ? tx('O torneio já aparece na página da arena e soma no ranking da casa.')
+        : tx('O torneio segue de pé, sem sede vinculada. Fale com a arena ou escolha outra.'),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/torneios/${tournament.id}`,
       actor,
@@ -212,8 +212,8 @@ export async function setTournamentStatus(id, status, actor) {
       const athletes = await listAthletes();
       const ids = athletes.map((a) => a.id).filter(Boolean);
       notifyUsers(ids, {
-        title: `Inscrições abertas: "${String(tournament.name || 'Novo torneio').slice(0, 60)}"`,
-        message: 'Um torneio público está com inscrições abertas. Toque para ver e participar.',
+        title: tx('Inscrições abertas: "{torneio}"', { torneio: String(tournament.name || 'Novo torneio').slice(0, 60) }),
+        message: tx('Um torneio público está com inscrições abertas. Toque para ver e participar.'),
         type: NOTIFICATION_TYPE.TOURNAMENT_OPEN,
         link: '/torneios',
         actor,

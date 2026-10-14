@@ -37,7 +37,7 @@ import {
 } from '../domain/waitlist.js';
 import { getArena } from './arenaService.js';
 import { getOpenSlot, joinOpenSlot } from './openMatchService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = 'arena_waitlist';
 
@@ -192,9 +192,8 @@ export async function notifyNextInLine(slotId, actor) {
   try {
     const slot = await getOpenSlot(slotId);
     notifyUsers([next.athlete_id], {
-      title: `Vagou um lugar em "${str(slot?.arena_name || '').slice(0, 50)}"`,
-      message: `${formatSlotLabel(slot) || 'Jogo aberto'} — você tem `
-        + `${DEFAULT_PROMOTION_WINDOW_MINUTES} minutos para confirmar.`,
+      title: tx('Vagou um lugar em "{arena}"', { arena: str(slot?.arena_name || '').slice(0, 50) }),
+      message: tx('{quando} — você tem {n} minutos para confirmar.', { quando: formatSlotLabel(slot) || 'Jogo aberto', n: DEFAULT_PROMOTION_WINDOW_MINUTES }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: slot?.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
       actor,

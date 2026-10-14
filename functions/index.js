@@ -36,6 +36,7 @@ const { recuperarSeFaltou } = require('./rankingCatchUp');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
 const notificationPrefs = require('./notificationPrefs');
+const avisoI18n = require('./avisoI18n');
 
 if (!getApps().length) initializeApp();
 
@@ -328,9 +329,13 @@ exports.pushOnNotificationCreate = onDocumentCreated(
     // A categoria que a pessoa silenciou nas Configurações não vira push — o
     // sino já obedecia, o celular não. Sem conseguir ler as preferências, o
     // aviso segue (como antes): perder um aviso é pior que um a mais.
+    // A mesma leitura traz o idioma da pessoa (`users.language`): o push sai
+    // nele quando o aviso tem `i18n`. Sem conseguir ler, fica o português.
+    let language = null;
     try {
       const userSnap = await db.collection('users').doc(String(n.user_id)).get();
       const prefs = userSnap.exists ? userSnap.data().notification_prefs : null;
+      language = userSnap.exists ? userSnap.data().language || null : null;
       if (notificationPrefs.isNotificationMuted(prefs, n.type)) {
         logger.info('pushOnNotificationCreate: categoria silenciada, sem push.', { user: n.user_id, type: n.type });
         return;
@@ -346,8 +351,8 @@ exports.pushOnNotificationCreate = onDocumentCreated(
 
     const message = {
       notification: {
-        title: String(n.title || 'PickleRush').slice(0, 120),
-        body: String(n.message || '').slice(0, 300),
+        title: String(avisoI18n.campoNoIdioma(n, 'title', language) || 'PickleRush').slice(0, 120),
+        body: String(avisoI18n.campoNoIdioma(n, 'message', language)).slice(0, 300),
       },
       webpush: {
         fcmOptions: { link },

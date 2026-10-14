@@ -54,7 +54,7 @@ import {
   canRespondToPartnerInvite,
 } from '../domain/partnerInvite.js';
 import { isActiveRegistration, selfCheckInState } from '../domain/checkin.js';
-import { t, tk } from '@/core/i18n';
+import { t, tk, tx } from '@/core/i18n';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -185,8 +185,8 @@ export async function createRegistration(input, actor) {
   if (withPartnerInvite) {
     try {
       await notifyUsers([playerBUserId], {
-        title: 'Convite de dupla',
-        message: `${payload.player_a_name || 'Um atleta'} te inscreveu como dupla em "${tournament.name}". Abra o torneio para confirmar ou recusar.`,
+        title: tx('Convite de dupla'),
+        message: tx('{nome} te inscreveu como dupla em "{torneio}". Abra o torneio para confirmar ou recusar.', { nome: payload.player_a_name || 'Um atleta', torneio: tournament.name }),
         type: NOTIFICATION_TYPE.PARTNER_INVITE,
         link: `/torneios/${tournament_id}`,
         // Payload que habilita confirmar/recusar direto no sino (flag
@@ -231,10 +231,10 @@ export async function respondPartnerInvite(id, accept, actor) {
   try {
     const recipients = [registration.created_by, registration.player_a_user_id].filter(Boolean);
     await notifyUsers(recipients, {
-      title: accept ? 'Dupla confirmada' : 'Convite de dupla recusado',
+      title: accept ? tx('Dupla confirmada') : tx('Convite de dupla recusado'),
       message: accept
-        ? `${registration.player_b_name || 'Seu parceiro'} confirmou a dupla em "${registration.label || 'sua inscrição'}".`
-        : `${registration.player_b_name || 'Seu parceiro'} recusou o convite de dupla. Ajuste ou cancele a inscrição.`,
+        ? tx('{nome} confirmou a dupla em "{inscricao}".', { nome: registration.player_b_name || 'Seu parceiro', inscricao: registration.label || 'sua inscrição' })
+        : tx('{nome} recusou o convite de dupla. Ajuste ou cancele a inscrição.', { nome: registration.player_b_name || 'Seu parceiro' }),
       type: NOTIFICATION_TYPE.PARTNER_RESPONSE,
       link: `/torneios/${registration.tournament_id}`,
       actor,
@@ -805,8 +805,8 @@ export async function linkRegistrationPlayerToAccount(id, slot, athlete, actor) 
     try {
       const nome = res.previous_name || 'jogador';
       await notifyUsers([uid], {
-        title: 'Sua inscrição foi ligada à sua conta',
-        message: `Você estava inscrito como "${nome}" num torneio. A inscrição agora usa os dados do seu cadastro, e os resultados são seus e entram no ranking.`,
+        title: tx('Sua inscrição foi ligada à sua conta'),
+        message: tx('Você estava inscrito como "{nome}" num torneio. A inscrição agora usa os dados do seu cadastro, e os resultados são seus e entram no ranking.', { nome }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: res.tournament_id ? `/torneios/${res.tournament_id}` : '/torneios',
         actor,
@@ -859,8 +859,8 @@ export async function declareRegistrationPayment(id, actor) {
     const admins = await listTournamentAdmins(registration.tournament_id);
     const adminIds = admins.map((a) => a.user_id).filter(Boolean);
     await notifyUsers(adminIds, {
-      title: 'Pagamento informado',
-      message: `${registration.label || registration.player_a_name || 'Um inscrito'} informou o pagamento da inscrição. Confira e confirme.`,
+      title: tx('Pagamento informado'),
+      message: tx('{nome} informou o pagamento da inscrição. Confira e confirme.', { nome: registration.label || registration.player_a_name || 'Um inscrito' }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/torneios/${registration.tournament_id}/admin`,
       actor,

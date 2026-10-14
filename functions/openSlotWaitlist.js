@@ -18,6 +18,8 @@
  * está no prazo. Chama-se quantos couberem, pela ordem da fila.
  */
 
+const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n');
+
 /** Minutos para aceitar a vaga. O cliente mostra o mesmo número. */
 const JANELA_PROMOCAO_MIN = 60;
 
@@ -126,11 +128,16 @@ async function promoverProximo(ctx, slotId) {
   const { slot, chamados } = resultado;
   for (const e of chamados) {
     // eslint-disable-next-line no-await-in-loop
+    const title = tx('Vagou um lugar em "{arena}"', { arena: String((slot && slot.arena_name) || '').slice(0, 50) });
+    const message = tx('{quando} — você tem {n} minutos para confirmar.', {
+      quando: `${(slot && slot.date) || ''} ${(slot && slot.start) || ''}`, n: JANELA_PROMOCAO_MIN,
+    });
+    const i18n = i18nDoAviso({ title, message });
     await db.collection('notifications').add({
       user_id: e.athlete_id,
-      title: `Vagou um lugar em "${String((slot && slot.arena_name) || '').slice(0, 50)}"`,
-      message: `${(slot && slot.date) || ''} ${(slot && slot.start) || ''} — você tem `
-        + `${JANELA_PROMOCAO_MIN} minutos para confirmar.`,
+      title: textoDoAviso(title),
+      message: textoDoAviso(message),
+      ...(i18n ? { i18n } : {}),
       type: 'generic',
       link: slot && slot.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
       read: false,

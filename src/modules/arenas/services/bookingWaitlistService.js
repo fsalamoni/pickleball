@@ -12,6 +12,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { tx } from '@/core/i18n';
 import { normalizeWaitlistEntry, waitlistDocId } from '../domain/booking_waitlist.js';
 import { listArenaManagerIds } from './arenaService.js';
 
@@ -29,8 +30,8 @@ export async function joinWaitlist(input, actor) {
   });
   const managerIds = await listArenaManagerIds(value.arena_id).catch(() => []);
   notifyUsers(managerIds, {
-    title: 'Interesse em horário ocupado',
-    message: `${value.user_name} entrou na lista de espera para ${value.date} ${value.start}.`,
+    title: tx('Interesse em horário ocupado'),
+    message: tx('{nome} entrou na lista de espera para {data} {inicio}.', { nome: value.user_name, data: value.date, inicio: value.start }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${value.arena_id}/gerir`,
     actor: { uid: actor.uid, displayName: value.user_name },

@@ -19,6 +19,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { tx } from '@/core/i18n';
 import {
   BOOKING_REFERRAL_STATUS, normalizeReferralCode, referralProgram, referralRewards,
 } from '../domain/marketing.js';
@@ -62,8 +63,8 @@ export async function applyBookingReferral(booking, { agreedPrice } = {}, actor 
       updated_at: serverTimestamp(),
     }).catch(() => {});
     notifyUsers([referredId], {
-      title: 'O código de indicação não foi aplicado',
-      message: `Na reserva em ${arenaNome}: ${motivo}`,
+      title: tx('O código de indicação não foi aplicado'),
+      message: tx('Na reserva em {arena}: {motivo}', { arena: arenaNome, motivo }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor,
@@ -134,7 +135,7 @@ export async function applyBookingReferral(booking, { agreedPrice } = {}, actor 
   ].filter(Boolean).join(' e ');
   if (paraQuemChegou) {
     notifyUsers([referredId], {
-      title: 'Indicação aplicada',
+      title: tx('Indicação aplicada'),
       message: `Em ${arenaNome}: ${paraQuemChegou}.`,
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
@@ -143,8 +144,8 @@ export async function applyBookingReferral(booking, { agreedPrice } = {}, actor 
   }
   if (resgate.referrerReward > 0) {
     notifyUsers([resgate.referrerId], {
-      title: 'Sua indicação deu certo',
-      message: `${booking.athlete_name || 'Quem você indicou'} reservou em ${arenaNome}: ${formatPrice(resgate.referrerReward)} de crédito para você.`,
+      title: tx('Sua indicação deu certo'),
+      message: tx('{nome} reservou em {arena}: {valor} de crédito para você.', { nome: booking.athlete_name || 'Quem você indicou', arena: arenaNome, valor: formatPrice(resgate.referrerReward) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arenaId}`,
       actor,

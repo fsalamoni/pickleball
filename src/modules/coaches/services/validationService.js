@@ -17,7 +17,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeValidation, validationDocId } from '../domain/validation.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_VALIDATION_COLLECTION = 'coach_level_validations';
 
@@ -55,8 +55,8 @@ export async function upsertValidation(input, actor) {
   }, { merge: true });
 
   notifyUsers([value.student_id], {
-    title: 'Seu nível foi validado',
-    message: `${value.coach_name || 'Um professor'} validou seu nível: ${value.level_name}.`,
+    title: tx('Seu nível foi validado'),
+    message: tx('{nome} validou seu nível: {nivel}.', { nome: value.coach_name || 'Um professor', nivel: value.level_name }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/perfil',
     actor: { uid: actor.uid },

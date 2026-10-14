@@ -13,7 +13,7 @@ import { db } from '@/core/config/firebase';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeSession } from '../domain/session.js';
 import { TrainingItemError } from './trainingItemService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const TRAINING_SESSIONS = 'training_sessions';
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -43,8 +43,8 @@ export async function listStudentSessions(coachUid, studentUids = []) {
 function notifyCoachShared(identity, coachId, title) {
   return notifyUsers([coachId], {
     type: NOTIFICATION_TYPE.TRAINING_COMMENT,
-    title: 'Um aluno compartilhou um treino',
-    message: `${identity.name || 'Seu aluno'} registrou "${title}".`,
+    title: tx('Um aluno compartilhou um treino'),
+    message: tx('{nome} registrou "{titulo}".', { nome: identity.name || 'Seu aluno', titulo: title }),
     link: '/treino?aba=alunos',
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);
@@ -87,8 +87,8 @@ export async function confirmSession(session, { identity }) {
   await updateDoc(doc(db, TRAINING_SESSIONS, session.id), { coach_confirmed_at: serverTimestamp(), updated_at: serverTimestamp() });
   await notifyUsers([session.uid], {
     type: NOTIFICATION_TYPE.TRAINING_COMMENT,
-    title: 'Seu professor viu o seu treino',
-    message: `${identity.name || 'Seu professor'} confirmou "${session.title}".`,
+    title: tx('Seu professor viu o seu treino'),
+    message: tx('{nome} confirmou "{titulo}".', { nome: identity.name || 'Seu professor', titulo: session.title }),
     link: '/treino?aba=diario',
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);
@@ -111,7 +111,7 @@ export async function addComment(session, text, { identity }) {
   if (to) {
     await notifyUsers([to], {
       type: NOTIFICATION_TYPE.TRAINING_COMMENT,
-      title: isOwner ? 'Seu aluno comentou um treino' : 'Seu professor comentou o seu treino',
+      title: isOwner ? tx('Seu aluno comentou um treino') : tx('Seu professor comentou o seu treino'),
       message: `${identity.name || 'Alguém'}: ${texto.slice(0, 120)}`,
       link: isOwner ? '/treino?aba=alunos' : '/treino?aba=diario',
       actor: { uid: identity.uid, name: identity.name },

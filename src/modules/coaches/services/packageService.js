@@ -20,7 +20,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizePackage, normalizePackageSale, computeExpiresAt, creditsRemaining,
 } from '../domain/package.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_PACKAGE_COLLECTIONS = {
   packages: 'coach_packages',
@@ -101,8 +101,8 @@ export async function sellPackage(coachId, { pkg, studentId, studentName, paid =
   });
   if (studentId) {
     notifyUsers([studentId], {
-      title: 'Novo pacote de aulas',
-      message: `Você recebeu o pacote "${value.package_name}" (${value.credits_total} aulas).`,
+      title: tx('Novo pacote de aulas'),
+      message: tx('Você recebeu o pacote "{pacote}" ({n} aulas).', { pacote: value.package_name, n: value.credits_total }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-aulas',
       actor: { uid: actor.uid },

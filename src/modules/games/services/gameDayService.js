@@ -60,7 +60,7 @@ import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 import { playGenderOf } from '@/modules/athletes/domain/profileMeta.js';
 import { resultFromSets } from '../domain/gameSets.js';
-import { t, tk } from '@/core/i18n';
+import { t, tk, tx } from '@/core/i18n';
 
 const COL = 'game_days';
 // O jogo aberto ligado a este dia de jogo (Onda CA). Escrito direto aqui, e
@@ -348,8 +348,8 @@ export async function joinPublicGameDay(gameDay, user, profile) {
   // uma data semanal receberia um por pessoa, toda semana (a lista está no dia).
   if (!doClube && atual.created_by && atual.created_by !== user.uid) {
     notifyUsers([atual.created_by], {
-      title: 'Novo participante no seu dia de jogo',
-      message: `${name} entrou no dia de jogo "${atual.title || gameDay.title}".`,
+      title: tx('Novo participante no seu dia de jogo'),
+      message: tx('{nome} entrou no dia de jogo "{dia}".', { nome: name, dia: atual.title || gameDay.title }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/dia-de-jogo/${gameDay.id}`,
       actor: { uid: user.uid, displayName: name },
@@ -475,8 +475,8 @@ export async function addGameDayParticipant(gdId, entry, actor, { gameDay = null
     // Notifica atletas inseridos pelo criador.
     if (source === GD_PARTICIPANT_SOURCE.INVITED && actor?.uid && entry.user_id !== actor.uid) {
       notifyUsers([entry.user_id], {
-        title: 'Você foi convidado para um dia de jogo',
-        message: 'Um atleta te inseriu em um dia de jogo. Abra "Dia de jogo" para ver.',
+        title: tx('Você foi convidado para um dia de jogo'),
+        message: tx('Um atleta te inseriu em um dia de jogo. Abra "Dia de jogo" para ver.'),
         type: NOTIFICATION_TYPE.GENERIC,
         link: '/dia-de-jogo',
         actor: { uid: actor.uid },
@@ -587,8 +587,8 @@ export async function linkGuestParticipantToAccount(gdId, pid, athlete, actor) {
   });
   if (actor?.uid && uid !== actor.uid) {
     notifyUsers([uid], {
-      title: 'Seus jogos foram ligados à sua conta',
-      message: `Você jogou num dia de jogo como "${alvo.name || 'convidado'}". Os resultados agora são seus e entram no seu histórico.`,
+      title: tx('Seus jogos foram ligados à sua conta'),
+      message: tx('Você jogou num dia de jogo como "{nome}". Os resultados agora são seus e entram no seu histórico.', { nome: alvo.name || 'convidado' }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/dia-de-jogo/${gdId}`,
       actor: { uid: actor.uid },
@@ -714,8 +714,8 @@ export async function addGameDayAdmin(gdId, uid, actor) {
     updated_at: serverTimestamp(),
   });
   notifyUsers([uid], {
-    title: 'Você virou organizador de um dia de jogo',
-    message: `Agora você pode conduzir as partidas de "${gd.title}".`,
+    title: tx('Você virou organizador de um dia de jogo'),
+    message: tx('Agora você pode conduzir as partidas de "{dia}".', { dia: gd.title }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/dia-de-jogo/${gdId}`,
     actor: actor?.uid ? { uid: actor.uid } : undefined,

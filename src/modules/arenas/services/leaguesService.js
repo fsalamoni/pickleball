@@ -32,7 +32,7 @@ import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
 import { todayISO } from '../domain/calendar.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL_TOURNAMENTS = 'arena_internal_tournaments';
 const COL_LADDERS = 'arena_ladders';
@@ -238,8 +238,10 @@ export async function cancelInternalTournament(tid, motivo, actor) {
   if (uids.length > 0) {
     try {
       await notifyUsers(uids, {
-        title: 'Torneio cancelado',
-        message: `"${tor.name}" foi cancelado${motivo ? `: ${motivo}` : '.'}`,
+        title: tx('Torneio cancelado'),
+        message: motivo
+          ? tx('"{torneio}" foi cancelado: {motivo}', { torneio: tor.name, motivo })
+          : tx('"{torneio}" foi cancelado.', { torneio: tor.name }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/arenas/${tor.arena_id}/torneios`,
         actor,
@@ -337,8 +339,8 @@ export async function startInternalTournament(tournament, { arena = null, courts
   if (uids.length > 0) {
     try {
       await notifyUsers(uids, {
-        title: 'O torneio começou',
-        message: `"${tournament.name}" está rolando. Entre para ver as partidas.`,
+        title: tx('O torneio começou'),
+        message: tx('"{torneio}" está rolando. Entre para ver as partidas.', { torneio: tournament.name }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/dia-de-jogo/${gameDayId}`,
         actor,
@@ -426,10 +428,10 @@ export async function finishInternalTournament(tournament, classificacao = [], {
     const campeao = classificacao.find((c) => Number(c?.position) === 1);
     try {
       await notifyUsers(uids, {
-        title: 'Torneio encerrado',
+        title: tx('Torneio encerrado'),
         message: campeao?.name
-          ? `"${atualNoBanco.name}" terminou — campeão: ${campeao.name}. Veja a classificação da casa.`
-          : `"${atualNoBanco.name}" terminou. Veja a classificação da casa.`,
+          ? tx('"{torneio}" terminou — campeão: {campeao}. Veja a classificação da casa.', { torneio: atualNoBanco.name, campeao: campeao.name })
+          : tx('"{torneio}" terminou. Veja a classificação da casa.', { torneio: atualNoBanco.name }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/arenas/${arenaId}/torneios`,
         actor,

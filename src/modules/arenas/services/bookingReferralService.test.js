@@ -22,10 +22,14 @@ const estado = { cupons: [], resgate: null, erroResgate: null, erroRegras: false
 vi.mock('@/core/config/firebase', () => ({ db: {} }));
 vi.mock('@/core/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/services/auditService', () => ({ createAuditLog: vi.fn(() => Promise.resolve()) }));
-vi.mock('@/core/services/notificationService', () => ({
-  notifyUsers: vi.fn(async (uids, aviso) => { avisos.push({ uids, ...aviso }); }),
-  NOTIFICATION_TYPE: { GENERIC: 'generic' },
-}));
+vi.mock('@/core/services/notificationService', async () => {
+  const { textoDoAviso } = await import('@/core/i18n/avisos');
+  const pt = (a) => { if (a) { a.title = textoDoAviso(a.title); a.message = textoDoAviso(a.message); } return a; };
+  return {
+    notifyUsers: vi.fn(async (uids, aviso) => { avisos.push({ uids, ...pt(aviso) }); }),
+    NOTIFICATION_TYPE: { GENERIC: 'generic' },
+  };
+});
 vi.mock('firebase/firestore', () => ({
   doc: (_db, col, id) => ({ _path: `${col}/${id}` }),
   updateDoc: async (ref, data) => { escritas.push({ path: ref._path, data }); },

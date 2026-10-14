@@ -19,7 +19,7 @@ import {
   buildShares, canShareItem, MAX_RECIPIENTS, needsSharedAccess, SHARE_DONE_NOTE_MAX, SHARE_KIND,
 } from '../domain/share.js';
 import { TRAINING_ITEMS, TrainingItemError } from './trainingItemService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const TRAINING_SHARES = 'training_shares';
 const toShare = (d) => ({ id: d.id, ...d.data() });
@@ -108,8 +108,10 @@ export async function shareItem({ item, toUids = [], kind = SHARE_KIND.INDICACAO
 
   const notified = await notifyUsers(entregues, {
     type: NOTIFICATION_TYPE.TRAINING_SHARE,
-    title: isStudentSend ? 'Seu professor mandou um treino' : 'Indicaram um treino para você',
-    message: `${identity.name || 'Alguém'}: "${item.title}"${dueDate && isStudentSend ? ` — para fazer até ${dueDate.split('-').reverse().join('/')}` : ''}`,
+    title: isStudentSend ? tx('Seu professor mandou um treino') : tx('Indicaram um treino para você'),
+    message: dueDate && isStudentSend
+      ? tx('{nome}: "{titulo}" — para fazer até {data}', { nome: identity.name || 'Alguém', titulo: item.title, data: dueDate.split('-').reverse().join('/') })
+      : tx('{nome}: "{titulo}"', { nome: identity.name || 'Alguém', titulo: item.title }),
     link: '/treino?aba=recebidos',
     actor: { uid: identity.uid, name: identity.name },
     data: { item_id: item.id },

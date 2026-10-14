@@ -2,7 +2,7 @@ import { collection, getDocs, getDoc, deleteDoc, doc, orderBy, query, where, ser
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { logger } from '@/core/lib/logger';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 import { createNotification, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { buildRevokePayload } from '../domain/accessRoster.js';
 import {
@@ -197,9 +197,10 @@ export async function updateUserRecordAsAdmin(uid, patch, actor, meta = {}) {
   await createNotification({
     userId: uid,
     type: NOTIFICATION_TYPE.PROFILE_ADMIN_EDIT,
-    title: 'Seu cadastro foi corrigido',
-    message: `A administração ajustou: ${changes.map((c) => c.label).join(', ')}.`
-      + ' Confira no seu perfil e avise se algo não estiver certo.',
+    title: tx('Seu cadastro foi corrigido'),
+    message: tx('A administração ajustou: {campos}. Confira no seu perfil e avise se algo não estiver certo.', {
+      campos: changes.map((c) => c.label).join(', '),
+    }),
     link: '/perfil/editar',
     actor,
   });

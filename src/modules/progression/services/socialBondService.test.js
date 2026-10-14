@@ -34,7 +34,9 @@ const mockRunTransaction = vi.fn(async (_db, fn) => {
   return fn(tx);
 });
 
-const mockNotify = vi.fn(async () => 1);
+const { textoDoAviso } = await import('@/core/i18n/avisos');
+// O aviso em português (a marca tx() vira texto no próprio objeto).
+const mockNotify = vi.fn(async (_uids, a) => { if (a) { a.title = textoDoAviso(a.title); a.message = textoDoAviso(a.message); } return 1; });
 vi.mock('@/core/services/notificationService', () => ({
   notifyUsers: (...a) => mockNotify(...a),
   NOTIFICATION_TYPE: { GAMIFICATION: 'gamification' },

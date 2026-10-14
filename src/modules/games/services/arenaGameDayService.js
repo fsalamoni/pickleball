@@ -51,7 +51,7 @@ import {
   getGameDay, listGameDayParticipants, addGameDayParticipant,
   deleteGameDay, leaveGameDay,
 } from './gameDayService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = 'game_days';
 const SUB_PARTICIPANTS = 'participants';
@@ -364,8 +364,8 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
 
   if (atual.created_by && atual.created_by !== user.uid) {
     notifyUsers([atual.created_by], {
-      title: 'Nova presença no dia de jogo',
-      message: `${name} marcou presença em "${atual.title}".`,
+      title: tx('Nova presença no dia de jogo'),
+      message: tx('{nome} marcou presença em "{dia}".', { nome: name, dia: atual.title }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${atual.arena_id}/gerir/dia-de-jogo/${atual.id}`,
       actor: { uid: user.uid, displayName: name },

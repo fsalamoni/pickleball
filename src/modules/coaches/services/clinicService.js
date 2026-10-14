@@ -21,7 +21,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   normalizeClinic, clinicSignupDocId, CLINIC_STATUS,
 } from '../domain/clinic.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 export const COACH_CLINIC_COLLECTION = 'coach_clinics';
 export const COACH_CLINIC_SIGNUP_COLLECTION = 'coach_clinic_signups';
@@ -114,8 +114,8 @@ export async function cancelClinic(clinicId, actor) {
   const ids = signups.map((s) => s.athlete_id).filter(Boolean);
   if (ids.length > 0) {
     notifyUsers(ids, {
-      title: 'Clínica cancelada',
-      message: `A clínica "${existing.title}" foi cancelada pelo professor.`,
+      title: tx('Clínica cancelada'),
+      message: tx('A clínica "{clinica}" foi cancelada pelo professor.', { clinica: existing.title }),
       type: NOTIFICATION_TYPE.GENERIC,
       actor: { uid: actor.uid },
     });
@@ -161,8 +161,8 @@ export async function enrollInClinic(clinic, athlete) {
     throw err;
   }
   notifyUsers([clinic.coach_id], {
-    title: 'Nova inscrição em clínica',
-    message: `${str(athlete.displayName) || 'Um atleta'} se inscreveu em "${clinic.title}".`,
+    title: tx('Nova inscrição em clínica'),
+    message: tx('{nome} se inscreveu em "{clinica}".', { nome: str(athlete.displayName) || 'Um atleta', clinica: clinic.title }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/aulas',
     actor: { uid: athlete.uid },

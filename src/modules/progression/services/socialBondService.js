@@ -30,6 +30,7 @@ import {
 } from '@/modules/progression/domain/gamificationV2Schema2';
 
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { tx } from '@/core/i18n';
 import { logger } from '@/core/lib/logger';
 import { gamificationDb } from './firestoreDb.js';
 import { t } from '@/core/i18n';
@@ -311,8 +312,10 @@ export async function startMentorship({ mentorUid, apprenticeUid, proposedBy = n
     try {
       const outro = proposedBy === mentorUid ? apprenticeUid : mentorUid;
       await notifyUsers([outro], {
-        title: 'Convite de mentoria',
-        message: `${proposerName || 'Um atleta'} convidou você para ${proposedBy === mentorUid ? 'ser aprendiz' : 'ser mentor'}. Responda em Vínculos.`,
+        title: tx('Convite de mentoria'),
+        message: proposedBy === mentorUid
+          ? tx('{nome} convidou você para ser aprendiz. Responda em Vínculos.', { nome: proposerName || 'Um atleta' })
+          : tx('{nome} convidou você para ser mentor. Responda em Vínculos.', { nome: proposerName || 'Um atleta' }),
         type: NOTIFICATION_TYPE.GAMIFICATION,
         link: '/vinculos?aba=mentorias',
       });

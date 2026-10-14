@@ -27,7 +27,11 @@ vi.mock('firebase/firestore', async () => {
   };
 });
 vi.mock('@/core/services/auditService', () => ({ createAuditLog: vi.fn(async () => {}) }));
-vi.mock('@/core/services/notificationService', () => ({ notifyUsers: vi.fn(async () => 0), NOTIFICATION_TYPE: { GENERIC: 'generic' } }));
+vi.mock('@/core/services/notificationService', async () => {
+  const { textoDoAviso } = await import('@/core/i18n/avisos');
+  const pt = (a) => { if (a) { a.title = textoDoAviso(a.title); a.message = textoDoAviso(a.message); } return a; };
+  return { notifyUsers: vi.fn(async (_uids, aviso) => { pt(aviso); return 0; }), NOTIFICATION_TYPE: { GENERIC: 'generic' } };
+});
 vi.mock('./arenaGameDayService.js', () => ({ signUpToArenaGameDay: (...a) => signUp(...a) }));
 
 const { joinPublicGameDay } = await import('./gameDayService.js');

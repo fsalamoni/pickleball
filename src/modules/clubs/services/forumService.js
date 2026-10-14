@@ -34,7 +34,7 @@ import { deleteAttachment } from '@/core/services/storageService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { CLUB_COLLECTIONS, FORUM_LIMITS } from '../domain/constants.js';
 import { buildPoll, isPollClosed } from '../domain/forumPoll.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -201,8 +201,8 @@ export async function addComment(thread, input, user, profile) {
 
   // Notifica os participantes do tópico (exceto o autor do comentário).
   notifyUsers(thread.participant_ids || [thread.author_id], {
-    title: `${authorName} comentou em "${trimmed(thread.title, 60)}"`,
-    message: body ? trimmed(body, 140) : '📎 Anexo',
+    title: tx('{nome} comentou em "{topico}"', { nome: authorName, topico: trimmed(thread.title, 60) }),
+    message: body ? trimmed(body, 140) : tx('📎 Anexo'),
     type: NOTIFICATION_TYPE.FORUM_REPLY,
     link: threadLink(thread.club_id, thread.id),
     actor: { uid: user.uid, displayName: authorName },

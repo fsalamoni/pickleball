@@ -36,7 +36,7 @@ import {
   checkUnavailabilityConflict, unavailabilityConflictMessage,
 } from '../domain/booking_conflict.js';
 import { todayISO } from '../domain/calendar.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL_COACHES = 'arena_coaches';
 const COL_CLASSES = 'arena_classes';
@@ -207,8 +207,10 @@ export async function cancelArenaClass(classId, motivo, actor) {
   if (uids.length > 0) {
     try {
       await notifyUsers(uids, {
-        title: 'Aula cancelada',
-        message: `A aula de ${cls.date} às ${cls.start} foi cancelada${motivo ? `: ${str(motivo)}` : '.'}`,
+        title: tx('Aula cancelada'),
+        message: motivo
+          ? tx('A aula de {data} às {inicio} foi cancelada: {motivo}', { data: cls.date, inicio: cls.start, motivo: str(motivo) })
+          : tx('A aula de {data} às {inicio} foi cancelada.', { data: cls.date, inicio: cls.start }),
         type: NOTIFICATION_TYPE.GENERIC,
         link: `/arenas/${cls.arena_id}/aulas`,
         actor,

@@ -13,7 +13,7 @@
  *    apps de mensagem, sem destruir o histórico do outro participante.
  */
 
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import {
   collection,
@@ -330,7 +330,7 @@ export async function sendMessage(conversation, { text, attachments } = {}, user
     : senderName;
   notifyUsers(memberIds, {
     title,
-    message: messagePreview(cleanText, cleanAttachments) || 'Nova mensagem',
+    message: messagePreview(cleanText, cleanAttachments) || tx('Nova mensagem'),
     type: NOTIFICATION_TYPE.CHAT_MESSAGE,
     link: `/chat?c=${conversation.id}`,
     actor: { uid: user.uid, displayName: senderName },

@@ -27,7 +27,7 @@ import {
 } from '../domain/shared_booking.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = ARENA_COLLECTIONS;
 const str = (v) => String(v ?? '').trim();
@@ -152,8 +152,8 @@ export async function createSharedBooking(arena, user, profile, input) {
   const inviteeIds = invitedIds(participants);
   if (inviteeIds.length > 0) {
     notifyUsers(inviteeIds, {
-      title: 'Convite para dividir uma quadra',
-      message: `${payload.athlete_name} convidou você para ${slot.date} ${slot.start}–${slot.end} em ${str(arena.name).slice(0, 40)}.`,
+      title: tx('Convite para dividir uma quadra'),
+      message: tx('{nome} convidou você para {data} {inicio}–{fim} em {arena}.', { nome: payload.athlete_name, data: slot.date, inicio: slot.start, fim: slot.end, arena: str(arena.name).slice(0, 40) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor: { uid: user.uid, displayName: payload.athlete_name },
@@ -161,8 +161,10 @@ export async function createSharedBooking(arena, user, profile, input) {
   }
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
-    title: `Nova reserva${bookingType === BOOKING_TYPE.COACH_LESSON ? ' de aula' : ' compartilhada'} — "${str(arena.name).slice(0, 40)}"`,
-    message: `${payload.athlete_name} solicitou ${slot.date} ${slot.start}. Toque para responder.`,
+    title: bookingType === BOOKING_TYPE.COACH_LESSON
+      ? tx('Nova reserva de aula — "{arena}"', { arena: str(arena.name).slice(0, 40) })
+      : tx('Nova reserva compartilhada — "{arena}"', { arena: str(arena.name).slice(0, 40) }),
+    message: tx('{nome} solicitou {data} {inicio}. Toque para responder.', { nome: payload.athlete_name, data: slot.date, inicio: slot.start }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
     actor: { uid: user.uid, displayName: payload.athlete_name },
@@ -192,8 +194,8 @@ export async function acceptBookingInvite(booking, user, profile, { slot = null 
   participants = acceptInvite(participants, user.uid, slot);
   await updateDoc(doc(db, COL.bookings, booking.id), { ...denorm(participants), updated_at: serverTimestamp() });
   notifyUsers([booking.athlete_id, booking.coach_id].filter(Boolean), {
-    title: 'Convite de reserva aceito',
-    message: `${displayName(user, profile)} entrou na reserva de ${booking.arena_name}.`,
+    title: tx('Convite de reserva aceito'),
+    message: tx('{nome} entrou na reserva de {arena}.', { nome: displayName(user, profile), arena: booking.arena_name }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/minhas-reservas',
     actor: { uid: user.uid },
@@ -219,8 +221,8 @@ export async function joinOpenBooking(booking, user, profile, { slot = null } = 
   }, slot);
   await updateDoc(doc(db, COL.bookings, booking.id), { ...denorm(participants), updated_at: serverTimestamp() });
   notifyUsers([booking.athlete_id, booking.coach_id].filter(Boolean), {
-    title: 'Alguém entrou na sua reserva aberta',
-    message: `${displayName(user, profile)} entrou na reserva de ${booking.arena_name}.`,
+    title: tx('Alguém entrou na sua reserva aberta'),
+    message: tx('{nome} entrou na reserva de {arena}.', { nome: displayName(user, profile), arena: booking.arena_name }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/minhas-reservas',
     actor: { uid: user.uid },
@@ -251,8 +253,8 @@ export async function inviteToBooking(booking, user, invitees = []) {
   const newIds = invitees.map((i) => i.athlete_id).filter(Boolean);
   if (newIds.length > 0) {
     notifyUsers(newIds, {
-      title: 'Convite para dividir uma quadra',
-      message: `Você foi convidado para uma reserva em ${str(booking.arena_name).slice(0, 40)}.`,
+      title: tx('Convite para dividir uma quadra'),
+      message: tx('Você foi convidado para uma reserva em {arena}.', { arena: str(booking.arena_name).slice(0, 40) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor: { uid: user.uid },
@@ -298,8 +300,8 @@ export async function addBookingResponsibles(booking, actor, { invites = [], nam
   const inviteeIds = cleanInvites.map((i) => i.athlete_id).filter(Boolean);
   if (inviteeIds.length > 0) {
     notifyUsers(inviteeIds, {
-      title: 'Você foi incluído como responsável por uma reserva',
-      message: `Confirme sua participação na reserva de ${str(booking.arena_name).slice(0, 40)}.`,
+      title: tx('Você foi incluído como responsável por uma reserva'),
+      message: tx('Confirme sua participação na reserva de {arena}.', { arena: str(booking.arena_name).slice(0, 40) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor: { uid: actor.uid },

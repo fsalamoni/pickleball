@@ -17,7 +17,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { validateAnnouncement } from '../domain/announcements.js';
-import { t } from '@/core/i18n';
+import { t, tx } from '@/core/i18n';
 
 const COL = 'tournament_announcements';
 
@@ -41,7 +41,7 @@ export async function sendTournamentAnnouncement(input, actor) {
   }
 
   await notifyUsers(recipients, {
-    title: `Aviso do torneio: ${String(title).trim()}`,
+    title: tx('Aviso do torneio: {titulo}', { titulo: String(title).trim() }),
     message: String(message).trim(),
     type: NOTIFICATION_TYPE.TOURNAMENT_ANNOUNCEMENT,
     link: `/torneios/${tournament.id}`,
