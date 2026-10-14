@@ -84,6 +84,9 @@ const HomeCardsDialog = lazy(() => import('../cards/HomeCardsDialog'));
 // Sob demanda: só quem escolheu o card do treino baixa o treino.
 const HomeTrainingCard = lazy(() => import('./HomeTrainingCard'));
 
+// Sob demanda: só quem escolheu o card do Mercado (com a flag ligada) baixa o Mercado.
+const HomeMarketCard = lazy(() => import('@/v2/components/marketplace/HomeMarketCard'));
+
 // O balanço do jogo: só quem ligou para si, e só com jogo esperando.
 const HomeDebriefPrompt = lazy(() => import('@/v2/components/training/debrief/HomeDebriefPrompt'));
 
@@ -225,6 +228,12 @@ export default function V2PersonalHome() {
         return (
           <Suspense fallback={<V2Skeleton className="h-56 rounded-4xl" />}>
             <HomeTrainingCard />
+          </Suspense>
+        );
+      case HOME_CARD.MERCADO:
+        return (
+          <Suspense fallback={<V2Skeleton className="h-56 rounded-4xl" />}>
+            <HomeMarketCard />
           </Suspense>
         );
       default:

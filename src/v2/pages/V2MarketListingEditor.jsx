@@ -10,7 +10,7 @@
  * cartão como o comprador vai ver.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ImagePlus, Star, Trash2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -203,6 +203,7 @@ function EditorPage() {
   const { listingId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, userProfile } = useAuth();
   const editing = Boolean(listingId);
   const lq = useListing(listingId);
@@ -220,11 +221,14 @@ function EditorPage() {
     if (editing && !listing) return;
     const base = fromListing(listing);
     if (!editing) {
+      // Vindo de um mercado interno (loja do professor, mercado da arena):
+      // o rascunho preenche, quem vende revisa (`domain/internalProducts.js`).
+      Object.assign(base, location.state?.rascunho || {});
       base.city = sq.data?.city || userProfile?.city || '';
       base.state = sq.data?.state || userProfile?.state || '';
     }
     setForm(base);
-  }, [editing, listing, sq.data, userProfile, form]);
+  }, [editing, listing, sq.data, userProfile, form, location.state]);
 
   const cats = useMemo(() => activeCategories(settings.data?.disabled_categories), [settings.data]);
   const attrs = useMemo(() => attributesFor(form?.category_slug), [form?.category_slug]);

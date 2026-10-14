@@ -369,7 +369,7 @@ function useV2Nav() {
     [escolhidos, hubs],
   );
 
-  return { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach };
+  return { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach, marketplaceOn };
 }
 
 /** Hub ativo: o que contém a subpágina mais específica que casa com o path. */
@@ -631,7 +631,7 @@ export default function V2Layout({ children }) {
   const navigate = useNavigate();
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
-  const { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach } = useV2Nav();
+  const { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach, marketplaceOn } = useV2Nav();
   const bottomItems = useBottomNav({
     uid: user?.uid, pathname: location.pathname, arenas: myArenas, pendingByArena, ehProfessor: isCoach,
   });
@@ -978,6 +978,7 @@ export default function V2Layout({ children }) {
               arenas={myArenas}
               treinoOn
               isPlatformAdmin={isPlatformAdmin}
+              mercadoOn={marketplaceOn}
             />
           </Suspense>
         )}
