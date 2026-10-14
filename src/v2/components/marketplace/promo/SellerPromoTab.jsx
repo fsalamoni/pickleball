@@ -25,6 +25,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 import ShareImageDialog, { MarketShareCard } from './ShareImageDialog';
+import { t, tn, fmtData } from '@/core/i18n';
 
 // Data do campo (AAAA-MM-DD) ↔ instante em Brasília: começo e fim do dia.
 const diaParaMs = (d, fim) => (d ? Date.parse(`${d}T${fim ? '23:59:59' : '00:00:00'}-03:00`) : null);
@@ -61,7 +62,7 @@ function CouponDialog({ sellerKey, coupon, onClose }) {
       max_uses: f.max_uses ? Number(f.max_uses) : null,
     };
     m.mutate({ id: coupon?.id, input, sellerKey, uid: user?.uid, actor: { uid: user?.uid, name: userProfile?.platform_name || userProfile?.full_name } }, {
-      onSuccess: () => { toast.success(coupon ? 'Cupom salvo.' : 'Cupom criado.'); onClose(); },
+      onSuccess: () => { toast.success(coupon ? t('Cupom salvo.') : t('Cupom criado.')); onClose(); },
       onError: (er) => { setErrors(er.errors || {}); toast.error(er.message); },
     });
   };
@@ -69,38 +70,38 @@ function CouponDialog({ sellerKey, coupon, onClose }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg" sheet>
         <DialogHeader>
-          <DialogTitle>{coupon ? 'Editar cupom' : 'Novo cupom'}</DialogTitle>
-          <DialogDescription>O comprador digita o código no carrinho. O desconto sai do preço da sua loja.</DialogDescription>
+          <DialogTitle>{coupon ? t('Editar cupom') : t('Novo cupom')}</DialogTitle>
+          <DialogDescription>{t('O comprador digita o código no carrinho. O desconto sai do preço da sua loja.')}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={salvar}>
-          <V2Field label="Código" htmlFor="cp-code" hint={coupon ? 'O código não muda depois de criado.' : 'De 3 a 20 letras e números. Ex.: BEMVINDO10'} error={errors.code}>
+          <V2Field label={t('Código')} htmlFor="cp-code" hint={coupon ? t('O código não muda depois de criado.') : t('De 3 a 20 letras e números. Ex.: BEMVINDO10')} error={errors.code}>
             <V2Input id="cp-code" value={f.code} disabled={!!coupon} onChange={(e) => set({ code: e.target.value.toUpperCase() })} maxLength={20} className="uppercase" />
           </V2Field>
           <fieldset>
-            <legend className="mb-2 text-sm font-bold text-ink">O que ele dá</legend>
+            <legend className="mb-2 text-sm font-bold text-ink">{t('O que ele dá')}</legend>
             <div className="flex flex-wrap gap-2">
-              {Object.values(COUPON_KIND).map((k) => <V2FilterChip key={k} active={f.kind === k} onClick={() => set({ kind: k, value: k === COUPON_KIND.AMOUNT ? '20,00' : k === COUPON_KIND.PERCENT ? '10' : '' })}>{COUPON_KIND_LABELS[k]}</V2FilterChip>)}
+              {Object.values(COUPON_KIND).map((k) => <V2FilterChip key={k} active={f.kind === k} onClick={() => set({ kind: k, value: k === COUPON_KIND.AMOUNT ? '20,00' : k === COUPON_KIND.PERCENT ? '10' : '' })}>{t(COUPON_KIND_LABELS[k])}</V2FilterChip>)}
             </div>
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-2">
             {f.kind !== COUPON_KIND.FREE_SHIPPING && (
-              <V2Field label={f.kind === COUPON_KIND.PERCENT ? 'Desconto (%)' : 'Desconto (R$)'} htmlFor="cp-value" error={errors.value}>
+              <V2Field label={f.kind === COUPON_KIND.PERCENT ? t('Desconto (%)') : t('Desconto (R$)')} htmlFor="cp-value" error={errors.value}>
                 <V2Input id="cp-value" inputMode="decimal" value={f.value} onChange={(e) => set({ value: e.target.value })} />
               </V2Field>
             )}
-            <V2Field label="Pedido mínimo (R$, opcional)" htmlFor="cp-min" error={errors.min_subtotal_cents}>
-              <V2Input id="cp-min" inputMode="decimal" placeholder="0,00" value={f.min} onChange={(e) => set({ min: e.target.value })} />
+            <V2Field label={t('Pedido mínimo (R$, opcional)')} htmlFor="cp-min" error={errors.min_subtotal_cents}>
+              <V2Input id="cp-min" inputMode="decimal" placeholder={t('0,00')} value={f.min} onChange={(e) => set({ min: e.target.value })} />
             </V2Field>
-            <V2Field label="Começa (opcional)" htmlFor="cp-start"><V2Input id="cp-start" type="date" value={f.start} onChange={(e) => set({ start: e.target.value })} /></V2Field>
-            <V2Field label="Termina (opcional)" htmlFor="cp-end" error={errors.ends_at_ms}><V2Input id="cp-end" type="date" value={f.end} onChange={(e) => set({ end: e.target.value })} /></V2Field>
-            <V2Field label="Limite de usos (opcional)" htmlFor="cp-max" error={errors.max_uses}><V2Input id="cp-max" type="number" min={1} value={f.max_uses} onChange={(e) => set({ max_uses: e.target.value })} /></V2Field>
+            <V2Field label={t('Começa (opcional)')} htmlFor="cp-start"><V2Input id="cp-start" type="date" value={f.start} onChange={(e) => set({ start: e.target.value })} /></V2Field>
+            <V2Field label={t('Termina (opcional)')} htmlFor="cp-end" error={errors.ends_at_ms}><V2Input id="cp-end" type="date" value={f.end} onChange={(e) => set({ end: e.target.value })} /></V2Field>
+            <V2Field label={t('Limite de usos (opcional)')} htmlFor="cp-max" error={errors.max_uses}><V2Input id="cp-max" type="number" min={1} value={f.max_uses} onChange={(e) => set({ max_uses: e.target.value })} /></V2Field>
           </div>
-          <V2Toggle id="cp-once" label="Uma vez por pessoa" checked={f.once_per_buyer} onChange={(v) => set({ once_per_buyer: v })} />
-          <V2Toggle id="cp-first" label="Só na primeira compra na loja" hint="Bom para trazer clientes novos." checked={f.first_purchase_only} onChange={(v) => set({ first_purchase_only: v })} />
-          <V2Toggle id="cp-public" label="Divulgar na vitrine e nos anúncios" hint="Desligado, só quem receber o código usa." checked={f.public} onChange={(v) => set({ public: v })} />
+          <V2Toggle id="cp-once" label={t('Uma vez por pessoa')} checked={f.once_per_buyer} onChange={(v) => set({ once_per_buyer: v })} />
+          <V2Toggle id="cp-first" label={t('Só na primeira compra na loja')} hint={t('Bom para trazer clientes novos.')} checked={f.first_purchase_only} onChange={(v) => set({ first_purchase_only: v })} />
+          <V2Toggle id="cp-public" label={t('Divulgar na vitrine e nos anúncios')} hint={t('Desligado, só quem receber o código usa.')} checked={f.public} onChange={(v) => set({ public: v })} />
           {ativos.length > 0 && (
             <details className="rounded-2xl bg-paper p-3">
-              <summary className="cursor-pointer text-sm font-bold text-ink">Só em alguns anúncios {f.listing_ids.length ? `(${f.listing_ids.length})` : '(todos)'}</summary>
+              <summary className="cursor-pointer text-sm font-bold text-ink">{t('Só em alguns anúncios')} {f.listing_ids.length ? `(${f.listing_ids.length})` : t('(todos)')}</summary>
               <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
                 {ativos.map((l) => (
                   <li key={l.id}>
@@ -115,10 +116,10 @@ function CouponDialog({ sellerKey, coupon, onClose }) {
               {errors.listing_ids && <p className="text-xs text-red-600">{errors.listing_ids}</p>}
             </details>
           )}
-          <V2Field label="Frase para o comprador (opcional)" htmlFor="cp-desc"><V2Textarea id="cp-desc" rows={2} maxLength={140} value={f.description} onChange={(e) => set({ description: e.target.value })} placeholder="Ex.: 10% para quem está começando" className="min-h-0" /></V2Field>
+          <V2Field label={t('Frase para o comprador (opcional)')} htmlFor="cp-desc"><V2Textarea id="cp-desc" rows={2} maxLength={140} value={f.description} onChange={(e) => set({ description: e.target.value })} placeholder={t('Ex.: 10% para quem está começando')} className="min-h-0" /></V2Field>
           <div className="flex justify-end gap-2">
-            <V2Button type="button" variant="ghost" onClick={onClose}>Voltar</V2Button>
-            <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : 'Salvar cupom'}</V2Button>
+            <V2Button type="button" variant="ghost" onClick={onClose}>{t('Voltar')}</V2Button>
+            <V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar cupom')}</V2Button>
           </div>
         </form>
       </DialogContent>
@@ -132,11 +133,11 @@ function CouponsSection({ sellerKey, seller }) {
   const [divulgar, setDivulgar] = useState(null);
   const ativo = useMarketMutation(({ id, on }) => setCouponActive(id, on));
   const apagar = useMarketMutation(deleteCoupon);
-  const novo = <V2Button type="button" onClick={() => setEditar('novo')}><Plus className="h-4 w-4" /> Novo cupom</V2Button>;
+  const novo = <V2Button type="button" onClick={() => setEditar('novo')}><Plus className="h-4 w-4" /> {t('Novo cupom')}</V2Button>;
   let corpo;
   if (q.isError) corpo = <V2ErrorState inline onRetry={() => q.refetch()} />;
   else if (q.isLoading) corpo = <V2Skeleton lines={3} />;
-  else if (!(q.data || []).length) corpo = <V2EmptyState icon={TicketPercent} title="Nenhum cupom ainda" description="Um cupom de boas-vindas ou de frete grátis ajuda a fechar a primeira venda." action={novo} />;
+  else if (!(q.data || []).length) corpo = <V2EmptyState icon={TicketPercent} title={t('Nenhum cupom ainda')} description={t('Um cupom de boas-vindas ou de frete grátis ajuda a fechar a primeira venda.')} action={novo} />;
   else {
     corpo = (
       <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
@@ -148,17 +149,17 @@ function CouponsSection({ sellerKey, seller }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <CopyCodeButton code={c.code} size="sm" />
                   <span className="font-bold text-ink">{couponBenefitLabel(c)}</span>
-                  <V2Badge tone={vivo ? 'green' : 'neutral'}>{c.active === false ? 'Desligado' : vivo ? 'Valendo' : 'Fora do prazo'}</V2Badge>
-                  {c.public && <V2Badge tone="neutral">Divulgado</V2Badge>}
+                  <V2Badge tone={vivo ? 'green' : 'neutral'}>{c.active === false ? t('Desligado') : vivo ? t('Valendo') : t('Fora do prazo')}</V2Badge>
+                  {c.public && <V2Badge tone="neutral">{t('Divulgado')}</V2Badge>}
                 </div>
-                <p className="text-xs text-gray-500">{couponConditionsLabel(c) || 'Sem condições'} · {c.uses_count || 0} uso{c.uses_count === 1 ? '' : 's'}</p>
+                <p className="text-xs text-gray-500">{couponConditionsLabel(c) || t('Sem condições')} · {tn(c.uses_count || 0, '{n} uso', '{n} usos')}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {vivo && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDivulgar(c)}><Share2 className="h-4 w-4" /> Cartão</V2Button>}
-                <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditar(c)}><Pencil className="h-4 w-4" /> Editar</V2Button>
-                <V2Button type="button" size="sm" variant="ghost" onClick={() => ativo.mutate({ id: c.id, on: c.active === false }, { onError: (e) => toast.error(e.message) })}>{c.active === false ? 'Ligar' : 'Desligar'}</V2Button>
+                {vivo && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDivulgar(c)}><Share2 className="h-4 w-4" /> {t('Cartão')}</V2Button>}
+                <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditar(c)}><Pencil className="h-4 w-4" /> {t('Editar')}</V2Button>
+                <V2Button type="button" size="sm" variant="ghost" onClick={() => ativo.mutate({ id: c.id, on: c.active === false }, { onError: (e) => toast.error(e.message) })}>{c.active === false ? t('Ligar') : t('Desligar')}</V2Button>
                 {!(c.uses_count > 0) && (
-                  <V2Button type="button" size="sm" variant="ghost" aria-label={`Apagar o cupom ${c.code}`} onClick={() => { if (window.confirm(`Apagar o cupom ${c.code}?`)) apagar.mutate(c.id, { onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
+                  <V2Button type="button" size="sm" variant="ghost" aria-label={t('Apagar o cupom {codigo}', { codigo: c.code })} onClick={() => { if (window.confirm(t('Apagar o cupom {codigo}?', { codigo: c.code }))) apagar.mutate(c.id, { onError: (e) => toast.error(e.message) }); }}><Trash2 className="h-4 w-4" /></V2Button>
                 )}
               </div>
             </li>
@@ -171,8 +172,8 @@ function CouponsSection({ sellerKey, seller }) {
     <section aria-labelledby="cupons-titulo" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="cupons-titulo" className="font-display text-xl font-bold text-ink">Cupons</h2>
-          <p className="text-sm text-gray-500">Cupom usado não se apaga (some a conta de quanto rendeu): desligue.</p>
+          <h2 id="cupons-titulo" className="font-display text-xl font-bold text-ink">{t('Cupons')}</h2>
+          <p className="text-sm text-gray-500">{t('Cupom usado não se apaga (some a conta de quanto rendeu): desligue.')}</p>
         </div>
         {(q.data || []).length > 0 && novo}
       </div>
@@ -182,11 +183,11 @@ function CouponsSection({ sellerKey, seller }) {
         <ShareImageDialog
           open
           onOpenChange={(v) => { if (!v) setDivulgar(null); }}
-          title={`Cartão do cupom ${divulgar.code}`}
-          description="Quem abre o link chega à sua loja com o cupom já aplicado no carrinho."
+          title={t('Cartão do cupom {codigo}', { codigo: divulgar.code })}
+          description={t('Quem abre o link chega à sua loja com o cupom já aplicado no carrinho.')}
           url={typeof window !== 'undefined' ? couponShareUrl(window.location.origin, sellerKey, divulgar.code) : ''}
           fileName={`cupom-${divulgar.code}.png`}
-          shareText={`${couponBenefitLabel(divulgar)} em ${seller?.display_name || 'minha loja'} no Mercado PickleRush. Cupom ${divulgar.code}`}
+          shareText={t('{beneficio} em {loja} no Mercado PickleRush. Cupom {codigo}', { beneficio: couponBenefitLabel(divulgar), loja: seller?.display_name || t('minha loja'), codigo: divulgar.code })}
           renderCard={({ ref, qr, showImage }) => (
             <MarketShareCard ref={ref} kind="coupon" image={seller?.banner_url || seller?.logo_url} showImage={showImage} qr={qr}
               title={couponBenefitLabel(divulgar)} subtitle={[seller?.display_name, couponConditionsLabel(divulgar)].filter(Boolean).join(' · ')} code={divulgar.code} />
@@ -205,29 +206,29 @@ function GiftSettings({ sellerKey, seller }) {
   const semPix = priv.isSuccess && !priv.data?.pix_key;
   const salvar = () => {
     const amounts = f.amounts.split(/[;\n]/).map((x) => parseBRL(x.trim())).filter((x) => x);
-    if (f.enabled && semPix) { toast.error('Cadastre a chave Pix em Recebimento antes de vender vale-presente.'); return; }
+    if (f.enabled && semPix) { toast.error(t('Cadastre a chave Pix em Recebimento antes de vender vale-presente.')); return; }
     m.mutate({ input: { enabled: f.enabled, amounts_cents: amounts, allow_custom: f.allow_custom, validity_months: Number(f.validity_months), note: f.note } }, {
-      onSuccess: () => toast.success(f.enabled ? 'Vale-presente à venda na sua vitrine.' : 'Vale-presente desligado.'),
+      onSuccess: () => toast.success(f.enabled ? t('Vale-presente à venda na sua vitrine.') : t('Vale-presente desligado.')),
       onError: (e) => toast.error(e.message),
     });
   };
   return (
     <V2Surface variant="compacto" className="space-y-4 p-5">
-      <V2Toggle id="vale-on" label="Vender vale-presente na vitrine" hint="Quem compra paga pelo seu Pix; o vale nasce quando você confirma o pagamento." checked={f.enabled} onChange={(v) => setF((x) => ({ ...x, enabled: v }))} />
-      {semPix && <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">Falta a chave Pix (aba Recebimento) para vender vale-presente.</p>}
+      <V2Toggle id="vale-on" label={t('Vender vale-presente na vitrine')} hint={t('Quem compra paga pelo seu Pix; o vale nasce quando você confirma o pagamento.')} checked={f.enabled} onChange={(v) => setF((x) => ({ ...x, enabled: v }))} />
+      {semPix && <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">{t('Falta a chave Pix (aba Recebimento) para vender vale-presente.')}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Valores (R$)" htmlFor="vale-valores" hint={`Separe com ponto e vírgula. Até ${GIFT_CARD_LIMITS.maxAmounts}.`}>
-          <V2Input id="vale-valores" value={f.amounts} onChange={(e) => setF((x) => ({ ...x, amounts: e.target.value }))} placeholder="50,00; 100,00; 200,00" />
+        <V2Field label={t('Valores (R$)')} htmlFor="vale-valores" hint={t('Separe com ponto e vírgula. Até {n}.', { n: GIFT_CARD_LIMITS.maxAmounts })}>
+          <V2Input id="vale-valores" value={f.amounts} onChange={(e) => setF((x) => ({ ...x, amounts: e.target.value }))} placeholder={t('50,00; 100,00; 200,00')} />
         </V2Field>
-        <V2Field label="Validade" htmlFor="vale-validade">
+        <V2Field label={t('Validade')} htmlFor="vale-validade">
           <V2Select id="vale-validade" value={f.validity_months} onChange={(e) => setF((x) => ({ ...x, validity_months: e.target.value }))}>
-            {GIFT_CARD_VALIDITY_OPTIONS.map((v) => <option key={v} value={v}>{v} meses</option>)}
+            {GIFT_CARD_VALIDITY_OPTIONS.map((v) => <option key={v} value={v}>{t('{n} meses', { n: v })}</option>)}
           </V2Select>
         </V2Field>
       </div>
-      <V2Toggle id="vale-livre" label="Deixar escolher outro valor" checked={f.allow_custom} onChange={(v) => setF((x) => ({ ...x, allow_custom: v }))} />
-      <V2Field label="Recado no vale (opcional)" htmlFor="vale-nota"><V2Input id="vale-nota" maxLength={140} value={f.note} onChange={(e) => setF((x) => ({ ...x, note: e.target.value }))} placeholder="Ex.: vale em toda a loja, inclusive aulas" /></V2Field>
-      <div className="flex justify-end"><V2Button type="button" onClick={salvar} disabled={m.isPending}>{m.isPending ? 'Salvando…' : 'Salvar'}</V2Button></div>
+      <V2Toggle id="vale-livre" label={t('Deixar escolher outro valor')} checked={f.allow_custom} onChange={(v) => setF((x) => ({ ...x, allow_custom: v }))} />
+      <V2Field label={t('Recado no vale (opcional)')} htmlFor="vale-nota"><V2Input id="vale-nota" maxLength={140} value={f.note} onChange={(e) => setF((x) => ({ ...x, note: e.target.value }))} placeholder={t('Ex.: vale em toda a loja, inclusive aulas')} /></V2Field>
+      <div className="flex justify-end"><V2Button type="button" onClick={salvar} disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar')}</V2Button></div>
     </V2Surface>
   );
 }
@@ -249,22 +250,22 @@ function IssueDialog({ sellerKey, onClose }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md" sheet>
         <DialogHeader>
-          <DialogTitle>Emitir um vale</DialogTitle>
-          <DialogDescription>Prêmio de torneio, cortesia, troca de produto: um vale da sua loja, sem pagamento.</DialogDescription>
+          <DialogTitle>{t('Emitir um vale')}</DialogTitle>
+          <DialogDescription>{t('Prêmio de torneio, cortesia, troca de produto: um vale da sua loja, sem pagamento.')}</DialogDescription>
         </DialogHeader>
         {feito ? (
           <div className="space-y-3 text-center">
-            <p className="text-sm text-gray-600">Vale emitido. Mande o código a quem vai usar: ele resgata em Mercado → Vales-presente.</p>
-            <CopyCodeButton code={feito.code} successMessage="Código copiado. Mande a quem ganhou." />
-            <V2Button type="button" className="w-full" onClick={onClose}>Pronto</V2Button>
+            <p className="text-sm text-gray-600">{t('Vale emitido. Mande o código a quem vai usar: ele resgata em Mercado → Vales-presente.')}</p>
+            <CopyCodeButton code={feito.code} successMessage={t('Código copiado. Mande a quem ganhou.')} />
+            <V2Button type="button" className="w-full" onClick={onClose}>{t('Pronto')}</V2Button>
           </div>
         ) : (
           <form className="space-y-3" onSubmit={emitir}>
-            <V2Field label="Valor (R$)" htmlFor="em-valor"><V2Input id="em-valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} /></V2Field>
-            <V2Field label="Para (opcional)" htmlFor="em-para"><V2Input id="em-para" maxLength={60} value={para} onChange={(e) => setPara(e.target.value)} /></V2Field>
-            <V2Field label="Mensagem (opcional)" htmlFor="em-msg"><V2Input id="em-msg" maxLength={200} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Parabéns pelo título!" /></V2Field>
-            <V2Field label="Anotação interna (opcional)" htmlFor="em-nota" hint="Só a sua loja vê."><V2Input id="em-nota" maxLength={140} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ex.: 1º lugar do torneio de outubro" /></V2Field>
-            <V2Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? 'Emitindo…' : 'Emitir vale'}</V2Button>
+            <V2Field label={t('Valor (R$)')} htmlFor="em-valor"><V2Input id="em-valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} /></V2Field>
+            <V2Field label={t('Para (opcional)')} htmlFor="em-para"><V2Input id="em-para" maxLength={60} value={para} onChange={(e) => setPara(e.target.value)} /></V2Field>
+            <V2Field label={t('Mensagem (opcional)')} htmlFor="em-msg"><V2Input id="em-msg" maxLength={200} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={t('Parabéns pelo título!')} /></V2Field>
+            <V2Field label={t('Anotação interna (opcional)')} htmlFor="em-nota" hint={t('Só a sua loja vê.')}><V2Input id="em-nota" maxLength={140} value={nota} onChange={(e) => setNota(e.target.value)} placeholder={t('Ex.: 1º lugar do torneio de outubro')} /></V2Field>
+            <V2Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? t('Emitindo…') : t('Emitir vale')}</V2Button>
           </form>
         )}
       </DialogContent>
@@ -282,10 +283,10 @@ function GiftCardsSection({ sellerKey, seller }) {
     <section aria-labelledby="vales-titulo" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="vales-titulo" className="font-display text-xl font-bold text-ink">Vale-presente</h2>
-          <p className="text-sm text-gray-500">{q.isSuccess && lista.length ? `${lista.length} vales · ${formatBRL(saldo)} em saldo a usar na sua loja` : 'Um presente que traz um cliente novo para a sua loja.'}</p>
+          <h2 id="vales-titulo" className="font-display text-xl font-bold text-ink">{t('Vale-presente')}</h2>
+          <p className="text-sm text-gray-500">{q.isSuccess && lista.length ? t('{n} vales · {valor} em saldo a usar na sua loja', { n: lista.length, valor: formatBRL(saldo) }) : t('Um presente que traz um cliente novo para a sua loja.')}</p>
         </div>
-        <V2Button type="button" variant="ghost" onClick={() => setEmitir(true)}><Gift className="h-4 w-4" /> Emitir vale</V2Button>
+        <V2Button type="button" variant="ghost" onClick={() => setEmitir(true)}><Gift className="h-4 w-4" /> {t('Emitir vale')}</V2Button>
       </div>
       <GiftSettings sellerKey={sellerKey} seller={seller} />
       {q.isError ? <V2ErrorState inline onRetry={() => q.refetch()} /> : q.isLoading ? <V2Skeleton lines={2} /> : lista.length > 0 && (
@@ -293,20 +294,20 @@ function GiftCardsSection({ sellerKey, seller }) {
           {lista.slice(0, 50).map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
               <span className="min-w-0">
-                <span className="block font-bold text-ink">{maskGiftCardCode(c.code)} · {formatBRL(c.balance_cents)} de {formatBRL(c.initial_cents)}</span>
+                <span className="block font-bold text-ink">{maskGiftCardCode(c.code)} · {t('{saldo} de {total}', { saldo: formatBRL(c.balance_cents), total: formatBRL(c.initial_cents) })}</span>
                 <span className="block text-xs text-gray-500">
-                  {c.source === 'order' ? 'Vendido' : 'Emitido'}{c.recipient_name ? ` para ${c.recipient_name}` : ''}{c.note ? ` · ${c.note}` : ''}
-                  {c.expires_at_ms ? ` · vence ${new Date(c.expires_at_ms).toLocaleDateString('pt-BR')}` : ''}
+                  {c.source === 'order' ? t('Vendido') : t('Emitido')}{c.recipient_name ? ` ${t('para {nome}', { nome: c.recipient_name })}` : ''}{c.note ? ` · ${c.note}` : ''}
+                  {c.expires_at_ms ? ` · ${t('vence {data}', { data: fmtData(c.expires_at_ms, { day: '2-digit', month: '2-digit', year: 'numeric' }) })}` : ''}
                 </span>
               </span>
               <span className="flex items-center gap-2">
-                <V2Badge tone={c.status === GIFT_CARD_STATUS.ACTIVE ? 'green' : 'neutral'}>{c.status === GIFT_CARD_STATUS.CANCELLED ? 'Cancelado' : c.status === GIFT_CARD_STATUS.USED ? 'Usado' : c.claimed_at_ms ? 'Resgatado' : 'A resgatar'}</V2Badge>
+                <V2Badge tone={c.status === GIFT_CARD_STATUS.ACTIVE ? 'green' : 'neutral'}>{c.status === GIFT_CARD_STATUS.CANCELLED ? t('Cancelado') : c.status === GIFT_CARD_STATUS.USED ? t('Usado') : c.claimed_at_ms ? t('Resgatado') : t('A resgatar')}</V2Badge>
                 {c.source !== 'order' && c.status !== GIFT_CARD_STATUS.CANCELLED && (
                   <V2Button type="button" size="sm" variant="ghost" onClick={() => {
-                    const motivo = window.prompt('Por que cancelar este vale? (quem tem o vale é avisado)');
-                    if (motivo) cancelar.mutate({ action: 'cancel', id: c.id, reason: motivo }, { onSuccess: () => toast.success('Vale cancelado.'), onError: (e) => toast.error(e.message) });
+                    const motivo = window.prompt(t('Por que cancelar este vale? (quem tem o vale é avisado)'));
+                    if (motivo) cancelar.mutate({ action: 'cancel', id: c.id, reason: motivo }, { onSuccess: () => toast.success(t('Vale cancelado.')), onError: (e) => toast.error(e.message) });
                   }}
-                  >Cancelar</V2Button>
+                  >{t('Cancelar')}</V2Button>
                 )}
               </span>
             </li>
@@ -326,20 +327,20 @@ function ShareSection({ sellerKey, seller }) {
   return (
     <V2Surface variant="plano" className="flex flex-wrap items-center justify-between gap-3 p-5">
       <div>
-        <h2 className="font-display text-lg font-bold text-ink">Divulgue a sua vitrine</h2>
-        <p className="text-sm text-gray-500">Uma imagem com QR para os stories, o grupo do clube e o balcão.</p>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Divulgue a sua vitrine')}</h2>
+        <p className="text-sm text-gray-500">{t('Uma imagem com QR para os stories, o grupo do clube e o balcão.')}</p>
       </div>
-      <V2Button type="button" onClick={() => setOpen(true)}><Share2 className="h-4 w-4" /> Cartão da loja</V2Button>
+      <V2Button type="button" onClick={() => setOpen(true)}><Share2 className="h-4 w-4" /> {t('Cartão da loja')}</V2Button>
       <ShareImageDialog
         open={open}
         onOpenChange={setOpen}
-        title="Cartão da sua loja"
+        title={t('Cartão da sua loja')}
         url={url}
         fileName={`loja-${sellerKey}.png`}
-        shareText={`Conheça ${seller.display_name} no Mercado PickleRush`}
+        shareText={t('Conheça {loja} no Mercado PickleRush', { loja: seller.display_name })}
         renderCard={({ ref, qr, showImage }) => (
           <MarketShareCard ref={ref} kind="store" image={seller.banner_url || seller.logo_url} showImage={showImage} qr={qr} title={seller.display_name}
-            subtitle={[seller.city, seller.state].filter(Boolean).join(' · ')} highlight={n ? `${n} produtos à venda` : ''} />
+            subtitle={[seller.city, seller.state].filter(Boolean).join(' · ')} highlight={n ? tn(n, '{n} produto à venda', '{n} produtos à venda') : ''} />
         )}
       />
     </V2Surface>

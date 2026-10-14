@@ -22,6 +22,7 @@ import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplica
 import { createAuditLog } from '@/core/services/auditService';
 import { couponDocId, giftCardConfig, normalizeCouponCode, validateCouponInput } from '../domain/promotions.js';
 import { notifyUsers } from '@/core/services/notificationService';
+import { t } from '@/core/i18n';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 
@@ -82,11 +83,11 @@ export async function getSellerPrivate(key) {
  */
 export async function ensureSeller({ type, entityId, uid, displayName, city = '', state = '', photoUrl = '' }) {
   const key = sellerKeyFor(type, entityId);
-  if (!key || type === SELLER_TYPE.STORE) throw new MarketError('Tipo de vendedor inválido.');
+  if (!key || type === SELLER_TYPE.STORE) throw new MarketError(t('Tipo de vendedor inválido.'));
   const atual = await getSeller(key);
   if (atual) return atual;
   const name = String(displayName || '').trim().slice(0, 60);
-  if (name.length < 2) throw new MarketError('Diga o nome que aparece para os compradores.');
+  if (name.length < 2) throw new MarketError(t('Diga o nome que aparece para os compradores.'));
   const data = {
     seller_key: key, seller_type: type, entity_id: entityId, owner_uid: uid, status: SELLER_STATUS.ACTIVE,
     display_name: name, city, state, logo_url: photoUrl || '', bio: '',
@@ -101,7 +102,7 @@ export async function updateSellerProfile(key, input = {}) {
   const patch = {};
   if (input.display_name != null) {
     const n = String(input.display_name).trim();
-    if (n.length < 2 || n.length > 60) throw new MarketError('Nome entre 2 e 60 caracteres.', { display_name: 'Nome entre 2 e 60 caracteres.' });
+    if (n.length < 2 || n.length > 60) throw new MarketError(t('Nome entre 2 e 60 caracteres.'), { display_name: t('Nome entre 2 e 60 caracteres.') });
     patch.display_name = n;
   }
   ['bio', 'city', 'state', 'logo_url', 'banner_url', 'website'].forEach((k) => {
@@ -120,7 +121,7 @@ export async function updateSellerProfile(key, input = {}) {
 
 export async function savePayment(key, input) {
   const r = validatePayment(input);
-  if (!r.ok) throw new MarketError('Confira os dados do Pix.', r.errors);
+  if (!r.ok) throw new MarketError(t('Confira os dados do Pix.'), r.errors);
   await setDoc(doc(db, C.sellers, key, 'private', 'data'), { ...r.value, updated_at: serverTimestamp() }, { merge: true });
   return r.value;
 }
@@ -128,10 +129,10 @@ export async function savePayment(key, input) {
 /** "Abrir minha loja": vai para análise do admin. A recusada pode pedir de novo. */
 export async function applyStore(uid, input) {
   const r = validateStoreApplication(input);
-  if (!r.ok) throw new MarketError('Confira os dados da loja.', r.errors);
+  if (!r.ok) throw new MarketError(t('Confira os dados da loja.'), r.errors);
   const key = sellerKeyFor(SELLER_TYPE.STORE, uid);
   const atual = await getSeller(key);
-  if (atual && atual.status !== SELLER_STATUS.REJECTED) throw new MarketError('Você já tem uma loja cadastrada.');
+  if (atual && atual.status !== SELLER_STATUS.REJECTED) throw new MarketError(t('Você já tem uma loja cadastrada.'));
   if (atual) {
     await updateDoc(doc(db, C.sellers, key), { ...r.public, status: SELLER_STATUS.PENDING, reject_reason: null, updated_at: serverTimestamp() });
   } else {
@@ -153,7 +154,7 @@ export async function reviewSeller(seller, { status, reason = '', verified }, { 
   const patch = { reviewed_by: actor.uid, reviewed_at: serverTimestamp(), updated_at: serverTimestamp() };
   if (status) patch.status = status;
   if (status === SELLER_STATUS.REJECTED || status === SELLER_STATUS.SUSPENDED) {
-    if (String(reason).trim().length < 5) throw new MarketError('Escreva o motivo (a pessoa vai ler).');
+    if (String(reason).trim().length < 5) throw new MarketError(t('Escreva o motivo (a pessoa vai ler).'));
     patch.reject_reason = String(reason).trim().slice(0, 300);
   } else if (status === SELLER_STATUS.ACTIVE) {
     patch.reject_reason = null;
@@ -229,14 +230,14 @@ export async function getListings(ids = []) {
     if (x.status === 'fulfilled') out[unicos[i]] = x.value || null;
     else failed += 1;
   });
-  if (failed && failed === unicos.length) throw new Error('Não foi possível carregar os anúncios.');
+  if (failed && failed === unicos.length) throw new Error(t('Não foi possível carregar os anúncios.'));
   return out;
 }
 
 /** Confere o texto contra os termos proibidos ANTES de gravar (o servidor confere de novo). */
 function conferirTermos(value, settings) {
   const termo = findBannedTerm(`${value.title} ${value.description}`, settings?.banned_terms || []);
-  if (termo) throw new MarketError(`O anúncio cita "${termo}", que não é permitido no Mercado.`, { title: 'Termo não permitido.' });
+  if (termo) throw new MarketError(t('O anúncio cita "{termo}", que não é permitido no Mercado.', { termo }), { title: t('Termo não permitido.') });
 }
 
 /**
@@ -244,9 +245,9 @@ function conferirTermos(value, settings) {
  * `seller` é a ficha (`market_sellers/{key}`) em nome de quem se vende.
  */
 export async function saveListing({ id, input, publish, seller, uid, settings, keepQuantity = false }) {
-  if (!seller || seller.status !== SELLER_STATUS.ACTIVE) throw new MarketError('Este vendedor não está ativo no Mercado.');
+  if (!seller || seller.status !== SELLER_STATUS.ACTIVE) throw new MarketError(t('Este vendedor não está ativo no Mercado.'));
   const r = validateListingInput(input, { publish });
-  if (!r.ok) throw new MarketError('Confira os campos destacados.', r.errors);
+  if (!r.ok) throw new MarketError(t('Confira os campos destacados.'), r.errors);
   conferirTermos(r.value, settings);
   const antes = id ? await getListing(id) : null;
   const qtd = id && keepQuantity ? Number(antes?.quantity) || 0 : r.value.quantity;
@@ -282,22 +283,22 @@ export async function quickEditListing(listing, { price_cents, quantity, compare
   const patch = { updated_at: serverTimestamp() };
   if (price_cents != null) {
     const p = Math.round(Number(price_cents));
-    if (!(p > 0)) throw new MarketError('Informe o preço.');
+    if (!(p > 0)) throw new MarketError(t('Informe o preço.'));
     patch.price_cents = p;
     if (compare_at_cents !== undefined) {
       const c = compare_at_cents == null || compare_at_cents === '' ? null : Math.round(Number(compare_at_cents));
-      if (c != null && !(c > p)) throw new MarketError('O preço "de" precisa ser maior que o preço atual.');
+      if (c != null && !(c > p)) throw new MarketError(t('O preço "de" precisa ser maior que o preço atual.'));
       patch.compare_at_cents = c;
     } else if (listing.compare_at_cents && !(listing.compare_at_cents > p)) {
       patch.compare_at_cents = null; // o "de" deixou de ser maior: sai o riscado
     }
   }
   if (quantity != null && listing.source?.kind === 'arena_product' && listing.source.tracked) {
-    throw new MarketError('A quantidade deste anúncio acompanha o estoque da arena. Registre a compra no estoque da arena.');
+    throw new MarketError(t('A quantidade deste anúncio acompanha o estoque da arena. Registre a compra no estoque da arena.'));
   }
   if (quantity != null) {
     const q = Math.floor(Number(quantity));
-    if (!(q >= 0 && q <= 9999)) throw new MarketError('Quantidade entre 0 e 9999.');
+    if (!(q >= 0 && q <= 9999)) throw new MarketError(t('Quantidade entre 0 e 9999.'));
     patch.quantity = q;
     if (q === 0 && listing.status === 'active') patch.status = 'sold_out';
     if (q > 0 && listing.status === 'sold_out') patch.status = 'active';
@@ -307,7 +308,7 @@ export async function quickEditListing(listing, { price_cents, quantity, compare
 
 /** Só o que nunca vendeu pode ser apagado (o pedido aponta para ele). */
 export async function deleteListing(listing) {
-  if ((listing.quantity_sold || 0) > 0) throw new MarketError('Este anúncio já vendeu: encerre em vez de apagar.');
+  if ((listing.quantity_sold || 0) > 0) throw new MarketError(t('Este anúncio já vendeu: encerre em vez de apagar.'));
   await deleteDoc(doc(db, C.listings, listing.id));
 }
 
@@ -318,7 +319,7 @@ export async function deleteListing(listing) {
 export async function moderateListing(listing, { action, reason = '' }, { uid, actor } = {}) {
   const by = uid || actor?.uid || null;
   const motivo = String(reason).trim().slice(0, 300);
-  if (action === 'remove' && !motivo) throw new MarketError('Diga o motivo: quem vende vai ler.');
+  if (action === 'remove' && !motivo) throw new MarketError(t('Diga o motivo: quem vende vai ler.'));
   const moderation = { status: action === 'remove' ? 'removed' : 'ok', reason: motivo, by, at_ms: Date.now(), auto: false };
   const patch = { moderation, updated_at: serverTimestamp() };
   if (action === 'remove') patch.status = 'removed';
@@ -350,16 +351,16 @@ export async function getMyReport(listingId, uid) {
 }
 
 export async function reportListing({ listing, uid, reason, text = '' }) {
-  if (!REPORT_REASON_LABELS[reason]) throw new MarketError('Escolha o motivo.');
-  const t = String(text || '').trim();
-  if (t.length > 500) throw new MarketError('Use até 500 caracteres.');
+  if (!REPORT_REASON_LABELS[reason]) throw new MarketError(t('Escolha o motivo.'));
+  const texto = String(text || '').trim();
+  if (texto.length > 500) throw new MarketError(t('Use até 500 caracteres.'));
   await setDoc(doc(db, C.reports, reportId(listing.id, uid)), {
     listing_id: listing.id,
     listing_title: String(listing.title || '').slice(0, 120),
     seller_key: listing.seller_key,
     reporter_uid: uid,
     reason,
-    text: t,
+    text: texto,
     status: 'open',
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
@@ -495,11 +496,11 @@ export async function getMyCouponUses(couponId, uid) {
 
 export async function saveCoupon({ id, input, sellerKey, uid, actor }) {
   const r = validateCouponInput(input);
-  if (!r.ok) throw new MarketError('Confira os campos destacados.', r.errors);
+  if (!r.ok) throw new MarketError(t('Confira os campos destacados.'), r.errors);
   const docId = id || couponDocId(sellerKey, r.value.code);
   if (!id) {
     const existe = await getDoc(doc(db, C.coupons, docId));
-    if (existe.exists()) throw new MarketError('Você já tem um cupom com este código.', { code: 'Código já usado nesta loja.' });
+    if (existe.exists()) throw new MarketError(t('Você já tem um cupom com este código.'), { code: t('Código já usado nesta loja.') });
     await setDoc(doc(db, C.coupons, docId), {
       ...r.value, seller_key: sellerKey, uses_count: 0, created_by: uid,
       created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
@@ -529,7 +530,7 @@ export async function listAllCoupons() {
  */
 export async function adminDisableCoupon(coupon, { reason = '', actor } = {}) {
   const motivo = String(reason).trim().slice(0, 300);
-  if (!motivo) throw new MarketError('Diga o motivo: quem vende vai ler.');
+  if (!motivo) throw new MarketError(t('Diga o motivo: quem vende vai ler.'));
   await updateDoc(doc(db, C.coupons, coupon.id), { active: false, updated_at: serverTimestamp() });
   const extras = await Promise.allSettled([
     createAuditLog({

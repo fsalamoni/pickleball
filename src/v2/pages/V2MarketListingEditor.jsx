@@ -31,6 +31,7 @@ import {
 } from '@/v2/ui/primitives';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { ListingCard, MarketGate } from '@/v2/components/marketplace/marketUi';
+import { t } from '@/core/i18n';
 
 const centsText = (c) => (c == null || c === '' ? '' : formatBRL(c).replace(/^R\$\s?/, ''));
 
@@ -95,7 +96,7 @@ function MediaEditor({ media, onChange, error }) {
       try {
         const prep = await prepareMarketFile(file, { allowVideo: asVideo });
         if (!prep.ok) throw new Error(prep.error);
-        if (asVideo !== (prep.type === 'video')) throw new Error(asVideo ? 'Escolha um arquivo de vídeo.' : 'Escolha uma foto.');
+        if (asVideo !== (prep.type === 'video')) throw new Error(asVideo ? t('Escolha um arquivo de vídeo.') : t('Escolha uma foto.'));
         const up = uploadMarketFile(prep.file, { uid: user.uid, kind: prep.type, folder: 'anuncios', onProgress: (pct) => setEnvios((xs) => xs.map((e) => (e.id === id ? { ...e, pct } : e))) });
         const r = await up.done;
         onChange((atual) => (asVideo
@@ -125,18 +126,18 @@ function MediaEditor({ media, onChange, error }) {
         {fotos.map((m, i) => (
           <li key={m.url} className="space-y-1.5">
             <div className="relative aspect-square overflow-hidden rounded-2xl border border-gray-100 bg-paper">
-              <img src={m.url} alt={m.alt || `Foto ${i + 1}`} className="h-full w-full object-cover" />
-              {i === 0 && <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-2xs font-bold text-white"><Star className="h-3 w-3" /> Capa</span>}
+              <img src={m.url} alt={m.alt || t('Foto {n}', { n: i + 1 })} className="h-full w-full object-cover" />
+              {i === 0 && <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-2xs font-bold text-white"><Star className="h-3 w-3" /> {t('Capa')}</span>}
               <div className="absolute inset-x-1 bottom-1 flex justify-between">
                 <span className="flex gap-1">
-                  <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Mover a foto ${i + 1} para a esquerda`} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => mover(i, 1)} disabled={i === fotos.length - 1} aria-label={`Mover a foto ${i + 1} para a direita`} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={t('Mover a foto {n} para a esquerda', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => mover(i, 1)} disabled={i === fotos.length - 1} aria-label={t('Mover a foto {n} para a direita', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
                 </span>
-                <button type="button" onClick={() => tirar(m)} aria-label={`Tirar a foto ${i + 1}`} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-red-600"><Trash2 className="h-4 w-4" /></button>
+                <button type="button" onClick={() => tirar(m)} aria-label={t('Tirar a foto {n}', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-red-600"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
-            <label className="sr-only" htmlFor={`alt-${i}`}>Descrição da foto {i + 1}</label>
-            <input id={`alt-${i}`} value={m.alt || ''} maxLength={140} onChange={(e) => legenda(m, e.target.value)} placeholder="Descreva a foto (opcional)" className="w-full rounded-xl border border-gray-200 bg-paper-pure px-2 py-1.5 text-xs text-ink" />
+            <label className="sr-only" htmlFor={`alt-${i}`}>{t('Descrição da foto {n}', { n: i + 1 })}</label>
+            <input id={`alt-${i}`} value={m.alt || ''} maxLength={140} onChange={(e) => legenda(m, e.target.value)} placeholder={t('Descreva a foto (opcional)')} className="w-full rounded-xl border border-gray-200 bg-paper-pure px-2 py-1.5 text-xs text-ink" />
           </li>
         ))}
         {envios.map((e) => (
@@ -149,21 +150,21 @@ function MediaEditor({ media, onChange, error }) {
           <li>
             <button type="button" onClick={() => inputRef.current?.click()} className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-bold text-gray-500 hover:border-ink hover:text-ink">
               <ImagePlus className="h-7 w-7" />
-              Adicionar fotos
+              {t('Adicionar fotos')}
             </button>
           </li>
         )}
       </ul>
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files); e.target.value = ''; }} />
-      <p className="text-xs text-gray-500">Até {MEDIA_LIMITS.maxPhotos} fotos. A primeira é a capa. Fotos com boa luz, de frente e mostrando os detalhes (ou marcas de uso) vendem mais.</p>
+      <p className="text-xs text-gray-500">{t('Até {n} fotos. A primeira é a capa. Fotos com boa luz, de frente e mostrando os detalhes (ou marcas de uso) vendem mais.', { n: MEDIA_LIMITS.maxPhotos })}</p>
       <div className="flex flex-wrap items-center gap-3">
         {video ? (
           <span className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-sm text-ink">
-            <Video className="h-4 w-4" /> Vídeo enviado
-            <button type="button" onClick={() => tirar(video)} className="font-bold text-red-600 underline">Tirar</button>
+            <Video className="h-4 w-4" /> {t('Vídeo enviado')}
+            <button type="button" onClick={() => tirar(video)} className="font-bold text-red-600 underline">{t('Tirar')}</button>
           </span>
         ) : (
-          <V2Button type="button" size="sm" variant="ghost" onClick={() => videoRef.current?.click()}><Video className="h-4 w-4" /> Enviar um vídeo (até {MEDIA_LIMITS.maxVideoSeconds} s)</V2Button>
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => videoRef.current?.click()}><Video className="h-4 w-4" /> {t('Enviar um vídeo (até {n} s)', { n: MEDIA_LIMITS.maxVideoSeconds })}</V2Button>
         )}
         <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files, { asVideo: true }); e.target.value = ''; }} />
       </div>
@@ -174,13 +175,13 @@ function MediaEditor({ media, onChange, error }) {
 
 function AttributeField({ attr, value, onChange, error }) {
   const id = `attr-${attr.key}`;
-  const label = attr.unit ? `${attr.label} (${attr.unit})` : attr.label;
+  const label = attr.unit ? `${t(attr.label)} (${attr.unit})` : t(attr.label);
   if (attr.type === 'select') {
     return (
       <V2Field label={label} htmlFor={id} error={error}>
         <V2Select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
           <option value="">—</option>
-          {attr.options.map((o) => <option key={o} value={o}>{attr.unit ? `${o} ${attr.unit}` : o}</option>)}
+          {attr.options.map((o) => <option key={o} value={o}>{attr.unit ? `${o} ${attr.unit}` : t(o)}</option>)}
         </V2Select>
       </V2Field>
     );
@@ -189,7 +190,7 @@ function AttributeField({ attr, value, onChange, error }) {
     return (
       <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
         <input type="checkbox" checked={value === true || value === 'true'} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-ink" />
-        {attr.label}
+        {t(attr.label)}
       </label>
     );
   }
@@ -246,7 +247,7 @@ function EditorPage() {
     const r = validateListingInput(input, { publish });
     if (!r.ok) {
       setErrors(r.errors);
-      toast.error('Confira os campos destacados.');
+      toast.error(t('Confira os campos destacados.'));
       requestAnimationFrame(() => { const el = document.querySelector('#editor-anuncio .text-red-500'); if (el) rolarAte(el, { reservaInferior: 96 }); });
       return;
     }
@@ -259,10 +260,10 @@ function EditorPage() {
           try {
             await linkArenaProduct({ listingId: id, productId: produto });
           } catch (e) {
-            toast.warning(`O anúncio foi salvo, mas não foi ligado ao estoque da arena: ${e.message}`);
+            toast.warning(t('O anúncio foi salvo, mas não foi ligado ao estoque da arena: {erro}', { erro: e.message }));
           }
         }
-        toast.success(publish ? 'Anúncio no ar.' : 'Rascunho salvo.');
+        toast.success(publish ? t('Anúncio no ar.') : t('Rascunho salvo.'));
         navigate(`/mercado/vender?como=${encodeURIComponent(sellerKey)}&aba=anuncios`, { replace: true, state: { destaque: id } });
       },
       onError: (e) => { setErrors(e.fieldErrors || {}); toast.error(e.message); },
@@ -275,18 +276,18 @@ function EditorPage() {
   if (!operador || !sq.data || (editing && !listing)) {
     return (
       <V2Surface className="mx-auto max-w-xl text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">Não dá para editar este anúncio</h1>
-        <p className="mt-2 text-gray-500">{!sq.data ? 'Comece a vender pelo painel antes de criar o primeiro anúncio.' : 'Este anúncio não é de uma conta que você opera.'}</p>
-        <Link to="/mercado/vender" className="mt-4 inline-flex font-bold text-ink underline">Ir para o painel de vendas</Link>
+        <h1 className="font-display text-2xl font-bold text-ink">{t('Não dá para editar este anúncio')}</h1>
+        <p className="mt-2 text-gray-500">{!sq.data ? t('Comece a vender pelo painel antes de criar o primeiro anúncio.') : t('Este anúncio não é de uma conta que você opera.')}</p>
+        <Link to="/mercado/vender" className="mt-4 inline-flex font-bold text-ink underline">{t('Ir para o painel de vendas')}</Link>
       </V2Surface>
     );
   }
   if (listing?.status === 'removed') {
     return (
       <V2Surface className="mx-auto max-w-xl text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">Anúncio tirado do ar pela moderação</h1>
-        <p className="mt-2 text-gray-500">{listing.moderation?.reason || 'Ele não pode ser editado.'}</p>
-        <Link to={voltar} className="mt-4 inline-flex font-bold text-ink underline">Voltar aos anúncios</Link>
+        <h1 className="font-display text-2xl font-bold text-ink">{t('Anúncio tirado do ar pela moderação')}</h1>
+        <p className="mt-2 text-gray-500">{listing.moderation?.reason || t('Ele não pode ser editado.')}</p>
+        <Link to={voltar} className="mt-4 inline-flex font-bold text-ink underline">{t('Voltar aos anúncios')}</Link>
       </V2Surface>
     );
   }
@@ -295,48 +296,48 @@ function EditorPage() {
   const ship = form.fulfillment.includes('shipping');
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-28">
-      <V2BackLink to={voltar}>Meus anúncios</V2BackLink>
-      <V2PageIntro title={editing ? 'Editar anúncio' : 'Novo anúncio'} subtitle={`Vendendo como ${sq.data.display_name}`} />
+      <V2BackLink to={voltar}>{t('Meus anúncios')}</V2BackLink>
+      <V2PageIntro title={editing ? t('Editar anúncio') : t('Novo anúncio')} subtitle={t('Vendendo como {nome}', { nome: sq.data.display_name })} />
       <div className="grid gap-6 lg:grid-cols-12">
         <form id="editor-anuncio" className="space-y-6 lg:col-span-8" onSubmit={(e) => { e.preventDefault(); salvar(true); }} noValidate>
-          <Section id="fotos" title="Fotos e vídeo">
+          <Section id="fotos" title={t('Fotos e vídeo')}>
             <MediaEditor media={form.media} onChange={(fn) => set((f) => ({ media: fn(f.media) }))} error={errors.media} />
-            <V2Field label="Ou um link do YouTube/Vimeo" htmlFor="video-link" error={errors.video_link}>
-              <V2Input id="video-link" type="url" placeholder="https://youtube.com/…" value={form.video_link} onChange={(e) => set({ video_link: e.target.value })} />
+            <V2Field label={t('Ou um link do YouTube/Vimeo')} htmlFor="video-link" error={errors.video_link}>
+              <V2Input id="video-link" type="url" placeholder={t('https://youtube.com/…')} value={form.video_link} onChange={(e) => set({ video_link: e.target.value })} />
             </V2Field>
           </Section>
 
-          <Section id="oque" title="O que você está vendendo">
-            <V2Field label="Título" htmlFor="titulo" error={errors.title} hint={`${form.title.length}/${TEXT_LIMITS.title} · marca, modelo e o principal detalhe. Ex.: "Raquete Selkirk Vanguard Power Air 16 mm"`}>
+          <Section id="oque" title={t('O que você está vendendo')}>
+            <V2Field label={t('Título')} htmlFor="titulo" error={errors.title} hint={`${form.title.length}/${TEXT_LIMITS.title} · ${t('marca, modelo e o principal detalhe. Ex.: "Raquete Selkirk Vanguard Power Air 16 mm"')}`}>
               <V2Input id="titulo" maxLength={TEXT_LIMITS.title} value={form.title} onChange={(e) => set({ title: e.target.value })} />
             </V2Field>
-            <V2Field label="Categoria" htmlFor="categoria" error={errors.category_slug}>
+            <V2Field label={t('Categoria')} htmlFor="categoria" error={errors.category_slug}>
               <V2Select id="categoria" value={form.category_slug} onChange={(e) => set({ category_slug: e.target.value })}>
-                <option value="">Escolha…</option>
+                <option value="">{t('Escolha…')}</option>
                 {cats.map((c) => (
                   c.children.length ? (
-                    <optgroup key={c.slug} label={c.label}>
-                      <option value={c.slug}>{c.label} (geral)</option>
-                      {c.children.map((k) => <option key={k.slug} value={k.slug}>{k.label}</option>)}
+                    <optgroup key={c.slug} label={t(c.label)}>
+                      <option value={c.slug}>{t('{categoria} (geral)', { categoria: t(c.label) })}</option>
+                      {c.children.map((k) => <option key={k.slug} value={k.slug}>{t(k.label)}</option>)}
                     </optgroup>
-                  ) : <option key={c.slug} value={c.slug}>{c.label}</option>
+                  ) : <option key={c.slug} value={c.slug}>{t(c.label)}</option>
                 ))}
               </V2Select>
             </V2Field>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-bold text-ink">Estado</legend>
+              <legend className="text-sm font-bold text-ink">{t('Estado')}</legend>
               <div className="flex flex-wrap gap-2">
-                {[[LISTING_TYPE.NEW, 'Novo'], [LISTING_TYPE.USED, 'Usado']].map(([v, l]) => (
+                {[[LISTING_TYPE.NEW, t('Novo')], [LISTING_TYPE.USED, t('Usado')]].map(([v, l]) => (
                   <label key={v} className={cn('flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold', form.type === v ? 'border-ink bg-ink text-white' : 'border-gray-200 text-ink')}>
                     <input type="radio" name="tipo" value={v} checked={form.type === v} onChange={() => set({ type: v })} className="sr-only" />{l}
                   </label>
                 ))}
               </div>
               {form.type === LISTING_TYPE.USED && (
-                <V2Field label="Como está" htmlFor="condicao" error={errors.condition}>
+                <V2Field label={t('Como está')} htmlFor="condicao" error={errors.condition}>
                   <V2Select id="condicao" value={form.condition} onChange={(e) => set({ condition: e.target.value })}>
-                    <option value="">Escolha…</option>
-                    {['like_new', 'good', 'fair'].map((c) => <option key={c} value={c}>{CONDITION_LABELS[c]}</option>)}
+                    <option value="">{t('Escolha…')}</option>
+                    {['like_new', 'good', 'fair'].map((c) => <option key={c} value={c}>{t(CONDITION_LABELS[c])}</option>)}
                   </V2Select>
                 </V2Field>
               )}
@@ -344,7 +345,7 @@ function EditorPage() {
           </Section>
 
           {attrs.length > 0 && (
-            <Section id="caract" title="Características" hint="Opcional, mas é por elas que os compradores filtram a busca.">
+            <Section id="caract" title={t('Características')} hint={t('Opcional, mas é por elas que os compradores filtram a busca.')}>
               <div className="grid gap-4 sm:grid-cols-2">
                 {attrs.map((a) => (
                   <AttributeField key={a.key} attr={a} value={form.attributes[a.key]} error={errors[`attr_${a.key}`]} onChange={(v) => set((f) => ({ attributes: { ...f.attributes, [a.key]: v } }))} />
@@ -353,46 +354,46 @@ function EditorPage() {
             </Section>
           )}
 
-          <Section id="desc" title="Descrição">
-            <V2Field label="Conte os detalhes" htmlFor="descricao" hint={`${form.description.length}/${TEXT_LIMITS.description} · tempo de uso, o que acompanha, motivo da venda. Não coloque telefone: as conversas são pelo PickleRush.`}>
+          <Section id="desc" title={t('Descrição')}>
+            <V2Field label={t('Conte os detalhes')} htmlFor="descricao" hint={`${form.description.length}/${TEXT_LIMITS.description} · ${t('tempo de uso, o que acompanha, motivo da venda. Não coloque telefone: as conversas são pelo PickleRush.')}`}>
               <V2Textarea id="descricao" rows={6} maxLength={TEXT_LIMITS.description} value={form.description} onChange={(e) => set({ description: e.target.value })} />
             </V2Field>
           </Section>
 
-          <Section id="preco" title="Preço e estoque">
+          <Section id="preco" title={t('Preço e estoque')}>
             <div className="grid gap-4 sm:grid-cols-3">
-              <V2Field label="Preço (R$)" htmlFor="preco-v" error={errors.price_cents}>
-                <V2Input id="preco-v" inputMode="decimal" placeholder="0,00" value={form.price} onChange={(e) => set({ price: e.target.value })} />
+              <V2Field label={t('Preço (R$)')} htmlFor="preco-v" error={errors.price_cents}>
+                <V2Input id="preco-v" inputMode="decimal" placeholder={t('0,00')} value={form.price} onChange={(e) => set({ price: e.target.value })} />
               </V2Field>
-              <V2Field label="Preço “de” (opcional)" htmlFor="preco-de" error={errors.compare_at_cents} hint="Mostra o desconto riscado.">
-                <V2Input id="preco-de" inputMode="decimal" placeholder="0,00" value={form.compare_at} onChange={(e) => set({ compare_at: e.target.value })} />
+              <V2Field label={t('Preço “de” (opcional)')} htmlFor="preco-de" error={errors.compare_at_cents} hint={t('Mostra o desconto riscado.')}>
+                <V2Input id="preco-de" inputMode="decimal" placeholder={t('0,00')} value={form.compare_at} onChange={(e) => set({ compare_at: e.target.value })} />
               </V2Field>
               <V2Field
-                label="Quantidade"
+                label={t('Quantidade')}
                 htmlFor="qtd"
                 error={errors.quantity}
-                hint={listing?.source?.tracked ? 'Acompanha o estoque da arena.' : undefined}
+                hint={listing?.source?.tracked ? t('Acompanha o estoque da arena.') : undefined}
               >
                 <V2Input id="qtd" type="number" min={0} max={9999} value={form.quantity} disabled={Boolean(listing?.source?.tracked)} onChange={(e) => set({ quantity: e.target.value })} />
               </V2Field>
             </div>
             {(listing?.source?.kind === 'arena_product' || (!editing && params.get('produto'))) && (
               <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">
-                Este anúncio usa o estoque da arena: o que sair no balcão, na loja do app ou aqui é descontado do mesmo lugar.
-                A venda entra no estoque como saída quando você confirma o pagamento, e volta se o pedido for cancelado.
+                {t('Este anúncio usa o estoque da arena: o que sair no balcão, na loja do app ou aqui é descontado do mesmo lugar.')}
+                {' '}{t('A venda entra no estoque como saída quando você confirma o pagamento, e volta se o pedido for cancelado.')}
               </p>
             )}
             {settings.data?.offers_enabled !== false && (
               <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
                 <input type="checkbox" checked={form.accepts_offers} onChange={(e) => set({ accepts_offers: e.target.checked })} className="h-5 w-5 accent-ink" />
-                Aceito ofertas (o comprador propõe um valor e você aceita, recusa ou contrapropõe)
+                {t('Aceito ofertas (o comprador propõe um valor e você aceita, recusa ou contrapropõe)')}
               </label>
             )}
           </Section>
 
-          <Section id="entrega" title="Entrega" hint="O pagamento é por Pix direto para você, depois que você aceitar o pedido.">
+          <Section id="entrega" title={t('Entrega')} hint={t('O pagamento é por Pix direto para você, depois que você aceitar o pedido.')}>
             <fieldset className="space-y-2">
-              <legend className="sr-only">Formas de entrega</legend>
+              <legend className="sr-only">{t('Formas de entrega')}</legend>
               {Object.entries(FULFILLMENT_LABELS).map(([v, l]) => (
                 <label key={v} className="flex min-h-11 items-center gap-2 text-sm text-ink">
                   <input
@@ -401,32 +402,32 @@ function EditorPage() {
                     onChange={(e) => set((f) => ({ fulfillment: e.target.checked ? [...f.fulfillment, v] : f.fulfillment.filter((x) => x !== v) }))}
                     className="h-5 w-5 accent-ink"
                   />
-                  {l}
+                  {t(l)}
                 </label>
               ))}
               {errors.fulfillment && <p role="alert" className="text-sm font-medium text-red-500">{errors.fulfillment}</p>}
             </fieldset>
             {ship && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <V2Field label="Valor do envio (R$)" htmlFor="frete" error={errors.shipping_cents} hint="0 para frete grátis. Vale para o pedido inteiro deste vendedor.">
-                  <V2Input id="frete" inputMode="decimal" placeholder="0,00" disabled={form.shipping_to_agree} value={form.shipping} onChange={(e) => set({ shipping: e.target.value })} />
+                <V2Field label={t('Valor do envio (R$)')} htmlFor="frete" error={errors.shipping_cents} hint={t('0 para frete grátis. Vale para o pedido inteiro deste vendedor.')}>
+                  <V2Input id="frete" inputMode="decimal" placeholder={t('0,00')} disabled={form.shipping_to_agree} value={form.shipping} onChange={(e) => set({ shipping: e.target.value })} />
                 </V2Field>
                 <label className="flex min-h-11 items-center gap-2 self-end text-sm text-ink">
                   <input type="checkbox" checked={form.shipping_to_agree} onChange={(e) => set({ shipping_to_agree: e.target.checked })} className="h-5 w-5 accent-ink" />
-                  Frete a combinar
+                  {t('Frete a combinar')}
                 </label>
               </div>
             )}
             {(form.fulfillment.includes('pickup') || form.fulfillment.includes('meetup')) && (
-              <V2Field label="Onde retirar ou encontrar (opcional)" htmlFor="retirada" hint="Bairro ou referência. Nada de endereço completo: isso se combina na conversa.">
+              <V2Field label={t('Onde retirar ou encontrar (opcional)')} htmlFor="retirada" hint={t('Bairro ou referência. Nada de endereço completo: isso se combina na conversa.')}>
                 <V2Input id="retirada" maxLength={140} value={form.pickup_note} onChange={(e) => set({ pickup_note: e.target.value })} />
               </V2Field>
             )}
             <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
-              <V2Field label="Cidade" htmlFor="cidade" error={errors.city}>
+              <V2Field label={t('Cidade')} htmlFor="cidade" error={errors.city}>
                 <V2Input id="cidade" maxLength={60} value={form.city} onChange={(e) => set({ city: e.target.value })} />
               </V2Field>
-              <V2Field label="UF" htmlFor="uf">
+              <V2Field label={t('UF')} htmlFor="uf">
                 <V2Select id="uf" value={form.state} onChange={(e) => set({ state: e.target.value })}>
                   <option value="">—</option>
                   {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
@@ -438,20 +439,20 @@ function EditorPage() {
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
             <div className="mx-auto flex max-w-6xl justify-end gap-2">
               {/* No ar, "rascunho" tiraria o anúncio do ar sem querer: pausar é no painel. */}
-              {!noAr && <V2Button type="button" variant="ghost" disabled={m.isPending} onClick={() => salvar(false)}>Salvar rascunho</V2Button>}
-              <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : noAr ? 'Salvar e manter no ar' : 'Publicar'}</V2Button>
+              {!noAr && <V2Button type="button" variant="ghost" disabled={m.isPending} onClick={() => salvar(false)}>{t('Salvar rascunho')}</V2Button>}
+              <V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : noAr ? t('Salvar e manter no ar') : t('Publicar')}</V2Button>
             </div>
           </div>
         </form>
 
         <aside className="hidden lg:col-span-4 lg:block">
           <div className="sticky top-24 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Como o comprador vê</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Como o comprador vê')}</p>
             <div className="pointer-events-none" aria-hidden="true"><ListingCard listing={preview} showFavorite={false} /></div>
             <V2Surface variant="plano" className="space-y-2 p-4">
-              <p className="text-sm font-bold text-ink">Anúncio {completo}% completo</p>
+              <p className="text-sm font-bold text-ink">{t('Anúncio {pct}% completo', { pct: completo })}</p>
               <span className="block h-2 overflow-hidden rounded-full bg-gray-100"><span className="block h-full rounded-full bg-acid" style={{ width: `${completo}%` }} /></span>
-              <p className="text-xs text-gray-500">Mais fotos, uma boa descrição e as características ajudam o anúncio a aparecer e a vender.</p>
+              <p className="text-xs text-gray-500">{t('Mais fotos, uma boa descrição e as características ajudam o anúncio a aparecer e a vender.')}</p>
             </V2Surface>
           </div>
         </aside>

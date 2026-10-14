@@ -8,6 +8,7 @@
  */
 import { SELLER_TYPE, SELLER_STATUS } from './constants.js';
 import { normalizeSearchText } from './listing.js';
+import { t, tk } from '@/core/i18n';
 
 export function sellerKeyFor(type, id) {
   if (!Object.values(SELLER_TYPE).includes(type) || !id) return null;
@@ -31,11 +32,11 @@ export function slugify(text) {
  */
 export function sellingIdentities({ uid, name, isCoach = false, arenas = [], store = null }) {
   if (!uid) return [];
-  const out = [{ key: sellerKeyFor('athlete', uid), type: 'athlete', label: `Eu (${name || 'atleta'})`, entity_id: uid }];
-  if (isCoach) out.push({ key: sellerKeyFor('coach', uid), type: 'coach', label: 'Como professor', entity_id: uid });
-  arenas.forEach((a) => out.push({ key: sellerKeyFor('arena', a.id), type: 'arena', label: `Pela arena ${a.name || ''}`.trim(), entity_id: a.id }));
+  const out = [{ key: sellerKeyFor('athlete', uid), type: 'athlete', label: t('Eu ({nome})', { nome: name || t('atleta') }), entity_id: uid }];
+  if (isCoach) out.push({ key: sellerKeyFor('coach', uid), type: 'coach', label: t('Como professor'), entity_id: uid });
+  arenas.forEach((a) => out.push({ key: sellerKeyFor('arena', a.id), type: 'arena', label: t('Pela arena {nome}', { nome: a.name || '' }).trim(), entity_id: a.id }));
   if (store && store.status === SELLER_STATUS.ACTIVE) {
-    out.push({ key: store.seller_key || sellerKeyFor('store', uid), type: 'store', label: `Pela loja ${store.display_name || ''}`.trim(), entity_id: uid });
+    out.push({ key: store.seller_key || sellerKeyFor('store', uid), type: 'store', label: t('Pela loja {nome}', { nome: store.display_name || '' }).trim(), entity_id: uid });
   }
   return out;
 }
@@ -63,21 +64,21 @@ export function maskCnpj(value) {
 }
 
 export const PIX_KEY_TYPES = Object.freeze({
-  cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', phone: 'Telefone', random: 'Chave aleatória',
+  cpf: 'CPF', cnpj: 'CNPJ', email: tk('E-mail'), phone: tk('Telefone'), random: tk('Chave aleatória'),
 });
 
 /** Confere a chave Pix pelo tipo. Devolve a chave limpa ou o erro. */
 export function validatePixKey(type, key) {
   const k = String(key || '').trim();
-  if (!PIX_KEY_TYPES[type]) return { error: 'Escolha o tipo da chave Pix.' };
-  if (type === 'cpf') return onlyDigits(k).length === 11 ? { value: onlyDigits(k) } : { error: 'CPF com 11 números.' };
-  if (type === 'cnpj') return isValidCnpj(k) ? { value: onlyDigits(k) } : { error: 'CNPJ inválido.' };
-  if (type === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(k) ? { value: k.toLowerCase() } : { error: 'E-mail inválido.' };
+  if (!PIX_KEY_TYPES[type]) return { error: t('Escolha o tipo da chave Pix.') };
+  if (type === 'cpf') return onlyDigits(k).length === 11 ? { value: onlyDigits(k) } : { error: t('CPF com 11 números.') };
+  if (type === 'cnpj') return isValidCnpj(k) ? { value: onlyDigits(k) } : { error: t('CNPJ inválido.') };
+  if (type === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(k) ? { value: k.toLowerCase() } : { error: t('E-mail inválido.') };
   if (type === 'phone') {
     const d = onlyDigits(k).replace(/^55/, '');
-    return d.length >= 10 && d.length <= 11 ? { value: `+55${d}` } : { error: 'Telefone com DDD.' };
+    return d.length >= 10 && d.length <= 11 ? { value: `+55${d}` } : { error: t('Telefone com DDD.') };
   }
-  return /^[0-9a-f-]{32,36}$/i.test(k) ? { value: k.toLowerCase() } : { error: 'Chave aleatória inválida.' };
+  return /^[0-9a-f-]{32,36}$/i.test(k) ? { value: k.toLowerCase() } : { error: t('Chave aleatória inválida.') };
 }
 
 /** Pix do vendedor pronto para o pedido (sem isso, o vendedor não recebe). */
@@ -86,7 +87,7 @@ export function validatePayment(input = {}) {
   const pix = validatePixKey(input.pix_key_type, input.pix_key);
   if (pix.error) errors.pix_key = pix.error;
   const receiver = String(input.receiver_name || '').trim().slice(0, 80);
-  if (receiver.length < 3) errors.receiver_name = 'Nome de quem recebe o Pix (aparece para o comprador conferir).';
+  if (receiver.length < 3) errors.receiver_name = t('Nome de quem recebe o Pix (aparece para o comprador conferir).');
   return {
     ok: !Object.keys(errors).length,
     errors,
@@ -98,21 +99,21 @@ export function validatePayment(input = {}) {
 export function validateStoreApplication(input = {}) {
   const errors = {};
   const name = String(input.display_name || '').trim().replace(/\s+/g, ' ');
-  if (name.length < 3 || name.length > 60) errors.display_name = 'Nome da loja entre 3 e 60 caracteres.';
+  if (name.length < 3 || name.length > 60) errors.display_name = t('Nome da loja entre 3 e 60 caracteres.');
   const legal = String(input.legal_name || '').trim().slice(0, 120);
-  if (legal.length < 3) errors.legal_name = 'Razão social.';
-  if (!isValidCnpj(input.cnpj)) errors.cnpj = 'CNPJ inválido.';
+  if (legal.length < 3) errors.legal_name = t('Razão social.');
+  if (!isValidCnpj(input.cnpj)) errors.cnpj = t('CNPJ inválido.');
   const city = String(input.city || '').trim().slice(0, 60);
   const state = String(input.state || '').trim().toUpperCase().slice(0, 2);
-  if (!city || state.length !== 2) errors.city = 'Cidade e estado da loja.';
+  if (!city || state.length !== 2) errors.city = t('Cidade e estado da loja.');
   const phone = onlyDigits(input.phone);
-  if (phone.length < 10) errors.phone = 'Telefone com DDD (só a equipe do PickleRush vê).';
+  if (phone.length < 10) errors.phone = t('Telefone com DDD (só a equipe do PickleRush vê).');
   const bio = String(input.bio || '').trim().slice(0, 600);
   const website = String(input.website || '').trim();
-  if (website && !/^https:\/\/[^\s]+\.[^\s]+$/.test(website)) errors.website = 'Endereço começando com https://';
+  if (website && !/^https:\/\/[^\s]+\.[^\s]+$/.test(website)) errors.website = t('Endereço começando com https://');
   const returnDays = Math.floor(Number(input.return_days ?? 7));
-  if (!(returnDays >= 7 && returnDays <= 90)) errors.return_days = 'Loja dá ao menos 7 dias para devolução (Código de Defesa do Consumidor).';
-  if (!input.accept_terms) errors.accept_terms = 'Aceite os Termos do Mercado.';
+  if (!(returnDays >= 7 && returnDays <= 90)) errors.return_days = t('Loja dá ao menos 7 dias para devolução (Código de Defesa do Consumidor).');
+  if (!input.accept_terms) errors.accept_terms = t('Aceite os Termos do Mercado.');
   return {
     ok: !Object.keys(errors).length,
     errors,

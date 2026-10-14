@@ -12,6 +12,7 @@ import { giftCardConfig, normalizeCouponCode } from '@/modules/marketplace/domai
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
 import { GiftCardBuyDialog, StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
+import { t, tk, tn, fmtData, fmtNumero } from '@/core/i18n';
 import { cn } from '@/core/lib/utils';
 import { normalizeSearchText } from '@/modules/marketplace/domain/listing';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
@@ -26,7 +27,7 @@ import {
   ListingCard, ListingGrid, ListingGridSkeleton, MarketGate, SellerTypeTag, Stars, VerifiedMark,
 } from '@/v2/components/marketplace/marketUi';
 
-const ORDENS = [{ id: 'recent', label: 'Mais recentes' }, { id: 'price_asc', label: 'Menor preço' }, { id: 'price_desc', label: 'Maior preço' }];
+const ORDENS = [{ id: 'recent', label: tk('Mais recentes') }, { id: 'price_asc', label: tk('Menor preço') }, { id: 'price_desc', label: tk('Maior preço') }];
 
 function ordenar(xs, by) {
   const c = [...xs];
@@ -43,15 +44,15 @@ function Reviews({ sellerKey }) {
   const resumo = summarizeReviews(all);
   return (
     <section aria-labelledby="aval-titulo" className="space-y-4">
-      <h2 id="aval-titulo" className="font-display text-xl font-bold text-ink">Avaliações de quem comprou</h2>
+      <h2 id="aval-titulo" className="font-display text-xl font-bold text-ink">{t('Avaliações de quem comprou')}</h2>
       {!resumo.count ? (
-        <p className="text-sm text-gray-500">Ainda sem avaliações. As avaliações aparecem depois das primeiras vendas concluídas.</p>
+        <p className="text-sm text-gray-500">{t('Ainda sem avaliações. As avaliações aparecem depois das primeiras vendas concluídas.')}</p>
       ) : (
         <div className="grid gap-6 md:grid-cols-[14rem_1fr]">
           <div className="space-y-2">
-            <p className="font-display text-5xl font-bold text-ink">{resumo.showRating ? String(resumo.avg.toFixed(1)).replace('.', ',') : '—'}</p>
+            <p className="font-display text-5xl font-bold text-ink">{resumo.showRating ? fmtNumero(Number(resumo.avg.toFixed(1)), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}</p>
             <Stars avg={resumo.avg} count={resumo.count} />
-            {!resumo.showRating && <p className="text-xs text-gray-500">A nota aparece a partir de {MIN_REVIEWS_FOR_RATING} avaliações.</p>}
+            {!resumo.showRating && <p className="text-xs text-gray-500">{t('A nota aparece a partir de {n} avaliações.', { n: MIN_REVIEWS_FOR_RATING })}</p>}
             <ul className="space-y-1 pt-2">
               {[5, 4, 3, 2, 1].map((n) => (
                 <li key={n} className="flex items-center gap-2 text-xs text-gray-500">
@@ -68,12 +69,12 @@ function Reviews({ sellerKey }) {
             {all.slice(0, 20).map((r) => (
               <li key={r.id} className="py-3">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex" aria-label={`${r.rating} de 5`}>
+                  <span className="inline-flex" aria-label={t('{nota} de 5', { nota: r.rating })}>
                     {[1, 2, 3, 4, 5].map((i) => <Star key={i} aria-hidden="true" className={cn('h-3.5 w-3.5', i <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />)}
                   </span>
-                  <span className="text-xs text-gray-500">{r.author_name} · {r.created_at_ms ? new Date(r.created_at_ms).toLocaleDateString('pt-BR') : ''}</span>
+                  <span className="text-xs text-gray-500">{r.author_name} · {r.created_at_ms ? fmtData(r.created_at_ms, { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</span>
                 </div>
-                {r.listing_title && <p className="mt-1 text-xs text-gray-500">Comprou: {r.listing_title}</p>}
+                {r.listing_title && <p className="mt-1 text-xs text-gray-500">{t('Comprou: {titulo}', { titulo: r.listing_title })}</p>}
                 {r.comment && <p className="mt-1 text-sm text-ink">{r.comment}</p>}
               </li>
             ))}
@@ -107,9 +108,9 @@ function SellerPage() {
   const anuncios = useMemo(() => (l.data || []).filter((x) => x.status === 'active' || x.status === 'sold_out'), [l.data]);
   const cats = MARKET_CATEGORIES.filter((c) => anuncios.some((x) => (x.category_path || [])[0] === c.slug));
   const visiveis = useMemo(() => {
-    const t = normalizeSearchText(busca);
+    const termo = normalizeSearchText(busca);
     return ordenar(anuncios.filter((x) => (!cat || (x.category_path || [])[0] === cat)
-      && (!t || normalizeSearchText(`${x.title} ${x.brand || ''}`).includes(t))), ordem)
+      && (!termo || normalizeSearchText(`${x.title} ${x.brand || ''}`).includes(termo))), ordem)
       .sort((a, b) => (a.status === 'sold_out') - (b.status === 'sold_out'));
   }, [anuncios, busca, cat, ordem]);
 
@@ -121,9 +122,9 @@ function SellerPage() {
       <div className="mx-auto max-w-7xl space-y-6 pb-16">
         <MarketHeader />
         <V2Surface className="text-center">
-          <h1 className="font-display text-2xl font-bold text-ink">Esta vitrine não está aberta</h1>
-          <p className="mt-2 text-gray-500">O vendedor não está vendendo no Mercado agora.</p>
-          <Link to="/mercado" className="mt-4 inline-flex font-bold text-ink underline">Voltar ao Mercado</Link>
+          <h1 className="font-display text-2xl font-bold text-ink">{t('Esta vitrine não está aberta')}</h1>
+          <p className="mt-2 text-gray-500">{t('O vendedor não está vendendo no Mercado agora.')}</p>
+          <Link to="/mercado" className="mt-4 inline-flex font-bold text-ink underline">{t('Voltar ao Mercado')}</Link>
         </V2Surface>
       </div>
     );
@@ -143,27 +144,27 @@ function SellerPage() {
             <Stars avg={seller.rating_avg} count={seller.rating_count} />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
               {seller.city && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{[seller.city, seller.state].filter(Boolean).join(' · ')}</span>}
-              {seller.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3.5 w-3.5" />{seller.sales_count} vendas concluídas</span>}
+              {seller.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3.5 w-3.5" />{tn(seller.sales_count, '{n} venda concluída', '{n} vendas concluídas')}</span>}
               {seller.website && /^https:\/\//.test(seller.website) && (
-                <a href={seller.website} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-ink hover:underline">Site <ExternalLink className="h-3.5 w-3.5" /></a>
+                <a href={seller.website} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-ink hover:underline">{t('Site')} <ExternalLink className="h-3.5 w-3.5" /></a>
               )}
             </div>
             {badges.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{badges.map((b) => <V2Badge key={b.id} tone={b.id === 'top' ? 'acid' : 'neutral'}>{b.label}</V2Badge>)}</div>}
           </div>
           <div className="flex flex-wrap gap-2">
             {vendeVale && seller.owner_uid !== user?.uid && (
-              <V2Button type="button" onClick={() => setDarVale(true)}><Gift className="h-4 w-4" /> Dar vale-presente</V2Button>
+              <V2Button type="button" onClick={() => setDarVale(true)}><Gift className="h-4 w-4" /> {t('Dar vale-presente')}</V2Button>
             )}
-            {seller.owner_uid && <V2ChatLauncherButton athlete={{ id: seller.owner_uid, name: seller.display_name, photo_url: logo }} variant="ghost" label="Falar com a loja" />}
-            <V2Button type="button" variant="ghost" onClick={() => setCompartilhar(true)} aria-label="Compartilhar a loja"><Share2 className="h-4 w-4" /> Compartilhar</V2Button>
+            {seller.owner_uid && <V2ChatLauncherButton athlete={{ id: seller.owner_uid, name: seller.display_name, photo_url: logo }} variant="ghost" label={t('Falar com a loja')} />}
+            <V2Button type="button" variant="ghost" onClick={() => setCompartilhar(true)} aria-label={t('Compartilhar a loja')}><Share2 className="h-4 w-4" /> {t('Compartilhar')}</V2Button>
           </div>
         </div>
         {seller.bio && <p className="whitespace-pre-line border-t border-gray-100 px-5 py-4 text-sm leading-6 text-gray-700 sm:px-6">{seller.bio}</p>}
         {seller.seller_type === 'store' && seller.policies && (
           <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-gray-100 px-5 py-3 text-sm sm:px-6">
-            <div className="flex gap-1"><dt className="text-gray-500">Devolução:</dt><dd className="font-medium text-ink">até {seller.policies.return_days} dias</dd></div>
-            {seller.policies.ship_within_hours > 0 && <div className="flex gap-1"><dt className="text-gray-500">Despacha em:</dt><dd className="font-medium text-ink">até {seller.policies.ship_within_hours < 48 ? '24 horas' : `${Math.round(seller.policies.ship_within_hours / 24)} dias`}</dd></div>}
-            {seller.cnpj_masked && <div className="flex gap-1"><dt className="text-gray-500">CNPJ:</dt><dd className="font-medium text-ink">{seller.cnpj_masked}</dd></div>}
+            <div className="flex gap-1"><dt className="text-gray-500">{t('Devolução:')}</dt><dd className="font-medium text-ink">{t('até {n} dias', { n: seller.policies.return_days })}</dd></div>
+            {seller.policies.ship_within_hours > 0 && <div className="flex gap-1"><dt className="text-gray-500">{t('Despacha em:')}</dt><dd className="font-medium text-ink">{seller.policies.ship_within_hours < 48 ? t('até 24 horas') : t('até {n} dias', { n: Math.round(seller.policies.ship_within_hours / 24) })}</dd></div>}
+            {seller.cnpj_masked && <div className="flex gap-1"><dt className="text-gray-500">{t('CNPJ:')}</dt><dd className="font-medium text-ink">{seller.cnpj_masked}</dd></div>}
           </dl>
         )}
       </section>
@@ -173,8 +174,8 @@ function SellerPage() {
   let lista;
   if (l.isError) lista = <V2ErrorState onRetry={() => l.refetch()} />;
   else if (l.isLoading) lista = <ListingGridSkeleton n={4} />;
-  else if (!anuncios.length) lista = <V2EmptyState title="Nenhum produto à venda agora" description="Salve um favorito de outro vendedor ou volte mais tarde." />;
-  else if (!visiveis.length) lista = <p className="py-10 text-center text-sm text-gray-500">Nada com esse filtro nesta vitrine.</p>;
+  else if (!anuncios.length) lista = <V2EmptyState title={t('Nenhum produto à venda agora')} description={t('Salve um favorito de outro vendedor ou volte mais tarde.')} />;
+  else if (!visiveis.length) lista = <p className="py-10 text-center text-sm text-gray-500">{t('Nada com esse filtro nesta vitrine.')}</p>;
   else lista = <ListingGrid>{visiveis.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>;
 
   return (
@@ -187,33 +188,33 @@ function SellerPage() {
           <ShareImageDialog
             open={compartilhar}
             onOpenChange={setCompartilhar}
-            title="Compartilhar a loja"
+            title={t('Compartilhar a loja')}
             url={url}
             fileName={`loja-${sellerKey}.png`}
-            shareText={`Conheça ${seller.display_name} no Mercado PickleRush`}
+            shareText={t('Conheça {loja} no Mercado PickleRush', { loja: seller.display_name })}
             renderCard={({ ref, qr, showImage }) => (
               <MarketShareCard ref={ref} kind="store" image={banner || logo} showImage={showImage} qr={qr} title={seller.display_name}
-                subtitle={[seller.city, seller.state].filter(Boolean).join(' · ') || `${anuncios.length} produtos`} highlight={anuncios.length ? `${anuncios.length} produtos à venda` : ''} />
+                subtitle={[seller.city, seller.state].filter(Boolean).join(' · ') || tn(anuncios.length, '{n} produto', '{n} produtos')} highlight={anuncios.length ? tn(anuncios.length, '{n} produto à venda', '{n} produtos à venda') : ''} />
             )}
           />
           {vendeVale && <GiftCardBuyDialog open={darVale} onOpenChange={setDarVale} seller={{ ...seller, seller_key: sellerKey }} onBought={(r) => navigate(`/mercado/pedidos/${r.id}`)} />}
         </>
       )}
-      <section aria-label="Produtos do vendedor" className="space-y-4">
+      <section aria-label={t('Produtos do vendedor')} className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-display text-xl font-bold text-ink">Produtos {anuncios.length > 0 && <span className="text-gray-500">({anuncios.length})</span>}</h2>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Produtos')} {anuncios.length > 0 && <span className="text-gray-500">({anuncios.length})</span>}</h2>
           <div className="flex gap-2">
-            <V2SearchInput icon={Search} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar nesta vitrine" aria-label="Buscar nesta vitrine" wrapperClassName="flex-1 sm:w-64" />
-            <label htmlFor="ordem-vitrine" className="sr-only">Ordenar</label>
+            <V2SearchInput icon={Search} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t('Buscar nesta vitrine')} aria-label={t('Buscar nesta vitrine')} wrapperClassName="flex-1 sm:w-64" />
+            <label htmlFor="ordem-vitrine" className="sr-only">{t('Ordenar')}</label>
             <V2Select id="ordem-vitrine" value={ordem} onChange={(e) => setOrdem(e.target.value)} className="w-40">
-              {ORDENS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              {ORDENS.map((o) => <option key={o.id} value={o.id}>{t(o.label)}</option>)}
             </V2Select>
           </div>
         </div>
         {cats.length > 1 && (
           <div className="flex flex-wrap gap-2">
-            <V2FilterChip active={!cat} onClick={() => setCat('')}>Tudo</V2FilterChip>
-            {cats.map((c) => <V2FilterChip key={c.slug} active={cat === c.slug} onClick={() => setCat(c.slug)}>{c.label}</V2FilterChip>)}
+            <V2FilterChip active={!cat} onClick={() => setCat('')}>{t('Tudo')}</V2FilterChip>
+            {cats.map((c) => <V2FilterChip key={c.slug} active={cat === c.slug} onClick={() => setCat(c.slug)}>{t(c.label)}</V2FilterChip>)}
           </div>
         )}
         {lista}

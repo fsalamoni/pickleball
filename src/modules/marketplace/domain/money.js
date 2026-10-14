@@ -1,10 +1,12 @@
 /**
  * MERCADO — dinheiro em CENTAVOS inteiros (nunca float).
  */
+import { fmtMoeda, idiomaAtivo, IDIOMA_PADRAO } from '@/core/i18n';
 
-/** 69000 → "R$ 690,00". Montado à mão para não depender da máquina. */
+/** 69000 → "R$ 690,00". Montado à mão para não depender da máquina (em pt-BR); nos outros idiomas, no formato deles (sempre em reais). */
 export function formatBRL(cents) {
   const n = Math.round(Number(cents) || 0);
+  if (idiomaAtivo() !== IDIOMA_PADRAO) return fmtMoeda(n / 100);
   const neg = n < 0;
   const abs = Math.abs(n);
   const reais = Math.floor(abs / 100);

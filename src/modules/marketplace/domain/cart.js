@@ -8,6 +8,7 @@
  */
 import { availableQuantity, coverOf } from './listing.js';
 import { LISTING_STATUS } from './constants.js';
+import { t, tn } from '@/core/i18n';
 
 export const CART_MAX_ITEMS = 50;
 /** Teto de unidades por item (o servidor recusa acima disso). */
@@ -42,7 +43,7 @@ export function addToCart(cart, listing, quantity = 1) {
     const q = Math.min(max, c.items[i].quantity + Math.max(1, quantity));
     c.items[i] = { ...c.items[i], quantity: q };
   } else {
-    if (c.items.length >= CART_MAX_ITEMS) return { cart: c, error: `O carrinho aceita até ${CART_MAX_ITEMS} itens.` };
+    if (c.items.length >= CART_MAX_ITEMS) return { cart: c, error: t('O carrinho aceita até {n} itens.', { n: CART_MAX_ITEMS }) };
     c.items.push(cartLine(listing, Math.min(max, quantity)));
   }
   c.saved = c.saved.filter((x) => x.listing_id !== listing.id);
@@ -95,18 +96,18 @@ export function cartCount(cart) {
  */
 export function checkLine(line, listing) {
   // Não deu para ler o anúncio agora: não se compra às cegas (nem se diz que acabou).
-  if (listing === undefined) return { ok: false, problem: 'Não conseguimos conferir este item agora. Tente de novo.', unit_price_cents: line.price_cents_at_add, max: line.quantity, unknown: true };
+  if (listing === undefined) return { ok: false, problem: t('Não conseguimos conferir este item agora. Tente de novo.'), unit_price_cents: line.price_cents_at_add, max: line.quantity, unknown: true };
   if (!listing || listing.status === LISTING_STATUS.REMOVED || listing.status === LISTING_STATUS.CLOSED) {
-    return { ok: false, problem: 'Não está mais à venda.', unit_price_cents: line.price_cents_at_add, max: 0 };
+    return { ok: false, problem: t('Não está mais à venda.'), unit_price_cents: line.price_cents_at_add, max: 0 };
   }
   if (listing.status !== LISTING_STATUS.ACTIVE || availableQuantity(listing) < 1) {
-    return { ok: false, problem: listing.status === LISTING_STATUS.PAUSED ? 'O vendedor pausou este anúncio.' : 'Esgotado.', unit_price_cents: listing.price_cents, max: 0 };
+    return { ok: false, problem: listing.status === LISTING_STATUS.PAUSED ? t('O vendedor pausou este anúncio.') : t('Esgotado.'), unit_price_cents: listing.price_cents, max: 0 };
   }
   const max = availableQuantity(listing);
   const problems = [];
-  if (line.quantity > max) problems.push(`Só há ${max} disponível${max > 1 ? 'is' : ''}.`);
+  if (line.quantity > max) problems.push(tn(max, 'Só há {n} disponível.', 'Só há {n} disponíveis.'));
   if (listing.price_cents !== line.price_cents_at_add) {
-    problems.push(listing.price_cents < line.price_cents_at_add ? 'O preço baixou.' : 'O preço mudou.');
+    problems.push(listing.price_cents < line.price_cents_at_add ? t('O preço baixou.') : t('O preço mudou.'));
   }
   return {
     ok: line.quantity <= max,
