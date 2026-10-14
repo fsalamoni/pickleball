@@ -21,6 +21,7 @@ import { CONDITION_LABELS, FULFILLMENT_LABELS, MEDIA_LIMITS, TEXT_LIMITS } from 
 import { listingCompleteness, validateListingInput } from '@/modules/marketplace/domain/listing';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { saveListing } from '@/modules/marketplace/services/marketService';
+import { linkArenaProduct } from '@/modules/marketplace/services/marketOrderService';
 import { prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
 import {
   useIsMarketOperator, useListing, useMarketMutation, useMarketSettings, useSeller,
@@ -249,8 +250,17 @@ function EditorPage() {
       return;
     }
     setErrors({});
-    m.mutate({ id: listingId, input, publish, seller: { ...sq.data, seller_key: sellerKey }, uid: user.uid, settings: settings.data }, {
-      onSuccess: (id) => {
+    m.mutate({ id: listingId, input, publish, seller: { ...sq.data, seller_key: sellerKey }, uid: user.uid, settings: settings.data, keepQuantity: Boolean(listing?.source?.tracked) }, {
+      onSuccess: async (id) => {
+        // Veio do estoque da arena: o anúncio passa a usar o MESMO estoque.
+        const produto = !editing && sellerKey.startsWith('arena_') ? params.get('produto') : null;
+        if (produto) {
+          try {
+            await linkArenaProduct({ listingId: id, productId: produto });
+          } catch (e) {
+            toast.warning(`O anúncio foi salvo, mas não foi ligado ao estoque da arena: ${e.message}`);
+          }
+        }
         toast.success(publish ? 'Anúncio no ar.' : 'Rascunho salvo.');
         navigate(`/mercado/vender?como=${encodeURIComponent(sellerKey)}&aba=anuncios`, { replace: true, state: { destaque: id } });
       },
@@ -356,10 +366,21 @@ function EditorPage() {
               <V2Field label="Preço “de” (opcional)" htmlFor="preco-de" error={errors.compare_at_cents} hint="Mostra o desconto riscado.">
                 <V2Input id="preco-de" inputMode="decimal" placeholder="0,00" value={form.compare_at} onChange={(e) => set({ compare_at: e.target.value })} />
               </V2Field>
-              <V2Field label="Quantidade" htmlFor="qtd" error={errors.quantity}>
-                <V2Input id="qtd" type="number" min={0} max={9999} value={form.quantity} onChange={(e) => set({ quantity: e.target.value })} />
+              <V2Field
+                label="Quantidade"
+                htmlFor="qtd"
+                error={errors.quantity}
+                hint={listing?.source?.tracked ? 'Acompanha o estoque da arena.' : undefined}
+              >
+                <V2Input id="qtd" type="number" min={0} max={9999} value={form.quantity} disabled={Boolean(listing?.source?.tracked)} onChange={(e) => set({ quantity: e.target.value })} />
               </V2Field>
             </div>
+            {(listing?.source?.kind === 'arena_product' || (!editing && params.get('produto'))) && (
+              <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">
+                Este anúncio usa o estoque da arena: o que sair no balcão, na loja do app ou aqui é descontado do mesmo lugar.
+                A venda entra no estoque como saída quando você confirma o pagamento, e volta se o pedido for cancelado.
+              </p>
+            )}
             {settings.data?.offers_enabled !== false && (
               <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
                 <input type="checkbox" checked={form.accepts_offers} onChange={(e) => set({ accepts_offers: e.target.checked })} className="h-5 w-5 accent-ink" />

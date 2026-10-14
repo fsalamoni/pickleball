@@ -328,6 +328,7 @@ async function placeOrders(ctx, uid, data) {
         const items = listings.map((l, k) => ({
           listing_id: l.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '',
           unit_price_cents: l.price_cents, quantity: g.items[k].quantity,
+          ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
         }));
         const subtotal = items.reduce((n, i) => n + i.unit_price_cents * i.quantity, 0);
         const ship = groupShipping(listings, g.fulfillment);
@@ -461,6 +462,7 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
     const listingSnaps = RESTOCK_ON.includes(to)
       ? await tx.getAll(...order.items.map((i) => db.collection('market_listings').doc(i.listing_id)))
       : [];
+    const estoqueArena = await arenaStockReads(db, tx, orderId, order, to);
     let privSnap = null;
     if (action === 'accept') privSnap = await tx.get(db.collection('market_sellers').doc(order.seller_key).collection('private').doc('data'));
 
@@ -515,6 +517,7 @@ async function applyOrderAction(ctx, orderId, action, role, actorUid, extra = {}
       upd.deadline_at_ms = null;
       restockUpdates(order, listingSnaps, now).forEach((r) => tx.update(r.ref, r.data));
     }
+    Object.assign(upd, arenaStockWrites(db, tx, order, orderId, estoqueArena, { now, actorUid }));
     if (to === S.COMPLETED) {
       upd.completed_at_ms = now;
       upd.review_open = true;
@@ -580,7 +583,10 @@ async function createOrderFromOffer(ctx, tx, offer, listingSnap, privSnap, selle
     buyer_uid: offer.buyer_uid, buyer_name: offer.buyer_name || '',
     seller_key: offer.seller_key, seller_name: seller.display_name || l.seller_name || '', seller_type: seller.seller_type || l.seller_type || '',
     seller_manager_uids: offer.seller_manager_uids || [],
-    items: [{ listing_id: listingSnap.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '', unit_price_cents: offer.amount_cents, quantity: 1 }],
+    items: [{
+      listing_id: listingSnap.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '', unit_price_cents: offer.amount_cents, quantity: 1,
+      ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
+    }],
     item_count: 1, listing_ids: [listingSnap.id],
     fulfillment, buyer_note: '', ...ship,
     subtotal_cents: offer.amount_cents, total_cents: offer.amount_cents + ship.shipping_cents, platform_fee_cents: 0,
@@ -856,10 +862,192 @@ async function notifyQuestion(ctx, questionId, before, after) {
   return null;
 }
 
+/* ------------------------------------------ o estoque único da arena -- */
+//
+// Um anúncio de ARENA pode apontar para um produto do estoque dela
+// (`listing.source = { kind: 'arena_product', id }`, gravado só pelo servidor
+// via `linkArenaProduct`). A partir daí o estoque é UM:
+//  - o anúncio mostra `stock_qty − reservado` (pedidos abertos ainda não
+//    pagos), refeito a cada mudança do produto (`syncArenaListing`);
+//  - a SAÍDA no estoque da arena nasce quando o pagamento é confirmado
+//    (venda de verdade, não intenção) e é desfeita se o pedido for cancelado.
+// Produto sem controle de estoque (`stock_qty` vazio) não mexe na quantidade
+// do anúncio: quem vende ajusta à mão, como antes.
+
+const ARENA_SOURCE = 'arena_product';
+const RESERVED_STATUSES = Object.freeze([S.PLACED, S.ACCEPTED, S.PAYMENT_REVIEW]);
+const COL_INV_PRODUCTS = 'arena_inventory_products';
+const COL_INV_EXITS = 'arena_inventory_exits';
+
+function arenaProductIdOf(listing) {
+  return listing && listing.source && listing.source.kind === ARENA_SOURCE ? listing.source.id || null : null;
+}
+
+/** "AAAA-MM-DD" no fuso de Brasília (a data que o estoque da arena usa). */
+function diaEmBrasilia(ms) {
+  return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+/** Unidades do produto presas em pedidos abertos e ainda não pagos. */
+function reservedFor(orders, productId) {
+  return (orders || [])
+    .filter((o) => RESERVED_STATUSES.includes(o.status) && !o.arena_stock_applied)
+    .reduce((n, o) => n + (o.items || [])
+      .filter((i) => i.arena_product_id === productId)
+      .reduce((m, i) => m + (Number(i.quantity) || 0), 0), 0);
+}
+
+/** O que o anúncio ligado precisa mudar para refletir o produto. `{}` = nada. */
+function linkedListingPatch(listing, product, reserved = 0) {
+  if (!product) {
+    return ['active', 'sold_out'].includes(listing.status) ? { status: 'paused', source: null } : { source: null };
+  }
+  const stock = product.stock_qty == null || product.stock_qty === '' ? NaN : Number(product.stock_qty);
+  const tracked = Number.isFinite(stock);
+  // `source.tracked` diz à tela se a quantidade é do estoque (só leitura) ou de quem vende.
+  const patch = Boolean(listing.source && listing.source.tracked) === tracked ? {} : { source: { ...listing.source, tracked } };
+  if (!tracked) return patch;
+  const q = Math.max(0, Math.floor(stock - reserved));
+  if (q !== Number(listing.quantity)) patch.quantity = q;
+  if (listing.status === 'active' && q <= 0) patch.status = 'sold_out';
+  if (listing.status === 'sold_out' && q > 0) patch.status = 'active';
+  return patch;
+}
+
+/** Leituras da transação do pedido (antes de qualquer escrita). */
+async function arenaStockReads(db, tx, orderId, order, to) {
+  const arena = parseSellerKey(order.seller_key);
+  if (!arena || arena.type !== 'arena') return null;
+  if (to === S.PAID && !order.arena_stock_applied) {
+    const linhas = (order.items || []).filter((i) => i.arena_product_id);
+    if (!linhas.length) return null;
+    const ids = [...new Set(linhas.map((i) => i.arena_product_id))];
+    const snaps = await tx.getAll(...ids.map((id) => db.collection(COL_INV_PRODUCTS).doc(id)));
+    const produtos = new Map(snaps.filter((s) => s.exists && s.data().arena_id === arena.id).map((s) => [s.id, s.data()]));
+    return { tipo: 'saida', arenaId: arena.id, linhas, produtos };
+  }
+  if (RESTOCK_ON.includes(to) && order.arena_stock_applied) {
+    const saidas = await tx.get(db.collection(COL_INV_EXITS).where('market_order_id', '==', orderId));
+    const doc = saidas.docs.filter((d) => d.data().arena_id === arena.id);
+    const ids = [...new Set(doc.map((d) => d.data().product_id))];
+    const snaps = ids.length ? await tx.getAll(...ids.map((id) => db.collection(COL_INV_PRODUCTS).doc(id))) : [];
+    const produtos = new Map(snaps.filter((s) => s.exists).map((s) => [s.id, s.data()]));
+    return { tipo: 'devolve', arenaId: arena.id, saidas: doc, produtos };
+  }
+  return null;
+}
+
+/** Escritas no estoque da arena; devolve os campos a somar no pedido. */
+function arenaStockWrites(db, tx, order, orderId, leitura, { now, actorUid }) {
+  if (!leitura) return {};
+  const porProduto = new Map();
+  if (leitura.tipo === 'saida') {
+    leitura.linhas.forEach((i) => {
+      if (!leitura.produtos.has(i.arena_product_id)) return; // produto saiu do estoque: nada a baixar
+      const q = Number(i.quantity) || 0;
+      const unit = Math.round(Number(i.unit_price_cents) || 0) / 100;
+      tx.set(db.collection(COL_INV_EXITS).doc(), {
+        product_id: i.arena_product_id, arena_id: leitura.arenaId, date: diaEmBrasilia(now),
+        quantity: q, exit_type: 'sale', unit_price: unit, total_price: Math.round(q * unit * 100) / 100,
+        reason: `Pedido do Mercado ${order.code || ''}`.trim(), market_order_id: orderId, channel: 'mercado',
+        created_by: actorUid || null, created_at: new Date(now),
+      });
+      porProduto.set(i.arena_product_id, (porProduto.get(i.arena_product_id) || 0) - q);
+    });
+    if (!porProduto.size) return {};
+  } else {
+    leitura.saidas.forEach((d) => {
+      const x = d.data();
+      tx.delete(d.ref);
+      porProduto.set(x.product_id, (porProduto.get(x.product_id) || 0) + (Number(x.quantity) || 0));
+    });
+  }
+  porProduto.forEach((delta, pid) => {
+    const p = leitura.produtos.get(pid);
+    if (!p || p.stock_qty == null) return;
+    tx.update(db.collection(COL_INV_PRODUCTS).doc(pid), { stock_qty: Number(p.stock_qty) + delta, updated_at: new Date(now) });
+  });
+  return { arena_stock_applied: leitura.tipo === 'saida' };
+}
+
+/**
+ * Gatilho do produto do estoque: refaz a quantidade do anúncio ligado.
+ * Confere os DOIS lados do vínculo — o campo no produto é escrito pela arena
+ * e, sozinho, não prova nada.
+ */
+async function syncArenaListing(ctx, productId, before, after) {
+  const { db, now = Date.now() } = ctx;
+  const base = after || before;
+  const listingId = base && base.market_listing_id;
+  if (!listingId) return null;
+  const ref = db.collection('market_listings').doc(listingId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const l = snap.data();
+    if (arenaProductIdOf(l) !== productId || l.seller_key !== `arena_${base.arena_id}`) return null;
+    let reserved = 0;
+    if (after) {
+      const os = await tx.get(db.collection('market_orders').where('listing_ids', 'array-contains', listingId));
+      reserved = reservedFor(os.docs.map((d) => d.data()), productId);
+    }
+    const patch = linkedListingPatch(l, after, reserved);
+    if (!Object.keys(patch).length) return null;
+    tx.update(ref, { ...patch, updated_at: new Date(now) });
+    return patch;
+  });
+}
+
+/** Liga (ou desliga, com `productId` vazio) o anúncio da arena a um produto do estoque. */
+async function linkArenaProduct(ctx, actor, data = {}) {
+  const { db, now = Date.now() } = ctx;
+  const { enabled } = await loadContext(db);
+  if (!enabled) fail('failed-precondition', 'O Mercado está fechado no momento.');
+  const listingId = texto(data.listingId, 64);
+  const productId = data.productId ? texto(data.productId, 64) : null;
+  if (!listingId) fail('invalid-argument', 'Anúncio inválido.');
+  const lRef = db.collection('market_listings').doc(listingId);
+  const lSnap = await lRef.get();
+  if (!lSnap.exists) fail('not-found', 'Anúncio não encontrado.');
+  const arena = parseSellerKey(lSnap.data().seller_key);
+  if (!arena || arena.type !== 'arena') fail('failed-precondition', 'Só anúncio de arena se liga ao estoque da arena.');
+  if (!(await operatorUids(db, lSnap.data().seller_key)).includes(actor.uid)) fail('permission-denied', 'Só quem gere a arena pode fazer isso.');
+
+  await db.runTransaction(async (tx) => {
+    const l = (await tx.get(lRef)).data();
+    const anterior = arenaProductIdOf(l);
+    const prodRef = productId ? db.collection(COL_INV_PRODUCTS).doc(productId) : null;
+    const antRef = anterior && anterior !== productId ? db.collection(COL_INV_PRODUCTS).doc(anterior) : null;
+    const prodSnap = prodRef ? await tx.get(prodRef) : null;
+    const antSnap = antRef ? await tx.get(antRef) : null;
+    if (prodRef) {
+      if (!prodSnap.exists || prodSnap.data().arena_id !== arena.id) fail('failed-precondition', 'Este produto não é do estoque desta arena.');
+      const outro = prodSnap.data().market_listing_id;
+      if (outro && outro !== listingId) {
+        const outroSnap = await tx.get(db.collection('market_listings').doc(outro));
+        if (outroSnap.exists && arenaProductIdOf(outroSnap.data()) === productId && outroSnap.data().status !== 'closed') {
+          fail('already-exists', 'Este produto já está ligado a outro anúncio do Mercado.');
+        }
+      }
+      tx.update(prodRef, { market_listing_id: listingId, updated_at: new Date(now) });
+    }
+    if (antSnap && antSnap.exists && antSnap.data().market_listing_id === listingId) {
+      tx.update(antRef, { market_listing_id: null, updated_at: new Date(now) });
+    }
+    tx.update(lRef, { source: productId ? { kind: ARENA_SOURCE, id: productId } : null, updated_at: new Date(now) });
+  });
+  if (productId) {
+    const p = await db.collection(COL_INV_PRODUCTS).doc(productId).get();
+    await syncArenaListing(ctx, productId, null, p.data());
+  }
+  return { ok: true };
+}
+
 module.exports = {
   ORDER_ACTIONS, OFFER_ACTIONS, OFFER_RULES, RESTOCK_ON, DEFAULT_BANNED_TERMS,
   checkOrderAction, applyOfferAction, validateOfferAmount, validateReview, findBannedTerm,
   serverSettings, commonFulfillment, groupShipping, validatePlaceRequest, cleanAddress,
   MarketError, placeOrders, orderAction, applyOrderAction, offerAction, submitReview,
   housekeeping, moderateListing, recomputeSellerRating, operatorUids, notifyQuestion,
+  reservedFor, linkedListingPatch, syncArenaListing, linkArenaProduct,
 };

@@ -11,12 +11,15 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Package, Plus, Search, TrendingUp, TrendingDown, Trash2,
-  Save, Pencil, CalendarClock, ShoppingBasket, Tag, Smartphone,
+  Save, Pencil, CalendarClock, ShoppingBasket, Tag, Smartphone, Store,
 } from 'lucide-react';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { draftFromArenaProduct } from '@/modules/marketplace/domain/internalProducts';
 import {
   useInventoryProducts, useCreateInventoryProduct, useUpdateInventoryProduct, useDeleteInventoryProduct,
   useInventoryEntries, useAddInventoryEntry,
@@ -232,6 +235,7 @@ function ProductsSection({ arenaId, onOpenCatalog, filtro = STOCK_FILTERS[0].val
   const remove = useDeleteInventoryProduct(arenaId);
   const { isOn: moduloLigado } = useArenaModules(arenaId);
   const lojaOn = moduloLigado(ARENA_MODULE_ID.PDV);
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
@@ -413,6 +417,8 @@ function ProductsSection({ arenaId, onOpenCatalog, filtro = STOCK_FILTERS[0].val
               key={p.id}
               product={p}
               lojaOn={lojaOn}
+              mercadoOn={mercadoOn}
+              arenaId={arenaId}
               posicao={posicoes.get(p.id)}
               editing={editingId === p.id}
               onToggleEdit={() => setEditingId(editingId === p.id ? null : p.id)}
@@ -533,7 +539,7 @@ function StockBadge({ product: p, posicao }) {
 }
 
 /** Linha de produto do mercado: detalhes, preço de venda, estoque e validade. */
-function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving, lojaOn }) {
+function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving, lojaOn, mercadoOn, arenaId }) {
   const [edit, setEdit] = useState({
     sale_price: p.sale_price ?? '', min_stock: p.min_stock ?? '', expiry_date: p.expiry_date ?? '',
     sell_online: p.sell_online === true,
@@ -558,6 +564,11 @@ function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive
                 <Smartphone className="mr-1 h-3 w-3" />
                 {Number(p.sale_price) > 0 && p.active !== false ? 'No app' : 'No app — sem preço ou inativo'}
               </V2Badge>
+            )}
+            {mercadoOn && p.market_listing_id && (
+              <Link to={`/mercado/anuncio/${p.market_listing_id}`} className="inline-flex min-h-6 items-center">
+                <V2Badge tone="green"><Store className="mr-1 h-3 w-3" aria-hidden="true" />No Mercado PickleRush</V2Badge>
+              </Link>
             )}
             {!p.active && <V2Badge tone="red">Inativo</V2Badge>}
           </div>
@@ -587,6 +598,15 @@ function ProductRow({ product: p, posicao, editing, onToggleEdit, onToggleActive
           </div>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          {mercadoOn && !p.market_listing_id && p.active !== false && (
+            <Link
+              to={`/mercado/vender/anuncio/novo?como=arena_${arenaId}&produto=${p.id}`}
+              state={{ rascunho: draftFromArenaProduct(p) }}
+              className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-gray-500 hover:text-ink"
+            >
+              <Store className="h-3.5 w-3.5" aria-hidden="true" /> Anunciar no Mercado
+            </Link>
+          )}
           <button type="button" onClick={onToggleEdit} className="text-gray-500 hover:text-ink" aria-label={`Editar ${p.name}`}>
             <Pencil className="h-4 w-4" />
           </button>
@@ -977,6 +997,9 @@ function ExitsSection({ arenaId }) {
                       <V2Badge tone="amber">{EXIT_TYPE_LABELS[x.exit_type] || x.exit_type}</V2Badge>
                       {x.channel === 'app' && (
                         <V2Badge tone="blue" className="ml-1"><Smartphone className="mr-1 h-3 w-3" />Pedido pelo app</V2Badge>
+                      )}
+                      {x.channel === 'mercado' && (
+                        <V2Badge tone="green" className="ml-1"><Store className="mr-1 h-3 w-3" />Mercado PickleRush</V2Badge>
                       )}
                       {x.buyer_name && <span className="ml-2 text-gray-400">{x.buyer_name}</span>}
                     </div>

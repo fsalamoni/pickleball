@@ -221,7 +221,7 @@ function conferirTermos(value, settings) {
  * Cria ou atualiza um anúncio. `publish` exige o mínimo para ir ao ar.
  * `seller` é a ficha (`market_sellers/{key}`) em nome de quem se vende.
  */
-export async function saveListing({ id, input, publish, seller, uid, settings }) {
+export async function saveListing({ id, input, publish, seller, uid, settings, keepQuantity = false }) {
   if (!seller || seller.status !== SELLER_STATUS.ACTIVE) throw new MarketError('Este vendedor não está ativo no Mercado.');
   const r = validateListingInput(input, { publish });
   if (!r.ok) throw new MarketError('Confira os campos destacados.', r.errors);
@@ -229,6 +229,9 @@ export async function saveListing({ id, input, publish, seller, uid, settings })
   const status = publish ? 'active' : 'draft';
   const base = { ...r.value, status, seller_name: seller.display_name, updated_at: serverTimestamp() };
   if (publish) base.published_at = serverTimestamp();
+  // A quantidade do anúncio ligado ao estoque da arena é do servidor: o
+  // formulário aberto há minutos não pode regravá-la com um número velho.
+  if (id && keepQuantity) delete base.quantity;
   if (id) {
     await updateDoc(doc(db, C.listings, id), base);
     return id;
@@ -254,6 +257,9 @@ export async function quickEditListing(listing, { price_cents, quantity }) {
     const p = Math.round(Number(price_cents));
     if (!(p > 0)) throw new MarketError('Informe o preço.');
     patch.price_cents = p;
+  }
+  if (quantity != null && listing.source?.kind === 'arena_product' && listing.source.tracked) {
+    throw new MarketError('A quantidade deste anúncio acompanha o estoque da arena. Registre a compra no estoque da arena.');
   }
   if (quantity != null) {
     const q = Math.floor(Number(quantity));
