@@ -867,7 +867,7 @@ export default function V2Layout({ children }) {
         </aside>
       )}
 
-      <div className="relative flex w-full flex-1 flex-col">
+      <div className="relative flex min-w-0 w-full flex-1 flex-col">
         <header
           className={cn(
             'glass z-20 flex w-full items-center justify-between px-4 sm:px-6 lg:px-10',
@@ -887,7 +887,7 @@ export default function V2Layout({ children }) {
 
           <button type="button"
             onClick={() => abrirPaleta('cabecalho')}
-            className="hidden max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 md:flex"
+            className="hidden min-w-0 max-w-md flex-1 items-center gap-3 rounded-full bg-white py-3 pl-4 pr-4 text-left text-sm text-gray-500 shadow-sm hover:text-ink focus:outline-none focus:ring-4 focus:ring-gray-100 md:flex"
             aria-label="Buscar ou ir para (Ctrl K)"
           >
             <SearchIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -895,7 +895,7 @@ export default function V2Layout({ children }) {
             <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
           </button>
 
-          <div className="ml-auto flex items-center gap-2 sm:gap-4">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
             {isRealPlatformAdmin && (
               <button
                 type="button"
