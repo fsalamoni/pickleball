@@ -106,7 +106,7 @@ function StoreForm({ uid, inicial }) {
         </div>
         <label htmlFor="l-termos" className="flex items-start gap-3 text-sm text-gray-700">
           <input id="l-termos" type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={Boolean(f.accept_terms)} onChange={(e) => set({ accept_terms: e.target.checked })} />
-          <span>{t('Li e aceito os')} <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">{t('Termos de Uso')}</Link> {t('e os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos do Mercado')}</Link>{t(', e respondo pelos produtos que vendo.')}</span>
+          <span>Li e aceito os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link>, os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos Gerais do Mercado</Link> e os <Link to="/legal/termos-vendedor-mercado" className="font-bold text-ink underline">Termos do Vendedor</Link>, e respondo, de forma exclusiva, pelos produtos que vendo, pela entrega e pelos documentos da venda.</span>
         </label>
         {erros.accept_terms && <p className="text-sm font-medium text-red-500">{erros.accept_terms}</p>}
       </V2Surface>

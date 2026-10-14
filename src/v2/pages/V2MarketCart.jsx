@@ -34,6 +34,7 @@ import {
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, SellerTypeTag, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
 import { t } from '@/core/i18n';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 const ADDRESS_FIELDS = ['name', 'cep', 'street', 'number', 'complement', 'district', 'city', 'state', 'phone'];
 
@@ -64,8 +65,8 @@ function Line({ line, cart, editable }) {
   const run = (p) => p.catch(() => toast.error(t('Não foi possível atualizar o carrinho. Tente de novo.')));
   return (
     <li className="flex gap-3 py-4">
-      <Link to={`/mercado/anuncio/${line.listing_id}`} className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-paper">
-        {line.cover_url && <img src={line.cover_url} alt="" loading="lazy" className={cn('h-full w-full object-cover', !check.ok && 'opacity-50')} />}
+      <Link to={`/mercado/anuncio/${line.listing_id}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-paper">
+        {line.cover_url && <MarketPhoto src={line.cover_url} aspect={line.cover_aspect} frame={line.cover_frame} loading="lazy" className={cn(!check.ok && 'opacity-50')} />}
       </Link>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start justify-between gap-3">
@@ -391,7 +392,7 @@ function CartPage() {
                   const ok = l && l.status === 'active';
                   return (
                     <li key={s.listing_id} className="flex items-center gap-3 py-3">
-                      <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-paper-pure">{s.cover_url && <img src={s.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" />}</span>
+                      <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-paper-pure">{s.cover_url && <MarketPhoto src={s.cover_url} aspect={s.cover_aspect} frame={s.cover_frame} loading="lazy" />}</span>
                       <Link to={`/mercado/anuncio/${s.listing_id}`} className="min-w-0 flex-1 truncate text-sm text-ink hover:underline">{s.title}</Link>
                       {ok ? (
                         <V2Button type="button" size="sm" variant="ghost" onClick={() => cart.back(s.listing_id).catch(() => toast.error(t('Não foi possível mover. Tente de novo.')))}>{t('Mover para o carrinho')}</V2Button>
@@ -421,7 +422,7 @@ function CartPage() {
                 <V2Button type="button" size="lg" className="w-full" disabled={place.isPending} onClick={confirmar}>
                   {place.isPending ? t('Fazendo o pedido…') : escolhidos.length > 1 ? t('Confirmar {n} pedidos', { n: escolhidos.length }) : t('Confirmar pedido')}
                 </V2Button>
-                <p className="text-xs text-gray-500">{t('Ao confirmar, você concorda com os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos do Mercado')}</Link>.</p>
+                <p className="text-xs text-gray-500">Ao confirmar, você concorda com os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos Gerais do Mercado</Link> e os <Link to="/legal/termos-comprador-mercado" className="font-bold text-ink underline">Termos do Comprador</Link>. A compra é feita direto com o vendedor: a PickleRush não recebe o pagamento nem entrega o produto.</p>
               </>
             ) : (
               <V2Button type="button" size="lg" className="w-full" disabled={!escolhidos.length} onClick={() => setParams({ fechar: '1' })}>

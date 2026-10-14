@@ -57,6 +57,16 @@ export function pendingGateConsents(consentMap, documents = LEGAL_DOCUMENTS) {
   return gateDocuments(documents).filter((d) => !isDocAccepted(consentMap, d));
 }
 
+/** Documentos do aviso do Mercado (`marketGate: true`), aceitos no primeiro acesso. */
+export function marketGateDocuments(documents = LEGAL_DOCUMENTS) {
+  return documents.filter((d) => d.marketGate === true);
+}
+
+/** Documentos do Mercado ainda não aceitos (ou com versão nova). */
+export function pendingMarketConsents(consentMap, documents = LEGAL_DOCUMENTS) {
+  return marketGateDocuments(documents).filter((d) => !isDocAccepted(consentMap, d));
+}
+
 /**
  * Documentos por papel pendentes para o usuário (não bloqueiam; alimentam a
  * central e as caixas de aceite nos fluxos).

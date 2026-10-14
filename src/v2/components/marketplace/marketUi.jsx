@@ -16,6 +16,7 @@ import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { formatBRL, discountPercent } from '@/modules/marketplace/domain/money';
 import { coverOf } from '@/modules/marketplace/domain/listing';
+import MarketPhoto, { AiStamp } from './MarketPhoto';
 import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domain/reputation';
 import { useFavorites, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
@@ -172,15 +173,18 @@ export function ListingCard({ listing, className, showFavorite = true }) {
     >
       <div className="relative aspect-square overflow-hidden bg-paper">
         {cover ? (
-          <img
+          <MarketPhoto
             src={cover.thumb_url || cover.url}
             alt={cover.alt || listing.title}
+            aspect={cover.aspect}
+            frame={cover.frame}
             loading="lazy"
-            className={cn('h-full w-full object-cover transition-transform duration-300 group-hover:scale-105', sold && 'opacity-60')}
+            className={cn('transition-transform duration-300 group-hover:scale-105', sold && 'opacity-60')}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-gray-300"><Box className="h-12 w-12" /></div>
         )}
+        {cover?.ai_generated && <AiStamp className="absolute bottom-3 left-3" />}
         {sold && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">{t('Esgotado')}</span>}
         {!sold && listing.type === LISTING_TYPE.USED && (
           <span className="absolute left-3 top-3 rounded-full bg-paper-pure/90 px-3 py-1 text-xs font-bold text-ink backdrop-blur">

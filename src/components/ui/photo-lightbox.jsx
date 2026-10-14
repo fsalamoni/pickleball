@@ -17,6 +17,7 @@ export function PhotoLightbox({
   description,
   imageClassName,
   contentClassName,
+  children,
 }) {
   if (!src || !trigger) return trigger || null;
 
@@ -36,7 +37,7 @@ export function PhotoLightbox({
           </DialogHeader>
         )}
         <div className="flex max-h-[82vh] items-center justify-center overflow-hidden rounded-[1.5rem] bg-black/30 p-2">
-          <img src={src} alt={alt} className={cn('max-h-[78vh] max-w-full rounded-[1rem] object-contain', imageClassName)} />
+          {children || <img src={src} alt={alt} className={cn('max-h-[78vh] max-w-full rounded-[1rem] object-contain', imageClassName)} />}
         </div>
       </DialogContent>
     </Dialog>

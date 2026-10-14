@@ -18,6 +18,7 @@ import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
 import { t, fmtData } from '@/core/i18n';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 const data = (ms) => (ms ? fmtData(ms, { day: '2-digit', month: 'short' }) : '');
 
@@ -41,8 +42,8 @@ function OrdersList({ uid, filtro }) {
             <Link to={`/mercado/pedidos/${o.id}`} className="flex items-center gap-4 p-4 hover:bg-paper">
               <span className="flex shrink-0 -space-x-3">
                 {capas.map((i) => (
-                  <span key={i.listing_id} className="h-14 w-14 overflow-hidden rounded-xl bg-paper ring-2 ring-paper-pure">
-                    {i.cover_url ? <img src={i.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}
+                  <span key={i.listing_id} className="relative h-14 w-14 overflow-hidden rounded-xl bg-paper ring-2 ring-paper-pure">
+                    {i.cover_url ? <MarketPhoto src={i.cover_url} aspect={i.cover_aspect} frame={i.cover_frame} loading="lazy" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}
                   </span>
                 ))}
               </span>

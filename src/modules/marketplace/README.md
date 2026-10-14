@@ -124,3 +124,23 @@ em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
 - **Perto de você** usa a Minha região (`useRegionalList`), do mais perto ao
   mais longe.
 
+- **Fotos** (editor do anúncio): arrastar do computador e soltar, várias de
+  uma vez (na ordem escolhida), reordenar arrastando uma sobre a outra (ou
+  pelas setas), e **Ajustar** cada foto: tamanho, enquadramento no card e
+  rotação. O arquivo NÃO muda: `media[].aspect` (largura ÷ altura, medida no
+  envio) e `media[].frame = { rotate, zoom, x, y }` são aplicados por CSS
+  (`domain/mediaFrame.js` + `MarketPhoto`). O card recorta (`mode="cover"`);
+  a galeria e a foto ampliada mostram a foto inteira, só girada
+  (`mode="contain"`). Foto antiga sem `aspect` sai como sempre
+  (`object-cover`). O pedido e o carrinho copiam `cover_aspect`/`cover_frame`.
+  **Nunca** desenhe foto de anúncio com `<img>` cru: use `MarketPhoto`.
+- **Selo "Gerado por IA"**: `media[].ai_generated` (declarado por quem
+  publica, na foto e no vídeo) vira o carimbo `AiStamp` no card, na galeria e
+  na foto ampliada. A plataforma não verifica: a declaração e a
+  responsabilidade são do vendedor (Política de Imagens e IA).
+- **Termos do Mercado**: quatro documentos com `marketGate: true` em
+  `legal/domain/legalDocuments.js` (Termos Gerais v2, do Comprador, do
+  Vendedor e a Política de Imagens, Vídeos e IA, rota `mercado-imagens-e-ia`).
+  `MarketTermsGate` pede o aceite no primeiro acesso a `/mercado` e a cada
+  versão nova (`pendingMarketConsents`), gravado em `legal_consents` como os
+  demais. Subir a `version` de um deles pede novo aceite a todos.

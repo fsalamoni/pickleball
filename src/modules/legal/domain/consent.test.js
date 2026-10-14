@@ -117,3 +117,24 @@ describe('documento de funcionalidade atrás de flag', () => {
     comFlag.forEach((d) => expect(chaves.has(d.flag)).toBe(true));
   });
 });
+
+describe('aviso de termos do Mercado', () => {
+  it('pede os quatro documentos do Mercado até serem aceitos na versão atual', async () => {
+    const { pendingMarketConsents, marketGateDocuments } = await import('./consent.js');
+    const docs = marketGateDocuments();
+    expect(docs.map((d) => d.key).sort()).toEqual(
+      ['politica-imagens-ia-mercado', 'termos-comprador-mercado', 'termos-mercado', 'termos-vendedor-mercado'],
+    );
+    docs.forEach((d) => { expect(d.flag).toBe('marketplace'); expect(d.gate).toBe(false); });
+    expect(pendingMarketConsents({})).toHaveLength(4);
+    const tudo = Object.fromEntries(docs.map((d) => [d.key, { version: d.version }]));
+    expect(pendingMarketConsents(tudo)).toHaveLength(0);
+    // Termos gerais v1 (aceitos antes) não valem para a v2.
+    expect(pendingMarketConsents({ ...tudo, 'termos-mercado': { version: 1 } }).map((d) => d.key)).toEqual(['termos-mercado']);
+  });
+
+  it('a política de IA tem a rota que o editor de anúncio cita', async () => {
+    const { getLegalDocumentByRoute } = await import('./legalDocuments.js');
+    expect(getLegalDocumentByRoute('mercado-imagens-e-ia')?.key).toBe('politica-imagens-ia-mercado');
+  });
+});

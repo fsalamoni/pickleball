@@ -87,6 +87,7 @@ const GamificationBackground = lazy(() => import('@/v2/components/gamification/G
 // Paleta de comandos: só baixa quando a pessoa abre.
 const V2CommandPalette = lazy(() => import('@/v2/components/search/V2CommandPalette'));
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
+import MarketTermsGate from '@/v2/components/legal/MarketTermsGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
 import { t, tk, tn } from '@/core/i18n';
@@ -744,6 +745,8 @@ export default function V2Layout({ children }) {
           bloqueantes simultâneos. */}
       <LegalConsentGate />
       {!consentGateBlocking && <V2OnboardingWizard />}
+      {/* Termos do Mercado: no primeiro acesso a /mercado (e a cada versão nova). */}
+      {!consentGateBlocking && marketplaceOn && location.pathname.startsWith('/mercado') && <MarketTermsGate />}
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',

@@ -11,7 +11,9 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ImagePlus, Star, Trash2, Video } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Crop, ImagePlus, RotateCcw, RotateCw, Sparkles, Star, Trash2, Video,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -32,6 +34,13 @@ import {
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { ListingCard, MarketGate } from '@/v2/components/marketplace/marketUi';
 import { t } from '@/core/i18n';
+import MarketPhoto, { AiStamp } from '@/v2/components/marketplace/MarketPhoto';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DEFAULT_FRAME, ZOOM_MAX, ZOOM_MIN, clampFrame, normalizeAspect, normalizeFrame, panFrame, rotateFrame, zoomFrame,
+} from '@/modules/marketplace/domain/mediaFrame';
 
 const centsText = (c) => (c == null || c === '' ? '' : formatBRL(c).replace(/^R\$\s?/, ''));
 
@@ -80,95 +89,278 @@ function Section({ id, title, hint, children }) {
   );
 }
 
-function MediaEditor({ media, onChange, error }) {
+/** Largura ÷ altura do arquivo (para enquadrar a foto sem alterar o arquivo). */
+function medirProporcao(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth && img.naturalHeight ? normalizeAspect(img.naturalWidth / img.naturalHeight) : null);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/**
+ * Ajustar a foto: arrastar escolhe o centro, "Tamanho" aproxima, os botões
+ * giram. O arquivo não muda: o card recorta assim e a foto ampliada aparece
+ * inteira, só girada.
+ */
+function PhotoAdjustDialog({ foto, numero, onSave, onClose }) {
+  const [aspect, setAspect] = useState(normalizeAspect(foto?.aspect));
+  const [frame, setFrame] = useState(() => normalizeFrame(foto?.frame));
+  const arrasto = useRef(null);
+
+  useEffect(() => {
+    let vivo = true;
+    if (foto && !normalizeAspect(foto.aspect)) medirProporcao(foto.url).then((a) => { if (vivo) setAspect(a); });
+    return () => { vivo = false; };
+  }, [foto]);
+
+  if (!foto) return null;
+  const pronto = Boolean(aspect);
+  const mover = (dx, dy) => setFrame((f) => panFrame(aspect, f, dx, dy));
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ajustar a foto {numero}</DialogTitle>
+          <DialogDescription>Arraste a foto para escolher o que aparece no card. Quem abrir o anúncio e ampliar a foto vê a foto inteira.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 sm:grid-cols-[1fr_9rem]">
+          <div
+            role="application"
+            aria-label="Enquadramento da foto no card. Use as setas para mover."
+            tabIndex={0}
+            className="relative aspect-square touch-none select-none overflow-hidden rounded-2xl border border-gray-100 bg-paper focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40"
+            style={{ cursor: pronto ? 'grab' : 'wait' }}
+            onPointerDown={(e) => {
+              if (!pronto) return;
+              e.currentTarget.setPointerCapture(e.pointerId);
+              arrasto.current = { x: e.clientX, y: e.clientY };
+            }}
+            onPointerMove={(e) => {
+              if (!arrasto.current) return;
+              const r = e.currentTarget.getBoundingClientRect();
+              mover((e.clientX - arrasto.current.x) / r.width, (e.clientY - arrasto.current.y) / r.height);
+              arrasto.current = { x: e.clientX, y: e.clientY };
+            }}
+            onPointerUp={() => { arrasto.current = null; }}
+            onPointerCancel={() => { arrasto.current = null; }}
+            onKeyDown={(e) => {
+              if (!pronto) return;
+              const passos = { ArrowLeft: [0.05, 0], ArrowRight: [-0.05, 0], ArrowUp: [0, 0.05], ArrowDown: [0, -0.05] };
+              if (passos[e.key]) { e.preventDefault(); mover(...passos[e.key]); }
+            }}
+          >
+            {pronto
+              ? <MarketPhoto src={foto.url} alt={foto.alt || ''} aspect={aspect} frame={frame} />
+              : <span className="flex h-full items-center justify-center text-sm text-gray-500">Carregando a foto…</span>}
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-500">Ao ampliar</p>
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-ink/90">
+              {pronto && <MarketPhoto src={foto.url} aspect={aspect} frame={frame} mode="contain" />}
+            </div>
+            <p className="text-xs text-gray-500">A foto inteira, como foi enviada{frame.rotate ? ', girada' : ''}.</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <label className="block text-sm font-bold text-ink" htmlFor="foto-zoom">Tamanho no card</label>
+          <input
+            id="foto-zoom"
+            type="range"
+            min={ZOOM_MIN}
+            max={ZOOM_MAX}
+            step={0.05}
+            value={frame.zoom}
+            disabled={!pronto}
+            onChange={(e) => setFrame((f) => zoomFrame(aspect, f, Number(e.target.value)))}
+            className="w-full accent-ink"
+          />
+          <div className="flex flex-wrap gap-2">
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, -1))}><RotateCcw className="h-4 w-4" /> Girar para a esquerda</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => rotateFrame(aspect, f, 1))}><RotateCw className="h-4 w-4" /> Girar para a direita</V2Button>
+            <V2Button type="button" size="sm" variant="ghost" disabled={!pronto} onClick={() => setFrame((f) => ({ ...DEFAULT_FRAME, rotate: f.rotate }))}>Centralizar</V2Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button type="button" disabled={!pronto} onClick={() => onSave({ aspect, frame: clampFrame(aspect, frame) })}>Salvar ajuste</V2Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AiCheck({ id, checked, onChange, children }) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-2 text-xs text-gray-600">
+      <input id={id} type="checkbox" checked={Boolean(checked)} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-ink" />
+      <span>{children}</span>
+    </label>
+  );
+}
+
+function MediaEditor({ media, onChange, error, aiPolicyRoute }) {
   const { user } = useAuth();
   const inputRef = useRef(null);
   const videoRef = useRef(null);
+  const arrastando = useRef(null);
   const [envios, setEnvios] = useState([]);
+  const [soltando, setSoltando] = useState(false);
+  const [ajustando, setAjustando] = useState(null);
   const fotos = media.filter((m) => m.kind !== 'video');
   const video = media.find((m) => m.kind === 'video');
 
-  const subir = async (files, { asVideo = false } = {}) => {
-    const lista = [...files].slice(0, asVideo ? 1 : MEDIA_LIMITS.maxPhotos - fotos.length);
-    for (const file of lista) {
-      const id = `${file.name}-${Math.random()}`;
-      setEnvios((xs) => [...xs, { id, nome: file.name, pct: 0 }]);
-      try {
-        const prep = await prepareMarketFile(file, { allowVideo: asVideo });
-        if (!prep.ok) throw new Error(prep.error);
-        if (asVideo !== (prep.type === 'video')) throw new Error(asVideo ? t('Escolha um arquivo de vídeo.') : t('Escolha uma foto.'));
-        const up = uploadMarketFile(prep.file, { uid: user.uid, kind: prep.type, folder: 'anuncios', onProgress: (pct) => setEnvios((xs) => xs.map((e) => (e.id === id ? { ...e, pct } : e))) });
-        const r = await up.done;
-        onChange((atual) => (asVideo
-          ? [...atual.filter((m) => m.kind !== 'video'), { url: r.url, path: r.path, kind: 'video', alt: '' }]
-          : [...atual.filter((m) => m.kind !== 'video'), { url: r.url, path: r.path, kind: 'image', alt: '' }, ...atual.filter((m) => m.kind === 'video')]));
-      } catch (e) {
-        toast.error(`${file.name}: ${e.message}`);
-      } finally {
-        setEnvios((xs) => xs.filter((x) => x.id !== id));
+  const enviarUm = async (file, asVideo) => {
+    const id = `${file.name}-${Math.random()}`;
+    setEnvios((xs) => [...xs, { id, nome: file.name, pct: 0 }]);
+    try {
+      const prep = await prepareMarketFile(file, { allowVideo: asVideo });
+      if (!prep.ok) throw new Error(prep.error);
+      if (asVideo !== (prep.type === 'video')) throw new Error(asVideo ? t('Escolha um arquivo de vídeo.') : t('Escolha uma foto.'));
+      let aspect = null;
+      if (!asVideo) {
+        const local = URL.createObjectURL(prep.file);
+        aspect = await medirProporcao(local);
+        URL.revokeObjectURL(local);
       }
+      const up = uploadMarketFile(prep.file, { uid: user.uid, kind: prep.type, folder: 'anuncios', onProgress: (pct) => setEnvios((xs) => xs.map((e) => (e.id === id ? { ...e, pct } : e))) });
+      const r = await up.done;
+      return asVideo
+        ? { url: r.url, path: r.path, kind: 'video', alt: '' }
+        : { url: r.url, path: r.path, kind: 'image', alt: '', aspect, frame: { ...DEFAULT_FRAME } };
+    } catch (e) {
+      toast.error(`${file.name}: ${e.message}`);
+      return null;
+    } finally {
+      setEnvios((xs) => xs.filter((x) => x.id !== id));
     }
   };
 
-  const mover = (i, passo) => onChange((atual) => {
+  // Todas de uma vez, e entram na ordem em que foram escolhidas.
+  const subir = async (files, { asVideo = false } = {}) => {
+    const escolhidos = [...files].filter((f) => (asVideo ? true : !f.type || f.type.startsWith('image/')));
+    const lista = escolhidos.slice(0, asVideo ? 1 : Math.max(0, MEDIA_LIMITS.maxPhotos - fotos.length - envios.length));
+    if (!asVideo && escolhidos.length > lista.length) toast.info(`Cabem até ${MEDIA_LIMITS.maxPhotos} fotos; ${escolhidos.length - lista.length} ficaram de fora.`);
+    const novos = (await Promise.all(lista.map((f) => enviarUm(f, asVideo)))).filter(Boolean);
+    if (!novos.length) return;
+    onChange((atual) => (asVideo
+      ? [...atual.filter((m) => m.kind !== 'video'), ...novos]
+      : [...atual.filter((m) => m.kind !== 'video'), ...novos, ...atual.filter((m) => m.kind === 'video')]));
+  };
+
+  const reordenar = (de, para) => onChange((atual) => {
     const fs = atual.filter((m) => m.kind !== 'video');
-    const j = i + passo;
-    if (j < 0 || j >= fs.length) return atual;
-    [fs[i], fs[j]] = [fs[j], fs[i]];
-    return [...fs, ...atual.filter((m) => m.kind === 'video')];
+    if (de === para || de < 0 || para < 0 || de >= fs.length || para >= fs.length) return atual;
+    const [m] = fs.splice(de, 1);
+    fs.splice(para, 0, m);
+    return [...fs, ...atual.filter((x) => x.kind === 'video')];
   });
   const tirar = (m) => onChange((atual) => atual.filter((x) => x.url !== m.url));
-  const legenda = (m, alt) => onChange((atual) => atual.map((x) => (x.url === m.url ? { ...x, alt } : x)));
+  const mudar = (m, campos) => onChange((atual) => atual.map((x) => (x.url === m.url ? { ...x, ...campos } : x)));
+  const temArquivo = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
 
   return (
     <div className="space-y-4">
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {fotos.map((m, i) => (
-          <li key={m.url} className="space-y-1.5">
-            <div className="relative aspect-square overflow-hidden rounded-2xl border border-gray-100 bg-paper">
-              <img src={m.url} alt={m.alt || t('Foto {n}', { n: i + 1 })} className="h-full w-full object-cover" />
-              {i === 0 && <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-2xs font-bold text-white"><Star className="h-3 w-3" /> {t('Capa')}</span>}
-              <div className="absolute inset-x-1 bottom-1 flex justify-between">
-                <span className="flex gap-1">
-                  <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={t('Mover a foto {n} para a esquerda', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => mover(i, 1)} disabled={i === fotos.length - 1} aria-label={t('Mover a foto {n} para a direita', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-                </span>
-                <button type="button" onClick={() => tirar(m)} aria-label={t('Tirar a foto {n}', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-red-600"><Trash2 className="h-4 w-4" /></button>
+      <div
+        onDragOver={(e) => { if (temArquivo(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setSoltando(true); } }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setSoltando(false); }}
+        onDrop={(e) => {
+          if (!temArquivo(e)) return;
+          e.preventDefault();
+          setSoltando(false);
+          subir(e.dataTransfer.files);
+        }}
+        className={cn('rounded-3xl transition-colors', soltando && 'bg-acid/10 outline-dashed outline-2 outline-offset-4 outline-ink')}
+      >
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {fotos.map((m, i) => (
+            <li
+              key={m.url}
+              className="space-y-1.5"
+              draggable
+              onDragStart={(e) => { arrastando.current = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
+              onDragOver={(e) => { if (arrastando.current != null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } }}
+              onDrop={(e) => {
+                if (arrastando.current == null) return;
+                e.preventDefault();
+                e.stopPropagation();
+                reordenar(arrastando.current, i);
+                arrastando.current = null;
+              }}
+              onDragEnd={() => { arrastando.current = null; }}
+            >
+              <div className="relative aspect-square cursor-grab overflow-hidden rounded-2xl border border-gray-100 bg-paper active:cursor-grabbing">
+                <MarketPhoto src={m.url} alt={m.alt || t('Foto {n}', { n: i + 1 })} aspect={m.aspect} frame={m.frame} />
+                {i === 0 && <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-2xs font-bold text-white"><Star className="h-3 w-3" /> {t('Capa')}</span>}
+                {m.ai_generated && <AiStamp className="absolute right-2 top-2" />}
+                <div className="absolute inset-x-1 bottom-1 flex justify-between">
+                  <span className="flex gap-1">
+                    <button type="button" onClick={() => reordenar(i, i - 1)} disabled={i === 0} aria-label={t('Mover a foto {n} para a esquerda', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => reordenar(i, i + 1)} disabled={i === fotos.length - 1} aria-label={t('Mover a foto {n} para a direita', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
+                  </span>
+                  <span className="flex gap-1">
+                    <button type="button" onClick={() => setAjustando(i)} aria-label={`Ajustar a foto ${i + 1}: tamanho, enquadramento e rotação`} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-ink"><Crop className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => tirar(m)} aria-label={t('Tirar a foto {n}', { n: i + 1 })} className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-pure/90 text-red-600"><Trash2 className="h-4 w-4" /></button>
+                  </span>
+                </div>
               </div>
-            </div>
-            <label className="sr-only" htmlFor={`alt-${i}`}>{t('Descrição da foto {n}', { n: i + 1 })}</label>
-            <input id={`alt-${i}`} value={m.alt || ''} maxLength={140} onChange={(e) => legenda(m, e.target.value)} placeholder={t('Descreva a foto (opcional)')} className="w-full rounded-xl border border-gray-200 bg-paper-pure px-2 py-1.5 text-xs text-ink" />
-          </li>
-        ))}
-        {envios.map((e) => (
-          <li key={e.id} className="flex aspect-square flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 text-xs text-gray-500">
-            <span className="max-w-full truncate px-2">{e.nome}</span>
-            <span>{e.pct}%</span>
-          </li>
-        ))}
-        {fotos.length + envios.length < MEDIA_LIMITS.maxPhotos && (
-          <li>
-            <button type="button" onClick={() => inputRef.current?.click()} className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-bold text-gray-500 hover:border-ink hover:text-ink">
-              <ImagePlus className="h-7 w-7" />
-              {t('Adicionar fotos')}
-            </button>
-          </li>
-        )}
-      </ul>
+              <label className="sr-only" htmlFor={`alt-${i}`}>{t('Descrição da foto {n}', { n: i + 1 })}</label>
+              <input id={`alt-${i}`} value={m.alt || ''} maxLength={140} onChange={(e) => mudar(m, { alt: e.target.value })} placeholder={t('Descreva a foto (opcional)')} className="w-full rounded-xl border border-gray-200 bg-paper-pure px-2 py-1.5 text-xs text-ink" />
+              <AiCheck id={`ia-${i}`} checked={m.ai_generated} onChange={(v) => mudar(m, { ai_generated: v })}>Gerada ou alterada por IA</AiCheck>
+            </li>
+          ))}
+          {envios.map((e) => (
+            <li key={e.id} className="flex aspect-square flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 text-xs text-gray-500">
+              <span className="max-w-full truncate px-2">{e.nome}</span>
+              <span>{e.pct}%</span>
+            </li>
+          ))}
+          {fotos.length + envios.length < MEDIA_LIMITS.maxPhotos && (
+            <li>
+              <button type="button" onClick={() => inputRef.current?.click()} className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 px-2 text-center text-sm font-bold text-gray-500 hover:border-ink hover:text-ink">
+                <ImagePlus className="h-7 w-7" />
+                {t('Adicionar fotos')}
+                <span className="text-xs font-normal">ou arraste para cá</span>
+              </button>
+            </li>
+          )}
+        </ul>
+      </div>
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files); e.target.value = ''; }} />
-      <p className="text-xs text-gray-500">{t('Até {n} fotos. A primeira é a capa. Fotos com boa luz, de frente e mostrando os detalhes (ou marcas de uso) vendem mais.', { n: MEDIA_LIMITS.maxPhotos })}</p>
+      <p className="text-xs text-gray-500">
+        Até {MEDIA_LIMITS.maxPhotos} fotos, escolhidas ou arrastadas várias de uma vez. A primeira é a capa; arraste uma foto sobre a outra (ou use as setas) para mudar a ordem, e toque em <Crop className="inline h-3.5 w-3.5" aria-label="ajustar" /> para escolher o tamanho, o enquadramento no card e girar. Ao ampliar, o comprador vê a foto inteira.
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         {video ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-sm text-ink">
+          <span className="inline-flex flex-wrap items-center gap-2 rounded-2xl bg-paper px-3 py-1.5 text-sm text-ink">
             <Video className="h-4 w-4" /> {t('Vídeo enviado')}
             <button type="button" onClick={() => tirar(video)} className="font-bold text-red-600 underline">{t('Tirar')}</button>
+            <AiCheck id="ia-video" checked={video.ai_generated} onChange={(v) => mudar(video, { ai_generated: v })}>Gerado ou alterado por IA</AiCheck>
           </span>
         ) : (
           <V2Button type="button" size="sm" variant="ghost" onClick={() => videoRef.current?.click()}><Video className="h-4 w-4" /> {t('Enviar um vídeo (até {n} s)', { n: MEDIA_LIMITS.maxVideoSeconds })}</V2Button>
         )}
         <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { subir(e.target.files, { asVideo: true }); e.target.value = ''; }} />
       </div>
+      <div className="rounded-2xl bg-paper p-3 text-xs text-gray-600">
+        <p className="flex items-center gap-1.5 font-bold text-ink"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Imagem ou vídeo feito com inteligência artificial</p>
+        <p className="mt-1">
+          Se uma foto ou o vídeo foi criado ou alterado por IA de um jeito que muda o que se vê (produto montado, cor, fundo com o produto trocado, detalhe apagado), marque “Gerada ou alterada por IA”. O comprador vê o selo <strong>Gerado por IA</strong>. Ajustes simples de luz e corte não precisam.
+          Você responde pelas fotos e vídeos que publica: eles precisam mostrar o produto que será entregue, e o anúncio pode ser retirado se enganar quem compra.{' '}
+          {aiPolicyRoute && <Link to={`/legal/${aiPolicyRoute}`} className="font-bold text-ink underline">Ler a política de imagens e IA</Link>}
+        </p>
+      </div>
       {error && <p role="alert" className="text-sm font-medium text-red-500">{error}</p>}
+      {ajustando != null && fotos[ajustando] && (
+        <PhotoAdjustDialog
+          foto={fotos[ajustando]}
+          numero={ajustando + 1}
+          onClose={() => setAjustando(null)}
+          onSave={(campos) => { mudar(fotos[ajustando], campos); setAjustando(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -301,7 +493,7 @@ function EditorPage() {
       <div className="grid gap-6 lg:grid-cols-12">
         <form id="editor-anuncio" className="space-y-6 lg:col-span-8" onSubmit={(e) => { e.preventDefault(); salvar(true); }} noValidate>
           <Section id="fotos" title={t('Fotos e vídeo')}>
-            <MediaEditor media={form.media} onChange={(fn) => set((f) => ({ media: fn(f.media) }))} error={errors.media} />
+            <MediaEditor media={form.media} onChange={(fn) => set((f) => ({ media: fn(f.media) }))} error={errors.media} aiPolicyRoute="mercado-imagens-e-ia" />
             <V2Field label={t('Ou um link do YouTube/Vimeo')} htmlFor="video-link" error={errors.video_link}>
               <V2Input id="video-link" type="url" placeholder={t('https://youtube.com/…')} value={form.video_link} onChange={(e) => set({ video_link: e.target.value })} />
             </V2Field>

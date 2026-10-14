@@ -234,6 +234,18 @@ function coverUrl(listing) {
   return c ? (c.thumb_url || c.url || '') : '';
 }
 
+/** O enquadramento da capa, copiado junto com a foto (o card do pedido recorta igual ao anúncio). */
+function coverFrame(listing) {
+  const media = Array.isArray(listing.media) ? listing.media : [];
+  const c = media.find((m) => m && m.is_cover) || media.find((m) => m && m.kind !== 'video');
+  if (!c || !(Number(c.aspect) > 0) || !c.frame || typeof c.frame !== 'object') return {};
+  const n = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  return {
+    cover_aspect: n(c.aspect, 1),
+    cover_frame: { rotate: n(c.frame.rotate, 0), zoom: n(c.frame.zoom, 1), x: n(c.frame.x, 0.5), y: n(c.frame.y, 0.5) },
+  };
+}
+
 /** Escreve avisos (fora da transação: aviso que falha não desfaz o pedido). */
 async function notify(db, uids, { title, message, link }, now) {
   const alvos = [...new Set((uids || []).filter(Boolean))];
@@ -414,7 +426,7 @@ async function placeOrders(ctx, uid, data) {
         if (!commonFulfillment(listings).includes(g.fulfillment)) fail('failed-precondition', 'Este vendedor não oferece essa forma de entrega para todos os itens.');
 
         const items = listings.map((l, k) => ({
-          listing_id: l.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '',
+          listing_id: l.id, title: l.title, cover_url: coverUrl(l), ...coverFrame(l), condition: l.condition || '',
           ...(g.fulfillment !== 'shipping' && l.pickup_note ? { pickup_note: texto(l.pickup_note, 140), city: texto(l.city, 60) } : {}),
           unit_price_cents: l.price_cents, quantity: g.items[k].quantity,
           ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
@@ -767,7 +779,7 @@ async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sel
     seller_key: offer.seller_key, seller_name: seller.display_name || l.seller_name || '', seller_type: seller.seller_type || l.seller_type || '',
     seller_manager_uids: offer.seller_manager_uids || [],
     items: [{
-      listing_id: listingSnap.id, title: l.title, cover_url: coverUrl(l), condition: l.condition || '', unit_price_cents: offer.amount_cents, quantity: 1,
+      listing_id: listingSnap.id, title: l.title, cover_url: coverUrl(l), ...coverFrame(l), condition: l.condition || '', unit_price_cents: offer.amount_cents, quantity: 1,
       ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
     }],
     item_count: 1, listing_ids: [listingSnap.id],
@@ -808,7 +820,7 @@ async function offerAction(ctx, actor, data = {}) {
     const ref = db.collection('market_offers').doc();
     const name = await buyerName(db, actor.uid);
     await ref.set({
-      listing_id: listingId, listing_title: l.title, cover_url: coverUrl(l),
+      listing_id: listingId, listing_title: l.title, cover_url: coverUrl(l), ...coverFrame(l),
       seller_key: l.seller_key, seller_name: l.seller_name || '', seller_manager_uids: ops,
       buyer_uid: actor.uid, buyer_name: name, list_price_cents: l.price_cents, amount_cents: amount,
       fulfillment: (l.fulfillment || []).includes(data.fulfillment) ? data.fulfillment : (l.fulfillment || [])[0] || 'meetup',

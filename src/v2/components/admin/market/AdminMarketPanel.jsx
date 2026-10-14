@@ -32,6 +32,7 @@ import { couponBenefitLabel, couponConditionsLabel } from '@/modules/marketplace
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { statusTone } from '@/v2/components/marketplace/marketUi';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -311,8 +312,8 @@ function ReportedRow({ listingId, reports, listing }) {
     <li>
       <V2Surface variant="compacto" className="space-y-3 p-4">
         <div className="flex flex-wrap items-start gap-3">
-          <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">
-            {listing?.media?.[0]?.thumb_url || listing?.media?.[0]?.url ? <img src={listing.media[0].thumb_url || listing.media[0].url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}
+          <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">
+            {listing?.media?.[0]?.thumb_url || listing?.media?.[0]?.url ? <MarketPhoto src={listing.media[0].thumb_url || listing.media[0].url} aspect={listing.media[0].aspect} frame={listing.media[0].frame} loading="lazy" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-bold text-ink">{titulo}</p>

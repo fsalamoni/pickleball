@@ -15,6 +15,7 @@ import { coverOf } from '@/modules/marketplace/domain/listing';
 import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { t, tk, tn } from '@/core/i18n';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 import {
   HomeAction, HomeEmpty, HomeRow, HomeSection,
 } from '@/v2/components/home/personal/HomeSection';
@@ -28,9 +29,9 @@ function Novidade({ listing }) {
       to={`/mercado/anuncio/${listing.id}`}
       className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-100 bg-paper-pure transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
     >
-      <span className="relative block aspect-square bg-paper">
+      <span className="relative block aspect-square overflow-hidden bg-paper">
         {cover
-          ? <img src={cover.thumb_url || cover.url} alt={cover.alt || listing.title} loading="lazy" className="h-full w-full object-cover" />
+          ? <MarketPhoto src={cover.thumb_url || cover.url} alt={cover.alt || listing.title} aspect={cover.aspect} frame={cover.frame} loading="lazy" />
           : <span className="flex h-full items-center justify-center text-gray-300"><Box className="h-8 w-8" aria-hidden="true" /></span>}
       </span>
       <span className="space-y-0.5 p-2.5">
