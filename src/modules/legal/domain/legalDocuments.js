@@ -20,6 +20,7 @@
  *  - category     'Essenciais' | 'Complementares' | 'Por papel'
  *  - audience     'all' | 'organizer' | 'arena_owner' | 'coach'
  *  - gate         true → entra no portão de consentimento bloqueante
+ *  - marketGate   true → entra no aviso de termos do Mercado (primeiro acesso a /mercado)
  *  - icon         nome do ícone lucide (mapeado na view)
  *  - flag         (opcional) chave de FEATURE_FLAG: com a flag desligada o
  *                 documento não aparece (a funcionalidade não existe ainda)
@@ -431,91 +432,291 @@ export const LEGAL_DOCUMENTS = [
   {
     key: 'termos-mercado',
     route: 'termos-mercado',
-    title: 'Termos do Mercado',
-    eyebrow: 'Complementar · Mercado',
-    description: 'Regras de quem compra e de quem vende no Mercado PickleRush.',
-    version: 1,
+    title: 'Termos Gerais do Mercado',
+    eyebrow: 'Mercado · Termos gerais',
+    description: 'O que o Mercado PickleRush é, o que ele não é, e as regras que valem para quem compra e para quem vende.',
+    version: 2,
     effectiveDate: '2026-10-14',
     category: LEGAL_CATEGORY.COMPLEMENTARY,
     audience: LEGAL_ROLE.ALL,
     gate: false,
+    marketGate: true,
     flag: 'marketplace',
     icon: 'ShoppingBag',
     sections: [
       {
         icon: 'ShoppingBag',
-        title: 'O que é o Mercado',
-        description: 'Uma vitrine que aproxima quem compra de quem vende.',
+        title: '1. O que é o Mercado',
+        description: 'Um espaço de anúncios que aproxima quem quer vender de quem quer comprar.',
         paragraphs: [
-          'O Mercado é a área da PickleRush em que atletas, professores, arenas e lojas anunciam produtos de pickleball. A compra e venda é um contrato entre comprador e vendedor: a PickleRush não é vendedora, não guarda estoque, não recebe o pagamento e não faz a entrega.',
-          'A PickleRush não cobra comissão das vendas. O pagamento é feito por Pix diretamente na conta do vendedor, que aparece para o comprador depois que o vendedor aceita o pedido.',
+          'O Mercado é a área da PickleRush em que atletas, professores, arenas e lojas publicam anúncios de produtos ligados ao pickleball. A PickleRush atua apenas como provedora de aplicação de internet (Lei nº 12.965/2014, Marco Civil da Internet): oferece o espaço para o anúncio e ferramentas para que as pessoas interessadas se encontrem e conversem.',
+          'Estes Termos Gerais valem para todas as pessoas que usam o Mercado. Eles são completados pelos Termos do Comprador, pelos Termos do Vendedor e pela Política de Imagens, Vídeos e Conteúdo Gerado por IA, e se somam aos Termos de Uso, à Política de Privacidade e às Diretrizes da Comunidade da plataforma. Em caso de conflito, as regras específicas do Mercado prevalecem no que tratam do Mercado.',
         ],
       },
       {
-        icon: 'UserCheck',
-        title: 'Quem pode comprar e vender',
+        icon: 'Ban',
+        title: '2. O que a PickleRush não é e não faz',
+        description: 'A PickleRush não participa do negócio feito entre as partes.',
         bullets: [
-          'Comprar e vender exige uma conta na PickleRush com dados verdadeiros.',
-          'Lojas (empresas) entram com cadastro próprio, com CNPJ, e só vendem depois da aprovação da PickleRush.',
-          'Arenas vendem pela equipe que as gere; professores vendem produtos físicos (aulas seguem pelo painel do professor).',
-          'Menores de 18 anos só compram ou vendem com autorização do responsável legal.',
-          'A PickleRush pode recusar, suspender ou encerrar o cadastro de quem descumprir estes Termos.',
-        ],
-      },
-      {
-        icon: 'FileText',
-        title: 'Anúncios',
-        description: 'O anúncio é a promessa do vendedor.',
-        bullets: [
-          'Fotos e descrição devem mostrar o produto real. Produto usado precisa dizer o estado e os defeitos.',
-          'O preço anunciado é o preço cobrado; o frete, quando houver, aparece antes da compra.',
-          'É proibido anunciar falsificação ou réplica, produto roubado, produto ilegal ou perigoso, e qualquer coisa que não seja do universo do esporte.',
-          'A moderação pode tirar um anúncio do ar e explica o motivo ao vendedor. Denúncias de qualquer pessoa são analisadas.',
-        ],
-      },
-      {
-        icon: 'CreditCard',
-        title: 'Pedido, pagamento e entrega',
-        bullets: [
-          'O pedido reserva o produto. O vendedor aceita ou recusa dentro do prazo mostrado no pedido; sem resposta, o pedido é cancelado sozinho e o produto volta à vitrine.',
-          'Depois do aceite, o comprador paga por Pix ao vendedor dentro do prazo e avisa no pedido, com o comprovante se quiser. Sem pagamento no prazo, o pedido é cancelado.',
-          'O vendedor confirma o pagamento e envia, deixa para retirada ou combina a entrega, conforme o pedido. O comprador confirma quando recebe.',
-          'Ofertas aceitas viram pedido com o valor combinado.',
-          'Endereço e telefone do comprador só aparecem para o vendedor depois do aceite, e só podem ser usados para a entrega.',
-        ],
-      },
-      {
-        icon: 'RotateCcw',
-        title: 'Arrependimento, troca e devolução',
-        paragraphs: [
-          'Quando o vendedor for fornecedor (loja, arena ou quem vende com habitualidade), o comprador tem os direitos do Código de Defesa do Consumidor, inclusive o arrependimento em até 7 dias do recebimento nas compras feitas pela internet (art. 49), e a garantia contra defeitos.',
-          'Entre particulares (por exemplo, um atleta vendendo a raquete que usou), valem o combinado no anúncio e a lei civil. A política de devolução de cada vendedor aparece na página dele.',
-        ],
-      },
-      {
-        icon: 'AlertTriangle',
-        title: 'Problemas no pedido',
-        bullets: [
-          'Se algo der errado (produto que não chegou, diferente do anúncio, com defeito), o comprador relata o problema no próprio pedido, dentro do prazo mostrado nele.',
-          'A moderação ouve os dois lados e decide se o pedido é concluído ou cancelado. Como o dinheiro foi direto ao vendedor, a devolução de valores é feita por ele; quem se recusa pode ter as vendas suspensas.',
-          'Comprador e vendedor devem manter a conversa e as combinações dentro da PickleRush: é o que permite à moderação ajudar.',
-        ],
-      },
-      {
-        icon: 'Star',
-        title: 'Avaliações e conduta',
-        bullets: [
-          'Depois do pedido concluído, comprador e vendedor podem se avaliar. A avaliação deve ser honesta e sobre a compra.',
-          'É proibido criar avaliações falsas, combinar notas ou ameaçar alguém para mudar uma avaliação.',
-          'Valem as Diretrizes da Comunidade em perguntas, respostas e mensagens.',
+          'Não é vendedora, fornecedora, fabricante, importadora, distribuidora nem proprietária dos produtos anunciados.',
+          'Não é parte do contrato de compra e venda, não é intermediadora de pagamento, corretora, mandatária, representante, depositária nem garantidora de nenhuma das partes.',
+          'Não recebe, guarda, retém nem repassa valores: o pagamento vai diretamente do comprador ao vendedor, pelo meio que eles usarem.',
+          'Não cobra comissão sobre as vendas e não define preço, frete, prazo, forma de entrega, garantia ou qualquer condição do negócio.',
+          'Não armazena, inspeciona, testa, embala, transporta nem entrega produtos, e não contrata nem indica transportadora.',
+          'Não emite nota fiscal, recibo ou termo de garantia em nome de ninguém, e não recolhe tributos devidos pelas partes.',
+          'Não verifica nem garante a existência, a propriedade, a origem, a autenticidade, a qualidade, a segurança, a legalidade ou o estado dos produtos, nem a veracidade dos anúncios, das fotos e dos vídeos, nem a identidade, a capacidade ou a solvência de quem compra e de quem vende.',
         ],
       },
       {
         icon: 'Scale',
-        title: 'Impostos, responsabilidade e alterações',
+        title: '3. O negócio é entre comprador e vendedor',
         paragraphs: [
-          'Cada vendedor responde pelo que vende: qualidade, garantia, entrega, nota fiscal e impostos, quando exigidos.',
-          'A PickleRush responde pelo funcionamento da ferramenta e age para tirar do ar o que descumpre estes Termos, mas não é parte da compra e venda. Estes Termos complementam os Termos de Uso e a Política de Privacidade, e podem ser atualizados; mudanças relevantes pedem novo aceite.',
+          'A compra e venda feita a partir de um anúncio é um contrato firmado direta e exclusivamente entre comprador e vendedor (Código Civil, arts. 481 e seguintes). São deles, e só deles, a decisão de negociar, as condições combinadas, o pagamento, a entrega, a troca, a devolução e a garantia, bem como os direitos e deveres que nascem do negócio.',
+          'Quando o vendedor for fornecedor (loja, arena ou quem vende com habitualidade), a relação com o comprador é de consumo e o vendedor responde perante ele nos termos do Código de Defesa do Consumidor. Entre particulares, valem o combinado e o Código Civil, inclusive as regras sobre vícios ocultos (arts. 441 a 446).',
+        ],
+      },
+      {
+        icon: 'FileText',
+        title: '4. As ferramentas do Mercado',
+        bullets: [
+          'Pedido, oferta, carrinho, mensagens, perguntas, avaliações, cupons, avisos e o registro de problema no pedido são ferramentas de organização e de comunicação entre as partes.',
+          'Os status do pedido ("aceito", "pago", "enviado", "recebido") são informados pelas próprias partes. Eles não são recibo, comprovante de pagamento, prova de entrega nem garantia dada pela PickleRush.',
+          'O registro de problema permite que as partes deixem por escrito o que aconteceu e que a PickleRush avalie medidas sobre anúncios e contas. Ele não é arbitragem nem mediação, não obriga as partes, não substitui o atendimento do próprio vendedor e não impede que qualquer pessoa procure o Procon, o consumidor.gov.br ou o Poder Judiciário.',
+          'Usar as ferramentas não torna a PickleRush participante do negócio nem cria para ela qualquer obrigação de garantir o resultado da compra.',
+        ],
+      },
+      {
+        icon: 'ShieldCheck',
+        title: '5. O que a PickleRush faz',
+        bullets: [
+          'Mantém o Mercado funcionando com cuidado razoável, sem prometer que ele estará sempre disponível ou livre de falhas.',
+          'Trata os dados pessoais conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018) e a Política de Privacidade, mostrando dados de contato e de entrega só a quem precisa deles para concluir o pedido.',
+          'Pode recusar, pausar ou retirar anúncios, e advertir, suspender ou encerrar contas que descumpram estes documentos ou a lei, por decisão própria ou a partir de denúncia, sem dever de vigiar previamente o que é publicado.',
+          'Atende às ordens das autoridades e da Justiça e colabora com elas na forma da lei.',
+        ],
+      },
+      {
+        icon: 'AlertTriangle',
+        title: '6. Limites de responsabilidade',
+        paragraphs: [
+          'Na máxima extensão permitida pela lei, a PickleRush não responde por perdas e danos decorrentes do negócio entre as partes, como: produto não entregue, entregue com atraso, extraviado ou avariado no transporte; produto diferente do anúncio, com defeito, falsificado ou de origem ilícita; pagamento feito e não reconhecido, ou feito a pessoa errada; golpes e fraudes praticados por usuários ou por terceiros, sobretudo fora da plataforma; desistência, inadimplência ou conduta de qualquer das partes; e encontros presenciais combinados entre elas.',
+          'Nada nestes documentos afasta direitos que a lei garante e que não podem ser renunciados. A PickleRush responde, nos termos da lei, pelos próprios atos e pelo funcionamento da ferramenta que oferece.',
+        ],
+      },
+      {
+        icon: 'Lock',
+        title: '7. Segurança e prevenção de golpes',
+        bullets: [
+          'Combine e registre tudo pelo pedido e pelas mensagens do Mercado. Desconfie de quem pede para negociar ou pagar por fora.',
+          'Antes de pagar, confira se o nome de quem recebe o Pix é o mesmo do vendedor mostrado no pedido.',
+          'Nunca envie senhas, códigos de verificação ou fotos de documentos. A PickleRush nunca pede esses dados.',
+          'Em encontros para retirada, prefira lugares públicos e movimentados, de dia, e confira o produto antes de concluir.',
+          'Se cair num golpe com Pix, procure imediatamente o seu banco (há um mecanismo de devolução do Banco Central para casos de fraude) e registre um boletim de ocorrência. Denuncie o anúncio ou a conta na PickleRush.',
+        ],
+      },
+      {
+        icon: 'Gavel',
+        title: '8. Indenização, lei aplicável e alterações',
+        paragraphs: [
+          'Quem descumprir estes documentos ou a lei responde pelos danos que causar e, se a PickleRush for cobrada ou processada por um ato seu, deve indenizá-la, inclusive pelas despesas razoáveis de defesa.',
+          `Estes documentos seguem a lei brasileira. Quando houver relação de consumo, a ação pode ser proposta no foro do domicílio do consumidor. A PickleRush pode atualizar estes documentos; mudanças relevantes recebem nova versão e pedem novo aceite antes do uso do Mercado. Dúvidas: ${LEGAL_CONTACT_EMAIL}.`,
+        ],
+      },
+    ],
+  },
+  {
+    key: 'termos-comprador-mercado',
+    route: 'termos-comprador-mercado',
+    title: 'Termos do Comprador',
+    eyebrow: 'Mercado · Quem compra',
+    description: 'A responsabilidade de quem compra no Mercado PickleRush.',
+    version: 1,
+    effectiveDate: '2026-10-14',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    marketGate: true,
+    flag: 'marketplace',
+    icon: 'CreditCard',
+    sections: [
+      {
+        icon: 'UserCheck',
+        title: '1. Você decide e responde pela sua compra',
+        paragraphs: [
+          'Ao comprar no Mercado, você reconhece que a PickleRush apenas facilita o encontro de interesses entre você e o vendedor, que ela não presta nenhum serviço no negócio e que não vende, não entrega, não recebe o pagamento e não garante o produto.',
+          'A decisão de comprar é sua. Você assume a responsabilidade por avaliar o que está comprando e de quem está comprando: ler o anúncio inteiro, ver todas as fotos e vídeos (inclusive o selo "Gerado por IA", quando houver), perguntar o que for preciso antes de pedir, conferir as avaliações e a página do vendedor, a forma de entrega, o frete, o prazo e a política de troca e devolução, e verificar compatibilidade, tamanho e autenticidade quando isso importar.',
+        ],
+      },
+      {
+        icon: 'Scale',
+        title: '2. Isenção da PickleRush',
+        paragraphs: [
+          'Na máxima extensão permitida pela lei, você isenta a PickleRush de responsabilidade pelo produto e pelo negócio, incluindo defeitos, vícios, diferenças em relação ao anúncio, falsificação, atraso, extravio, avaria no transporte, não entrega e desistência do vendedor. Reclamações sobre o produto, a entrega, a troca, a devolução, o reembolso ou a garantia devem ser feitas ao vendedor.',
+          'Seus direitos legais continuam valendo contra o vendedor. Se ele for fornecedor, você tem as garantias do Código de Defesa do Consumidor, inclusive o direito de se arrepender em até 7 dias do recebimento nas compras feitas pela internet (art. 49) e a garantia contra vícios (arts. 18 e 26). Entre particulares, vale o combinado e o Código Civil.',
+        ],
+      },
+      {
+        icon: 'CreditCard',
+        title: '3. Pagamento',
+        bullets: [
+          'O pagamento é feito diretamente ao vendedor (em regra por Pix), e a chave aparece depois que ele aceita o pedido.',
+          'Confira o nome de quem recebe antes de pagar. Pague só pelo valor e pela chave mostrados no pedido.',
+          'Como a PickleRush não recebe o dinheiro, ela não estorna, não reembolsa, não bloqueia e não devolve valores. Devolução é sempre com o vendedor; em caso de fraude no Pix, procure o seu banco.',
+          'Avise no pedido quando pagar e guarde o comprovante.',
+        ],
+      },
+      {
+        icon: 'Truck',
+        title: '4. Recebimento e retirada',
+        bullets: [
+          'Informe um endereço correto e completo quando houver envio. Endereço errado ou ausência no recebimento é assunto a resolver com o vendedor e a transportadora.',
+          'Confira o produto ao receber; se houver problema, registre com fotos e avise o vendedor pelo pedido o quanto antes, dentro do prazo mostrado nele.',
+          'Confirme o recebimento apenas quando de fato tiver recebido. A confirmação conclui o pedido.',
+          'Encontros para retirada são combinados entre você e o vendedor, por conta e risco de ambos.',
+        ],
+      },
+      {
+        icon: 'HeartHandshake',
+        title: '5. Conduta de quem compra',
+        bullets: [
+          'Faça pedidos e ofertas apenas quando tiver intenção real de comprar, e pague dentro do prazo combinado.',
+          'Use os dados do vendedor (nome, chave Pix, local de retirada) somente para esta compra.',
+          'Avalie com honestidade e só sobre a compra. Avaliação falsa, ameaça ou chantagem por avaliação levam à suspensão.',
+          'Menores de 18 anos só compram com autorização e acompanhamento do responsável legal.',
+        ],
+      },
+    ],
+  },
+  {
+    key: 'termos-vendedor-mercado',
+    route: 'termos-vendedor-mercado',
+    title: 'Termos do Vendedor',
+    eyebrow: 'Mercado · Quem vende',
+    description: 'O vendedor responde, de forma única e exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.',
+    version: 1,
+    effectiveDate: '2026-10-14',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    marketGate: true,
+    flag: 'marketplace',
+    icon: 'Building2',
+    sections: [
+      {
+        icon: 'Scale',
+        title: '1. Responsabilidade única e exclusiva do vendedor',
+        description: 'A PickleRush não participa da venda; quem vende responde por ela.',
+        bullets: [
+          'O produto: existência, propriedade ou direito de vender, origem lícita, autenticidade, qualidade, estado, segurança e conformidade com as normas que se aplicam a ele (como certificações exigidas por lei).',
+          'O anúncio: título, descrição, características, estado de uso, defeitos, preço, frete, prazos e as fotos e vídeos. O anúncio obriga quem o publica (CDC, arts. 30, 31 e 37).',
+          'A venda: aceitar ou recusar pedidos e ofertas, cumprir o que foi combinado, receber o pagamento e conferir que ele de fato entrou na sua conta.',
+          'A troca, a devolução, o reembolso, a garantia e o atendimento ao comprador, inclusive o direito de arrependimento quando você for fornecedor.',
+          'Os tributos, licenças e obrigações fiscais e regulatórias da sua atividade.',
+        ],
+      },
+      {
+        icon: 'Truck',
+        title: '2. Transporte e entrega',
+        bullets: [
+          'A forma de entrega (envio, retirada ou encontro) é oferecida e cumprida por você. Se houver envio, a escolha, a contratação e o pagamento da transportadora ou dos Correios, a embalagem, o seguro, o código de rastreio e o prazo são de sua única e exclusiva responsabilidade.',
+          'O risco do produto é seu até a entrega ao comprador, salvo o que vocês combinarem por escrito e a lei permitir (Código Civil, art. 492).',
+          'Respeite as restrições de transporte de cada produto (por exemplo, baterias e itens perigosos).',
+          'A PickleRush não indica, não contrata, não paga e não responde por transportadoras, nem por extravio, avaria ou atraso.',
+        ],
+      },
+      {
+        icon: 'FileText',
+        title: '3. Documentos do negócio',
+        bullets: [
+          'Nota fiscal, recibo, termo de garantia, manual e demais documentos exigidos por lei são emitidos e entregues por você, quando cabíveis.',
+          'Loja, arena e quem vende com habitualidade devem informar com clareza nome ou razão social, CPF ou CNPJ, endereço e meios de contato, as características essenciais do produto, o preço total com o frete e as condições da oferta, como pede o Decreto nº 7.962/2013 (comércio eletrônico).',
+          'As condições de troca e devolução devem estar escritas na sua página e respeitar a lei.',
+        ],
+      },
+      {
+        icon: 'Ban',
+        title: '4. O que não pode ser vendido',
+        bullets: [
+          'Produtos falsificados, réplicas ou que imitem marca de terceiros.',
+          'Produtos roubados, furtados, contrabandeados ou de origem que você não possa comprovar.',
+          'Produtos ilegais, perigosos, recolhidos (recall) ou cuja venda dependa de autorização que você não tem.',
+          'Qualquer coisa que não seja do universo do esporte, além do que as Diretrizes da Comunidade e a lei proíbem.',
+        ],
+      },
+      {
+        icon: 'Lock',
+        title: '5. Dados do comprador',
+        paragraphs: [
+          'Nome, endereço e telefone do comprador aparecem para você só depois do aceite, e só podem ser usados para concluir aquela venda. Quanto a esses dados, você é controlador independente perante a Lei Geral de Proteção de Dados: deve guardá-los com segurança, não compartilhá-los e não usá-los para propaganda sem consentimento, e descartá-los quando não forem mais necessários.',
+        ],
+      },
+      {
+        icon: 'Gavel',
+        title: '6. Isenção e indenização',
+        paragraphs: [
+          'Você isenta a PickleRush de responsabilidade por reclamações, cobranças, multas, autuações e ações relacionadas aos seus produtos, anúncios, vendas, entregas e documentos, e se compromete a indenizá-la, inclusive pelas despesas razoáveis de defesa, caso ela venha a ser cobrada ou condenada por fato seu.',
+          'Descumprir estes Termos pode levar à retirada de anúncios e à suspensão ou ao encerramento das vendas e da conta, sem prejuízo das medidas legais.',
+        ],
+      },
+    ],
+  },
+  {
+    key: 'politica-imagens-ia-mercado',
+    route: 'mercado-imagens-e-ia',
+    title: 'Política de Imagens, Vídeos e Conteúdo Gerado por IA',
+    eyebrow: 'Mercado · Fotos e vídeos',
+    description: 'Como devem ser as fotos e os vídeos dos anúncios, e quando marcar que foram gerados ou alterados por inteligência artificial.',
+    version: 1,
+    effectiveDate: '2026-10-14',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    marketGate: true,
+    flag: 'marketplace',
+    icon: 'Camera',
+    sections: [
+      {
+        icon: 'Camera',
+        title: '1. Fotos e vídeos mostram o produto real',
+        bullets: [
+          'Use fotos e vídeos do próprio produto que será entregue, mostrando o estado, as marcas de uso e os defeitos.',
+          'Imagem de catálogo ou do fabricante só pode ser usada para produto novo idêntico ao anunciado, e a descrição deve dizer que a imagem é ilustrativa.',
+          'Ajustar luz, contraste, enquadramento, tamanho e rotação é permitido, desde que o produto continue como é de verdade.',
+        ],
+      },
+      {
+        icon: 'Sparkles',
+        title: '2. Quando marcar "Gerada ou alterada por IA"',
+        paragraphs: [
+          'Marque a opção na foto ou no vídeo sempre que ele tiver sido criado por inteligência artificial ou alterado por ela de um jeito que mude o que o comprador vê: o produto montado ou "renderizado", cores, forma, tamanho ou acessórios diferentes, defeitos apagados, ou o produto colocado num cenário criado por IA. A plataforma mostra o selo "Gerado por IA" sobre a imagem, nos cards e na foto ampliada.',
+          'Não precisa marcar ajustes simples que não mudam o produto, como corte, luz, contraste, nitidez ou um fundo liso no lugar do original sem alterar o produto em si.',
+        ],
+      },
+      {
+        icon: 'UserCheck',
+        title: '3. A declaração é sua',
+        bullets: [
+          'Quem publica declara se a imagem ou o vídeo foi gerado ou alterado por IA e responde, de forma única e exclusiva, pela veracidade dessa informação e pelo conteúdo publicado.',
+          'A PickleRush não analisa nem certifica automaticamente as imagens. A presença ou a ausência do selo não é uma garantia dada pela plataforma.',
+          'Imagem gerada por IA não pode ser usada para enganar o comprador sobre o produto. Publicidade enganosa é proibida pelo Código de Defesa do Consumidor (art. 37).',
+        ],
+      },
+      {
+        icon: 'Ban',
+        title: '4. O que não pode ser publicado',
+        bullets: [
+          'Imagens ou vídeos de que você não tem os direitos (Lei nº 9.610/1998, de direitos autorais), como fotos de outros vendedores ou de sites sem autorização.',
+          'Imagem de pessoa sem autorização dela (Código Civil, art. 20), e de criança ou adolescente identificável sem autorização do responsável.',
+          'Montagens que imitem pessoas reais (deepfake), marcas de terceiros em produto que não é da marca, conteúdo sexual, violento ou discriminatório.',
+          'Dados pessoais visíveis, como documentos, placas de veículo, endereços e telefones.',
+        ],
+      },
+      {
+        icon: 'AlertTriangle',
+        title: '5. Medidas e denúncias',
+        paragraphs: [
+          'Anúncios com imagem enganosa, sem o selo quando ele era devido ou que descumpram esta política podem ser pausados ou retirados, e a conta pode ser suspensa. Qualquer pessoa pode denunciar um anúncio pelo botão de denúncia.',
+          'Ainda não há no Brasil uma lei em vigor que regule a rotulagem de conteúdo gerado por IA; esta política adota a transparência como boa prática e será atualizada quando a legislação mudar.',
         ],
       },
     ],

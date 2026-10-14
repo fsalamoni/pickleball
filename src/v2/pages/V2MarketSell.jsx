@@ -45,6 +45,7 @@ import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
 import SellerPromoTab from '@/v2/components/marketplace/promo/SellerPromoTab';
 import SellerInsightsTab from '@/v2/components/marketplace/SellerInsightsTab';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 const ABAS = [
   { value: 'resumo', label: 'Resumo', icon: LayoutDashboard },
@@ -86,7 +87,7 @@ function StartSelling({ identity, defaults }) {
         <V2Field label="Nome que aparece para os compradores" htmlFor="nome-vend">
           <V2Input id="nome-vend" maxLength={60} value={nome} onChange={(e) => setNome(e.target.value)} />
         </V2Field>
-        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link> e os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos do Mercado</Link>.</p>
+        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link>, os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos Gerais do Mercado</Link>, os <Link to="/legal/termos-vendedor-mercado" className="font-bold text-ink underline">Termos do Vendedor</Link> e a <Link to="/legal/mercado-imagens-e-ia" className="font-bold text-ink underline">Política de Imagens e IA</Link>. Você responde, de forma exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.</p>
         <V2Button type="submit" className="w-full" disabled={m.isPending || nome.trim().length < 2}>{m.isPending ? 'Abrindo…' : 'Começar a vender'}</V2Button>
       </form>
     </V2Surface>
@@ -247,7 +248,7 @@ function ListingsTab({ sellerKey }) {
                     onChange={(e) => setMarcados((m) => (e.target.checked ? [...m, l.id] : m.filter((x) => x !== l.id)))} />
                 )}
                 <Link to={l.status === 'active' || l.status === 'sold_out' ? `/mercado/anuncio/${l.id}` : `/mercado/vender/anuncio/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <img src={capa.thumb_url || capa.url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
+                  <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <MarketPhoto src={capa.thumb_url || capa.url} aspect={capa.aspect} frame={capa.frame} loading="lazy" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
                   <span className="min-w-0">
                     <span className="block truncate font-bold text-ink">{l.title || 'Sem título'}</span>
                     <span className="block text-sm text-gray-600">{l.compare_at_cents > l.price_cents && <span className="mr-1 text-gray-500 line-through">{formatBRL(l.compare_at_cents)}</span>}{formatBRL(l.price_cents)} · {l.quantity ?? 0} em estoque{l.quantity_sold ? ` · ${l.quantity_sold} vendidos` : ''}</span>

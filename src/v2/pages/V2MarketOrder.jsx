@@ -38,6 +38,7 @@ import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, Stars, fulfillmentLabel, statusTone } from '@/v2/components/marketplace/marketUi';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 const dataHora = (ms) => (ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -390,7 +391,7 @@ function OrderPage() {
             <ul className="divide-y divide-gray-100">
               {(order.items || []).map((i) => (
                 <li key={i.listing_id} className="flex items-center gap-3 py-3">
-                  <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">{i.cover_url ? <img src={i.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}</span>
+                  <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">{i.cover_url ? <MarketPhoto src={i.cover_url} aspect={i.cover_aspect} frame={i.cover_frame} loading="lazy" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}</span>
                   {i.listing_id
                     ? <Link to={`/mercado/anuncio/${i.listing_id}`} className="min-w-0 flex-1 text-sm text-ink hover:underline">{i.title}<span className="block text-xs text-gray-500">{i.quantity} × {formatBRL(i.unit_price_cents)}</span></Link>
                     : <span className="min-w-0 flex-1 text-sm text-ink">{i.title}{i.gift?.recipient_name && <span className="block text-xs text-gray-500">Para {i.gift.recipient_name}</span>}</span>}

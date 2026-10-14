@@ -11,6 +11,7 @@ import { useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { coverOf } from '@/modules/marketplace/domain/listing';
 import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2Surface } from '@/v2/ui/primitives';
+import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 export default function SellerMarketTeaser({ sellerKey, quem }) {
   const q = useSellerListings(sellerKey, { publicOnly: true });
@@ -41,9 +42,9 @@ export default function SellerMarketTeaser({ sellerKey, quem }) {
           return (
             <li key={l.id}>
               <Link to={`/mercado/anuncio/${l.id}`} className="group block overflow-hidden rounded-2xl border border-gray-100 bg-paper-pure hover:shadow-md">
-                <span className="block aspect-square bg-paper">
+                <span className="relative block aspect-square overflow-hidden bg-paper">
                   {cover
-                    ? <img src={cover.thumb_url || cover.url} alt={cover.alt || l.title} loading="lazy" className="h-full w-full object-cover" />
+                    ? <MarketPhoto src={cover.thumb_url || cover.url} alt={cover.alt || l.title} aspect={cover.aspect} frame={cover.frame} loading="lazy" />
                     : <span className="flex h-full items-center justify-center text-gray-300"><Box className="h-8 w-8" aria-hidden="true" /></span>}
                 </span>
                 <span className="block p-2.5">

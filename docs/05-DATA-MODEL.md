@@ -1365,7 +1365,7 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
   `category_slug`, `category_path[]`, `type` (`new|used`), `condition`,
   `brand`, `attributes`, `price_cents`, `compare_at_cents`, `quantity`,
   `accepts_offers`, `fulfillment[]` (`pickup|meetup|shipping`),
-  `shipping_cents`, `shipping_to_agree`, `pickup_note`, `media[]` (≤ 11),
+  `shipping_cents`, `shipping_to_agree`, `pickup_note`, `media[]` (≤ 11; cada item pode ter `aspect`, `frame { rotate, zoom, x, y }` e `ai_generated`, todos opcionais),
   `video_link`, `city`, `state`, `search_terms[]`, `published_at`. Só o
   servidor ou o admin: `moderation`, `quantity_sold`, `favorite_count`,
   `seller_rating_avg`, `seller_rating_count`, `seller_verified`, `source`,

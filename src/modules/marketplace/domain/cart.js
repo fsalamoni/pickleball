@@ -28,6 +28,7 @@ export function cartLine(listing, quantity = 1) {
     seller_name: listing.seller_name || '',
     title: listing.title || '',
     cover_url: coverOf(listing)?.thumb_url || coverOf(listing)?.url || '',
+    ...(coverOf(listing)?.aspect ? { cover_aspect: coverOf(listing).aspect, cover_frame: coverOf(listing).frame || null } : {}),
     price_cents_at_add: listing.price_cents,
     quantity: Math.max(1, Math.floor(quantity) || 1),
   };

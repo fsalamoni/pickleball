@@ -8,6 +8,25 @@ import { Box, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { parseVideoLink } from '@/modules/marketplace/domain/listing';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { normalizeAspect, normalizeFrame, rotatedAspect } from '@/modules/marketplace/domain/mediaFrame';
+import MarketPhoto, { AiStamp } from './MarketPhoto';
+
+/** A foto INTEIRA ampliada (só girada), numa caixa com a proporção dela. */
+function FotoInteira({ m, alt }) {
+  const a = normalizeAspect(m.aspect);
+  const r = a ? rotatedAspect(a, normalizeFrame(m.frame).rotate) : null;
+  return (
+    <span
+      className="relative block overflow-hidden rounded-[1rem]"
+      style={r ? { aspectRatio: String(r), width: `min(100%, calc(78vh * ${r}))` } : undefined}
+    >
+      {r
+        ? <MarketPhoto src={m.url} alt={alt} aspect={a} frame={m.frame} mode="contain" boxAspect={r} />
+        : <img src={m.url} alt={alt} className="max-h-[78vh] max-w-full object-contain" />}
+      {m.ai_generated && <AiStamp size="md" className="absolute left-3 top-3" />}
+    </span>
+  );
+}
 
 export default function ListingGallery({ listing }) {
   const media = [...(listing.media || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -39,12 +58,18 @@ export default function ListingGallery({ listing }) {
             src={atual.url}
             alt={atual.alt || listing.title}
             title={listing.title}
+            description={atual.ai_generated ? 'O vendedor informou que esta imagem foi gerada ou alterada por inteligência artificial.' : undefined}
             trigger={(
-              <button type="button" className="block h-full w-full cursor-zoom-in" aria-label="Ampliar a foto">
-                <img src={atual.url} alt={atual.alt || listing.title} className="h-full w-full object-contain" />
+              <button type="button" className="relative block h-full w-full cursor-zoom-in" aria-label="Ampliar a foto">
+                <MarketPhoto src={atual.url} alt={atual.alt || listing.title} aspect={atual.aspect} frame={atual.frame} mode="contain" />
               </button>
             )}
-          />
+          >
+            <FotoInteira m={atual} alt={atual.alt || listing.title} />
+          </PhotoLightbox>
+        )}
+        {(atual.kind === 'image' || atual.kind === 'video') && atual.ai_generated && (
+          <AiStamp size="md" className="absolute left-3 top-3" />
         )}
         {atual.kind === 'video' && (
           <video src={atual.url} controls playsInline className="h-full w-full bg-black object-contain" />
@@ -83,7 +108,7 @@ export default function ListingGallery({ listing }) {
                 className={cn('relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-paper', k === i ? 'border-ink' : 'border-transparent')}
               >
                 {m.kind === 'image'
-                  ? <img src={m.thumb_url || m.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ? <MarketPhoto src={m.thumb_url || m.url} aspect={m.aspect} frame={m.frame} loading="lazy" />
                   : <span className="flex h-full w-full items-center justify-center text-ink"><PlayCircle className="h-7 w-7" /></span>}
               </button>
             </li>

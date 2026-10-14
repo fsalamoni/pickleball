@@ -7,6 +7,7 @@ import {
   PUBLIC_LISTING_STATUSES,
 } from './constants.js';
 import { findCategory, validateAttributes, categoryPath } from './taxonomy.js';
+import { normalizeAspect, normalizeFrame } from './mediaFrame.js';
 
 const STOPWORDS = new Set([
   'a', 'o', 'as', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'no', 'na',
@@ -146,6 +147,8 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
       thumb_url: m.thumb_url || m.url,
       kind: m.kind === 'video' ? 'video' : 'image',
       alt: String(m.alt || '').slice(0, 140),
+      ...(m.kind === 'video' ? {} : { frame: normalizeFrame(m.frame), aspect: normalizeAspect(m.aspect) }),
+      ai_generated: m.ai_generated === true,
       is_cover: false,
       order: i,
     }));
