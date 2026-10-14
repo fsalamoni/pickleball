@@ -13,6 +13,7 @@
  *
  * Sem I/O — testável isoladamente.
  */
+import { t, tk } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -24,10 +25,10 @@ export const STUDENT_STATUS = Object.freeze({
 });
 
 export const STUDENT_STATUS_LABELS = Object.freeze({
-  [STUDENT_STATUS.INVITED]: 'Convidado',
-  [STUDENT_STATUS.ACTIVE]: 'Ativo',
-  [STUDENT_STATUS.PAUSED]: 'Pausado',
-  [STUDENT_STATUS.ENDED]: 'Encerrado',
+  [STUDENT_STATUS.INVITED]: tk('Convidado'),
+  [STUDENT_STATUS.ACTIVE]: tk('Ativo'),
+  [STUDENT_STATUS.PAUSED]: tk('Pausado'),
+  [STUDENT_STATUS.ENDED]: tk('Encerrado'),
 });
 
 export const STUDENT_STATUS_TONE = Object.freeze({
@@ -103,8 +104,8 @@ export function normalizeTags(input) {
 export function normalizeStudent(input = {}) {
   const coach_id = str(input.coach_id);
   const student_id = str(input.student_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
-  if (!student_id) return { valid: false, error: 'student_id é obrigatório.', value: { coach_id } };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
+  if (!student_id) return { valid: false, error: t('student_id é obrigatório.'), value: { coach_id } };
 
   const status = Object.values(STUDENT_STATUS).includes(str(input.status))
     ? str(input.status)
@@ -152,7 +153,7 @@ export function rosterSummary(students = []) {
 }
 
 export function studentStatusLabel(status) {
-  return STUDENT_STATUS_LABELS[status] || status;
+  return t(STUDENT_STATUS_LABELS[status] || status);
 }
 
 export function studentStatusTone(status) {

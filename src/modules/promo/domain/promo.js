@@ -30,6 +30,7 @@ import {
 import { BANNER_REGION, cityKey, normalizeLocality } from '../../arenas/domain/homeBanners.js';
 import { LESSON_COUPON_STATUS } from './lessonCoupon.js';
 import { BR_UFS } from '../../../core/domain/ufs.js';
+import { t, tk, fmtLista } from '@/core/i18n';
 
 /* ------------------------------------------------------------------ */
 /*  Emissor                                                           */
@@ -94,26 +95,26 @@ const K = COUPON_KIND;
  */
 export const PROMO_KIND_META = Object.freeze({
   [PROMO_ISSUER.PLATFORM]: Object.freeze({
-    [K.DISCOUNT]: { label: 'Desconto', hint: 'Percentual ou valor fixo — num evento da plataforma, numa loja parceira ou no que você anunciar. Quem usa mostra o código e a plataforma registra o uso.' },
-    [K.EVENT]: { label: 'Inscrição em evento', hint: 'Inscrição num evento ou torneio da plataforma.', example: 'Inscrição no Open de Primavera' },
-    [K.PRODUCT]: { label: 'Produto ou brinde', hint: 'Um brinde, um kit, um produto de parceiro.', example: '1 camiseta PickleRush' },
-    [K.CLINIC]: { label: 'Clínica', hint: 'Participação numa clínica ou treino especial.', example: 'Clínica de saque com convidado' },
-    [K.GROUP_LESSON]: { label: 'Aula em grupo', hint: 'Uma vaga numa aula em grupo.', example: '1 aula em grupo para iniciantes' },
-    [K.PRIVATE_LESSON]: { label: 'Aula particular', hint: 'Uma aula individual.', example: '1 aula particular de 1h' },
-    [K.RENTAL]: { label: 'Aluguel de equipamento', hint: 'Raquete, bolas ou outro equipamento.', example: 'Aluguel de 2 raquetes' },
-    [K.FOOD]: { label: 'Comida', hint: 'Um lanche ou refeição num evento.', example: '1 lanche no festival' },
-    [K.DRINK]: { label: 'Bebida', hint: 'Uma bebida num evento.', example: '1 água de coco' },
-    [K.OTHER]: { label: 'Outro benefício', hint: 'Qualquer outra vantagem.', example: 'Frete grátis na loja parceira' },
+    [K.DISCOUNT]: { label: tk('Desconto'), hint: tk('Percentual ou valor fixo — num evento da plataforma, numa loja parceira ou no que você anunciar. Quem usa mostra o código e a plataforma registra o uso.') },
+    [K.EVENT]: { label: tk('Inscrição em evento'), hint: tk('Inscrição num evento ou torneio da plataforma.'), example: tk('Inscrição no Open de Primavera') },
+    [K.PRODUCT]: { label: tk('Produto ou brinde'), hint: tk('Um brinde, um kit, um produto de parceiro.'), example: tk('1 camiseta PickleRush') },
+    [K.CLINIC]: { label: tk('Clínica'), hint: tk('Participação numa clínica ou treino especial.'), example: tk('Clínica de saque com convidado') },
+    [K.GROUP_LESSON]: { label: tk('Aula em grupo'), hint: tk('Uma vaga numa aula em grupo.'), example: tk('1 aula em grupo para iniciantes') },
+    [K.PRIVATE_LESSON]: { label: tk('Aula particular'), hint: tk('Uma aula individual.'), example: tk('1 aula particular de 1h') },
+    [K.RENTAL]: { label: tk('Aluguel de equipamento'), hint: tk('Raquete, bolas ou outro equipamento.'), example: tk('Aluguel de 2 raquetes') },
+    [K.FOOD]: { label: tk('Comida'), hint: tk('Um lanche ou refeição num evento.'), example: tk('1 lanche no festival') },
+    [K.DRINK]: { label: tk('Bebida'), hint: tk('Uma bebida num evento.'), example: tk('1 água de coco') },
+    [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem.'), example: tk('Frete grátis na loja parceira') },
   }),
   [PROMO_ISSUER.COACH]: Object.freeze({
-    [K.DISCOUNT]: { label: 'Desconto na aula', hint: 'Percentual ou valor fixo na aula. O aluno informa o código ao pedir a aula; o uso conta quando você confirma.' },
-    [K.PRIVATE_LESSON]: { label: 'Aula particular', hint: 'Uma aula individual por conta da casa.', example: '1 aula experimental grátis' },
-    [K.GROUP_LESSON]: { label: 'Aula em grupo', hint: 'Uma vaga numa aula em grupo.', example: '1 aula em grupo de iniciantes' },
-    [K.CLINIC]: { label: 'Clínica', hint: 'Participação numa clínica sua.', example: 'Clínica de voleio' },
-    [K.PRODUCT]: { label: 'Produto ou brinde', hint: 'Um item da sua loja ou um brinde.', example: '1 overgrip' },
-    [K.RENTAL]: { label: 'Aluguel de equipamento', hint: 'Raquete ou outro equipamento emprestado.', example: 'Raquete para a primeira aula' },
-    [K.EVENT]: { label: 'Evento', hint: 'Participação num evento ou treino especial seu.', example: 'Treino coletivo de sábado' },
-    [K.OTHER]: { label: 'Outro benefício', hint: 'Qualquer outra vantagem.', example: 'Avaliação de nível grátis' },
+    [K.DISCOUNT]: { label: tk('Desconto na aula'), hint: tk('Percentual ou valor fixo na aula. O aluno informa o código ao pedir a aula; o uso conta quando você confirma.') },
+    [K.PRIVATE_LESSON]: { label: tk('Aula particular'), hint: tk('Uma aula individual por conta da casa.'), example: tk('1 aula experimental grátis') },
+    [K.GROUP_LESSON]: { label: tk('Aula em grupo'), hint: tk('Uma vaga numa aula em grupo.'), example: tk('1 aula em grupo de iniciantes') },
+    [K.CLINIC]: { label: tk('Clínica'), hint: tk('Participação numa clínica sua.'), example: tk('Clínica de voleio') },
+    [K.PRODUCT]: { label: tk('Produto ou brinde'), hint: tk('Um item da sua loja ou um brinde.'), example: tk('1 overgrip') },
+    [K.RENTAL]: { label: tk('Aluguel de equipamento'), hint: tk('Raquete ou outro equipamento emprestado.'), example: tk('Raquete para a primeira aula') },
+    [K.EVENT]: { label: tk('Evento'), hint: tk('Participação num evento ou treino especial seu.'), example: tk('Treino coletivo de sábado') },
+    [K.OTHER]: { label: tk('Outro benefício'), hint: tk('Qualquer outra vantagem.'), example: tk('Avaliação de nível grátis') },
   }),
 });
 
@@ -161,8 +162,8 @@ export function normalizeReach(input = {}) {
   let mode = Object.values(PROMO_REACH).includes(input?.mode) ? input.mode : PROMO_REACH.BRASIL;
   const state = uf(input?.state);
   const city = String(input?.city || '').replace(/\s+/g, ' ').trim().slice(0, 80);
-  if (mode === PROMO_REACH.ESTADO && !state) errors.reach = 'Escolha o estado.';
-  if (mode === PROMO_REACH.CIDADE && (!city || !state)) errors.reach = 'Informe a cidade e o estado.';
+  if (mode === PROMO_REACH.ESTADO && !state) errors.reach = t('Escolha o estado.');
+  if (mode === PROMO_REACH.CIDADE && (!city || !state)) errors.reach = t('Informe a cidade e o estado.');
   if (Object.keys(errors).length) mode = PROMO_REACH.BRASIL;
   return {
     valid: Object.keys(errors).length === 0,
@@ -177,7 +178,7 @@ export function normalizeReach(input = {}) {
 
 /** "Todo o Brasil", "RS", "Porto Alegre (RS)". */
 export function reachLabel(reach) {
-  if (!reach || reach.mode === PROMO_REACH.BRASIL || !reach.mode) return 'Todo o Brasil';
+  if (!reach || reach.mode === PROMO_REACH.BRASIL || !reach.mode) return t('Todo o Brasil');
   if (reach.mode === PROMO_REACH.ESTADO) return uf(reach.state);
   return `${reach.city} (${uf(reach.state)})`;
 }
@@ -255,7 +256,7 @@ export function normalizePromoCouponInput(input = {}, { issuerType } = {}) {
   const kind = permitidos[input.kind] ? input.kind : K.DISCOUNT;
   const base = normalizeCouponInput({ ...input, kind });
   const errors = { ...base.errors };
-  if (!permitidos[kind]) errors.kind = 'Tipo de cupom não disponível.';
+  if (!permitidos[kind]) errors.kind = t('Tipo de cupom não disponível.');
   const alcance = normalizeReach(input.reach || {});
   if (!alcance.valid) Object.assign(errors, alcance.errors);
   const visibility = issuerType === PROMO_ISSUER.COACH && input.visibility === PROMO_VISIBILITY.STUDENTS
@@ -296,9 +297,9 @@ export function promoBenefitText(coupon) {
 /** Onde a pessoa usa o cupom — a frase do canhoto e do "copiar". */
 export function promoUseHint(coupon) {
   const coach = coupon?.issuer_type === PROMO_ISSUER.COACH;
-  if (coach && couponKind(coupon) === K.DISCOUNT) return 'Informe o código ao pedir a aula.';
-  if (coach) return 'Mostre o código ao professor.';
-  return 'Mostre o código para usar.';
+  if (coach && couponKind(coupon) === K.DISCOUNT) return t('Informe o código ao pedir a aula.');
+  if (coach) return t('Mostre o código ao professor.');
+  return t('Mostre o código para usar.');
 }
 
 /* ------------------------------------------------------------------ */
@@ -334,25 +335,25 @@ const D = PROMO_DESTINATION;
 
 /** Cada destino: rótulo, dica, botão e se pede alvo (qual torneio…). */
 export const PROMO_DESTINATION_META = Object.freeze({
-  [D.DETAILS]: { label: 'Página da campanha', hint: 'Mostra o banner, a mensagem e o caminho.', cta: 'Saiba mais' },
-  [D.TOURNAMENTS]: { label: 'Torneios', hint: 'A lista de torneios da plataforma.', cta: 'Ver torneios' },
-  [D.TOURNAMENT]: { label: 'Um torneio', hint: 'A página de um torneio com inscrição aberta.', cta: 'Inscrever-se', target: 'tournament' },
-  [D.OPEN_GAMES]: { label: 'Procura-se jogo', hint: 'Os jogos com vaga da comunidade.', cta: 'Quero jogar' },
-  [D.GAME_DAY]: { label: 'Um dia de jogo', hint: 'A página de um dia de jogo público.', cta: 'Ver o jogo', target: 'game_day' },
-  [D.ARENAS]: { label: 'Arenas e quadras', hint: 'Encontrar arena e reservar quadra.', cta: 'Reservar quadra' },
-  [D.COACHES]: { label: 'Professores', hint: 'O diretório de professores.', cta: 'Encontrar professor' },
-  [D.RANKING]: { label: 'Ranking', hint: 'O ranking da plataforma.', cta: 'Ver o ranking' },
-  [D.DOUBLES]: { label: 'Ranking de duplas', hint: 'As parcerias mais fortes.', cta: 'Ver as duplas' },
-  [D.CLUBS]: { label: 'Clubes', hint: 'Os clubes da comunidade.', cta: 'Conhecer clubes' },
-  [D.COMMUNITY]: { label: 'Comunidade', hint: 'As novidades da comunidade.', cta: 'Ver novidades' },
-  [D.PARTNERS]: { label: 'Parceiros', hint: 'Os parceiros da plataforma.', cta: 'Ver parceiros' },
-  [D.PROMOS]: { label: 'Promoções', hint: 'A vitrine de cupons e campanhas.', cta: 'Ver promoções' },
-  [D.MARKET]: { label: 'Mercado', hint: 'O marketplace: equipamentos novos e usados (o professor leva à própria loja).', cta: 'Ver o Mercado', flag: 'marketplace' },
-  [D.PROFILE]: { label: 'Meu perfil de professor', hint: 'O seu perfil público, com agenda, clínicas e loja.', cta: 'Conhecer o professor' },
-  [D.BOOK_LESSON]: { label: 'Marcar aula', hint: 'Abre o pedido de aula no seu perfil.', cta: 'Marcar aula' },
-  [D.CLINICS]: { label: 'Minhas clínicas', hint: 'As clínicas e workshops abertos.', cta: 'Ver clínicas' },
-  [D.STORE]: { label: 'Minha loja', hint: 'Os produtos à venda com você.', cta: 'Ver a loja' },
-  [D.CONTENT]: { label: 'Meu conteúdo', hint: 'A sua biblioteca de conteúdo.', cta: 'Ver conteúdo' },
+  [D.DETAILS]: { label: tk('Página da campanha'), hint: tk('Mostra o banner, a mensagem e o caminho.'), cta: tk('Saiba mais') },
+  [D.TOURNAMENTS]: { label: tk('Torneios'), hint: tk('A lista de torneios da plataforma.'), cta: tk('Ver torneios') },
+  [D.TOURNAMENT]: { label: tk('Um torneio'), hint: tk('A página de um torneio com inscrição aberta.'), cta: tk('Inscrever-se'), target: 'tournament' },
+  [D.OPEN_GAMES]: { label: tk('Procura-se jogo'), hint: tk('Os jogos com vaga da comunidade.'), cta: tk('Quero jogar') },
+  [D.GAME_DAY]: { label: tk('Um dia de jogo'), hint: tk('A página de um dia de jogo público.'), cta: tk('Ver o jogo'), target: 'game_day' },
+  [D.ARENAS]: { label: tk('Arenas e quadras'), hint: tk('Encontrar arena e reservar quadra.'), cta: tk('Reservar quadra') },
+  [D.COACHES]: { label: tk('Professores'), hint: tk('O diretório de professores.'), cta: tk('Encontrar professor') },
+  [D.RANKING]: { label: tk('Ranking'), hint: tk('O ranking da plataforma.'), cta: tk('Ver o ranking') },
+  [D.DOUBLES]: { label: tk('Ranking de duplas'), hint: tk('As parcerias mais fortes.'), cta: tk('Ver as duplas') },
+  [D.CLUBS]: { label: tk('Clubes'), hint: tk('Os clubes da comunidade.'), cta: tk('Conhecer clubes') },
+  [D.COMMUNITY]: { label: tk('Comunidade'), hint: tk('As novidades da comunidade.'), cta: tk('Ver novidades') },
+  [D.PARTNERS]: { label: tk('Parceiros'), hint: tk('Os parceiros da plataforma.'), cta: tk('Ver parceiros') },
+  [D.PROMOS]: { label: tk('Promoções'), hint: tk('A vitrine de cupons e campanhas.'), cta: tk('Ver promoções') },
+  [D.MARKET]: { label: tk('Mercado'), hint: tk('O marketplace: equipamentos novos e usados (o professor leva à própria loja).'), cta: tk('Ver o Mercado'), flag: 'marketplace' },
+  [D.PROFILE]: { label: tk('Meu perfil de professor'), hint: tk('O seu perfil público, com agenda, clínicas e loja.'), cta: tk('Conhecer o professor') },
+  [D.BOOK_LESSON]: { label: tk('Marcar aula'), hint: tk('Abre o pedido de aula no seu perfil.'), cta: tk('Marcar aula') },
+  [D.CLINICS]: { label: tk('Minhas clínicas'), hint: tk('As clínicas e workshops abertos.'), cta: tk('Ver clínicas') },
+  [D.STORE]: { label: tk('Minha loja'), hint: tk('Os produtos à venda com você.'), cta: tk('Ver a loja') },
+  [D.CONTENT]: { label: tk('Meu conteúdo'), hint: tk('A sua biblioteca de conteúdo.'), cta: tk('Ver conteúdo') },
 });
 
 /** Os destinos de cada emissor, na ordem de exibição. */
@@ -375,7 +376,7 @@ export function normalizePromoDestination(input = {}, issuerType) {
   const target_label = meta.target ? String(input?.target_label || '').replace(/\s+/g, ' ').trim().slice(0, 120) : '';
   const errors = {};
   if (meta.target && !target_id) {
-    errors.target_id = { tournament: 'Escolha o torneio.', game_day: 'Escolha o dia de jogo.' }[meta.target];
+    errors.target_id = { tournament: t('Escolha o torneio.'), game_day: t('Escolha o dia de jogo.') }[meta.target];
   }
   return { valid: Object.keys(errors).length === 0, errors, value: { type, target_id, target_label } };
 }
@@ -426,7 +427,8 @@ export function promoNoticeLink(destination, ctx = {}) {
 export function promoDestinationCta(destination, design) {
   const proprio = String(design?.cta || '').trim();
   if (proprio) return proprio;
-  return PROMO_DESTINATION_META[destination?.type]?.cta || 'Saiba mais';
+  const padrao = PROMO_DESTINATION_META[destination?.type]?.cta;
+  return padrao ? t(padrao) : t('Saiba mais');
 }
 
 /* ------------------------------------------------------------------ */
@@ -453,11 +455,11 @@ export function normalizePromoPlacement(input = {}, { today } = {}) {
   const show_home = input.show_home === true;
   let until = String(input.banner_until || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) until = today ? somaDias(today, BANNER_DEFAULT_DAYS) : '';
-  if (today && until < today) errors.banner_until = 'A data final já passou.';
+  if (today && until < today) errors.banner_until = t('A data final já passou.');
   if (today && until > somaDias(today, BANNER_MAX_DAYS)) {
-    errors.banner_until = `O banner fica no ar por até ${BANNER_MAX_DAYS} dias.`;
+    errors.banner_until = t('O banner fica no ar por até {dias} dias.', { dias: BANNER_MAX_DAYS });
   }
-  if (!show_on_page && !show_home) errors.placement = 'Escolha pelo menos um lugar para o banner aparecer.';
+  if (!show_on_page && !show_home) errors.placement = t('Escolha pelo menos um lugar para o banner aparecer.');
   return { valid: Object.keys(errors).length === 0, errors, value: { show_on_page, show_home, banner_until: until } };
 }
 
@@ -482,14 +484,14 @@ export function livePromoBanners(campaigns = [], { today, lugar = 'home' } = {})
 /** "Banner na tela inicial e no seu perfil · leva a: Marcar aula". */
 export function promoPlacementText(campaign) {
   if (!campaign?.banner) return '';
-  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? 'no seu perfil' : 'na vitrine de promoções';
+  const pagina = campaign.issuer_type === PROMO_ISSUER.COACH ? t('no seu perfil') : t('na vitrine de promoções');
   const onde = [
-    campaign.show_home ? 'na tela inicial' : null,
+    campaign.show_home ? t('na tela inicial') : null,
     campaign.show_on_page !== false ? pagina : null,
   ].filter(Boolean);
-  const destino = PROMO_DESTINATION_META[campaign.destination?.type]?.label || PROMO_DESTINATION_META.details.label;
+  const destino = t(PROMO_DESTINATION_META[campaign.destination?.type]?.label || PROMO_DESTINATION_META.details.label);
   const alvo = campaign.destination?.target_label ? ` (${campaign.destination.target_label})` : '';
-  return `Banner ${onde.join(' e ')} · leva a: ${destino}${alvo}`;
+  return t('Banner {onde} · leva a: {destino}', { onde: fmtLista(onde), destino: `${destino}${alvo}` });
 }
 
 /* ------------------------------------------------------------------ */
@@ -511,13 +513,13 @@ export const PROMO_AUDIENCE = Object.freeze({
 const A = PROMO_AUDIENCE;
 
 export const PROMO_AUDIENCE_META = Object.freeze({
-  [A.ALL]: { label: 'Todo mundo', hint: 'Todas as contas da plataforma.' },
-  [A.INTEREST]: { label: 'Por interesse', hint: 'Quem marcou um interesse no perfil (torneios, aulas, arenas…).', needs: 'interest' },
-  [A.STATE]: { label: 'Por estado', hint: 'Quem informou o estado no perfil.', needs: 'state' },
-  [A.CITY]: { label: 'Por cidade', hint: 'Quem informou a cidade no perfil.', needs: 'city' },
-  [A.COACHES]: { label: 'Professores', hint: 'Quem tem perfil de professor ativo.' },
-  [A.ACTIVE_STUDENTS]: { label: 'Alunos ativos', hint: 'Os alunos com vínculo ativo com você.' },
-  [A.ALL_STUDENTS]: { label: 'Todos os alunos', hint: 'Ativos e em pausa (quem ainda não aceitou o convite fica de fora).' },
+  [A.ALL]: { label: tk('Todo mundo'), hint: tk('Todas as contas da plataforma.') },
+  [A.INTEREST]: { label: tk('Por interesse'), hint: tk('Quem marcou um interesse no perfil (torneios, aulas, arenas…).'), needs: 'interest' },
+  [A.STATE]: { label: tk('Por estado'), hint: tk('Quem informou o estado no perfil.'), needs: 'state' },
+  [A.CITY]: { label: tk('Por cidade'), hint: tk('Quem informou a cidade no perfil.'), needs: 'city' },
+  [A.COACHES]: { label: tk('Professores'), hint: tk('Quem tem perfil de professor ativo.') },
+  [A.ACTIVE_STUDENTS]: { label: tk('Alunos ativos'), hint: tk('Os alunos com vínculo ativo com você.') },
+  [A.ALL_STUDENTS]: { label: tk('Todos os alunos'), hint: tk('Ativos e em pausa (quem ainda não aceitou o convite fica de fora).') },
 });
 
 export const PROMO_AUDIENCES_BY_ISSUER = Object.freeze({
@@ -675,15 +677,15 @@ export const LESSON_COUPON_KINDS = Object.freeze([K.DISCOUNT, K.PRIVATE_LESSON])
  * @param {{ coachId: string, usedByUser?: boolean, isStudent?: boolean|null, now?: number }} ctx
  */
 export function lessonCouponProblem(coupon, { coachId, usedByUser = false, isStudent = null, now = Date.now() } = {}) {
-  if (!coupon) return 'Cupom não encontrado.';
+  if (!coupon) return tk('Cupom não encontrado.');
   if (coupon.issuer_type !== PROMO_ISSUER.COACH || coupon.issuer_id !== coachId) {
-    return 'Este código não é deste professor.';
+    return tk('Este código não é deste professor.');
   }
   if (!LESSON_COUPON_KINDS.includes(couponKind(coupon))) {
-    return 'Este código é um vale: mostre ao professor na aula para usar.';
+    return tk('Este código é um vale: mostre ao professor na aula para usar.');
   }
   if (coupon.visibility === PROMO_VISIBILITY.STUDENTS && isStudent === false) {
-    return 'Este cupom é só para quem já é aluno deste professor.';
+    return tk('Este cupom é só para quem já é aluno deste professor.');
   }
   const erro = couponError(coupon, { anyFamily: true, usedByUser, now });
   return erro;

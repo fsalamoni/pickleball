@@ -22,6 +22,7 @@ import {
 import { FORUM_LIMITS } from '@/modules/clubs/domain/constants';
 import { useCreateThread } from '@/modules/clubs/hooks/useClubForum';
 import PollBuilder from './PollBuilder';
+import { t } from '@/core/i18n';
 
 const EMPTY_POLL = { question: '', options: ['', ''], multiple: false, closesAt: '' };
 
@@ -50,7 +51,7 @@ export default function CreateThreadDialog({ clubId, open, onOpenChange, onCreat
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error('Informe um título para o tópico.');
+      toast.error(t('Informe um título para o tópico.'));
       return;
     }
     setSubmitting(true);
@@ -61,12 +62,12 @@ export default function CreateThreadDialog({ clubId, open, onOpenChange, onCreat
         attachments: attachments.items,
         poll: pollEnabled ? poll : null,
       });
-      toast.success('Tópico criado.');
+      toast.success(t('Tópico criado.'));
       reset();
       onOpenChange?.(false);
       onCreated?.(id);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível criar o tópico.');
+      toast.error(err.message || t('Não foi possível criar o tópico.'));
     } finally {
       setSubmitting(false);
     }
@@ -77,46 +78,46 @@ export default function CreateThreadDialog({ clubId, open, onOpenChange, onCreat
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MessagesSquare className="h-5 w-5 text-ink" /> Novo tópico
+            <MessagesSquare className="h-5 w-5 text-ink" /> {t('Novo tópico')}
           </DialogTitle>
           <DialogDescription>
-            Abra uma discussão para o clube. Use formatação rica, anexos e, se quiser, uma enquete.
+            {t('Abra uma discussão para o clube. Use formatação rica, anexos e, se quiser, uma enquete.')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="thread-title">Título *</Label>
+            <Label htmlFor="thread-title">{t('Título *')}</Label>
             <Input
               id="thread-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={FORUM_LIMITS.TITLE_MAX}
-              placeholder="Sobre o que é a discussão?"
+              placeholder={t('Sobre o que é a discussão?')}
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Descrição</Label>
+            <Label>{t('Descrição')}</Label>
             <MarkdownEditor
               value={body}
               onChange={setBody}
               rows={6}
               maxLength={FORUM_LIMITS.BODY_MAX}
-              placeholder="Detalhe o assunto. Use títulos, listas, tabelas, links…"
+              placeholder={t('Detalhe o assunto. Use títulos, listas, tabelas, links…')}
             />
           </div>
 
           <div className="space-y-2">
             <PendingAttachmentList items={attachments.items} onRemove={attachments.remove} />
-            <AttachmentAddButton onFiles={attachments.pick} uploading={attachments.uploading} label="Anexar imagens ou arquivos" />
+            <AttachmentAddButton onFiles={attachments.pick} uploading={attachments.uploading} label={t('Anexar imagens ou arquivos')} />
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-paper px-3 py-2">
             <div>
-              <div className="text-sm font-medium text-ink">Adicionar enquete</div>
-              <div className="text-xs text-gray-500">Colete a opinião do clube com uma votação.</div>
+              <div className="text-sm font-medium text-ink">{t('Adicionar enquete')}</div>
+              <div className="text-xs text-gray-500">{t('Colete a opinião do clube com uma votação.')}</div>
             </div>
             <Switch checked={pollEnabled} onCheckedChange={setPollEnabled} />
           </div>
@@ -125,10 +126,10 @@ export default function CreateThreadDialog({ clubId, open, onOpenChange, onCreat
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
-              Cancelar
+              {t('Cancelar')}
             </Button>
             <Button type="submit" disabled={submitting || attachments.uploading}>
-              {submitting ? 'Publicando…' : 'Publicar tópico'}
+              {submitting ? t('Publicando…') : t('Publicar tópico')}
             </Button>
           </DialogFooter>
         </form>

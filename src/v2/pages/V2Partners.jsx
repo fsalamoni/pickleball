@@ -10,6 +10,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2Partners() {
   const { data: links = [], isLoading, isError, refetch } = useAffiliateLinks();
@@ -17,7 +18,7 @@ export default function V2Partners() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <V2PageIntro title="Parceiros" subtitle="Marcas, lojas e serviços conectados ao crescimento do jogo." />
+      <V2PageIntro title={t('Parceiros')} subtitle={t('Marcas, lojas e serviços conectados ao crescimento do jogo.')} />
 
       {isLoading ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -26,8 +27,8 @@ export default function V2Partners() {
       ) : isError ? (
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar os parceiros"
-            description="Tente de novo em instantes."
+            title={t('Não foi possível carregar os parceiros')}
+            description={t('Tente de novo em instantes.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -35,8 +36,8 @@ export default function V2Partners() {
         <V2Surface>
           <V2EmptyState
             icon={Handshake}
-            title="Ainda não há parceiros"
-            description="Assim que novas marcas e serviços parceiros forem publicados, eles aparecerão aqui."
+            title={t('Ainda não há parceiros')}
+            description={t('Assim que novas marcas e serviços parceiros forem publicados, eles aparecerão aqui.')}
           />
         </V2Surface>
       ) : (
@@ -60,7 +61,7 @@ export default function V2Partners() {
                 <h3 className="font-display text-lg font-bold text-ink">{link.title}</h3>
                 {link.description && <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-500">{link.description}</p>}
                 <div className="mt-auto pt-5">
-                  <V2Badge tone="acid"><ExternalLink className="h-3 w-3" /> Visitar parceiro</V2Badge>
+                  <V2Badge tone="acid"><ExternalLink className="h-3 w-3" /> {t('Visitar parceiro')}</V2Badge>
                 </div>
               </div>
             </a>

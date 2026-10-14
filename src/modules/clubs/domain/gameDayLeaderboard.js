@@ -21,6 +21,7 @@ import {
   GAME_KIND, GAME_KIND_LABELS, gameKindsIn, splitGamesByKind,
 } from '@/modules/games/domain/gameKind.js';
 import { gamePoints } from '@/modules/games/domain/gameSets.js';
+import { t } from '@/core/i18n';
 
 function makeRow(id, name) {
   return {
@@ -123,7 +124,7 @@ export function computeGameDayLeaderboards(participants, games) {
   const kinds = gameKindsIn(games);
   if (kinds.length <= 1) {
     const kind = kinds[0] || GAME_KIND.DOUBLES;
-    return [{ kind, label: GAME_KIND_LABELS[kind], rows: computeGameDayLeaderboard(lista, games) }];
+    return [{ kind, label: t(GAME_KIND_LABELS[kind]), rows: computeGameDayLeaderboard(lista, games) }];
   }
 
   const porTipo = splitGamesByKind(games);
@@ -141,6 +142,6 @@ export function computeGameDayLeaderboards(participants, games) {
     const jogaram = idsDe(porTipo[kind]);
     const doTipo = lista.filter((p) => jogaram.has(p.id)
       || (kind === GAME_KIND.DOUBLES && !emAlgumJogo.has(p.id)));
-    return { kind, label: GAME_KIND_LABELS[kind], rows: computeGameDayLeaderboard(doTipo, porTipo[kind]) };
+    return { kind, label: t(GAME_KIND_LABELS[kind]), rows: computeGameDayLeaderboard(doTipo, porTipo[kind]) };
   });
 }

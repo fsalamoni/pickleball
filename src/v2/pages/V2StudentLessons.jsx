@@ -28,14 +28,15 @@ import MyCoachLinks from '@/v2/components/coach/MyCoachLinks';
 import {
   V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tk } from '@/core/i18n';
 
-const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_SHORT = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
 
 function fmtDate(iso) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return `${WEEKDAY_SHORT[date.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+  return `${t(WEEKDAY_SHORT[date.getDay()])} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
 function StudentLessonCard({ lesson, onCancel, isPending }) {
@@ -50,25 +51,25 @@ function StudentLessonCard({ lesson, onCancel, isPending }) {
       </div>
       <div className="mt-1.5 flex items-center gap-1 text-xs text-gray-500">
         <CalendarDays className="h-3.5 w-3.5" />
-        {first ? `${fmtDate(first.date)} · ${first.start}–${first.end}` : 'Horário a combinar'}
+        {first ? `${fmtDate(first.date)} · ${first.start}–${first.end}` : t('Horário a combinar')}
         {slots.length > 1 && <span className="ml-1">+{slots.length - 1} data(s)</span>}
       </div>
       {lesson.location && <p className="mt-1 text-xs text-gray-500">📍 {lesson.location}</p>}
       {lesson.coupon?.code && (
         <p className={`mt-1.5 inline-flex items-start gap-1 rounded-xl px-2 py-0.5 text-2xs font-bold leading-4 ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
-          <Tag className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> <span>{lessonCouponLine(lesson.coupon, { lessonStatus: lesson.status })}</span>
+          <Tag className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> <span>{lessonCouponLine(lesson.coupon, { lessonStatus: lesson.status, traduzir: true })}</span>
         </p>
       )}
       {canCancel && (
         <div className="mt-3 flex justify-end">
           <ConfirmDialog
-            title="Cancelar aula?"
-            description="A aula será cancelada e o professor avisado."
-            confirmLabel="Cancelar aula"
+            title={t('Cancelar aula?')}
+            description={t('A aula será cancelada e o professor avisado.')}
+            confirmLabel={t('Cancelar aula')}
             onConfirm={() => onCancel(lesson)}
             trigger={(
               <button type="button" disabled={isPending} className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50">
-                Cancelar
+                {t('Cancelar')}
               </button>
             )}
           />
@@ -83,14 +84,14 @@ function PackageBalance({ sales }) {
   if (active.length === 0) return null;
   return (
     <V2Surface>
-      <h2 className="mb-4 font-display text-lg font-bold text-ink">Meus créditos</h2>
+      <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Meus créditos')}</h2>
       <div className="space-y-2">
         {active.map((s) => (
           <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
             <div>
               <p className="font-bold text-ink">{s.package_name}</p>
               <p className="text-xs text-gray-500">
-                {formatPrice(s.price)}{s.expires_at && ` · válido até ${s.expires_at}`}
+                {formatPrice(s.price)}{s.expires_at && ` · ${t('válido até {data}', { data: s.expires_at })}`}
               </p>
             </div>
             <V2Badge tone="green">{creditsRemaining(s)} aula(s) restante(s)</V2Badge>
@@ -117,17 +118,17 @@ function V2StudentLessonsContent() {
   const handleCancel = async (lesson) => {
     try {
       await respond.mutateAsync({ lesson, nextStatus: LESSON_STATUS.CANCELLED });
-      toast.success('Aula cancelada.');
+      toast.success(t('Aula cancelada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível cancelar.');
+      toast.error(err?.message || t('Não foi possível cancelar.'));
     }
   };
 
   return (
     <div className="mx-auto max-w-[800px] space-y-6 p-4">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Minhas aulas</h1>
-        <p className="mt-2 font-medium text-gray-500">Acompanhe suas aulas com professores.</p>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Minhas aulas')}</h1>
+        <p className="mt-2 font-medium text-gray-500">{t('Acompanhe suas aulas com professores.')}</p>
       </div>
 
       <PackageBalance sales={sales} />
@@ -139,23 +140,23 @@ function V2StudentLessonsContent() {
       <MyArenaEnrollments />
 
       <V2Surface>
-        <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas com professores</h2>
+        <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Próximas com professores')}</h2>
         {isLoading ? (
           <V2Skeleton lines={3} />
         ) : isError ? (
           // Falhar não é "nenhuma aula": afirmar isso faria a pessoa não ir à
           // aula que tem marcada (docs/27-FALHA-NAO-E-VAZIO.md).
           <V2ErrorState
-            title="Não foi possível carregar suas aulas"
-            description="Suas aulas continuam marcadas — só não conseguimos buscá-las agora."
+            title={t('Não foi possível carregar suas aulas')}
+            description={t('Suas aulas continuam marcadas — só não conseguimos buscá-las agora.')}
             onRetry={() => refetch()}
           />
         ) : upcoming.length === 0 ? (
           <V2EmptyState
             icon={GraduationCap}
-            title="Nenhuma aula agendada"
-            description="Encontre um professor no diretório e solicite sua primeira aula."
-            action={<Link to="/coaches" className="text-sm font-bold text-ink underline">Ver professores →</Link>}
+            title={t('Nenhuma aula agendada')}
+            description={t('Encontre um professor no diretório e solicite sua primeira aula.')}
+            action={<Link to="/coaches" className="text-sm font-bold text-ink underline">{t('Ver professores →')}</Link>}
           />
         ) : (
           <div className="space-y-2">
@@ -166,7 +167,7 @@ function V2StudentLessonsContent() {
 
       {history.length > 0 && (
         <V2Surface>
-          <h2 className="mb-4 font-display text-lg font-bold text-ink">Histórico</h2>
+          <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Histórico')}</h2>
           <div className="space-y-2">
             {history.map((l) => <StudentLessonCard key={l.id} lesson={l} onCancel={handleCancel} isPending={respond.isPending} />)}
           </div>

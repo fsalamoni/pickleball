@@ -8,6 +8,7 @@
  *
  * Sem I/O — testável isoladamente.
  */
+import { t, tk } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -17,8 +18,8 @@ export const CLINIC_STATUS = Object.freeze({
 });
 
 export const CLINIC_STATUS_LABELS = Object.freeze({
-  [CLINIC_STATUS.OPEN]: 'Aberta',
-  [CLINIC_STATUS.CANCELLED]: 'Cancelada',
+  [CLINIC_STATUS.OPEN]: tk('Aberta'),
+  [CLINIC_STATUS.CANCELLED]: tk('Cancelada'),
 });
 
 export const CLINIC_TITLE_MAX = 120;
@@ -41,27 +42,27 @@ export function clinicSignupDocId(clinicId, athleteId) {
  */
 export function normalizeClinic(input = {}) {
   const coach_id = str(input.coach_id);
-  if (!coach_id) return { valid: false, error: 'Professor é obrigatório.', value: {} };
+  if (!coach_id) return { valid: false, error: t('Professor é obrigatório.'), value: {} };
 
   const title = str(input.title).slice(0, CLINIC_TITLE_MAX);
-  if (!title) return { valid: false, error: 'Informe um título.', value: {} };
+  if (!title) return { valid: false, error: t('Informe um título.'), value: {} };
 
   const date = str(input.date);
-  if (!DATE_RE.test(date)) return { valid: false, error: 'Data inválida.', value: {} };
+  if (!DATE_RE.test(date)) return { valid: false, error: t('Data inválida.'), value: {} };
 
   const start = str(input.start);
   const end = str(input.end);
   if (!TIME_RE.test(start) || !TIME_RE.test(end)) {
-    return { valid: false, error: 'Horário inválido.', value: {} };
+    return { valid: false, error: t('Horário inválido.'), value: {} };
   }
-  if (end <= start) return { valid: false, error: 'O término deve ser após o início.', value: {} };
+  if (end <= start) return { valid: false, error: t('O término deve ser após o início.'), value: {} };
 
   const capacity = (() => {
     const n = Math.floor(Number(input.capacity));
     if (!Number.isFinite(n) || n < 1) return null;
     return Math.min(n, CLINIC_CAPACITY_MAX);
   })();
-  if (capacity === null) return { valid: false, error: 'Informe o número de vagas (mín. 1).', value: {} };
+  if (capacity === null) return { valid: false, error: t('Informe o número de vagas (mín. 1).'), value: {} };
 
   const price = (() => {
     const n = Number(input.price);
@@ -111,11 +112,11 @@ export function isClinicPast(clinic, now = new Date()) {
  * @returns {{ ok: boolean, reason: string|null }}
  */
 export function canEnroll({ clinic, signupCount = 0, alreadyEnrolled = false, now = new Date() } = {}) {
-  if (!clinic) return { ok: false, reason: 'Clínica inválida.' };
-  if (clinic.status === CLINIC_STATUS.CANCELLED) return { ok: false, reason: 'Clínica cancelada.' };
-  if (alreadyEnrolled) return { ok: false, reason: 'Você já está inscrito.' };
-  if (isClinicPast(clinic, now)) return { ok: false, reason: 'Clínica já realizada.' };
-  if (isClinicFull(clinic, signupCount)) return { ok: false, reason: 'Vagas esgotadas.' };
+  if (!clinic) return { ok: false, reason: t('Clínica inválida.') };
+  if (clinic.status === CLINIC_STATUS.CANCELLED) return { ok: false, reason: t('Clínica cancelada.') };
+  if (alreadyEnrolled) return { ok: false, reason: t('Você já está inscrito.') };
+  if (isClinicPast(clinic, now)) return { ok: false, reason: t('Clínica já realizada.') };
+  if (isClinicFull(clinic, signupCount)) return { ok: false, reason: t('Vagas esgotadas.') };
   return { ok: true, reason: null };
 }
 

@@ -24,6 +24,7 @@ import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import CouponArtEditor from '@/v2/components/arenas/marketing/coupons/CouponArtEditor';
 import PromoReachPicker from './PromoReachPicker';
 import { PROMO_KIND_ICON, issuerBrand, promoKindGroups, uploadFolderFor } from './promoUi';
+import { t } from '@/core/i18n';
 
 function dataDoCampo(v) {
   const n = instanteEmMs(v);
@@ -132,7 +133,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
   const meta = kind ? PROMO_KIND_META[issuerType]?.[kind] : null;
   const Icone = kind ? PROMO_KIND_ICON[kind] : null;
   const salvando = criar.isPending || editar.isPending;
-  const onde = ehProfessor ? 'no seu perfil' : 'na vitrine de promoções';
+  const onde = ehProfessor ? t('no seu perfil') : t('na vitrine de promoções');
 
   const escolherTipo = (k) => {
     setKind(k);
@@ -150,10 +151,10 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
     try {
       if (cupom) await editar.mutateAsync({ issuer, couponId: cupom.id, input });
       else await criar.mutateAsync({ issuer, input });
-      toast.success(cupom ? 'Cupom atualizado.' : 'Cupom criado.');
+      toast.success(cupom ? t('Cupom atualizado.') : t('Cupom criado.'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o cupom.');
+      toast.error(err?.message || t('Não foi possível salvar o cupom.'));
     }
   };
 
@@ -161,17 +162,17 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
     <div className="mb-3 flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
         {!cupom && kind && (
-          <button type="button" onClick={() => setKind(null)} aria-label="Escolher outro tipo"
+          <button type="button" onClick={() => setKind(null)} aria-label={t('Escolher outro tipo')}
             className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
             <ArrowLeft className="h-4 w-4" />
           </button>
         )}
         {Icone && <Icone className="h-4 w-4 shrink-0 text-ink" aria-hidden />}
         <h3 className="truncate font-display text-base font-bold text-ink">
-          {cupom ? `Editar ${cupom.code}` : kind ? `Novo cupom · ${meta?.label || ''}` : 'Novo cupom: o que ele dá?'}
+          {cupom ? t('Editar {codigo}', { codigo: cupom.code }) : kind ? t('Novo cupom · {tipo}', { tipo: meta?.label ? t(meta.label) : '' }) : t('Novo cupom: o que ele dá?')}
         </h3>
       </div>
-      <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
+      <button type="button" onClick={onClose} aria-label={t('Fechar')} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -189,23 +190,23 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
   return (
     <form onSubmit={submit} className="rounded-2xl border border-gray-100 bg-paper p-4">
       {cabecalho}
-      {meta?.hint && <p className="mb-3 text-xs text-gray-500">{meta.hint}</p>}
+      {meta?.hint && <p className="mb-3 text-xs text-gray-500">{t(meta.hint)}</p>}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Código" htmlFor="pcup-code" hint="É o que a pessoa digita ou mostra. Sempre em maiúsculas.">
+        <V2Field label={t('Código')} htmlFor="pcup-code" hint={t('É o que a pessoa digita ou mostra. Sempre em maiúsculas.')}>
           <V2Input id="pcup-code" required maxLength={30} placeholder={familia === PROMO_FAMILY.VOUCHER ? 'BRINDE' : 'PRIMEIRA10'}
             value={form.code} onChange={(e) => set({ code: e.target.value.toUpperCase().replace(/\s+/g, '') })} />
         </V2Field>
 
         {kind === COUPON_KIND.DISCOUNT && (
           <>
-            <V2Field label="Tipo de desconto" htmlFor="pcup-tipo">
+            <V2Field label={t('Tipo de desconto')} htmlFor="pcup-tipo">
               <V2Select id="pcup-tipo" value={form.type} onChange={(e) => set({ type: e.target.value })}>
-                <option value={COUPON_TYPE.PERCENT}>Percentual (%)</option>
-                <option value={COUPON_TYPE.FIXED}>Valor fixo (R$)</option>
+                <option value={COUPON_TYPE.PERCENT}>{t('Percentual (%)')}</option>
+                <option value={COUPON_TYPE.FIXED}>{t('Valor fixo (R$)')}</option>
               </V2Select>
             </V2Field>
-            <V2Field label={form.type === COUPON_TYPE.PERCENT ? 'Desconto (%)' : 'Desconto (R$)'} htmlFor="pcup-valor">
+            <V2Field label={form.type === COUPON_TYPE.PERCENT ? t('Desconto (%)') : t('Desconto (R$)')} htmlFor="pcup-valor">
               <V2Input id="pcup-valor" type="number" min="0.01" step="0.01" required
                 max={form.type === COUPON_TYPE.PERCENT ? '100' : undefined}
                 value={form.value} onChange={(e) => set({ value: e.target.value })} />
@@ -215,43 +216,43 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
 
         {familia === PROMO_FAMILY.VOUCHER && (
           <>
-            <V2Field label="O que o vale dá" htmlFor="pcup-beneficio" className="sm:col-span-2"
-              hint="Escreva como a pessoa vai ler.">
-              <V2Input id="pcup-beneficio" required maxLength={120} placeholder={meta?.example || ''}
+            <V2Field label={t('O que o vale dá')} htmlFor="pcup-beneficio" className="sm:col-span-2"
+              hint={t('Escreva como a pessoa vai ler.')}>
+              <V2Input id="pcup-beneficio" required maxLength={120} placeholder={meta?.example ? t(meta.example) : ''}
                 value={form.benefit} onChange={(e) => set({ benefit: e.target.value })} />
             </V2Field>
-            <V2Field label="Valor para quem usa (R$)" htmlFor="pcup-face" hint="Quanto custaria sem o vale. Opcional.">
-              <V2Input id="pcup-face" type="number" min="0" step="0.01" placeholder="Opcional"
+            <V2Field label={t('Valor para quem usa (R$)')} htmlFor="pcup-face" hint={t('Quanto custaria sem o vale. Opcional.')}>
+              <V2Input id="pcup-face" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.face_value} onChange={(e) => set({ face_value: e.target.value })} />
             </V2Field>
-            <V2Field label={ehProfessor ? 'Custo para você (R$)' : 'Custo para a plataforma (R$)'} htmlFor="pcup-custo"
-              hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> Só você vê. Entra no controle de uso.</span>}>
-              <V2Input id="pcup-custo" type="number" min="0" step="0.01" placeholder="Opcional"
+            <V2Field label={ehProfessor ? t('Custo para você (R$)') : t('Custo para a plataforma (R$)')} htmlFor="pcup-custo"
+              hint={<span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" aria-hidden /> {t('Só você vê. Entra no controle de uso.')}</span>}>
+              <V2Input id="pcup-custo" type="number" min="0" step="0.01" placeholder={t('Opcional')}
                 value={form.unit_cost} onChange={(e) => set({ unit_cost: e.target.value })} />
             </V2Field>
           </>
         )}
 
-        <V2Field label="Usos máximos" htmlFor="pcup-max" hint="Vazio = ilimitado.">
-          <V2Input id="pcup-max" type="number" min="1" placeholder="Ilimitado"
+        <V2Field label={t('Usos máximos')} htmlFor="pcup-max" hint={t('Vazio = ilimitado.')}>
+          <V2Input id="pcup-max" type="number" min="1" placeholder={t('Ilimitado')}
             value={form.max_uses} onChange={(e) => set({ max_uses: e.target.value })} />
         </V2Field>
 
-        <V2Field label="Vale até" htmlFor="pcup-exp" hint="Vazio = sem prazo.">
+        <V2Field label={t('Vale até')} htmlFor="pcup-exp" hint={t('Vazio = sem prazo.')}>
           <V2Input id="pcup-exp" type="date" value={form.expires_at} onChange={(e) => set({ expires_at: e.target.value })} />
         </V2Field>
       </div>
 
-      <V2Field label="Descrição" htmlFor="pcup-desc" className="mt-3" hint="Aparece para quem usa o código. Diga a regra em uma linha.">
+      <V2Field label={t('Descrição')} htmlFor="pcup-desc" className="mt-3" hint={t('Aparece para quem usa o código. Diga a regra em uma linha.')}>
         <V2Input id="pcup-desc" maxLength={160}
-          placeholder={ehProfessor ? 'Para a primeira aula de quem nunca treinou comigo' : 'Válido no Open de Primavera'}
+          placeholder={ehProfessor ? t('Para a primeira aula de quem nunca treinou comigo') : t('Válido no Open de Primavera')}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
 
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-paper-pure p-3" aria-label="Arte do cupom">
-        <p className="font-display text-sm font-bold text-ink">Arte do cupom</p>
+      <section className="mt-4 rounded-2xl border border-gray-100 bg-paper-pure p-3" aria-label={t('Arte do cupom')}>
+        <p className="font-display text-sm font-bold text-ink">{t('Arte do cupom')}</p>
         <p className="mb-3 text-xs text-gray-500">
-          É como o cupom aparece {onde}, na tela inicial e na lista. O código fica no canhoto — quem vê toca para copiar.
+          {t('É como o cupom aparece {onde}, na tela inicial e na lista. O código fica no canhoto — quem vê toca para copiar.', { onde })}
         </p>
         <CouponArtEditor
           value={art}
@@ -261,7 +262,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
           uploadFolder={uploadFolderFor(issuer, 'coupon')}
           amostra={{
             code: form.code,
-            benefit: previa.errors.value || previa.errors.benefit ? (meta?.label || '') : promoBenefitText({ ...previa.value, issuer_type: issuerType }),
+            benefit: previa.errors.value || previa.errors.benefit ? (meta?.label ? t(meta.label) : '') : promoBenefitText({ ...previa.value, issuer_type: issuerType }),
             description: form.description,
           }}
         />
@@ -270,7 +271,7 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
       <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
         <input type="checkbox" checked={form.once_per_user} onChange={(e) => set({ once_per_user: e.target.checked })}
           className="h-4 w-4 rounded border-gray-300" />
-        Cada pessoa pode usar uma vez só
+        {t('Cada pessoa pode usar uma vez só')}
       </label>
 
       {ehProfessor && (
@@ -279,9 +280,9 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
             onChange={(e) => set({ visibility: e.target.checked ? PROMO_VISIBILITY.STUDENTS : PROMO_VISIBILITY.ALL })}
             className="mt-0.5 h-4 w-4 rounded border-gray-300" />
           <span>
-            Mostrar só para os meus alunos
+            {t('Mostrar só para os meus alunos')}
             <span className="block text-xs text-gray-500">
-              Na vitrine, no seu perfil e na tela inicial, só quem é seu aluno vê. Quem recebeu o código de você continua podendo usá-lo.
+              {t('Na vitrine, no seu perfil e na tela inicial, só quem é seu aluno vê. Quem recebeu o código de você continua podendo usá-lo.')}
             </span>
           </span>
         </label>
@@ -292,9 +293,9 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
           onChange={(e) => set({ show_public: e.target.checked, ...(e.target.checked ? {} : { show_home: false }) })}
           className="mt-0.5 h-4 w-4 rounded border-gray-300" />
         <span>
-          {ehProfessor ? 'Divulgar no meu perfil e na vitrine de promoções' : 'Divulgar na vitrine de promoções'}
+          {ehProfessor ? t('Divulgar no meu perfil e na vitrine de promoções') : t('Divulgar na vitrine de promoções')}
           <span className="block text-xs text-gray-500">
-            Aparece com o código, para quem quiser usar. Sem marcar, o cupom é um código que você entrega a quem quiser.
+            {t('Aparece com o código, para quem quiser usar. Sem marcar, o cupom é um código que você entrega a quem quiser.')}
           </span>
         </span>
       </label>
@@ -304,8 +305,8 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
             <input type="checkbox" checked={form.show_home} onChange={(e) => set({ show_home: e.target.checked })}
               className="mt-0.5 h-4 w-4 rounded border-gray-300" />
             <span>
-              Também como banner na tela inicial
-              <span className="block text-xs text-gray-500">No carrossel de promoções da tela inicial, na região que você escolher.</span>
+              {t('Também como banner na tela inicial')}
+              <span className="block text-xs text-gray-500">{t('No carrossel de promoções da tela inicial, na região que você escolher.')}</span>
             </span>
           </label>
           {form.show_home && (
@@ -316,17 +317,17 @@ export default function PromoCouponForm({ issuer, cupom = null, unitCost = null,
 
       {previa.valid && (
         <p className="mt-3 rounded-2xl bg-paper-pure p-3 text-xs text-gray-600">
-          Vai valer como: <strong className="text-ink">{couponLabel({ ...previa.value })}</strong>
-          {previa.value.max_uses ? ` · até ${previa.value.max_uses} usos` : ' · usos ilimitados'}
-          {previa.value.show_home ? ` · banner na tela inicial (${reachLabel(previa.value.reach)})` : ''}
-          {previa.value.visibility === PROMO_VISIBILITY.STUDENTS ? ' · só para os seus alunos' : ''}
+          {t('Vai valer como:')} <strong className="text-ink">{couponLabel({ ...previa.value })}</strong>
+          {previa.value.max_uses ? ` · ${t('até {n} usos', { n: previa.value.max_uses })}` : ` · ${t('usos ilimitados')}`}
+          {previa.value.show_home ? ` · ${t('banner na tela inicial ({regiao})', { regiao: reachLabel(previa.value.reach) })}` : ''}
+          {previa.value.visibility === PROMO_VISIBILITY.STUDENTS ? ` · ${t('só para os seus alunos')}` : ''}
         </p>
       )}
 
       <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
         <V2Button type="submit" disabled={salvando}>
-          {salvando ? 'Salvando…' : cupom ? 'Salvar' : 'Criar cupom'}
+          {salvando ? t('Salvando…') : cupom ? t('Salvar') : t('Criar cupom')}
         </V2Button>
       </div>
     </form>

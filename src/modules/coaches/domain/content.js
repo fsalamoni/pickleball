@@ -7,6 +7,7 @@
  */
 
 import { safeHttpUrl } from '@/core/domain/externalUrl';
+import { t, tk } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -16,8 +17,8 @@ export const CONTENT_VISIBILITY = Object.freeze({
 });
 
 export const CONTENT_VISIBILITY_LABELS = Object.freeze({
-  [CONTENT_VISIBILITY.PUBLIC]: 'Público',
-  [CONTENT_VISIBILITY.STUDENTS]: 'Só alunos',
+  [CONTENT_VISIBILITY.PUBLIC]: tk('Público'),
+  [CONTENT_VISIBILITY.STUDENTS]: tk('Só alunos'),
 });
 
 export const CONTENT_CATEGORY = Object.freeze({
@@ -29,11 +30,11 @@ export const CONTENT_CATEGORY = Object.freeze({
 });
 
 export const CONTENT_CATEGORY_LABELS = Object.freeze({
-  [CONTENT_CATEGORY.DRILL]: 'Drill',
-  [CONTENT_CATEGORY.TIP]: 'Dica',
-  [CONTENT_CATEGORY.TACTIC]: 'Tática',
-  [CONTENT_CATEGORY.FITNESS]: 'Condicionamento',
-  [CONTENT_CATEGORY.OTHER]: 'Outro',
+  [CONTENT_CATEGORY.DRILL]: tk('Drill'),
+  [CONTENT_CATEGORY.TIP]: tk('Dica'),
+  [CONTENT_CATEGORY.TACTIC]: tk('Tática'),
+  [CONTENT_CATEGORY.FITNESS]: tk('Condicionamento'),
+  [CONTENT_CATEGORY.OTHER]: tk('Outro'),
 });
 
 export const CONTENT_TITLE_MAX = 120;
@@ -60,13 +61,13 @@ function normVisibility(value) {
  */
 export function normalizeContent(input = {}) {
   const coach_id = str(input.coach_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
   const title = str(input.title).slice(0, CONTENT_TITLE_MAX);
-  if (!title) return { valid: false, error: 'Informe um título.', value: { coach_id } };
+  if (!title) return { valid: false, error: t('Informe um título.'), value: { coach_id } };
   const body = str(input.body).slice(0, CONTENT_BODY_MAX);
   const video_url = sanitizeVideoUrl(input.video_url);
   if (!body && !video_url) {
-    return { valid: false, error: 'Adicione um texto ou um link de vídeo.', value: { coach_id, title } };
+    return { valid: false, error: t('Adicione um texto ou um link de vídeo.'), value: { coach_id, title } };
   }
   return {
     valid: true,
@@ -99,11 +100,11 @@ export function visibleContent(list = [], viewer = {}) {
 }
 
 export function contentCategoryLabel(category) {
-  return CONTENT_CATEGORY_LABELS[normCategory(category)] || category;
+  return t(CONTENT_CATEGORY_LABELS[normCategory(category)] || category);
 }
 
 export function contentVisibilityLabel(visibility) {
-  return CONTENT_VISIBILITY_LABELS[normVisibility(visibility)] || visibility;
+  return t(CONTENT_VISIBILITY_LABELS[normVisibility(visibility)] || visibility);
 }
 
 /** Ordena por data de criação (mais recente primeiro) quando disponível. */

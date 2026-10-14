@@ -28,6 +28,7 @@ import {
 import { findCoachCouponByCode } from '@/modules/promo/services/promoService';
 import { useCoachPublicPromos, usePromoViewer } from '@/modules/promo/hooks/usePromo';
 import { useStudentLessons } from '@/modules/coaches/hooks/useLessons';
+import { t } from '@/core/i18n';
 
 const limpar = (v) => String(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
 
@@ -88,14 +89,14 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
         coachId, usedByUser: jaUsou(cupom, uid, minhasAulas), isStudent: ehAluno,
       });
       if (problema) {
-        setEstado({ carregando: false, erro: problema });
+        setEstado({ carregando: false, erro: t(problema) });
         return;
       }
       setEscolhido(cupom);
       onChange(lessonCouponFromPromo(cupom));
       setEstado({ carregando: false, erro: '' });
     } catch {
-      setEstado({ carregando: false, erro: 'Não foi possível conferir o cupom agora. Tente de novo.' });
+      setEstado({ carregando: false, erro: t('Não foi possível conferir o cupom agora. Tente de novo.') });
     }
   };
 
@@ -116,7 +117,7 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
 
   return (
     <div>
-      <Label htmlFor="aula-cupom" className="text-xs">Tem um cupom do professor? (opcional)</Label>
+      <Label htmlFor="aula-cupom" className="text-xs">{t('Tem um cupom do professor? (opcional)')}</Label>
       <div className="mt-1 flex gap-2">
         <Input id="aula-cupom" maxLength={30} placeholder="AULA10" value={codigo}
           onChange={(e) => {
@@ -126,13 +127,13 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
             setEstado({ carregando: false, erro: '' });
           }} />
         <Button type="button" variant="outline" disabled={!codigo.trim() || estado.carregando} onClick={() => conferir()}>
-          {estado.carregando ? 'Conferindo…' : 'Aplicar'}
+          {estado.carregando ? t('Conferindo…') : t('Aplicar')}
         </Button>
       </div>
 
       {paraTocar.length > 0 && !value && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-2xs font-bold uppercase tracking-wider text-ink/50">Promoções:</span>
+          <span className="text-2xs font-bold uppercase tracking-wider text-ink/50">{t('Promoções:')}</span>
           {paraTocar.map((c) => (
             <button
               key={c.id}
@@ -153,9 +154,9 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
         <p className="mt-1 text-xs font-semibold text-green-700">
           {value.code}: {value.benefit}
           {estimativa
-            ? ` — estimativa: ${formatPrice(estimativa.de)} por ${formatPrice(estimativa.por)}.`
+            ? ` — ${t('estimativa: {de} por {por}.', { de: formatPrice(estimativa.de), por: formatPrice(estimativa.por) })}`
             : '.'}
-          {' '}Entra quando o professor confirmar a aula.
+          {' '}{t('Entra quando o professor confirmar a aula.')}
         </p>
       )}
     </div>

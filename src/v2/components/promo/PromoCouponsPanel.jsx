@@ -26,6 +26,7 @@ import PromoCouponForm from './PromoCouponForm';
 import PromoReception from './PromoReception';
 import PromoUsageReport from './PromoUsageReport';
 import { PROMO_KIND_ICON, issuerBrand } from './promoUi';
+import { t } from '@/core/i18n';
 
 const TOM_DO_ESTADO = { ativo: 'green', desligado: 'neutral', esgotado: 'amber', vencido: 'amber' };
 
@@ -39,11 +40,11 @@ function diaIso(v) {
 
 function Alternador({ valor, onChange }) {
   const opcoes = [
-    { v: 'cupons', label: 'Cupons', icon: Tag },
-    { v: 'uso', label: 'Controle de uso', icon: BarChart3 },
+    { v: 'cupons', label: t('Cupons'), icon: Tag },
+    { v: 'uso', label: t('Controle de uso'), icon: BarChart3 },
   ];
   return (
-    <div role="tablist" aria-label="Cupons" className="inline-flex rounded-full bg-paper p-1">
+    <div role="tablist" aria-label={t('Cupons')} className="inline-flex rounded-full bg-paper p-1">
       {opcoes.map(({ v, label, icon: Icon }) => (
         <button key={v} type="button" role="tab" aria-selected={valor === v} onClick={() => onChange(v)}
           className={cn(
@@ -69,57 +70,59 @@ function CartaoCupom({ issuer, cupom, onEditar, onRegistrar, onAlternar, onApaga
     <div data-cupom={cupom.code} className={cn('rounded-2xl border p-3', desligado ? 'border-gray-100 bg-gray-50 opacity-75' : 'border-gray-100 bg-paper')}>
       <div className="flex items-start justify-between gap-2">
         <p className="inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-2xs font-bold text-gray-600">
-          {Icone && <Icone className="h-3 w-3" aria-hidden />} {promoKindLabel(issuer.type, kind)}
+          {Icone && <Icone className="h-3 w-3" aria-hidden />} {t(promoKindLabel(issuer.type, kind))}
         </p>
-        <V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge>
+        <V2Badge tone={TOM_DO_ESTADO[estado]}>{t(COUPON_STATUS_LABEL[estado])}</V2Badge>
       </div>
 
       <div className="mt-2">
         <CouponArt coupon={cupom} code={cupom.code} benefit={promoBenefitText(cupom)} description={cupom.description}
-          footer={ate ? `até ${formatDateShortBR(ate)}` : ''} arenaName={issuerBrand(issuer).name} copyable
+          footer={ate ? t('até {data}', { data: formatDateShortBR(ate) }) : ''} arenaName={issuerBrand(issuer).name} copyable
           notch={desligado ? 'bg-gray-50' : 'bg-paper'} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {cupom.show_public === true && (
           <span className="inline-flex items-center gap-1 font-bold text-ink">
-            <Eye className="h-3.5 w-3.5" aria-hidden /> {ehProfessor ? 'No seu perfil e na vitrine' : 'Na vitrine de promoções'}
+            <Eye className="h-3.5 w-3.5" aria-hidden /> {ehProfessor ? t('No seu perfil e na vitrine') : t('Na vitrine de promoções')}
           </span>
         )}
         {cupom.show_public === true && cupom.show_home === true && (
           <span className="inline-flex items-center gap-1 font-bold text-ink">
-            <Megaphone className="h-3.5 w-3.5" aria-hidden /> Tela inicial · {reachLabel(cupom.reach)}
+            <Megaphone className="h-3.5 w-3.5" aria-hidden /> {t('Tela inicial')} · {reachLabel(cupom.reach)}
           </span>
         )}
         {cupom.visibility === PROMO_VISIBILITY.STUDENTS && (
-          <span className="inline-flex items-center gap-1 font-bold text-ink"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> Só alunos</span>
+          <span className="inline-flex items-center gap-1 font-bold text-ink"><GraduationCap className="h-3.5 w-3.5" aria-hidden /> {t('Só alunos')}</span>
         )}
-        <span>{Number(cupom.used_count) || 0}{cupom.max_uses ? ` de ${cupom.max_uses}` : ''} usos</span>
-        {ate ? <span>até {formatDateShortBR(ate)}</span> : null}
-        {cupom.once_per_user !== false && <span>1 por pessoa</span>}
+        <span>{cupom.max_uses
+          ? t('{usados} de {max} usos', { usados: Number(cupom.used_count) || 0, max: cupom.max_uses })
+          : t('{usados} usos', { usados: Number(cupom.used_count) || 0 })}</span>
+        {ate ? <span>{t('até {data}', { data: formatDateShortBR(ate) })}</span> : null}
+        {cupom.once_per_user !== false && <span>{t('1 por pessoa')}</span>}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {!desligado && (
           <V2Button size="sm" variant="secondary" onClick={() => onRegistrar(cupom)}>
-            <ScanLine className="mr-1 h-3.5 w-3.5" aria-hidden /> Registrar uso
+            <ScanLine className="mr-1 h-3.5 w-3.5" aria-hidden /> {t('Registrar uso')}
           </V2Button>
         )}
         <V2Button size="sm" variant="ghost" onClick={() => onEditar(cupom)}>
-          <Pencil className="mr-1 h-3.5 w-3.5" aria-hidden /> Editar
+          <Pencil className="mr-1 h-3.5 w-3.5" aria-hidden /> {t('Editar')}
         </V2Button>
         <V2Button size="sm" variant="ghost" onClick={() => onAlternar(cupom)}>
-          {desligado ? 'Religar' : 'Desligar'}
+          {desligado ? t('Religar') : t('Desligar')}
         </V2Button>
         <ConfirmDialog
-          title={`Apagar o cupom ${cupom.code}?`}
-          description={`Apagar leva junto a contagem de ${Number(cupom.used_count) || 0} uso(s) — depois não dá para saber quanto essa promoção rendeu. Se a ideia é só parar de aceitar o código, use "Desligar".`}
-          confirmLabel="Apagar mesmo assim"
+          title={t('Apagar o cupom {codigo}?', { codigo: cupom.code })}
+          description={t('Apagar leva junto a contagem de {n} uso(s) — depois não dá para saber quanto essa promoção rendeu. Se a ideia é só parar de aceitar o código, use “Desligar”.', { n: Number(cupom.used_count) || 0 })}
+          confirmLabel={t('Apagar mesmo assim')}
           destructive
           onConfirm={() => onApagar(cupom)}
           trigger={(
             <V2Button size="sm" variant="ghost" className="text-red-600">
-              <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden /> Apagar
+              <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden /> {t('Apagar')}
             </V2Button>
           )}
         />
@@ -150,17 +153,17 @@ export default function PromoCouponsPanel({ issuer }) {
   const alternar = async (c) => {
     try {
       await ligar.mutateAsync({ issuer, couponId: c.id, active: c.active === false });
-      toast.success(c.active === false ? 'Cupom religado.' : 'Cupom desligado.');
+      toast.success(c.active === false ? t('Cupom religado.') : t('Cupom desligado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar o cupom.');
+      toast.error(err?.message || t('Não foi possível alterar o cupom.'));
     }
   };
   const remover = async (c) => {
     try {
       await apagar.mutateAsync({ issuer, couponId: c.id });
-      toast.success('Cupom apagado.');
+      toast.success(t('Cupom apagado.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível apagar.');
+      toast.error(err?.message || t('Não foi possível apagar.'));
     }
   };
 
@@ -170,12 +173,12 @@ export default function PromoCouponsPanel({ issuer }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-ink" aria-hidden />
-            <h2 className="font-display text-lg font-bold text-ink">Cupons</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{t('Cupons')}</h2>
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
             {ehProfessor
-              ? 'Desconto na aula, aula experimental, clínica, brinde — para os seus alunos ou para quem ainda vai ser.'
-              : 'Desconto, inscrição em evento, brinde, clínica — para toda a comunidade ou para uma região.'}
+              ? t('Desconto na aula, aula experimental, clínica, brinde — para os seus alunos ou para quem ainda vai ser.')
+              : t('Desconto, inscrição em evento, brinde, clínica — para toda a comunidade ou para uma região.')}
           </p>
         </div>
         <Alternador valor={aba} onChange={setAba} />
@@ -188,8 +191,8 @@ export default function PromoCouponsPanel({ issuer }) {
           {couponsQ.isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
           {couponsQ.isError && (
             <V2ErrorState
-              title="Não foi possível carregar os cupons"
-              description="Isto é uma falha de leitura — não quer dizer que não existam cupons. Criar um agora poderia repetir um código que já existe."
+              title={t('Não foi possível carregar os cupons')}
+              description={t('Isto é uma falha de leitura — não quer dizer que não existam cupons. Criar um agora poderia repetir um código que já existe.')}
               onRetry={() => couponsQ.refetch()}
             />
           )}
@@ -199,12 +202,12 @@ export default function PromoCouponsPanel({ issuer }) {
               <div className="mb-4 flex flex-wrap gap-2">
                 {!form && (
                   <V2Button size="sm" onClick={() => { setForm('novo'); setRecepcao(null); }}>
-                    <Plus className="mr-1.5 h-4 w-4" aria-hidden /> Novo cupom
+                    <Plus className="mr-1.5 h-4 w-4" aria-hidden /> {t('Novo cupom')}
                   </V2Button>
                 )}
                 {lista.length > 0 && recepcao == null && (
                   <V2Button size="sm" variant="secondary" onClick={() => { setRecepcao('codigo'); setForm(null); }}>
-                    <ScanLine className="mr-1.5 h-4 w-4" aria-hidden /> Registrar uso pelo código
+                    <ScanLine className="mr-1.5 h-4 w-4" aria-hidden /> {t('Registrar uso pelo código')}
                   </V2Button>
                 )}
               </div>
@@ -235,11 +238,11 @@ export default function PromoCouponsPanel({ issuer }) {
               {lista.length === 0 && !form && (
                 <V2EmptyState
                   icon={Tag}
-                  title="Nenhum cupom ainda"
+                  title={t('Nenhum cupom ainda')}
                   description={ehProfessor
-                    ? 'Uma aula experimental grátis ou um desconto na primeira aula é o jeito mais direto de trazer aluno novo. Comece escolhendo o que o cupom dá.'
-                    : 'Um cupom é o jeito mais direto de movimentar a comunidade num evento ou numa semana fraca. Comece escolhendo o que ele dá.'}
-                  action={<V2Button size="sm" onClick={() => setForm('novo')}>Criar o primeiro</V2Button>}
+                    ? t('Uma aula experimental grátis ou um desconto na primeira aula é o jeito mais direto de trazer aluno novo. Comece escolhendo o que o cupom dá.')
+                    : t('Um cupom é o jeito mais direto de movimentar a comunidade num evento ou numa semana fraca. Comece escolhendo o que ele dá.')}
+                  action={<V2Button size="sm" onClick={() => setForm('novo')}>{t('Criar o primeiro')}</V2Button>}
                 />
               )}
 

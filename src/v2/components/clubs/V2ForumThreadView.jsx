@@ -37,18 +37,19 @@ import {
 import V2ForumPoll from './V2ForumPoll';
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function timeAgo(ms) {
   if (!ms) return '';
   const diff = Date.now() - ms;
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'agora';
-  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 1) return t('agora');
+  if (minutes < 60) return t('há {n} min', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
+  if (hours < 24) return t('há {n} h', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `há ${days} d`;
-  return new Date(ms).toLocaleDateString('pt-BR');
+  if (days < 30) return t('há {n} d', { n: days });
+  return fmtData(new Date(ms), {});
 }
 
 export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, onDeleted }) {
@@ -82,10 +83,10 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
   if (isError) {
     return (
       <div className="space-y-3">
-        <V2Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</V2Button>
+        <V2Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> {t('Voltar')}</V2Button>
         <V2ErrorState
-          title="Não foi possível carregar o tópico"
-          description="O tópico continua lá — só não conseguimos buscá-lo agora."
+          title={t('Não foi possível carregar o tópico')}
+          description={t('O tópico continua lá — só não conseguimos buscá-lo agora.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -95,8 +96,8 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
   if (!thread) {
     return (
       <div className="space-y-3">
-        <V2Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</V2Button>
-        <div className="rounded-4xl bg-paper p-6 text-center text-sm text-gray-500">Tópico não encontrado ou removido.</div>
+        <V2Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> {t('Voltar')}</V2Button>
+        <div className="rounded-4xl bg-paper p-6 text-center text-sm text-gray-500">{t('Tópico não encontrado ou removido.')}</div>
       </div>
     );
   }
@@ -112,16 +113,16 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
 
   const saveEdit = async () => {
     if (!editTitle.trim()) {
-      toast.error('O título não pode ficar vazio.');
+      toast.error(t('O título não pode ficar vazio.'));
       return;
     }
     setSavingEdit(true);
     try {
       await updateThread.mutateAsync({ threadId, updates: { title: editTitle, body: editBody } });
-      toast.success('Tópico atualizado.');
+      toast.success(t('Tópico atualizado.'));
       setEditing(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível salvar.');
+      toast.error(err.message || t('Não foi possível salvar.'));
     } finally {
       setSavingEdit(false);
     }
@@ -130,20 +131,20 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
   const handlePin = async () => {
     try {
       await setPinned.mutateAsync({ threadId, pinned: !thread.pinned });
-      toast.success(thread.pinned ? 'Tópico desafixado.' : 'Tópico fixado.');
+      toast.success(thread.pinned ? t('Tópico desafixado.') : t('Tópico fixado.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível fixar.');
+      toast.error(err.message || t('Não foi possível fixar.'));
     }
   };
 
   const handleDelete = async () => {
     try {
       await deleteThread.mutateAsync(thread);
-      toast.success('Tópico excluído.');
+      toast.success(t('Tópico excluído.'));
       setConfirmDelete(false);
       onDeleted?.();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível excluir.');
+      toast.error(err.message || t('Não foi possível excluir.'));
     }
   };
 
@@ -151,24 +152,24 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <V2Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" /> Voltar aos tópicos
+          <ArrowLeft className="h-4 w-4" /> {t('Voltar aos tópicos')}
         </V2Button>
         {canManage && !editing && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button aria-label="Mais opções" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
+              <button aria-label={t('Mais opções')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isAuthor && (
-                <DropdownMenuItem onClick={startEdit}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                <DropdownMenuItem onClick={startEdit}><Pencil className="mr-2 h-4 w-4" /> {t('Editar')}</DropdownMenuItem>
               )}
               {isAdmin && (
                 <DropdownMenuItem onClick={handlePin}>
-                  {thread.pinned ? <><PinOff className="mr-2 h-4 w-4" /> Desafixar</> : <><Pin className="mr-2 h-4 w-4" /> Fixar no topo</>}
+                  {thread.pinned ? <><PinOff className="mr-2 h-4 w-4" /> {t('Desafixar')}</> : <><Pin className="mr-2 h-4 w-4" /> {t('Fixar no topo')}</>}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setConfirmDelete(true)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir tópico
+                <Trash2 className="mr-2 h-4 w-4" /> {t('Excluir tópico')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -185,19 +186,19 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   maxLength={FORUM_LIMITS.TITLE_MAX}
-                  placeholder="Título"
+                  placeholder={t('Título')}
                   className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-2 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
                 />
                 <MarkdownEditor value={editBody} onChange={setEditBody} rows={6} maxLength={FORUM_LIMITS.BODY_MAX} />
                 <div className="flex justify-end gap-2">
-                  <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={savingEdit}><X className="h-3.5 w-3.5" /> Cancelar</V2Button>
-                  <V2Button size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Salvando…' : 'Salvar'}</V2Button>
+                  <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={savingEdit}><X className="h-3.5 w-3.5" /> {t('Cancelar')}</V2Button>
+                  <V2Button size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? t('Salvando…') : t('Salvar')}</V2Button>
                 </div>
               </div>
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  {thread.pinned && <V2Badge tone="amber"><Pin className="h-3 w-3" /> Fixado</V2Badge>}
+                  {thread.pinned && <V2Badge tone="amber"><Pin className="h-3 w-3" /> {t('Fixado')}</V2Badge>}
                   <h2 className="font-display text-2xl font-bold text-ink">{thread.title}</h2>
                 </div>
                 <div className="mt-0.5 text-xs text-gray-500">
@@ -214,7 +215,7 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
 
       <div className="flex items-center gap-2 px-1 font-display text-sm font-bold text-ink">
         <MessageSquare className="h-4 w-4 text-ink" />
-        {comentariosFalharam ? 'Comentários' : `${comments.length} comentário(s)`}
+        {comentariosFalharam ? t('Comentários') : tn(comments.length, '{n} comentário', '{n} comentários')}
       </div>
 
       {loadingComments ? (
@@ -223,8 +224,8 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
         // "0 comentário(s)" numa falha seria afirmar que ninguém respondeu.
         <V2ErrorState
           inline
-          title="Não foi possível carregar os comentários"
-          description="Eles continuam lá — tente de novo."
+          title={t('Não foi possível carregar os comentários')}
+          description={t('Eles continuam lá — tente de novo.')}
           onRetry={() => recarregarComentarios()}
         />
       ) : (
@@ -240,9 +241,9 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Excluir tópico"
-        description={`Tem certeza que deseja excluir "${thread.title}"? Os comentários e a enquete também serão removidos.`}
-        confirmLabel="Excluir"
+        title={t('Excluir tópico')}
+        description={t('Tem certeza que deseja excluir “{titulo}”? Os comentários e a enquete também serão removidos.', { titulo: thread.title })}
+        confirmLabel={t('Excluir')}
         destructive
         loading={deleteThread.isPending}
         onConfirm={handleDelete}
@@ -265,7 +266,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
 
   const saveEdit = async () => {
     if (!draft.trim()) {
-      toast.error('O comentário não pode ficar vazio.');
+      toast.error(t('O comentário não pode ficar vazio.'));
       return;
     }
     setBusy(true);
@@ -273,7 +274,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
       await updateComment.mutateAsync({ commentId: comment.id, body: draft });
       setEditing(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível editar.');
+      toast.error(err.message || t('Não foi possível editar.'));
     } finally {
       setBusy(false);
     }
@@ -285,7 +286,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
       await deleteComment.mutateAsync(comment);
       setConfirmDelete(false);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível excluir.');
+      toast.error(err.message || t('Não foi possível excluir.'));
     } finally {
       setBusy(false);
     }
@@ -304,17 +305,17 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
             {(isAuthor || canDelete) && !editing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button aria-label="Mais opções" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
+                  <button aria-label={t('Mais opções')} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {isAuthor && comment.body && (
                     <DropdownMenuItem onClick={() => { setDraft(comment.body || ''); setEditing(true); }}>
-                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                      <Pencil className="mr-2 h-4 w-4" /> {t('Editar')}
                     </DropdownMenuItem>
                   )}
                   {canDelete && (
                     <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setConfirmDelete(true)}>
-                      <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                      <Trash2 className="mr-2 h-4 w-4" /> {t('Excluir')}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -326,8 +327,8 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
             <div className="mt-3 space-y-2">
               <MarkdownEditor value={draft} onChange={setDraft} rows={3} maxLength={FORUM_LIMITS.COMMENT_MAX} />
               <div className="flex justify-end gap-2">
-                <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={busy}>Cancelar</V2Button>
-                <V2Button size="sm" onClick={saveEdit} disabled={busy}>Salvar</V2Button>
+                <V2Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={busy}>{t('Cancelar')}</V2Button>
+                <V2Button size="sm" onClick={saveEdit} disabled={busy}>{t('Salvar')}</V2Button>
               </div>
             </div>
           ) : (
@@ -342,9 +343,9 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Excluir comentário"
-        description="Esta ação não pode ser desfeita."
-        confirmLabel="Excluir"
+        title={t('Excluir comentário')}
+        description={t('Esta ação não pode ser desfeita.')}
+        confirmLabel={t('Excluir')}
         destructive
         loading={busy}
         onConfirm={handleDelete}
@@ -369,7 +370,7 @@ function CommentComposer({ thread, clubId, threadId }) {
       setBody('');
       attachments.reset();
     } catch (err) {
-      toast.error(err.message || 'Não foi possível comentar.');
+      toast.error(err.message || t('Não foi possível comentar.'));
     } finally {
       setSubmitting(false);
     }
@@ -377,13 +378,13 @@ function CommentComposer({ thread, clubId, threadId }) {
 
   return (
     <div className="rounded-3xl border border-gray-100 bg-paper p-4 shadow-organic-sm">
-      <div className="mb-2 font-display text-sm font-bold text-ink">Adicionar comentário</div>
-      <MarkdownEditor value={body} onChange={setBody} rows={3} maxLength={FORUM_LIMITS.COMMENT_MAX} placeholder="Participe da discussão…" />
+      <div className="mb-2 font-display text-sm font-bold text-ink">{t('Adicionar comentário')}</div>
+      <MarkdownEditor value={body} onChange={setBody} rows={3} maxLength={FORUM_LIMITS.COMMENT_MAX} placeholder={t('Participe da discussão…')} />
       <PendingAttachmentList items={attachments.items} onRemove={attachments.remove} />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <AttachmentAddButton onFiles={attachments.pick} uploading={attachments.uploading} label="Anexar" />
+        <AttachmentAddButton onFiles={attachments.pick} uploading={attachments.uploading} label={t('Anexar')} />
         <V2Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-          <Send className="h-4 w-4" /> {submitting ? 'Enviando…' : 'Comentar'}
+          <Send className="h-4 w-4" /> {submitting ? t('Enviando…') : t('Comentar')}
         </V2Button>
       </div>
     </div>

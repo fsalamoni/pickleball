@@ -1,4 +1,5 @@
 import { FORUM_POLL } from './constants.js';
+import { t } from '@/core/i18n';
 
 /**
  * Funções puras das enquetes do fórum — criação, validação e apuração.
@@ -16,15 +17,15 @@ export function validatePollDraft(draft) {
   if (!draft) return { valid: true, error: null }; // enquete é opcional
   const question = String(draft.question || '').trim();
   const options = (draft.options || []).map((o) => String(o ?? '').trim()).filter(Boolean);
-  if (!question) return { valid: false, error: 'Escreva a pergunta da enquete.' };
+  if (!question) return { valid: false, error: t('Escreva a pergunta da enquete.') };
   if (options.length < FORUM_POLL.MIN_OPTIONS) {
-    return { valid: false, error: `A enquete precisa de pelo menos ${FORUM_POLL.MIN_OPTIONS} opções.` };
+    return { valid: false, error: t('A enquete precisa de pelo menos {n} opções.', { n: FORUM_POLL.MIN_OPTIONS }) };
   }
   if (options.length > FORUM_POLL.MAX_OPTIONS) {
-    return { valid: false, error: `A enquete aceita no máximo ${FORUM_POLL.MAX_OPTIONS} opções.` };
+    return { valid: false, error: t('A enquete aceita no máximo {n} opções.', { n: FORUM_POLL.MAX_OPTIONS }) };
   }
   const unique = new Set(options.map((o) => o.toLowerCase()));
-  if (unique.size !== options.length) return { valid: false, error: 'As opções não podem se repetir.' };
+  if (unique.size !== options.length) return { valid: false, error: t('As opções não podem se repetir.') };
   return { valid: true, error: null };
 }
 

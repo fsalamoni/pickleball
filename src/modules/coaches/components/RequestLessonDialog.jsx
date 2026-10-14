@@ -14,8 +14,9 @@ import { LESSON_FORMAT, LESSON_FORMAT_LABELS, isValidSlot } from '../domain/less
 import { useCoachAvailability, useCoachBusySlots, useRequestLesson } from '../hooks/useLessons.js';
 import { useCoachResidencies } from '../hooks/useCoaches.js';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
+import { t, tk } from '@/core/i18n';
 
-const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_SHORT = [tk('Dom'), tk('Seg'), tk('Ter'), tk('Qua'), tk('Qui'), tk('Sex'), tk('Sáb')];
 
 function todayISO() {
   const d = new Date();
@@ -25,7 +26,7 @@ function todayISO() {
 function fmtDay(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return `${WEEKDAY_SHORT[date.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+  return `${t(WEEKDAY_SHORT[date.getDay()])} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
 // "Tem um cupom do professor?" (Onda CG, flag `coach_marketing`) — sob
@@ -80,8 +81,8 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
   const slot = mode === 'slots' ? selected : (isValidSlot(custom) ? custom : null);
 
   async function handleSubmit() {
-    if (!user?.uid) { toast.error('Entre na plataforma para solicitar uma aula.'); return; }
-    if (!slot) { toast.error('Escolha um horário para a aula.'); return; }
+    if (!user?.uid) { toast.error(t('Entre na plataforma para solicitar uma aula.')); return; }
+    if (!slot) { toast.error(t('Escolha um horário para a aula.')); return; }
     try {
       await request.mutateAsync({
         coachId,
@@ -95,13 +96,13 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
           student_email: user.email || '',
         },
       });
-      toast.success('Solicitação enviada! O professor vai responder em breve.');
+      toast.success(t('Solicitação enviada! O professor vai responder em breve.'));
       onOpenChange(false);
       setSelected(null);
       setNotes('');
       setCupom(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível solicitar a aula.');
+      toast.error(err?.message || t('Não foi possível solicitar a aula.'));
     }
   }
 
@@ -109,33 +110,33 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Solicitar aula com {coach?.display_name}</DialogTitle>
-          <DialogDescription>Escolha um horário livre ou proponha outro. O professor confirma.</DialogDescription>
+          <DialogTitle>{t('Solicitar aula com {nome}', { nome: coach?.display_name })}</DialogTitle>
+          <DialogDescription>{t('Escolha um horário livre ou proponha outro. O professor confirma.')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Arena (item 3.1): o aluno escolhe a arena parceira (se houver) */}
           {activeResidencies.length > 0 && (
             <div>
-              <Label className="text-xs">Onde quer a aula?</Label>
+              <Label className="text-xs">{t('Onde quer a aula?')}</Label>
               <select
                 value={arenaId}
                 onChange={(e) => setArenaId(e.target.value)}
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="">Combinar com o professor (sem arena definida)</option>
+                <option value="">{t('Combinar com o professor (sem arena definida)')}</option>
                 {activeResidencies.map((r) => (
                   <option key={r.id} value={r.arena_id}>{arenaNameById.get(r.arena_id) || r.arena_id}</option>
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-gray-500">
-                O professor oferece aulas em uma ou mais arenas parceiras. Escolha a que prefere.
+                {t('O professor oferece aulas em uma ou mais arenas parceiras. Escolha a que prefere.')}
               </p>
             </div>
           )}
           {/* Formato */}
           <div>
-            <Label className="text-xs">Formato da aula</Label>
+            <Label className="text-xs">{t('Formato da aula')}</Label>
             <div className="mt-1 flex flex-wrap gap-2">
               {Object.values(LESSON_FORMAT).map((f) => (
                 <button
@@ -147,7 +148,7 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
                     format === f ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
                   )}
                 >
-                  {LESSON_FORMAT_LABELS[f]}
+                  {t(LESSON_FORMAT_LABELS[f])}
                 </button>
               ))}
             </div>
@@ -157,8 +158,8 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
           {hasAvailability && (
             <div className="flex gap-2">
               {[
-                { k: 'slots', label: 'Horários livres' },
-                { k: 'custom', label: 'Propor horário' },
+                { k: 'slots', label: t('Horários livres') },
+                { k: 'custom', label: t('Propor horário') },
               ].map(({ k, label }) => (
                 <button
                   key={k}
@@ -205,20 +206,20 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
             <div className="space-y-2">
               {!hasAvailability && (
                 <p className="text-xs text-gray-500">
-                  Este professor ainda não publicou horários. Proponha um horário e ele confirma.
+                  {t('Este professor ainda não publicou horários. Proponha um horário e ele confirma.')}
                 </p>
               )}
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-3 sm:col-span-1">
-                  <Label className="text-xs">Data</Label>
+                  <Label className="text-xs">{t('Data')}</Label>
                   <Input type="date" min={todayISO()} value={custom.date} onChange={(e) => setCustom((s) => ({ ...s, date: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Início</Label>
+                  <Label className="text-xs">{t('Início')}</Label>
                   <Input type="time" value={custom.start} onChange={(e) => setCustom((s) => ({ ...s, start: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Fim</Label>
+                  <Label className="text-xs">{t('Fim')}</Label>
                   <Input type="time" value={custom.end} onChange={(e) => setCustom((s) => ({ ...s, end: e.target.value }))} />
                 </div>
               </div>
@@ -226,13 +227,13 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
           )}
 
           <div>
-            <Label className="text-xs">Mensagem ao professor (opcional)</Label>
+            <Label className="text-xs">{t('Mensagem ao professor (opcional)')}</Label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               maxLength={1000}
-              placeholder="Seu nível, objetivo da aula, preferências…"
+              placeholder={t('Seu nível, objetivo da aula, preferências…')}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -246,22 +247,22 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
 
           {slot && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
-              Aula <strong>{LESSON_FORMAT_LABELS[format]}</strong> em <strong>{fmtDay(slot.date)}</strong>, {slot.start}–{slot.end}
+              {t('Aula {formato} em {dia}, {inicio}–{fim}', { formato: t(LESSON_FORMAT_LABELS[format]), dia: fmtDay(slot.date), inicio: slot.start, fim: slot.end })}
               {arenaId && (() => {
                 const name = arenaNameById.get(arenaId);
-                return name ? <> em <strong>{name}</strong></> : null;
+                return name ? <> {t('em {arena}', { arena: name })}</> : null;
               })()}.
               {coach?.hourly_rate != null && (
-                <span className="text-ink/70"> · Valor de referência: R$ {Number(coach.hourly_rate).toFixed(2)}/h (o professor confirma).</span>
+                <span className="text-ink/70"> · {t('Valor de referência: R$ {valor}/h (o professor confirma).', { valor: Number(coach.hourly_rate).toFixed(2) })}</span>
               )}
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Cancelar')}</Button>
           <Button onClick={handleSubmit} disabled={request.isPending || !slot}>
-            {request.isPending ? 'Enviando…' : 'Solicitar aula'}
+            {request.isPending ? t('Enviando…') : t('Solicitar aula')}
           </Button>
         </DialogFooter>
       </DialogContent>

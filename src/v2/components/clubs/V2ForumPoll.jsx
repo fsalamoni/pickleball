@@ -5,12 +5,13 @@ import { cn } from '@/core/lib/utils';
 import { tallyVotes, isPollClosed, toggleOption } from '@/modules/clubs/domain/forumPoll';
 import { usePollVotes, useMyPollVote, useSetPollVote } from '@/modules/clubs/hooks/useClubForum';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { t, fmtData } from '@/core/i18n';
 
 function closesLabel(ms) {
   if (!ms) return null;
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return fmtData(d, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function V2ForumPoll({ thread }) {
@@ -42,14 +43,14 @@ export default function V2ForumPoll({ thread }) {
 
   const handleVote = async () => {
     if (selected.length === 0) {
-      toast.error('Selecione ao menos uma opção.');
+      toast.error(t('Selecione ao menos uma opção.'));
       return;
     }
     try {
       await setVote.mutateAsync({ thread, optionIds: selected });
-      toast.success('Voto registrado.');
+      toast.success(t('Voto registrado.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível votar.');
+      toast.error(err.message || t('Não foi possível votar.'));
     }
   };
 
@@ -57,9 +58,9 @@ export default function V2ForumPoll({ thread }) {
     try {
       await setVote.mutateAsync({ thread, optionIds: [] });
       setSelected([]);
-      toast.success('Voto removido.');
+      toast.success(t('Voto removido.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover o voto.');
+      toast.error(err.message || t('Não foi possível remover o voto.'));
     }
   };
 
@@ -71,14 +72,14 @@ export default function V2ForumPoll({ thread }) {
           <h4 className="font-display font-bold text-ink">{poll.question}</h4>
         </div>
         {closed ? (
-          <V2Badge tone="neutral"><Lock className="h-3 w-3" /> Encerrada</V2Badge>
+          <V2Badge tone="neutral"><Lock className="h-3 w-3" /> {t('Encerrada')}</V2Badge>
         ) : poll.closes_at_ms ? (
-          <V2Badge tone="amber"><Clock className="h-3 w-3" /> até {closesLabel(poll.closes_at_ms)}</V2Badge>
+          <V2Badge tone="amber"><Clock className="h-3 w-3" /> {t('até {data}', { data: closesLabel(poll.closes_at_ms) })}</V2Badge>
         ) : null}
       </div>
 
       <p className="mb-4 text-xs text-gray-500">
-        {poll.multiple ? 'Você pode escolher várias opções.' : 'Escolha uma opção.'}
+        {poll.multiple ? t('Você pode escolher várias opções.') : t('Escolha uma opção.')}
       </p>
 
       <div className="space-y-2">
@@ -121,16 +122,16 @@ export default function V2ForumPoll({ thread }) {
         <span>{totalVoters} voto(s){poll.multiple ? ` em ${totalVotes} escolhas` : ''}</span>
         <div className="flex gap-2">
           {!revealResults && !closed && (
-            <V2Button size="sm" variant="ghost" onClick={() => setShowResults(true)}>Ver parciais</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={() => setShowResults(true)}>{t('Ver parciais')}</V2Button>
           )}
           {!hasVoted && !closed && (
             <V2Button size="sm" onClick={handleVote} disabled={selected.length === 0 || setVote.isPending}>
-              Votar
+              {t('Votar')}
             </V2Button>
           )}
           {hasVoted && !closed && (
             <V2Button size="sm" variant="ghost" onClick={handleClear} disabled={setVote.isPending}>
-              Remover voto
+              {t('Remover voto')}
             </V2Button>
           )}
         </div>

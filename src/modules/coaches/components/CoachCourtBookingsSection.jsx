@@ -24,6 +24,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function PartnerArenaRow({ residency, coach, onBook }) {
   const { data: arena } = useArena(residency.arena_id);
@@ -38,7 +39,7 @@ function PartnerArenaRow({ residency, coach, onBook }) {
         </div>
       </div>
       <V2Button size="sm" onClick={() => onBook(arena)}>
-        <CalendarPlus className="h-4 w-4" /> Reservar quadra
+        <CalendarPlus className="h-4 w-4" /> {t('Reservar quadra')}
       </V2Button>
     </div>
   );
@@ -46,7 +47,7 @@ function PartnerArenaRow({ residency, coach, onBook }) {
 
 function whenLabel(booking) {
   const s = bookingSlots(booking)[0];
-  return s ? `${s.date} · ${s.start}–${s.end}` : 'Horário a combinar';
+  return s ? `${s.date} · ${s.start}–${s.end}` : t('Horário a combinar');
 }
 
 function CoachBookingCard({ booking }) {
@@ -58,9 +59,9 @@ function CoachBookingCard({ booking }) {
   const doCancel = async () => {
     try {
       await cancel.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: false } });
-      toast.success('Reserva cancelada.');
+      toast.success(t('Reserva cancelada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível cancelar.');
+      toast.error(err?.message || t('Não foi possível cancelar.'));
     }
   };
 
@@ -72,16 +73,16 @@ function CoachBookingCard({ booking }) {
           <p className="text-xs text-gray-500">{whenLabel(booking)}</p>
         </div>
         <div className="flex items-center gap-1.5">
-          <V2Badge tone="blue">Aula</V2Badge>
+          <V2Badge tone="blue">{t('Aula')}</V2Badge>
           {editable && (
             <>
-              <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Alterar</V2Button>
+              <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> {t('Alterar')}</V2Button>
               <ConfirmDialog
-                title="Cancelar reserva?"
-                description="A reserva de quadra será cancelada e a arena avisada."
-                confirmLabel="Cancelar reserva"
+                title={t('Cancelar reserva?')}
+                description={t('A reserva de quadra será cancelada e a arena avisada.')}
+                confirmLabel={t('Cancelar reserva')}
                 onConfirm={doCancel}
-                trigger={<button type="button" className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Cancelar</button>}
+                trigger={<button type="button" className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50">{t('Cancelar')}</button>}
               />
             </>
           )}
@@ -104,22 +105,21 @@ export default function CoachCourtBookingsSection({ coach }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <GraduationCap className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Reservar quadra para aula</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Reservar quadra para aula')}</h2>
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
-        Reserve quadras nas suas arenas parceiras e adicione alunos (ou deixe aberto para eles entrarem).
-        A reserva aparece no calendário da arena como aula com professor.
+        {t('Reserve quadras nas suas arenas parceiras e adicione alunos (ou deixe aberto para eles entrarem). A reserva aparece no calendário da arena como aula com professor.')}
       </p>
 
       {isLoading ? (
         <V2Skeleton lines={2} />
       ) : isError ? (
-        <V2ErrorState inline title="Não foi possível carregar as suas arenas parceiras" onRetry={() => refetch()} />
+        <V2ErrorState inline title={t('Não foi possível carregar as suas arenas parceiras')} onRetry={() => refetch()} />
       ) : residencies.length === 0 ? (
         <V2EmptyState
           icon={Building2}
-          title="Nenhuma arena parceira"
-          description="Quando uma arena vincular você como professor parceiro, você poderá reservar quadras aqui."
+          title={t('Nenhuma arena parceira')}
+          description={t('Quando uma arena vincular você como professor parceiro, você poderá reservar quadras aqui.')}
         />
       ) : (
         <div className="space-y-2">
@@ -133,14 +133,14 @@ export default function CoachCourtBookingsSection({ coach }) {
         <V2ErrorState
           inline
           className="mt-4"
-          title="Não foi possível carregar as quadras que você já reservou"
+          title={t('Não foi possível carregar as quadras que você já reservou')}
           onRetry={() => recarregarReservas()}
         />
       )}
 
       {bookings.length > 0 && (
         <div className="mt-5">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Minhas reservas de quadra</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">{t('Minhas reservas de quadra')}</p>
           <div className="space-y-3">
             {bookings.map((b) => <CoachBookingCard key={b.id} booking={b} />)}
           </div>

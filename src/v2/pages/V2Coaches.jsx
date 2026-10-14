@@ -21,6 +21,7 @@ import { distanceLabel } from '@/core/domain/region';
 import { parsePlaceText } from '@/core/domain/locality';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton, V2ErrorState } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 function CoachForm({ existing, onClose }) {
   const { user } = useAuth();
@@ -51,7 +52,7 @@ function CoachForm({ existing, onClose }) {
           certifications: split(form.certifications),
         },
       });
-      toast.success('Perfil salvo!');
+      toast.success(t('Perfil salvo!'));
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -63,44 +64,44 @@ function CoachForm({ existing, onClose }) {
   return (
     <V2Surface className="border-green-200 bg-green-50/40" data-dica="professor-formulario">
       <h3 className="font-display text-base font-bold text-ink">
-        {existing ? 'Editar perfil de professor' : 'Tornar-se professor'}
+        {existing ? t('Editar perfil de professor') : t('Tornar-se professor')}
       </h3>
       <form onSubmit={handleSubmit} className="mt-3 space-y-3">
-        <V2Field label="Nome de exibição" required>
+        <V2Field label={t('Nome de exibição')} required>
           <V2Input value={form.display_name} onChange={setField('display_name')} required maxLength={80} />
         </V2Field>
-        <V2Field label="Bio" hint="Conte sua experiência, metodologia, etc. (max 1000 chars)">
+        <V2Field label={t('Bio')} hint={t('Conte sua experiência, metodologia, etc. (max 1000 chars)')}>
           <V2Textarea value={form.bio} onChange={setField('bio')} maxLength={1000} rows={3} />
         </V2Field>
         <div className="grid grid-cols-2 gap-2">
-          <V2Field label="Valor/hora (R$)">
+          <V2Field label={t('Valor/hora (R$)')}>
             <V2Input type="number" min="0" step="0.01" value={form.hourly_rate} onChange={setField('hourly_rate')}
               className="bg-paper px-4 py-3" />
           </V2Field>
-          <V2Field label="Regiões (separadas por vírgula)">
-            <V2Input value={form.regions} onChange={setField('regions')} placeholder="São Paulo, Rio" />
+          <V2Field label={t('Regiões (separadas por vírgula)')}>
+            <V2Input value={form.regions} onChange={setField('regions')} placeholder={t('São Paulo, Rio')} />
           </V2Field>
         </div>
-        <V2Field label="Modalidades (separadas por vírgula)" required>
-          <V2Input value={form.modalities} onChange={setField('modalities')} required placeholder="Iniciantes, Avançado, DUPR 4.0+" />
+        <V2Field label={t('Modalidades (separadas por vírgula)')} required>
+          <V2Input value={form.modalities} onChange={setField('modalities')} required placeholder={t('Iniciantes, Avançado, DUPR 4.0+')} />
         </V2Field>
-        <V2Field label="Certificações (separadas por vírgula)">
-          <V2Input value={form.certifications} onChange={setField('certifications')} placeholder="CBP Level 1, IFP" />
+        <V2Field label={t('Certificações (separadas por vírgula)')}>
+          <V2Input value={form.certifications} onChange={setField('certifications')} placeholder={t('CBP Level 1, IFP')} />
         </V2Field>
         <div className="flex flex-col gap-2 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.accepting_students} onChange={setField('accepting_students')} />
-            Aceitando novos alunos
+            {t('Aceitando novos alunos')}
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.active} onChange={setField('active')} />
-            Perfil ativo (visível no diretório)
+            {t('Perfil ativo (visível no diretório)')}
           </label>
         </div>
         <div className="flex justify-end gap-2">
-          <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+          <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button type="submit" size="sm" disabled={upsert.isPending}>
-            {upsert.isPending ? 'Salvando…' : 'Salvar'}
+            {upsert.isPending ? t('Salvando…') : t('Salvar')}
           </V2Button>
         </div>
       </form>
@@ -119,7 +120,7 @@ function CoachCard({ coach, distancia = null }) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-display text-base font-bold text-ink">{coach.display_name}</h3>
-              {coach.accepting_students && <V2Badge tone="green">Aceitando</V2Badge>}
+              {coach.accepting_students && <V2Badge tone="green">{t('Aceitando')}</V2Badge>}
             </div>
             {coach.bio && <p className="mt-1 line-clamp-2 text-sm text-gray-600">{coach.bio}</p>}
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -210,13 +211,13 @@ export default function V2Coaches() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-green-700" /> Professores
+            <GraduationCap className="h-6 w-6 text-green-700" /> {t('Professores')}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">Encontre coaches de pickleball ou cadastre-se como professor</p>
+          <p className="mt-1 text-sm text-gray-500">{t('Encontre coaches de pickleball ou cadastre-se como professor')}</p>
         </div>
         {!meuPerfilFalhou && (
           <V2Button size="sm" variant={myProfile ? 'ghost' : 'default'} onClick={() => setEditing(true)} data-dica="professor-sou">
-            {myProfile ? <><Edit3 className="h-4 w-4" /> Editar perfil</> : <><Plus className="h-4 w-4" /> Sou professor</>}
+            {myProfile ? <><Edit3 className="h-4 w-4" /> {t('Editar perfil')}</> : <><Plus className="h-4 w-4" /> {t('Sou professor')}</>}
           </V2Button>
         )}
       </div>
@@ -224,8 +225,8 @@ export default function V2Coaches() {
       {meuPerfilFalhou && (
         <V2ErrorState
           inline
-          title="Não foi possível conferir o seu perfil de professor"
-          description="Editar ou criar o perfil volta assim que carregar."
+          title={t('Não foi possível conferir o seu perfil de professor')}
+          description={t('Editar ou criar o perfil volta assim que carregar.')}
           onRetry={() => recarregarMeuPerfil()}
         />
       )}
@@ -233,35 +234,35 @@ export default function V2Coaches() {
       {editing && !meuPerfilFalhou && <CoachForm existing={myProfile} onClose={() => setEditing(false)} />}
 
       {/* Filtros */}
-      <V2Surface collapsible collapseId="coaches-filtros" title="Filtros" data-dica="professores-filtros">
+      <V2Surface collapsible collapseId="coaches-filtros" title={t('Filtros')} data-dica="professores-filtros">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <V2Field label="Cidade / Estado">
-            <V2Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="São Paulo" />
+          <V2Field label={t('Cidade / Estado')}>
+            <V2Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder={t('São Paulo')} />
           </V2Field>
-          <V2Field label="Modalidade / nível">
-            <V2Input value={modality} onChange={(e) => setModality(e.target.value)} placeholder="Iniciantes, DUPR 4.0+" />
+          <V2Field label={t('Modalidade / nível')}>
+            <V2Input value={modality} onChange={(e) => setModality(e.target.value)} placeholder={t('Iniciantes, DUPR 4.0+')} />
           </V2Field>
         </div>
         {discoveryOn && (
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <V2Field label="Preço até (R$/h)">
+            <V2Field label={t('Preço até (R$/h)')}>
               <V2Input type="number" min="0" step="10" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="150" />
             </V2Field>
-            <V2Field label="Ordenar por">
+            <V2Field label={t('Ordenar por')}>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2.5 text-sm text-ink"
               >
-                <option value="relevancia">Relevância</option>
-                <option value="preco_asc">Menor preço</option>
-                <option value="preco_desc">Maior preço</option>
+                <option value="relevancia">{t('Relevância')}</option>
+                <option value="preco_asc">{t('Menor preço')}</option>
+                <option value="preco_desc">{t('Maior preço')}</option>
               </select>
             </V2Field>
-            <V2Field label="Disponibilidade">
+            <V2Field label={t('Disponibilidade')}>
               <label className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2.5 text-sm text-ink">
                 <input type="checkbox" checked={acceptingOnly} onChange={(e) => setAcceptingOnly(e.target.checked)} />
-                Só aceitando alunos
+                {t('Só aceitando alunos')}
               </label>
             </V2Field>
           </div>
@@ -275,21 +276,21 @@ export default function V2Coaches() {
         <V2Skeleton lines={4} />
       ) : listaFalhou ? (
         <V2ErrorState
-          title="Não foi possível carregar os professores"
-          description="A lista não chegou — isso não quer dizer que não haja professores na sua região."
+          title={t('Não foi possível carregar os professores')}
+          description={t('A lista não chegou — isso não quer dizer que não haja professores na sua região.')}
           onRetry={() => recarregarLista()}
         />
       ) : displayed.length === 0 && regional.fora > 0 ? (
-        <RegionEmptyHint regional={regional} oque="Nenhum professor" />
+        <RegionEmptyHint regional={regional} oque={t('Nenhum professor')} />
       ) : displayed.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}
-          title="Nenhum professor encontrado"
+          title={t('Nenhum professor encontrado')}
           description={(region || modality || maxPrice || acceptingOnly)
-            ? 'Nenhum professor com esses filtros. Limpe os filtros para ver todos os professores da plataforma.'
-            : 'Ainda não há professores cadastrados. Cadastre-se como professor para ser o primeiro.'}
+            ? t('Nenhum professor com esses filtros. Limpe os filtros para ver todos os professores da plataforma.')
+            : t('Ainda não há professores cadastrados. Cadastre-se como professor para ser o primeiro.')}
           action={(region || modality || maxPrice || acceptingOnly)
-            ? <V2Button size="sm" variant="ghost" onClick={() => { setRegion(''); setModality(''); setMaxPrice(''); setAcceptingOnly(false); }}>Limpar filtros</V2Button>
+            ? <V2Button size="sm" variant="ghost" onClick={() => { setRegion(''); setModality(''); setMaxPrice(''); setAcceptingOnly(false); }}>{t('Limpar filtros')}</V2Button>
             : undefined}
         />
       ) : (

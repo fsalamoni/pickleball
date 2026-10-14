@@ -27,6 +27,7 @@ import {
   isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 export default function V2EventParticipantsPanel({ event, clubId }) {
   const { user } = useAuth();
@@ -53,18 +54,18 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
   const handleJoin = async () => {
     try {
       await setResponse.mutateAsync(INVITE_STATUS.GOING);
-      toast.success('Você agora participa deste evento.');
+      toast.success(t('Você agora participa deste evento.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível participar.');
+      toast.error(err.message || t('Não foi possível participar.'));
     }
   };
 
   const handleLeave = async () => {
     try {
       await removeInvite.mutateAsync(user.uid);
-      toast.success('Você saiu do evento.');
+      toast.success(t('Você saiu do evento.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível sair.');
+      toast.error(err.message || t('Não foi possível sair.'));
     }
   };
 
@@ -72,16 +73,16 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
     try {
       await removeInvite.mutateAsync(userId);
     } catch (err) {
-      toast.error(err.message || 'Não foi possível remover.');
+      toast.error(err.message || t('Não foi possível remover.'));
     }
   };
 
   const handleVisibility = async (visibility) => {
     try {
       await updateEvent.mutateAsync({ visibility });
-      toast.success(visibility === EVENT_VISIBILITY.PRIVATE ? 'Evento agora é privado.' : 'Evento agora é público.');
+      toast.success(visibility === EVENT_VISIBILITY.PRIVATE ? t('Evento agora é privado.') : t('Evento agora é público.'));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível alterar a visibilidade.');
+      toast.error(err.message || t('Não foi possível alterar a visibilidade.'));
     }
   };
 
@@ -98,18 +99,18 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
           <div className="flex items-center gap-2">
             {isPrivate ? <Lock className="h-5 w-5 text-amber-600" /> : <Globe className="h-5 w-5 text-ink" />}
             <div>
-              <h3 className="font-display text-sm font-bold text-ink">{isPrivate ? 'Evento privado' : 'Evento público'}</h3>
+              <h3 className="font-display text-sm font-bold text-ink">{isPrivate ? t('Evento privado') : t('Evento público')}</h3>
               <p className="text-xs text-gray-500">
-                {isPrivate ? 'Visível apenas para participantes e convidados.' : 'Visível para todos os atletas do clube.'}
+                {isPrivate ? t('Visível apenas para participantes e convidados.') : t('Visível para todos os atletas do clube.')}
               </p>
             </div>
           </div>
           <div className="flex gap-1.5">
             <V2Button size="sm" variant={!isPrivate ? 'primary' : 'ghost'} onClick={() => handleVisibility(EVENT_VISIBILITY.PUBLIC)} disabled={updateEvent.isPending || !isPrivate}>
-              <Globe className="h-4 w-4" /> Público
+              <Globe className="h-4 w-4" /> {t('Público')}
             </V2Button>
             <V2Button size="sm" variant={isPrivate ? 'primary' : 'ghost'} onClick={() => handleVisibility(EVENT_VISIBILITY.PRIVATE)} disabled={updateEvent.isPending || isPrivate}>
-              <Lock className="h-4 w-4" /> Privado
+              <Lock className="h-4 w-4" /> {t('Privado')}
             </V2Button>
           </div>
         </div>
@@ -120,14 +121,14 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-display text-sm font-bold text-ink">
-              {semSaberQuemParticipa ? 'Sua participação' : amParticipant ? 'Você participa deste evento' : amInvited ? 'Você foi convidado' : 'Participe deste evento'}
+              {semSaberQuemParticipa ? t('Sua participação') : amParticipant ? t('Você participa deste evento') : amInvited ? t('Você foi convidado') : t('Participe deste evento')}
             </h3>
-            <p className="text-xs text-gray-500">Confirme sua presença em cada dia de jogo na aba “Detalhes e dias de jogo”.</p>
+            <p className="text-xs text-gray-500">{t('Confirme sua presença em cada dia de jogo na aba “Detalhes e dias de jogo”.')}</p>
           </div>
           {semSaberQuemParticipa ? null : amParticipant ? (
-            <V2Button size="sm" variant="ghost" onClick={handleLeave} disabled={removeInvite.isPending || isManager}>Sair do evento</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={handleLeave} disabled={removeInvite.isPending || isManager}>{t('Sair do evento')}</V2Button>
           ) : (
-            <V2Button size="sm" onClick={handleJoin} disabled={setResponse.isPending}>{amInvited ? 'Aceitar convite' : 'Participar'}</V2Button>
+            <V2Button size="sm" onClick={handleJoin} disabled={setResponse.isPending}>{amInvited ? t('Aceitar convite') : t('Participar')}</V2Button>
           )}
         </div>
       </V2Surface>
@@ -137,10 +138,10 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-ink" />
-            <h3 className="font-display text-base font-bold text-ink">Participantes do evento</h3>
+            <h3 className="font-display text-base font-bold text-ink">{t('Participantes do evento')}</h3>
           </div>
           {!convitesFalharam && (
-            <V2Button size="sm" variant="ghost" onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4" /> Convidar atletas</V2Button>
+            <V2Button size="sm" variant="ghost" onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4" /> {t('Convidar atletas')}</V2Button>
           )}
         </div>
 
@@ -157,12 +158,12 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
           ) : convitesFalharam ? (
             <V2ErrorState
               inline
-              title="Não foi possível carregar os participantes"
-              description="Eles continuam no evento — só não conseguimos buscá-los agora."
+              title={t('Não foi possível carregar os participantes')}
+              description={t('Eles continuam no evento — só não conseguimos buscá-los agora.')}
               onRetry={() => refetch()}
             />
           ) : invites.length === 0 ? (
-            <V2EmptyState icon={Users} title="Sem participantes ainda" description="Convide os atletas do clube para integrarem o evento." />
+            <V2EmptyState icon={Users} title={t('Sem participantes ainda')} description={t('Convide os atletas do clube para integrarem o evento.')} />
           ) : (
             <div className="divide-y divide-gray-100">
               {invites.map((inv) => {
@@ -174,17 +175,17 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold text-ink">
                           {inv.user_name}
-                          {inv.user_id === event.created_by && <span className="ml-1 text-xs text-ink">(organizador)</span>}
+                          {inv.user_id === event.created_by && <span className="ml-1 text-xs text-ink">{t('(organizador)')}</span>}
                         </div>
-                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-2xs text-gray-500">Convidado da plataforma</div>}
+                        {inv.source === INVITE_SOURCE.PLATFORM && <div className="text-2xs text-gray-500">{t('Convidado da plataforma')}</div>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <V2Badge tone={inv.status === INVITE_STATUS.INVITED ? 'neutral' : 'green'}>
-                        {inv.status === INVITE_STATUS.INVITED ? 'Convidado' : 'Participante'}
+                        {inv.status === INVITE_STATUS.INVITED ? t('Convidado') : t('Participante')}
                       </V2Badge>
                       {canRemove && inv.user_id !== event.created_by && (
-                        <button onClick={() => handleRemove(inv.user_id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
+                        <button onClick={() => handleRemove(inv.user_id)} className="text-gray-400 transition-colors hover:text-red-600" title={t('Remover')}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -214,7 +215,7 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
     const map = new Map();
     members.forEach((m) => {
       if (!m.user_id || invitedIds.has(m.user_id) || map.has(m.user_id)) return;
-      map.set(m.user_id, { user_id: m.user_id, user_name: m.user_name || 'Atleta', user_photo: m.photo_url || '', source: INVITE_SOURCE.CLUB });
+      map.set(m.user_id, { user_id: m.user_id, user_name: m.user_name || t('Atleta'), user_photo: m.photo_url || '', source: INVITE_SOURCE.CLUB });
     });
     return Array.from(map.values()).sort((a, b) => a.user_name.localeCompare(b.user_name));
   }, [members, invitedIds]);
@@ -224,7 +225,7 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
     const map = new Map();
     athletes.forEach((a) => {
       if (!a.id || invitedIds.has(a.id) || memberIds.has(a.id) || map.has(a.id)) return;
-      map.set(a.id, { user_id: a.id, user_name: a.platform_name || 'Atleta', user_photo: a.photo_url || '', source: INVITE_SOURCE.PLATFORM });
+      map.set(a.id, { user_id: a.id, user_name: a.platform_name || t('Atleta'), user_photo: a.photo_url || '', source: INVITE_SOURCE.PLATFORM });
     });
     return Array.from(map.values()).sort((a, b) => a.user_name.localeCompare(b.user_name));
   }, [athletes, members, invitedIds]);
@@ -235,9 +236,9 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
   const handleInvite = async (target) => {
     try {
       await invite.mutateAsync(target);
-      toast.success(`Convite enviado para ${target.user_name}.`);
+      toast.success(t('Convite enviado para {nome}.', { nome: target.user_name }));
     } catch (err) {
-      toast.error(err.message || 'Não foi possível convidar.');
+      toast.error(err.message || t('Não foi possível convidar.'));
     }
   };
 
@@ -245,24 +246,23 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Convidar atletas</DialogTitle>
+          <DialogTitle>{t('Convidar atletas')}</DialogTitle>
           <DialogDescription>
-            Convide atletas do clube. Em eventos privados, você também pode convidar outros atletas da plataforma —
-            eles recebem uma notificação para responder.
+            {t('Convide atletas do clube. Em eventos privados, você também pode convidar outros atletas da plataforma — eles recebem uma notificação para responder.')}
           </DialogDescription>
         </DialogHeader>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome…"
+          placeholder={t('Buscar por nome…')}
           className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
         />
         <div className="max-h-[50vh] space-y-4 overflow-y-auto">
-          <Pool title="Atletas do clube" people={clubPool.filter(f)} onInvite={handleInvite} emptyText="Todos os atletas do clube já participam." />
-          <Pool title="Outros atletas da plataforma" people={platformPool.filter(f)} onInvite={handleInvite} emptyText="Nenhum outro atleta disponível." />
+          <Pool title={t('Atletas do clube')} people={clubPool.filter(f)} onInvite={handleInvite} emptyText={t('Todos os atletas do clube já participam.')} />
+          <Pool title={t('Outros atletas da plataforma')} people={platformPool.filter(f)} onInvite={handleInvite} emptyText={t('Nenhum outro atleta disponível.')} />
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Fechar')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -283,7 +283,7 @@ function Pool({ title, people, onInvite, emptyText }) {
                 <UserAvatar name={p.user_name} photoUrl={p.user_photo} size="sm" />
                 <span className="truncate text-sm font-bold text-ink">{p.user_name}</span>
               </div>
-              <V2Button size="sm" variant="ghost" onClick={() => onInvite(p)}><Send className="h-3.5 w-3.5" /> Convidar</V2Button>
+              <V2Button size="sm" variant="ghost" onClick={() => onInvite(p)}><Send className="h-3.5 w-3.5" /> {t('Convidar')}</V2Button>
             </div>
           ))}
         </div>

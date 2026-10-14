@@ -8,17 +8,19 @@ import React from 'react';
 import { BR_UFS, PROMO_REACH, normalizeReach } from '@/modules/promo/domain/promo';
 import { V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, tk } from '@/core/i18n';
 
 const OPCOES = [
-  { v: PROMO_REACH.BRASIL, label: 'Todo o Brasil' },
-  { v: PROMO_REACH.ESTADO, label: 'Um estado' },
-  { v: PROMO_REACH.CIDADE, label: 'Uma cidade' },
+  { v: PROMO_REACH.BRASIL, label: tk('Todo o Brasil') },
+  { v: PROMO_REACH.ESTADO, label: tk('Um estado') },
+  { v: PROMO_REACH.CIDADE, label: tk('Uma cidade') },
 ];
 
 /**
  * @param {{ idPrefix: string, value: { mode, state, city }, onChange: Function, legend?: string }} props
  */
-export default function PromoReachPicker({ idPrefix, value, onChange, legend = 'Até onde aparece na tela inicial' }) {
+export default function PromoReachPicker({ idPrefix, value, onChange, legend: legendProp }) {
+  const legend = legendProp || t('Até onde aparece na tela inicial');
   const v = value || { mode: PROMO_REACH.BRASIL, state: '', city: '' };
   const erro = normalizeReach(v).errors.reach;
   const set = (patch) => onChange({ ...v, ...patch });
@@ -30,20 +32,20 @@ export default function PromoReachPicker({ idPrefix, value, onChange, legend = '
           <button key={o.v} type="button" role="radio" aria-checked={v.mode === o.v} onClick={() => set({ mode: o.v })}
             className={cn('rounded-full border px-3.5 py-1.5 text-xs font-bold transition sm:text-sm',
               v.mode === o.v ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink')}>
-            {o.label}
+            {t(o.label)}
           </button>
         ))}
       </div>
       {v.mode !== PROMO_REACH.BRASIL && (
         <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]">
-          <V2Field label="Estado" htmlFor={`${idPrefix}-uf`}>
+          <V2Field label={t('Estado')} htmlFor={`${idPrefix}-uf`}>
             <V2Select id={`${idPrefix}-uf`} value={v.state || ''} onChange={(e) => set({ state: e.target.value })}>
-              <option value="">UF…</option>
+              <option value="">{t('UF…')}</option>
               {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
             </V2Select>
           </V2Field>
           {v.mode === PROMO_REACH.CIDADE && (
-            <V2Field label="Cidade" htmlFor={`${idPrefix}-cidade`}>
+            <V2Field label={t('Cidade')} htmlFor={`${idPrefix}-cidade`}>
               <V2Input id={`${idPrefix}-cidade`} maxLength={80} placeholder="Porto Alegre"
                 value={v.city || ''} onChange={(e) => set({ city: e.target.value })} />
             </V2Field>
@@ -53,8 +55,8 @@ export default function PromoReachPicker({ idPrefix, value, onChange, legend = '
       {erro && <p className="text-xs font-semibold text-amber-700">{erro}</p>}
       <p className="text-xs text-gray-500">
         {v.mode === PROMO_REACH.BRASIL
-          ? 'Aparece para todo mundo — inclusive quem ainda não informou a cidade.'
-          : 'Aparece para quem é dessa região (pela cidade do perfil) ou escolheu vê-la.'}
+          ? t('Aparece para todo mundo — inclusive quem ainda não informou a cidade.')
+          : t('Aparece para quem é dessa região (pela cidade do perfil) ou escolheu vê-la.')}
       </p>
     </fieldset>
   );

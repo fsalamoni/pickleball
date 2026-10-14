@@ -30,6 +30,7 @@ import {
   normalizePromoCouponInput, normalizePromoDestination, normalizePromoPlacement, normalizeReach,
   promoDestinationLink, promoFamily, promoNoticeLink, promoSettingsId,
 } from '../domain/promo.js';
+import { t } from '@/core/i18n';
 
 const COL_COUPONS = PROMO_COLLECTIONS.coupons;
 const COL_CAMPAIGNS = PROMO_COLLECTIONS.campaigns;
@@ -42,7 +43,7 @@ const recentesPrimeiro = (a, b) => (b.created_at?.seconds || 0) - (a.created_at?
 
 function exigirEmissor(issuer) {
   const e = normalizeIssuer(issuer);
-  if (!e) throw new Error('Emissor inválido.');
+  if (!e) throw new Error(t('Emissor inválido.'));
   return e;
 }
 
@@ -109,14 +110,14 @@ const limparModelo = (t) => ({
 
 /** Grava os modelos de BANNER do emissor (a lista é conferida de novo aqui). */
 export async function savePromoBannerTemplates(issuer, list = [], actor = null) {
-  if (!db) throw new Error('Firestore indisponível.');
+  if (!db) throw new Error(t('Firestore indisponível.'));
   const limpa = arenaTemplatesFrom({ banner_templates: list }).slice(0, ARENA_TEMPLATES_MAX).map(limparModelo);
   return gravarModelos(issuer, 'banner_templates', limpa, actor);
 }
 
 /** Grava os modelos de CUPOM do emissor. */
 export async function savePromoCouponTemplates(issuer, list = [], actor = null) {
-  if (!db) throw new Error('Firestore indisponível.');
+  if (!db) throw new Error(t('Firestore indisponível.'));
   const limpa = arenaCouponTemplatesFrom({ [COUPON_TEMPLATES_FIELD]: list }).slice(0, ARENA_TEMPLATES_MAX).map(limparModelo);
   return gravarModelos(issuer, COUPON_TEMPLATES_FIELD, limpa, actor);
 }
@@ -143,11 +144,11 @@ export async function listIssuerCoupons(issuer) {
  */
 export async function createPromoCoupon(issuer, input = {}, actor = null) {
   const e = exigirEmissor(issuer);
-  if (!db) throw new Error('Firestore indisponível.');
+  if (!db) throw new Error(t('Firestore indisponível.'));
   const { valid, errors, value } = normalizePromoCouponInput(input, { issuerType: e.type });
-  if (!valid) throw new Error(primeiroErro(errors) || 'Dados inválidos.');
+  if (!valid) throw new Error(primeiroErro(errors) || t('Dados inválidos.'));
   const repetido = (await listIssuerCoupons(e)).find((c) => String(c.code || '').toUpperCase() === value.code);
-  if (repetido) throw new Error(`Você já tem um cupom com o código ${value.code}.`);
+  if (repetido) throw new Error(t('Você já tem um cupom com o código {codigo}.', { codigo: value.code }));
   const id = doc(collection(db, COL_COUPONS)).id;
   await setDoc(doc(db, COL_COUPONS, id), {
     id,
@@ -178,12 +179,12 @@ export async function createPromoCoupon(issuer, input = {}, actor = null) {
  */
 export async function updatePromoCoupon(issuer, couponId, input = {}, actor = null) {
   const e = exigirEmissor(issuer);
-  if (!db || !couponId) throw new Error('Cupom inválido.');
+  if (!db || !couponId) throw new Error(t('Cupom inválido.'));
   const { valid, errors, value } = normalizePromoCouponInput(input, { issuerType: e.type });
-  if (!valid) throw new Error(primeiroErro(errors) || 'Dados inválidos.');
+  if (!valid) throw new Error(primeiroErro(errors) || t('Dados inválidos.'));
   const repetido = (await listIssuerCoupons(e))
     .find((c) => c.id !== couponId && String(c.code || '').toUpperCase() === value.code);
-  if (repetido) throw new Error(`Você já tem um cupom com o código ${value.code}.`);
+  if (repetido) throw new Error(t('Você já tem um cupom com o código {codigo}.', { codigo: value.code }));
   await updateDoc(doc(db, COL_COUPONS, couponId), { ...value, issuer_name: e.name, updated_at: serverTimestamp() });
   if (input.unit_cost !== undefined) {
     // Deixou de ser vale: o custo unitário não se aplica mais e sai.
@@ -262,15 +263,15 @@ export async function getPromoCoupon(couponId) {
  */
 export async function redeemPromoCoupon(issuer, couponId, { userId = null, userName = '' } = {}, actor = null) {
   const e = exigirEmissor(issuer);
-  if (!db || !couponId) throw new Error('Cupom não informado.');
+  if (!db || !couponId) throw new Error(t('Cupom não informado.'));
   const ref = doc(db, COL_COUPONS, couponId);
   const cupom = await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists()) throw new Error('Cupom não encontrado.');
+    if (!snap.exists()) throw new Error(t('Cupom não encontrado.'));
     const c = { id: snap.id, ...snap.data() };
-    if (c.issuer_type !== e.type || c.issuer_id !== e.id) throw new Error('Este cupom é de outro emissor.');
+    if (c.issuer_type !== e.type || c.issuer_id !== e.id) throw new Error(t('Este cupom é de outro emissor.'));
     const erro = couponError(c, { anyFamily: true, usedByUser: Boolean(userId) && (c.used_by || []).includes(userId) });
-    if (erro) throw new Error(erro.replace('Você já usou', 'Esta pessoa já usou'));
+    if (erro) throw new Error(t(erro.replace('Você já usou', 'Esta pessoa já usou')));
     const patch = { used_count: increment(1), last_used_at: serverTimestamp(), updated_at: serverTimestamp() };
     if (userId) patch.used_by = arrayUnion(userId);
     tx.update(ref, patch);
@@ -399,15 +400,15 @@ export async function getPromoCampaign(campaignId) {
  */
 export async function publishPromoCampaign(issuer, input = {}, recipients = [], actor = null, { today = todayISO() } = {}) {
   const e = exigirEmissor(issuer);
-  if (!db) throw new Error('Firestore indisponível.');
+  if (!db) throw new Error(t('Firestore indisponível.'));
   const nome = str(input.name).slice(0, 120);
   const mensagem = str(input.message).slice(0, 1000);
   const avisar = input.notify !== false;
-  if (!nome) throw new Error('Dê um nome à campanha.');
-  if (avisar && !mensagem) throw new Error('Escreva a mensagem do aviso.');
+  if (!nome) throw new Error(t('Dê um nome à campanha.'));
+  if (avisar && !mensagem) throw new Error(t('Escreva a mensagem do aviso.'));
 
   const banner = normalizeCampaignBanner(input.banner || null);
-  if (!banner.valid) throw new Error(primeiroErro(banner.errors) || 'Confira o banner.');
+  if (!banner.valid) throw new Error(primeiroErro(banner.errors) || t('Confira o banner.'));
   const destino = normalizePromoDestination(input.destination || {}, e.type);
   if (!destino.valid) throw new Error(primeiroErro(destino.errors));
   const lugar = banner.value ? normalizePromoPlacement(input, { today }) : null;
@@ -416,9 +417,9 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
   if (!alcance.valid) throw new Error(primeiroErro(alcance.errors));
 
   const destinatarios = avisar ? [...new Set((recipients || []).filter(Boolean))] : [];
-  if (avisar && destinatarios.length === 0) throw new Error('Não há ninguém neste público.');
+  if (avisar && destinatarios.length === 0) throw new Error(t('Não há ninguém neste público.'));
   if (!avisar && !banner.value) {
-    throw new Error('Escolha um banner ou um aviso — a campanha precisa aparecer em algum lugar.');
+    throw new Error(t('Escolha um banner ou um aviso — a campanha precisa aparecer em algum lugar.'));
   }
 
   const id = doc(collection(db, COL_CAMPAIGNS)).id;
@@ -506,16 +507,16 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
  * enviado não é tocado (não há como "desenviar" uma notificação).
  */
 export async function updatePromoCampaign(campaignId, patch = {}, actor = null, { today = todayISO() } = {}) {
-  if (!db || !campaignId) throw new Error('Campanha inválida.');
+  if (!db || !campaignId) throw new Error(t('Campanha inválida.'));
   const atual = await getPromoCampaign(campaignId);
-  if (!atual) throw new Error('Campanha não encontrada.');
+  if (!atual) throw new Error(t('Campanha não encontrada.'));
   const e = issuerOf(atual);
-  if (!e) throw new Error('Campanha sem emissor.');
+  if (!e) throw new Error(t('Campanha sem emissor.'));
 
   const mudancas = {};
   if ('banner' in patch) {
     const banner = normalizeCampaignBanner(patch.banner || null);
-    if (!banner.valid) throw new Error(primeiroErro(banner.errors) || 'Confira o banner.');
+    if (!banner.valid) throw new Error(primeiroErro(banner.errors) || t('Confira o banner.'));
     mudancas.banner = banner.value;
   }
   if ('destination' in patch) {

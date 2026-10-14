@@ -11,6 +11,7 @@
  * - Residência é link coach ↔ arena (visível se arena opt-in)
  * - Sem dependência de framework
  */
+import { t } from '@/core/i18n';
 
 export const COACH_BIO_MAX = 1000;
 export const COACH_DISPLAY_NAME_MAX = 80;
@@ -39,10 +40,10 @@ export function normalizeCoachPhotos(input) {
 export function normalizeCoachProfile(input = {}) {
   const display_name = str(input.display_name);
   if (!display_name) {
-    return { valid: false, error: 'Nome de exibição é obrigatório.', value: {} };
+    return { valid: false, error: t('Nome de exibição é obrigatório.'), value: {} };
   }
   if (display_name.length > COACH_DISPLAY_NAME_MAX) {
-    return { valid: false, error: `Nome muito longo (máx. ${COACH_DISPLAY_NAME_MAX}).`, value: { display_name: display_name.slice(0, COACH_DISPLAY_NAME_MAX) } };
+    return { valid: false, error: t('Nome muito longo (máx. {n}).', { n: COACH_DISPLAY_NAME_MAX }), value: { display_name: display_name.slice(0, COACH_DISPLAY_NAME_MAX) } };
   }
   const bio = str(input.bio).slice(0, COACH_BIO_MAX);
   const hourly_rate = (() => {
@@ -59,7 +60,7 @@ export function normalizeCoachProfile(input = {}) {
     .filter(Boolean)
     .slice(0, COACH_MODALITIES_MAX);
   if (modalities.length === 0) {
-    return { valid: false, error: 'Informe ao menos uma modalidade (ex: "Iniciantes", "Avançado", "DUPR 4.0+").', value: { display_name, bio, hourly_rate, regions } };
+    return { valid: false, error: t('Informe ao menos uma modalidade (ex: "Iniciantes", "Avançado", "DUPR 4.0+").'), value: { display_name, bio, hourly_rate, regions } };
   }
   const certifications = (Array.isArray(input.certifications) ? input.certifications : [])
     .map((c) => str(c).slice(0, COACH_CERTIFICATION_MAX))
@@ -88,8 +89,8 @@ export function normalizeCoachProfile(input = {}) {
 export function normalizeCoachResidency(input = {}) {
   const coach_id = str(input.coach_id);
   const arena_id = str(input.arena_id);
-  if (!coach_id) return { valid: false, error: 'coach_id é obrigatório.', value: {} };
-  if (!arena_id) return { valid: false, error: 'arena_id é obrigatório.', value: { coach_id } };
+  if (!coach_id) return { valid: false, error: t('coach_id é obrigatório.'), value: {} };
+  if (!arena_id) return { valid: false, error: t('arena_id é obrigatório.'), value: { coach_id } };
   return {
     valid: true,
     error: null,

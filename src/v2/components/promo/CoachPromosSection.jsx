@@ -20,6 +20,7 @@ import { useCoachPublicPromos, usePromoViewer } from '@/modules/promo/hooks/useP
 import { V2Button, V2Surface } from '@/v2/ui/primitives';
 import PromoCampaignBanner from './PromoCampaignBanner';
 import PromoCouponCard from './PromoCouponCard';
+import { t } from '@/core/i18n';
 
 /**
  * @param {{ coachId: string, onUseInLesson?: (code: string) => void }} props
@@ -45,7 +46,7 @@ export default function CoachPromosSection({ coachId, onUseInLesson }) {
     <div id="professor-promocoes" className="scroll-mt-4">
       <V2Surface>
         <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-          <Tag className="h-4 w-4" aria-hidden /> Promoções
+          <Tag className="h-4 w-4" aria-hidden /> {t('Promoções')}
         </h3>
         {banners.length > 0 && (
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -59,7 +60,7 @@ export default function CoachPromosSection({ coachId, onUseInLesson }) {
                 <PromoCouponCard coupon={c} showIssuer={false} />
                 {onUseInLesson && LESSON_COUPON_KINDS.includes(couponKind(c)) && (
                   <V2Button size="sm" variant="secondary" onClick={() => onUseInLesson(c.code)}>
-                    <CalendarPlus className="h-4 w-4" aria-hidden /> Usar ao pedir a aula
+                    <CalendarPlus className="h-4 w-4" aria-hidden /> {t('Usar ao pedir a aula')}
                   </V2Button>
                 )}
               </div>

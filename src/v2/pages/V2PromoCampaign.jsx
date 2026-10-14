@@ -27,10 +27,11 @@ import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } fr
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import { issuerDisplayName } from '@/v2/components/promo/promoUi';
+import { t } from '@/core/i18n';
 
 function Voltar() {
   return (
-    <V2BackLink to="/promocoes">Promoções</V2BackLink>
+    <V2BackLink to="/promocoes">{t('Promoções')}</V2BackLink>
   );
 }
 
@@ -55,8 +56,8 @@ export default function V2PromoCampaign() {
       <div className="mx-auto max-w-3xl space-y-4">
         <Voltar />
         <V2ErrorState
-          title="Não foi possível carregar a campanha"
-          description="A conexão falhou. A campanha continua lá — tente de novo em instantes."
+          title={t('Não foi possível carregar a campanha')}
+          description={t('A conexão falhou. A campanha continua lá — tente de novo em instantes.')}
           onRetry={() => q.refetch()}
         />
       </div>
@@ -68,9 +69,9 @@ export default function V2PromoCampaign() {
       <div className="mx-auto max-w-3xl space-y-4">
         <Voltar />
         <V2Surface className="text-center">
-          <p className="font-display text-lg font-bold text-ink">Esta campanha não está mais disponível</p>
-          <p className="mt-1 text-sm text-gray-500">Ela pode ter sido retirada. Veja as promoções que estão no ar agora.</p>
-          <V2Button asChild className="mt-4"><Link to="/promocoes">Ver promoções</Link></V2Button>
+          <p className="font-display text-lg font-bold text-ink">{t('Esta campanha não está mais disponível')}</p>
+          <p className="mt-1 text-sm text-gray-500">{t('Ela pode ter sido retirada. Veja as promoções que estão no ar agora.')}</p>
+          <V2Button asChild className="mt-4"><Link to="/promocoes">{t('Ver promoções')}</Link></V2Button>
         </V2Surface>
       </div>
     );
@@ -102,7 +103,7 @@ export default function V2PromoCampaign() {
       <V2Surface>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h1 className="font-display text-2xl font-black text-ink">{campanha.name}</h1>
-          {!valendo && <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? 'Pausada' : 'Encerrada'}</V2Badge>}
+          {!valendo && <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? t('Pausada') : t('Encerrada')}</V2Badge>}
         </div>
         <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
           {ehProfessor ? <GraduationCap className="h-4 w-4" aria-hidden /> : <Tag className="h-4 w-4" aria-hidden />}
@@ -115,13 +116,13 @@ export default function V2PromoCampaign() {
           <p className="mt-4 flex items-center gap-1.5 text-sm text-gray-500">
             <CalendarClock className="h-4 w-4" aria-hidden />
             {estado === BANNER_STATE.ENDED
-              ? `Valeu até ${formatDateShortBR(campanha.banner_until)}.`
-              : `Vale até ${formatDateShortBR(campanha.banner_until)}.`}
+              ? t('Valeu até {data}.', { data: formatDateShortBR(campanha.banner_until) })
+              : t('Vale até {data}.', { data: formatDateShortBR(campanha.banner_until) })}
           </p>
         )}
         {!valendo && (
           <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Esta campanha não está mais no ar. Veja as promoções que valem agora.
+            {t('Esta campanha não está mais no ar. Veja as promoções que valem agora.')}
           </p>
         )}
 
@@ -133,10 +134,10 @@ export default function V2PromoCampaign() {
           )}
           {linkProfessor && destino.type !== PROMO_DESTINATION.PROFILE && (
             <V2Button asChild variant={valendo && vaiParaOutroLugar ? 'secondary' : 'primary'}>
-              <Link to={`/coaches/${campanha.issuer_id}`}><GraduationCap className="h-4 w-4" aria-hidden /> Conhecer o professor</Link>
+              <Link to={`/coaches/${campanha.issuer_id}`}><GraduationCap className="h-4 w-4" aria-hidden /> {t('Conhecer o professor')}</Link>
             </V2Button>
           )}
-          <V2Button asChild variant="ghost"><Link to="/promocoes">Ver promoções</Link></V2Button>
+          <V2Button asChild variant="ghost"><Link to="/promocoes">{t('Ver promoções')}</Link></V2Button>
         </div>
       </V2Surface>
     </div>

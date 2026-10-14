@@ -12,6 +12,7 @@
  *   { round, side_a: [id, id], side_b: [id, id] } (Rei da Quadra inclui `court`).
  * Sem I/O — testável.
  */
+import { t, tk } from '@/core/i18n';
 
 export const GAME_DAY_FORMAT = Object.freeze({
   AMERICANO: 'americano',
@@ -34,11 +35,11 @@ export const GAME_DAY_FORMAT = Object.freeze({
 });
 
 export const GAME_DAY_FORMAT_LABELS = Object.freeze({
-  [GAME_DAY_FORMAT.AMERICANO]: 'Americano',
-  [GAME_DAY_FORMAT.MEXICANO]: 'Mexicano',
-  [GAME_DAY_FORMAT.KING_OF_COURT]: 'Rei da Quadra',
-  [GAME_DAY_FORMAT.PLAY]: 'Play (jogo aberto por ordem de chegada)',
-  [GAME_DAY_FORMAT.AMERICANO_LIVE]: 'Americano aprimorado (partida a partida, com placar)',
+  [GAME_DAY_FORMAT.AMERICANO]: tk('Americano'),
+  [GAME_DAY_FORMAT.MEXICANO]: tk('Mexicano'),
+  [GAME_DAY_FORMAT.KING_OF_COURT]: tk('Rei da Quadra'),
+  [GAME_DAY_FORMAT.PLAY]: tk('Play (jogo aberto por ordem de chegada)'),
+  [GAME_DAY_FORMAT.AMERICANO_LIVE]: tk('Americano aprimorado (partida a partida, com placar)'),
 });
 
 /**
@@ -239,7 +240,7 @@ function sortDescByLevel(ids, levelOf) {
 export function generateMexicanoSchedule(playerIds, options = {}) {
   const ids = (playerIds || []).filter(Boolean);
   const n = ids.length;
-  if (n < 4) throw new Error('O Mexicano exige no mínimo 4 participantes.');
+  if (n < 4) throw new Error(t('O Mexicano exige no mínimo 4 participantes.'));
   const { seed = 'mexicano', rounds = 5 } = options;
   const totalRounds = Math.max(1, Math.min(60, Math.floor(rounds)));
   const rng = seededRng(seed);
@@ -287,7 +288,7 @@ export function generateMexicanoSchedule(playerIds, options = {}) {
 export function kingOfCourtFirstRound(playerIds, options = {}) {
   const ids = (playerIds || []).filter(Boolean);
   const n = ids.length;
-  if (n < 4) throw new Error('O Rei da Quadra exige no mínimo 4 participantes.');
+  if (n < 4) throw new Error(t('O Rei da Quadra exige no mínimo 4 participantes.'));
   const { seed = 'king' } = options;
   const rng = seededRng(seed);
   const levelOf = levelReader(options.levels);

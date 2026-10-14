@@ -25,6 +25,7 @@ import {
   V2StatCard, V2Surface, V2Textarea,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 function downloadCSV(filename, content) {
   // BOM (U+FEFF) ajuda o Excel a reconhecer UTF-8.
@@ -55,36 +56,36 @@ function CreatePackageForm({ coachId, onClose }) {
           validity_days: Number(form.validity_days),
         },
       });
-      toast.success('Pacote criado!');
+      toast.success(t('Pacote criado!'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível criar.');
+      toast.error(err?.message || t('Não foi possível criar.'));
     }
   };
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
-      <h3 className="font-display text-base font-bold text-ink">Novo pacote</h3>
-      <V2Field label="Nome">
-        <V2Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={80} placeholder="Ex.: Pacote 10 aulas" />
+      <h3 className="font-display text-base font-bold text-ink">{t('Novo pacote')}</h3>
+      <V2Field label={t('Nome')}>
+        <V2Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={80} placeholder={t('Ex.: Pacote 10 aulas')} />
       </V2Field>
       <div className="grid gap-3 sm:grid-cols-3">
-        <V2Field label="Aulas">
+        <V2Field label={t('Aulas')}>
           <V2Input type="number" min="1" max="200" value={form.lessons_count} onChange={(e) => setForm({ ...form, lessons_count: e.target.value })} required />
         </V2Field>
-        <V2Field label="Preço (R$)">
+        <V2Field label={t('Preço (R$)')}>
           <V2Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
         </V2Field>
-        <V2Field label="Validade (dias)">
+        <V2Field label={t('Validade (dias)')}>
           <V2Input type="number" min="1" max="730" value={form.validity_days} onChange={(e) => setForm({ ...form, validity_days: e.target.value })} required />
         </V2Field>
       </div>
-      <V2Field label="Descrição (opcional)">
+      <V2Field label={t('Descrição (opcional)')}>
         <V2Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} maxLength={300} />
       </V2Field>
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={create.isPending}>{create.isPending ? 'Criando…' : 'Criar pacote'}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" disabled={create.isPending}>{create.isPending ? t('Criando…') : t('Criar pacote')}</V2Button>
       </div>
     </form>
   );
@@ -100,49 +101,49 @@ function SellForm({ coachId, packages, students, onClose }) {
     e.preventDefault();
     const pkg = packages.find((p) => p.id === packageId);
     const student = students.find((s) => s.student_id === studentId);
-    if (!pkg) { toast.error('Escolha um pacote.'); return; }
-    if (!student) { toast.error('Escolha um aluno.'); return; }
+    if (!pkg) { toast.error(t('Escolha um pacote.')); return; }
+    if (!student) { toast.error(t('Escolha um aluno.')); return; }
     try {
       await sell.mutateAsync({ coachId, pkg, studentId: student.student_id, studentName: student.student_name, paid });
-      toast.success('Pacote vendido!');
+      toast.success(t('Pacote vendido!'));
       onClose();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível vender.');
+      toast.error(err?.message || t('Não foi possível vender.'));
     }
   };
 
   if (students.length === 0) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3 text-sm text-amber-800">
-        Adicione alunos ao seu roster antes de vender um pacote.
+        {t('Adicione alunos ao seu roster antes de vender um pacote.')}
       </div>
     );
   }
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-gray-100 bg-paper p-4">
-      <h3 className="font-display text-base font-bold text-ink">Vender pacote</h3>
+      <h3 className="font-display text-base font-bold text-ink">{t('Vender pacote')}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Pacote">
+        <V2Field label={t('Pacote')}>
           <V2Select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
-            <option value="">Selecione…</option>
+            <option value="">{t('Selecione…')}</option>
             {packages.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatPrice(p.price)}</option>)}
           </V2Select>
         </V2Field>
-        <V2Field label="Aluno">
+        <V2Field label={t('Aluno')}>
           <V2Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-            <option value="">Selecione…</option>
-            {students.map((s) => <option key={s.student_id} value={s.student_id}>{s.student_name || s.student_email || 'Aluno'}</option>)}
+            <option value="">{t('Selecione…')}</option>
+            {students.map((s) => <option key={s.student_id} value={s.student_id}>{s.student_name || s.student_email || t('Aluno')}</option>)}
           </V2Select>
         </V2Field>
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-600">
         <input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
-        Já foi pago
+        {t('Já foi pago')}
       </label>
       <div className="flex justify-end gap-2 pt-1">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={sell.isPending}>{sell.isPending ? 'Vendendo…' : 'Registrar venda'}</V2Button>
+        <V2Button type="button" variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" disabled={sell.isPending}>{sell.isPending ? t('Vendendo…') : t('Registrar venda')}</V2Button>
       </div>
     </form>
   );
@@ -155,22 +156,22 @@ function SaleRow({ sale, onTogglePaid, onConsume, isPending }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
       <div>
-        <p className="font-bold text-ink">{sale.student_name || 'Aluno'} · {sale.package_name}</p>
+        <p className="font-bold text-ink">{sale.student_name || t('Aluno')} · {sale.package_name}</p>
         <p className="text-xs text-gray-500">
-          {remaining}/{sale.credits_total} crédito(s) · {formatPrice(sale.price)}
-          {sale.expires_at && <span className={expired ? 'text-red-500' : ''}> · expira {sale.expires_at}</span>}
+          {remaining}/{tn(sale.credits_total, t('{n} crédito'), t('{n} créditos'))} · {formatPrice(sale.price)}
+          {sale.expires_at && <span className={expired ? 'text-red-500' : ''}> · {t('expira {data}', { data: sale.expires_at })}</span>}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
-        {active ? <V2Badge tone="green">Ativo</V2Badge> : expired ? <V2Badge tone="red">Expirado</V2Badge> : remaining === 0 ? <V2Badge tone="neutral">Esgotado</V2Badge> : null}
-        {sale.paid ? <V2Badge tone="green">Pago</V2Badge> : <V2Badge tone="amber">Pendente</V2Badge>}
+        {active ? <V2Badge tone="green">{t('Ativo')}</V2Badge> : expired ? <V2Badge tone="red">{t('Expirado')}</V2Badge> : remaining === 0 ? <V2Badge tone="neutral">{t('Esgotado')}</V2Badge> : null}
+        {sale.paid ? <V2Badge tone="green">{t('Pago')}</V2Badge> : <V2Badge tone="amber">{t('Pendente')}</V2Badge>}
         {remaining > 0 && !expired && (
-          <button type="button" disabled={isPending} onClick={() => onConsume(sale)} className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50" title="Usar 1 crédito">
-            <Minus className="mr-1 inline h-3 w-3" /> Crédito
+          <button type="button" disabled={isPending} onClick={() => onConsume(sale)} className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white disabled:opacity-50" title={t('Usar 1 crédito')}>
+            <Minus className="mr-1 inline h-3 w-3" /> {t('Crédito')}
           </button>
         )}
         <button type="button" disabled={isPending} onClick={() => onTogglePaid(sale)} className="rounded-full border border-ink bg-ink px-2.5 py-1 text-xs font-bold text-white hover:bg-ink/90 disabled:opacity-50">
-          {sale.paid ? 'Marcar pendente' : <><Check className="mr-1 inline h-3 w-3" /> Pago</>}
+          {sale.paid ? t('Marcar pendente') : <><Check className="mr-1 inline h-3 w-3" /> {t('Pago')}</>}
         </button>
       </div>
     </div>
@@ -198,16 +199,16 @@ export default function CoachPackagesSection({ coachId }) {
   const finance = useMemo(() => formatRevenue(revenueSummary(sales)), [sales]);
 
   const handleDelete = async (pkg) => {
-    try { await del.mutateAsync({ pkg }); toast.success('Pacote excluído.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível excluir.'); }
+    try { await del.mutateAsync({ pkg }); toast.success(t('Pacote excluído.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível excluir.')); }
   };
   const handleTogglePaid = async (sale) => {
     try { await setPaid.mutateAsync({ sale, paid: !sale.paid }); }
-    catch (err) { toast.error(err?.message || 'Não foi possível atualizar.'); }
+    catch (err) { toast.error(err?.message || t('Não foi possível atualizar.')); }
   };
   const handleConsume = async (sale) => {
-    try { await consume.mutateAsync({ saleId: sale.id, coachId, studentId: sale.student_id }); toast.success('Crédito debitado.'); }
-    catch (err) { toast.error(err?.message || 'Não foi possível debitar.'); }
+    try { await consume.mutateAsync({ saleId: sale.id, coachId, studentId: sale.student_id }); toast.success(t('Crédito debitado.')); }
+    catch (err) { toast.error(err?.message || t('Não foi possível debitar.')); }
   };
 
   return (
@@ -215,13 +216,13 @@ export default function CoachPackagesSection({ coachId }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Pacotes e financeiro</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Pacotes e financeiro')}</h2>
         </div>
         <div className="flex gap-2">
           {/* Sem a lista de pacotes, criar é convite a duplicar; sem a de
               alunos, vender não tem para quem. */}
-          {!showCreate && !pacotesFalharam && <V2Button size="sm" variant="ghost" onClick={() => { setShowCreate(true); setShowSell(false); }}><Plus className="mr-1 h-4 w-4" /> Pacote</V2Button>}
-          {packages.length > 0 && !showSell && !alunosFalharam && <V2Button size="sm" onClick={() => { setShowSell(true); setShowCreate(false); }}><DollarSign className="mr-1 h-4 w-4" /> Vender</V2Button>}
+          {!showCreate && !pacotesFalharam && <V2Button size="sm" variant="ghost" onClick={() => { setShowCreate(true); setShowSell(false); }}><Plus className="mr-1 h-4 w-4" /> {t('Pacote')}</V2Button>}
+          {packages.length > 0 && !showSell && !alunosFalharam && <V2Button size="sm" onClick={() => { setShowSell(true); setShowCreate(false); }}><DollarSign className="mr-1 h-4 w-4" /> {t('Vender')}</V2Button>}
         </div>
       </div>
 
@@ -230,15 +231,15 @@ export default function CoachPackagesSection({ coachId }) {
         <V2ErrorState
           inline
           className="mb-4"
-          title="Não foi possível carregar as suas vendas"
-          description="A receita e o que falta receber aparecem assim que carregar."
+          title={t('Não foi possível carregar as suas vendas')}
+          description={t('A receita e o que falta receber aparecem assim que carregar.')}
           onRetry={() => recarregarVendas()}
         />
       ) : (
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <V2StatCard icon={DollarSign} label="Receita recebida" value={finance.revenue_label} accent="ink" />
-        <V2StatCard label="A receber" value={finance.pending_label} hint={`${finance.pending_count} venda(s) pendente(s)`} />
-        <V2StatCard label="Vendas" value={String(finance.total_sales)} hint={`${finance.paid_count} paga(s)`} />
+        <V2StatCard icon={DollarSign} label={t('Receita recebida')} value={finance.revenue_label} accent="ink" />
+        <V2StatCard label={t('A receber')} value={finance.pending_label} hint={`${finance.pending_count} venda(s) pendente(s)`} />
+        <V2StatCard label={t('Vendas')} value={String(finance.total_sales)} hint={`${finance.paid_count} paga(s)`} />
       </div>
       )}
 
@@ -247,13 +248,13 @@ export default function CoachPackagesSection({ coachId }) {
 
       {/* Pacotes */}
       <div className="mb-4">
-        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Pacotes ofertados</h3>
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">{t('Pacotes ofertados')}</h3>
         {pkgLoading ? (
           <V2Skeleton lines={2} />
         ) : pacotesFalharam ? (
-          <V2ErrorState inline title="Não foi possível carregar os seus pacotes" onRetry={() => recarregarPacotes()} />
+          <V2ErrorState inline title={t('Não foi possível carregar os seus pacotes')} onRetry={() => recarregarPacotes()} />
         ) : packages.length === 0 ? (
-          <V2EmptyState icon={Package} title="Nenhum pacote" description="Crie um pacote (ex.: 10 aulas com validade) para vender aos alunos." />
+          <V2EmptyState icon={Package} title={t('Nenhum pacote')} description={t('Crie um pacote (ex.: 10 aulas com validade) para vender aos alunos.')} />
         ) : (
           <div className="space-y-2">
             {packages.map((pkg) => (
@@ -263,15 +264,15 @@ export default function CoachPackagesSection({ coachId }) {
                   <p className="text-xs text-gray-500">{pkg.lessons_count} aulas · {formatPrice(pkg.price)} · {pkg.validity_days} dias</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {pkg.active !== false ? <V2Badge tone="green">Ativo</V2Badge> : <V2Badge tone="neutral">Inativo</V2Badge>}
+                  {pkg.active !== false ? <V2Badge tone="green">{t('Ativo')}</V2Badge> : <V2Badge tone="neutral">{t('Inativo')}</V2Badge>}
                   <ConfirmDialog
-                    title="Excluir pacote?"
-                    description={`"${pkg.name}" deixa de ser ofertado. Vendas já feitas não são afetadas.`}
-                    confirmLabel="Excluir"
+                    title={t('Excluir pacote?')}
+                    description={t('“{nome}” deixa de ser ofertado. Vendas já feitas não são afetadas.', { nome: pkg.name })}
+                    confirmLabel={t('Excluir')}
                     onConfirm={() => handleDelete(pkg)}
                     trigger={(
                       <button type="button" className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100">
-                        <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
+                        <Trash2 className="mr-1 inline h-3 w-3" /> {t('Excluir')}
                       </button>
                     )}
                   />
@@ -285,17 +286,17 @@ export default function CoachPackagesSection({ coachId }) {
       {/* Vendas */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Vendas</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">{t('Vendas')}</h3>
           {sales.length > 0 && (
             <button type="button" onClick={() => downloadCSV(`vendas-pacotes-${coachId}.csv`, salesToCSV(sales))} className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-              <Download className="h-3.5 w-3.5" /> Exportar CSV
+              <Download className="h-3.5 w-3.5" /> {t('Exportar CSV')}
             </button>
           )}
         </div>
         {salesLoading ? (
           <V2Skeleton lines={2} />
         ) : vendasFalharam ? null : sales.length === 0 ? (
-          <V2EmptyState icon={DollarSign} title="Nenhuma venda ainda" description="Venda um pacote a um aluno para começar a controlar créditos e receita." />
+          <V2EmptyState icon={DollarSign} title={t('Nenhuma venda ainda')} description={t('Venda um pacote a um aluno para começar a controlar créditos e receita.')} />
         ) : (
           <div className="space-y-2">
             {sales.map((sale) => (

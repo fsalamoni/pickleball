@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { computeGameDayLeaderboards } from '@/modules/clubs/domain/gameDayLeaderboard';
+import { t } from '@/core/i18n';
 
 /**
  * Ranking do dia (classificação interna do dia de jogo). Presentacional e
@@ -32,27 +33,25 @@ export default function GameDayLeaderboard({ participants = [], games = [] }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Trophy className="h-5 w-5 text-green-600" />
-        <h3 className="text-base font-semibold text-ink">Ranking do dia</h3>
+        <h3 className="text-base font-semibold text-ink">{t('Ranking do dia')}</h3>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={Trophy}
-          title="Sem participantes"
-          description="Insira participantes para ver a classificação do dia."
+          title={t('Sem participantes')}
+          description={t('Insira participantes para ver a classificação do dia.')}
         />
       ) : (
         <>
           {!anyDecided && (
             <p className="text-xs text-gray-500">
-              Lance os resultados dos jogos para a classificação começar a contar.
+              {t('Lance os resultados dos jogos para a classificação começar a contar.')}
             </p>
           )}
           {separado && (
             <p className="text-xs leading-5 text-gray-500">
-              Hoje teve jogo <strong>simples</strong> e em <strong>duplas</strong>: cada tipo tem o seu
-              ranking, e um não soma no outro. Na publicação, o simples vai para o rating de simples e as
-              duplas para o de duplas.
+              {t('Hoje teve jogo simples e em duplas: cada tipo tem o seu ranking, e um não soma no outro. Na publicação, o simples vai para o rating de simples e as duplas para o de duplas.')}
             </p>
           )}
           {secoes.map((sec) => (
@@ -79,12 +78,12 @@ function LeaderboardTable({ rows }) {
         <thead>
           <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
             <th className="w-8 py-2 pr-2 text-left font-semibold">#</th>
-            <th className="py-2 pr-2 text-left font-semibold">Atleta</th>
-            <th className="py-2 px-2 text-center font-semibold" title="Jogos">J</th>
-            <th className="py-2 px-2 text-center font-semibold" title="Vitórias">V</th>
-            <th className="py-2 px-2 text-center font-semibold" title="Derrotas">D</th>
-            <th className="py-2 px-2 text-center font-semibold" title="Saldo de pontos">Saldo</th>
-            <th className="py-2 pl-2 text-center font-semibold" title="Pontos sofridos">Sofr.</th>
+            <th className="py-2 pr-2 text-left font-semibold">{t('Atleta')}</th>
+            <th className="py-2 px-2 text-center font-semibold" title={t('Jogos')}>J</th>
+            <th className="py-2 px-2 text-center font-semibold" title={t('Vitórias')}>V</th>
+            <th className="py-2 px-2 text-center font-semibold" title={t('Derrotas')}>D</th>
+            <th className="py-2 px-2 text-center font-semibold" title={t('Saldo de pontos')}>{t('Saldo')}</th>
+            <th className="py-2 pl-2 text-center font-semibold" title={t('Pontos sofridos')}>{t('Sofr.')}</th>
           </tr>
         </thead>
         <tbody>

@@ -16,6 +16,7 @@
 
 import { weekdayOf, slotsConflict } from '../../arenas/domain/booking.js';
 import { timeToMinutes } from '../../arenas/domain/pricing.js';
+import { t } from '@/core/i18n';
 
 export const SLOT_MINUTES_DEFAULT = 60;
 export const SLOT_MINUTES_MIN = 15;
@@ -46,7 +47,7 @@ export function normalizeWindow(input = {}) {
   const valid = weekdays.length > 0 && s != null && e != null && e > s;
   return {
     valid,
-    error: valid ? null : 'Janela inválida: escolha ao menos um dia e um horário final maior que o inicial.',
+    error: valid ? null : t('Janela inválida: escolha ao menos um dia e um horário final maior que o inicial.'),
     value: {
       id: str(input.id) || `w_${Math.random().toString(36).slice(2, 9)}`,
       weekdays,
@@ -64,7 +65,7 @@ export function normalizeException(input = {}) {
   const valid = isISODate(date);
   return {
     valid,
-    error: valid ? null : 'Data inválida (use AAAA-MM-DD).',
+    error: valid ? null : t('Data inválida (use AAAA-MM-DD).'),
     value: { date, reason: str(input.reason).slice(0, 200) },
   };
 }

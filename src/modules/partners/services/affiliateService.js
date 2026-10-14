@@ -18,13 +18,14 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { normalizeAffiliateInput } from '../domain/affiliate.js';
+import { t } from '@/core/i18n';
 
 const COL = 'affiliate_links';
 
 /** Cria um link de afiliado/patrocinador. */
 export async function createLink(input, actor) {
   const { valid, errors, value } = normalizeAffiliateInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   const id = doc(collection(db, COL)).id;
   await setDoc(doc(db, COL, id), {
     id,
@@ -40,7 +41,7 @@ export async function createLink(input, actor) {
 /** Atualiza um link existente. */
 export async function updateLink(id, input, actor) {
   const { valid, errors, value } = normalizeAffiliateInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Dados inválidos.'));
   await updateDoc(doc(db, COL, id), { ...value, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'affiliate_link_updated', actor, details: { link_id: id } });
 }

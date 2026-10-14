@@ -6,6 +6,7 @@
  */
 
 import { safeHttpUrl, isSafeHttpUrl } from '@/core/domain/externalUrl';
+import { t, tk } from '@/core/i18n';
 
 export const AFFILIATE_CATEGORY = Object.freeze({
   EQUIPMENT: 'equipment',
@@ -16,11 +17,11 @@ export const AFFILIATE_CATEGORY = Object.freeze({
 });
 
 export const AFFILIATE_CATEGORY_LABELS = Object.freeze({
-  [AFFILIATE_CATEGORY.EQUIPMENT]: 'Equipamentos',
-  [AFFILIATE_CATEGORY.STORE]: 'Loja',
-  [AFFILIATE_CATEGORY.SPONSOR]: 'Patrocinador',
-  [AFFILIATE_CATEGORY.ACADEMY]: 'Academia/Clínica',
-  [AFFILIATE_CATEGORY.OTHER]: 'Outros',
+  [AFFILIATE_CATEGORY.EQUIPMENT]: tk('Equipamentos'),
+  [AFFILIATE_CATEGORY.STORE]: tk('Loja'),
+  [AFFILIATE_CATEGORY.SPONSOR]: tk('Patrocinador'),
+  [AFFILIATE_CATEGORY.ACADEMY]: tk('Academia/Clínica'),
+  [AFFILIATE_CATEGORY.OTHER]: tk('Outros'),
 });
 
 function trimmed(value) {
@@ -59,9 +60,9 @@ export function normalizeAffiliateInput(input = {}) {
   };
 
   const errors = {};
-  if (!value.title) errors.title = 'Informe o título.';
-  if (!isValidUrl(value.url)) errors.url = 'Informe uma URL válida (https://…).';
-  if (trimmed(input.image_url) && !value.image_url) errors.image_url = 'A imagem precisa ser uma URL https:// válida.';
+  if (!value.title) errors.title = t('Informe o título.');
+  if (!isValidUrl(value.url)) errors.url = t('Informe uma URL válida (https://…).');
+  if (trimmed(input.image_url) && !value.image_url) errors.image_url = t('A imagem precisa ser uma URL https:// válida.');
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }

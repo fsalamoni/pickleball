@@ -17,6 +17,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeValidation, validationDocId } from '../domain/validation.js';
+import { t } from '@/core/i18n';
 
 export const COACH_VALIDATION_COLLECTION = 'coach_level_validations';
 
@@ -38,11 +39,11 @@ export async function listAthleteValidations(studentId) {
 
 /** Cria/atualiza a validação de nível de um aluno (só o professor/admin). */
 export async function upsertValidation(input, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   const { valid, error, value } = normalizeValidation(input);
   if (!valid) throw new Error(error);
   if (actor.uid !== value.coach_id && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão para validar este nível.');
+    throw new Error(t('Sem permissão para validar este nível.'));
   }
 
   const id = validationDocId(value.coach_id, value.student_id);
@@ -66,9 +67,9 @@ export async function upsertValidation(input, actor) {
 
 /** Remove a validação (só o professor/admin). */
 export async function removeValidation(coachId, studentId, actor) {
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
   if (actor.uid !== coachId && !actor.isPlatformAdmin) {
-    throw new Error('Sem permissão.');
+    throw new Error(t('Sem permissão.'));
   }
   await deleteDoc(doc(db, COACH_VALIDATION_COLLECTION, validationDocId(coachId, studentId)));
   await createAuditLog({ action: 'coach_level_validation_removed', actor, details: { coach_id: coachId, student_id: studentId } });

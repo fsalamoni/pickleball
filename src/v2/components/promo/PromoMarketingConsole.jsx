@@ -13,10 +13,11 @@ import { Megaphone, Tag } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import PromoCampaignsPanel from './PromoCampaignsPanel';
 import PromoCouponsPanel from './PromoCouponsPanel';
+import { t, tk } from '@/core/i18n';
 
 const ABAS = [
-  { v: 'cupons', label: 'Cupons', icon: Tag },
-  { v: 'campanhas', label: 'Campanhas', icon: Megaphone },
+  { v: 'cupons', label: tk('Cupons'), icon: Tag },
+  { v: 'campanhas', label: tk('Campanhas'), icon: Megaphone },
 ];
 
 /**
@@ -34,14 +35,14 @@ export default function PromoMarketingConsole({ issuer, intro = null }) {
   return (
     <div className="space-y-4" data-divulgacao={issuer.type}>
       {intro}
-      <div role="tablist" aria-label="Divulgação" className="flex flex-wrap gap-2">
+      <div role="tablist" aria-label={t('Divulgação')} className="flex flex-wrap gap-2">
         {ABAS.map(({ v, label, icon: Icon }) => (
           <button key={v} type="button" role="tab" aria-selected={aba === v} onClick={() => ir(v)}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink',
               aba === v ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
             )}>
-            <Icon className="h-4 w-4" aria-hidden /> {label}
+            <Icon className="h-4 w-4" aria-hidden /> {t(label)}
           </button>
         ))}
       </div>

@@ -8,6 +8,7 @@
  */
 import { COUPON_KIND_ICON } from '@/v2/components/arenas/marketing/coupons/couponKindUi';
 import { PLATFORM_ISSUER_ID, PROMO_FAMILY, PROMO_ISSUER, promoKinds } from '@/modules/promo/domain/promo';
+import { t, tn } from '@/core/i18n';
 
 export { COUPON_KIND_ICON as PROMO_KIND_ICON };
 
@@ -26,7 +27,7 @@ export function coachIssuer(uid, coach) {
 /** A marca do emissor para os editores de arte. */
 export function issuerBrand(issuer) {
   if (issuer?.type === PROMO_ISSUER.PLATFORM) {
-    return { color: PICKLERUSH_COLOR, label: 'Usar as cores do PickleRush', name: 'PickleRush' };
+    return { color: PICKLERUSH_COLOR, label: t('Usar as cores do PickleRush'), name: 'PickleRush' };
   }
   return { color: '', label: '', name: issuer?.name || '' };
 }
@@ -40,35 +41,37 @@ export function uploadFolderFor(issuer, kind) {
 /** Como o emissor aparece para quem vê: "PickleRush" / "Prof. Ana". */
 export function issuerDisplayName(doc) {
   if (doc?.issuer_type === PROMO_ISSUER.PLATFORM) return 'PickleRush';
-  return doc?.issuer_name || 'Professor';
+  return doc?.issuer_name || t('Professor');
 }
 
 /** Os tipos agrupados por família, para o seletor. */
 export function promoKindGroups(issuerType) {
-  const todos = promoKinds(issuerType).map((k) => ({ ...k, icon: COUPON_KIND_ICON[k.kind] }));
+  const todos = promoKinds(issuerType).map((k) => ({
+    ...k, label: t(k.label), hint: t(k.hint), example: k.example ? t(k.example) : k.example, icon: COUPON_KIND_ICON[k.kind],
+  }));
   const coach = issuerType === PROMO_ISSUER.COACH;
   return [
     {
       family: PROMO_FAMILY.DISCOUNT,
-      label: coach ? 'Desconto na aula' : 'Desconto',
+      label: coach ? t('Desconto na aula') : t('Desconto'),
       hint: coach
-        ? 'O aluno informa o código ao pedir a aula; o desconto entra quando você confirma.'
-        : 'Percentual ou valor fixo. Quem usa mostra o código e a plataforma registra o uso.',
+        ? t('O aluno informa o código ao pedir a aula; o desconto entra quando você confirma.')
+        : t('Percentual ou valor fixo. Quem usa mostra o código e a plataforma registra o uso.'),
       kinds: todos.filter((k) => k.family === PROMO_FAMILY.DISCOUNT),
     },
     {
       family: PROMO_FAMILY.VOUCHER,
-      label: 'Vale',
+      label: t('Vale'),
       hint: coach
-        ? 'Um benefício entregue por você: o aluno mostra o código e você registra o uso. O vale de aula particular também entra no pedido de aula.'
-        : 'Um benefício entregue pela plataforma: a pessoa mostra o código e a equipe registra o uso.',
+        ? t('Um benefício entregue por você: o aluno mostra o código e você registra o uso. O vale de aula particular também entra no pedido de aula.')
+        : t('Um benefício entregue pela plataforma: a pessoa mostra o código e a equipe registra o uso.'),
       kinds: todos.filter((k) => k.family === PROMO_FAMILY.VOUCHER),
     },
   ];
 }
 
 /** "1 pessoa" / "3 pessoas". */
-export const pessoas = (n) => `${n} ${n === 1 ? 'pessoa' : 'pessoas'}`;
+export const pessoas = (n) => tn(n, '{n} pessoa', '{n} pessoas');
 
 /**
  * Quanto do AVISO da campanha chegou. `recipients_count` é o público pedido e
@@ -78,6 +81,6 @@ export const pessoas = (n) => `${n} ${n === 1 ? 'pessoa' : 'pessoas'}`;
 export function avisoEnviado(campaign) {
   const confirmados = Number(campaign?.sent_count) || 0;
   const publico = Number(campaign?.recipients_count) || 0;
-  if (publico > 0 && confirmados < publico) return `Aviso confirmado para ${confirmados} de ${pessoas(publico)}`;
-  return `Aviso para ${pessoas(confirmados || publico)}`;
+  if (publico > 0 && confirmados < publico) return t('Aviso confirmado para {confirmados} de {publico}', { confirmados, publico: pessoas(publico) });
+  return t('Aviso para {publico}', { publico: pessoas(confirmados || publico) });
 }

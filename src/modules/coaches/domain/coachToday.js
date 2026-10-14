@@ -9,6 +9,7 @@ import { BOOKING_STATUS, PAYMENT_STATUS } from '../../arenas/domain/constants';
 import { lessonFirstSlot, lessonsAwaitingReply } from './lesson';
 import { STUDENT_STATUS } from './student';
 import { QUESTION_STATUS } from '../../training/domain/question';
+import { t } from '@/core/i18n';
 
 const porHorario = (a, b) => {
   const sa = lessonFirstSlot(a); const sb = lessonFirstSlot(b);
@@ -43,13 +44,13 @@ export function coachToday(lessons = [], { hoje, questions } = {}) {
 export function coachActivation({ coach, availability, students, lessons } = {}) {
   const tri = (fonte, teste) => (fonte === undefined ? null : Boolean(teste(fonte)));
   const items = [
-    { id: 'perfil', label: 'Complete o perfil (bio e valor da hora)', aba: 'info',
+    { id: 'perfil', label: t('Complete o perfil (bio e valor da hora)'), aba: 'info',
       done: coach ? Boolean(String(coach.bio || '').trim()) && Number(coach.hourly_rate) > 0 : null },
-    { id: 'disponibilidade', label: 'Publique a sua disponibilidade semanal', aba: 'agenda',
+    { id: 'disponibilidade', label: t('Publique a sua disponibilidade semanal'), aba: 'agenda',
       done: tri(availability, (a) => (a?.windows || []).length > 0) },
-    { id: 'aluno', label: 'Convide o primeiro aluno', aba: 'alunos',
+    { id: 'aluno', label: t('Convide o primeiro aluno'), aba: 'alunos',
       done: tri(students, (s) => (s || []).some((x) => x.status === STUDENT_STATUS.ACTIVE || x.status === STUDENT_STATUS.INVITED)) },
-    { id: 'aula', label: 'Receba o primeiro pedido de aula', aba: 'agenda',
+    { id: 'aula', label: t('Receba o primeiro pedido de aula'), aba: 'agenda',
       done: tri(lessons, (l) => (l || []).length > 0) },
   ];
   return { items, completo: items.every((i) => i.done === true), feitos: items.filter((i) => i.done === true).length };

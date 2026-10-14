@@ -31,6 +31,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
   V2ErrorState, V2BackLink,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 // Promoções do professor (Onda CG, flag `coach_marketing`) — sob demanda: com
 // a flag desligada, o perfil não baixa nada do marketing.
@@ -55,7 +56,7 @@ function ResidencyCard({ residency }) {
           {residency.notes && <p className="mt-1 text-xs text-gray-500">{residency.notes}</p>}
         </div>
         <div className="flex flex-col items-end gap-1">
-          {residency.status === 'paused' ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="green">Ativo</V2Badge>}
+          {residency.status === 'paused' ? <V2Badge tone="amber">{t('Pausado')}</V2Badge> : <V2Badge tone="green">{t('Ativo')}</V2Badge>}
         </div>
       </div>
     </div>
@@ -116,33 +117,33 @@ export default function V2CoachProfile() {
   if (!coach && perfilFalhou) return (
     <div className="p-4">
       <V2ErrorState
-        title="Não foi possível abrir o perfil deste professor"
-        description="A conexão falhou no meio do caminho. Tente de novo."
+        title={t('Não foi possível abrir o perfil deste professor')}
+        description={t('A conexão falhou no meio do caminho. Tente de novo.')}
         onRetry={() => recarregarPerfil()}
       />
     </div>
   );
   if (!coach) return (
     <div className="p-4">
-      <V2EmptyState icon={GraduationCap} title="Professor não encontrado" />
-      <Link to="/coaches" className="mt-3 inline-block text-sm font-bold text-ink">← Voltar ao diretório</Link>
+      <V2EmptyState icon={GraduationCap} title={t('Professor não encontrado')} />
+      <Link to="/coaches" className="mt-3 inline-block text-sm font-bold text-ink">{t('← Voltar ao diretório')}</Link>
     </div>
   );
 
   return (
     <div className="space-y-4 p-4">
-      <V2BackLink to="/coaches">Professores</V2BackLink>
+      <V2BackLink to="/coaches">{t('Professores')}</V2BackLink>
 
       {semVagas && (
         <div role="status" className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p>
-            <strong>{coach.display_name || 'Este professor'} não está aceitando alunos novos agora</strong>, então o pedido de aula não abre.
-            {semVagas.cupom && <> Guarde o código <strong>{semVagas.cupom}</strong>: ele segue valendo enquanto a promoção estiver no ar.</>}
-            {coach.contact_whatsapp && ' Se quiser, fale com ele pelo WhatsApp logo abaixo.'}
+            <strong>{t('{nome} não está aceitando alunos novos agora', { nome: coach.display_name || t('Este professor') })}</strong>{t(', então o pedido de aula não abre.')}
+            {semVagas.cupom && <> {t('Guarde o código')} <strong>{semVagas.cupom}</strong>{t(': ele segue valendo enquanto a promoção estiver no ar.')}</>}
+            {coach.contact_whatsapp && ` ${t('Se quiser, fale com ele pelo WhatsApp logo abaixo.')}`}
           </p>
           <button type="button" onClick={() => setSemVagas(null)}
             className="shrink-0 text-xs font-bold text-amber-900 underline">
-            Entendi
+            {t('Entendi')}
           </button>
         </div>
       )}
@@ -156,8 +157,8 @@ export default function V2CoachProfile() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{coach.display_name}</h1>
-              {coach.accepting_students && <V2Badge tone="green">Aceitando alunos</V2Badge>}
-              {!coach.active && <V2Badge tone="red">Inativo</V2Badge>}
+              {coach.accepting_students && <V2Badge tone="green">{t('Aceitando alunos')}</V2Badge>}
+              {!coach.active && <V2Badge tone="red">{t('Inativo')}</V2Badge>}
             </div>
             {coach.bio && <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{coach.bio}</p>}
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -177,7 +178,7 @@ export default function V2CoachProfile() {
             )}
             {coach.certifications?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Certificações</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{t('Certificações')}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {coach.certifications.map((c) => <V2Badge key={c} tone="neutral">{c}</V2Badge>)}
                 </div>
@@ -186,7 +187,7 @@ export default function V2CoachProfile() {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {canRequestLesson && (
                 <V2Button size="sm" onClick={() => setRequesting(true)}>
-                  <MessageCircle className="h-4 w-4" /> Solicitar aula
+                  <MessageCircle className="h-4 w-4" /> {t('Solicitar aula')}
                 </V2Button>
               )}
               {coach.contact_whatsapp && (
@@ -195,7 +196,7 @@ export default function V2CoachProfile() {
                   target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-100"
                 >
-                  <Phone className="h-3.5 w-3.5" /> WhatsApp
+                  <Phone className="h-3.5 w-3.5" /> {t('WhatsApp')}
                 </a>
               )}
               {coach.contact_email && (
@@ -203,7 +204,7 @@ export default function V2CoachProfile() {
                   href={`mailto:${coach.contact_email}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-bold text-ink hover:bg-paper"
                 >
-                  <Mail className="h-3.5 w-3.5" /> E-mail
+                  <Mail className="h-3.5 w-3.5" /> {t('E-mail')}
                 </a>
               )}
               {/*
@@ -212,7 +213,7 @@ export default function V2CoachProfile() {
                 'Ver perfil de atleta' (navegação, não gestão) + Like + Share.
               */}
               <Link to={`/atleta/${coachId}`} className="text-xs font-bold text-ink hover:underline">
-                Ver perfil de atleta →
+                {t('Ver perfil de atleta →')}
               </Link>
               <V2FavoriteCoachButton coach={coach} />
               <V2CoachShareButton coach={coach} />
@@ -233,14 +234,14 @@ export default function V2CoachProfile() {
       {coach.photos?.length > 0 && (
         <V2Surface>
           <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-            <ImageIcon className="h-4 w-4" /> Fotos
+            <ImageIcon className="h-4 w-4" /> {t('Fotos')}
           </h3>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {coach.photos.map((url, i) => (
               <PhotoLightbox
                 key={url || i}
                 src={url}
-                alt={`Foto ${i + 1} de ${coach.display_name}`}
+                alt={t('Foto {n} de {nome}', { n: i + 1, nome: coach.display_name })}
                 trigger={<img src={url} alt="" loading="lazy" decoding="async" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />}
               />
             ))}
@@ -252,9 +253,9 @@ export default function V2CoachProfile() {
       {lessonsOn && storeProducts.length > 0 && (
         <V2Surface id="professor-loja" className="scroll-mt-4">
           <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-            <Store className="h-4 w-4" /> Loja
+            <Store className="h-4 w-4" /> {t('Loja')}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">Produtos à venda com este professor. Combine o pagamento diretamente.</p>
+          <p className="mt-1 text-sm text-gray-500">{t('Produtos à venda com este professor. Combine o pagamento diretamente.')}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {storeProducts.map((p) => (
               <div key={p.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -289,12 +290,12 @@ export default function V2CoachProfile() {
 
       {/* Residências — apenas visualização pública (item 3.2) */}
       <V2Surface>
-        <h3 className="font-display text-base font-bold text-ink">Arenas parceiras</h3>
+        <h3 className="font-display text-base font-bold text-ink">{t('Arenas parceiras')}</h3>
         <div className="mt-3 space-y-2">
           {arenasFalharam ? (
-            <V2ErrorState inline title="Não foi possível carregar as arenas parceiras" onRetry={() => recarregarArenas()} />
+            <V2ErrorState inline title={t('Não foi possível carregar as arenas parceiras')} onRetry={() => recarregarArenas()} />
           ) : residencies.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma arena vinculada ainda.</p>
+            <p className="text-sm text-gray-500">{t('Nenhuma arena vinculada ainda.')}</p>
           ) : (
             residencies.map((r) => (
               <ResidencyCard key={r.id} residency={r} />
@@ -309,9 +310,9 @@ export default function V2CoachProfile() {
       {/* Biblioteca de conteúdo (PRO-18) — só visualização pública (item 3.2) */}
       {lessonsOn && libraryItems.length > 0 && (
         <V2Surface id="professor-conteudo" className="scroll-mt-4">
-          <h3 className="font-display text-base font-bold text-ink">Biblioteca de conteúdo</h3>
+          <h3 className="font-display text-base font-bold text-ink">{t('Biblioteca de conteúdo')}</h3>
           {libraryItems.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">Nenhum conteúdo publicado ainda.</p>
+            <p className="mt-3 text-sm text-gray-500">{t('Nenhum conteúdo publicado ainda.')}</p>
           ) : (
             <div className="mt-3 space-y-2">
               {libraryItems.map((item) => (
@@ -319,7 +320,7 @@ export default function V2CoachProfile() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-bold text-ink">{item.title}</p>
                     <V2Badge tone="blue">{contentCategoryLabel(item.category)}</V2Badge>
-                    {item.visibility === CONTENT_VISIBILITY.STUDENTS && <V2Badge tone="amber">Só alunos</V2Badge>}
+                    {item.visibility === CONTENT_VISIBILITY.STUDENTS && <V2Badge tone="amber">{t('Só alunos')}</V2Badge>}
                   </div>
                   {item.body && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{item.body}</p>}
                   <CoachContentVideoLink item={item} />
@@ -331,7 +332,7 @@ export default function V2CoachProfile() {
       )}
 
       {/* Clubes vinculados (só aparece se houver) */}
-      {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} title="Clubes" />}
+      {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} title={t('Clubes')} />}
 
       {canRequestLesson && (
         <RequestLessonDialog
@@ -350,7 +351,7 @@ function CoachContentVideoLink({ item }) {
   if (!videoUrl) return null;
   return (
     <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-      <Video className="h-3 w-3" /> Ver vídeo
+      <Video className="h-3 w-3" /> {t('Ver vídeo')}
     </a>
   );
 }

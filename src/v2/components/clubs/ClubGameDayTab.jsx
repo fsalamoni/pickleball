@@ -36,6 +36,7 @@ import {
 } from '@/modules/games/hooks/useGameDays';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { RSVP_STATUS } from '@/modules/clubs/domain/constants';
+import { t, tn } from '@/core/i18n';
 
 export default function ClubGameDayTab({ event, clubId, date, rsvps = [] }) {
   // Legado: a data anterior à Onda AS não tem `game_day_id` e continua no
@@ -84,10 +85,10 @@ function LegacyGameDay({ event, clubId, date }) {
   const ativar = async () => {
     try {
       await converter.mutateAsync({ date, format: GAME_DAY_FORMAT.AMERICANO, play_courts: 1 });
-      toast.success('Módulo completo ativado nesta data.');
+      toast.success(t('Módulo completo ativado nesta data.'));
       setConfirmar(false);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível ativar.');
+      toast.error(err?.message || t('Não foi possível ativar.'));
     }
   };
 
@@ -97,29 +98,25 @@ function LegacyGameDay({ event, clubId, date }) {
         <div className="space-y-2 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
             <Sparkles aria-hidden="true" className="h-4 w-4 text-amber-600" />
-            Esta data usa o organizador antigo
+            {t('Esta data usa o organizador antigo')}
           </div>
           <p className="text-sm text-gray-600">
-            Ela foi agendada antes do módulo único, então segue com a ferramenta de sempre — e o que
-            já foi jogado aqui continua exatamente onde está. O módulo completo acrescenta{' '}
-            <strong>Play</strong>, <strong>Americano aprimorado</strong>, <strong>telão</strong>,
-            tutorial do formato, administradores nomeados e as configurações do dia (formato,
-            quadras e quem organiza as partidas).
+            {t('Ela foi agendada antes do módulo único, então segue com a ferramenta de sempre — e o que já foi jogado aqui continua exatamente onde está. O módulo completo acrescenta Play, Americano aprimorado, telão, tutorial do formato, administradores nomeados e as configurações do dia (formato, quadras e quem organiza as partidas).')}
           </p>
           {podeConverter ? (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <V2Button size="sm" onClick={() => setConfirmar(true)} disabled={converter.isPending}>
-                <Sparkles className="mr-1.5 h-4 w-4" /> Ativar o módulo completo
+                <Sparkles className="mr-1.5 h-4 w-4" /> {t('Ativar o módulo completo')}
               </V2Button>
               <span className="text-xs text-gray-500">
-                Esta data ainda está vazia, então nada é movido.
+                {t('Esta data ainda está vazia, então nada é movido.')}
               </span>
             </div>
           ) : (
             <p className="text-xs text-gray-500">
               {desconhecido
-                ? 'Não deu para conferir se esta data já tem atletas ou partidas, então a conversão fica indisponível por enquanto.'
-                : `${veredito.motivo} As datas novas já nascem com o módulo completo.`}
+                ? t('Não deu para conferir se esta data já tem atletas ou partidas, então a conversão fica indisponível por enquanto.')
+                : `${t(veredito.motivo)} ${t('As datas novas já nascem com o módulo completo.')}`}
             </p>
           )}
         </div>
@@ -130,9 +127,9 @@ function LegacyGameDay({ event, clubId, date }) {
       <ConfirmDialog
         open={confirmar}
         onOpenChange={setConfirmar}
-        title="Ativar o módulo completo nesta data?"
-        description="A data passa a usar o mesmo dia de jogo do atleta e da arena, com Play, Americano aprimorado, telão e as configurações do dia. Como ela ainda está vazia, nada é movido nem perdido."
-        confirmLabel="Ativar"
+        title={t('Ativar o módulo completo nesta data?')}
+        description={t('A data passa a usar o mesmo dia de jogo do atleta e da arena, com Play, Americano aprimorado, telão e as configurações do dia. Como ela ainda está vazia, nada é movido nem perdido.')}
+        confirmLabel={t('Ativar')}
         loading={converter.isPending}
         onConfirm={ativar}
       />
@@ -154,8 +151,8 @@ function ModularGameDay({ gameDayId, rsvps }) {
         <div className="p-3">
           <V2ErrorState
             inline
-            title="Não foi possível carregar o dia de jogo desta data"
-            description="A conexão falhou. Ele continua lá."
+            title={t('Não foi possível carregar o dia de jogo desta data')}
+            description={t('A conexão falhou. Ele continua lá.')}
             onRetry={refetch}
           />
         </div>
@@ -166,7 +163,7 @@ function ModularGameDay({ gameDayId, rsvps }) {
     return (
       <V2Surface className="rounded-xl">
         <div className="p-4 text-sm text-gray-500">
-          Este dia de jogo não foi encontrado. Ele pode ter sido arquivado.
+          {t('Este dia de jogo não foi encontrado. Ele pode ter sido arquivado.')}
         </div>
       </V2Surface>
     );
@@ -177,7 +174,7 @@ function ModularGameDay({ gameDayId, rsvps }) {
       <div className="flex flex-wrap items-center justify-end gap-2">
         <V2Button asChild variant="ghost" size="sm">
           <Link to={`/dia-de-jogo/${gameDay.id}`}>
-            <LinkIcon className="mr-1.5 h-4 w-4" /> Abrir em tela cheia
+            <LinkIcon className="mr-1.5 h-4 w-4" /> {t('Abrir em tela cheia')}
           </Link>
         </V2Button>
         <GameDayModuleTools gameDay={gameDay} podeGerenciar={podeGerenciar} />
@@ -222,7 +219,7 @@ function RsvpImportCard({ gameDayId, rsvps, participants }) {
   const pendentes = useMemo(() => (
     (rsvps || [])
       .filter((r) => r.status === RSVP_STATUS.GOING && r.user_id && !jaNoDia.has(r.user_id))
-      .map((r) => ({ user_id: r.user_id, name: r.user_name || 'Atleta', photo_url: r.user_photo || '' }))
+      .map((r) => ({ user_id: r.user_id, name: r.user_name || t('Atleta'), photo_url: r.user_photo || '' }))
   ), [rsvps, jaNoDia]);
 
   if (pendentes.length === 0) return null;
@@ -238,12 +235,12 @@ function RsvpImportCard({ gameDayId, rsvps, participants }) {
         await addParticipant.mutateAsync({ ...entry, source: GD_PARTICIPANT_SOURCE.INVITED });
         ok += 1;
       } catch (err) {
-        toast.error(err.message || `Não foi possível inserir ${entry.name}.`);
+        toast.error(err.message || t('Não foi possível inserir {nome}.', { nome: entry.name }));
         break;
       }
     }
     setEnviando(false);
-    if (ok > 0) toast.success(ok === 1 ? '1 atleta inserido.' : `${ok} atletas inseridos.`);
+    if (ok > 0) toast.success(tn(ok, '{n} atleta inserido.', '{n} atletas inseridos.'));
   };
 
   return (
@@ -252,11 +249,11 @@ function RsvpImportCard({ gameDayId, rsvps, participants }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
             <Users className="h-4 w-4 text-green-600" />
-            Confirmaram presença e ainda não estão no dia de jogo
+            {t('Confirmaram presença e ainda não estão no dia de jogo')}
           </div>
           <V2Button size="sm" disabled={enviando} onClick={() => inserir(pendentes)}>
             <UserPlus className="mr-1.5 h-4 w-4" />
-            Inserir {pendentes.length === 1 ? 'o atleta' : `os ${pendentes.length}`}
+            {pendentes.length === 1 ? t('Inserir o atleta') : t('Inserir os {n}', { n: pendentes.length })}
           </V2Button>
         </div>
         <div className="flex flex-wrap gap-2">

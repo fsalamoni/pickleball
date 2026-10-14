@@ -13,6 +13,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import {
   V2Button, V2Field, V2Input, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const splitCsv = (s) => String(s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
@@ -47,9 +48,9 @@ export function CoachInfoSection({ coach }) {
           certifications: splitCsv(form.certifications),
         },
       });
-      toast.success('Informações salvas!');
+      toast.success(t('Informações salvas!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar.');
+      toast.error(err?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -57,49 +58,49 @@ export function CoachInfoSection({ coach }) {
     <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <UserCircle className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Informações</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Informações')}</h2>
       </div>
       <form onSubmit={save} className="space-y-3">
-        <V2Field label="Nome de exibição" required>
+        <V2Field label={t('Nome de exibição')} required>
           <V2Input value={form.display_name} onChange={setField('display_name')} required maxLength={80} />
         </V2Field>
-        <V2Field label="Bio" hint="Experiência, metodologia, diferenciais (máx. 1000).">
+        <V2Field label={t('Bio')} hint={t('Experiência, metodologia, diferenciais (máx. 1000).')}>
           <V2Textarea value={form.bio} onChange={setField('bio')} maxLength={1000} rows={3} />
         </V2Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="Valor/hora (R$)">
+          <V2Field label={t('Valor/hora (R$)')}>
             <V2Input type="number" min="0" step="0.01" value={form.hourly_rate} onChange={setField('hourly_rate')} />
           </V2Field>
-          <V2Field label="Regiões (vírgula)">
-            <V2Input value={form.regions} onChange={setField('regions')} placeholder="São Paulo, Rio" />
+          <V2Field label={t('Regiões (vírgula)')}>
+            <V2Input value={form.regions} onChange={setField('regions')} placeholder={t('São Paulo, Rio')} />
           </V2Field>
         </div>
-        <V2Field label="Modalidades (vírgula)" required>
-          <V2Input value={form.modalities} onChange={setField('modalities')} required placeholder="Iniciantes, Avançado, DUPR 4.0+" />
+        <V2Field label={t('Modalidades (vírgula)')} required>
+          <V2Input value={form.modalities} onChange={setField('modalities')} required placeholder={t('Iniciantes, Avançado, DUPR 4.0+')} />
         </V2Field>
-        <V2Field label="Certificações (vírgula)">
-          <V2Input value={form.certifications} onChange={setField('certifications')} placeholder="CBP Level 1, IFP" />
+        <V2Field label={t('Certificações (vírgula)')}>
+          <V2Input value={form.certifications} onChange={setField('certifications')} placeholder={t('CBP Level 1, IFP')} />
         </V2Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <V2Field label="WhatsApp (contato)" hint="Aparece no perfil público para os alunos.">
+          <V2Field label={t('WhatsApp (contato)')} hint={t('Aparece no perfil público para os alunos.')}>
             <V2Input value={form.contact_whatsapp} onChange={setField('contact_whatsapp')} placeholder="+55 11 99999-9999" maxLength={40} />
           </V2Field>
-          <V2Field label="E-mail (contato)">
+          <V2Field label={t('E-mail (contato)')}>
             <V2Input type="email" value={form.contact_email} onChange={setField('contact_email')} maxLength={160} />
           </V2Field>
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.accepting_students} onChange={setField('accepting_students')} className="h-4 w-4 rounded border-gray-300" />
-            Aceitando novos alunos
+            {t('Aceitando novos alunos')}
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.active} onChange={setField('active')} className="h-4 w-4 rounded border-gray-300" />
-            Perfil ativo (visível no diretório)
+            {t('Perfil ativo (visível no diretório)')}
           </label>
         </div>
         <div className="flex justify-end">
-          <V2Button type="submit" disabled={upsert.isPending}>{upsert.isPending ? 'Salvando…' : 'Salvar informações'}</V2Button>
+          <V2Button type="submit" disabled={upsert.isPending}>{upsert.isPending ? t('Salvando…') : t('Salvar informações')}</V2Button>
         </div>
       </form>
     </V2Surface>
@@ -115,14 +116,14 @@ export function CoachPhotosSection({ coach }) {
     try {
       await upsert.mutateAsync({ coachId: coach.id, input: { ...coach, photos: next } });
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar as fotos.');
+      toast.error(err?.message || t('Não foi possível salvar as fotos.'));
     }
   };
 
   const addPhoto = async (url) => {
     if (!url) return;
     await savePhotos([...photos, url]);
-    toast.success('Foto adicionada.');
+    toast.success(t('Foto adicionada.'));
   };
   const removePhoto = async (idx) => {
     await savePhotos(photos.filter((_, i) => i !== idx));
@@ -132,17 +133,17 @@ export function CoachPhotosSection({ coach }) {
     <V2Surface className="space-y-4">
       <div className="flex items-center gap-2">
         <ImageIcon className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Fotos</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Fotos')}</h2>
       </div>
-      <p className="-mt-2 text-sm text-gray-500">A primeira foto é usada como destaque. Até {COACH_PHOTOS_MAX} fotos.</p>
+      <p className="-mt-2 text-sm text-gray-500">{t('A primeira foto é usada como destaque. Até {n} fotos.', { n: COACH_PHOTOS_MAX })}</p>
       {photos.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {photos.map((url, i) => (
             <div key={url || i} className="group relative">
-              <PhotoLightbox src={url} alt={`Foto ${i + 1} do professor`}
+              <PhotoLightbox src={url} alt={t('Foto {n} do professor', { n: i + 1 })}
                 trigger={<img src={url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
-              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-[10px] font-bold text-ink">Destaque</span>}
-              <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remover foto">
+              {i === 0 && <span className="absolute left-1 top-1 rounded bg-acid px-1.5 py-0.5 text-[10px] font-bold text-ink">{t('Destaque')}</span>}
+              <button type="button" onClick={() => removePhoto(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-red-600 opacity-0 transition-opacity group-hover:opacity-100" aria-label={t('Remover foto')}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -150,7 +151,7 @@ export function CoachPhotosSection({ coach }) {
         </div>
       )}
       {photos.length < COACH_PHOTOS_MAX && (
-        <ImageUpload value="" onChange={(url) => addPhoto(url)} folder="coaches" label="Adicionar foto" hint="JPG/PNG de aulas, quadras, você em ação." />
+        <ImageUpload value="" onChange={(url) => addPhoto(url)} folder="coaches" label={t('Adicionar foto')} hint={t('JPG/PNG de aulas, quadras, você em ação.')} />
       )}
     </V2Surface>
   );

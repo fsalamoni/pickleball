@@ -21,6 +21,7 @@
  *
  * Determinístico dada a seed (reprodutível ao re-sortear com a mesma seed).
  */
+import { t } from '@/core/i18n';
 
 /* RNG determinístico (mulberry32 semeado por string) — auto-contido. */
 function seededRng(seed = 'gameday') {
@@ -488,7 +489,7 @@ function buildRound(playing, partnerCount, oppCount, rng, levelOf = null, paresP
  */
 export function pairFourBalanced(group, opts = {}) {
   const ids = (group || []).filter(Boolean);
-  if (ids.length !== 4) throw new Error('O pareamento exige exatamente 4 jogadores.');
+  if (ids.length !== 4) throw new Error(t('O pareamento exige exatamente 4 jogadores.'));
   const {
     history = null, levels = null, rng = Math.random, fixedPairs = null,
   } = opts;
@@ -533,7 +534,7 @@ export function generateGameDayGames(playerIds, options = {}) {
   const ids = (playerIds || []).filter(Boolean);
   const n = ids.length;
   if (n < 4) {
-    throw new Error('O sorteio do dia de jogo exige no mínimo 4 participantes.');
+    throw new Error(t('O sorteio do dia de jogo exige no mínimo 4 participantes.'));
   }
   const {
     seed = 'gameday', history = null, courts: courtsOption = null, levels = null,
@@ -753,7 +754,7 @@ export function generateSinglesGames(playerIds, options = {}) {
   const ids = (playerIds || []).filter(Boolean);
   const n = ids.length;
   if (n < 2) {
-    throw new Error('O sorteio de jogos simples exige no mínimo 2 participantes.');
+    throw new Error(t('O sorteio de jogos simples exige no mínimo 2 participantes.'));
   }
   const {
     seed = 'gameday-simples', history = null, courts: courtsOption = null, levels = null,
