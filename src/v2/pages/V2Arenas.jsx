@@ -122,7 +122,7 @@ function V2ArenasContent() {
           />
         </V2Surface>
       ) : filtered.length === 0 && regional.fora > 0 ? (
-        <RegionEmptyHint regional={regional} oque="Nenhuma arena" />
+        <RegionEmptyHint regional={regional} oque={t('Nenhuma arena')} />
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState

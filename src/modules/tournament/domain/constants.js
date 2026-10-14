@@ -388,7 +388,7 @@ export const TOURNAMENT_USER_ROLE = Object.freeze({
 /** Capacidade máxima por modalidade. Requisito do produto: até 500 inscritos. */
 export const MAX_REGISTRATIONS_PER_MODALITY = 500;
 
-export const REGISTRATION_PROVISIONAL_LABEL = 'Provisório';
+export const REGISTRATION_PROVISIONAL_LABEL = tk('Provisório');
 
 /** Tempo de experiência do usuário em pickleball. */
 export const PICKLEBALL_EXPERIENCE = Object.freeze({

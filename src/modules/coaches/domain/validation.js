@@ -84,6 +84,5 @@ export function validationBadgeText(v) {
   if (!v) return '';
   const by = str(v.coach_name);
   const badge = str(v.level_badge) || str(v.level_name);
-  const base = `Nível ${badge} validado`;
-  return by ? `${base} por ${by}` : base;
+  return by ? t('Nível {badge} validado por {por}', { badge, por: by }) : t('Nível {badge} validado', { badge });
 }

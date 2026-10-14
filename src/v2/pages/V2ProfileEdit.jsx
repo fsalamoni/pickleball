@@ -29,7 +29,7 @@ import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle, V2BackLink,
 } from '@/v2/ui/primitives';
-import { t } from '@/core/i18n';
+import { t, tk } from '@/core/i18n';
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -548,7 +548,7 @@ export default function V2ProfileEdit() {
                 initialAnswers={formMode === 'saved' ? savedAnswers : null}
                 onComplete={saveAssessment}
                 onSaveDraft={saveAssessment}
-                saveLabel="Salvar respostas no perfil"
+                saveLabel={tk('Salvar respostas no perfil')}
               />
             </div>
           )}

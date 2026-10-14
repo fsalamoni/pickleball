@@ -34,7 +34,7 @@ import {
 import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
-const MOTIVOS = ['Acabou o produto', 'Não veio retirar', 'Pedido duplicado'];
+const MOTIVOS = [tk('Acabou o produto'), tk('Não veio retirar'), tk('Pedido duplicado')];
 
 function CancelOrderDialog({ open, onOpenChange, onConfirm, entregue, pending }) {
   const [motivo, setMotivo] = useState('');
@@ -52,9 +52,9 @@ function CancelOrderDialog({ open, onOpenChange, onConfirm, entregue, pending })
         </DialogHeader>
         <div className="flex flex-wrap gap-1.5">
           {MOTIVOS.map((m) => (
-            <button key={m} type="button" onClick={() => setMotivo(m)}
-              className={`rounded-full border px-3 py-1 text-xs font-bold ${motivo === m ? 'border-ink bg-ink text-paper' : 'border-gray-200 bg-paper text-ink hover:border-ink/40'}`}>
-              {m}
+            <button key={m} type="button" onClick={() => setMotivo(t(m))}
+              className={`rounded-full border px-3 py-1 text-xs font-bold ${motivo === t(m) ? 'border-ink bg-ink text-paper' : 'border-gray-200 bg-paper text-ink hover:border-ink/40'}`}>
+              {t(m)}
             </button>
           ))}
         </div>

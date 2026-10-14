@@ -17,7 +17,7 @@ export function ReviewBody({ review, limit = null }) {
       <p className="font-display text-base font-bold text-ink">{reviewHeadline(review)}</p>
       {review.incomplete?.length > 0 && (
         <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          {t('Alguns dados não carregaram ({fontes}). Os números abaixo podem estar incompletos.', { fontes: fmtLista(review.incomplete) })}
+          {t('Alguns dados não carregaram ({fontes}). Os números abaixo podem estar incompletos.', { fontes: fmtLista(review.incomplete.map((f) => t(f))) })}
         </p>
       )}
       {mostrar.length > 0 && (
