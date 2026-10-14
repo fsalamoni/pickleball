@@ -27,6 +27,7 @@ import {
 import { pontosDaTela } from '@/modules/help/domain/pontosDeDica';
 import { useDicas } from './DicasContext';
 import InterruptorDicas from './InterruptorDicas';
+import { t, tn } from '@/core/i18n';
 
 const ICONES = {
   Building2, CalendarCheck, Compass, Dumbbell, GraduationCap, Settings, Sparkles, Swords, Trophy, Users,
@@ -44,10 +45,10 @@ function LinhaGuia({ guia, feito, onIniciar }) {
           {feito ? <Check className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">{guia.title}</span>
+          <span className="block text-sm font-semibold text-ink">{t(guia.title)}</span>
           <span className="block text-xs leading-snug text-gray-500">
-            {guia.summary}
-            <span className="whitespace-nowrap text-gray-400"> · {guia.steps.length} {guia.steps.length === 1 ? 'passo' : 'passos'}{feito ? ' · feito' : ''}</span>
+            {t(guia.summary)}
+            <span className="whitespace-nowrap text-gray-400"> · {tn(guia.steps.length, '{n} passo', '{n} passos')}{feito ? ` · ${t('feito')}` : ''}</span>
           </span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden="true" />
@@ -97,9 +98,9 @@ export default function PainelDeDicas({ ctx }) {
               <Lightbulb className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="font-display text-xl font-bold text-ink">Dicas</DialogTitle>
+              <DialogTitle className="font-display text-xl font-bold text-ink">{t('Dicas')}</DialogTitle>
               <DialogDescription className="text-sm text-gray-500">
-                Guias na tela de verdade, e pontos que explicam cada botão.
+                {t('Guias na tela de verdade, e pontos que explicam cada botão.')}
               </DialogDescription>
             </div>
           </div>
@@ -109,16 +110,16 @@ export default function PainelDeDicas({ ctx }) {
           <div className={cn('flex items-start gap-3 rounded-3xl border p-4', d.ligadas ? 'border-acid/60 bg-acid/10' : 'border-gray-100 bg-paper')}>
             <div className="min-w-0 flex-1">
               <label htmlFor="dicas-interruptor" className="block font-display text-base font-bold text-ink">
-                Dicas na tela {d.ligadas ? 'ligadas' : 'desligadas'}
+                {d.ligadas ? t('Dicas na tela ligadas') : t('Dicas na tela desligadas')}
               </label>
               <p className="mt-0.5 text-xs leading-5 text-gray-600">
                 {d.ligadas
-                  ? 'Pontos pulsando ao lado dos botões dizem aonde cada um leva. Toque num ponto para ver a dica.'
-                  : 'Nada aparece sozinho. Ligue para ver, em cada tela, pontos que explicam os botões.'}
+                  ? t('Pontos pulsando ao lado dos botões dizem aonde cada um leva. Toque num ponto para ver a dica.')
+                  : t('Nada aparece sozinho. Ligue para ver, em cada tela, pontos que explicam os botões.')}
               </p>
               {d.ligadas && pontosAqui > 0 && (
                 <p className="mt-1 text-xs font-semibold text-ink">
-                  {pontosAqui === 1 ? 'Esta tela tem 1 ponto de dica.' : `Esta tela tem até ${pontosAqui} pontos de dica.`}
+                  {tn(pontosAqui, 'Esta tela tem {n} ponto de dica.', 'Esta tela tem até {n} pontos de dica.')}
                 </p>
               )}
             </div>
@@ -126,21 +127,21 @@ export default function PainelDeDicas({ ctx }) {
           </div>
 
           {daTela.length > 0 && !resultado && (
-            <section aria-label="Guias desta tela" className="space-y-2">
-              <Rotulo>Nesta tela</Rotulo>
+            <section aria-label={t('Guias desta tela')} className="space-y-2">
+              <Rotulo>{t('Nesta tela')}</Rotulo>
               <ul className="space-y-1">
                 {daTela.map((g) => <LinhaGuia key={g.id} guia={g} feito={feitos.has(g.id)} onIniciar={iniciar} />)}
               </ul>
             </section>
           )}
 
-          <section aria-label="O que você quer fazer?" className="space-y-3">
-            <Rotulo>O que você quer fazer?</Rotulo>
+          <section aria-label={t('O que você quer fazer?')} className="space-y-3">
+            <Rotulo>{t('O que você quer fazer?')}</Rotulo>
             <V2SearchInput
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Ex.: reservar quadra, criar torneio"
-              aria-label="Buscar um guia"
+              placeholder={t('Ex.: reservar quadra, criar torneio')}
+              aria-label={t('Buscar um guia')}
             />
             {resultado ? (
               resultado.length > 0 ? (
@@ -149,8 +150,9 @@ export default function PainelDeDicas({ ctx }) {
                 </ul>
               ) : (
                 <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">
-                  Nenhum guia com essas palavras. Tente com menos palavras
-                  {ajudaOn ? ' — ou procure na Central de ajuda.' : '.'}
+                  {ajudaOn
+                    ? t('Nenhum guia com essas palavras. Tente com menos palavras — ou procure na Central de ajuda.')
+                    : t('Nenhum guia com essas palavras. Tente com menos palavras.')}
                 </p>
               )
             ) : (
@@ -160,7 +162,7 @@ export default function PainelDeDicas({ ctx }) {
                   return (
                     <div key={a.area} className="space-y-1">
                       <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-gray-500">
-                        <Icone className="h-3.5 w-3.5" aria-hidden="true" /> {a.label}
+                        <Icone className="h-3.5 w-3.5" aria-hidden="true" /> {t(a.label)}
                       </p>
                       <ul className="space-y-1">
                         {a.guias.map((g) => <LinhaGuia key={g.id} guia={g} feito={feitos.has(g.id)} onIniciar={iniciar} />)}
@@ -180,7 +182,7 @@ export default function PainelDeDicas({ ctx }) {
               onClick={d.fecharPainel}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink"
             >
-              <LifeBuoy className="h-4 w-4" aria-hidden="true" /> Central de ajuda
+              <LifeBuoy className="h-4 w-4" aria-hidden="true" /> {t('Central de ajuda')}
             </Link>
           ) : <span />}
           {d.vistos.length > 0 && (
@@ -189,7 +191,7 @@ export default function PainelDeDicas({ ctx }) {
               onClick={d.recomecarVistos}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-ink"
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Mostrar de novo os pontos já vistos
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> {t('Mostrar de novo os pontos já vistos')}
             </button>
           )}
         </div>

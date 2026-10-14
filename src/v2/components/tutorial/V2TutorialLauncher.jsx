@@ -48,6 +48,7 @@ import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreferen
 import { getTutorial } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
 import { useDicas } from '@/v2/components/dicas/DicasContext';
+import { t, tk } from '@/core/i18n';
 
 /** O id do guia de um tutorial (o mesmo de `guiaIdDoTutorial`, sem importar o catálogo). */
 const guiaDoTutorial = (tutorialId) => `tutorial:${tutorialId}`;
@@ -72,13 +73,13 @@ function PassoAtual({ passo }) {
     <div className="space-y-3">
       {passo.body.map((paragrafo) => (
         <p key={paragrafo.slice(0, 40)} className="text-sm leading-6 text-gray-600">
-          {paragrafo}
+          {t(paragrafo)}
         </p>
       ))}
       {passo.tip && (
         <p className="flex items-start gap-2 rounded-2xl bg-paper px-3.5 py-2.5 text-xs leading-5 text-gray-600">
           <Lightbulb aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-acid-dark" />
-          <span>{passo.tip}</span>
+          <span>{t(passo.tip)}</span>
         </p>
       )}
     </div>
@@ -88,14 +89,14 @@ function PassoAtual({ passo }) {
 /** Bolinhas de progresso — e atalho para pular direto a um passo. */
 function Progresso({ total, atual, onIr }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Passos do tutorial">
+    <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label={t('Passos do tutorial')}>
       {Array.from({ length: total }, (_, i) => (
         <button
           key={i}
           type="button"
           role="tab"
           aria-selected={i === atual}
-          aria-label={`Passo ${i + 1} de ${total}`}
+          aria-label={t('Passo {n} de {total}', { n: i + 1, total })}
           onClick={() => onIr(i)}
           className={cn(
             'h-2 rounded-full transition-all',
@@ -122,7 +123,7 @@ function Progresso({ total, atual, onIr }) {
  *   o formato ANTES de criar o dia de jogo).
  */
 export default function V2TutorialLauncher({
-  tutorialId, label = 'Como funciona', autoOpen = true, variant = 'ghost', size = 'sm', dica, guia, explicar = false,
+  tutorialId, label = tk('Como funciona'), autoOpen = true, variant = 'ghost', size = 'sm', dica, guia, explicar = false,
 }) {
   const { user } = useAuth();
   const dicas = useDicas();
@@ -169,7 +170,7 @@ export default function V2TutorialLauncher({
     <>
       <V2Button variant={variant} size={size} onClick={abrir} data-dica={dica}>
         <GraduationCap className="mr-1.5 h-4 w-4" aria-hidden="true" />
-        {label}
+        {t(label)}
       </V2Button>
 
       <Dialog open={aberto} onOpenChange={(v) => { if (!v) fechar(); }}>
@@ -178,11 +179,11 @@ export default function V2TutorialLauncher({
         <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">
-              Passo {passo + 1} de {total}
+              {t('Passo {n} de {total}', { n: passo + 1, total })}
             </p>
-            <DialogTitle>{tutorial.steps[passo].title}</DialogTitle>
+            <DialogTitle>{t(tutorial.steps[passo].title)}</DialogTitle>
             <DialogDescription>
-              {passo === 0 ? tutorial.subtitle : tutorial.title}
+              {passo === 0 ? t(tutorial.subtitle) : t(tutorial.title)}
             </DialogDescription>
           </DialogHeader>
 
@@ -194,7 +195,7 @@ export default function V2TutorialLauncher({
 
           <DialogFooter className="mt-2 flex-row items-center justify-between gap-2 sm:justify-between">
             <V2Button variant="ghost" size="sm" onClick={fechar}>
-              {ultimo ? 'Fechar' : 'Dispensar'}
+              {ultimo ? t('Fechar') : t('Dispensar')}
             </V2Button>
 
             <div className="flex items-center gap-2">
@@ -202,16 +203,16 @@ export default function V2TutorialLauncher({
                   competir visualmente com "Próximo". */}
               {passo > 0 && (
                 <V2Button variant="subtle" size="sm" onClick={() => setPasso((p) => p - 1)}>
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Anterior
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" /> {t('Anterior')}
                 </V2Button>
               )}
               {ultimo ? (
                 <V2Button size="sm" onClick={fechar}>
-                  <Check className="mr-1.5 h-4 w-4" aria-hidden="true" /> Entendi
+                  <Check className="mr-1.5 h-4 w-4" aria-hidden="true" /> {t('Entendi')}
                 </V2Button>
               ) : (
                 <V2Button size="sm" onClick={() => setPasso((p) => p + 1)}>
-                  Próximo <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  {t('Próximo')} <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </V2Button>
               )}
             </div>

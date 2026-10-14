@@ -10,6 +10,7 @@ import { Lightbulb, PlayCircle, X } from 'lucide-react';
 import { V2Button } from '@/v2/ui/primitives';
 import Destaque from './Destaque';
 import { useAlvoNaTela } from './alvoNaTela';
+import { t } from '@/core/i18n';
 
 export default function PontoAberto({ ponto, guia, onFechar, onEntendi, onGuia }) {
   const tituloId = useId();
@@ -27,28 +28,28 @@ export default function PontoAberto({ ponto, guia, onFechar, onEntendi, onGuia }
     <Destaque el={el} rect={rect} tituloId={tituloId} chave={ponto.id}>
       <div className="flex items-start justify-between gap-3">
         <p className="inline-flex items-center gap-1.5 text-2xs font-bold uppercase tracking-widest text-gray-500">
-          <Lightbulb className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" /> Dica
+          <Lightbulb className="h-3.5 w-3.5 text-acid-dark" aria-hidden="true" /> {t('Dica')}
         </p>
         <button
           type="button"
           onClick={onFechar}
-          aria-label="Fechar a dica"
+          aria-label={t('Fechar a dica')}
           className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
       <h2 id={tituloId} ref={tituloRef} tabIndex={-1} className="mt-1 font-display text-lg font-bold leading-tight text-ink outline-none">
-        {ponto.title}
+        {t(ponto.title)}
       </h2>
-      <p className="mt-1.5 text-sm leading-6 text-gray-600">{ponto.body}</p>
+      <p className="mt-1.5 text-sm leading-6 text-gray-600">{t(ponto.body)}</p>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         {guia && (
           <V2Button variant="secondary" size="sm" onClick={onGuia}>
-            <PlayCircle className="h-4 w-4" aria-hidden="true" /> Me mostre como
+            <PlayCircle className="h-4 w-4" aria-hidden="true" /> {t('Me mostre como')}
           </V2Button>
         )}
-        <V2Button size="sm" onClick={onEntendi}>Entendi</V2Button>
+        <V2Button size="sm" onClick={onEntendi}>{t('Entendi')}</V2Button>
       </div>
     </Destaque>
   );
