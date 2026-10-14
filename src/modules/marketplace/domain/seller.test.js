@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { i18nDoAviso, textoDoAviso } from '@/core/i18n/avisos';
 import {
   sellerKeyFor, parseSellerKey, slugify, sellingIdentities, isValidCnpj, maskCnpj, validatePixKey, validatePayment, validateStoreApplication, sellerReviewNotice,
 } from './seller.js';
@@ -47,23 +48,29 @@ describe('vendedor', () => {
 });
 
 describe('sellerReviewNotice', () => {
+  const txt = (m) => textoDoAviso(m);
   const loja = { id: 'store_u1', seller_key: 'store_u1', seller_type: 'store', display_name: 'Loja X', status: 'pending' };
   it('aprovação de loja em análise leva ao painel', () => {
     const n = sellerReviewNotice(loja, { status: 'active' });
-    expect(n.title).toContain('aprovada');
+    expect(txt(n.title)).toBe('Loja X foi aprovada no Mercado');
     expect(n.link).toBe('/mercado/vender?como=store_u1');
   });
   it('recusa leva ao cadastro e diz o motivo', () => {
     const n = sellerReviewNotice(loja, { status: 'rejected', reason: 'CNPJ não confere' });
     expect(n.link).toBe('/mercado/loja/abrir');
-    expect(n.message).toContain('CNPJ não confere');
+    expect(txt(n.message)).toContain('CNPJ não confere');
   });
   it('reativação e suspensão', () => {
-    expect(sellerReviewNotice({ ...loja, status: 'suspended' }, { status: 'active' }).title).toContain('de novo');
-    expect(sellerReviewNotice({ ...loja, status: 'active' }, { status: 'suspended', reason: 'golpe' }).message).toContain('golpe');
+    expect(txt(sellerReviewNotice({ ...loja, status: 'suspended' }, { status: 'active' }).title)).toContain('de novo');
+    expect(txt(sellerReviewNotice({ ...loja, status: 'active' }, { status: 'suspended', reason: 'golpe' }).message)).toContain('golpe');
   });
   it('tirar o selo não avisa', () => {
     expect(sellerReviewNotice(loja, { verified: false })).toBeNull();
     expect(sellerReviewNotice(loja, { verified: true }).link).toBe('/mercado/vendedor/store_u1');
+  });
+  it('sem nome, o "sua loja" também é traduzível', () => {
+    const n = sellerReviewNotice({ ...loja, display_name: '' }, { status: 'active' });
+    expect(txt(n.title)).toBe('sua loja foi aprovada no Mercado');
+    expect(i18nDoAviso(n).title).toEqual({ key: '{nome} foi aprovada no Mercado', params: { nome: 'sua loja' }, tparams: ['nome'] });
   });
 });

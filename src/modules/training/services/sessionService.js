@@ -44,7 +44,7 @@ function notifyCoachShared(identity, coachId, title) {
   return notifyUsers([coachId], {
     type: NOTIFICATION_TYPE.TRAINING_COMMENT,
     title: tx('Um aluno compartilhou um treino'),
-    message: tx('{nome} registrou "{titulo}".', { nome: identity.name || 'Seu aluno', titulo: title }),
+    message: tx('{nome} registrou "{titulo}".', { nome: identity.name || tx('Seu aluno'), titulo: title }),
     link: '/treino?aba=alunos',
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);
@@ -88,7 +88,7 @@ export async function confirmSession(session, { identity }) {
   await notifyUsers([session.uid], {
     type: NOTIFICATION_TYPE.TRAINING_COMMENT,
     title: tx('Seu professor viu o seu treino'),
-    message: tx('{nome} confirmou "{titulo}".', { nome: identity.name || 'Seu professor', titulo: session.title }),
+    message: tx('{nome} confirmou "{titulo}".', { nome: identity.name || tx('Seu professor'), titulo: session.title }),
     link: '/treino?aba=diario',
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);
@@ -112,7 +112,7 @@ export async function addComment(session, text, { identity }) {
     await notifyUsers([to], {
       type: NOTIFICATION_TYPE.TRAINING_COMMENT,
       title: isOwner ? tx('Seu aluno comentou um treino') : tx('Seu professor comentou o seu treino'),
-      message: `${identity.name || 'Alguém'}: ${texto.slice(0, 120)}`,
+      message: identity.name ? `${identity.name}: ${texto.slice(0, 120)}` : texto.slice(0, 120),
       link: isOwner ? '/treino?aba=alunos' : '/treino?aba=diario',
       actor: { uid: identity.uid, name: identity.name },
     }).catch(() => 0);

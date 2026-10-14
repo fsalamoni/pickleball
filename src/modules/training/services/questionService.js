@@ -66,7 +66,7 @@ export async function createQuestion(input, { identity }) {
   await notifyUsers([value.coach_uid], {
     type: NOTIFICATION_TYPE.TRAINING_QUESTION,
     title: tx('Nova dúvida de aluno'),
-    message: `${identity.name || 'Seu aluno'}: ${value.subject}`,
+    message: identity.name ? `${identity.name}: ${value.subject}` : value.subject,
     link: `/treino?aba=duvidas&q=${ref.id}`,
     actor: { uid: identity.uid, name: identity.name },
   }).catch(() => 0);

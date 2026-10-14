@@ -14,6 +14,7 @@
  *     motivo e a aula é confirmada assim mesmo.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { textoDoAviso } from '@/core/i18n/avisos';
 
 const banco = new Map();
 const escritas = [];
@@ -229,7 +230,7 @@ describe('⭐ o cupom do pedido de aula, na confirmação', () => {
     expect(gravada.price).toBe(135);
     expect(gravada.coupon).toMatchObject({ status: 'applied', discount_value: 15, original_price: 150 });
     expect(banco.get(`promo_coupons/${id}`)).toMatchObject({ used_count: 1, used_by: ['ana'] });
-    expect(notifyUsers.mock.calls.at(-1)[1].message).toContain('Cupom AULA10 aplicado');
+    expect(textoDoAviso(notifyUsers.mock.calls.at(-1)[1].message)).toContain('Cupom AULA10 aplicado');
   });
 
   it('⭐ cupom já usado por este aluno: recusado com o motivo, e a aula é confirmada', async () => {
@@ -256,7 +257,7 @@ describe('⭐ o cupom do pedido de aula, na confirmação', () => {
     await respondLesson({ ...confirmada, id: 'l1' }, 'cancelled', professor);
     expect(banco.get(`promo_coupons/${id}`)).toMatchObject({ used_count: 0, used_by: [] });
     expect(banco.get('coach_lessons/l1').coupon).toMatchObject({ status: 'applied', returned: true });
-    expect(notifyUsers.mock.calls.at(-1)[1].message).toMatch(/devolvido/);
+    expect(textoDoAviso(notifyUsers.mock.calls.at(-1)[1].message)).toMatch(/devolvido/);
     // De novo (outra aba): nada desce duas vezes.
     expect(await returnPendingCouponUses([{ ...banco.get('coach_lessons/l1'), id: 'l1' }])).toBe(0);
     expect(banco.get(`promo_coupons/${id}`).used_count).toBe(0);

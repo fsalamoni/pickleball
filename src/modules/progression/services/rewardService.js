@@ -130,7 +130,7 @@ export async function requestReward({ reward, user, snapshot }) {
   if (alvos.length > 0) {
     await notifyUsers(alvos, {
       title: tx('Novo pedido de recompensa'),
-      message: tx('{nome} pediu "{recompensa}". Confira e libere.', { nome: user.displayName || 'Um atleta', recompensa: reward.title }),
+      message: tx('{nome} pediu "{recompensa}". Confira e libere.', { nome: user.displayName || tx('Um atleta'), recompensa: reward.title }),
       type: NOTIFICATION_TYPE.GAMIFICATION,
       link: '/gamification',
       actor: user,

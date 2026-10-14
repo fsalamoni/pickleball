@@ -110,8 +110,8 @@ export async function shareItem({ item, toUids = [], kind = SHARE_KIND.INDICACAO
     type: NOTIFICATION_TYPE.TRAINING_SHARE,
     title: isStudentSend ? tx('Seu professor mandou um treino') : tx('Indicaram um treino para você'),
     message: dueDate && isStudentSend
-      ? tx('{nome}: "{titulo}" — para fazer até {data}', { nome: identity.name || 'Alguém', titulo: item.title, data: dueDate.split('-').reverse().join('/') })
-      : tx('{nome}: "{titulo}"', { nome: identity.name || 'Alguém', titulo: item.title }),
+      ? tx('{nome}: "{titulo}" — para fazer até {data}', { nome: identity.name || tx('Alguém'), titulo: item.title, data: dueDate.split('-').reverse().join('/') })
+      : tx('{nome}: "{titulo}"', { nome: identity.name || tx('Alguém'), titulo: item.title }),
     link: '/treino?aba=recebidos',
     actor: { uid: identity.uid, name: identity.name },
     data: { item_id: item.id },

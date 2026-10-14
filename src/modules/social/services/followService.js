@@ -39,7 +39,7 @@ export async function followAthlete(targetUid, actor, followerName) {
   await createNotification({
     userId: targetUid,
     title: tx('Novo seguidor'),
-    message: tx('{nome} começou a seguir você.', { nome: followerName || 'Um atleta' }),
+    message: tx('{nome} começou a seguir você.', { nome: followerName || tx('Um atleta') }),
     type: 'new_follower',
     link: `/atleta/${actor.uid}`,
     actor,

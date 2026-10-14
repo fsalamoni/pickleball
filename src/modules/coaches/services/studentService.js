@@ -127,7 +127,7 @@ export async function upsertStudent(coachId, input, actor) {
   if (isNew && value.student_id) {
     notifyUsers([value.student_id], {
       title: tx('Você foi adicionado por um professor'),
-      message: tx('{nome} adicionou você como aluno. Toque para ver.', { nome: str(actor.displayName) || 'Um professor' }),
+      message: tx('{nome} adicionou você como aluno. Toque para ver.', { nome: str(actor.displayName) || tx('Um professor') }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-aulas',
       actor: { uid: actor.uid },
@@ -154,21 +154,21 @@ function statusPatch(link, nextStatus, actor) {
 
 /** Quem recebe o aviso de cada passo — e o que ele diz. */
 function statusNotice(link, nextStatus, { byStudent, actor }) {
-  const aluno = str(link.student_name) || 'Um aluno';
-  const professor = str(actor.displayName) || 'Seu professor';
+  const aluno = { nome: str(link.student_name) || tx('Um aluno') };
+  const professor = { nome: str(actor.displayName) || tx('Seu professor') };
   if (byStudent && nextStatus === STUDENT_STATUS.ACTIVE) {
-    return { to: link.coach_id, title: 'Aluno aceitou o convite', message: `${aluno} aceitou fazer parte da sua lista de alunos.`, link: '/aulas?aba=alunos' };
+    return { to: link.coach_id, title: tx('Aluno aceitou o convite'), message: tx('{nome} aceitou fazer parte da sua lista de alunos.', aluno), link: '/aulas?aba=alunos' };
   }
   if (byStudent && nextStatus === STUDENT_STATUS.ENDED) {
     return link.status === STUDENT_STATUS.INVITED
-      ? { to: link.coach_id, title: 'Convite recusado', message: `${aluno} recusou o convite para ser seu aluno.`, link: '/aulas?aba=alunos' }
-      : { to: link.coach_id, title: 'Vínculo de aluno encerrado', message: `${aluno} encerrou o vínculo de aluno com você.`, link: '/aulas?aba=alunos' };
+      ? { to: link.coach_id, title: tx('Convite recusado'), message: tx('{nome} recusou o convite para ser seu aluno.', aluno), link: '/aulas?aba=alunos' }
+      : { to: link.coach_id, title: tx('Vínculo de aluno encerrado'), message: tx('{nome} encerrou o vínculo de aluno com você.', aluno), link: '/aulas?aba=alunos' };
   }
   if (!byStudent && nextStatus === STUDENT_STATUS.ENDED && link.status !== STUDENT_STATUS.INVITED) {
-    return { to: link.student_id, title: 'Vínculo com o professor encerrado', message: `${professor} encerrou o vínculo de aluno com você.`, link: '/minhas-aulas' };
+    return { to: link.student_id, title: tx('Vínculo com o professor encerrado'), message: tx('{nome} encerrou o vínculo de aluno com você.', professor), link: '/minhas-aulas' };
   }
   if (!byStudent && nextStatus === STUDENT_STATUS.INVITED) {
-    return { to: link.student_id, title: 'Convite de professor', message: `${professor} convidou você para ser aluno de novo. Toque para responder.`, link: '/minhas-aulas' };
+    return { to: link.student_id, title: tx('Convite de professor'), message: tx('{nome} convidou você para ser aluno de novo. Toque para responder.', professor), link: '/minhas-aulas' };
   }
   return null;
 }

@@ -3,6 +3,7 @@
  * qualquer um encerra, e o encerrado só volta pelo aceite do aluno.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { textoDoAviso } from '@/core/i18n/avisos';
 
 const mockUpdate = vi.fn(async () => {});
 const mockDelete = vi.fn(async () => {});
@@ -48,12 +49,12 @@ describe('setStudentStatus — enquanto for professor do aluno', () => {
     expect(patch).toMatchObject({ status: 'ended', ended_by: 'ana', ended_at: { _ts: true } });
     expect(Object.keys(patch).sort()).toEqual(['ended_at', 'ended_by', 'status', 'updated_at']);
     expect(mockNotify.mock.calls[0][0]).toEqual(['prof']);
-    expect(mockNotify.mock.calls[0][1].title).toBe('Vínculo de aluno encerrado');
+    expect(textoDoAviso(mockNotify.mock.calls[0][1].title)).toBe('Vínculo de aluno encerrado');
   });
 
   it('o aluno recusa o convite (convidado → encerrado)', async () => {
     await setStudentStatus(link('invited'), 'ended', ANA);
-    expect(mockNotify.mock.calls[0][1].title).toBe('Convite recusado');
+    expect(textoDoAviso(mockNotify.mock.calls[0][1].title)).toBe('Convite recusado');
   });
 
   it('o aluno não pausa nem reativa', async () => {
@@ -73,7 +74,7 @@ describe('setStudentStatus — enquanto for professor do aluno', () => {
     await expect(setStudentStatus(fim, 'active', PROF)).rejects.toThrow(/novo convite/);
     await setStudentStatus(fim, 'invited', PROF);
     expect(mockUpdate.mock.calls[0][1]).toEqual({ status: 'invited', updated_at: { _ts: true } });
-    expect(mockNotify.mock.calls[0][1].title).toBe('Convite de professor');
+    expect(textoDoAviso(mockNotify.mock.calls[0][1].title)).toBe('Convite de professor');
   });
 
   it('reconvidado: o professor não ativa por conta própria; o aluno aceita e o histórico de fim sai', async () => {

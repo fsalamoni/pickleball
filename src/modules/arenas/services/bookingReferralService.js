@@ -129,14 +129,15 @@ export async function applyBookingReferral(booking, { agreedPrice } = {}, actor 
   if (desconto > 0) patch.agreed_price = Math.max(0, Math.round((valor - desconto) * 100) / 100);
   await updateDoc(bookingRef, patch);
 
-  const paraQuemChegou = [
-    desconto > 0 ? `${formatPrice(desconto)} de desconto nesta reserva` : null,
-    resgate.referredReward > 0 ? `${formatPrice(resgate.referredReward)} em crédito na arena` : null,
-  ].filter(Boolean).join(' e ');
+  const ganhos = { arena: arenaNome, desconto: formatPrice(desconto), credito: formatPrice(resgate.referredReward) };
+  let paraQuemChegou = null;
+  if (desconto > 0 && resgate.referredReward > 0) paraQuemChegou = tx('Em {arena}: {desconto} de desconto nesta reserva e {credito} em crédito na arena.', ganhos);
+  else if (desconto > 0) paraQuemChegou = tx('Em {arena}: {desconto} de desconto nesta reserva.', ganhos);
+  else if (resgate.referredReward > 0) paraQuemChegou = tx('Em {arena}: {credito} em crédito na arena.', ganhos);
   if (paraQuemChegou) {
     notifyUsers([referredId], {
       title: tx('Indicação aplicada'),
-      message: `Em ${arenaNome}: ${paraQuemChegou}.`,
+      message: paraQuemChegou,
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor,
@@ -145,7 +146,7 @@ export async function applyBookingReferral(booking, { agreedPrice } = {}, actor 
   if (resgate.referrerReward > 0) {
     notifyUsers([resgate.referrerId], {
       title: tx('Sua indicação deu certo'),
-      message: tx('{nome} reservou em {arena}: {valor} de crédito para você.', { nome: booking.athlete_name || 'Quem você indicou', arena: arenaNome, valor: formatPrice(resgate.referrerReward) }),
+      message: tx('{nome} reservou em {arena}: {valor} de crédito para você.', { nome: booking.athlete_name || tx('Quem você indicou'), arena: arenaNome, valor: formatPrice(resgate.referrerReward) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arenaId}`,
       actor,

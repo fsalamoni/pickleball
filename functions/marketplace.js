@@ -537,25 +537,25 @@ function restockUpdates(order, snaps, now) {
 }
 
 const OTHER_SIDE_MSG = {
-  accept: (o) => ['Pedido aceito', `${o.seller_name} aceitou o pedido ${o.code}. Pague pelo Pix e avise.`, 'buyer'],
-  decline: (o) => ['Pedido recusado', `${o.seller_name} recusou o pedido ${o.code}.`, 'buyer'],
-  send_proof: (o) => ['Pagamento informado', `${o.buyer_name} avisou que pagou o pedido ${o.code}. Confira o Pix.`, 'seller'],
-  confirm_payment: (o) => ['Pagamento confirmado', (o.issued_gift_card_ids || []).length
-    ? `${o.seller_name} confirmou o pagamento do pedido ${o.code}. O vale-presente já está em Mercado → Vales.`
-    : `${o.seller_name} confirmou o pagamento do pedido ${o.code}.`, 'buyer'],
-  reject_payment: (o) => ['Pagamento não encontrado', `${o.seller_name} não encontrou o Pix do pedido ${o.code}.`, 'buyer'],
-  ship: (o) => ['Pedido enviado', `O pedido ${o.code} saiu para entrega.`, 'buyer'],
-  ready: (o) => ['Pedido pronto', `O pedido ${o.code} está pronto para entregar.`, 'buyer'],
-  delivered: (o) => ['Pedido entregue', `${o.seller_name} marcou o pedido ${o.code} como entregue. Confirme o recebimento.`, 'buyer'],
-  confirm_received: (o) => ['Pedido concluído', `${o.buyer_name} confirmou o recebimento do pedido ${o.code}.`, 'seller'],
-  cancel: (o) => ['Pedido cancelado', `${o.buyer_name} cancelou o pedido ${o.code}.`, 'seller'],
-  seller_cancel: (o) => ['Pedido cancelado', `${o.seller_name} cancelou o pedido ${o.code}.`, 'buyer'],
-  open_dispute: (o) => ['Problema no pedido', `${o.buyer_name} relatou um problema no pedido ${o.code}. A moderação vai analisar.`, 'seller'],
-  resolve_buyer: (o) => ['Disputa encerrada', `A moderação encerrou a disputa do pedido ${o.code} a favor do comprador.`, 'both'],
-  resolve_seller: (o) => ['Disputa encerrada', `A moderação encerrou a disputa do pedido ${o.code} a favor do vendedor.`, 'both'],
-  admin_cancel: (o) => ['Pedido cancelado', `A moderação cancelou o pedido ${o.code}.`, 'both'],
-  expire: (o) => ['Pedido expirado', `O pedido ${o.code} passou do prazo e foi cancelado. O estoque voltou ao anúncio.`, 'both'],
-  auto_complete: (o) => ['Pedido concluído', `O pedido ${o.code} foi concluído automaticamente.`, 'both'],
+  accept: (o) => [tx('Pedido aceito'), tx('{vendedor} aceitou o pedido {codigo}. Pague pelo Pix e avise.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  decline: (o) => [tx('Pedido recusado'), tx('{vendedor} recusou o pedido {codigo}.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  send_proof: (o) => [tx('Pagamento informado'), tx('{comprador} avisou que pagou o pedido {codigo}. Confira o Pix.', { comprador: o.buyer_name, codigo: o.code }), 'seller'],
+  confirm_payment: (o) => [tx('Pagamento confirmado'), (o.issued_gift_card_ids || []).length
+    ? tx('{vendedor} confirmou o pagamento do pedido {codigo}. O vale-presente já está em Mercado → Vales.', { vendedor: o.seller_name, codigo: o.code })
+    : tx('{vendedor} confirmou o pagamento do pedido {codigo}.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  reject_payment: (o) => [tx('Pagamento não encontrado'), tx('{vendedor} não encontrou o Pix do pedido {codigo}.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  ship: (o) => [tx('Pedido enviado'), tx('O pedido {codigo} saiu para entrega.', { codigo: o.code }), 'buyer'],
+  ready: (o) => [tx('Pedido pronto'), tx('O pedido {codigo} está pronto para entregar.', { codigo: o.code }), 'buyer'],
+  delivered: (o) => [tx('Pedido entregue'), tx('{vendedor} marcou o pedido {codigo} como entregue. Confirme o recebimento.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  confirm_received: (o) => [tx('Pedido concluído'), tx('{comprador} confirmou o recebimento do pedido {codigo}.', { comprador: o.buyer_name, codigo: o.code }), 'seller'],
+  cancel: (o) => [tx('Pedido cancelado'), tx('{comprador} cancelou o pedido {codigo}.', { comprador: o.buyer_name, codigo: o.code }), 'seller'],
+  seller_cancel: (o) => [tx('Pedido cancelado'), tx('{vendedor} cancelou o pedido {codigo}.', { vendedor: o.seller_name, codigo: o.code }), 'buyer'],
+  open_dispute: (o) => [tx('Problema no pedido'), tx('{comprador} relatou um problema no pedido {codigo}. A moderação vai analisar.', { comprador: o.buyer_name, codigo: o.code }), 'seller'],
+  resolve_buyer: (o) => [tx('Disputa encerrada'), tx('A moderação encerrou a disputa do pedido {codigo} a favor do comprador.', { codigo: o.code }), 'both'],
+  resolve_seller: (o) => [tx('Disputa encerrada'), tx('A moderação encerrou a disputa do pedido {codigo} a favor do vendedor.', { codigo: o.code }), 'both'],
+  admin_cancel: (o) => [tx('Pedido cancelado'), tx('A moderação cancelou o pedido {codigo}.', { codigo: o.code }), 'both'],
+  expire: (o) => [tx('Pedido expirado'), tx('O pedido {codigo} passou do prazo e foi cancelado. O estoque voltou ao anúncio.', { codigo: o.code }), 'both'],
+  auto_complete: (o) => [tx('Pedido concluído'), tx('O pedido {codigo} foi concluído automaticamente.', { codigo: o.code }), 'both'],
 };
 
 /**
@@ -875,15 +875,16 @@ async function offerAction(ctx, actor, data = {}) {
 
   const o = res.offer;
   const toBuyer = role === 'seller';
+  const p = { anuncio: o.listing_title, comprador: o.buyer_name };
   const msgs = {
-    accept: ['Oferta aceita', `Sua oferta por "${o.listing_title}" foi aceita. Pague pelo Pix no pedido.`],
-    accept_counter: ['Contraproposta aceita', `${o.buyer_name} aceitou o valor por "${o.listing_title}".`],
-    decline: ['Oferta recusada', `A oferta por "${o.listing_title}" foi recusada.`],
-    counter: ['Contraproposta', `O vendedor fez uma contraproposta por "${o.listing_title}".`],
-    counter_back: ['Nova oferta', `${o.buyer_name} fez uma nova oferta por "${o.listing_title}".`],
-    withdraw: ['Oferta retirada', `${o.buyer_name} desistiu da oferta por "${o.listing_title}".`],
+    accept: [tx('Oferta aceita'), tx('Sua oferta por "{anuncio}" foi aceita. Pague pelo Pix no pedido.', p)],
+    accept_counter: [tx('Contraproposta aceita'), tx('{comprador} aceitou o valor por "{anuncio}".', p)],
+    decline: [tx('Oferta recusada'), tx('A oferta por "{anuncio}" foi recusada.', p)],
+    counter: [tx('Contraproposta'), tx('O vendedor fez uma contraproposta por "{anuncio}".', p)],
+    counter_back: [tx('Nova oferta'), tx('{comprador} fez uma nova oferta por "{anuncio}".', p)],
+    withdraw: [tx('Oferta retirada'), tx('{comprador} desistiu da oferta por "{anuncio}".', p)],
   };
-  const [title, message] = msgs[action] || ['Oferta', ''];
+  const [title, message] = msgs[action] || [tx('Oferta'), ''];
   const link = res.orderId ? (toBuyer ? `/mercado/pedidos/${res.orderId}` : `/mercado/vendas/${res.orderId}`) : `/mercado/ofertas/${offerId}`;
   const opsAgora = await operatorUids(db, o.seller_key);
   await notify(db, toBuyer ? [o.buyer_uid] : opsAgora, { title, message, link }, now);
@@ -1002,7 +1003,7 @@ async function housekeeping(ctx) {
       // eslint-disable-next-line no-await-in-loop
       await notify(db, [of.buyer_uid], {
         title: tx('Oferta expirou'),
-        message: tx('A negociação por "{anuncio}" passou do prazo sem resposta. Você pode fazer outra oferta.', { anuncio: of.listing_title || 'um anúncio' }),
+        message: tx('A negociação por "{anuncio}" passou do prazo sem resposta. Você pode fazer outra oferta.', { anuncio: of.listing_title || tx('um anúncio') }),
         link: `/mercado/ofertas/${d.id}`,
       }, now);
       feitos.offers += 1;
@@ -1472,7 +1473,7 @@ async function claimGiftCard(ctx, actor, data) {
     const nome = await buyerName(db, actor.uid);
     await notify(db, [card.buyer_uid], {
       title: tx('Seu presente chegou'),
-      message: tx('{nome} resgatou o vale-presente de {valor} de {loja}.', { nome, valor: promo.formatBRL(card.initial_cents), loja: card.seller_name || 'uma loja' }),
+      message: tx('{nome} resgatou o vale-presente de {valor} de {loja}.', { nome, valor: promo.formatBRL(card.initial_cents), loja: card.seller_name || tx('uma loja') }),
       link: '/mercado/vales',
     }, now);
   }

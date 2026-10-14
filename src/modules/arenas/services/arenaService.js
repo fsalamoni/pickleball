@@ -311,8 +311,12 @@ export async function addArenaReview(arena, user, profile, input) {
   try {
     const managerIds = await listArenaManagerIds(arena.id);
     notifyUsers(managerIds, {
-      title: `Nova ${REVIEW_TYPE_LABELS[type].toLowerCase()} em "${str(arena.name).slice(0, 50)}"`,
-      message: type === REVIEW_TYPE.REVIEW ? `Nota ${rating}★${comment ? `: ${comment.slice(0, 80)}` : ''}` : comment.slice(0, 100),
+      title: {
+        [REVIEW_TYPE.REVIEW]: tx('Nova avaliação em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
+        [REVIEW_TYPE.COMPLAINT]: tx('Nova reclamação em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
+      }[type] || tx('Nova sugestão em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
+      message: type !== REVIEW_TYPE.REVIEW ? comment.slice(0, 100)
+        : comment ? tx('Nota {nota}★: {comentario}', { nota: rating, comentario: comment.slice(0, 80) }) : tx('Nota {nota}★', { nota: rating }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/arenas/${arena.id}/gerir`,
       actor: { uid: user.uid, displayName: displayName(user, profile) },

@@ -162,7 +162,7 @@ export async function enrollInClinic(clinic, athlete) {
   }
   notifyUsers([clinic.coach_id], {
     title: tx('Nova inscrição em clínica'),
-    message: tx('{nome} se inscreveu em "{clinica}".', { nome: str(athlete.displayName) || 'Um atleta', clinica: clinic.title }),
+    message: tx('{nome} se inscreveu em "{clinica}".', { nome: str(athlete.displayName) || tx('Um atleta'), clinica: clinic.title }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/aulas',
     actor: { uid: athlete.uid },

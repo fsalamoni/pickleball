@@ -19,6 +19,7 @@ const CASOS = [
   ['Você recebeu o pacote "{pacote}" ({n} aulas).', { pacote: 'P', n: 4 }],
   ['Falta {x}', {}],
   ['Objeto {x}', { x: { y: 1 } }],
+  ['{nome} começou a seguir você.', { nome: cliente.tx('Um atleta') }],
 ];
 
 describe('avisos: cliente × servidor', () => {
@@ -42,6 +43,19 @@ describe('avisos: cliente × servidor', () => {
     for (const lang of ['en', 'es']) {
       definirIdioma(lang, AVISOS[lang]);
       expect(servidor.campoNoIdioma(n, 'title', lang)).toBe(cliente.noticeText(n, 'title'));
+      expect(servidor.campoNoIdioma(n, 'message', lang)).toBe(cliente.noticeText(n, 'message'));
+    }
+  });
+
+  it('o nome que faltou (parâmetro-marca) também sai traduzido', () => {
+    const message = cliente.tx('{nome} começou a seguir você.', { nome: cliente.tx('Um atleta') });
+    const i18n = cliente.i18nDoAviso({ message });
+    expect(i18n.message).toEqual({ key: '{nome} começou a seguir você.', params: { nome: 'Um atleta' }, tparams: ['nome'] });
+    expect(cliente.textoDoAviso(message)).toBe('Um atleta começou a seguir você.');
+    const n = { message: 'Um atleta começou a seguir você.', i18n };
+    expect(servidor.campoNoIdioma(n, 'message', 'en')).toBe(`${AVISOS.en['Um atleta']} started following you.`);
+    for (const lang of ['en', 'es']) {
+      definirIdioma(lang, AVISOS[lang]);
       expect(servidor.campoNoIdioma(n, 'message', lang)).toBe(cliente.noticeText(n, 'message'));
     }
   });

@@ -75,7 +75,9 @@ export const FEATURE_FLAG = Object.freeze({
    * aparece em português. Catálogos por módulo, carregados só do idioma
    * escolhido (`src/core/i18n`, plano em docs/44-IDIOMAS.md).
    *
-   * Zero banco: a escolha fica no aparelho (`picklerush:idioma`). Desligada,
+   * A escolha fica no aparelho (`picklerush:idioma`) e é copiada para
+   * `users/{uid}.language` (campo opcional), para o aviso e o push saírem no
+   * idioma de quem recebe e a escolha seguir a pessoa. Desligada,
    * tudo em português e nenhum seletor aparece — inclusive para quem tinha
    * escolhido outro idioma (a escolha é apagada ao abrir).
    */
