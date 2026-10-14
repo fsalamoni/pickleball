@@ -1,0 +1,550 @@
+/**
+ * V2MarketSell — o painel de quem vende no Mercado (`/mercado/vender`).
+ *
+ * Uma pessoa pode vender de mais de um jeito: como ela mesma, como professor
+ * ou por uma arena que administra (`sellingIdentities`). O jeito escolhido
+ * mora na URL (`?como=<sellerKey>`), e a aba também (`?aba=`): recarregar não
+ * perde o lugar, e o aviso do servidor pode levar direto a uma venda.
+ *
+ * O Resumo responde "o que precisa de mim agora"; as outras abas são o
+ * trabalho: anúncios, vendas, ofertas, perguntas, Pix e a vitrine.
+ */
+import React, { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  AlertCircle, CheckCircle2, HandCoins, ImagePlus, LayoutDashboard, MessageCircleQuestion, Package, Pencil, Plus, Receipt, Store, Wallet,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/core/lib/utils';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { BR_UFS } from '@/core/domain/ufs';
+import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
+import { useCoach } from '@/modules/coaches/hooks/useCoaches';
+import { coverOf, listingCompleteness } from '@/modules/marketplace/domain/listing';
+import { PIX_KEY_TYPES, sellerKeyFor, sellingIdentities } from '@/modules/marketplace/domain/seller';
+import {
+  LISTING_STATUS_LABELS, OFFER_STATUS_LABELS, ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS,
+} from '@/modules/marketplace/domain/constants';
+import { orderWaitingOn } from '@/modules/marketplace/domain/orderStatus';
+import { validateAnswer } from '@/modules/marketplace/domain/settings';
+import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
+import {
+  answerQuestion, deleteListing, ensureSeller, quickEditListing, savePayment, setListingStatus, updateSellerProfile,
+} from '@/modules/marketplace/services/marketService';
+import { prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
+import {
+  useMarketMutation, useSeller, useSellerListings, useSellerOffers, useSellerOrders, useSellerPrivate, useSellerQuestions,
+} from '@/modules/marketplace/hooks/useMarket';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2PageIntro, V2Select,
+  V2Skeleton, V2Surface, V2Textarea,
+} from '@/v2/ui/primitives';
+import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import MarketHeader from '@/v2/components/marketplace/MarketHeader';
+import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
+
+const ABAS = [
+  { value: 'resumo', label: 'Resumo', icon: LayoutDashboard },
+  { value: 'anuncios', label: 'Anúncios', icon: Package },
+  { value: 'vendas', label: 'Vendas', icon: Receipt },
+  { value: 'ofertas', label: 'Ofertas', icon: HandCoins },
+  { value: 'perguntas', label: 'Perguntas', icon: MessageCircleQuestion },
+  { value: 'pix', label: 'Recebimento', icon: Wallet },
+  { value: 'vitrine', label: 'Vitrine', icon: Store },
+];
+
+const ACTIVE_ORDER = (o) => !ORDER_FINAL_STATUSES.includes(o.status);
+const MY_TURN_ORDER = (o) => ['placed', 'payment_review', 'paid'].includes(o.status) || (o.status === 'ready');
+const novoAnuncio = (key) => `/mercado/vender/anuncio/novo?como=${encodeURIComponent(key)}`;
+
+/* -------------------------------------------------------------- começar -- */
+
+function StartSelling({ identity, defaults }) {
+  const [nome, setNome] = useState(defaults.name || '');
+  const m = useMarketMutation(ensureSeller);
+  const { user } = useAuth();
+  return (
+    <V2Surface className="mx-auto max-w-xl space-y-4 text-center">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-acid/30"><Store className="h-7 w-7 text-ink" /></span>
+      <h2 className="font-display text-2xl font-bold text-ink">Comece a vender {identity.type === 'arena' ? 'pela arena' : identity.type === 'coach' ? 'como professor' : 'no Mercado'}</h2>
+      <p className="text-sm text-gray-500">Sem comissão. O comprador paga por Pix direto para você, depois que você aceitar o pedido.</p>
+      <form
+        className="space-y-3 text-left"
+        onSubmit={(e) => {
+          e.preventDefault();
+          m.mutate({ type: identity.type, entityId: identity.entity_id, uid: user.uid, displayName: nome, city: defaults.city, state: defaults.state, photoUrl: defaults.photo }, {
+            onSuccess: () => toast.success('Pronto! Agora crie o seu primeiro anúncio.'),
+            onError: (er) => toast.error(er.message),
+          });
+        }}
+      >
+        <V2Field label="Nome que aparece para os compradores" htmlFor="nome-vend">
+          <V2Input id="nome-vend" maxLength={60} value={nome} onChange={(e) => setNome(e.target.value)} />
+        </V2Field>
+        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">termos de uso</Link>, inclusive as regras do Mercado.</p>
+        <V2Button type="submit" className="w-full" disabled={m.isPending || nome.trim().length < 2}>{m.isPending ? 'Abrindo…' : 'Começar a vender'}</V2Button>
+      </form>
+    </V2Surface>
+  );
+}
+
+/* --------------------------------------------------------------- resumo -- */
+
+function Summary({ sellerKey, seller, go }) {
+  const orders = useSellerOrders(sellerKey);
+  const offers = useSellerOffers(sellerKey);
+  const qs = useSellerQuestions(sellerKey);
+  const listings = useSellerListings(sellerKey);
+  const priv = useSellerPrivate(sellerKey);
+  const conta = (q, fn) => (q.isError ? null : q.isLoading ? undefined : (q.data || []).filter(fn).length);
+  const cards = [
+    { id: 'vendas', label: 'Vendas esperando você', n: conta(orders, MY_TURN_ORDER), icon: Receipt },
+    { id: 'perguntas', label: 'Perguntas sem resposta', n: conta(qs, (q) => q.status === 'open'), icon: MessageCircleQuestion },
+    { id: 'ofertas', label: 'Ofertas para responder', n: conta(offers, (o) => o.status === 'pending' && !(Date.now() > Number(o.expires_at_ms))), icon: HandCoins },
+    { id: 'anuncios', label: 'Anúncios no ar', n: conta(listings, (l) => l.status === 'active'), icon: Package },
+  ];
+  const passos = [
+    { ok: Boolean(priv.data?.pix_key), carregando: priv.isLoading || priv.isError, label: 'Cadastrar a chave Pix para receber', aba: 'pix' },
+    { ok: Boolean(seller.logo_url && seller.bio), carregando: false, label: 'Colocar foto e descrição na vitrine', aba: 'vitrine' },
+    { ok: (listings.data || []).some((l) => l.status === 'active' || l.status === 'sold_out'), carregando: listings.isLoading || listings.isError, label: 'Publicar o primeiro anúncio', aba: 'anuncios' },
+  ];
+  const faltam = passos.filter((p) => !p.ok && !p.carregando);
+  const recebido = (orders.data || []).filter((o) => o.status === 'completed').reduce((n, o) => n + (o.total_cents || 0), 0);
+  return (
+    <div className="space-y-6">
+      {faltam.length > 0 && (
+        <V2Surface variant="compacto" className="space-y-3 border-acid/60 p-5">
+          <h2 className="font-display text-lg font-bold text-ink">Para começar a vender</h2>
+          <ul className="space-y-2">
+            {passos.map((p) => (
+              <li key={p.label} className="flex items-center gap-2 text-sm">
+                {p.ok ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : <span className="h-5 w-5 rounded-full border-2 border-gray-300" />}
+                {p.ok ? <span className="text-gray-500 line-through">{p.label}</span> : <button type="button" onClick={() => go(p.aba)} className="font-bold text-ink underline">{p.label}</button>}
+              </li>
+            ))}
+          </ul>
+          {!priv.data?.pix_key && !priv.isLoading && !priv.isError && <p className="text-xs text-gray-500">Sem a chave Pix você não consegue aceitar pedidos.</p>}
+        </V2Surface>
+      )}
+      <div className="grid gap-3 sm:grid-cols-4">
+        {cards.map((c) => (
+          <button key={c.id} type="button" onClick={() => go(c.id)} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 text-left hover:border-ink/40">
+            <c.icon className="h-5 w-5 text-gray-500" />
+            <p className="mt-2 font-display text-3xl font-bold text-ink">{c.n === undefined ? '…' : c.n === null ? '—' : c.n}</p>
+            <p className="text-sm text-gray-600">{c.label}</p>
+          </button>
+        ))}
+      </div>
+      {(orders.isError || offers.isError || qs.isError || listings.isError) && <p className="text-xs text-gray-500">Parte do resumo não carregou (—). Abra a aba para tentar de novo.</p>}
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
+        <span>Vendas concluídas: <strong className="text-ink">{seller.sales_count || 0}</strong></span>
+        {!orders.isError && !orders.isLoading && <span>Recebido em vendas concluídas: <strong className="text-ink">{formatBRL(recebido)}</strong></span>}
+        <Link to={`/mercado/vendedor/${sellerKey}`} className="font-bold text-ink underline">Ver minha vitrine</Link>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- anúncios -- */
+
+function QuickEdit({ listing, onClose }) {
+  const [preco, setPreco] = useState(formatBRL(listing.price_cents).replace(/^R\$\s?/, ''));
+  const [qtd, setQtd] = useState(String(listing.quantity ?? 0));
+  const m = useMarketMutation(({ l, p, q }) => quickEditListing(l, { price_cents: p, quantity: q }));
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent sheet className="max-w-sm">
+        <DialogTitle>Preço e estoque</DialogTitle>
+        <DialogDescription className="line-clamp-2">{listing.title}</DialogDescription>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            m.mutate({ l: listing, p: parseBRL(preco), q: Number(qtd) }, { onSuccess: () => { toast.success('Atualizado.'); onClose(); }, onError: (er) => toast.error(er.message) });
+          }}
+        >
+          <V2Field label="Preço (R$)" htmlFor="qe-preco"><V2Input id="qe-preco" inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} autoFocus /></V2Field>
+          <V2Field label="Quantidade" htmlFor="qe-qtd" hint="Com 0, o anúncio aparece como esgotado."><V2Input id="qe-qtd" type="number" min={0} max={9999} value={qtd} onChange={(e) => setQtd(e.target.value)} /></V2Field>
+          <div className="flex justify-end gap-2">
+            <V2Button type="button" variant="ghost" onClick={onClose}>Voltar</V2Button>
+            <V2Button type="submit" disabled={m.isPending}>Salvar</V2Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const FILTROS = [
+  { id: 'ativos', label: 'No ar', test: (l) => l.status === 'active' || l.status === 'sold_out' },
+  { id: 'rascunhos', label: 'Rascunhos', test: (l) => l.status === 'draft' },
+  { id: 'pausados', label: 'Pausados', test: (l) => l.status === 'paused' },
+  { id: 'encerrados', label: 'Encerrados', test: (l) => l.status === 'closed' || l.status === 'removed' },
+];
+
+function ListingsTab({ sellerKey }) {
+  const q = useSellerListings(sellerKey);
+  const [filtro, setFiltro] = useState('ativos');
+  const [editar, setEditar] = useState(null);
+  const status = useMarketMutation(({ l, s }) => setListingStatus(l, s));
+  const apagar = useMarketMutation(deleteListing);
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={5} />;
+  const todos = q.data || [];
+  const criar = <V2Button asChild><Link to={novoAnuncio(sellerKey)}><Plus className="h-4 w-4" /> Novo anúncio</Link></V2Button>;
+  if (!todos.length) {
+    return <V2EmptyState icon={Package} title="Nenhum anúncio ainda" description="Fotos boas, um título com marca e modelo e o preço certo: em poucos minutos o seu produto está no ar." action={criar} />;
+  }
+  const f = FILTROS.find((x) => x.id === filtro);
+  const lista = todos.filter(f.test);
+  const agir = (l, s, msg) => status.mutate({ l, s }, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {FILTROS.map((x) => <V2FilterChip key={x.id} active={filtro === x.id} onClick={() => setFiltro(x.id)}>{x.label} ({todos.filter(x.test).length})</V2FilterChip>)}
+        </div>
+        {criar}
+      </div>
+      {!lista.length ? <p className="py-10 text-center text-sm text-gray-500">Nada aqui.</p> : (
+        <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
+          {lista.map((l) => {
+            const capa = coverOf(l);
+            const pct = Math.round(listingCompleteness(l) * 100);
+            return (
+              <li key={l.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                <Link to={l.status === 'active' || l.status === 'sold_out' ? `/mercado/anuncio/${l.id}` : `/mercado/vender/anuncio/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <img src={capa.thumb_url || capa.url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-bold text-ink">{l.title || 'Sem título'}</span>
+                    <span className="block text-sm text-gray-600">{formatBRL(l.price_cents)} · {l.quantity ?? 0} em estoque{l.quantity_sold ? ` · ${l.quantity_sold} vendidos` : ''}</span>
+                    <span className="block text-xs text-gray-500">{l.favorite_count ? `${l.favorite_count} favoritos · ` : ''}{pct}% completo</span>
+                  </span>
+                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  <V2Badge tone={l.status === 'active' ? 'green' : l.status === 'removed' ? 'red' : 'neutral'}>{LISTING_STATUS_LABELS[l.status] || l.status}</V2Badge>
+                  {l.status === 'removed' && l.moderation?.reason && <span className="text-xs text-red-600">{l.moderation.reason}</span>}
+                  {l.status !== 'removed' && (
+                    <>
+                      <V2Button asChild size="sm" variant="ghost"><Link to={`/mercado/vender/anuncio/${l.id}`}><Pencil className="h-4 w-4" /> Editar</Link></V2Button>
+                      {['active', 'sold_out', 'paused'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditar(l)}>Preço e estoque</V2Button>}
+                      {['active', 'sold_out'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => agir(l, 'paused', 'Anúncio pausado.')}>Pausar</V2Button>}
+                      {l.status === 'paused' && <V2Button type="button" size="sm" variant="secondary" onClick={() => agir(l, 'active', 'Anúncio de volta ao ar.')}>Retomar</V2Button>}
+                      {['active', 'sold_out', 'paused'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => agir(l, 'closed', 'Anúncio encerrado.')}>Encerrar</V2Button>}
+                      {!(l.quantity_sold > 0) && ['draft', 'paused', 'closed'].includes(l.status) && (
+                        <V2Button type="button" size="sm" variant="danger" onClick={() => { if (window.confirm('Apagar este anúncio? Não dá para desfazer.')) apagar.mutate(l, { onSuccess: () => toast.success('Anúncio apagado.'), onError: (e) => toast.error(e.message) }); }}>Apagar</V2Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {editar && <QuickEdit listing={editar} onClose={() => setEditar(null)} />}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------- vendas -- */
+
+function SalesTab({ sellerKey }) {
+  const q = useSellerOrders(sellerKey);
+  const [fim, setFim] = useState(false);
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={4} />;
+  const todos = q.data || [];
+  if (!todos.length) return <V2EmptyState icon={Receipt} title="Nenhuma venda ainda" description="Quando alguém comprar, o pedido aparece aqui e você recebe um aviso." />;
+  const lista = todos.filter((o) => (fim ? !ACTIVE_ORDER(o) : ACTIVE_ORDER(o)))
+    .sort((a, b) => (MY_TURN_ORDER(b) - MY_TURN_ORDER(a)) || (b.placed_at_ms || 0) - (a.placed_at_ms || 0));
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <V2FilterChip active={!fim} onClick={() => setFim(false)}>Em andamento ({todos.filter(ACTIVE_ORDER).length})</V2FilterChip>
+        <V2FilterChip active={fim} onClick={() => setFim(true)}>Encerradas</V2FilterChip>
+      </div>
+      {!lista.length ? <p className="py-10 text-center text-sm text-gray-500">Nada aqui.</p> : (
+        <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
+          {lista.map((o) => (
+            <li key={o.id}>
+              <Link to={`/mercado/vendas/${o.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-paper">
+                <span className="min-w-0">
+                  <span className="block truncate font-bold text-ink">{(o.items || [])[0]?.title}{(o.items || []).length > 1 ? ` e mais ${o.items.length - 1}` : ''}</span>
+                  <span className="block text-xs text-gray-500">{o.buyer_name} · {o.code}</span>
+                  {ACTIVE_ORDER(o) && <span className={cn('mt-1 block text-sm', MY_TURN_ORDER(o) ? 'font-bold text-ink' : 'text-gray-600')}>{orderWaitingOn(o, 'seller')}</span>}
+                </span>
+                <span className="shrink-0 space-y-1 text-right">
+                  <V2Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABELS[o.status] || o.status}</V2Badge>
+                  <span className="block font-bold text-ink">{formatBRL(o.total_cents)}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- ofertas -- */
+
+function OffersTab({ sellerKey }) {
+  const q = useSellerOffers(sellerKey);
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={4} />;
+  const lista = [...(q.data || [])].sort((a, b) => (b.status === 'pending') - (a.status === 'pending'));
+  if (!lista.length) return <V2EmptyState icon={HandCoins} title="Nenhuma oferta" description="Nos anúncios que aceitam oferta, o comprador propõe um valor e você responde aqui." />;
+  return (
+    <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
+      {lista.map((o) => (
+        <li key={o.id}>
+          <Link to={`/mercado/ofertas/${o.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-paper">
+            <span className="min-w-0">
+              <span className="block truncate font-bold text-ink">{o.listing_title}</span>
+              <span className="block text-xs text-gray-500">{o.buyer_name || 'Comprador'} · anunciado por {formatBRL(o.list_price_cents)}</span>
+            </span>
+            <span className="shrink-0 space-y-1 text-right">
+              <V2Badge tone={o.status === 'pending' ? 'amber' : o.status === 'ordered' ? 'green' : 'neutral'}>{o.status === 'pending' ? 'Responder' : OFFER_STATUS_LABELS[o.status] || o.status}</V2Badge>
+              <span className="block font-bold text-ink">{formatBRL(o.amount_cents)}</span>
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ------------------------------------------------------------ perguntas -- */
+
+function AnswerForm({ question }) {
+  const { user } = useAuth();
+  const [texto, setTexto] = useState('');
+  const [erro, setErro] = useState('');
+  const m = useMarketMutation(({ q, t }) => answerQuestion(q, { uid: user.uid, text: t }));
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const r = validateAnswer(texto);
+        if (r.error) { setErro(r.error); return; }
+        m.mutate({ q: question, t: texto }, { onSuccess: () => toast.success('Resposta publicada.'), onError: (er) => setErro(er.message) });
+      }}
+    >
+      <label htmlFor={`resp-${question.id}`} className="sr-only">Sua resposta</label>
+      <V2Textarea id={`resp-${question.id}`} rows={2} maxLength={1000} value={texto} onChange={(e) => { setTexto(e.target.value); setErro(''); }} placeholder="Responda para todos verem no anúncio" />
+      {erro && <p role="alert" className="text-sm font-medium text-red-500">{erro}</p>}
+      <V2Button type="submit" size="sm" disabled={m.isPending || !texto.trim()}>Responder</V2Button>
+    </form>
+  );
+}
+
+function QuestionsTab({ sellerKey }) {
+  const q = useSellerQuestions(sellerKey);
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={4} />;
+  const lista = q.data || [];
+  if (!lista.length) return <V2EmptyState icon={MessageCircleQuestion} title="Nenhuma pergunta" description="As perguntas dos compradores sobre os seus anúncios aparecem aqui. Responder rápido ajuda a vender." />;
+  return (
+    <ul className="space-y-3">
+      {lista.map((x) => (
+        <li key={x.id}>
+          <V2Surface variant="compacto" className="space-y-2 p-4">
+            <Link to={`/mercado/anuncio/${x.listing_id}?ancora=perguntas`} className="text-xs font-bold text-gray-500 hover:underline">{x.listing_title}</Link>
+            <p className="text-sm text-ink"><strong>{x.asker_name}:</strong> {x.text}</p>
+            {x.status === 'answered' ? <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">{x.answer}</p> : <AnswerForm question={x} />}
+          </V2Surface>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ------------------------------------------------------------------ pix -- */
+
+function PixTab({ sellerKey }) {
+  const q = useSellerPrivate(sellerKey);
+  const [form, setForm] = useState(null);
+  const [erros, setErros] = useState({});
+  const m = useMarketMutation(({ k, v }) => savePayment(k, v));
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={4} />;
+  const f = form || { pix_key_type: q.data?.pix_key_type || 'cpf', pix_key: q.data?.pix_key || '', receiver_name: q.data?.receiver_name || '', instructions: q.data?.instructions || '' };
+  const set = (patch) => { setForm({ ...f, ...patch }); setErros({}); };
+  return (
+    <V2Surface className="max-w-xl space-y-4">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">Como você recebe</h2>
+        <p className="text-sm text-gray-500">O comprador só vê a chave depois que você aceita o pedido, e o Pix cai direto na sua conta. O PickleRush não cobra comissão.</p>
+      </div>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          m.mutate({ k: sellerKey, v: f }, { onSuccess: () => { toast.success('Chave Pix salva.'); setForm(null); }, onError: (er) => setErros(er.fieldErrors || {}) });
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+          <V2Field label="Tipo da chave" htmlFor="pix-tipo">
+            <V2Select id="pix-tipo" value={f.pix_key_type} onChange={(e) => set({ pix_key_type: e.target.value })}>
+              {Object.entries(PIX_KEY_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </V2Select>
+          </V2Field>
+          <V2Field label="Chave Pix" htmlFor="pix-chave" error={erros.pix_key}><V2Input id="pix-chave" value={f.pix_key} onChange={(e) => set({ pix_key: e.target.value })} /></V2Field>
+        </div>
+        <V2Field label="Nome de quem recebe" htmlFor="pix-nome" error={erros.receiver_name} hint="Como aparece no app do banco. O comprador confere antes de pagar.">
+          <V2Input id="pix-nome" maxLength={80} value={f.receiver_name} onChange={(e) => set({ receiver_name: e.target.value })} />
+        </V2Field>
+        <V2Field label="Instruções (opcional)" htmlFor="pix-inst" hint="Ex.: mande o comprovante pela conversa.">
+          <V2Textarea id="pix-inst" rows={2} maxLength={300} value={f.instructions} onChange={(e) => set({ instructions: e.target.value })} />
+        </V2Field>
+        <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : 'Salvar'}</V2Button>
+      </form>
+    </V2Surface>
+  );
+}
+
+/* -------------------------------------------------------------- vitrine -- */
+
+function ImagePick({ label, url, onPick, wide }) {
+  const { user } = useAuth();
+  const [pct, setPct] = useState(0);
+  const id = `img-${label}`;
+  const escolher = async (file) => {
+    if (!file) return;
+    const prep = await prepareMarketFile(file, { allowVideo: false });
+    if (!prep.ok || prep.type !== 'image') { toast.error(prep.error || 'Escolha uma foto.'); return; }
+    try {
+      const r = await uploadMarketFile(prep.file, { uid: user.uid, kind: 'image', folder: 'vitrine', onProgress: setPct }).done;
+      onPick(r.url);
+    } catch (e) { toast.error(e.message); } finally { setPct(0); }
+  };
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <label htmlFor={id} className={cn('relative flex cursor-pointer items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 bg-paper text-gray-500 hover:border-ink', wide ? 'h-28 rounded-2xl' : 'h-24 w-24 rounded-full')}>
+        {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : <ImagePlus className="h-6 w-6" />}
+        {pct > 0 && <span className="absolute inset-0 flex items-center justify-center bg-paper-pure/80 text-xs font-bold text-ink">{pct}%</span>}
+      </label>
+      <input id={id} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { escolher(e.target.files?.[0]); e.target.value = ''; }} />
+    </div>
+  );
+}
+
+function StorefrontTab({ sellerKey, seller }) {
+  const [f, setF] = useState({ display_name: seller.display_name || '', bio: seller.bio || '', city: seller.city || '', state: seller.state || '', website: seller.website || '', logo_url: seller.logo_url || '', banner_url: seller.banner_url || '' });
+  const m = useMarketMutation(({ k, v }) => updateSellerProfile(k, v));
+  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  return (
+    <V2Surface className="max-w-2xl space-y-5">
+      <div className="flex items-center gap-3">
+        <V2Avatar name={f.display_name} photoUrl={f.logo_url} size="lg" />
+        <div>
+          <h2 className="font-display text-lg font-bold text-ink">A sua vitrine</h2>
+          <Link to={`/mercado/vendedor/${sellerKey}`} className="text-sm font-bold text-ink underline">Ver como o comprador vê</Link>
+        </div>
+      </div>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (f.website && !/^https:\/\//.test(f.website.trim())) { toast.error('O site precisa começar com https://'); return; }
+          m.mutate({ k: sellerKey, v: f }, { onSuccess: () => toast.success('Vitrine atualizada.'), onError: (er) => toast.error(er.message) });
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-[7rem_1fr]">
+          <ImagePick label="Logo" url={f.logo_url} onPick={(u) => set({ logo_url: u })} />
+          <ImagePick label="Capa" url={f.banner_url} wide onPick={(u) => set({ banner_url: u })} />
+        </div>
+        <V2Field label="Nome" htmlFor="v-nome"><V2Input id="v-nome" maxLength={60} value={f.display_name} onChange={(e) => set({ display_name: e.target.value })} /></V2Field>
+        <V2Field label="Sobre" htmlFor="v-bio" hint="Quem você é, o que vende, como entrega. Até 600 caracteres.">
+          <V2Textarea id="v-bio" rows={4} maxLength={600} value={f.bio} onChange={(e) => set({ bio: e.target.value })} />
+        </V2Field>
+        <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
+          <V2Field label="Cidade" htmlFor="v-cidade"><V2Input id="v-cidade" maxLength={60} value={f.city} onChange={(e) => set({ city: e.target.value })} /></V2Field>
+          <V2Field label="UF" htmlFor="v-uf">
+            <V2Select id="v-uf" value={f.state} onChange={(e) => set({ state: e.target.value })}>
+              <option value="">—</option>
+              {BR_UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+            </V2Select>
+          </V2Field>
+        </div>
+        <V2Field label="Site (opcional)" htmlFor="v-site"><V2Input id="v-site" type="url" placeholder="https://" value={f.website} onChange={(e) => set({ website: e.target.value })} /></V2Field>
+        <V2Button type="submit" disabled={m.isPending}>{m.isPending ? 'Salvando…' : 'Salvar vitrine'}</V2Button>
+      </form>
+    </V2Surface>
+  );
+}
+
+/* --------------------------------------------------------------- página -- */
+
+function SellPage() {
+  const { user, userProfile } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const coach = useCoach(user?.uid);
+  const { arenas = [] } = useMyArenaSummary();
+  const storeKey = user ? sellerKeyFor('store', user.uid) : '';
+  const store = useSeller(storeKey);
+  const nome = userProfile?.platform_name || userProfile?.full_name || user?.displayName || '';
+  const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data }), [user?.uid, nome, coach.data, arenas, store.data]);
+  const como = ids.find((i) => i.key === params.get('como')) || ids[0];
+  const aba = ABAS.some((a) => a.value === params.get('aba')) ? params.get('aba') : 'resumo';
+  const sq = useSeller(como?.key);
+  const ir = (patch) => setParams((p) => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; }, { replace: true });
+
+  const arenaDe = como?.type === 'arena' ? arenas.find((a) => a.id === como.entity_id) : null;
+  const defaults = { name: arenaDe?.name || nome, city: arenaDe?.city || userProfile?.city || '', state: arenaDe?.state || userProfile?.state || '', photo: arenaDe?.logo_url || userProfile?.photo_url || '' };
+  let corpo;
+  if (!como) corpo = <V2Skeleton className="h-64" />;
+  else if (sq.isError) corpo = <V2ErrorState onRetry={() => sq.refetch()} />;
+  else if (sq.isLoading) corpo = <V2Skeleton className="h-64" />;
+  else if (!sq.data) corpo = <StartSelling identity={como} defaults={defaults} />;
+  else if (sq.data.status !== 'active') {
+    corpo = (
+      <V2Surface className="flex items-start gap-3">
+        <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+        <div>
+          <p className="font-bold text-ink">{sq.data.status === 'pending' ? 'Cadastro em análise' : 'Vendas suspensas'}</p>
+          <p className="text-sm text-gray-600">{sq.data.reject_reason || (sq.data.status === 'pending' ? 'A equipe do PickleRush avisa assim que analisar.' : 'Fale com o suporte para entender o motivo.')}</p>
+        </div>
+      </V2Surface>
+    );
+  } else {
+    const props = { sellerKey: como.key, seller: sq.data };
+    corpo = (
+      <div className="space-y-5">
+        <V2SubTabs ariaLabel="Painel de vendas" tabs={ABAS} activeValue={aba} onSelect={(t) => ir({ aba: t.value === 'resumo' ? '' : t.value })} />
+        {aba === 'resumo' && <Summary {...props} go={(a) => ir({ aba: a })} />}
+        {aba === 'anuncios' && <ListingsTab {...props} />}
+        {aba === 'vendas' && <SalesTab {...props} />}
+        {aba === 'ofertas' && <OffersTab {...props} />}
+        {aba === 'perguntas' && <QuestionsTab {...props} />}
+        {aba === 'pix' && <PixTab {...props} />}
+        {aba === 'vitrine' && <StorefrontTab key={como.key} {...props} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 pb-16">
+      <MarketHeader />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <V2PageIntro title="Vender no Mercado" subtitle="Anúncios, vendas e o Pix, num lugar só." />
+        {ids.length > 1 && (
+          <V2Field label="Vendendo como" htmlFor="vendendo-como" className="w-full sm:w-72">
+            <V2Select id="vendendo-como" value={como?.key || ''} onChange={(e) => ir({ como: e.target.value, aba: '' })}>
+              {ids.map((i) => <option key={i.key} value={i.key}>{i.label}</option>)}
+            </V2Select>
+          </V2Field>
+        )}
+      </div>
+      {corpo}
+    </div>
+  );
+}
+
+export default function V2MarketSell() {
+  return <MarketGate><SellPage /></MarketGate>;
+}
