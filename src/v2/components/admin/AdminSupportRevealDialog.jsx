@@ -14,6 +14,7 @@ import { useSupportReveal } from '@/modules/admin/hooks/usePlatformUsers';
 import {
   REVEAL_REASON_META, REVEAL_TEXT_MIN, SENSITIVE_FIELDS, validateRevealRequest,
 } from '@/modules/admin/domain/supportAccess';
+import { t } from '@/core/i18n';
 
 /** @param {{ user: object, onRevealed: (values: object) => void, onClose: Function }} props */
 export default function AdminSupportRevealDialog({ user, onRevealed, onClose }) {
@@ -30,7 +31,7 @@ export default function AdminSupportRevealDialog({ user, onRevealed, onClose }) 
       onRevealed(r.values || {});
       onClose();
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível revelar.');
+      toast.error(e?.message || t('Não foi possível revelar.'));
     }
   };
 
@@ -38,32 +39,32 @@ export default function AdminSupportRevealDialog({ user, onRevealed, onClose }) 
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5" /> Revelar dados de contato</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5" /> {t('Revelar dados de contato')}</DialogTitle>
           <DialogDescription>
-            E-mail, telefone, nascimento e endereço de {user.platform_name || user.full_name || 'esta conta'}.
-            O acesso fica registrado internamente (quem, quando, por quê).
+            {t('E-mail, telefone, nascimento e endereço de {nome}.', { nome: user.platform_name || user.full_name || t('esta conta') })}{' '}
+            {t('O acesso fica registrado internamente (quem, quando, por quê).')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <V2Field label="Categoria do motivo" htmlFor="reveal-cat" required>
+          <V2Field label={t('Categoria do motivo')} htmlFor="reveal-cat" required>
             <V2Select id="reveal-cat" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-              <option value="">Escolha…</option>
-              {Object.entries(REVEAL_REASON_META).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              <option value="">{t('Escolha…')}</option>
+              {Object.entries(REVEAL_REASON_META).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
             </V2Select>
           </V2Field>
-          <V2Field label="Motivo" htmlFor="reveal-texto" required error={texto && errors.reason_text}
-            hint={`Mínimo ${REVEAL_TEXT_MIN} caracteres. A pessoa lê este texto no aviso.`}>
+          <V2Field label={t('Motivo')} htmlFor="reveal-texto" required error={texto && errors.reason_text}
+            hint={t('Mínimo {min} caracteres. A pessoa lê este texto no aviso.', { min: REVEAL_TEXT_MIN })}>
             <V2Textarea id="reveal-texto" rows={3} maxLength={500} value={texto} onChange={(e) => setTexto(e.target.value)}
-              placeholder="Ex.: a pessoa pediu por WhatsApp para conferir o telefone do cadastro" />
+              placeholder={t('Ex.: a pessoa pediu por WhatsApp para conferir o telefone do cadastro')} />
           </V2Field>
-          <V2Field label="Referência (opcional)" htmlFor="reveal-ticket" hint="E-mail, print ou protocolo do pedido.">
+          <V2Field label={t('Referência (opcional)')} htmlFor="reveal-ticket" hint={t('E-mail, print ou protocolo do pedido.')}>
             <V2Input id="reveal-ticket" maxLength={120} value={ticket} onChange={(e) => setTicket(e.target.value)} />
           </V2Field>
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button disabled={!isValid || revelar.isPending} onClick={confirmar}>
-            {revelar.isPending ? 'Registrando…' : 'Registrar e revelar'}
+            {revelar.isPending ? t('Registrando…') : t('Registrar e revelar')}
           </V2Button>
         </DialogFooter>
       </DialogContent>

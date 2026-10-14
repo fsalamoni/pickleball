@@ -28,6 +28,7 @@ import {
 import { PLATFORM_OWNER_EMAILS } from '@/core/config/owners';
 import { accountStatusOf, accountStatusActions, STATUS_ACTION_META } from '@/modules/admin/domain/accountStatus';
 import { SENSITIVE_FIELDS, maskValue } from '@/modules/admin/domain/supportAccess';
+import { t, tk, tn, fmtData } from '@/core/i18n';
 
 // O diálogo de exclusão só baixa quando alguém vai excluir.
 const AdminAccountDeletionDialog = lazy(() => import('./AdminAccountDeletionDialog'));
@@ -38,9 +39,9 @@ const AdminAccountStatusDialog = lazy(() => import('./AdminAccountStatusDialog')
 const AdminSupportRevealDialog = lazy(() => import('./AdminSupportRevealDialog'));
 
 const GRUPOS = [
-  { id: 'identidade', label: 'Identidade' },
-  { id: 'local', label: 'Localização' },
-  { id: 'jogo', label: 'Jogo' },
+  { id: 'identidade', label: tk('Identidade') },
+  { id: 'local', label: tk('Localização') },
+  { id: 'jogo', label: tk('Jogo') },
 ];
 
 /**
@@ -137,8 +138,8 @@ export default function AdminUserRecordsTab() {
     return (
       <V2Surface>
         <V2ErrorState
-          title="Não foi possível carregar os cadastros"
-          description="Os cadastros continuam lá — só não conseguimos listá-los agora."
+          title={t('Não foi possível carregar os cadastros')}
+          description={t('Os cadastros continuam lá — só não conseguimos listá-los agora.')}
           onRetry={() => refetch()}
         />
       </V2Surface>
@@ -150,17 +151,13 @@ export default function AdminUserRecordsTab() {
       <V2Surface>
         <div className="flex items-center gap-2">
           <UserCog className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Cadastros dos usuários</h2>
+          <h2 className="font-display text-lg font-bold text-ink">{t('Cadastros dos usuários')}</h2>
         </div>
         <p className="mt-1 text-xs leading-5 text-gray-500">
-          Corrija erros e preencha o que falta no cadastro de qualquer usuário. Toda alteração
-          exige um motivo e fica registrada na Auditoria, com o antes e o depois de cada campo.
+          {t('Corrija erros e preencha o que falta no cadastro de qualquer usuário. Toda alteração exige um motivo e fica registrada na Auditoria, com o antes e o depois de cada campo.')}
         </p>
         <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-2xs leading-5 text-gray-600">
-          <strong className="text-ink">O que esta tela NÃO faz, de propósito:</strong> não mexe em
-          poder (<code>role</code>), não altera as preferências de privacidade do titular
-          (quem vê o e-mail, o telefone, o endereço) e não troca o e-mail de login — esse mora
-          no Firebase Authentication.
+          <strong className="text-ink">{t('O que esta tela NÃO faz, de propósito:')}</strong> {t('não mexe em poder (')}<code>role</code>{t('), não altera as preferências de privacidade do titular (quem vê o e-mail, o telefone, o endereço) e não troca o e-mail de login — esse mora no Firebase Authentication.')}
         </p>
       </V2Surface>
 
@@ -172,73 +169,68 @@ export default function AdminUserRecordsTab() {
               className="pl-9"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por nome, e-mail, cidade ou uid…"
+              placeholder={t('Buscar por nome, e-mail, cidade ou uid…')}
             />
           </div>
           <V2FilterChip active={filtro === 'todos'} onClick={() => setFiltro('todos')}>
-            Todos ({totais.total})
+            {t('Todos ({total})', { total: totais.total })}
           </V2FilterChip>
           <V2FilterChip active={filtro === 'pendentes'} onClick={() => setFiltro('pendentes')}>
-            Falta obrigatório ({totais.pendentes})
+            {t('Falta obrigatório ({pendentes})', { pendentes: totais.pendentes })}
           </V2FilterChip>
           <V2FilterChip active={filtro === 'incompletos'} onClick={() => setFiltro('incompletos')}>
-            Algo a preencher ({totais.incompletos})
+            {t('Algo a preencher ({incompletos})', { incompletos: totais.incompletos })}
           </V2FilterChip>
           <V2FilterChip active={filtro === 'teste'} onClick={() => setFiltro('teste')}>
             <FlaskConical className="mr-1 inline h-3.5 w-3.5" />
-            Parecem de teste ({totais.teste})
+            {t('Parecem de teste ({teste})', { teste: totais.teste })}
           </V2FilterChip>
           <V2FilterChip active={filtro === 'fechadas'} onClick={() => setFiltro('fechadas')}>
             <Ban className="mr-1 inline h-3.5 w-3.5" />
-            Suspensas e bloqueadas ({totais.fechadas})
+            {t('Suspensas e bloqueadas ({fechadas})', { fechadas: totais.fechadas })}
           </V2FilterChip>
         </div>
 
         {filtro === 'fechadas' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
-            Suspensa tem prazo; bloqueada não. <strong>Nada reativa sozinho</strong>: quando a suspensão vence,
-            a conta aparece aqui como vencida{totais.vencidas > 0 ? ` (${totais.vencidas} agora)` : ''} e o admin
-            decide se reativa. Reativar devolve o acesso como era; nada foi apagado.
+            {t('Suspensa tem prazo; bloqueada não.')} <strong>{t('Nada reativa sozinho')}</strong>{t(': quando a suspensão vence, a conta aparece aqui como vencida')}{totais.vencidas > 0 ? ` (${t('{n} agora', { n: totais.vencidas })})` : ''} {t('e o admin decide se reativa. Reativar devolve o acesso como era; nada foi apagado.')}
           </p>
         )}
 
         {filtro === 'teste' && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-2xs leading-5 text-amber-900">
-            A suspeita vem de sinais simples — conta oculta na moderação, e-mail de domínio de
-            exemplo, nome ou e-mail com &ldquo;teste&rdquo;, &ldquo;mock&rdquo;, &ldquo;demo&rdquo;. Cada linha
-            mostra o que levantou a suspeita. <strong>Confira antes de excluir</strong>: é sugestão,
-            não certeza.
+            {t('A suspeita vem de sinais simples — conta oculta na moderação, e-mail de domínio de exemplo, nome ou e-mail com “teste”, “mock”, “demo”. Cada linha mostra o que levantou a suspeita.')} <strong>{t('Confira antes de excluir')}</strong>{t(': é sugestão, não certeza.')}
           </p>
         )}
 
         {selecionados.size > 0 ? (
           <div className="sticky top-2 z-10 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
             <span className="text-sm font-semibold text-red-900">
-              {selecionados.size} selecionado{selecionados.size > 1 ? 's' : ''}
-              {selecionados.size >= DELETION_BATCH_MAX && ` (limite de ${DELETION_BATCH_MAX} por vez)`}
+              {tn(selecionados.size, '{n} selecionado', '{n} selecionados')}
+              {selecionados.size >= DELETION_BATCH_MAX && ` (${t('limite de {max} por vez', { max: DELETION_BATCH_MAX })})`}
             </span>
             <div className="flex gap-2">
-              <V2Button size="sm" variant="ghost" onClick={() => setSelecionados(new Set())}>Limpar</V2Button>
+              <V2Button size="sm" variant="ghost" onClick={() => setSelecionados(new Set())}>{t('Limpar')}</V2Button>
               <V2Button
                 size="sm"
                 className="bg-red-600 text-white hover:bg-red-700"
                 onClick={() => abrirExclusao(comStatus.filter((u) => selecionados.has(u.uid)))}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Excluir selecionados
+                <Trash2 className="h-3.5 w-3.5" /> {t('Excluir selecionados')}
               </V2Button>
             </div>
           </div>
         ) : listados.some((u) => u._bloqueio.ok) && (
           <div className="mt-3 text-right">
             <button type="button" className="text-2xs font-semibold text-gray-500 underline hover:text-ink" onClick={selecionarVisiveis}>
-              Selecionar os que aparecem (até {DELETION_BATCH_MAX})
+              {t('Selecionar os que aparecem (até {max})', { max: DELETION_BATCH_MAX })}
             </button>
           </div>
         )}
 
         <div className="mt-4 space-y-2">
           {listados.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">Nenhum cadastro encontrado.</p>
+            <p className="py-6 text-center text-sm text-gray-400">{t('Nenhum cadastro encontrado.')}</p>
           ) : listados.slice(0, 100).map((u) => (
             <UserRow
               key={u.uid}
@@ -252,7 +244,7 @@ export default function AdminUserRecordsTab() {
           ))}
           {listados.length > 100 && (
             <p className="pt-2 text-center text-2xs text-gray-500">
-              Mostrando 100 de {listados.length}. Refine a busca.
+              {t('Mostrando 100 de {length}. Refine a busca.', { length: listados.length })}
             </p>
           )}
         </div>
@@ -288,7 +280,7 @@ export default function AdminUserRecordsTab() {
 /* --------------------------------------------------------------------------- */
 
 const formatarData = (ms) => (ms
-  ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(new Date(ms))
+  ? fmtData(ms, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' })
   : '');
 
 /**
@@ -311,13 +303,10 @@ function DeletedAccountsPanel({ users, enabled }) {
     <V2Surface>
       <div className="flex items-center gap-2">
         <GitMerge className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Contas excluídas</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Contas excluídas')}</h2>
       </div>
       <p className="mt-1 text-xs leading-5 text-gray-500">
-        A exclusão apaga a identidade, mas os jogos ficam no histórico como &ldquo;Atleta removido&rdquo; —
-        eles também são dos adversários. Se a conta excluída era o <strong>segundo cadastro</strong> de
-        alguém que continua aqui, <strong>Unificar</strong> devolve jogos, inscrições e resultados à conta
-        que ficou, e o ranking se refaz sozinho.
+        {t('A exclusão apaga a identidade, mas os jogos ficam no histórico como “Atleta removido” — eles também são dos adversários.')} {t('Se')} a conta excluída era o <strong>{t('segundo cadastro')}</strong> {t('de alguém que continua aqui,')} <strong>{t('Unificar')}</strong> {t('devolve jogos, inscrições e resultados à conta que ficou, e o ranking se refaz sozinho.')}
       </p>
       <div className="mt-3 space-y-2">
         {isLoading ? (
@@ -325,25 +314,25 @@ function DeletedAccountsPanel({ users, enabled }) {
         ) : isError ? (
           <V2ErrorState
             inline
-            title="A Auditoria não carregou"
-            description="Sem ela não dá para saber quem foi excluído."
+            title={t('A Auditoria não carregou')}
+            description={t('Sem ela não dá para saber quem foi excluído.')}
             onRetry={() => refetch()}
           />
         ) : excluidas.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">Nenhum cadastro foi excluído pelo painel.</p>
+          <p className="py-4 text-center text-sm text-gray-400">{t('Nenhum cadastro foi excluído pelo painel.')}</p>
         ) : excluidas.map((c) => (
           <div key={c.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">{c.name}</p>
               <p className="truncate text-2xs text-gray-500">
-                {[c.email, c.deletedAtMs ? `excluída em ${formatarData(c.deletedAtMs)}` : null].filter(Boolean).join(' · ')}
+                {[c.email, c.deletedAtMs ? t('excluída em {data}', { data: formatarData(c.deletedAtMs) }) : null].filter(Boolean).join(' · ')}
               </p>
             </div>
             {c.mergedInto ? (
-              <V2Badge tone="green">Unificada em {nomePorUid.get(c.mergedInto) || 'outra conta'}</V2Badge>
+              <V2Badge tone="green">{t('Unificada em')} {nomePorUid.get(c.mergedInto) || t('outra conta')}</V2Badge>
             ) : (
               <V2Button size="sm" variant="subtle" onClick={() => setAlvo(c)}>
-                <GitMerge className="h-3.5 w-3.5" /> Unificar com outra conta
+                <GitMerge className="h-3.5 w-3.5" /> {t('Unificar com outra conta')}
               </V2Button>
             )}
           </div>
@@ -374,13 +363,13 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
         checked={selected}
         disabled={!bloqueio.ok}
         onChange={onToggle}
-        aria-label={`Selecionar ${u.platform_name || u.full_name || u.uid} para excluir`}
-        title={bloqueio.ok ? 'Selecionar para excluir' : bloqueio.reason}
+        aria-label={t('Selecionar {valor} para excluir', { valor: u.platform_name || u.full_name || u.uid })}
+        title={bloqueio.ok ? t('Selecionar para excluir') : bloqueio.reason}
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="font-semibold text-ink">
-            {u.platform_name || u.full_name || '(sem nome)'}
+            {u.platform_name || u.full_name || t('(sem nome)')}
           </span>
           {conta.status !== 'active' && (
             <V2Badge tone={conta.tone}>
@@ -389,22 +378,22 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
           )}
           {s.complete ? (
             <V2Badge tone="green">
-              <CheckCircle2 className="h-3 w-3" /> completo
+              <CheckCircle2 className="h-3 w-3" /> {t('completo')}
             </V2Badge>
           ) : (
             <V2Badge tone="amber">
-              <AlertCircle className="h-3 w-3" /> falta {s.missingRequired.length} obrigatório(s)
+              <AlertCircle className="h-3 w-3" /> {tn(s.missingRequired.length, 'falta {n} obrigatório', 'faltam {n} obrigatórios')}
             </V2Badge>
           )}
         </div>
         {/* Mascarado: o e-mail inteiro só com registro de leitura (ficha → Revelar). */}
-        <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || '(sem e-mail)'}</div>
+        <div className="mt-0.5 truncate text-xs text-gray-500">{maskValue('email', u.email) || t('(sem e-mail)')}</div>
         {conta.status !== 'active' && conta.reason && (
-          <div className="mt-1 text-2xs text-gray-500">Motivo: {conta.reason}</div>
+          <div className="mt-1 text-2xs text-gray-500">{t('Motivo: {reason}', { reason: conta.reason })}</div>
         )}
         {s.missingCount > 0 && (
           <div className="mt-1 text-2xs text-gray-500">
-            Falta preencher: {s.missing.map((f) => f.label).join(', ')}
+            {t('Falta preencher:')} {s.missing.map((f) => f.label).join(', ')}
           </div>
         )}
         <div className="mt-1 text-2xs text-gray-500">
@@ -422,7 +411,7 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
       </div>
       <div className="flex flex-wrap gap-2">
         <V2Button size="sm" variant="secondary" onClick={onEdit}>
-          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar cadastro
+          <Pencil className="mr-1 h-3.5 w-3.5" /> {t('Editar cadastro')}
         </V2Button>
         {u._acoes.actions.map((a) => {
           const I = ICONE_ACAO[a];
@@ -434,11 +423,11 @@ function UserRow({ user: u, onEdit, selected, onToggle, onDelete, onStatus }) {
           );
         })}
         {bloqueio.ok ? (
-          <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={`Excluir ${u.platform_name || u.full_name || u.uid}`}>
-            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={t('Excluir {valor}', { valor: u.platform_name || u.full_name || u.uid })}>
+            <Trash2 className="h-3.5 w-3.5" /> {t('Excluir')}
           </V2Button>
         ) : (
-          <span className="self-center text-2xs text-gray-500" title={bloqueio.reason}>não excluível</span>
+          <span className="self-center text-2xs text-gray-500" title={bloqueio.reason}>{t('não excluível')}</span>
         )}
       </div>
     </div>
@@ -469,10 +458,10 @@ function RecordEditDialog({ user, onClose }) {
   const handleSave = async () => {
     try {
       const r = await salvar.mutateAsync({ uid: user.uid, patch, reason: motivo });
-      toast.success(`${r.changes.length} campo(s) corrigido(s).`);
+      toast.success(tn(r.changes.length, '{n} campo corrigido.', '{n} campos corrigidos.'));
       onClose();
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível salvar.');
+      toast.error(e?.message || t('Não foi possível salvar.'));
     }
   };
 
@@ -480,18 +469,18 @@ function RecordEditDialog({ user, onClose }) {
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{user.platform_name || user.full_name || 'Cadastro'}</DialogTitle>
+          <DialogTitle>{user.platform_name || user.full_name || t('Cadastro')}</DialogTitle>
           <DialogDescription>
-            {(revelado ? revelado.email : maskValue('email', user.email)) || '(sem e-mail)'} · <span className="font-mono text-2xs">{user.uid}</span>
+            {(revelado ? revelado.email : maskValue('email', user.email)) || t('(sem e-mail)')} · <span className="font-mono text-2xs">{user.uid}</span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {!revelado && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-paper p-3 text-xs text-gray-600">
-              <span>E-mail, telefone, nascimento e endereço estão mascarados. Revelar registra o acesso internamente.</span>
+              <span>{t('E-mail, telefone, nascimento e endereço estão mascarados. Revelar registra o acesso internamente.')}</span>
               <V2Button size="sm" variant="secondary" onClick={() => setRevelando(true)}>
-                <Eye className="h-3.5 w-3.5" /> Revelar dados de contato
+                <Eye className="h-3.5 w-3.5" /> {t('Revelar dados de contato')}
               </V2Button>
             </div>
           )}
@@ -526,7 +515,7 @@ function RecordEditDialog({ user, onClose }) {
           {changes.length > 0 && (
             <div className="rounded-xl border border-gray-200 bg-paper p-3">
               <h4 className="text-xs font-bold text-ink">
-                O que vai mudar ({changes.length})
+                {t('O que vai mudar ({length})', { length: changes.length })}
               </h4>
               <ul className="mt-2 space-y-1 text-2xs">
                 {changes.map((c) => (
@@ -546,15 +535,15 @@ function RecordEditDialog({ user, onClose }) {
           )}
 
           <label className="block text-xs font-semibold text-ink">
-            Motivo da correção <span className="text-red-500">*</span>
+            {t('Motivo da correção')} <span className="text-red-500">*</span>
             <V2Input
               className="mt-1"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ex.: o atleta pediu a correção do telefone por WhatsApp"
+              placeholder={t('Ex.: o atleta pediu a correção do telefone por WhatsApp')}
             />
             <span className="mt-1 block text-2xs font-normal text-gray-500">
-              Fica na Auditoria junto com o antes e o depois de cada campo.
+              {t('Fica na Auditoria junto com o antes e o depois de cada campo.')}
             </span>
           </label>
         </div>
@@ -573,12 +562,12 @@ function RecordEditDialog({ user, onClose }) {
         )}
 
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
           <V2Button
             disabled={!validacao.isValid || salvar.isPending}
             onClick={handleSave}
           >
-            {salvar.isPending ? 'Salvando…' : `Salvar ${changes.length} alteração(ões)`}
+            {salvar.isPending ? t('Salvando…') : tn(changes.length, 'Salvar {n} alteração', 'Salvar {n} alterações')}
           </V2Button>
         </DialogFooter>
       </DialogContent>
@@ -615,13 +604,13 @@ function CampoDeEdicao({ field: f, value, onChange }) {
   return (
     <>
       <V2Select className="mt-1" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">— não informado —</option>
+        <option value="">{t('— não informado —')}</option>
         {opcoes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         {foraDaLista && <option value={value}>{value} (valor antigo, fora da lista)</option>}
       </V2Select>
       {foraDaLista && (
         <span className="mt-1 block text-2xs font-normal text-amber-700">
-          O valor gravado não está na lista atual. Escolha um da lista para corrigir.
+          {t('O valor gravado não está na lista atual. Escolha um da lista para corrigir.')}
         </span>
       )}
     </>

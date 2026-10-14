@@ -16,6 +16,7 @@
  * resultado e rating de outras pessoas; reservas, pagamentos, auditoria e
  * consentimentos FICAM, com o dado pessoal minimizado.
  */
+import { t } from '../../../core/i18n/index.js';
 
 /** A palavra que o admin digita para confirmar. */
 export const DELETION_CONFIRM_WORD = 'EXCLUIR';
@@ -61,18 +62,18 @@ const texto = (v) => String(v ?? '').trim();
  */
 export function deletionBlockedReason(user, { actorUid = null, ownerEmails = [] } = {}) {
   const uid = texto(user?.uid || user?.id);
-  if (!uid) return { ok: false, reason: 'Cadastro sem identificador.' };
+  if (!uid) return { ok: false, reason: t('Cadastro sem identificador.') };
   if (actorUid && uid === actorUid) {
-    return { ok: false, reason: 'Você não pode excluir a própria conta por aqui.' };
+    return { ok: false, reason: t('Você não pode excluir a própria conta por aqui.') };
   }
   const donos = new Set((ownerEmails || []).map(lower));
   if (user?.email && donos.has(lower(user.email))) {
-    return { ok: false, reason: 'Conta de dono da plataforma. Não pode ser excluída.' };
+    return { ok: false, reason: t('Conta de dono da plataforma. Não pode ser excluída.') };
   }
   if (user?.role === 'platform_admin') {
     return {
       ok: false,
-      reason: 'Conta com poder de admin. Tire o poder em Governança → Acessos antes.',
+      reason: t('Conta com poder de admin. Tire o poder em Governança → Acessos antes.'),
     };
   }
   return { ok: true, reason: '' };
@@ -89,16 +90,16 @@ export const canDeleteAccount = (user, ctx) => deletionBlockedReason(user, ctx).
 export function validateDeletionRequest({ uids = [], reason = '', confirmText = '' } = {}) {
   const erros = {};
   const unicos = [...new Set((uids || []).filter(Boolean))];
-  if (unicos.length === 0) erros.uids = 'Escolha ao menos um cadastro.';
+  if (unicos.length === 0) erros.uids = t('Escolha ao menos um cadastro.');
   if (unicos.length > DELETION_BATCH_MAX) {
-    erros.uids = `No máximo ${DELETION_BATCH_MAX} cadastros por vez.`;
+    erros.uids = t('No máximo {max} cadastros por vez.', { max: DELETION_BATCH_MAX });
   }
   if (texto(reason).length < DELETION_REASON_MIN) {
-    erros.reason = `Descreva o motivo (mínimo ${DELETION_REASON_MIN} caracteres).`;
+    erros.reason = t('Descreva o motivo (mínimo {min} caracteres).', { min: DELETION_REASON_MIN });
   }
   // Sem diferenciar maiúsculas: o que se quer é a intenção, não a digitação.
   if (texto(confirmText).toUpperCase() !== DELETION_CONFIRM_WORD) {
-    erros.confirmText = `Digite ${DELETION_CONFIRM_WORD} para confirmar.`;
+    erros.confirmText = t('Digite {palavra} para confirmar.', { palavra: DELETION_CONFIRM_WORD });
   }
   return { isValid: Object.keys(erros).length === 0, errors: erros };
 }
@@ -135,23 +136,23 @@ export function testAccountSignals(user) {
   const email = lower(user?.email);
   const dominio = email.includes('@') ? email.split('@')[1] : '';
 
-  if (user?.hidden === true) motivos.push('Oculto na moderação de atletas');
+  if (user?.hidden === true) motivos.push(t('Oculto na moderação de atletas'));
   if (dominio && DOMINIOS_DE_TESTE.some((d) => dominio === d || dominio.endsWith(`.${d}`))) {
-    motivos.push(`E-mail de domínio de exemplo (@${dominio})`);
+    motivos.push(t('E-mail de domínio de exemplo (@{dominio})', { dominio }));
   }
   const usuarioDoEmail = email.split('@')[0] || '';
   const partesEmail = usuarioDoEmail.split(/[^a-z0-9]+/).filter(Boolean);
   if (partesEmail.some((p) => PALAVRAS_DE_TESTE.includes(p.replace(/\d+$/, '')))) {
-    motivos.push('E-mail com cara de teste');
+    motivos.push(t('E-mail com cara de teste'));
   }
   const nome = lower(user?.full_name || user?.display_name || user?.name);
   const palavrasNome = nome
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .split(/[^a-z0-9]+/).filter(Boolean);
   if (palavrasNome.some((p) => PALAVRAS_DE_TESTE.includes(p.replace(/\d+$/, '')))) {
-    motivos.push('Nome com cara de teste');
+    motivos.push(t('Nome com cara de teste'));
   }
-  if (!email && !nome) motivos.push('Sem nome e sem e-mail');
+  if (!email && !nome) motivos.push(t('Sem nome e sem e-mail'));
   return motivos;
 }
 

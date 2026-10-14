@@ -4,6 +4,7 @@ import { Medal, Check, AlertTriangle, Filter } from 'lucide-react';
 import { V2Surface } from '@/v2/ui/primitives';
 import { useRankingWorkerStatus } from '@/modules/rating/hooks/useRating';
 import { describeRankingWorker, describeRankingExclusions, formatarMomento } from '@/modules/rating/domain/rankingWorkerStatus';
+import { t, tk, tn } from '@/core/i18n';
 
 /**
  * RANKING E RATING SÃO AUTOMÁTICOS — o painel que explica por que não há mais
@@ -47,7 +48,7 @@ function EstadoDoServidor() {
   if (isError) {
     return (
       <p className="mt-3 text-[11px] leading-4 text-gray-500">
-        Não foi possível ler agora quando o servidor recalculou pela última vez.
+        {t('Não foi possível ler agora quando o servidor recalculou pela última vez.')}
       </p>
     );
   }
@@ -58,20 +59,19 @@ function EstadoDoServidor() {
     <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 px-3 py-2 text-[11px] leading-4 text-gray-600">
       {estado.registrado ? (
         <p>
-          <strong className="text-ink">Última atualização do servidor:</strong>{' '}
+          <strong className="text-ink">{t('Última atualização do servidor:')}</strong>{' '}
           {formatarMomento(estado.ultimaPassadaMs)}
           {estado.motivo ? ` — ${estado.motivo}` : ''}
-          {estado.emCurso ? ' · recalculando agora' : ''}
+          {estado.emCurso ? ` · ${t('recalculando agora')}` : ''}
         </p>
       ) : (
-        <p>O servidor ainda não registrou nenhum recálculo.</p>
+        <p>{t('O servidor ainda não registrou nenhum recálculo.')}</p>
       )}
       {estado.erro && (
         <p className="flex items-start gap-1.5 text-amber-700">
           <AlertTriangle aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0" />
           <span>
-            A tentativa de {formatarMomento(estado.erro.ms)} falhou ({estado.erro.mensagem}). A próxima
-            publicação ou a recuperação agendada tenta de novo.
+            {t('A tentativa de {quando} falhou ({erro}). A próxima publicação ou a recuperação agendada tenta de novo.', { quando: formatarMomento(estado.erro.ms), erro: estado.erro.mensagem })}
           </span>
         </p>
       )}
@@ -90,7 +90,7 @@ function ForaDoRanking({ fora }) {
   if (fora.fora === 0) {
     return (
       <p className="mt-2 text-[11px] leading-4 text-gray-500">
-        Todas as {fora.usadas} partidas decididas da última passada entraram no ranking.
+        {t('Todas as {n} partidas decididas da última passada entraram no ranking.', { n: fora.usadas })}
       </p>
     );
   }
@@ -98,7 +98,7 @@ function ForaDoRanking({ fora }) {
     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-[11px] leading-4 text-gray-700">
       <p className="flex items-center gap-1.5 font-semibold text-ink">
         <Filter aria-hidden="true" className="h-3 w-3" />
-        {fora.usadas} partida(s) no ranking · {fora.fora} ficaram de fora
+        {tn(fora.usadas, '{n} partida no ranking', '{n} partidas no ranking')} · {tn(fora.fora, '{n} ficou de fora', '{n} ficaram de fora')}
       </p>
       <ul className="mt-1.5 space-y-1">
         {fora.linhas.map((l) => (
@@ -107,25 +107,24 @@ function ForaDoRanking({ fora }) {
       </ul>
       {fora.torneios.length > 0 && (
         <div className="mt-2">
-          <p className="font-semibold text-ink">Onde estão:</p>
+          <p className="font-semibold text-ink">{t('Onde estão:')}</p>
           <ul className="mt-1 space-y-1">
-            {fora.torneios.map((t) => (
-              <li key={t.id || 'sem-torneio'}>
-                {t.id ? (
-                  <Link to={`/torneios/${t.id}/gerenciar`} className="font-semibold text-ink underline">
-                    {t.nome || 'Torneio sem nome visível'}
+            {fora.torneios.map((tor) => (
+              <li key={tor.id || 'sem-torneio'}>
+                {tor.id ? (
+                  <Link to={`/torneios/${tor.id}/gerenciar`} className="font-semibold text-ink underline">
+                    {tor.nome || t('Torneio sem nome visível')}
                   </Link>
-                ) : 'Partidas sem torneio'}
-                {' — '}{t.partidasFora} partida(s), {t.texto}
+                ) : t('Partidas sem torneio')}
+                {' — '}{tn(tor.partidasFora, '{n} partida', '{n} partidas')}, {tor.texto}
               </li>
             ))}
           </ul>
         </div>
       )}
       <p className="mt-2 text-gray-500">
-        Jogo de dia de jogo que não foi PUBLICADO não aparece aqui: ele nem chega ao servidor. Quem
-        organiza publica em “Resultados no ranking”, dentro do dia.
-        {fora.semPlacar > 0 ? ` ${fora.semPlacar} partida(s) sem placar (W.O.) contam no ranking nacional e no de duplas, mas não no 2.0–8.0, que mede pelo placar.` : ''}
+        {t('Jogo de dia de jogo que não foi PUBLICADO não aparece aqui: ele nem chega ao servidor. Quem organiza publica em “Resultados no ranking”, dentro do dia.')}
+        {fora.semPlacar > 0 ? ` ${tn(fora.semPlacar, '{n} partida sem placar (W.O.) conta no ranking nacional e no de duplas, mas não no 2.0–8.0, que mede pelo placar.', '{n} partidas sem placar (W.O.) contam no ranking nacional e no de duplas, mas não no 2.0–8.0, que mede pelo placar.')}` : ''}
       </p>
     </div>
   );
@@ -136,30 +135,27 @@ export default function RankingAutomatico() {
     <V2Surface>
       <div className="flex items-center gap-2">
         <Medal className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Ranking e rating</h2>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Ranking e rating')}</h2>
       </div>
       <p className="mt-2 text-xs leading-5 text-gray-500">
-        Não há nada para acionar aqui. Os três rankings de partida — ELO/nacional,
-        rating 2.0–8.0 e duplas — são recalculados <strong>pelo servidor</strong>, na hora,
-        a cada resultado que entra, muda ou sai.
+        {t('Não há nada para acionar aqui. Os três rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — são recalculados')}{' '}
+        <strong>{t('pelo servidor')}</strong>{t(', na hora, a cada resultado que entra, muda ou sai.')}
       </p>
       <ul className="mt-3 space-y-2">
         {[
-          ['Torneio', 'todo resultado lançado, editado ou excluído conta na hora — em torneio o lançamento não é facultativo.'],
-          ['Dia de jogo e evento de clube', 'conta quando quem organiza PUBLICA no ranking, e a cada correção depois disso.'],
-          ['Saiu do ar', 'arquivar, cancelar ou tornar o torneio privado remove os resultados no mesmo instante.'],
-          ['Rede de segurança', 'a cada 30 minutos o servidor confere se entrou resultado sem recálculo — por exemplo, com as funções fora do ar — e recalcula sozinho.'],
+          [tk('Torneio'), tk('todo resultado lançado, editado ou excluído conta na hora — em torneio o lançamento não é facultativo.')],
+          [tk('Dia de jogo e evento de clube'), tk('conta quando quem organiza PUBLICA no ranking, e a cada correção depois disso.')],
+          [tk('Saiu do ar'), tk('arquivar, cancelar ou tornar o torneio privado remove os resultados no mesmo instante.')],
+          [tk('Rede de segurança'), tk('a cada 30 minutos o servidor confere se entrou resultado sem recálculo — por exemplo, com as funções fora do ar — e recalcula sozinho.')],
         ].map(([titulo, texto]) => (
           <li key={titulo} className="flex items-start gap-2 text-xs leading-5 text-gray-600">
             <Check aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-acid" />
-            <span><strong className="text-ink">{titulo}:</strong> {texto}</span>
+            <span><strong className="text-ink">{t(titulo)}:</strong> {t(texto)}</span>
           </li>
         ))}
       </ul>
       <p className="mt-3 text-[11px] leading-4 text-gray-400">
-        Rajadas (publicar um dia de jogo grava dezenas de partidas de uma vez) são
-        agrupadas num recálculo só. O ranking interno dos clubes segue o mesmo caminho,
-        pelos próprios gatilhos.
+        {t('Rajadas (publicar um dia de jogo grava dezenas de partidas de uma vez) são agrupadas num recálculo só. O ranking interno dos clubes segue o mesmo caminho, pelos próprios gatilhos.')}
       </p>
       <EstadoDoServidor />
     </V2Surface>

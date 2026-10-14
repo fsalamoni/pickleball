@@ -2,6 +2,7 @@ import { collection, getDocs, getDoc, deleteDoc, doc, orderBy, query, where, ser
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { logger } from '@/core/lib/logger';
+import { t } from '@/core/i18n';
 import { createNotification, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { buildRevokePayload } from '../domain/accessRoster.js';
 import {
@@ -52,9 +53,9 @@ export async function setTournamentArchived(tournamentId, archived, actor) {
  * status != 'cancelled'.
  */
 export async function cancelAndArchiveTournament(tournamentId, actor) {
-  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (!db) throw new Error('Firestore indisponível.');
+  if (!tournamentId) throw new Error(t('ID do torneio é obrigatório.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (!db) throw new Error(t('Firestore indisponível.'));
   await updateDoc(doc(db, 'tournaments', tournamentId), {
     status: 'cancelled',
     archived: true,
@@ -102,9 +103,9 @@ export async function deleteTournamentCascading(tournamentId, actor) {
  * @param {{ previousRole?: string, reason?: string }} [meta]
  */
 export async function revokeAccountPowers(uid, actor, meta = {}) {
-  if (!uid) throw new Error('Informe a conta.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  if (uid === actor.uid) throw new Error('Você não pode revogar o seu próprio acesso por aqui.');
+  if (!uid) throw new Error(t('Informe a conta.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
+  if (uid === actor.uid) throw new Error(t('Você não pode revogar o seu próprio acesso por aqui.'));
 
   const payload = buildRevokePayload({ role: meta.previousRole || 'platform_admin' }, actor.uid);
   await updateDoc(doc(db, 'users', uid), {
@@ -147,11 +148,11 @@ export async function revokeAccountPowers(uid, actor, meta = {}) {
  * @returns {Promise<{ changes: Array, ignored: string[] }>}
  */
 export async function updateUserRecordAsAdmin(uid, patch, actor, meta = {}) {
-  if (!uid) throw new Error('Informe o usuário.');
-  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!uid) throw new Error(t('Informe o usuário.'));
+  if (!actor?.uid) throw new Error(t('Usuário não autenticado.'));
 
   const antesSnap = await getDoc(doc(db, 'users', uid));
-  if (!antesSnap.exists()) throw new Error('Cadastro não encontrado.');
+  if (!antesSnap.exists()) throw new Error(t('Cadastro não encontrado.'));
   const antes = antesSnap.data();
 
   const { patch: limpo, ignored } = sanitizeAdminUserPatch(patch);

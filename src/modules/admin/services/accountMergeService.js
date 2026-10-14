@@ -6,6 +6,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/core/config/firebase';
 import { deletionErrorMessage } from './accountDeletionService';
+import { t } from '@/core/i18n';
 
 const NOME_DA_FUNCAO = 'adminMergeAccountHistory';
 
@@ -24,13 +25,13 @@ export async function listAccountLifecycleLogs() {
 }
 
 async function chamar(payload) {
-  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   const fn = httpsCallable(functions, NOME_DA_FUNCAO, { timeout: 540_000 });
   try {
     const { data } = await fn(payload);
     return data;
   } catch (err) {
-    const e = new Error(deletionErrorMessage(err).replace('A exclusão roda', 'A unificação roda'));
+    const e = new Error(deletionErrorMessage(err, { unificacao: true }));
     e.code = err?.code;
     throw e;
   }

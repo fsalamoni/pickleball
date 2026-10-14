@@ -3,17 +3,19 @@
  * e as categorias são CÓPIA de `functions/supportAccess.js` (o pacote de
  * Functions é publicado isolado); há teste de paridade.
  */
+import { t, tk } from '../../../core/i18n/index.js';
+
 export const SENSITIVE_FIELDS = Object.freeze(['email', 'phone', 'birth_date', 'address']);
 export const REVEAL_TEXT_MIN = 20;
 
 export const REVEAL_REASON_META = Object.freeze({
-  suporte_solicitado: 'A pessoa pediu ajuda',
-  correcao_de_dado: 'Correção de dado',
-  investigacao_de_abuso: 'Investigação de abuso',
-  requisicao_do_titular: 'Requisição do titular (LGPD)',
-  ordem_judicial: 'Ordem judicial',
-  incidente_de_seguranca: 'Incidente de segurança',
-  outro: 'Outro',
+  suporte_solicitado: tk('A pessoa pediu ajuda'),
+  correcao_de_dado: tk('Correção de dado'),
+  investigacao_de_abuso: tk('Investigação de abuso'),
+  requisicao_do_titular: tk('Requisição do titular (LGPD)'),
+  ordem_judicial: tk('Ordem judicial'),
+  incidente_de_seguranca: tk('Incidente de segurança'),
+  outro: tk('Outro'),
 });
 
 /** `ana.silva@gmail.com` → `a********@gmail.com`; `51999887766` → `•••••7766`. */
@@ -30,8 +32,8 @@ export function maskValue(field, value) {
 
 export function validateRevealRequest({ fields = [], reason_category = '', reason_text = '' } = {}) {
   const erros = {};
-  if (!fields.length || fields.some((f) => !SENSITIVE_FIELDS.includes(f))) erros.fields = 'Escolha o que revelar.';
-  if (!REVEAL_REASON_META[reason_category]) erros.reason_category = 'Escolha a categoria.';
-  if (String(reason_text).trim().length < REVEAL_TEXT_MIN) erros.reason_text = `Mínimo ${REVEAL_TEXT_MIN} caracteres.`;
+  if (!fields.length || fields.some((f) => !SENSITIVE_FIELDS.includes(f))) erros.fields = t('Escolha o que revelar.');
+  if (!REVEAL_REASON_META[reason_category]) erros.reason_category = t('Escolha a categoria.');
+  if (String(reason_text).trim().length < REVEAL_TEXT_MIN) erros.reason_text = t('Mínimo {min} caracteres.', { min: REVEAL_TEXT_MIN });
   return { isValid: Object.keys(erros).length === 0, errors: erros };
 }
