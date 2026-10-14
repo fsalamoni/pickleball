@@ -31,6 +31,11 @@ describe('anúncio', () => {
     expect(validateListingInput({ ...base, condition: '' }).errors.condition).toBeTruthy();
     expect(validateListingInput({ ...base, type: 'product_new', condition: 'fair' }).value.condition).toBe('new');
   });
+  it('🐞 "Usado" do editor continua usado (o apelido curto não vira novo)', () => {
+    const v = validateListingInput({ ...base, type: 'used', condition: 'good' }).value;
+    expect(v.type).toBe('product_used');
+    expect(v.condition).toBe('good');
+  });
   it('preço "de" menor que o preço é erro', () => {
     expect(validateListingInput({ ...base, compare_at_cents: 50000 }).errors.compare_at_cents).toBeTruthy();
     expect(validateListingInput({ ...base, compare_at_cents: 120000 }).value.compare_at_cents).toBe(120000);

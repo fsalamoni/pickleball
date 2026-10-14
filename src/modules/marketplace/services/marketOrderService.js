@@ -12,7 +12,9 @@ import { db, functions } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C } from '../domain/constants.js';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
-const recentes = (xs) => xs.sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+// Pedidos e ofertas gravam `placed_at_ms`/`created_at` (do servidor), não `created_at_ms`.
+const quando = (x) => Number(x.created_at_ms || x.placed_at_ms || x.created_at?.toMillis?.() || 0);
+const recentes = (xs) => xs.sort((a, b) => quando(b) - quando(a));
 
 /** A frase certa para o erro do servidor (a mensagem dele já é em pt-BR). */
 export function marketCallError(err) {

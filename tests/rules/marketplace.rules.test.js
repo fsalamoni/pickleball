@@ -231,6 +231,9 @@ describe('o que é só do dono', () => {
     await assertFails(getDoc(doc(como(ANA), 'market_carts', BIA)));
     await assertSucceeds(setDoc(doc(como(BIA), 'market_saved_searches', 's1'), { uid: BIA, label: 'Raquetes', params: 'cat=raquetes' }));
     await assertFails(getDoc(doc(como(ANA), 'market_saved_searches', 's1')));
+    // A dona liga/desliga o aviso; outra pessoa não "adota" a busca alheia.
+    await assertSucceeds(setDoc(doc(como(BIA), 'market_saved_searches', 's1'), { uid: BIA, label: 'Raquetes', params: 'cat=raquetes', notify: false }));
+    await assertFails(setDoc(doc(como(ANA), 'market_saved_searches', 's1'), { uid: ANA, label: 'Raquetes', params: '' }));
   });
 });
 

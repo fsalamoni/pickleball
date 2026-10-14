@@ -8,18 +8,20 @@
  * Quem vende vê a mesma página sem a compra (e responde às perguntas). Quando
  * não dá para comprar, a caixa diz POR QUÊ (`buyability`), nunca um botão mudo.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronRight, HandCoins, MapPin, PackageCheck, Share2, ShieldCheck, ShoppingCart, Truck, Users, Store as StoreIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
+import { RECENT_PREF, parseRecent, pushRecent } from '@/modules/marketplace/domain/discovery';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import { availableQuantity, buyability } from '@/modules/marketplace/domain/listing';
 import { attributesFor, categoryBreadcrumb, formatAttribute } from '@/modules/marketplace/domain/taxonomy';
-import { CONDITION_LABELS } from '@/modules/marketplace/domain/constants';
+import { CONDITION_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { sellerBadges } from '@/modules/marketplace/domain/reputation';
 import {
@@ -92,7 +94,7 @@ function BuyBox({ listing, isOperator, settings }) {
   return (
     <V2Surface variant="compacto" className="space-y-4 p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-        <span>{listing.type === 'used' ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'}</span>
+        <span>{listing.type === LISTING_TYPE.USED ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'}</span>
         {listing.quantity_sold > 0 && <span>· {listing.quantity_sold} vendido{listing.quantity_sold > 1 ? 's' : ''}</span>}
         <SellerTypeTag type={listing.seller_type} />
       </div>
@@ -182,7 +184,7 @@ function Characteristics({ listing }) {
     .filter(({ v }) => v !== undefined && v !== null && v !== '');
   const linhas = [
     ...(listing.brand && !attrs.some(({ a }) => a.key === 'marca') ? [['Marca', listing.brand]] : []),
-    ['Condição', listing.type === 'used' ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'],
+    ['Condição', listing.type === LISTING_TYPE.USED ? (CONDITION_LABELS[listing.condition] || 'Usado') : 'Novo'],
     ...attrs.map(({ a, v }) => [a.label, formatAttribute(a, v)]),
   ];
   return (
@@ -253,9 +255,16 @@ function ListingPage() {
   const settings = useMarketSettings();
   const listing = q.data;
   const isOperator = useIsMarketOperator(listing?.seller_key);
-  const { isPlatformAdmin } = useAuth();
+  const { isPlatformAdmin, user } = useAuth();
   const podeVerOculto = isOperator || isPlatformAdmin;
   useHashScroll();
+  // "Vistos recentemente" na vitrine: só no aparelho, por conta (zero banco).
+  const visivel = listing && ['active', 'sold_out'].includes(listing.status);
+  useEffect(() => {
+    if (!visivel || !user?.uid) return;
+    const ids = parseRecent(readViewPreference(user.uid, RECENT_PREF));
+    writeViewPreference(user.uid, RECENT_PREF, JSON.stringify(pushRecent(ids, listing.id)));
+  }, [visivel, listing?.id, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let corpo;
   if (q.isError) corpo = <V2ErrorState onRetry={() => q.refetch()} />;

@@ -10,6 +10,8 @@ import { availableQuantity, coverOf } from './listing.js';
 import { LISTING_STATUS } from './constants.js';
 
 export const CART_MAX_ITEMS = 50;
+/** Teto de unidades por item (o servidor recusa acima disso). */
+export const CART_MAX_QTY = 99;
 
 function clean(cart) {
   return {
@@ -34,7 +36,7 @@ export function cartLine(listing, quantity = 1) {
 /** Acrescenta (ou soma, se já está). Nunca passa do estoque visto. */
 export function addToCart(cart, listing, quantity = 1) {
   const c = clean(cart);
-  const max = Math.max(1, availableQuantity(listing));
+  const max = Math.max(1, Math.min(CART_MAX_QTY, availableQuantity(listing)));
   const i = c.items.findIndex((x) => x.listing_id === listing.id);
   if (i >= 0) {
     const q = Math.min(max, c.items[i].quantity + Math.max(1, quantity));
@@ -51,7 +53,7 @@ export function setCartQuantity(cart, listingId, quantity) {
   const c = clean(cart);
   const q = Math.floor(Number(quantity));
   if (!(q >= 1)) return removeFromCart(c, listingId);
-  c.items = c.items.map((x) => (x.listing_id === listingId ? { ...x, quantity: Math.min(q, 999) } : x));
+  c.items = c.items.map((x) => (x.listing_id === listingId ? { ...x, quantity: Math.min(q, CART_MAX_QTY) } : x));
   return c;
 }
 

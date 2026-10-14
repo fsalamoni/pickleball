@@ -8,6 +8,8 @@
  * servidor grava (ver `functions/marketplace.js`, `linkListingSource`).
  */
 
+import { LISTING_TYPE, TEXT_LIMITS } from './constants.js';
+
 const COACH_CATEGORY = Object.freeze({
   vestuario: 'vestuario', acessorios: 'acessorios', material: 'treino', outros: 'outros',
 });
@@ -24,11 +26,11 @@ const reais = (v) => {
 /** Rascunho a partir de um produto da loja do professor. */
 export function draftFromCoachProduct(p = {}) {
   return {
-    title: String(p.name || '').trim().slice(0, 120),
+    title: String(p.name || '').trim().slice(0, TEXT_LIMITS.title),
     description: String(p.description || '').trim(),
     price: reais(p.price),
     category_slug: COACH_CATEGORY[p.category] || '',
-    type: 'new',
+    type: LISTING_TYPE.NEW,
     quantity: '1',
   };
 }
@@ -42,11 +44,11 @@ export function draftFromArenaProduct(p = {}) {
   const desc = [p.brand && `Marca: ${p.brand}.`, p.size && `Tamanho: ${p.size}.`, String(p.description || '').trim()]
     .filter(Boolean).join(' ');
   return {
-    title: [p.name, p.brand && !String(p.name || '').includes(p.brand) ? p.brand : ''].filter(Boolean).join(' ').trim().slice(0, 120),
+    title: [p.name, p.brand && !String(p.name || '').includes(p.brand) ? p.brand : ''].filter(Boolean).join(' ').trim().slice(0, TEXT_LIMITS.title),
     description: desc,
     price: reais(p.sale_price),
     category_slug: ARENA_CATEGORY[p.category] || 'outros',
-    type: 'new',
+    type: LISTING_TYPE.NEW,
     quantity: String(Number.isFinite(stock) && p.stock_qty != null ? Math.max(0, Math.floor(stock)) : 1),
     fulfillment: ['pickup'],
     pickup_note: 'Retirar na recepção da arena.',

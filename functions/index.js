@@ -1254,6 +1254,31 @@ exports.marketModerateListing = onDocumentWritten(
   },
 );
 
+// Buscas salvas: um aviso por dia por busca, quando chegou anúncio novo.
+exports.marketSavedSearchAlerts = onSchedule(
+  { schedule: 'every day 10:00', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 300 },
+  async () => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    await marketplace.savedSearchAlerts({ db, now: Date.now(), logger });
+  },
+);
+
+// O preço baixou → aviso para quem favoritou o anúncio.
+exports.marketPriceDropNotify = onDocumentWritten(
+  { document: 'market_listings/{listingId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    if (!a || !d || !(Number(d.price_cents) < Number(a.price_cents))) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    try {
+      await marketplace.notifyPriceDrop({ db, now: Date.now() }, event.params.listingId, a, d);
+    } catch (err) {
+      logger.warn('Mercado: aviso de preço não enviado.', { listingId: event.params.listingId, err: err && err.message });
+    }
+  },
+);
+
 // Estoque único da arena: liga um anúncio a um produto do estoque, e cada
 // mudança do produto refaz a quantidade do anúncio (ver `marketplace.js`).
 exports.marketLinkArenaProduct = marketCallable('marketLinkArenaProduct', marketplace.linkArenaProduct);

@@ -108,7 +108,8 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
   const category = findCategory(input.category_slug);
   if (!category) errors.category_slug = 'Escolha a categoria.';
 
-  const type = input.type === LISTING_TYPE.USED ? LISTING_TYPE.USED : LISTING_TYPE.NEW;
+  // 'used' é o apelido curto (rascunhos antigos do editor gravavam assim).
+  const type = [LISTING_TYPE.USED, 'used'].includes(input.type) ? LISTING_TYPE.USED : LISTING_TYPE.NEW;
   const condition = type === LISTING_TYPE.NEW
     ? CONDITION.NEW
     : (Object.values(CONDITION).includes(input.condition) && input.condition !== CONDITION.NEW ? input.condition : null);

@@ -117,6 +117,7 @@ function ResumoSecao({ ctx }) {
             ...arenas.slice(0, 3).map((a) => ({ to: `/arenas/${a.id}/gerir`, label: a.name || 'Minha arena', descricao: 'Central da arena', icon: Building2 })),
             mercadoOn && { to: '/mercado/vender', label: 'Vender no Mercado', descricao: 'Anúncios, vendas e o seu Pix', icon: Store },
             mercadoOn && { to: '/mercado/pedidos', label: 'Compras no Mercado', descricao: 'Pedidos e ofertas', icon: ShoppingBag },
+            mercadoOn && { to: '/mercado/buscas', label: 'Buscas salvas', descricao: 'Aviso quando chega anúncio novo', icon: Bell },
             isPlatformAdmin && { to: '/admin/painel', label: 'Painel admin', descricao: 'A plataforma inteira', icon: LayoutDashboard },
           ]}
         />

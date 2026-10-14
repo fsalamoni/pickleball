@@ -832,7 +832,7 @@ async function moderateListing(ctx, listingId, listing) {
   await notify(db, [listing.created_by], {
     title: 'Anúncio pausado',
     message: `"${String(listing.title || '').slice(0, 60)}" tem um termo não permitido ("${termo}"). Edite e publique de novo.`,
-    link: '/mercado/vender',
+    link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}`,
   }, now);
   return termo;
 }
@@ -860,6 +860,82 @@ async function notifyQuestion(ctx, questionId, before, after) {
     return 'asker';
   }
   return null;
+}
+
+/* ------------------------------------------ alertas de quem compra ---- */
+
+const { savedSearchMatches, savedSearchSince } = require('./marketSearch.js');
+
+const ALERT_GAP_MS = 20 * 3600 * 1000;
+const ALERT_SEARCHES_MAX = 2000;
+
+/**
+ * Buscas salvas com aviso ligado → UM aviso por dia por busca, só quando
+ * chegou anúncio novo que bate com ela desde a última visita (ou o último
+ * aviso). A conta é a mesma da tela (`marketSearch.js`, com paridade).
+ */
+async function savedSearchAlerts(ctx) {
+  const { db, now = Date.now(), logger } = ctx;
+  const { enabled } = await loadContext(db);
+  if (!enabled) return { sent: 0 };
+  const [lsSnap, bsSnap] = await Promise.all([
+    db.collection('market_listings').where('status', '==', 'active').get(),
+    db.collection('market_saved_searches').where('notify', '==', true).limit(ALERT_SEARCHES_MAX).get(),
+  ]);
+  const listings = lsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let sent = 0;
+  for (const d of bsSnap.docs) {
+    const b = d.data();
+    const ultimo = Number(b.last_alert_ms) || 0;
+    if (!b.uid || now - ultimo < ALERT_GAP_MS) continue;
+    const since = Math.max(savedSearchSince(b), ultimo);
+    const novos = savedSearchMatches(listings, b.params || '', { since, uid: b.uid });
+    if (!novos.length) continue;
+    const n = novos.length;
+    const primeiro = texto(novos[0].title, 60);
+    // eslint-disable-next-line no-await-in-loop
+    await notify(db, [b.uid], {
+      title: `Novidade na sua busca "${texto(b.label, 40)}"`,
+      message: n === 1 ? `Chegou "${primeiro}".` : `${n} anúncios novos, como "${primeiro}".`,
+      link: `/mercado/buscas?abrir=${d.id}`,
+    }, now);
+    // eslint-disable-next-line no-await-in-loop
+    await d.ref.update({ last_alert_ms: now });
+    sent += 1;
+  }
+  if (logger && sent) logger.info('Mercado: avisos de buscas salvas.', { sent });
+  return { sent };
+}
+
+/**
+ * O preço baixou → avisa quem favoritou. Só quando fica abaixo do menor preço
+ * já avisado (`price_alert_cents`): subir e descer de novo não vira spam.
+ */
+async function notifyPriceDrop(ctx, listingId, before, after) {
+  const { db, now = Date.now() } = ctx;
+  if (!before || !after || after.status !== 'active') return 0;
+  const antes = Number(before.price_cents) || 0;
+  const depois = Number(after.price_cents) || 0;
+  if (!(depois > 0 && depois < antes)) return 0;
+  const piso = Number(after.price_alert_cents) || 0;
+  if (piso && depois >= piso) return 0;
+  const { enabled } = await loadContext(db);
+  if (!enabled) return 0;
+  const [favs, ops] = await Promise.all([
+    db.collection('market_favorites').where('listing_id', '==', listingId).get(),
+    operatorUids(db, after.seller_key),
+  ]);
+  const alvos = favs.docs.map((f) => f.data().uid).filter((u) => u && !ops.includes(u));
+  await db.collection('market_listings').doc(listingId).update({ price_alert_cents: depois });
+  if (!alvos.length) return 0;
+  const pct = Math.round(((antes - depois) / antes) * 100);
+  const brl = (c) => `R$ ${(c / 100).toFixed(2).replace('.', ',')}`;
+  await notify(db, alvos, {
+    title: `Baixou ${pct}%: ${texto(after.title, 60)}`,
+    message: `O anúncio que você favoritou foi de ${brl(antes)} para ${brl(depois)}.`,
+    link: `/mercado/anuncio/${listingId}`,
+  }, now);
+  return alvos.length;
 }
 
 /* ------------------------------------------ o estoque único da arena -- */
@@ -1050,4 +1126,5 @@ module.exports = {
   MarketError, placeOrders, orderAction, applyOrderAction, offerAction, submitReview,
   housekeeping, moderateListing, recomputeSellerRating, operatorUids, notifyQuestion,
   reservedFor, linkedListingPatch, syncArenaListing, linkArenaProduct,
+  savedSearchAlerts, notifyPriceDrop,
 };

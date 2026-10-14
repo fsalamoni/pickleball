@@ -298,8 +298,8 @@ export async function moderateListing(listing, { action, reason = '' }, { uid, a
       details: { listing_id: listing.id, title: listing.title, seller_key: listing.seller_key, reason: motivo },
     }),
     listing.created_by ? notifyUsers([listing.created_by], action === 'remove'
-      ? { title: 'Anúncio retirado pela moderação', message: `"${String(listing.title || '').slice(0, 60)}" saiu do Mercado. Motivo: ${motivo}`, type: 'market', link: '/mercado/vender?aba=anuncios' }
-      : { title: 'Anúncio liberado', message: `"${String(listing.title || '').slice(0, 60)}" foi liberado pela moderação. Ele está pausado: retome quando quiser.`, type: 'market', link: '/mercado/vender?aba=anuncios' }) : null,
+      ? { title: 'Anúncio retirado pela moderação', message: `"${String(listing.title || '').slice(0, 60)}" saiu do Mercado. Motivo: ${motivo}`, type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }
+      : { title: 'Anúncio liberado', message: `"${String(listing.title || '').slice(0, 60)}" foi liberado pela moderação. Ele está pausado: retome quando quiser.`, type: 'market', link: `/mercado/vender?aba=anuncios&como=${encodeURIComponent(listing.seller_key || '')}` }) : null,
   ]);
   return { warnings: extras.filter((r) => r.status === 'rejected').length };
 }
@@ -409,6 +409,7 @@ export async function saveSearch(uid, { label, params, notify = true }) {
 
 export const deleteSavedSearch = (id) => deleteDoc(doc(db, C.savedSearches, id));
 export const touchSavedSearch = (id) => updateDoc(doc(db, C.savedSearches, id), { last_seen_ms: Date.now() });
+export const setSavedSearchNotify = (id, on) => updateDoc(doc(db, C.savedSearches, id), { notify: Boolean(on) });
 
 /* ------------------------------------------------------------ carrinho -- */
 

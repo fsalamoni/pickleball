@@ -28,7 +28,7 @@ import { validateReview } from '@/modules/marketplace/domain/reputation';
 import { orderAction, submitReview } from '@/modules/marketplace/services/marketOrderService';
 import { getMarketFileUrl, prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
 import {
-  useDispute, useMarketMutation, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
+  useDispute, useMarketMutation, useMarketSettings, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -219,7 +219,7 @@ function ReviewBox({ order, role }) {
   const [erro, setErro] = useState('');
   const m = useMarketMutation(submitReview);
   if (order.status !== 'completed' || !['buyer', 'seller'].includes(role)) return null;
-  const minha = (reviews.data || []).find((r) => r.author_role === role);
+  const minha = reviews.data?.[role] || null;
   const ja = order[`reviewed_by_${role}`] || minha;
   const alvo = role === 'buyer' ? 'o vendedor' : 'o comprador';
   if (ja) {
@@ -296,6 +296,7 @@ function History({ orderId }) {
 }
 
 function OrderPage() {
+  const settings = useMarketSettings();
   const { orderId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
   const q = useOrder(orderId);
@@ -317,7 +318,7 @@ function OrderPage() {
       </V2Surface>
     );
   } else {
-    const acoes = nextActionsFor(order, role);
+    const acoes = nextActionsFor(order, role, { disputeWindowDays: settings.data?.dispute_window_days });
     const espera = orderWaitingOn(order, role);
     const outro = role === 'buyer'
       ? { id: (order.seller_manager_uids || [])[0], platform_name: order.seller_name }

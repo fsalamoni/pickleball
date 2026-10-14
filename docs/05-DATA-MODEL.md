@@ -1368,12 +1368,14 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
   `shipping_cents`, `shipping_to_agree`, `pickup_note`, `media[]` (≤ 11),
   `video_link`, `city`, `state`, `search_terms[]`, `published_at`. Só o
   servidor ou o admin: `moderation`, `quantity_sold`, `favorite_count`,
-  `seller_rating_avg`, `seller_rating_count`, `seller_verified`, `source`.
+  `seller_rating_avg`, `seller_rating_count`, `seller_verified`, `source`,
+  `price_alert_cents` (o menor preço já avisado a quem favoritou).
 - `market_questions/{id}` — pergunta pública e resposta (`listing_id`,
   `seller_key`, `asker_uid`, `asker_name`, `text`, `status`
   `open|answered|hidden`, `answer`, `answered_by`).
 - `market_favorites/{uid}_{listingId}`, `market_saved_searches/{id}` (`uid`,
-  `label`, `params`, `notify`), `market_carts/{uid}` (`items[]`, `saved[]`,
+  `label`, `params`, `notify`, `last_seen_ms`; o servidor grava `last_alert_ms`
+  no aviso diário de novidade), `market_carts/{uid}` (`items[]`, `saved[]`,
   ≤ 50) — só do dono.
 - Escritos SÓ pelo servidor: `market_orders/{id}` (`code`, `status`, comprador,
   vendedor, `seller_manager_uids`, `items[]` com a foto e o preço do momento,

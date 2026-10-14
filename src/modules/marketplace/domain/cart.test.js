@@ -47,4 +47,11 @@ describe('carrinho', () => {
     expect(checkLine(line, { ...a, status: 'paused' }).ok).toBe(false);
     expect(checkLine(line, undefined).unknown).toBe(true);
   });
+  it('🐞 nunca passa de 99 unidades (o servidor recusa acima)', () => {
+    const muito = { ...b, id: 'm', quantity: 500 };
+    let cart = addToCart({}, muito, 300).cart;
+    expect(cart.items[0].quantity).toBe(99);
+    cart = setCartQuantity(cart, 'm', 400);
+    expect(cart.items[0].quantity).toBe(99);
+  });
 });

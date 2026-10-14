@@ -4104,7 +4104,7 @@ service cloud.firestore {
     // Campos do anúncio que o navegador nunca escreve.
     function marketListingLocked() {
       return ['moderation', 'quantity_sold', 'favorite_count', 'seller_rating_avg',
-        'seller_rating_count', 'seller_verified', 'source'];
+        'seller_rating_count', 'seller_verified', 'source', 'price_alert_cents'];
     }
     function marketListingShapeOk(d) {
       return d.title is string && d.title.size() >= 3 && d.title.size() <= 120
@@ -4190,8 +4190,10 @@ service cloud.firestore {
 
     match /market_saved_searches/{searchId} {
       allow read, delete: if isAuthed() && resource.data.uid == request.auth.uid;
+      // Na atualização, a busca já tem de ser da pessoa (não dá para "adotar" a de outra).
       allow create, update: if isAuthed()
         && request.resource.data.uid == request.auth.uid
+        && (resource == null || resource.data.uid == request.auth.uid)
         && request.resource.data.get('label', '') is string
         && request.resource.data.get('label', '').size() <= 60;
     }

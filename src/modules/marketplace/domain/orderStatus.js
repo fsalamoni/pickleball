@@ -73,14 +73,16 @@ export function orderRoleOf(order, uid, { managerUids = [], isAdmin = false } = 
  * Botões que aparecem para quem vê o pedido — só os que a pessoa PODE fazer
  * (ação sem permissão não é renderizada).
  */
-export function nextActionsFor(order, role, { now = Date.now(), disputeWindowDays = ORDER_DEADLINES.disputeWindowDays } = {}) {
+export function nextActionsFor(order, role, { now = Date.now(), disputeWindowDays } = {}) {
+  const janela = Number(disputeWindowDays) || ORDER_DEADLINES.disputeWindowDays;
   if (!order || !role) return [];
   return Object.entries(ORDER_ACTIONS)
     .filter(([id]) => checkOrderAction(order, id, role).ok)
     .filter(([id]) => {
       if (id !== 'open_dispute') return true;
-      const since = Number(order.delivered_at_ms || order.paid_at_ms || 0);
-      return !since || now - since <= disputeWindowDays * 86400000;
+      // A mesma data que o servidor usa (`open_dispute` em functions/marketplace.js).
+      const since = Number(order.delivered_at_ms || order.shipped_at_ms || order.ready_at_ms || order.paid_at_ms || 0);
+      return !since || now - since <= janela * 86400000;
     })
     .map(([id, a]) => ({ id, label: a.label, tone: a.tone || 'secondary', needsReason: Boolean(a.needsReason) }));
 }

@@ -16,7 +16,7 @@ import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { formatBRL, discountPercent } from '@/modules/marketplace/domain/money';
 import { coverOf } from '@/modules/marketplace/domain/listing';
-import { FULFILLMENT_LABELS } from '@/modules/marketplace/domain/constants';
+import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domain/reputation';
 import { useFavorites, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
 import { V2Skeleton } from '@/v2/ui/primitives';
@@ -181,7 +181,7 @@ export function ListingCard({ listing, className, showFavorite = true }) {
           <div className="flex h-full items-center justify-center text-gray-300"><Box className="h-12 w-12" /></div>
         )}
         {sold && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">Esgotado</span>}
-        {!sold && listing.type === 'used' && (
+        {!sold && listing.type === LISTING_TYPE.USED && (
           <span className="absolute left-3 top-3 rounded-full bg-paper-pure/90 px-3 py-1 text-xs font-bold text-ink backdrop-blur">
             {CONDITION_SHORT[listing.condition] || 'Usado'}
           </span>

@@ -13,20 +13,28 @@
  * leitura em mãos.
  */
 import React, { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, HandCoins, MessageCircleQuestion, ShieldCheck, SlidersHorizontal, Sparkles, Store, X,
+  ArrowRight, Bell, BellRing, HandCoins, MessageCircleQuestion, ShieldCheck, SlidersHorizontal, Sparkles, Store, X,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { readViewPreference } from '@/core/lib/viewPreference';
+import { REGION_MODE } from '@/core/domain/region';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
   EMPTY_FILTERS, SORT_OPTIONS, activeFilterChips, clearChip, facetCounts, filtersFromParams, filtersToParams, searchListings,
 } from '@/modules/marketplace/domain/search';
 import { MARKET_CATEGORIES, categoryBreadcrumb, findCategory } from '@/modules/marketplace/domain/taxonomy';
 import { discountPercent } from '@/modules/marketplace/domain/money';
-import { normalizeSearchText } from '@/modules/marketplace/domain/listing';
-import { FULFILLMENT_LABELS } from '@/modules/marketplace/domain/constants';
-import { useMarketSettings, usePublicListings, useStores } from '@/modules/marketplace/hooks/useMarket';
+import {
+  RECENT_PREF, SAVED_SEARCH_LIMIT, parseRecent, recentListings, savedSearchKey, savedSearchLabel,
+} from '@/modules/marketplace/domain/discovery';
+import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
+import {
+  useMarketSettings, usePublicListings, useSavedSearchActions, useSavedSearches, useStores,
+} from '@/modules/marketplace/hooks/useMarket';
 import { V2Button, V2EmptyState, V2ErrorState } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import MarketFilters from '@/v2/components/marketplace/MarketFilters';
@@ -137,17 +145,31 @@ function StoresRail({ stores }) {
   );
 }
 
-function Showcase({ listings, stores, settings, viewerCity }) {
+/** "Perto de você" pela Minha região (cidade + raio, estado…), do mais perto ao mais longe. */
+function useNearby(ativos) {
+  const regional = useRegionalList(ativos, (l) => ({ city: l.city, state: l.state }));
+  const { region } = regional;
+  if (!regional.limita || regional.carregando) return { items: [], title: '', to: null };
+  const km = (l) => regional.infoDe(l)?.km ?? Infinity;
+  const items = [...searchListings(regional.itens, { sort: 'recent' }).items].sort((a, b) => km(a) - km(b)).slice(0, 4);
+  let to = null;
+  if (region.modo === REGION_MODE.CIDADE) to = `/mercado?cidade=${encodeURIComponent(region.cidade)}`;
+  else if (region.modo === REGION_MODE.ESTADO && region.uf) to = `/mercado?uf=${region.uf}`;
+  return { items, title: `Perto de você · ${regional.rotuloCurto}`, to };
+}
+
+function Showcase({ listings, stores, settings, uid }) {
   const disabled = new Set(settings?.disabled_categories || []);
   const visiveis = listings.filter((l) => !(l.category_path || []).some((c) => disabled.has(c)));
   const counts = facetCounts(visiveis, EMPTY_FILTERS).cat;
   const ativos = visiveis.filter((l) => l.status === 'active' && l.quantity > 0);
   const recentes = searchListings(ativos, { sort: 'recent' }).items.slice(0, 8);
   const ofertas = searchListings(ativos.filter((l) => discountPercent(l.price_cents, l.compare_at_cents) > 0), { sort: 'discount' }).items.slice(0, 4);
-  const usados = searchListings(ativos.filter((l) => l.type === 'used'), { sort: 'recent' }).items.slice(0, 4);
-  const perto = viewerCity
-    ? searchListings(ativos.filter((l) => normalizeSearchText(l.city) === normalizeSearchText(viewerCity)), { sort: 'recent' }).items.slice(0, 4)
-    : [];
+  const usados = searchListings(ativos.filter((l) => l.type === LISTING_TYPE.USED), { sort: 'recent' }).items.slice(0, 4);
+  const perto = useNearby(ativos);
+  // Lido uma vez ao abrir a vitrine (o anúncio grava ao ser visto).
+  const [vistosIds] = useState(() => parseRecent(readViewPreference(uid, RECENT_PREF)));
+  const vistos = recentListings(vistosIds, ativos).slice(0, 4);
   return (
     <div className="space-y-10">
       <Hero />
@@ -161,14 +183,52 @@ function Showcase({ listings, stores, settings, viewerCity }) {
         />
       ) : (
         <>
+          <Rail title="Vistos recentemente" hint="Para voltar onde você parou" items={vistos} />
           <Rail title="Chegou agora" hint="Os anúncios mais novos" to="/mercado?ordem=recent" items={recentes} />
           <Rail title="Ofertas" hint="Com preço abaixo do anterior" to="/mercado?ordem=discount" items={ofertas} />
-          {perto.length > 0 && <Rail title={`Perto de você em ${viewerCity}`} hint="Dá para combinar a entrega" to={`/mercado?cidade=${encodeURIComponent(viewerCity)}`} items={perto} />}
+          <Rail title={perto.title} hint="Dá para combinar a entrega em mãos" to={perto.to} items={perto.items} />
           <Rail title="Usados em bom estado" hint="Equipamento de quem joga, com preço de usado" to="/mercado?estado=used" items={usados} />
           <StoresRail stores={stores} />
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * "Salvar busca": guarda os filtros de agora e avisa quando chegar anúncio
+ * novo que bata com eles (o servidor confere uma vez por dia).
+ */
+function SaveSearchButton({ filters }) {
+  const { user } = useAuth();
+  const buscas = useSavedSearches(user?.uid);
+  const { save } = useSavedSearchActions(user?.uid);
+  const navigate = useNavigate();
+  if (!user?.uid || buscas.isError) return null;
+  const params = savedSearchKey(filtersToParams(filters));
+  const lista = buscas.data || [];
+  const ja = lista.find((b) => savedSearchKey(b.params) === params);
+  if (ja) {
+    return (
+      <Link to="/mercado/buscas" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-paper px-4 text-sm font-bold text-ink hover:bg-paper-dark">
+        <BellRing className="h-4 w-4" /> Busca salva
+      </Link>
+    );
+  }
+  const salvar = () => {
+    if (lista.length >= SAVED_SEARCH_LIMIT) {
+      toast.error(`Você já tem ${SAVED_SEARCH_LIMIT} buscas salvas. Apague alguma em Buscas salvas.`);
+      return;
+    }
+    save.mutate({ label: savedSearchLabel(filters), params, notify: true }, {
+      onSuccess: () => toast.success('Busca salva. Avisamos quando chegar anúncio novo.', { action: { label: 'Ver buscas', onClick: () => navigate('/mercado/buscas') } }),
+      onError: () => toast.error('Não foi possível salvar a busca. Tente de novo.'),
+    });
+  };
+  return (
+    <V2Button type="button" variant="ghost" size="sm" onClick={salvar} disabled={buscas.isLoading || save.isPending}>
+      <Bell className="h-4 w-4" /> {save.isPending ? 'Salvando…' : 'Salvar busca'}
+    </V2Button>
   );
 }
 
@@ -205,7 +265,8 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
           <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{titulo}</h1>
           <p className="text-sm text-gray-500" aria-live="polite">{total} resultado{total === 1 ? '' : 's'}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SaveSearchButton filters={filters} />
           <V2Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setAbertos(true)} type="button">
             <SlidersHorizontal className="h-4 w-4" /> Filtros{nFiltros ? ` (${nFiltros})` : ''}
           </V2Button>
@@ -286,7 +347,7 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
 }
 
 function MarketPage() {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => filtersFromParams(params), [params]);
   const feed = usePublicListings();
@@ -302,7 +363,7 @@ function MarketPage() {
   else if (buscando) {
     corpo = <Results listings={feed.data || []} filters={filters} setFilters={setFilters} settings={settings.data} viewer={viewer} />;
   } else {
-    corpo = <Showcase listings={feed.data || []} stores={stores.data || []} settings={settings.data} viewerCity={viewer.city} />;
+    corpo = <Showcase listings={feed.data || []} stores={stores.data || []} settings={settings.data} uid={user?.uid} />;
   }
 
   return (

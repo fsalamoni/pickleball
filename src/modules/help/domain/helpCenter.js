@@ -576,7 +576,7 @@ const ATLETA = {
       guias: ['mercado-comprar'],
       title: 'Comprar no Mercado',
       summary: 'Raquetes, bolas e acessórios de atletas, professores, arenas e lojas, com Pix direto a quem vende.',
-      keywords: ['mercado', 'comprar', 'compra', 'carrinho', 'raquete', 'usado', 'pix', 'pedido', 'oferta', 'favorito', 'loja', 'marketplace', 'vender'],
+      keywords: ['mercado', 'comprar', 'compra', 'carrinho', 'raquete', 'usado', 'pix', 'pedido', 'oferta', 'favorito', 'loja', 'marketplace', 'vender', 'busca salva', 'aviso', 'preço'],
       blocks: [
         p('O Mercado é a vitrine de produtos de pickleball do PickleRush. Quem vende pode ser outro atleta, um professor, uma arena ou uma loja aprovada. O pagamento é por Pix, direto para quem vende: a plataforma não recebe nem guarda o seu dinheiro.'),
         steps(
@@ -589,11 +589,14 @@ const ATLETA = {
         list(
           'OFERTA — quando o anúncio aceita, "Fazer oferta" manda um valor menor. O vendedor aceita, recusa ou faz uma contraproposta.',
           'PERGUNTAS — pergunte no próprio anúncio. A resposta fica lá para todo mundo ver.',
-          'FAVORITOS — o coração guarda o anúncio para depois.',
+          'FAVORITOS — o coração guarda o anúncio para depois. Se o preço baixar, você recebe um aviso.',
+          'BUSCAS SALVAS — numa busca, toque em "Salvar busca". Quando chegar anúncio novo que combine, chega um aviso (no máximo um por dia por busca). Elas ficam em Buscas salvas, onde dá para desligar o aviso ou apagar.',
+          'VISTOS RECENTEMENTE — a vitrine mostra os últimos anúncios que você abriu neste aparelho, para voltar onde parou.',
           'PROBLEMA — se algo deu errado depois de pagar, "Tive um problema" no pedido leva o caso à moderação, que ouve os dois lados.',
         ),
         link('/mercado', 'Abrir o Mercado'),
         link('/mercado/pedidos', 'Minhas compras'),
+        link('/mercado/buscas', 'Buscas salvas'),
         warn('Pague só pelo pedido, para a chave que aparece nele depois do aceite. Desconfie de quem pedir pagamento por fora, em outro aplicativo ou para outra chave.'),
         tip('Anúncio estranho (falsificação, golpe, produto proibido)? Toque em "Denunciar este anúncio". Quem vende não sabe quem denunciou.'),
       ],
