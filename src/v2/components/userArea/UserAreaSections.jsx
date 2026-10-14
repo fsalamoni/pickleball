@@ -11,9 +11,11 @@ import { Link } from 'react-router-dom';
 import {
   Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, GraduationCap,
   HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Search, Settings, ShieldCheck,
-  Medal, Swords, Trophy, User, Users,
+  Medal, ShoppingBag, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
 
@@ -96,6 +98,8 @@ function ResumoSecao({ ctx }) {
   const { isPlatformAdmin } = useAuth();
   const arenaModulesOn = true;
   const trainingOn = true;
+  const { flags } = useFeatureFlags();
+  const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
   const arenas = ctx.arenasQ.isSuccess ? ctx.arenasQ.data : [];
   return (
     <div className="space-y-6">
@@ -111,6 +115,8 @@ function ResumoSecao({ ctx }) {
             { to: '/perfil/torneios', label: 'Torneios que organizo', descricao: 'Os que você criou ou ajuda a organizar', icon: Trophy },
             ctx.isCoach && { to: '/aulas', label: 'Painel do professor', descricao: 'Agenda, alunos e pacotes', icon: GraduationCap },
             ...arenas.slice(0, 3).map((a) => ({ to: `/arenas/${a.id}/gerir`, label: a.name || 'Minha arena', descricao: 'Central da arena', icon: Building2 })),
+            mercadoOn && { to: '/mercado/vender', label: 'Vender no Mercado', descricao: 'Anúncios, vendas e o seu Pix', icon: Store },
+            mercadoOn && { to: '/mercado/pedidos', label: 'Compras no Mercado', descricao: 'Pedidos e ofertas', icon: ShoppingBag },
             isPlatformAdmin && { to: '/admin/painel', label: 'Painel admin', descricao: 'A plataforma inteira', icon: LayoutDashboard },
           ]}
         />

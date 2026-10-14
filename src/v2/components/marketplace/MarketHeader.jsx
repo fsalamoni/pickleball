@@ -86,6 +86,7 @@ export default function MarketHeader({ className }) {
             <HeaderLink to="/mercado/favoritos" icon={Heart} label="Favoritos" />
             <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label="Compras" />
           </span>
+          <HeaderLink to="/mercado/vender" icon={Store} label="Vender" />
           <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label="Carrinho" badge={cart.isError ? 0 : cart.count} />
         </nav>
       </div>
