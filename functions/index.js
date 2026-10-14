@@ -1232,6 +1232,15 @@ exports.marketFavoriteCount = onDocumentWritten(
   },
 );
 
+// Pergunta feita ou respondida → aviso para o outro lado.
+exports.marketQuestionNotify = onDocumentWritten(
+  { document: 'market_questions/{questionId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    await marketplace.notifyQuestion({ db, now: Date.now() }, event.params.questionId, antes(event), depois(event));
+  },
+);
+
 // Anúncio publicado ou editado → moderação automática por termo proibido.
 exports.marketModerateListing = onDocumentWritten(
   { document: 'market_listings/{listingId}', database: DATABASE_ID, region: REGION },

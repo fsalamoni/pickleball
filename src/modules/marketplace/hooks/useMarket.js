@@ -3,11 +3,18 @@
  * única: chave escrita duas vezes diverge e busca de novo o que já estava
  * em cache).
  */
+import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
+import { parseSellerKey } from '../domain/seller.js';
 import * as svc from '../services/marketService';
 import * as orders from '../services/marketOrderService';
+import {
+  addToCart, cartCount, moveToCart, removeFromCart, saveForLater, setCartQuantity,
+} from '../domain/cart.js';
 
 export const marketKeys = {
   all: ['mercado'],
@@ -38,6 +45,20 @@ export const marketKeys = {
   admin: ['mercado', 'admin'],
 };
 
+/**
+ * Quem vê opera este vendedor? (o mesmo que `isMarketOperator` na regra:
+ * a própria conta, ou gestor da arena). Só para decidir o que MOSTRAR — quem
+ * decide de verdade é a regra e o servidor.
+ */
+export function useIsMarketOperator(sellerKey) {
+  const { user } = useAuth();
+  const { arenas = [] } = useMyArenaSummary();
+  const k = parseSellerKey(sellerKey);
+  if (!k || !user?.uid) return false;
+  if (k.type === 'arena') return arenas.some((a) => a.id === k.id);
+  return k.id === user.uid;
+}
+
 /** O Mercado está ligado para quem vê? (a flag do admin) */
 export const useMarketEnabled = () => useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
 
@@ -54,11 +75,21 @@ export function useListing(id) {
 }
 
 export function useListingsByIds(ids = []) {
-  return useQuery({ queryKey: marketKeys.listingsByIds(ids), queryFn: () => svc.getListings(ids), enabled: ids.length > 0 });
+  return useQuery({ queryKey: marketKeys.listingsByIds(ids), queryFn: () => svc.getListings(ids), enabled: ids.length > 0, placeholderData: (prev) => prev });
 }
 
 export function useSeller(key) {
   return useQuery({ queryKey: marketKeys.seller(key), queryFn: () => svc.getSeller(key), enabled: !!key });
+}
+
+/** As lojas ATIVAS (pendente e recusada não aparecem na vitrine). */
+export function useStores({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: marketKeys.stores,
+    queryFn: async () => (await svc.listStores()).filter((s) => s.status === 'active'),
+    staleTime: 5 * 60_000,
+    enabled,
+  });
 }
 
 export function useSellerPrivate(key, { enabled = true } = {}) {
@@ -126,6 +157,33 @@ export function useSaveCart(uid) {
     },
     onError: (_e, _v, ctx) => qc.setQueryData(marketKeys.cart(uid), ctx?.antes),
   });
+}
+
+/**
+ * O carrinho com as operações do domínio já ligadas à gravação otimista.
+ * `add` devolve o erro do domínio (carrinho cheio) em vez de gravar.
+ */
+export function useMarketCart(uid) {
+  const q = useCart(uid);
+  const save = useSaveCart(uid);
+  const cart = q.data || { items: [], saved: [] };
+  const grava = useCallback((next) => save.mutateAsync(next), [save]);
+  return {
+    ...q,
+    cart,
+    count: cartCount(cart),
+    saving: save.isPending,
+    add: async (listing, quantity = 1) => {
+      const r = addToCart(cart, listing, quantity);
+      if (r.error) return { error: r.error };
+      await grava(r.cart);
+      return { error: null };
+    },
+    setQuantity: (listingId, qty) => grava(setCartQuantity(cart, listingId, qty)),
+    remove: (listingId) => grava(removeFromCart(cart, listingId)),
+    later: (listingId) => grava(saveForLater(cart, listingId)),
+    back: (listingId) => grava(moveToCart(cart, listingId)),
+  };
 }
 
 export function useMyOrders(uid) {

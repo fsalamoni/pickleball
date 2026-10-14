@@ -27,7 +27,9 @@ describe('padrões por papel', () => {
 
 describe('chosenSidebar', () => {
   it('sem escolha, o padrão do papel; o item de papel que a pessoa não tem some', () => {
-    expect(chosenSidebar(null, {})).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta });
+    // O Mercado só entra com a flag dele ligada.
+    expect(chosenSidebar(null, {})).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta.filter((i) => i !== I.MERCADO) });
+    expect(chosenSidebar(null, { mercado: true })).toEqual({ preset: 'atleta', items: SIDEBAR_PRESET_ITEMS.atleta });
     const arena = chosenSidebar(null, { arenas: true });
     expect(arena.preset).toBe('arena');
     expect(arena.items[1]).toBe(I.MINHA_ARENA);
@@ -59,7 +61,7 @@ describe('editar', () => {
     expect(toggleSidebarItem(base, I.MINHA_ARENA, {})).not.toContain(I.MINHA_ARENA);
   });
   it('mover: ninguém passa à frente do Início; na ponta não faz nada', () => {
-    const base = [...SIDEBAR_PRESET_ITEMS.atleta];
+    const base = SIDEBAR_PRESET_ITEMS.atleta.filter((i) => i !== I.MERCADO);
     expect(moveSidebarItem(base, I.JOGAR, -1)).toEqual(base);
     expect(moveSidebarItem(base, I.INICIO, 1)).toEqual(base);
     expect(moveSidebarItem(base, I.COMPETIR, -1)[1]).toBe(I.COMPETIR);

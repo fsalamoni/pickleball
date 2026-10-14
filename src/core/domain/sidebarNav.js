@@ -24,6 +24,7 @@ export const SIDEBAR_ITEM = Object.freeze({
   AULAS: 'ensino',
   PERFIL: 'perfil',
   PARCEIROS: 'parceiros',
+  MERCADO: 'mercado',
   MINHA_ARENA: 'minha-arena',
   PROFESSOR: 'professor',
   ADMIN: 'admin',
@@ -32,7 +33,8 @@ export const SIDEBAR_ITEM = Object.freeze({
 const I = SIDEBAR_ITEM;
 
 /**
- * `requer`: o papel de que o item depende (`arenas`, `professor`, `admin`).
+ * `requer`: o papel de que o item depende (`arenas`, `professor`, `admin`) —
+ * ou, no `mercado`, a flag do Mercado ligada.
  * `fixo`: não sai da barra. Os rótulos são os do menu (o da arena é o nome dela).
  */
 export const SIDEBAR_ITEM_META = Object.freeze({
@@ -44,6 +46,7 @@ export const SIDEBAR_ITEM_META = Object.freeze({
   [I.AULAS]: { label: 'Aulas', description: 'Professores e as aulas que você faz.' },
   [I.PERFIL]: { label: 'Minha área', description: 'Tudo o que é seu, inclusive o que você gere.', fixo: true },
   [I.PARCEIROS]: { label: 'Parceiros', description: 'Os parceiros da plataforma.' },
+  [I.MERCADO]: { label: 'Mercado', description: 'Comprar e vender produtos de pickleball.', requer: 'mercado' },
   [I.MINHA_ARENA]: { label: 'Minha arena', description: 'A Central da arena que você gere, com as pendências.', requer: 'arenas' },
   [I.PROFESSOR]: { label: 'Painel do professor', description: 'Agenda, alunos, clínicas e horários.', requer: 'professor' },
   [I.ADMIN]: { label: 'Admin', description: 'O painel da plataforma.', requer: 'admin', fixo: true },
@@ -62,12 +65,12 @@ export const SIDEBAR_PRESET_META = Object.freeze({
 
 /** Os itens de cada padrão, na ordem. Admin entra sozinho para quem é (fixo). */
 export const SIDEBAR_PRESET_ITEMS = Object.freeze({
-  [SIDEBAR_PRESET.ATLETA]: Object.freeze([I.INICIO, I.JOGAR, I.COMPETIR, I.ARENAS, I.COMUNIDADE, I.AULAS, I.PERFIL]),
-  [SIDEBAR_PRESET.ARENA]: Object.freeze([I.INICIO, I.MINHA_ARENA, I.ARENAS, I.JOGAR, I.COMPETIR, I.PERFIL]),
-  [SIDEBAR_PRESET.PROFESSOR]: Object.freeze([I.INICIO, I.PROFESSOR, I.AULAS, I.JOGAR, I.COMPETIR, I.PERFIL]),
+  [SIDEBAR_PRESET.ATLETA]: Object.freeze([I.INICIO, I.JOGAR, I.COMPETIR, I.ARENAS, I.COMUNIDADE, I.AULAS, I.MERCADO, I.PERFIL]),
+  [SIDEBAR_PRESET.ARENA]: Object.freeze([I.INICIO, I.MINHA_ARENA, I.ARENAS, I.JOGAR, I.COMPETIR, I.MERCADO, I.PERFIL]),
+  [SIDEBAR_PRESET.PROFESSOR]: Object.freeze([I.INICIO, I.PROFESSOR, I.AULAS, I.JOGAR, I.COMPETIR, I.MERCADO, I.PERFIL]),
 });
 
-/** @typedef {{ arenas?: boolean, professor?: boolean, admin?: boolean }} Papeis */
+/** @typedef {{ arenas?: boolean, professor?: boolean, admin?: boolean, mercado?: boolean }} Papeis */
 
 /** O item pode aparecer para esta pessoa? */
 export function sidebarItemAvailable(id, papeis = {}) {

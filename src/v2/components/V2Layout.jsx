@@ -40,8 +40,13 @@ import {
   LifeBuoy,
   Dumbbell,
   SlidersHorizontal,
+  Store,
+  ShoppingBag,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { bottomNavItems } from '@/core/domain/bottomNav';
 import { navRotulos } from '@/core/domain/navRotulos';
 import { useSidebarNav } from '@/core/lib/useSidebarNav';
@@ -122,6 +127,7 @@ const PAGE_TITLES = [
   ['/conquistas', 'Conquistas'],
   ['/vinculos', 'Vínculos'],
   ['/notificacoes', 'Notificações'],
+  ['/mercado', 'Mercado'],
   ['/admin', 'Admin'],
 ];
 
@@ -146,6 +152,7 @@ function resolvePageTitle(pathname, { userHubOn = false } = {}) {
 
 function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
+  const marketplaceOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
   const performanceOn = true;
   const ratingOn = true;
   const matchmakingOn = true;
@@ -328,6 +335,15 @@ function useV2Nav() {
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
       }),
+      // Mercado (flag `marketplace`): comprar e vender, separado do mercado interno das arenas.
+      marketplaceOn && hub({
+        id: 'mercado', dica: 'menu-mercado', label: 'Mercado', icon: Store, to: '/mercado',
+        children: [
+          { to: '/mercado', label: 'Comprar', icon: Store, exact: true },
+          { to: '/mercado/pedidos', label: 'Minhas compras', icon: ShoppingBag },
+          { to: '/mercado/favoritos', label: 'Favoritos', icon: Heart },
+        ],
+      }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
       affiliatesOn && hub({
         id: 'parceiros', label: 'Parceiros', icon: HeartHandshake, to: '/parceiros',
@@ -338,13 +354,15 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, gamificationOn, trainingOn, userHubOn, myArenas, pendingByArena, rotulos, marketplaceOn]);
 
   // A barra lateral e a gaveta mostram só os hubs que a pessoa escolheu
   // (core/domain/sidebarNav.js — padrão por papel, editável em Configurações
   // → Menu). `hubs` continua completo: é o que a busca indexa e o que diz em
   // que hub a pessoa está, mesmo num hub escondido.
-  const papeis = useMemo(() => ({ arenas: showMyArenas, professor: isCoach, admin: !!isPlatformAdmin }), [showMyArenas, isCoach, isPlatformAdmin]);
+  const papeis = useMemo(() => ({
+    arenas: showMyArenas, professor: isCoach, admin: !!isPlatformAdmin, mercado: marketplaceOn,
+  }), [showMyArenas, isCoach, isPlatformAdmin, marketplaceOn]);
   const { itens: escolhidos } = useSidebarNav(papeis);
   const hubsVisiveis = useMemo(
     () => escolhidos.map((id) => hubs.find((h) => h.id === id)).filter(Boolean),
