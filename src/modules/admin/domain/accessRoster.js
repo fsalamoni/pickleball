@@ -14,6 +14,7 @@
  *     (`FirebaseAuthContext`). Revogar essa conta não adianta — ela volta.
  *     Só faz sentido revogar quem NÃO tem e-mail de dono.
  */
+import { t } from '../../../core/i18n/index.js';
 
 /** Poderes que uma conta pode carregar. */
 export const POWER = Object.freeze({
@@ -101,11 +102,11 @@ export function canRevokeAccount(account, { isOwner = false } = {}) {
 
 /** Motivo, em pt-BR, de o botão não aparecer. Vazio quando ele aparece. */
 export function revokeBlockedReason(account, { isOwner = false } = {}) {
-  if (!isOwner) return 'Só o dono da plataforma revoga poderes.';
-  if (!account?.uid) return 'Conta inválida.';
-  if (account.isSelf) return 'Esta é a sua conta.';
-  if (account.isOwnerEmail) return 'E-mail de dono: o login devolveria o poder no acesso seguinte.';
-  if (account.powers.length === 0) return 'Esta conta não tem poder algum.';
+  if (!isOwner) return t('Só o dono da plataforma revoga poderes.');
+  if (!account?.uid) return t('Conta inválida.');
+  if (account.isSelf) return t('Esta é a sua conta.');
+  if (account.isOwnerEmail) return t('E-mail de dono: o login devolveria o poder no acesso seguinte.');
+  if (account.powers.length === 0) return t('Esta conta não tem poder algum.');
   return '';
 }
 
@@ -129,9 +130,8 @@ export function buildAccessRoster(users = [], ctx = {}) {
     alerts.push({
       level: ALERT_LEVEL.CRITICAL,
       code: 'admins_inesperados',
-      title: `${inesperados.length} conta(s) com poder de administrador sem e-mail de dono`,
-      detail: 'Administrador lê qualquer perfil e apaga qualquer documento. '
-        + 'Confira o histórico de cada uma na Auditoria antes de revogar.',
+      title: t('{n} conta(s) com poder de administrador sem e-mail de dono', { n: inesperados.length }),
+      detail: t('Administrador lê qualquer perfil e apaga qualquer documento. Confira o histórico de cada uma na Auditoria antes de revogar.'),
       uids: inesperados.map((c) => c.uid),
     });
   }
@@ -139,9 +139,8 @@ export function buildAccessRoster(users = [], ctx = {}) {
     alerts.push({
       level: ALERT_LEVEL.CRITICAL,
       code: 'ocultos_com_poder',
-      title: `${ocultosComPoder.length} conta(s) OCULTA(s) ainda com poder`,
-      detail: 'Ocultar tira o atleta das listagens e NÃO remove o poder. '
-        + 'Estas contas continuam com acesso total.',
+      title: t('{n} conta(s) OCULTA(s) ainda com poder', { n: ocultosComPoder.length }),
+      detail: t('Ocultar tira o atleta das listagens e NÃO remove o poder. Estas contas continuam com acesso total.'),
       uids: ocultosComPoder.map((c) => c.uid),
     });
   }
@@ -149,8 +148,8 @@ export function buildAccessRoster(users = [], ctx = {}) {
     alerts.push({
       level: ALERT_LEVEL.WARNING,
       code: 'admin_sem_email',
-      title: `${semEmail.length} administrador(es) sem e-mail no documento`,
-      detail: 'Sem e-mail não dá para dizer se a conta é legítima. Investigue.',
+      title: t('{n} administrador(es) sem e-mail no documento', { n: semEmail.length }),
+      detail: t('Sem e-mail não dá para dizer se a conta é legítima. Investigue.'),
       uids: semEmail.map((c) => c.uid),
     });
   }
@@ -158,8 +157,8 @@ export function buildAccessRoster(users = [], ctx = {}) {
     alerts.push({
       level: ALERT_LEVEL.CRITICAL,
       code: 'sem_admin',
-      title: 'Nenhuma conta com poder de administrador',
-      detail: 'Se você perdeu o acesso, use a restauração de emergência do dono.',
+      title: t('Nenhuma conta com poder de administrador'),
+      detail: t('Se você perdeu o acesso, use a restauração de emergência do dono.'),
       uids: [],
     });
   }
@@ -167,8 +166,8 @@ export function buildAccessRoster(users = [], ctx = {}) {
     alerts.push({
       level: ALERT_LEVEL.INFO,
       code: 'ok',
-      title: 'Só o dono tem poder de administrador',
-      detail: 'É a configuração esperada.',
+      title: t('Só o dono tem poder de administrador'),
+      detail: t('É a configuração esperada.'),
       uids: [],
     });
   }

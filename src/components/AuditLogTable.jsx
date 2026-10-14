@@ -6,6 +6,7 @@ import { AUDIT_ACTION_LABELS, formatAuditDate } from '@/core/services/auditServi
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { t, tn } from '@/core/i18n';
 
 const PAGE_SIZES = [10, 50, 100];
 
@@ -76,22 +77,22 @@ export function AuditLogTable({ title, description, tournamentId, userId, classN
       <CardContent className="space-y-4 p-4 sm:p-5">
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <FilterInput label="Nº" value={filters.log_number} onChange={(value) => updateFilter(setFilters, 'log_number', value)} />
-          <FilterInput label="Usuário" value={filters.user_name} onChange={(value) => updateFilter(setFilters, 'user_name', value)} />
-          <FilterInput label="Data/hora" value={filters.created_at} onChange={(value) => updateFilter(setFilters, 'created_at', value)} />
-          <FilterInput label="Ação" value={filters.action_label} onChange={(value) => updateFilter(setFilters, 'action_label', value)} />
-          <FilterInput label="Detalhes" value={filters.details} onChange={(value) => updateFilter(setFilters, 'details', value)} />
+          <FilterInput label={t('Nº')} value={filters.log_number} onChange={(value) => updateFilter(setFilters, 'log_number', value)} />
+          <FilterInput label={t('Usuário')} value={filters.user_name} onChange={(value) => updateFilter(setFilters, 'user_name', value)} />
+          <FilterInput label={t('Data/hora')} value={filters.created_at} onChange={(value) => updateFilter(setFilters, 'created_at', value)} />
+          <FilterInput label={t('Ação')} value={filters.action_label} onChange={(value) => updateFilter(setFilters, 'action_label', value)} />
+          <FilterInput label={t('Detalhes')} value={filters.details} onChange={(value) => updateFilter(setFilters, 'details', value)} />
         </div>
 
         <div className="overflow-x-auto rounded-3xl border border-gray-100">
           <table className="min-w-[980px] w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-ink text-left text-white/70">
-                <th className="py-3 pl-4 pr-3 font-semibold">Nº</th>
-                <th className="py-3 px-3 font-semibold">Usuário</th>
-                <th className="py-3 px-3 font-semibold">Data e horário</th>
-                <th className="py-3 px-3 font-semibold">Ação realizada</th>
-                <th className="py-3 px-3 font-semibold">Informações</th>
+                <th className="py-3 pl-4 pr-3 font-semibold">{t('Nº')}</th>
+                <th className="py-3 px-3 font-semibold">{t('Usuário')}</th>
+                <th className="py-3 px-3 font-semibold">{t('Data e horário')}</th>
+                <th className="py-3 px-3 font-semibold">{t('Ação realizada')}</th>
+                <th className="py-3 px-3 font-semibold">{t('Informações')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white/65">
@@ -111,7 +112,7 @@ export function AuditLogTable({ title, description, tournamentId, userId, classN
               ))}
               {!visibleLogs.length && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500">Nenhum log encontrado.</td>
+                  <td colSpan={5} className="py-8 text-center text-gray-500">{t('Nenhum log encontrado.')}</td>
                 </tr>
               )}
             </tbody>
@@ -120,34 +121,34 @@ export function AuditLogTable({ title, description, tournamentId, userId, classN
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Registros por página</span>
+            <span>{t('Registros por página')}</span>
             <select
               className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              aria-label="Registros por página"
+              aria-label={t('Registros por página')}
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
             >
               {PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
             </select>
-            <span>{filteredLogs.length} registro(s)</span>
+            <span>{tn(filteredLogs.length, '{n} registro', '{n} registros')}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={safePage <= 1} onClick={() => setPage((p) => p - 1)}>
-              Anterior
+              {t('Anterior')}
             </Button>
-            <span className="text-sm text-gray-500">Página</span>
+            <span className="text-sm text-gray-500">{t('Página')}</span>
             <Input
               type="number"
               min="1"
               max={pageCount}
-              aria-label="Número da página"
+              aria-label={t('Número da página')}
               value={safePage}
               onChange={(e) => setPage(Math.max(1, Math.min(pageCount, Number(e.target.value) || 1)))}
               className="h-9 w-20"
             />
             <span className="text-sm text-gray-500">de {pageCount}</span>
             <Button type="button" variant="outline" size="sm" disabled={safePage >= pageCount} onClick={() => setPage((p) => p + 1)}>
-              Próxima
+              {t('Próxima')}
             </Button>
           </div>
         </div>

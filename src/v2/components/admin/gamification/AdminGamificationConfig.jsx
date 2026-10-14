@@ -11,6 +11,7 @@ import {
 import { TIER_NAMES } from '@/modules/progression/domain/tiers';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
+import { t, tk, tn } from '@/core/i18n';
 
 /**
  * Os números, agrupados pela parte da gamificação a que pertencem — o admin
@@ -20,34 +21,34 @@ import TermHint, { TermNote } from '@/v2/components/gamification/TermHint';
  */
 const GRUPOS_NUM = [
   {
-    id: 'season', titulo: 'Temporada e placar público', modulo: 'hall_of_fame', tier: true,
+    id: 'season', titulo: tk('Temporada e placar público'), modulo: 'hall_of_fame', tier: true,
     campos: [
-      { path: 'season.prizeTop1', label: 'Prêmio do 1º da temporada (XP)', hint: 'Concedido uma única vez, quando o mês fecha.' },
-      { path: 'season.prizeTop10Percent', label: 'Prêmio do top 10% (XP)' },
-      { path: 'season.prizeParticipation', label: 'Prêmio de participação (XP)', hint: 'Só para quem teve XP no mês.' },
+      { path: 'season.prizeTop1', label: tk('Prêmio do 1º da temporada (XP)'), hint: tk('Concedido uma única vez, quando o mês fecha.') },
+      { path: 'season.prizeTop10Percent', label: tk('Prêmio do top 10% (XP)') },
+      { path: 'season.prizeParticipation', label: tk('Prêmio de participação (XP)'), hint: tk('Só para quem teve XP no mês.') },
     ],
   },
   {
-    id: 'duels', titulo: 'Duelo da semana', modulo: 'duels',
+    id: 'duels', titulo: tk('Duelo da semana'), modulo: 'duels',
     campos: [
-      { path: 'duels.winnerXp', label: 'XP de quem vence o duelo' },
-      { path: 'duels.participationXp', label: 'XP de quem joga o duelo e não vence' },
-      { path: 'duels.maxLevelGap', label: 'Diferença máxima de nível no duelo', hint: 'Em pontos da régua 2.0–8.0. Menor = duelos mais parelhos, mas menos pares.', step: 0.25 },
+      { path: 'duels.winnerXp', label: tk('XP de quem vence o duelo') },
+      { path: 'duels.participationXp', label: tk('XP de quem joga o duelo e não vence') },
+      { path: 'duels.maxLevelGap', label: tk('Diferença máxima de nível no duelo'), hint: tk('Em pontos da régua 2.0–8.0. Menor = duelos mais parelhos, mas menos pares.'), step: 0.25 },
     ],
   },
   {
-    id: 'reviews', titulo: 'Avaliações pós-jogo', modulo: 'match_reviews',
+    id: 'reviews', titulo: tk('Avaliações pós-jogo'), modulo: 'match_reviews',
     campos: [
-      { path: 'reviews.minForPublicScore', label: 'Avaliações para a nota aparecer', hint: 'Antes disso a pessoa não tem nota pública — poucas notas dizem pouco.' },
-      { path: 'reviews.windowDays', label: 'Dias para avaliar um jogo' },
+      { path: 'reviews.minForPublicScore', label: tk('Avaliações para a nota aparecer'), hint: tk('Antes disso a pessoa não tem nota pública — poucas notas dizem pouco.') },
+      { path: 'reviews.windowDays', label: tk('Dias para avaliar um jogo') },
     ],
   },
   {
-    id: 'antiFarm', titulo: 'Integridade (antifarm)', modulo: null,
+    id: 'antiFarm', titulo: tk('Integridade (antifarm)'), modulo: null,
     campos: [
-      { path: 'antiFarm.xpJumpPerDay', label: 'Salto de XP por dia que gera sinal', hint: 'Acima disso o servidor abre um sinal para você revisar. Nunca pune sozinho.' },
-      { path: 'antiFarm.kudosRingMin', label: 'Kudos trocados que formam um “anel”' },
-      { path: 'antiFarm.unverifiedXpFactor', label: 'XP além do que os jogos verificados sustentam (fator)', step: 0.5 },
+      { path: 'antiFarm.xpJumpPerDay', label: tk('Salto de XP por dia que gera sinal'), hint: tk('Acima disso o servidor abre um sinal para você revisar. Nunca pune sozinho.') },
+      { path: 'antiFarm.kudosRingMin', label: tk('Kudos trocados que formam um “anel”') },
+      { path: 'antiFarm.unverifiedXpFactor', label: tk('XP além do que os jogos verificados sustentam (fator)'), step: 0.5 },
     ],
   },
 ];
@@ -75,9 +76,9 @@ export default function AdminGamificationConfig() {
     try {
       const salvo = await saveGamificationConfig(draft, atual, { uid: user?.uid, email: user?.email });
       setDraft(salvo);
-      toast.success('Configuração salva. Vale na próxima passada do servidor e na hora para as telas.');
+      toast.success(t('Configuração salva. Vale na próxima passada do servidor e na hora para as telas.'));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível salvar.');
+      toast.error(e?.message || t('Não foi possível salvar.'));
     } finally {
       setSaving(false);
     }
@@ -87,14 +88,14 @@ export default function AdminGamificationConfig() {
     <div className="space-y-5" data-testid="admin-gamification-config">
       <V2Surface className="space-y-4" data-dica="admin-gam-modulos">
         <div>
-          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Módulos <TermHint term="admin-modulos" /></h2>
-          <p className="text-sm text-gray-500">A flag <code>gamification_v2</code> é o interruptor geral; aqui você liga e desliga cada parte. Módulo desligado some das telas e o servidor para de rodar a parte dele.</p>
+          <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">{t('Módulos')} <TermHint term="admin-modulos" /></h2>
+          <p className="text-sm text-gray-500">{t('A flag')} <code>gamification_v2</code> {t('é o interruptor geral; aqui você liga e desliga cada parte. Módulo desligado some das telas e o servidor para de rodar a parte dele.')}</p>
         </div>
         {GAMIFICATION_MODULE_GROUPS.map((g) => (
           <div key={g.id} className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t(g.label)}</p>
             {Object.entries(GAMIFICATION_MODULES).filter(([, m]) => m.grupo === g.id).map(([id, m]) => (
-              <V2Toggle key={id} id={`mod-${id}`} checked={draft.modules[id]} label={m.label} hint={m.description}
+              <V2Toggle key={id} id={`mod-${id}`} checked={draft.modules[id]} label={t(m.label)} hint={t(m.description)}
                 onChange={(v) => setDraft((d) => ({ ...d, modules: { ...d.modules, [id]: v } }))} />
             ))}
           </div>
@@ -102,19 +103,19 @@ export default function AdminGamificationConfig() {
       </V2Surface>
 
       <V2Surface className="space-y-4" data-dica="admin-gam-premios">
-        <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">Prêmios e limiares <TermHint term="admin-premios" /></h2>
+        <h2 className="flex items-center gap-1 font-display text-lg font-bold text-ink">{t('Prêmios e limiares')} <TermHint term="admin-premios" /></h2>
         {GRUPOS_NUM.map((g, i) => {
           const desligado = g.modulo && draft.modules[g.modulo] === false;
           return (
             <div key={g.id} className={`space-y-3 ${i > 0 ? 'border-t border-gray-100 pt-4' : ''}`} data-grupo={g.id}>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{g.titulo}</p>
-                {desligado && <V2Badge tone="amber">módulo desligado — só vale quando você ligar</V2Badge>}
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t(g.titulo)}</p>
+                {desligado && <V2Badge tone="amber">{t('módulo desligado — só vale quando você ligar')}</V2Badge>}
               </div>
               {g.tier && (
-                <V2Field label="Tier mínimo para aparecer no placar público" htmlFor="cfg-mintier" hint="Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.">
+                <V2Field label={t('Tier mínimo para aparecer no placar público')} htmlFor="cfg-mintier" hint={t('Quem está abaixo disso ranqueia e recebe prêmios, mas não aparece para os outros.')}>
                   <V2Select id="cfg-mintier" value={draft.season.publicMinTier} onChange={(e) => setDraft((d) => setIn(d, 'season.publicMinTier', e.target.value))}>
-                    {TIER_NAMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {TIER_NAMES.map((tier) => <option key={tier} value={tier}>{t(tier)}</option>)}
                   </V2Select>
                 </V2Field>
               )}
@@ -122,7 +123,7 @@ export default function AdminGamificationConfig() {
                 {g.campos.map((n) => {
                   const [min, max] = GAMIFICATION_CONFIG_LIMITS[n.path];
                   return (
-                    <V2Field key={n.path} label={n.label} htmlFor={`cfg-${n.path}`} hint={n.hint ? `${n.hint} (${min}–${max})` : `${min}–${max}`}>
+                    <V2Field key={n.path} label={t(n.label)} htmlFor={`cfg-${n.path}`} hint={n.hint ? `${t(n.hint)} (${min}–${max})` : `${min}–${max}`}>
                       <V2Input id={`cfg-${n.path}`} type="number" min={min} max={max} step={n.step || 1} value={get(draft, n.path)}
                         onChange={(e) => setDraft((d) => setIn(d, n.path, e.target.value === '' ? '' : Number(e.target.value)))} />
                     </V2Field>
@@ -135,19 +136,19 @@ export default function AdminGamificationConfig() {
       </V2Surface>
 
       <V2Surface className="space-y-4" data-dica="admin-gam-avisos">
-        <h2 className="font-display text-lg font-bold text-ink">Avisos enviados pelo servidor</h2>
-        {[['weeklyReview', 'Resumo da semana (segunda-feira)'], ['duels', 'Duelo da semana'], ['challengeResults', 'Resultado dos desafios']].map(([k, l]) => (
+        <h2 className="font-display text-lg font-bold text-ink">{t('Avisos enviados pelo servidor')}</h2>
+        {[['weeklyReview', t('Resumo da semana (segunda-feira)')], ['duels', t('Duelo da semana')], ['challengeResults', t('Resultado dos desafios')]].map(([k, l]) => (
           <V2Toggle key={k} id={`notif-${k}`} checked={draft.notifications[k]} label={l}
             onChange={(v) => setDraft((d) => setIn(d, `notifications.${k}`, v))} />
         ))}
-        <p className="text-xs text-gray-500">Cada pessoa ainda pode desligar o que não quer receber, nas preferências dela.</p>
+        <p className="text-xs text-gray-500">{t('Cada pessoa ainda pode desligar o que não quer receber, nas preferências dela.')}</p>
       </V2Surface>
 
       <V2Surface variant="plano" className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 bg-paper-pure/95 p-4 shadow-lg backdrop-blur">
-        <p className="text-sm text-gray-600">{mudancas.length === 0 ? 'Nada alterado.' : `${mudancas.length} ${mudancas.length === 1 ? 'alteração' : 'alterações'} a salvar.`}</p>
+        <p className="text-sm text-gray-600">{mudancas.length === 0 ? t('Nada alterado.') : tn(mudancas.length, '{n} alteração a salvar.', '{n} alterações a salvar.')}</p>
         <div className="flex gap-2">
-          <V2Button variant="ghost" size="sm" onClick={() => setDraft(normalizeGamificationConfig(DEFAULT_GAMIFICATION_CONFIG))}><RotateCcw className="mr-1 h-4 w-4" /> Padrões de fábrica</V2Button>
-          <V2Button size="sm" disabled={saving || mudancas.length === 0} onClick={salvar} data-dica="admin-gam-salvar"><Save className="mr-1 h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}</V2Button>
+          <V2Button variant="ghost" size="sm" onClick={() => setDraft(normalizeGamificationConfig(DEFAULT_GAMIFICATION_CONFIG))}><RotateCcw className="mr-1 h-4 w-4" /> {t('Padrões de fábrica')}</V2Button>
+          <V2Button size="sm" disabled={saving || mudancas.length === 0} onClick={salvar} data-dica="admin-gam-salvar"><Save className="mr-1 h-4 w-4" /> {saving ? t('Salvando…') : t('Salvar')}</V2Button>
         </div>
       </V2Surface>
     </div>

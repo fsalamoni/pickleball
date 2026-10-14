@@ -8,6 +8,7 @@
  */
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/core/config/firebase';
+import { t } from '@/core/i18n';
 
 const NOME_DA_FUNCAO = 'adminDeleteAccounts';
 
@@ -19,24 +20,26 @@ const NOME_DA_FUNCAO = 'adminDeleteAccounts';
  * a tela estar no ar e a função não. Sem esta tradução o admin veria
  * "internal" e concluiria que a exclusão quebrou.
  */
-export function deletionErrorMessage(err) {
+export function deletionErrorMessage(err, { unificacao = false } = {}) {
   const code = String(err?.code || '').replace('functions/', '');
   if (code === 'not-found' || code === 'unimplemented') {
-    return 'A exclusão roda no servidor, e a função ainda não foi publicada. Ela sai no próximo deploy — tente de novo mais tarde.';
+    return unificacao
+      ? t('A unificação roda no servidor, e a função ainda não foi publicada. Ela sai no próximo deploy — tente de novo mais tarde.')
+      : t('A exclusão roda no servidor, e a função ainda não foi publicada. Ela sai no próximo deploy — tente de novo mais tarde.');
   }
-  if (code === 'permission-denied') return err?.message || 'Você não tem permissão para esta operação.';
-  if (code === 'invalid-argument') return err?.message || 'Pedido inválido.';
+  if (code === 'permission-denied') return err?.message || t('Você não tem permissão para esta operação.');
+  if (code === 'invalid-argument') return err?.message || t('Pedido inválido.');
   if (code === 'unavailable' || code === 'deadline-exceeded') {
-    return 'O servidor não respondeu a tempo. Nada é apagado pela metade: rode de novo para terminar.';
+    return t('O servidor não respondeu a tempo. Nada é apagado pela metade: rode de novo para terminar.');
   }
   if (code === 'internal') {
-    return 'O servidor falhou ao processar. Se a função foi publicada agora há pouco, aguarde alguns minutos e tente de novo.';
+    return t('O servidor falhou ao processar. Se a função foi publicada agora há pouco, aguarde alguns minutos e tente de novo.');
   }
-  return err?.message || 'Não foi possível concluir.';
+  return err?.message || t('Não foi possível concluir.');
 }
 
 async function chamar(payload) {
-  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   const fn = httpsCallable(functions, NOME_DA_FUNCAO, { timeout: 540_000 });
   try {
     const { data } = await fn(payload);

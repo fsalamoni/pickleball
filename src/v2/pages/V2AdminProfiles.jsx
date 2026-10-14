@@ -12,6 +12,7 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 export default function V2AdminProfiles({ embedded = false }) {
   const { user, isPlatformAdmin } = useAuth();
@@ -40,7 +41,7 @@ export default function V2AdminProfiles({ embedded = false }) {
       setError(null);
       setProfiles(await listAllAthleteProfiles());
     } catch (err) {
-      setError(err.message || 'Não foi possível carregar os perfis.');
+      setError(err.message || t('Não foi possível carregar os perfis.'));
       toast.error(err.message);
     }
   }
@@ -59,7 +60,7 @@ export default function V2AdminProfiles({ embedded = false }) {
     try {
       const result = await restoreAthleteProfileFromUserDoc(uid, user);
       if (result.ok) {
-        toast.success(`Perfil restaurado (${result.fieldsWritten} campos).`);
+        toast.success(t('Perfil restaurado ({fieldsWritten} campos).', { fieldsWritten: result.fieldsWritten }));
         void load();
       } else {
         toast.error(result.reason);
@@ -76,18 +77,18 @@ export default function V2AdminProfiles({ embedded = false }) {
     try {
       const res = await resyncAllAthleteProfilesFromUsers(user, { dryRun });
       if (!res.ok) {
-        toast.error(res.reason || 'Falha na re-sincronização.');
+        toast.error(res.reason || t('Falha na re-sincronização.'));
         return;
       }
       setResyncResult({ ...res, mode: dryRun ? 'dry-run' : 'apply' });
       if (dryRun) {
-        toast.success(`Simulação: ${res.summary.eligible} espelho(s) seriam atualizados.`);
+        toast.success(tn(res.summary.eligible, 'Simulação: {n} espelho seria atualizado.', 'Simulação: {n} espelhos seriam atualizados.'));
       } else {
-        toast.success(`${res.written} espelho(s) re-sincronizado(s) a partir do users/{uid}.`);
+        toast.success(tn(res.written, '{n} espelho re-sincronizado a partir do users/{uid}.', '{n} espelhos re-sincronizados a partir do users/{uid}.', { uid: '{uid}' }));
         void load();
       }
     } catch (err) {
-      toast.error(err.message || 'Falha na re-sincronização.');
+      toast.error(err.message || t('Falha na re-sincronização.'));
     } finally {
       setResyncMode(null);
     }
@@ -102,12 +103,12 @@ export default function V2AdminProfiles({ embedded = false }) {
 
   async function runMigration(dryRun) {
     if (!migUid.trim()) {
-      toast.error('Informe o UID do atleta definitivo.');
+      toast.error(t('Informe o UID do atleta definitivo.'));
       return;
     }
     const aliases = parseAliasEmails();
     if (aliases.length === 0) {
-      toast.error('Informe ao menos um email de origem.');
+      toast.error(t('Informe ao menos um email de origem.'));
       return;
     }
     setMigBusy(true);
@@ -125,15 +126,15 @@ export default function V2AdminProfiles({ embedded = false }) {
       setMigLastResult({ ...res, mode: dryRun ? 'dry-run' : 'apply' });
       if (dryRun) {
         toast.success(
-          `Dry-run: ${res.scanned} encontrados, ${res.claimed} seriam migrados.`,
+          t('Dry-run: {scanned} encontrados, {claimed} seriam migrados.', { scanned: res.scanned, claimed: res.claimed }),
         );
       } else {
         toast.success(
-          `${res.claimed} inscrição(ões) migrada(s) em ${res.tournamentsAffected.length} torneio(s).`,
+          t('{claimed} inscrições migradas em {torneios} torneios.', { claimed: res.claimed, torneios: res.tournamentsAffected.length }),
         );
       }
     } catch (err) {
-      toast.error(err.message || 'Falha na migração.');
+      toast.error(err.message || t('Falha na migração.'));
     } finally {
       setMigBusy(false);
     }
@@ -147,13 +148,13 @@ export default function V2AdminProfiles({ embedded = false }) {
     setTogglingUid(target);
     try {
       await setAthleteHidden(target, nextHidden, user);
-      toast.success(nextHidden ? 'Atleta ocultado das listas.' : 'Atleta reexibido.');
+      toast.success(nextHidden ? t('Atleta ocultado das listas.') : t('Atleta reexibido.'));
       // Atualização otimista local (evita recarregar a lista inteira).
       setProfiles((list) => (list || []).map((p) => (
         (p.id || p.uid) === target ? { ...p, hidden: nextHidden } : p
       )));
     } catch (err) {
-      toast.error(err.message || 'Falha ao atualizar a visibilidade do atleta.');
+      toast.error(err.message || t('Falha ao atualizar a visibilidade do atleta.'));
     } finally {
       setTogglingUid(null);
     }
@@ -174,8 +175,8 @@ export default function V2AdminProfiles({ embedded = false }) {
     <div className={embedded ? 'space-y-6' : 'mx-auto max-w-[1100px]'}>
       {!embedded && (
         <V2PageIntro
-          title="Perfis de atletas"
-          subtitle="Restaure o athlete_profiles/{uid} a partir do users/{uid} (fonte de verdade operacional)."
+          title={t('Perfis de atletas')}
+          subtitle={t('Restaure o athlete_profiles/{uid} a partir do users/{uid} (fonte de verdade operacional).')}
         />
       )}
       {embedded && (
@@ -185,10 +186,9 @@ export default function V2AdminProfiles({ embedded = false }) {
               <UserCog className="h-4.5 w-4.5" />
             </div>
             <div className="flex-1">
-              <h2 className="font-display text-xl font-bold text-ink">Perfis de atletas</h2>
+              <h2 className="font-display text-xl font-bold text-ink">{t('Perfis de atletas')}</h2>
               <p className="mt-1 text-sm leading-6 text-gray-500">
-                Ferramentas de manutenção do diretório público (<code className="rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>)
-                e de migração de dados provisórios com emails divergentes.
+                {t('Ferramentas de manutenção do diretório público (')}<code className="rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>{t(') e de migração de dados provisórios com emails divergentes.')}
               </p>
             </div>
           </div>
@@ -201,21 +201,19 @@ export default function V2AdminProfiles({ embedded = false }) {
             <UserCog className="h-4.5 w-4.5" />
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Restaurar perfil por UID</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{t('Restaurar perfil por UID')}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Útil quando o espelho público foi corrompido (ex.: bug antigo do
+              {t('Útil quando o espelho público foi corrompido (ex.: bug antigo do')}
               <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">syncAthleteProfile</code>
-              sobrescrevendo a foto do atleta com string vazia). A restauração
-              re-lê o <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
-              e regrava o <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>.
-              A operação fica no <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">audit_logs</code>.
+              {t('sobrescrevendo a foto do atleta com string vazia). A restauração re-lê o')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
+              {t('e regrava o')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>{t('. A operação fica no')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">audit_logs</code>.
             </p>
           </div>
         </div>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">UID do atleta</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{t('UID do atleta')}</label>
             <input
               value={uid}
               onChange={(e) => setUid(e.target.value.trim())}
@@ -227,7 +225,7 @@ export default function V2AdminProfiles({ embedded = false }) {
           </div>
           <V2Button onClick={handleRestore} disabled={!uid || busy}>
             <RotateCcw className="h-4 w-4" />
-            {busy ? 'Restaurando…' : 'Restaurar perfil'}
+            {busy ? t('Restaurando…') : t('Restaurar perfil')}
           </V2Button>
         </div>
 
@@ -235,26 +233,26 @@ export default function V2AdminProfiles({ embedded = false }) {
           <div className="mt-4 rounded-[1.25rem] border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
             <div className="flex items-center gap-2 font-bold">
               <ShieldCheck className="h-4 w-4" />
-              Perfil atual no diretório
+              {t('Perfil atual no diretório')}
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div><span className="text-gray-500">Nome:</span> {targetProfile.platform_name || '—'}</div>
-              <div><span className="text-gray-500">Email:</span> {targetProfile.email || '—'}</div>
-              <div><span className="text-gray-500">Cidade/UF:</span> {targetProfile.city || '—'}/{targetProfile.state || '—'}</div>
-              <div><span className="text-gray-500">Listado:</span> {targetProfile.directory_listed ? 'sim' : 'não'}</div>
+              <div><span className="text-gray-500">{t('Nome:')}</span> {targetProfile.platform_name || '—'}</div>
+              <div><span className="text-gray-500">{t('Email:')}</span> {targetProfile.email || '—'}</div>
+              <div><span className="text-gray-500">{t('Cidade/UF:')}</span> {targetProfile.city || '—'}/{targetProfile.state || '—'}</div>
+              <div><span className="text-gray-500">{t('Listado:')}</span> {targetProfile.directory_listed ? 'sim' : t('não')}</div>
               <div className="sm:col-span-2 truncate">
-                <span className="text-gray-500">Foto:</span>{' '}
+                <span className="text-gray-500">{t('Foto:')}</span>{' '}
                 {targetProfile.photo_url ? (
                   <a href={targetProfile.photo_url} target="_blank" rel="noopener noreferrer" className="text-ink underline">
                     {targetProfile.photo_url.slice(0, 80)}…
                   </a>
-                ) : '— (vazia — alvo típico de restauração)'}
+                ) : t('— (vazia — alvo típico de restauração)')}
               </div>
             </div>
             {targetProfile.photo_url === '' && (
               <div className="mt-2 flex items-center gap-1.5 text-amber-800">
                 <ArrowRight className="h-3.5 w-3.5" />
-                Foto vazia detectada — a restauração deve corrigir.
+                {t('Foto vazia detectada — a restauração deve corrigir.')}
               </div>
             )}
           </div>
@@ -273,16 +271,14 @@ export default function V2AdminProfiles({ embedded = false }) {
             <RefreshCw className="h-4.5 w-4.5" />
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Re-sincronizar diretório (em lote)</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{t('Re-sincronizar diretório (em lote)')}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Propaga para o espelho público
+              {t('Propaga para o espelho público')}
               <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>
-              os dados inseridos manualmente no
+              {t('os dados inseridos manualmente no')}
               <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
-              (ex.: <strong>ID DUPR</strong>, gênero, gênero de jogo e lado da quadra) que ainda
-              não passaram pelo <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">syncAthleteProfile</code>.
-              Atualiza <strong>apenas espelhos que já existem</strong> (nunca cria entradas novas
-              no diretório) e preserva flags de moderação. A operação fica no
+              {t('(ex.:')} <strong>{t('ID DUPR')}</strong>{t(', gênero, gênero de jogo e lado da quadra) que ainda não passaram pelo')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">syncAthleteProfile</code>.
+              {t('Atualiza')} <strong>{t('apenas espelhos que já existem')}</strong> {t('(nunca cria entradas novas no diretório) e preserva flags de moderação. A operação fica no')}
               <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">audit_logs</code>.
             </p>
           </div>
@@ -291,37 +287,37 @@ export default function V2AdminProfiles({ embedded = false }) {
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <V2Button variant="secondary" onClick={() => runResync(true)} disabled={resyncBusy}>
             <AlertTriangle className="h-4 w-4" />
-            {resyncMode === 'dry-run' ? 'Processando…' : 'Simular (dry-run)'}
+            {resyncMode === 'dry-run' ? t('Processando…') : t('Simular (dry-run)')}
           </V2Button>
           <V2Button onClick={() => runResync(false)} disabled={resyncBusy}>
             <RefreshCw className="h-4 w-4" />
-            {resyncMode === 'apply' ? 'Re-sincronizando…' : 'Re-sincronizar agora'}
+            {resyncMode === 'apply' ? t('Re-sincronizando…') : t('Re-sincronizar agora')}
           </V2Button>
         </div>
 
         {resyncResult && (
           <div className="mt-5 rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 text-sm">
             <div className="font-bold text-ink">
-              {resyncResult.mode === 'dry-run' ? 'Simulação' : 'Resultado'} — diretório de atletas
+              {resyncResult.mode === 'dry-run' ? t('Simulação') : t('Resultado')} {t('— diretório de atletas')}
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <div><span className="text-gray-500">Usuários:</span> {resyncResult.scanned}</div>
-              <div><span className="text-gray-500">Espelhos existentes:</span> {resyncResult.mirrors}</div>
+              <div><span className="text-gray-500">{t('Usuários:')}</span> {resyncResult.scanned}</div>
+              <div><span className="text-gray-500">{t('Espelhos existentes:')}</span> {resyncResult.mirrors}</div>
               <div>
-                <span className="text-gray-500">{resyncResult.mode === 'dry-run' ? 'A atualizar:' : 'Atualizados:'}</span>{' '}
+                <span className="text-gray-500">{resyncResult.mode === 'dry-run' ? t('A atualizar:') : t('Atualizados:')}</span>{' '}
                 {resyncResult.mode === 'dry-run' ? resyncResult.summary.eligible : resyncResult.written}
               </div>
             </div>
             <div className="mt-2 grid gap-2 text-xs text-gray-500 sm:grid-cols-4">
-              <div>Com DUPR: <span className="font-semibold text-ink">{resyncResult.summary.withDupr}</span></div>
-              <div>Com gênero: <span className="font-semibold text-ink">{resyncResult.summary.withGender}</span></div>
-              <div>Com gênero de jogo: <span className="font-semibold text-ink">{resyncResult.summary.withCompetitionGender}</span></div>
-              <div>Com lado da quadra: <span className="font-semibold text-ink">{resyncResult.summary.withCourtSide}</span></div>
+              <div>{t('Com DUPR:')} <span className="font-semibold text-ink">{resyncResult.summary.withDupr}</span></div>
+              <div>{t('Com gênero:')} <span className="font-semibold text-ink">{resyncResult.summary.withGender}</span></div>
+              <div>{t('Com gênero de jogo:')} <span className="font-semibold text-ink">{resyncResult.summary.withCompetitionGender}</span></div>
+              <div>{t('Com lado da quadra:')} <span className="font-semibold text-ink">{resyncResult.summary.withCourtSide}</span></div>
             </div>
             {resyncResult.mode === 'dry-run' && (
               <div className="mt-3 flex items-center gap-1.5 text-amber-800">
                 <ArrowRight className="h-3.5 w-3.5" />
-                Simulação: nenhum dado foi gravado. Clique em “Re-sincronizar agora” para aplicar.
+                {t('Simulação: nenhum dado foi gravado. Clique em “Re-sincronizar agora” para aplicar.')}
               </div>
             )}
           </div>
@@ -334,24 +330,20 @@ export default function V2AdminProfiles({ embedded = false }) {
             <Wand2 className="h-4.5 w-4.5" />
           </div>
           <div className="flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Migração de dados provisórios</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{t('Migração de dados provisórios')}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Use quando um atleta foi inscrito provisoriamente pelo admin com um
-              email diferente do email que ele usa para entrar na plataforma
-              (ex.: <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente@google.com</code>
-              em vez de <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente.bcosta@icloud.com</code>).
-              A migração re-escreve os campos <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_a_*</code> /
-              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_b_*</code> das
+              {t('Use quando um atleta foi inscrito provisoriamente pelo admin com um email diferente do email que ele usa para entrar na plataforma (ex.:')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente@google.com</code>
+              {t('em vez de')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente.bcosta@icloud.com</code>{t('). A migração re-escreve os campos')} <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_a_*</code> /
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_b_*</code> {t('das')}
               <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">tournament_registrations</code>
-              com o UID, nome, nível e foto da conta definitiva. Os jogos e o
-              ranking passam a contar para o atleta real na próxima recomputação.
+              {t('com o UID, nome, nível e foto da conta definitiva. Os jogos e o ranking passam a contar para o atleta real na próxima recomputação.')}
             </p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">UID do atleta definitivo</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{t('UID do atleta definitivo')}</label>
             <input
               value={migUid}
               onChange={(e) => setMigUid(e.target.value.trim())}
@@ -363,7 +355,7 @@ export default function V2AdminProfiles({ embedded = false }) {
           </div>
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
-              Emails de origem <span className="font-normal normal-case text-gray-400">(separar por vírgula)</span>
+              {t('Emails de origem')} <span className="font-normal normal-case text-gray-400">{t('(separar por vírgula)')}</span>
             </label>
             <input
               value={migAliases}
@@ -378,12 +370,12 @@ export default function V2AdminProfiles({ embedded = false }) {
 
         <div className="mt-4">
           <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
-            Nota (opcional) <span className="font-normal normal-case text-gray-400">— vai para o audit log</span>
+            {t('Nota (opcional)')} <span className="font-normal normal-case text-gray-400">— vai para o audit log</span>
           </label>
           <input
             value={migNote}
             onChange={(e) => setMigNote(e.target.value)}
-            placeholder="Ex.: migração do Vicente, 3 torneios com email provisório errado"
+            placeholder={t('Ex.: migração do Vicente, 3 torneios com email provisório errado')}
             className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
             autoComplete="off"
           />
@@ -396,11 +388,11 @@ export default function V2AdminProfiles({ embedded = false }) {
             disabled={migBusy}
           >
             <AlertTriangle className="h-4 w-4" />
-            {migBusy ? 'Simulando…' : 'Simular (dry-run)'}
+            {migBusy ? t('Simulando…') : t('Simular (dry-run)')}
           </V2Button>
           <V2Button onClick={() => runMigration(false)} disabled={migBusy}>
             <Wand2 className="h-4 w-4" />
-            {migBusy ? 'Migrando…' : 'Executar migração'}
+            {migBusy ? t('Migrando…') : t('Executar migração')}
           </V2Button>
           {/* Não há "Recalcular ranking agora": a própria migração reescreve
               o uid da inscrição, e o gatilho `recomputeRankingOnTournamentRegistration`
@@ -411,21 +403,21 @@ export default function V2AdminProfiles({ embedded = false }) {
         {migLastResult && (
           <div className="mt-5 rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 text-sm">
             <div className="font-bold text-ink">
-              {migLastResult.mode === 'dry-run' ? 'Simulação' : 'Resultado'} — UID {migLastResult.targetUid}
+              {migLastResult.mode === 'dry-run' ? t('Simulação') : t('Resultado')} — UID {migLastResult.targetUid}
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-4">
-              <div><span className="text-gray-500">Encontrados:</span> {migLastResult.scanned}</div>
-              <div><span className="text-gray-500">Migrados:</span> {migLastResult.claimed}</div>
-              <div><span className="text-gray-500">Já OK:</span> {migLastResult.skipped}</div>
-              <div><span className="text-gray-500">Torneios:</span> {migLastResult.tournamentsAffected.length}</div>
+              <div><span className="text-gray-500">{t('Encontrados:')}</span> {migLastResult.scanned}</div>
+              <div><span className="text-gray-500">{t('Migrados:')}</span> {migLastResult.claimed}</div>
+              <div><span className="text-gray-500">{t('Já OK:')}</span> {migLastResult.skipped}</div>
+              <div><span className="text-gray-500">{t('Torneios:')}</span> {migLastResult.tournamentsAffected.length}</div>
             </div>
             <div className="mt-2 text-xs text-gray-500">
-              Emails: {migLastResult.aliasEmails.join(', ')}
+              {t('Emails:')} {migLastResult.aliasEmails.join(', ')}
             </div>
             {migLastResult.details.length > 0 && (
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-ink">
-                  Ver {migLastResult.details.length} inscrição(ões) afetada(s)
+                  {tn(migLastResult.details.length, 'Ver {n} inscrição afetada', 'Ver {n} inscrições afetadas')}
                 </summary>
                 <ul className="mt-2 space-y-1 font-mono text-xs text-gray-600">
                   {migLastResult.details.map((d) => (
@@ -443,17 +435,15 @@ export default function V2AdminProfiles({ embedded = false }) {
       </V2Surface>
 
       <V2Surface>
-        <h3 className="font-display text-lg font-bold text-ink">Atletas cadastrados na plataforma</h3>
+        <h3 className="font-display text-lg font-bold text-ink">{t('Atletas cadastrados na plataforma')}</h3>
         <p className="mt-1 text-sm text-gray-500">
-          Lista inclui quem optou por não aparecer no diretório público.
-          {moderationOn && ' Use “Ocultar” para esconder contas de teste/falsas das listas de inscrição e do diretório — é reversível e não apaga o cadastro.'}
+          {t('Lista inclui quem optou por não aparecer no diretório público.')}
+          {moderationOn && t(' Use “Ocultar” para esconder contas de teste/falsas das listas de inscrição e do diretório — é reversível e não apaga o cadastro.')}
         </p>
         {moderationOn && (
           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-            <strong>Ocultar não remove poder.</strong> É moderação de exibição: tira o atleta
-            das listagens e não mexe no <code>role</code>. Uma conta oculta que seja
-            administrador continua com acesso total. Para ver e revogar quem tem poder, use
-            <strong> Painel admin → Governança → Acessos</strong>.
+            <strong>{t('Ocultar não remove poder.')}</strong> {t('É moderação de exibição: tira o atleta das listagens e não mexe no')} <code>role</code>. {t('Uma conta oculta que seja administrador continua com acesso total. Para ver e revogar quem tem poder, use')}
+            <strong> {t('Painel admin → Governança → Acessos')}</strong>.
           </p>
         )}
 
@@ -463,7 +453,7 @@ export default function V2AdminProfiles({ embedded = false }) {
             <input
               value={athleteSearch}
               onChange={(e) => setAthleteSearch(e.target.value)}
-              placeholder="Buscar por nome, email ou UID…"
+              placeholder={t('Buscar por nome, email ou UID…')}
               className="h-10 w-full rounded-[1rem] border border-input bg-background pl-9 pr-3 text-sm"
               autoComplete="off"
               spellCheck={false}
@@ -476,20 +466,20 @@ export default function V2AdminProfiles({ embedded = false }) {
         ) : profiles.length === 0 ? (
           <V2EmptyState
             icon={UserCog}
-            title="Nenhum perfil cadastrado"
-            description="Quando alguém fizer login, o perfil de atleta é sincronizado automaticamente."
+            title={t('Nenhum perfil cadastrado')}
+            description={t('Quando alguém fizer login, o perfil de atleta é sincronizado automaticamente.')}
           />
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-paper text-left text-gray-500">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Nome</th>
-                  <th className="px-4 py-3 font-semibold">UID</th>
-                  <th className="px-4 py-3 font-semibold">Email</th>
-                  <th className="px-4 py-3 font-semibold">Cidade</th>
-                  <th className="px-4 py-3 font-semibold text-center">Foto</th>
-                  {moderationOn && <th className="px-4 py-3 font-semibold text-right">Visibilidade</th>}
+                  <th className="px-4 py-3 font-semibold">{t('Nome')}</th>
+                  <th className="px-4 py-3 font-semibold">{t('UID')}</th>
+                  <th className="px-4 py-3 font-semibold">{t('Email')}</th>
+                  <th className="px-4 py-3 font-semibold">{t('Cidade')}</th>
+                  <th className="px-4 py-3 font-semibold text-center">{t('Foto')}</th>
+                  {moderationOn && <th className="px-4 py-3 font-semibold text-right">{t('Visibilidade')}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -501,7 +491,7 @@ export default function V2AdminProfiles({ embedded = false }) {
                       <td className="px-4 py-3 font-semibold text-ink">
                         <span className={isHidden ? 'text-gray-400 line-through' : ''}>{p.platform_name || '—'}</span>
                         {isHidden && (
-                          <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-2xs font-semibold text-gray-600">Oculto</span>
+                          <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-2xs font-semibold text-gray-600">{t('Oculto')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500">{target}</td>
@@ -513,7 +503,7 @@ export default function V2AdminProfiles({ embedded = false }) {
                         {p.photo_url ? (
                           <span className="text-green-700">✓</span>
                         ) : (
-                          <span className="text-amber-700">vazia</span>
+                          <span className="text-amber-700">{t('vazia')}</span>
                         )}
                       </td>
                       {moderationOn && (
@@ -525,7 +515,7 @@ export default function V2AdminProfiles({ embedded = false }) {
                             disabled={togglingUid === target}
                           >
                             {isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                            {togglingUid === target ? '…' : isHidden ? 'Reexibir' : 'Ocultar'}
+                            {togglingUid === target ? '…' : isHidden ? t('Reexibir') : t('Ocultar')}
                           </V2Button>
                         </td>
                       )}
@@ -535,7 +525,7 @@ export default function V2AdminProfiles({ embedded = false }) {
                 {filteredProfiles.length === 0 && (
                   <tr>
                     <td colSpan={moderationOn ? 6 : 5} className="px-4 py-6 text-center text-sm text-gray-500">
-                      Nenhum atleta encontrado para “{athleteSearch}”.
+                      {t('Nenhum atleta encontrado para “{busca}”.', { busca: athleteSearch })}
                     </td>
                   </tr>
                 )}

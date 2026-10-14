@@ -87,6 +87,7 @@ import {
   V2Surface, V2Button, V2Field, V2Input, V2Select, V2Toggle, V2Textarea,
   V2Badge, V2StatCard, V2EmptyState, V2Skeleton, V2PageIntro,
 } from '@/v2/ui/primitives';
+import { t, tn, fmtData } from '@/core/i18n';
 
 const EMPTY_FILTERS = {
   dateFrom: '', dateTo: '', source: '', matchType: '',
@@ -95,14 +96,14 @@ const EMPTY_FILTERS = {
 
 /** Texto de confirmação de cada mudança de situação em massa. */
 const STATUS_CONFIRM = {
-  [EXPORT_STATUS.PENDING]: (n) => `Tornar ${n} partida(s) PENDENTE(S)? `
-    + 'Elas voltam para a lista de exportação e podem ser baixadas de novo no CSV.',
-  [EXPORT_STATUS.EXPORTED]: (n) => `Marcar ${n} partida(s) como EXPORTADA(S)? `
-    + 'Elas saem da lista de exportação, mas continuam pendentes de lançamento no DUPR.',
-  [EXPORT_STATUS.SUBMITTED]: (n) => `Marcar ${n} partida(s) como LANÇADA(S) NO DUPR? `
-    + 'Isso evita reexportá-las por engano.',
-  [EXPORT_STATUS.EXCLUDED]: (n) => `Marcar ${n} partida(s) como NÃO LANÇAR NO DUPR? `
-    + 'Elas deixam de aparecer na lista de exportação até que você as torne pendentes de novo.',
+  [EXPORT_STATUS.PENDING]: (n) => `${tn(n, 'Tornar {n} partida PENDENTE?', 'Tornar {n} partidas PENDENTES?')} `
+    + t('Elas voltam para a lista de exportação e podem ser baixadas de novo no CSV.'),
+  [EXPORT_STATUS.EXPORTED]: (n) => `${tn(n, 'Marcar {n} partida como EXPORTADA?', 'Marcar {n} partidas como EXPORTADAS?')} `
+    + t('Elas saem da lista de exportação, mas continuam pendentes de lançamento no DUPR.'),
+  [EXPORT_STATUS.SUBMITTED]: (n) => `${tn(n, 'Marcar {n} partida como LANÇADA NO DUPR?', 'Marcar {n} partidas como LANÇADAS NO DUPR?')} `
+    + t('Isso evita reexportá-las por engano.'),
+  [EXPORT_STATUS.EXCLUDED]: (n) => `${tn(n, 'Marcar {n} partida como NÃO LANÇAR NO DUPR?', 'Marcar {n} partidas como NÃO LANÇAR NO DUPR?')} `
+    + t('Elas deixam de aparecer na lista de exportação até que você as torne pendentes de novo.'),
 };
 
 /** Opção "todas" + a lista derivada, cada uma com contagem. */
@@ -114,7 +115,7 @@ function withAllOption(list, allLabel) {
 function formatDateTime(ms) {
   if (!ms) return '—';
   try {
-    return new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    return fmtData(ms, { dateStyle: 'short', timeStyle: 'short' }) || '—';
   } catch {
     return '—';
   }
@@ -275,7 +276,7 @@ export default function AdminDuprExportTab() {
   const applyStatus = (selection, clearSelection, status) => {
     const entries = resolveSelectedEntries(selection, allView);
     if (entries.length === 0) {
-      toast.error('Selecione ao menos uma partida.');
+      toast.error(t('Selecione ao menos uma partida.'));
       return;
     }
     // Confirmação via dialog V2 (substitui window.confirm).
@@ -290,9 +291,9 @@ export default function AdminDuprExportTab() {
       {
         onSuccess: () => {
           clearSelection();
-          toast.success(`${entries.length} partida(s) agora com situação "${EXPORT_STATUS_LABELS[status]}".`);
+          toast.success(tn(entries.length, '{n} partida agora com situação “{valor}”.', '{n} partidas agora com situação “{valor}”.', { valor: t(EXPORT_STATUS_LABELS[status]) }));
         },
-        onError: () => toast.error('Não foi possível atualizar a situação. Tente novamente.'),
+        onError: () => toast.error(t('Não foi possível atualizar a situação. Tente novamente.')),
       },
     );
     setPendingConfirm(null);
@@ -306,9 +307,9 @@ export default function AdminDuprExportTab() {
       {
         onSuccess: () => {
           clearSelection();
-          toast.success(`${entries.length} partida(s) fora da lista de exportação.`);
+          toast.success(tn(entries.length, '{n} partida fora da lista de exportação.', '{n} partidas fora da lista de exportação.'));
         },
-        onError: () => toast.error('Não foi possível atualizar a lista de exportação. Tente novamente.'),
+        onError: () => toast.error(t('Não foi possível atualizar a lista de exportação. Tente novamente.')),
       },
     );
     setPendingConfirm(null);
@@ -318,7 +319,7 @@ export default function AdminDuprExportTab() {
   const applyQueueChange = (selection, clearSelection, removed) => {
     const entries = resolveSelectedEntries(selection, allView);
     if (entries.length === 0) {
-      toast.error('Selecione ao menos uma partida.');
+      toast.error(t('Selecione ao menos uma partida.'));
       return;
     }
     if (removed) {
@@ -332,10 +333,10 @@ export default function AdminDuprExportTab() {
         onSuccess: () => {
           clearSelection();
           toast.success(removed
-            ? `${entries.length} partida(s) fora da lista de exportação.`
-            : `${entries.length} partida(s) devolvida(s) à lista de exportação.`);
+            ? tn(entries.length, '{n} partida fora da lista de exportação.', '{n} partidas fora da lista de exportação.')
+            : tn(entries.length, '{n} partida devolvida à lista de exportação.', '{n} partidas devolvidas à lista de exportação.'));
         },
-        onError: () => toast.error('Não foi possível atualizar a lista de exportação. Tente novamente.'),
+        onError: () => toast.error(t('Não foi possível atualizar a lista de exportação. Tente novamente.')),
       },
     );
   };
@@ -347,7 +348,7 @@ export default function AdminDuprExportTab() {
   const handleDownload = () => {
     const rows = entriesToRows(queue, { readyOnly: true });
     if (rows.length === 0) {
-      toast.error('A lista de exportação está vazia.');
+      toast.error(t('A lista de exportação está vazia.'));
       return;
     }
     const range = dateRangeOf(queue);
@@ -376,7 +377,7 @@ export default function AdminDuprExportTab() {
     // (antiduplicação). Sem `force`: nada é rebaixado por um download.
     recordLedger.mutate({ entries: queue, status: EXPORT_STATUS.EXPORTED, ledgerByKey });
     setQueueSelection(new Set());
-    toast.success(`${rows.length} partida(s) exportada(s) para CSV do DUPR.`);
+    toast.success(tn(rows.length, '{n} partida exportada para CSV do DUPR.', '{n} partidas exportadas para CSV do DUPR.'));
   };
 
   if (isLoading) {
@@ -392,20 +393,20 @@ export default function AdminDuprExportTab() {
     return (
       <V2EmptyState
         icon={AlertTriangle}
-        title="Não foi possível carregar as partidas"
-        description="Tente novamente em instantes."
-        action={<V2Button onClick={() => refetch()}>Tentar de novo</V2Button>}
+        title={t('Não foi possível carregar as partidas')}
+        description={t('Tente novamente em instantes.')}
+        action={<V2Button onClick={() => refetch()}>{t('Tentar de novo')}</V2Button>}
       />
     );
   }
 
   const situationOptions = [
-    { value: '', label: `Todas as situações (${situations.total})` },
-    { value: EXPORT_STATUS.PENDING, label: `${EXPORT_STATUS_LABELS.pending} (${situations.pending})` },
-    { value: EXPORT_STATUS.EXPORTED, label: `${EXPORT_STATUS_LABELS.exported} (${situations.exported})` },
-    { value: EXPORT_STATUS.SUBMITTED, label: `${EXPORT_STATUS_LABELS.submitted} (${situations.submitted})` },
-    { value: EXPORT_STATUS.EXCLUDED, label: `${EXPORT_STATUS_LABELS.excluded} (${situations.excluded})` },
-    ...(duprIndex ? [{ value: EXPORT_STATUS.CONFIRMED, label: `${EXPORT_STATUS_LABELS.confirmed} (${situations.confirmed})` }] : []),
+    { value: '', label: t('Todas as situações ({total})', { total: situations.total }) },
+    { value: EXPORT_STATUS.PENDING, label: `${t(EXPORT_STATUS_LABELS.pending)} (${situations.pending})` },
+    { value: EXPORT_STATUS.EXPORTED, label: `${t(EXPORT_STATUS_LABELS.exported)} (${situations.exported})` },
+    { value: EXPORT_STATUS.SUBMITTED, label: `${t(EXPORT_STATUS_LABELS.submitted)} (${situations.submitted})` },
+    { value: EXPORT_STATUS.EXCLUDED, label: `${t(EXPORT_STATUS_LABELS.excluded)} (${situations.excluded})` },
+    ...(duprIndex ? [{ value: EXPORT_STATUS.CONFIRMED, label: `${t(EXPORT_STATUS_LABELS.confirmed)} (${situations.confirmed})` }] : []),
   ];
 
   const filterSignature = `${JSON.stringify(filters)}|${situationFilter}|${readyOnly}`;
@@ -413,8 +414,8 @@ export default function AdminDuprExportTab() {
   return (
     <div className="space-y-6">
       <V2PageIntro
-        title="Exportar partidas para o DUPR"
-        subtitle="Gere um CSV no formato de importação de partidas de clubes do DUPR a partir do histórico oficial da plataforma."
+        title={t('Exportar partidas para o DUPR')}
+        subtitle={t('Gere um CSV no formato de importação de partidas de clubes do DUPR a partir do histórico oficial da plataforma.')}
       />
 
       <V2Surface className="border-l-4 border-l-acid p-4">
@@ -422,19 +423,14 @@ export default function AdminDuprExportTab() {
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-acid" />
           <div className="text-sm leading-6 text-gray-600">
             <p>
-              A base são as <strong>partidas decididas registradas no ranking</strong> da
-              plataforma: torneios, dias de jogo, eventos de clube e confrontos por equipes.
-              W.O./partidas sem placar não entram.
+              {t('A base são as')} <strong>{t('partidas decididas registradas no ranking')}</strong> {t('da plataforma: torneios, dias de jogo, eventos de clube e confrontos por equipes. W.O./partidas sem placar não entram.')}
             </p>
             <p className="mt-1">
-              A tabela de cima é a <strong>busca</strong> (obedece aos filtros). A de baixo é a{' '}
-              <strong>lista de exportação</strong>: ela se monta sozinha com as partidas prontas
-              e pendentes, e é <strong>só ela</strong> que vira o CSV.
+              {t('A tabela de cima é a')} <strong>{t('busca')}</strong> {t('(obedece aos filtros). A de baixo é a ')}
+              <strong>{t('lista de exportação')}</strong>{t(': ela se monta sozinha com as partidas prontas e pendentes, e é')} <strong>{t('só ela')}</strong> {t('que vira o CSV.')}
             </p>
             <p className="mt-1">
-              O DUPR exige o <strong>ID DUPR</strong> de cada jogador. Partidas com algum
-              atleta sem ID ficam marcadas como <em>incompletas</em> e não entram na lista de
-              exportação — peça a esses atletas para cadastrar o ID no perfil.
+              {t('O DUPR exige o')} <strong>{t('ID DUPR')}</strong> {t('de cada jogador. Partidas com algum atleta sem ID ficam marcadas como')} <em>{t('incompletas')}</em> {t('e não entram na lista de exportação — peça a esses atletas para cadastrar o ID no perfil.')}
             </p>
           </div>
         </div>
@@ -443,27 +439,27 @@ export default function AdminDuprExportTab() {
       {/* Controle de lançamentos (antiduplicação) */}
       <V2Surface className="p-4 sm:p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <History className="h-4 w-4" /> Controle de lançamentos no DUPR
+          <History className="h-4 w-4" /> {t('Controle de lançamentos no DUPR')}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Última atividade</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Última atividade')}</div>
             <div className="text-sm font-semibold text-ink">{formatDateTime(lastExport.lastActivityAt)}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Já exportadas</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Já exportadas')}</div>
             <div className="text-sm font-semibold text-ink">{lastExport.exportedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Lançadas no DUPR</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Lançadas no DUPR')}</div>
             <div className="text-sm font-semibold text-ink">{lastExport.submittedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Não lançar</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Não lançar')}</div>
             <div className="text-sm font-semibold text-ink">{lastExport.excludedCount}</div>
           </div>
           <div className="rounded-xl bg-gray-50 px-3 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Partidas no ledger</div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">{t('Partidas no ledger')}</div>
             <div className="text-sm font-semibold text-ink">{lastExport.total}</div>
           </div>
         </div>
@@ -473,21 +469,21 @@ export default function AdminDuprExportTab() {
       <V2Surface className="p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Filter className="h-4 w-4" /> Filtros da busca
+            <Filter className="h-4 w-4" /> {t('Filtros da busca')}
           </div>
           <V2Button variant="ghost" size="sm" onClick={resetFilters}>
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Limpar
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('Limpar')}
           </V2Button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <V2Field label="Data inicial" htmlFor="dupr-date-from">
+          <V2Field label={t('Data inicial')} htmlFor="dupr-date-from">
             <V2Input id="dupr-date-from" type="date" value={filters.dateFrom} onChange={set('dateFrom')} />
           </V2Field>
-          <V2Field label="Data final" htmlFor="dupr-date-to">
+          <V2Field label={t('Data final')} htmlFor="dupr-date-to">
             <V2Input id="dupr-date-to" type="date" value={filters.dateTo} onChange={set('dateTo')} />
           </V2Field>
-          <V2Field label="Origem" htmlFor="dupr-source">
+          <V2Field label={t('Origem')} htmlFor="dupr-source">
             <V2Select
               id="dupr-source"
               value={filters.source}
@@ -498,7 +494,7 @@ export default function AdminDuprExportTab() {
               ]}
             />
           </V2Field>
-          <V2Field label="Tipo de partida" htmlFor="dupr-type">
+          <V2Field label={t('Tipo de partida')} htmlFor="dupr-type">
             <V2Select
               id="dupr-type"
               value={filters.matchType}
@@ -510,7 +506,7 @@ export default function AdminDuprExportTab() {
               ]}
             />
           </V2Field>
-          <V2Field label="Torneio" htmlFor="dupr-tournament">
+          <V2Field label={t('Torneio')} htmlFor="dupr-tournament">
             <V2Select
               id="dupr-tournament"
               value={filters.tournamentId}
@@ -518,7 +514,7 @@ export default function AdminDuprExportTab() {
               options={withAllOption(options.tournaments, 'Todos os torneios')}
             />
           </V2Field>
-          <V2Field label="Dia de jogo" htmlFor="dupr-gameday">
+          <V2Field label={t('Dia de jogo')} htmlFor="dupr-gameday">
             <V2Select
               id="dupr-gameday"
               value={filters.gameDayId}
@@ -526,7 +522,7 @@ export default function AdminDuprExportTab() {
               options={withAllOption(options.gameDays, 'Todos os dias de jogo')}
             />
           </V2Field>
-          <V2Field label="Clube" htmlFor="dupr-club">
+          <V2Field label={t('Clube')} htmlFor="dupr-club">
             <V2Select
               id="dupr-club"
               value={filters.clubId}
@@ -534,7 +530,7 @@ export default function AdminDuprExportTab() {
               options={withAllOption(options.clubs, 'Todos os clubes')}
             />
           </V2Field>
-          <V2Field label="Evento de clube" htmlFor="dupr-event">
+          <V2Field label={t('Evento de clube')} htmlFor="dupr-event">
             <V2Select
               id="dupr-event"
               value={filters.eventId}
@@ -542,7 +538,7 @@ export default function AdminDuprExportTab() {
               options={withAllOption(options.events, 'Todos os eventos')}
             />
           </V2Field>
-          <V2Field label="Atleta" htmlFor="dupr-athlete">
+          <V2Field label={t('Atleta')} htmlFor="dupr-athlete">
             <V2Select
               id="dupr-athlete"
               value={filters.athleteUid}
@@ -550,7 +546,7 @@ export default function AdminDuprExportTab() {
               options={withAllOption(options.athletes, 'Todos os atletas')}
             />
           </V2Field>
-          <V2Field label="Tipo de pontuação (DUPR)" htmlFor="dupr-scoretype">
+          <V2Field label={t('Tipo de pontuação (DUPR)')} htmlFor="dupr-scoretype">
             <V2Select
               id="dupr-scoretype"
               value={scoreType}
@@ -558,7 +554,7 @@ export default function AdminDuprExportTab() {
               options={Object.values(DUPR_SCORE_TYPE).map((v) => ({ value: v, label: DUPR_SCORE_TYPE_LABELS[v] }))}
             />
           </V2Field>
-          <V2Field label="Situação DUPR" htmlFor="dupr-situation">
+          <V2Field label={t('Situação DUPR')} htmlFor="dupr-situation">
             <V2Select
               id="dupr-situation"
               value={situationFilter}
@@ -573,15 +569,15 @@ export default function AdminDuprExportTab() {
             id="dupr-ready-only"
             checked={readyOnly}
             onChange={setReadyOnly}
-            label="Somente partidas prontas"
-            hint="Na busca, mostra apenas as partidas com todos os jogadores com ID DUPR."
+            label={t('Somente partidas prontas')}
+            hint={t('Na busca, mostra apenas as partidas com todos os jogadores com ID DUPR.')}
           />
           <V2Toggle
             id="dupr-external-id"
             checked={includeExternalId}
             onChange={setIncludeExternalId}
-            label="Incluir ID interno (externalId)"
-            hint="Preenche o externalId do DUPR com o id do atleta na plataforma."
+            label={t('Incluir ID interno (externalId)')}
+            hint={t('Preenche o externalId do DUPR com o id do atleta na plataforma.')}
           />
         </div>
       </V2Surface>
@@ -590,27 +586,23 @@ export default function AdminDuprExportTab() {
       {officialSyncOn && (
         <V2Surface className="p-4 sm:p-5">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
-            <ClipboardList className="h-4 w-4" /> Conferência com o DUPR (evitar duplicação)
+            <ClipboardList className="h-4 w-4" /> {t('Conferência com o DUPR (evitar duplicação)')}
           </div>
           <p className="mb-3 text-sm leading-6 text-gray-600">
-            Cole aqui o <strong>histórico de partidas do DUPR</strong> (JSON exportado da API de
-            parceiro/clube ou do painel do DUPR). A conferência marca como
-            <V2Badge tone="green" className="mx-1">Confirmada no DUPR</V2Badge>
-            as partidas que já constam lá, cruzando por <em>identifier</em> determinístico
-            (<code>pr_&lt;id&gt;</code>) e por impressão digital (data + tipo + IDs + placar).
-            A conferência <strong>em tempo real</strong> exige um backend com credenciais de
-            parceiro DUPR (Cloud Function) — o espaço já está reservado para essa fase.
+            {t('Cole aqui o')} <strong>{t('histórico de partidas do DUPR')}</strong> {t('(JSON exportado da API de parceiro/clube ou do painel do DUPR). A conferência marca como')}
+            <V2Badge tone="green" className="mx-1">{t('Confirmada no DUPR')}</V2Badge>
+            {t('as partidas que já constam lá, cruzando por')} <em>identifier</em> {t('determinístico (')}<code>pr_&lt;id&gt;</code>{t(') e por impressão digital (data + tipo + IDs + placar). A conferência')} <strong>{t('em tempo real')}</strong> {t('exige um backend com credenciais de parceiro DUPR (Cloud Function) — o espaço já está reservado para essa fase.')}
           </p>
           <V2Textarea
             id="dupr-history"
             rows={5}
             value={historyText}
             onChange={(e) => setHistoryText(e.target.value)}
-            placeholder='Cole o JSON do histórico do DUPR aqui (ex.: {"result":{"hits":[...]}} ou [ ... ]).'
+            placeholder={`${t('Cole o JSON do histórico do DUPR aqui')} (ex.: {"result":{"hits":[...]}} ou [ ... ]).`}
           />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <V2Button variant="secondary" size="sm" onClick={() => setHistoryApplied(historyText)}>
-              <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" /> Conferir agora
+              <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" /> {t('Conferir agora')}
             </V2Button>
             {historyApplied.trim() && (
               <V2Button
@@ -618,13 +610,13 @@ export default function AdminDuprExportTab() {
                 size="sm"
                 onClick={() => { setHistoryText(''); setHistoryApplied(''); }}
               >
-                Limpar conferência
+                {t('Limpar conferência')}
               </V2Button>
             )}
             {duprIndex && (
               <span className="text-sm text-gray-500">
-                {duprIndex.count} registro(s) lidos do DUPR ·{' '}
-                <strong className="text-green-600">{situations.confirmed}</strong> confirmada(s) no recorte.
+                {tn(duprIndex.count, '{n} registro lido do DUPR', '{n} registros lidos do DUPR')}{' · '}
+                {tn(situations.confirmed, '{n} confirmada no recorte.', '{n} confirmadas no recorte.')}
               </span>
             )}
           </div>
@@ -633,11 +625,11 @@ export default function AdminDuprExportTab() {
 
       {/* Resumo do recorte dos filtros */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <V2StatCard icon={ListChecks} label="Partidas filtradas" value={summary.total} accent="ink" />
-        <V2StatCard icon={CheckCircle2} label="Prontas (com ID)" value={summary.ready} accent="green" />
-        <V2StatCard icon={AlertTriangle} label="Incompletas" value={summary.incomplete} accent={summary.incomplete ? 'acid' : 'ink'} />
-        <V2StatCard icon={Users} label="Simples" value={summary.singles} accent="ink" />
-        <V2StatCard icon={Users} label="Duplas" value={summary.doubles} accent="ink" />
+        <V2StatCard icon={ListChecks} label={t('Partidas filtradas')} value={summary.total} accent="ink" />
+        <V2StatCard icon={CheckCircle2} label={t('Prontas (com ID)')} value={summary.ready} accent="green" />
+        <V2StatCard icon={AlertTriangle} label={t('Incompletas')} value={summary.incomplete} accent={summary.incomplete ? 'acid' : 'ink'} />
+        <V2StatCard icon={Users} label={t('Simples')} value={summary.singles} accent="ink" />
+        <V2StatCard icon={Users} label={t('Duplas')} value={summary.doubles} accent="ink" />
       </div>
 
       {summary.incomplete > 0 && (
@@ -645,9 +637,7 @@ export default function AdminDuprExportTab() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
             <p className="text-sm leading-6 text-amber-900">
-              <strong>{summary.incomplete}</strong> partida(s) do recorte têm jogadores sem ID
-              DUPR e não entram na lista de exportação. Peça a esses atletas para cadastrar o
-              ID DUPR no perfil.
+              {tn(summary.incomplete, '{n} partida do recorte tem jogadores sem ID DUPR e não entra na lista de exportação. Peça a esses atletas para cadastrar o ID DUPR no perfil.', '{n} partidas do recorte têm jogadores sem ID DUPR e não entram na lista de exportação. Peça a esses atletas para cadastrar o ID DUPR no perfil.')}
             </p>
           </div>
         </V2Surface>
@@ -657,8 +647,8 @@ export default function AdminDuprExportTab() {
       <section className="space-y-3">
         <ListHeader
           icon={Filter}
-          title="Partidas do filtro"
-          description="Tudo o que os filtros acima alcançam. Selecione partidas para corrigir a situação DUPR delas ou para devolvê-las à lista de exportação. Trocar um filtro não desmarca o que já estava selecionado."
+          title={t('Partidas do filtro')}
+          description={t('Tudo o que os filtros acima alcançam. Selecione partidas para corrigir a situação DUPR delas ou para devolvê-las à lista de exportação. Trocar um filtro não desmarca o que já estava selecionado.')}
         />
         <DuprMatchesTable
           idPrefix="dupr-filtered"
@@ -680,7 +670,7 @@ export default function AdminDuprExportTab() {
               onClear={() => setFilteredSelection(new Set())}
               extraActions={[{
                 key: 'restore',
-                label: 'Devolver à lista de exportação',
+                label: t('Devolver à lista de exportação'),
                 icon: PlusCircle,
                 variant: 'ghost',
                 onClick: () => applyQueueChange(
@@ -692,8 +682,8 @@ export default function AdminDuprExportTab() {
           empty={(
             <V2EmptyState
               icon={Trophy}
-              title="Nenhuma partida encontrada"
-              description="Ajuste os filtros para encontrar partidas decididas na plataforma."
+              title={t('Nenhuma partida encontrada')}
+              description={t('Ajuste os filtros para encontrar partidas decididas na plataforma.')}
             />
           )}
         />
@@ -703,21 +693,18 @@ export default function AdminDuprExportTab() {
       <section className="space-y-3">
         <ListHeader
           icon={ListChecks}
-          title="Aptas a exportar para lançar no DUPR"
-          description="Montada automaticamente: toda partida pronta (todos os jogadores com ID DUPR) e ainda pendente entra aqui sozinha. O CSV leva exatamente estas partidas — nem mais, nem menos."
+          title={t('Aptas a exportar para lançar no DUPR')}
+          description={t('Montada automaticamente: toda partida pronta (todos os jogadores com ID DUPR) e ainda pendente entra aqui sozinha. O CSV leva exatamente estas partidas — nem mais, nem menos.')}
           action={(
             <V2Button onClick={handleDownload} disabled={queue.length === 0 || isFetching}>
-              <Download className="mr-2 h-4 w-4" /> Baixar CSV do DUPR ({queue.length})
+              <Download className="mr-2 h-4 w-4" /> {t('Baixar CSV do DUPR ({n})', { n: queue.length })}
             </V2Button>
           )}
         />
 
         {(queueStats.pendingIncomplete > 0 || queueStats.removed > 0) && (
           <p className="text-sm text-gray-500">
-            Fora da lista, mesmo pendentes:{' '}
-            <strong className="text-ink">{queueStats.pendingIncomplete}</strong> sem ID DUPR
-            {' '}e <strong className="text-ink">{queueStats.removed}</strong> retirada(s) por você
-            {' '}(use &ldquo;Devolver à lista de exportação&rdquo; na tabela de cima para trazê-las de volta).
+            {t('Fora da lista, mesmo pendentes: {semId} sem ID DUPR e {retiradas} retiradas por você (use “Devolver à lista de exportação” na tabela de cima para trazê-las de volta).', { semId: queueStats.pendingIncomplete, retiradas: queueStats.removed })}
           </p>
         )}
 
@@ -752,8 +739,8 @@ export default function AdminDuprExportTab() {
           empty={(
             <V2EmptyState
               icon={CheckCircle2}
-              title="Nenhuma partida aguardando exportação"
-              description="Assim que uma partida decidida com todos os IDs DUPR entrar na plataforma, ela aparece aqui automaticamente."
+              title={t('Nenhuma partida aguardando exportação')}
+              description={t('Assim que uma partida decidida com todos os IDs DUPR entrar na plataforma, ela aparece aqui automaticamente.')}
             />
           )}
         />
@@ -764,19 +751,19 @@ export default function AdminDuprExportTab() {
         onOpenChange={(v) => !v && !isWriting && setPendingConfirm(null)}
         title={
           pendingConfirm?.kind === 'status'
-            ? `Alterar situação de ${pendingConfirm.entries.length} partida(s)?`
+            ? tn(pendingConfirm.entries.length, 'Alterar situação de {n} partida?', 'Alterar situação de {n} partidas?')
             : pendingConfirm?.kind === 'queue-remove'
-              ? `Excluir ${pendingConfirm.entries.length} partida(s) da lista de exportação?`
-              : 'Confirmar'
+              ? tn(pendingConfirm.entries.length, 'Excluir {n} partida da lista de exportação?', 'Excluir {n} partidas da lista de exportação?')
+              : t('Confirmar')
         }
         description={
           pendingConfirm?.kind === 'status' && pendingConfirm.status
             ? STATUS_CONFIRM[pendingConfirm.status](pendingConfirm.entries.length)
             : pendingConfirm?.kind === 'queue-remove'
-              ? 'A situação DUPR delas NÃO muda — continuam pendentes e podem voltar à lista quando você quiser.'
+              ? t('A situação DUPR delas NÃO muda — continuam pendentes e podem voltar à lista quando você quiser.')
               : ''
         }
-        confirmLabel={pendingConfirm?.kind === 'queue-remove' ? 'Excluir da lista' : 'Confirmar'}
+        confirmLabel={pendingConfirm?.kind === 'queue-remove' ? t('Excluir da lista') : t('Confirmar')}
         destructive
         loading={isWriting}
         onConfirm={() => {

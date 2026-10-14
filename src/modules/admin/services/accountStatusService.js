@@ -6,9 +6,10 @@ import { httpsCallable } from 'firebase/functions';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db, functions } from '@/core/config/firebase';
 import { deletionErrorMessage } from './accountDeletionService';
+import { t } from '@/core/i18n';
 
 async function chamar(nome, payload) {
-  if (!functions) throw new Error('Firebase não está configurado neste ambiente.');
+  if (!functions) throw new Error(t('Firebase não está configurado neste ambiente.'));
   try {
     const { data } = await httpsCallable(functions, nome, { timeout: 60_000 })(payload);
     return data;

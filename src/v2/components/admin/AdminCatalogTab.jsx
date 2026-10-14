@@ -24,6 +24,7 @@ import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton,
 } from '@/v2/ui/primitives';
+import { t, tn } from '@/core/i18n';
 
 const EMPTY = {
   name: '', category: CATALOG_CATEGORIES_LIST[0], subcategory: '', brand: '',
@@ -64,7 +65,7 @@ export default function AdminCatalogTab() {
     e.preventDefault();
     try {
       await create.mutateAsync(form);
-      toast.success('Produto adicionado ao catálogo!');
+      toast.success(t('Produto adicionado ao catálogo!'));
       setForm(EMPTY);
       setCreating(false);
     } catch (err) { toast.error(err.message); }
@@ -75,35 +76,34 @@ export default function AdminCatalogTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShoppingBasket className="h-5 w-5 text-green-700" />
-          <h2 className="font-display text-xl font-bold text-ink">Catálogo de produtos</h2>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Catálogo de produtos')}</h2>
         </div>
         <V2Button size="sm" onClick={() => { setForm(EMPTY); setCreating((v) => !v); }}>
-          <Plus className="h-4 w-4" /> Novo produto
+          <Plus className="h-4 w-4" /> {t('Novo produto')}
         </V2Button>
       </div>
       <p className="text-sm text-gray-500">
-        Lista geral disponível para todas as arenas montarem o estoque. Está sempre presente — você
-        pode adicionar, editar e excluir itens aqui. {stats.total} itens ({stats.platform} padrão · {stats.arena} de arenas).
+        {t('Lista geral disponível para todas as arenas montarem o estoque. Está sempre presente — você pode adicionar, editar e excluir itens aqui. {total} itens ({platform} padrão · {arena} de arenas).', { total: stats.total, platform: stats.platform, arena: stats.arena })}
       </p>
 
       {creating && (
         <V2Surface className="border-green-200 bg-green-50/30">
           <form onSubmit={handleCreate} className="space-y-2">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <V2Field label="Nome" required>
-                <V2Input value={form.name} onChange={set('name')} required maxLength={100} placeholder="Ex: Coca-Cola 350ml" />
+              <V2Field label={t('Nome')} required>
+                <V2Input value={form.name} onChange={set('name')} required maxLength={100} placeholder={t('Ex: Coca-Cola 350ml')} />
               </V2Field>
-              <V2Field label="Marca">
+              <V2Field label={t('Marca')}>
                 <V2Input value={form.brand} onChange={set('brand')} maxLength={60} />
               </V2Field>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <V2Field label="Categoria" required>
+              <V2Field label={t('Categoria')} required>
                 <V2Select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))}>
-                  {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{t(c)}</option>)}
                 </V2Select>
               </V2Field>
-              <V2Field label="Subcategoria" required>
+              <V2Field label={t('Subcategoria')} required>
                 <V2Input list="admin-cat-sub" value={form.subcategory} onChange={set('subcategory')} maxLength={50} />
                 <datalist id="admin-cat-sub">
                   {(CATALOG_SUBCATEGORIES[form.category] || []).map((s) => <option key={s} value={s} />)}
@@ -111,26 +111,26 @@ export default function AdminCatalogTab() {
               </V2Field>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <V2Field label="Embalagem">
+              <V2Field label={t('Embalagem')}>
                 <V2Input list="admin-cat-pack" value={form.packaging} onChange={set('packaging')} maxLength={40} />
                 <datalist id="admin-cat-pack">
                   {CATALOG_PACKAGINGS.map((s) => <option key={s} value={s} />)}
                 </datalist>
               </V2Field>
-              <V2Field label="Tamanho/volume">
-                <V2Input value={form.size} onChange={set('size')} maxLength={30} placeholder="Ex: 350ml" />
+              <V2Field label={t('Tamanho/volume')}>
+                <V2Input value={form.size} onChange={set('size')} maxLength={30} placeholder={t('Ex: 350ml')} />
               </V2Field>
-              <V2Field label="Sabor/variante">
+              <V2Field label={t('Sabor/variante')}>
                 <V2Input value={form.flavor} onChange={set('flavor')} maxLength={40} />
               </V2Field>
             </div>
-            <V2Field label="Descrição">
+            <V2Field label={t('Descrição')}>
               <V2Textarea value={form.description} onChange={set('description')} maxLength={500} rows={2} />
             </V2Field>
             <div className="flex justify-end gap-2">
-              <V2Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>Cancelar</V2Button>
+              <V2Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>{t('Cancelar')}</V2Button>
               <V2Button type="submit" size="sm" disabled={create.isPending}>
-                <Save className="h-4 w-4" /> {create.isPending ? 'Salvando…' : 'Adicionar'}
+                <Save className="h-4 w-4" /> {create.isPending ? t('Salvando…') : t('Adicionar')}
               </V2Button>
             </div>
           </form>
@@ -141,18 +141,18 @@ export default function AdminCatalogTab() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="pl-9" />
+            <V2Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('Buscar...')} className="pl-9" />
           </div>
           <V2Select value={category} onChange={(e) => { setCategory(e.target.value); setSubcategory('all'); }}>
-            <option value="all">Todas categorias</option>
-            {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
+            <option value="all">{t('Todas categorias')}</option>
+            {CATALOG_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{t(c)}</option>)}
           </V2Select>
           <V2Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
-            <option value="all">Todas subcategorias</option>
+            <option value="all">{t('Todas subcategorias')}</option>
             {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </V2Select>
         </div>
-        <p className="text-xs text-gray-500">{filtered.length} produto(s)</p>
+        <p className="text-xs text-gray-500">{tn(filtered.length, '{n} produto', '{n} produtos')}</p>
       </V2Surface>
 
       {isLoading ? (
@@ -168,21 +168,21 @@ export default function AdminCatalogTab() {
               onSave={async (updates) => {
                 try {
                   await update.mutateAsync({ product: p, updates });
-                  toast.success('Produto atualizado!');
+                  toast.success(t('Produto atualizado!'));
                   setEditingId(null);
                 } catch (err) { toast.error(err.message); }
               }}
               onDelete={async () => {
                 try {
                   await remove.mutateAsync(p);
-                  toast.success('Produto removido do catálogo.');
+                  toast.success(t('Produto removido do catálogo.'));
                 } catch (err) { toast.error(err.message); }
               }}
               saving={update.isPending}
             />
           ))}
           {filtered.length > 500 && (
-            <p className="py-2 text-center text-xs text-gray-500">Mostrando 500 de {filtered.length}. Refine a busca para ver os demais.</p>
+            <p className="py-2 text-center text-xs text-gray-500">{t('Mostrando 500 de {length}. Refine a busca para ver os demais.', { length: filtered.length })}</p>
           )}
         </div>
       )}
@@ -207,7 +207,7 @@ function CatalogRow({ product: p, editing, onToggleEdit, onSave, onDelete, savin
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="truncate text-sm font-bold text-ink">{p.name}</span>
-            {isArena ? <V2Badge tone="amber">de arena</V2Badge> : <V2Badge tone="neutral"><CheckCircle2 className="mr-1 h-3 w-3" />padrão</V2Badge>}
+            {isArena ? <V2Badge tone="amber">{t('de arena')}</V2Badge> : <V2Badge tone="neutral"><CheckCircle2 className="mr-1 h-3 w-3" />{t('padrão')}</V2Badge>}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
             {p.brand && <span>{p.brand}</span>}
@@ -216,16 +216,16 @@ function CatalogRow({ product: p, editing, onToggleEdit, onSave, onDelete, savin
             {packInfo && <span>· {packInfo}</span>}
           </div>
         </div>
-        <button type="button" onClick={onToggleEdit} className="shrink-0 text-gray-500 hover:text-ink" aria-label={`Editar ${p.name}`}>
+        <button type="button" onClick={onToggleEdit} className="shrink-0 text-gray-500 hover:text-ink" aria-label={t('Editar {name}', { name: p.name })}>
           {editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
         </button>
         <ConfirmDialog
-          title="Excluir do catálogo?"
-          description={`"${p.name}" deixará de aparecer para as arenas. Produtos já adicionados aos mercados não são afetados.`}
-          confirmLabel="Excluir"
+          title={t('Excluir do catálogo?')}
+          description={t('"{name}" deixará de aparecer para as arenas. Produtos já adicionados aos mercados não são afetados.', { name: p.name })}
+          confirmLabel={t('Excluir')}
           onConfirm={onDelete}
           trigger={(
-            <button type="button" className="shrink-0 text-red-500 hover:text-red-700" aria-label={`Excluir ${p.name}`}>
+            <button type="button" className="shrink-0 text-red-500 hover:text-red-700" aria-label={t('Excluir {name}', { name: p.name })}>
               <Trash2 className="h-4 w-4" />
             </button>
           )}
@@ -235,18 +235,18 @@ function CatalogRow({ product: p, editing, onToggleEdit, onSave, onDelete, savin
       {editing && (
         <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <V2Field label="Nome"><V2Input value={edit.name} onChange={(e) => setEdit((s) => ({ ...s, name: e.target.value }))} maxLength={100} /></V2Field>
-            <V2Field label="Marca"><V2Input value={edit.brand} onChange={(e) => setEdit((s) => ({ ...s, brand: e.target.value }))} maxLength={60} /></V2Field>
+            <V2Field label={t('Nome')}><V2Input value={edit.name} onChange={(e) => setEdit((s) => ({ ...s, name: e.target.value }))} maxLength={100} /></V2Field>
+            <V2Field label={t('Marca')}><V2Input value={edit.brand} onChange={(e) => setEdit((s) => ({ ...s, brand: e.target.value }))} maxLength={60} /></V2Field>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-            <V2Field label="Subcategoria"><V2Input value={edit.subcategory} onChange={(e) => setEdit((s) => ({ ...s, subcategory: e.target.value }))} maxLength={50} /></V2Field>
-            <V2Field label="Embalagem"><V2Input value={edit.packaging} onChange={(e) => setEdit((s) => ({ ...s, packaging: e.target.value }))} maxLength={40} /></V2Field>
-            <V2Field label="Tamanho"><V2Input value={edit.size} onChange={(e) => setEdit((s) => ({ ...s, size: e.target.value }))} maxLength={30} /></V2Field>
-            <V2Field label="Sabor"><V2Input value={edit.flavor} onChange={(e) => setEdit((s) => ({ ...s, flavor: e.target.value }))} maxLength={40} /></V2Field>
+            <V2Field label={t('Subcategoria')}><V2Input value={edit.subcategory} onChange={(e) => setEdit((s) => ({ ...s, subcategory: e.target.value }))} maxLength={50} /></V2Field>
+            <V2Field label={t('Embalagem')}><V2Input value={edit.packaging} onChange={(e) => setEdit((s) => ({ ...s, packaging: e.target.value }))} maxLength={40} /></V2Field>
+            <V2Field label={t('Tamanho')}><V2Input value={edit.size} onChange={(e) => setEdit((s) => ({ ...s, size: e.target.value }))} maxLength={30} /></V2Field>
+            <V2Field label={t('Sabor')}><V2Input value={edit.flavor} onChange={(e) => setEdit((s) => ({ ...s, flavor: e.target.value }))} maxLength={40} /></V2Field>
           </div>
           <div className="flex justify-end">
             <V2Button size="sm" disabled={saving} onClick={() => onSave(edit)}>
-              <Save className="h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}
+              <Save className="h-4 w-4" /> {saving ? t('Salvando…') : t('Salvar')}
             </V2Button>
           </div>
         </div>

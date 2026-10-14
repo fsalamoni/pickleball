@@ -27,13 +27,14 @@ import { usePreviewAccountDeletion, useDeleteAccounts } from '@/modules/admin/ho
 import {
   DELETION_CONFIRM_WORD, validateDeletionRequest,
 } from '@/modules/admin/domain/accountDeletion';
+import { t, tk, tn } from '@/core/i18n';
 
 function Linhas({ itens }) {
   return (
     <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-gray-600">
       {itens.map((i) => (
         <li key={i.label}>
-          {i.label}{i.count > 1 ? ` (${i.count})` : ''}
+          {t(i.label)}{i.count > 1 ? ` (${i.count})` : ''}
         </li>
       ))}
     </ul>
@@ -50,15 +51,15 @@ function RelatorioDaConta({ report }) {
           <p className="truncate text-2xs text-gray-500">{r.email || r.uid}</p>
         </div>
         {r.canDelete
-          ? <V2Badge tone="green">Pode excluir</V2Badge>
-          : <V2Badge tone="red">Impedida</V2Badge>}
+          ? <V2Badge tone="green">{t('Pode excluir')}</V2Badge>
+          : <V2Badge tone="red">{t('Impedida')}</V2Badge>}
       </div>
 
       {r.blockers.length > 0 && (
         <ul className="mt-2 space-y-1">
           {r.blockers.map((b) => (
             <li key={b.label} className="text-xs text-red-700">
-              <strong>{b.label}.</strong>{b.detail ? ` ${b.detail}` : ''}
+              <strong>{t(b.label)}.</strong>{b.detail ? ` ${t(b.detail)}` : ''}
             </li>
           ))}
         </ul>
@@ -68,11 +69,11 @@ function RelatorioDaConta({ report }) {
         <div className="mt-2 space-y-2">
           <div>
             <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-red-700">
-              <Trash2 className="h-3 w-3" /> Será apagado
+              <Trash2 className="h-3 w-3" /> {t('Será apagado')}
             </p>
             <Linhas itens={[
-              ...(r.exists ? [{ label: 'Cadastro', count: 1 }] : []),
-              ...(r.authExists ? [{ label: 'Conta de login', count: 1 }] : []),
+              ...(r.exists ? [{ label: tk('Cadastro'), count: 1 }] : []),
+              ...(r.authExists ? [{ label: tk('Conta de login'), count: 1 }] : []),
               ...r.deletes,
             ]}
             />
@@ -80,7 +81,7 @@ function RelatorioDaConta({ report }) {
           {r.pseudonyms.length > 0 && (
             <div>
               <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-gray-500">
-                <History className="h-3 w-3" /> Fica no histórico, como &ldquo;Atleta removido&rdquo;
+                <History className="h-3 w-3" /> {t('Fica no histórico, como “Atleta removido”')}
               </p>
               <Linhas itens={r.pseudonyms} />
             </div>
@@ -88,14 +89,14 @@ function RelatorioDaConta({ report }) {
           {r.retained.length > 0 && (
             <div>
               <p className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-gray-500">
-                <Clock className="h-3 w-3" /> Fica guardado
+                <Clock className="h-3 w-3" /> {t('Fica guardado')}
               </p>
               <Linhas itens={r.retained} />
             </div>
           )}
           {r.truncated && (
             <p className="text-2xs text-amber-700">
-              Tem mais itens do que uma passada alcança. Rode a exclusão de novo depois para terminar.
+              {t('Tem mais itens do que uma passada alcança. Rode a exclusão de novo depois para terminar.')}
             </p>
           )}
         </div>
@@ -105,10 +106,10 @@ function RelatorioDaConta({ report }) {
 }
 
 const STATUS_RESULTADO = {
-  deleted: { tone: 'green', label: 'Excluída', Icon: CheckCircle2 },
-  partial: { tone: 'amber', label: 'Excluída em parte — rode de novo', Icon: AlertTriangle },
-  blocked: { tone: 'red', label: 'Não excluída (impedida)', Icon: ShieldAlert },
-  error: { tone: 'red', label: 'Falhou', Icon: XCircle },
+  deleted: { tone: 'green', label: tk('Excluída'), Icon: CheckCircle2 },
+  partial: { tone: 'amber', label: tk('Excluída em parte — rode de novo'), Icon: AlertTriangle },
+  blocked: { tone: 'red', label: tk('Não excluída (impedida)'), Icon: ShieldAlert },
+  error: { tone: 'red', label: tk('Falhou'), Icon: XCircle },
 };
 
 export default function AdminAccountDeletionDialog({ users, onClose }) {
@@ -147,14 +148,10 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
       <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {resultados ? 'Resultado da exclusão' : `Excluir ${users.length} cadastro${users.length > 1 ? 's' : ''}`}
+            {resultados ? t('Resultado da exclusão') : tn(users.length, 'Excluir {n} cadastro', 'Excluir {n} cadastros')}
           </DialogTitle>
           <DialogDescription>
-            A conta de login e os dados pessoais somem. O histórico esportivo fica, com o nome trocado
-            por &ldquo;Atleta removido&rdquo; — apagá-lo reescreveria o resultado e o rating de outras
-            pessoas. Reservas e pagamentos ficam guardados, sem o nome. O conteúdo que a pessoa criou
-            para outras (treinos, respostas a alunos, conteúdo de professor) fica, com o nome dela. A
-            Auditoria registra tudo.
+            {t('A conta de login e os dados pessoais somem. O histórico esportivo fica, com o nome trocado por “Atleta removido” — apagá-lo reescreveria o resultado e o rating de outras pessoas. Reservas e pagamentos ficam guardados, sem o nome. O conteúdo que a pessoa criou para outras (treinos, respostas a alunos, conteúdo de professor) fica, com o nome dela. A Auditoria registra tudo.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -167,11 +164,11 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
               return (
                 <div key={r.uid} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 p-3">
                   <span className="min-w-0 truncate text-sm font-semibold text-ink">{nome}</span>
-                  <V2Badge tone={meta.tone}><meta.Icon className="h-3 w-3" /> {meta.label}</V2Badge>
+                  <V2Badge tone={meta.tone}><meta.Icon className="h-3 w-3" /> {t(meta.label)}</V2Badge>
                   {r.error && <p className="w-full text-2xs text-red-700">{r.error}</p>}
                   {r.storageError && (
                     <p className="w-full text-2xs text-amber-700">
-                      As fotos enviadas não puderam ser apagadas agora; o resto foi feito.
+                      {t('As fotos enviadas não puderam ser apagadas agora; o resto foi feito.')}
                     </p>
                   )}
                 </div>
@@ -181,12 +178,12 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
         ) : previa.isPending || (!previa.data && !previa.isError) ? (
           <div className="flex items-center gap-3 py-8 text-sm text-gray-600">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Levantando o que cada conta tem na plataforma…
+            {t('Levantando o que cada conta tem na plataforma…')}
           </div>
         ) : previa.isError ? (
           <div className="space-y-3 py-4">
             <p className="text-sm text-red-700">{previa.error?.message}</p>
-            <V2Button size="sm" variant="secondary" onClick={() => previa.mutate({ uids })}>Tentar de novo</V2Button>
+            <V2Button size="sm" variant="secondary" onClick={() => previa.mutate({ uids })}>{t('Tentar de novo')}</V2Button>
           </div>
         ) : (
           /* ---------------------------------------------------- prévia */
@@ -197,26 +194,24 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
 
             {impedidas.length > 0 && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800">
-                {impedidas.length === 1 ? '1 conta está impedida e fica' : `${impedidas.length} contas estão impedidas e ficam`} de
-                fora. Resolva o que está listado nela e tente de novo.
+                {tn(impedidas.length, '{n} conta está impedida e fica de fora. Resolva o que está listado nela e tente de novo.', '{n} contas estão impedidas e ficam de fora. Resolva o que está listado nelas e tente de novo.')}
               </p>
             )}
 
             {!podeExecutar ? (
               <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
-                <strong className="text-ink">Só o dono da plataforma executa a exclusão.</strong> Você pode
-                conferir a prévia; peça a ele para concluir.
+                <strong className="text-ink">{t('Só o dono da plataforma executa a exclusão.')}</strong> {t('Você pode conferir a prévia; peça a ele para concluir.')}
               </p>
             ) : liberadas.length > 0 && (
               <div className="space-y-3 rounded-xl border border-red-200 p-3">
                 <div>
-                  <label htmlFor="motivo-exclusao" className="text-sm font-semibold text-ink">Motivo</label>
+                  <label htmlFor="motivo-exclusao" className="text-sm font-semibold text-ink">{t('Motivo')}</label>
                   <V2Textarea
                     id="motivo-exclusao"
                     rows={2}
                     value={motivo}
                     onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Ex.: contas de exemplo criadas para testar os torneios"
+                    placeholder={t('Ex.: contas de exemplo criadas para testar os torneios')}
                   />
                   {motivo && validacao.errors.reason && (
                     <p className="mt-1 text-2xs text-red-600">{validacao.errors.reason}</p>
@@ -224,7 +219,7 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
                 </div>
                 <div>
                   <label htmlFor="confirma-exclusao" className="text-sm font-semibold text-ink">
-                    Digite <span className="font-mono">{DELETION_CONFIRM_WORD}</span> para confirmar
+                    {t('Digite {palavra} para confirmar', { palavra: DELETION_CONFIRM_WORD })}
                   </label>
                   <V2Input
                     id="confirma-exclusao"
@@ -242,10 +237,10 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
 
         <DialogFooter>
           {resultados ? (
-            <V2Button onClick={onClose}>Fechar</V2Button>
+            <V2Button onClick={onClose}>{t('Fechar')}</V2Button>
           ) : (
             <>
-              <V2Button variant="ghost" onClick={onClose} disabled={excluir.isPending}>Cancelar</V2Button>
+              <V2Button variant="ghost" onClick={onClose} disabled={excluir.isPending}>{t('Cancelar')}</V2Button>
               {podeExecutar && liberadas.length > 0 && (
                 <V2Button
                   className="bg-red-600 text-white hover:bg-red-700"
@@ -253,7 +248,7 @@ export default function AdminAccountDeletionDialog({ users, onClose }) {
                   onClick={executar}
                 >
                   {excluir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Excluir {liberadas.length} cadastro{liberadas.length > 1 ? 's' : ''}
+                  {tn(liberadas.length, 'Excluir {n} cadastro', 'Excluir {n} cadastros')}
                 </V2Button>
               )}
             </>
