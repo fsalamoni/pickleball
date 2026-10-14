@@ -169,6 +169,28 @@ export function useSavedSearches(uid) {
   return useQuery({ queryKey: marketKeys.savedSearches(uid), queryFn: () => svc.listSavedSearches(uid), enabled: !!uid });
 }
 
+/** Salvar, apagar, ligar/desligar o aviso e "vi agora" de uma busca salva. */
+export function useSavedSearchActions(uid) {
+  const qc = useQueryClient();
+  const key = marketKeys.savedSearches(uid);
+  const done = () => qc.invalidateQueries({ queryKey: key });
+  const patch = (id, data) => qc.setQueryData(key, (xs) => (xs || []).map((b) => (b.id === id ? { ...b, ...data } : b)));
+  return {
+    save: useMutation({ mutationFn: (input) => svc.saveSearch(uid, input), onSettled: done }),
+    remove: useMutation({ mutationFn: (id) => svc.deleteSavedSearch(id), onSettled: done }),
+    notify: useMutation({
+      mutationFn: ({ id, on }) => svc.setSavedSearchNotify(id, on),
+      onMutate: ({ id, on }) => patch(id, { notify: on }),
+      onSettled: done,
+    }),
+    // "Vi agora": zera as novidades daquela busca (sem esperar a gravação).
+    touch: useMutation({
+      mutationFn: (id) => svc.touchSavedSearch(id),
+      onMutate: (id) => patch(id, { last_seen_ms: Date.now() }),
+    }),
+  };
+}
+
 export function useCart(uid) {
   return useQuery({ queryKey: marketKeys.cart(uid), queryFn: () => svc.getCart(uid), enabled: !!uid });
 }

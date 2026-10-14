@@ -15,4 +15,10 @@ describe('rascunho a partir dos mercados internos', () => {
     expect(draftFromArenaProduct({ name: 'Água', category: 'Bebida', stock_qty: null }).quantity).toBe('1');
     expect(draftFromArenaProduct({ name: 'Água', category: 'Bebida', stock_qty: -2 }).quantity).toBe('0');
   });
+  it('🐞 o rascunho cabe no editor: tipo "novo" de verdade e título no limite', () => {
+    const d = draftFromArenaProduct({ name: 'x'.repeat(150), sale_price: 10 });
+    expect(d.type).toBe('product_new');
+    expect(d.title.length).toBeLessThanOrEqual(90);
+    expect(draftFromCoachProduct({ name: 'Bola', price: 5 }).type).toBe('product_new');
+  });
 });

@@ -66,4 +66,10 @@ describe('pedido', () => {
     expect(orderWaitingOn({ status: 'disputed' }, 'admin')).toMatch(/decida/);
     expect(orderWaitingOn({ status: 'paid' }, 'admin')).toBe('');
   });
+  it('🐞 prazo da disputa conta do envio, como no servidor, e segue a configuração', () => {
+    const now = Date.UTC(2026, 9, 20);
+    const o = { status: 'shipped', paid_at_ms: now - 9 * 86400000, shipped_at_ms: now - 3 * 86400000 };
+    expect(nextActionsFor(o, 'buyer', { now }).map((a) => a.id)).toContain('open_dispute');
+    expect(nextActionsFor(o, 'buyer', { now, disputeWindowDays: 2 }).map((a) => a.id)).not.toContain('open_dispute');
+  });
 });

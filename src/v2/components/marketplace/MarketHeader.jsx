@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, Search, ShoppingBag, ShoppingCart, Store } from 'lucide-react';
+import { Bell, Heart, Search, ShoppingBag, ShoppingCart, Store } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
@@ -85,6 +85,7 @@ export default function MarketHeader({ className }) {
         <nav aria-label="Atalhos do Mercado" className="flex shrink-0 items-center">
           <span className="hidden sm:contents">
             <HeaderLink to="/mercado/favoritos" icon={Heart} label="Favoritos" />
+            {user && <HeaderLink to="/mercado/buscas" icon={Bell} label="Buscas" dica="mercado-buscas" />}
             <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label="Compras" />
           </span>
           <HeaderLink to="/mercado/vender" icon={Store} label="Vender" dica="mercado-vender" />

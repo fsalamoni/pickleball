@@ -90,3 +90,20 @@ marketplace/
 em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
 `tests/rules/marketplace.rules.test.js`; funções em
 `tests/rules/marketplace.functions.test.js`.
+
+## O que traz a pessoa de volta
+
+- **Buscas salvas** (`/mercado/buscas`): "Salvar busca" na lista de
+  resultados; a tela mostra quantos anúncios chegaram desde a última vez e os
+  primeiros. A conta é `domain/discovery.js` (`savedSearchMatches`) e o aviso
+  diário do servidor (`marketSavedSearchAlerts`, 10h) usa a CÓPIA
+  `functions/marketSearch.js` — paridade em `marketSearch.parity.test.js`.
+  Um aviso por busca a cada 20 h, só com o aviso ligado.
+- **Preço baixou**: `marketPriceDropNotify` avisa quem favoritou quando o
+  preço fica abaixo do menor já avisado (`price_alert_cents`, travado na
+  regra) — subir e descer de novo não vira spam.
+- **Vistos recentemente**: no aparelho, por conta (`v2:view:<uid>:mercado:vistos`),
+  zero banco.
+- **Perto de você** usa a Minha região (`useRegionalList`), do mais perto ao
+  mais longe.
+

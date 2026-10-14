@@ -17,7 +17,7 @@ import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import { attributesFor, activeCategories } from '@/modules/marketplace/domain/taxonomy';
-import { CONDITION_LABELS, FULFILLMENT_LABELS, MEDIA_LIMITS, TEXT_LIMITS } from '@/modules/marketplace/domain/constants';
+import { CONDITION_LABELS, FULFILLMENT_LABELS, LISTING_TYPE, MEDIA_LIMITS, TEXT_LIMITS } from '@/modules/marketplace/domain/constants';
 import { listingCompleteness, validateListingInput } from '@/modules/marketplace/domain/listing';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { saveListing } from '@/modules/marketplace/services/marketService';
@@ -38,7 +38,7 @@ function fromListing(l) {
   return {
     title: l?.title || '',
     category_slug: l?.category_slug || '',
-    type: l?.type || 'new',
+    type: [LISTING_TYPE.USED, 'used'].includes(l?.type) ? LISTING_TYPE.USED : LISTING_TYPE.NEW,
     condition: l?.condition && l.condition !== 'new' ? l.condition : '',
     attributes: l?.attributes || {},
     description: l?.description || '',
@@ -325,13 +325,13 @@ function EditorPage() {
             <fieldset className="space-y-2">
               <legend className="text-sm font-bold text-ink">Estado</legend>
               <div className="flex flex-wrap gap-2">
-                {[['new', 'Novo'], ['used', 'Usado']].map(([v, l]) => (
+                {[[LISTING_TYPE.NEW, 'Novo'], [LISTING_TYPE.USED, 'Usado']].map(([v, l]) => (
                   <label key={v} className={cn('flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold', form.type === v ? 'border-ink bg-ink text-white' : 'border-gray-200 text-ink')}>
                     <input type="radio" name="tipo" value={v} checked={form.type === v} onChange={() => set({ type: v })} className="sr-only" />{l}
                   </label>
                 ))}
               </div>
-              {form.type === 'used' && (
+              {form.type === LISTING_TYPE.USED && (
                 <V2Field label="Como está" htmlFor="condicao" error={errors.condition}>
                   <V2Select id="condicao" value={form.condition} onChange={(e) => set({ condition: e.target.value })}>
                     <option value="">Escolha…</option>
