@@ -41,6 +41,14 @@ export function t(chave, params) {
 }
 
 /**
+ * MARCA uma chave sem traduzir: para textos guardados em constantes do nível
+ * do módulo (listas de rótulos, opções). A tela traduz ao desenhar:
+ *   const OPCOES = [{ rotulo: tk('Duplas') }];  …  {t(op.rotulo)}
+ * Assim a guarda de catálogos enxerga a chave.
+ */
+export const tk = (chave) => chave;
+
+/**
  * Plural. `singular` e `plural` são os textos em português; o catálogo guarda
  * `[forma_singular, forma_plural]` na chave do PLURAL. `{n}` entra sozinho.
  *   tn(n, '{n} jogo', '{n} jogos')

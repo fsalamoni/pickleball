@@ -53,11 +53,11 @@ describe('catálogos de idioma', () => {
     }
   });
 
-  it('todo t(\'…\') literal do código existe nos catálogos', async () => {
+  it('todo t/tn/tk(\'…\') literal do código existe nos catálogos', async () => {
     const todas = new Set();
     for (const p of pastas) Object.keys(await ler(p, alvos[0])).forEach((k) => todas.add(k));
     const faltando = [];
-    const re = /(?<![\w.$])tn?\(\s*(?:[\w.]+\s*,\s*)?'((?:[^'\\\n])+)'/g;
+    const re = /(?<![\w.$])t[nk]?\(\s*(?:[\w.]+\s*,\s*)?'((?:[^'\\\n])+)'/g;
     for (const f of arquivos) {
       if (!/\.(jsx?|mjs)$/.test(f) || /\.test\.|[\\/]locales[\\/]/.test(f)) continue;
       const src = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');

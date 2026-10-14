@@ -66,3 +66,10 @@ describe('formatação', () => {
     expect(fmtLista(['a', 'b', 'c'])).toBe('a, b, and c');
   });
 });
+
+describe('tk', () => {
+  it('só marca a chave', async () => {
+    const { tk } = await import('./engine.js');
+    expect(tk('Duplas')).toBe('Duplas');
+  });
+});

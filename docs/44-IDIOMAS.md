@@ -4,6 +4,7 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 
 ## Como funciona
 - **O texto em português é a chave**: `t('Entrar num jogo')`. Sem catálogo (pt-BR) ou sem tradução, aparece o próprio português.
+- Rótulos em constantes do módulo: marque com `tk('Texto')` e traduza ao desenhar com `t(rotulo)`.
 - Variáveis `t('Você tem {n} XP', { n })`; plural `tn(n, '{n} jogo', '{n} jogos')` (o catálogo guarda `['{n} game', '{n} games']` na chave do plural).
 - Datas/números/moeda: `fmtData`, `fmtNumero`, `fmtMoeda`, `fmtLista` (`Intl` pelo idioma ativo). Não escreva `'pt-BR'` em tela nova.
 - Catálogos por módulo: `src/<área>/i18n/locales/<codigo>.js` (`export default { 'texto pt': 'text' }`), carregados só para o idioma escolhido. pt-BR não baixa nada.
