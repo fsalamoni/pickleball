@@ -59,6 +59,6 @@ export function evaluateCancellation(slot, policy, nowMs = Date.now()) {
 /** Mensagem de aviso para um cancelamento tardio (pt-BR). */
 export function lateCancellationMessage(policy) {
   const p = policy && policy.deadlineHours != null ? policy : normalizeCancellationPolicy(policy || {});
-  const base = `A arena pede cancelamento com pelo menos ${p.deadlineHours}h de antecedência.`;
+  const base = t('A arena pede cancelamento com pelo menos {h}h de antecedência.', { h: p.deadlineHours });
   return p.notes ? `${base} ${p.notes}` : t('{base} Este é um cancelamento tardio.', { base });
 }

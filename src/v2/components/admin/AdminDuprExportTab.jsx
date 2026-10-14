@@ -727,7 +727,7 @@ export default function AdminDuprExportTab() {
               onClear={() => setQueueSelection(new Set())}
               extraActions={[{
                 key: 'remove',
-                label: 'Excluir da lista',
+                label: t('Excluir da lista'),
                 icon: MinusCircle,
                 variant: 'ghost',
                 onClick: () => applyQueueChange(

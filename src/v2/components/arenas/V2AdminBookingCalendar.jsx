@@ -490,7 +490,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                 onOpenChange={setCancelConfirm}
                 title={t('Cancelar reserva?')}
                 description={cancelInfo.late
-                  ? `${t(lateCancellationMessage(normalizeCancellationPolicy(arena)))} ${t('A reserva será cancelada e o horário ficará disponível.')}`
+                  ? `${lateCancellationMessage(normalizeCancellationPolicy(arena))} ${t('A reserva será cancelada e o horário ficará disponível.')}`
                   : t('A reserva será marcada como cancelada e o horário ficará disponível.')}
                 confirmLabel={t('Cancelar reserva')}
                 onConfirm={handleCancelBooking}

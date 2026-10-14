@@ -115,10 +115,10 @@ export function MarkdownEditor({
   return (
     <div className={cn('rounded-lg border border-input bg-background', disabled && 'opacity-70', className)}>
       <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-1.5 py-1">
-        <ToolbarButton title={t('Negrito')} onClick={() => applyWrap('**', '**', 'negrito')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Negrito')} onClick={() => applyWrap('**', '**', t('negrito'))} disabled={disabled || mode === 'preview'}>
           <Bold className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title={t('Itálico')} onClick={() => applyWrap('_', '_', 'itálico')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Itálico')} onClick={() => applyWrap('_', '_', t('itálico'))} disabled={disabled || mode === 'preview'}>
           <Italic className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton title={t('Título')} onClick={() => applyLinePrefix('## ')} disabled={disabled || mode === 'preview'}>
@@ -138,7 +138,7 @@ export function MarkdownEditor({
         <ToolbarButton title={t('Link')} onClick={insertLink} disabled={disabled || mode === 'preview'}>
           <Link2 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton title={t('Código')} onClick={() => applyWrap('`', '`', 'código')} disabled={disabled || mode === 'preview'}>
+        <ToolbarButton title={t('Código')} onClick={() => applyWrap('`', '`', t('código'))} disabled={disabled || mode === 'preview'}>
           <Code2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton title={t('Tabela')} onClick={() => insertText(TABLE_SNIPPET)} disabled={disabled || mode === 'preview'}>

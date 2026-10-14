@@ -167,7 +167,7 @@ export function modalityPodium({ modality = null, tournament = null, matches = [
       const people = registrationAllPeople(reg);
       entries.push({
         registrationId: regId,
-        label: reg?.label || people.map((p) => p.name).join(' / ') || 'Inscrição',
+        label: reg?.label || people.map((p) => p.name).join(' / ') || t('Inscrição'),
         people,
       });
     });

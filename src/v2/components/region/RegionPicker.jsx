@@ -250,7 +250,7 @@ function OutroLugar({ escolha, region, geo, definir }) {
               <Raios
                 modo={escolha.modo}
                 raioKm={escolha.raioKm}
-                rotulo="Distância a partir desse lugar"
+                rotulo={t('Distância a partir desse lugar')}
                 onChange={(modo, raioKm) => definir({ ...escolha, modo, raioKm })}
               />
               <Vizinhas geo={geo} cidade={escolha.cidade} uf={escolha.uf} modo={escolha.modo} raioKm={escolha.raioKm} />
@@ -335,7 +335,7 @@ export default function RegionPicker({ className }) {
           <Raios
             modo={modoCidade}
             raioKm={raio}
-            rotulo="Distância a partir da sua cidade"
+            rotulo={t('Distância a partir da sua cidade')}
             onChange={(modo, raioKm) => definir({ modo, origem: REGION_ORIGIN.PERFIL, raioKm })}
           />
           <Vizinhas geo={geo} cidade={cidadePerfil} uf={ufPerfil} modo={modoCidade} raioKm={raio} />

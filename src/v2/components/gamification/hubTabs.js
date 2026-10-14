@@ -1,12 +1,13 @@
 import { Gift, Route, Swords, Target, Users } from 'lucide-react';
+import { tk } from '@/core/i18n';
 
 /** As abas do hub, na ordem em que uma pessoa nova as aprende. `modules`: some se TODOS estiverem desligados. */
 export const HUB_TABS = [
-  { id: 'jornada', label: 'Jornada', icon: Route, dica: 'aba-jornada' },
-  { id: 'missoes', label: 'Missões', icon: Target, dica: 'aba-missoes' },
-  { id: 'competir', label: 'Competir', icon: Swords, dica: 'aba-competir' },
-  { id: 'social', label: 'Social', icon: Users, dica: 'aba-social', modules: ['match_reviews', 'partner_letters', 'social_bonds'] },
-  { id: 'recompensas', label: 'Recompensas', icon: Gift, dica: 'aba-recompensas', modules: ['rewards'] },
+  { id: 'jornada', label: tk('Jornada'), icon: Route, dica: 'aba-jornada' },
+  { id: 'missoes', label: tk('Missões'), icon: Target, dica: 'aba-missoes' },
+  { id: 'competir', label: tk('Competir'), icon: Swords, dica: 'aba-competir' },
+  { id: 'social', label: tk('Social'), icon: Users, dica: 'aba-social', modules: ['match_reviews', 'partner_letters', 'social_bonds'] },
+  { id: 'recompensas', label: tk('Recompensas'), icon: Gift, dica: 'aba-recompensas', modules: ['rewards'] },
 ];
 
 /** Nomes antigos e atalhos dos avisos: `?aba=duelo` leva a Competir etc. */

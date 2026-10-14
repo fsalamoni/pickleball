@@ -19,7 +19,7 @@
 import { getAvailableSpots, slotLevelFit, slotStartMs } from './openMatch.js';
 import { WAITLIST_STATUS, DEFAULT_PROMOTION_WINDOW_MINUTES } from './waitlist.js';
 import { instanteEmMs } from '@/core/domain/instant';
-import { tk } from '@/core/i18n';
+import { t, tk } from '@/core/i18n';
 
 const CANCELADA = 'cancelled';
 
@@ -184,7 +184,7 @@ export function waitlistCallDeadline(entrada, now = Date.now()) {
     && d.getMonth() === hoje.getMonth() && d.getDate() === hoje.getDate();
   return {
     ms,
-    label: mesmoDia ? hora : `${p(d.getDate())}/${p(d.getMonth() + 1)} às ${hora}`,
+    label: mesmoDia ? hora : t('{data} às {hora}', { data: `${p(d.getDate())}/${p(d.getMonth() + 1)}`, hora }),
     vencida: now > ms,
   };
 }

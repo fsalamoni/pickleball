@@ -12,6 +12,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { tk } from '@/core/i18n';
 import { getPlayerH2HRecords } from '@/modules/rating/services/headToHeadService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import { PLAYER_RECORDS_KEY } from './useProgression';
@@ -69,8 +70,8 @@ export function useGameRecords(uid, enabled = true) {
     [torneios.data, dias.data],
   );
   const incomplete = [];
-  if (torneios.isError) incomplete.push('torneios');
-  if (dias.isError) incomplete.push('dias de jogo');
+  if (torneios.isError) incomplete.push(tk('torneios'));
+  if (dias.isError) incomplete.push(tk('dias de jogo'));
   return {
     records,
     isLoading: torneios.isLoading || dias.isLoading,

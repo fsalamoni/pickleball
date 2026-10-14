@@ -24,6 +24,7 @@ import { counterSummary } from './shop.js';
 import { noShowCandidates } from './checkin.js';
 import { SUBSCRIPTION_STATUS, subscriptionState } from './subscription.js';
 import { pendingBookingReferrals } from './marketing.js';
+import { tk } from '@/core/i18n';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -52,35 +53,35 @@ export function arenaPendingItems(fontes = {}, ligados = {}, { hoje, now = new D
     const n = aConfirmar(bookings, hoje).length;
     if (n > 0) {
       itens.push({ id: 'reservas', count: n, aba: 'reservas',
-        label: plural(n, 'reserva para confirmar', 'reservas para confirmar') });
+        label: plural(n, tk('reserva para confirmar'), tk('reservas para confirmar')) });
     }
   }
   if (ligados.loja && Array.isArray(sales)) {
     const n = counterSummary(sales, hoje, () => '').aEntregar.length;
     if (n > 0) {
       itens.push({ id: 'pedidos', count: n, aba: 'pedidos',
-        label: plural(n, 'pedido do app para entregar', 'pedidos do app para entregar') });
+        label: plural(n, tk('pedido do app para entregar'), tk('pedidos do app para entregar')) });
     }
   }
   if (ligados.presenca && Array.isArray(bookings)) {
     const n = noShowCandidates(bookings, hoje, now).length;
     if (n > 0) {
       itens.push({ id: 'faltas', count: n, aba: 'presenca',
-        label: plural(n, 'falta para marcar hoje', 'faltas para marcar hoje') });
+        label: plural(n, tk('falta para marcar hoje'), tk('faltas para marcar hoje')) });
     }
   }
   if (ligados.indicacoes && Array.isArray(bookings)) {
     const n = pendingBookingReferrals(bookings).toRegister.length;
     if (n > 0) {
       itens.push({ id: 'indicacoes', count: n, aba: 'indicacoes',
-        label: plural(n, 'indicação para registrar', 'indicações para registrar') });
+        label: plural(n, tk('indicação para registrar'), tk('indicações para registrar')) });
     }
   }
   if (ligados.mensalidade && Array.isArray(subscriptions)) {
     const n = subscriptions.filter((s) => subscriptionState(s, hoje).status === SUBSCRIPTION_STATUS.OVERDUE).length;
     if (n > 0) {
       itens.push({ id: 'mensalidades', count: n, aba: 'membros',
-        label: plural(n, 'mensalidade em atraso', 'mensalidades em atraso') });
+        label: plural(n, tk('mensalidade em atraso'), tk('mensalidades em atraso')) });
     }
   }
   return itens;

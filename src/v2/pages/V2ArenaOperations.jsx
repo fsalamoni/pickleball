@@ -227,7 +227,7 @@ function ChecklistForm({ arenaId, checklist, onClose }) {
         hint={tn(itens.length, 'Um por linha. {n} item.', 'Um por linha. {n} itens.')}
       >
         <V2Textarea id="cl-itens" rows={6}
-          placeholder={'Ligar as luzes\nConferir as redes\nAbrir os vestiários'}
+          placeholder={t('Ligar as luzes\nConferir as redes\nAbrir os vestiários')}
           value={form.texto} onChange={(e) => set({ texto: e.target.value })} />
       </V2Field>
       <label className="mt-3 flex items-start gap-2 text-sm text-gray-600">

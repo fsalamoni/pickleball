@@ -7,6 +7,7 @@
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { tk } from '@/core/i18n';
 import { listUserMissions } from '@/modules/progression/services/missionService';
 import { buildPeriodReview, periodWindow } from '@/modules/progression/domain/periodReview';
 import { useGameRecords } from './useGameRecords';
@@ -32,8 +33,8 @@ export function usePeriodReview(engine, kind = 'week', offset = 0) {
   const review = useMemo(() => {
     if (!uid || !engine) return null;
     const incompleteSources = [...gameRecords.incomplete];
-    if (missionsQ.isError) incompleteSources.push('missões');
-    if (engine.facts?.unknown?.length) incompleteSources.push('dados de atividade');
+    if (missionsQ.isError) incompleteSources.push(tk('missões'));
+    if (engine.facts?.unknown?.length) incompleteSources.push(tk('dados de atividade'));
     const janela = periodWindow(kind, offset, new Date());
     // Totais ATÉ o fim do período: os marcos ("seu 50º jogo") se medem sobre a
     // carreira naquele momento, não sobre hoje.

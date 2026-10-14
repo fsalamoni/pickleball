@@ -228,7 +228,7 @@ function V2GamificationHomeOn() {
         )}
       </V2Surface>
 
-      <V2SectionNav sections={abasVisiveis} activeId={aba} onSelect={trocarAba} ariaLabel={t('Seções da gamificação')} dica="gamificacao-abas" />
+      <V2SectionNav sections={abasVisiveis.map((a) => ({ ...a, label: t(a.label) }))} activeId={aba} onSelect={trocarAba} ariaLabel={t('Seções da gamificação')} dica="gamificacao-abas" />
 
       <HowItWorks tab={aba} />
 

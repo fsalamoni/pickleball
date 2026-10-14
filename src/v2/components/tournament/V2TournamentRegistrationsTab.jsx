@@ -255,7 +255,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                                 const c = resolveRegistrationContact(r, contacts?.get?.(r.id) || null);
                                 return [c.player_a_email, c.player_b_email].filter(Boolean).join(' / ');
                               })()}
-                            {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
+                            {r.is_provisional ? ` · ${t(REGISTRATION_PROVISIONAL_LABEL).toLowerCase()}` : ''}
                           </div>
                           {isAdmin && r.status !== REGISTRATION_STATUS.CANCELLED
                             && registrationSlotsWithoutAccount(r).length > 0 && (

@@ -1,4 +1,4 @@
-import { t, tk } from '@/core/i18n';
+import { t, tk, fmtData } from '@/core/i18n';
 /**
  * Domínio puro de calendário de arena.
  *
@@ -110,8 +110,8 @@ export function formatDateShortBR(value, { hoje = todayISO() } = {}) {
 export function formatDateLongBR(value) {
   const d = parseDate(value);
   if (!d) return '';
-  const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-  return `${dias[d.getDay()]}, ${d.getDate()} de ${MONTH_LABELS_PT[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`;
+  const txt = fmtData(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
 }
 
 /**
