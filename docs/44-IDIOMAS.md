@@ -33,3 +33,15 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 | Inscrição | Registration | Inscripción |
 | Dupla | Pair (doubles team) | Pareja |
 | Sorteio | Draw | Sorteo |
+
+## O que está traduzido e o que fica em português de propósito
+Traduzido (en, es): o casco (menus, cabeçalho, Configurações, cadastro), início, Jogar e dia de jogo (inclusive telão), torneio (gestão, página pública, impressão), arena (Central, página pública, reserva, módulos), professor, clubes, ranking e rating, gamificação, Centro de Treino, Mercado, Minha área, notificações (moldura), ajuda e dicas, Painel admin.
+
+Fica em português **de propósito** — é dado gravado, não tela:
+- o que o app GRAVA no banco: nomes padrão ("Grupo único", "(cópia)", grupos-modelo do Play, nome de busca salva, nome do dispositivo do totem), motivos, auditoria, sementes (biblioteca de treino), palavras-chave;
+- o texto de quem escreve (campanhas, descrições, comentários);
+- arquivos exportados (CSV, "Baixar meus dados");
+- os documentos legais (Termos, Privacidade, termos do Mercado): tradução precisa de revisão jurídica;
+- mensagens só de desenvolvedor (logger, validação de esquema).
+
+⚠️ Chave com quebra de linha (`\n`) no `t('…')` não é conferida pelo guarda nem por `scripts/i18n-faltando.mjs`: confira à mão.
