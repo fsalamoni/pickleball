@@ -40,7 +40,6 @@ import {
   conversationTypeFor,
   conversationTitle,
 } from '../domain/conversations.js';
-import { t } from '@/core/i18n';
 
 const COL = CHAT_COLLECTIONS;
 

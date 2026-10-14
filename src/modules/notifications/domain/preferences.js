@@ -11,7 +11,6 @@
  */
 import { t, tk } from '@/core/i18n';
 
-import { t, tk } from '@/core/i18n';
 
 /** Categorias de preferência, na ordem de exibição. */
 export const NOTIFICATION_CATEGORIES = Object.freeze([
