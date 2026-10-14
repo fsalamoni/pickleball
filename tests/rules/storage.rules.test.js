@@ -164,4 +164,12 @@ describe('mercado/ — fotos, vídeos e comprovante do Mercado', () => {
     await assertSucceeds(getBytes(ref(asOutro(), 'mercado/dono_uid/g.webp')));
     await assertFails(listAll(ref(asOutro(), 'mercado/dono_uid')));
   });
+  it('28. o dono apaga a foto do anúncio, mas não o comprovante do Pix', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'mercado/dono_uid/anuncios-1_a.webp'), bytes(), { contentType: 'image/webp' });
+      await uploadBytes(ref(ctx.storage(), 'mercado/dono_uid/comprovante-1_a.pdf'), bytes(), { contentType: 'application/pdf' });
+    });
+    await assertSucceeds(deleteObject(ref(asDono(), 'mercado/dono_uid/anuncios-1_a.webp')));
+    await assertFails(deleteObject(ref(asDono(), 'mercado/dono_uid/comprovante-1_a.pdf')));
+  });
 });

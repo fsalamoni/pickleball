@@ -1204,6 +1204,7 @@ exports.marketPlaceOrders = marketCallable('marketPlaceOrders', (ctx, actor, dat
 exports.marketOrderAction = marketCallable('marketOrderAction', marketplace.orderAction);
 exports.marketOfferAction = marketCallable('marketOfferAction', marketplace.offerAction);
 exports.marketSubmitReview = marketCallable('marketSubmitReview', marketplace.submitReview);
+exports.marketGiftCardAction = marketCallable('marketGiftCardAction', marketplace.giftCardAction);
 
 exports.marketHousekeeping = onSchedule(
   { schedule: 'every 60 minutes', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 300 },

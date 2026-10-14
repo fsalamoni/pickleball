@@ -55,6 +55,14 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
     exige motivo, avisa quem vende, grava auditoria e encerra as denúncias
     abertas do anúncio. O admin decide disputa NO PRÓPRIO pedido (o papel
     `admin` sai de `orderRoleOf`); o Painel admin → Mercado só lista e leva lá.
+11. **Cupom e vale-presente: o preço é do SERVIDOR.** A conta é
+    `orderPricing` (`domain/promotions.js`: cupom primeiro, vale depois, nunca
+    abaixo de zero) com a cópia em `functions/marketPromo.js` — paridade em
+    `marketPromo.parity.test.js`. O cupom (`market_coupons/{seller_key}_{CODE}`)
+    é gravado por quem vende, mas o uso (`uses_count`, `market_coupon_uses`)
+    e todo vale (`market_gift_cards`, `marketGiftCardAction`) só o servidor
+    escreve; cancelar o pedido devolve o uso e o saldo. Vale só vale na loja que
+    o vendeu, e o código completo só aparece para quem o comprou ou resgatou.
 
 ## Telas
 
@@ -62,7 +70,10 @@ são do **PDV/estoque da arena** (`arenas/`). Este módulo usa **só** o prefixo
 `/mercado/favoritos`, `/mercado/carrinho`, `/mercado/pedidos` (+ `:id`),
 `/mercado/vendas/:id`, `/mercado/ofertas/:id`, `/mercado/vender` (painel de
 quem vende, `?como=` e `?aba=`), `/mercado/vender/anuncio/novo|:id` (editor),
-`/mercado/loja/abrir`. Admin: seção **Mercado** do Painel admin (`mercado-*`:
+`/mercado/loja/abrir`, `/mercado/vales` (vales que comprei ou resgatei). No
+painel de quem vende, **Divulgar** (cupons, vale-presente, cartão da loja) e
+**Desempenho** (números de 30/90 dias + planilha). Cartões para compartilhar
+(anúncio, loja, vale) saem como PNG em `promo/ShareImageDialog`. Admin: seção **Mercado** do Painel admin (`mercado-*`:
 Visão geral, Problemas em pedidos, Anúncios, Pedidos, Lojas, Configurações),
 que some com a flag desligada; disputas e anúncios denunciados entram em
 "Precisa de você".
@@ -86,7 +97,8 @@ marketplace/
 `market_sellers` (+ `private/data`), `market_listings`, `market_questions`,
 `market_favorites`, `market_saved_searches`, `market_carts`, `market_offers`,
 `market_orders` (+ `events`, `private/shipping`), `market_reviews`,
-`market_disputes`, `market_reports`; configuração em `platform_settings/marketplace`. Detalhe
+`market_disputes`, `market_reports`, `market_coupons` (+ `market_coupon_uses`),
+`market_gift_cards`; configuração em `platform_settings/marketplace`. Detalhe
 em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
 `tests/rules/marketplace.rules.test.js`; funções em
 `tests/rules/marketplace.functions.test.js`.

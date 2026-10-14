@@ -952,7 +952,22 @@ async function coletarMercado(db, uid) {
     vendas.docs.forEach((d) => {
       if ((d.data() || {}).seller_name !== REMOVED_SELLER) itens.push({ ref: d.ref, patch: { seller_name: REMOVED_SELLER } });
     });
+    // Os cupons da loja saem com ela (ninguém mais compra dela). Os vales
+    // que ela vendeu ficam: o saldo é de quem ganhou.
+    // eslint-disable-next-line no-await-in-loop
+    const cupons = await consultar(db, 'market_coupons', 'seller_key', '==', key);
+    truncated = truncated || cupons.truncated;
+    cupons.docs.forEach((d) => deletes.push(d.ref));
   }
+  // Vale-presente que comprou ou tem: o saldo fica (é dinheiro), os nomes e o
+  // recado saem. ponytail: o contador de uso de cupom (`market_coupon_uses/{uid}`
+  // em lojas de outros) fica — é só um número sob o uid, sem nome.
+  const vales = await consultarUniao(db, 'market_gift_cards', [['buyer_uid', '=='], ['holder_uid', '==']], uid);
+  truncated = truncated || vales.truncated;
+  vales.docs.forEach((d) => {
+    const v = d.data() || {};
+    if (v.recipient_name || v.from_name || v.message) itens.push({ ref: d.ref, patch: { recipient_name: '', from_name: '', message: '' } });
+  });
   const compras = await consultar(db, 'market_orders', 'buyer_uid', '==', uid);
   truncated = truncated || compras.truncated;
   for (const d of compras.docs) {
@@ -1007,7 +1022,7 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Cupons do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_coupons', wheres: [['issuer_id', '==']], patch: foraDoAr('active'), countAll: true },
   { label: 'Campanhas do professor (ficam, fora do ar)', bucket: 'retained', col: 'promo_campaigns', wheres: [['issuer_id', '==']], patch: patchCoachCampaign, countAll: true },
   // Mercado
-  { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders'] },
+  { label: 'Vendas e compras no Mercado (ficam, sem o nome)', bucket: 'retained', collect: coletarMercado, deleteLabel: 'Chave Pix e endereços de entrega do Mercado', cols: ['market_sellers', 'market_listings', 'market_orders', 'market_coupons', 'market_gift_cards'] },
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
   { label: 'Perguntas feitas no Mercado', col: 'market_questions', wheres: [['asker_uid', '==']], patch: campos('asker_uid', ['asker_name'], [], REMOVED_USER) },
   { label: 'Avaliações no Mercado', col: 'market_reviews', wheres: [['author_uid', '==']], patch: campos('author_uid', ['author_name'], [], REMOVED_USER) },

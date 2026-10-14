@@ -1388,9 +1388,24 @@ aditivo; **zero índice composto**. Regras no bloco "MERCADO" do
   `REPORT_REASON_LABELS`, `text` ≤ 500, `status: open|resolved`, `outcome`).
   Quem denuncia cria e lê a própria; só o admin lista e decide. Na exclusão
   de conta fica (como a denúncia do treino).
-- Storage: `mercado/{uid}/{arquivo}` (foto < 3 MB, vídeo < 60 MB, PDF < 3 MB).
+- `market_coupons/{seller_key}_{CODE}`: cupom do vendedor (`kind` percent |
+  fixed | free_shipping, `value`, mínimo, validade, limite total e por pessoa,
+  só para quem nunca comprou, anúncios escolhidos, `public` para divulgar no
+  perfil e no anúncio). O vendedor cria e edita; código e `uses_count` são
+  imutáveis no cliente. O uso é do SERVIDOR (no pedido, devolvido no
+  cancelamento), em `market_coupon_uses/{uid}`.
+- `market_gift_cards/{id}`: vale-presente de uma loja, escrito SÓ pelo
+  servidor (`marketGiftCardAction`): comprado num pedido `source: 'gift_card'`
+  (`fulfillment: 'digital'`) e criado quando o vendedor confirma o pagamento,
+  ou emitido pelo vendedor; resgatado pelo código (`holder_uid`), abatido no
+  pedido e devolvido no cancelamento. Legível por comprador, titular e loja.
+  O pedido ganha `discount_cents`, `shipping_discount_cents`, `gift_card_cents`,
+  `coupon{…}` e `gift_cards[]`; o item pode ter `pickup_note`.
+- Storage: `mercado/{uid}/{arquivo}` (foto < 3 MB, vídeo < 60 MB, PDF < 3 MB;
+  o comprovante `comprovante-*` não pode ser apagado pelo dono).
 
-Na exclusão de conta: carrinho, favoritos, buscas, Pix e endereços somem;
+Na exclusão de conta: carrinho, favoritos, buscas, Pix, endereços e os cupons
+da ficha pessoal somem; os vales ficam sem nome e mensagem (o saldo segue);
 pedidos, ofertas, perguntas e avaliações ficam sem o nome; a ficha pessoal
 fica "Vendedor removido", suspensa, com os anúncios encerrados; pedido em
 andamento impede a exclusão.

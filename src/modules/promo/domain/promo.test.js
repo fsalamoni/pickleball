@@ -234,6 +234,8 @@ describe('destino', () => {
     expect(promoDestinationLink({ type: 'clinics' }, coach)).toBe('/coaches/u1#professor-clinicas');
     expect(promoDestinationLink({ type: 'tournament', target_id: 't 1' }, { issuerType: 'platform' })).toBe('/torneios/t%201');
     expect(promoDestinationLink({ type: 'doubles' }, { issuerType: 'platform' })).toBe('/ranking/duplas');
+    expect(promoDestinationLink({ type: 'market' }, { issuerType: 'platform' })).toBe('/mercado');
+    expect(promoDestinationLink({ type: 'market' }, coach)).toBe('/mercado/vendedor/coach_u1');
     expect(promoDestinationLink({ type: 'details' }, { issuerType: 'platform' })).toBe('/promocoes');
   });
 

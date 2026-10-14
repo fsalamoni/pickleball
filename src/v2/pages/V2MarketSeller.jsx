@@ -4,8 +4,14 @@
  * Serve a atleta, professor, arena e loja — o que muda é o selo.
  */
 import React, { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ExternalLink, MapPin, PackageCheck, Search, Star } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ExternalLink, Gift, MapPin, PackageCheck, Search, Share2, Star } from 'lucide-react';
+import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { giftCardConfig } from '@/modules/marketplace/domain/promotions';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
+import { GiftCardBuyDialog, StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
 import { cn } from '@/core/lib/utils';
 import { normalizeSearchText } from '@/modules/marketplace/domain/listing';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
@@ -13,7 +19,7 @@ import { sellerBadges, summarizeReviews, MIN_REVIEWS_FOR_RATING } from '@/module
 import { publishedMs } from '@/modules/marketplace/domain/search';
 import { useSeller, useSellerListings, useSellerReviews } from '@/modules/marketplace/hooks/useMarket';
 import {
-  V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import {
@@ -85,7 +91,16 @@ function SellerPage() {
   const [busca, setBusca] = useState('');
   const [cat, setCat] = useState('');
   const [ordem, setOrdem] = useState('recent');
+  const [compartilhar, setCompartilhar] = useState(false);
+  const [darVale, setDarVale] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const seller = s.data;
+  // Imagem só do Storage da plataforma (a regra não confere o endereço).
+  const banner = isAllowedImageUrl(seller?.banner_url) ? seller.banner_url : '';
+  const logo = isAllowedImageUrl(seller?.logo_url) ? seller.logo_url : '';
+  const vendeVale = giftCardConfig(seller).enabled;
+  const url = typeof window !== 'undefined' ? `${window.location.origin}/mercado/vendedor/${sellerKey}` : '';
   const anuncios = useMemo(() => (l.data || []).filter((x) => x.status === 'active' || x.status === 'sold_out'), [l.data]);
   const cats = MARKET_CATEGORIES.filter((c) => anuncios.some((x) => (x.category_path || [])[0] === c.slug));
   const visiveis = useMemo(() => {
@@ -113,9 +128,9 @@ function SellerPage() {
     const badges = sellerBadges(seller);
     topo = (
       <section className="overflow-hidden rounded-[2rem] border border-gray-100 bg-paper-pure">
-        <div className="h-28 bg-ink sm:h-40" style={seller.banner_url ? { backgroundImage: `url(${seller.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} />
+        <div className="h-28 bg-ink sm:h-40" style={banner ? { backgroundImage: `url(${banner})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} />
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:p-6">
-          <V2Avatar name={seller.display_name} photoUrl={seller.logo_url} size="xl" className="-mt-14 ring-4 ring-paper-pure sm:-mt-16" />
+          <V2Avatar name={seller.display_name} photoUrl={logo} size="xl" className="-mt-14 ring-4 ring-paper-pure sm:-mt-16" />
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{seller.display_name}</h1>
@@ -131,6 +146,13 @@ function SellerPage() {
               )}
             </div>
             {badges.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{badges.map((b) => <V2Badge key={b.id} tone={b.id === 'top' ? 'acid' : 'neutral'}>{b.label}</V2Badge>)}</div>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {vendeVale && seller.owner_uid !== user?.uid && (
+              <V2Button type="button" onClick={() => setDarVale(true)}><Gift className="h-4 w-4" /> Dar vale-presente</V2Button>
+            )}
+            {seller.owner_uid && <V2ChatLauncherButton athlete={{ id: seller.owner_uid, name: seller.display_name, photo_url: logo }} variant="ghost" label="Falar com a loja" />}
+            <V2Button type="button" variant="ghost" onClick={() => setCompartilhar(true)} aria-label="Compartilhar a loja"><Share2 className="h-4 w-4" /> Compartilhar</V2Button>
           </div>
         </div>
         {seller.bio && <p className="whitespace-pre-line border-t border-gray-100 px-5 py-4 text-sm leading-6 text-gray-700 sm:px-6">{seller.bio}</p>}
@@ -156,6 +178,24 @@ function SellerPage() {
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
       <MarketHeader />
       {topo}
+      {seller && seller.status === 'active' && <StoreCoupons sellerKey={sellerKey} />}
+      {seller && (
+        <>
+          <ShareImageDialog
+            open={compartilhar}
+            onOpenChange={setCompartilhar}
+            title="Compartilhar a loja"
+            url={url}
+            fileName={`loja-${sellerKey}.png`}
+            shareText={`Conheça ${seller.display_name} no Mercado PickleRush`}
+            renderCard={({ ref, qr, showImage }) => (
+              <MarketShareCard ref={ref} kind="store" image={banner || logo} showImage={showImage} qr={qr} title={seller.display_name}
+                subtitle={[seller.city, seller.state].filter(Boolean).join(' · ') || `${anuncios.length} produtos`} highlight={anuncios.length ? `${anuncios.length} produtos à venda` : ''} />
+            )}
+          />
+          {vendeVale && <GiftCardBuyDialog open={darVale} onOpenChange={setDarVale} seller={{ ...seller, seller_key: sellerKey }} onBought={(r) => navigate(`/mercado/pedidos/${r.id}`)} />}
+        </>
+      )}
       <section aria-label="Produtos do vendedor" className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-display text-xl font-bold text-ink">Produtos {anuncios.length > 0 && <span className="text-gray-500">({anuncios.length})</span>}</h2>

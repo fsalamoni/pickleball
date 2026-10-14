@@ -12,7 +12,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyOrders, usePublicListings } from '@/modules/marketplace/hooks/useMarket';
 import { marketHomeSummary } from '@/modules/marketplace/domain/home';
 import { coverOf } from '@/modules/marketplace/domain/listing';
-import { formatBRL } from '@/modules/marketplace/domain/money';
+import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import {
   HomeAction, HomeEmpty, HomeRow, HomeSection,
@@ -33,7 +33,7 @@ function Novidade({ listing }) {
           : <span className="flex h-full items-center justify-center text-gray-300"><Box className="h-8 w-8" aria-hidden="true" /></span>}
       </span>
       <span className="space-y-0.5 p-2.5">
-        <span className="block font-display text-sm font-bold text-ink">{formatBRL(listing.price_cents)}</span>
+        <span className="block font-display text-sm font-bold text-ink">{formatBRL(listing.price_cents)}{discountPercent(listing.price_cents, listing.compare_at_cents) > 0 && <span className="ml-1.5 text-xs text-green-700">−{discountPercent(listing.price_cents, listing.compare_at_cents)}%</span>}</span>
         <span className="line-clamp-2 block text-xs leading-snug text-gray-600">{listing.title}</span>
       </span>
     </Link>

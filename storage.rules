@@ -94,7 +94,9 @@ service firebase.storage {
         || (request.resource.contentType == 'application/pdf'
           && request.resource.size < 3 * 1024 * 1024)
       );
-      allow delete: if isAuthed() && request.auth.uid == uid;
+      // O comprovante do Pix é prova do pedido (a moderação o abre numa
+      // disputa): quem pagou não o apaga. A exclusão de conta usa o servidor.
+      allow delete: if isAuthed() && request.auth.uid == uid && !fileName.matches('comprovante-.*');
     }
 
     // Bloqueia qualquer outro caminho por padrão.

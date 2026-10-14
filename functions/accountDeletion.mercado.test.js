@@ -38,6 +38,10 @@ function cenario(extra = {}) {
     'market_favorites/bia_l1': { uid: 'bia', listing_id: 'l1' },
     'market_saved_searches/s1': { uid: 'ana', label: 'raquete' },
     'market_disputes/o2': { buyer_uid: 'ana', status: 'resolved' },
+    'market_coupons/athlete_ana_DEZ': { seller_key: 'athlete_ana', code: 'DEZ' },
+    'market_coupons/arena_a1_DEZ': { seller_key: 'arena_a1', code: 'DEZ' },
+    'market_gift_cards/g1': { seller_key: 'arena_a1', buyer_uid: 'ana', holder_uid: 'bia', recipient_name: 'Bia', from_name: 'Ana', message: 'Oi', balance_cents: 5000 },
+    'market_gift_cards/g2': { seller_key: 'arena_a1', buyer_uid: 'bia', holder_uid: 'bia', recipient_name: 'Bia', from_name: 'Bia', message: '', balance_cents: 5000 },
     ...extra,
   });
   const auth = createFakeAuth(['ana', 'bia'], { log: db.store.log });
@@ -75,6 +79,7 @@ describe('exclusão de conta: o Mercado', () => {
     const sumiram = [...antes].filter((p) => !db.store.docs.has(p)).sort();
     expect(sumiram).toEqual([
       'market_carts/ana',
+      'market_coupons/athlete_ana_DEZ',
       'market_favorites/ana_l2',
       'market_orders/o2/private/shipping',
       'market_saved_searches/s1',
@@ -94,5 +99,9 @@ describe('exclusão de conta: o Mercado', () => {
     expect(g('market_listings/l2')).toMatchObject({ seller_name: 'Arena A', status: 'active' });
     expect(g('market_orders/o1/private/shipping')).toBeTruthy();
     expect(g('market_reviews/o1_buyer').author_name).toBe('Bia Lima');
+    // vale: o saldo fica, os nomes e o recado saem; o vale de outra pessoa fica intacto
+    expect(g('market_gift_cards/g1')).toMatchObject({ recipient_name: '', from_name: '', message: '', balance_cents: 5000, holder_uid: 'bia' });
+    expect(g('market_gift_cards/g2').from_name).toBe('Bia');
+    expect(g('market_coupons/arena_a1_DEZ')).toBeTruthy();
   });
 });

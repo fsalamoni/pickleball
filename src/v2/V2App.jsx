@@ -95,6 +95,7 @@ const V2MarketListing = lazy(() => import('@/v2/pages/V2MarketListing'));
 const V2MarketSeller = lazy(() => import('@/v2/pages/V2MarketSeller'));
 const V2MarketFavorites = lazy(() => import('@/v2/pages/V2MarketFavorites'));
 const V2MarketSearches = lazy(() => import('@/v2/pages/V2MarketSearches'));
+const V2MarketGiftCards = lazy(() => import('@/v2/pages/V2MarketGiftCards'));
 const V2MarketCart = lazy(() => import('@/v2/pages/V2MarketCart'));
 const V2MarketOrders = lazy(() => import('@/v2/pages/V2MarketOrders'));
 const V2MarketOrder = lazy(() => import('@/v2/pages/V2MarketOrder'));
@@ -266,6 +267,7 @@ export default function V2App() {
           <Route path="mercado/vendedor/:sellerKey" element={<Isolada nome="mercado"><V2MarketSeller /></Isolada>} />
           <Route path="mercado/favoritos" element={<Isolada nome="mercado"><V2MarketFavorites /></Isolada>} />
           <Route path="mercado/buscas" element={<Isolada nome="mercado"><V2MarketSearches /></Isolada>} />
+          <Route path="mercado/vales" element={<Isolada nome="mercado"><V2MarketGiftCards /></Isolada>} />
           <Route path="mercado/carrinho" element={<Isolada nome="mercado"><V2MarketCart /></Isolada>} />
           <Route path="mercado/pedidos" element={<Isolada nome="mercado"><V2MarketOrders /></Isolada>} />
           <Route path="mercado/pedidos/:orderId" element={<Isolada nome="mercado"><V2MarketOrder /></Isolada>} />

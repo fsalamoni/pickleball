@@ -20,6 +20,7 @@ import { validateListingInput } from '../domain/listing.js';
 import { normalizeMarketSettings, findBannedTerm, validateQuestion, validateAnswer } from '../domain/settings.js';
 import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplication } from '../domain/seller.js';
 import { createAuditLog } from '@/core/services/auditService';
+import { couponDocId, giftCardConfig, normalizeCouponCode, validateCouponInput } from '../domain/promotions.js';
 import { notifyUsers } from '@/core/services/notificationService';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
@@ -199,16 +200,37 @@ export async function listListingsByStatus(statuses) {
   return (await getDocs(q)).docs.map(toDoc);
 }
 
+/** Anúncio que a regra não deixa ler (pausado, encerrado, removido) = fora do ar, não falha. */
+export const isNotPublicError = (err) => String(err?.code || '').includes('permission-denied');
+
+/** O anúncio, ou `null` se não existe ou saiu do ar (a regra não deixa ler pausado/encerrado). */
 export async function getListing(id) {
   if (!id) return null;
-  const snap = await getDoc(doc(db, C.listings, id));
-  return snap.exists() ? toDoc(snap) : null;
+  try {
+    const snap = await getDoc(doc(db, C.listings, id));
+    return snap.exists() ? toDoc(snap) : null;
+  } catch (err) {
+    if (isNotPublicError(err)) return null;
+    throw err;
+  }
 }
 
+/**
+ * Vários anúncios por id. No mapa: o anúncio; `null` = não existe ou saiu do
+ * ar; AUSENTE = a leitura falhou (a tela não pode dizer "não está mais à
+ * venda" sobre uma queda de rede). Tudo falhando, a consulta falha.
+ */
 export async function getListings(ids = []) {
   const unicos = [...new Set(ids.filter(Boolean))];
   const r = await Promise.allSettled(unicos.map(getListing));
-  return Object.fromEntries(r.filter((x) => x.status === 'fulfilled' && x.value).map((x) => [x.value.id, x.value]));
+  const out = {};
+  let failed = 0;
+  r.forEach((x, i) => {
+    if (x.status === 'fulfilled') out[unicos[i]] = x.value || null;
+    else failed += 1;
+  });
+  if (failed && failed === unicos.length) throw new Error('Não foi possível carregar os anúncios.');
+  return out;
 }
 
 /** Confere o texto contra os termos proibidos ANTES de gravar (o servidor confere de novo). */
@@ -226,9 +248,14 @@ export async function saveListing({ id, input, publish, seller, uid, settings, k
   const r = validateListingInput(input, { publish });
   if (!r.ok) throw new MarketError('Confira os campos destacados.', r.errors);
   conferirTermos(r.value, settings);
-  const status = publish ? 'active' : 'draft';
+  const antes = id ? await getListing(id) : null;
+  const qtd = id && keepQuantity ? Number(antes?.quantity) || 0 : r.value.quantity;
+  // Sem estoque, publicar é "esgotado" (no ar, sem botão de comprar).
+  const status = publish ? (qtd > 0 ? 'active' : 'sold_out') : 'draft';
   const base = { ...r.value, status, seller_name: seller.display_name, updated_at: serverTimestamp() };
-  if (publish) base.published_at = serverTimestamp();
+  // "Chegou agora" e o aviso das buscas salvas contam da PRIMEIRA vez no ar —
+  // editar um anúncio que já está no ar não o faz "novo" de novo.
+  if (publish && !['active', 'sold_out'].includes(antes?.status)) base.published_at = serverTimestamp();
   // A quantidade do anúncio ligado ao estoque da arena é do servidor: o
   // formulário aberto há minutos não pode regravá-la com um número velho.
   if (id && keepQuantity) delete base.quantity;
@@ -251,12 +278,19 @@ export async function setListingStatus(listing, status) {
 }
 
 /** Ajuste rápido de preço e estoque (na lista do vendedor). */
-export async function quickEditListing(listing, { price_cents, quantity }) {
+export async function quickEditListing(listing, { price_cents, quantity, compare_at_cents }) {
   const patch = { updated_at: serverTimestamp() };
   if (price_cents != null) {
     const p = Math.round(Number(price_cents));
     if (!(p > 0)) throw new MarketError('Informe o preço.');
     patch.price_cents = p;
+    if (compare_at_cents !== undefined) {
+      const c = compare_at_cents == null || compare_at_cents === '' ? null : Math.round(Number(compare_at_cents));
+      if (c != null && !(c > p)) throw new MarketError('O preço "de" precisa ser maior que o preço atual.');
+      patch.compare_at_cents = c;
+    } else if (listing.compare_at_cents && !(listing.compare_at_cents > p)) {
+      patch.compare_at_cents = null; // o "de" deixou de ser maior: sai o riscado
+    }
   }
   if (quantity != null && listing.source?.kind === 'arena_product' && listing.source.tracked) {
     throw new MarketError('A quantidade deste anúncio acompanha o estoque da arena. Registre a compra no estoque da arena.');
@@ -427,4 +461,85 @@ export async function saveCart(uid, cart) {
 export async function listMyQuestions(uid) {
   const q = query(collection(db, C.questions), where('asker_uid', '==', uid));
   return (await getDocs(q)).docs.map(toDoc);
+}
+
+/* -------------------------------------------------------------- cupons -- */
+
+/** Os cupons de uma loja (todos: para quem vende). */
+export async function listSellerCoupons(key) {
+  const q = query(collection(db, C.coupons), where('seller_key', '==', key));
+  return (await getDocs(q)).docs.map(toDoc).sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+/** Os cupons DIVULGADOS: de uma loja, ou de todo o Mercado (sem `key`). */
+export async function listPublicCoupons(key) {
+  const cond = [where('public', '==', true), where('active', '==', true)];
+  if (key) cond.unshift(where('seller_key', '==', key));
+  return (await getDocs(query(collection(db, C.coupons), ...cond))).docs.map(toDoc);
+}
+
+/** O cupom pelo código digitado (ou `null`). Quem sabe o código lê o cupom. */
+export async function findCoupon(sellerKey, code) {
+  const c = normalizeCouponCode(code);
+  if (!sellerKey || c.length < 3) return null;
+  const snap = await getDoc(doc(db, C.coupons, couponDocId(sellerKey, c)));
+  return snap.exists() ? toDoc(snap) : null;
+}
+
+/** Quantas vezes esta pessoa já usou o cupom (para "1 por pessoa"). */
+export async function getMyCouponUses(couponId, uid) {
+  if (!couponId || !uid) return 0;
+  const snap = await getDoc(doc(db, C.coupons, couponId, 'market_coupon_uses', uid));
+  return snap.exists() ? Number(snap.data().count) || 0 : 0;
+}
+
+export async function saveCoupon({ id, input, sellerKey, uid, actor }) {
+  const r = validateCouponInput(input);
+  if (!r.ok) throw new MarketError('Confira os campos destacados.', r.errors);
+  const docId = id || couponDocId(sellerKey, r.value.code);
+  if (!id) {
+    const existe = await getDoc(doc(db, C.coupons, docId));
+    if (existe.exists()) throw new MarketError('Você já tem um cupom com este código.', { code: 'Código já usado nesta loja.' });
+    await setDoc(doc(db, C.coupons, docId), {
+      ...r.value, seller_key: sellerKey, uses_count: 0, created_by: uid,
+      created_at: serverTimestamp(), created_at_ms: Date.now(), updated_at: serverTimestamp(),
+    });
+  } else {
+    const { code, ...resto } = r.value;
+    await updateDoc(doc(db, C.coupons, docId), { ...resto, updated_at: serverTimestamp() });
+  }
+  await createAuditLog({
+    action: id ? 'market_coupon_updated' : 'market_coupon_created', actor,
+    details: { coupon_id: docId, seller_key: sellerKey, kind: r.value.kind, value: r.value.value },
+  }).catch(() => {});
+  return docId;
+}
+
+export const setCouponActive = (id, active) => updateDoc(doc(db, C.coupons, id), { active: Boolean(active), updated_at: serverTimestamp() });
+export const deleteCoupon = (id) => deleteDoc(doc(db, C.coupons, id));
+
+/* ------------------------------------------------------- vale-presente -- */
+
+/** Os vales que estão na minha conta (para usar) e os que comprei (para dar). */
+export async function listMyGiftCards(uid) {
+  const [meus, comprados] = await Promise.all([
+    getDocs(query(collection(db, C.giftCards), where('holder_uid', '==', uid))),
+    getDocs(query(collection(db, C.giftCards), where('buyer_uid', '==', uid))),
+  ]);
+  const porId = new Map();
+  [...meus.docs, ...comprados.docs].forEach((d) => porId.set(d.id, toDoc(d)));
+  return [...porId.values()].sort((a, b) => (b.issued_at_ms || 0) - (a.issued_at_ms || 0));
+}
+
+/** Os vales de uma loja (para quem vende). */
+export async function listSellerGiftCards(key) {
+  const q = query(collection(db, C.giftCards), where('seller_key', '==', key));
+  return (await getDocs(q)).docs.map(toDoc).sort((a, b) => (b.issued_at_ms || 0) - (a.issued_at_ms || 0));
+}
+
+/** Liga, desliga e ajusta o vale-presente da loja (o servidor confere de novo na compra). */
+export async function saveGiftCardSettings(key, input) {
+  const cfg = giftCardConfig({ gift_cards: input });
+  await updateDoc(doc(db, C.sellers, key), { gift_cards: cfg, updated_at: serverTimestamp() });
+  return cfg;
 }

@@ -19,6 +19,8 @@ export const MARKET_COLLECTIONS = Object.freeze({
   reviews: 'market_reviews',
   disputes: 'market_disputes',
   reports: 'market_reports',
+  coupons: 'market_coupons',
+  giftCards: 'market_gift_cards',
 });
 
 /** Documento de configuração do admin (em `platform_settings`). */
@@ -108,6 +110,8 @@ export const FULFILLMENT_LABELS = Object.freeze({
   pickup: 'Retirar no local',
   meetup: 'Entrega combinada',
   shipping: 'Envio',
+  // Só no pedido de vale-presente: não há nada a entregar.
+  digital: 'Vale-presente (sem entrega)',
 });
 
 export const ORDER_STATUS = Object.freeze({

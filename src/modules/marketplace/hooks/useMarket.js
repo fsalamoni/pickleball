@@ -43,6 +43,10 @@ export const marketKeys = {
   offer: (id) => ['mercado', 'oferta', id],
   sellerReviews: (key) => ['mercado', 'vendedor', key, 'avaliacoes'],
   admin: ['mercado', 'admin'],
+  sellerCoupons: (key) => ['mercado', 'vendedor', key, 'cupons'],
+  publicCoupons: (key) => ['mercado', 'cupons', key || 'todos'],
+  sellerGiftCards: (key) => ['mercado', 'vendedor', key, 'vales'],
+  myGiftCards: (uid) => ['mercado', 'vales', uid],
 };
 
 /**
@@ -287,7 +291,31 @@ export function useSellerReviews(key) {
  * (pedido mexe em estoque, oferta vira pedido, avaliação muda a nota…).
  * ponytail: invalida o Mercado inteiro; afinar por chave se pesar.
  */
+export function useBuyerReviews(uid, { enabled = true } = {}) {
+  return useQuery({ queryKey: ['market', 'buyer-reviews', uid], queryFn: () => orders.listBuyerReviews(uid), enabled: !!uid && enabled, staleTime: 5 * 60_000 });
+}
+
 export function useMarketMutation(fn) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: fn, onSettled: () => qc.invalidateQueries({ queryKey: marketKeys.all }) });
 }
+
+/* -------------------------------------------- cupons e vale-presente -- */
+
+export function useSellerCoupons(key, { enabled = true } = {}) {
+  return useQuery({ queryKey: marketKeys.sellerCoupons(key), queryFn: () => svc.listSellerCoupons(key), enabled: !!key && enabled });
+}
+
+/** Cupons divulgados de uma loja (ou de todo o Mercado, sem `key`). */
+export function usePublicCoupons(key, { enabled = true } = {}) {
+  return useQuery({ queryKey: marketKeys.publicCoupons(key), queryFn: () => svc.listPublicCoupons(key), enabled, staleTime: 60_000 });
+}
+
+export function useSellerGiftCards(key, { enabled = true } = {}) {
+  return useQuery({ queryKey: marketKeys.sellerGiftCards(key), queryFn: () => svc.listSellerGiftCards(key), enabled: !!key && enabled });
+}
+
+export function useMyGiftCards(uid, { enabled = true } = {}) {
+  return useQuery({ queryKey: marketKeys.myGiftCards(uid), queryFn: () => svc.listMyGiftCards(uid), enabled: !!uid && enabled });
+}
+

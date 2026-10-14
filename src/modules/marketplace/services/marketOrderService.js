@@ -53,6 +53,9 @@ export const offerAction = (p) => chamar('marketOfferAction', p);
 
 export const submitReview = (p) => chamar('marketSubmitReview', p);
 
+/** Vale-presente: buy | claim | issue | cancel (o servidor decide e grava). */
+export const giftCardAction = (p) => chamar('marketGiftCardAction', p);
+
 /** Liga o anúncio da arena a um produto do estoque dela (`productId: null` desliga). */
 export const linkArenaProduct = (p) => chamar('marketLinkArenaProduct', p);
 
@@ -102,6 +105,12 @@ export async function getOffer(id) {
 /** As avaliações visíveis de um vendedor. */
 export async function listSellerReviews(key) {
   const q = query(collection(db, C.reviews), where('seller_key', '==', key), where('visible', '==', true));
+  return recentes((await getDocs(q)).docs.map(toDoc));
+}
+
+/** O que vendedores disseram de quem compra (só as reveladas). */
+export async function listBuyerReviews(uid) {
+  const q = query(collection(db, C.reviews), where('target_uid', '==', uid), where('visible', '==', true));
   return recentes((await getDocs(q)).docs.map(toDoc));
 }
 

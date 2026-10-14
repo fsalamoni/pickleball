@@ -4,7 +4,9 @@
  * O vendedor pessoal (atleta, professor, loja) leva a ficha, o Pix, os
  * anúncios e as vendas; o que é da ARENA fica com a arena.
  */
-import { getCart, getSeller, getSellerPrivate, listMyFavorites, listMyQuestions, listSavedSearches, listSellerListings } from './marketService.js';
+import {
+  getCart, getSeller, getSellerPrivate, listMyFavorites, listMyGiftCards, listMyQuestions, listSavedSearches, listSellerCoupons, listSellerListings,
+} from './marketService.js';
 import { listMyOffers, listMyOrders, listMyReviews, listSellerOrders } from './marketOrderService.js';
 import { listMyMarketUploads } from './marketMediaService.js';
 
@@ -17,6 +19,7 @@ async function comoVendedor(uid) {
     payment: await getSellerPrivate(s.id),
     listings: await listSellerListings(s.id),
     sales: await listSellerOrders(s.id),
+    coupons: await listSellerCoupons(s.id),
   })));
 }
 
@@ -30,6 +33,7 @@ export async function collectMarketExport(uid) {
     ['favorites', 'Favoritos do Mercado', () => listMyFavorites(uid)],
     ['saved_searches', 'Buscas salvas do Mercado', () => listSavedSearches(uid)],
     ['cart', 'Carrinho do Mercado', () => getCart(uid)],
+    ['gift_cards', 'Vales-presente do Mercado', () => listMyGiftCards(uid)],
     ['selling', 'Vendas no Mercado', () => comoVendedor(uid)],
     ['media_paths', 'Lista de fotos e arquivos do Mercado', () => listMyMarketUploads(uid)],
   ];

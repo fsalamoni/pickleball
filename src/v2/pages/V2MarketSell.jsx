@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  AlertCircle, CheckCircle2, HandCoins, ImagePlus, LayoutDashboard, MessageCircleQuestion, Package, Pencil, Plus, Receipt, Store, Wallet,
+  AlertCircle, BarChart3, CheckCircle2, HandCoins, ImagePlus, LayoutDashboard, MessageCircleQuestion, Package, Pencil, Plus, Receipt, Store, TicketPercent, Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -43,6 +43,8 @@ import {
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
+import SellerPromoTab from '@/v2/components/marketplace/promo/SellerPromoTab';
+import SellerInsightsTab from '@/v2/components/marketplace/SellerInsightsTab';
 
 const ABAS = [
   { value: 'resumo', label: 'Resumo', icon: LayoutDashboard },
@@ -52,6 +54,8 @@ const ABAS = [
   { value: 'perguntas', label: 'Perguntas', icon: MessageCircleQuestion },
   { value: 'pix', label: 'Recebimento', icon: Wallet, dica: 'mercado-vender-pix' },
   { value: 'vitrine', label: 'Vitrine', icon: Store },
+  { value: 'divulgar', label: 'Cupons e vales', icon: TicketPercent },
+  { value: 'desempenho', label: 'Desempenho', icon: BarChart3 },
 ];
 
 const ACTIVE_ORDER = (o) => !ORDER_FINAL_STATUSES.includes(o.status);
@@ -151,7 +155,8 @@ function Summary({ sellerKey, seller, go }) {
 function QuickEdit({ listing, onClose }) {
   const [preco, setPreco] = useState(formatBRL(listing.price_cents).replace(/^R\$\s?/, ''));
   const [qtd, setQtd] = useState(String(listing.quantity ?? 0));
-  const m = useMarketMutation(({ l, p, q }) => quickEditListing(l, { price_cents: p, quantity: q }));
+  const [de, setDe] = useState(listing.compare_at_cents ? formatBRL(listing.compare_at_cents).replace(/^R\$\s?/, '') : '');
+  const m = useMarketMutation(({ l, p, q, c }) => quickEditListing(l, { price_cents: p, quantity: q, compare_at_cents: c }));
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent sheet className="max-w-sm">
@@ -161,10 +166,11 @@ function QuickEdit({ listing, onClose }) {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ l: listing, p: parseBRL(preco), q: listing.source?.tracked ? null : Number(qtd) }, { onSuccess: () => { toast.success('Atualizado.'); onClose(); }, onError: (er) => toast.error(er.message) });
+            m.mutate({ l: listing, p: parseBRL(preco), q: listing.source?.tracked ? null : Number(qtd), c: de ? parseBRL(de) : null }, { onSuccess: () => { toast.success('Atualizado.'); onClose(); }, onError: (er) => toast.error(er.message) });
           }}
         >
           <V2Field label="Preço (R$)" htmlFor="qe-preco"><V2Input id="qe-preco" inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} autoFocus /></V2Field>
+          <V2Field label="Preço “de” (R$, opcional)" htmlFor="qe-de" hint="Aparece riscado ao lado do preço. Precisa ser maior que ele."><V2Input id="qe-de" inputMode="decimal" placeholder="0,00" value={de} onChange={(e) => setDe(e.target.value)} /></V2Field>
           {listing.source?.tracked ? (
             <p className="text-sm text-gray-600">Quantidade: {listing.quantity ?? 0}. Ela acompanha o estoque da arena; para mudar, registre a compra no estoque.</p>
           ) : (
@@ -191,7 +197,12 @@ function ListingsTab({ sellerKey }) {
   const q = useSellerListings(sellerKey);
   const [filtro, setFiltro] = useState('ativos');
   const [editar, setEditar] = useState(null);
+  const [marcados, setMarcados] = useState([]);
   const status = useMarketMutation(({ l, s }) => setListingStatus(l, s));
+  const emLote = useMarketMutation(async ({ ls, s }) => {
+    const r = await Promise.allSettled(ls.map((l) => setListingStatus(l, s)));
+    return r.filter((x) => x.status === 'rejected').length;
+  });
   const apagar = useMarketMutation(deleteListing);
   if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={5} />;
@@ -203,14 +214,27 @@ function ListingsTab({ sellerKey }) {
   const f = FILTROS.find((x) => x.id === filtro);
   const lista = todos.filter(f.test);
   const agir = (l, s, msg) => status.mutate({ l, s }, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
+  const sel = lista.filter((l) => marcados.includes(l.id) && l.status !== 'removed');
+  const lote = (s, msg) => emLote.mutate({ ls: sel, s }, {
+    onSuccess: (falhas) => { setMarcados([]); if (falhas) toast.error(`${falhas} não mudaram. Tente de novo.`); else toast.success(msg); },
+  });
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          {FILTROS.map((x) => <V2FilterChip key={x.id} active={filtro === x.id} onClick={() => setFiltro(x.id)}>{x.label} ({todos.filter(x.test).length})</V2FilterChip>)}
+          {FILTROS.map((x) => <V2FilterChip key={x.id} active={filtro === x.id} onClick={() => { setFiltro(x.id); setMarcados([]); }}>{x.label} ({todos.filter(x.test).length})</V2FilterChip>)}
         </div>
         {criar}
       </div>
+      {sel.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-paper p-3 text-sm" role="region" aria-label="Ações nos selecionados">
+          <span className="font-bold text-ink">{sel.length} selecionado{sel.length > 1 ? 's' : ''}</span>
+          {filtro === 'ativos' && <V2Button type="button" size="sm" variant="ghost" disabled={emLote.isPending} onClick={() => lote('paused', 'Anúncios pausados.')}>Pausar</V2Button>}
+          {filtro === 'pausados' && <V2Button type="button" size="sm" variant="secondary" disabled={emLote.isPending} onClick={() => lote('active', 'Anúncios de volta ao ar.')}>Retomar</V2Button>}
+          {['ativos', 'pausados'].includes(filtro) && <V2Button type="button" size="sm" variant="ghost" disabled={emLote.isPending} onClick={() => { if (window.confirm(`Encerrar ${sel.length} anúncios?`)) lote('closed', 'Anúncios encerrados.'); }}>Encerrar</V2Button>}
+          <V2Button type="button" size="sm" variant="ghost" onClick={() => setMarcados([])}>Limpar</V2Button>
+        </div>
+      )}
       {!lista.length ? <p className="py-10 text-center text-sm text-gray-500">Nada aqui.</p> : (
         <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
           {lista.map((l) => {
@@ -218,17 +242,21 @@ function ListingsTab({ sellerKey }) {
             const pct = Math.round(listingCompleteness(l) * 100);
             return (
               <li key={l.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                {['ativos', 'pausados'].includes(filtro) && (
+                  <input type="checkbox" aria-label={`Selecionar ${l.title || 'anúncio'}`} className="h-5 w-5 shrink-0 accent-ink" checked={marcados.includes(l.id)}
+                    onChange={(e) => setMarcados((m) => (e.target.checked ? [...m, l.id] : m.filter((x) => x !== l.id)))} />
+                )}
                 <Link to={l.status === 'active' || l.status === 'sold_out' ? `/mercado/anuncio/${l.id}` : `/mercado/vender/anuncio/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <img src={capa.thumb_url || capa.url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
                   <span className="min-w-0">
                     <span className="block truncate font-bold text-ink">{l.title || 'Sem título'}</span>
-                    <span className="block text-sm text-gray-600">{formatBRL(l.price_cents)} · {l.quantity ?? 0} em estoque{l.quantity_sold ? ` · ${l.quantity_sold} vendidos` : ''}</span>
+                    <span className="block text-sm text-gray-600">{l.compare_at_cents > l.price_cents && <span className="mr-1 text-gray-500 line-through">{formatBRL(l.compare_at_cents)}</span>}{formatBRL(l.price_cents)} · {l.quantity ?? 0} em estoque{l.quantity_sold ? ` · ${l.quantity_sold} vendidos` : ''}</span>
                     <span className="block text-xs text-gray-500">{l.favorite_count ? `${l.favorite_count} favoritos · ` : ''}{pct}% completo</span>
                   </span>
                 </Link>
                 <div className="flex flex-wrap items-center gap-2">
                   <V2Badge tone={l.status === 'active' ? 'green' : l.status === 'removed' ? 'red' : 'neutral'}>{LISTING_STATUS_LABELS[l.status] || l.status}</V2Badge>
-                  {l.status === 'removed' && l.moderation?.reason && <span className="text-xs text-red-600">{l.moderation.reason}</span>}
+                  {(l.status === 'removed' || l.moderation?.auto) && l.moderation?.reason && <span className="text-xs text-red-600">{l.moderation.auto ? 'Pausado pela moderação: ' : ''}{l.moderation.reason}</span>}
                   {l.status !== 'removed' && (
                     <>
                       <V2Button asChild size="sm" variant="ghost"><Link to={`/mercado/vender/anuncio/${l.id}`}><Pencil className="h-4 w-4" /> Editar</Link></V2Button>
@@ -527,6 +555,8 @@ function SellPage() {
         {aba === 'perguntas' && <QuestionsTab {...props} />}
         {aba === 'pix' && <PixTab {...props} />}
         {aba === 'vitrine' && <StorefrontTab key={como.key} {...props} />}
+        {aba === 'divulgar' && <SellerPromoTab key={como.key} {...props} />}
+        {aba === 'desempenho' && <SellerInsightsTab {...props} />}
       </div>
     );
   }

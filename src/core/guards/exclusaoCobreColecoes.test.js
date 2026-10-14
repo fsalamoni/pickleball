@@ -118,6 +118,8 @@ const MERCADO_EXPORTADO_POR = {
   market_offers: ['listMyOffers'],
   market_orders: ['listMyOrders', 'listSellerOrders'],
   market_reviews: ['listMyReviews'],
+  market_coupons: ['listSellerCoupons'],
+  market_gift_cards: ['listMyGiftCards'],
 };
 const MERCADO_FORA_DA_EXPORTACAO = {
   market_disputes: 'A disputa é do pedido e não guarda nada que o pedido exportado já não diga; a decisão é da moderação.',

@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Box, Store } from 'lucide-react';
 import { useSellerListings } from '@/modules/marketplace/hooks/useMarket';
 import { coverOf } from '@/modules/marketplace/domain/listing';
-import { formatBRL } from '@/modules/marketplace/domain/money';
+import { discountPercent, formatBRL } from '@/modules/marketplace/domain/money';
 import { V2Surface } from '@/v2/ui/primitives';
 
 export default function SellerMarketTeaser({ sellerKey, quem }) {
@@ -47,7 +47,7 @@ export default function SellerMarketTeaser({ sellerKey, quem }) {
                     : <span className="flex h-full items-center justify-center text-gray-300"><Box className="h-8 w-8" aria-hidden="true" /></span>}
                 </span>
                 <span className="block p-2.5">
-                  <span className="block font-display text-sm font-bold text-ink">{formatBRL(l.price_cents)}</span>
+                  <span className="block font-display text-sm font-bold text-ink">{formatBRL(l.price_cents)}{discountPercent(l.price_cents, l.compare_at_cents) > 0 && <span className="ml-1.5 text-xs text-green-700">−{discountPercent(l.price_cents, l.compare_at_cents)}%</span>}</span>
                   <span className="line-clamp-2 block text-xs text-gray-600">{l.title}</span>
                 </span>
               </Link>
