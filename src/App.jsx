@@ -1,3 +1,4 @@
+import { IdiomaBridge } from '@/core/i18n/useLanguage';
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -117,6 +118,7 @@ export default function App() {
         {/* Modo escuro: decide e aplica a aparência de cada pessoa (flag
             `dark_mode`). As telas não o usam — só o seletor de aparência. */}
         <ThemeProvider>
+        <IdiomaBridge />
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <RouteTelemetry />
           <Suspense fallback={<FullScreenSpinner />}>

@@ -32,6 +32,7 @@ import {
 
 import V2PushCard from '@/v2/components/settings/V2PushCard';
 import SettingsSection, { SettingsGroup } from '@/v2/components/settings/SettingsSection';
+import { IdiomaSettingsCard } from '@/v2/components/idioma/LanguageSwitcher';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
 import SidebarSettingsCard from '@/v2/components/settings/SidebarSettingsCard';
@@ -181,6 +182,8 @@ export default function V2Settings() {
         <SettingsGroup title="Tela e navegação" description="Como o PickleRush aparece para você. Fica salvo neste aparelho, na sua conta.">
           {/* Aparência: Claro, Escuro ou Automático. */}
           <ThemeSettingsCard />
+          {/* Idioma: português, inglês, espanhol (flag multi_language). */}
+          <IdiomaSettingsCard />
           {/* Página inicial: os cards do início e a ordem. */}
           <HomeCardsSettingsCard />
           {/* Menu: os hubs da barra lateral e a ordem — padrão por papel, editável. */}
