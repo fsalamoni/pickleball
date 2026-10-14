@@ -4,13 +4,14 @@
  * pedido; se algo mudou no meio (o cupom acabou), o pedido daquele vendedor
  * volta com o motivo, nunca mais caro do que a tela mostrou.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Gift, TicketPercent, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { couponBenefitLabel, couponConditionsLabel, maskGiftCardCode, normalizeCouponCode } from '@/modules/marketplace/domain/promotions';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { findCoupon, getMyCouponUses } from '@/modules/marketplace/services/marketService';
+import { takePendingCoupon } from '@/modules/marketplace/services/pendingCoupon';
 import { V2Button, V2Input } from '@/v2/ui/primitives';
 
 /**
@@ -38,6 +39,15 @@ export default function CheckoutPromos({ sellerKey, choice, patch, giftCards = [
       toast.error('Não foi possível conferir o cupom agora. Tente de novo.');
     } finally { setBusy(false); }
   };
+
+  // O cupom do link da loja (`?cupom=`) já chega aplicado, uma vez.
+  const linkVisto = useRef(false);
+  useEffect(() => {
+    if (linkVisto.current || !user?.uid) return;
+    linkVisto.current = true;
+    const doLink = takePendingCoupon(sellerKey);
+    if (doLink && !aplicado) aplicar(doLink);
+  }, [user?.uid, sellerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const giftIds = choice.giftIds || [];
   const toggleGift = (id) => patch({ giftIds: giftIds.includes(id) ? giftIds.filter((x) => x !== id) : [...giftIds, id].slice(0, 5) });

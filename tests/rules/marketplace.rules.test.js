@@ -361,6 +361,17 @@ describe('⭐ vale-presente: só o servidor escreve', () => {
     await assertFails(updateDoc(doc(como(ANA), 'market_gift_cards', 'g1'), { balance_cents: 999999 }));
     await assertFails(setDoc(doc(como(BIA), 'market_gift_cards', 'g2'), { seller_key: `athlete_${ANA}`, holder_uid: BIA, balance_cents: 100 }));
   });
+  it('o admin lista todos os vales e todos os cupons e desliga cupom; outra conta não lista tudo', async () => {
+    await semRegras((db) => setDoc(doc(db, 'market_coupons', `athlete_${ANA}_SEGREDO`), {
+      code: 'SEGREDO', seller_key: `athlete_${ANA}`, kind: 'percent', value: 10, active: true, public: false, uses_count: 0,
+    }));
+    await assertSucceeds(getDocs(collection(como(ADMIN), 'market_gift_cards')));
+    await assertSucceeds(getDocs(collection(como(ADMIN), 'market_coupons')));
+    await assertFails(getDocs(collection(como(BIA), 'market_gift_cards')));
+    await assertFails(getDocs(collection(como(BIA), 'market_coupons')));
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'market_coupons', `athlete_${ANA}_SEGREDO`), { active: false }));
+    await assertFails(updateDoc(doc(como(ADMIN), 'market_gift_cards', 'g1'), { balance_cents: 0 }));
+  });
 });
 
 describe('avaliações do comprador', () => {

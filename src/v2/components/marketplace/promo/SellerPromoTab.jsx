@@ -14,6 +14,7 @@ import {
 } from '@/modules/marketplace/domain/promotions';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { deleteCoupon, saveCoupon, saveGiftCardSettings, setCouponActive } from '@/modules/marketplace/services/marketService';
+import { couponShareUrl } from '@/modules/marketplace/services/pendingCoupon';
 import { giftCardAction } from '@/modules/marketplace/services/marketOrderService';
 import {
   useMarketMutation, useSellerCoupons, useSellerGiftCards, useSellerListings, useSellerPrivate,
@@ -125,9 +126,10 @@ function CouponDialog({ sellerKey, coupon, onClose }) {
   );
 }
 
-function CouponsSection({ sellerKey }) {
+function CouponsSection({ sellerKey, seller }) {
   const q = useSellerCoupons(sellerKey);
   const [editar, setEditar] = useState(null);
+  const [divulgar, setDivulgar] = useState(null);
   const ativo = useMarketMutation(({ id, on }) => setCouponActive(id, on));
   const apagar = useMarketMutation(deleteCoupon);
   const novo = <V2Button type="button" onClick={() => setEditar('novo')}><Plus className="h-4 w-4" /> Novo cupom</V2Button>;
@@ -152,6 +154,7 @@ function CouponsSection({ sellerKey }) {
                 <p className="text-xs text-gray-500">{couponConditionsLabel(c) || 'Sem condições'} · {c.uses_count || 0} uso{c.uses_count === 1 ? '' : 's'}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {vivo && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDivulgar(c)}><Share2 className="h-4 w-4" /> Cartão</V2Button>}
                 <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditar(c)}><Pencil className="h-4 w-4" /> Editar</V2Button>
                 <V2Button type="button" size="sm" variant="ghost" onClick={() => ativo.mutate({ id: c.id, on: c.active === false }, { onError: (e) => toast.error(e.message) })}>{c.active === false ? 'Ligar' : 'Desligar'}</V2Button>
                 {!(c.uses_count > 0) && (
@@ -175,6 +178,21 @@ function CouponsSection({ sellerKey }) {
       </div>
       {corpo}
       {editar && <CouponDialog sellerKey={sellerKey} coupon={editar === 'novo' ? null : editar} onClose={() => setEditar(null)} />}
+      {divulgar && (
+        <ShareImageDialog
+          open
+          onOpenChange={(v) => { if (!v) setDivulgar(null); }}
+          title={`Cartão do cupom ${divulgar.code}`}
+          description="Quem abre o link chega à sua loja com o cupom já aplicado no carrinho."
+          url={typeof window !== 'undefined' ? couponShareUrl(window.location.origin, sellerKey, divulgar.code) : ''}
+          fileName={`cupom-${divulgar.code}.png`}
+          shareText={`${couponBenefitLabel(divulgar)} em ${seller?.display_name || 'minha loja'} no Mercado PickleRush. Cupom ${divulgar.code}`}
+          renderCard={({ ref, qr, showImage }) => (
+            <MarketShareCard ref={ref} kind="coupon" image={seller?.banner_url || seller?.logo_url} showImage={showImage} qr={qr}
+              title={couponBenefitLabel(divulgar)} subtitle={[seller?.display_name, couponConditionsLabel(divulgar)].filter(Boolean).join(' · ')} code={divulgar.code} />
+          )}
+        />
+      )}
     </section>
   );
 }
@@ -332,7 +350,7 @@ export default function SellerPromoTab({ sellerKey, seller }) {
   return (
     <div className="space-y-8">
       <ShareSection sellerKey={sellerKey} seller={seller} />
-      <CouponsSection sellerKey={sellerKey} />
+      <CouponsSection sellerKey={sellerKey} seller={seller} />
       <GiftCardsSection sellerKey={sellerKey} seller={seller} />
     </div>
   );

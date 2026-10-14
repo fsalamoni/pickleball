@@ -57,7 +57,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, FileDown } from 'lucide-react';
+import { UserCog, Wrench, FileDown, TicketPercent } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -152,6 +152,7 @@ const SECTIONS = Object.freeze([
     { id: 'mercado-anuncios', label: 'Anúncios', icon: Flag, keywords: ['marketplace', 'denúncia', 'moderação', 'tirar do ar', 'réplica'] },
     { id: 'mercado-pedidos', label: 'Pedidos', icon: Package, keywords: ['marketplace', 'compras', 'vendas', 'cancelar pedido'] },
     { id: 'mercado-lojas', label: 'Lojas', icon: Store, keywords: ['marketplace', 'aprovar loja', 'cnpj', 'vendedor'] },
+    { id: 'mercado-promocoes', label: 'Cupons e vales', icon: TicketPercent, keywords: ['marketplace', 'cupom', 'desconto', 'vale-presente', 'gift card', 'saldo'] },
     { id: 'mercado-config', label: 'Configurações', icon: SlidersHorizontal, keywords: ['marketplace', 'termos proibidos', 'categorias', 'prazos'] },
   ] },
   // A voz da plataforma e dos parceiros falando com todos.

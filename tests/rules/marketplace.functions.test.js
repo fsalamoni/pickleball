@@ -214,6 +214,36 @@ describe('⭐ a máquina do pedido', () => {
     expect((await order(id)).status).toBe('cancelled');
     expect((await listing('raq')).quantity).toBe(2);
   });
+
+  it('⭐ disputa aberta depois da entrega não devolve o estoque (o produto saiu)', async () => {
+    const id = await pedido();
+    await market.orderAction(ctx(), { uid: ANA }, { orderId: id, action: 'accept' });
+    await market.orderAction(ctx(), { uid: ANA }, { orderId: id, action: 'confirm_payment' });
+    await market.orderAction(ctx(), { uid: ANA }, { orderId: id, action: 'ready' });
+    await market.orderAction(ctx(), { uid: ANA }, { orderId: id, action: 'delivered' });
+    await market.orderAction(ctx(), { uid: BIA }, { orderId: id, action: 'open_dispute', reason: 'Veio quebrada' });
+    expect((await order(id)).disputed_from).toBe('delivered');
+    await market.orderAction(ctx(), { uid: 'adm', isPlatformAdmin: true }, { orderId: id, action: 'resolve_buyer', reason: 'Foto da raquete quebrada' });
+    expect((await order(id)).status).toBe('cancelled');
+    expect((await listing('raq')).quantity).toBe(1);
+  });
+});
+
+describe('vale-presente perto de vencer', () => {
+  it('a rotina avisa UMA vez quem está com o vale (ou quem deu, sem resgate)', async () => {
+    const dia = 86400000;
+    const base = { seller_key: `athlete_${ANA}`, seller_name: 'Ana', status: 'active', initial_cents: 10000 };
+    await db.doc('market_gift_cards/v1').set({ ...base, buyer_uid: CAIO, holder_uid: BIA, claimed_at_ms: NOW - dia, balance_cents: 4000, expires_at_ms: NOW + 10 * dia });
+    await db.doc('market_gift_cards/v2').set({ ...base, buyer_uid: CAIO, holder_uid: CAIO, balance_cents: 10000, expires_at_ms: NOW + 20 * dia });
+    await db.doc('market_gift_cards/longe').set({ ...base, holder_uid: BIA, balance_cents: 10000, expires_at_ms: NOW + 90 * dia });
+    await db.doc('market_gift_cards/zerado').set({ ...base, holder_uid: BIA, balance_cents: 0, expires_at_ms: NOW + 5 * dia });
+    expect((await market.housekeeping(ctx())).giftCards).toBe(2);
+    expect((await db.doc('market_gift_cards/v1').get()).data().expiry_reminded_at_ms).toBe(NOW);
+    const avisos = await db.collection('notifications').get();
+    const para = avisos.docs.map((d) => d.data().user_id).sort();
+    expect(para).toEqual([BIA, CAIO]);
+    expect((await market.housekeeping(ctx({ now: NOW + dia }))).giftCards).toBe(0);
+  });
 });
 
 describe('⭐ a negociação', () => {

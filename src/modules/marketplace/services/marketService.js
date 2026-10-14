@@ -518,6 +518,38 @@ export async function saveCoupon({ id, input, sellerKey, uid, actor }) {
 export const setCouponActive = (id, active) => updateDoc(doc(db, C.coupons, id), { active: Boolean(active), updated_at: serverTimestamp() });
 export const deleteCoupon = (id) => deleteDoc(doc(db, C.coupons, id));
 
+/** Admin: todos os cupons do Mercado. */
+export async function listAllCoupons() {
+  return (await getDocs(collection(db, C.coupons))).docs.map(toDoc);
+}
+
+/**
+ * Admin desliga um cupom (abuso, erro de digitação que dá 100%): com motivo,
+ * auditoria e aviso a quem vende. Religar é com a loja.
+ */
+export async function adminDisableCoupon(coupon, { reason = '', actor } = {}) {
+  const motivo = String(reason).trim().slice(0, 300);
+  if (!motivo) throw new MarketError('Diga o motivo: quem vende vai ler.');
+  await updateDoc(doc(db, C.coupons, coupon.id), { active: false, updated_at: serverTimestamp() });
+  const extras = await Promise.allSettled([
+    createAuditLog({
+      action: 'market_coupon_disabled_by_admin', actor,
+      details: { coupon_id: coupon.id, seller_key: coupon.seller_key, code: coupon.code, reason: motivo },
+    }),
+    coupon.created_by ? notifyUsers([coupon.created_by], {
+      title: 'Cupom desligado pela moderação',
+      message: `O cupom ${coupon.code} foi desligado. Motivo: ${motivo}`,
+      type: 'market', link: `/mercado/vender?aba=divulgar&como=${encodeURIComponent(coupon.seller_key || '')}`,
+    }) : null,
+  ]);
+  return { warnings: extras.filter((r) => r.status === 'rejected').length };
+}
+
+/** Admin: todos os vales-presente do Mercado. */
+export async function listAllGiftCards() {
+  return (await getDocs(collection(db, C.giftCards))).docs.map(toDoc);
+}
+
 /* ------------------------------------------------------- vale-presente -- */
 
 /** Os vales que estão na minha conta (para usar) e os que comprei (para dar). */

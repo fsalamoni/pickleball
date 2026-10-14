@@ -5,6 +5,7 @@
  *  - Anúncios: as denúncias (agrupadas por anúncio) e o que a moderação tirou;
  *  - Pedidos: todos, por estado;
  *  - Lojas: a fila de aprovação e o cuidado com as que já vendem;
+ *  - Cupons e vales: o que está no ar, quanto foi usado e o saldo em aberto;
  *  - Configurações: o que vale para o Mercado inteiro.
  *
  * Toda decisão avisa o dono da loja e vai para a auditoria (`reviewSeller`).
@@ -13,12 +14,12 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Building2, CheckCircle2, ExternalLink, Flag, MessageSquareWarning, Package, Store } from 'lucide-react';
+import { BadgeCheck, Building2, CheckCircle2, ExternalLink, Flag, Gift, MessageSquareWarning, Package, Store, TicketPercent } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { moderateListing, resolveListingReports, reviewSeller, saveMarketSettings } from '@/modules/marketplace/services/marketService';
+import { adminDisableCoupon, moderateListing, resolveListingReports, reviewSeller, saveMarketSettings } from '@/modules/marketplace/services/marketService';
 import {
-  useAdminListings, useAdminOrders, useAdminStores, useListingsByIds, useMarketMutation, useMarketSettings, useOpenDisputes,
+  useAdminListings, useAdminOrders, useAdminPromos, useAdminStores, useListingsByIds, useMarketMutation, useMarketSettings, useOpenDisputes,
   useOpenReports, usePublicListings, useSellerPrivate,
 } from '@/modules/marketplace/hooks/useMarket';
 import {
@@ -26,7 +27,8 @@ import {
 } from '@/modules/marketplace/domain/constants';
 import { normalizeMarketSettings, DEFAULT_BANNED_TERMS } from '@/modules/marketplace/domain/settings';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
-import { marketMetrics } from '@/modules/marketplace/domain/metrics';
+import { marketMetrics, promoOverview } from '@/modules/marketplace/domain/metrics';
+import { couponBenefitLabel, couponConditionsLabel } from '@/modules/marketplace/domain/promotions';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { statusTone } from '@/v2/components/marketplace/marketUi';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -431,6 +433,87 @@ function OrdersTab() {
   );
 }
 
+/* ---------------------------------------------------- cupons e vales -- */
+
+function DisableCouponForm({ coupon, onDone }) {
+  const { user } = useAuth();
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState('');
+  const m = useMarketMutation(() => adminDisableCoupon(coupon, { reason: motivo, actor: user }));
+  return (
+    <form className="w-full space-y-2" onSubmit={(e) => { e.preventDefault(); m.mutate(undefined, { onSuccess: () => { toast.success('Cupom desligado. Quem vende foi avisado.'); onDone(); }, onError: (er) => setErro(er.message) }); }}>
+      <V2Field label="Motivo (quem vende vai ler)" htmlFor={`motivo-cupom-${coupon.id}`} error={erro}>
+        <V2Textarea id={`motivo-cupom-${coupon.id}`} rows={2} maxLength={300} value={motivo} onChange={(e) => { setMotivo(e.target.value); setErro(''); }} autoFocus />
+      </V2Field>
+      <div className="flex gap-2">
+        <V2Button type="button" size="sm" variant="ghost" onClick={onDone}>Voltar</V2Button>
+        <V2Button type="submit" size="sm" variant="danger" disabled={m.isPending}>Desligar o cupom</V2Button>
+      </div>
+    </form>
+  );
+}
+
+function PromosTab() {
+  const q = useAdminPromos();
+  const [busca, setBusca] = useState('');
+  const [desligar, setDesligar] = useState(null);
+  const m = useMemo(() => promoOverview(q.data?.coupons || [], q.data?.giftCards || []), [q.data]);
+  if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={6} />;
+  const termo = busca.trim().toLowerCase();
+  const cupons = m.topCoupons.filter((c) => !termo || [c.code, c.seller_key].some((x) => String(x || '').toLowerCase().includes(termo)));
+  return (
+    <section className="space-y-5" aria-label="Cupons e vales do Mercado">
+      <TabTitle title="Cupons e vales">Os cupons que as lojas criaram e os vales-presente vendidos. O saldo em aberto é o que as lojas ainda devem em mercadoria.</TabTitle>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Numero label="Cupons no ar" value={m.couponsActive} hint={`${m.topCoupons.length} criado(s)`} />
+        <Numero label="Usos de cupom" value={m.couponUses} hint="pedidos que levaram desconto" />
+        <Numero label="Vales para usar" value={m.giftCardsActive} hint={`saldo de ${formatBRL(m.openBalanceCents)}`} />
+        <Numero label="Saldo que venceu" value={formatBRL(m.expiredBalanceCents)} hint="vale vencido com saldo" />
+      </div>
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><TicketPercent className="h-4 w-4" /> Cupons</h3>
+        <label htmlFor="busca-cupom" className="sr-only">Buscar cupom</label>
+        <V2Input id="busca-cupom" type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Código ou loja" className="max-w-sm" />
+        {!cupons.length ? <V2EmptyState icon={TicketPercent} title={termo ? 'Nenhum cupom com esta busca' : 'Nenhuma loja criou cupom ainda'} /> : (
+          <V2Surface as="ul" variant="compacto" className="divide-y divide-gray-100 p-0">
+            {cupons.slice(0, 200).map((c) => {
+              const vivo = m.isLive(c);
+              return (
+                <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+                  <span className="font-bold text-ink">{c.code}</span>
+                  <span className="min-w-0 flex-1 text-sm text-gray-600">
+                    {couponBenefitLabel(c)}{couponConditionsLabel(c) ? ` · ${couponConditionsLabel(c)}` : ''}
+                    <Link to={`/mercado/vendedor/${c.seller_key}`} className="block truncate text-xs text-gray-500 underline">{c.seller_key}</Link>
+                  </span>
+                  <span className="text-sm text-gray-600">{c.uses_count || 0} uso(s)</span>
+                  <V2Badge tone={vivo ? 'green' : 'neutral'}>{c.active === false ? 'Desligado' : vivo ? 'No ar' : 'Fora do prazo'}</V2Badge>
+                  {c.active !== false && desligar !== c.id && <V2Button type="button" size="sm" variant="ghost" onClick={() => setDesligar(c.id)}>Desligar</V2Button>}
+                  {desligar === c.id && <DisableCouponForm coupon={c} onDone={() => setDesligar(null)} />}
+                </li>
+              );
+            })}
+          </V2Surface>
+        )}
+      </div>
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Gift className="h-4 w-4" /> Saldo de vales por loja</h3>
+        {!m.giftCardsByStore.length ? <V2EmptyState icon={Gift} title="Nenhum vale com saldo para usar" /> : (
+          <V2Surface as="ul" variant="compacto" className="divide-y divide-gray-100 p-0">
+            {m.giftCardsByStore.map((l) => (
+              <li key={l.seller_key} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4">
+                <Link to={`/mercado/vendedor/${l.seller_key}`} className="min-w-0 flex-1 truncate font-bold text-ink hover:underline">{l.seller_name || l.seller_key}</Link>
+                <span className="text-sm text-gray-600">{l.count} vale(s)</span>
+                <span className="text-sm font-bold text-ink">{formatBRL(l.balance_cents)}</span>
+              </li>
+            ))}
+          </V2Surface>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------ configurações -- */
 
 function NumberField({ id, label, hint, value, onChange, min, max }) {
@@ -519,6 +602,7 @@ const TABS = {
   'mercado-anuncios': ListingsTab,
   'mercado-pedidos': OrdersTab,
   'mercado-lojas': StoresTab,
+  'mercado-promocoes': PromosTab,
   'mercado-config': SettingsTab,
 };
 

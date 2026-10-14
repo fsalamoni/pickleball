@@ -173,6 +173,7 @@ navegação nova.
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating (simples+duplas) + jogos + parceiros |
 | `/meu-desempenho` | autenticado (V2) | performance |
 | `/promocoes` `/campanhas/:campaignId` | autenticado (V2) | vitrine e página de campanha da **divulgação da plataforma e dos professores** (Onda CG) — gated por `platform_marketing`/`coach_marketing` (as duas OFF ⇒ volta ao início). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` |
+| `/mercado` `/mercado/anuncio/:id` `/mercado/vendedor/:key` `/mercado/carrinho` `/mercado/pedidos` `/mercado/vender` `/mercado/vales` `/mercado/buscas` | autenticado (V2), flag `marketplace` | **Mercado** (marketplace aberto: lojas, atletas, professores e arenas vendendo; Pix direto ao vendedor; cupons, vale-presente, cartões para compartilhar). Ver `src/modules/marketplace/README.md` |
 | `/gamification` `/conquistas` `/conquistas/:uid` `/hall-da-fama` `/vinculos` | autenticado (V2) | Gamificação V2 — **gated por `gamification_v2`** (flag OFF ⇒ empty state). Cada rota isolada em `GamificationErrorBoundary`. `/vinculos` = rivais (derivados do H2H), crews e mentorias |
 | `/admin/torneios` `/admin/metricas` `/admin/parceiros` `/admin/console` | platform_admin (V2) | painel + console (flags, migrations) |
 | `/admin/owner-debug` `/admin/owner-restore` `/admin/profiles` | platform_admin (V2) | admin tools |
@@ -218,6 +219,12 @@ Firestore. Share com QR Code + WhatsApp + download PNG.
 
 **103 coleções top-level** (39 antes do Arena V3, +64 com as Ondas 1-10
 + Wave B + Wave C + PRs #85-#88 + Ondas G/H/I/J/L/M).
+- **Mercado (PRs #238–#248, flag `marketplace`)**: coleções `market_*`
+  (vendedores, anúncios, perguntas, favoritos, buscas salvas, carrinhos,
+  ofertas, pedidos, avaliações, disputas, denúncias, cupons, vales-presente).
+  Pedido, oferta, avaliação, disputa, uso de cupom e vale só o SERVIDOR
+  escreve (`functions/marketplace.js`). Detalhe em `docs/05-DATA-MODEL.md`
+  § Mercado.
 - **PR #85 (2026-07-29)**: +1 coleção `game_days/{id}` (dia de jogo do
   atleta, com subcoleções `participants`/`games`).
 - **PR #86 (2026-07-29)**: +1 coleção `legal_consents/{uid_docKey}`
