@@ -153,6 +153,15 @@ describe('⭐ anúncio', () => {
     await assertSucceeds(getDocs(query(collection(como(ANA), 'market_listings'), where('seller_key', '==', `athlete_${ANA}`))));
     await assertFails(getDocs(query(collection(como(BIA), 'market_listings'), where('seller_key', '==', `athlete_${ANA}`))));
   });
+  it('⭐ vendedor suspenso não põe anúncio de volta no ar', async () => {
+    await semRegras(async (db) => {
+      await updateDoc(doc(db, 'market_sellers', `athlete_${ANA}`), { status: 'suspended' });
+      await updateDoc(doc(db, 'market_listings', 'l1'), { status: 'paused', admin_paused: true });
+    });
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { status: 'active' }));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { status: 'closed' }));
+    await assertSucceeds(updateDoc(doc(como(ADMIN), 'market_listings', 'rasc'), { status: 'active' }));
+  });
   it('apaga só o que nunca vendeu', async () => {
     await semRegras((db) => setDoc(doc(db, 'market_listings', 'vendido'), anuncio({ quantity_sold: 1 })));
     await assertFails(deleteDoc(doc(como(ANA), 'market_listings', 'vendido')));

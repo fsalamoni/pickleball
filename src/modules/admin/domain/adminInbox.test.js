@@ -27,3 +27,11 @@ describe('inboxBadges / inboxTotals', () => {
     expect(inboxTotals(itens)).toEqual({ total: 7, incompleto: true });
   });
 });
+
+describe('buildInbox — lojas do Mercado', () => {
+  it('sem a fonte, a linha não aparece; com ela, conta', () => {
+    expect(buildInbox({}).some((i) => i.id === 'lojas')).toBe(false);
+    const l = buildInbox({ lojas: { ok: true, count: 2 } }).find((i) => i.id === 'lojas');
+    expect(l).toMatchObject({ tab: 'mercado-lojas', count: 2, atencao: true });
+  });
+});

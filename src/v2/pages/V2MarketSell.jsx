@@ -541,6 +541,13 @@ function SellPage() {
         )}
       </div>
       {corpo}
+      {!store.isLoading && !store.isError && store.data?.status !== 'active' && (
+        <p className="text-sm text-gray-500">
+          {store.data?.status === 'pending'
+            ? <>A sua loja está em análise. <Link to="/mercado/loja/abrir" className="font-bold text-ink underline">Ver o cadastro</Link></>
+            : <>Vende como empresa, com CNPJ? <Link to="/mercado/loja/abrir" className="font-bold text-ink underline">Abrir uma loja</Link></>}
+        </p>
+      )}
     </div>
   );
 }

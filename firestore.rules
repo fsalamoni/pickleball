@@ -4134,6 +4134,9 @@ service cloud.firestore {
         isMarketOperator(resource.data.seller_key)
         && resource.data.status != 'removed'
         && request.resource.data.status in ['draft', 'active', 'paused', 'sold_out', 'closed']
+        // Vendedor suspenso não põe anúncio de volta no ar (o admin pausou).
+        && (request.resource.data.status != 'active' || resource.data.status == 'active'
+          || marketSeller(resource.data.seller_key).status == 'active')
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(marketListingLocked().concat(['seller_key', 'seller_type', 'created_by']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['seller_name'])

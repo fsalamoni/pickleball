@@ -100,6 +100,7 @@ const V2MarketOrder = lazy(() => import('@/v2/pages/V2MarketOrder'));
 const V2MarketOffer = lazy(() => import('@/v2/pages/V2MarketOffer'));
 const V2MarketSell = lazy(() => import('@/v2/pages/V2MarketSell'));
 const V2MarketListingEditor = lazy(() => import('@/v2/pages/V2MarketListingEditor'));
+const V2MarketStoreApply = lazy(() => import('@/v2/pages/V2MarketStoreApply'));
 // Centro de Treino (flag `training_center`): cada tela se fecha sozinha com a flag desligada.
 const V2Training = lazy(() => import('@/v2/pages/V2Training'));
 const V2TrainingItem = lazy(() => import('@/v2/pages/V2TrainingItem'));
@@ -270,6 +271,7 @@ export default function V2App() {
           <Route path="mercado/ofertas/:offerId" element={<Isolada nome="mercado"><V2MarketOffer /></Isolada>} />
           <Route path="mercado/vender" element={<Isolada nome="mercado"><V2MarketSell /></Isolada>} />
           <Route path="mercado/vender/anuncio/novo" element={<Isolada nome="mercado"><V2MarketListingEditor /></Isolada>} />
+          <Route path="mercado/loja/abrir" element={<Isolada nome="mercado"><V2MarketStoreApply /></Isolada>} />
           <Route path="mercado/vender/anuncio/:listingId" element={<Isolada nome="mercado"><V2MarketListingEditor /></Isolada>} />
           <Route path="treino" element={<Isolada nome="treino"><V2Training /></Isolada>} />
           <Route path="treino/golpes" element={<Isolada nome="treino"><V2TrainingTechniques /></Isolada>} />

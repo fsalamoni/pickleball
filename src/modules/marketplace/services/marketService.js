@@ -18,7 +18,9 @@ import { db } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C, MARKET_SETTINGS_DOC, PUBLIC_LISTING_STATUSES, SELLER_STATUS, SELLER_TYPE } from '../domain/constants.js';
 import { validateListingInput } from '../domain/listing.js';
 import { normalizeMarketSettings, findBannedTerm, validateQuestion, validateAnswer } from '../domain/settings.js';
-import { sellerKeyFor, validatePayment, validateStoreApplication } from '../domain/seller.js';
+import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplication } from '../domain/seller.js';
+import { createAuditLog } from '@/core/services/auditService';
+import { notifyUsers } from '@/core/services/notificationService';
 
 const toDoc = (d) => ({ id: d.id, ...d.data() });
 
@@ -141,9 +143,13 @@ export async function applyStore(uid, input) {
   return key;
 }
 
-/** Admin: aprovar, recusar (com motivo), suspender ou verificar uma loja/vendedor. */
-export async function reviewSeller(key, { status, reason = '', verified }, { uid }) {
-  const patch = { reviewed_by: uid, reviewed_at: serverTimestamp(), updated_at: serverTimestamp() };
+/**
+ * Admin: aprovar, recusar (com motivo), suspender, reativar ou verificar um
+ * vendedor. Quem é afetado recebe um aviso, e fica na auditoria.
+ */
+export async function reviewSeller(seller, { status, reason = '', verified }, { actor }) {
+  const key = seller.id || seller.seller_key;
+  const patch = { reviewed_by: actor.uid, reviewed_at: serverTimestamp(), updated_at: serverTimestamp() };
   if (status) patch.status = status;
   if (status === SELLER_STATUS.REJECTED || status === SELLER_STATUS.SUSPENDED) {
     if (String(reason).trim().length < 5) throw new MarketError('Escreva o motivo (a pessoa vai ler).');
@@ -153,6 +159,23 @@ export async function reviewSeller(key, { status, reason = '', verified }, { uid
   }
   if (typeof verified === 'boolean') patch.verified = verified;
   await updateDoc(doc(db, C.sellers, key), patch);
+  // Suspender tira os anúncios da vitrine; reativar devolve só os que a
+  // suspensão tirou (o que o vendedor pausou por conta própria fica pausado).
+  if (status === SELLER_STATUS.SUSPENDED || (status === SELLER_STATUS.ACTIVE && seller.status === SELLER_STATUS.SUSPENDED)) {
+    const anuncios = await listSellerListings(key);
+    const alvo = status === SELLER_STATUS.SUSPENDED
+      ? anuncios.filter((l) => PUBLIC_LISTING_STATUSES.includes(l.status))
+      : anuncios.filter((l) => l.admin_paused === true && l.status === 'paused');
+    await Promise.all(alvo.map((l) => updateDoc(doc(db, C.listings, l.id), status === SELLER_STATUS.SUSPENDED
+      ? { status: 'paused', admin_paused: true, paused_from: l.status, updated_at: serverTimestamp() }
+      : { status: l.paused_from === 'sold_out' ? 'sold_out' : 'active', admin_paused: false, updated_at: serverTimestamp() })));
+  }
+  await createAuditLog({
+    action: 'market_seller_review', actor, userId: seller.owner_uid || null,
+    details: { seller_key: key, status: status || null, verified: typeof verified === 'boolean' ? verified : null, reason: patch.reject_reason || null },
+  });
+  const aviso = sellerReviewNotice(seller, { status, verified, reason: patch.reject_reason });
+  if (aviso && seller.owner_uid) await notifyUsers([seller.owner_uid], { ...aviso, type: 'market', actor });
 }
 
 /* ------------------------------------------------------------ anúncios -- */
