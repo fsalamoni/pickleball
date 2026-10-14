@@ -51,7 +51,7 @@ Fica em português **de propósito** — é dado gravado, não tela:
 - o que o app GRAVA no banco: nomes padrão ("Grupo único", "(cópia)", grupos-modelo do Play, nome de busca salva, nome do dispositivo do totem), motivos, auditoria, sementes (biblioteca de treino), palavras-chave;
 - o texto de quem escreve (campanhas, descrições, comentários);
 - arquivos exportados (CSV, "Baixar meus dados");
-- os documentos legais (Termos, Privacidade, termos do Mercado): tradução precisa de revisão jurídica;
+- os documentos legais (Termos, Privacidade, termos do Mercado) **valem em português**. Em en/es a tela mostra uma **tradução de cortesia** (`src/modules/legal/i18n/documentos/<codigo>.js`, baixada só por quem usa o idioma), com o aviso "o português prevalece" e o botão "Ver original em português". O aceite não muda: mesma `key`, mesma `version`, título gravado em português. Cada tradução guarda a impressão (`fonte`) do texto em português de onde saiu: mudou o português, a tela volta ao original e `legalTranslation.test.js` diz qual documento atualizar (recalcule a `fonte` com `legalSourceHash`);
 - mensagens só de desenvolvedor (logger, validação de esquema).
 
 ⚠️ Chave com quebra de linha (`\n`) no `t('…')` não é conferida pelo guarda nem por `scripts/i18n-faltando.mjs`: confira à mão.

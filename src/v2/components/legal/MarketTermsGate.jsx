@@ -15,6 +15,8 @@ import { ExternalLink, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { pendingMarketConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
+import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
+import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -29,6 +31,8 @@ export default function MarketTermsGate() {
   const accept = useAcceptConsents();
   const [checked, setChecked] = useState({});
   const pending = useMemo(() => pendingMarketConsents(consentMap), [consentMap]);
+  // Só o que se MOSTRA é traduzido; o aceite grava o documento em português.
+  const traducoes = useLegalTranslations(pending.length > 0);
 
   if (!user || isLoadingAuth || isLoading || !isFetched || pending.length === 0) return null;
 
@@ -63,6 +67,7 @@ export default function MarketTermsGate() {
           </p>
           {pending.map((d) => {
             const Icon = legalIcon(d.icon);
+            const visto = legalDocTranslation(d, traducoes) || d;
             return (
               <label key={d.key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-colors hover:border-acid-dark/40">
                 <input
@@ -73,10 +78,10 @@ export default function MarketTermsGate() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 font-semibold text-ink">
-                    <Icon className="h-4 w-4 text-gray-500" /> {d.title}
+                    <Icon className="h-4 w-4 text-gray-500" /> {visto.title}
                   </span>
                   <span className="mt-0.5 block text-xs text-gray-500">
-                    {d.description}{' '}
+                    {visto.description}{' '}
                     <a
                       href={`/legal/${d.route}`}
                       target="_blank"

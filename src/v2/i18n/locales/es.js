@@ -455,4 +455,7 @@ export default {
   "Você responde, de forma exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.": "Respondes, de forma exclusiva, por el producto, la venta, el transporte y los documentos.",
   "Você tem {n} documentos essenciais pendentes de aceite.": ["Tienes {n} documento esencial pendiente de aceptación.", "Tienes {n} documentos esenciales pendientes de aceptación."],
   "voce@email.com": "tu@correo.com",
+  "Esta é uma tradução de cortesia. Em caso de divergência, prevalece a versão em português.": "Esta es una traducción de cortesía. En caso de discrepancia, prevalece la versión en portugués.",
+  "Ver original em português": "Ver original en portugués",
+  "Ver tradução": "Ver traducción",
 };

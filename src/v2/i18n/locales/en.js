@@ -455,4 +455,7 @@ export default {
   "Você responde, de forma exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.": "You are solely responsible for the product, the sale, shipping and documents.",
   "Você tem {n} documentos essenciais pendentes de aceite.": ["You have {n} essential document pending acceptance.", "You have {n} essential documents pending acceptance."],
   "voce@email.com": "you@email.com",
+  "Esta é uma tradução de cortesia. Em caso de divergência, prevalece a versão em português.": "This is a courtesy translation. The Portuguese version prevails in case of any discrepancy.",
+  "Ver original em português": "View original in Portuguese",
+  "Ver tradução": "View translation",
 };
