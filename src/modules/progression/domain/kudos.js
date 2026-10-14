@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Kudos (lógica pura, sem I/O).
  *
@@ -67,7 +68,7 @@ export function validateKudosInput(input = {}) {
 
   if (!fromUid) return { valid: false, error: 'fromUid é obrigatório.', value: {} };
   if (!toUid) return { valid: false, error: 'toUid é obrigatório.', value: {} };
-  if (fromUid === toUid) return { valid: false, error: 'Não pode dar kudos a si mesmo.', value: {} };
+  if (fromUid === toUid) return { valid: false, error: t('Não pode dar kudos a si mesmo.'), value: {} };
   if (!Object.values(KUDOS_TARGET_TYPE).includes(targetType)) {
     return { valid: false, error: 'targetType inválido.', value: {} };
   }

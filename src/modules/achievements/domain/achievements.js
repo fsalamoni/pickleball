@@ -6,28 +6,30 @@
  * pendentes, preservando a ordem do catálogo.
  */
 
+import { tk } from '@/core/i18n';
+
 /** Catálogo ordenado (do mais fácil ao mais difícil), por trilha temática. */
 export const ACHIEVEMENTS = Object.freeze([
-  { id: 'first_tournament', name: 'Estreante', description: 'Participou do primeiro torneio.', test: (s) => s.tournaments >= 1 },
-  { id: 'first_win', name: 'Primeira vitória', description: 'Venceu o primeiro jogo.', test: (s) => s.wins >= 1 },
-  { id: 'first_podium', name: 'No pódio', description: 'Terminou entre os 3 primeiros.', test: (s) => s.podiums >= 1 },
-  { id: 'champion', name: 'Campeão', description: 'Conquistou um título.', test: (s) => s.titles >= 1 },
-  { id: 'wins_10', name: 'Dez de lá', description: 'Acumulou 10 vitórias.', test: (s) => s.wins >= 10 },
-  { id: 'wins_50', name: 'Cinquentão', description: 'Acumulou 50 vitórias.', test: (s) => s.wins >= 50 },
-  { id: 'wins_100', name: 'Centena de vitórias', description: 'Acumulou 100 vitórias.', test: (s) => s.wins >= 100 },
-  { id: 'played_25', name: 'Pegando ritmo', description: 'Disputou 25 jogos.', test: (s) => s.played >= 25 },
-  { id: 'tournaments_10', name: 'Maratonista', description: 'Disputou 10 torneios.', test: (s) => s.tournaments >= 10 },
-  { id: 'tournaments_25', name: 'Veterano de quadra', description: 'Disputou 25 torneios.', test: (s) => s.tournaments >= 25 },
-  { id: 'played_100', name: 'Centurião', description: 'Disputou 100 jogos.', test: (s) => s.played >= 100 },
-  { id: 'played_250', name: 'Incansável', description: 'Disputou 250 jogos.', test: (s) => s.played >= 250 },
-  { id: 'podiums_10', name: 'Frequentador do pódio', description: 'Subiu ao pódio 10 vezes.', test: (s) => s.podiums >= 10 },
-  { id: 'titles_5', name: 'Colecionador de troféus', description: 'Conquistou 5 títulos.', test: (s) => s.titles >= 5 },
-  { id: 'titles_10', name: 'Lenda', description: 'Conquistou 10 títulos.', test: (s) => s.titles >= 10 },
-  { id: 'rating_1100', name: 'Em ascensão', description: 'Atingiu rating 1100.', test: (s) => (s.rating || 0) >= 1100 },
-  { id: 'rating_1300', name: 'Elite', description: 'Atingiu rating 1300.', test: (s) => (s.rating || 0) >= 1300 },
-  { id: 'rating_1500', name: 'Fora de série', description: 'Atingiu rating 1500.', test: (s) => (s.rating || 0) >= 1500 },
-  { id: 'week_streak_4', name: 'Constância', description: 'Jogou em 4 semanas seguidas.', test: (s) => (s.weekStreak || 0) >= 4 },
-  { id: 'week_streak_12', name: 'Rotina de atleta', description: 'Jogou em 12 semanas seguidas.', test: (s) => (s.weekStreak || 0) >= 12 },
+  { id: 'first_tournament', name: tk('Estreante'), description: tk('Participou do primeiro torneio.'), test: (s) => s.tournaments >= 1 },
+  { id: 'first_win', name: tk('Primeira vitória'), description: tk('Venceu o primeiro jogo.'), test: (s) => s.wins >= 1 },
+  { id: 'first_podium', name: tk('No pódio'), description: tk('Terminou entre os 3 primeiros.'), test: (s) => s.podiums >= 1 },
+  { id: 'champion', name: tk('Campeão'), description: tk('Conquistou um título.'), test: (s) => s.titles >= 1 },
+  { id: 'wins_10', name: tk('Dez de lá'), description: tk('Acumulou 10 vitórias.'), test: (s) => s.wins >= 10 },
+  { id: 'wins_50', name: tk('Cinquentão'), description: tk('Acumulou 50 vitórias.'), test: (s) => s.wins >= 50 },
+  { id: 'wins_100', name: tk('Centena de vitórias'), description: tk('Acumulou 100 vitórias.'), test: (s) => s.wins >= 100 },
+  { id: 'played_25', name: tk('Pegando ritmo'), description: tk('Disputou 25 jogos.'), test: (s) => s.played >= 25 },
+  { id: 'tournaments_10', name: tk('Maratonista'), description: tk('Disputou 10 torneios.'), test: (s) => s.tournaments >= 10 },
+  { id: 'tournaments_25', name: tk('Veterano de quadra'), description: tk('Disputou 25 torneios.'), test: (s) => s.tournaments >= 25 },
+  { id: 'played_100', name: tk('Centurião'), description: tk('Disputou 100 jogos.'), test: (s) => s.played >= 100 },
+  { id: 'played_250', name: tk('Incansável'), description: tk('Disputou 250 jogos.'), test: (s) => s.played >= 250 },
+  { id: 'podiums_10', name: tk('Frequentador do pódio'), description: tk('Subiu ao pódio 10 vezes.'), test: (s) => s.podiums >= 10 },
+  { id: 'titles_5', name: tk('Colecionador de troféus'), description: tk('Conquistou 5 títulos.'), test: (s) => s.titles >= 5 },
+  { id: 'titles_10', name: tk('Lenda'), description: tk('Conquistou 10 títulos.'), test: (s) => s.titles >= 10 },
+  { id: 'rating_1100', name: tk('Em ascensão'), description: tk('Atingiu rating 1100.'), test: (s) => (s.rating || 0) >= 1100 },
+  { id: 'rating_1300', name: tk('Elite'), description: tk('Atingiu rating 1300.'), test: (s) => (s.rating || 0) >= 1300 },
+  { id: 'rating_1500', name: tk('Fora de série'), description: tk('Atingiu rating 1500.'), test: (s) => (s.rating || 0) >= 1500 },
+  { id: 'week_streak_4', name: tk('Constância'), description: tk('Jogou em 4 semanas seguidas.'), test: (s) => (s.weekStreak || 0) >= 4 },
+  { id: 'week_streak_12', name: tk('Rotina de atleta'), description: tk('Jogou em 12 semanas seguidas.'), test: (s) => (s.weekStreak || 0) >= 12 },
 ]);
 
 /**

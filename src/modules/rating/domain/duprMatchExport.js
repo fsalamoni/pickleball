@@ -20,6 +20,7 @@
  */
 
 import { toMillis } from '@/modules/tournament/domain/participation';
+import { tk } from '@/core/i18n';
 
 /** Máximo de games que o DUPR aceita por partida. */
 export const DUPR_MAX_GAMES = 5;
@@ -28,8 +29,8 @@ export const DUPR_MAX_GAMES = 5;
 export const DUPR_SCORE_TYPE = Object.freeze({ SIDEOUT: 'SIDEOUT', RALLY: 'RALLY' });
 
 export const DUPR_SCORE_TYPE_LABELS = Object.freeze({
-  [DUPR_SCORE_TYPE.SIDEOUT]: 'Lado-fora (tradicional)',
-  [DUPR_SCORE_TYPE.RALLY]: 'Rally (ponto corrido)',
+  [DUPR_SCORE_TYPE.SIDEOUT]: tk('Lado-fora (tradicional)'),
+  [DUPR_SCORE_TYPE.RALLY]: tk('Rally (ponto corrido)'),
 });
 
 /** Tipo de partida no DUPR (S = simples, D = duplas). */
@@ -44,10 +45,10 @@ export const DUPR_EXPORT_SOURCE = Object.freeze({
 });
 
 export const DUPR_EXPORT_SOURCE_LABELS = Object.freeze({
-  [DUPR_EXPORT_SOURCE.TOURNAMENT]: 'Torneio',
-  [DUPR_EXPORT_SOURCE.GAME_DAY]: 'Dia de jogo',
-  [DUPR_EXPORT_SOURCE.CLUB_EVENT]: 'Evento de clube',
-  [DUPR_EXPORT_SOURCE.TEAM]: 'Torneio por equipes',
+  [DUPR_EXPORT_SOURCE.TOURNAMENT]: tk('Torneio'),
+  [DUPR_EXPORT_SOURCE.GAME_DAY]: tk('Dia de jogo'),
+  [DUPR_EXPORT_SOURCE.CLUB_EVENT]: tk('Evento de clube'),
+  [DUPR_EXPORT_SOURCE.TEAM]: tk('Torneio por equipes'),
 });
 
 /**

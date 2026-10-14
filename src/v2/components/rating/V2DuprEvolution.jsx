@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDuprRatingHistory } from '@/modules/rating/hooks/useDuprRating';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
+import { t } from '@/core/i18n';
 
 /**
  * Evolução do "Nível 2.0–8.0" (ranking estilo DUPR) de um atleta — mesmo formato
@@ -24,12 +25,12 @@ export default function V2DuprEvolution({ uid }) {
     <>
       {doublesPoints.length >= 2 && (
         <div className="mt-8">
-          <RatingSparkline points={doublesPoints} title="Evolução do Nível 2.0–8.0 · Duplas" />
+          <RatingSparkline points={doublesPoints} title={t('Evolução do Nível 2.0–8.0 · Duplas')} />
         </div>
       )}
       {singlesPoints.length >= 2 && (
         <div className="mt-8">
-          <RatingSparkline points={singlesPoints} title="Evolução do Nível 2.0–8.0 · Simples" />
+          <RatingSparkline points={singlesPoints} title={t('Evolução do Nível 2.0–8.0 · Simples')} />
         </div>
       )}
     </>

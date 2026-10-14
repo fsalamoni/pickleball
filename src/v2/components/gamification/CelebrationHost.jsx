@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { planCelebrations } from '@/modules/progression/domain/marks';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 const TONE = {
   gold: 'border-amber-300 bg-amber-50',
@@ -54,7 +55,7 @@ export default function CelebrationHost({ marks, prefs, ready, update, enabled =
         <p className="font-display text-base font-bold text-ink">{atual.title}</p>
         <p className="text-sm text-gray-600">{atual.message}</p>
       </div>
-      <button type="button" onClick={() => setFila((f) => f.slice(1))} aria-label="Fechar" className="rounded-full p-1 text-gray-500 hover:bg-white/60">
+      <button type="button" onClick={() => setFila((f) => f.slice(1))} aria-label={t('Fechar')} className="rounded-full p-1 text-gray-500 hover:bg-white/60">
         <X className="h-4 w-4" />
       </button>
     </div>

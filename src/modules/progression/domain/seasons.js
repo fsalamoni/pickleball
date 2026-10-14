@@ -10,6 +10,7 @@
  */
 
 import { tierFromXp } from './tiers.js';
+import { tk } from '@/core/i18n';
 
 const str = (v) => String(v ?? '').trim();
 
@@ -139,7 +140,7 @@ export function buildHallOfFame(users = [], nPorEstado = 3, nGeral = 3) {
  * Prêmios do top N da temporada mensal.
  */
 export const MONTHLY_SEASON_PRIZES = Object.freeze({
-  TOP_1: { label: 'Top 1% da temporada', xp: 1000, shareable: true },
-  TOP_10: { label: 'Top 10% da temporada', xp: 500, shareable: true },
-  PARTICIPATION: { label: 'Participou da temporada', xp: 50, shareable: false },
+  TOP_1: { label: tk('Top 1% da temporada'), xp: 1000, shareable: true },
+  TOP_10: { label: tk('Top 10% da temporada'), xp: 500, shareable: true },
+  PARTICIPATION: { label: tk('Participou da temporada'), xp: 50, shareable: false },
 });

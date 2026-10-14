@@ -1,3 +1,4 @@
+import { t, tk, fmtData } from '@/core/i18n';
 /**
  * Estado do recálculo de rankings NO SERVIDOR, legível por gente.
  *
@@ -12,12 +13,12 @@
 
 /** Rótulos dos motivos gravados pelos gatilhos (`functions/index.js`). */
 export const MOTIVO_LABEL = Object.freeze({
-  'tournament-change': 'mudança num torneio',
-  'tournament-match': 'resultado de torneio',
-  'tournament-registration': 'inscrição de torneio',
-  'club-event-game': 'dia de jogo publicado',
-  'recuperacao-agendada': 'recuperação agendada',
-  'unificacao-de-conta': 'unificação de cadastro',
+  'tournament-change': tk('mudança num torneio'),
+  'tournament-match': tk('resultado de torneio'),
+  'tournament-registration': tk('inscrição de torneio'),
+  'club-event-game': tk('dia de jogo publicado'),
+  'recuperacao-agendada': tk('recuperação agendada'),
+  'unificacao-de-conta': tk('unificação de cadastro'),
 });
 
 /** Converte Timestamp do Firestore, `{ seconds }`, Date, número ou texto em ms. */
@@ -50,7 +51,7 @@ export function describeRankingWorker(worker) {
   return {
     registrado: ultimaPassadaMs > 0,
     ultimaPassadaMs,
-    motivo: motivoBruto ? (MOTIVO_LABEL[motivoBruto] || motivoBruto) : null,
+    motivo: motivoBruto ? (MOTIVO_LABEL[motivoBruto] ? t(MOTIVO_LABEL[motivoBruto]) : motivoBruto) : null,
     emCurso: emMs(worker.running_since) > 0,
     // Um erro antigo, seguido de passada bem-sucedida, já foi superado: mostrar
     // assusta à toa e ensina a ignorar o aviso quando ele importar.
@@ -67,20 +68,20 @@ export function describeRankingWorker(worker) {
  */
 export function formatarMomento(ms) {
   if (!ms) return '';
-  return new Intl.DateTimeFormat('pt-BR', {
+  return fmtData(new Date(ms), {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
-  }).format(new Date(ms));
+  });
 }
 
 /** Por que o torneio inteiro ficou fora — dito como a pessoa resolve. */
 export const TORNEIO_FORA_LABEL = Object.freeze({
-  rascunho: 'em rascunho (publique o torneio)',
-  privado: 'privado (só torneio público conta)',
-  cancelado: 'cancelado',
-  arquivado: 'arquivado',
-  apagado: 'apagado',
-  outro: 'fora do ranking',
+  rascunho: tk('em rascunho (publique o torneio)'),
+  privado: tk('privado (só torneio público conta)'),
+  cancelado: tk('cancelado'),
+  arquivado: tk('arquivado'),
+  apagado: tk('apagado'),
+  outro: tk('fora do ranking'),
 });
 
 /**
@@ -103,24 +104,24 @@ export function describeRankingExclusions(worker) {
   const ex = worker?.last_result?.excluded;
   if (!ex || typeof ex !== 'object') return null;
   const n = (v) => Math.max(0, Number(v) || 0);
-  const t = ex.torneio || {};
+  const tor = ex.torneio || {};
   const d = ex.dia_de_jogo || {};
-  const pt = t.por_motivo || {};
+  const pt = tor.por_motivo || {};
   const pd = d.por_motivo || {};
-  const foraDoTorneio = t.torneio_fora || {};
+  const foraDoTorneio = tor.torneio_fora || {};
 
   const linhas = [];
   const add = (chave, quantidade, texto) => {
     if (n(quantidade) > 0) linhas.push({ chave, quantidade: n(quantidade), texto });
   };
   add('sem_conta', pt.sem_conta,
-    'partida(s) de torneio com jogador SEM CONTA na plataforma (inscrito só pelo nome, provisório ou vaga). Vincule a conta na inscrição.');
+    t('partida(s) de torneio com jogador SEM CONTA na plataforma (inscrito só pelo nome, provisório ou vaga). Vincule a conta na inscrição.'));
   Object.entries(foraDoTorneio).forEach(([motivo, q]) => {
-    add(`torneio_${motivo}`, q, `partida(s) de torneio ${TORNEIO_FORA_LABEL[motivo] || TORNEIO_FORA_LABEL.outro}.`);
+    add(`torneio_${motivo}`, q, t('partida(s) de torneio {motivo}.', { motivo: t(TORNEIO_FORA_LABEL[motivo] || TORNEIO_FORA_LABEL.outro) }));
   });
-  add('sem_vencedor_torneio', pt.sem_vencedor, 'partida(s) de torneio encerrada(s) sem vencedor.');
-  add('jogo_incompleto', pd.jogo_incompleto, 'jogo(s) de dia de jogo publicados com atleta sem conta.');
-  add('sem_vencedor_dia', pd.sem_vencedor, 'jogo(s) de dia de jogo sem vencedor.');
+  add('sem_vencedor_torneio', pt.sem_vencedor, t('partida(s) de torneio encerrada(s) sem vencedor.'));
+  add('jogo_incompleto', pd.jogo_incompleto, t('jogo(s) de dia de jogo publicados com atleta sem conta.'));
+  add('sem_vencedor_dia', pd.sem_vencedor, t('jogo(s) de dia de jogo sem vencedor.'));
 
   const torneios = (Array.isArray(ex.torneios) ? ex.torneios : []).map((x) => ({
     id: x?.id || null,
@@ -129,12 +130,12 @@ export function describeRankingExclusions(worker) {
     partidasFora: n(x?.partidas_fora),
     inscricoesSemConta: n(x?.inscricoes_sem_conta),
     texto: x?.motivo === 'sem_conta'
-      ? `${n(x?.inscricoes_sem_conta)} inscrição(ões) sem conta`
-      : (TORNEIO_FORA_LABEL[x?.motivo] || TORNEIO_FORA_LABEL.outro),
+      ? t('{n} inscrição(ões) sem conta', { n: n(x?.inscricoes_sem_conta) })
+      : t(TORNEIO_FORA_LABEL[x?.motivo] || TORNEIO_FORA_LABEL.outro),
   }));
 
   return {
-    usadas: n(t.usadas) + n(d.usadas),
+    usadas: n(tor.usadas) + n(d.usadas),
     fora: linhas.reduce((s, l) => s + l.quantidade, 0),
     linhas,
     torneios,

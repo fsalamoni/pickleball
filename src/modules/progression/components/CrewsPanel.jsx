@@ -6,6 +6,7 @@ import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import TermHint from '@/v2/components/gamification/TermHint';
+import { t, fmtNumero } from '@/core/i18n';
 
 const NOME_MAX = 40;
 
@@ -59,32 +60,32 @@ export default function CrewsPanel({
     <div className={cn('space-y-4', className)} data-testid="crews-panel">
       <V2Surface>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="flex items-center gap-1 font-display text-base font-bold text-ink">Minhas crews <TermHint term="crews" /></h3>
+          <h3 className="flex items-center gap-1 font-display text-base font-bold text-ink">{t('Minhas crews')} <TermHint term="crews" /></h3>
           {!criando && (
             <V2Button variant="secondary" size="sm" onClick={() => setCriando(true)} data-testid="crew-new-btn">
-              <Plus className="h-4 w-4" aria-hidden="true" /> Criar crew
+              <Plus className="h-4 w-4" aria-hidden="true" /> {t('Criar crew')}
             </V2Button>
           )}
         </div>
 
         {criando && (
           <form onSubmit={submeter} className="mb-4 space-y-3" data-testid="crew-form">
-            <V2Field label="Nome da crew" htmlFor="crew-nome" hint={`Até ${NOME_MAX} caracteres.`}>
+            <V2Field label={t('Nome da crew')} htmlFor="crew-nome" hint={t('Até {n} caracteres.', { n: NOME_MAX })}>
               <V2Input
                 id="crew-nome"
                 value={nome}
                 maxLength={NOME_MAX}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex.: Turma da manhã"
+                placeholder={t('Ex.: Turma da manhã')}
                 autoFocus
               />
             </V2Field>
             <div className="flex gap-2">
               <V2Button type="submit" disabled={!nome.trim() || isBusy}>
-                {isBusy ? 'Criando…' : 'Criar'}
+                {isBusy ? t('Criando…') : t('Criar')}
               </V2Button>
               <V2Button type="button" variant="ghost" onClick={() => { setCriando(false); setNome(''); }}>
-                Cancelar
+                {t('Cancelar')}
               </V2Button>
             </div>
           </form>
@@ -95,8 +96,8 @@ export default function CrewsPanel({
         {myCrews.length === 0 ? (
           <V2EmptyState
             icon={Users}
-            title="Você ainda não está numa crew"
-            description="Crew é seu grupo fixo de jogo. Crie a sua ou entre em uma pública abaixo."
+            title={t('Você ainda não está numa crew')}
+            description={t('Crew é seu grupo fixo de jogo. Crie a sua ou entre em uma pública abaixo.')}
           />
         ) : (
           <ul className="space-y-2">
@@ -114,12 +115,12 @@ export default function CrewsPanel({
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
                     {c.name}
                     {c.createdBy === uid && (
-                      <Crown className="h-3.5 w-3.5 text-amber-500" aria-label="Você criou esta crew" />
+                      <Crown className="h-3.5 w-3.5 text-amber-500" aria-label={t('Você criou esta crew')} />
                     )}
                   </p>
                   <p className="text-xs text-gray-500">
                     {c.membersCount}/{CREW_MAX_MEMBERS} membros
-                    {c.totalXp > 0 && ` · ${c.totalXp.toLocaleString('pt-BR')} XP`}
+                    {c.totalXp > 0 && ` · ${fmtNumero(c.totalXp)} XP`}
                   </p>
                 </div>
                 {/* Quem criou não pode sair sem transferir a posse — o service
@@ -132,7 +133,7 @@ export default function CrewsPanel({
                     onClick={() => onLeave?.(c.crewId)}
                     data-testid="crew-leave-btn"
                   >
-                    <LogOut className="h-4 w-4" aria-hidden="true" /> Sair
+                    <LogOut className="h-4 w-4" aria-hidden="true" /> {t('Sair')}
                   </V2Button>
                 )}
               </li>
@@ -142,9 +143,9 @@ export default function CrewsPanel({
       </V2Surface>
 
       <V2Surface>
-        <h3 className="mb-3 font-display text-base font-bold text-ink">Crews abertas</h3>
+        <h3 className="mb-3 font-display text-base font-bold text-ink">{t('Crews abertas')}</h3>
         {paraEntrar.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma crew pública disponível agora.</p>
+          <p className="text-sm text-gray-500">{t('Nenhuma crew pública disponível agora.')}</p>
         ) : (
           <ul className="space-y-2">
             {paraEntrar.map((c) => {
@@ -161,7 +162,7 @@ export default function CrewsPanel({
                     <p className="text-xs text-gray-500">{c.membersCount}/{CREW_MAX_MEMBERS} membros</p>
                   </div>
                   {lotada ? (
-                    <V2Badge tone="neutral">Lotada</V2Badge>
+                    <V2Badge tone="neutral">{t('Lotada')}</V2Badge>
                   ) : (
                     <V2Button
                       variant="secondary"
@@ -170,7 +171,7 @@ export default function CrewsPanel({
                       onClick={() => onJoin?.(c.crewId)}
                       data-testid="crew-join-btn"
                     >
-                      Entrar
+                      {t('Entrar')}
                     </V2Button>
                   )}
                 </li>

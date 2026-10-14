@@ -12,6 +12,7 @@
  */
 
 import { COURT_SIDE } from '@/modules/athletes/domain/profileMeta';
+import { t, tn } from '@/core/i18n';
 
 /** Pesos de cada dimensão (somam 100). */
 export const SMART_WEIGHTS = Object.freeze({
@@ -85,14 +86,14 @@ export function computeMatchCompatibility(me = {}, candidate = {}) {
   const mr = Number(me.rating);
   const cr = Number(candidate.rating);
   if (Number.isFinite(mr) && Number.isFinite(cr) && Math.abs(mr - cr) <= 100) {
-    reasons.push('Nível parecido');
+    reasons.push(t('Nível parecido'));
   }
   if (isSpecificSide(me.court_side) && isSpecificSide(candidate.court_side)
     && me.court_side !== candidate.court_side) {
-    reasons.push('Lados complementares');
+    reasons.push(t('Lados complementares'));
   }
-  if (city > 0) reasons.push('Mesma cidade');
-  if (shared > 0) reasons.push(`${shared} interesse${shared > 1 ? 's' : ''} em comum`);
+  if (city > 0) reasons.push(t('Mesma cidade'));
+  if (shared > 0) reasons.push(tn(shared, '{n} interesse em comum', '{n} interesses em comum'));
 
   return { score: total, reasons };
 }

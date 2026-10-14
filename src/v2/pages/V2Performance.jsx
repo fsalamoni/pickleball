@@ -23,6 +23,7 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -34,19 +35,19 @@ export default function V2Performance() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <V2PageIntro title="Meu desempenho" subtitle="Estatísticas, histórico e evolução dos seus jogos e torneios." />
+      <V2PageIntro title={t('Meu desempenho')} subtitle={t('Estatísticas, histórico e evolução dos seus jogos e torneios.')} />
 
       {athleteAgendaOn && (
         <div className="mb-6 inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5">
           <button type="button" onClick={() => setTab('estatistica')}
             className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
               tab === 'estatistica' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-            <BarChart3 className="h-4 w-4" /> Estatística
+            <BarChart3 className="h-4 w-4" /> {t('Estatística')}
           </button>
           <button type="button" onClick={() => setTab('jogos')}
             className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
               tab === 'jogos' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-            <CalendarClock className="h-4 w-4" /> Meus jogos
+            <CalendarClock className="h-4 w-4" /> {t('Meus jogos')}
           </button>
         </div>
       )}
@@ -83,31 +84,31 @@ function StatsPanel() {
             <V2ErrorState
               inline
               className="mb-4"
-              title="Parte dos seus jogos não carregou"
-              description="Os números ficam em branco até tudo chegar."
+              title={t('Parte dos seus jogos não carregou')}
+              description={t('Os números ficam em branco até tudo chegar.')}
               onRetry={refetch}
             />
           )}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <V2StatCard icon={Trophy} accent="ink" label="Torneios" value={isError ? '—' : stats.tournaments} />
-            <V2StatCard icon={ListChecks} accent="blue" label="Inscrições" value={isError ? '—' : stats.registrations} />
-            <V2StatCard icon={Swords} accent="ink" label="Jogos" value={isError ? '—' : stats.played} />
-            <V2StatCard icon={Percent} accent="acid" label="Aproveitamento" value={isError ? '—' : formatPercent(stats.winRate)} hint={isError ? undefined : `${stats.wins}V – ${stats.losses}D`} />
-            <V2StatCard icon={Award} accent="green" label="Títulos" value={isError ? '—' : stats.titles} />
-            <V2StatCard icon={Medal} accent="ink" label="Pódios" value={isError ? '—' : stats.podiums} />
+            <V2StatCard icon={Trophy} accent="ink" label={t('Torneios')} value={isError ? '—' : stats.tournaments} />
+            <V2StatCard icon={ListChecks} accent="blue" label={t('Inscrições')} value={isError ? '—' : stats.registrations} />
+            <V2StatCard icon={Swords} accent="ink" label={t('Jogos')} value={isError ? '—' : stats.played} />
+            <V2StatCard icon={Percent} accent="acid" label={t('Aproveitamento')} value={isError ? '—' : formatPercent(stats.winRate)} hint={isError ? undefined : `${stats.wins}V – ${stats.losses}D`} />
+            <V2StatCard icon={Award} accent="green" label={t('Títulos')} value={isError ? '—' : stats.titles} />
+            <V2StatCard icon={Medal} accent="ink" label={t('Pódios')} value={isError ? '—' : stats.podiums} />
           </div>
 
           {!isError && <RankingCoverageCard coverage={coverage} played={stats.played} />}
 
           {formats.length > 0 && (
             <V2Surface className="mt-8">
-              <h2 className="mb-4 font-display text-lg font-bold text-ink">Desempenho por formato</h2>
+              <h2 className="mb-4 font-display text-lg font-bold text-ink">{t('Desempenho por formato')}</h2>
               <div className="space-y-2">
                 {formats.map(([format, b]) => (
                   <div key={format} className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">
-                    <span className="text-sm font-semibold text-ink">{MODALITY_FORMAT_LABELS[format] || format}</span>
+                    <span className="text-sm font-semibold text-ink">{MODALITY_FORMAT_LABELS[format] ? t(MODALITY_FORMAT_LABELS[format]) : format}</span>
                     <span className="text-xs text-gray-500 tabular-nums">
-                      {b.played} jogo(s) · {b.wins}V – {b.losses}D · <strong className="text-ink">{formatPercent(b.winRate)}</strong>
+                      {t('{n} jogo(s) · {v}V – {d}D', { n: b.played, v: b.wins, d: b.losses })} · <strong className="text-ink">{formatPercent(b.winRate)}</strong>
                     </span>
                   </div>
                 ))}
@@ -156,13 +157,13 @@ function RankingCoverageCard({ coverage, played }) {
   if (!coverage || coverage.totalFora === 0) return null;
   const { torneio, diaDeJogo, dias } = coverage;
   const linhas = [
-    [diaDeJogo.naoPublicado, 'de dias de jogo que quem organiza ainda não publicou no ranking.'],
-    [diaDeJogo.convidado + torneio.semConta, 'com alguém sem conta na plataforma na partida (inscrito ou inserido só pelo nome) — a partida sai do ranking para todos.'],
-    [torneio.torneioFora, 'de torneios em rascunho, privados ou cancelados — esses não contam para ninguém.'],
-    [diaDeJogo.pendente, 'publicados, mas ainda não atualizados no ranking — quem organiza toca em “Atualizar publicação”.'],
+    [diaDeJogo.naoPublicado, t('de dias de jogo que quem organiza ainda não publicou no ranking.')],
+    [diaDeJogo.convidado + torneio.semConta, t('com alguém sem conta na plataforma na partida (inscrito ou inserido só pelo nome) — a partida sai do ranking para todos.')],
+    [torneio.torneioFora, t('de torneios em rascunho, privados ou cancelados — esses não contam para ninguém.')],
+    [diaDeJogo.pendente, t('publicados, mas ainda não atualizados no ranking — quem organiza toca em “Atualizar publicação”.')],
   ].filter(([n]) => n > 0);
-  const motivoDoDia = (m) => (m === OUT_OF_RANKING_REASON.NOT_PUBLISHED ? 'não publicado'
-    : m === OUT_OF_RANKING_REASON.GUEST ? 'com convidado sem conta' : 'publicação desatualizada');
+  const motivoDoDia = (m) => (m === OUT_OF_RANKING_REASON.NOT_PUBLISHED ? t('não publicado')
+    : m === OUT_OF_RANKING_REASON.GUEST ? t('com convidado sem conta') : t('publicação desatualizada'));
 
   return (
     <V2Surface className="mt-8 border-amber-200 bg-amber-50/40">
@@ -170,12 +171,11 @@ function RankingCoverageCard({ coverage, played }) {
         <Info aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
         <div className="min-w-0">
           <h2 className="font-display text-lg font-bold text-ink">
-            {coverage.totalFora} de {played} jogo(s) seus não estão no ranking
+            {t('{fora} de {total} jogo(s) seus não estão no ranking', { fora: coverage.totalFora, total: played })}
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm
-            conta, de torneios públicos e de dias de jogo publicados.
-            {rating ? ` Hoje o ranking tem ${rating.games} jogo(s) seus.` : ''}
+            {t('Aqui contam todos os seus jogos. O ranking e o rating só contam partidas em que todos têm conta, de torneios públicos e de dias de jogo publicados.')}
+            {rating ? ` ${t('Hoje o ranking tem {n} jogo(s) seus.', { n: rating.games })}` : ''}
           </p>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
             {linhas.map(([n, texto]) => (
@@ -190,14 +190,13 @@ function RankingCoverageCard({ coverage, played }) {
                   to={`/dia-de-jogo/${d.id}`}
                   className="rounded-full border border-gray-200 bg-paper-pure px-3 py-1.5 text-xs font-semibold text-ink hover:border-gray-300"
                 >
-                  {d.label} · {d.jogos} jogo(s) · {motivoDoDia(d.motivo)}
+                  {d.label} · {t('{n} jogo(s)', { n: d.jogos })} · {motivoDoDia(d.motivo)}
                 </Link>
               ))}
             </div>
           )}
           <p className="mt-3 text-xs text-gray-500">
-            Quem organiza resolve: publicando o dia de jogo, ou ligando o convidado à conta dele
-            (no dia de jogo, em “Resultados no ranking”; no torneio, no lápis da inscrição).
+            {t('Quem organiza resolve: publicando o dia de jogo, ou ligando o convidado à conta dele (no dia de jogo, em “Resultados no ranking”; no torneio, no lápis da inscrição).')}
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { useDuprRatingForUid } from '@/modules/rating/hooks/useDuprRating';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 function fmt(rating) {
   const n = Number(rating);
@@ -29,14 +30,14 @@ export default function V2DuprRatingBadge({ uid, className }) {
 
   return (
     <span
-      title="Nível de habilidade (escala 2.0–8.0)"
+      title={t('Nível de habilidade (escala 2.0–8.0)')}
       className={cn(
         'inline-flex items-center gap-2 rounded-2xl border border-acid/40 bg-acid/15 px-4 py-2 text-sm font-semibold text-ink',
         className,
       )}
     >
       <Sparkles className="h-4 w-4 text-acid" />
-      Nível 2.0–8.0 · {parts.join(' · ')}
+      {t('Nível 2.0–8.0')} · {parts.join(' · ')}
     </span>
   );
 }

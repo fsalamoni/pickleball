@@ -10,6 +10,7 @@ import { coachMetrics, monthWindow } from '@/modules/progression/domain/supplyMe
 import { coachBadges, coachSuggestions, computeCoachHealth } from '@/modules/progression/domain/supplyHealth';
 import OwnerEngagementPanel from './OwnerEngagementPanel';
 import HealthCard from './HealthCard';
+import { t } from '@/core/i18n';
 
 /** Engajamento do professor: saúde, selos, metas, desafios e recompensas. @param {{ coach: { id: string, name?: string } }} props */
 export default function CoachEngagementPanel({ coach }) {
@@ -34,10 +35,10 @@ export default function CoachEngagementPanel({ coach }) {
 
   const summary = (
     <>
-      <HealthCard health={health} suggestions={suggestions} unknown={m.unknown} title="Saúde do seu trabalho" basePath="/aulas" />
+      <HealthCard health={health} suggestions={suggestions} unknown={m.unknown} title={t('Saúde do seu trabalho')} basePath="/aulas" />
       {badges.length > 0 && (
         <V2Surface data-testid="coach-badges">
-          <h2 className="mb-2 font-display text-lg font-bold text-ink">Seus selos</h2>
+          <h2 className="mb-2 font-display text-lg font-bold text-ink">{t('Seus selos')}</h2>
           <ul className="space-y-2">
             {badges.map((b) => (
               <li key={b.id} className="flex items-start gap-3">

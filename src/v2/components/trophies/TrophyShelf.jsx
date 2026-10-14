@@ -18,12 +18,13 @@ import { HomeEmpty, HomeAction } from '@/v2/components/home/personal/HomeSection
 import { cn } from '@/core/lib/utils';
 import { METAL } from './MedalCard';
 import CongratulateButton from './CongratulateButton';
+import { t, fmtLista } from '@/core/i18n';
 
 const MedalCardDialog = lazy(() => import('./MedalCardDialog'));
 
 function Contagem({ contagem }) {
   return (
-    <div className="flex flex-wrap gap-2" aria-label="Medalhas por metal">
+    <div className="flex flex-wrap gap-2" aria-label={t('Medalhas por metal')}>
       {[1, 2, 3].map((pos) => {
         const n = contagem[['', 'ouro', 'prata', 'bronze'][pos]];
         return (
@@ -38,15 +39,15 @@ function Contagem({ contagem }) {
 }
 
 /** Um troféu na estante: o medalhão do metal, o evento, a data. */
-function TrofeuCard({ t, onOpen, children }) {
-  const metal = METAL[t.position];
+function TrofeuCard({ t: trofeu, onOpen, children }) {
+  const metal = METAL[trofeu.position];
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure shadow-organic-sm">
       <button
         type="button"
         onClick={onOpen}
         className="flex flex-1 flex-col items-start gap-3 p-4 text-left transition-colors hover:bg-paper focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
-        aria-label={`Abrir o cartão: ${t.placeLabel} em ${t.title}`}
+        aria-label={t('Abrir o cartão: {lugar} em {evento}', { lugar: trofeu.placeLabel, evento: trofeu.title })}
       >
         <span className="flex items-center gap-3">
           <span
@@ -54,18 +55,18 @@ function TrofeuCard({ t, onOpen, children }) {
             style={{ background: metal.cor, boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${metal.cor}` }}
             aria-hidden="true"
           >
-            {t.position}º
+            {trofeu.position}º
           </span>
           <span className="min-w-0">
-            <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">{t.placeLabel}{t.shared ? ' · dividido' : ''}</span>
-            <span className="block truncate font-display text-base font-bold leading-tight text-ink">{t.title}</span>
+            <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">{trofeu.placeLabel}{trofeu.shared ? ` · ${t('dividido')}` : ''}</span>
+            <span className="block truncate font-display text-base font-bold leading-tight text-ink">{trofeu.title}</span>
           </span>
         </span>
         <span className="text-sm text-gray-500">
-          {t.subtitle}{t.date ? ` · ${dataPorExtenso(t.date)}` : ''}
-          {t.record ? ` · ${t.record.won} de ${t.record.played} jogos` : ''}
+          {trofeu.subtitle}{trofeu.date ? ` · ${dataPorExtenso(trofeu.date)}` : ''}
+          {trofeu.record ? ` · ${t('{v} de {n} jogos', { v: trofeu.record.won, n: trofeu.record.played })}` : ''}
         </span>
-        <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-ink"><Share2 className="h-3.5 w-3.5" /> Ver o cartão</span>
+        <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-ink"><Share2 className="h-3.5 w-3.5" /> {t('Ver o cartão')}</span>
       </button>
       {children && <div className="border-t border-gray-100 p-3">{children}</div>}
     </li>
@@ -84,31 +85,31 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
 
   if (q.isPending) return <V2Skeleton lines={4} />;
   if (q.isError) {
-    return <V2ErrorState inline title="Não carregou os troféus" description="Eles continuam lá — a conexão é que falhou." onRetry={() => q.refetch()} />;
+    return <V2ErrorState inline title={t('Não carregou os troféus')} description={t('Eles continuam lá — a conexão é que falhou.')} onRetry={() => q.refetch()} />;
   }
 
   const lista = aba === TROPHY_KIND.TOURNAMENT ? grupo.torneios : grupo.diasDeJogo;
   const vazioTotal = grupo.contagem.total === 0 && grupo.faltou.length === 0;
-  const quem = mine ? 'Você' : (nome || 'Esta pessoa');
+  const quem = mine ? t('Você') : (nome || t('Esta pessoa'));
 
   return (
     <div className="space-y-4">
       {grupo.faltou.length > 0 && (
-        <V2ErrorState inline title={`Ficou de fora: ${grupo.faltou.join(' e ')}`} description="A estante está incompleta até a conexão voltar." onRetry={() => q.refetch()} />
+        <V2ErrorState inline title={t('Ficou de fora: {fontes}', { fontes: fmtLista(grupo.faltou) })} description={t('A estante está incompleta até a conexão voltar.')} onRetry={() => q.refetch()} />
       )}
       {vazioTotal ? (
         <HomeEmpty
           icon={Medal}
-          actions={mine ? <HomeAction to="/torneios">Ver torneios abertos</HomeAction> : null}
+          actions={mine ? <HomeAction to="/torneios">{t('Ver torneios abertos')}</HomeAction> : null}
         >
           {mine
-            ? 'Sua estante ainda está vazia. O primeiro pódio num torneio ou num dia de jogo publicado aparece aqui, com o cartão pronto para compartilhar.'
-            : `${quem} ainda não subiu ao pódio num torneio ou dia de jogo publicado.`}
+            ? t('Sua estante ainda está vazia. O primeiro pódio num torneio ou num dia de jogo publicado aparece aqui, com o cartão pronto para compartilhar.')
+            : t('{quem} ainda não subiu ao pódio num torneio ou dia de jogo publicado.', { quem })}
         </HomeEmpty>
       ) : (
         <>
           <Contagem contagem={grupo.contagem} />
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tipo de conquista">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('Tipo de conquista')}>
             <V2FilterChip role="tab" aria-selected={aba === TROPHY_KIND.TOURNAMENT} active={aba === TROPHY_KIND.TOURNAMENT} onClick={() => setAba(TROPHY_KIND.TOURNAMENT)}>
               <Trophy className="mr-1.5 h-3.5 w-3.5" /> Torneios ({grupo.contagem.torneios.total})
             </V2FilterChip>
@@ -118,24 +119,24 @@ export default function TrophyShelf({ uid, nome = '', mine = false, compacto = f
           </div>
           {lista.length === 0 ? (
             <p className="text-sm text-gray-500">
-              {aba === TROPHY_KIND.TOURNAMENT ? 'Nenhum pódio de torneio ainda.' : 'Nenhum pódio de dia de jogo publicado ainda.'}
+              {aba === TROPHY_KIND.TOURNAMENT ? t('Nenhum pódio de torneio ainda.') : t('Nenhum pódio de dia de jogo publicado ainda.')}
             </p>
           ) : (
             <ul className={cn('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
-              {(compacto ? lista.slice(0, 4) : lista).map((t) => (
-                <TrofeuCard key={t.id} t={t} onOpen={() => setAberto(t)}>
+              {(compacto ? lista.slice(0, 4) : lista).map((tr) => (
+                <TrofeuCard key={tr.id} t={tr} onOpen={() => setAberto(tr)}>
                   {!mine && user?.uid !== uid && (
                     <CongratulateButton
                       className="w-full"
-                      contextId={trophyContextId(t)}
+                      contextId={trophyContextId(tr)}
                       toUids={[uid]}
-                      scope={t.kind === TROPHY_KIND.TOURNAMENT ? 'tournament' : 'universal'}
-                      eventTitle={`${t.title} · ${t.subtitle}`}
-                      placeLabel={t.placeLabel}
+                      scope={tr.kind === TROPHY_KIND.TOURNAMENT ? 'tournament' : 'universal'}
+                      eventTitle={`${tr.title} · ${tr.subtitle}`}
+                      placeLabel={tr.placeLabel}
                     />
                   )}
-                  {t.link && (
-                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={t.link}>{t.kind === TROPHY_KIND.TOURNAMENT ? 'Ver o torneio' : 'Ver o dia de jogo'}</Link></V2Button>
+                  {tr.link && (
+                    <V2Button asChild size="sm" variant="ghost" className="mt-1 w-full"><Link to={tr.link}>{tr.kind === TROPHY_KIND.TOURNAMENT ? t('Ver o torneio') : t('Ver o dia de jogo')}</Link></V2Button>
                   )}
                 </TrofeuCard>
               ))}

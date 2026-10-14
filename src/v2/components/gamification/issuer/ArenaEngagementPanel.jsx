@@ -7,6 +7,7 @@ import { arenaMetrics, monthWindow } from '@/modules/progression/domain/supplyMe
 import { arenaSuggestions, computeArenaHealth } from '@/modules/progression/domain/supplyHealth';
 import OwnerEngagementPanel from './OwnerEngagementPanel';
 import HealthCard from './HealthCard';
+import { t } from '@/core/i18n';
 
 /** Engajamento da arena: saúde, sugestões, metas, desafios e recompensas. @param {{ arena: { id: string, name?: string } }} props */
 export default function ArenaEngagementPanel({ arena }) {
@@ -25,7 +26,7 @@ export default function ArenaEngagementPanel({ arena }) {
   const health = useMemo(() => computeArenaHealth(m.health), [m.health]);
   const suggestions = useMemo(() => arenaSuggestions(m.health), [m.health]);
 
-  const summary = <HealthCard health={health} suggestions={suggestions} unknown={m.unknown} title="Saúde da arena" basePath={`/arenas/${arena.id}/gerir`} />;
+  const summary = <HealthCard health={health} suggestions={suggestions} unknown={m.unknown} title={t('Saúde da arena')} basePath={`/arenas/${arena.id}/gerir`} />;
   return (
     <OwnerEngagementPanel ownerType="arena" issuer={{ type: 'arena', id: arena.id, name: arena.name }} summary={summary} actuals={m.actuals} monthKey={monthWindow().key} />
   );

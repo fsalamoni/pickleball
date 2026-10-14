@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Sistema de Referral (lógica pura, sem I/O).
  *
@@ -81,17 +82,17 @@ export function buildReferralUrl(origin, code) {
 export function buildReferralShareText(code, url, options = {}) {
   const c = normalizeReferralCode(code);
   if (!c) return '';
-  const name = options.userName ? str(options.userName) : 'Eu';
+  const name = options.userName ? str(options.userName) : t('Eu');
   const custom = options.customMessage ? str(options.customMessage) : null;
 
   const lines = [
-    `🏓 ${name} te convidou para o PickleRush!`,
-    custom || 'Junte-se à maior plataforma de pickleball amador do Brasil.',
+    t('🏓 {nome} te convidou para o PickleRush!', { nome: name }),
+    custom || t('Junte-se à maior plataforma de pickleball amador do Brasil.'),
     '',
-    `Use meu código: ${c}`,
+    t('Use meu código: {codigo}', { codigo: c }),
   ];
   if (url) lines.push(url);
-  lines.push('via PickleRush');
+  lines.push(t('via PickleRush'));
   return lines.filter(Boolean).join('\n');
 }
 
@@ -164,10 +165,10 @@ export function validateReferralInput(input = {}) {
   const refereeUid = str(input.refereeUid);
   const code = normalizeReferralCode(input.code);
 
-  if (!code) return { valid: false, error: 'Código é obrigatório.', value: {} };
-  if (!isValidReferralCode(code)) return { valid: false, error: 'Código inválido.', value: {} };
+  if (!code) return { valid: false, error: t('Código é obrigatório.'), value: {} };
+  if (!isValidReferralCode(code)) return { valid: false, error: t('Código inválido.'), value: {} };
   if (referrerUid && refereeUid && referrerUid === refereeUid) {
-    return { valid: false, error: 'Não pode indicar a si mesmo.', value: {} };
+    return { valid: false, error: t('Não pode indicar a si mesmo.'), value: {} };
   }
   return {
     valid: true,

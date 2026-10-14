@@ -19,11 +19,12 @@ import {
   V2Button, V2EmptyState, V2PageIntro, V2Surface,
 } from '@/v2/ui/primitives';
 import { TermNote } from '@/v2/components/gamification/TermHint';
+import { t } from '@/core/i18n';
 
 const ABAS = [
-  { key: 'rivais', label: 'Rivais', icon: Swords, dica: 'vinculos-aba-rivais' },
-  { key: 'crews', label: 'Crews', icon: Users, dica: 'vinculos-aba-crews' },
-  { key: 'mentorias', label: 'Mentorias', icon: GraduationCap, dica: 'vinculos-aba-mentorias' },
+  { key: 'rivais', get label() { return t('Rivais'); }, icon: Swords, dica: 'vinculos-aba-rivais' },
+  { key: 'crews', get label() { return t('Crews'); }, icon: Users, dica: 'vinculos-aba-crews' },
+  { key: 'mentorias', get label() { return t('Mentorias'); }, icon: GraduationCap, dica: 'vinculos-aba-mentorias' },
 ];
 
 /**
@@ -39,15 +40,15 @@ export default function V2SocialBonds() {
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">
-        <V2PageIntro title="Vínculos" subtitle="Rivais, crews e mentorias." />
+        <V2PageIntro title={t('Vínculos')} subtitle={t('Rivais, crews e mentorias.')} />
         <V2Surface>
           <V2EmptyState
             icon={Users}
-            title="Vínculos em construção"
-            description="Esta seção estará disponível em breve."
+            title={t('Vínculos em construção')}
+            description={t('Esta seção estará disponível em breve.')}
             action={
               <V2Button asChild>
-                <Link to="/meu-desempenho">Ir para Meu desempenho</Link>
+                <Link to="/meu-desempenho">{t('Ir para Meu desempenho')}</Link>
               </V2Button>
             }
           />
@@ -63,7 +64,7 @@ function V2SocialBondsOn() {
   const uid = user?.uid;
   // `?aba=mentorias` (o aviso do convite) abre direto na aba certa.
   const [params] = useSearchParams();
-  const [aba, setAba] = useState(() => (ABAS.some((t) => t.key === params.get('aba')) ? params.get('aba') : 'rivais'));
+  const [aba, setAba] = useState(() => (ABAS.some((aba) => aba.key === params.get('aba')) ? params.get('aba') : 'rivais'));
 
   // Rivais vêm do histórico real de confrontos — não de uma coleção própria,
   // que nada preencheria.
@@ -96,7 +97,7 @@ function V2SocialBondsOn() {
   // é assim que a mensagem do service (ex.: "crew lotada") chega à tela em
   // vez de morrer no console.
   const aoFalhar = {
-    onError: (e) => setErroCrew(e?.message || 'Não foi possível concluir a ação.'),
+    onError: (e) => setErroCrew(e?.message || t('Não foi possível concluir a ação.')),
   };
   function executar(fn, variaveis) {
     setErroCrew(null);
@@ -106,41 +107,41 @@ function V2SocialBondsOn() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <V2PageIntro
-        title="Vínculos"
-        subtitle="Seus rivais de quadra, suas crews e suas mentorias."
+        title={t('Vínculos')}
+        subtitle={t('Seus rivais de quadra, suas crews e suas mentorias.')}
         action={
           <Link
             to="/gamification"
             className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline"
           >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Gamificação
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" /> {t('Gamificação')}
           </Link>
         }
       />
 
-      <div className="mb-6 flex flex-wrap gap-1.5" role="tablist" aria-label="Tipo de vínculo" data-dica="vinculos-abas">
-        {ABAS.map((t) => {
-          const Icone = t.icon;
-          const ativa = aba === t.key;
+      <div className="mb-6 flex flex-wrap gap-1.5" role="tablist" aria-label={t('Tipo de vínculo')} data-dica="vinculos-abas">
+        {ABAS.map((item) => {
+          const Icone = item.icon;
+          const ativa = aba === item.key;
           return (
             <button
-              key={t.key}
+              key={item.key}
               type="button"
               role="tab"
               aria-selected={ativa}
-              onClick={() => setAba(t.key)}
-              data-testid={`bonds-tab-${t.key}`}
-              data-dica={t.dica}
+              onClick={() => setAba(item.key)}
+              data-testid={`bonds-tab-${item.key}`}
+              data-dica={item.dica}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
                 ativa ? 'bg-ink text-white' : 'bg-paper text-gray-600 hover:bg-gray-100',
               )}
             >
               <Icone className="h-3.5 w-3.5" aria-hidden="true" />
-              {t.label}
-              {contagem[t.key] > 0 && (
+              {item.label}
+              {contagem[item.key] > 0 && (
                 <span className={cn('tabular-nums', ativa ? 'text-white/70' : 'text-gray-400')}>
-                  {contagem[t.key]}
+                  {contagem[item.key]}
                 </span>
               )}
             </button>

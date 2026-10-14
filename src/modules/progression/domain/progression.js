@@ -1,3 +1,4 @@
+import { t, tk } from '@/core/i18n';
 /**
  * Progressão do jogador (lógica pura, sem I/O).
  *
@@ -68,10 +69,10 @@ export const GOAL_METRIC = Object.freeze({
 });
 
 export const GOAL_METRIC_LABELS = Object.freeze({
-  [GOAL_METRIC.GAMES]: 'Jogos disputados',
-  [GOAL_METRIC.WINS]: 'Vitórias',
-  [GOAL_METRIC.TOURNAMENTS]: 'Torneios',
-  [GOAL_METRIC.RATING]: 'Rating',
+  [GOAL_METRIC.GAMES]: tk('Jogos disputados'),
+  [GOAL_METRIC.WINS]: tk('Vitórias'),
+  [GOAL_METRIC.TOURNAMENTS]: tk('Torneios'),
+  [GOAL_METRIC.RATING]: tk('Rating'),
 });
 
 /** Normaliza/valida o input de uma meta. */
@@ -79,7 +80,7 @@ export function normalizeGoalInput(input = {}) {
   const metric = Object.values(GOAL_METRIC).includes(input.metric) ? input.metric : GOAL_METRIC.GAMES;
   const target = Math.max(1, Math.floor(Number(input.target) || 0));
   const errors = {};
-  if (!Number(input.target) || Number(input.target) <= 0) errors.target = 'Defina um alvo maior que zero.';
+  if (!Number(input.target) || Number(input.target) <= 0) errors.target = t('Defina um alvo maior que zero.');
   return { valid: Object.keys(errors).length === 0, errors, value: { metric, target } };
 }
 

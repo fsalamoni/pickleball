@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
+import { t } from '@/core/i18n';
 
 /** Número da pontuação: inteiro como está; decimal com até 3 casas (sem zeros à toa). */
 function fmtValue(n) {
@@ -25,7 +26,7 @@ function fmtDelta(d) {
  *
  * @param {{ points: Array<{ at: number, rating: number }>, title?: string }} props
  */
-export default function RatingSparkline({ points = [], title = 'Evolução do rating' }) {
+export default function RatingSparkline({ points = [], title = t('Evolução do rating') }) {
   const valid = (points || []).filter((p) => Number.isFinite(p?.rating));
   if (valid.length < 2) return null;
 
@@ -58,7 +59,7 @@ export default function RatingSparkline({ points = [], title = 'Evolução do ra
           <div className="flex items-baseline gap-2">
             <span className="font-display text-xl font-bold tabular-nums text-ink">{fmtValue(last)}</span>
             <span
-              title="variação desde o início"
+              title={t('variação desde o início')}
               className={`text-xs font-semibold tabular-nums ${delta > 0 ? 'text-green-700' : delta < 0 ? 'text-red-600' : 'text-gray-400'}`}
             >
               {fmtDelta(delta)}

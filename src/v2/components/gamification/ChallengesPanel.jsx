@@ -13,8 +13,9 @@ import {
 import { usePeople, useClubNames } from '@/modules/progression/hooks/usePeople';
 import { cn } from '@/core/lib/utils';
 import TermHint from './TermHint';
+import { t, fmtData } from '@/core/i18n';
 
-const dataBR = (ms) => new Date(Number(ms)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+const dataBR = (ms) => fmtData(new Date(Number(ms)), { day: '2-digit', month: 'short' });
 
 /** O placar de um desafio (top 10 + a posição da própria pessoa). */
 function Leaderboard({ challenge, subjectId }) {
@@ -25,17 +26,17 @@ function Leaderboard({ challenge, subjectId }) {
   const top = ranked.slice(0, 10);
   const { people } = usePeople(top.filter((e) => e.subjectType !== 'club').map((e) => e.subjectId));
   const clubs = useClubNames(top.filter((e) => e.subjectType === 'club').map((e) => e.subjectId));
-  const nomeDe = (e) => (e.subjectType === 'club' ? clubs.get(e.subjectId) : people.get(e.subjectId)?.name) || 'Atleta';
+  const nomeDe = (e) => (e.subjectType === 'club' ? clubs.get(e.subjectId) : people.get(e.subjectId)?.name) || t('Atleta');
   if (q.isLoading) return <V2Skeleton lines={4} />;
-  if (q.isError) return <V2ErrorState inline title="Não deu para carregar o placar" onRetry={q.refetch} />;
-  if (!ranked.length) return <p className="text-sm text-gray-500">Ninguém entrou ainda. Seja a primeira pessoa.</p>;
+  if (q.isError) return <V2ErrorState inline title={t('Não deu para carregar o placar')} onRetry={q.refetch} />;
+  if (!ranked.length) return <p className="text-sm text-gray-500">{t('Ninguém entrou ainda. Seja a primeira pessoa.')}</p>;
   return (
     <div className="space-y-2">
       {eu && (
         <p className="rounded-xl bg-acid/20 p-2.5 text-sm text-ink" data-testid="my-standing">
-          Você está em <strong>{eu.position}º</strong> de {eu.total} com <strong>{eu.value} {unit}</strong>
-          {eu.toPodium != null && <> · faltam {eu.toPodium} para o pódio</>}
-          {eu.inPodium && <> · no pódio 🎉</>}
+          {t('Você está em {pos}º de {total} com {valor} {unidade}', { pos: eu.position, total: eu.total, valor: eu.value, unidade: unit })}
+          {eu.toPodium != null && <> {t('· faltam {n} para o pódio', { n: eu.toPodium })}</>}
+          {eu.inPodium && <> {t('· no pódio 🎉')}</>}
         </p>
       )}
       <ol className="space-y-1">
@@ -53,7 +54,7 @@ function Leaderboard({ challenge, subjectId }) {
           );
         })}
       </ol>
-      <p className="text-2xs text-gray-500">O placar é calculado pelo servidor a cada poucas horas, a partir dos jogos registrados.</p>
+      <p className="text-2xs text-gray-500">{t('O placar é calculado pelo servidor a cada poucas horas, a partir dos jogos registrados.')}</p>
     </div>
   );
 }
@@ -69,13 +70,13 @@ function ChallengeCard({ c, entry, onOpen, onJoin, joining }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="font-display text-base font-bold text-ink">{c.title}</p>
-            <V2Badge tone="purple">{CHALLENGE_ISSUER_LABEL[c.issuerType] || 'Desafio'}</V2Badge>
-            {c.subject === 'club' && <V2Badge tone="blue"><Users className="h-3 w-3" /> entre clubes</V2Badge>}
-            {entry && <V2Badge tone="green">você está dentro</V2Badge>}
+            <V2Badge tone="purple">{CHALLENGE_ISSUER_LABEL[c.issuerType] ? t(CHALLENGE_ISSUER_LABEL[c.issuerType]) : t('Desafio')}</V2Badge>
+            {c.subject === 'club' && <V2Badge tone="blue"><Users className="h-3 w-3" /> {t('entre clubes')}</V2Badge>}
+            {entry && <V2Badge tone="green">{t('você está dentro')}</V2Badge>}
           </div>
           {c.description && <p className="mt-0.5 text-sm text-gray-600">{c.description}</p>}
           <p className="mt-1 text-xs text-gray-500">
-            Mede: {metrica?.label || c.metric} · {dataBR(c.startsAt)} a {dataBR(c.endsAt)} · {challengeTimeLabel(c)}
+            {t('Mede: {metrica} · {inicio} a {fim} · {quando}', { metrica: metrica?.label ? t(metrica.label) : c.metric, inicio: dataBR(c.startsAt), fim: dataBR(c.endsAt), quando: challengeTimeLabel(c) })}
           </p>
           {c.prizes?.length > 0 && (
             <p className="mt-1 text-xs text-amber-700">
@@ -85,22 +86,22 @@ function ChallengeCard({ c, entry, onOpen, onJoin, joining }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <V2Button size="sm" variant="secondary" onClick={() => onOpen(c)}>Ver placar</V2Button>
+        <V2Button size="sm" variant="secondary" onClick={() => onOpen(c)}>{t('Ver placar')}</V2Button>
         {!entry && c.subject !== 'club' && estado !== 'ended' && (
           pode.ok ? (
-            <V2Button size="sm" disabled={joining} onClick={() => onJoin(c)}>Entrar no desafio</V2Button>
+            <V2Button size="sm" disabled={joining} onClick={() => onJoin(c)}>{t('Entrar no desafio')}</V2Button>
           ) : <span className="text-xs text-gray-500">{pode.reason}</span>
         )}
-        {entry && estado !== 'ended' && <span className="text-xs text-gray-500">Seu progresso é contado automaticamente.</span>}
+        {entry && estado !== 'ended' && <span className="text-xs text-gray-500">{t('Seu progresso é contado automaticamente.')}</span>}
       </div>
     </li>
   );
 }
 
 const TABS = [
-  { value: 'ativos', label: 'Ativos', icon: Target },
-  { value: 'meus', label: 'Meus desafios', icon: Flag },
-  { value: 'encerrados', label: 'Resultados', icon: Trophy },
+  { value: 'ativos', get label() { return t('Ativos'); }, icon: Target },
+  { value: 'meus', get label() { return t('Meus desafios'); }, icon: Flag },
+  { value: 'encerrados', get label() { return t('Resultados'); }, icon: Trophy },
 ];
 
 /** Descobrir, entrar e acompanhar desafios. @param {{ uid: string }} props */
@@ -124,25 +125,25 @@ export default function ChallengesPanel({ uid }) {
   const entrar = async (c) => {
     try {
       await act.join.mutateAsync(c.id);
-      toast.success(`Você entrou em “${c.title}”.`);
+      toast.success(t('Você entrou em “{titulo}”.', { titulo: c.title }));
     } catch (e) {
-      toast.error(e?.message || 'Não foi possível entrar agora.');
+      toast.error(e?.message || t('Não foi possível entrar agora.'));
     }
   };
 
   return (
     <V2Surface data-testid="challenges-panel" data-dica="desafios" className="space-y-4">
       <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <Trophy className="h-5 w-5" aria-hidden="true" /> Desafios <TermHint term="desafios" />
+        <Trophy className="h-5 w-5" aria-hidden="true" /> {t('Desafios')} <TermHint term="desafios" />
       </h2>
-      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(t) => setAba(t.value)} ariaLabel="Tipo de desafio" />
+      <V2SubTabs tabs={TABS} activeValue={aba} onSelect={(aba) => setAba(aba.value)} ariaLabel={t('Tipo de desafio')} />
       {carregando ? <V2Skeleton lines={4} /> : falhou ? (
-        <V2ErrorState inline title="Não deu para carregar os desafios" onRetry={() => { ativos.refetch(); mine.refetch(); }} />
+        <V2ErrorState inline title={t('Não deu para carregar os desafios')} onRetry={() => { ativos.refetch(); mine.refetch(); }} />
       ) : lista.length === 0 ? (
         <V2EmptyState
           icon={Trophy}
-          title={aba === 'meus' ? 'Você não está em nenhum desafio' : aba === 'encerrados' ? 'Nenhum resultado ainda' : 'Nenhum desafio aberto agora'}
-          description={aba === 'meus' ? 'Entre num desafio ativo para competir pelo placar.' : 'Quando a plataforma, uma arena, um clube ou um professor abrir um desafio, ele aparece aqui.'}
+          title={aba === 'meus' ? t('Você não está em nenhum desafio') : aba === 'encerrados' ? t('Nenhum resultado ainda') : t('Nenhum desafio aberto agora')}
+          description={aba === 'meus' ? t('Entre num desafio ativo para competir pelo placar.') : t('Quando a plataforma, uma arena, um clube ou um professor abrir um desafio, ele aparece aqui.')}
         />
       ) : (
         <ul className="space-y-3">
@@ -156,7 +157,7 @@ export default function ChallengesPanel({ uid }) {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{aberto.emoji} {aberto.title}</DialogTitle>
-              <DialogDescription>{aberto.rules || aberto.description || 'Quem somar mais, vence.'}</DialogDescription>
+              <DialogDescription>{aberto.rules || aberto.description || t('Quem somar mais, vence.')}</DialogDescription>
             </DialogHeader>
             <Leaderboard challenge={aberto} subjectId={uid} />
           </DialogContent>

@@ -7,37 +7,38 @@ import { useLetterActions, useReceivedLetters, useSentLetters } from '@/modules/
 import { usePeople } from '@/modules/progression/hooks/usePeople';
 import { LETTER_MAX, LETTER_STARTERS, letterDocId, letterForRecipient, letterTargets } from '@/modules/progression/domain/partnerLetters';
 import TermHint from './TermHint';
+import { t, fmtData } from '@/core/i18n';
 
-const quando = (ms) => new Date(Number(ms)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+const quando = (ms) => fmtData(new Date(Number(ms)), { day: '2-digit', month: 'short' });
 
 function WriteDialog({ target, people, onClose, onSend, sending }) {
   const [text, setText] = useState('');
   const [showName, setShowName] = useState(false);
-  const p = people.get(target.toUid) || { name: 'Atleta', photoUrl: '' };
+  const p = people.get(target.toUid) || { name: t('Atleta'), photoUrl: '' };
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Carta para {p.name}</DialogTitle>
-          <DialogDescription>Uma frase de gratidão pela parceria. Por padrão ela chega sem o seu nome.</DialogDescription>
+          <DialogTitle>{t('Carta para {nome}', { nome: p.name })}</DialogTitle>
+          <DialogDescription>{t('Uma frase de gratidão pela parceria. Por padrão ela chega sem o seu nome.')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-1.5">
             {LETTER_STARTERS.map((s) => (
-              <button key={s} type="button" onClick={() => setText((t) => (t ? t : s))}
-                className="rounded-full border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-ink/40">{s.trim()}</button>
+              <button key={s} type="button" onClick={() => setText((atual) => (atual || t(s)))}
+                className="rounded-full border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-ink/40">{t(s).trim()}</button>
             ))}
           </div>
           <V2Textarea
-            value={text} rows={4} maxLength={LETTER_MAX} placeholder="Escreva com carinho…" aria-label="Texto da carta"
+            value={text} rows={4} maxLength={LETTER_MAX} placeholder={t('Escreva com carinho…')} aria-label={t('Texto da carta')}
             onChange={(e) => setText(e.target.value)}
           />
           <p className="text-right text-2xs text-gray-500">{text.length}/{LETTER_MAX}</p>
-          <V2Toggle id="letter-name" checked={showName} onChange={setShowName} label="Assinar com o meu nome" hint="Desligado: a pessoa recebe como “Um parceiro de dupla”." />
+          <V2Toggle id="letter-name" checked={showName} onChange={setShowName} label={t('Assinar com o meu nome')} hint={t('Desligado: a pessoa recebe como “Um parceiro de dupla”.')} />
         </div>
         <DialogFooter>
-          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
-          <V2Button disabled={text.trim().length < 3 || sending} onClick={() => onSend({ text, showName })}>Enviar carta</V2Button>
+          <V2Button variant="ghost" onClick={onClose}>{t('Cancelar')}</V2Button>
+          <V2Button disabled={text.trim().length < 3 || sending} onClick={() => onSend({ text, showName })}>{t('Enviar carta')}</V2Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -89,16 +90,16 @@ export default function LettersPanel({ uid, fromName, records, windowDays = 30 }
 
   if (received.isLoading || sent.isLoading) return <V2Skeleton className="h-40 rounded-4xl" />;
   if (received.isError || sent.isError) {
-    return <V2Surface><V2ErrorState inline title="Não deu para carregar as cartas" onRetry={() => { received.refetch(); }} /></V2Surface>;
+    return <V2Surface><V2ErrorState inline title={t('Não deu para carregar as cartas')} onRetry={() => { received.refetch(); }} /></V2Surface>;
   }
 
   const enviar = async ({ text, showName }) => {
     try {
       await act.send.mutateAsync({ fromName, toUid: writing.toUid, matchKey: writing.matchKey, text, showName });
-      toast.success('Carta enviada.');
+      toast.success(t('Carta enviada.'));
       setWriting(null);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar agora.');
+      toast.error(err?.message || t('Não foi possível enviar agora.'));
     }
   };
 
@@ -106,17 +107,17 @@ export default function LettersPanel({ uid, fromName, records, windowDays = 30 }
     <V2Surface data-testid="letters-panel" data-dica="cartas" className="space-y-5">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Mail className="h-5 w-5" aria-hidden="true" /> Cartas dos parceiros <TermHint term="cartas" />
+          <Mail className="h-5 w-5" aria-hidden="true" /> {t('Cartas dos parceiros')} <TermHint term="cartas" />
         </h2>
         {received.unread > 0 && <V2Badge tone="acid">{received.unread} {received.unread === 1 ? 'nova' : 'novas'}</V2Badge>}
       </div>
 
       {candidatos.length > 0 && (
         <div className="rounded-2xl bg-paper p-3">
-          <p className="mb-2 text-sm font-bold text-ink">Quem jogou com você merece um obrigado</p>
+          <p className="mb-2 text-sm font-bold text-ink">{t('Quem jogou com você merece um obrigado')}</p>
           <div className="flex flex-wrap gap-2">
             {candidatos.map((c) => {
-              const p = people.get(c.toUid) || { name: 'Atleta', photoUrl: '' };
+              const p = people.get(c.toUid) || { name: t('Atleta'), photoUrl: '' };
               return (
                 <button key={c.toUid} type="button" onClick={() => setWriting(c)}
                   className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3 text-xs font-semibold text-ink hover:border-ink/40">
@@ -129,7 +130,7 @@ export default function LettersPanel({ uid, fromName, records, windowDays = 30 }
       )}
 
       {received.letters.length === 0 ? (
-        <V2EmptyState icon={MailOpen} title="Nenhuma carta ainda" description="Quando um parceiro de dupla escrever para você, a carta aparece aqui." />
+        <V2EmptyState icon={MailOpen} title={t('Nenhuma carta ainda')} description={t('Quando um parceiro de dupla escrever para você, a carta aparece aqui.')} />
       ) : (
         <ul className="space-y-2">
           {received.letters.map((raw) => {
@@ -141,9 +142,9 @@ export default function LettersPanel({ uid, fromName, records, windowDays = 30 }
                 <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500">
                   <span>{l.from} · {quando(l.createdAt)}</span>
                   <span className="flex gap-1">
-                    <button type="button" aria-label="Denunciar carta" title="Denunciar" onClick={() => { act.report.mutate(l.id); toast('Carta denunciada. A moderação vai analisar.'); }}
+                    <button type="button" aria-label={t('Denunciar carta')} title={t('Denunciar')} onClick={() => { act.report.mutate(l.id); toast(t('Carta denunciada. A moderação vai analisar.')); }}
                       className="rounded-full p-1.5 hover:bg-paper"><Flag className="h-3.5 w-3.5" /></button>
-                    <button type="button" aria-label="Apagar carta" title="Apagar" onClick={() => act.remove.mutate(l.id)}
+                    <button type="button" aria-label={t('Apagar carta')} title={t('Apagar')} onClick={() => act.remove.mutate(l.id)}
                       className="rounded-full p-1.5 hover:bg-paper"><Trash2 className="h-3.5 w-3.5" /></button>
                   </span>
                 </div>

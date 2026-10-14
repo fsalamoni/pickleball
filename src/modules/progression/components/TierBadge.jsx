@@ -2,6 +2,7 @@ import React from 'react';
 import { Crown } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { tierFromXp, TIERS } from '../domain/tiers.js';
+import { t } from '@/core/i18n';
 
 /**
  * Mapa de cor Tailwind por token de cor do tier.
@@ -70,10 +71,10 @@ export default function TierBadge({
         sizeClass,
         className,
       )}
-      title={tier.description}
+      title={t(tier.description)}
     >
       {showIcon && <span aria-hidden="true">{tier.icon}</span>}
-      {showName && <span>{tier.name}</span>}
+      {showName && <span>{t(tier.name)}</span>}
       {withCrown && tier.name === 'Imortal' && (
         <Crown className="h-3 w-3" />
       )}

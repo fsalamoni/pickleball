@@ -13,12 +13,13 @@
 import React, { forwardRef } from 'react';
 import { initialsFor } from '@/components/ui/user-avatar';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 /** As cores dos metais sobre ink. Ouro é o acid da marca: o título é a casa. */
 export const METAL = Object.freeze({
-  1: { cor: '#D4F82E', nome: 'Ouro' },
-  2: { cor: '#D5DBE5', nome: 'Prata' },
-  3: { cor: '#E0A469', nome: 'Bronze' },
+  1: { cor: '#D4F82E', get nome() { return t('Ouro'); } },
+  2: { cor: '#D5DBE5', get nome() { return t('Prata'); } },
+  3: { cor: '#E0A469', get nome() { return t('Bronze'); } },
 });
 
 const F = {
@@ -72,7 +73,7 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
   if (!card) return null;
   const podio = card.mode === 'podio';
   const cor = METAL[card.position || 1].cor;
-  const kicker = card.event.kind === 'dia_de_jogo' ? 'Dia de jogo' : 'Torneio';
+  const kicker = card.event.kind === 'dia_de_jogo' ? t('Dia de jogo') : t('Torneio');
 
   return (
     <div
@@ -97,7 +98,7 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
             {/* PNG direto, sem <picture>: a captura da imagem só embute o
                 `src` — o WebP do <source> saía como imagem quebrada. */}
             <img src="/logo-escuro.png" alt="" width={320} height={320} className="h-[2.4em] w-auto shrink-0 object-contain" />
-            <span className="font-display font-bold tracking-wide text-white">PickleRush</span>
+            <span className="font-display font-bold tracking-wide text-white">{t('PickleRush')}</span>
           </div>
           {card.host ? (
             <div className="flex min-w-0 items-center" style={{ gap: '0.5em' }}>
@@ -112,7 +113,7 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
         {/* O degrau */}
         <div style={{ marginTop: '6cqw' }}>
           <p className="font-bold uppercase tracking-[0.22em]" style={{ fontSize: F.kicker, color: cor }}>
-            {podio ? 'Pódio' : METAL[card.position].nome}
+            {podio ? t('Pódio') : METAL[card.position].nome}
           </p>
           <h2 className="cartao-titulo font-display font-black leading-[0.95] tracking-tight text-white" style={{ fontSize: podio ? 'clamp(22px, 10cqw, 60px)' : F.degrau, marginTop: '0.1em' }}>
             {podio ? card.event.subtitle || card.event.title : card.headline}
@@ -156,8 +157,8 @@ const MedalCard = forwardRef(function MedalCard({ card, qrDataUrl = '', classNam
           <p className="italic leading-snug text-white/85" style={{ fontSize: F.frase, maxWidth: qrDataUrl ? '68%' : '100%' }}>“{card.saying}”</p>
           {qrDataUrl && (
             <div className="flex shrink-0 flex-col items-center" style={{ gap: '0.4em', fontSize: F.micro }}>
-              <img src={qrDataUrl} alt="QR Code" className="rounded-md bg-white" style={{ width: '17cqw', height: '17cqw', padding: '0.3em' }} />
-              <span className="text-white/60">picklerush.web.app</span>
+              <img src={qrDataUrl} alt={t('QR Code')} className="rounded-md bg-white" style={{ width: '17cqw', height: '17cqw', padding: '0.3em' }} />
+              <span className="text-white/60">{t('picklerush.web.app')}</span>
             </div>
           )}
         </footer>

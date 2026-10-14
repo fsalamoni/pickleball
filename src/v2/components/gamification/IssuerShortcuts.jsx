@@ -7,6 +7,7 @@ import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useMyClubs } from '@/modules/clubs/hooks/useClubs';
 import { issuerLinks } from './issuerLinks';
+import { t } from '@/core/i18n';
 
 const ICON = { admin: ShieldCheck, arena: Building2, coach: GraduationCap, club: Users };
 
@@ -29,8 +30,8 @@ export default function IssuerShortcuts() {
   if (links.length === 0) return null;
   return (
     <V2Surface data-testid="issuer-shortcuts" data-dica="oferecer">
-      <h2 className="mb-1 font-display text-lg font-bold text-ink">Você também oferece</h2>
-      <p className="mb-3 text-sm text-gray-500">Crie desafios e recompensas para o seu público e acompanhe o engajamento.</p>
+      <h2 className="mb-1 font-display text-lg font-bold text-ink">{t('Você também oferece')}</h2>
+      <p className="mb-3 text-sm text-gray-500">{t('Crie desafios e recompensas para o seu público e acompanhe o engajamento.')}</p>
       <ul className="space-y-2">
         {links.map((l) => {
           const Icon = ICON[l.kind] || Users;

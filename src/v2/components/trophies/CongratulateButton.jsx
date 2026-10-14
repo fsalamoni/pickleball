@@ -16,6 +16,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { logger } from '@/core/lib/logger';
 import { V2Button } from '@/v2/ui/primitives';
+import { t } from '@/core/i18n';
 
 const PREF = (contextId) => `parabens:${contextId}`;
 
@@ -42,7 +43,7 @@ export default function CongratulateButton({ contextId, toUids = [], scope = 'to
         message: `Parabéns pelo ${placeLabel} — ${eventTitle}`.slice(0, 280),
       })));
       const ok = outros.filter((_, i) => resultados[i].status === 'fulfilled');
-      if (ok.length === 0) throw resultados[0]?.reason || new Error('Não foi possível parabenizar.');
+      if (ok.length === 0) throw resultados[0]?.reason || new Error(t('Não foi possível parabenizar.'));
       await notifyUsers(ok, {
         type: NOTIFICATION_TYPE.GAMIFICATION,
         title: 'Você recebeu parabéns',
@@ -56,23 +57,23 @@ export default function CongratulateButton({ contextId, toUids = [], scope = 'to
       setFeito(true);
       writeViewPreference(me, PREF(contextId), '1');
       qc.invalidateQueries({ queryKey: ['user-kudo-index', me] });
-      toast.success('Parabéns enviado! Você ganhou XP por torcer.');
+      toast.success(t('Parabéns enviado! Você ganhou XP por torcer.'));
     },
-    onError: (err) => toast.error(err?.message || 'Não foi possível parabenizar agora.'),
+    onError: (err) => toast.error(err?.message || t('Não foi possível parabenizar agora.')),
   });
 
   if (outros.length === 0) return null;
   if (!me) {
     return (
       <V2Button asChild size={size} variant={variant} className={className}><Link to="/login">
-        <PartyPopper className="h-4 w-4" /> Entre para parabenizar</Link>
+        <PartyPopper className="h-4 w-4" /> {t('Entre para parabenizar')}</Link>
       </V2Button>
     );
   }
   return (
     <V2Button size={size} variant={feito ? 'ghost' : variant} className={className} disabled={feito || mut.isPending} onClick={() => mut.mutate()}>
       {feito ? <Check className="h-4 w-4 text-green-600" /> : <PartyPopper className="h-4 w-4" />}
-      {feito ? 'Parabéns enviado' : mut.isPending ? 'Enviando…' : 'Parabenizar'}
+      {feito ? t('Parabéns enviado') : mut.isPending ? t('Enviando…') : t('Parabenizar')}
     </V2Button>
   );
 }

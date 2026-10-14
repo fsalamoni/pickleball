@@ -45,6 +45,7 @@ import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { HUB_TABS, abaDaUrl } from '@/v2/components/gamification/hubTabs';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import { useDebriefSettings } from '@/modules/training/hooks/useDebriefs';
+import { t, fmtNumero } from '@/core/i18n';
 
 /**
  * V2GamificationHome — o hub da gamificação, em cinco abas:
@@ -59,13 +60,13 @@ export default function V2GamificationHome() {
   if (!gamificationOn) {
     return (
       <div className="mx-auto max-w-[1000px]">
-        <V2PageIntro title="Gamificação" subtitle="Veja missões, conquistas, trilhas de XP e convites em um só lugar." />
+        <V2PageIntro title={t('Gamificação')} subtitle={t('Veja missões, conquistas, trilhas de XP e convites em um só lugar.')} />
         <V2Surface>
           <V2EmptyState
             icon={Sparkles}
-            title="Gamificação V2 em construção"
-            description="Esta seção estará disponível em breve. Por enquanto, explore as conquistas clássicas em 'Meu desempenho'."
-            action={<V2Button asChild><Link to="/meu-desempenho">Ir para Meu desempenho</Link></V2Button>}
+            title={t('Gamificação V2 em construção')}
+            description={t('Esta seção estará disponível em breve. Por enquanto, explore as conquistas clássicas em “Meu desempenho”.')}
+            action={<V2Button asChild><Link to="/meu-desempenho">{t('Ir para Meu desempenho')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -158,7 +159,7 @@ function V2GamificationHomeOn() {
   if (engine.isLoading) {
     return (
       <div className="mx-auto max-w-[1100px]">
-        <V2PageIntro title="Gamificação" subtitle="..." />
+        <V2PageIntro title={t('Gamificação')} subtitle="..." />
         <V2Skeleton className="h-96 rounded-4xl" />
       </div>
     );
@@ -166,8 +167,8 @@ function V2GamificationHomeOn() {
   if (engine.isError && !engine.stats) {
     return (
       <div className="mx-auto max-w-[1100px]">
-        <V2PageIntro title="Gamificação" subtitle="Missões, conquistas e competição." />
-        <V2Surface><V2ErrorState title="Não deu para carregar a sua jornada" onRetry={engine.refetch} /></V2Surface>
+        <V2PageIntro title={t('Gamificação')} subtitle={t('Missões, conquistas e competição.')} />
+        <V2Surface><V2ErrorState title={t('Não deu para carregar a sua jornada')} onRetry={engine.refetch} /></V2Surface>
       </div>
     );
   }
@@ -178,13 +179,13 @@ function V2GamificationHomeOn() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-5" data-testid="gamification-hub">
       <V2PageIntro
-        title="Gamificação"
-        subtitle="Missões, conquistas, temporada, desafios e recompensas — tudo medido pelo que você joga de verdade."
+        title={t('Gamificação')}
+        subtitle={t('Missões, conquistas, temporada, desafios e recompensas — tudo medido pelo que você joga de verdade.')}
         action={
           <div className="flex items-center gap-2">
-            <V2Badge tone="green"><Zap className="h-3.5 w-3.5" /> {xp.total.toLocaleString('pt-BR')} XP</V2Badge>
-            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/como-funciona" data-dica="gamificacao-guia" aria-label="Como funciona a gamificação"><CircleHelp className="h-4 w-4" /></Link></V2Button>
-            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/configuracoes" data-dica="gamificacao-preferencias" aria-label="Preferências da gamificação"><Settings2 className="h-4 w-4" /></Link></V2Button>
+            <V2Badge tone="green"><Zap className="h-3.5 w-3.5" /> {fmtNumero(xp.total)} XP</V2Badge>
+            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/como-funciona" data-dica="gamificacao-guia" aria-label={t('Como funciona a gamificação')}><CircleHelp className="h-4 w-4" /></Link></V2Button>
+            <V2Button asChild variant="ghost" size="sm"><Link to="/gamification/configuracoes" data-dica="gamificacao-preferencias" aria-label={t('Preferências da gamificação')}><Settings2 className="h-4 w-4" /></Link></V2Button>
           </div>
         }
       />
@@ -196,28 +197,28 @@ function V2GamificationHomeOn() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><Sparkles className="h-5 w-5" /></div>
             <div>
               <div className="flex items-center gap-1"><TierBadge xp={xp.total} size="sm" /><TermHint term="tier" /></div>
-              <p className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">Nível {xp.level.level} · {xp.level.xpIntoLevel}/{xp.level.xpForNext} XP <TermHint term="nivel" className="h-5 w-5" /></p>
+              <p className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">{t('Nível {n} · {atual}/{proximo} XP', { n: xp.level.level, atual: xp.level.xpIntoLevel, proximo: xp.level.xpForNext })} <TermHint term="nivel" className="h-5 w-5" /></p>
             </div>
           </div>
           <Link to="/gamification#sequencia-card" className="flex items-center gap-3 rounded-2xl hover:bg-paper">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600"><Flame className="h-5 w-5" aria-hidden="true" /></div>
             <div>
               <p className="text-2xl font-bold tabular-nums text-ink">{streak.weeks}</p>
-              <p className="text-xs text-gray-500">{streak.weeks === 1 ? 'semana seguida' : 'semanas seguidas'}{streak.status === 'em_risco' ? ' · jogue até domingo' : ''}</p>
+              <p className="text-xs text-gray-500">{streak.weeks === 1 ? t('semana seguida') : t('semanas seguidas')}{streak.status === 'em_risco' ? t(' · jogue até domingo') : ''}</p>
             </div>
           </Link>
           <Link to="/conquistas" className="flex items-center gap-3 rounded-2xl hover:bg-paper">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><Award className="h-5 w-5" /></div>
             <div>
               <p className="text-2xl font-bold tabular-nums text-ink">{engine.achievements.unlockedCount}<span className="text-sm text-gray-400">/{totalAch}</span></p>
-              <p className="text-xs text-gray-500">conquistas · ver todas</p>
+              <p className="text-xs text-gray-500">{t('conquistas · ver todas')}</p>
             </div>
           </Link>
         </div>
         {xp.tierProgress.next && (
           <div className="mt-4 border-t border-gray-100 pt-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Próximo tier: <strong className="text-ink">{xp.tierProgress.next.name}</strong> {xp.tierProgress.next.icon}</span>
+              <span className="text-gray-500">{t('Próximo tier:')} <strong className="text-ink">{xp.tierProgress.next.name}</strong> {xp.tierProgress.next.icon}</span>
               <span className="font-bold tabular-nums text-ink">{Math.round(xp.tierProgress.progress * 100)}%</span>
             </div>
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
@@ -227,7 +228,7 @@ function V2GamificationHomeOn() {
         )}
       </V2Surface>
 
-      <V2SectionNav sections={abasVisiveis} activeId={aba} onSelect={trocarAba} ariaLabel="Seções da gamificação" dica="gamificacao-abas" />
+      <V2SectionNav sections={abasVisiveis} activeId={aba} onSelect={trocarAba} ariaLabel={t('Seções da gamificação')} dica="gamificacao-abas" />
 
       <HowItWorks tab={aba} />
 
@@ -240,8 +241,8 @@ function V2GamificationHomeOn() {
           {isModuleOn('weekly_review') && !review.isLoading && review.review && <PeriodReviewCard review={review.review} />}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Award className="h-5 w-5" /> Conquistas em destaque <TermHint term="conquistas" /></h2>
-              <Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">Ver todas <ChevronRight className="h-4 w-4" /></Link>
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Award className="h-5 w-5" /> {t('Conquistas em destaque')} <TermHint term="conquistas" /></h2>
+              <Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">{t('Ver todas')} <ChevronRight className="h-4 w-4" /></Link>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {unlockedHighlights.map((a) => <AchievementCardV2 key={a.id} achievement={a} compact />)}
@@ -258,7 +259,7 @@ function V2GamificationHomeOn() {
           <XpBreakdownCard uid={uid} xp={xp} />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <V2Surface>
-              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> Trilhas paralelas <TermHint term="trilhas" /></h2>
+              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> {t('Trilhas paralelas')} <TermHint term="trilhas" /></h2>
               <SkillTreeBars trees={engine.skillTrees} compact />
             </V2Surface>
             <div id="convite" className="scroll-mt-6">
@@ -302,7 +303,7 @@ function V2GamificationHomeOn() {
           {isModuleOn('social_bonds') && (
             <Link to="/vinculos" className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-gray-200 hover:bg-paper">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-700"><Users className="h-5 w-5" aria-hidden="true" /></div>
-              <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">Vínculos</p><p className="text-xs text-gray-500">Rivais, crews e mentorias</p></div>
+              <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">{t('Vínculos')}</p><p className="text-xs text-gray-500">{t('Rivais, crews e mentorias')}</p></div>
               <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
             </Link>
           )}
@@ -334,10 +335,10 @@ function MissionsMini({ daily, onOpen }) {
     <V2Surface data-testid="missions-mini" className="!p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> Missões de hoje</h2>
-          <p className="text-sm text-gray-500">{feitas} de {lista.length} cumpridas. {feitas === lista.length && lista.length > 0 ? 'Bônus do dia liberado!' : 'Jogue e elas avançam sozinhas.'}</p>
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink"><Target className="h-5 w-5" /> {t('Missões de hoje')}</h2>
+          <p className="text-sm text-gray-500">{feitas} de {lista.length} cumpridas. {feitas === lista.length && lista.length > 0 ? t('Bônus do dia liberado!') : t('Jogue e elas avançam sozinhas.')}</p>
         </div>
-        <V2Button size="sm" variant="secondary" onClick={onOpen}>Ver missões</V2Button>
+        <V2Button size="sm" variant="secondary" onClick={onOpen}>{t('Ver missões')}</V2Button>
       </div>
     </V2Surface>
   );
@@ -350,14 +351,14 @@ function LinkTiles({ hallOn, bondsOn }) {
       {bondsOn && (
         <Link to="/vinculos" data-testid="link-vinculos" className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-gray-200 hover:bg-paper">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-700"><Users className="h-5 w-5" aria-hidden="true" /></div>
-          <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">Vínculos</p><p className="text-xs text-gray-500">Rivais, crews e mentorias</p></div>
+          <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">{t('Vínculos')}</p><p className="text-xs text-gray-500">{t('Rivais, crews e mentorias')}</p></div>
           <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
         </Link>
       )}
       {hallOn && (
         <Link to="/hall-da-fama" data-testid="link-hall-da-fama" className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-gray-200 hover:bg-paper">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><Trophy className="h-5 w-5" aria-hidden="true" /></div>
-          <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">Hall da Fama</p><p className="text-xs text-gray-500">Temporada do mês e os maiores de todos os tempos</p></div>
+          <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">{t('Hall da Fama')}</p><p className="text-xs text-gray-500">{t('Temporada do mês e os maiores de todos os tempos')}</p></div>
           <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
         </Link>
       )}

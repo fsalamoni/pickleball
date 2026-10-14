@@ -6,6 +6,7 @@ import { reviewHeadline, reviewHighlights } from '@/modules/progression/domain/p
 import { achievementName } from './achievementName';
 import { cn } from '@/core/lib/utils';
 import TermHint from './TermHint';
+import { t, fmtLista } from '@/core/i18n';
 
 /** O corpo da revisão (manchete + destaques). Reaproveitado no card e na página. */
 export function ReviewBody({ review, limit = null }) {
@@ -16,7 +17,7 @@ export function ReviewBody({ review, limit = null }) {
       <p className="font-display text-base font-bold text-ink">{reviewHeadline(review)}</p>
       {review.incomplete?.length > 0 && (
         <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Alguns dados não carregaram ({review.incomplete.join(', ')}). Os números abaixo podem estar incompletos.
+          {t('Alguns dados não carregaram ({fontes}). Os números abaixo podem estar incompletos.', { fontes: fmtLista(review.incomplete) })}
         </p>
       )}
       {mostrar.length > 0 && (
@@ -40,7 +41,7 @@ export default function PeriodReviewCard({ review }) {
     <V2Surface data-testid="period-review-card" data-dica="revisao-semana">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <CalendarDays className="h-5 w-5" aria-hidden="true" /> Sua semana em revisão <TermHint term="revisao" />
+          <CalendarDays className="h-5 w-5" aria-hidden="true" /> {t('Sua semana em revisão')} <TermHint term="revisao" />
         </h2>
         <span className="text-2xs font-semibold uppercase tracking-wide text-gray-500">{review.window.label}</span>
       </div>
@@ -49,7 +50,7 @@ export default function PeriodReviewCard({ review }) {
         to="/gamification/revisao"
         className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline"
       >
-        Ver a revisão completa <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        {t('Ver a revisão completa')} <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Link>
     </V2Surface>
   );

@@ -14,6 +14,7 @@ import { getModality } from '@/modules/tournament/services/modalityService.js';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService.js';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants.js';
 import { gameDayTrophies, tournamentTrophies } from '../domain/trophies.js';
+import { t } from '@/core/i18n';
 
 const COL_RANKING = 'club_event_games';
 const uniq = (xs) => Array.from(new Set(xs.filter(Boolean)));
@@ -42,7 +43,7 @@ export async function listTournamentTrophies(uid) {
 }
 
 /** Os troféus de DIA DE JOGO: os dias publicados em que jogou, com TODOS os jogos de cada dia. */
-export async function listGameDayTrophies(uid, nome = 'Atleta') {
+export async function listGameDayTrophies(uid, nome = t('Atleta')) {
   if (!db) return [];
   const [a, b] = await Promise.all([
     getDocs(query(collection(db, COL_RANKING), where('side_a_ids', 'array-contains', uid))),
@@ -65,12 +66,12 @@ export async function listGameDayTrophies(uid, nome = 'Atleta') {
 export async function listMyTrophies(uid) {
   if (!uid) return { torneios: [], diasDeJogo: [], perfil: null };
   const perfil = await getAthlete(uid).catch(() => null);
-  const nome = perfil?.platform_name || perfil?.full_name || 'Atleta';
-  const [t, g] = await Promise.allSettled([listTournamentTrophies(uid), listGameDayTrophies(uid, nome)]);
-  if (t.status === 'rejected' && g.status === 'rejected') throw t.reason;
+  const nome = perfil?.platform_name || perfil?.full_name || t('Atleta');
+  const [tr, g] = await Promise.allSettled([listTournamentTrophies(uid), listGameDayTrophies(uid, nome)]);
+  if (tr.status === 'rejected' && g.status === 'rejected') throw tr.reason;
   const foto = perfil?.photo_url || null;
   const diasDeJogo = g.status === 'fulfilled'
     ? g.value.map((x) => ({ ...x, people: x.people.map((p) => (p.user_id === uid ? { ...p, photo_url: foto } : p)) }))
     : undefined;
-  return { torneios: t.status === 'fulfilled' ? t.value : undefined, diasDeJogo, perfil };
+  return { torneios: tr.status === 'fulfilled' ? tr.value : undefined, diasDeJogo, perfil };
 }

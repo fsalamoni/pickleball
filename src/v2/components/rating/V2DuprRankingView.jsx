@@ -14,10 +14,11 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t } from '@/core/i18n';
 
 const FORMATS = [
-  { id: 'doubles', label: 'Duplas' },
-  { id: 'singles', label: 'Simples' },
+  { id: 'doubles', get label() { return t('Duplas'); } },
+  { id: 'singles', get label() { return t('Simples'); } },
 ];
 
 function medalEmoji(position) {
@@ -39,31 +40,23 @@ function DuprExplainer() {
     <V2Surface className="mb-8">
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-          <span className="font-semibold text-ink">Como funciona este ranking?</span>
-          <span className="text-xs text-gray-500 group-open:hidden">ver explicação</span>
-          <span className="hidden text-xs text-gray-500 group-open:inline">ocultar</span>
+          <span className="font-semibold text-ink">{t('Como funciona este ranking?')}</span>
+          <span className="text-xs text-gray-500 group-open:hidden">{t('ver explicação')}</span>
+          <span className="hidden text-xs text-gray-500 group-open:inline">{t('ocultar')}</span>
         </summary>
         <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
           <p>
-            É um <strong>ranking próprio da plataforma</strong>, na <strong>mesma escala do DUPR
-            (2.000 a 8.000)</strong> e desenhado para se comportar como ele.
+            {t('É um ranking próprio da plataforma, na mesma escala do DUPR (2.000 a 8.000) e desenhado para se comportar como ele.')}
           </p>
           <ul className="list-disc space-y-1.5 pl-5">
-            <li><strong>Baseado no placar</strong>, não só em vitória/derrota: uma <strong>derrota
-              apertada contra um adversário mais forte pode subir</strong> o rating; uma vitória
-              magra sobre iguais quase não mexe.</li>
-            <li><strong>Confiabilidade</strong> cresce com os jogos — ratings maduros se movem pouco;
-              novatos convergem rápido (por isso a marca <em>provisório</em> no começo).</li>
-            <li><strong>Simples e duplas</strong> têm ratings separados (como no DUPR).</li>
-            <li>A <strong>semente inicial</strong> vem do rating DUPR informado no perfil (quando houver)
-              ou do seu nível de nivelamento; W.O. não conta.</li>
-            <li>Conta os jogos finalizados de <strong>torneios públicos e dias de jogo publicados</strong> da
-              plataforma, em que <strong>todos os atletas têm conta</strong> — partida com alguém inscrito só
-              pelo nome fica de fora para todos.</li>
+            <li><strong>{t('Baseado no placar')}</strong>{': '}{t('não só em vitória/derrota: uma derrota apertada contra um adversário mais forte pode subir o rating; uma vitória magra sobre iguais quase não mexe.')}</li>
+            <li><strong>{t('Confiabilidade')}</strong>{': '}{t('cresce com os jogos — ratings maduros se movem pouco; novatos convergem rápido (por isso a marca provisório no começo).')}</li>
+            <li><strong>{t('Simples e duplas')}</strong> {t('têm ratings separados (como no DUPR).')}</li>
+            <li>{t('A semente inicial vem do rating DUPR informado no perfil (quando houver) ou do seu nível de nivelamento; W.O. não conta.')}</li>
+            <li>{t('Conta os jogos finalizados de torneios públicos e dias de jogo publicados da plataforma, em que todos os atletas têm conta — partida com alguém inscrito só pelo nome fica de fora para todos.')}</li>
           </ul>
           <p className="text-xs text-gray-500">
-            ⚠️ Não é o <strong>rating oficial do DUPR</strong> (o algoritmo do DUPR é proprietário) —
-            é uma aproximação independente, na mesma escala.
+            {t('⚠️ Não é o rating oficial do DUPR (o algoritmo do DUPR é proprietário) — é uma aproximação independente, na mesma escala.')}
           </p>
         </div>
       </details>
@@ -98,8 +91,8 @@ export default function V2DuprRankingView() {
   return (
     <div>
       <V2PageIntro
-        title="Nível de habilidade · escala 2.0–8.0"
-        subtitle="Ranking próprio no formato DUPR, calculado pelos jogos da plataforma. Não é o rating oficial do DUPR."
+        title={t('Nível de habilidade · escala 2.0–8.0')}
+        subtitle={t('Ranking próprio no formato DUPR, calculado pelos jogos da plataforma. Não é o rating oficial do DUPR.')}
         /* Não há "Recalcular": o servidor refaz os três rankings a cada
            resultado que entra, muda ou sai. Ver `RankingAutomatico`. */
       />
@@ -118,7 +111,7 @@ export default function V2DuprRankingView() {
                 format === f.id ? 'bg-ink text-white shadow-sm' : 'text-gray-500 hover:text-ink',
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -126,7 +119,7 @@ export default function V2DuprRankingView() {
           icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome, cidade ou estado"
+          placeholder={t('Buscar por nome, cidade ou estado')}
         />
       </V2Surface>
 
@@ -136,8 +129,8 @@ export default function V2DuprRankingView() {
         // Falha não é "ranking ainda não calculado" (docs/27-FALHA-NAO-E-VAZIO.md).
         <V2Surface>
           <V2ErrorState
-            title="Não foi possível carregar o ranking"
-            description="O rating continua calculado — só não conseguimos buscá-lo agora."
+            title={t('Não foi possível carregar o ranking')}
+            description={t('O rating continua calculado — só não conseguimos buscá-lo agora.')}
             onRetry={() => refetch()}
           />
         </V2Surface>
@@ -145,10 +138,10 @@ export default function V2DuprRankingView() {
         <V2Surface>
           <V2EmptyState
             icon={TrendingUp}
-            title={rows.length === 0 ? 'O ranking ainda não foi calculado' : 'Nenhum atleta neste formato'}
+            title={rows.length === 0 ? t('O ranking ainda não foi calculado') : t('Nenhum atleta neste formato')}
             description={rows.length === 0
-              ? 'Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.'
-              : 'Troque entre Simples e Duplas ou ajuste a busca.'}
+              ? t('Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.')
+              : t('Troque entre Simples e Duplas ou ajuste a busca.')}
           />
         </V2Surface>
       ) : (
@@ -175,21 +168,21 @@ export default function V2DuprRankingView() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-ink">
                     {p.platform_name}
-                    {isMe && <span className="ml-2 text-xs font-bold text-ink-lighter">(você)</span>}
-                    {p.provisional && <V2Badge tone="neutral" className="ml-2 align-middle">provisório</V2Badge>}
+                    {isMe && <span className="ml-2 text-xs font-bold text-ink-lighter">{t('(você)')}</span>}
+                    {p.provisional && <V2Badge tone="neutral" className="ml-2 align-middle">{t('provisório')}</V2Badge>}
                   </p>
-                  <p className="text-xs text-gray-500">{[p.city, p.state].filter(Boolean).join(' / ') || 'Local não informado'}</p>
+                  <p className="text-xs text-gray-500">{[p.city, p.state].filter(Boolean).join(' / ') || t('Local não informado')}</p>
                 </div>
                 <div className="hidden items-center gap-4 sm:flex">
-                  <Stat label="Jogos" value={p.games ?? '—'} />
-                  <Stat label="V–D" value={`${p.wins ?? 0}–${p.losses ?? 0}`} />
+                  <Stat label={t('Jogos')} value={p.games ?? '—'} />
+                  <Stat label={t('V–D')} value={`${p.wins ?? 0}–${p.losses ?? 0}`} />
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">{format === 'doubles' ? 'Duplas' : 'Simples'}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{format === 'doubles' ? t('Duplas') : t('Simples')}</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{fmt(p.rating)}</p>
                   {Number.isFinite(p.reliability) && (
-                    <p className="text-2xs text-gray-500" title="Confiabilidade — cresce com o número de jogos">
-                      conf. {p.reliability}%
+                    <p className="text-2xs text-gray-500" title={t('Confiabilidade — cresce com o número de jogos')}>
+                      {t('conf. {n}%', { n: p.reliability })}
                     </p>
                   )}
                 </div>

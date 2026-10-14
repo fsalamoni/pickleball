@@ -9,6 +9,7 @@ import IssuerChallengesManager from './IssuerChallengesManager';
 import IssuerRewardsManager from './IssuerRewardsManager';
 import GoalsCard from './GoalsCard';
 import { Sparkles } from 'lucide-react';
+import { t } from '@/core/i18n';
 
 /**
  * A moldura do "Engajamento" de quem oferece — professor, arena ou clube:
@@ -27,20 +28,20 @@ export default function OwnerEngagementPanel({ ownerType, issuer, summary, actua
   const [aba, setAba] = useState('resumo');
 
   if (!on || (!isModuleOn('supply_panels') && !isModuleOn('challenges') && !isModuleOn('rewards'))) {
-    return <V2EmptyState icon={Sparkles} title="O engajamento ainda não está ligado" description="Quando a plataforma ativar a gamificação para quem oferece aulas, quadras e clubes, o resumo, os desafios e as recompensas aparecem aqui." />;
+    return <V2EmptyState icon={Sparkles} title={t('O engajamento ainda não está ligado')} description={t('Quando a plataforma ativar a gamificação para quem oferece aulas, quadras e clubes, o resumo, os desafios e as recompensas aparecem aqui.')} />;
   }
 
   const tabs = [
-    isModuleOn('supply_panels') && { value: 'resumo', label: 'Resumo', icon: LineChart, dica: 'oferta-aba-resumo' },
-    isModuleOn('challenges') && { value: 'desafios', label: 'Desafios', icon: Trophy, dica: 'oferta-aba-desafios' },
-    isModuleOn('rewards') && { value: 'recompensas', label: 'Recompensas', icon: Gift, dica: 'oferta-aba-recompensas' },
+    isModuleOn('supply_panels') && { value: 'resumo', label: t('Resumo'), icon: LineChart, dica: 'oferta-aba-resumo' },
+    isModuleOn('challenges') && { value: 'desafios', label: t('Desafios'), icon: Trophy, dica: 'oferta-aba-desafios' },
+    isModuleOn('rewards') && { value: 'recompensas', label: t('Recompensas'), icon: Gift, dica: 'oferta-aba-recompensas' },
   ].filter(Boolean);
   const ativa = tabs.some((t) => t.value === aba) ? aba : tabs[0].value;
   const actor = { uid: user?.uid, email: user?.email, displayName: user?.displayName };
 
   return (
     <div className="space-y-4" data-testid="owner-engagement">
-      {tabs.length > 1 && <V2SubTabs tabs={tabs} activeValue={ativa} onSelect={(t) => setAba(t.value)} ariaLabel="Engajamento" />}
+      {tabs.length > 1 && <V2SubTabs tabs={tabs} activeValue={ativa} onSelect={(aba) => setAba(aba.value)} ariaLabel={t('Engajamento')} />}
       {ativa === 'resumo' && (
         <div className="space-y-4">
           {summary}

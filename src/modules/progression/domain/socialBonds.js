@@ -1,3 +1,4 @@
+import { t } from '@/core/i18n';
 /**
  * Social Bonds (lógica pura, sem I/O).
  *
@@ -133,11 +134,11 @@ export function aggregateCrewStats(memberGames = []) {
 export function validateCrewInput(input = {}) {
   const name = str(input.name);
   if (!name || name.length < 3 || name.length > 40) {
-    return { valid: false, error: 'Nome deve ter entre 3 e 40 caracteres.', value: {} };
+    return { valid: false, error: t('Nome deve ter entre 3 e 40 caracteres.'), value: {} };
   }
   const members = Array.isArray(input.members) ? input.members.filter(Boolean) : [];
   if (members.length > CREW_MAX_MEMBERS) {
-    return { valid: false, error: `Crew suporta no máximo ${CREW_MAX_MEMBERS} membros.`, value: {} };
+    return { valid: false, error: t('Crew suporta no máximo {n} membros.', { n: CREW_MAX_MEMBERS }), value: {} };
   }
   return {
     valid: true,
@@ -170,10 +171,10 @@ export function validateMentorshipInput(input = {}) {
   const mentorUid = str(input.mentorUid);
   const apprenticeUid = str(input.apprenticeUid);
   if (!mentorUid || !apprenticeUid) {
-    return { valid: false, error: 'Mentor e aprendiz são obrigatórios.', value: {} };
+    return { valid: false, error: t('Mentor e aprendiz são obrigatórios.'), value: {} };
   }
   if (mentorUid === apprenticeUid) {
-    return { valid: false, error: 'Não pode ser mentor de si mesmo.', value: {} };
+    return { valid: false, error: t('Não pode ser mentor de si mesmo.'), value: {} };
   }
   return {
     valid: true,

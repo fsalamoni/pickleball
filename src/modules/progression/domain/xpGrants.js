@@ -1,3 +1,4 @@
+import { tk } from '@/core/i18n';
 /**
  * xpGrants — o XP que o SERVIDOR concede.
  *
@@ -25,11 +26,11 @@ export const XP_GRANT_KIND = Object.freeze({
 });
 
 export const XP_GRANT_KIND_LABEL = Object.freeze({
-  season: 'Prêmio de temporada',
-  duel: 'Duelo da semana',
-  challenge: 'Desafio',
-  event: 'Evento',
-  admin: 'Bônus da plataforma',
+  season: tk('Prêmio de temporada'),
+  duel: tk('Duelo da semana'),
+  challenge: tk('Desafio'),
+  event: tk('Evento'),
+  admin: tk('Bônus da plataforma'),
 });
 
 /** Teto por concessão — o servidor também respeita; defesa em profundidade. */

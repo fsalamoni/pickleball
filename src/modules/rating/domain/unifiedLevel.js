@@ -51,6 +51,7 @@
 import { LEVEL_TABLE } from '@/modules/leveling/data/levels.js';
 import { seedFromLevelOrdinal } from './elo.js';
 import { clampRating, usapToRating, DUPR_MIN, DUPR_MAX } from './duprScale.js';
+import { tk } from '@/core/i18n';
 
 /** Limites da régua canônica (mesma escala do DUPR). */
 export const UNIFIED_MIN = DUPR_MIN;
@@ -66,10 +67,10 @@ export const LEVEL_SOURCE = Object.freeze({
 
 /** Rótulo curto de cada fonte, em pt-BR (para a interface). */
 export const LEVEL_SOURCE_LABEL = Object.freeze({
-  [LEVEL_SOURCE.DUPR_OFFICIAL]: 'DUPR informado',
-  [LEVEL_SOURCE.PLATFORM_SKILL]: 'Nível 2.0–8.0 da plataforma',
-  [LEVEL_SOURCE.ELO]: 'Rating do ranking',
-  [LEVEL_SOURCE.DECLARED]: 'Nível indicado',
+  [LEVEL_SOURCE.DUPR_OFFICIAL]: tk('DUPR informado'),
+  [LEVEL_SOURCE.PLATFORM_SKILL]: tk('Nível 2.0–8.0 da plataforma'),
+  [LEVEL_SOURCE.ELO]: tk('Rating do ranking'),
+  [LEVEL_SOURCE.DECLARED]: tk('Nível indicado'),
 });
 
 /**

@@ -7,6 +7,7 @@ import { useGamificationConfig } from '@/modules/progression/hooks/useGamificati
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { daysRemainingInMonth } from '@/modules/progression/domain/seasons';
 import TermHint from '@/v2/components/gamification/TermHint';
+import { t, tn, fmtNumero, fmtData } from '@/core/i18n';
 
 /**
  * SeasonBanner — banner da season atual.
@@ -24,7 +25,7 @@ export default function SeasonBanner({ className }) {
   const { data: top = [] } = useSeasonTop({ seasonId, limit: 3, enabled: gamificationOn && moduloOn });
 
   if (!gamificationOn || !moduloOn) return null;
-  const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const currentMonth = fmtData(new Date(), { month: 'long', year: 'numeric' });
   const dias = daysRemainingInMonth();
   const p = config.season;
 
@@ -39,35 +40,35 @@ export default function SeasonBanner({ className }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-purple-700">
-          <Sparkles className="h-3 w-3" aria-hidden="true" /> Temporada · {dias === 1 ? 'último dia' : `faltam ${dias} dias`}
+          <Sparkles className="h-3 w-3" aria-hidden="true" /> {t('Temporada')} · {dias === 1 ? t('último dia') : tn(dias, 'faltam {n} dia', 'faltam {n} dias')}
           <TermHint term="temporada" className="h-5 w-5" />
         </p>
         <p className="mt-0.5 text-sm font-bold text-ink capitalize">{currentMonth}</p>
         {season && (
           <p className="mt-0.5 text-xs text-gray-600">
-            Você tem {season.xp.toLocaleString('pt-BR')} XP no mês · posição #{season.position}
-            {season.prizeXp > 0 && ` · prêmio previsto +${season.prizeXp} XP`}
+            {t('Você tem {xp} XP no mês · posição #{pos}', { xp: fmtNumero(season.xp), pos: season.position })}
+            {season.prizeXp > 0 && t(' · prêmio previsto +{xp} XP', { xp: season.prizeXp })}
           </p>
         )}
       </div>
 
       <div className="flex flex-col items-end gap-1">
         <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">
-          <Calendar className="h-3 w-3" aria-hidden="true" /> Top 3
+          <Calendar className="h-3 w-3" aria-hidden="true" /> {t('Top 3')}
         </p>
-        {top.slice(0, 3).map((t) => (
-          <p key={t.uid} className="text-xs text-gray-700">
-            #{t.publicPosition ?? t.position} · {t.displayName || t.tier}
+        {top.slice(0, 3).map((linha) => (
+          <p key={linha.uid} className="text-xs text-gray-700">
+            #{linha.publicPosition ?? linha.position} · {linha.displayName || t(linha.tier || '')}
           </p>
         ))}
-        {top.length === 0 && <p className="text-xs text-gray-500">Ranking ainda em formação</p>}
+        {top.length === 0 && <p className="text-xs text-gray-500">{t('Ranking ainda em formação')}</p>}
       </div>
 
       <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-purple-100 pt-2 text-[10px] text-gray-500">
         <span>
-          Prêmios: 1º {p.prizeTop1} XP · top 10% {p.prizeTop10Percent} XP · participação {p.prizeParticipation} XP
+          {t('Prêmios: 1º {top1} XP · top 10% {top10} XP · participação {part} XP', { top1: p.prizeTop1, top10: p.prizeTop10Percent, part: p.prizeParticipation })}
         </span>
-        <Link to="/hall-da-fama" className="font-bold text-ink hover:underline">Ver o placar →</Link>
+        <Link to="/hall-da-fama" className="font-bold text-ink hover:underline">{t('Ver o placar →')}</Link>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { buildSkillTrees } from '../domain/skillTrees.js';
 import { computeProtectedStreak } from '../domain/streakProtection.js';
 import TierBadge from './TierBadge.jsx';
 import SkillTreeBars from './SkillTreeBars.jsx';
+import { t, fmtNumero } from '@/core/i18n';
 
 /**
  * ProgressionCardV2 — card completo de progressão V2.
@@ -97,9 +98,9 @@ export default function ProgressionCardV2({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <TierBadge xp={xpTotal} size="sm" />
-                <span className="text-sm font-bold text-ink">Nível {level.level}</span>
+                <span className="text-sm font-bold text-ink">{t('Nível {n}', { n: level.level })}</span>
               </div>
-              <div className="text-xs text-gray-500 tabular-nums">{xpTotal.toLocaleString('pt-BR')} XP</div>
+              <div className="text-xs text-gray-500 tabular-nums">{fmtNumero(xpTotal)} XP</div>
             </div>
           </div>
           <StreakIndicator info={streakInfo} />
@@ -114,7 +115,7 @@ export default function ProgressionCardV2({
             />
           </div>
           <div className="mt-1 text-right text-[11px] text-gray-400 tabular-nums">
-            {level.xpIntoLevel}/{level.xpForNext.toLocaleString('pt-BR')} XP para o nível {level.level + 1}
+            {t('{atual}/{proximo} XP para o nível {n}', { atual: level.xpIntoLevel, proximo: fmtNumero(level.xpForNext), n: level.level + 1 })}
           </div>
         </div>
 
@@ -122,7 +123,7 @@ export default function ProgressionCardV2({
         {tierProg.next && (
           <div className="rounded-2xl bg-paper p-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Próximo tier: <strong className="text-ink">{tierProg.next.name}</strong> {tierProg.next.icon}</span>
+              <span className="text-gray-500">{t('Próximo tier:')} <strong className="text-ink">{tierProg.next.name}</strong> {tierProg.next.icon}</span>
               <span className="font-bold tabular-nums text-ink">{Math.round(tierProg.progress * 100)}%</span>
             </div>
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
@@ -137,7 +138,7 @@ export default function ProgressionCardV2({
         {/* Skill trees (se tiver xpBySource) */}
         {trees && !compact && (
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Trilhas paralelas</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{t('Trilhas paralelas')}</p>
             <SkillTreeBars trees={trees} compact />
           </div>
         )}
@@ -163,18 +164,18 @@ function StreakIndicator({ info }) {
         <span className="tabular-nums font-semibold">{weeks} sem.</span>
       </div>
       {info.atRisk && (
-        <span title="Jogue até domingo para somar esta semana" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-700">
-          em risco
+        <span title={t('Jogue até domingo para somar esta semana')} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-700">
+          {t('em risco')}
         </span>
       )}
       {usedGrace && (
-        <span title="Você usou a folga deste mês: uma semana sem jogar por mês não quebra a sequência" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
-          <Shield className="h-3 w-3" /> folga usada
+        <span title={t('Você usou a folga deste mês: uma semana sem jogar por mês não quebra a sequência')} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
+          <Shield className="h-3 w-3" /> {t('folga usada')}
         </span>
       )}
       {frozen && (
-        <span title="Férias ativas: a sequência fica guardada" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
-          <ShieldCheck className="h-3 w-3" /> férias
+        <span title={t('Férias ativas: a sequência fica guardada')} className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
+          <ShieldCheck className="h-3 w-3" /> {t('férias')}
         </span>
       )}
     </div>

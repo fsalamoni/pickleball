@@ -23,13 +23,16 @@ import {
   missionDateKey, platformWeekKey, platformMonthKey, addDaysToDateKey, dayStartMs,
 } from './missionDay.js';
 import { distinctDays } from './activityFacts.js';
+import { t, tn, fmtData } from '@/core/i18n';
 
 export const MIN_GAMES_FOR_WIN_RATE = 3;
 
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-
-const dd = (chave) => chave.slice(8, 10);
-const diaMes = (chave) => `${Number(dd(chave))} de ${MESES[Number(chave.slice(5, 7)) - 1]}`;
+const dataDaChave = (chave) => new Date(Date.UTC(Number(chave.slice(0, 4)), Number(chave.slice(5, 7)) - 1, Number(chave.slice(8, 10))));
+const diaMes = (chave) => fmtData(dataDaChave(chave), { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const mesAno = (chave) => {
+  const s = fmtData(dataDaChave(chave), { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
 
 /**
  * A janela do período, no fuso da plataforma.
@@ -51,7 +54,7 @@ export function periodWindow(kind, offset = 0, now = new Date()) {
     const endMs = dayStartMs(prox);
     return {
       kind, key: chave.slice(0, 7), startMs, endMs,
-      label: `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} de ${y}`,
+      label: mesAno(chave),
       inProgress: now.getTime() < endMs,
     };
   }
@@ -61,7 +64,7 @@ export function periodWindow(kind, offset = 0, now = new Date()) {
   const endMs = dayStartMs(addDaysToDateKey(segunda, 7));
   return {
     kind: 'week', key: segunda, startMs, endMs,
-    label: `${diaMes(segunda)} a ${diaMes(domingo)}`,
+    label: t('{inicio} a {fim}', { inicio: diaMes(segunda), fim: diaMes(domingo) }),
     inProgress: now.getTime() < endMs,
   };
 }
@@ -163,8 +166,8 @@ export function buildPeriodReview(input = {}) {
   const totalJogos = Number(totals.games) || 0;
   const totalVitorias = Number(totals.wins) || 0;
   const marcos = [
-    ...marcosCruzados(totalJogos, jogos.length, MARCOS_JOGOS, { id: 'games', texto: (n) => (n === 1 ? 'Seu primeiro jogo!' : `Seu ${n}º jogo!`) }),
-    ...marcosCruzados(totalVitorias, vitorias, [1, 10, 25, 50, 100], { id: 'wins', texto: (n) => (n === 1 ? 'Sua primeira vitória!' : `${n} vitórias na carreira!`) }),
+    ...marcosCruzados(totalJogos, jogos.length, MARCOS_JOGOS, { id: 'games', texto: (n) => (n === 1 ? t('Seu primeiro jogo!') : t('Seu {n}º jogo!', { n })) }),
+    ...marcosCruzados(totalVitorias, vitorias, [1, 10, 25, 50, 100], { id: 'wins', texto: (n) => (n === 1 ? t('Sua primeira vitória!') : t('{n} vitórias na carreira!', { n })) }),
   ];
 
   const review = {
@@ -202,7 +205,6 @@ export function buildPeriodReview(input = {}) {
   return review;
 }
 
-const plural = (n, um, varios) => (n === 1 ? um : varios);
 
 /**
  * As linhas de destaque, em pt-BR, na ordem em que importam. Só entra o que
@@ -214,31 +216,35 @@ const plural = (n, um, varios) => (n === 1 ? um : varios);
  */
 export function reviewHighlights(r, { nameOf = (id) => id } = {}) {
   if (!r) return [];
-  const vs = r.window.kind === 'month' ? 'o mês passado' : 'a semana passada';
+  const mes = r.window.kind === 'month';
   const out = [];
   if (r.games > 0) {
     const d = r.gamesDelta;
-    const comp = r.gamesPrev === 0 && d > 0 ? '' : d === 0 ? ` (igual a ${vs})`
-      : ` (${d > 0 ? '+' : ''}${d} que ${vs})`;
-    out.push({ id: 'games', icon: '🎾', tone: 'neutral', text: `${r.games} ${plural(r.games, 'jogo', 'jogos')}${comp}` });
+    let comp = '';
+    if (!(r.gamesPrev === 0 && d > 0)) {
+      if (d === 0) comp = mes ? t(' (igual a o mês passado)') : t(' (igual a a semana passada)');
+      else comp = mes ? t(' ({delta} que o mês passado)', { delta: `${d > 0 ? '+' : ''}${d}` }) : t(' ({delta} que a semana passada)', { delta: `${d > 0 ? '+' : ''}${d}` });
+    }
+    out.push({ id: 'games', icon: '🎾', tone: 'neutral', text: `${tn(r.games, '{n} jogo', '{n} jogos')}${comp}` });
   }
   if (r.winRate != null) {
-    out.push({ id: 'winrate', icon: '🏆', tone: r.winRate >= 50 ? 'good' : 'neutral', text: `${r.wins} ${plural(r.wins, 'vitória', 'vitórias')} · ${r.winRate}% de aproveitamento` });
+    out.push({ id: 'winrate', icon: '🏆', tone: r.winRate >= 50 ? 'good' : 'neutral', text: tn(r.wins, '{n} vitória · {pct}% de aproveitamento', '{n} vitórias · {pct}% de aproveitamento', { pct: r.winRate }) });
   } else if (r.wins > 0) {
-    out.push({ id: 'wins', icon: '🏆', tone: 'good', text: `${r.wins} ${plural(r.wins, 'vitória', 'vitórias')}` });
+    out.push({ id: 'wins', icon: '🏆', tone: 'good', text: tn(r.wins, '{n} vitória', '{n} vitórias') });
   }
-  if (r.activeDays >= 2) out.push({ id: 'days', icon: '📅', tone: 'neutral', text: `Jogou em ${r.activeDays} dias diferentes` });
-  if (r.tournaments > 0) out.push({ id: 'tournaments', icon: '🥇', tone: 'neutral', text: `${r.tournaments} ${plural(r.tournaments, 'dia de torneio', 'dias de torneio')}` });
-  if (r.partners >= 2) out.push({ id: 'partners', icon: '🤝', tone: 'neutral', text: `Jogou com ${r.partners} parceiros diferentes` });
+  if (r.activeDays >= 2) out.push({ id: 'days', icon: '📅', tone: 'neutral', text: t('Jogou em {n} dias diferentes', { n: r.activeDays }) });
+  if (r.tournaments > 0) out.push({ id: 'tournaments', icon: '🥇', tone: 'neutral', text: tn(r.tournaments, '{n} dia de torneio', '{n} dias de torneio') });
+  if (r.partners >= 2) out.push({ id: 'partners', icon: '🤝', tone: 'neutral', text: t('Jogou com {n} parceiros diferentes', { n: r.partners }) });
   if (r.ratingDelta != null && r.ratingDelta !== 0) {
-    out.push({ id: 'rating', icon: r.ratingDelta > 0 ? '📈' : '📉', tone: r.ratingDelta > 0 ? 'good' : 'neutral', text: `Rating ${r.ratingDelta > 0 ? 'subiu' : 'caiu'} ${Math.abs(r.ratingDelta)} ${plural(Math.abs(r.ratingDelta), 'ponto', 'pontos')}` });
+    const pts = Math.abs(r.ratingDelta);
+    out.push({ id: 'rating', icon: r.ratingDelta > 0 ? '📈' : '📉', tone: r.ratingDelta > 0 ? 'good' : 'neutral', text: r.ratingDelta > 0 ? tn(pts, 'Rating subiu {n} ponto', 'Rating subiu {n} pontos') : tn(pts, 'Rating caiu {n} ponto', 'Rating caiu {n} pontos') });
   }
-  if (r.bookings > 0) out.push({ id: 'bookings', icon: '🏟️', tone: 'neutral', text: `${r.bookings} ${plural(r.bookings, 'reserva de quadra jogada', 'reservas de quadra jogadas')}` });
-  if (r.lessons > 0) out.push({ id: 'lessons', icon: '🎓', tone: 'neutral', text: `${r.lessons} ${plural(r.lessons, 'aula', 'aulas')} com professor` });
-  if (r.kudosGiven > 0) out.push({ id: 'kudos', icon: '👏', tone: 'neutral', text: `${r.kudosGiven} ${plural(r.kudosGiven, 'kudo dado', 'kudos dados')}` });
-  if (r.reviewsGiven + r.lettersSent > 0) out.push({ id: 'social', icon: '💬', tone: 'neutral', text: `${r.reviewsGiven} ${plural(r.reviewsGiven, 'avaliação', 'avaliações')} e ${r.lettersSent} ${plural(r.lettersSent, 'carta', 'cartas')} aos companheiros` });
-  if (r.missionsDone > 0) out.push({ id: 'missions', icon: '🎯', tone: 'good', text: `${r.missionsDone} ${plural(r.missionsDone, 'missão cumprida', 'missões cumpridas')}` });
-  r.newAchievements.forEach((a) => out.push({ id: `ach_${a.id}`, icon: '🏅', tone: 'good', text: `Conquista desbloqueada: ${nameOf(a.id)}`, achievementId: a.id }));
+  if (r.bookings > 0) out.push({ id: 'bookings', icon: '🏟️', tone: 'neutral', text: tn(r.bookings, '{n} reserva de quadra jogada', '{n} reservas de quadra jogadas') });
+  if (r.lessons > 0) out.push({ id: 'lessons', icon: '🎓', tone: 'neutral', text: tn(r.lessons, '{n} aula com professor', '{n} aulas com professor') });
+  if (r.kudosGiven > 0) out.push({ id: 'kudos', icon: '👏', tone: 'neutral', text: tn(r.kudosGiven, '{n} kudo dado', '{n} kudos dados') });
+  if (r.reviewsGiven + r.lettersSent > 0) out.push({ id: 'social', icon: '💬', tone: 'neutral', text: t('{avaliacoes} e {cartas} aos companheiros', { avaliacoes: tn(r.reviewsGiven, '{n} avaliação', '{n} avaliações'), cartas: tn(r.lettersSent, '{n} carta', '{n} cartas') }) });
+  if (r.missionsDone > 0) out.push({ id: 'missions', icon: '🎯', tone: 'good', text: tn(r.missionsDone, '{n} missão cumprida', '{n} missões cumpridas') });
+  r.newAchievements.forEach((a) => out.push({ id: `ach_${a.id}`, icon: '🏅', tone: 'good', text: t('Conquista desbloqueada: {nome}', { nome: nameOf(a.id) }), achievementId: a.id }));
   r.milestones.forEach((m) => out.push({ id: m.key, icon: '✨', tone: 'good', text: m.text }));
   return out;
 }
@@ -246,17 +252,17 @@ export function reviewHighlights(r, { nameOf = (id) => id } = {}) {
 /** A mensagem de abertura, calibrada para o que aconteceu (e nunca cobra). */
 export function reviewHeadline(r) {
   if (!r) return '';
-  const quando = r.window.kind === 'month' ? 'neste mês' : 'nesta semana';
+  const mes = r.window.kind === 'month';
   if (r.isEmpty) {
-    return r.window.inProgress
-      ? `Ainda sem registros ${quando}. Um jogo já muda isso.`
-      : `Foi um período tranquilo. Quando voltar à quadra, a revisão volta com você.`;
+    if (!r.window.inProgress) return t('Foi um período tranquilo. Quando voltar à quadra, a revisão volta com você.');
+    return mes ? t('Ainda sem registros neste mês. Um jogo já muda isso.') : t('Ainda sem registros nesta semana. Um jogo já muda isso.');
   }
   if (r.milestones.length > 0) return r.milestones[0].text;
-  if (r.newAchievements.length > 0) return `Você desbloqueou ${r.newAchievements.length} ${plural(r.newAchievements.length, 'conquista', 'conquistas')} ${quando}.`;
-  if (r.gamesDelta > 0 && r.gamesPrev > 0) return `Você jogou mais que no período anterior. Bom ritmo.`;
-  if (r.games > 0) return `Você jogou ${r.games} ${plural(r.games, 'vez', 'vezes')} ${quando}.`;
-  return `Você esteve ativo ${quando}.`;
+  const na = r.newAchievements.length;
+  if (na > 0) return mes ? tn(na, 'Você desbloqueou {n} conquista neste mês.', 'Você desbloqueou {n} conquistas neste mês.') : tn(na, 'Você desbloqueou {n} conquista nesta semana.', 'Você desbloqueou {n} conquistas nesta semana.');
+  if (r.gamesDelta > 0 && r.gamesPrev > 0) return t('Você jogou mais que no período anterior. Bom ritmo.');
+  if (r.games > 0) return mes ? tn(r.games, 'Você jogou {n} vez neste mês.', 'Você jogou {n} vezes neste mês.') : tn(r.games, 'Você jogou {n} vez nesta semana.', 'Você jogou {n} vezes nesta semana.');
+  return mes ? t('Você esteve ativo neste mês.') : t('Você esteve ativo nesta semana.');
 }
 
 /** A chave do dia, reexportada para a tela formatar sem importar dois módulos. */
