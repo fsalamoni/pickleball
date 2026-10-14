@@ -4,6 +4,7 @@ import { cn } from '@/core/lib/utils';
 import { V2Badge } from '@/v2/ui/primitives';
 import {
   MISSION_BONUS_XP,
+  missionDescriptionShown,
 } from '../domain/missions.js';
 import { t } from '@/core/i18n';
 
@@ -93,7 +94,7 @@ export default function MissionList({
               </span>
               <div className="min-w-0 flex-1">
                 <p className={cn('text-sm font-semibold', m.done ? 'text-gray-500 line-through' : 'text-ink')}>
-                  {m.description}
+                  {missionDescriptionShown(m)}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
                   <div
@@ -101,7 +102,7 @@ export default function MissionList({
                     aria-valuenow={m.current}
                     aria-valuemin={0}
                     aria-valuemax={m.target}
-                    aria-label={`${m.description}: ${m.current} de ${m.target}`}
+                    aria-label={t('{texto}: {atual} de {alvo}', { texto: missionDescriptionShown(m), atual: m.current, alvo: m.target })}
                     className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200"
                   >
                     <div

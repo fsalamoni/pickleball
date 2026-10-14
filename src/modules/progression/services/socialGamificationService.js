@@ -14,6 +14,7 @@ import {
   letterDocId, validateLetter,
 } from '@/modules/progression/domain/partnerLetters';
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 const db = () => gamificationDb();
 
@@ -34,7 +35,7 @@ export async function listMyReviews(uid) {
  */
 export async function submitMatchReviews({ fromUid, matchKey, items }) {
   if (!fromUid || !matchKey || !Array.isArray(items) || items.length === 0) {
-    throw new Error('Escolha ao menos uma pessoa para avaliar.');
+    throw new Error(t('Escolha ao menos uma pessoa para avaliar.'));
   }
   const batch = writeBatch(db());
   const agora = Date.now();

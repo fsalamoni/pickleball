@@ -88,7 +88,7 @@ function StartSelling({ identity, defaults }) {
         <V2Field label={t('Nome que aparece para os compradores')} htmlFor="nome-vend">
           <V2Input id="nome-vend" maxLength={60} value={nome} onChange={(e) => setNome(e.target.value)} />
         </V2Field>
-        <p className="text-xs text-gray-500">Ao continuar, você concorda com os <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">Termos de Uso</Link>, os <Link to="/legal/termos-mercado" className="font-bold text-ink underline">Termos Gerais do Mercado</Link>, os <Link to="/legal/termos-vendedor-mercado" className="font-bold text-ink underline">Termos do Vendedor</Link> e a <Link to="/legal/mercado-imagens-e-ia" className="font-bold text-ink underline">Política de Imagens e IA</Link>. Você responde, de forma exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.</p>
+        <p className="text-xs text-gray-500">{t('Ao continuar, você concorda com os')} <Link to="/legal/termos-de-uso" className="font-bold text-ink underline">{t('Termos de Uso')}</Link>, {t('os')} <Link to="/legal/termos-mercado" className="font-bold text-ink underline">{t('Termos Gerais do Mercado')}</Link>, {t('os')} <Link to="/legal/termos-vendedor-mercado" className="font-bold text-ink underline">{t('Termos do Vendedor')}</Link> {t('e a')} <Link to="/legal/mercado-imagens-e-ia" className="font-bold text-ink underline">{t('Política de Imagens e IA')}</Link>. {t('Você responde, de forma exclusiva, pelo produto, pela venda, pelo transporte e pelos documentos.')}</p>
         <V2Button type="submit" className="w-full" disabled={m.isPending || nome.trim().length < 2}>{m.isPending ? t('Abrindo…') : t('Começar a vender')}</V2Button>
       </form>
     </V2Surface>

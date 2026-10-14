@@ -15,6 +15,7 @@ import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
 import { V2Badge, V2Button, V2EmptyState, V2Surface } from '@/v2/ui/primitives';
 import LegalDocumentView from '@/v2/components/legal/LegalDocumentView';
+import { t } from '@/core/i18n';
 
 export default function V2LegalDocument() {
   const enabled = true;
@@ -33,9 +34,9 @@ export default function V2LegalDocument() {
       <div className="mx-auto max-w-[900px]">
         <V2Surface>
           <V2EmptyState
-            title="Documento não encontrado"
-            description="O documento que você procura não existe ou foi movido."
-            action={<V2Button asChild><Link to="/legal">Ver todos os documentos</Link></V2Button>}
+            title={t('Documento não encontrado')}
+            description={t('O documento que você procura não existe ou foi movido.')}
+            action={<V2Button asChild><Link to="/legal">{t('Ver todos os documentos')}</Link></V2Button>}
           />
         </V2Surface>
       </div>
@@ -47,18 +48,18 @@ export default function V2LegalDocument() {
   const handleAccept = async () => {
     try {
       await accept.mutateAsync({ key: doc.key, version: doc.version, title: doc.title });
-      toast.success('Concordância registrada.');
+      toast.success(t('Concordância registrada.'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar.');
+      toast.error(err?.message || t('Não foi possível registrar.'));
     }
   };
 
   const action = user ? (
     accepted ? (
-      <V2Badge tone="green"><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Você concordou</V2Badge>
+      <V2Badge tone="green"><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> {t('Você concordou')}</V2Badge>
     ) : (
       <V2Button onClick={handleAccept} disabled={accept.isPending}>
-        {accept.isPending ? 'Registrando…' : 'Li e concordo'}
+        {accept.isPending ? t('Registrando…') : t('Li e concordo')}
       </V2Button>
     )
   ) : null;
@@ -67,7 +68,7 @@ export default function V2LegalDocument() {
     <div>
       <div className="mx-auto mb-3 max-w-[900px]">
         <Link to="/legal" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
-          <ChevronLeft className="h-4 w-4" /> Documentos
+          <ChevronLeft className="h-4 w-4" /> {t('Documentos')}
         </Link>
       </div>
       <LegalDocumentView doc={doc} action={action} />

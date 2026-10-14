@@ -13,6 +13,7 @@ import {
 import { createAuditLog } from '@/core/services/auditService';
 import { validateChallenge } from '@/modules/progression/domain/challenges';
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 const db = () => gamificationDb();
 
@@ -49,7 +50,7 @@ export async function getChallenge(id) {
 export async function createChallenge(input, issuer, actor) {
   const v = validateChallenge(input, { ...issuer, uid: actor.uid });
   if (!v.ok) {
-    const e = new Error(Object.values(v.errors)[0] || 'Desafio inválido.');
+    const e = new Error(Object.values(v.errors)[0] || t('Desafio inválido.'));
     e.errors = v.errors;
     throw e;
   }
@@ -63,7 +64,7 @@ export async function createChallenge(input, issuer, actor) {
 export async function updateChallenge(id, atual, patch, issuer, actor) {
   const v = validateChallenge({ ...atual, ...patch }, { ...issuer, uid: atual.createdBy });
   if (!v.ok) {
-    const e = new Error(Object.values(v.errors)[0] || 'Desafio inválido.');
+    const e = new Error(Object.values(v.errors)[0] || t('Desafio inválido.'));
     e.errors = v.errors;
     throw e;
   }

@@ -15,6 +15,7 @@ import { pendingGateConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
 import { V2Button } from '@/v2/ui/primitives';
 import { legalIcon } from './legalIcons';
+import { t } from '@/core/i18n';
 
 export default function LegalConsentGate() {
   const { user, isLoadingAuth } = useAuth();
@@ -36,9 +37,9 @@ export default function LegalConsentGate() {
     if (!allChecked) return;
     try {
       await acceptAll.mutateAsync(pending.map((d) => ({ key: d.key, version: d.version, title: d.title })));
-      toast.success('Consentimento registrado. Boa partida!');
+      toast.success(t('Consentimento registrado. Boa partida!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar o consentimento.');
+      toast.error(err?.message || t('Não foi possível registrar o consentimento.'));
     }
   };
 
@@ -50,8 +51,8 @@ export default function LegalConsentGate() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="font-display text-xl font-bold text-ink">Antes de continuar</h2>
-            <p className="text-sm text-gray-500">Leia e concorde com os documentos essenciais da plataforma.</p>
+            <h2 className="font-display text-xl font-bold text-ink">{t('Antes de continuar')}</h2>
+            <p className="text-sm text-gray-500">{t('Leia e concorde com os documentos essenciais da plataforma.')}</p>
           </div>
         </div>
 
@@ -74,7 +75,7 @@ export default function LegalConsentGate() {
                     <Icon className="h-4 w-4 text-gray-400" /> {d.title}
                   </span>
                   <span className="mt-0.5 block text-xs text-gray-500">
-                    Li e concordo com {d.title.toLowerCase()} (v{d.version}).{' '}
+                    {t('Li e concordo com {documento} (v{versao}).', { documento: d.title.toLowerCase(), versao: d.version })}{' '}
                     <a
                       href={`/legal/${d.route}`}
                       target="_blank"
@@ -82,7 +83,7 @@ export default function LegalConsentGate() {
                       onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-0.5 font-semibold text-ink underline"
                     >
-                      Ler documento <ExternalLink className="h-3 w-3" />
+                      {t('Ler documento')} <ExternalLink className="h-3 w-3" />
                     </a>
                   </span>
                 </span>
@@ -93,10 +94,10 @@ export default function LegalConsentGate() {
 
         <div className="border-t border-gray-100 p-6">
           <V2Button className="w-full" onClick={handleAccept} disabled={!allChecked || acceptAll.isPending}>
-            {acceptAll.isPending ? 'Registrando…' : 'Aceitar e continuar'}
+            {acceptAll.isPending ? t('Registrando…') : t('Aceitar e continuar')}
           </V2Button>
           <p className="mt-2 text-center text-2xs text-gray-500">
-            Marque todos os itens para continuar. Seu aceite fica registrado com data e versão.
+            {t('Marque todos os itens para continuar. Seu aceite fica registrado com data e versão.')}
           </p>
         </div>
       </div>

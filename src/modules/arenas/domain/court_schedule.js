@@ -111,13 +111,13 @@ export function normalizeScheduleInput(input = {}) {
   const errors = {};
   const start = normalizeTime(input.start_time);
   const end = normalizeTime(input.end_time);
-  if (!start) errors.start_time = 'Informe um horário de início válido (HH:MM).';
-  if (!end) errors.end_time = 'Informe um horário de fim válido (HH:MM).';
+  if (!start) errors.start_time = t('Informe um horário de início válido (HH:MM).');
+  if (!end) errors.end_time = t('Informe um horário de fim válido (HH:MM).');
   if (start && end && timeToMinutes(start) >= timeToMinutes(end)) {
-    errors.end_time = 'O horário de fim deve ser depois do início.';
+    errors.end_time = t('O horário de fim deve ser depois do início.');
   }
   const weekdays = normalizeWeekdays(input.weekdays);
-  if (!weekdays) errors.weekdays = 'Selecione pelo menos um dia da semana.';
+  if (!weekdays) errors.weekdays = t('Selecione pelo menos um dia da semana.');
 
   const label = String(input.label ?? '').trim().slice(0, 60);
 

@@ -63,8 +63,8 @@ const HORA = /^\d{2}:\d{2}$/;
 export function normalizeMaintenanceInput(input = {}) {
   const errors = {};
   const title = String(input.title || '').trim();
-  if (!title) errors.title = 'Título obrigatório.';
-  if (title.length > 200) errors.title = 'Máx. 200 chars.';
+  if (!title) errors.title = t('Título obrigatório.');
+  if (title.length > 200) errors.title = t('Máx. 200 chars.');
 
   const fecha = Boolean(input.blocks_court);
   const inicio = DATA_ISO.test(String(input.starts_on || '')) ? input.starts_on : null;
@@ -75,13 +75,13 @@ export function normalizeMaintenanceInput(input = {}) {
   // Fechar a quadra é a parte que afeta o dinheiro da arena. Se a pessoa
   // marcou "fechar" e não disse quando, é erro — e não um bloqueio silencioso
   // de data nenhuma (que pareceria ter funcionado).
-  if (fecha && !inicio) errors.starts_on = 'Diga a partir de que dia a quadra fica fechada.';
-  if (fecha && fim && fim < inicio) errors.ends_on = 'O fim não pode ser antes do início.';
-  if (fecha && horaFim <= horaIni) errors.end_time = 'O horário final tem que ser depois do inicial.';
+  if (fecha && !inicio) errors.starts_on = t('Diga a partir de que dia a quadra fica fechada.');
+  if (fecha && fim && fim < inicio) errors.ends_on = t('O fim não pode ser antes do início.');
+  if (fecha && horaFim <= horaIni) errors.end_time = t('O horário final tem que ser depois do inicial.');
   if (fecha && inicio) {
     const dias = maintenanceDates({ starts_on: inicio, ends_on: fim });
     if (fim && fim > dias[dias.length - 1]) {
-      errors.ends_on = `No máximo ${MAINTENANCE_MAX_DAYS} dias de uma vez.`;
+      errors.ends_on = t('No máximo {n} dias de uma vez.', { n: MAINTENANCE_MAX_DAYS });
     }
   }
 
@@ -391,7 +391,7 @@ export const STAFF_MAX = 40;
 export function normalizeStaffMember(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim().slice(0, 80);
-  if (!name) errors.name = 'Diga o nome de quem trabalha aqui.';
+  if (!name) errors.name = t('Diga o nome de quem trabalha aqui.');
   const role = Object.values(STAFF_ROLE).includes(input.role) ? input.role : STAFF_ROLE.OTHER;
   const shift = Object.values(STAFF_SHIFT).includes(input.shift) ? input.shift : STAFF_SHIFT.FULL;
   return {

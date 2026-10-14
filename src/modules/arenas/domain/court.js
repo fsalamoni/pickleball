@@ -1,4 +1,4 @@
-import { tk } from '@/core/i18n';
+import { tk, t } from '@/core/i18n';
 /**
  * Domínio puro de Court (quadra) — validação/normalização de input,
  * ordenação e helpers de apresentação. Sem I/O, testável isoladamente.
@@ -60,16 +60,16 @@ function clampInt(n, min, max) {
 export function normalizeCourtInput(input = {}) {
   const errors = {};
   const name = str(input.name);
-  if (!name) errors.name = 'Informe o nome da quadra.';
-  if (name.length > 60) errors.name = 'Nome muito longo (máx. 60).';
+  if (!name) errors.name = t('Informe o nome da quadra.');
+  if (name.length > 60) errors.name = t('Nome muito longo (máx. 60).');
 
   const courtType = str(input.court_type).toLowerCase();
   if (courtType && !Object.values(COURT_TYPES).includes(courtType)) {
-    errors.court_type = 'Tipo de quadra inválido.';
+    errors.court_type = t('Tipo de quadra inválido.');
   }
   const surfaceType = str(input.surface_type).toLowerCase();
   if (surfaceType && !Object.values(SURFACE_TYPES).includes(surfaceType)) {
-    errors.surface_type = 'Superfície inválida.';
+    errors.surface_type = t('Superfície inválida.');
   }
 
   const sortOrderRaw = Number(input.sort_order);

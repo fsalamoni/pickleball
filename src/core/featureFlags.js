@@ -14,6 +14,8 @@
  * ignora (só lê chaves conhecidas), então nada precisa ser alterado no banco.
  */
 
+import { tk } from './i18n/engine.js';
+
 export const FEATURE_FLAG = Object.freeze({
   /**
    * Integração OFICIAL com o DUPR (fase 2 — reservado): puxar o rating por ID
@@ -463,43 +465,24 @@ export const PERMANENT_FEATURES_ON = Object.freeze(
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.GAMEDAY_MEXICANO]: {
-    label: 'Dia de jogo — Mexicano',
-    description:
-      'Oferece o Mexicano entre os formatos do dia de jogo: na criação, na '
-      + 'troca de formato e no sorteio, no atleta, na arena, no clube e no '
-      + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
-      + 'criados como Mexicano continuam funcionando normalmente.',
+    label: tk('Dia de jogo — Mexicano'),
+    description: tk('Oferece o Mexicano entre os formatos do dia de jogo: na criação, na troca de formato e no sorteio, no atleta, na arena, no clube e no jogo aberto. Desligada, a opção some daqui para frente — os dias já criados como Mexicano continuam funcionando normalmente.'),
   },
   [FEATURE_FLAG.GAMEDAY_KING_OF_COURT]: {
-    label: 'Dia de jogo — Rei da Quadra',
-    description:
-      'Oferece o Rei da Quadra entre os formatos do dia de jogo: na criação, '
-      + 'na troca de formato e no sorteio, no atleta, na arena, no clube e no '
-      + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
-      + 'criados como Rei da Quadra continuam funcionando normalmente.',
+    label: tk('Dia de jogo — Rei da Quadra'),
+    description: tk('Oferece o Rei da Quadra entre os formatos do dia de jogo: na criação, na troca de formato e no sorteio, no atleta, na arena, no clube e no jogo aberto. Desligada, a opção some daqui para frente — os dias já criados como Rei da Quadra continuam funcionando normalmente.'),
   },
   [FEATURE_FLAG.MARKETPLACE]: {
-    label: 'Mercado (marketplace)',
-    description:
-      'Abre o Mercado em /mercado: anúncios de atletas, professores, arenas e '
-      + 'lojas, com busca, filtros, carrinho, favoritos, perguntas, ofertas, '
-      + 'pedidos com Pix direto ao vendedor e avaliações. Desligada, o Mercado '
-      + 'some de todo lugar e nada é lido; anúncios e pedidos ficam guardados.',
+    label: tk('Mercado (marketplace)'),
+    description: tk('Abre o Mercado em /mercado: anúncios de atletas, professores, arenas e lojas, com busca, filtros, carrinho, favoritos, perguntas, ofertas, pedidos com Pix direto ao vendedor e avaliações. Desligada, o Mercado some de todo lugar e nada é lido; anúncios e pedidos ficam guardados.'),
   },
   [FEATURE_FLAG.MULTI_LANGUAGE]: {
-    label: 'Vários idiomas (português, inglês, espanhol)',
-    description:
-      'Mostra o seletor de idioma (Configurações e tela de entrada) e, na '
-      + 'primeira visita, adota o idioma do navegador. O que ainda não foi '
-      + 'traduzido aparece em português. Desligada, tudo em português e a '
-      + 'escolha antiga é apagada. A escolha fica no aparelho.',
+    label: tk('Vários idiomas (português, inglês, espanhol)'),
+    description: tk('Mostra o seletor de idioma (Configurações e tela de entrada) e, na primeira visita, adota o idioma do navegador. O que ainda não foi traduzido aparece em português. Desligada, tudo em português e a escolha antiga é apagada. A escolha fica no aparelho.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
-    label: 'DUPR oficial (fase 2 — reservado)',
-    description:
-      'Reservado para a integração OFICIAL com o DUPR (puxar rating por ID e '
-      + 'enviar partidas). Exige acesso de parceiro/clube DUPR e backend com '
-      + 'credenciais. Sem efeito enquanto a integração não for implementada.',
+    label: tk('DUPR oficial (fase 2 — reservado)'),
+    description: tk('Reservado para a integração OFICIAL com o DUPR (puxar rating por ID e enviar partidas). Exige acesso de parceiro/clube DUPR e backend com credenciais. Sem efeito enquanto a integração não for implementada.'),
   },
 });
 

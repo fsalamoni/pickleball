@@ -1,4 +1,4 @@
-import { tk } from '@/core/i18n';
+import { tk, t } from '@/core/i18n';
 /**
  * Domínio: o torneio interno da arena — a competição da casa.
  *
@@ -58,15 +58,15 @@ const HORA_RE = /^\d{2}:\d{2}$/;
 export function normalizeInternalTournamentInput(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim();
-  if (!name) errors.name = 'Nome obrigatório.';
+  if (!name) errors.name = t('Nome obrigatório.');
   const date = String(input.date || '').trim();
-  if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) errors.date = 'Data inválida.';
+  if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) errors.date = t('Data inválida.');
   const maxParticipants = Number(input.max_participants);
   if (!Number.isFinite(maxParticipants) || maxParticipants < 2 || maxParticipants > 64) {
-    errors.max_participants = '2-64 participantes.';
+    errors.max_participants = t('2-64 participantes.');
   }
   const entryFee = Number(input.entry_fee) || 0;
-  if (entryFee < 0) errors.entry_fee = 'Taxa inválida.';
+  if (entryFee < 0) errors.entry_fee = t('Taxa inválida.');
 
   const courtIds = (Array.isArray(input.court_ids) ? input.court_ids : [])
     .map((c) => String(c || '').trim())
@@ -78,9 +78,9 @@ export function normalizeInternalTournamentInput(input = {}) {
   // Escolher quadra sem dizer quando fecharia a quadra o dia inteiro — ou
   // nenhum minuto, dependendo de quem lê. As duas coisas andam juntas.
   if (courtIds.length > 0 && (!inicio || !fim)) {
-    errors.start_time = 'Diga o horário do torneio nessas quadras.';
+    errors.start_time = t('Diga o horário do torneio nessas quadras.');
   }
-  if (inicio && fim && fim <= inicio) errors.end_time = 'O fim vem depois do início.';
+  if (inicio && fim && fim <= inicio) errors.end_time = t('O fim vem depois do início.');
 
   return {
     valid: Object.keys(errors).length === 0,
@@ -112,9 +112,9 @@ export function normalizeInternalTournamentInput(input = {}) {
 export function normalizePrizeInput(input = {}) {
   const errors = {};
   const position = Number(input.position);
-  if (!Number.isFinite(position) || position < 1 || position > 10) errors.position = 'Posição 1-10.';
+  if (!Number.isFinite(position) || position < 1 || position > 10) errors.position = t('Posição 1-10.');
   const value = String(input.value || '').trim();
-  if (!value) errors.value = 'Valor obrigatório.';
+  if (!value) errors.value = t('Valor obrigatório.');
   return {
     valid: Object.keys(errors).length === 0,
     errors,

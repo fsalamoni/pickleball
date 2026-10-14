@@ -147,7 +147,7 @@ export function normalizeCouponArtDesign(input = {}) {
   };
   const warnings = [];
   if (contrastRatio(fg, bg) < MIN_TEXT_CONTRAST) {
-    warnings.push('O texto está pouco visível sobre este fundo. Troque a cor do texto ou do fundo.');
+    warnings.push(t('O texto está pouco visível sobre este fundo. Troque a cor do texto ou do fundo.'));
   }
   return { valid: true, value, warnings };
 }
@@ -208,9 +208,9 @@ export function normalizeCouponArt(input) {
   if (input.source === COUPON_ART_SOURCE.UPLOAD) {
     const url = String(input.image_url || '').trim();
     const alt = texto(input.alt, COUPON_ALT_MAX);
-    if (!url) errors.image_url = 'Envie a imagem do cupom.';
-    else if (!isAllowedImageUrl(url)) errors.image_url = 'A imagem precisa ser enviada pela plataforma.';
-    if (!alt) errors.alt = 'Descreva a imagem (é o que o leitor de tela lê).';
+    if (!url) errors.image_url = t('Envie a imagem do cupom.');
+    else if (!isAllowedImageUrl(url)) errors.image_url = t('A imagem precisa ser enviada pela plataforma.');
+    if (!alt) errors.alt = t('Descreva a imagem (é o que o leitor de tela lê).');
     const w = Number(input.width);
     const h = Number(input.height);
     return {
@@ -238,7 +238,7 @@ export function normalizeCouponArt(input) {
       },
     };
   }
-  return { valid: false, errors: { art: 'Arte do cupom inválida.' }, value: null };
+  return { valid: false, errors: { art: t('Arte do cupom inválida.') }, value: null };
 }
 
 /**
@@ -299,16 +299,16 @@ export function couponUploadGuide(spec = COUPON_UPLOAD_SPEC) {
   const mb = (b) => t('{valor} MB', { valor: Math.round(b / (1024 * 1024)) });
   return [
     { label: t('Tamanho ideal'), value: `${spec.recommended.width} × ${spec.recommended.height} px` },
-    { label: t('Proporção'), value: `${spec.ratioLabel} (a largura é o dobro da altura)` },
-    { label: t('Mínimo'), value: `${spec.minimum.width} × ${spec.minimum.height} px — menor que isso fica borrado` },
+    { label: t('Proporção'), value: t('{proporcao} (a largura é o dobro da altura)', { proporcao: spec.ratioLabel }) },
+    { label: t('Mínimo'), value: t('{largura} × {altura} px — menor que isso fica borrado', { largura: spec.minimum.width, altura: spec.minimum.height }) },
     { label: t('Formatos'), value: spec.formats.join(', ') },
-    { label: t('Peso'), value: `até ${mb(spec.idealBytes)} (máximo ${mb(spec.maxBytes)})` },
-    { label: t('Código'), value: 'NÃO escreva o código na imagem: a plataforma mostra o código ao lado, e quem vê toca para copiar. Assim ele nunca fica errado.' },
+    { label: t('Peso'), value: t('até {ideal} (máximo {maximo})', { ideal: mb(spec.idealBytes), maximo: mb(spec.maxBytes) }) },
+    { label: t('Código'), value: t('NÃO escreva o código na imagem: a plataforma mostra o código ao lado, e quem vê toca para copiar. Assim ele nunca fica errado.') },
     {
       label: t('Margem'),
-      value: `texto e logo dentro dos ${Math.round(spec.safeArea.width * 100)}% centrais — os cantos são arredondados`,
+      value: t('texto e logo dentro dos {largura}% centrais — os cantos são arredondados', { largura: Math.round(spec.safeArea.width * 100) }),
     },
-    { label: t('Texto'), value: 'pouco e grande; o que estiver escrito na imagem precisa ir também na descrição' },
+    { label: t('Texto'), value: t('pouco e grande; o que estiver escrito na imagem precisa ir também na descrição') },
   ];
 }
 

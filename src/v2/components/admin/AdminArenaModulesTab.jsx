@@ -76,7 +76,7 @@ function useModuleAdoption(enabled) {
 function StatusBadge({ status }) {
   const meta = ARENA_MODULE_STATUS_META[status];
   if (!meta) return null;
-  return <V2Badge tone={meta.tone} title={meta.hint}>{meta.label}</V2Badge>;
+  return <V2Badge tone={meta.tone} title={t(meta.hint)}>{t(meta.label)}</V2Badge>;
 }
 
 function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = false }) {
@@ -97,7 +97,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={isFamily ? 'font-display text-base font-bold text-ink' : 'text-sm font-bold text-ink'}>
-              {mod.label}
+              {t(mod.label)}
             </span>
             <StatusBadge status={mod.status} />
             {released && forced && <V2Badge tone="blue">{t('Obrigatório')}</V2Badge>}
@@ -110,7 +110,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
               {mod.id}
             </code>
           </div>
-          <p className="mt-1 text-xs leading-5 text-gray-500">{mod.summary || mod.description}</p>
+          <p className="mt-1 text-xs leading-5 text-gray-500">{t(mod.summary || mod.description || '')}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {mod.audience.map((who) => (
@@ -118,7 +118,7 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
                 key={who}
                 className="rounded-full bg-paper-pure px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-gray-500"
               >
-                {who}
+                {t(who)}
               </span>
             ))}
           </div>
@@ -126,13 +126,13 @@ function ModuleRow({ mod, entry, adoption, busy, onRelease, onMode, isFamily = f
           {mod.status === ARENA_MODULE_STATUS.EXTERNAL && mod.externalNote && (
             <p className="mt-2 flex gap-1.5 rounded-xl bg-purple-50 p-2 text-2xs leading-4 text-purple-800">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>{mod.externalNote}</span>
+              <span>{t(mod.externalNote)}</span>
             </p>
           )}
           {!releasable && (
             <p className="mt-2 flex gap-1.5 text-2xs leading-4 text-gray-500">
               <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>{ARENA_MODULE_STATUS_META[mod.status]?.hint}</span>
+              <span>{t(ARENA_MODULE_STATUS_META[mod.status]?.hint || '')}</span>
             </p>
           )}
 
@@ -204,7 +204,7 @@ function FamilyCard({ node, platformModules, adoption, busyId, onRelease, onMode
         <ModuleIcon module={node.family} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="font-display text-lg font-bold text-ink">{node.family.label}</span>
+            <span className="font-display text-lg font-bold text-ink">{t(node.family.label)}</span>
             <V2Badge tone={releasedCount > 0 ? 'green' : 'neutral'}>
               {releasedCount} / {all.length} liberados
             </V2Badge>

@@ -30,6 +30,8 @@
  * escolher — inclusive as que ela escolher errado.
  */
 
+import { t } from '@/core/i18n';
+
 /** A cor da plataforma, quando a arena não escolheu nenhuma. */
 export const BRAND_DEFAULT_COLOR = '#0B0B0C';
 
@@ -94,10 +96,10 @@ export function readableInk(hex) {
 export function normalizeBranding(input = {}) {
   const errors = {};
   const cor = normalizeHex(input.primary_color);
-  if (input.primary_color && !cor) errors.primary_color = 'Use uma cor em hexadecimal, como #1D4ED8.';
+  if (input.primary_color && !cor) errors.primary_color = t('Use uma cor em hexadecimal, como #1D4ED8.');
 
   const logo = String(input.logo_url || '').trim().slice(0, 500);
-  if (logo && !/^https?:\/\//i.test(logo)) errors.logo_url = 'O endereço do logo precisa começar com https://';
+  if (logo && !/^https?:\/\//i.test(logo)) errors.logo_url = t('O endereço do logo precisa começar com https://');
 
   return {
     valid: Object.keys(errors).length === 0,

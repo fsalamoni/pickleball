@@ -32,6 +32,7 @@ import {
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { logger } from '@/core/lib/logger';
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 function db() { return gamificationDb(); }
 
@@ -333,9 +334,9 @@ export async function respondMentorship(pairKey, accept, actorUid) {
   if (!snap.exists()) return null;
   const m = parseMentorship(snap.data());
   if (!m || m.status !== 'pending') return m;
-  if (actorUid !== m.mentorUid && actorUid !== m.apprenticeUid) throw new Error('Este convite não é seu.');
+  if (actorUid !== m.mentorUid && actorUid !== m.apprenticeUid) throw new Error(t('Este convite não é seu.'));
   const souQuemConvidou = actorUid === m.proposedBy;
-  if (accept && souQuemConvidou) throw new Error('Quem convida não pode aceitar o próprio convite.');
+  if (accept && souQuemConvidou) throw new Error(t('Quem convida não pode aceitar o próprio convite.'));
   const now = Date.now();
   const updated = accept
     ? { ...m, status: 'active', startedAt: now, updatedAt: now }

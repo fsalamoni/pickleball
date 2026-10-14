@@ -589,9 +589,7 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: tk('A luz acompanha a reserva. Exige o controlador do fabricante.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
-    externalNote:
-      'A plataforma cadastra o dispositivo e registra o comando, mas quem liga a luz '
-      + 'é o controlador do fabricante. É preciso um endereço (webhook) que aceite o comando.',
+    externalNote: tk('A plataforma cadastra o dispositivo e registra o comando, mas quem liga a luz é o controlador do fabricante. É preciso um endereço (webhook) que aceite o comando.'),
     collections: ['arena_devices'],
   },
   [ARENA_MODULE_ID.IOT_SENSORS]: {
@@ -614,9 +612,7 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ATHLETE]: tk('Reveja o ponto depois do jogo.'),
     },
     requires: [ARENA_MODULE_ID.IOT],
-    externalNote:
-      'Câmera, gravação e armazenamento de vídeo são serviços de terceiro. '
-      + 'A plataforma guarda o cadastro e o link, não o vídeo.',
+    externalNote: tk('Câmera, gravação e armazenamento de vídeo são serviços de terceiro. A plataforma guarda o cadastro e o link, não o vídeo.'),
     collections: ['arena_devices'],
   },
 
@@ -698,10 +694,7 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: tk('Um endereço seu. Exige apontar o DNS e configurar o hosting.'),
     },
     requires: [ARENA_MODULE_ID.WHITE_LABEL],
-    externalNote:
-      'Domínio é configuração de DNS e de hospedagem, não de aplicação. '
-      + 'A plataforma guarda o endereço desejado e mostra o passo a passo; '
-      + 'a publicação é feita fora do sistema.',
+    externalNote: tk('Domínio é configuração de DNS e de hospedagem, não de aplicação. A plataforma guarda o endereço desejado e mostra o passo a passo; a publicação é feita fora do sistema.'),
     collections: ['arena_settings'],
   },
   [ARENA_MODULE_ID.WHITE_LABEL_APP]: {
@@ -712,9 +705,7 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: tk('Um aplicativo com o nome da arena — outro produto, não uma chave.'),
     },
     requires: [ARENA_MODULE_ID.WHITE_LABEL],
-    externalNote:
-      'Publicar aplicativo nas lojas envolve contas de desenvolvedor, revisão e '
-      + 'manutenção próprias. Não está no escopo da plataforma.',
+    externalNote: tk('Publicar aplicativo nas lojas envolve contas de desenvolvedor, revisão e manutenção próprias. Não está no escopo da plataforma.'),
     collections: [],
   },
 

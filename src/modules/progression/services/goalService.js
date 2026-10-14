@@ -15,14 +15,15 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { normalizeGoalInput } from '../domain/progression.js';
+import { t } from '@/core/i18n';
 
 const COL = 'player_goals';
 
 /** Cria uma meta para o usuário autenticado. */
 export async function createGoal(input, actor) {
-  if (!db || !actor?.uid) throw new Error('É preciso estar autenticado.');
+  if (!db || !actor?.uid) throw new Error(t('É preciso estar autenticado.'));
   const { valid, errors, value } = normalizeGoalInput(input);
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Meta inválida.');
+  if (!valid) throw new Error(Object.values(errors)[0] || t('Meta inválida.'));
   const goalId = doc(collection(db, COL)).id;
   const id = `${actor.uid}_${goalId}`;
   await setDoc(doc(db, COL, id), {

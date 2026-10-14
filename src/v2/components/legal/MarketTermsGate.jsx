@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { V2Button } from '@/v2/ui/primitives';
 import { legalIcon } from './legalIcons';
+import { t } from '@/core/i18n';
 
 export default function MarketTermsGate() {
   const { user, isLoadingAuth } = useAuth();
@@ -36,9 +37,9 @@ export default function MarketTermsGate() {
     if (!allChecked) return;
     try {
       await accept.mutateAsync(pending.map((d) => ({ key: d.key, version: d.version, title: d.title })));
-      toast.success('Termos do Mercado aceitos. Boas compras e boas vendas!');
+      toast.success(t('Termos do Mercado aceitos. Boas compras e boas vendas!'));
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível registrar o aceite. Tente de novo.');
+      toast.error(err?.message || t('Não foi possível registrar o aceite. Tente de novo.'));
     }
   };
   const bloquear = (e) => e.preventDefault();
@@ -51,14 +52,14 @@ export default function MarketTermsGate() {
             <ShoppingBag className="h-6 w-6" />
           </span>
           <span>
-            <DialogTitle className="font-display text-xl font-bold text-ink">Antes de entrar no Mercado</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500">Leia e concorde com os termos do Mercado.</DialogDescription>
+            <DialogTitle className="font-display text-xl font-bold text-ink">{t('Antes de entrar no Mercado')}</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">{t('Leia e concorde com os termos do Mercado.')}</DialogDescription>
           </span>
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto p-6">
           <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">
-            O Mercado só aproxima quem quer vender de quem quer comprar. A PickleRush não vende, não recebe o pagamento, não entrega e não garante os produtos: <strong>a venda e o transporte são responsabilidade do vendedor</strong>, e <strong>quem compra responde pela própria decisão de compra</strong>. Os direitos que a lei garante continuam valendo entre vocês.
+            {t('O Mercado só aproxima quem quer vender de quem quer comprar. A PickleRush não vende, não recebe o pagamento, não entrega e não garante os produtos:')} <strong>{t('a venda e o transporte são responsabilidade do vendedor')}</strong>, {t('e')} <strong>{t('quem compra responde pela própria decisão de compra')}</strong>. {t('Os direitos que a lei garante continuam valendo entre vocês.')}
           </p>
           {pending.map((d) => {
             const Icon = legalIcon(d.icon);
@@ -83,7 +84,7 @@ export default function MarketTermsGate() {
                       onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-0.5 font-semibold text-ink underline"
                     >
-                      Ler documento <ExternalLink className="h-3 w-3" />
+                      {t('Ler documento')} <ExternalLink className="h-3 w-3" />
                     </a>
                   </span>
                 </span>
@@ -94,10 +95,10 @@ export default function MarketTermsGate() {
 
         <div className="space-y-2 border-t border-gray-100 p-6">
           <V2Button type="button" className="w-full" onClick={aceitar} disabled={!allChecked || accept.isPending}>
-            {accept.isPending ? 'Registrando…' : 'Li e aceito, entrar no Mercado'}
+            {accept.isPending ? t('Registrando…') : t('Li e aceito, entrar no Mercado')}
           </V2Button>
-          <V2Button type="button" variant="ghost" className="w-full" onClick={() => navigate('/')}>Agora não</V2Button>
-          <p className="text-center text-2xs text-gray-500">Marque todos os itens para entrar. O aceite fica registrado com data e versão.</p>
+          <V2Button type="button" variant="ghost" className="w-full" onClick={() => navigate('/')}>{t('Agora não')}</V2Button>
+          <p className="text-center text-2xs text-gray-500">{t('Marque todos os itens para entrar. O aceite fica registrado com data e versão.')}</p>
         </div>
       </DialogContent>
     </Dialog>

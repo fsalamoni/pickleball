@@ -105,34 +105,34 @@ export function normalizeArenaSettings(input = {}) {
   // Validações específicas
   const op = value.operational;
   if (op.booking_window_days < 0 || op.booking_window_days > 365) {
-    errors['operational.booking_window_days'] = 'Deve ser entre 0 e 365.';
+    errors['operational.booking_window_days'] = t('Deve ser entre 0 e 365.');
   }
   if (op.min_booking_lead_minutes < 0 || op.min_booking_lead_minutes > 1440) {
-    errors['operational.min_booking_lead_minutes'] = 'Deve ser entre 0 e 1440 (24h).';
+    errors['operational.min_booking_lead_minutes'] = t('Deve ser entre 0 e 1440 (24h).');
   }
   if (op.cancellation_window_hours < 0 || op.cancellation_window_hours > 168) {
-    errors['operational.cancellation_window_hours'] = 'Deve ser entre 0 e 168 (1 semana).';
+    errors['operational.cancellation_window_hours'] = t('Deve ser entre 0 e 168 (1 semana).');
   }
   if (op.cancellation_refund_pct < 0 || op.cancellation_refund_pct > 100) {
-    errors['operational.cancellation_refund_pct'] = 'Deve ser entre 0 e 100.';
+    errors['operational.cancellation_refund_pct'] = t('Deve ser entre 0 e 100.');
   }
   if (op.no_show_fee_pct < 0 || op.no_show_fee_pct > 100) {
-    errors['operational.no_show_fee_pct'] = 'Deve ser entre 0 e 100.';
+    errors['operational.no_show_fee_pct'] = t('Deve ser entre 0 e 100.');
   }
   if (op.default_slot_duration_minutes < 15 || op.default_slot_duration_minutes > 480) {
-    errors['operational.default_slot_duration_minutes'] = 'Deve ser entre 15 e 480 min (8h).';
+    errors['operational.default_slot_duration_minutes'] = t('Deve ser entre 15 e 480 min (8h).');
   }
   if (op.buffer_between_bookings_minutes < 0 || op.buffer_between_bookings_minutes > 120) {
-    errors['operational.buffer_between_bookings_minutes'] = 'Deve ser entre 0 e 120.';
+    errors['operational.buffer_between_bookings_minutes'] = t('Deve ser entre 0 e 120.');
   }
 
   // Validação de branding colors (hex simples)
   const br = value.branding;
   if (br.primary_color && !/^#[0-9a-fA-F]{6}$/.test(br.primary_color)) {
-    errors['branding.primary_color'] = 'Cor inválida (use #RRGGBB).';
+    errors['branding.primary_color'] = t('Cor inválida (use #RRGGBB).');
   }
   if (br.accent_color && !/^#[0-9a-fA-F]{6}$/.test(br.accent_color)) {
-    errors['branding.accent_color'] = 'Cor inválida (use #RRGGBB).';
+    errors['branding.accent_color'] = t('Cor inválida (use #RRGGBB).');
   }
 
   // Validação de payments
@@ -140,7 +140,7 @@ export function normalizeArenaSettings(input = {}) {
   const validMethods = ['pix', 'credit_card', 'debit_card', 'cash', 'wallet', 'bank_transfer'];
   pay.accepted_methods = (pay.accepted_methods || []).filter((m) => validMethods.includes(m));
   if (pay.max_split_players < 1 || pay.max_split_players > 10) {
-    errors['payments.max_split_players'] = 'Deve ser entre 1 e 10.';
+    errors['payments.max_split_players'] = t('Deve ser entre 1 e 10.');
   }
 
   return {

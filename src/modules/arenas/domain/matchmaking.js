@@ -154,13 +154,13 @@ export function normalizeMatchmakingCriteria(input = {}) {
   };
 
   if (value.min_level_diff < 0 || value.min_level_diff > 5) {
-    errors.min_level_diff = 'Deve ser entre 0 e 5.';
+    errors.min_level_diff = t('Deve ser entre 0 e 5.');
   }
   if (value.max_level_diff < 0 || value.max_level_diff > 5) {
-    errors.max_level_diff = 'Deve ser entre 0 e 5.';
+    errors.max_level_diff = t('Deve ser entre 0 e 5.');
   }
   if (value.min_level_diff > value.max_level_diff) {
-    errors.max_level_diff = 'Máximo deve ser maior que mínimo.';
+    errors.max_level_diff = t('Máximo deve ser maior que mínimo.');
   }
 
   return { valid: Object.keys(errors).length === 0, errors, value };

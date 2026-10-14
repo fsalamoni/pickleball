@@ -719,13 +719,13 @@ function getLevelName(level) {
 export function generateExplanation(level) {
   const explanations = {
     novato: tk('Você está dando os primeiros passos no pickleball. O foco agora é aprender as regras básicas, segurar a raquete corretamente e simplesmente colocar a bola no campo. Erros não forçados são frequentes e o posicionamento na quadra ainda está sendo desenvolvido.'),
-    iniciante: 'Você já conhece as regras básicas e consegue iniciar ralis curtos. O forehand está se desenvolvendo, mas o backhand e o posicionamento ainda são inconsistentes. Os pontos se perdem principalmente por erros não forçados.',
+    iniciante: tk('Você já conhece as regras básicas e consegue iniciar ralis curtos. O forehand está se desenvolvendo, mas o backhand e o posicionamento ainda são inconsistentes. Os pontos se perdem principalmente por erros não forçados.'),
     iniciante_avancado: tk('Você já acerta bons golpes de forehand, saca com consistência e começa a entender a importância da rede. No entanto, a impaciência ainda predomina: você tende a bater forte quando deveria amortecer.'),
-    intermediario_basico: 'Você entende a importância da rede e já tenta usar o drop shot. Consegue sustentar ralis de dinks por alguns golpes, mas a consistência falha sob pressão. A sincronização com o parceiro ainda precisa de desenvolvimento.',
+    intermediario_basico: tk('Você entende a importância da rede e já tenta usar o drop shot. Consegue sustentar ralis de dinks por alguns golpes, mas a consistência falha sob pressão. A sincronização com o parceiro ainda precisa de desenvolvimento.'),
     intermediario: tk('Você compreende a essência do jogo e usa o drop shot com regularidade. Movimenta-se bem com seu parceiro e consegue trocar dinks com controle direcional. Porém, quando a pressão aumenta, a consistência ainda falha.'),
-    intermediario_avancado: 'Você domina os fundamentos e já usa spins e slices com intenção tática. Lê bem as situações de jogo e escolhe entre amortecer ou acelerar conforme a posição dos adversários.',
+    intermediario_avancado: tk('Você domina os fundamentos e já usa spins e slices com intenção tática. Lê bem as situações de jogo e escolhe entre amortecer ou acelerar conforme a posição dos adversários.'),
     avancado: tk('Você tem sólido domínio técnico e tático. Domina ambas as faces da raquete, tem reflexos rápidos para bloquear voleios difíceis e usa estratégias de dupla com eficiência.'),
-    profissional: 'Você é um jogador de alto nível com domínio técnico e tático consistente. Suas decisões são rápidas e precisas, você antecipa os movimentos dos adversários e manipula ralis ao seu favor.',
+    profissional: tk('Você é um jogador de alto nível com domínio técnico e tático consistente. Suas decisões são rápidas e precisas, você antecipa os movimentos dos adversários e manipula ralis ao seu favor.'),
     elite: tk('Maestria técnica aliada à orquestração tática consistente. Suas decisões são automatizadas, você antecipa os movimentos dos adversários e manipula ralis lentos ou frenéticos ao seu favor com tranquilidade.'),
   };
   return explanations[level] || explanations.novato;

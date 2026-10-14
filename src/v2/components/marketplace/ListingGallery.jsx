@@ -59,7 +59,7 @@ export default function ListingGallery({ listing }) {
             src={atual.url}
             alt={atual.alt || listing.title}
             title={listing.title}
-            description={atual.ai_generated ? 'O vendedor informou que esta imagem foi gerada ou alterada por inteligência artificial.' : undefined}
+            description={atual.ai_generated ? t('O vendedor informou que esta imagem foi gerada ou alterada por inteligência artificial.') : undefined}
             trigger={(
               <button type="button" className="relative block h-full w-full cursor-zoom-in" aria-label={t('Ampliar a foto')}>
                 <MarketPhoto src={atual.url} alt={atual.alt || listing.title} aspect={atual.aspect} frame={atual.frame} mode="contain" />

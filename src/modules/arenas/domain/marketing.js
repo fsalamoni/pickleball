@@ -131,8 +131,8 @@ export function isBookingCoupon(coupon) {
 const reais = (n) => `R$ ${(Number(n) || 0).toFixed(2).replace('.', ',')}`;
 const horasTexto = (h) => {
   const n = Number(h) || 0;
-  const t = Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
-  return `${t} ${n === 1 ? 'hora grátis' : 'horas grátis'}`;
+  const txt = Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+  return n === 1 ? t('{n} hora grátis', { n: txt }) : t('{n} horas grátis', { n: txt });
 };
 
 /**
@@ -145,7 +145,7 @@ export function couponBenefitText(coupon) {
   if (kind === COUPON_KIND.DISCOUNT) {
     return coupon.type === COUPON_TYPE.FIXED
       ? t('{value} de desconto', { value: reais(coupon.value) })
-      : `${Number(coupon.value) || 0}% de desconto`;
+      : t('{pct}% de desconto', { pct: Number(coupon.value) || 0 });
   }
   if (kind === COUPON_KIND.FREE_HOURS) return horasTexto(coupon.value);
   if (kind === COUPON_KIND.REFERRAL) return referralRulesText(coupon);
@@ -160,12 +160,12 @@ export function referralRulesText(rules) {
   if (!rules) return '';
   const partes = [];
   const quemIndica = Number(rules.referrer_reward) || 0;
-  if (quemIndica > 0) partes.push(`quem indica ganha ${reais(quemIndica)} em crédito`);
+  if (quemIndica > 0) partes.push(t('quem indica ganha {valor} em crédito', { valor: reais(quemIndica) }));
   const valor = Number(rules.referred_reward_value) || 0;
   if (valor > 0) {
-    if (rules.referred_reward_kind === REFERRED_REWARD.PERCENT) partes.push(`quem chega ganha ${valor}% na primeira reserva`);
-    else if (rules.referred_reward_kind === REFERRED_REWARD.FIXED) partes.push(`quem chega ganha ${reais(valor)} na primeira reserva`);
-    else if (rules.referred_reward_kind === REFERRED_REWARD.CREDIT) partes.push(`quem chega ganha ${reais(valor)} em crédito`);
+    if (rules.referred_reward_kind === REFERRED_REWARD.PERCENT) partes.push(t('quem chega ganha {pct}% na primeira reserva', { pct: valor }));
+    else if (rules.referred_reward_kind === REFERRED_REWARD.FIXED) partes.push(t('quem chega ganha {valor} na primeira reserva', { valor: reais(valor) }));
+    else if (rules.referred_reward_kind === REFERRED_REWARD.CREDIT) partes.push(t('quem chega ganha {valor} em crédito', { valor: reais(valor) }));
   }
   const txt = partes.join(' · ');
   return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : t('Sem prêmio definido');
@@ -215,8 +215,8 @@ export function normalizeCouponInput(input = {}) {
   // O cupom de indicação não é digitado por ninguém (cada atleta tem o
   // próprio código): o código é só um nome para a lista.
   if (!code && family === COUPON_FAMILY.REFERRAL) code = 'INDICACAO';
-  if (!code) errors.code = 'Dê um código ao cupom.';
-  if (code.length > 30) errors.code = 'No máximo 30 caracteres.';
+  if (!code) errors.code = t('Dê um código ao cupom.');
+  if (code.length > 30) errors.code = t('No máximo 30 caracteres.');
 
   let type = null;
   let value = null;
@@ -230,16 +230,16 @@ export function normalizeCouponInput(input = {}) {
   if (kind === COUPON_KIND.DISCOUNT) {
     type = Object.values(COUPON_TYPE).includes(input.type) ? input.type : COUPON_TYPE.PERCENT;
     value = Number(input.value);
-    if (!Number.isFinite(value) || value <= 0) errors.value = 'O desconto deve ser maior que zero.';
-    if (type === COUPON_TYPE.PERCENT && value > 100) errors.value = 'O desconto não passa de 100%.';
+    if (!Number.isFinite(value) || value <= 0) errors.value = t('O desconto deve ser maior que zero.');
+    if (type === COUPON_TYPE.PERCENT && value > 100) errors.value = t('O desconto não passa de 100%.');
   } else if (kind === COUPON_KIND.FREE_HOURS) {
     value = Number(input.value);
-    if (!Number.isFinite(value) || value <= 0) errors.value = 'Informe quantas horas são grátis.';
-    else if (value > 24) errors.value = 'No máximo 24 horas.';
+    if (!Number.isFinite(value) || value <= 0) errors.value = t('Informe quantas horas são grátis.');
+    else if (value > 24) errors.value = t('No máximo 24 horas.');
     else value = Math.round(value * 2) / 2; // de meia em meia hora
   } else if (family === COUPON_FAMILY.VOUCHER) {
     benefit = String(input.benefit || '').trim().slice(0, 120);
-    if (!benefit) errors.benefit = 'Diga o que o vale dá (ex.: "1 água de coco").';
+    if (!benefit) errors.benefit = t('Diga o que o vale dá (ex.: "1 água de coco").');
     faceValue = positivoOuNull(input.face_value);
   } else if (family === COUPON_FAMILY.REFERRAL) {
     const quemIndica = num(input.referrer_reward);
@@ -257,10 +257,10 @@ export function normalizeCouponInput(input = {}) {
       max_per_referrer: positivoOuNull(input.max_per_referrer),
     };
     if (tipoChegada === REFERRED_REWARD.PERCENT && referral.referred_reward_value > 100) {
-      errors.referred_reward_value = 'O desconto não passa de 100%.';
+      errors.referred_reward_value = t('O desconto não passa de 100%.');
     }
     if (referral.referrer_reward <= 0 && referral.referred_reward_value <= 0) {
-      errors.referrer_reward = 'Defina o prêmio de pelo menos um dos lados.';
+      errors.referrer_reward = t('Defina o prêmio de pelo menos um dos lados.');
     }
   }
 
@@ -468,12 +468,12 @@ export function promoConditions(promo) {
   if (promo.expires_at) {
     const d = new Date(Number(promo.expires_at));
     const p = (n) => String(n).padStart(2, '0');
-    ate = `até ${formatDateShortBR(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`)}`;
+    ate = t('até {data}', { data: formatDateShortBR(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`) });
   }
   return [
-    promo.min_amount ? `a partir de ${formatPrice(promo.min_amount)}` : null,
+    promo.min_amount ? t('a partir de {valor}', { valor: formatPrice(promo.min_amount) }) : null,
     ate,
-    promo.once_per_user ? 'uma vez por pessoa' : null,
+    promo.once_per_user ? t('uma vez por pessoa') : null,
   ].filter(Boolean).join(' · ');
 }
 
@@ -548,7 +548,7 @@ export function referralFriendReward(program) {
 export function referralInviteText({ arenaName = 'arena', code = '', program = null } = {}) {
   if (!program) return t('Jogo na {arenaName} — use meu código {code} na primeira visita e nós dois ganhamos crédito.', { arenaName, code });
   const valor = Number(program.referred_reward_value) || 0;
-  const base = `Jogo na ${arenaName} — use meu código ${code} na sua primeira reserva`;
+  const base = t('Jogo na {arenaName} — use meu código {code} na sua primeira reserva', { arenaName, code });
   if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.PERCENT) return t('{base} e ganhe {valor}% de desconto nela.', { base, valor });
   if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.FIXED) return t('{base} e ganhe {valor} de desconto nela.', { base, valor: reais(valor) });
   if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.CREDIT) return t('{base} e ganhe {valor} em crédito.', { base, valor: reais(valor) });
@@ -629,10 +629,10 @@ export function bookingReferralLine(referral, { perspective = 'athlete' } = {}) 
     const partes = [];
     const desconto = Number(referral.discount_value) || 0;
     const credito = Number(referral.referred_reward) || 0;
-    if (desconto > 0) partes.push(`${reais(desconto)} de desconto`);
-    if (credito > 0) partes.push(`${reais(credito)} em crédito`);
+    if (desconto > 0) partes.push(t('{value} de desconto', { value: reais(desconto) }));
+    if (credito > 0) partes.push(t('{valor} em crédito', { valor: reais(credito) }));
     if (perspective === 'arena' && Number(referral.referrer_reward) > 0) {
-      partes.push(`${reais(referral.referrer_reward)} para quem indicou`);
+      partes.push(t('{valor} para quem indicou', { valor: reais(referral.referrer_reward) }));
     }
     return { tone: 'green', text: t('Indicação registrada ({code}){valor}', { code, valor: partes.length ? ` · ${partes.join(' · ')}` : '' }) };
   }

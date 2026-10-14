@@ -142,11 +142,11 @@ export function normalizeOpenMatchInput(input = {}, { courts = [], formats = OPE
   if (courtIds.length === 0) {
     // Um dia de jogo acontece em quadras. Sem quadra, o jogo não fecharia o
     // horário no calendário — e a arena venderia a mesma hora duas vezes.
-    errors.court_ids = 'Escolha pelo menos uma quadra.';
+    errors.court_ids = t('Escolha pelo menos uma quadra.');
   }
 
   const format = String(input.game_format ?? '').trim() || GAME_DAY_FORMAT.AMERICANO;
-  if (!formats.includes(format)) errors.game_format = 'Escolha como o jogo vai ser jogado.';
+  if (!formats.includes(format)) errors.game_format = t('Escolha como o jogo vai ser jogado.');
 
   const manageMode = input.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS
     ? GAME_DAY_MANAGE_MODE.PARTICIPANTS

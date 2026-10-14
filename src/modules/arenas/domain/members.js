@@ -5,7 +5,7 @@
  */
 
 import { instanteEmMs } from '@/core/domain/instant';
-import { tk } from '@/core/i18n';
+import { tk, t } from '@/core/i18n';
 
 export const MEMBER_TIER = Object.freeze({
   BRONZE: 'bronze',
@@ -61,22 +61,22 @@ export function normalizeMemberInput(input = {}) {
 export function normalizePackageInput(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim();
-  if (!name) errors.name = 'Nome obrigatório.';
-  if (name.length > 80) errors.name = 'Máx. 80 chars.';
+  if (!name) errors.name = t('Nome obrigatório.');
+  if (name.length > 80) errors.name = t('Máx. 80 chars.');
 
   const hours = Number(input.hours);
   if (!Number.isFinite(hours) || hours <= 0 || hours > 200) {
-    errors.hours = 'Horas deve ser entre 1 e 200.';
+    errors.hours = t('Horas deve ser entre 1 e 200.');
   }
 
   const price = Number(input.price);
   if (!Number.isFinite(price) || price <= 0) {
-    errors.price = 'Preço deve ser maior que 0.';
+    errors.price = t('Preço deve ser maior que 0.');
   }
 
   const validityDays = Number(input.validity_days) || 60;
   if (validityDays < 1 || validityDays > 365) {
-    errors.validity_days = 'Validade deve ser entre 1 e 365 dias.';
+    errors.validity_days = t('Validade deve ser entre 1 e 365 dias.');
   }
 
   return {

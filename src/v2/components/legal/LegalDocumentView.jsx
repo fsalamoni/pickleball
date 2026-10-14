@@ -2,11 +2,12 @@ import React from 'react';
 import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
 import { PLATFORM_NAME } from '@/modules/legal/domain/legalDocuments';
 import { legalIcon } from './legalIcons';
+import { t, fmtData } from '@/core/i18n';
 
 function formatDate(iso) {
   if (!iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return fmtData(new Date(y, m - 1, d), { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 /**
@@ -15,7 +16,7 @@ function formatDate(iso) {
  */
 export default function LegalDocumentView({ doc, action }) {
   if (!doc) return null;
-  const meta = `${PLATFORM_NAME} · Versão ${doc.version} — vigente desde ${formatDate(doc.effectiveDate)}.`;
+  const meta = `${PLATFORM_NAME} · ${t('Versão {versao} — vigente desde {data}.', { versao: doc.version, data: formatDate(doc.effectiveDate) })}`;
 
   return (
     <div className="mx-auto max-w-[900px]">

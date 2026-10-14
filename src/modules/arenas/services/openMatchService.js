@@ -358,7 +358,7 @@ export async function createOpenSlot(arenaId, input, actor) {
 
   const { valid, errors, value } = normalizeOpenSlotInput(input);
   if (!valid) {
-    const firstError = Object.values(errors)[0] || 'Dados inválidos.';
+    const firstError = Object.values(errors)[0] || t('Dados inválidos.');
     throw new Error(firstError);
   }
 
@@ -400,7 +400,7 @@ export async function updateOpenSlot(slotId, updates, actor) {
   if (!slotId) throw new Error(t('slotId é obrigatório.'));
   const { valid, errors, value } = normalizeOpenSlotInput(updates);
   if (!valid) {
-    const firstError = Object.values(errors)[0] || 'Dados inválidos.';
+    const firstError = Object.values(errors)[0] || t('Dados inválidos.');
     throw new Error(firstError);
   }
   // A mesma conferência da criação — mudar o horário também pode atropelar.

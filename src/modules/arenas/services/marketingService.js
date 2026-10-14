@@ -190,7 +190,7 @@ export async function registrarUsoDeCupom(couponId, userId) {
 export async function validateCouponCode(arenaId, code, ctx = {}) {
   const limpo = String(code || '').trim().toUpperCase().replace(/\s+/g, '');
   if (!db || !arenaId || !limpo) {
-    return { coupon: null, discount: 0, error: 'Informe o código do cupom.' };
+    return { coupon: null, discount: 0, error: t('Informe o código do cupom.') };
   }
   let achado = null;
   try {
@@ -201,7 +201,7 @@ export async function validateCouponCode(arenaId, code, ctx = {}) {
       .map((d) => ({ id: d.id, ...d.data() }))
       .find((c) => String(c.code || '').toUpperCase() === limpo) || null;
   } catch {
-    return { coupon: null, discount: 0, error: 'Não foi possível conferir o cupom agora.' };
+    return { coupon: null, discount: 0, error: t('Não foi possível conferir o cupom agora.') };
   }
 
   const erro = couponError(achado, {

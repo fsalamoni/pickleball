@@ -20,6 +20,8 @@
  * presença inegociável usa o caminho da arena, que confirma pelo painel.
  */
 
+import { t } from '@/core/i18n';
+
 /** Janela em que a chegada pode ser confirmada, em minutos. */
 export const CHECKIN_EARLY_MIN = 60;
 export const CHECKIN_LATE_MIN = 30;
@@ -228,16 +230,16 @@ export function checkinBlockedReason(state, minutesToStart) {
       const h = Math.floor(num(minutesToStart) / 60);
       const m = num(minutesToStart) % 60;
       const quando = h > 0 ? `${h}h${m > 0 ? String(m).padStart(2, '0') : ''}` : `${m} min`;
-      return `Ainda falta ${quando} para o seu horário. A chegada abre 1 hora antes.`;
+      return t('Ainda falta {quando} para o seu horário. A chegada abre 1 hora antes.', { quando });
     }
     case 'late':
-      return 'O horário já passou. Fale com a recepção da arena.';
+      return t('O horário já passou. Fale com a recepção da arena.');
     case 'not_confirmed':
-      return 'A arena ainda não confirmou esta reserva.';
+      return t('A arena ainda não confirmou esta reserva.');
     case 'cancelled':
-      return 'Esta reserva foi cancelada.';
+      return t('Esta reserva foi cancelada.');
     case 'other_day':
-      return 'Esta reserva não é para hoje.';
+      return t('Esta reserva não é para hoje.');
     default:
       return '';
   }

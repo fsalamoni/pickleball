@@ -30,6 +30,7 @@ import { applyRealProgress } from '@/modules/progression/domain/missionMetrics';
 import { missionDocXp } from '@/modules/progression/domain/xpTotal';
 
 import { gamificationDb } from './firestoreDb.js';
+import { t } from '@/core/i18n';
 
 function db() {
   return gamificationDb();
@@ -131,7 +132,7 @@ export async function claimScopedBonus(uid, scope, now = new Date()) {
   const data = parseMissionDoc(existing.data());
   const todas = Array.isArray(data.missions) && data.missions.length > 0
     && data.missions.every((m) => (m.current || 0) >= (m.target || 1));
-  if (!todas) throw new Error('Cumpra todas as missões antes de resgatar o bônus.');
+  if (!todas) throw new Error(t('Cumpra todas as missões antes de resgatar o bônus.'));
   const updated = { ...data, bonusClaimed: true, updatedAt: Date.now() };
   updated.xpEarned = missionDocXp(updated);
   await setDoc(ref, { ...updated, serverUpdatedAt: serverTimestamp() });

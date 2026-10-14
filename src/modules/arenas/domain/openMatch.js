@@ -224,30 +224,30 @@ export function normalizeOpenSlotInput(input = {}) {
   const end = String(input.end ?? '').trim();
 
   if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    errors.date = 'Data inválida (use AAAA-MM-DD).';
+    errors.date = t('Data inválida (use AAAA-MM-DD).');
   }
   if (!start.match(/^\d{2}:\d{2}$/)) {
-    errors.start = 'Horário inicial inválido (use HH:MM).';
+    errors.start = t('Horário inicial inválido (use HH:MM).');
   }
   if (!end.match(/^\d{2}:\d{2}$/)) {
-    errors.end = 'Horário final inválido (use HH:MM).';
+    errors.end = t('Horário final inválido (use HH:MM).');
   }
   if (!errors.start && !errors.end) {
     const s = timeToMinutes(start);
     const e = timeToMinutes(end);
     if (s != null && e != null && e <= s) {
-      errors.end = 'Horário final deve ser depois do inicial.';
+      errors.end = t('Horário final deve ser depois do inicial.');
     }
   }
 
   const totalSpots = Number(input.total_spots);
   if (!Number.isFinite(totalSpots) || totalSpots < 2 || totalSpots > 20) {
-    errors.total_spots = 'Total de vagas deve ser entre 2 e 20.';
+    errors.total_spots = t('Total de vagas deve ser entre 2 e 20.');
   }
 
   const format = String(input.format ?? 'duplas').trim();
   if (!OPEN_SLOT_FORMATS.includes(format)) {
-    errors.format = 'Formato inválido.';
+    errors.format = t('Formato inválido.');
   }
 
   // A faixa vive na RÉGUA ÚNICA (2.0–8.0), a mesma do atleta. Escalas
@@ -257,7 +257,7 @@ export function normalizeOpenSlotInput(input = {}) {
   if (input.min_level !== '' && input.min_level != null) {
     const n = Number(input.min_level);
     if (!Number.isFinite(n) || n < DUPR_MIN || n > DUPR_MAX) {
-      errors.min_level = `Nível mínimo deve ser entre ${faixa}.`;
+      errors.min_level = t('Nível mínimo deve ser entre {faixa}.', { faixa });
     } else {
       minLevel = n;
     }
@@ -266,20 +266,20 @@ export function normalizeOpenSlotInput(input = {}) {
   if (input.max_level !== '' && input.max_level != null) {
     const n = Number(input.max_level);
     if (!Number.isFinite(n) || n < DUPR_MIN || n > DUPR_MAX) {
-      errors.max_level = `Nível máximo deve ser entre ${faixa}.`;
+      errors.max_level = t('Nível máximo deve ser entre {faixa}.', { faixa });
     } else {
       maxLevel = n;
     }
   }
   if (minLevel != null && maxLevel != null && maxLevel < minLevel) {
-    errors.max_level = 'Nível máximo deve ser maior que o mínimo.';
+    errors.max_level = t('Nível máximo deve ser maior que o mínimo.');
   }
 
   let price = null;
   if (input.price !== '' && input.price != null) {
     const n = Number(input.price);
     if (!Number.isFinite(n) || n < 0) {
-      errors.price = 'Preço inválido.';
+      errors.price = t('Preço inválido.');
     } else {
       price = n;
     }

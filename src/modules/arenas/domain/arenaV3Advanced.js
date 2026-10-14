@@ -3,6 +3,8 @@
  * Domínio puro mínimo para fechar o roadmap.
  */
 
+import { t } from '@/core/i18n';
+
 export const DEVICE_KIND = Object.freeze({
   QR_KIOSK: 'qr_kiosk',
   LIGHTING: 'lighting',
@@ -22,7 +24,7 @@ export const DEVICE_STATUS = Object.freeze({
 export function normalizeDeviceInput(input = {}) {
   const errors = {};
   const name = String(input.name || '').trim();
-  if (!name) errors.name = 'Nome obrigatório.';
+  if (!name) errors.name = t('Nome obrigatório.');
   const kind = Object.values(DEVICE_KIND).includes(input.kind) ? input.kind : DEVICE_KIND.QR_KIOSK;
   return {
     valid: Object.keys(errors).length === 0,

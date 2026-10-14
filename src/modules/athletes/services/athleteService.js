@@ -27,6 +27,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { ATHLETE_DIRECTORY_COLLECTION } from '../domain/constants.js';
 import { buildAthletePublicProfile, filterEmptyStringFields, privateContactsToClear } from '../domain/publicProfile.js';
 import { groupClubsByUser, buildAthleteProfilesResyncPlan } from '../domain/directoryResync.js';
+import { t } from '@/core/i18n';
 
 const CLUB_MEMBERS_COLLECTION = 'club_members';
 
@@ -101,10 +102,10 @@ export async function syncAthleteProfile(user, profile = {}) {
  * @returns {Promise<{ ok: true, uid: string, fieldsWritten: number } | { ok: false, reason: string }>}
  */
 export async function restoreAthleteProfileFromUserDoc(uid, actor) {
-  if (!db || !uid) return { ok: false, reason: 'UID inválido.' };
-  if (!actor?.uid) return { ok: false, reason: 'Usuário não autenticado.' };
+  if (!db || !uid) return { ok: false, reason: t('UID inválido.') };
+  if (!actor?.uid) return { ok: false, reason: t('Usuário não autenticado.') };
   const userSnap = await getDoc(doc(db, 'users', uid));
-  if (!userSnap.exists()) return { ok: false, reason: `users/${uid} não encontrado.` };
+  if (!userSnap.exists()) return { ok: false, reason: t('Cadastro {uid} não encontrado.', { uid }) };
   const userProfile = { uid, ...userSnap.data() };
   const publicProfile = buildAthletePublicProfile(uid, userProfile, []);
   const payload = filterEmptyStringFields({
@@ -160,8 +161,8 @@ export async function restoreAthleteProfileFromUserDoc(uid, actor) {
  * @returns {Promise<{ ok: true, dryRun: boolean, scanned: number, mirrors: number, written: number, summary: object } | { ok: false, reason: string }>}
  */
 export async function resyncAllAthleteProfilesFromUsers(actor, options = {}) {
-  if (!db) return { ok: false, reason: 'Firestore indisponível.' };
-  if (!actor?.uid) return { ok: false, reason: 'Usuário não autenticado.' };
+  if (!db) return { ok: false, reason: t('Firestore indisponível.') };
+  if (!actor?.uid) return { ok: false, reason: t('Usuário não autenticado.') };
   const dryRun = options.dryRun === true;
 
   // Leituras de coleção (fonte de verdade, espelhos existentes e vínculos de
@@ -236,8 +237,8 @@ export async function listAthletes() {
  * @param {object} actor
  */
 export async function setAthleteHidden(uid, hidden, actor) {
-  if (!db) throw new Error('Firestore indisponível.');
-  if (!uid) throw new Error('UID do atleta é obrigatório.');
+  if (!db) throw new Error(t('Firestore indisponível.'));
+  if (!uid) throw new Error(t('UID do atleta é obrigatório.'));
   const flag = hidden === true;
   const meta = {
     hidden: flag,
