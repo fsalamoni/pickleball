@@ -90,7 +90,7 @@ const V2CommandPalette = lazy(() => import('@/v2/components/search/V2CommandPale
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import MarketTermsGate from '@/v2/components/legal/MarketTermsGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
-import { pendingGateConsents } from '@/modules/legal/domain/consent';
+import { pendingGateConsents, pendingMarketConsents } from '@/modules/legal/domain/consent';
 import { t, tk, tn } from '@/core/i18n';
 
 const BRAND = 'PickleRush';
@@ -685,6 +685,15 @@ export default function V2Layout({ children }) {
   const consentGateBlocking = legalCenterOn && !!user && (
     consentsLoading || !consentsFetched || pendingGateConsents(consentMap).length > 0
   );
+  // 🐞 A mesma regra vale para os termos do Mercado: com o cadastro inicial
+  // aberto por cima, os termos ficavam na tela e nenhum toque respondia (era o
+  // "trava no celular"). Os termos vêm primeiro; o cadastro, depois do aceite.
+  const marketGateBlocking = !consentGateBlocking && marketplaceOn
+    && location.pathname.startsWith('/mercado') && pendingMarketConsents(consentMap).length > 0;
+  // Com um aviso de aceite NA TELA, a página atrás não monta: nenhum diálogo
+  // dela (um link com `?criar=1`, `?marcar=1`) abre por cima do aviso e o trava.
+  // Enquanto os aceites só carregam, a página monta normalmente (sem esperar).
+  const avisoNaTela = (consentGateBlocking && consentsFetched) || marketGateBlocking;
 
   // Colapso da barra lateral (só ícones), persistido por usuário.
   const [collapsed, setCollapsed] = useState(() => {
@@ -755,9 +764,9 @@ export default function V2Layout({ children }) {
           Tem precedência sobre o onboarding para evitar dois modais
           bloqueantes simultâneos. */}
       <LegalConsentGate />
-      {!consentGateBlocking && <V2OnboardingWizard />}
+      {!consentGateBlocking && !marketGateBlocking && <V2OnboardingWizard />}
       {/* Termos do Mercado: no primeiro acesso a /mercado (e a cada versão nova). */}
-      {!consentGateBlocking && marketplaceOn && location.pathname.startsWith('/mercado') && <MarketTermsGate />}
+      {marketGateBlocking && <MarketTermsGate />}
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',
@@ -979,7 +988,7 @@ export default function V2Layout({ children }) {
             navHubsOn ? 'pt-6' : 'pt-28',
           )}
         >
-          {children}
+          {avisoNaTela ? null : children}
         </main>
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>

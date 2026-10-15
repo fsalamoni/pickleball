@@ -35,6 +35,16 @@ export function useAcceptConsents() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (docsMeta) => recordConsents(user, docsMeta),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['legal-consents'] }),
+    // O aceite gravado entra no cache NA HORA: o aviso fecha sem esperar a
+    // releitura (que, na rede fraca do celular, deixava o aviso aberto depois
+    // do "aceito" e a pessoa tocando de novo).
+    onSuccess: (records) => {
+      qc.setQueryData(['legal-consents', user?.uid], (antes = []) => [
+        ...antes.filter((r) => !records.some((n) => n.id === r.id)),
+        // `accepted_at` gravado é o marcador do servidor; até a releitura vale o _ms.
+        ...records.map((r) => ({ ...r, accepted_at: null })),
+      ]);
+      qc.invalidateQueries({ queryKey: ['legal-consents'] });
+    },
   });
 }

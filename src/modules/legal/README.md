@@ -37,7 +37,19 @@ português? `legalTranslation.test.js` reprova listando o documento.
   válido quando a versão aceita ≥ versão vigente.
 - `services/consentService.js` + `hooks/useConsents.js` — I/O e React Query.
 - `LegalConsentGate` (montado no `V2Layout`) bloqueia o uso até o aceite dos
-  documentos essenciais; reaparece quando a versão sobe.
+  documentos essenciais; reaparece quando a versão sobe. `MarketTermsGate` faz
+  o mesmo com os termos do Mercado no primeiro acesso a `/mercado`.
+- ⚠️ **Um aviso por vez** (o `V2Layout` decide): primeiro os essenciais, depois
+  os do Mercado, e só então o assistente de cadastro. 🐞 Com o cadastro aberto
+  por cima, os termos do Mercado ficavam na tela sem responder ao toque (o
+  Dialog do Radix de cima desliga os toques no de baixo). Com um aviso na tela,
+  a página atrás não monta — nenhum diálogo dela (`?criar=1`, `?marcar=1`)
+  abre por cima do aviso. Prova no e2e (`tests/e2e/logado.spec.js`).
+- O miolo dos dois avisos é `ConsentChecklist`: "Ler documento" abre o texto
+  DENTRO do aviso (nunca outra aba — no celular tirava a pessoa do aviso) e
+  "Li e concordo" marca a caixa. O aceite é UMA escrita em lote
+  (`recordConsents`), entra no cache na hora e o aviso fecha; a auditoria não
+  segura o aceite.
 - `useRoleConsent(docKey)` — caixa "Li e aceito os Termos do X" + guarda de
   submit + registro, usada em criar torneio, criar arena e ativar professor.
 

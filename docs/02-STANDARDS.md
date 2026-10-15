@@ -214,7 +214,9 @@ O usuário vê:
 - `/legal` — central com lista de documentos
 - `/legal/:docRoute` — página de documento com botão "Li e concordo"
 - `LegalConsentGate` no `V2Layout` bloqueia acesso até aceite dos
-  essenciais
+  essenciais (e `MarketTermsGate`, os do Mercado). Um aviso por vez, antes do
+  assistente de cadastro; o documento se lê dentro do aviso. Ver
+  `src/modules/legal/README.md` § Consentimento
 
 **Estrutura de documentos** (em `domain/legalDocuments.js`):
 - **Essenciais** (aceite bloqueante): Termos de Uso, Política de

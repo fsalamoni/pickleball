@@ -5,23 +5,24 @@
  * de usar o Mercado. Mesmo molde do portão da entrada na plataforma
  * (`LegalConsentGate`); o aceite fica em `legal_consents`, com data e versão.
  *
- * É um Dialog (Radix) de propósito: se o cadastro inicial também estiver
- * aberto, os dois convivem sem um travar os cliques do outro.
+ * 🐞 Não abre junto com o cadastro inicial: os dois são Dialogs do Radix, e o
+ * de cima desliga os toques no de baixo — no celular, quem tinha o cadastro
+ * por completar via os termos e nenhum toque respondia. Quem decide a vez é o
+ * `V2Layout` (os termos primeiro; o cadastro depois do aceite).
  */
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ExternalLink, ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { pendingMarketConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
-import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
 import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { V2Button } from '@/v2/ui/primitives';
-import { legalIcon } from './legalIcons';
+import ConsentChecklist, { AceiteProgresso } from './ConsentChecklist';
 import { t } from '@/core/i18n';
 
 export default function MarketTermsGate() {
@@ -50,8 +51,15 @@ export default function MarketTermsGate() {
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent hideClose className="flex max-w-lg flex-col gap-0 p-0" onEscapeKeyDown={bloquear} onPointerDownOutside={bloquear} onInteractOutside={bloquear}>
-        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-gray-100 p-6 text-left">
+      {/* 90vh antes de 90dvh: sem `dvh` (Safari < 15.4) a altura máxima seria ignorada. */}
+      <DialogContent
+        hideClose
+        className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 supports-[height:100dvh]:max-h-[90dvh]"
+        onEscapeKeyDown={bloquear}
+        onPointerDownOutside={bloquear}
+        onInteractOutside={bloquear}
+      >
+        <DialogHeader className="shrink-0 flex-row items-center gap-3 space-y-0 border-b border-gray-100 p-4 text-left sm:p-6">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
             <ShoppingBag className="h-6 w-6" />
           </span>
@@ -61,49 +69,24 @@ export default function MarketTermsGate() {
           </span>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto p-6">
+        <ConsentChecklist
+          pending={pending}
+          traducoes={traducoes}
+          checked={checked}
+          onCheck={(key, sim) => setChecked((s) => ({ ...s, [key]: sim }))}
+          describe={(d, visto) => visto.description}
+        >
           <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">
             {t('O Mercado só aproxima quem quer vender de quem quer comprar. A PickleRush não vende, não recebe o pagamento, não entrega e não garante os produtos:')} <strong>{t('a venda e o transporte são responsabilidade do vendedor')}</strong>, {t('e')} <strong>{t('quem compra responde pela própria decisão de compra')}</strong>. {t('Os direitos que a lei garante continuam valendo entre vocês.')}
           </p>
-          {pending.map((d) => {
-            const Icon = legalIcon(d.icon);
-            const visto = legalDocTranslation(d, traducoes) || d;
-            return (
-              <label key={d.key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-colors hover:border-acid-dark/40">
-                <input
-                  type="checkbox"
-                  checked={!!checked[d.key]}
-                  onChange={(e) => setChecked((s) => ({ ...s, [d.key]: e.target.checked }))}
-                  className="mt-1 h-4 w-4 shrink-0 accent-ink"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 font-semibold text-ink">
-                    <Icon className="h-4 w-4 text-gray-500" /> {visto.title}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    {visto.description}{' '}
-                    <a
-                      href={`/legal/${d.route}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-0.5 font-semibold text-ink underline"
-                    >
-                      {t('Ler documento')} <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        </ConsentChecklist>
 
-        <div className="space-y-2 border-t border-gray-100 p-6">
+        <div className="shrink-0 space-y-2 border-t border-gray-100 p-4 sm:p-6">
           <V2Button type="button" className="w-full" onClick={aceitar} disabled={!allChecked || accept.isPending}>
             {accept.isPending ? t('Registrando…') : t('Li e aceito, entrar no Mercado')}
           </V2Button>
           <V2Button type="button" variant="ghost" className="w-full" onClick={() => navigate('/')}>{t('Agora não')}</V2Button>
-          <p className="text-center text-2xs text-gray-500">{t('Marque todos os itens para entrar. O aceite fica registrado com data e versão.')}</p>
+          <AceiteProgresso pending={pending} checked={checked} />
         </div>
       </DialogContent>
     </Dialog>
