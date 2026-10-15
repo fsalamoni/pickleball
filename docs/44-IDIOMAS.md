@@ -44,6 +44,28 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 | Inscrição | Registration | Inscripción |
 | Dupla | Pair (doubles team) | Pareja |
 | Sorteio | Draw | Sorteo |
+| Jogo (partida) | Game / Match | Partido (nunca "juego" nesse sentido) |
+| Jogo aberto | Open game | Partido abierto |
+| Procura-se jogo | Looking for a game | Se busca partido |
+| Play / Americano / Mexicano | Play / Americano / Mexicano | Play / Americano / Mexicano |
+| Americano aprimorado | Enhanced Americano | Americano mejorado |
+| Rei da Quadra | King of the Court | Rey de la Cancha |
+| Telão | Big screen | Pantalla gigante |
+| Minha área | My area | Mi área |
+| Central da arena | Arena hub | Central de la arena |
+| Painel do professor | Coach dashboard | Panel del entrenador |
+| Mercado (marketplace) | Marketplace | Mercado |
+| Mercado (estoque da arena) | Market | Mercado |
+| Simples | Singles | Individuales |
+| Duplas (formato) | Doubles | Dobles |
+| Ranking de duplas | Doubles ranking | Ranking de dobles |
+| Ranking do dia | Day ranking | Ranking del día |
+| Balanço do jogo | Game debrief | Balance del partido |
+| Aula (professor) / aula da arena | Lesson / Class | Clase |
+| Parceiro(a) | Partner | Pareja (compañero/a quando ambíguo) |
+| Central de ajuda | Help center | Centro de ayuda |
+
+Estilo: en é inglês dos EUA (canceled, contrações, sentence case: "Coach dashboard", não "Coach Dashboard"); es é latino-americano neutro, sempre "tú".
 
 ## O que está traduzido e o que fica em português de propósito
 Traduzido (en, es): o casco (menus, cabeçalho, Configurações, cadastro), início, Jogar e dia de jogo (inclusive telão), torneio (gestão, página pública, impressão), arena (Central, página pública, reserva, módulos), professor, clubes, ranking e rating, gamificação, Centro de Treino, Mercado, Minha área, notificações (moldura), ajuda e dicas, Painel admin.

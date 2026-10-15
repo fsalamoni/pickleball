@@ -1649,7 +1649,7 @@ export default {
   "Taxa: {entry_fee_cents} — pagamento será solicitado em seguida.": "Cuota: {entry_fee_cents}. El pago se pedirá a continuación.",
   "te convidou para jogar como dupla nesta modalidade.": "te invitó a jugar en pareja en esta categoría.",
   "Tela sempre acesa": "Pantalla siempre encendida",
-  "Telão": "Pantalla grande",
+  "Telão": "Pantalla gigante",
   "tem conta, escolha-a.": "tiene cuenta, elígela.",
   "Temporada": "Temporada",
   "Temporada (ex: \"2026 Q1\", \"2026 Inverno\") é obrigatória.": "La temporada (ej.: \"2026 Q1\", \"2026 Invierno\") es obligatoria.",

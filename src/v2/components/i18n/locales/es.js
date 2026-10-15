@@ -886,7 +886,7 @@ export default {
   "O smash é o golpe mais poderoso do pickleball: uma bola alta é atacada de cima para baixo com força máxima. Requer timing preciso, posicionamento correto e técnica específica. Errar smashes fáceis é um sinal de falta de prática específica nesse golpe.": "El smash es el golpe más potente del pickleball: una pelota alta se ataca de arriba hacia abajo con fuerza máxima. Requiere timing preciso, posicionamiento correcto y técnica específica. Fallar smashes fáciles es señal de falta de práctica específica de este golpe.",
   "O sorteio equilibra os jogos pelo nível. Diga o seu — dá para refinar depois com o teste.": "El sorteo equilibra los partidos por nivel. Indica el tuyo — puedes ajustarlo después con el test.",
   "O staff lança resultado e a plataforma atualiza classificação, saldo e leitura da modalidade sem depender de planilha paralela.": "El staff registra el resultado y la plataforma actualiza la clasificación, el saldo y la vista de la modalidad sin depender de una planilla aparte.",
-  "O telão, o totem da arena e a impressão continuam claros, para quem está na quadra e no papel.": "La pantalla grande, el tótem de la arena y la impresión siguen claros, para quien está en la cancha y en papel.",
+  "O telão, o totem da arena e a impressão continuam claros, para quem está na quadra e no papel.": "La pantalla gigante, el tótem de la arena y la impresión siguen claros, para quien está en la cancha y en papel.",
   "O visual de sempre, com fundo claro.": "El aspecto de siempre, con fondo claro.",
   "Ocorreu um erro inesperado. Recarregue a página para tentar novamente.": "Ocurrió un error inesperado. Recarga la página para intentarlo de nuevo.",
   "Ocultar comportamento observável": "Ocultar comportamiento observable",
