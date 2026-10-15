@@ -5,18 +5,21 @@
  * plataforma. Reaparece automaticamente quando a versão de um documento sobe.
  *
  * Não bloqueia usuários não autenticados (nada a consentir ainda).
+ *
+ * `pointer-events-auto`: se um diálogo do Radix abrir por baixo (atalho de
+ * teclado, link com `?criar=1`), ele desliga os toques no `body` — e o aviso,
+ * que fica por cima (z-100), tem de continuar respondendo.
  */
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { ShieldCheck, ExternalLink } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
-import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
 import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import { V2Button } from '@/v2/ui/primitives';
-import { legalIcon } from './legalIcons';
+import ConsentChecklist, { AceiteProgresso } from './ConsentChecklist';
 import { t } from '@/core/i18n';
 
 export default function LegalConsentGate() {
@@ -48,62 +51,38 @@ export default function LegalConsentGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-4xl bg-paper-pure shadow-organic">
-        <div className="flex items-center gap-3 border-b border-gray-100 p-6">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="aviso-consentimento-titulo"
+      className="pointer-events-auto fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-ink/70 p-4 backdrop-blur-sm"
+    >
+      {/* 90vh antes de 90dvh: navegador sem `dvh` (Safari < 15.4) ignoraria a
+          altura máxima e o botão de aceite ficaria fora da tela. */}
+      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-4xl bg-paper-pure shadow-organic supports-[height:100dvh]:max-h-[90dvh]">
+        <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 p-4 sm:p-6">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="font-display text-xl font-bold text-ink">{t('Antes de continuar')}</h2>
+            <h2 id="aviso-consentimento-titulo" className="font-display text-xl font-bold text-ink">{t('Antes de continuar')}</h2>
             <p className="text-sm text-gray-500">{t('Leia e concorde com os documentos essenciais da plataforma.')}</p>
           </div>
         </div>
 
-        <div className="flex-1 space-y-2 overflow-y-auto p-6">
-          {pending.map((d) => {
-            const Icon = legalIcon(d.icon);
-            const titulo = (legalDocTranslation(d, traducoes) || d).title;
-            return (
-              <label
-                key={d.key}
-                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-colors hover:border-acid-dark/40"
-              >
-                <input
-                  type="checkbox"
-                  checked={!!checked[d.key]}
-                  onChange={(e) => setChecked((s) => ({ ...s, [d.key]: e.target.checked }))}
-                  className="mt-1 h-4 w-4 shrink-0 accent-ink"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 font-semibold text-ink">
-                    <Icon className="h-4 w-4 text-gray-400" /> {titulo}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    {t('Li e concordo com {documento} (v{versao}).', { documento: titulo.toLowerCase(), versao: d.version })}{' '}
-                    <a
-                      href={`/legal/${d.route}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-0.5 font-semibold text-ink underline"
-                    >
-                      {t('Ler documento')} <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <ConsentChecklist
+          pending={pending}
+          traducoes={traducoes}
+          checked={checked}
+          onCheck={(key, sim) => setChecked((s) => ({ ...s, [key]: sim }))}
+          describe={(d, visto) => t('Li e concordo com {documento} (v{versao}).', { documento: visto.title.toLowerCase(), versao: d.version })}
+        />
 
-        <div className="border-t border-gray-100 p-6">
-          <V2Button className="w-full" onClick={handleAccept} disabled={!allChecked || acceptAll.isPending}>
+        <div className="shrink-0 space-y-2 border-t border-gray-100 p-4 sm:p-6">
+          <V2Button type="button" className="w-full" onClick={handleAccept} disabled={!allChecked || acceptAll.isPending}>
             {acceptAll.isPending ? t('Registrando…') : t('Aceitar e continuar')}
           </V2Button>
-          <p className="mt-2 text-center text-2xs text-gray-500">
-            {t('Marque todos os itens para continuar. Seu aceite fica registrado com data e versão.')}
-          </p>
+          <AceiteProgresso pending={pending} checked={checked} />
         </div>
       </div>
     </div>

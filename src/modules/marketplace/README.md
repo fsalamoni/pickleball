@@ -153,7 +153,8 @@ em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
   Vendedor e a Política de Imagens, Vídeos e IA, rota `mercado-imagens-e-ia`).
   `MarketTermsGate` pede o aceite no primeiro acesso a `/mercado` e a cada
   versão nova (`pendingMarketConsents`), gravado em `legal_consents` como os
-  demais. Subir a `version` de um deles pede novo aceite a todos.
+  demais. Subir a `version` de um deles pede novo aceite a todos. Abre antes
+  do assistente de cadastro, nunca junto (ver `legal/README.md` § Consentimento).
 
 **Mais perto de Shopee e eBay (2026-10-15, zero banco).** Busca com sugestões
 (categorias e marcas) e buscas recentes no aparelho (`domain/suggestions.js`);
