@@ -5,8 +5,12 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { registerPwa } from '@core/pwa/registerPwa';
 import { firebaseReady, firebaseServicesEnabled, firebaseDisabledReason } from '@/core/config/firebase';
 import { iniciarIdiomas } from '@/core/i18n/loader';
+import { instalarRelatorioDeErros, reportarErro } from '@/core/services/errorReport';
 import './index.css';
 import { t } from '@/core/i18n';
+
+// Exceções soltas e promessas rejeitadas vão para o monitoramento de erros.
+instalarRelatorioDeErros();
 
 function BootFallback() {
   return (
@@ -90,7 +94,10 @@ firebaseReady.then(async () => {
       </ErrorBoundary>
     </React.StrictMode>,
   );
-}).catch(renderBootFailed);
+}).catch((erro) => {
+  reportarErro(erro, { fonte: 'inicializacao', fatal: true });
+  renderBootFailed();
+});
 
 // Fallback absoluto: se o firebaseReady demorar, mostra o spinner (0,5 s) e,
 // passados 15 s sem nada na tela, a saída de recarregar em vez de girar para sempre.
@@ -104,6 +111,7 @@ setTimeout(() => {
   const root = document.getElementById('root');
   if (root && root.querySelector('.animate-spin') && root.querySelector('[data-boot-inicializando]')) {
     root.replaceChildren();
+    reportarErro(new Error('A inicialização passou de 15 s'), { fonte: 'inicializacao', fatal: true });
     renderBootFailed();
   }
 }, 15000);

@@ -207,7 +207,7 @@ export default function Landing() {
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {JOURNEY_STEPS.map((item) => (
                   <div key={item.step} className="rounded-3xl border border-gray-100 bg-paper p-5">
-                    <div className="font-display text-sm font-bold uppercase tracking-widest text-acid-dark">{item.step}</div>
+                    <div className="inline-flex rounded-full bg-acid px-2.5 py-0.5 font-display text-sm font-bold tracking-widest text-ink">{item.step}</div>
                     <h3 className="mt-3 font-display text-lg font-bold text-ink">{t(item.title)}</h3>
                     <p className="mt-2 text-sm leading-6 text-gray-500">{t(item.desc)}</p>
                   </div>

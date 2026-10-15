@@ -1338,3 +1338,25 @@ exports.marketArenaStockSync = onDocumentWritten(
     }
   },
 );
+
+// =====================================================================
+// ERROS DO NAVEGADOR → Error Reporting. O aplicativo manda para `/api/erro`
+// (rewrite do Hosting); a validação e o formato moram em `clientErrors.js`.
+// Pública de propósito: o erro pode acontecer antes do login (tela branca).
+// =====================================================================
+const { onRequest } = require('firebase-functions/v2/https');
+const clientErrors = require('./clientErrors');
+
+const dentroDoLimiteDeErros = clientErrors.criarLimite();
+
+exports.clientErrorReport = onRequest(
+  { region: REGION, maxInstances: 2, memory: '256MiB', invoker: 'public' },
+  (req, res) => {
+    if (req.method !== 'POST') { res.status(405).end(); return; }
+    if (dentroDoLimiteDeErros()) {
+      const entrada = clientErrors.entradaDeLog(clientErrors.lerCorpo(req), { userAgent: req.get('user-agent') || '' });
+      if (entrada) logger.write(entrada);
+    }
+    res.status(204).end();
+  },
+);

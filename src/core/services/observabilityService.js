@@ -1,5 +1,6 @@
 import { analyticsPromise, performancePromise } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { reportarErro } from '@/core/services/errorReport';
 
 const noopTrace = { stop: () => {} };
 
@@ -37,6 +38,7 @@ export function recordEvent(name, params = {}) {
 
 export function recordClientError(error, context = {}) {
   logger.error(context.source || 'Client error', error, context.info || '');
+  reportarErro(error, { fonte: context.source, fatal: context.fatal === true });
 
   void analyticsPromise
     .then(async (analytics) => {

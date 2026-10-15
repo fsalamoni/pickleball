@@ -207,7 +207,16 @@ quem lembrar.
 
 `core/services/webVitals.js` (carregado sob demanda) envia LCP, INP e CLS ao
 Analytics como evento `web_vitals`, com a rota anonimizada. Sem Analytics
-ligado, não faz nada. Erros de cliente vão por `observabilityService`.
+ligado, não faz nada.
+
+**Erros em produção**: `recordClientError` (`observabilityService`, chamado
+pelos boundaries) e os ouvintes globais de `core/services/errorReport.js`
+(exceção solta, promessa rejeitada, falha da inicialização) mandam o erro para
+`POST /api/erro` → função `clientErrorReport` → Google Cloud Error Reporting,
+que agrupa, conta e avisa erro novo. O corpo é montado por
+`core/domain/errorReport.js` (rota sem ids, ruído de navegador e extensões
+fora) e o servidor limpa de novo. Só no site publicado. Ver
+`docs/03-WORKFLOW.md` §7.4.
 
 ## 9. Testes
 
@@ -218,7 +227,7 @@ ligado, não faz nada. Erros de cliente vão por `observabilityService`.
 | Guardas de fonte | `src/core/guards/*.test.js` | ver §6 |
 | Regras do Firestore/Storage | `tests/rules/*.rules.test.js` | `npm run test:rules` (emulador, precisa de Java; config `vitest.rules.config.js`) |
 | Paridade cliente × servidor | `*.parity.test.js` (motores de rating, ranking, mercado, avisos) | mexer num lado só quebra o teste, de propósito |
-| E2E | `tests/e2e/*.spec.js` | `npm run e2e` (Playwright; Chromium desktop e Pixel 5; `E2E_BASE_URL`, padrão produção). Inclui axe nas rotas públicas |
+| E2E | `tests/e2e/*.spec.js` | `npm run e2e` (Playwright; Chromium desktop e Pixel 5) no build deste código com Auth e Firestore nos emuladores — no CI em todo PR. Inclui uma conta que entra e abre as telas principais e o axe nas rotas públicas. `npm run e2e:producao` roda as públicas no site no ar (também depois de cada deploy). Ver `docs/03-WORKFLOW.md` §7.2 |
 
 Contagens e arquivos atuais: `docs/46-INVENTARIO.md`.
 
@@ -227,9 +236,11 @@ Contagens e arquivos atuais: `docs/46-INVENTARIO.md`.
 - `ci.yml` (push em `main`/`copilot/**` e PRs): segredos no Git
   (`security:secrets`), inventário em dia (`docs:inventario:check`), lint,
   testes, build, orçamento do pacote; job `firestore-rules` (emulador);
-  `dependencias` (informativo); e, só em PR, `docs-obrigatorios`.
+  job `e2e` (navegador, emuladores); `dependencias` (informativo); e, só em
+  PR, `docs-obrigatorios`.
 - `deploy-firebase.yml` (push em `main`): build, regras e índices do Firestore,
-  Cloud Functions por nome, regras do Storage e Hosting (`picklerush`).
+  Cloud Functions por nome, regras do Storage e Hosting (`picklerush`); por
+  fim abre o site no ar num navegador e confere `/api/erro`.
 - `functions-watchdog.yml` (a cada 30 min) recria função apagada; demais
   workflows: backup manual do Firestore, limpeza de e-mails legados,
   GitHub Pages (legado).

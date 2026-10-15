@@ -200,8 +200,10 @@ npm run e2e            # Playwright
 - **Deploy**: push em `main` → `.github/workflows/deploy-firebase.yml` →
   Hosting, regras, índices e Cloud Functions (publicadas **por nome** no
   codebase `picklerush`; nunca deploy amplo — projeto Firebase compartilhado).
-  `functions-watchdog.yml` recria função apagada. `ci.yml` roda lint/testes e
-  confere se o inventário e os docs acompanham o código. Detalhes e armadilhas:
+  `functions-watchdog.yml` recria função apagada. `ci.yml` roda lint/testes,
+  os testes de navegador (Playwright com emuladores) e confere se o inventário
+  e os docs acompanham o código. Erros que acontecem no aparelho das pessoas
+  vão para o Google Cloud Error Reporting (`/api/erro`, `docs/03-WORKFLOW.md` §7.4). Detalhes e armadilhas:
   `docs/03-WORKFLOW.md`.
 - **Env**: `VITE_FIREBASE_*`, `VITE_FIRESTORE_DATABASE_ID` (padrão
   `pickleball`), `VITE_PWA_ENABLED`.

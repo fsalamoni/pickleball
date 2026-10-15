@@ -209,7 +209,7 @@ interno sem mudança de comportamento", não "n/a"). Detalhe em `docs/02-STANDAR
 ### 3.3 Review
 
 - **Você mesmo revisa** (IA pode fazer self-review via `gh pr view` + tools)
-- **Aprova** quando o CI está verde (secrets, inventário, lint, test, build, orçamento, regras, docs) + smoke + docs ok
+- **Aprova** quando o CI está verde (secrets, inventário, lint, test, build, orçamento, regras, navegador, docs) + smoke + docs ok
 - **Squash merge** (botão do GitHub) — mantém main linear
 - **Delete branch** após merge (botão do GitHub)
 
@@ -242,7 +242,7 @@ gh pr merge <num> --squash --delete-branch
 
 ```
 push em main
-  ├─ ci.yml (em paralelo): secrets · inventário · lint · test · build · orçamento · regras
+  ├─ ci.yml (em paralelo): secrets · inventário · lint · test · build · orçamento · regras · navegador
   └─ deploy-firebase.yml  (concurrency "firebase-hosting", timeout 30 min)
        1. Validate required secrets
        2. Install dependencies + Firebase CLI (firebase-tools@13)
@@ -258,6 +258,9 @@ push em main
           → scripts/functions-deploy.sh (codebase `picklerush`, por nome)
       10. Deploy Storage rules (não fatal)
       11. Deploy Hosting (picklerush e pickletour; pickletour é redirect-only)
+      12. Conferir o site no ar: Playwright nas rotas públicas de
+          https://picklerush.web.app (falha o job) + POST /api/erro → 204
+          (monitoramento de erros; só avisa)
   ↓
 ✅ Site atualizado em https://picklerush.web.app
 ```
@@ -361,7 +364,7 @@ que já não existe: a tela mostra "Uma versão nova foi publicada — Recarrega
 
 | Workflow | Quando roda | O que faz |
 |---|---|---|
-| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
+| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java). Job `e2e`: `npm run e2e` — testes de navegador no build do PR com Auth e Firestore nos emuladores (relatório do Playwright como artefato quando falha). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
 | `deploy-firebase.yml` | push em `main` + manual | Deploy completo (§4.1) |
 | `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
 | `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
@@ -457,6 +460,10 @@ gh pr create --base main --title "fix: emergência X" --body "..."
 Quando user reporta "feature X não funciona":
 
 ```
+0. Erros em produção (§7.4)
+   └─ Painel admin → Sistema → Diagnóstico → "Erros em produção"
+   └─ O erro já está lá, com pilha, rota, versão e quantas pessoas?
+
 1. Bundle deployed
    └─ curl -s https://picklerush.web.app/ | grep "index-" 
    └─ Tem o bundle novo? Se não, é cache do SW
@@ -470,7 +477,8 @@ Quando user reporta "feature X não funciona":
    └─ Tudo verde? Se não, é regressão
 
 4. Playwright (E2E)
-   └─ npm run e2e
+   └─ npm run e2e            (build deste código + emuladores)
+   └─ npm run e2e:producao   (só as rotas públicas, no site no ar)
    └─ Algum falha? Se sim, é fluxo específico
 
 5. Feature flag
@@ -487,26 +495,26 @@ Quando user reporta "feature X não funciona":
    └─ Chamou Firestore? Voltou com dados? Erro 403/404?
 ```
 
-### 7.2 Auth injetada (Playwright)
+### 7.2 Testes de navegador (Playwright)
 
-Bugs que só aparecem logado precisam de auth no E2E:
+`npm run e2e` (`scripts/e2e.sh`) monta o build deste código apontando para os
+**emuladores** (projeto `demo-picklerush`, nada toca produção), serve com
+`vite preview` e roda `tests/e2e/` em Chromium de computador e de celular
+(Pixel 5). É o mesmo comando do job `e2e` do CI. Precisa de Java e do
+Chromium do Playwright (`npm run e2e:install`).
 
-```js
-// 1. Criar user via signUp REST
-const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
-  method: 'POST',
-  body: JSON.stringify({ email: 'test@picklerush.com', password: 'Test123!', returnSecureToken: true }),
-});
+| Arquivo | O que prova |
+|---|---|
+| `public-routes.spec.js` | o site abre, `/login` tem o formulário, rota fechada leva ao login. Também roda no **site no ar** depois de cada deploy |
+| `acessibilidade.spec.js` | axe (WCAG 2.1 AA) em `/` e `/login`: violação séria ou crítica reprova |
+| `logado.spec.js` (`@emuladores`) | cria uma conta no emulador (Auth REST + `users/{uid}` completo, para o assistente de cadastro não abrir), entra pelo formulário e abre as telas principais: cada uma tem de mostrar o título, sem a tela de erro e sem exceção na página |
 
-// 2. PATCH role via Firestore
-await fetch(`https://firestore.googleapis.com/v1/projects/pickletour/databases/pickleball/documents/users/${uid}`, {
-  method: 'PATCH',
-  body: JSON.stringify({ fields: { role: { stringValue: 'platform_admin' } } }),
-});
-
-// 3. IndexedDB injection (NÃO `firebase:authUser:...`)
-//    Injetar em `firebaseLocalStorageDb` que é o que o SDK lê
-```
+Teste que precisa dos emuladores leva `@emuladores` no nome: o
+`npm run e2e:producao` (`E2E_BASE_URL=https://picklerush.web.app`) os pula.
+Dois cuidados: o Firestore mantém conexão aberta, então **nunca** espere
+`networkidle` (espere o elemento); e o axe roda depois que o spinner de
+inicialização some e as animações terminam, senão mede a cor no meio do
+desvanecer.
 
 ### 7.3 Investigar bug "já foi deployado mas não funciona"
 
@@ -521,6 +529,22 @@ curl -s https://picklerush.web.app/assets/index-XXX.js | grep -c "novoCodigo"
 # 4. Se tem mas não funciona, é runtime (erro JS)
 # 5. Abrir DevTools → console → network → ver o que tá acontecendo
 ```
+
+### 7.4 Erros em produção (monitoramento)
+
+Todo erro que acontece no aparelho de alguém chega ao **Google Cloud Error
+Reporting** do projeto `pickletour`: Painel admin → Sistema → Diagnóstico →
+"Erros em produção" (ou `https://console.cloud.google.com/errors?project=pickletour`).
+Lá cada erro aparece agrupado, com quantas vezes, desde quando, a pilha, a
+rota, a versão (o commit do deploy, `VITE_RELEASE`) e o navegador. Para ser
+avisado por e-mail de erro **novo**: na página do Error Reporting, "Configure
+notifications".
+
+Caminho: navegador → `POST /api/erro` → função `clientErrorReport` → log →
+Error Reporting (`docs/47-BACKEND-CLOUD-FUNCTIONS.md` §7.1). O que entra: os
+erros que derrubam uma tela (boundaries), exceções soltas, promessas
+rejeitadas sem `catch`, falha da inicialização e a tela que não abriu (script
+de segurança do `index.html`). Ruído do navegador e de extensões fica de fora.
 
 ---
 
@@ -704,9 +728,11 @@ valores em doc, issue ou PR):
 | `VITE_FIRESTORE_DATABASE_ID` | secret/variável (Pages; o deploy fixa `pickleball`) | Pages | Não |
 | `VITE_ENABLE_FIREBASE_ANALYTICS`, `VITE_ENABLE_FIREBASE_PERFORMANCE` | variável (Pages; o deploy fixa `false`) | Pages | Não |
 
-O `ci.yml` **não usa segredo**: o build do CI roda com variáveis fictícias.
+O `ci.yml` **não usa segredo**: o build do CI roda com variáveis fictícias
+(e o job `e2e`, com o projeto de demonstração dos emuladores).
 O `deploy-firebase.yml` fixa `VITE_FIRESTORE_DATABASE_ID=pickleball`,
-`VITE_PWA_ENABLED=true` e `VITE_BASE_PATH=/`.
+`VITE_PWA_ENABLED=true`, `VITE_BASE_PATH=/` e `VITE_RELEASE=<commit>` (a
+versão que o monitoramento de erros anota).
 
 **Adicionar/rotacionar a service account**:
 1. Firebase Console → Project settings → Service accounts → Generate new private key
@@ -744,7 +770,8 @@ npm run security:secrets       # nada de segredo no Git
 npm test             # vitest
 npm run lint         # eslint --quiet
 npm run typecheck    # sintaxe e resolução (checkJs desligado: tipos JSDoc não são verificados)
-npm run e2e          # playwright
+npm run e2e          # playwright: build deste código + emuladores (o mesmo do CI)
+npm run e2e:producao # só as rotas públicas, no site no ar
 npm run e2e:install  # primeira vez
 
 # === Firebase ===
@@ -775,7 +802,7 @@ DEPLOY    push main → deploy-firebase.yml (regras → índices → funções p
 DOCS      toda mudança de código leva doc; npm run docs:inventario; CI reprova sem (ou 'Docs: não se aplica — motivo')
 VERIFY    smoke test manual + bundle grep
 HOTFIX    fix/X → PR → merge (mesmo que feature)
-DEBUG     bundle → build → test → e2e → flag → rule → service
+DEBUG     erros em produção → bundle → build → test → e2e → flag → rule → service
 PWA       bump VERSION em public/sw.js quando os assets mudam
 SECRETS   FIREBASE_SERVICE_ACCOUNT + VITE_FIREBASE_* no GitHub
 ```
