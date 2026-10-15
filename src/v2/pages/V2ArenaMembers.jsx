@@ -317,7 +317,7 @@ export default function V2ArenaMembers() {
   const temIndicacao = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
 
   if (isLoading || modulosLoading) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[820px] rounded-4xl" />;
+    return <V2Skeleton className="mx-auto h-96 max-w-[720px] rounded-4xl" />;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!temMembros) return <Navigate to={`/arenas/${arena.id}`} replace />;
@@ -329,7 +329,7 @@ export default function V2ArenaMembers() {
   const meusPacotes = Array.isArray(wallet?.packages) ? wallet.packages : [];
 
   return (
-    <div className="mx-auto max-w-[820px]">
+    <div className="mx-auto max-w-[720px]">
       <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Você nesta arena')}</h1>
       <p className="mt-1 text-sm text-gray-500">

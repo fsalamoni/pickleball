@@ -90,11 +90,11 @@ export default function V2ArenaLeagues() {
   if (naGestao) return <Navigate to={`/arenas/${arenaId}/gerir?aba=torneios`} replace />;
 
   if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[900px] rounded-4xl" />;
+    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
   }
   if (!arena && isError) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2ErrorState
           title={t('Não foi possível abrir os torneios da arena')}
           description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
@@ -111,7 +111,7 @@ export default function V2ArenaLeagues() {
   const comRanking = isOn(ARENA_MODULE_ID.LEAGUES);
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-4">
+    <div className="mx-auto max-w-[1000px] space-y-4">
       <div className="mb-2">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">

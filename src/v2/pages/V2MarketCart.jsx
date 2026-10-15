@@ -29,7 +29,7 @@ import {
 import { couponLive, couponProblem, giftCardProblem, orderPricing, sortGiftCardsForUse } from '@/modules/marketplace/domain/promotions';
 import CheckoutPromos from '@/v2/components/marketplace/promo/CheckoutPromos';
 import {
-  V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, SellerTypeTag, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
@@ -201,7 +201,7 @@ function AddressForm({ value, onChange, error }) {
 
 function Done({ result }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <V2Page largura="estreita" className="space-y-6">
       {result.orders.length > 0 && (
         <V2Surface className="space-y-4 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
@@ -234,7 +234,7 @@ function Done({ result }) {
         <V2Button asChild><Link to="/mercado/pedidos">{t('Ver minhas compras')}</Link></V2Button>
         <V2Button asChild variant="ghost"><Link to="/mercado">{t('Continuar comprando')}</Link></V2Button>
       </div>
-    </div>
+    </V2Page>
   );
 }
 
@@ -438,11 +438,11 @@ function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
+    <V2Page className="space-y-6 pb-16">
+      <MarketHeader categorias={false} />
       {!result && <V2PageIntro title={step === 'fechar' ? t('Fechar pedido') : t('Carrinho')} />}
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

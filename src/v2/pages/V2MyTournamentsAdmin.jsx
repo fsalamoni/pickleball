@@ -31,7 +31,7 @@ export default function V2MyTournamentsAdmin() {
   if (!consoleOn) return <Navigate to="/perfil" replace />;
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-5">
+    <div className="mx-auto max-w-[1000px] space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink">{userHubOn ? t('Torneios que organizo') : t('Meus torneios')}</h1>

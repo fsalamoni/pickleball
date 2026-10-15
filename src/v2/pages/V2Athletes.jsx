@@ -48,7 +48,7 @@ export default function V2Athletes() {
   }, [athletes, q]);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro title={t('Atletas')} subtitle={t('Encontre parceiros de jogo por nível, cidade e clube.')} />
 
       <V2Surface className="mb-8">

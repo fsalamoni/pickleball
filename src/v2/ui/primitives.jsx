@@ -133,6 +133,24 @@ export function V2CollapsibleSection(props) {
   return <V2Surface collapsible {...props} />;
 }
 
+/**
+ * As TRÊS larguras de página da plataforma. Antes cada tela escolhia a sua
+ * (eram 21 valores, de 500 a 1800 px), e trocar de tela fazia o conteúdo
+ * "pular" de largura. `estreita`: leitura, formulário e estados (erro, vazio);
+ * `padrao`: a maioria das telas; `larga`: vitrines com grade de cartões.
+ * Guarda em `src/core/guards/larguraDePagina.test.js`.
+ */
+export const PAGE_WIDTH = Object.freeze({
+  estreita: 'max-w-[720px]',
+  padrao: 'max-w-[1000px]',
+  larga: 'max-w-[1200px]',
+});
+
+/** O contêiner de uma página: centralizado, numa das três larguras. */
+export function V2Page({ largura = 'padrao', className, children, ...props }) {
+  return <div className={cn('mx-auto w-full', PAGE_WIDTH[largura] || PAGE_WIDTH.padrao, className)} {...props}>{children}</div>;
+}
+
 export function V2PageIntro({ title, subtitle, action, className }) {
   return (
     <div className={cn('mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between', className)}>

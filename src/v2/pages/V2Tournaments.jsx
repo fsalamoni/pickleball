@@ -85,7 +85,7 @@ export default function V2Tournaments() {
   const vazio = sorted.length === 0 && !(tab === 'public' && regional.fora > 0);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Torneios')}
         subtitle={t('Descubra eventos abertos e acompanhe os seus.')}

@@ -124,7 +124,7 @@ export default function V2ArenaPDV() {
   });
 
   if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[900px] rounded-4xl" />;
+    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!isOn(ARENA_MODULE_ID.PDV)) return <Navigate to={`/arenas/${arenaId}`} replace />;
@@ -133,7 +133,7 @@ export default function V2ArenaPDV() {
   const temSplit = isOn(ARENA_MODULE_ID.PDV_SPLIT);
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Loja da {name}', { name: arena.name })}</h1>

@@ -34,7 +34,7 @@ export default function V2GamificationGuide() {
   const on = true;
   if (!on) {
     return (
-      <div className="mx-auto max-w-[760px]">
+      <div className="mx-auto max-w-[720px]">
         <V2PageIntro title={t('Como funciona a gamificação')} subtitle={t('XP, missões, temporada, recompensas e privacidade.')} />
         <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('Este guia chega junto com a gamificação.')} /></V2Surface>
       </div>
@@ -86,7 +86,7 @@ function V2GamificationGuideOn() {
   const tabs = publicos.map((a) => ({ value: a, label: t(GUIDE_AUDIENCE_META[a].label) }));
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-5" data-testid="gamification-guide">
+    <div className="mx-auto max-w-[1000px] space-y-5" data-testid="gamification-guide">
       <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
 
       <V2ContentHero

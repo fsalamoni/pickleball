@@ -15,9 +15,11 @@ import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, Building2, Dumbbell, Eye, GraduationCap, LayoutDashboard,
-  LayoutGrid, Medal, Pencil, Swords, Trophy, User, Users,
+  LayoutGrid, Medal, Pencil, ShoppingBag, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -30,10 +32,14 @@ import { useCoachTrainingQuestions, useMyTrainingQuestions } from '@/modules/tra
 import { unreadCount } from '@/modules/training/domain/share';
 import { usePendingDebriefs } from '@/modules/training/hooks/useDebriefs';
 import { esperaPorMim } from '@/v2/components/training/questions/questionsView';
+import {
+  useMyOffers, useMyOrders, useSeller, useSellerOffers, useSellerOrders, useSellerQuestions,
+} from '@/modules/marketplace/hooks/useMarket';
+import { sellerKeyFor } from '@/modules/marketplace/domain/seller';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifiedLevel';
 import {
-  USER_AREA_GROUPS, memberSince, resolveUserAreaSection, userAreaPending, userAreaSections,
+  USER_AREA_GROUPS, marketPendingCounts, memberSince, resolveUserAreaSection, userAreaPending, userAreaSections,
 } from '@/modules/athletes/domain/userArea';
 import { V2Avatar, V2Badge, V2Button, V2ErrorState } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
@@ -43,7 +49,7 @@ import { SECOES } from './UserAreaSections';
 import { t } from '@/core/i18n';
 
 const ICONES = {
-  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, Users, GraduationCap, Building2, LayoutDashboard,
+  LayoutGrid, User, Dumbbell, Swords, Trophy, Medal, ShoppingBag, Users, GraduationCap, Building2, LayoutDashboard,
 };
 
 /** `true`/`false` quando a leitura respondeu, `'erro'` quando falhou, `undefined` carregando. */
@@ -70,6 +76,21 @@ export default function UserArea() {
   // Balanço do jogo: só consulta para quem ligou (flag + escolha da pessoa).
   const balancos = usePendingDebriefs();
 
+  // Mercado (flag `marketplace`). As vendas só se consultam para quem já vende.
+  // ponytail: só a ficha pessoal (`athlete_{uid}`); vendas como professor,
+  // arena ou loja ficam no painel de vendas — somar aqui = 4 leituras por ficha.
+  const { flags } = useFeatureFlags();
+  const mercadoOn = Boolean(flags?.[FEATURE_FLAG.MARKETPLACE]);
+  const sellerKey = mercadoOn && uid ? sellerKeyFor('athlete', uid) : null;
+  const sellerQ = useSeller(sellerKey);
+  const vendeKey = sellerQ.data ? sellerKey : null;
+  const sellerOrdersQ = useSellerOrders(vendeKey);
+  const sellerOffersQ = useSellerOffers(vendeKey);
+  const sellerQuestionsQ = useSellerQuestions(vendeKey);
+  const myOrdersQ = useMyOrders(mercadoOn ? uid : null);
+  const myOffersQ = useMyOffers(mercadoOn ? uid : null);
+  const mercadoQs = [sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ, myOffersQ];
+
   const convitesEventoPendentes = (eventInvitesQ.data || []).filter((i) => i?.status === 'invited');
   const temConvite = (clubInvitesQ.data || []).length > 0 || convitesEventoPendentes.length > 0;
 
@@ -79,8 +100,9 @@ export default function UserArea() {
     // Convite pendente também abre a seção: é nela que a pessoa responde.
     clubes: temConvite ? true : papelDe(clubsQ, (clubsQ.data || []).length > 0),
     admin: !!isPlatformAdmin,
+    mercado: mercadoOn,
   }).map((s) => ({ ...s, icon: ICONES[s.icone] })),
-  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin]);
+  [coachQ, isCoach, arenasQ, clubsQ, temConvite, isPlatformAdmin, mercadoOn]);
 
   const ativa = resolveUserAreaSection(params.get('secao'), secoes);
   const Secao = SECOES[ativa];
@@ -107,6 +129,13 @@ export default function UserArea() {
     duvidasEsperando,
     treinosNaoLidos: trainingOn && inboxQ.isSuccess ? unreadCount(inboxQ.data || []) : undefined,
     balancosPendentes: balancos.isSuccess ? balancos.pending.length : undefined,
+    mercado: mercadoOn ? marketPendingCounts({
+      sellerOrders: sellerOrdersQ.isSuccess ? sellerOrdersQ.data : undefined,
+      sellerOffers: sellerOffersQ.isSuccess ? sellerOffersQ.data : undefined,
+      sellerQuestions: sellerQuestionsQ.isSuccess ? sellerQuestionsQ.data : undefined,
+      myOrders: myOrdersQ.isSuccess ? myOrdersQ.data : undefined,
+      myOffers: myOffersQ.isSuccess ? myOffersQ.data : undefined,
+    }) : undefined,
   });
   const falhas = [
     arenasQ.isError && t('as suas arenas'),
@@ -116,15 +145,16 @@ export default function UserArea() {
     trainingOn && (myQuestionsQ.isError || coachQuestionsQ.isError) && t('as dúvidas de treino'),
     trainingOn && inboxQ.isError && t('os treinos recebidos'),
     balancos.isError && t('os jogos para o balanço'),
+    mercadoOn && mercadoQs.some((q) => q.isError) && t('as suas compras e vendas no Mercado'),
   ].filter(Boolean);
   const tentarDeNovo = () => {
-    [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ]
+    [arenasQ, lessonsQ, clubInvitesQ, eventInvitesQ, myQuestionsQ, coachQuestionsQ, inboxQ, ...mercadoQs]
       .filter((q) => q.isError).forEach((q) => q.refetch());
     if (arenaSummary.pendingError) arenaSummary.refetch?.();
     if (balancos.isError) balancos.refetch();
   };
 
-  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes };
+  const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ } };
 
   return (
     <div className="mx-auto max-w-[1000px] space-y-6">

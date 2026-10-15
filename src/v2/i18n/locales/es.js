@@ -458,4 +458,11 @@ export default {
   "Esta é uma tradução de cortesia. Em caso de divergência, prevalece a versão em português.": "Esta es una traducción de cortesía. En caso de discrepancia, prevalece la versión en portugués.",
   "Ver original em português": "Ver original en portugués",
   "Ver tradução": "Ver traducción",
+  "Compras, vendas e alertas": "Compras, ventas y alertas",
+  "O que você ajusta no Mercado: os avisos de compras e vendas, a chave Pix para receber, as buscas salvas e os termos.": "Lo que ajustas en el Mercado: los avisos de compras y ventas, la clave Pix para cobrar, las búsquedas guardadas y los términos.",
+  "Avisos do Mercado": "Avisos del Mercado",
+  "Recebimento (Pix)": "Cobro (Pix)",
+  "Buscas salvas e alertas": "Búsquedas guardadas y alertas",
+  "Termos do Mercado": "Términos del Mercado",
+  "Do Mercado: anúncios, pedidos, favoritos e buscas salvas.": "Del Mercado: anuncios, pedidos, favoritos y búsquedas guardadas.",
 };

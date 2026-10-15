@@ -90,7 +90,7 @@ export default function V2AdminOwnerRestore() {
   }
 
   if (isLoadingAuth) {
-    return <V2Skeleton className="mx-auto mt-10 h-64 max-w-[800px] rounded-4xl" />;
+    return <V2Skeleton className="mx-auto mt-10 h-64 max-w-[720px] rounded-4xl" />;
   }
 
   if (!isAuthenticated) {
@@ -99,7 +99,7 @@ export default function V2AdminOwnerRestore() {
 
   if (!isOwner) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2PageIntro
           title={t('Acesso restrito')}
           subtitle={t('Esta rota é exclusiva para o owner da plataforma.')}
@@ -132,7 +132,7 @@ export default function V2AdminOwnerRestore() {
   const userDocPhotoIsEmpty = usersDoc && !usersDoc.photo_url;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2PageIntro
         title={t('Restaurar admin (emergência)')}
         subtitle={t('Use esta página se você perdeu o acesso admin. Detecta e corrige o role do seu users/{uid}.')}

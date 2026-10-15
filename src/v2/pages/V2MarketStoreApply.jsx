@@ -17,10 +17,9 @@ import { sellerKeyFor, validateStoreApplication } from '@/modules/marketplace/do
 import { applyStore } from '@/modules/marketplace/services/marketService';
 import { useMarketMutation, useMarketSettings, useSeller, useSellerPrivate } from '@/modules/marketplace/hooks/useMarket';
 import {
-  V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Page,
 } from '@/v2/ui/primitives';
 import { rolarAte } from '@/v2/ui/rolarAte';
-import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate } from '@/v2/components/marketplace/marketUi';
 import { t, tk } from '@/core/i18n';
 
@@ -192,12 +191,11 @@ function ApplyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-16">
-      <MarketHeader />
+    <V2Page className="space-y-6 pb-16">
       <V2BackLink to="/mercado/vender">{t('Painel de vendas')}</V2BackLink>
       <V2PageIntro title={t('Abrir minha loja')} subtitle={t('Para quem vende como empresa, com CNPJ. A equipe analisa antes de abrir.')} />
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

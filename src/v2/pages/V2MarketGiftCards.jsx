@@ -13,7 +13,8 @@ import { formatBRL } from '@/modules/marketplace/domain/money';
 import { giftCardAction } from '@/modules/marketplace/services/marketOrderService';
 import { useMarketMutation, useMyGiftCards } from '@/modules/marketplace/hooks/useMarket';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Input, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Input, V2Page, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import MarketTabs from '@/v2/components/marketplace/MarketTabs';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate } from '@/v2/components/marketplace/marketUi';
 import ShareImageDialog from '@/v2/components/marketplace/promo/ShareImageDialog';
@@ -174,13 +175,14 @@ function GiftPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2PageIntro title={t('Vales-presente')} subtitle={t('Os que você ganhou, os que você deu e o resgate de um código.')} />
+    <V2Page className="space-y-6 pb-16">
+      <MarketHeader categorias={false} />
+      <V2PageIntro title={t('Minhas compras')} subtitle={t('Vales-presente: os que você ganhou, os que você deu e o resgate de um código.')} />
+      <MarketTabs grupo="compras" ativo="vales" />
       <Redeem initial={inicial} />
       {corpo}
       {mandar && <SendDialog card={mandar} onClose={() => setMandar(null)} />}
-    </div>
+    </V2Page>
   );
 }
 

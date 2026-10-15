@@ -26,6 +26,8 @@ export const USER_AREA_SECTION = Object.freeze({
   JOGOS: 'jogos',
   TORNEIOS: 'torneios',
   TROFEUS: 'trofeus',
+  /** Mercado (flag `marketplace`): comprando e vendendo. */
+  MERCADO: 'mercado',
   CLUBES: 'clubes',
   PROFESSOR: 'professor',
   ARENAS: 'arenas',
@@ -54,6 +56,7 @@ const META = Object.freeze([
   { id: S.JOGOS, label: tk('Meus jogos'), icone: 'Swords', grupo: 'voce', quem: 'todos' },
   { id: S.TORNEIOS, label: tk('Torneios'), icone: 'Trophy', grupo: 'voce', quem: 'todos' },
   { id: S.TROFEUS, label: tk('Troféus'), icone: 'Medal', grupo: 'voce', quem: 'todos' },
+  { id: S.MERCADO, label: tk('Mercado'), icone: 'ShoppingBag', grupo: 'voce', quem: 'mercado' },
   { id: S.CLUBES, label: tk('Clubes'), icone: 'Users', grupo: 'voce', quem: 'clubes' },
   { id: S.PROFESSOR, label: tk('Professor'), icone: 'GraduationCap', grupo: 'gestao', quem: 'professor' },
   { id: S.ARENAS, label: tk('Arenas'), icone: 'Building2', grupo: 'gestao', quem: 'arenas' },
@@ -63,7 +66,8 @@ const META = Object.freeze([
 const temPapel = (v) => v === true || v === 'erro';
 
 /**
- * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean }} papeis
+ * @param {{ professor?: boolean|'erro', arenas?: boolean|'erro', clubes?: boolean|'erro', admin?: boolean, mercado?: boolean }} papeis
+ *   `mercado` = a flag `marketplace` ligada
  * @returns {Array<{ id: string, label: string, icone: string, grupo: string, dica: string }>}
  */
 export function userAreaSections(papeis = {}) {
@@ -79,6 +83,38 @@ export function resolveUserAreaSection(pedida, secoes = []) {
 }
 
 const lista = (x) => (Array.isArray(x) ? x : undefined);
+
+/** Mercado: os estados em que a VENDA espera o vendedor (a mesma conta do Resumo de `/mercado/vender`). */
+const VENDA_ESPERA_VENDEDOR = ['placed', 'payment_review', 'paid', 'ready'];
+const ofertaViva = (o, now) => !(Number(o?.expires_at_ms) && now > Number(o.expires_at_ms));
+
+/**
+ * As contas do Mercado para a faixa. Cada lista `undefined` (não carregou,
+ * falhou ou a pessoa não vende) devolve `undefined` na conta — nunca zero.
+ *
+ * @param {{ sellerOrders?: object[], sellerOffers?: object[], sellerQuestions?: object[], myOrders?: object[], myOffers?: object[] }} l
+ */
+export function marketPendingCounts(l = {}, now = Date.now()) {
+  const conta = (x, fn) => lista(x)?.filter(fn).length;
+  return {
+    vendas: conta(l.sellerOrders, (o) => VENDA_ESPERA_VENDEDOR.includes(o?.status)),
+    ofertas: conta(l.sellerOffers, (o) => o?.status === 'pending' && ofertaViva(o, now)),
+    perguntas: conta(l.sellerQuestions, (q) => q?.status === 'open'),
+    pagar: conta(l.myOrders, (o) => o?.status === 'accepted'),
+    // Vale-presente entregue já está na conta: não há o que confirmar.
+    receber: conta(l.myOrders, (o) => ['shipped', 'ready'].includes(o?.status) || (o?.status === 'delivered' && o?.fulfillment !== 'digital')),
+    contrapropostas: conta(l.myOffers, (o) => o?.status === 'countered' && ofertaViva(o, now)),
+  };
+}
+
+const MERCADO_PENDENCIAS = [
+  ['vendas', '/mercado/vender?aba=vendas'],
+  ['ofertas', '/mercado/vender?aba=ofertas'],
+  ['perguntas', '/mercado/vender?aba=perguntas'],
+  ['pagar', '/mercado/pedidos'],
+  ['receber', '/mercado/pedidos'],
+  ['contrapropostas', '/mercado/pedidos?aba=ofertas'],
+];
 const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
 
 /**
@@ -92,6 +128,7 @@ const numero = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : undefin
  *   aulasAResponder?: number,
  *   treinosNaoLidos?: number,
  *   duvidasEsperando?: number,
+ *   mercado?: ReturnType<typeof marketPendingCounts>,
  * }} fontes cada uma `undefined` quando não carregou ou falhou
  * @returns {Array<{ id: string, count: number, label: string, detalhe?: string, to?: string, secao?: string }>}
  */
@@ -156,6 +193,20 @@ export function userAreaPending(fontes = {}) {
       id: 'balancos', count: balancos, to: '/treino?aba=balanco',
       label: tn(balancos, '{n} jogo esperando o seu balanço', '{n} jogos esperando o seu balanço'),
     });
+  }
+
+  // tn com literais (o guarda de idiomas lê as chaves daqui).
+  const rotulo = {
+    vendas: (n) => tn(n, '{n} venda no Mercado esperando você', '{n} vendas no Mercado esperando você'),
+    ofertas: (n) => tn(n, '{n} oferta no Mercado para responder', '{n} ofertas no Mercado para responder'),
+    perguntas: (n) => tn(n, '{n} pergunta de comprador sem resposta', '{n} perguntas de comprador sem resposta'),
+    pagar: (n) => tn(n, '{n} compra esperando o seu Pix', '{n} compras esperando o seu Pix'),
+    receber: (n) => tn(n, '{n} compra para confirmar o recebimento', '{n} compras para confirmar o recebimento'),
+    contrapropostas: (n) => tn(n, '{n} contraproposta do vendedor para responder', '{n} contrapropostas do vendedor para responder'),
+  };
+  for (const [id, to] of MERCADO_PENDENCIAS) {
+    const n = numero(fontes.mercado?.[id]);
+    if (n) itens.push({ id: `mercado:${id}`, count: n, to, label: rotulo[id](n) });
   }
 
   return itens;

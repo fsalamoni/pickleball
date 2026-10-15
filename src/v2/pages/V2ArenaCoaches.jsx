@@ -301,14 +301,14 @@ function V2ArenaCoachesContent() {
   if (arenaLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2ErrorState title={t('Não foi possível abrir esta arena')} onRetry={() => recarregarArena()} />
       </div>
     );
   }
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState title={t('Arena não encontrada')} action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← {t('Voltar')}</Link>} />
         </V2Surface>

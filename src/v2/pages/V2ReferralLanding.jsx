@@ -47,7 +47,7 @@ export default function V2ReferralLanding() {
   }
 
   return (
-    <div className="mx-auto max-w-[640px] px-4 py-10">
+    <div className="mx-auto max-w-[720px] px-4 py-10">
       <V2PageIntro
         title={t('Você foi convidado')}
         subtitle={t('Entre no PickleRush e comece com XP na conta.')}

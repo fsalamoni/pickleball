@@ -7,7 +7,7 @@ export default function V2Privacy() {
   const meta = t('Versão 1.0 — {data}. Ao usar a plataforma, você declara ciência e aceitação destas condições.', { data: fmtData(new Date(), { month: 'long', year: 'numeric' }) });
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('Termos de uso e privacidade')}
         title={t('Política de Uso e Privacidade')}

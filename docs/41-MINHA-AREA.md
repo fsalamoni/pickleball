@@ -22,7 +22,16 @@ Centro de Treino (`docs/40-CENTRO-DE-TREINO.md`) entra por aqui.
 2. **Precisa de você** (`userAreaPending`) — pedidos de reserva das arenas que
    a pessoa gere, pedidos de aula esperando resposta, convites de clube e de
    evento ainda não respondidos, dúvidas de treino esperando por ela e treinos
-   recebidos não lidos. Cada linha leva ao lugar que resolve (outra tela ou uma
+   recebidos não lidos, e — com a flag `marketplace` — o **Mercado**
+   (`marketPendingCounts`): vendas esperando o vendedor (`placed`,
+   `payment_review`, `paid`, `ready`, a mesma conta do Resumo de
+   `/mercado/vender`) → `?aba=vendas`; ofertas `pending` não vencidas →
+   `?aba=ofertas`; perguntas `open` → `?aba=perguntas`; compras esperando o
+   Pix (`accepted`) e para confirmar o recebimento (`shipped`, `ready`,
+   `delivered` que não é vale digital) → `/mercado/pedidos`; contrapropostas
+   do vendedor (`countered`) → `/mercado/pedidos?aba=ofertas`. As vendas só
+   são consultadas para quem tem a ficha pessoal `athlete_{uid}`; vendas como
+   professor, arena ou loja ficam no painel de vendas. Cada linha leva ao lugar que resolve (outra tela ou uma
    seção daqui). A conta é a **mesma** da tela que resolve.
 3. **Seções** (`userAreaSections`), com `?secao=` na URL e a barra
    `V2SectionNav` em duas linhas com nome:
@@ -33,6 +42,7 @@ Centro de Treino (`docs/40-CENTRO-DE-TREINO.md`) entra por aqui.
 | | `perfil` — **Perfil e conta** (os números do ranking, o editor, a progressão, as configurações e os códigos de indicação) | todos |
 | | `treino` (a semana de treino e o que chegou) | todos |
 | | `jogos` — **Meus jogos** (o que vem: reservas, aulas, dias de jogo; o que foi: desempenho e ranking — um link por destino), `torneios` (os que eu jogo) | todos |
+| | `mercado` — **Mercado**: *Comprando* (Minhas compras, Carrinho com a contagem, Favoritos, Buscas salvas, Vales-presente) e *Vendendo* (Painel de vendas com os anúncios no ar, Novo anúncio, Vendas, Ofertas e Perguntas com o "esperando você"; sem ficha, "Começar a vender") | com a flag `marketplace` |
 | | `clubes` (meus clubes e convites para responder) | membro de clube **ou** quem tem convite pendente |
 | **Gerencio** | `professor` | quem tem `coaches/{uid}` |
 | | `arenas` | quem gere arena |
@@ -108,6 +118,9 @@ arena, um para o professor"*.
   (e-mail na Política de Privacidade) que o admin executa em Painel admin →
   Comunidade → Cadastros (decisão do dono, 2026-10-08).
 - Aprovações de entrada em clube na faixa "Precisa de você".
+
+> **2026-10-15**: seção **Mercado** (flag `marketplace`) e as pendências do
+> Mercado na faixa. No Resumo, os três atalhos soltos do Mercado viraram um só.
 
 > **2026-10-11 (plano de UX, Fase 3.1)**: de 11 para **9 seções** — `jogo` + `agenda`
 > viraram `jogos` (Meus jogos) e `conta` entrou em `perfil` (Perfil e conta); o

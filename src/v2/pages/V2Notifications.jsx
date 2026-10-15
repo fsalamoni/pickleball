@@ -267,7 +267,7 @@ export default function V2Notifications() {
   }
 
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title={t('Notificações')}
         // O número de não lidas já está no filtro "Não lidas" e no sino.

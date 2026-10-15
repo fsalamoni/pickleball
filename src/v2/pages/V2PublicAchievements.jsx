@@ -107,7 +107,7 @@ function V2PublicAchievementsOn() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Conquistas')}
         subtitle={isOwnProfile ? t('Seu perfil público de conquistas') : t('Conquistas de {nome}', { nome: athleteName })}

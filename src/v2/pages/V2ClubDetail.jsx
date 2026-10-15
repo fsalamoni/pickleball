@@ -96,7 +96,7 @@ export default function V2ClubDetail() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1100px] space-y-6">
+      <div className="mx-auto max-w-[1200px] space-y-6">
         <V2Skeleton className="h-52 rounded-4xl" />
         <V2Skeleton className="h-80 rounded-4xl" />
       </div>
@@ -105,7 +105,7 @@ export default function V2ClubDetail() {
 
   if (isError || !club) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState icon={Building2} title={t('Clube não encontrado')}
             description={t('O clube que você procura não existe ou foi removido.')}
@@ -129,7 +129,7 @@ export default function V2ClubDetail() {
     ? 'members' : activeTab;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2BackLink to="/clubes" className="mb-5">{t('Voltar para clubes')}</V2BackLink>
 
       {/* Hero */}

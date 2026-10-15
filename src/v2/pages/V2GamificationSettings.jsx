@@ -17,14 +17,14 @@ export default function V2GamificationSettings() {
   useHashScroll();
   if (!on) {
     return (
-      <div className="mx-auto max-w-[760px]">
+      <div className="mx-auto max-w-[720px]">
         <V2PageIntro title={t('Preferências da gamificação')} subtitle={t('Privacidade, avisos e como você aparece.')} />
         <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('Estas preferências chegam junto com a gamificação.')} /></V2Surface>
       </div>
     );
   }
   return (
-    <div className="mx-auto max-w-[760px] space-y-5">
+    <div className="mx-auto max-w-[720px] space-y-5">
       <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
       <V2PageIntro title={t('Preferências da gamificação')} subtitle={t('Você manda: o que aparece, o que chega e como você é visto.')} />
       <GamificationPreferences uid={user?.uid} isModuleOn={isModuleOn} />

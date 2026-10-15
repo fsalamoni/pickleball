@@ -32,7 +32,7 @@ export default function V2TournamentAdmin() {
 
   if (isLoading || loadingAdmin) {
     return (
-      <div className="mx-auto max-w-[1100px] space-y-4">
+      <div className="mx-auto max-w-[1200px] space-y-4">
         <V2Skeleton className="h-16 rounded-2xl" />
         <V2Skeleton className="h-96 rounded-2xl" />
       </div>
@@ -43,7 +43,7 @@ export default function V2TournamentAdmin() {
   if (!tournament || !isAdmin) return <Navigate to={`/torneios/${tournamentId}`} replace />;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       {/* Cabeçalho compacto e objetivo — sem hero/vitrine. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-paper-pure p-4">
         <div className="min-w-0">

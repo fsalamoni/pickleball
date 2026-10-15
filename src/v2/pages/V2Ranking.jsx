@@ -160,7 +160,7 @@ function NationalRankingView() {
   }, [players, search, rankingFiltersOn, stateFilter, levelFilter, genderFilter, clubFilter, ageFilter]);
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Ranking nacional')}
         subtitle={t('Rating calculado a partir dos jogos de torneios e dias de jogo da plataforma.')}
@@ -308,7 +308,7 @@ export default function V2Ranking() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <div className="mb-6 overflow-x-auto">
         <div data-dica="ranking-abas" className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
           {TABS.map((t) => (

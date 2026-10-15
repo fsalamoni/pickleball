@@ -35,7 +35,7 @@ import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/c
 import {
   useMarketSettings, usePublicListings, useSavedSearchActions, useSavedSearches, useStores,
 } from '@/modules/marketplace/hooks/useMarket';
-import { V2Button, V2EmptyState, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2Page } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import MarketFilters from '@/v2/components/marketplace/MarketFilters';
 import {
@@ -179,8 +179,8 @@ function Showcase({ listings, stores, settings, uid }) {
         <V2EmptyState
           icon={Sparkles}
           title={t('O Mercado acabou de abrir')}
-          description={t('Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie pela Minha área.')}
-          action={<V2Button asChild><Link to="/perfil">{t('Ir para a Minha área')}</Link></V2Button>}
+          description={t('Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie no Mercado.')}
+          action={<V2Button asChild><Link to="/mercado/vender">{t('Anunciar um produto')}</Link></V2Button>}
         />
       ) : (
         <>
@@ -368,10 +368,11 @@ function MarketPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
+    <V2Page largura="larga" className="space-y-6 pb-16">
+      {/* Na vitrine os departamentos já aparecem em grade, com a contagem. */}
+      <MarketHeader categorias={buscando} />
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

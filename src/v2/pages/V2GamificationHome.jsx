@@ -158,7 +158,7 @@ function V2GamificationHomeOn() {
 
   if (engine.isLoading) {
     return (
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1200px]">
         <V2PageIntro title={t('Gamificação')} subtitle="..." />
         <V2Skeleton className="h-96 rounded-4xl" />
       </div>
@@ -166,7 +166,7 @@ function V2GamificationHomeOn() {
   }
   if (engine.isError && !engine.stats) {
     return (
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1200px]">
         <V2PageIntro title={t('Gamificação')} subtitle={t('Missões, conquistas e competição.')} />
         <V2Surface><V2ErrorState title={t('Não deu para carregar a sua jornada')} onRetry={engine.refetch} /></V2Surface>
       </div>
@@ -177,7 +177,7 @@ function V2GamificationHomeOn() {
   const totalAch = engine.achievements.total;
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-5" data-testid="gamification-hub">
+    <div className="mx-auto max-w-[1200px] space-y-5" data-testid="gamification-hub">
       <V2PageIntro
         title={t('Gamificação')}
         subtitle={t('Missões, conquistas, temporada, desafios e recompensas — tudo medido pelo que você joga de verdade.')}

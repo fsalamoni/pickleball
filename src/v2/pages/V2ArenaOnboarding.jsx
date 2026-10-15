@@ -105,7 +105,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 p-6" aria-busy="true" aria-label={t('Carregando a arena')}>
+      <div className="mx-auto max-w-[720px] space-y-4 p-6" aria-busy="true" aria-label={t('Carregando a arena')}>
         <V2Skeleton className="h-8 w-2/3" />
         <V2Skeleton lines={4} />
       </div>
@@ -113,7 +113,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
   }
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-3xl p-6">
+      <div className="mx-auto max-w-[720px] p-6">
         <V2ErrorState
           title={t('Não foi possível abrir a configuração da arena')}
           description={t('A conexão falhou no meio do caminho. O que você já configurou continua salvo — tente de novo.')}
@@ -124,7 +124,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
   }
   if (!arena) {
     return (
-      <div className="mx-auto max-w-3xl p-6">
+      <div className="mx-auto max-w-[720px] p-6">
         <p className="text-sm text-gray-500">{t('Arena não encontrada.')}</p>
         <Link to="/arenas" className="mt-3 inline-block text-sm font-semibold text-ink underline">{t('Voltar às arenas')}</Link>
       </div>
@@ -232,7 +232,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-[720px] px-4 py-8">
       <V2BackLink to="/arenas" className="mb-5">{t('Voltar às arenas')}</V2BackLink>
 
       <V2Surface className="p-6 md:p-8">

@@ -93,7 +93,7 @@ export default function V2Rules() {
   const data = SECTIONS[active];
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('Sobre o esporte')}
         title={t('Regras do Pickleball')}

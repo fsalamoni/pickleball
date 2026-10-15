@@ -57,7 +57,7 @@ export default function V2Search() {
   if (!enabled) return <Navigate to="/atletas" replace />;
 
   return (
-    <div className="mx-auto max-w-[820px]">
+    <div className="mx-auto max-w-[720px]">
       <V2PageIntro title={t('Buscar')} subtitle={t('Atletas, torneios, arenas e clubes num só lugar.')} />
 
       <div className="mb-5 max-w-lg">

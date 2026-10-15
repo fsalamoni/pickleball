@@ -26,7 +26,7 @@ export default function V2History() {
   if (!enabled) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('História do esporte')}
         title={t('Como o pickleball saiu de uma brincadeira e virou uma comunidade global')}

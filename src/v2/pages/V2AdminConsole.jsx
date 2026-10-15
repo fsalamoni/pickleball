@@ -147,7 +147,7 @@ const SECTIONS = Object.freeze([
     { id: 'gam-metrics', label: tk('Métricas'), icon: BarChart3 },
   ] },
   // O Mercado (flag `marketplace`): some da barra com a flag desligada.
-  { id: 'market', label: tk('Mercado'), icon: Store, flag: 'marketplace', tabs: [
+  { id: 'market', label: tk('Mercado'), icon: Store, flag: 'marketplace', dica: 'admin-secao-mercado', tabs: [
     { id: 'mercado-resumo', label: tk('Visão geral'), icon: BarChart3, keywords: ['marketplace', 'vendas', 'métricas', 'gmv'] },
     { id: 'mercado-disputas', label: tk('Problemas em pedidos'), icon: MessageSquareWarning, keywords: ['marketplace', 'disputa', 'reclamação', 'não recebi'] },
     { id: 'mercado-anuncios', label: tk('Anúncios'), icon: Flag, keywords: ['marketplace', 'denúncia', 'moderação', 'tirar do ar', 'réplica'] },

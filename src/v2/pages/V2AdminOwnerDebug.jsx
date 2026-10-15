@@ -222,7 +222,7 @@ export default function V2AdminOwnerDebug() {
   }
   if (!isOwner) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2PageIntro title={t('Acesso restrito')} subtitle={t('Página de debug exclusiva do owner.')} />
         <V2Surface className="p-6">
           <p>{t('Você não é o owner da plataforma. Esta página só é acessível para o e-mail cadastrado em')} <code>core/config/owners.js</code>.</p>
@@ -233,7 +233,7 @@ export default function V2AdminOwnerDebug() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Debug profundo do user')}
         subtitle={t('Lê Firestore direto (sem hooks/cache) e mostra contagens + erros. Use quando “user sumiu” / “perfil zerado” / “useMyTournaments retorna []”.')}

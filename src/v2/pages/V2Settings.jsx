@@ -17,7 +17,7 @@
 import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { User, Download, ShieldCheck, Bell, ChevronRight } from 'lucide-react';
+import { User, Download, ShieldCheck, Bell, ChevronRight, Store } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
@@ -42,6 +42,8 @@ import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
 import { t, tn } from '@/core/i18n';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 export default function V2Settings() {
   const enabled = true;
@@ -50,6 +52,9 @@ export default function V2Settings() {
   const centralAvisosOn = true;
   const gamificacaoOn = true;
   const treinoOn = true;
+  const mercadoOn = useFeatureFlag(FEATURE_FLAG.MARKETPLACE);
+  // Categoria de aviso de funcionalidade desligada não aparece (nem conta).
+  const categoriaVisivel = (cat) => (cat.id !== 'training' || treinoOn) && (cat.id !== 'market' || mercadoOn);
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
   // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();
@@ -140,7 +145,7 @@ export default function V2Settings() {
   }
 
   const silenciadas = NOTIFICATION_CATEGORIES
-    .filter((cat) => cat.id !== 'training' || treinoOn)
+    .filter(categoriaVisivel)
     .filter((cat) => prefs[cat.id] === false).length;
   const resumoAvisos = silenciadas === 0
     ? t('Todas as categorias ligadas')
@@ -171,6 +176,7 @@ export default function V2Settings() {
               {treinoOn
                 ? t('Baixe uma cópia dos seus dados na plataforma (perfil, inscrições, reservas, metas e o seu treino: itens, diário, planos, envios, dúvidas e balanços dos jogos) em formato JSON.')
                 : t('Baixe uma cópia dos seus dados na plataforma (perfil, inscrições e reservas) em formato JSON.')}
+              {mercadoOn && <> {t('Do Mercado: anúncios, pedidos, favoritos e buscas salvas.')}</>}
             </p>
             <div className="mt-3">
               <V2Button size="sm" onClick={exportData} disabled={busy}>
@@ -207,7 +213,7 @@ export default function V2Settings() {
                     : t('Escolha quais categorias de notificação você quer ver. As silenciadas não aparecem no sino, e não contam no número de não lidas.')}
                 </p>
                 <div className="mt-4 space-y-3">
-                  {NOTIFICATION_CATEGORIES.filter((cat) => cat.id !== 'training' || treinoOn).map((cat) => (
+                  {NOTIFICATION_CATEGORIES.filter(categoriaVisivel).map((cat) => (
                     <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
                       <V2Toggle
                         id={`notif-${cat.id}`}
@@ -236,6 +242,21 @@ export default function V2Settings() {
           </SettingsSection>
 
           {pushOn && <V2PushCard />}
+
+          {/* Mercado (flag `marketplace`): os atalhos do que se configura lá. */}
+          {mercadoOn && (
+            <SettingsSection id="mercado" dica="config-mercado" icon={Store} title={t('Mercado')} summary={t('Compras, vendas e alertas')}>
+              <p className="text-sm text-gray-500">
+                {t('O que você ajusta no Mercado: os avisos de compras e vendas, a chave Pix para receber, as buscas salvas e os termos.')}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <V2Button asChild variant="secondary" size="sm"><Link to="/configuracoes#notificacoes">{t('Avisos do Mercado')}</Link></V2Button>
+                <V2Button asChild variant="secondary" size="sm"><Link to="/mercado/vender?aba=pix">{t('Recebimento (Pix)')}</Link></V2Button>
+                <V2Button asChild variant="secondary" size="sm"><Link to="/mercado/buscas">{t('Buscas salvas e alertas')}</Link></V2Button>
+                <V2Button asChild variant="ghost" size="sm"><Link to="/legal/termos-mercado">{t('Termos do Mercado')}</Link></V2Button>
+              </div>
+            </SettingsSection>
+          )}
         </SettingsGroup>
 
         <SettingsGroup title={t('Jogo e treino')}>

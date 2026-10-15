@@ -82,7 +82,7 @@ function EditorPage() {
 
   if (legado) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[720px]">
         <Voltar />
         <Recado
           titulo={t('Conteúdo da área do professor')}
@@ -96,7 +96,7 @@ function EditorPage() {
 
   if (alvoId && leitura.isPending) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4" aria-busy="true">
+      <div className="mx-auto max-w-[720px] space-y-4" aria-busy="true">
         <V2Skeleton className="h-10 w-2/3" />
         <V2Skeleton className="h-64 rounded-4xl" />
       </div>
@@ -105,7 +105,7 @@ function EditorPage() {
 
   if (alvoId && leitura.isError) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[720px]">
         <Voltar />
         <V2ErrorState
           title={t('Não foi possível abrir o item')}
@@ -118,7 +118,7 @@ function EditorPage() {
 
   if (alvoId && !item) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[720px]">
         <Voltar />
         <Recado titulo={t('Este item não está disponível')}>
           {t('Ele pode ter sido apagado pelo autor, ou não foi compartilhado com a sua conta.')}
@@ -129,7 +129,7 @@ function EditorPage() {
 
   if (itemId && item.legacy) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[720px]">
         <Voltar />
         <Recado
           titulo={t('Conteúdo da área do professor')}
@@ -144,7 +144,7 @@ function EditorPage() {
   if (itemId && !canEditItem(item, { uid: identity.uid, isAdmin: identity.isAdmin })) {
     const copia = canCopyItem(item, { uid: identity.uid });
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[720px]">
         <Voltar to={`/treino/item/${item.id}`}>{t('Voltar ao item')}</Voltar>
         <Recado
           titulo={t('Só quem criou pode editar')}
@@ -165,7 +165,7 @@ function EditorPage() {
     const copia = canCopyItem(item, { uid: identity.uid });
     if (!copia.ok) {
       return (
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-[720px]">
           <Voltar />
           <Recado titulo={t('Não dá para copiar este item')}>{copia.reason}</Recado>
         </div>
@@ -345,7 +345,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
   } : null;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-[1000px]">
       <Voltar to={item ? `/treino/item/${item.id}` : '/treino'}>{item ? t('Voltar ao item') : t('Voltar ao treino')}</Voltar>
       <V2PageIntro title={titulo} subtitle={subtitulo} />
 

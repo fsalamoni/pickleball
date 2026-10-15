@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { isPublicListing } from '@/modules/marketplace/domain/listing';
 import { useFavorites, useListingsByIds, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
-import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro } from '@/v2/ui/primitives';
+import MarketTabs from '@/v2/components/marketplace/MarketTabs';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ListingCard, ListingGrid, ListingGridSkeleton, MarketGate } from '@/v2/components/marketplace/marketUi';
 import { t, tn } from '@/core/i18n';
@@ -69,11 +70,12 @@ function FavoritesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2PageIntro title={t('Favoritos')} subtitle={ids.length ? tn(ids.length, '{n} anúncio guardado', '{n} anúncios guardados') : undefined} />
+    <V2Page largura="larga" className="space-y-6 pb-16">
+      <MarketHeader categorias={false} />
+      <V2PageIntro title={t('Salvos')} subtitle={ids.length ? tn(ids.length, '{n} anúncio guardado', '{n} anúncios guardados') : undefined} />
+      <MarketTabs grupo="salvos" ativo="favoritos" />
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

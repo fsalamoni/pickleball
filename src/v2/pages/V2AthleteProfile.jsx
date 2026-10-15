@@ -60,7 +60,7 @@ export default function V2AthleteProfile() {
   if (isError) {
     // Falhar não é "o perfil não existe" (docs/27-FALHA-NAO-E-VAZIO.md).
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar o perfil')}
@@ -75,7 +75,7 @@ export default function V2AthleteProfile() {
   const athlete = data?.athlete;
   if (!athlete) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState
             icon={Trophy}

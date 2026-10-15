@@ -36,7 +36,7 @@ export default function V2EventDetail() {
 
   if (isError || !event) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState
             icon={membership ? CalendarDays : Lock}
