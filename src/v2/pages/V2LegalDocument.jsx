@@ -1,7 +1,8 @@
 /**
  * V2LegalDocument — página de um documento legal (/legal/:docRoute).
  * Renderiza o conteúdo no padrão de design e, para o usuário autenticado,
- * mostra o estado de aceite + botão "Li e concordo". Flag legal_center.
+ * mostra o estado de aceite (no topo) ou o botão "Li e concordo" — este no FIM,
+ * depois do texto: concordar é a última coisa, nunca antes de ler.
  */
 
 import React from 'react';
@@ -54,14 +55,13 @@ export default function V2LegalDocument() {
     }
   };
 
-  const action = user ? (
-    accepted ? (
-      <V2Badge tone="green"><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> {t('Você concordou')}</V2Badge>
-    ) : (
-      <V2Button onClick={handleAccept} disabled={accept.isPending}>
-        {accept.isPending ? t('Registrando…') : t('Li e concordo')}
-      </V2Button>
-    )
+  const status = user && accepted
+    ? <V2Badge tone="green"><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> {t('Você concordou')}</V2Badge>
+    : null;
+  const action = user && !accepted ? (
+    <V2Button type="button" className="w-full sm:w-auto" onClick={handleAccept} disabled={accept.isPending}>
+      {accept.isPending ? t('Registrando…') : t('Li e concordo')}
+    </V2Button>
   ) : null;
 
   return (
@@ -71,7 +71,7 @@ export default function V2LegalDocument() {
           <ChevronLeft className="h-4 w-4" /> {t('Documentos')}
         </Link>
       </div>
-      <LegalDocumentView doc={doc} action={action} />
+      <LegalDocumentView doc={doc} status={status} action={action} />
     </V2Page>
   );
 }

@@ -212,10 +212,13 @@ gaveta mostram os hubs que a **pessoa** escolhe (`core/domain/sidebarNav.js`,
 
 O usuário vê:
 - `/legal` — central com lista de documentos
-- `/legal/:docRoute` — página de documento com botão "Li e concordo"
+- `/legal/:docRoute` — página de documento com o botão "Li e concordo" no fim,
+  depois do texto
 - `LegalConsentGate` no `V2Layout` bloqueia acesso até aceite dos
   essenciais (e `MarketTermsGate`, os do Mercado). Um aviso por vez, antes do
-  assistente de cadastro; o documento se lê dentro do aviso. Ver
+  assistente de cadastro; os documentos vêm em ordem e se leem ali mesmo, e o
+  botão de aceite (sempre ativo) é a última coisa — um toque aceita todos, sem
+  caixa por documento. Ver
   `src/modules/legal/README.md` § Consentimento
 
 **Estrutura de documentos** (em `domain/legalDocuments.js`):

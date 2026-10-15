@@ -154,7 +154,9 @@ em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
   `MarketTermsGate` pede o aceite no primeiro acesso a `/mercado` e a cada
   versão nova (`pendingMarketConsents`), gravado em `legal_consents` como os
   demais. Subir a `version` de um deles pede novo aceite a todos. Abre antes
-  do assistente de cadastro, nunca junto (ver `legal/README.md` § Consentimento).
+  do assistente de cadastro, nunca junto. É uma página no lugar do Mercado:
+  os quatro em ordem e, por último, "Li e aceito, entrar no Mercado", que
+  aceita todos num toque (ver `legal/README.md` § Consentimento).
 
 **Mais perto de Shopee e eBay (2026-10-15, zero banco).** Busca com sugestões
 (categorias e marcas) e buscas recentes no aparelho (`domain/suggestions.js`);

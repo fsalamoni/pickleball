@@ -66,11 +66,52 @@ async function entrar(page, { email, senha }) {
   await expect(page).not.toHaveURL(/\/login/);
 }
 
-/** Marca cada documento e aceita; o aviso tem de sumir (no celular, pelo toque). */
+/** Toque de verdade no celular (eventos de toque), clique no computador. */
+const tocar = (alvo) => (test.info().project.use.hasTouch ? alvo.tap() : alvo.click());
+
+/**
+ * Rola com o gesto de verdade (o dedo no celular, a roda do mouse no
+ * computador) até o alvo aparecer inteiro na tela.
+ */
+async function rolarAte(page, alvo) {
+  const { width, height } = page.viewportSize();
+  // Inteiro na tela e sem nada por cima (a barra de baixo do celular, por exemplo).
+  const emVista = () => alvo.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const meio = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return r.top >= 0 && r.bottom <= window.innerHeight && !!meio && el.contains(meio);
+  });
+  const cdp = test.info().project.use.hasTouch ? await page.context().newCDPSession(page) : null;
+  for (let i = 0; i < 30 && !(await emVista()); i += 1) {
+    if (cdp) {
+      const x = Math.round(width / 2);
+      const y0 = Math.round(height * 0.75);
+      const y1 = Math.round(height * 0.3);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
+      for (let k = 1; k <= 10; k += 1) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: Math.round(y0 + ((y1 - y0) * k) / 10) }] });
+        await page.waitForTimeout(16);
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else {
+      await page.mouse.move(width / 2, height / 2);
+      await page.mouse.wheel(0, height * 0.6);
+    }
+    await page.waitForTimeout(150);
+  }
+  expect(await emVista(), 'o gesto de rolar leva até o botão').toBe(true);
+}
+
+/**
+ * Aceita o aviso como uma pessoa: rola até o fim (o botão é a última coisa),
+ * e um toque no botão, que nasce ativo, fecha o aviso.
+ */
 async function aceitar(page, aviso, botao) {
   await expect(aviso).toBeVisible();
-  for (const caixa of await aviso.getByRole('checkbox').all()) await caixa.check();
-  await aviso.getByRole('button', { name: botao }).click();
+  const aceite = aviso.getByRole('button', { name: botao });
+  await expect(aceite).toBeEnabled();
+  await rolarAte(page, aceite);
+  await tocar(aceite);
   await expect(aviso).toBeHidden();
 }
 
@@ -109,23 +150,31 @@ test.describe('@emuladores com conta', () => {
     expect(errosDaPagina).toEqual([]);
   });
 
-  // 🐞 No celular os termos do Mercado "travavam": o assistente de cadastro
-  // abria por cima, e o diálogo de cima desliga os toques no de baixo.
+  // 🐞 No celular os termos do Mercado "travavam": primeiro o assistente de
+  // cadastro abria por cima (o diálogo de cima desliga os toques no de baixo);
+  // depois o botão só acendia com quatro caixas marcadas, e as últimas ficavam
+  // abaixo da dobra. Num celular pequeno: rolar com o dedo até o fim e um
+  // toque aceita.
   test('⭐ com o cadastro por completar, os termos do Mercado respondem ao toque', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 600 });
     await ligarFlag('marketplace');
     await entrar(page, await criarAtleta({ incompleto: true }));
     await aceitar(page, page.getByRole('dialog', { name: 'Antes de continuar' }), 'Aceitar e continuar');
 
     await page.goto('/mercado');
-    const termos = page.getByRole('dialog', { name: 'Antes de entrar no Mercado' });
+    // Uma página no lugar do Mercado, não uma janela; o cadastro espera a vez.
+    const termos = page.getByRole('region', { name: 'Antes de entrar no Mercado' });
     await expect(termos).toBeVisible();
-    await expect(page.getByRole('dialog')).toHaveCount(1);
-    // O documento abre dentro do aviso, e "Li e concordo" volta marcando.
-    await termos.getByRole('button', { name: 'Ler documento' }).first().click();
-    await termos.getByRole('button', { name: 'Li e concordo' }).click();
-    await expect(termos.getByRole('checkbox').first()).toBeChecked();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Os quatro documentos em ordem; o primeiro abre o texto ali mesmo.
+    await expect(termos.locator('summary')).toHaveCount(4);
+    await tocar(termos.locator('summary').first());
+    await expect(termos.locator('details').first()).toHaveAttribute('open', '');
+    await expect(termos.locator('details').first().locator('h4').first()).toBeVisible();
     await aceitar(page, termos, 'Li e aceito, entrar no Mercado');
-    // Aceitos os termos, é a vez do cadastro.
+    // O Mercado abre do topo (não rolado até onde estava o botão)…
+    await expect.poll(() => page.locator('main').evaluate((el) => el.scrollTop)).toBe(0);
+    // …e, aceitos os termos, é a vez do cadastro.
     await expect(page.getByRole('dialog')).toHaveCount(1);
   });
 });
