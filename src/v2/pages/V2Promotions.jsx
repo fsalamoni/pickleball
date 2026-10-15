@@ -87,7 +87,7 @@ export default function V2Promotions() {
   const nada = banners.length + cuponsPlataforma.length + cuponsProfessores.length === 0;
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-6">
+    <div className="mx-auto max-w-[1200px] space-y-6">
       <V2PageIntro
         title={t('Promoções')}
         subtitle={t('Cupons e campanhas da plataforma e dos professores que estão valendo agora. Toque no código para copiar.')}

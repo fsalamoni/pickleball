@@ -235,7 +235,7 @@ function GameDayDetail({ gameDayId }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (isLoading) {
-    return <div className="mx-auto max-w-[900px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+    return <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
   }
   // ⚠️ FALHA não é ausência. Dizer "pode ter sido removido ou você não tem
   // acesso" quando o que caiu foi a rede é alarmar quem está na beira da
@@ -248,7 +248,7 @@ function GameDayDetail({ gameDayId }) {
   // existe — por isso a frase admite as duas coisas.)
   if (isError && error?.code === 'permission-denied') {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2Surface>
           <V2EmptyState
             icon={Lock}
@@ -262,7 +262,7 @@ function GameDayDetail({ gameDayId }) {
   }
   if (isError) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar este dia de jogo')}
@@ -275,7 +275,7 @@ function GameDayDetail({ gameDayId }) {
   }
   if (!gameDay) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
@@ -308,7 +308,7 @@ function GameDayDetail({ gameDayId }) {
   };
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <button type="button" onClick={() => navigate('/dia-de-jogo')} className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
         <ChevronLeft className="h-4 w-4" /> {t('Dias de jogo')}
       </button>

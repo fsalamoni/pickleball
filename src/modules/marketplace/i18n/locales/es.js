@@ -1136,4 +1136,13 @@ export default {
   "Voltar ao carrinho": "Volver al carrito",
   "Voltar ao Mercado": "Volver al Mercado",
   "Voltar aos anúncios": "Volver a los anuncios",
+  "Salvos": "Guardados",
+  "Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie no Mercado.": "Los primeros anuncios aparecerán aquí. ¿Tienes algo de pickleball guardado en casa? Anúncialo en el Mercado.",
+  "Anunciar um produto": "Anunciar un producto",
+  "Buscas salvas: {n} de {total}": "Búsquedas guardadas: {n} de {total}",
+  "Vales-presente: os que você ganhou, os que você deu e o resgate de um código.": "Tarjetas de regalo: las que recibiste, las que diste y el canje de un código.",
+  "Seus pedidos, ofertas e vales-presente no Mercado.": "Tus pedidos, ofertas y tarjetas de regalo en el Mercado.",
+  "Ofertas recebidas": "Ofertas recibidas",
+  "Negociações": "Negociaciones",
+  "Anúncios, negociações e o Pix, num lugar só.": "Anuncios, negociaciones y el Pix, en un solo lugar.",
 };

@@ -1,14 +1,17 @@
 /**
- * MERCADO — o topo de toda tela do Mercado: a busca (o centro de um
- * marketplace), os atalhos de quem compra (favoritos, compras, carrinho com o
- * número de itens) e os departamentos.
+ * MERCADO — o topo das telas de QUEM COMPRA: a busca (o centro de um
+ * marketplace), o carrinho com o número de itens e os departamentos.
+ *
+ * Os outros caminhos (Minhas compras, Salvos, Vender) ficam UMA vez só, na
+ * barra do Mercado logo acima (o hub do V2Layout). As telas de quem vende não
+ * usam este topo: lá a busca e o carrinho só atrapalham (`SellerHeader`).
  *
  * A busca leva a `/mercado?q=…` mantendo a categoria escolhida; o resto dos
  * filtros recomeça (uma busca nova é uma pergunta nova).
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Bell, Gift, Heart, Search, ShoppingBag, ShoppingCart, Store } from 'lucide-react';
+import { Search, ShoppingCart, Store } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
@@ -35,7 +38,7 @@ function HeaderLink({ to, icon: Icon, label, badge, dica }) {
   );
 }
 
-export default function MarketHeader({ className }) {
+export default function MarketHeader({ className, categorias = true }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -83,17 +86,9 @@ export default function MarketHeader({ className }) {
             <Search className="h-5 w-5" />
           </button>
         </form>
-        <nav aria-label={t('Atalhos do Mercado')} className="flex shrink-0 items-center">
-          <span className="hidden sm:contents">
-            <HeaderLink to="/mercado/favoritos" icon={Heart} label={t('Favoritos')} />
-            {user && <HeaderLink to="/mercado/buscas" icon={Bell} label={t('Buscas')} dica="mercado-buscas" />}
-            <HeaderLink to="/mercado/pedidos" icon={ShoppingBag} label={t('Compras')} />
-            {user && <HeaderLink to="/mercado/vales" icon={Gift} label={t('Vales')} />}
-          </span>
-          <HeaderLink to="/mercado/vender" icon={Store} label={t('Vender')} dica="mercado-vender" />
-          <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label={t('Carrinho')} dica="mercado-carrinho" badge={cart.isError ? 0 : cart.count} />
-        </nav>
+        <HeaderLink to="/mercado/carrinho" icon={ShoppingCart} label={t('Carrinho')} dica="mercado-carrinho" badge={cart.isError ? 0 : cart.count} />
       </div>
+      {categorias && (
       <nav aria-label={t('Departamentos')} data-dica="mercado-departamentos" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
         <ul className="flex gap-2 sm:flex-wrap">
           {cats.map((c) => {
@@ -115,6 +110,7 @@ export default function MarketHeader({ className }) {
           })}
         </ul>
       </nav>
+      )}
     </div>
   );
 }

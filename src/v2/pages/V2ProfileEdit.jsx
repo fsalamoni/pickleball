@@ -310,7 +310,7 @@ export default function V2ProfileEdit() {
   };
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2BackLink to="/perfil" className="mb-5">{t('Voltar ao perfil')}</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

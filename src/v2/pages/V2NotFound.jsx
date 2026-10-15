@@ -21,7 +21,7 @@ const SHORTCUTS = [
 export default function V2NotFound() {
   const location = useLocation();
   return (
-    <div className="mx-auto max-w-[640px]">
+    <div className="mx-auto max-w-[720px]">
       <V2Surface className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-ink text-acid">
           <Compass className="h-8 w-8" />

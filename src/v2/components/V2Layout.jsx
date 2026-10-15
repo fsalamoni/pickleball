@@ -43,6 +43,7 @@ import {
   Store,
   ShoppingBag,
   Heart,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -341,9 +342,11 @@ function useV2Nav() {
       marketplaceOn && hub({
         id: 'mercado', dica: 'menu-mercado', label: t('Mercado'), icon: Store, to: '/mercado',
         children: [
-          { to: '/mercado', label: t('Comprar'), icon: Store, exact: true },
-          { to: '/mercado/pedidos', label: t('Minhas compras'), icon: ShoppingBag },
-          { to: '/mercado/favoritos', label: t('Favoritos'), icon: Heart },
+          // Dois ambientes: quem compra (as três primeiras) e quem vende (a última).
+          { to: '/mercado', label: t('Comprar'), icon: Store, exact: true, also: ['/mercado/anuncio', '/mercado/vendedor', '/mercado/carrinho'] },
+          { to: '/mercado/pedidos', label: t('Minhas compras'), icon: ShoppingBag, also: ['/mercado/vales'], dica: 'mercado-compras' },
+          { to: '/mercado/favoritos', label: t('Salvos'), icon: Heart, also: ['/mercado/buscas'], dica: 'mercado-salvos' },
+          { to: '/mercado/vender', label: t('Vender'), icon: Tag, also: ['/mercado/vendas', '/mercado/loja'], dica: 'mercado-vender' },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
@@ -389,9 +392,11 @@ function findActiveHub(pathname, hubs) {
 }
 
 function isActive(pathname, item) {
+  const current = pathname.endsWith('/') ? pathname : `${pathname}/`;
+  // `also`: outras rotas que pertencem a este item (ex.: o carrinho é de "Comprar").
+  if (item.also?.some((p) => current.startsWith(`${p}/`))) return true;
   if (item.exact) return pathname === item.to;
   const base = item.to.endsWith('/') ? item.to : `${item.to}/`;
-  const current = pathname.endsWith('/') ? pathname : `${pathname}/`;
   return current === base || current.startsWith(base);
 }
 
@@ -608,6 +613,8 @@ function SubnavBar({ hub, pathname, onNavigate }) {
               key={c.to + c.label}
               to={c.to}
               onClick={onNavigate}
+              data-dica={c.dica}
+              aria-current={active ? 'page' : undefined}
               className={cn(
                 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors',
                 active ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',

@@ -44,7 +44,7 @@ export default function V2FormatsGuide() {
   const etapasOn = true;
   const ordem = etapasOn ? [...STAGE_ORDER, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS] : STAGE_ORDER;
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('Organização')}
         title={t('Guia de formatos e modelos de torneio')}

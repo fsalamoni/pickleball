@@ -37,28 +37,50 @@ import {
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2PageIntro, V2Select,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select,
   V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
-import { V2SubTabs } from '@/v2/ui/V2SectionNav';
-import MarketHeader from '@/v2/components/marketplace/MarketHeader';
+import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
 import SellerPromoTab from '@/v2/components/marketplace/promo/SellerPromoTab';
 import SellerInsightsTab from '@/v2/components/marketplace/SellerInsightsTab';
 import { t, tk, tn } from '@/core/i18n';
 import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
-const ABAS = [
-  { value: 'resumo', label: tk('Resumo'), icon: LayoutDashboard },
-  { value: 'anuncios', label: tk('Anúncios'), icon: Package, dica: 'mercado-vender-anuncios' },
-  { value: 'vendas', label: tk('Vendas'), icon: Receipt, dica: 'mercado-vender-vendas' },
-  { value: 'ofertas', label: tk('Ofertas'), icon: HandCoins },
-  { value: 'perguntas', label: tk('Perguntas'), icon: MessageCircleQuestion },
-  { value: 'pix', label: tk('Recebimento'), icon: Wallet, dica: 'mercado-vender-pix' },
-  { value: 'vitrine', label: tk('Vitrine'), icon: Store },
-  { value: 'divulgar', label: tk('Cupons e vales'), icon: TicketPercent },
-  { value: 'desempenho', label: tk('Desempenho'), icon: BarChart3 },
+/**
+ * As nove abas em cinco seções, pelo que a pessoa vem fazer: ver o que
+ * precisa dela (Resumo), cuidar dos anúncios, NEGOCIAR (vendas, ofertas e
+ * perguntas são a mesma conversa com quem compra), divulgar e ajustar a loja.
+ * O valor de cada aba (`?aba=`) não mudou: os avisos antigos seguem abrindo
+ * no lugar certo.
+ */
+const SECOES = [
+  { id: 'resumo', label: tk('Resumo'), icon: LayoutDashboard, abas: [{ value: 'resumo', label: tk('Resumo') }] },
+  { id: 'anuncios', label: tk('Anúncios'), icon: Package, dica: 'mercado-vender-anuncios', abas: [{ value: 'anuncios', label: tk('Anúncios') }] },
+  {
+    id: 'negociar', label: tk('Negociações'), icon: Receipt, dica: 'mercado-vender-vendas',
+    abas: [
+      { value: 'vendas', label: tk('Vendas'), icon: Receipt },
+      { value: 'ofertas', label: tk('Ofertas'), icon: HandCoins },
+      { value: 'perguntas', label: tk('Perguntas'), icon: MessageCircleQuestion },
+    ],
+  },
+  {
+    id: 'divulgar', label: tk('Divulgação'), icon: TicketPercent,
+    abas: [
+      { value: 'divulgar', label: tk('Cupons e vales'), icon: TicketPercent },
+      { value: 'desempenho', label: tk('Desempenho'), icon: BarChart3 },
+    ],
+  },
+  {
+    id: 'loja', label: tk('Minha loja'), icon: Store, dica: 'mercado-vender-pix',
+    abas: [
+      { value: 'pix', label: tk('Recebimento'), icon: Wallet },
+      { value: 'vitrine', label: tk('Vitrine'), icon: Store },
+    ],
+  },
 ];
+const ABAS = SECOES.flatMap((sec) => sec.abas.map((a) => ({ ...a, secao: sec.id })));
 
 const ACTIVE_ORDER = (o) => !ORDER_FINAL_STATUSES.includes(o.status);
 const MY_TURN_ORDER = (o) => ['placed', 'payment_review', 'paid'].includes(o.status) || (o.status === 'ready');
@@ -226,7 +248,6 @@ function ListingsTab({ sellerKey }) {
         <div className="flex flex-wrap gap-2">
           {FILTROS.map((x) => <V2FilterChip key={x.id} active={filtro === x.id} onClick={() => { setFiltro(x.id); setMarcados([]); }}>{t(x.label)} ({todos.filter(x.test).length})</V2FilterChip>)}
         </div>
-        {criar}
       </div>
       {sel.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-paper p-3 text-sm" role="region" aria-label={t('Ações nos selecionados')}>
@@ -525,6 +546,7 @@ function SellPage() {
   const ids = useMemo(() => sellingIdentities({ uid: user?.uid, name: nome, isCoach: Boolean(coach.data), arenas, store: store.data }), [user?.uid, nome, coach.data, arenas, store.data]);
   const como = ids.find((i) => i.key === params.get('como')) || ids[0];
   const aba = ABAS.some((a) => a.value === params.get('aba')) ? params.get('aba') : 'resumo';
+  const secao = SECOES.find((sec) => sec.abas.some((a) => a.value === aba));
   const sq = useSeller(como?.key);
   const ir = (patch) => setParams((p) => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; }, { replace: true });
 
@@ -549,7 +571,17 @@ function SellPage() {
     const props = { sellerKey: como.key, seller: sq.data };
     corpo = (
       <div className="space-y-5">
-        <V2SubTabs ariaLabel={t('Painel de vendas')} tabs={ABAS.map((a) => ({ ...a, label: t(a.label) }))} activeValue={aba} onSelect={(tab) => ir({ aba: tab.value === 'resumo' ? '' : tab.value })} />
+        <div className="space-y-2">
+          <V2SectionNav
+            ariaLabel={t('Painel de vendas')}
+            sections={SECOES.map((sec) => ({ ...sec, label: t(sec.label) }))}
+            activeId={secao.id}
+            onSelect={(sec) => ir({ aba: sec.abas[0].value === 'resumo' ? '' : sec.abas[0].value })}
+          />
+          {secao.abas.length > 1 && (
+            <V2SubTabs ariaLabel={t(secao.label)} tabs={secao.abas.map((a) => ({ ...a, label: t(a.label) }))} activeValue={aba} onSelect={(tab) => ir({ aba: tab.value })} />
+          )}
+        </div>
         {aba === 'resumo' && <Summary {...props} go={(a) => ir({ aba: a })} />}
         {aba === 'anuncios' && <ListingsTab {...props} />}
         {aba === 'vendas' && <SalesTab {...props} />}
@@ -564,10 +596,18 @@ function SellPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-16">
-      <MarketHeader />
+    <V2Page className="space-y-6 pb-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <V2PageIntro title={t('Vender no Mercado')} subtitle={t('Anúncios, vendas e o Pix, num lugar só.')} />
+        <V2PageIntro
+          title={t('Vender no Mercado')}
+          subtitle={t('Anúncios, negociações e o Pix, num lugar só.')}
+          action={sq.data?.status === 'active' ? (
+            <span className="flex flex-wrap gap-2">
+              <V2Button asChild variant="secondary"><Link to={`/mercado/vendedor/${como.key}`}>{t('Ver minha vitrine')}</Link></V2Button>
+              <V2Button asChild><Link to={novoAnuncio(como.key)}><Plus className="h-4 w-4" /> {t('Novo anúncio')}</Link></V2Button>
+            </span>
+          ) : null}
+        />
         {ids.length > 1 && (
           <V2Field label={t('Vendendo como')} htmlFor="vendendo-como" className="w-full sm:w-72">
             <V2Select id="vendendo-como" value={como?.key || ''} onChange={(e) => ir({ como: e.target.value, aba: '' })}>
@@ -584,7 +624,7 @@ function SellPage() {
             : <>{t('Vende como empresa, com CNPJ?')} <Link to="/mercado/loja/abrir" className="font-bold text-ink underline">{t('Abrir uma loja')}</Link></>}
         </p>
       )}
-    </div>
+    </V2Page>
   );
 }
 

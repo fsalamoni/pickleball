@@ -32,7 +32,7 @@ import {
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
-  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Page,
 } from '@/v2/ui/primitives';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
@@ -324,7 +324,7 @@ function OrderPage() {
   const operador = useIsMarketOperator(order?.seller_key);
   const role = orderRoleOf(order, user?.uid, { isAdmin: isPlatformAdmin, managerUids: operador && user?.uid ? [user.uid] : [] });
   const [acao, setAcao] = useState(null);
-  const voltar = role === 'seller' ? '/mercado' : role === 'admin' ? (order?.status === 'disputed' ? '/admin?tab=mercado-disputas' : '/admin?tab=mercado-pedidos') : '/mercado/pedidos';
+  const voltar = role === 'seller' ? '/mercado/vender?aba=vendas' : role === 'admin' ? (order?.status === 'disputed' ? '/admin?tab=mercado-disputas' : '/admin?tab=mercado-pedidos') : '/mercado/pedidos';
   useEffect(() => { setAcao(null); }, [order?.status]);
 
   let corpo;
@@ -454,11 +454,12 @@ function OrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2BackLink to={voltar}>{role === 'seller' ? t('Mercado') : role === 'admin' ? t('Painel admin') : t('Minhas compras')}</V2BackLink>
+    <V2Page className="space-y-6 pb-16">
+      {/* Quem vende está no ambiente de vendas: sem a busca e o carrinho de quem compra. */}
+      {role !== 'seller' && role !== 'admin' && <MarketHeader categorias={false} />}
+      <V2BackLink to={voltar}>{role === 'seller' ? t('Painel de vendas') : role === 'admin' ? t('Painel admin') : t('Minhas compras')}</V2BackLink>
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

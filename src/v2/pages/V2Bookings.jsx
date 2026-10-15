@@ -77,7 +77,7 @@ export default function V2Bookings() {
   const pendingInvites = sharedOn ? invites.filter((b) => ACTIVE.has(b.status)) : [];
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2PageIntro
         title={t('Minhas reservas')}
         subtitle={t('Acompanhe suas solicitações, valores e pagamentos nas arenas.')}

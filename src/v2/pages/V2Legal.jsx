@@ -50,7 +50,7 @@ export default function V2Legal() {
     .filter((d) => user && !isDocAccepted(consentMap, d)).length;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('Transparência')}
         title={t('Termos, Documentos e Políticas')}

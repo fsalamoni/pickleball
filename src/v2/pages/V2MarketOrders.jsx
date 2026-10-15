@@ -12,9 +12,9 @@ import { ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS, OFFER_STATUS_LABELS } from '
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { useMyOffers, useMyOrders } from '@/modules/marketplace/hooks/useMarket';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2PageIntro, V2Skeleton,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Page, V2PageIntro, V2Skeleton,
 } from '@/v2/ui/primitives';
-import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import MarketTabs from '@/v2/components/marketplace/MarketTabs';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
 import { t, fmtData } from '@/core/i18n';
@@ -100,15 +100,10 @@ function OrdersPage() {
   const mudar = (patch) => setParams((p) => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; }, { replace: true });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2PageIntro title={t('Minhas compras')} subtitle={t('Seus pedidos e ofertas no Mercado.')} />
-      <V2SubTabs
-        ariaLabel={t('Compras e ofertas')}
-        tabs={[{ value: 'compras', label: t('Pedidos'), icon: ShoppingBag }, { value: 'ofertas', label: t('Ofertas'), icon: HandCoins }]}
-        activeValue={aba}
-        onSelect={(tab) => mudar({ aba: tab.value === 'ofertas' ? 'ofertas' : '', f: '' })}
-      />
+    <V2Page className="space-y-6 pb-16">
+      <MarketHeader categorias={false} />
+      <V2PageIntro title={t('Minhas compras')} subtitle={t('Seus pedidos, ofertas e vales-presente no Mercado.')} />
+      <MarketTabs grupo="compras" ativo={aba === 'ofertas' ? 'ofertas' : 'pedidos'} />
       {aba === 'compras' ? (
         <>
           <div className="flex gap-2">
@@ -118,7 +113,7 @@ function OrdersPage() {
           <OrdersList uid={user?.uid} filtro={filtro} />
         </>
       ) : <OffersList uid={user?.uid} />}
-    </div>
+    </V2Page>
   );
 }
 

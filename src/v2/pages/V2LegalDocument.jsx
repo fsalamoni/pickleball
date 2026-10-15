@@ -31,7 +31,7 @@ export default function V2LegalDocument() {
 
   if (!doc) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2Surface>
           <V2EmptyState
             title={t('Documento não encontrado')}
@@ -66,7 +66,7 @@ export default function V2LegalDocument() {
 
   return (
     <div>
-      <div className="mx-auto mb-3 max-w-[900px]">
+      <div className="mx-auto mb-3 max-w-[1000px]">
         <Link to="/legal" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
           <ChevronLeft className="h-4 w-4" /> {t('Documentos')}
         </Link>

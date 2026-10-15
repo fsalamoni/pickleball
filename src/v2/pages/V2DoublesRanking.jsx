@@ -144,7 +144,7 @@ export default function V2DoublesRanking() {
   const recorteAtivo = minGames > DEFAULT_DOUBLES_MIN_GAMES;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2PageIntro
         title={t('Ranking de duplas')}
         subtitle={t('Parcerias classificadas por aproveitamento. Empate é decidido por mais vitórias, menos derrotas e saldo de pontos, nessa ordem.')}

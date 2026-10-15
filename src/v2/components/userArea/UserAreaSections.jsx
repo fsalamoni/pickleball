@@ -9,9 +9,9 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, GraduationCap,
-  HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Search, Settings, ShieldCheck,
-  Medal, ShoppingBag, Store, Swords, Trophy, User, Users,
+  Award, BarChart3, Bell, BookOpen, Building2, CalendarDays, ClipboardList, Dumbbell, FileText, Gift, GraduationCap,
+  HandCoins, Heart, HelpCircle, Inbox, LayoutDashboard, LayoutGrid, MapPin, MessageCircleQuestion, PanelLeft, Plus, Receipt,
+  Search, Settings, ShieldCheck, Medal, ShoppingBag, ShoppingCart, Store, Swords, Trophy, User, Users,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
@@ -35,7 +35,9 @@ import { PLAN_STATUS, plannedByDate } from '@/modules/training/domain/plan';
 import { weekSummary } from '@/modules/training/domain/session';
 import { todayLocal, weekKeyOf } from '@/modules/training/domain/dates';
 import { unreadCount } from '@/modules/training/domain/share';
-import { USER_AREA_SECTION as S } from '@/modules/athletes/domain/userArea';
+import { USER_AREA_SECTION as S, marketPendingCounts } from '@/modules/athletes/domain/userArea';
+import { useMarketCart, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
+import { ORDER_FINAL_STATUSES } from '@/modules/marketplace/domain/constants';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { HomeAction, HomeEmpty, HomeRow } from '@/v2/components/home/personal/HomeSection';
@@ -115,9 +117,7 @@ function ResumoSecao({ ctx }) {
             { to: '/perfil/torneios', label: t('Torneios que organizo'), descricao: t('Os que você criou ou ajuda a organizar'), icon: Trophy },
             ctx.isCoach && { to: '/aulas', label: t('Painel do professor'), descricao: t('Agenda, alunos e pacotes'), icon: GraduationCap },
             ...arenas.slice(0, 3).map((a) => ({ to: `/arenas/${a.id}/gerir`, label: a.name || t('Minha arena'), descricao: t('Central da arena'), icon: Building2 })),
-            mercadoOn && { to: '/mercado/vender', label: t('Vender no Mercado'), descricao: t('Anúncios, vendas e o seu Pix'), icon: Store },
-            mercadoOn && { to: '/mercado/pedidos', label: t('Compras no Mercado'), descricao: t('Pedidos e ofertas'), icon: ShoppingBag },
-            mercadoOn && { to: '/mercado/buscas', label: t('Buscas salvas'), descricao: t('Aviso quando chega anúncio novo'), icon: Bell },
+            mercadoOn && { to: '/mercado', label: t('Mercado'), descricao: t('Comprar e vender equipamento'), icon: ShoppingBag },
             isPlatformAdmin && { to: '/admin/painel', label: t('Painel admin'), descricao: t('A plataforma inteira'), icon: LayoutDashboard },
           ]}
         />
@@ -490,6 +490,89 @@ function AdminSecao() {
   );
 }
 
+/**
+ * Mercado (flag `marketplace`): o que compro e o que vendo. As contas de
+ * "esperando você" são as MESMAS da faixa (`marketPendingCounts`), sobre as
+ * leituras que a Minha área já fez; só carrinho e anúncios consultam aqui.
+ */
+function MercadoSecao({ ctx }) {
+  const { uid, mercado: m } = ctx;
+  const carrinho = useMarketCart(uid);
+  const vende = m.sellerQ.isSuccess && Boolean(m.sellerQ.data);
+  const anuncios = useSellerListings(vende ? m.sellerKey : null);
+  const ok = (q) => (q.isSuccess ? q.data : undefined);
+  const contas = marketPendingCounts({
+    sellerOrders: ok(m.sellerOrdersQ), sellerOffers: ok(m.sellerOffersQ), sellerQuestions: ok(m.sellerQuestionsQ), myOrders: ok(m.myOrdersQ),
+  });
+  const emAndamento = m.myOrdersQ.isSuccess ? (m.myOrdersQ.data || []).filter((o) => !ORDER_FINAL_STATUSES.includes(o.status)).length : undefined;
+  const esperaCompra = (contas.pagar ?? 0) + (contas.receber ?? 0);
+  const noAr = anuncios.isSuccess ? (anuncios.data || []).filter((l) => l.status === 'active').length : undefined;
+  const selo = (n) => (n ? t('{n} esperando você', { n }) : undefined);
+  const falhaVendas = [m.sellerOrdersQ, m.sellerOffersQ, m.sellerQuestionsQ, anuncios].filter((q) => q.isError);
+
+  return (
+    <div className="space-y-6">
+      <Bloco id="mercado-comprando" icon={ShoppingBag} title={t('Comprando')} action={{ to: '/mercado', label: t('Abrir o Mercado') }}>
+        <Atalhos
+          itens={[
+            {
+              to: '/mercado/pedidos', label: t('Minhas compras'), icon: Receipt,
+              descricao: emAndamento === undefined ? t('Pedidos e ofertas') : tn(emAndamento, '{n} compra em andamento', '{n} compras em andamento'),
+              badge: selo(esperaCompra), badgeTone: 'acid',
+            },
+            {
+              to: '/mercado/carrinho', label: t('Carrinho'), icon: ShoppingCart,
+              descricao: carrinho.isSuccess ? tn(carrinho.count, '{n} item no carrinho', '{n} itens no carrinho') : t('O que você vai comprar'),
+            },
+            { to: '/mercado/favoritos', label: t('Favoritos'), descricao: t('Os anúncios que você guardou'), icon: Heart },
+            { to: '/mercado/buscas', label: t('Buscas salvas'), descricao: t('Aviso quando chega anúncio novo'), icon: Bell },
+            { to: '/mercado/vales', label: t('Vales-presente'), descricao: t('Os vales que você comprou ou ganhou'), icon: Gift },
+          ]}
+        />
+        {(m.myOrdersQ.isError || carrinho.isError) && (
+          <V2ErrorState
+            inline
+            className="mt-3"
+            title={t('Não carregaram as suas compras')}
+            description={t('Os seus pedidos continuam lá.')}
+            onRetry={() => { if (m.myOrdersQ.isError) m.myOrdersQ.refetch(); if (carrinho.isError) carrinho.refetch(); }}
+          />
+        )}
+      </Bloco>
+
+      <Bloco id="mercado-vendendo" icon={Store} title={t('Vendendo')} action={{ to: '/mercado/vender', label: t('Painel de vendas') }}>
+        {m.sellerQ.isError ? (
+          <V2ErrorState inline title={t('Não carregou a sua ficha de vendedor')} description={t('Os seus anúncios continuam lá.')} onRetry={() => m.sellerQ.refetch()} />
+        ) : !m.sellerQ.isSuccess ? (
+          <V2Skeleton lines={3} />
+        ) : !vende ? (
+          <HomeEmpty icon={Store} actions={<HomeAction to="/mercado/vender" primary>{t('Começar a vender')}</HomeAction>}>
+            {t('Você ainda não vende no Mercado em seu nome. Vendas pela arena, como professor ou pela loja ficam no painel de vendas.')}
+          </HomeEmpty>
+        ) : (
+          <>
+            <Atalhos
+              itens={[
+                {
+                  to: '/mercado/vender', label: t('Painel de vendas'), icon: LayoutDashboard,
+                  descricao: noAr === undefined ? t('Anúncios, vendas e o seu Pix') : tn(noAr, '{n} anúncio no ar', '{n} anúncios no ar'),
+                },
+                { to: `/mercado/vender/anuncio/novo?como=${encodeURIComponent(m.sellerKey)}`, label: t('Novo anúncio'), descricao: t('Fotos, preço e entrega'), icon: Plus },
+                { to: '/mercado/vender?aba=vendas', label: t('Vendas'), descricao: t('Aceitar, conferir o Pix e entregar'), icon: Receipt, badge: selo(contas.vendas), badgeTone: 'acid' },
+                { to: '/mercado/vender?aba=ofertas', label: t('Ofertas'), descricao: t('Propostas de preço dos compradores'), icon: HandCoins, badge: selo(contas.ofertas), badgeTone: 'acid' },
+                { to: '/mercado/vender?aba=perguntas', label: t('Perguntas'), descricao: t('Dúvidas sobre os seus anúncios'), icon: MessageCircleQuestion, badge: selo(contas.perguntas), badgeTone: 'acid' },
+              ]}
+            />
+            {falhaVendas.length > 0 && (
+              <V2ErrorState inline className="mt-3" title={t('Não deu para contar tudo o que espera por você nas vendas')} onRetry={() => falhaVendas.forEach((q) => q.refetch())} />
+            )}
+          </>
+        )}
+      </Bloco>
+    </div>
+  );
+}
+
 /** A estante de troféus: pódios de torneio e de dia de jogo, com o cartão. */
 function TrofeusSecao() {
   const { user } = useAuth();
@@ -507,6 +590,7 @@ export const SECOES = Object.freeze({
   [S.JOGOS]: JogosSecao,
   [S.TORNEIOS]: TorneiosSecao,
   [S.TROFEUS]: TrofeusSecao,
+  [S.MERCADO]: MercadoSecao,
   [S.CLUBES]: ClubesSecao,
   [S.PROFESSOR]: ProfessorSecao,
   [S.ARENAS]: ArenasSecao,

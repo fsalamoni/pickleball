@@ -582,11 +582,12 @@ const ATLETA = {
       blocks: [
         p(tk('O Mercado é a vitrine de produtos de pickleball do PickleRush. Quem vende pode ser outro atleta, um professor, uma arena ou uma loja aprovada. O pagamento é por Pix, direto para quem vende: a plataforma não recebe nem guarda o seu dinheiro.')),
         steps(
-          tk('Abra o Mercado e busque pelo nome, ou navegue pelos departamentos. Os filtros ajudam com marca, estado (novo ou usado), preço, cidade e entrega.'),
+          tk('Abra o Mercado (Comprar) e busque pelo nome, ou navegue pelos departamentos. Os filtros ajudam com marca, estado (novo ou usado), preço, cidade e entrega.'),
           tk('No anúncio, veja fotos, vídeo, ficha técnica e as perguntas já respondidas. Toque em "Adicionar ao carrinho" ou em "Comprar agora".'),
           tk('No carrinho, cada vendedor vira um pedido separado. Escolha a entrega e envie.'),
           tk('Quando o vendedor aceitar, a chave Pix aparece no pedido. Pague, anexe o comprovante se quiser e toque em "Já paguei".'),
           tk('Recebeu? Toque em "Recebi o produto" e avalie quem vendeu.'),
+          tk('Tudo de quem compra fica em "Minhas compras" (pedidos, ofertas e vales) e em "Salvos" (favoritos e buscas). O que espera por você aparece também na Minha área.'),
         ),
         list(
           tk('OFERTA — quando o anúncio aceita, "Fazer oferta" manda um valor menor. O vendedor aceita, recusa ou faz uma contraproposta.'),
@@ -611,9 +612,9 @@ const ATLETA = {
       summary: tk('Anunciar o que você tem parado, receber por Pix e acompanhar as vendas.'),
       keywords: ['mercado', 'vender', 'venda', 'anunciar', 'anúncio', 'pix', 'recebimento', 'professor', 'loja', 'cnpj', 'marketplace'],
       blocks: [
-        p(tk('Qualquer pessoa com conta pode vender no Mercado pela Minha área, em "Vender no Mercado". O professor pode anunciar também como professor (com o selo de professor), e quem gere uma arena, pela arena.')),
+        p(tk('Qualquer pessoa com conta pode vender no Mercado: toque em "Vender" na barra do Mercado ou na seção Mercado da Minha área. O painel é separado das compras, em seções: Resumo, Anúncios, Negociações (vendas, ofertas e perguntas), Divulgação e Minha loja. O professor pode anunciar também como professor (com o selo de professor), e quem gere uma arena, pela arena.')),
         steps(
-          tk('Abra "Vender no Mercado" e cadastre a sua chave Pix em "Recebimento". Sem ela, não dá para aceitar pedidos.'),
+          tk('Abra o painel e cadastre a sua chave Pix em "Minha loja" → "Recebimento". Sem ela, não dá para aceitar pedidos.'),
           tk('Toque em "Novo anúncio": fotos (a primeira é a capa), o que é, preço e estado, entrega. Dá para salvar como rascunho.'),
           tk('Quando chegar um pedido, aceite ou recuse. Aceito, o comprador vê a sua chave e paga.'),
           tk('Confira o Pix e toque em "Recebi o pagamento". Depois, "Marcar como enviado" (com o rastreio) ou "Pronto para entregar".'),
@@ -1810,6 +1811,12 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ATHLETE, 'mercado-vender']] },
   { pattern: '/mercado/vender/*', label: tk('o seu anúncio'),
     refs: [[HELP_SECTION.ATHLETE, 'mercado-vender']] },
+  { pattern: '/mercado/pedidos', label: tk('as suas compras'),
+    refs: [[HELP_SECTION.ATHLETE, 'mercado-comprar'], [HELP_SECTION.ATHLETE, 'mercado-cupons-vales']] },
+  { pattern: '/mercado/favoritos', label: tk('os salvos'),
+    refs: [[HELP_SECTION.ATHLETE, 'mercado-comprar']] },
+  { pattern: '/mercado/buscas', label: tk('as buscas salvas'),
+    refs: [[HELP_SECTION.ATHLETE, 'mercado-comprar']] },
   { pattern: '/mercado/vales', label: tk('os vales-presente'),
     refs: [[HELP_SECTION.ATHLETE, 'mercado-cupons-vales']] },
   { pattern: '/mercado/vender', label: tk('vender no Mercado'),

@@ -312,7 +312,7 @@ function DetalheDaArena({ arena, gameDayId }) {
   // existe, com os atletas já na porta.
   if (isError) {
     return (
-      <div className="mx-auto max-w-[800px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar este dia de jogo')}
@@ -325,7 +325,7 @@ function DetalheDaArena({ arena, gameDayId }) {
   }
   if (!gameDay || gameDay.arena_id !== arena.id) {
     return (
-      <div className="mx-auto max-w-[800px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}

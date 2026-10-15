@@ -392,7 +392,7 @@ export default function V2Help() {
   };
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <span ref={topoRef} aria-hidden="true" />
       <V2ContentHero
         eyebrow={t('Central de ajuda')}

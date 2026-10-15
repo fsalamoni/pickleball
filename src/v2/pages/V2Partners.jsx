@@ -17,7 +17,7 @@ export default function V2Partners() {
   const active = useMemo(() => publicAffiliateLinks(links), [links]);
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro title={t('Parceiros')} subtitle={t('Marcas, lojas e serviços conectados ao crescimento do jogo.')} />
 
       {isLoading ? (

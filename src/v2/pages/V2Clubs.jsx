@@ -45,7 +45,7 @@ export default function V2Clubs() {
   }, [regional]);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Clubes')}
         subtitle={t('Descubra clubes, crie o seu e organize sua turma.')}

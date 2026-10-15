@@ -49,7 +49,7 @@ export default function V2ArenaCampaign() {
 
   if (q.isLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-[720px] space-y-4">
         <V2Skeleton lines={1} />
         <div className="aspect-[16/9] animate-pulse rounded-3xl bg-gray-100 sm:aspect-[2/1]" />
         <V2Skeleton lines={3} />
@@ -59,7 +59,7 @@ export default function V2ArenaCampaign() {
 
   if (q.isError) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-[720px] space-y-4">
         <Voltar arenaId={arenaId} />
         <V2ErrorState
           title={t('Não foi possível carregar a campanha')}
@@ -72,7 +72,7 @@ export default function V2ArenaCampaign() {
 
   if (!campanha) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-[720px] space-y-4">
         <Voltar arenaId={arenaId} arenaName={arena?.name} />
         <V2Surface className="text-center">
           <p className="font-display text-lg font-bold text-ink">{t('Esta campanha não está mais disponível')}</p>
@@ -94,7 +94,7 @@ export default function V2ArenaCampaign() {
   const reservarLink = `/arenas/${arenaDaCampanha}#arena-reservar`;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-[720px] space-y-5">
       <Voltar arenaId={arenaDaCampanha} arenaName={arena?.name} />
 
       {/* No ar e levando a outro lugar, o banner é o link (o botão desenhado

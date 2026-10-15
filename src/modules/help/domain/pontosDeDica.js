@@ -508,6 +508,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     guide: 'treino-admin',
     audience: 'admin',
   },
+  {
+    id: 'admin:mercado',
+    route: '/admin/painel',
+    target: 'admin-secao-mercado',
+    title: tk('Mercado'),
+    body: tk('Visão geral, problemas em pedidos, denúncias de anúncios, pedidos, lojas, cupons e vales e as configurações do Mercado.'),
+    flags: ['marketplace'],
+    audience: 'admin',
+  },
 
   /* ------------------------------------------------------------ treino -- */
   {

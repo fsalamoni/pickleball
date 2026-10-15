@@ -101,7 +101,7 @@ export default function V2FindPlayers() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1200px]">
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível, prontos para um jogo.')} />
         <V2Skeleton className="h-64 rounded-4xl" />
       </div>
@@ -112,7 +112,7 @@ export default function V2FindPlayers() {
   // rating" a quem tem. Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md).
   if (isError) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2ErrorState
@@ -127,7 +127,7 @@ export default function V2FindPlayers() {
 
   if (!me) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2EmptyState
@@ -141,7 +141,7 @@ export default function V2FindPlayers() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={rotulos.pessoas}
         subtitle={smartOn

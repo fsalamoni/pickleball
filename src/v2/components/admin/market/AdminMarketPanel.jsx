@@ -116,9 +116,9 @@ function StoreRow({ loja }) {
             <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
               {loja.display_name}
               {loja.verified && <BadgeCheck className="h-4 w-4 text-blue-600" aria-label={t('Verificada')} />}
-              <V2Badge tone={loja.status === 'active' ? 'green' : loja.status === 'pending' ? 'amber' : 'neutral'}>{SELLER_STATUS_LABELS[loja.status] || loja.status}</V2Badge>
+              <V2Badge tone={loja.status === 'active' ? 'green' : loja.status === 'pending' ? 'amber' : 'neutral'}>{SELLER_STATUS_LABELS[loja.status] ? t(SELLER_STATUS_LABELS[loja.status]) : loja.status}</V2Badge>
             </p>
-            <p className="text-xs text-gray-500">{[loja.city, loja.state].filter(Boolean).join(' · ')}{loja.cnpj_masked ? ` · CNPJ ${loja.cnpj_masked}` : ''} · desde {quando(loja.created_at)}</p>
+            <p className="text-xs text-gray-500">{[loja.city, loja.state].filter(Boolean).join(' · ')}{loja.cnpj_masked ? ` · CNPJ ${loja.cnpj_masked}` : ''} · {t('desde {data}', { data: quando(loja.created_at) })}</p>
             {loja.reject_reason && loja.status !== 'active' && <p className="mt-1 text-sm text-red-600">{t('Motivo: {reject_reason}', { reject_reason: loja.reject_reason })}</p>}
           </div>
           <V2Button type="button" size="sm" variant="ghost" aria-expanded={aberta} onClick={() => setAberta((x) => !x)}>{aberta ? t('Fechar ficha') : t('Ver ficha')}</V2Button>
@@ -126,21 +126,21 @@ function StoreRow({ loja }) {
         {aberta && (
           <div className="space-y-3">
             {loja.bio && <p className="whitespace-pre-line text-sm text-gray-700">{loja.bio}</p>}
-            <p className="text-sm text-gray-600">{t('Devolução em até')} {loja.policies?.return_days ?? '—'} {t('dias · despacha em até')} {loja.policies?.ship_within_hours ?? '—'} h{loja.website ? <> · <a href={loja.website} target="_blank" rel="noopener noreferrer nofollow" className="font-bold text-ink underline">{t('site')}</a></> : null}</p>
+            <p className="text-sm text-gray-600">{t('Devolução em até {n} dias · despacha em até {h} h', { n: loja.policies?.return_days ?? '—', h: loja.policies?.ship_within_hours ?? '—' })}{loja.website ? <> · <a href={loja.website} target="_blank" rel="noopener noreferrer nofollow" className="font-bold text-ink underline">{t('site')}</a></> : null}</p>
             <CompanyData sellerKey={loja.id} />
           </div>
         )}
         <div className="flex flex-wrap gap-2">
           {loja.status === 'pending' && (
             <>
-              <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active' }, 'Loja aprovada. O dono foi avisado.')}>{t('Aprovar')}</V2Button>
-              <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active', verified: true }, 'Loja aprovada e verificada.')} variant="secondary">{t('Aprovar e verificar')}</V2Button>
+              <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active' }, t('Loja aprovada. O dono foi avisado.'))}>{t('Aprovar')}</V2Button>
+              <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active', verified: true }, t('Loja aprovada e verificada.'))} variant="secondary">{t('Aprovar e verificar')}</V2Button>
               <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('rejected')}>{t('Recusar')}</V2Button>
             </>
           )}
           {loja.status === 'active' && (
             <>
-              <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir({ verified: !loja.verified }, loja.verified ? 'Selo retirado.' : 'Selo de verificada dado.')}>
+              <V2Button type="button" size="sm" variant="secondary" disabled={m.isPending} onClick={() => agir({ verified: !loja.verified }, loja.verified ? t('Selo retirado.') : t('Selo de verificada dado.'))}>
                 {loja.verified ? t('Tirar o selo') : t('Dar o selo de verificada')}
               </V2Button>
               <V2Button type="button" size="sm" variant="danger" onClick={() => setMotivo('suspended')}>{t('Suspender')}</V2Button>
@@ -148,7 +148,7 @@ function StoreRow({ loja }) {
             </>
           )}
           {loja.status === 'suspended' && (
-            <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active' }, 'Loja reativada. O dono foi avisado.')}>{t('Reativar')}</V2Button>
+            <V2Button type="button" size="sm" disabled={m.isPending} onClick={() => agir({ status: 'active' }, t('Loja reativada. O dono foi avisado.'))}>{t('Reativar')}</V2Button>
           )}
         </div>
       </V2Surface>
@@ -238,7 +238,7 @@ function OverviewTab() {
             <p className="text-xs font-medium text-gray-500">{t('Anúncios por quem vende')}</p>
             <dl className="mt-2 grid grid-cols-4 gap-2">
               {Object.entries(SELLER_TYPE_LABELS).map(([k, l]) => (
-                <div key={k}><dt className="text-xs text-gray-500">{l}</dt><dd className="font-display text-xl font-bold text-ink">{porTipo[k] || 0}</dd></div>
+                <div key={k}><dt className="text-xs text-gray-500">{t(l)}</dt><dd className="font-display text-xl font-bold text-ink">{porTipo[k] || 0}</dd></div>
               ))}
             </dl>
           </V2Surface>
@@ -270,7 +270,7 @@ function DisputesTab() {
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-ink">{t('Pedido')} {d.order_code || d.id}</p>
                   <p className="text-sm text-gray-700">{d.reason}</p>
-                  <p className="text-xs text-gray-500">{t('Aberto')} {haQuanto(d.created_at_ms)}{d.previous_status ? ` · estava "${ORDER_STATUS_LABELS[d.previous_status] || d.previous_status}"` : ''}</p>
+                  <p className="text-xs text-gray-500">{t('Aberto')} {haQuanto(d.created_at_ms)}{d.previous_status ? t(' · estava "{status}"', { status: ORDER_STATUS_LABELS[d.previous_status] ? t(ORDER_STATUS_LABELS[d.previous_status]) : d.previous_status }) : ''}</p>
                 </div>
                 <V2Button asChild size="sm"><Link to={`/mercado/pedidos/${d.order_id || d.id}`}>{t('Abrir e decidir')}</Link></V2Button>
               </V2Surface>
@@ -319,7 +319,7 @@ function ReportedRow({ listingId, reports, listing }) {
             <p className="font-bold text-ink">{titulo}</p>
             <p className="text-xs text-gray-500">{listing ? `${listing.seller_name || ''} · ${formatBRL(listing.price_cents)}` : t('Não deu para carregar o anúncio')}{listing?.status === 'removed' ? t(' · já retirado') : ''}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {Object.entries(motivos).map(([k, n]) => <V2Badge key={k} tone="red">{REPORT_REASON_LABELS[k] || k}{n > 1 ? ` · ${n}` : ''}</V2Badge>)}
+              {Object.entries(motivos).map(([k, n]) => <V2Badge key={k} tone="red">{REPORT_REASON_LABELS[k] ? t(REPORT_REASON_LABELS[k]) : k}{n > 1 ? ` · ${n}` : ''}</V2Badge>)}
             </div>
             {reports.filter((r) => r.text).map((r) => <p key={r.id} className="mt-2 rounded-xl bg-paper p-2 text-sm text-gray-700">“{r.text}”</p>)}
           </div>
@@ -423,7 +423,7 @@ function OrdersTab() {
                 <span className="font-bold text-ink">{o.code}</span>
                 <span className="min-w-0 flex-1 truncate text-sm text-gray-600">{o.buyer_name} → {o.seller_name}</span>
                 <span className="text-sm font-bold text-ink">{formatBRL(o.total_cents)}</span>
-                <V2Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABELS[o.status] || o.status}</V2Badge>
+                <V2Badge tone={statusTone(o.status)}>{ORDER_STATUS_LABELS[o.status] ? t(ORDER_STATUS_LABELS[o.status]) : o.status}</V2Badge>
                 <span className="w-full text-xs text-gray-500 sm:w-auto">{haQuanto(o.placed_at_ms || msDe(o.created_at))}</span>
               </Link>
             </li>

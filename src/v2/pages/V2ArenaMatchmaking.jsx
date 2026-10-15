@@ -150,7 +150,7 @@ export default function V2ArenaMatchmaking() {
 
   if (falhouArena && !arena) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar a arena')}
@@ -164,7 +164,7 @@ export default function V2ArenaMatchmaking() {
 
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState
             title={t('Arena não encontrada')}
@@ -177,7 +177,7 @@ export default function V2ArenaMatchmaking() {
 
   if (!canUseModule) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <div className="mb-4">
           <V2BackLink to={`/arenas/${arena.id}`}>{t('Voltar à arena')}</V2BackLink>
         </div>

@@ -83,6 +83,16 @@ Visão geral, Problemas em pedidos, Anúncios, Pedidos, Lojas, Cupons e vales, C
 que some com a flag desligada; disputas e anúncios denunciados entram em
 "Precisa de você".
 
+**Dois ambientes (2026-10-15).** A barra do Mercado tem quatro itens: **Comprar**
+(vitrine, anúncio, loja, carrinho), **Minhas compras** (Pedidos · Ofertas ·
+Vales, abas de `MarketTabs`), **Salvos** (Favoritos · Buscas salvas) e **Vender**.
+O topo de compras (`MarketHeader`: busca + carrinho, departamentos só na
+vitrine) não aparece nas telas de quem vende. O painel de quem vende agrupa as
+9 abas em 5 seções: Resumo · Anúncios · Negociações (Vendas, Ofertas,
+Perguntas) · Divulgação (Cupons e vales, Desempenho) · Minha loja (Recebimento,
+Vitrine). Os valores de `?aba=` não mudaram (avisos levam a eles). Na Minha
+área, a seção **Mercado** e as pendências em "Precisa de você".
+
 ## Estrutura
 
 ```

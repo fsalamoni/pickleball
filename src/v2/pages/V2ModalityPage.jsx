@@ -59,7 +59,7 @@ export default function V2ModalityPage() {
   // rede manda o atleta concluir que a categoria dele saiu do torneio.
   if (erroTorneio || erroModalidades) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar a modalidade')}
@@ -74,7 +74,7 @@ export default function V2ModalityPage() {
   const modality = modalities.find((m) => m.id === modalityId);
   if (!tournament || !modality) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface className="text-center">
           <Trophy className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Modalidade não encontrada')}</h2>

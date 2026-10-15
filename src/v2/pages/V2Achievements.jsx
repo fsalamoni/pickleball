@@ -47,7 +47,7 @@ export default function V2Achievements() {
   // Se a master flag está OFF, mostra empty state amigável
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1200px]">
         <V2PageIntro
           title={t('Conquistas')}
           subtitle={t('Catálogo de troféus, medalhas e marcos da plataforma.')}

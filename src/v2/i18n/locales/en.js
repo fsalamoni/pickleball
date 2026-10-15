@@ -458,4 +458,11 @@ export default {
   "Esta é uma tradução de cortesia. Em caso de divergência, prevalece a versão em português.": "This is a courtesy translation. The Portuguese version prevails in case of any discrepancy.",
   "Ver original em português": "View original in Portuguese",
   "Ver tradução": "View translation",
+  "Compras, vendas e alertas": "Purchases, sales and alerts",
+  "O que você ajusta no Mercado: os avisos de compras e vendas, a chave Pix para receber, as buscas salvas e os termos.": "What you set up in the Marketplace: purchase and sale notifications, the Pix key to get paid, saved searches and the terms.",
+  "Avisos do Mercado": "Marketplace notifications",
+  "Recebimento (Pix)": "Getting paid (Pix)",
+  "Buscas salvas e alertas": "Saved searches and alerts",
+  "Termos do Mercado": "Marketplace terms",
+  "Do Mercado: anúncios, pedidos, favoritos e buscas salvas.": "From the Marketplace: listings, orders, favorites and saved searches.",
 };

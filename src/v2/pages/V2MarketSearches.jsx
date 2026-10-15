@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { SAVED_SEARCH_LIMIT, savedSearchMatches, savedSearchSince } from '@/modules/marketplace/domain/discovery';
 import { usePublicListings, useSavedSearchActions, useSavedSearches } from '@/modules/marketplace/hooks/useMarket';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro, V2Surface } from '@/v2/ui/primitives';
+import MarketTabs from '@/v2/components/marketplace/MarketTabs';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ListingCard, ListingGrid, ListingGridSkeleton, MarketGate } from '@/v2/components/marketplace/marketUi';
 import { t, tn } from '@/core/i18n';
@@ -122,11 +123,12 @@ function SearchesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2PageIntro title={t('Buscas salvas')} subtitle={lista.length ? t('{n} de {total}', { n: lista.length, total: SAVED_SEARCH_LIMIT }) : undefined} />
+    <V2Page className="space-y-6 pb-16">
+      <MarketHeader categorias={false} />
+      <V2PageIntro title={t('Salvos')} subtitle={lista.length ? t('Buscas salvas: {n} de {total}', { n: lista.length, total: SAVED_SEARCH_LIMIT }) : undefined} />
+      <MarketTabs grupo="salvos" ativo="buscas" />
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

@@ -28,7 +28,7 @@ import { sellerBadges } from '@/modules/marketplace/domain/reputation';
 import {
   useIsMarketOperator, useListing, useMarketCart, useMarketSettings, usePublicListings, useSeller, useSellerListings,
 } from '@/modules/marketplace/hooks/useMarket';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface, V2Page } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import ListingGallery from '@/v2/components/marketplace/ListingGallery';
 import ListingQuestions from '@/v2/components/marketplace/ListingQuestions';
@@ -334,10 +334,10 @@ function ListingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
+    <V2Page largura="larga" className="space-y-6 pb-16">
       <MarketHeader />
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 

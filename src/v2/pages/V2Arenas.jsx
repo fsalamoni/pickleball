@@ -79,7 +79,7 @@ function V2ArenasContent() {
   }, [regional]);
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2PageIntro
         title={t('Explorar Quadras')}
         subtitle={t('Encontre arenas, veja preços e horários e solicite sua reserva.')}

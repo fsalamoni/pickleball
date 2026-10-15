@@ -20,7 +20,7 @@ import { sellerBadges, summarizeReviews, MIN_REVIEWS_FOR_RATING } from '@/module
 import { publishedMs } from '@/modules/marketplace/domain/search';
 import { useSeller, useSellerListings, useSellerReviews } from '@/modules/marketplace/hooks/useMarket';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import {
@@ -119,14 +119,14 @@ function SellerPage() {
   else if (s.isLoading) topo = <V2Skeleton className="h-48" />;
   else if (!seller || seller.status !== 'active') {
     return (
-      <div className="mx-auto max-w-7xl space-y-6 pb-16">
+      <V2Page largura="larga" className="space-y-6 pb-16">
         <MarketHeader />
         <V2Surface className="text-center">
           <h1 className="font-display text-2xl font-bold text-ink">{t('Esta vitrine não está aberta')}</h1>
           <p className="mt-2 text-gray-500">{t('O vendedor não está vendendo no Mercado agora.')}</p>
           <Link to="/mercado" className="mt-4 inline-flex font-bold text-ink underline">{t('Voltar ao Mercado')}</Link>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   } else {
     const badges = sellerBadges(seller);
@@ -179,7 +179,7 @@ function SellerPage() {
   else lista = <ListingGrid>{visiveis.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 pb-16">
+    <V2Page largura="larga" className="space-y-8 pb-16">
       <MarketHeader />
       {topo}
       {seller && seller.status === 'active' && <StoreCoupons sellerKey={sellerKey} sharedCode={cupomDoLink} />}
@@ -220,7 +220,7 @@ function SellerPage() {
         {lista}
       </section>
       {seller && <Reviews sellerKey={sellerKey} />}
-    </div>
+    </V2Page>
   );
 }
 

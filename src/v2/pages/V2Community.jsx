@@ -37,7 +37,7 @@ export default function V2Community() {
   const incompleto = Boolean(data?.incompleto);
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2PageIntro title={t('Comunidade')} subtitle={t('Movimentos recentes de torneios e convites de jogo na plataforma.')} />
 
       {isLoading ? (

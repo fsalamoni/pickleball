@@ -38,7 +38,7 @@ export default function V2JoinTournament() {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1200px]">
       <V2BackLink to="/torneios" className="mb-5">{t('Voltar aos torneios')}</V2BackLink>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">

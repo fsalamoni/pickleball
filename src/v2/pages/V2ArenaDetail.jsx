@@ -107,7 +107,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[900px] space-y-4">
+      <div className="mx-auto max-w-[1000px] space-y-4">
         <V2Skeleton className="h-56 rounded-4xl" />
         <V2Skeleton className="h-48 rounded-4xl" />
       </div>
@@ -118,7 +118,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   // "removida" por uma queda de rede desiste dela — e não tenta de novo.
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2ErrorState
           title={t('Não foi possível abrir esta arena')}
           description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
@@ -130,7 +130,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState
             icon={Building2}
@@ -154,7 +154,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   const hasContacts = links.whatsapp || links.phone || links.email || links.instagram || links.website;
 
   return (
-    <div ref={paginaRef} className="mx-auto max-w-[900px]">
+    <div ref={paginaRef} className="mx-auto max-w-[1000px]">
       <V2BackLink to="/arenas" className="mb-5">{t('Voltar às arenas')}</V2BackLink>
 
       {/* Hero — com a MARCA da arena, quando ela tem uma.

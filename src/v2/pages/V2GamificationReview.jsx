@@ -22,7 +22,7 @@ export default function V2GamificationReview() {
   const on = true;
   if (!on) {
     return (
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-[1000px]">
         <V2PageIntro title={t('Revisão')} subtitle={t('O resumo do seu período.')} />
         <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('A revisão da semana chega junto com a gamificação.')} /></V2Surface>
       </div>
@@ -41,7 +41,7 @@ function ReviewOn() {
   const trocar = (k) => { setKind(k); setOffset(0); };
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-5" data-testid="gamification-review">
+    <div className="mx-auto max-w-[1000px] space-y-5" data-testid="gamification-review">
       <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
       <V2PageIntro title={t('Sua revisão')} subtitle={t('O que você fez no período, comparado com o anterior. Nada aqui é cobrança.')} />
 

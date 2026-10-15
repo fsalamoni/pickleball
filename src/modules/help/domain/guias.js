@@ -73,6 +73,7 @@ export const GUIA_AREA = Object.freeze({
   ARENAS: 'arenas',
   MINHA_ARENA: 'minha-arena',
   AULAS: 'aulas',
+  MERCADO: 'mercado',
   CONTA: 'conta',
 });
 
@@ -86,6 +87,7 @@ export const GUIA_AREA_META = Object.freeze({
   [GUIA_AREA.ARENAS]: { label: tk('Quadras e reservas'), icon: 'CalendarCheck' },
   [GUIA_AREA.MINHA_ARENA]: { label: tk('Para a sua arena'), icon: 'Building2' },
   [GUIA_AREA.AULAS]: { label: tk('Aulas'), icon: 'GraduationCap' },
+  [GUIA_AREA.MERCADO]: { label: tk('Mercado'), icon: 'Store' },
   [GUIA_AREA.CONTA]: { label: tk('Conta e preferências'), icon: 'Settings' },
 });
 
@@ -1017,7 +1019,7 @@ const GUIAS_BASE = [
   /* ------------------------------------------------------------ treino -- */
   {
     id: 'mercado-comprar',
-    area: GUIA_AREA.COMUNIDADE,
+    area: GUIA_AREA.MERCADO,
     flags: ['marketplace'],
     title: tk('Comprar no Mercado'),
     summary: tk('Buscar, pôr no carrinho e pagar por Pix direto a quem vende.'),
@@ -1051,7 +1053,7 @@ const GUIAS_BASE = [
   },
   {
     id: 'mercado-vender',
-    area: GUIA_AREA.COMUNIDADE,
+    area: GUIA_AREA.MERCADO,
     flags: ['marketplace'],
     title: tk('Vender no Mercado'),
     summary: tk('A chave Pix, o primeiro anúncio e as vendas.'),
@@ -1065,7 +1067,7 @@ const GUIAS_BASE = [
         target: 'mercado-vender',
         advanceOn: { route: '/mercado/vender' },
         title: tk('Vender'),
-        body: tk('Toque em "Vender" para abrir o seu painel de vendas.'),
+        body: tk('Na barra do Mercado, "Vender" abre o seu painel: tudo de quem vende fica lá, separado de quem compra.'),
       },
       {
         id: 'pix',
@@ -1073,7 +1075,7 @@ const GUIAS_BASE = [
         goTo: '/mercado/vender',
         target: 'mercado-vender-pix',
         title: tk('Primeiro, o Pix'),
-        body: tk('Em "Recebimento", cadastre a chave Pix e o nome de quem recebe. Sem ela, não dá para aceitar pedidos.'),
+        body: tk('Em "Minha loja" → "Recebimento", cadastre a chave Pix e o nome de quem recebe. Sem ela, não dá para aceitar pedidos.'),
       },
       {
         id: 'anuncios',
@@ -1086,8 +1088,43 @@ const GUIAS_BASE = [
         id: 'vendas',
         route: '/mercado/vender',
         target: 'mercado-vender-vendas',
-        title: tk('As vendas'),
-        body: tk('Cada pedido diz o que espera de você: aceitar, conferir o Pix, enviar ou entregar.'),
+        title: tk('As negociações'),
+        body: tk('Vendas, ofertas e perguntas ficam juntas. Cada pedido diz o que espera de você: aceitar, conferir o Pix, enviar ou entregar.'),
+      },
+    ],
+  },
+  {
+    id: 'mercado-minhas-compras',
+    area: GUIA_AREA.MERCADO,
+    flags: ['marketplace'],
+    title: tk('Acompanhar compras e salvos'),
+    summary: tk('Pedidos, ofertas e vales num lugar; favoritos e buscas salvas noutro.'),
+    keywords: ['mercado', 'pedido', 'compra', 'oferta', 'vale', 'favorito', 'busca salva', 'aviso'],
+    screens: ['/mercado', '/mercado/pedidos', '/mercado/favoritos'],
+    steps: [
+      {
+        id: 'compras',
+        route: '/mercado',
+        goTo: '/mercado',
+        target: 'mercado-compras',
+        advanceOn: { route: '/mercado/pedidos' },
+        title: tk('Minhas compras'),
+        body: tk('Os pedidos, as ofertas que você fez e os vales-presente, em abas.'),
+      },
+      {
+        id: 'salvos',
+        route: '/mercado/pedidos',
+        target: 'mercado-salvos',
+        advanceOn: { route: '/mercado/favoritos' },
+        title: tk('Salvos'),
+        body: tk('Os anúncios favoritos (com aviso quando o preço baixa) e as buscas salvas.'),
+      },
+      {
+        id: 'buscas',
+        route: '/mercado/favoritos',
+        target: 'mercado-buscas',
+        title: tk('Buscas salvas'),
+        body: tk('Chega um aviso quando aparece anúncio novo que combina. Aqui você desliga o aviso ou apaga a busca.'),
       },
     ],
   },

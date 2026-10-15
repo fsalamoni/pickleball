@@ -1136,4 +1136,13 @@ export default {
   "Voltar ao carrinho": "Back to cart",
   "Voltar ao Mercado": "Back to the Marketplace",
   "Voltar aos anúncios": "Back to listings",
+  "Salvos": "Saved",
+  "Os primeiros anúncios vão aparecer aqui. Tem algo de pickleball parado em casa? Anuncie no Mercado.": "The first listings will show up here. Got pickleball gear sitting at home? List it on the Marketplace.",
+  "Anunciar um produto": "List a product",
+  "Buscas salvas: {n} de {total}": "Saved searches: {n} of {total}",
+  "Vales-presente: os que você ganhou, os que você deu e o resgate de um código.": "Gift cards: the ones you received, the ones you gave, and redeeming a code.",
+  "Seus pedidos, ofertas e vales-presente no Mercado.": "Your orders, offers and gift cards on the Marketplace.",
+  "Ofertas recebidas": "Offers received",
+  "Negociações": "Deals",
+  "Anúncios, negociações e o Pix, num lugar só.": "Listings, deals and Pix, all in one place.",
 };

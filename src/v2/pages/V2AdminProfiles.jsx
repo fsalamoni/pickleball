@@ -172,7 +172,7 @@ export default function V2AdminProfiles({ embedded = false }) {
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className={embedded ? 'space-y-6' : 'mx-auto max-w-[1100px]'}>
+    <div className={embedded ? 'space-y-6' : 'mx-auto max-w-[1200px]'}>
       {!embedded && (
         <V2PageIntro
           title={t('Perfis de atletas')}

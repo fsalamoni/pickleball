@@ -73,7 +73,7 @@ export default function V2Tournament() {
   // concluir que apagaram o torneio.
   if (isError) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar o torneio')}
@@ -86,7 +86,7 @@ export default function V2Tournament() {
   }
   if (!tournament) {
     return (
-      <div className="mx-auto max-w-[700px]">
+      <div className="mx-auto max-w-[720px]">
         <V2Surface>
           <V2EmptyState icon={Trophy} title={t('Torneio não encontrado')}
             description={t('Verifique o link ou volte para a lista de torneios.')}

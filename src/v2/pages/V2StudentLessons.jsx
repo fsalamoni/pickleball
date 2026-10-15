@@ -125,7 +125,7 @@ function V2StudentLessonsContent() {
   };
 
   return (
-    <div className="mx-auto max-w-[800px] space-y-6 p-4">
+    <div className="mx-auto max-w-[720px] space-y-6 p-4">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Minhas aulas')}</h1>
         <p className="mt-2 font-medium text-gray-500">{t('Acompanhe suas aulas com professores.')}</p>

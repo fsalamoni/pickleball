@@ -5,7 +5,7 @@ import { t } from '@/core/i18n';
 
 export default function V2Conduct() {
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1000px]">
       <V2ContentHero
         eyebrow={t('Espírito esportivo')}
         title={t('Conduta & Fair Play')}

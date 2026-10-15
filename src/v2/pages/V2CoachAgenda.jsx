@@ -359,13 +359,13 @@ function V2CoachAgendaContent() {
   const aResponder = useMemo(() => lessonsAwaitingReply(upcoming).length, [upcoming]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (coachLoading) return <div className="mx-auto max-w-[900px] p-4"><V2Skeleton lines={6} /></div>;
+  if (coachLoading) return <div className="mx-auto max-w-[1000px] p-4"><V2Skeleton lines={6} /></div>;
 
   // Falha não é "você não é professor": o convite a criar o perfil mandaria o
   // professor recadastrar o que já tem.
   if (!coach && perfilFalhou) {
     return (
-      <div className="mx-auto max-w-[700px] space-y-6 p-4">
+      <div className="mx-auto max-w-[720px] space-y-6 p-4">
         <V2ErrorState
           title={t('Não foi possível abrir o seu painel de professor')}
           description={t('O seu perfil continua lá — a conexão falhou no meio do caminho.')}
@@ -380,7 +380,7 @@ function V2CoachAgendaContent() {
     // nas arenas vem primeiro — sem isto, ele abria "Minha agenda" e lia que
     // não é professor, com aulas marcadas.
     return (
-      <div className="mx-auto max-w-[700px] space-y-6 p-4">
+      <div className="mx-auto max-w-[720px] space-y-6 p-4">
         <MyTaughtArenaClasses />
         <V2Surface>
           <V2EmptyState
@@ -408,7 +408,7 @@ function V2CoachAgendaContent() {
   const coachId = user.uid;
 
   return (
-    <div className="mx-auto max-w-[900px] p-4">
+    <div className="mx-auto max-w-[1000px] p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Painel do professor')}</h1>
         <div className="flex items-center gap-2">

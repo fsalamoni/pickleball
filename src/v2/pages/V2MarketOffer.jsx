@@ -15,7 +15,7 @@ import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { offerAction } from '@/modules/marketplace/services/marketOrderService';
 import { useIsMarketOperator, useMarketMutation, useOffer } from '@/modules/marketplace/hooks/useMarket';
 import {
-  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
@@ -141,11 +141,13 @@ function OfferPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
-      <MarketHeader />
-      <V2BackLink to="/mercado/pedidos?aba=ofertas">{t('Minhas ofertas')}</V2BackLink>
+    <V2Page className="space-y-6 pb-16">
+      {role !== 'seller' && <MarketHeader categorias={false} />}
+      {role === 'seller'
+        ? <V2BackLink to="/mercado/vender?aba=ofertas">{t('Ofertas recebidas')}</V2BackLink>
+        : <V2BackLink to="/mercado/pedidos?aba=ofertas">{t('Minhas ofertas')}</V2BackLink>}
       {corpo}
-    </div>
+    </V2Page>
   );
 }
 
