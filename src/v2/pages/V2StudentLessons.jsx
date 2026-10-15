@@ -26,7 +26,8 @@ import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasse
 import MyCoachLinks from '@/v2/components/coach/MyCoachLinks';
 
 import {
-  V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
+  V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
@@ -125,9 +126,9 @@ function V2StudentLessonsContent() {
   };
 
   return (
-    <div className="mx-auto max-w-[720px] space-y-6 p-4">
+    <V2Page className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Minhas aulas')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Minhas aulas')}</h1>
         <p className="mt-2 font-medium text-gray-500">{t('Acompanhe suas aulas com professores.')}</p>
       </div>
 
@@ -173,7 +174,7 @@ function V2StudentLessonsContent() {
           </div>
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }
 

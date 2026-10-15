@@ -21,6 +21,7 @@ import { useSeller, useSellerListings } from '@/modules/marketplace/hooks/useMar
 import SellerReviews from '@/v2/components/marketplace/SellerReviews';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import {
@@ -70,10 +71,10 @@ function SellerPage() {
   else if (s.isLoading) topo = <V2Skeleton className="h-48" />;
   else if (!seller || seller.status !== 'active') {
     return (
-      <V2Page largura="larga" className="space-y-6 pb-16">
+      <V2Page className="space-y-6">
         <MarketHeader />
         <V2Surface className="text-center">
-          <h1 className="font-display text-2xl font-bold text-ink">{t('Esta vitrine não está aberta')}</h1>
+          <h1 className={PAGE_TITLE}>{t('Esta vitrine não está aberta')}</h1>
           <p className="mt-2 text-gray-500">{t('O vendedor não está vendendo no Mercado agora.')}</p>
           <Link to="/mercado" className="mt-4 inline-flex font-bold text-ink underline">{t('Voltar ao Mercado')}</Link>
         </V2Surface>
@@ -88,7 +89,7 @@ function SellerPage() {
           <V2Avatar name={seller.display_name} photoUrl={logo} size="xl" className="-mt-14 ring-4 ring-paper-pure sm:-mt-16" />
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{seller.display_name}</h1>
+              <h1 className={PAGE_TITLE}>{seller.display_name}</h1>
               {seller.verified && <VerifiedMark className="h-5 w-5" />}
               <SellerTypeTag type={seller.seller_type} />
             </div>
@@ -132,7 +133,7 @@ function SellerPage() {
   else lista = <ListingGrid>{visiveis.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>;
 
   return (
-    <V2Page largura="larga" className="space-y-8 pb-16">
+    <V2Page className="space-y-8">
       <MarketHeader />
       {topo}
       {seller && seller.status === 'active' && <StoreCoupons sellerKey={sellerKey} sharedCode={cupomDoLink} />}

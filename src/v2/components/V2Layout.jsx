@@ -70,7 +70,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
-import { V2Avatar } from '@/v2/ui/primitives';
+import { PAGE_FRAME, V2Avatar } from '@/v2/ui/primitives';
 import BrandMark, { LogoImg } from '@/v2/ui/BrandMark';
 import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
@@ -603,8 +603,12 @@ function HubItem({ hub, active, collapsed, onClick }) {
 /** Barra superior de subpáginas (nível 2) do hub ativo. Quebra em 2 linhas. */
 function SubnavBar({ hub, pathname, onNavigate }) {
   return (
-    <div className="z-10 flex-shrink-0 border-b border-gray-100 bg-paper-pure/95 px-4 py-2 backdrop-blur sm:px-6 lg:px-10">
-      <div className="hide-scrollbar flex flex-wrap items-center gap-1.5">
+    // O mesmo recuo e a mesma calha de rolagem do <main>: com barra de rolagem
+    // clássica (Windows) a moldura do conteúdo encolhe a largura dela, e a
+    // barra de abas precisa encolher junto para começar na mesma linha.
+    <div className="z-10 flex-shrink-0 overflow-hidden border-b border-gray-100 bg-paper-pure/95 px-4 py-2 backdrop-blur [scrollbar-gutter:stable] sm:px-6 lg:px-10">
+      {/* A mesma moldura das páginas: as abas começam na linha do título. */}
+      <div className={cn(PAGE_FRAME, 'hide-scrollbar flex flex-wrap items-center gap-1.5')}>
         {hub.children.map((c) => {
           const Icon = c.icon;
           const active = isActive(pathname, c);
@@ -969,7 +973,9 @@ export default function V2Layout({ children }) {
           tabIndex={-1}
           ref={mainRef}
           className={cn(
-            'flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 outline-none sm:px-6 lg:px-10 lg:pb-12',
+            // Calha estável: página curta e página comprida ficam com a mesma
+            // largura, e o conteúdo não pula quando a barra de rolagem aparece.
+            'flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 outline-none [scrollbar-gutter:stable] sm:px-6 lg:px-10 lg:pb-12',
             navHubsOn ? 'pt-6' : 'pt-28',
           )}
         >

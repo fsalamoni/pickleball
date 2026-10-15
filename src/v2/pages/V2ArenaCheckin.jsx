@@ -41,6 +41,8 @@ import {
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2BackLink,
+  V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -138,7 +140,7 @@ export default function V2ArenaCheckin() {
   }, [codigoDoQr, rvCarregando, ptCarregando, abertas.length]);
 
   if (isLoading || modulosCarregando) {
-    return <div className="mx-auto max-w-lg px-4 py-10"><V2Skeleton lines={5} /></div>;
+    return <V2Page><V2Skeleton lines={5} /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!isOn(ARENA_MODULE_ID.IOT_QR_KIOSK)) return <Navigate to={`/arenas/${arenaId}`} replace />;
@@ -146,11 +148,11 @@ export default function V2ArenaCheckin() {
   /* --- deu certo --------------------------------------------------------- */
   if (pronto || (jaChegou && abertas.length === 0)) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+      <V2Page className="text-center">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50">
           <CheckCircle2 className="h-10 w-10 text-green-600" />
         </div>
-        <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-ink">
+        <h1 className={`mt-6 ${PAGE_TITLE}`}>
           {t('Chegada confirmada')}
         </h1>
         <p className="mt-2 text-gray-500">
@@ -164,16 +166,16 @@ export default function V2ArenaCheckin() {
             <Link to="/minhas-reservas">{t('Minhas reservas')}</Link>
           </V2Button>
         </div>
-      </div>
+      </V2Page>
     );
   }
 
   const carregandoAutomatico = Boolean(codigoDoQr) && (rvCarregando || ptCarregando);
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
+    <V2Page>
       <V2BackLink to={`/arenas/${arenaId}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Chegada')}</h1>
+      <h1 className={PAGE_TITLE}>{t('Chegada')}</h1>
       <p className="mt-2 font-medium text-gray-500">
         {t('Confirme sua presença com o código do totem da recepção.')}
       </p>
@@ -250,6 +252,6 @@ export default function V2ArenaCheckin() {
       <p className="mt-6 text-xs leading-5 text-gray-500">
         {t('A confirmação vale só para o seu horário, e é o que faz a arena saber que a quadra está em uso. Esqueceu de confirmar? A recepção resolve na hora.')}
       </p>
-    </div>
+    </V2Page>
   );
 }

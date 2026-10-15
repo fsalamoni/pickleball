@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateClub } from '@/modules/clubs/hooks/useClubs';
-import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea, V2BackLink } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 const INITIAL = {
@@ -45,12 +45,12 @@ export default function V2CreateClub() {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2BackLink to="/clubes" className="mb-5">{t('Voltar para clubes')}</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Novo clube')}</span>
-        <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{t('Crie seu clube e reúna a turma.')}</h1>
+        <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Crie seu clube e reúna a turma.')}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">{t('Você será o administrador e poderá convidar atletas por código. Ao criar, libera mural, eventos, fórum e gestão compartilhada.')}</p>
         {linkedLabel && (
           <p className="mt-2 inline-block rounded-full bg-acid/20 px-3 py-1 text-xs font-bold text-acid">{linkedLabel}</p>
@@ -108,6 +108,6 @@ export default function V2CreateClub() {
           </div>
         </form>
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }

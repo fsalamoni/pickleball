@@ -79,7 +79,7 @@ import { computeTier } from '@/modules/arenas/domain/members';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { useArenaMembers, useAddArenaMember } from '@/modules/arenas/hooks/useArenaV3';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tn } from '@/core/i18n';
 
@@ -255,27 +255,27 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
-  if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
+  if (isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2ErrorState
           title={t('Não foi possível abrir a gestão da arena')}
           description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => recarregarArena()}
         />
-      </div>
+      </V2Page>
     );
   }
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface className="text-center">
           <Building2 className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Arena não encontrada')}</h2>
           <Link to="/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">{t('Voltar ao diretório')}</Link>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -315,7 +315,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   };
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <div className="mb-5 flex items-center justify-between gap-2">
         <V2BackLink to={`/arenas/${arena.id}`}>{arena.name}</V2BackLink>
         {isOwner && (
@@ -334,7 +334,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
 
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Central da arena')}</span>
-        <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{arena.name}</h1>
+        <h1 className={`mt-4 ${HERO_TITLE}`}>{arena.name}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">{t('Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.')}</p>
         <div className="mt-5 flex flex-wrap gap-2">
           {arenaModulesOn && (
@@ -477,7 +477,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         )}
         </Suspense>
       </div>
-    </div>
+    </V2Page>
   );
 }
 

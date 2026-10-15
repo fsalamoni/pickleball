@@ -8,7 +8,7 @@ import { conversationTitle } from '@/modules/chat/domain/conversations';
 import V2ConversationList from '@/v2/components/chat/V2ConversationList';
 import V2ChatWindow from '@/v2/components/chat/V2ChatWindow';
 import NewChatDialog from '@/modules/chat/components/NewChatDialog';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2Surface, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
@@ -65,9 +65,9 @@ export default function V2Chat() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{t('Mensagens')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Mensagens')}</h1>
         <p className="mt-2 font-medium text-gray-500">{t('Converse com atletas e grupos da comunidade em tempo real.')}</p>
       </div>
 
@@ -118,6 +118,6 @@ export default function V2Chat() {
       </V2Surface>
 
       <NewChatDialog open={newOpen} onOpenChange={setNewOpen} mode="new" busy={creating} onConfirm={handleCreate} />
-    </div>
+    </V2Page>
   );
 }

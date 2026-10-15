@@ -31,6 +31,7 @@ import { couponLive, couponProblem, giftCardProblem, orderPricing, sortGiftCards
 import CheckoutPromos from '@/v2/components/marketplace/promo/CheckoutPromos';
 import {
   V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Page, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { MarketGate, SellerTypeTag, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
@@ -223,11 +224,11 @@ function AddressForm({ value, onChange, error, saved, onPick, onRemove, remember
 
 function Done({ result }) {
   return (
-    <V2Page largura="estreita" className="space-y-6">
+    <V2Page className="space-y-6">
       {result.orders.length > 0 && (
         <V2Surface className="space-y-4 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
-          <h1 className="font-display text-2xl font-bold text-ink">
+          <h1 className={PAGE_TITLE}>
             {result.orders.length > 1 ? t('{n} pedidos feitos', { n: result.orders.length }) : t('Pedido feito')}
           </h1>
           <p className="text-gray-600">{t('Agora o vendedor aceita o pedido. Aí aparece a chave Pix para você pagar — você recebe um aviso.')}</p>
@@ -488,7 +489,7 @@ function CartPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader categorias={false} />
       {!result && <V2PageIntro title={step === 'fechar' ? t('Fechar pedido') : t('Carrinho')} />}
       {!result && step === 'fechar' && (

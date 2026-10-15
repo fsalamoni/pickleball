@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { logger } from '@/core/lib/logger';
 import { t } from '@/core/i18n';
+import { PAGE_FRAME } from '@/v2/ui/pageFrame';
 
 /**
  * GamificationErrorBoundary — captura erros em componentes V2 de gamificação.
@@ -34,7 +35,7 @@ export default class GamificationErrorBoundary extends React.Component {
           data-testid="gamification-error-boundary"
           role="alert"
           aria-live="assertive"
-          className="mx-auto max-w-[800px] rounded-4xl border border-red-200 bg-red-50 p-6"
+          className={`${PAGE_FRAME} rounded-4xl border border-red-200 bg-red-50 p-6`}
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700">

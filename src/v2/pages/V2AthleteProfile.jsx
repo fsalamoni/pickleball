@@ -15,7 +15,7 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
-import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 import TrophyShelf from '@/v2/components/trophies/TrophyShelf';
@@ -50,17 +50,17 @@ export default function V2AthleteProfile() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1000px] space-y-6">
+      <V2Page className="space-y-6">
         <V2Skeleton className="h-64 rounded-4xl" />
         <V2Skeleton className="h-40 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
   if (isError) {
     // Falhar não é "o perfil não existe" (docs/27-FALHA-NAO-E-VAZIO.md).
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar o perfil')}
@@ -68,14 +68,14 @@ export default function V2AthleteProfile() {
             onRetry={() => refetch()}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   const athlete = data?.athlete;
   if (!athlete) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={Trophy}
@@ -84,7 +84,7 @@ export default function V2AthleteProfile() {
             action={<Link to="/atletas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar aos atletas')}</Link>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -94,7 +94,7 @@ export default function V2AthleteProfile() {
   const formats = Object.entries(stats?.byFormat || {});
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2BackLink to="/atletas" className="mb-5">{t('Voltar aos atletas')}</V2BackLink>
 
       {/* Hero */}
@@ -114,7 +114,7 @@ export default function V2AthleteProfile() {
           </div>
 
           <div className="text-center sm:text-left">
-            <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{athlete.platform_name}</h1>
+            <h1 className={PAGE_TITLE}>{athlete.platform_name}</h1>
             <p className="mt-1 font-medium text-gray-500">
               {[
                 Number.isFinite(athlete.age) ? tn(athlete.age, '{n} ano', '{n} anos') : null,
@@ -267,7 +267,7 @@ export default function V2AthleteProfile() {
           </div>
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }
 

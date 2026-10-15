@@ -175,7 +175,7 @@ function GiftPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader categorias={false} />
       <V2PageIntro title={t('Minhas compras')} subtitle={t('Vales-presente: os que você ganhou, os que você deu e o resgate de um código.')} />
       <MarketTabs grupo="compras" ativo="vales" />

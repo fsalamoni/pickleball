@@ -30,7 +30,7 @@ import { todayISO } from '@/modules/arenas/domain/calendar';
 import { WAITLIST_STATUS } from '@/modules/arenas/domain/waitlist';
 import { OpenSlotCard as VagaCard, WaitlistCallCard as ChamadaDaFila } from '@/v2/components/arenas/openMatch/OpenSlotCard';
 import { useOpenSlotActions } from '@/v2/components/arenas/openMatch/useOpenSlotActions';
-import { V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 export default function V2ArenaOpenMatch() {
@@ -71,7 +71,7 @@ export default function V2ArenaOpenMatch() {
   }, [slots, hoje, user?.uid]);
 
   if (isLoading || carregandoModulos) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[720px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!isOn(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH)) {
@@ -79,9 +79,9 @@ export default function V2ArenaOpenMatch() {
   }
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Jogos abertos')}</h1>
+      <h1 className={PAGE_TITLE}>{t('Jogos abertos')}</h1>
       <p className="mt-1 text-sm text-gray-500">
         {t('Horários que a arena abriu para quem quiser entrar. Não precisa levar dupla.')}
       </p>
@@ -170,6 +170,6 @@ export default function V2ArenaOpenMatch() {
           </>
         )}
       </div>
-    </div>
+    </V2Page>
   );
 }

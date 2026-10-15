@@ -18,7 +18,7 @@ import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants'
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
 import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
-import { V2Badge, V2Button, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Skeleton, V2BackLink, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 export default function V2TournamentAdmin() {
@@ -32,10 +32,10 @@ export default function V2TournamentAdmin() {
 
   if (isLoading || loadingAdmin) {
     return (
-      <div className="mx-auto max-w-[1200px] space-y-4">
+      <V2Page className="space-y-4">
         <V2Skeleton className="h-16 rounded-2xl" />
         <V2Skeleton className="h-96 rounded-2xl" />
-      </div>
+      </V2Page>
     );
   }
 
@@ -43,7 +43,7 @@ export default function V2TournamentAdmin() {
   if (!tournament || !isAdmin) return <Navigate to={`/torneios/${tournamentId}`} replace />;
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       {/* Cabeçalho compacto e objetivo — sem hero/vitrine. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-paper-pure p-4">
         <div className="min-w-0">
@@ -68,6 +68,6 @@ export default function V2TournamentAdmin() {
       <V2BackLink to="/perfil/torneios" className="mb-4">{t('Meus torneios')}</V2BackLink>
 
       <V2TournamentAdminPanel tournament={tournament} />
-    </div>
+    </V2Page>
   );
 }

@@ -123,7 +123,7 @@ function SearchesPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader categorias={false} />
       <V2PageIntro title={t('Salvos')} subtitle={lista.length ? t('Buscas salvas: {n} de {total}', { n: lista.length, total: SAVED_SEARCH_LIMIT }) : undefined} />
       <MarketTabs grupo="salvos" ativo="buscas" />

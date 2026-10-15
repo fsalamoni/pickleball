@@ -21,7 +21,7 @@ import {
   V2FilterChip,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -101,10 +101,10 @@ export default function V2FindPlayers() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <V2Page>
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível, prontos para um jogo.')} />
         <V2Skeleton className="h-64 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
@@ -112,7 +112,7 @@ export default function V2FindPlayers() {
   // rating" a quem tem. Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md).
   if (isError) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2ErrorState
@@ -121,13 +121,13 @@ export default function V2FindPlayers() {
             onRetry={() => refetch()}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   if (!me) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={rotulos.pessoas} subtitle={t('Parceiros e adversários do seu nível.')} />
         <V2Surface>
           <V2EmptyState
@@ -136,12 +136,12 @@ export default function V2FindPlayers() {
             description={t('Dispute jogos em torneios da plataforma para receber seu rating e liberar as sugestões de parceiros do seu nível.')}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={rotulos.pessoas}
         subtitle={smartOn
@@ -219,6 +219,6 @@ export default function V2FindPlayers() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

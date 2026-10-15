@@ -15,7 +15,7 @@ import {
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -79,7 +79,7 @@ function V2ArenasContent() {
   }, [regional]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Explorar Quadras')}
         subtitle={t('Encontre arenas, veja preços e horários e solicite sua reserva.')}
@@ -150,7 +150,7 @@ function V2ArenasContent() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 

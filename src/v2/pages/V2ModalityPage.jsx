@@ -15,7 +15,7 @@ import { V2ModalityGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2ModalityMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
@@ -52,14 +52,14 @@ export default function V2ModalityPage() {
   const [tab, setTab] = useState('info');
 
   if (loadingT || loadingM) {
-    return <div className="mx-auto max-w-[1200px] space-y-6"><V2Skeleton className="h-64 rounded-4xl" /><V2Skeleton className="h-96 rounded-4xl" /></div>;
+    return <V2Page className="space-y-6"><V2Skeleton className="h-64 rounded-4xl" /><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
 
   // ⚠️ FALHA não é ausência: a modalidade "não encontrada" por uma queda de
   // rede manda o atleta concluir que a categoria dele saiu do torneio.
   if (erroTorneio || erroModalidades) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar a modalidade')}
@@ -67,20 +67,20 @@ export default function V2ModalityPage() {
             onRetry={() => { recarregarTorneio(); recarregarModalidades(); }}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   const modality = modalities.find((m) => m.id === modalityId);
   if (!tournament || !modality) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface className="text-center">
           <Trophy className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 font-display text-lg font-bold text-ink">{t('Modalidade não encontrada')}</h2>
           <Link to={`/torneios/${tournamentId}`} className="mt-2 inline-block text-sm font-bold text-ink underline">{t('Voltar ao torneio')}</Link>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -121,7 +121,7 @@ export default function V2ModalityPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2BackLink to={`/torneios/${tournamentId}`} className="mb-5">{tournament.name}</V2BackLink>
 
       {/* Hero */}
@@ -132,7 +132,7 @@ export default function V2ModalityPage() {
           <div className="mt-4 flex flex-wrap items-start gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm"><Trophy className="h-6 w-6" /></div>
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">{modality.name}</h1>
+              <h1 className={HERO_TITLE}>{modality.name}</h1>
               <div className="mt-3 flex flex-wrap gap-2">
                 {badges.map((b) => <span key={b} className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">{b}</span>)}
                 {alreadyRegistered && <span className="rounded-full bg-acid px-3 py-1 text-xs font-bold text-ink"><ShieldCheck className="mr-1 inline h-3 w-3" /> {t('Inscrito')}</span>}
@@ -220,6 +220,6 @@ export default function V2ModalityPage() {
 
         </>
       )}
-    </div>
+    </V2Page>
   );
 }

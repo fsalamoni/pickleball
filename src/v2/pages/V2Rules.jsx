@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Flag, Trophy } from 'lucide-react';
-import { V2Badge, V2Button, V2ContentHero, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ContentHero, V2Surface, V2Page } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
 
@@ -93,7 +93,7 @@ export default function V2Rules() {
   const data = SECTIONS[active];
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Sobre o esporte')}
         title={t('Regras do Pickleball')}
@@ -122,7 +122,7 @@ export default function V2Rules() {
       <div className="mt-6 text-center text-sm text-gray-500">
         <Link to="/nivelamento" className="font-bold text-ink underline">{t('Descubra seu nível com nosso formulário de nivelamento →')}</Link>
       </div>
-    </div>
+    </V2Page>
   );
 }
 

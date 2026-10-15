@@ -27,7 +27,7 @@ import {
   normalizeNotificationPrefs,
 } from '@/modules/notifications/domain/preferences';
 import {
-  V2Button, V2PageIntro, V2Surface, V2Toggle,
+  V2Button, V2PageIntro, V2Surface, V2Toggle, V2Page,
 } from '@/v2/ui/primitives';
 
 import V2PushCard from '@/v2/components/settings/V2PushCard';
@@ -152,7 +152,7 @@ export default function V2Settings() {
     : tn(silenciadas, '{n} categoria silenciada', '{n} categorias silenciadas');
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2PageIntro
         title={t('Configurações')}
         subtitle={t('Cada cartão diz como está. Abra só o que você quer mudar.')}
@@ -266,6 +266,6 @@ export default function V2Settings() {
           <DebriefSettingsCard />
         </SettingsGroup>
       </div>
-    </div>
+    </V2Page>
   );
 }

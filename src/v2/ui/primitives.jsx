@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, ChevronDown, WifiOff, RefreshCw } from 'lucid
 import { cn } from '@/core/lib/utils';
 import { t, tk } from '@/core/i18n';
 
+import { PAGE_FRAME, PAGE_TITLE, HERO_TITLE } from './pageFrame';
 /**
  * Primitivos de UI do design system v2 "Athleisure Premium".
  *
@@ -133,29 +134,20 @@ export function V2CollapsibleSection(props) {
   return <V2Surface collapsible {...props} />;
 }
 
-/**
- * As TRÊS larguras de página da plataforma. Antes cada tela escolhia a sua
- * (eram 21 valores, de 500 a 1800 px), e trocar de tela fazia o conteúdo
- * "pular" de largura. `estreita`: leitura, formulário e estados (erro, vazio);
- * `padrao`: a maioria das telas; `larga`: vitrines com grade de cartões.
- * Guarda em `src/core/guards/larguraDePagina.test.js`.
- */
-export const PAGE_WIDTH = Object.freeze({
-  estreita: 'max-w-[720px]',
-  padrao: 'max-w-[1000px]',
-  larga: 'max-w-[1200px]',
-});
+// A moldura e o título das páginas moram num arquivo leve: as telas de erro,
+// que entram no pacote inicial, usam a moldura sem puxar os primitivos.
+export { PAGE_FRAME, TITLE_TYPE, PAGE_TITLE, HERO_TITLE } from './pageFrame';
 
-/** O contêiner de uma página: centralizado, numa das três larguras. */
-export function V2Page({ largura = 'padrao', className, children, ...props }) {
-  return <div className={cn('mx-auto w-full', PAGE_WIDTH[largura] || PAGE_WIDTH.padrao, className)} {...props}>{children}</div>;
+/** O contêiner de toda página: a moldura única. */
+export function V2Page({ className, children, ...props }) {
+  return <div className={cn(PAGE_FRAME, className)} {...props}>{children}</div>;
 }
 
 export function V2PageIntro({ title, subtitle, action, className }) {
   return (
     <div className={cn('mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="min-w-0">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h1>
+        <h1 className={PAGE_TITLE}>{title}</h1>
         {subtitle && <p className="mt-2 font-medium text-gray-500">{subtitle}</p>}
       </div>
       {action && <div className="flex flex-wrap items-center gap-3">{action}</div>}
@@ -599,7 +591,7 @@ export function V2ContentHero({ eyebrow, title, description, meta, action }) {
       <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-3xl">
           {eyebrow && <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{eyebrow}</span>}
-          <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
+          <h1 className={cn('mt-4', HERO_TITLE)}>{title}</h1>
           {description && <p className="mt-3 text-sm leading-7 text-gray-300">{description}</p>}
           {meta && <p className="mt-3 text-xs text-gray-500">{meta}</p>}
         </div>
@@ -623,7 +615,7 @@ export function V2ContentSection({ icon: Icon, title, description, children, cla
           {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
         </div>
       </div>
-      <div className="mt-4 space-y-3 text-sm leading-7 text-gray-600">{children}</div>
+      <div className="mt-4 max-w-[80ch] space-y-3 text-sm leading-7 text-gray-600">{children}</div>
     </V2Surface>
   );
 }

@@ -29,7 +29,8 @@ import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabili
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
-  V2ErrorState, V2BackLink,
+  V2ErrorState, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -111,27 +112,27 @@ export default function V2CoachProfile() {
   }, [params, setParams, canRequestLesson, coach, isOwn]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
+  if (isLoading) return <V2Page><V2Skeleton lines={6} /></V2Page>;
   // Falha não é "professor não encontrado": quem recebeu o link do professor
   // concluiria que ele saiu da plataforma.
   if (!coach && perfilFalhou) return (
-    <div className="p-4">
+    <V2Page>
       <V2ErrorState
         title={t('Não foi possível abrir o perfil deste professor')}
         description={t('A conexão falhou no meio do caminho. Tente de novo.')}
         onRetry={() => recarregarPerfil()}
       />
-    </div>
+    </V2Page>
   );
   if (!coach) return (
-    <div className="p-4">
+    <V2Page>
       <V2EmptyState icon={GraduationCap} title={t('Professor não encontrado')} />
       <Link to="/coaches" className="mt-3 inline-block text-sm font-bold text-ink">{t('← Voltar ao diretório')}</Link>
-    </div>
+    </V2Page>
   );
 
   return (
-    <div className="space-y-4 p-4">
+    <V2Page className="space-y-4">
       <V2BackLink to="/coaches">{t('Professores')}</V2BackLink>
 
       {semVagas && (
@@ -156,7 +157,7 @@ export default function V2CoachProfile() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="font-display text-2xl font-bold text-ink">{coach.display_name}</h1>
+              <h1 className={PAGE_TITLE}>{coach.display_name}</h1>
               {coach.accepting_students && <V2Badge tone="green">{t('Aceitando alunos')}</V2Badge>}
               {!coach.active && <V2Badge tone="red">{t('Inativo')}</V2Badge>}
             </div>
@@ -342,7 +343,7 @@ export default function V2CoachProfile() {
           initialCouponCode={cupomDoPedido}
         />
       )}
-    </div>
+    </V2Page>
   );
 }
 

@@ -27,7 +27,8 @@ import {
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
-  V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
+  V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import CampaignBanner from '@/v2/components/arenas/marketing/campaigns/CampaignBanner';
@@ -49,30 +50,30 @@ export default function V2ArenaCampaign() {
 
   if (q.isLoading) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <V2Skeleton lines={1} />
         <div className="aspect-[16/9] animate-pulse rounded-3xl bg-gray-100 sm:aspect-[2/1]" />
         <V2Skeleton lines={3} />
-      </div>
+      </V2Page>
     );
   }
 
   if (q.isError) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <Voltar arenaId={arenaId} />
         <V2ErrorState
           title={t('Não foi possível carregar a campanha')}
           description={t('A conexão falhou. A campanha continua lá — tente de novo em instantes.')}
           onRetry={() => q.refetch()}
         />
-      </div>
+      </V2Page>
     );
   }
 
   if (!campanha) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <Voltar arenaId={arenaId} arenaName={arena?.name} />
         <V2Surface className="text-center">
           <p className="font-display text-lg font-bold text-ink">{t('Esta campanha não está mais disponível')}</p>
@@ -81,7 +82,7 @@ export default function V2ArenaCampaign() {
             <Link to={`/arenas/${arenaId}`}>{t('Ver a arena')}</Link>
           </V2Button>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -94,7 +95,7 @@ export default function V2ArenaCampaign() {
   const reservarLink = `/arenas/${arenaDaCampanha}#arena-reservar`;
 
   return (
-    <div className="mx-auto max-w-[720px] space-y-5">
+    <V2Page className="space-y-5">
       <Voltar arenaId={arenaDaCampanha} arenaName={arena?.name} />
 
       {/* No ar e levando a outro lugar, o banner é o link (o botão desenhado
@@ -108,7 +109,7 @@ export default function V2ArenaCampaign() {
 
       <V2Surface>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h1 className="font-display text-2xl font-black text-ink">{campanha.name}</h1>
+          <h1 className={PAGE_TITLE}>{campanha.name}</h1>
           {!valendo && (
             <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? t('Pausada pela arena') : t('Encerrada')}</V2Badge>
           )}
@@ -151,6 +152,6 @@ export default function V2ArenaCampaign() {
           </V2Button>
         </div>
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }

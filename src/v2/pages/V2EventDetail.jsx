@@ -7,7 +7,7 @@ import { EventFormDialog } from '@/modules/clubs/components/EventFormDialog';
 import V2EventDatesPanel from '@/v2/components/clubs/V2EventDatesPanel';
 import V2EventParticipantsPanel from '@/v2/components/clubs/V2EventParticipantsPanel';
 import V2EventChat from '@/v2/components/clubs/V2EventChat';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 
@@ -27,16 +27,16 @@ export default function V2EventDetail() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1000px] space-y-6">
+      <V2Page className="space-y-6">
         <V2Skeleton className="h-44 rounded-4xl" />
         <V2Skeleton className="h-72 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
   if (isError || !event) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={membership ? CalendarDays : Lock}
@@ -47,7 +47,7 @@ export default function V2EventDetail() {
             action={<Link to={membership ? `/clubes/${clubId}?tab=events` : `/clubes/${clubId}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{membership ? t('Voltar para eventos') : t('Ir para o clube')}</Link>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -63,7 +63,7 @@ export default function V2EventDetail() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2BackLink to={`/clubes/${clubId}?tab=events`} className="mb-5">{t('Voltar para eventos')}</V2BackLink>
 
       {/* Hero */}
@@ -77,7 +77,7 @@ export default function V2EventDetail() {
               </span>
               {event.recurring && <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white"><Repeat className="h-3 w-3" /> {t('Recorrente')}</span>}
             </div>
-            <h1 className="mt-3 font-display text-3xl font-bold text-white">{event.title}</h1>
+            <h1 className={`mt-3 ${HERO_TITLE}`}>{event.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
               {when && <span className="inline-flex items-center gap-1"><CalendarDays className="h-4 w-4" /> {when}</span>}
               {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {event.location}</span>}
@@ -120,6 +120,6 @@ export default function V2EventDetail() {
       </div>
 
       <EventFormDialog clubId={clubId} event={event} open={editOpen} onClose={() => setEditOpen(false)} />
-    </div>
+    </V2Page>
   );
 }

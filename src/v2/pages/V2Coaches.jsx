@@ -20,7 +20,7 @@ import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import { parsePlaceText } from '@/core/domain/locality';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
-import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton, V2ErrorState, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 function CoachForm({ existing, onClose }) {
@@ -207,10 +207,10 @@ export default function V2Coaches() {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
-    <div className="space-y-4 p-4">
+    <V2Page className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
+          <h1 className={`flex items-center gap-2 ${PAGE_TITLE}`}>
             <GraduationCap className="h-6 w-6 text-green-700" /> {t('Professores')}
           </h1>
           <p className="mt-1 text-sm text-gray-500">{t('Encontre coaches de pickleball ou cadastre-se como professor')}</p>
@@ -303,6 +303,6 @@ export default function V2Coaches() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

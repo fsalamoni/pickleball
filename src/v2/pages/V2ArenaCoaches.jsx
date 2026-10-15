@@ -27,7 +27,8 @@ import {
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2SearchInput,
   V2Skeleton, V2Surface, V2Textarea,
-  V2ErrorState, V2BackLink,
+  V2ErrorState, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -298,35 +299,35 @@ function V2ArenaCoachesContent() {
   const { data: arena, isLoading: arenaLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
 
-  if (arenaLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+  if (arenaLoading) return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2ErrorState title={t('Não foi possível abrir esta arena')} onRetry={() => recarregarArena()} />
-      </div>
+      </V2Page>
     );
   }
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState title={t('Arena não encontrada')} action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← {t('Voltar')}</Link>} />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   const canManage = arena.owner_id === user?.uid || managed.some((m) => m.id === arena.id) || isPlatformAdmin;
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">{t('Voltar ao hub admin')}</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Professores parceiros · {name}', { name: arena.name })}</h1>
+        <h1 className={PAGE_TITLE}>{t('Professores parceiros · {name}', { name: arena.name })}</h1>
         <p className="mt-2 font-medium text-gray-500">{t('Vincule professores à arena. Os parceiros ativos aparecem na página pública.')}</p>
       </div>
       <ArenaCoachesManager arena={arena} showTitle={false} />
-    </div>
+    </V2Page>
   );
 }
 

@@ -43,7 +43,7 @@ import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ArenaPageIndex from '@/v2/components/arenas/ArenaPageIndex';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2Page, TITLE_TYPE } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 
 
@@ -107,10 +107,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1000px] space-y-4">
+      <V2Page className="space-y-4">
         <V2Skeleton className="h-56 rounded-4xl" />
         <V2Skeleton className="h-48 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
@@ -118,19 +118,19 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   // "removida" por uma queda de rede desiste dela — e não tenta de novo.
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2ErrorState
           title={t('Não foi possível abrir esta arena')}
           description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => recarregarArena?.()}
         />
-      </div>
+      </V2Page>
     );
   }
 
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={Building2}
@@ -139,7 +139,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             action={<Link to="/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar às arenas')}</Link>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -154,7 +154,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   const hasContacts = links.whatsapp || links.phone || links.email || links.instagram || links.website;
 
   return (
-    <div ref={paginaRef} className="mx-auto max-w-[1000px]">
+    <V2Page ref={paginaRef}>
       <V2BackLink to="/arenas" className="mb-5">{t('Voltar às arenas')}</V2BackLink>
 
       {/* Hero — com a MARCA da arena, quando ela tem uma.
@@ -183,7 +183,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
               {marca.logo && cover && (
                 <img src={marca.logo} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white/90 object-contain p-1" />
               )}
-              <h1 className="font-display text-3xl font-bold">{arena.name}</h1>
+              <h1 className={TITLE_TYPE}>{arena.name}</h1>
             </div>
             {marca.tagline && <p className="mt-0.5 text-sm opacity-85">{marca.tagline}</p>}
             {address && <p className="mt-1 flex items-center gap-1.5 text-sm opacity-85"><MapPin className="h-4 w-4" /> {address}</p>}
@@ -419,7 +419,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
       {/* Quadras (item 2 — preço e regras completos) */}
       <div id="arena-quadras" data-secao-arena={t('Quadras')} className="scroll-mt-4"><ArenaCourtsSection arenaId={arenaId} /></div>
-    </div>
+    </V2Page>
   );
 }
 

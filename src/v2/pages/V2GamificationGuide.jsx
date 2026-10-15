@@ -10,7 +10,7 @@ import {
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
 import { cn } from '@/core/lib/utils';
 import {
-  V2ContentHero, V2EmptyState, V2PageIntro, V2SearchInput, V2Surface, V2BackLink,
+  V2ContentHero, V2EmptyState, V2PageIntro, V2SearchInput, V2Surface, V2BackLink, V2Page,
 } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { rolarAte } from '@/v2/ui/rolarAte';
@@ -34,10 +34,10 @@ export default function V2GamificationGuide() {
   const on = true;
   if (!on) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2PageIntro title={t('Como funciona a gamificação')} subtitle={t('XP, missões, temporada, recompensas e privacidade.')} />
         <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('Este guia chega junto com a gamificação.')} /></V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <V2GamificationGuideOn />;
@@ -86,7 +86,7 @@ function V2GamificationGuideOn() {
   const tabs = publicos.map((a) => ({ value: a, label: t(GUIDE_AUDIENCE_META[a].label) }));
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-5" data-testid="gamification-guide">
+    <V2Page className="space-y-5" data-testid="gamification-guide">
       <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
 
       <V2ContentHero
@@ -179,6 +179,6 @@ function V2GamificationGuideOn() {
           {helpOn && <Link to={helpLinkFor('/gamification')} className="text-ink hover:underline">{t('Central de ajuda')}</Link>}
         </span>
       </div>
-    </div>
+    </V2Page>
   );
 }

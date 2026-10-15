@@ -23,7 +23,7 @@ import {
   PROMO_DESTINATION, PROMO_ISSUER, promoDestinationCta, promoDestinationLink,
 } from '@/modules/promo/domain/promo';
 import { usePromoCampaign } from '@/modules/promo/hooks/usePromo';
-import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import { issuerDisplayName } from '@/v2/components/promo/promoUi';
@@ -43,37 +43,37 @@ export default function V2PromoCampaign() {
 
   if (q.isLoading) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <V2Skeleton lines={1} />
         <div className="aspect-[16/9] animate-pulse rounded-3xl bg-gray-100 sm:aspect-[2/1]" />
         <V2Skeleton lines={3} />
-      </div>
+      </V2Page>
     );
   }
 
   if (q.isError) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <Voltar />
         <V2ErrorState
           title={t('Não foi possível carregar a campanha')}
           description={t('A conexão falhou. A campanha continua lá — tente de novo em instantes.')}
           onRetry={() => q.refetch()}
         />
-      </div>
+      </V2Page>
     );
   }
 
   if (!campanha) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4">
+      <V2Page className="space-y-4">
         <Voltar />
         <V2Surface className="text-center">
           <p className="font-display text-lg font-bold text-ink">{t('Esta campanha não está mais disponível')}</p>
           <p className="mt-1 text-sm text-gray-500">{t('Ela pode ter sido retirada. Veja as promoções que estão no ar agora.')}</p>
           <V2Button asChild className="mt-4"><Link to="/promocoes">{t('Ver promoções')}</Link></V2Button>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -91,7 +91,7 @@ export default function V2PromoCampaign() {
   const linkProfessor = ehProfessor && !cancelada;
 
   return (
-    <div className="mx-auto max-w-[720px] space-y-5">
+    <V2Page className="space-y-5">
       <Voltar />
 
       {campanha.banner && (valendo && vaiParaOutroLugar ? (
@@ -102,7 +102,7 @@ export default function V2PromoCampaign() {
 
       <V2Surface>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h1 className="font-display text-2xl font-black text-ink">{campanha.name}</h1>
+          <h1 className={PAGE_TITLE}>{campanha.name}</h1>
           {!valendo && <V2Badge tone="neutral">{estado === BANNER_STATE.PAUSED ? t('Pausada') : t('Encerrada')}</V2Badge>}
         </div>
         <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
@@ -140,6 +140,6 @@ export default function V2PromoCampaign() {
           <V2Button asChild variant="ghost"><Link to="/promocoes">{t('Ver promoções')}</Link></V2Button>
         </div>
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }

@@ -11,6 +11,7 @@ import {
   V2PageIntro,
   V2Skeleton,
   V2Surface,
+  PAGE_FRAME,
 } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 
@@ -172,7 +173,7 @@ export default function V2AdminProfiles({ embedded = false }) {
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className={embedded ? 'space-y-6' : 'mx-auto max-w-[1200px]'}>
+    <div className={embedded ? 'space-y-6' : PAGE_FRAME}>
       {!embedded && (
         <V2PageIntro
           title={t('Perfis de atletas')}

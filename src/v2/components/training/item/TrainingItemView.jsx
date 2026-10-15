@@ -25,6 +25,7 @@ import { INDEX_MIN_SECTIONS, SECTION_TITLES, itemView } from './contentView';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { t } from '@/core/i18n';
 
+import { PAGE_TITLE } from '@/v2/ui/primitives';
 const menosMovimento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 function Secao({ id, title, children, className }) {
@@ -319,7 +320,7 @@ export default function TrainingItemView({ item, itemsById, aside, className }) 
             </span>
           )}
         </div>
-        <h1 className="break-words font-display text-3xl font-bold leading-tight text-ink">{v.title || item.title}</h1>
+        <h1 className={`break-words ${PAGE_TITLE}`}>{v.title || item.title}</h1>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <AuthorLine item={item} className="text-sm" />
           {meta && <span className="text-sm text-gray-500">{meta}</span>}

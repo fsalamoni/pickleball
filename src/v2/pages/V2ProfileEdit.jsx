@@ -27,7 +27,8 @@ import {
 } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
-  V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle, V2BackLink,
+  V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle, V2BackLink, V2Page,
+  HERO_TITLE,
 } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
@@ -310,12 +311,12 @@ export default function V2ProfileEdit() {
   };
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2BackLink to="/perfil" className="mb-5">{t('Voltar ao perfil')}</V2BackLink>
 
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Seu perfil')}</span>
-        <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{t('Como você aparece para a comunidade.')}</h1>
+        <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Como você aparece para a comunidade.')}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">{t('Organize identidade, privacidade, nível e informações de professor. Cada bloco salva de forma independente.')}</p>
       </div>
 
@@ -554,6 +555,6 @@ export default function V2ProfileEdit() {
           )}
         </V2Surface>
       </div>
-    </div>
+    </V2Page>
   );
 }

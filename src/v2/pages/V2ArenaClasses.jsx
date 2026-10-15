@@ -37,7 +37,8 @@ import { COACH_LEVEL, COACH_LEVEL_META } from '@/modules/arenas/domain/classes';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import ArenaClassesPanel from '@/v2/components/arenas/classes/ArenaClassesPanel';
 import {
-  V2Avatar, V2Badge, V2Button, V2Skeleton, V2Surface, V2BackLink,
+  V2Avatar, V2Badge, V2Button, V2Skeleton, V2Surface, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -99,7 +100,7 @@ export default function V2ArenaClasses() {
   if (naGestao) return <Navigate to={`/arenas/${arenaId}/gerir?aba=aulas`} replace />;
 
   if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!isOn(ARENA_MODULE_ID.CLASSES)) return <Navigate to={`/arenas/${arenaId}`} replace />;
@@ -115,10 +116,10 @@ export default function V2ArenaClasses() {
       : 'Aulas nesta arena';
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{titulo}</h1>
+        <h1 className={PAGE_TITLE}>{titulo}</h1>
         <p className="mt-2 font-medium text-gray-500">
           {souProfessor
             ? t('As aulas em que você é o professor, com os alunos de cada uma.')
@@ -136,6 +137,6 @@ export default function V2ArenaClasses() {
       {temCatalogo && !souProfessor && <VitrineDeProfessores arenaId={arena.id} />}
 
       <ArenaClassesPanel arena={arena} podeGerir={podeGerir} meuPerfilDeProfessor={meuPerfilDeProfessor} />
-    </div>
+    </V2Page>
   );
 }

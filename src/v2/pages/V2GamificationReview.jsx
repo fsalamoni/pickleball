@@ -6,7 +6,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGamificationEngine } from '@/modules/progression/hooks/useGamificationEngine';
 import { usePeriodReview } from '@/modules/progression/hooks/usePeriodReview';
 import { ReviewBody } from '@/v2/components/gamification/PeriodReviewCard';
-import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink, V2Page } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { Sparkles } from 'lucide-react';
 import MiniStat from '@/v2/components/gamification/MiniStat';
@@ -22,10 +22,10 @@ export default function V2GamificationReview() {
   const on = true;
   if (!on) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Revisão')} subtitle={t('O resumo do seu período.')} />
         <V2Surface><V2EmptyState icon={Sparkles} title={t('Disponível em breve')} description={t('A revisão da semana chega junto com a gamificação.')} /></V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <ReviewOn />;
@@ -41,7 +41,7 @@ function ReviewOn() {
   const trocar = (k) => { setKind(k); setOffset(0); };
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-5" data-testid="gamification-review">
+    <V2Page className="space-y-5" data-testid="gamification-review">
       <V2BackLink to="/gamification">{t('Gamificação')}</V2BackLink>
       <V2PageIntro title={t('Sua revisão')} subtitle={t('O que você fez no período, comparado com o anterior. Nada aqui é cobrança.')} />
 
@@ -80,6 +80,6 @@ function ReviewOn() {
           </V2Surface>
         </>
       )}
-    </div>
+    </V2Page>
   );
 }

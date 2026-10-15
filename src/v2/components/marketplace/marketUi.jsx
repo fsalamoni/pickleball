@@ -20,7 +20,7 @@ import MarketPhoto, { AiStamp } from './MarketPhoto';
 import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domain/reputation';
 import { useFavorites, useFollows, useToggleFavorite, useToggleFollow } from '@/modules/marketplace/hooks/useMarket';
-import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2Skeleton, V2Page } from '@/v2/ui/primitives';
 import { toast } from 'sonner';
 import { t, tk, tn } from '@/core/i18n';
 
@@ -30,7 +30,7 @@ import { t, tk, tn } from '@/core/i18n';
  */
 export function MarketGate({ children }) {
   const { flags, isLoading } = useFeatureFlags();
-  if (isLoading) return <div className="space-y-4 p-4"><V2Skeleton className="h-12" /><V2Skeleton className="h-64" /></div>;
+  if (isLoading) return <V2Page className="space-y-4"><V2Skeleton className="h-12" /><V2Skeleton className="h-64" /></V2Page>;
   if (!flags?.[FEATURE_FLAG.MARKETPLACE]) return <Navigate to="/" replace />;
   return children;
 }

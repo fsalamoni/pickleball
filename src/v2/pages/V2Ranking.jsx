@@ -11,7 +11,7 @@ import {
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import V2DuprRankingView from '@/v2/components/rating/V2DuprRankingView';
@@ -160,7 +160,7 @@ function NationalRankingView() {
   }, [players, search, rankingFiltersOn, stateFilter, levelFilter, genderFilter, clubFilter, ageFilter]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Ranking nacional')}
         subtitle={t('Rating calculado a partir dos jogos de torneios e dias de jogo da plataforma.')}
@@ -282,7 +282,7 @@ function NationalRankingView() {
           })}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 
@@ -308,7 +308,7 @@ export default function V2Ranking() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <div className="mb-6 overflow-x-auto">
         <div data-dica="ranking-abas" className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
           {TABS.map((t) => (
@@ -327,6 +327,6 @@ export default function V2Ranking() {
         </div>
       </div>
       {tab === 'dupr' ? <V2DuprRankingView /> : <NationalRankingView />}
-    </div>
+    </V2Page>
   );
 }

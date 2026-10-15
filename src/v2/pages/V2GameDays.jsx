@@ -20,7 +20,8 @@ import {
 import { toast } from 'sonner';
 import {
   V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2ErrorState, V2PageIntro,
-  V2Skeleton, V2Surface,
+  V2Skeleton, V2Surface, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
@@ -127,7 +128,7 @@ function GameDayList() {
   }, [gameDays, today]);
 
   return (
-    <div className="mx-auto max-w-[1000px] pb-16 lg:pb-0">
+    <V2Page>
       <V2PageIntro
         title={t('Dia de jogo')}
         subtitle={t('Os seus dias de jogo, os com vaga para você entrar — e o seu, se quiser organizar a rodada.')}
@@ -214,7 +215,7 @@ function GameDayList() {
       )}
 
       <CreateGameDayDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={(id) => navigate(`/dia-de-jogo/${id}`)} />
-    </div>
+    </V2Page>
   );
 }
 
@@ -235,7 +236,7 @@ function GameDayDetail({ gameDayId }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (isLoading) {
-    return <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+    return <V2Page><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   }
   // ⚠️ FALHA não é ausência. Dizer "pode ter sido removido ou você não tem
   // acesso" quando o que caiu foi a rede é alarmar quem está na beira da
@@ -248,7 +249,7 @@ function GameDayDetail({ gameDayId }) {
   // existe — por isso a frase admite as duas coisas.)
   if (isError && error?.code === 'permission-denied') {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={Lock}
@@ -257,12 +258,12 @@ function GameDayDetail({ gameDayId }) {
             action={<V2Button asChild><Link to="/dia-de-jogo">{t('Ver os dias com vaga para você')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   if (isError) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar este dia de jogo')}
@@ -270,12 +271,12 @@ function GameDayDetail({ gameDayId }) {
             onRetry={refetch}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   if (!gameDay) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
@@ -284,7 +285,7 @@ function GameDayDetail({ gameDayId }) {
             action={<V2Button asChild><Link to="/dia-de-jogo">{t('Voltar')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -308,7 +309,7 @@ function GameDayDetail({ gameDayId }) {
   };
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <button type="button" onClick={() => navigate('/dia-de-jogo')} className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
         <ChevronLeft className="h-4 w-4" /> {t('Dias de jogo')}
       </button>
@@ -319,7 +320,7 @@ function GameDayDetail({ gameDayId }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
+              <h1 className={PAGE_TITLE}>{gameDay.title}</h1>
               {isOpenMatchGameDay(gameDay)
                 ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {t('Jogo aberto da arena')}</V2Badge>
                 : daArena ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> {t('Da arena')}</V2Badge>
@@ -408,6 +409,6 @@ function GameDayDetail({ gameDayId }) {
         loading={del.isPending}
         onConfirm={handleDelete}
       />
-    </div>
+    </V2Page>
   );
 }

@@ -11,7 +11,7 @@ import {
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 
@@ -48,7 +48,7 @@ export default function V2Athletes() {
   }, [athletes, q]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro title={t('Atletas')} subtitle={t('Encontre parceiros de jogo por nível, cidade e clube.')} />
 
       <V2Surface className="mb-8">
@@ -94,7 +94,7 @@ export default function V2Athletes() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 

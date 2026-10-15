@@ -20,7 +20,7 @@ import {
   V2PageIntro,
   V2Skeleton,
   V2StatCard,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
@@ -34,7 +34,7 @@ export default function V2Performance() {
   const [tab, setTab] = useState('estatistica');
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro title={t('Meu desempenho')} subtitle={t('Estatísticas, histórico e evolução dos seus jogos e torneios.')} />
 
       {athleteAgendaOn && (
@@ -53,7 +53,7 @@ export default function V2Performance() {
       )}
 
       {athleteAgendaOn && tab === 'jogos' ? <MyGamesPanel /> : <StatsPanel />}
-    </div>
+    </V2Page>
   );
 }
 

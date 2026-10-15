@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { V2Skeleton, V2Page } from '@/v2/ui/primitives';
 
 // A Minha área baixa só quando a pessoa abre o perfil.
 const UserArea = lazy(() => import('@/v2/components/userArea/UserArea'));
@@ -10,7 +10,7 @@ const UserArea = lazy(() => import('@/v2/components/userArea/UserArea'));
  */
 export default function V2Profile() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>}>
+    <Suspense fallback={<div><V2Skeleton className="h-64 rounded-4xl" /></div>}>
       <UserArea />
     </Suspense>
   );

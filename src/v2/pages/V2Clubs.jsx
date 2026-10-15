@@ -15,7 +15,7 @@ import {
   V2SearchInput,
   V2SectionHeader,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -45,7 +45,7 @@ export default function V2Clubs() {
   }, [regional]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Clubes')}
         subtitle={t('Descubra clubes, crie o seu e organize sua turma.')}
@@ -118,7 +118,7 @@ export default function V2Clubs() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 

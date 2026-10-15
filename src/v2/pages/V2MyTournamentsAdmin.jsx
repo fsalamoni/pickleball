@@ -11,7 +11,7 @@ import { Trophy, Settings2, Eye, Plus } from 'lucide-react';
 import { useMyManagedTournaments } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t, fmtData } from '@/core/i18n';
 
 function whenText(tt) {
@@ -31,10 +31,10 @@ export default function V2MyTournamentsAdmin() {
   if (!consoleOn) return <Navigate to="/perfil" replace />;
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-5">
+    <V2Page className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink">{userHubOn ? t('Torneios que organizo') : t('Meus torneios')}</h1>
+          <h1 className={PAGE_TITLE}>{userHubOn ? t('Torneios que organizo') : t('Meus torneios')}</h1>
           <p className="mt-1 text-sm text-gray-500">{t('Gerencie os torneios que você criou.')}</p>
         </div>
         <V2Button asChild size="sm">
@@ -91,6 +91,6 @@ export default function V2MyTournamentsAdmin() {
           })}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

@@ -105,7 +105,7 @@ function FavoritesPage() {
   }
 
   return (
-    <V2Page largura="larga" className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader categorias={false} />
       <V2PageIntro title={t('Salvos')} subtitle={ids.length ? tn(ids.length, '{n} anúncio guardado', '{n} anúncios guardados') : undefined} />
       <MarketTabs grupo="salvos" ativo="favoritos" />

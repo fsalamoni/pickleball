@@ -29,7 +29,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   V2Badge, V2Button, V2Surface,
-  V2ErrorState, V2BackLink, V2Skeleton,
+  V2ErrorState, V2BackLink, V2Skeleton, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, tn, tk } from '@/core/i18n';
@@ -105,29 +105,29 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4 p-6" aria-busy="true" aria-label={t('Carregando a arena')}>
+      <V2Page className="space-y-4" aria-busy="true" aria-label={t('Carregando a arena')}>
         <V2Skeleton className="h-8 w-2/3" />
         <V2Skeleton lines={4} />
-      </div>
+      </V2Page>
     );
   }
   if (!arena && arenaFalhou) {
     return (
-      <div className="mx-auto max-w-[720px] p-6">
+      <V2Page>
         <V2ErrorState
           title={t('Não foi possível abrir a configuração da arena')}
           description={t('A conexão falhou no meio do caminho. O que você já configurou continua salvo — tente de novo.')}
           onRetry={() => recarregarArena()}
         />
-      </div>
+      </V2Page>
     );
   }
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[720px] p-6">
+      <V2Page>
         <p className="text-sm text-gray-500">{t('Arena não encontrada.')}</p>
         <Link to="/arenas" className="mt-3 inline-block text-sm font-semibold text-ink underline">{t('Voltar às arenas')}</Link>
-      </div>
+      </V2Page>
     );
   }
 
@@ -232,7 +232,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
   };
 
   return (
-    <div className="mx-auto max-w-[720px] px-4 py-8">
+    <V2Page>
       <V2BackLink to="/arenas" className="mb-5">{t('Voltar às arenas')}</V2BackLink>
 
       <V2Surface className="p-6 md:p-8">
@@ -308,7 +308,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
           </div>
         )}
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }
 

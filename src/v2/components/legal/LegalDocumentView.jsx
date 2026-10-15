@@ -28,7 +28,7 @@ export default function LegalDocumentView({ doc, action }) {
   const meta = `${PLATFORM_NAME} · ${t('Versão {versao} — vigente desde {data}.', { versao: doc.version, data: formatDate(doc.effectiveDate) })}`;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div>
       {traduzido && (
         <div className="mb-4 flex flex-wrap items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <Languages className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

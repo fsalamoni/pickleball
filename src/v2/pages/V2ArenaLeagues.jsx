@@ -35,7 +35,7 @@ import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { sortHouseTournaments } from '@/modules/arenas/domain/houseTournaments';
 import HouseRankingPanel from '@/v2/components/arenas/houseRanking/HouseRankingPanel';
 import { HouseTournamentRow } from '@/v2/components/arenas/tournaments/HouseTournamentsSection';
-import { V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 function TorneiosDaCasa({ arena, podeGerir }) {
@@ -90,17 +90,17 @@ export default function V2ArenaLeagues() {
   if (naGestao) return <Navigate to={`/arenas/${arenaId}/gerir?aba=torneios`} replace />;
 
   if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
   if (!arena && isError) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2ErrorState
           title={t('Não foi possível abrir os torneios da arena')}
           description={t('A conexão falhou no meio do caminho. A arena continua lá — tente de novo.')}
           onRetry={() => refetch()}
         />
-      </div>
+      </V2Page>
     );
   }
   if (!arena) return <Navigate to="/arenas" replace />;
@@ -111,10 +111,10 @@ export default function V2ArenaLeagues() {
   const comRanking = isOn(ARENA_MODULE_ID.LEAGUES);
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-4">
+    <V2Page className="space-y-4">
       <div className="mb-2">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+        <h1 className={PAGE_TITLE}>
           {comRanking ? t('Torneios e ranking da casa') : t('Torneios da casa')}
         </h1>
         <p className="mt-2 font-medium text-gray-500">
@@ -133,6 +133,6 @@ export default function V2ArenaLeagues() {
 
       {comRanking && <div id="ranking" className="scroll-mt-4"><HouseRankingPanel arena={arena} audience="public" /></div>}
       <TorneiosDaCasa arena={arena} podeGerir={podeGerir} />
-    </div>
+    </V2Page>
   );
 }

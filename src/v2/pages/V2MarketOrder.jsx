@@ -36,6 +36,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
   V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
@@ -481,7 +482,7 @@ function OrderPage() {
   else if (!order || !role) {
     corpo = (
       <V2Surface className="text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">{t('Pedido não disponível')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Pedido não disponível')}</h1>
         <p className="mt-2 text-gray-500">{t('Este pedido não existe ou não é da sua conta. Confira se entrou com a conta certa.')}</p>
         <Link to="/mercado/pedidos" className="mt-4 inline-flex font-bold text-ink underline">{t('Ver minhas compras')}</Link>
       </V2Surface>
@@ -506,7 +507,7 @@ function OrderPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{role === 'seller' ? t('Venda') : role === 'admin' ? t('Moderação') : t('Compra')} · {order.code}</p>
-                <h1 className="font-display text-2xl font-bold text-ink">{ORDER_STATUS_LABELS[order.status] ? t(ORDER_STATUS_LABELS[order.status]) : order.status}</h1>
+                <h1 className={PAGE_TITLE}>{ORDER_STATUS_LABELS[order.status] ? t(ORDER_STATUS_LABELS[order.status]) : order.status}</h1>
                 <p className="text-sm text-gray-500">{role === 'seller' ? t('Para {nome}', { nome: order.buyer_name }) : role === 'admin' ? t('{comprador} comprou de {vendedor}', { comprador: order.buyer_name, vendedor: order.seller_name }) : t('De {nome}', { nome: order.seller_name })} · {dataHora(order.placed_at_ms)}</p>
               </div>
               <V2Badge tone={statusTone(order.status)}>{order.source === 'offer' ? t('Pela oferta') : fulfillmentLabel(order.fulfillment)}</V2Badge>
@@ -607,7 +608,7 @@ function OrderPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       {/* Quem vende está no ambiente de vendas: sem a busca e o carrinho de quem compra. */}
       {role !== 'seller' && role !== 'admin' && <MarketHeader categorias={false} />}
       <V2BackLink to={voltar}>{role === 'seller' ? t('Painel de vendas') : role === 'admin' ? t('Painel admin') : t('Minhas compras')}</V2BackLink>

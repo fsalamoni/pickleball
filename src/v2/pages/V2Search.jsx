@@ -15,7 +15,7 @@ import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useClubs } from '@/modules/clubs/hooks/useClubs';
 import { searchAll } from '@/modules/athletes/domain/globalSearch';
 import {
-  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface,
+  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -57,7 +57,7 @@ export default function V2Search() {
   if (!enabled) return <Navigate to="/atletas" replace />;
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2PageIntro title={t('Buscar')} subtitle={t('Atletas, torneios, arenas e clubes num só lugar.')} />
 
       <div className="mb-5 max-w-lg">
@@ -122,6 +122,6 @@ export default function V2Search() {
           })}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
