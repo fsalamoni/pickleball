@@ -774,7 +774,7 @@ export default {
   "Padrões de fábrica": "Factory defaults",
   "Página": "Page",
   "Página de debug exclusiva do owner.": "Owner-only debug page.",
-  "Painel Admin": "Admin Panel",
+  "Painel Admin": "Admin panel",
   "Painel admin → Governança → Acessos": "Admin panel → Governance → Access",
   "para confirmar": "to confirm",
   "Para cortar na hora, use": "To cut it off immediately, use",
