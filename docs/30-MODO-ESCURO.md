@@ -6,8 +6,10 @@
 > dados."*
 
 Cada pessoa escolhe a aparência: **Claro** (o visual de sempre), **Escuro** ou
-**Automático** (acompanha o aparelho). Flag `dark_mode`, **default OFF** —
-desligada, todo mundo vê o claro de sempre, pixel a pixel.
+**Automático** (acompanha o aparelho). Nasceu atrás da flag `dark_mode`
+(default OFF — desligada, todo mundo via o claro de sempre, pixel a pixel).
+
+> **Estado (2026-10-15):** incorporada — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico.
 
 **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou migração. A
 escolha fica no navegador, por usuário.

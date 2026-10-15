@@ -16,12 +16,13 @@ isto roda) e `docs/38-GAMIFICACAO-V2.md` (as missões).
 
 | Chave | Quem liga | O que faz |
 |---|---|---|
-| `game_debrief` (feature flag, default OFF) | admin da plataforma | a funcionalidade existe. **Só vale com `training_center` ligada** (`useGameDebriefAvailable`) |
+| `game_debrief` — incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada, assim como `training_center`) | ninguém — é código | a funcionalidade existe para todos (`useGameDebriefAvailable` devolve sempre `true`) |
 | `training_meta/{uid}.debrief = { enabled, since }` | cada pessoa | ela quer o balanço. `since` é o dia em que ligou: **só jogos desse dia em diante pedem balanço** (ligar não cobra o passado) |
 
-Desligada a flag, nada aparece: nem aba, nem cartão no início, nem
-configuração, nem missão, nem artigo de ajuda. Desligado pela pessoa, a aba
-Balanço só explica e oferece "Ligar para mim".
+Enquanto era flag, desligada nada aparecia (nem aba, nem cartão no início,
+nem configuração, nem missão, nem artigo de ajuda); hoje a chave que decide é
+só a da pessoa. Desligado pela pessoa, a aba Balanço só explica e oferece
+"Ligar para mim".
 
 Onde se liga: **Configurações → Balanço do jogo** (`#balanco-do-jogo`) ou a
 própria aba **Treino → Balanço** (`/treino?aba=balanco`).

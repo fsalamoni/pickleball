@@ -13,7 +13,7 @@
 | Categoria | Campos | Onde | Sensível? |
 |---|---|---|---|
 | **Identificação** | `full_name`, `platform_name`, `uid`, `photo_url` | `users`, `athlete_profiles` | não |
-| **Contato** | `email`, `phone`, `address` | `users`, `athlete_profiles` (com opt-in), `tournament_registrations` ⚠, `tournament_admins` ⚠, `audit_logs` | não, mas alto risco |
+| **Contato** | `email`, `phone`, `address` | `users`, `athlete_profiles` (com opt-in), `tournament_registrations/{rid}/private/contact`, `provisional_claims`, `club_join_requests`, `club_member_invites`, `market_addresses`, `audit_logs` (ver §1.1) | não, mas alto risco |
 | **Dado de menor** | `birth_date` de < 18 anos | `users` | ⚠ **sim** (LGPD art. 14) |
 | **Data de nascimento** | `birth_date` | `users` (`athlete_profiles` guarda só `age` ✅) | não, mas identificador forte |
 | **Gênero** | `gender`, `competition_gender` | `users`, `athlete_profiles`, `tournament_registrations` ⚠ | contextualmente sim |
@@ -34,6 +34,28 @@ convicção religiosa, opinião política, filiação sindical, orientação sex
 > dado sensível exige base legal específica (art. 11) e controles maiores.
 > Decidir isso conscientemente, nunca por acúmulo acidental.
 
+### 1.1 Onde mora o contato HOJE (conferido no código e no `firestore.rules`, 2026-10-15)
+
+**P1-01 resolvido** (2026-09-09): `tournament_admins` e `club_members` não
+gravam mais e-mail (guarda `src/modules/clubs/domain/memberPayload.test.js`).
+**P0-02 contido** (2026-09-09): inscrição nova não grava e-mail no documento
+público. Nos dois casos, documentos ANTIGOS ainda podem carregar o campo até a
+migração destrutiva (`19-PENDENCIAS.md`, itens 2 e 3).
+
+| Coleção | Campos pessoais | Quem lê (regra) |
+|---|---|---|
+| `users/{uid}` | e-mail, telefone, nascimento, endereço | o titular e o admin da plataforma |
+| `tournament_registrations/{rid}/private/contact` | `player_a_email`, `player_b_email` | admin da plataforma, organizador do torneio e as partes da inscrição (`isRegistrationParty`) |
+| `provisional_claims/{rid}_{a\|b}` | `email_lc` (prova de inscrição provisória) | admin da plataforma e quem tem aquele e-mail no token |
+| `club_join_requests`, `club_member_invites` | `user_email` | o próprio usuário, o admin do clube e o admin da plataforma |
+| `athlete_profiles/{uid}` | telefone, e-mail, endereço **só com opt-in** (`*_public`), gravados vazios sem ele por `buildAthletePublicProfile` | qualquer conta logada — o opt-in é aplicado pelo cliente; a regra não o confere |
+| `market_addresses/{uid}` | endereço de entrega | só o titular (`get`) |
+| `audit_logs` | e-mail e nome do ator e do alvo | só o admin da plataforma |
+
+Sem e-mail (só nome público, que na falta de nome é a parte antes do `@` —
+P1-02): `tournament_registrations` (documento novo), `tournament_admins`,
+`club_members`, `tournaments.creator_name`.
+
 ## 2. Registro por coleção — as que contêm dado pessoal
 
 Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
@@ -41,11 +63,11 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 
 | Coleção | Dado pessoal | Exposição | Base legal | Retenção proposta | Achado |
 |---|---|---|---|---|---|
-| `users` | nome, e-mail, telefone, **nascimento**, endereço, gênero | 🔒 | execução de contrato (art. 7º, V) | conta ativa + 6 meses | **P0-01** ⚠ |
+| `users` | nome, e-mail, telefone, **nascimento**, endereço, gênero | 🔒 | execução de contrato (art. 7º, V) | conta ativa + 6 meses | **P0-01** ✅ corrigido |
 | `athlete_profiles` | nome, cidade, idade, gênero, nível; contato **só com opt-in** ✅ | 🔓 | legítimo interesse / consentimento | enquanto listado | P2-01 |
-| `tournament_registrations` | nome, **e-mail**, gênero | 🌍 | execução de contrato | histórico esportivo: permanente (nome), e-mail: 0 | **P0-02** ⚠ |
-| `tournament_admins` | **e-mail**, nome | 🔓 | execução de contrato | enquanto for admin | **P1-01** ⚠ |
-| `tournaments` | `creator_name` (pode ser e-mail) | 🌍 | execução de contrato | permanente | **P1-02** ⚠ |
+| `tournament_registrations` | nome, gênero (e-mail só em documento legado; o novo vai para `{rid}/private/contact` 🔒👥) | 🌍 | execução de contrato | histórico esportivo: permanente (nome), e-mail: 0 | **P0-02** 🟡 contido (falta a migração) |
+| `tournament_admins` | nome (e-mail só em documento legado) | 🔓 | execução de contrato | enquanto for admin | **P1-01** ✅ corrigido (falta a migração) |
+| `tournaments` | `creator_name` (nunca o e-mail completo) | 🌍 | execução de contrato | permanente | **P1-02** ✅ corrigido |
 | `audit_logs` | e-mail e nome do ator e do alvo | 🛡 | obrigação legal / legítimo interesse | **5 anos** (defesa) | P2-08 |
 | `legal_consents` | uid, doc, versão, data | 🔒 | prova do consentimento | 5 anos após revogação | ✅ |
 | `push_tokens` | token do dispositivo | 🔒 | consentimento | até revogar / 90d inativo | ✅ |
@@ -77,7 +99,7 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | Destino | O que sai | Base | Situação |
 |---|---|---|---|
 | **Google / Firebase** (Auth, Firestore, Storage, Functions, Hosting, FCM) | tudo | operador (art. 39) | ⚠ **transferência internacional** (servidores fora do BR, exceto a região SP das Functions). Exige cláusula na Política de Privacidade e contrato de operador. Ver `06-LGPD` §6 |
-| **DUPR** (exportação CSV — flag OFF) | nome, e-mail, resultados | consentimento | ⚠ documentar antes de ligar a flag |
+| **DUPR** (exportação CSV pelo admin — `dupr_match_export`, sempre ligada desde 2026-10-10) | nome, DUPR ID, uid como id externo, resultados (sem e-mail — `DUPR_CSV_HEADERS`) | consentimento | ⚠ documentar a transferência |
 | **Google Analytics / Performance** | uso (env `false` hoje ✅) | consentimento | desligado — se ligar, exige banner de cookies funcional |
 | **Parceiros/afiliados** (`affiliate_links`) | nenhum dado pessoal | — | ✅ só link |
 | **YouTube / Vimeo** (vídeo por link no Treino) | o IP de quem toca no vídeo | consentimento (o toque) | ✅ fachada: o player (`youtube-nocookie.com`, `player.vimeo.com`) só carrega quando a pessoa toca |

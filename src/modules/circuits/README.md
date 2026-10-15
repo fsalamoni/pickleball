@@ -19,8 +19,7 @@
 
 ## Hooks
 ```js
-import { useCircuits, useCircuit } from '@/modules/circuits/hooks/useCircuits';
-import { useCircuitRanking } from '@/modules/circuits/hooks/useCircuitRanking';
+import { useCircuits, useCircuit, useCircuitRanking } from '@/modules/circuits/hooks/useCircuits';
 ```
 
 ## Feature flag

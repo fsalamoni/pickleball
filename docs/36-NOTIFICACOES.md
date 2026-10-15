@@ -1,7 +1,10 @@
 # 36 — Notificações: o sino que rola e a central com os avisos antigos
 
 > Uma onda sobre as notificações. A correção do sino vale para todos; a central
-> de notificações nasce atrás da flag `notifications_center` (padrão OFF).
+> de notificações nasceu atrás da flag `notifications_center` (padrão OFF).
+> **Estado (2026-10-15):** `notifications_center` incorporada — sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou
+> desligar a flag é histórico.
 > **Banco: zero** — nenhuma coleção, campo, índice ou regra. A central lê a
 > mesma consulta do sino, e marcar lida ou não lida usa os campos de sempre
 > (`read`, `read_at`), que a regra já deixa o dono escrever.

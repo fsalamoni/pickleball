@@ -1,7 +1,7 @@
 # Onda 7 — A chegada: totem, presença e falta medida
 
 > **Módulo**: `iot_qr_kiosk` (BETA no catálogo, depende de `iot`).
-> **Chave-mestra**: flag `arena_modules` (default OFF).
+> **Chave-mestra**: `arena_modules` — incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 > **Banco**: zero coleção, zero índice, **zero regra** — e 6 asserções novas no
 > emulador provando exatamente isso.
 

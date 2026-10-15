@@ -1,7 +1,6 @@
 # 41 — Minha área (flag `user_hub`)
 
-> Flag `user_hub` — **padrão DESLIGADA**. Desligada, `/perfil` é o perfil de
-> sempre, e os rótulos da navegação dizem "Meu perfil" e "Meus torneios".
+> **Estado (2026-10-15):** incorporada (`user_hub`) — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico.
 > Domínio: `src/modules/athletes/domain/userArea.js` (+ teste).
 > Telas: `src/v2/components/userArea/` (`UserArea`, `UserAreaSections`,
 > `ProfileShowcase`), montadas por `src/v2/pages/V2Profile.jsx`.

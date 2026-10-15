@@ -19,6 +19,10 @@
 >
 > Grupos no painel: `personalized_home` em **Engajamento**; as duas de
 > divulgação num grupo próprio, **Campanhas e cupons (plataforma e professores)**.
+>
+> **Estado (2026-10-15):** as três (e `home_cards`) estão incorporadas — sempre
+> ligadas (`PERMANENT_FEATURE`) desde 2026-10-10, fora do painel; o texto abaixo
+> que fala em ligar ou desligar a flag é histórico.
 
 ---
 

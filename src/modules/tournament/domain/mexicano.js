@@ -22,7 +22,7 @@
  * calculada a partir do placar dos jogos (independe da config de pontuação).
  */
 
-import { seededRng, shuffle } from './draw.js';
+import { seededRng, shuffle } from './drawPrimitives.js';
 import { t } from '@/core/i18n';
 
 const COURT_SIZE = 4;

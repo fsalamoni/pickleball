@@ -5,6 +5,15 @@
 > **nada disso existe**. Prometer direito que não se entrega é, por si,
 > descumprimento — e é o achado P2-04.
 
+> **Estado (2026-10-15) — o que existe HOJE, conferido no código:**
+>
+> | Direito | Situação |
+> |---|---|
+> | Exportação (portabilidade) | ✅ **Configurações → "Baixar meus dados"** (`V2Settings.jsx`): o navegador monta um JSON (`buildDataExport`, `athletes/domain/dataExport.js`) com o perfil (`users/{uid}`), as inscrições em torneio, as reservas, metas e Centro de Treino (`trainingExportService`) e o Mercado (`marketExportService`). Sem função de servidor e sem fila; o que não carregou vai escrito no arquivo como faltando. Não cobre todas as categorias do §3 |
+> | Exclusão de conta | 🟡 **Não há autoatendimento** — nenhum botão "Excluir minha conta". A pessoa pede pelo e-mail do encarregado (texto da Central de Ajuda) e o admin executa em Painel admin → Comunidade → Cadastros → Excluir, pela função `adminDeleteAccounts` (`functions/accountDeletion.js`; prévia do servidor, só o dono executa). A tabela do §4 é a que essa função aplica — ver `18-CADASTROS-ADMIN.md` §Excluir |
+> | Correção | a própria pessoa edita o perfil; o admin corrige em Cadastros (`18-CADASTROS-ADMIN.md`) |
+> | Tela `/perfil/privacidade`, "Excluir minha conta" com 7 dias de arrependimento, formulário `data_subject_requests` (prazo de 15 dias) e canal do encarregado na tela | 📐 **desenho, não construído** (§2, §4 "Fluxo", §5) |
+
 ## 1. Os direitos (art. 18) e como atender cada um
 
 | # | Direito | Como atender | Onde | Prazo |

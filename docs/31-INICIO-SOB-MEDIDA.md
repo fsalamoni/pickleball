@@ -12,6 +12,10 @@
 > `personalized_home` desligada, `/` segue a tela clássica e nada disto existe.
 > Com `home_cards` desligada, o início personalizado segue decidindo sozinho,
 > exatamente como na Onda CG.
+>
+> **Estado (2026-10-15):** `home_cards` e `personalized_home` incorporadas —
+> sempre ligadas (`PERMANENT_FEATURE`) desde 2026-10-10; o texto que fala em
+> ligar ou desligar essas flags é histórico.
 
 ---
 

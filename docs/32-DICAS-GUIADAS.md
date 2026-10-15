@@ -11,6 +11,10 @@
 > Uma flag nova, **default OFF**: `guided_tips` (grupo novo **Ajuda e dicas**,
 > ao lado de `help_center`). Desligada, **nada muda**: nem o botão aparece, e
 > os tutoriais seguem abrindo sozinhos na primeira vez, como sempre.
+>
+> **Estado (2026-10-15):** `guided_tips` incorporada — sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10; o texto que fala em ligar ou desligar
+> a FLAG é histórico. O interruptor de dicas de cada pessoa segue valendo.
 
 ---
 

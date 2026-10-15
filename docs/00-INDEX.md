@@ -37,7 +37,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 |---|---|---|
 | 0 | [`../CLAUDE.md`](../CLAUDE.md) | Guia-mestre: princípios, mapa "onde está X", checklist de entrega. |
 | 1 | [`01-AI-CONTEXT.md`](./01-AI-CONTEXT.md) | Panorama: o que é, stack, perfis, rotas, dados, deploy. Uma leitura e você está orientado. |
-| 2 | [`46-INVENTARIO.md`](./46-INVENTARIO.md) | ⚙️ **Gerado do código**: o que existe hoje (módulos, rotas, coleções, índices, funções, flags). |
+| 2 | [`46-INVENTARIO.md`](./46-INVENTARIO.md) | ⚙️ **Gerado do código**: o que existe hoje (módulos e **quem depende de quem**, rotas, coleções, índices, funções, flags). |
 | 3 | [`04-ARCHITECTURE.md`](./04-ARCHITECTURE.md) | Camadas, estado, erros, PWA, testes, CI/CD. |
 | 4 | [`02-STANDARDS.md`](./02-STANDARDS.md) | Como codar (flags, domain/service/hook, JSDoc, i18n, testes, documentação). |
 | 5 | [`03-WORKFLOW.md`](./03-WORKFLOW.md) | Git, PR, GitHub Actions, deploy Firebase, Cloud Functions. |
@@ -86,6 +86,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Doc | Conteúdo |
 |---|---|
 | [`09-UX-ANALYSIS/`](./09-UX-ANALYSIS/00-README.md) | Auditorias UX/UI por persona. [`15-backlog-remanescente.md`](./09-UX-ANALYSIS/15-backlog-remanescente.md) = backlog consolidado. |
+| [`HISTORICO-POR-ONDA.md`](./HISTORICO-POR-ONDA.md) | O que cada onda de entrega mudou e o defeito real que a motivou (saiu do `CLAUDE.md` §10). História: números e flags da época. |
 | [`AUDIT-2026-09-28.md`](./AUDIT-2026-09-28.md) | Relatório de auditoria geral. |
 | [`11-REFERENCE/`](./11-REFERENCE/cheatsheet.md) | Cheatsheet, glossário, FAQ. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativar push (PWA + FCM). |
@@ -108,5 +109,7 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Fluxo de dia de jogo / torneio / arena | o doc temático da §5; e o tutorial/guia/ajuda (`19`, `21`, `32`) |
 | Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
 | Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |
+| Fronteira entre camadas ou módulos (imports) | `04-ARCHITECTURE.md` §1.1a; o guarda `fronteirasDeModulos` reprova o que cruzar |
+| Entrega que vale registrar como história | uma entrada em `HISTORICO-POR-ONDA.md` |
 | Novo princípio ou armadilha aprendida | `CLAUDE.md` §2/§4 |
 | Doc novo | linha neste índice |

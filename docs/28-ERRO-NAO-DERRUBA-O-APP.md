@@ -30,7 +30,8 @@ torneio perde o lugar onde estava porque uma aba quebrou.
 `GamificationErrorBoundary` faz exatamente o que precisa ser feito: isola a
 rota, mostra um recado amigável, oferece "tentar de novo", e o resto da
 plataforma segue de pé. Só que ele era usado em **cinco rotas de
-gamificação** — que estão atrás da flag `gamification_v2`, **desligada**.
+gamificação** — que estavam atrás da flag `gamification_v2`, então
+**desligada** (incorporada, sempre ligada, desde 2026-10-10).
 
 É a mesma família do defeito da Onda AU (a entrada direta montada no ramo onde
 nunca renderizava): a ferramenta certa, construída, testada e guardada onde

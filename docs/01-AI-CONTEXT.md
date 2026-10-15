@@ -20,7 +20,7 @@ redireciona). UI e textos em **pt-BR**, com inglês e espanhol atrás da flag
 
 ## 2. Stack
 
-- **React 18 + Vite**, JSX com JSDoc (sem TypeScript; `npm run typecheck`).
+- **React 18 + Vite**, JSX com JSDoc (sem TypeScript; os tipos JSDoc são documentação — `checkJs` está desligado).
 - **Tailwind + shadcn/ui** (Radix, `src/components/ui/`) e primitivos próprios
   em `src/v2/ui/`. Modo escuro por paleta (`docs/30-MODO-ESCURO.md`).
 - **Firebase**: Auth (Google, Apple, e-mail/senha), **Firestore** (banco
@@ -191,7 +191,7 @@ default OFF, aditiva.** Contagem atual: `docs/46-INVENTARIO.md` §8.
 npm run dev            # Vite (http://localhost:5173)
 npm run lint           # ESLint — 0 errors
 npm test               # Vitest
-npm run typecheck      # JSDoc
+npm run typecheck      # sintaxe e resolução (tipos JSDoc não verificados)
 npm run build          # produção (VITE_PWA_ENABLED=true liga o PWA)
 npm run docs:inventario  # regenera docs/46-INVENTARIO.md
 npm run e2e            # Playwright

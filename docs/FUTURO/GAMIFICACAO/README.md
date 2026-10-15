@@ -16,13 +16,13 @@
 
 ## 0. Estado em uma linha
 
-A **Gamificação V2 está em produção desde o PR #115**, atrás da flag
-`gamification_v2` com **default OFF**. Com a flag desligada — que é o estado
-atual — a plataforma se comporta exatamente como antes: nenhuma rota nova
-aparece, nenhum documento é criado, nenhuma coleção é lida.
+A **Gamificação V2 está em produção desde o PR #115**. Nasceu atrás da flag
+`gamification_v2` (default OFF); **desde 2026-10-10 está incorporada — sempre
+ligada (`PERMANENT_FEATURE`)**. O estado atual está em `docs/38-GAMIFICACAO-V2.md`;
+o que segue abaixo é o registro do desenho.
 
-Ou seja: **o alicerce está pronto e ligado só quando você quiser.** O que falta
-é o que o estudo chama de "camada de produto" — as mecânicas que dependem de
+Ou seja: **o alicerce está pronto.** O que faltava, no desenho,
+era o que o estudo chama de "camada de produto" — as mecânicas que dependem de
 decisão editorial, de conteúdo e de calibragem, não de código de base.
 
 ---

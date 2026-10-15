@@ -1,7 +1,7 @@
 # 33 — Cadastro essencial: o que o sorteio e a busca por perto precisam
 
-> Flag `essential_profile` (default OFF). Desligada, o cadastro segue como
-> estava. Zero banco: todos os campos já existiam no perfil.
+> **Estado (2026-10-15):** incorporada (`essential_profile`) — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico.
+> Zero banco: todos os campos já existiam no perfil.
 
 ## O pedido
 

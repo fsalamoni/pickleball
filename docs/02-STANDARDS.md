@@ -58,8 +58,12 @@ components/  UI específica do módulo
 ```
 
 **Regra: dependência flui só para baixo** (`pages → hooks → services → domain`).
-Componentes **nunca** chamam Firestore direto. Services **nunca** importam React.
-Domain **nunca** importa services ou hooks.
+Tela nova **nunca** chama Firestore direto (8 telas antigas ainda chamam e
+estão numa lista que só diminui). Services **nunca** importam React. Domain
+**nunca** importa Firebase, React, services, hooks nem componentes. Import em
+círculo é proibido. Tudo isso é conferido pelo guarda
+`src/core/guards/fronteirasDeModulos.test.js` — ver `docs/04-ARCHITECTURE.md`
+§1.1a. Quem usa o seu módulo: `docs/46-INVENTARIO.md` §3.1.
 
 ### 1.3 Naming conventions
 
@@ -81,7 +85,7 @@ Domain **nunca** importa services ou hooks.
 - **JSX puro**, sem TypeScript
 - **JSDoc typedefs** compartilhados em `src/core/domain/types.js`
 - Tipos de domínio específicos: em `src/modules/X/domain/types.js` quando necessário
-- Rodar `npm run typecheck` antes de commit
+- `npm run typecheck` hoje confere só sintaxe e resolução (`checkJs: false` no `jsconfig.json`): os tipos JSDoc **não** são verificados. Ligar `checkJs` é dívida conhecida (ver `docs/04-ARCHITECTURE.md` §11)
 
 ```js
 /**

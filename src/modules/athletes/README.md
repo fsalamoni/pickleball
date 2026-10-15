@@ -16,7 +16,7 @@ Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
 ## Hooks
 ```js
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { useAthlete } from '@/modules/athletes/hooks/useAthlete';
+import { useAthlete } from '@/modules/athletes/hooks/useAthletes';
 ```
 
 ## Onde achar mais

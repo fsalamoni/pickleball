@@ -496,10 +496,12 @@ função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field
 
 ### `platform_settings/{docId}`
 Leitura pública; escrita só do admin da plataforma. Singletons:
-`global.feature_flags.{key}` (valores de `FEATURE_FLAG`),
-`app_version`, `flags_migration_version`, etc. Migração em
-`migrateLegacyFlags` (bump `FLAGS_MIGRATION_VERSION` ao adicionar
-defaults novos).
+`global` (`feature_flags.{key}` — valores das flags de `FEATURE_FLAG` — e
+`inicio.promocoes`), `arena_modules`, `gamification`, `marketplace`,
+`training` e `ranking_worker` (este escrito pelo servidor). Não há migração de
+flags: `normalizeFeatureFlags` lê só as chaves de `FEATURE_FLAG` (ausente ⇒
+`false`), ignora as desconhecidas — inclusive as chaves antigas das
+funcionalidades incorporadas — e as de `PERMANENT_FEATURE` valem sempre `true`.
 
 ## Professores (Sprint 4 PRO-15 + Ondas 8/7b)
 
@@ -641,7 +643,7 @@ Mesmo schema de `tournament_matches` + campos extras:
   um jogo por set). Um set só: tudo como antes, sem `set_scores`.
 - `kind: 'singles'|'doubles'`, `result_recorded_at`.
 
-O **Dia de jogo do atleta** (`game_days`, flag `athlete_game_day`) reaproveita
+O **Dia de jogo do atleta** (`game_days`, sempre ligado) reaproveita
 esta MESMA coleção: `source='athlete_game_day'`, `event_id = game_day_id`,
 `date_id = 'main'`, id determinístico `gd_${gameDayId}_${gameId}` e `club_id`
 **resolvido por partida** (o clube comum a TODOS os atletas, ou `null`). Assim os
@@ -652,7 +654,7 @@ Regras: `firestore.rules` — read público; create/update/delete apenas
 criador do evento do clube, dono do dia de jogo do atleta
 (`isGameDayOwnerOf`), admin do clube + platform admin.
 
-### `game_days/{id}` (flag `athlete_game_day`)
+### `game_days/{id}`
 Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube dono).
 - `created_by`, `creator_name`, `creator_photo`
 - `title`, `visibility: 'public'|'private'`, `date`, `time`, `location`,
@@ -673,8 +675,8 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 
 #### Campos dos GRUPOS DO PLAY (**opcionais, aditivos** — flag `play_groups`)
 
-Só no formato Play. **Ausentes, o Play segue uma fila única**, e com a flag
-desligada os grupos gravados são ignorados em toda a plataforma. Zero coleção e
+Só no formato Play. **Ausentes, o Play segue uma fila única** (`play_groups`
+está incorporada desde 2026-10-10 — sempre ligada). Zero coleção e
 zero índice; uma única cláusula de regra, para o administrador nomeado (abaixo).
 Guarda em `src/core/guards/playGrupos.test.js`.
 - `play_groups[]` (até 10) — `{ id, name, color, level_min, level_max,
@@ -787,7 +789,7 @@ dia de jogo público. As subcoleções `participants` e `games` aceitam também
 escrita de quem `canManageGameDayOf(gdId)` — o criador, os `admin_uids` e, quando
 `manage_mode == 'participants'`, qualquer uid em `member_uids`.
 
-### `legal_consents/{uid_docKey}` (flag `legal_center` — id determinístico)
+### `legal_consents/{uid_docKey}` (id determinístico)
 Registro do aceite de um documento legal por um usuário. 1 doc por usuário ×
 documento, guardando a última versão aceita (histórico auditável em `audit_logs`).
 - `id = ${uid}_${docKey}`, `user_id`, `doc_key`, `doc_title`
@@ -907,7 +909,7 @@ torna a chave estável independentemente de quem foi lado A ou B.
 
 ### `player_skill_ratings/{userId_format}` (NOVO Onda G)
 Rating estilo DUPR (escala 2.000-8.000), **independente** do
-ELO. Flag `skill_rating_dupr` (default OFF). Coleção
+ELO. Sempre ligado (a antiga flag `skill_rating_dupr` virou código). Coleção
 **separada** do `player_ratings` (ELO).
 - `user_id`, `format` (`'singles' | 'doubles'`).
 - `rating: number` (2.0-8.0).
@@ -973,12 +975,12 @@ Não há coleções `tournament_team_*`. As equipes usam as coleções do tornei
 - Cada etapa espelha em `club_event_games` com `source: 'team_confrontation'`
   (entra no ELO e no DUPR individual).
 
-## Gamificação V2 (flag `gamification_v2`, default OFF)
+## Gamificação V2 (`gamification_v2` — incorporada, sempre ligada desde 2026-10-10)
 
 > Coleções da camada completa (prefs, grants de XP, hall, avaliações, reputação, cartas, desafios, duelos, recompensas, metas, integridade, métricas): ver `docs/38-GAMIFICACAO-V2.md` §3.
 
-> 13 coleções materializadas. Com a flag desligada nenhuma delas recebe
-> request — o schema V1 (`users/{uid}` XP/nível/conquistas) segue intacto.
+> 13 coleções materializadas. O schema V1 (`users/{uid}`
+> XP/nível/conquistas) segue intacto.
 >
 > **Vocabulário**: os nomes de tier e as 5 trilhas vêm do DOMÍNIO
 > (`src/modules/progression/domain/tiers.js` e `skillTrees.js`). O schema
@@ -1109,12 +1111,13 @@ exportação**. Id do doc = id da partida (`tournament_matches` ou
 está PRONTA (todos os jogadores com `dupr_id`), com `status` `pending`
 e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 
-## Coleções Arena V3 (sempre atrás de sub-flags `ARENA_MODULE_*`)
+## Coleções Arena V3 (liberadas por módulo — `docs/24-MODULOS-DE-ARENA/00-INDEX.md`)
 
 > 35+ coleções criadas pelos módulos Arena V3 (PDV, members, leagues,
 > marketing, IoT, operations, matchmaking). Detalhe completo em
-> `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md`. Cada módulo
-> controla o que está ativo via sub-flag.
+> `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md`. O que está ativo é
+> decidido por módulo: a plataforma libera (`platform_settings/arena_modules`)
+> e a arena ativa (`arena_module_states`) — não há mais sub-flags.
 
 **PDV**: `arena_sales`, `arena_payments` — os produtos são os do Mercado
 (`arena_inventory_products` com `sell_online`); `arena_products` é legado
@@ -1239,7 +1242,7 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     `sale_id`.
 **Settings**: `arena_settings`, `arena_module_states`.
 
-### `catalog_products/{id}` (flag `arena_product_catalog`)
+### `catalog_products/{id}` 
 
 Catálogo PADRÃO de produtos, **compartilhado por toda a plataforma** — as arenas
 puxam esses itens para o seu mercado (`arena_inventory_products`) e complementam
@@ -1274,8 +1277,8 @@ do catálogo/mercado: `catalog_id`, `subcategory`, `packaging`, `size`, `flavor`
 **Nenhuma coleção, campo, índice ou regra.** A aparência escolhida é
 conveniência de interface e mora no navegador: `v2:view:<uid>:aparencia:tema`
 (a escolha, por usuário, via `viewPreference`) e `picklerush:tema` (o espelho
-lido pelo script de `index.html` para pintar a primeira tela). A flag é a de
-sempre, em `platform_settings/global.feature_flags.dark_mode`. Ver
+lido pelo script de `index.html` para pintar a primeira tela). `dark_mode` está
+incorporada desde 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada). Ver
 `docs/30-MODO-ESCURO.md` §3.
 
 ## Início sob medida (Onda CI — `home_cards`)
@@ -1343,7 +1346,7 @@ Ausente = aula sem cupom (todas as antigas).
 
 **Índices**: nenhum. Todas as consultas são só de igualdades.
 
-## Centro de Treino (flag `training_center`, default OFF)
+## Centro de Treino (`training_center` — incorporado, sempre ligado desde 2026-10-10)
 
 Sete coleções NOVAS e um documento de configuração. Tudo aditivo; **zero
 índice composto** (todas as consultas são por igualdade ou `array-contains`,
@@ -1544,7 +1547,7 @@ do jogo aberto). `id`, `arena_id`, `user_id`, `date`, `start`, `end`,
 dono, gestor ou admin; não há update. Entrar avisa os gestores.
 
 #### `arena_market_reports/{arenaId}_{periodType}_{periodKey}`
-Fechamento financeiro do Mercado (flag `arena_market_reports`). `arena_id`,
+Fechamento financeiro do Mercado (sempre ligado). `arena_id`,
 `period_type`, `period_key`, `period_start`, `period_end`, `label`, `lines[]`,
 `totals`, `status`, `edited`, `generated_at`, `generated_by`, `updated_at`.
 Lê e escreve só gestor da arena ou admin.

@@ -1,8 +1,8 @@
 # 40 — Centro de Treino (flag `training_center`)
 
-> Flag `training_center` — **padrão DESLIGADA**. Desligada, nada aparece:
-> `/treino` volta para o início, o card do início, a seção do admin, os artigos
-> de ajuda e as dicas somem. Nenhuma tela antiga muda.
+> **Estado (2026-10-15):** `training_center` incorporada — sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou
+> desligar a flag é histórico.
 > Módulo: `src/modules/training/` (domínio, serviços, hooks, semente).
 > Telas: `src/v2/pages/V2Training*.jsx` e `src/v2/components/training/`.
 > Admin: `src/v2/components/admin/training/` (Painel admin → Treino).

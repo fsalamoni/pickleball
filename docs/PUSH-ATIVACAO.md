@@ -33,7 +33,8 @@ segue exatamente como está (nenhum token é registrado, nenhum push é enviado)
 3. **Deploy** — o push das regras (`push_tokens`) e da função
    (`pushOnNotificationCreate`) sai no deploy automático (push em `main`). O
    novo `firebase-messaging-sw.js` também vai junto (Firebase Hosting).
-4. **Ligar a flag** `push_notifications` em `/admin` → Funcionalidades.
+4. ~~Ligar a flag `push_notifications`~~ — não é mais preciso: incorporada em
+   2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 5. **Cada atleta** ativa em **Configurações → Notificações push** e concede a
    permissão do navegador.
 

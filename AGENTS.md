@@ -7,8 +7,8 @@
 > **Leia [`CLAUDE.md`](./CLAUDE.md)** — é o guia-mestre absoluto do
 > PickleRush.
 >
-> Conteúdo idêntico. Mantemos os dois arquivos em sincronia: qualquer
-> mudança em um deve ser replicada no outro.
+> Só a regra abaixo é repetida aqui; todo o resto vive apenas no
+> `CLAUDE.md`, para não haver duas versões divergindo.
 
 ---
 

@@ -82,10 +82,11 @@ Tailwind `emerald-*` → `green-*` em arenas.
 ## F
 
 **feature_flag** — Toggle runtime de feature. Definido em
-`core/featureFlags.js`. Default OFF. Default no Firestore em
-`platform_settings/global (campo feature_flags.{key})`. Ativado pelo admin em
-`/admin/console`. Migração em `migrateLegacyFlags` (bump
-`FLAGS_MIGRATION_VERSION`).
+`core/featureFlags.js` (`FEATURE_FLAG`). Default OFF. Valor no Firestore em
+`platform_settings/global (campo feature_flags.{key})`; ausente ⇒ desligada,
+sem migração (`normalizeFeatureFlags`). Ativado pelo admin em Painel admin →
+Funcionalidades (`/admin/painel?tab=flags`). As funcionalidades incorporadas em
+2026-10-10 viraram `PERMANENT_FEATURE` (sempre ligadas, fora do painel).
 
 **firebase** — Backend da plataforma: Auth, Firestore, Hosting, Storage,
 Cloud Functions. Projeto: `pickletour`. Database: `pickleball` (named).
@@ -148,7 +149,7 @@ Implementado em `modules/tournament/domain/mexicano.js`. Flag
 
 **navigation 2 níveis** — Padrão de UI: tab bar principal (sticky top-2)
 + sub-tab bar (sticky top-[68px]). Usado em `/arenas/:id/gerir`,
-`/admin/console`, etc.
+`/admin/painel`, etc.
 
 **NotFound** — Página 404 interna. Flag `not_found_page` (Onda 1).
 Rota `/404`. Substitui catch-all → `/`.
@@ -163,13 +164,13 @@ Rota `/404`. Substitui catch-all → `/`.
 1-10 (PRs #71 + #72). Cada uma com suas flags.
 
 **open_match** — Funcionalidade do Arena V3. User entra em uma lista
-e o sistema combina com outros. Flag `ARENA_MODULE_MATCHMAKING_OPEN_MATCH`.
+e o sistema combina com outros. Módulo de arena `matchmaking_open_match` (liberado pela plataforma e ativado pela arena — `docs/24-MODULOS-DE-ARENA/`).
 
 **OTP** — One-time password. Não usamos (login é Google).
 
 ## P
 
-**pages (V2)** — Telas em `src/v2/pages/V2Xxx.jsx`. 67 atualmente.
+**pages (V2)** — Telas em `src/v2/pages/V2Xxx.jsx`. Contagem em `docs/46-INVENTARIO.md`.
 Lazy-loaded via `React.lazy`.
 
 **partner_invites** — Convite mútuo entre professor ↔ arena. Onda 7
@@ -186,7 +187,7 @@ gateway).
 
 **platform_admin** — Papel global. `users/{uid}.role === 'platform_admin'`.
 Acessa `/admin/*`. Único papel que pode ativar/desativar flags em
-runtime via `/admin/console`.
+runtime via `/admin/painel`.
 
 **pricing rule** — Regra de preço recorrente. `arenas/{id}.price_rules[]`.
 Campos: `weekdays[]`, `start`, `end`, `price`, `court_id?` (opcional).
@@ -231,7 +232,7 @@ negócio pesada (vai em `domain/`).
 **shadcn/ui** — Componentes Radix. Usados em `src/components/ui/`.
 V2 tem seus próprios primitivos (`src/v2/ui/primitives.jsx`).
 
-**shell** — Layout base. `V2Shell` (V2) com header, nav, content area.
+**shell** — Layout base. `V2Layout` (`src/v2/components/V2Layout.jsx`) com cabeçalho, navegação e área de conteúdo; a página vai dentro de `<V2Page>`.
 
 **smoke test** — Teste manual rápido do fluxo principal. Feito antes de
 PR, em dev, com dados mockados ou reais.
@@ -246,7 +247,7 @@ deploy de UI). Auto-unregister sempre. Reload deferido (lição sw-v73.3).
 **template (de torneio)** — Torneio marcado como modelo para duplicar.
 `templates: bool` em `tournaments/{id}`. Onda 5.
 
-**Telão** — TV mode fullscreen. Flag `tournament_tv_mode` (Onda 4).
+**Telão** — TV mode fullscreen. Sempre ligado (a antiga flag `tournament_tv_mode` virou código). Rota `/torneios/:id/telao`.
 Rota `/torneios/:id/telao`.
 
 **test/runtime** — Teste de renderização de componente. `*.runtime.test.jsx`.
@@ -271,7 +272,7 @@ tipografia. Ver `07-DESIGN-STANDARD.md`.
 **V1** — Camada legada (`src/pages/`, `src/components/`). Em desuso,
 mantida só para `PublicTournament` (`/p/:id`) e `PrintTournament`.
 
-**V2** — Camada ativa (`src/v2/`). "Athleisure Premium". 67 pages.
+**V2** — Camada ativa (`src/v2/`). "Athleisure Premium". dezenas de telas (contagem em `docs/46-INVENTARIO.md`).
 Padrão visual: ink/acid/paper, Outfit/Inter, V2* primitives.
 
 **vinculado (clube)** — Clube vinculado a professor ou arena. Aparece

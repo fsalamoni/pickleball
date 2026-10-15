@@ -31,11 +31,34 @@ components/  UI específica do módulo
 README.md    visão, schema, hooks e fluxos do módulo
 ```
 
-Regra: a dependência flui só para baixo (`telas → hooks → services → domain`).
-Componente nunca chama Firestore direto; service nunca importa React; domain
-nunca importa service nem hook. Regra de negócio (pontuação, sorteio, ranking,
+Regra: a dependência flui só para baixo (`telas → hooks → services → domain`,
+e tudo pode usar `core`). Regra de negócio (pontuação, sorteio, ranking,
 agendamento, elegibilidade) mora em `domain/` e é testada. A lista de módulos
 está em `docs/46-INVENTARIO.md`; o mapa funcional em `docs/06-MODULES.md`.
+
+### 1.1a Fronteiras conferidas no código
+
+Estas regras **não dependem de disciplina**: o guarda
+`src/core/guards/fronteirasDeModulos.test.js` reprova no `npm test` (e no CI)
+quem as cruzar. O grafo de imports vem de `src/core/guards/grafoDeImports.js`,
+a mesma fonte do inventário.
+
+| Regra | Estado em 2026-10-15 |
+|---|---|
+| Nenhum ciclo de import estático em `src/` | 0 (o único, no sorteio do torneio, foi desfeito em `drawPrimitives.js`) |
+| `domain/` não importa Firebase, React, `services/`, `hooks/`, componente nem tela | 0 violações em ~300 arquivos |
+| `services/` não importa React, `hooks/` nem componentes | 0 |
+| `domain/`, `services/` e `hooks/` de um módulo não importam `src/v2` | 0 |
+| `src/core` não importa `src/modules` nem `src/v2` | 1 exceção escrita: `FirebaseAuthContext.jsx` (sincroniza o perfil no login) |
+| Tela (`src/v2`) não importa o SDK do Firebase | **8 telas antigas ainda importam** (admin, cadastro da arena, edição do perfil); a lista só diminui — tela nova não entra |
+
+**Módulos podem usar uns aos outros**, e usam: o grafo módulo × módulo está em
+`docs/46-INVENTARIO.md` §3.1, com a coluna **"Usado por"** — antes de mudar um
+módulo, rode também os testes dos que o usam. Os mais usados são `athletes`,
+`tournament`, `games` e `rating`; mexer na API pública deles pede mais cuidado.
+O que impede a quebra silenciosa entre módulos são as fontes únicas citadas no
+`CLAUDE.md` §4 (uma função para cada regra, nunca cópias), os testes de
+paridade cliente × servidor e os guardas de fonte (§6).
 
 ### 1.2 `src/core/` — o que há lá
 
@@ -66,7 +89,7 @@ está em `docs/46-INVENTARIO.md`; o mapa funcional em `docs/06-MODULES.md`.
   `.catch(() => [])`. Detalhe e guardas: `docs/27-FALHA-NAO-E-VAZIO.md`.
 - **Sessão**: `FirebaseAuthContext` (Context) — `useAuth()` (`isAuthenticated`,
   `isLoadingAuth`, `isPlatformAdmin`…). Papéis administrativos e
-  "ver como usuário" (`impersonate`) também vivem ali.
+  "ver como usuário" (`viewAsUser` / `toggleViewAsUser`) também vivem ali.
 - **Flags**: `FeatureFlagsProvider` observa `platform_settings/global` e expõe
   o mapa; `useFeatureFlag(key)` lê um booleano. Só as chaves de `FEATURE_FLAG`
   (hoje 5) são ligáveis pelo admin; as incorporadas (`PERMANENT_FEATURE`) valem
@@ -156,7 +179,7 @@ está em `docs/46-INVENTARIO.md`; o mapa funcional em `docs/06-MODULES.md`.
 
 Testes Vitest que **leem o código-fonte** e reprovam regressões que teste de
 comportamento não vê (cada tela, isolada, funciona; a classe de defeito não).
-Exemplos: `falhaNaoEVazio` (varredura da plataforma toda), `telaIsolada`,
+Exemplos: `fronteirasDeModulos` (§1.1a), `falhaNaoEVazio` (varredura da plataforma toda), `telaIsolada`,
 `telaMorta` (componente que ninguém importa a partir de `main.jsx`),
 `larguraDePagina`, `dividaDeDesign` (só aceita a contagem DESCER:
 `text-gray-400`, `text-[10px]`, `<button>` sem `type`, cartão/campo escrito à
@@ -213,8 +236,12 @@ Contagens e arquivos atuais: `docs/46-INVENTARIO.md`.
 
 ## 11. Convenções de código
 
-- Alias `@/` → `src/` (e `@core`, `@modules`). JS + JSDoc (`core/domain/types.js`);
-  `npm run typecheck`.
+- Alias `@/` → `src/` (e `@core`, `@modules`). JS + JSDoc (`core/domain/types.js`).
+  ⚠️ Os tipos JSDoc são **documentação, não verificação**: `jsconfig.json` tem
+  `checkJs: false`, então `npm run typecheck` só confere sintaxe e resolução, e
+  não roda no CI. O que segura a correção hoje são os testes (`domain/` sempre
+  testado), os guardas de fonte e os testes de paridade. Ligar `checkJs` (ou
+  migrar para TypeScript) arquivo a arquivo é a maior dívida técnica conhecida.
 - `logger` (`core/lib/logger`) em vez de `console` nos services.
 - UI, comentários e mensagens em **pt-BR**, via `t()`/`tk()`.
 - Funcionalidade nova nasce atrás de flag (default OFF) — `docs/02-STANDARDS.md` §3.

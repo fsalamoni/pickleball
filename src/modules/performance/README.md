@@ -9,8 +9,7 @@ Estatísticas e histórico individual do atleta.
 
 ## Hooks
 ```js
-import { usePerformance } from '@/modules/performance/hooks/usePerformance';
-import { useAthleteAgenda } from '@/modules/performance/hooks/useAthleteAgenda';
+import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 ```
 
 ## Feature flags

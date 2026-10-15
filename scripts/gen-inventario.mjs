@@ -9,6 +9,7 @@
  */
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { grafoEstatico, ciclos, dependenciasEntreModulos } from '../src/core/guards/grafoDeImports.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const OUT = join(ROOT, 'docs/46-INVENTARIO.md');
@@ -114,6 +115,16 @@ const nTestes = walk('.').filter((f) => /\.test\.(js|jsx)$/.test(f) && !f.starts
 const nPaginas = ls('src/v2/pages').filter((n) => /^V2.*\.jsx$/.test(n) && !/\.test\./.test(n)).length;
 const compV2 = ls('src/v2/components').filter((n) => isDir(`src/v2/components/${n}`));
 
+// Quem depende de quem — a pergunta "o que pode quebrar se eu mudar este módulo?".
+const grafo = grafoEstatico(ROOT);
+const nCiclos = ciclos(grafo).length;
+const deps = dependenciasEntreModulos(grafo, ROOT);
+const usadoPor = {};
+for (const [de, paras] of Object.entries(deps)) for (const para of paras) (usadoPor[para] ||= new Set()).add(de);
+const lista = (s) => (s && s.size ? [...s].sort().map((m) => `\`${m}\``).join(', ') : '—');
+const tabelaDeps = ls('src/modules').filter((m) => isDir(`src/modules/${m}`)).sort()
+  .map((m) => `| \`${m}\` | ${usadoPor[m]?.size || 0} | ${lista(usadoPor[m])} | ${lista(deps[m])} |`);
+
 const md = `# 46 — Inventário gerado do código
 
 > ⚙️ **Arquivo GERADO. Não edite à mão.** Fonte: \`scripts/gen-inventario.mjs\`.
@@ -154,6 +165,16 @@ Colunas = arquivos de código (sem testes) por camada; \`·\` = a camada não ex
 | Módulo | domain | services | hooks | components | pages | i18n | README |
 |---|---|---|---|---|---|---|---|
 ${modulos.join('\n')}
+
+### 3.1 Dependências entre módulos
+
+Lidas dos imports estáticos. **"Usado por"** é quem pode quebrar se você mudar
+o módulo: rode os testes desses módulos também. Ciclos de import em \`src/\`:
+**${nCiclos}** (o guarda \`src/core/guards/fronteirasDeModulos.test.js\` exige zero).
+
+| Módulo | Nº de módulos que o usam | Usado por | Usa |
+|---|---|---|---|
+${tabelaDeps.join('\n')}
 
 Pastas de componentes V2: ${compV2.map((c) => `\`${c}\``).join(', ')}.
 

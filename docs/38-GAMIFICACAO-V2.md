@@ -1,8 +1,9 @@
 # 38 — Gamificação V2 completa (flag `gamification_v2`)
 
-> Flag-mestra `gamification_v2` (default **OFF**). Desligada, nada disto existe:
-> nenhuma rota abre, nenhum menu aparece, nenhuma consulta é feita. Ligada, o
-> admin ainda escolhe **módulo a módulo** o que vale (`platform_settings/gamification`).
+> **Estado (2026-10-15):** `gamification_v2` incorporada — sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou
+> desligar a flag é histórico. O admin segue escolhendo **módulo a módulo** o
+> que vale (`platform_settings/gamification`).
 
 ## 1. O que é
 

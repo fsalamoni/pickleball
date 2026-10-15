@@ -1,6 +1,6 @@
 # Americano aprimorado — o dia de jogo partida a partida, com placar
 
-> **Flag**: `gameday_americano_live` (default **OFF**) · **Formato gravado**:
+> **Estado (2026-10-15)**: incorporada (`gameday_americano_live`) — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico · **Formato gravado**:
 > `americano_live` · **Regras do Firestore**: nenhuma linha nova.
 >
 > Este documento é a fonte única do formato. Se você vai mexer em dia de jogo,

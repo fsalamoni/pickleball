@@ -9,7 +9,7 @@
  * — preferencialmente um diferente a cada vez.
  */
 
-import { seededRng, shuffle } from './draw.js';
+import { seededRng, shuffle } from './drawPrimitives.js';
 
 /**
  * Calcula o número recomendado de rodadas para N participantes.

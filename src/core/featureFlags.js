@@ -7,7 +7,8 @@
  *
  * NOTA (2026-10-10): as 33 funcionalidades que estavam LIGADAS em produção
  * foram incorporadas — deixaram de ser flags e vivem em `PERMANENT_FEATURE`,
- * sempre `true`. Restam as 3 flags abaixo, DESLIGADAS por padrão. A navegação
+ * sempre `true`. Restam as flags de `FEATURE_FLAG` abaixo (lista viva em
+ * `docs/46-INVENTARIO.md` §8), DESLIGADAS por padrão. A navegação
  * v3 (`nav_v3`, Fase 1 do plano de UX) foi ligada para todos e virou código
  * em 2026-10-11 — o ramo antigo foi apagado, não há mais flag. O documento
  * do Firestore ainda contém as chaves antigas: `normalizeFeatureFlags` as
@@ -513,7 +514,8 @@ export function countFlags(flags) {
 
 /**
  * Normaliza um mapa de flags vindo do Firestore, garantindo booleanos e
- * preenchendo as ausentes com `false`. Ignora chaves desconhecidas.
+ * partindo de `DEFAULT_FEATURE_FLAGS` (flags ligáveis desligadas, permanentes
+ * ligadas). Só lê chaves de `FEATURE_FLAG`; as demais são ignoradas.
  * @param {Record<string, unknown>|null|undefined} raw
  * @returns {Record<string, boolean>}
  */

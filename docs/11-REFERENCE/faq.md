@@ -26,13 +26,13 @@ regras offline, use emuladores: `firebase emulators:start`.
 ### Como vejo o que tá em produção?
 
 https://picklerush.web.app — usuário precisa estar logado pra ver
-telas autenticadas. Plataforma admin: `/admin/console`.
+telas autenticadas. Plataforma admin: `/admin/painel`.
 
 ### Como ativo o modo admin?
 
 1. Logar com `fsalamoni@gmail.com` (uid `Kx7CC0NVgogh8cCF4wIRmpOvo7r2`)
 2. Esse user tem `role: 'platform_admin'`
-3. `/admin/*` liberado, `/admin/console` permite ligar/desligar flags
+3. `/admin/*` liberado, `/admin/painel` permite ligar/desligar flags
 
 ---
 
@@ -47,7 +47,7 @@ Ver `cheatsheet.md` § 4 ("Onde está X") + `06-MODULES.md` § do módulo.
 - **V1** (`src/pages/`, `src/components/`): legado, em desuso. Mantido
   só para `PublicTournament` (`/p/:id`) e `PrintTournament`
   (`/torneios/:id/imprimir`).
-- **V2** (`src/v2/`): ativo, "Athleisure Premium". 67 pages, paleta
+- **V2** (`src/v2/`): ativo, "Athleisure Premium". dezenas de telas (contagem em `docs/46-INVENTARIO.md`), paleta
   ink/acid/paper, primitivos V2.
 
 ### Onde fica o schema do Firestore?
@@ -58,22 +58,24 @@ Ver `cheatsheet.md` § 4 ("Onde está X") + `06-MODULES.md` § do módulo.
 
 ### Onde ficam as flags?
 
-- `src/core/featureFlags.js` — 124 flags (FEATURE_FLAG)
+- `src/core/featureFlags.js` — `FEATURE_FLAG` (as poucas que o admin liga) e
+  `PERMANENT_FEATURE` (incorporadas em 2026-10-10, sempre `true`); contagem em
+  `docs/46-INVENTARIO.md`
 - `src/core/featureFlagGroups.js` — agrupadas (admin)
-- `platform_settings/global (campo feature_flags.{key})` — defaults no Firestore
-- `/admin/console` — UI para ativar/desativar
+- `platform_settings/global (campo feature_flags.{key})` — valores no Firestore
+  (ausente ⇒ desligada)
+- `/admin/painel?tab=flags` (Painel admin → Funcionalidades) — UI para ativar/desativar
 
 ### Como adiciono uma feature?
 
 1. Ler `CLAUDE.md` (raiz) + `02-STANDARDS.md` (como codar)
-2. Adicionar flag em `featureFlags.js` (default OFF)
+2. Adicionar flag em `featureFlags.js` (default OFF) + `FEATURE_FLAG_META`
 3. Adicionar ao grupo em `featureFlagGroups.js`
-4. Adicionar default no Firestore (via `migrateLegacyFlags`)
-5. Implementar: domain → service → hook → UI
-6. Adicionar teste
-7. PR + smoke test + merge
-8. Atualizar docs (01-AI-CONTEXT, 05-DATA-MODEL, 06-MODULES, 15-backlog)
-9. Ativar flag no /admin/console pra testar
+4. Implementar: domain → service → hook → UI (sem migração: ausente no banco ⇒ desligada)
+5. Adicionar teste
+6. PR + smoke test + merge
+7. Atualizar docs (01-AI-CONTEXT, 05-DATA-MODEL, 06-MODULES, 15-backlog) e `npm run docs:inventario`
+8. Ativar a flag em Painel admin → Funcionalidades pra testar
 
 ---
 
@@ -135,7 +137,7 @@ GitHub → Actions tab → último workflow "Deploy Firebase Hosting".
 2. `curl -s https://picklerush.web.app/assets/index-XXX.js | grep -c "novoCodigo"` — código novo está lá?
 3. Se não está: SW stale. `DevTools → Application → Service Workers → Unregister`
 4. Se está mas não funciona: erro JS em runtime. DevTools → Console
-5. Se flag está OFF: ativar em /admin/console
+5. Se flag está OFF: ativar em /admin/painel?tab=flags (só as flags de `FEATURE_FLAG`)
 6. Se Firestore rule tá negando: Console → Rules → Simulador
 
 ### "Build passa mas feature não funciona em runtime"
@@ -192,40 +194,36 @@ export const FEATURE_FLAG = Object.freeze({
 }
 ```
 
-E adicionar default no Firestore (via `migrateLegacyFlags`).
+Nada a gravar no Firestore: ausente no documento ⇒ desligada
+(`normalizeFeatureFlags`).
 
 ### Como ativo uma flag em produção?
 
 1. Logar como `fsalamoni@gmail.com` (platform_admin)
-2. `/admin/console` → togglear a flag
-3. Refresh
+2. Painel admin → Funcionalidades (`/admin/painel?tab=flags`) → ligar a flag
+3. A mudança chega por `onSnapshot` (sem refresh)
 
-Ou via Firebase Console:
-```js
-firebase.firestore().doc("platform_settings/global") // campo feature_flags.my_new_feature
-  .set({ value: true, ... });
-```
+Ou via Firebase Console: no documento `platform_settings/global`, campo
+`feature_flags.my_new_feature = true`.
 
 ### Como escondo uma página quando flag off?
 
-```jsx
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
+Não existe `FeatureFlagGuard`: use `useFeatureFlag` e, desligada, explique ou
+redirecione (`docs/02-STANDARDS.md` §3.3).
 
-<FeatureFlagGuard
-  flag={FEATURE_FLAG.MY_NEW_FEATURE}
-  label="Minha Feature"
-  description="O que faz"
->
-  <Content />
-</FeatureFlagGuard>
+```jsx
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+
+const ativo = useFeatureFlag(FEATURE_FLAG.MY_NEW_FEATURE);
+if (!ativo) return <V2EmptyState title={t('Esta funcionalidade não está disponível')} />;
 ```
 
 **NUNCA** redirecionar para `/` silenciosamente (lição sw-v73.3).
 
 ### Por que minha flag não aparece no admin?
 
-Provavelmente falta em `featureFlagGroups.js` OU não rodou
-`migrateLegacyFlags` (bump `FLAGS_MIGRATION_VERSION`).
+Provavelmente falta em `featureFlagGroups.js` ou em `FEATURE_FLAG_META`. Chave
+em `PERMANENT_FEATURE` não aparece no painel, de propósito (sempre ligada).
 
 ---
 
@@ -275,27 +273,9 @@ firebase emulators:start
 
 ### Como adiciono uma página V2?
 
-```jsx
-// src/v2/pages/V2Xxx.jsx
-import { lazy, Suspense } from 'react';
-import { V2Shell, V2Loading } from '@/v2/components/V2Shell';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-
-const V2XxxContent = lazy(() => import('@/v2/components/Xxx/V2XxxContent'));
-
-export default function V2Xxx() {
-  return (
-    <V2Shell title="Xxx">
-      <FeatureFlagGuard flag={FEATURE_FLAG.XXX} label="Xxx" description="...">
-        <Suspense fallback={<V2Loading />}>
-          <V2XxxContent />
-        </Suspense>
-      </FeatureFlagGuard>
-    </V2Shell>
-  );
-}
-```
+Siga a estrutura de `docs/02-STANDARDS.md` §4.1 (`<V2Page>` + `V2PageHeader`,
+carregando/erro/vazio tratados, texto em `t()`). Não existem `V2Shell` nem
+`FeatureFlagGuard`; se a página for de flag, use `useFeatureFlag` (acima).
 
 E adicionar a rota em `src/v2/V2App.jsx`:
 ```jsx
@@ -306,17 +286,14 @@ const V2Xxx = lazy(() => import('@/v2/pages/V2Xxx'));
 ### Como uso a navegação 2 níveis?
 
 ```jsx
-<V2TabBar sticky="top-2" tabs={[
-  { id: 'tab1', label: 'Tab 1', icon: Icon1 },
-  { id: 'tab2', label: 'Tab 2', icon: Icon2 },
-]} />
-<V2SubTabBar sticky="top-[68px]" tabs={[
-  { id: 'sub1', label: 'Sub 1' },
-  { id: 'sub2', label: 'Sub 2' },
-]} />
+import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
+
+<V2SectionNav sections={secoes} activeId={secao} onSelect={setSecao} grupos={grupos} />
+<V2SubTabs tabs={abasDaSecao} activeValue={aba} onSelect={setAba} />
 ```
 
-Usado em `/arenas/:id/gerir`, `/admin/console`.
+A barra **quebra em linhas, nunca rola para o lado**; `grupos` dá nome a cada
+linha (na arena: Atender · Gerir). A aba mora na URL (`?aba=`). Usado em `/arenas/:id/gerir`, `/admin/painel`.
 
 ### Como faço um modal?
 
@@ -427,7 +404,7 @@ mova para `components/` e faça `runtime.test.jsx`.
 
 ## Onde achar mais info
 
-- **Princípios / fluxo de leitura**: [`../CLAUDE.md`](../CLAUDE.md)
+- **Princípios / fluxo de leitura**: [`../CLAUDE.md`](../../CLAUDE.md)
 - **Padrões de código**: [`../02-STANDARDS.md`](../02-STANDARDS.md)
 - **Git/deploy**: [`../03-WORKFLOW.md`](../03-WORKFLOW.md)
 - **Schema**: [`../05-DATA-MODEL.md`](../05-DATA-MODEL.md)

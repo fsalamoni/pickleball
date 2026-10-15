@@ -3,7 +3,8 @@
 > Duas partes. **(1) Consertos, sempre ligados**: o "Jogar" do início e o
 > Procura-se jogo passam a mostrar os dias de jogo das ARENAS; tocar num dia de
 > jogo abre o próprio dia, com "Participar"; e o que já passou sai das listas.
-> **(2) Minha região** (flag `my_region`, default OFF): o que a plataforma
+> **(2) Minha região** (`my_region` — incorporada, sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10): o que a plataforma
 > mostra segue a região de cada pessoa. **Banco: zero** — nenhuma coleção,
 > campo, índice ou regra; a escolha fica no navegador, por usuário.
 

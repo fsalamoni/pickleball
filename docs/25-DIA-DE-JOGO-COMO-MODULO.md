@@ -449,13 +449,14 @@ fazer**, e a mensagem por quadra distingue *"sem atletas no dia ainda"* de
 
 | Flag | Formato | Padrão |
 |---|---|---|
-| `gameday_americano_live` | Americano aprimorado | OFF (já existia) |
+| `gameday_americano_live` | Americano aprimorado | incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada) |
 | `gameday_mexicano` | Mexicano | **OFF** (nova) |
 | `gameday_king_of_court` | Rei da Quadra | **OFF** (nova) |
 
-Americano e Play estão sempre disponíveis. Cada flag liga **só o seu**
-formato — o admin pode oferecer o Mexicano sem o Rei da Quadra. As três ficam
-juntas no grupo **Dia de jogo** do painel de funcionalidades.
+Americano, Play e (desde 2026-10-10) Americano aprimorado estão sempre
+disponíveis. Cada flag liga **só o seu** formato — o admin pode oferecer o
+Mexicano sem o Rei da Quadra. As duas que restam ficam no grupo **Dia de jogo**
+do painel de funcionalidades.
 
 ### 10.2. O que a flag decide (e o que não decide)
 
