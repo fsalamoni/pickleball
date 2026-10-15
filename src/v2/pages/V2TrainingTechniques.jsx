@@ -19,6 +19,7 @@ import { buildTechniqueTrail } from '@/modules/training/domain/techniqueTrail';
 import { itemMetaLine } from '@/modules/training/domain/trainingItem';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Skeleton, V2Surface, V2BackLink,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { rolarAte } from '@/v2/ui/rolarAte';
@@ -101,7 +102,7 @@ function Trilha() {
           <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500">
             <Route className="h-4 w-4" aria-hidden="true" />{' '}{t('Trilha dos golpes')}
           </p>
-          <h1 className="font-display text-3xl font-bold text-ink">{t('Aprenda cada golpe, do jeito certo')}</h1>
+          <h1 className={PAGE_TITLE}>{t('Aprenda cada golpe, do jeito certo')}</h1>
           <p className="max-w-2xl text-gray-600">
             {t('Os golpes e movimentos do pickleball numa ordem de aprender: o que vem antes é a base do que vem depois. Cada um traz o passo a passo, o corpo ponto a ponto, o certo e o errado e como saber se você fez certo.')}
           </p>

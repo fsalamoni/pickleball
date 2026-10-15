@@ -19,7 +19,7 @@ import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
-import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
@@ -96,22 +96,22 @@ export default function V2ClubDetail() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px] space-y-6">
+      <V2Page className="space-y-6">
         <V2Skeleton className="h-52 rounded-4xl" />
         <V2Skeleton className="h-80 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
   if (isError || !club) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState icon={Building2} title={t('Clube não encontrado')}
             description={t('O clube que você procura não existe ou foi removido.')}
             action={<Link to="/clubes" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar para clubes')}</Link>} />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -129,7 +129,7 @@ export default function V2ClubDetail() {
     ? 'members' : activeTab;
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2BackLink to="/clubes" className="mb-5">{t('Voltar para clubes')}</V2BackLink>
 
       {/* Hero */}
@@ -140,7 +140,7 @@ export default function V2ClubDetail() {
               ? <V2Avatar name={club.name} photoUrl={club.logo_url} size="xl" className="h-16 w-16 rounded-2xl" />
               : <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white"><Building2 className="h-7 w-7" /></span>}
             <div className="min-w-0">
-              <h1 className="font-display text-3xl font-bold text-white">{club.name}</h1>
+              <h1 className={HERO_TITLE}>{club.name}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-300">
                 {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
                 <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} membro(s)</span>
@@ -252,7 +252,7 @@ export default function V2ClubDetail() {
           </div>
         </>
       )}
-    </div>
+    </V2Page>
   );
 }
 

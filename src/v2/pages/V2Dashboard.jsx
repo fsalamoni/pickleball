@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { V2Skeleton, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 // A tela inicial é UMA: a personalizada (por pessoa). A clássica e a
@@ -16,12 +16,12 @@ export default function V2Dashboard() {
 
 function HomeCarregando() {
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6" aria-busy="true" aria-label={t('Carregando a tela inicial')}>
+    <V2Page className="space-y-6" aria-busy="true" aria-label={t('Carregando a tela inicial')}>
       <V2Skeleton className="h-52 rounded-4xl" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[1, 2, 3, 4].map((i) => <V2Skeleton key={i} className="h-20 rounded-3xl" />)}
       </div>
       <V2Skeleton className="h-64 rounded-4xl" />
-    </div>
+    </V2Page>
   );
 }

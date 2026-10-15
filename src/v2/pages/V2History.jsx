@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Flag, Globe2, History, Lightbulb, Sparkles } from 'lucide-react';
-import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { V2BulletList, V2ContentHero, V2ContentSection, V2Page } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
 const MILESTONES = [
@@ -26,7 +26,7 @@ export default function V2History() {
   if (!enabled) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('História do esporte')}
         title={t('Como o pickleball saiu de uma brincadeira e virou uma comunidade global')}
@@ -67,6 +67,6 @@ export default function V2History() {
           </p>
         </V2ContentSection>
       </div>
-    </div>
+    </V2Page>
   );
 }

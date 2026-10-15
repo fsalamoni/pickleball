@@ -29,6 +29,7 @@ import { cn } from '@/core/lib/utils';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import {
   V2Button, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import KindPicker from '@/v2/components/training/editor/KindPicker';
@@ -61,7 +62,7 @@ function Voltar({ to = '/treino', children = t('Voltar ao treino') }) {
 function Recado({ titulo, children, acoes }) {
   return (
     <V2Surface className="p-6 sm:p-8">
-      <h1 className="font-display text-2xl font-bold text-ink">{titulo}</h1>
+      <h1 className={PAGE_TITLE}>{titulo}</h1>
       <div className="mt-2 text-sm text-gray-500">{children}</div>
       {acoes && <div className="mt-5 flex flex-wrap gap-3">{acoes}</div>}
     </V2Surface>
@@ -82,7 +83,7 @@ function EditorPage() {
 
   if (legado) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <div>
         <Voltar />
         <Recado
           titulo={t('Conteúdo da área do professor')}
@@ -96,7 +97,7 @@ function EditorPage() {
 
   if (alvoId && leitura.isPending) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-4" aria-busy="true">
+      <div className="space-y-4" aria-busy="true">
         <V2Skeleton className="h-10 w-2/3" />
         <V2Skeleton className="h-64 rounded-4xl" />
       </div>
@@ -105,7 +106,7 @@ function EditorPage() {
 
   if (alvoId && leitura.isError) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <div>
         <Voltar />
         <V2ErrorState
           title={t('Não foi possível abrir o item')}
@@ -118,7 +119,7 @@ function EditorPage() {
 
   if (alvoId && !item) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <div>
         <Voltar />
         <Recado titulo={t('Este item não está disponível')}>
           {t('Ele pode ter sido apagado pelo autor, ou não foi compartilhado com a sua conta.')}
@@ -129,7 +130,7 @@ function EditorPage() {
 
   if (itemId && item.legacy) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <div>
         <Voltar />
         <Recado
           titulo={t('Conteúdo da área do professor')}
@@ -144,7 +145,7 @@ function EditorPage() {
   if (itemId && !canEditItem(item, { uid: identity.uid, isAdmin: identity.isAdmin })) {
     const copia = canCopyItem(item, { uid: identity.uid });
     return (
-      <div className="mx-auto max-w-[720px]">
+      <div>
         <Voltar to={`/treino/item/${item.id}`}>{t('Voltar ao item')}</Voltar>
         <Recado
           titulo={t('Só quem criou pode editar')}
@@ -165,7 +166,7 @@ function EditorPage() {
     const copia = canCopyItem(item, { uid: identity.uid });
     if (!copia.ok) {
       return (
-        <div className="mx-auto max-w-[720px]">
+        <div>
           <Voltar />
           <Recado titulo={t('Não dá para copiar este item')}>{copia.reason}</Recado>
         </div>
@@ -345,7 +346,7 @@ function EditorBody({ identity, settings, item, source, tipoInicial, asPlatform 
   } : null;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <div>
       <Voltar to={item ? `/treino/item/${item.id}` : '/treino'}>{item ? t('Voltar ao item') : t('Voltar ao treino')}</Voltar>
       <V2PageIntro title={titulo} subtitle={subtitulo} />
 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { AlertTriangle, BookOpen, HeartHandshake, Shield, Sparkles } from 'lucide-react';
-import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { V2BulletList, V2ContentHero, V2ContentSection, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 export default function V2Conduct() {
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Espírito esportivo')}
         title={t('Conduta & Fair Play')}
@@ -51,6 +51,6 @@ export default function V2Conduct() {
           </p>
         </V2ContentSection>
       </div>
-    </div>
+    </V2Page>
   );
 }

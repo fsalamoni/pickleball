@@ -27,7 +27,7 @@ import { useMyRegion } from '@/core/lib/useMyRegion';
 import RegionBar from '@/v2/components/region/RegionBar';
 import { usePromoShowcase, usePromoViewer } from '@/modules/promo/hooks/usePromo';
 import {
-  V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
+  V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import PromoCouponCard from '@/v2/components/promo/PromoCouponCard';
@@ -87,7 +87,7 @@ export default function V2Promotions() {
   const nada = banners.length + cuponsPlataforma.length + cuponsProfessores.length === 0;
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6">
+    <V2Page className="space-y-6">
       <V2PageIntro
         title={t('Promoções')}
         subtitle={t('Cupons e campanhas da plataforma e dos professores que estão valendo agora. Toque no código para copiar.')}
@@ -167,6 +167,6 @@ export default function V2Promotions() {
           )}
         </>
       )}
-    </div>
+    </V2Page>
   );
 }

@@ -30,7 +30,8 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -86,7 +87,7 @@ export default function V2ArenaGameDays() {
 
   if (!ligado) return <Navigate to={`/arenas/${arenaId}`} replace />;
   if (isLoading) {
-    return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-32 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
+    return <V2Page className="space-y-4"><V2Skeleton className="h-32 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
 
@@ -152,7 +153,7 @@ function ListaDaArena({ arena }) {
   const abrir = (id) => navigate(`/arenas/${arena.id}/gerir/dia-de-jogo/${id}`);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2BackLink to={`/arenas/${arena.id}/gerir`} className="mb-3">{t('Central da arena')}</V2BackLink>
 
       <V2PageIntro
@@ -212,7 +213,7 @@ function ListaDaArena({ arena }) {
         arena={arena}
         onSaved={(id) => navigate(`/arenas/${arena.id}/gerir/dia-de-jogo/${id}`)}
       />
-    </div>
+    </V2Page>
   );
 }
 
@@ -305,14 +306,14 @@ function DetalheDaArena({ arena, gameDayId }) {
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
 
   if (isLoading) {
-    return <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+    return <V2Page><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   }
   // ⚠️ FALHA não é ausência: dizer "foi arquivado, ou pertence a outra arena"
   // quando o que caiu foi a rede manda a arena procurar um problema que não
   // existe, com os atletas já na porta.
   if (isError) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar este dia de jogo')}
@@ -320,12 +321,12 @@ function DetalheDaArena({ arena, gameDayId }) {
             onRetry={refetch}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   if (!gameDay || gameDay.arena_id !== arena.id) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             icon={CalendarClock}
@@ -334,7 +335,7 @@ function DetalheDaArena({ arena, gameDayId }) {
             action={<V2Button asChild><Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>{t('Voltar')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -345,7 +346,7 @@ function DetalheDaArena({ arena, gameDayId }) {
        própria. Antes o cabeçalho tinha `mb-5`, o painel de Vagas não tinha
        nada — e encostava no cartão seguinte — e o módulo trazia o seu por
        dentro. */
-    <div className="mx-auto max-w-[1000px] space-y-4">
+    <V2Page className="space-y-4">
       <button type="button" onClick={() => navigate(`/arenas/${arena.id}/gerir/dia-de-jogo`)}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink"
       >
@@ -356,7 +357,7 @@ function DetalheDaArena({ arena, gameDayId }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
+              <h1 className={PAGE_TITLE}>{gameDay.title}</h1>
               <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
               {gameDay.status === 'archived' && <V2Badge tone="red">{t('Arquivado')}</V2Badge>}
             </div>
@@ -446,6 +447,6 @@ function DetalheDaArena({ arena, gameDayId }) {
           }
         }}
       />
-    </div>
+    </V2Page>
   );
 }

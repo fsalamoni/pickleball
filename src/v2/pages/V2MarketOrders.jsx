@@ -110,7 +110,7 @@ function OrdersPage() {
   }, [texto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader categorias={false} />
       <V2PageIntro title={t('Minhas compras')} subtitle={t('Seus pedidos, ofertas e vales-presente no Mercado.')} />
       <MarketTabs grupo="compras" ativo={aba === 'ofertas' ? 'ofertas' : 'pedidos'} />

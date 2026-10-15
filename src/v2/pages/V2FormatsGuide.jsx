@@ -14,7 +14,7 @@ import {
 import { FORMAT_DESCRIPTION, STAGE_DESCRIPTION, STAGE_MIN_PLAYERS } from '@/modules/tournament/domain/formatExplain';
 import { TOURNAMENT_PRESETS } from '@/modules/tournament/domain/tournamentPresets';
 import { describeTiebreakOrder } from '@/modules/tournament/domain/tiebreak';
-import { V2Badge, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { V2Badge, V2ContentHero, V2ContentSection, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 const STAGE_ORDER = [
@@ -44,7 +44,7 @@ export default function V2FormatsGuide() {
   const etapasOn = true;
   const ordem = etapasOn ? [...STAGE_ORDER, TOURNAMENT_STAGE_TYPE.AMERICANO_ETAPAS] : STAGE_ORDER;
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Organização')}
         title={t('Guia de formatos e modelos de torneio')}
@@ -181,6 +181,6 @@ export default function V2FormatsGuide() {
           </div>
         </V2ContentSection>
       </div>
-    </div>
+    </V2Page>
   );
 }

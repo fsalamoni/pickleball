@@ -100,7 +100,7 @@ import {
 } from '@/modules/partners/domain/affiliate';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { cn } from '@/core/lib/utils';
-import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Textarea, V2Toggle, V2Select } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Textarea, V2Toggle, V2Select, V2Page } from '@/v2/ui/primitives';
 import AdminConsoleNav from '@/v2/components/admin/AdminConsoleNav';
 import { flagsQueMudam, resolveAdminTab } from '@/modules/admin/domain/consoleNav';
 import { t, tk, tn } from '@/core/i18n';
@@ -196,7 +196,7 @@ export default function V2AdminConsole() {
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Painel Admin')}
         subtitle={t('Administre pessoas, torneios, arenas e o que a plataforma oferece.')}
@@ -254,7 +254,7 @@ export default function V2AdminConsole() {
         )}
       </div>
       </div>
-    </div>
+    </V2Page>
   );
 }
 

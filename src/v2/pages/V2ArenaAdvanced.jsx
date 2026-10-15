@@ -60,7 +60,7 @@ import { resolveArenaPrice, formatPrice } from '@/modules/arenas/domain/pricing'
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t, tn, tk } from '@/core/i18n';
 
@@ -567,7 +567,7 @@ export function ArenaAdvancedPanel({ arena, view }) {
 export default function V2ArenaAdvanced() {
   const { arenaId } = useParams();
   const { isOn, isLoading } = useArenaModules(arenaId);
-  if (isLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+  if (isLoading) return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   const aba = isOn(ARENA_MODULE_ID.WHITE_LABEL) ? 'marca'
     : isOn(ARENA_MODULE_ID.MULTI_UNIT) ? 'rede'
       : isOn(ARENA_MODULE_ID.AI) ? 'inteligencia'

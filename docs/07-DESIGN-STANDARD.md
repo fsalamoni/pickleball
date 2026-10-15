@@ -84,6 +84,7 @@ Regras:
 
 ## 6. Tipografia e hierarquia
 
+0. Título da página (h1): `PAGE_TITLE` (fundo claro) ou `HERO_TITLE` (herói escuro), um tamanho só — ver `docs/45-MOLDURA-DAS-PAGINAS.md`.
 1. Eyebrow: `text-xs font-semibold uppercase tracking-[0.16em]` a `0.2em`.
 2. Título principal de seção: `text-2xl font-semibold text-slate-950`.
 3. Descrição de seção: `text-sm leading-6 text-slate-600`.
@@ -105,6 +106,7 @@ Regras:
 
 ## 9. Responsividade
 
+0. Toda página está dentro da MESMA moldura (`<V2Page>`, 1200 px centralizada, sem recuo próprio) — ver `docs/45-MOLDURA-DAS-PAGINAS.md`.
 1. Hero e painel lateral quebram para uma coluna no mobile.
 2. Tabs precisam manter rolagem horizontal controlada (`overflow-x-auto`).
 3. Cards de métrica devem refluír para 1 ou 2 colunas antes de 4.

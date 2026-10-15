@@ -8,7 +8,7 @@ import {
   V2ErrorState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -37,7 +37,7 @@ export default function V2Community() {
   const incompleto = Boolean(data?.incompleto);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2PageIntro title={t('Comunidade')} subtitle={t('Movimentos recentes de torneios e convites de jogo na plataforma.')} />
 
       {isLoading ? (
@@ -94,6 +94,6 @@ export default function V2Community() {
           })}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

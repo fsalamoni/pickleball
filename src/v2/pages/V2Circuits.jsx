@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { Trophy, Plus, Calendar } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCircuits, useCreateCircuit } from '@/modules/circuits/hooks/useCircuits';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea, V2Skeleton, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 function CreateCircuitForm({ onClose }) {
@@ -81,10 +81,10 @@ export default function V2Circuits() {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
-    <div className="space-y-4 p-4">
+    <V2Page className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
+          <h1 className={`flex items-center gap-2 ${PAGE_TITLE}`}>
             <Trophy className="h-6 w-6 text-green-700" /> {t('Circuitos')}
           </h1>
           <p className="mt-1 text-sm text-gray-500">{t('Séries de torneios com ranking acumulado')}</p>
@@ -150,6 +150,6 @@ export default function V2Circuits() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

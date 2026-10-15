@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { ArrowRight, Globe, Hash } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getTournamentByInviteCode } from '@/modules/tournament/services/tournamentService';
-import { V2Button, V2Field, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
 const STEPS = [
@@ -38,13 +38,13 @@ export default function V2JoinTournament() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2BackLink to="/torneios" className="mb-5">{t('Voltar aos torneios')}</V2BackLink>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
         <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
           <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Acesso privado')}</span>
-          <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{t('Entre em um torneio privado com o código recebido.')}</h1>
+          <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Entre em um torneio privado com o código recebido.')}</h1>
           <p className="mt-3 max-w-xl text-sm leading-7 text-gray-300">{t('O código de convite desbloqueia a visão geral do evento e libera a escolha da modalidade.')}</p>
           <div className="mt-8 space-y-3">
             {STEPS.map((s) => (
@@ -105,6 +105,6 @@ export default function V2JoinTournament() {
           </V2Surface>
         </div>
       </div>
-    </div>
+    </V2Page>
   );
 }

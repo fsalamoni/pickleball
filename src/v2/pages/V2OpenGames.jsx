@@ -53,7 +53,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface, V2ErrorState,
+  V2Surface, V2ErrorState, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -145,7 +145,7 @@ export default function V2OpenGames() {
     && dias.itens.length === 0 && convites.itens.length === 0 && dias.fora === 0 && convites.fora === 0;
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={rotulos.vagas}
         subtitle={t('Dias de jogo com vaga, jogos abertos das arenas e convites — de hoje em diante.')}
@@ -273,6 +273,6 @@ export default function V2OpenGames() {
       )}
 
       {createOpen && <CreateOpenGameDialog open={createOpen} onOpenChange={setCreateOpen} />}
-    </div>
+    </V2Page>
   );
 }

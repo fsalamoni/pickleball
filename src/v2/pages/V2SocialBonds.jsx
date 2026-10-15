@@ -16,7 +16,7 @@ import MentorshipInvite from '@/modules/progression/components/MentorshipInvite'
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { usePeople } from '@/modules/progression/hooks/usePeople';
 import {
-  V2Button, V2EmptyState, V2PageIntro, V2Surface,
+  V2Button, V2EmptyState, V2PageIntro, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { TermNote } from '@/v2/components/gamification/TermHint';
 import { t } from '@/core/i18n';
@@ -39,7 +39,7 @@ export default function V2SocialBonds() {
   const gamificationOn = true;
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Vínculos')} subtitle={t('Rivais, crews e mentorias.')} />
         <V2Surface>
           <V2EmptyState
@@ -53,7 +53,7 @@ export default function V2SocialBonds() {
             }
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <V2SocialBondsOn />;
@@ -105,7 +105,7 @@ function V2SocialBondsOn() {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2PageIntro
         title={t('Vínculos')}
         subtitle={t('Seus rivais de quadra, suas crews e suas mentorias.')}
@@ -197,6 +197,6 @@ function V2SocialBondsOn() {
           {erroCrew && <p role="alert" className="text-sm text-red-600">{erroCrew}</p>}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

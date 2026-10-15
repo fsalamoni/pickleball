@@ -56,7 +56,7 @@ import {
   HELP_SECTION, helpCatalog, highlightParts, searchSnippet,
 } from '@/modules/help/domain/helpCenter';
 import {
-  V2Badge, V2Button, V2ContentHero, V2SearchInput, V2Surface,
+  V2Badge, V2Button, V2ContentHero, V2SearchInput, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import GuiasDoArtigo from '@/v2/components/dicas/GuiasDoArtigo';
@@ -392,7 +392,7 @@ export default function V2Help() {
   };
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <span ref={topoRef} aria-hidden="true" />
       <V2ContentHero
         eyebrow={t('Central de ajuda')}
@@ -627,6 +627,6 @@ export default function V2Help() {
           </div>
         </div>
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }

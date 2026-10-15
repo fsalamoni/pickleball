@@ -32,6 +32,7 @@ import {
 import { WEEKDAY_LONG, formatDayLabel, todayLocal, addDays } from '@/modules/training/domain/dates';
 import {
   V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2Input, V2Skeleton, V2Surface, V2Textarea, V2BackLink,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import TrainingGate from '@/v2/components/training/TrainingGate';
 import { ConfirmDialog, mensagemDeErro } from '@/v2/components/training/item/ItemActionDialogs';
@@ -99,7 +100,7 @@ function Cabecalho({ plan, acoes }) {
         </span>
       </div>
       <div className="flex items-start gap-2">
-        <h1 className="font-display text-3xl font-bold text-ink">{plan.title}</h1>
+        <h1 className={PAGE_TITLE}>{plan.title}</h1>
         <button type="button" aria-label={t('Editar nome e objetivo')} onClick={() => setEditando(true)} className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </button>

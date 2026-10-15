@@ -20,7 +20,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface, V2ErrorState,
+  V2Surface, V2ErrorState, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
@@ -85,7 +85,7 @@ export default function V2Tournaments() {
   const vazio = sorted.length === 0 && !(tab === 'public' && regional.fora > 0);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Torneios')}
         subtitle={t('Descubra eventos abertos e acompanhe os seus.')}
@@ -161,7 +161,7 @@ export default function V2Tournaments() {
           )}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 

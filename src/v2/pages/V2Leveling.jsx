@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2LevelTable from '@/v2/components/leveling/V2LevelTable';
 import { V2LevelingQuestionnaire } from '@/v2/components/leveling/V2LevelingQuestionnaire';
-import { V2ContentHero, V2Surface } from '@/v2/ui/primitives';
+import { V2ContentHero, V2Surface, V2Page } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t } from '@/core/i18n';
 
@@ -33,7 +33,7 @@ export default function V2Leveling() {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Sobre o esporte')}
         title={t('Nivelamento de Pickleball')}
@@ -71,6 +71,6 @@ export default function V2Leveling() {
           <V2LevelTable />
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }

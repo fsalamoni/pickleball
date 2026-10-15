@@ -18,7 +18,7 @@ import { V2TournamentOverview } from '@/v2/components/tournament/V2OverviewBlock
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2TournamentRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
-import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page, HERO_TITLE } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData } from '@/core/i18n';
 
@@ -61,10 +61,10 @@ export default function V2Tournament() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px] space-y-6">
+      <V2Page className="space-y-6">
         <V2Skeleton className="h-64 rounded-4xl" />
         <V2Skeleton className="h-96 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
@@ -73,7 +73,7 @@ export default function V2Tournament() {
   // concluir que apagaram o torneio.
   if (isError) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar o torneio')}
@@ -81,18 +81,18 @@ export default function V2Tournament() {
             onRetry={refetch}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   if (!tournament) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState icon={Trophy} title={t('Torneio não encontrado')}
             description={t('Verifique o link ou volte para a lista de torneios.')}
             action={<Link to="/torneios" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{t('Voltar aos torneios')}</Link>} />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -152,7 +152,7 @@ export default function V2Tournament() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2BackLink to="/torneios" className="mb-5">{t('Voltar aos torneios')}</V2BackLink>
 
       {tournament.archived && (
@@ -175,7 +175,7 @@ export default function V2Tournament() {
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm"><Trophy className="h-6 w-6" /></div>
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">{tournament.name}</h1>
+              <h1 className={HERO_TITLE}>{tournament.name}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-300">{tournament.description || t('Acompanhe modalidades, jogos, ranking e operação do evento.')}</p>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function V2Tournament() {
       </div>
 
       {!showGallery && <div className="mt-6"><V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} /></div>}
-    </div>
+    </V2Page>
   );
 }
 

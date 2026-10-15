@@ -35,7 +35,7 @@ import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/c
 import {
   useMarketSettings, usePublicListings, useSavedSearchActions, useSavedSearches, useStores,
 } from '@/modules/marketplace/hooks/useMarket';
-import { V2Button, V2EmptyState, V2ErrorState, V2Page } from '@/v2/ui/primitives';
+import { V2Button, V2EmptyState, V2ErrorState, V2Page, PAGE_TITLE, TITLE_TYPE } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import MarketFilters from '@/v2/components/marketplace/MarketFilters';
 import {
@@ -76,7 +76,7 @@ function Hero() {
   return (
     <section className="overflow-hidden rounded-[2rem] bg-ink p-6 text-white sm:p-10">
       <p className="text-sm font-bold uppercase tracking-widest text-acid">{t('Mercado PickleRush')}</p>
-      <h1 className="mt-2 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-5xl">
+      <h1 className={`mt-2 max-w-2xl ${TITLE_TYPE}`}>
         {t('Tudo de pickleball, de quem joga com você.')}
       </h1>
       <p className="mt-3 max-w-xl text-base text-white/80">
@@ -296,7 +296,7 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
       )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{titulo}</h1>
+          <h1 className={PAGE_TITLE}>{titulo}</h1>
           <p className="text-sm text-gray-500" aria-live="polite">{tn(total, '{n} resultado', '{n} resultados')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -396,7 +396,7 @@ function MarketPage() {
   }
 
   return (
-    <V2Page largura="larga" className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       {/* Os departamentos ficam num lugar só: a grade na vitrine, o painel de filtros nos resultados. */}
       <MarketHeader categorias={false} listings={feed.data} />
       {corpo}

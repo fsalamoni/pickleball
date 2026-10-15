@@ -39,7 +39,7 @@ import ReputationCard from '@/v2/components/gamification/ReputationCard';
 import RewardsPanel from '@/v2/components/gamification/RewardsPanel';
 import IssuerShortcuts from '@/v2/components/gamification/IssuerShortcuts';
 import {
-  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { HUB_TABS, abaDaUrl } from '@/v2/components/gamification/hubTabs';
@@ -59,7 +59,7 @@ export default function V2GamificationHome() {
   const gamificationOn = true;
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Gamificação')} subtitle={t('Veja missões, conquistas, trilhas de XP e convites em um só lugar.')} />
         <V2Surface>
           <V2EmptyState
@@ -69,7 +69,7 @@ export default function V2GamificationHome() {
             action={<V2Button asChild><Link to="/meu-desempenho">{t('Ir para Meu desempenho')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <V2GamificationHomeOn />;
@@ -158,18 +158,18 @@ function V2GamificationHomeOn() {
 
   if (engine.isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <V2Page>
         <V2PageIntro title={t('Gamificação')} subtitle="..." />
         <V2Skeleton className="h-96 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
   if (engine.isError && !engine.stats) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <V2Page>
         <V2PageIntro title={t('Gamificação')} subtitle={t('Missões, conquistas e competição.')} />
         <V2Surface><V2ErrorState title={t('Não deu para carregar a sua jornada')} onRetry={engine.refetch} /></V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -177,7 +177,7 @@ function V2GamificationHomeOn() {
   const totalAch = engine.achievements.total;
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5" data-testid="gamification-hub">
+    <V2Page className="space-y-5" data-testid="gamification-hub">
       <V2PageIntro
         title={t('Gamificação')}
         subtitle={t('Missões, conquistas, temporada, desafios e recompensas — tudo medido pelo que você joga de verdade.')}
@@ -322,7 +322,7 @@ function V2GamificationHomeOn() {
       <CelebrationHost marks={engine.marks} prefs={engine.prefs} ready={engine.ready} update={engine.updatePrefs} enabled={isModuleOn('celebrations')} />
       <MissionCompleteToast mission={celebratedMission} onClose={() => setCelebratedMission(null)} />
       {celebratedAchievement && <AchievementUnlockToast achievement={celebratedAchievement} onClose={() => setCelebratedAchievement(null)} />}
-    </div>
+    </V2Page>
   );
 }
 

@@ -34,7 +34,7 @@ import {
   scoreTone,
   normalizeMatchmakingCriteria,
 } from '@/modules/arenas/domain/matchmaking';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t, tn } from '@/core/i18n';
 
 function MatchCard({ candidate, score, arenaId, onChat }) {
@@ -132,7 +132,7 @@ export default function V2ArenaMatchmaking() {
   // Sem login
   if (!user) {
     return (
-      <div className="mx-auto max-w-[500px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             title={t('Faça login')}
@@ -140,17 +140,17 @@ export default function V2ArenaMatchmaking() {
             action={<V2Button asChild><Link to="/login">{t('Entrar')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   if (arenaLoading || modulosLoading) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
 
   if (falhouArena && !arena) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2ErrorState
             title={t('Não foi possível carregar a arena')}
@@ -158,26 +158,26 @@ export default function V2ArenaMatchmaking() {
             onRetry={() => recarregarArena()}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   if (!arena) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             title={t('Arena não encontrada')}
             action={<Link to="/arenas" className="text-sm font-bold text-ink underline">{t('← Voltar ao diretório')}</Link>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   if (!canUseModule) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <div className="mb-4">
           <V2BackLink to={`/arenas/${arena.id}`}>{t('Voltar à arena')}</V2BackLink>
         </div>
@@ -189,7 +189,7 @@ export default function V2ArenaMatchmaking() {
             action={<V2Button asChild variant="secondary"><Link to="/arenas">{t('Ver outras arenas')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -198,12 +198,12 @@ export default function V2ArenaMatchmaking() {
   const handleChat = (candidate) => navigate(`/chat?with=${candidate.uid}`);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{t('Voltar à arena')}</V2BackLink>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+            <h1 className={PAGE_TITLE}>
               {t('Encontrar parceiro · {name}', { name: arena.name })}
             </h1>
             <p className="mt-2 font-medium text-gray-500">
@@ -296,6 +296,6 @@ export default function V2ArenaMatchmaking() {
           </div>
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

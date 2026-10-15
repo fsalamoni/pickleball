@@ -16,6 +16,7 @@ import { offerAction } from '@/modules/marketplace/services/marketOrderService';
 import { useIsMarketOperator, useMarketMutation, useOffer } from '@/modules/marketplace/hooks/useMarket';
 import {
   V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Skeleton, V2Surface, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -65,7 +66,7 @@ function OfferPage() {
   else if (!offer || !role) {
     corpo = (
       <V2Surface className="text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">{t('Oferta não disponível')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Oferta não disponível')}</h1>
         <p className="mt-2 text-gray-500">{t('Esta negociação não existe ou não é da sua conta.')}</p>
         <Link to="/mercado/pedidos?aba=ofertas" className="mt-4 inline-flex font-bold text-ink underline">{t('Ver minhas ofertas')}</Link>
       </V2Surface>
@@ -159,7 +160,7 @@ function OfferPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       {role !== 'seller' && <MarketHeader categorias={false} />}
       {role === 'seller'
         ? <V2BackLink to="/mercado/vender?aba=ofertas">{t('Ofertas recebidas')}</V2BackLink>

@@ -1,13 +1,13 @@
 import React from 'react';
 import { Database, Eye, FileText, RefreshCw, ShieldCheck, UserCheck } from 'lucide-react';
-import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
+import { V2BulletList, V2ContentHero, V2ContentSection, V2Page } from '@/v2/ui/primitives';
 import { t, fmtData } from '@/core/i18n';
 
 export default function V2Privacy() {
   const meta = t('Versão 1.0 — {data}. Ao usar a plataforma, você declara ciência e aceitação destas condições.', { data: fmtData(new Date(), { month: 'long', year: 'numeric' }) });
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Termos de uso e privacidade')}
         title={t('Política de Uso e Privacidade')}
@@ -68,6 +68,6 @@ export default function V2Privacy() {
           </p>
         </V2ContentSection>
       </div>
-    </div>
+    </V2Page>
   );
 }

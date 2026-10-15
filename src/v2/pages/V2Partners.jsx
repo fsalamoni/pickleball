@@ -8,7 +8,7 @@ import {
   V2ErrorState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -17,7 +17,7 @@ export default function V2Partners() {
   const active = useMemo(() => publicAffiliateLinks(links), [links]);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro title={t('Parceiros')} subtitle={t('Marcas, lojas e serviços conectados ao crescimento do jogo.')} />
 
       {isLoading ? (
@@ -68,6 +68,6 @@ export default function V2Partners() {
           ))}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

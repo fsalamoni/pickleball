@@ -39,7 +39,7 @@ import {
 } from '@/modules/arenas/domain/subscription';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2BackLink, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import PackageForSaleCard from '@/v2/components/arenas/PackageForSaleCard';
 import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
 import { t } from '@/core/i18n';
@@ -317,7 +317,7 @@ export default function V2ArenaMembers() {
   const temIndicacao = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
 
   if (isLoading || modulosLoading) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[720px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!temMembros) return <Navigate to={`/arenas/${arena.id}`} replace />;
@@ -329,9 +329,9 @@ export default function V2ArenaMembers() {
   const meusPacotes = Array.isArray(wallet?.packages) ? wallet.packages : [];
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Você nesta arena')}</h1>
+      <h1 className={PAGE_TITLE}>{t('Você nesta arena')}</h1>
       <p className="mt-1 text-sm text-gray-500">
         {t('Seu nível, suas horas e seu saldo na {name}', { name: arena.name })}.
       </p>
@@ -410,6 +410,6 @@ export default function V2ArenaMembers() {
           )}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

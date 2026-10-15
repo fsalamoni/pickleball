@@ -13,7 +13,7 @@ import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { getLegalDocumentByRoute } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
-import { V2Badge, V2Button, V2EmptyState, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Surface, V2Page } from '@/v2/ui/primitives';
 import LegalDocumentView from '@/v2/components/legal/LegalDocumentView';
 import { t } from '@/core/i18n';
 
@@ -31,7 +31,7 @@ export default function V2LegalDocument() {
 
   if (!doc) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2Surface>
           <V2EmptyState
             title={t('Documento não encontrado')}
@@ -39,7 +39,7 @@ export default function V2LegalDocument() {
             action={<V2Button asChild><Link to="/legal">{t('Ver todos os documentos')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -65,13 +65,13 @@ export default function V2LegalDocument() {
   ) : null;
 
   return (
-    <div>
-      <div className="mx-auto mb-3 max-w-[1000px]">
+    <V2Page>
+      <div className="mb-3">
         <Link to="/legal" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
           <ChevronLeft className="h-4 w-4" /> {t('Documentos')}
         </Link>
       </div>
       <LegalDocumentView doc={doc} action={action} />
-    </div>
+    </V2Page>
   );
 }

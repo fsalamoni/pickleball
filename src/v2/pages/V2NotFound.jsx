@@ -8,7 +8,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Compass, Home, Trophy, Building2, Users } from 'lucide-react';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2Surface, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { t, tk } from '@/core/i18n';
 
 const SHORTCUTS = [
@@ -21,12 +21,12 @@ const SHORTCUTS = [
 export default function V2NotFound() {
   const location = useLocation();
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2Surface className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-ink text-acid">
           <Compass className="h-8 w-8" />
         </div>
-        <h1 className="mt-4 font-display text-3xl font-bold text-ink">{t('Página não encontrada')}</h1>
+        <h1 className={`mt-4 ${PAGE_TITLE}`}>{t('Página não encontrada')}</h1>
         <p className="mt-2 text-sm text-gray-500">
           {t('Não encontramos')} <span className="font-mono text-gray-600">{location.pathname}</span>.{' '}
           {t('O link pode estar quebrado ou a página pode ter mudado de lugar.')}
@@ -44,6 +44,6 @@ export default function V2NotFound() {
           </V2Button>
         </div>
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }

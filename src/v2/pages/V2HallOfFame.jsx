@@ -8,7 +8,7 @@ import { useHallOfFame, useMyHallRow } from '@/modules/progression/hooks/useHall
 import { useSeasonTop, useUserCurrentSeason } from '@/modules/progression/hooks/useUserSeasonRanking';
 import { useGamificationConfig } from '@/modules/progression/hooks/useGamificationConfig';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Select, V2Skeleton, V2Surface,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { cn } from '@/core/lib/utils';
@@ -29,7 +29,7 @@ export default function V2HallOfFame() {
   const gamificationOn = true;
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Hall da Fama')} subtitle={t('Os maiores atletas do PickleRush por XP acumulado.')} />
         <V2Surface>
           <V2EmptyState
@@ -39,7 +39,7 @@ export default function V2HallOfFame() {
             action={<V2Button asChild><a href="/meu-desempenho">{t('Ir para Meu desempenho')}</a></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <HallOfFameOn />;
@@ -79,10 +79,10 @@ function HallOfFameOn() {
 
   if (!isModuleOn('hall_of_fame')) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Hall da Fama')} subtitle={t('Os maiores atletas do PickleRush.')} />
         <V2Surface><V2EmptyState icon={EyeOff} title={t('O placar público está desligado')} description={t('A plataforma pausou o Hall da Fama e a temporada por enquanto. Seu XP e suas conquistas continuam valendo.')} /></V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -90,7 +90,7 @@ function HallOfFameOn() {
   const minTier = config.season.publicMinTier;
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-5" data-testid="hall-of-fame">
+    <V2Page className="space-y-5" data-testid="hall-of-fame">
       <V2PageIntro
         title={t('Hall da Fama')}
         subtitle={aba === 'temporada'
@@ -175,7 +175,7 @@ function HallOfFameOn() {
         </V2Surface>
       )}
       <p className="text-center text-2xs text-gray-500">{t('Atualizado uma vez por dia. Só aparece quem aceitou — em Preferências você escolhe.')}</p>
-    </div>
+    </V2Page>
   );
 }
 

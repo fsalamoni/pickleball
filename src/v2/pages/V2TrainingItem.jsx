@@ -453,7 +453,7 @@ function TrainingItemPage() {
   const { settings } = useTrainingSettings();
   const legado = itemId.startsWith('cc_');
   return (
-    <div className="mx-auto max-w-[720px] space-y-6">
+    <div className="space-y-6">
       <Voltar />
       {legado
         ? <FichaLegada itemId={itemId} identity={identity} settings={settings} />

@@ -31,6 +31,7 @@ import {
 } from '@/modules/marketplace/hooks/useMarket';
 import {
   V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import { V2SubTabs } from '@/v2/ui/V2SectionNav';
@@ -527,7 +528,7 @@ function EditorPage() {
   if (!operador || !sq.data || (editing && !listing)) {
     return (
       <V2Surface className="mx-auto max-w-xl text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">{t('Não dá para editar este anúncio')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Não dá para editar este anúncio')}</h1>
         <p className="mt-2 text-gray-500">{!sq.data ? t('Comece a vender pelo painel antes de criar o primeiro anúncio.') : t('Este anúncio não é de uma conta que você opera.')}</p>
         <Link to="/mercado/vender" className="mt-4 inline-flex font-bold text-ink underline">{t('Ir para o painel de vendas')}</Link>
       </V2Surface>
@@ -536,7 +537,7 @@ function EditorPage() {
   if (listing?.status === 'removed') {
     return (
       <V2Surface className="mx-auto max-w-xl text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">{t('Anúncio tirado do ar pela moderação')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Anúncio tirado do ar pela moderação')}</h1>
         <p className="mt-2 text-gray-500">{listing.moderation?.reason || t('Ele não pode ser editado.')}</p>
         <Link to={voltar} className="mt-4 inline-flex font-bold text-ink underline">{t('Voltar aos anúncios')}</Link>
       </V2Surface>
@@ -753,7 +754,7 @@ function EditorPage() {
           )}
 
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
-            <div className="mx-auto flex max-w-[1000px] justify-end gap-2">
+            <div className="flex justify-end gap-2">
               {/* No ar, "rascunho" tiraria o anúncio do ar sem querer: pausar é no painel. */}
               {!noAr && <V2Button type="button" variant="ghost" disabled={m.isPending} onClick={() => salvar(false)}>{t('Salvar rascunho')}</V2Button>}
               <V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : noAr ? t('Salvar e manter no ar') : t('Publicar')}</V2Button>

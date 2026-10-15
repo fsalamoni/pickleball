@@ -13,7 +13,8 @@ import {
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
 import {
-  V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2BackLink,
+  V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2BackLink, V2Page,
+  HERO_TITLE,
 } from '@/v2/ui/primitives';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
@@ -92,7 +93,7 @@ export default function V2CreateTournament() {
     : t('Cidade e local ainda não definidos');
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2BackLink to="/torneios" className="mb-5">{t('Voltar aos torneios')}</V2BackLink>
 
       <TemplatePicker />
@@ -103,7 +104,7 @@ export default function V2CreateTournament() {
           <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
           <div className="relative z-10">
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{t('Novo torneio')}</span>
-            <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{t('Monte um torneio com cara de evento real.')}</h1>
+            <h1 className={`mt-4 ${HERO_TITLE}`}>{t('Monte um torneio com cara de evento real.')}</h1>
             <p className="mt-3 max-w-xl text-sm leading-7 text-gray-300">{t('Configure identidade, acesso, regras e calendário. A prévia abaixo atualiza enquanto você preenche.')}</p>
 
             {/* O tutorial completo (criação → modalidades → inscrições →
@@ -227,7 +228,7 @@ export default function V2CreateTournament() {
           </form>
         </V2Surface>
       </div>
-    </div>
+    </V2Page>
   );
 }
 

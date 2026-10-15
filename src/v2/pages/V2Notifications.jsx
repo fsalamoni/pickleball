@@ -36,7 +36,7 @@ import {
   noticeFiltersFromParams, noticeFiltersToParams,
 } from '@/modules/notifications/domain/noticeFeed';
 import {
-  V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2PageIntro, V2SearchInput, V2Select, V2Skeleton,
+  V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2PageIntro, V2SearchInput, V2Select, V2Skeleton, V2Page,
 } from '@/v2/ui/primitives';
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { AREA_ICON, NoticeIcon, NoticeTime } from '@/v2/components/notifications/noticeParts';
@@ -267,7 +267,7 @@ export default function V2Notifications() {
   }
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <V2Page>
       <V2PageIntro
         title={t('Notificações')}
         // O número de não lidas já está no filtro "Não lidas" e no sino.
@@ -407,6 +407,6 @@ export default function V2Notifications() {
       )}
 
       {conteudo}
-    </div>
+    </V2Page>
   );
 }

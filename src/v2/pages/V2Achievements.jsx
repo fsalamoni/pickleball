@@ -16,7 +16,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { TermNote } from '@/v2/components/gamification/TermHint';
@@ -47,7 +47,7 @@ export default function V2Achievements() {
   // Se a master flag está OFF, mostra empty state amigável
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <V2Page>
         <V2PageIntro
           title={t('Conquistas')}
           subtitle={t('Catálogo de troféus, medalhas e marcos da plataforma.')}
@@ -64,7 +64,7 @@ export default function V2Achievements() {
             }
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -98,17 +98,17 @@ function V2AchievementsOn({ user }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <V2Page>
         <V2PageIntro title={t('Conquistas')} subtitle={t('Catálogo de troféus e marcos.')} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <V2Skeleton key={i} className="h-48 rounded-4xl" />)}
         </div>
-      </div>
+      </V2Page>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Conquistas')}
         subtitle={t('{n} de {total} desbloqueadas — quanto mais você joga, mais você conquista.', { n: result.unlockedCount, total: result.total })}
@@ -236,6 +236,6 @@ function V2AchievementsOn({ user }) {
           </ul>
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }

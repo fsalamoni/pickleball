@@ -21,6 +21,7 @@ import { recordEvent } from '@/core/services/observabilityService';
 import PersonalizeHomeDialog from './PersonalizeHomeDialog';
 import { t } from '@/core/i18n';
 
+import { TITLE_TYPE } from '@/v2/ui/primitives';
 function Contador({ label, value, destaque = false }) {
   return (
     <div className={destaque ? 'rounded-3xl bg-acid p-4 text-ink' : 'rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-lg'}>
@@ -66,7 +67,7 @@ export default function HomeHero({
       <div className="relative z-10 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-end">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-acid">{formatDateLongBR(hoje)}</p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className={`mt-2 ${TITLE_TYPE}`}>
             {saudacao(new Date(agora))}, {nome}
           </h1>
           <p className="mt-2 max-w-2xl text-base font-medium text-gray-300" aria-live="polite">

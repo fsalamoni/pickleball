@@ -7,7 +7,7 @@ import { isOwnerEmail } from '@/core/config/owners';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
-import { V2Button, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2PageIntro, V2Skeleton, V2Surface, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 /**
@@ -90,7 +90,7 @@ export default function V2AdminOwnerRestore() {
   }
 
   if (isLoadingAuth) {
-    return <V2Skeleton className="mx-auto mt-10 h-64 max-w-[720px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   }
 
   if (!isAuthenticated) {
@@ -99,7 +99,7 @@ export default function V2AdminOwnerRestore() {
 
   if (!isOwner) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2PageIntro
           title={t('Acesso restrito')}
           subtitle={t('Esta rota é exclusiva para o owner da plataforma.')}
@@ -122,7 +122,7 @@ export default function V2AdminOwnerRestore() {
             <Link to="/" className="text-sm font-bold text-ink underline">{t('← Voltar ao início')}</Link>
           </div>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -132,7 +132,7 @@ export default function V2AdminOwnerRestore() {
   const userDocPhotoIsEmpty = usersDoc && !usersDoc.photo_url;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2PageIntro
         title={t('Restaurar admin (emergência)')}
         subtitle={t('Use esta página se você perdeu o acesso admin. Detecta e corrige o role do seu users/{uid}.')}
@@ -241,7 +241,7 @@ export default function V2AdminOwnerRestore() {
           </div>
         )}
       </V2Surface>
-    </div>
+    </V2Page>
   );
 }
 

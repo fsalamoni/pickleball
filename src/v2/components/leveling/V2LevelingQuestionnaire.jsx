@@ -21,7 +21,7 @@ export function V2LevelingResultCard({ result, onRestart, onPrint = () => window
   const breakdown = result.categoryBreakdown || {};
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 print:max-w-none" id="leveling-print-area">
+    <div className="space-y-5" id="leveling-print-area">
       <V2Surface className="p-5 shadow-organic-sm print:shadow-none sm:p-8">
         <div className="text-center">
           <Trophy className="mx-auto h-12 w-12 text-acid" />

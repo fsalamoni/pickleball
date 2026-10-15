@@ -32,7 +32,7 @@ import { sellerBadges } from '@/modules/marketplace/domain/reputation';
 import {
   useIsMarketOperator, useListing, useMarketCart, useMarketSettings, usePublicListings, useSeller, useSellerListings,
 } from '@/modules/marketplace/hooks/useMarket';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface, V2Page } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Select, V2Skeleton, V2Surface, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import ListingGallery from '@/v2/components/marketplace/ListingGallery';
 import ListingQuestions from '@/v2/components/marketplace/ListingQuestions';
@@ -152,7 +152,7 @@ function BuyBox({ listing, isOperator, settings }) {
         {listing.quantity_sold > 0 && <span>· {tn(listing.quantity_sold, '{n} vendido', '{n} vendidos')}</span>}
         <SellerTypeTag type={listing.seller_type} />
       </div>
-      <h1 className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">{listing.title}</h1>
+      <h1 className={PAGE_TITLE}>{listing.title}</h1>
       <Price cents={listing.price_cents} compareAt={listing.compare_at_cents} size="lg" />
       {promoAte > 0 && listing.compare_at_cents > listing.price_cents && (
         <p className="text-xs font-semibold text-red-600">{t('Oferta até {data}', { data: fmtData(promoAte, { day: '2-digit', month: '2-digit' }) })}</p>
@@ -375,7 +375,7 @@ function ListingPage() {
   } else if (!listing || (['removed', 'draft', 'pending_review'].includes(listing.status) && !podeVerOculto)) {
     corpo = (
       <V2Surface className="text-center">
-        <h1 className="font-display text-2xl font-bold text-ink">{t('Este anúncio não está mais no ar')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Este anúncio não está mais no ar')}</h1>
         <p className="mt-2 text-gray-500">{t('O vendedor pausou ou encerrou, ou a moderação retirou. Veja outros parecidos na vitrine.')}</p>
         <V2Button asChild className="mt-6"><Link to="/mercado">{t('Ir para o Mercado')}</Link></V2Button>
       </V2Surface>
@@ -425,7 +425,7 @@ function ListingPage() {
   }
 
   return (
-    <V2Page largura="larga" className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <MarketHeader />
       {corpo}
     </V2Page>

@@ -41,7 +41,7 @@ import { LEVEL_SOURCE, LEVEL_SOURCE_LABEL } from '@/modules/rating/domain/unifie
 import {
   USER_AREA_GROUPS, marketPendingCounts, memberSince, resolveUserAreaSection, userAreaPending, userAreaSections,
 } from '@/modules/athletes/domain/userArea';
-import { V2Avatar, V2Badge, V2Button, V2ErrorState } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button, V2ErrorState, V2Page, PAGE_TITLE } from '@/v2/ui/primitives';
 import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { rolarAte } from '@/v2/ui/rolarAte';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
@@ -157,7 +157,7 @@ export default function UserArea() {
   const ctx = { uid, userProfile, isCoach, coachQ, arenasQ, arenaSummary, clubsQ, clubInvitesQ, eventInvitesQ, lessonsQ, inboxQ, irPara, secoes, mercado: { sellerKey, sellerQ, sellerOrdersQ, sellerOffersQ, sellerQuestionsQ, myOrdersQ } };
 
   return (
-    <div className="mx-auto max-w-[1000px] space-y-6">
+    <V2Page className="space-y-6">
       <Cabecalho user={user} userProfile={userProfile} />
 
       {(pendencias.length > 0 || falhas.length > 0) && (
@@ -196,7 +196,7 @@ export default function UserArea() {
       </div>
 
       {Secao && <Secao ctx={ctx} />}
-    </div>
+    </V2Page>
   );
 }
 
@@ -232,7 +232,7 @@ function Cabecalho({ user, userProfile }) {
         <V2Avatar name={name} photoUrl={photo} size="xl" className="h-20 w-20 text-2xl" />
         <div className="min-w-0 flex-1">
           <p className="text-2xs font-bold uppercase tracking-widest text-gray-500">{t('Minha área')}</p>
-          <h1 className="truncate font-display text-2xl font-bold text-ink sm:text-3xl">{name}</h1>
+          <h1 className={`truncate ${PAGE_TITLE}`}>{name}</h1>
           <p className="mt-0.5 text-sm text-gray-500">
             {[location, year ? t('Membro desde {ano}', { ano: year }) : null].filter(Boolean).join(' • ') || t('Complete seu perfil para aparecer no diretório')}
           </p>

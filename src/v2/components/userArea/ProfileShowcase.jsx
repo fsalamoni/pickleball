@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { Award, Hash, MapPin, Medal, Pencil, User } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { genderLabel } from '@/modules/athletes/domain/constants';
-import { V2Avatar, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Avatar, V2Button, V2Surface, PAGE_TITLE } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import { memberSince } from '@/modules/athletes/domain/userArea';
 import { t } from '@/core/i18n';
@@ -67,7 +67,7 @@ export default function ProfileShowcase({ me, editDica }) {
           </div>
 
           <div className="text-center sm:text-left">
-            <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{name}</h1>
+            <h1 className={PAGE_TITLE}>{name}</h1>
             <p className="mt-1 font-medium text-gray-500">
               {[location, year ? t('Membro desde {ano}', { ano: year }) : null].filter(Boolean).join(' • ') || t('Complete seu perfil para aparecer no diretório')}
             </p>

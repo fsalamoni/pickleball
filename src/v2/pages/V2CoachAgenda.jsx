@@ -43,7 +43,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
-  V2ErrorState,
+  V2ErrorState, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t, tk, tn } from '@/core/i18n';
 
@@ -359,19 +360,19 @@ function V2CoachAgendaContent() {
   const aResponder = useMemo(() => lessonsAwaitingReply(upcoming).length, [upcoming]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (coachLoading) return <div className="mx-auto max-w-[1000px] p-4"><V2Skeleton lines={6} /></div>;
+  if (coachLoading) return <V2Page><V2Skeleton lines={6} /></V2Page>;
 
   // Falha não é "você não é professor": o convite a criar o perfil mandaria o
   // professor recadastrar o que já tem.
   if (!coach && perfilFalhou) {
     return (
-      <div className="mx-auto max-w-[720px] space-y-6 p-4">
+      <V2Page className="space-y-6">
         <V2ErrorState
           title={t('Não foi possível abrir o seu painel de professor')}
           description={t('O seu perfil continua lá — a conexão falhou no meio do caminho.')}
           onRetry={() => recarregarPerfil()}
         />
-      </div>
+      </V2Page>
     );
   }
 
@@ -380,7 +381,7 @@ function V2CoachAgendaContent() {
     // nas arenas vem primeiro — sem isto, ele abria "Minha agenda" e lia que
     // não é professor, com aulas marcadas.
     return (
-      <div className="mx-auto max-w-[720px] space-y-6 p-4">
+      <V2Page className="space-y-6">
         <MyTaughtArenaClasses />
         <V2Surface>
           <V2EmptyState
@@ -390,7 +391,7 @@ function V2CoachAgendaContent() {
             action={<Link to="/coaches" className="text-sm font-bold text-ink underline">{t('Criar perfil de professor →')}</Link>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
@@ -408,9 +409,9 @@ function V2CoachAgendaContent() {
   const coachId = user.uid;
 
   return (
-    <div className="mx-auto max-w-[1000px] p-4">
+    <V2Page>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Painel do professor')}</h1>
+        <h1 className={PAGE_TITLE}>{t('Painel do professor')}</h1>
         <div className="flex items-center gap-2">
           <Link to={`/coaches/${coachId}`} className="text-xs font-bold text-ink hover:underline">{t('Ver perfil público →')}</Link>
           <DropdownMenu>
@@ -533,7 +534,7 @@ function V2CoachAgendaContent() {
           </>
         )}
       </div>
-    </div>
+    </V2Page>
   );
 }
 

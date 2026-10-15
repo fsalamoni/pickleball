@@ -35,7 +35,7 @@ import { paginate, normalizePageSize, DEFAULT_PAGE_SIZE } from '@/core/domain/pa
 import { readNumericPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Select, V2Skeleton, V2Surface,
+  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import V2Pagination from '@/v2/ui/V2Pagination';
 import { cn } from '@/core/lib/utils';
@@ -144,7 +144,7 @@ export default function V2DoublesRanking() {
   const recorteAtivo = minGames > DEFAULT_DOUBLES_MIN_GAMES;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2PageIntro
         title={t('Ranking de duplas')}
         subtitle={t('Parcerias classificadas por aproveitamento. Empate é decidido por mais vitórias, menos derrotas e saldo de pontos, nessa ordem.')}
@@ -303,6 +303,6 @@ export default function V2DoublesRanking() {
           />
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }

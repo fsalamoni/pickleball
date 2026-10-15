@@ -35,7 +35,8 @@ import ShopCart from '@/v2/components/arenas/shop/ShopCart';
 import MyOrderCard from '@/v2/components/arenas/shop/MyOrderCard';
 import ArenaPixKey from '@/v2/components/arenas/shop/ArenaPixKey';
 import {
-  V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink,
+  V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2BackLink, V2Page,
+  PAGE_TITLE,
 } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
@@ -124,7 +125,7 @@ export default function V2ArenaPDV() {
   });
 
   if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-96 rounded-4xl" /></V2Page>;
   }
   if (!arena) return <Navigate to="/arenas" replace />;
   if (!isOn(ARENA_MODULE_ID.PDV)) return <Navigate to={`/arenas/${arenaId}`} replace />;
@@ -133,10 +134,10 @@ export default function V2ArenaPDV() {
   const temSplit = isOn(ARENA_MODULE_ID.PDV_SPLIT);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <div className="mb-6">
         <V2BackLink to={`/arenas/${arena.id}`} className="mb-3">{arena.name}</V2BackLink>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{t('Loja da {name}', { name: arena.name })}</h1>
+        <h1 className={PAGE_TITLE}>{t('Loja da {name}', { name: arena.name })}</h1>
         <p className="mt-2 font-medium text-gray-500">{t('Peça pelo aplicativo e retire no balcão, sem fila.')}</p>
       </div>
 
@@ -229,6 +230,6 @@ export default function V2ArenaPDV() {
 
       <ShopCart arena={arena} itens={carrinho} temSplit={temSplit}
         onLimpar={() => setCarrinho({})} onPedido={() => setCarrinho({})} />
-    </div>
+    </V2Page>
   );
 }

@@ -13,7 +13,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { isOwnerEmail } from '@/core/config/owners';
-import { V2Button, V2PageIntro, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2PageIntro, V2Skeleton, V2Surface, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 /**
@@ -215,25 +215,25 @@ export default function V2AdminOwnerDebug() {
   }, [user?.uid]);
 
   if (isLoadingAuth) {
-    return <V2Skeleton className="mx-auto mt-10 h-64 max-w-[1000px] rounded-4xl" />;
+    return <V2Page><V2Skeleton className="h-64 rounded-4xl" /></V2Page>;
   }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   if (!isOwner) {
     return (
-      <div className="mx-auto max-w-[720px]">
+      <V2Page>
         <V2PageIntro title={t('Acesso restrito')} subtitle={t('Página de debug exclusiva do owner.')} />
         <V2Surface className="p-6">
           <p>{t('Você não é o owner da plataforma. Esta página só é acessível para o e-mail cadastrado em')} <code>core/config/owners.js</code>.</p>
           <Link to="/" className="mt-4 inline-block text-sm font-bold text-ink underline">{t('← Voltar ao início')}</Link>
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Debug profundo do user')}
         subtitle={t('Lê Firestore direto (sem hooks/cache) e mostra contagens + erros. Use quando “user sumiu” / “perfil zerado” / “useMyTournaments retorna []”.')}
@@ -312,7 +312,7 @@ export default function V2AdminOwnerDebug() {
           </details>
         </>
       )}
-    </div>
+    </V2Page>
   );
 }
 

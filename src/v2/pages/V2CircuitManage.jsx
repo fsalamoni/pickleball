@@ -22,7 +22,7 @@ import {
 } from '@/modules/circuits/hooks/useCircuits';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2BackLink } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2BackLink, V2Page } from '@/v2/ui/primitives';
 import { t, tn, fmtData } from '@/core/i18n';
 
 const athleteLabel = (a) => a.platform_name || a.full_name || a.name || t('Atleta');
@@ -397,33 +397,33 @@ export default function V2CircuitManage() {
   const [editing, setEditing] = useState(false);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
+  if (isLoading) return <V2Page><V2Skeleton lines={6} /></V2Page>;
   // Falha não é "circuito não encontrado — confira o link": o link está certo.
   if (isError) return (
-    <div className="p-4">
+    <V2Page>
       <V2ErrorState
         title={t('Não foi possível carregar o circuito')}
         description={t('O circuito continua lá — só não conseguimos buscá-lo agora.')}
         onRetry={() => refetch()}
       />
       <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">{t('← Ver circuitos')}</Link>
-    </div>
+    </V2Page>
   );
   if (!circuit) return (
-    <div className="p-4">
+    <V2Page>
       <V2EmptyState icon={Trophy} title={t('Circuito não encontrado')} description={t('Confira o link ou volte para a lista.')} />
       <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-green-700">{t('← Ver circuitos')}</Link>
-    </div>
+    </V2Page>
   );
 
   return (
-    <div className="space-y-4 p-4">
+    <V2Page className="space-y-4">
       <V2BackLink to="/circuits">{t('Circuitos')}</V2BackLink>
       <CircuitInfo circuit={circuit} isAdmin={isAdmin} onEdit={() => setEditing(true)} />
       <TournamentList circuitId={circuitId} isAdmin={isAdmin} />
       {isAdmin && <CircuitResultsEntry circuit={circuit} circuitId={circuitId} />}
       <Ranking circuitId={circuitId} />
       {editing && <EditCircuitModal circuit={circuit} onClose={() => setEditing(false)} />}
-    </div>
+    </V2Page>
   );
 }

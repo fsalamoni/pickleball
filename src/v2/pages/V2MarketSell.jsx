@@ -827,7 +827,7 @@ function SellPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <V2PageIntro
           title={t('Vender no Mercado')}

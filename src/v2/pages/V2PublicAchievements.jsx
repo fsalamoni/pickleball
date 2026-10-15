@@ -19,7 +19,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import { t, fmtNumero } from '@/core/i18n';
 
@@ -37,7 +37,7 @@ export default function V2PublicAchievements() {
   const gamificationOn = true;
   if (!gamificationOn) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Conquistas')} subtitle={t('Veja o perfil de outro atleta.')} />
         <V2Surface>
           <V2EmptyState
@@ -46,7 +46,7 @@ export default function V2PublicAchievements() {
             description={t('Esta seção estará disponível em breve.')}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
   return <V2PublicAchievementsOn />;
@@ -79,7 +79,7 @@ function V2PublicAchievementsOn() {
   const privado = !isOwnProfile && [progressionError, achievementsError].some((e) => e?.code === 'permission-denied');
   if (privado) {
     return (
-      <div className="mx-auto max-w-[1000px]" data-testid="achievements-private">
+      <V2Page data-testid="achievements-private">
         <V2PageIntro
           title={t('Conquistas')}
           subtitle={t('Conquistas de {nome}', { nome: athleteName })}
@@ -93,21 +93,21 @@ function V2PublicAchievementsOn() {
             action={<V2Button asChild><Link to={`/atleta/${uid}`}>{t('Ver perfil')}</Link></V2Button>}
           />
         </V2Surface>
-      </div>
+      </V2Page>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1000px]">
+      <V2Page>
         <V2PageIntro title={t('Conquistas')} subtitle="..." />
         <V2Skeleton className="h-96 rounded-4xl" />
-      </div>
+      </V2Page>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <V2Page>
       <V2PageIntro
         title={t('Conquistas')}
         subtitle={isOwnProfile ? t('Seu perfil público de conquistas') : t('Conquistas de {nome}', { nome: athleteName })}
@@ -221,7 +221,7 @@ function V2PublicAchievementsOn() {
           />
         </V2Surface>
       )}
-    </div>
+    </V2Page>
   );
 }
 

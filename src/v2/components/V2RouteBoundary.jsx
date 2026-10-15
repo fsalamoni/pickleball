@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, RotateCw } from 'lucide-react';
 import { recordClientError } from '@/core/services/observabilityService';
 import { planErrorRecovery } from '@/core/domain/errorRecovery';
 import { t } from '@/core/i18n';
+import { PAGE_FRAME } from '@/v2/ui/pageFrame';
 
 /**
  * Isola UMA tela: um erro dentro dela não derruba o aplicativo.
@@ -98,7 +99,7 @@ export default class V2RouteBoundary extends React.Component {
         aria-live="assertive"
         className={escuro
           ? 'mx-auto flex min-h-[60dvh] max-w-[900px] flex-col items-center justify-center gap-4 px-6 text-center text-white'
-          : 'mx-auto max-w-[800px] rounded-4xl border border-amber-200 bg-amber-50 p-6'}
+          : `${PAGE_FRAME} rounded-4xl border border-amber-200 bg-amber-50 p-6`}
       >
         <div className={escuro ? 'flex flex-col items-center gap-3' : 'flex items-start gap-3'}>
           <div className={escuro

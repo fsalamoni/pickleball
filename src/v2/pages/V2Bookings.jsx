@@ -21,7 +21,7 @@ import {
   V2PageIntro,
   V2Skeleton,
   V2Surface,
-  V2ErrorState,
+  V2ErrorState, V2Page,
 } from '@/v2/ui/primitives';
 
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
@@ -77,7 +77,7 @@ export default function V2Bookings() {
   const pendingInvites = sharedOn ? invites.filter((b) => ACTIVE.has(b.status)) : [];
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2PageIntro
         title={t('Minhas reservas')}
         subtitle={t('Acompanhe suas solicitações, valores e pagamentos nas arenas.')}
@@ -153,7 +153,7 @@ export default function V2Bookings() {
           {past.length > 0 && <BookingsGroup title={t('Histórico')} bookings={past} sharedOn={sharedOn} />}
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }
 

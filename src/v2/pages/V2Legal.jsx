@@ -13,7 +13,7 @@ import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
 import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
-import { V2Badge, V2ContentHero, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2ContentHero, V2Surface, V2Page } from '@/v2/ui/primitives';
 import { legalIcon } from '@/v2/components/legal/legalIcons';
 import { t, tn, tk, fmtData } from '@/core/i18n';
 
@@ -50,7 +50,7 @@ export default function V2Legal() {
     .filter((d) => user && !isDocAccepted(consentMap, d)).length;
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    <V2Page>
       <V2ContentHero
         eyebrow={t('Transparência')}
         title={t('Termos, Documentos e Políticas')}
@@ -118,6 +118,6 @@ export default function V2Legal() {
           );
         })}
       </div>
-    </div>
+    </V2Page>
   );
 }

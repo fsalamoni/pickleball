@@ -76,7 +76,7 @@ import HomeClubsSection from './HomeClubsSection';
 import HomeCommunitySection from './HomeCommunitySection';
 import HomeCardsEmpty from '../cards/HomeCardsEmpty';
 import { useNavRotulos } from '@/core/lib/useNavRotulos';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { V2Skeleton, V2Page } from '@/v2/ui/primitives';
 import { t } from '@/core/i18n';
 
 // O seletor dos cards só baixa quando a pessoa abre "Personalizar".
@@ -244,7 +244,7 @@ export default function V2PersonalHome() {
 
   if (sobMedida) {
     return (
-      <div className="mx-auto max-w-[1400px]">
+      <V2Page>
         <HomeHero
           nome={nome}
           hoje={hoje}
@@ -302,12 +302,12 @@ export default function V2PersonalHome() {
             <HomeCardsDialog open={escolhendo} onOpenChange={setEscolhendo} foci={foci} />
           </Suspense>
         )}
-      </div>
+      </V2Page>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <V2Page>
       <HomeHero
         nome={nome}
         hoje={hoje}
@@ -346,6 +346,6 @@ export default function V2PersonalHome() {
           </HomeSectionBoundary>
         </div>
       )}
-    </div>
+    </V2Page>
   );
 }

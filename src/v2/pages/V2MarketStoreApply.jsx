@@ -191,7 +191,7 @@ function ApplyPage() {
   }
 
   return (
-    <V2Page className="space-y-6 pb-16">
+    <V2Page className="space-y-6">
       <V2BackLink to="/mercado/vender">{t('Painel de vendas')}</V2BackLink>
       <V2PageIntro title={t('Abrir minha loja')} subtitle={t('Para quem vende como empresa, com CNPJ. A equipe analisa antes de abrir.')} />
       {corpo}
