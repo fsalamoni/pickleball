@@ -23,7 +23,7 @@ describe('navegação v3 (incorporada)', () => {
   });
 
   it('as âncoras de dica do menu continuam no lugar', () => {
-    for (const a of ['botao-procuro-jogo', 'menu-principal', 'menu-celular', 'menu-arenas', 'menu-jogar']) {
+    for (const a of ['menu-principal', 'menu-celular', 'menu-arenas', 'menu-jogar']) {
       expect(src, a).toContain(a);
     }
   });

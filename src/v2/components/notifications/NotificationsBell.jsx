@@ -161,7 +161,7 @@ export default function NotificationsBell() {
           type="button"
           data-dica="botao-notificacoes"
           aria-label={bellAccessibleLabel(unreadCount)}
-          className="btn-press relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm transition-colors hover:text-ink"
+          className="btn-press relative flex h-10 w-10 items-center sm:h-11 sm:w-11 justify-center rounded-full bg-white text-gray-500 shadow-sm transition-colors hover:text-ink"
         >
           <Bell className="h-5 w-5" aria-hidden="true" />
           {selo && (

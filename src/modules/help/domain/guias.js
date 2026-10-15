@@ -163,13 +163,6 @@ const GUIAS_BASE = [
         body: tk('Encontre uma quadra, veja os horários livres e peça a reserva. O que você reservou fica em Minhas reservas.'),
       },
       {
-        id: 'procuro-jogo',
-        route: '/',
-        target: 'botao-procuro-jogo',
-        title: tk('Atalho: Procuro jogo'),
-        body: tk('Leva direto aos convites abertos — o jeito mais rápido de achar com quem jogar hoje.'),
-      },
-      {
         id: 'avisos',
         route: '/',
         target: 'botao-notificacoes',
