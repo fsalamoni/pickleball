@@ -1,18 +1,52 @@
 # DATA_MODEL
 
 > Coleções Firestore (database **`pickleball`**), seus campos-chave e
-> relacionamentos. Tudo top-level (sem subcoleções aninhadas). Sem joins:
-> desnormalização e ids deterministas. Campos comuns: `created_at`,
-> `updated_at` (`serverTimestamp`). Para o panorama, ver `docs/01-AI-CONTEXT.md`.
+> relacionamentos. A maioria é **raiz** (`match /<coleção>/{id}`); as
+> **subcoleções** que têm regra própria estão listadas abaixo, com o caminho.
+> Sem joins: desnormalização e ids deterministas. Campos comuns: `created_at`,
+> `updated_at` (`serverTimestamp`) — mas confira o campo no service: há
+> coleções que gravam `createdAt` (gamificação) ou `*_ms` (número). Para o
+> panorama, ver `docs/01-AI-CONTEXT.md`.
+>
+> **Contagens (coleções, subcoleções, índices) não são mantidas à mão aqui**:
+> a fonte é o `docs/46-INVENTARIO.md`, GERADO a partir de `firestore.rules`,
+> `firestore.indexes.json` e do código. Este documento descreve o *shape* e as
+> regras; o inventário diz *quantas* e *quais*.
 
 ## Convenções
 
 - **Id determinista** (`clubId_uid`, `tournamentId_uid`): evita duplicidade e
   simplifica regras (1 doc por par recurso+usuário).
-- **Desnormalização**: nomes/e-mails do ator são copiados no doc para evitar
-  leitura cruzada (ex.: `user_name` em membros e admins).
-- **Auditoria**: mutações relevantes gravam `audit_logs` (ver fim do doc).
-- Toda escrita é validada por `firestore.rules` (lógica roda no client).
+- **Desnormalização**: nomes do ator são copiados no doc para evitar leitura
+  cruzada (ex.: `user_name` em membros e admins). **E-mail não**: coleção de
+  leitura ampla (`isAuthed()`/pública) nunca guarda e-mail, telefone,
+  endereço ou nascimento (`CLAUDE.md` §2.10).
+- **Auditoria**: mutações relevantes gravam `audit_logs` (ver "Transversal").
+- Toda escrita é validada por `firestore.rules` (lógica roda no client). O que
+  define **posição, prêmio, reputação, XP concedido e ranking** é escrito só
+  pelo servidor (Admin SDK ignora as regras) e a regra recusa o cliente.
+- **Campo que a regra confere é contrato**: o nome (`user_id`, `student_id`,
+  `athlete_id`…) tem de ser o que a regra usa, senão a escrita é recusada em
+  silêncio.
+- Consulta tem de filtrar pelo campo que a regra confere, e `where`+`orderBy`
+  exige índice composto — ver "Índices" no fim.
+
+### Subcoleções com regra própria
+
+| Caminho | Observação |
+|---|---|
+| `game_days/{id}/participants/{pid}` · `game_days/{id}/games/{gid}` | dia de jogo (ver `game_days`) |
+| `tournament_registrations/{rid}/private/contact` | e-mail/contato da inscrição (nunca no doc público) |
+| `club_events/{id}/dates/{dateId}` · `…/date_rsvps/{docId}` · `…/messages/{mid}` · `…/participants/{pid}` · `…/games/{gid}` | evento de clube; `participants`/`games` são o dia de jogo LEGADO |
+| `club_forum_threads/{id}/comments/{cid}` · `…/poll_votes/{uid}` | respostas e votos do fórum (o id do voto é o uid de quem votou) |
+| `conversations/{id}/messages/{mid}` | mensagens do chat |
+| `training_sessions/{id}/comments/{cid}` · `training_questions/{id}/messages/{mid}` | Centro de Treino |
+| `market_sellers/{key}/private/data` | Pix e dados da loja |
+| `market_coupons/{id}/market_coupon_uses/{uid}` | uso do cupom (só o servidor) |
+| `market_orders/{id}/events/{eid}` · `market_orders/{id}/private/shipping` | linha do tempo e endereço de entrega do pedido |
+
+Não existem coleções raiz `comments`, `messages`, `poll_votes`, `dates` nem
+`date_rsvps`: são as subcoleções acima.
 
 ## Identidade
 
