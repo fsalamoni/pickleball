@@ -42,27 +42,31 @@ function Opt({ active, onClick, label, count }) {
   );
 }
 
+const PRICE_DEBOUNCE_MS = 400;
+
+/** A faixa de preço vale sozinha, 400 ms depois de a pessoa parar de digitar. */
 function PriceRange({ min, max, onApply }) {
   const toText = (c) => (c == null ? '' : String(Math.round(c / 100)));
   const [de, setDe] = useState(toText(min));
   const [ate, setAte] = useState(toText(max));
   useEffect(() => { setDe(toText(min)); setAte(toText(max)); }, [min, max]);
-  const aplicar = (e) => {
-    e.preventDefault();
+  useEffect(() => {
     const a = parseBRL(de);
-    const b = parseBRL(ate);
-    onApply(a, b != null && a != null && b < a ? a : b);
-  };
+    const b0 = parseBRL(ate);
+    const b = b0 != null && a != null && b0 < a ? a : b0;
+    if (a === min && b === max) return undefined; // nada mudou: não grava a URL de novo
+    const id = setTimeout(() => onApply(a, b), PRICE_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [de, ate]); // eslint-disable-line react-hooks/exhaustive-deps
   const cls = 'h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-paper-pure px-3 text-sm text-ink focus:outline-none focus:ring-4 focus:ring-gray-100';
   return (
-    <form onSubmit={aplicar} className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <label className="sr-only" htmlFor="preco-min">{t('Preço mínimo')}</label>
       <input id="preco-min" inputMode="decimal" placeholder={t('Mín.')} value={de} onChange={(e) => setDe(e.target.value)} className={cls} />
       <span className="text-gray-500">–</span>
       <label className="sr-only" htmlFor="preco-max">{t('Preço máximo')}</label>
       <input id="preco-max" inputMode="decimal" placeholder={t('Máx.')} value={ate} onChange={(e) => setAte(e.target.value)} className={cls} />
-      <button type="submit" className="h-10 shrink-0 rounded-xl bg-ink px-3 text-sm font-bold text-white">{t('Ok')}</button>
-    </form>
+    </div>
   );
 }
 
@@ -74,6 +78,8 @@ export default function MarketFilters({ filters: f, facets, onChange }) {
   const root = f.cat ? findCategory(rootOf(f.cat)) : null;
   const subs = (root?.children || []).filter((c) => facets.cat?.[c.slug] || c.slug === f.cat);
   const attrs = f.cat ? filterableAttributes(f.cat) : [];
+  const cidades = Object.keys(facets.city || {}).filter((c) => c).sort((x, y) => x.localeCompare(y, 'pt-BR'));
+  if (f.city && !cidades.includes(f.city)) cidades.push(f.city);
 
   return (
     <div>
@@ -122,6 +128,9 @@ export default function MarketFilters({ filters: f, facets, onChange }) {
         {['shipping', 'pickup', 'meetup'].filter((k) => facets.ship?.[k] || f.ship === k).map((k) => (
           <Opt key={k} active={f.ship === k} label={t(FULFILLMENT_LABELS[k])} count={facets.ship?.[k] || 0} onClick={() => set({ ship: f.ship === k ? '' : k })} />
         ))}
+        {(facets.freeShipping > 0 || f.freeShipping) && (
+          <Opt active={f.freeShipping} label={t('Frete grátis')} count={facets.freeShipping || 0} onClick={() => set({ freeShipping: !f.freeShipping })} />
+        )}
         <Opt active={f.offers} label={t('Aceita oferta')} onClick={() => set({ offers: !f.offers })} />
       </Section>
 
@@ -150,7 +159,7 @@ export default function MarketFilters({ filters: f, facets, onChange }) {
         <select
           id="filtro-uf"
           value={f.uf}
-          onChange={(e) => set({ uf: e.target.value })}
+          onChange={(e) => set({ uf: e.target.value, city: '' })}
           className="h-10 w-full rounded-xl border border-gray-200 bg-paper-pure px-3 text-sm text-ink"
         >
           <option value="">{t('Todo o Brasil')}</option>
@@ -158,6 +167,20 @@ export default function MarketFilters({ filters: f, facets, onChange }) {
             <option key={uf} value={uf}>{uf} ({facets.uf?.[uf] || 0})</option>
           ))}
         </select>
+        {f.uf && (cidades.length > 0 || f.city) && (
+          <>
+            <label htmlFor="filtro-cidade" className="sr-only">{t('Cidade')}</label>
+            <select
+              id="filtro-cidade"
+              value={f.city}
+              onChange={(e) => set({ city: e.target.value })}
+              className="mt-2 h-10 w-full rounded-xl border border-gray-200 bg-paper-pure px-3 text-sm text-ink"
+            >
+              <option value="">{t('Todo o estado')}</option>
+              {cidades.map((c) => <option key={c} value={c}>{c} ({facets.city?.[c] || 0})</option>)}
+            </select>
+          </>
+        )}
       </Section>
     </div>
   );

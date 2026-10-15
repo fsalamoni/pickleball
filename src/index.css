@@ -259,5 +259,7 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  /* O recibo do Mercado usa a mesma folha, mas corre a página em vez de centrar. */
+  .cartao-folha-raiz.recibo-folha { position: static; display: block; }
   @page { size: A4 portrait; margin: 14mm; }
 }

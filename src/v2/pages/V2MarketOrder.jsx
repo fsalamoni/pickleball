@@ -9,26 +9,29 @@
  * endereço, a quem vende depois do aceite.
  */
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  CheckCircle2, Clock, FileText, Gift, MapPin, MessageSquareWarning, Package, Star, TicketPercent, Truck,
+  CheckCircle2, Clock, ExternalLink, FileText, Gift, MapPin, MessageSquareWarning, Package, Printer, RotateCcw, Star, TicketPercent, Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  ORDER_ACTIONS, nextActionsFor, orderRoleOf, orderTimeline, orderWaitingOn,
+  ORDER_ACTIONS, nextActionsFor, orderRoleOf, orderWaitingOn, timelineSteps,
 } from '@/modules/marketplace/domain/orderStatus';
 import {
-  DISPUTE_REASON_LABELS, ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS,
+  CANCEL_REASONS, DISPUTE_REASON_LABELS, FULFILLMENT_LABELS, ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS,
 } from '@/modules/marketplace/domain/constants';
+import { CARRIERS, detectCarrier, findCarrier, trackingLink } from '@/modules/marketplace/domain/carriers';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { PIX_KEY_TYPES } from '@/modules/marketplace/domain/seller';
 import { validateReview } from '@/modules/marketplace/domain/reputation';
 import { orderAction, submitReview } from '@/modules/marketplace/services/marketOrderService';
+import { getListings } from '@/modules/marketplace/services/marketService';
 import { getMarketFileUrl, prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
 import {
-  useBuyerReviews, useDispute, useIsMarketOperator, useMarketMutation, useMarketSettings, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
+  useBuyerReviews, useDispute, useIsMarketOperator, useMarketCart, useMarketMutation, useMarketSettings, useOrder, useOrderEvents, useOrderReviews, useOrderShipping,
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -46,16 +49,27 @@ const dataHora = (ms) => (ms ? fmtData(ms, { day: '2-digit', month: '2-digit', h
 
 const EVENT_LABELS = { placed: tk('Pedido feito'), gift_card_bought: tk('Vale-presente comprado'), offer_accepted: tk('Oferta aceita · pedido criado'), expire: tk('Expirou por prazo'), auto_complete: tk('Concluído automaticamente') };
 
+/** A barra de passos; no pedido que PAROU, o marcador diz onde e quando. */
 function Timeline({ order }) {
-  if (ORDER_FINAL_STATUSES.includes(order.status) && order.status !== 'completed') return null;
-  const steps = orderTimeline(order);
+  const { steps, stopped } = timelineSteps(order);
+  const parou = stopped?.tone === 'warning' ? 'bg-amber-500' : 'bg-red-500';
   return (
-    <ol className="grid grid-cols-5 gap-1" aria-label={t('Andamento do pedido')}>
-      {steps.map((s) => (
-        <li key={s.id} className="space-y-2 text-center" aria-current={s.current ? 'step' : undefined}>
-          <span className={cn('block h-1.5 rounded-full', s.done ? 'bg-ink' : 'bg-gray-200')} />
-          <span className={cn('block text-2xs font-bold sm:text-xs', s.current ? 'text-ink' : s.done ? 'text-gray-600' : 'text-gray-500')}>{s.label}</span>
-        </li>
+    <ol className="flex gap-1" aria-label={t('Andamento do pedido')}>
+      {steps.map((s, i) => (
+        <React.Fragment key={s.id}>
+          <li className="flex-1 space-y-2 text-center" aria-current={s.current ? 'step' : undefined}>
+            <span className={cn('block h-1.5 rounded-full', s.done ? 'bg-ink' : 'bg-gray-200')} />
+            <span className={cn('block text-2xs font-bold sm:text-xs', s.current ? 'text-ink' : s.done ? 'text-gray-600' : 'text-gray-500')}>{s.label}</span>
+          </li>
+          {stopped && stopped.afterIndex === i && (
+            <li className="flex-1 space-y-2 text-center" aria-current="step">
+              <span className={cn('block h-1.5 rounded-full', parou)} />
+              <span className={cn('block text-2xs font-bold sm:text-xs', stopped.tone === 'warning' ? 'text-amber-700' : 'text-red-600')}>
+                {stopped.at_ms ? t('{estado} em {data}', { estado: stopped.label, data: dataHora(stopped.at_ms) }) : stopped.label}
+              </span>
+            </li>
+          )}
+        </React.Fragment>
       ))}
     </ol>
   );
@@ -67,18 +81,31 @@ function ActionDialog({ action, order, onClose }) {
   const [reason, setReason] = useState('');
   const [motivo, setMotivo] = useState('not_received');
   const [tracking, setTracking] = useState('');
-  const [carrier, setCarrier] = useState('');
+  const [carrierId, setCarrierId] = useState('correios');
+  const [carrierOther, setCarrierOther] = useState('');
+  const cancelReasons = CANCEL_REASONS[action.id === 'cancel' ? 'buyer' : ['decline', 'seller_cancel'].includes(action.id) ? 'seller' : ''] || null;
+  const [cancelReason, setCancelReason] = useState(cancelReasons ? cancelReasons[0] : '');
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(0);
   const [erro, setErro] = useState('');
   const m = useMarketMutation(orderAction);
   const [busy, setBusy] = useState(false);
   const isDispute = action.id === 'open_dispute';
+  // O rótulo gravado em `tracking.carrier` (texto livre, como sempre).
+  const carrierLabel = carrierId === 'other' ? carrierOther.trim() : (findCarrier(carrierId)?.label || '');
+  const onTracking = (code) => {
+    setTracking(code);
+    const d = detectCarrier(code);
+    if (d) setCarrierId(d.id);
+  };
 
   const enviar = async (e) => {
     e.preventDefault();
-    const motivoTexto = isDispute ? `${DISPUTE_REASON_LABELS[motivo]}: ${reason.trim()}` : reason.trim();
-    if (meta.needsReason && reason.trim().length < 3) { setErro(t('Conte o motivo em poucas palavras.')); return; }
+    const detalhe = reason.trim();
+    let motivoTexto = detalhe;
+    if (isDispute) motivoTexto = `${DISPUTE_REASON_LABELS[motivo]}: ${detalhe}`;
+    else if (cancelReasons) motivoTexto = detalhe ? `${cancelReason} · ${detalhe}` : cancelReason;
+    if (meta.needsReason && motivoTexto.trim().length < 3) { setErro(t('Conte o motivo em poucas palavras.')); return; }
     setBusy(true);
     try {
       let proofPath = '';
@@ -93,7 +120,7 @@ function ActionDialog({ action, order, onClose }) {
         action: action.id,
         reason: meta.needsReason ? motivoTexto : '',
         ...(proofPath ? { proof_path: proofPath } : {}),
-        ...(action.id === 'ship' ? { tracking_code: tracking.trim(), carrier: carrier.trim() } : {}),
+        ...(action.id === 'ship' ? { tracking_code: tracking.trim(), carrier: tracking.trim() ? carrierLabel : '' } : {}),
       });
       toast.success(t('Feito. O outro lado foi avisado.'));
       onClose();
@@ -127,15 +154,31 @@ function ActionDialog({ action, order, onClose }) {
               </V2Select>
             </V2Field>
           )}
+          {cancelReasons && (
+            <V2Field label={t('Motivo')} htmlFor="cancel-motivo">
+              <V2Select id="cancel-motivo" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}>
+                {cancelReasons.map((r) => <option key={r} value={r}>{t(r)}</option>)}
+              </V2Select>
+            </V2Field>
+          )}
           {meta.needsReason && (
-            <V2Field label={isDispute ? t('Conte os detalhes') : t('Motivo')} htmlFor="acao-motivo">
-              <V2Textarea id="acao-motivo" rows={3} maxLength={480} value={reason} onChange={(e) => { setReason(e.target.value); setErro(''); }} autoFocus />
+            <V2Field label={isDispute ? t('Conte os detalhes') : cancelReasons ? t('Detalhes (opcional)') : t('Motivo')} htmlFor="acao-motivo">
+              <V2Textarea id="acao-motivo" rows={3} maxLength={480} value={reason} onChange={(e) => { setReason(e.target.value); setErro(''); }} autoFocus={!cancelReasons} />
             </V2Field>
           )}
           {action.id === 'ship' && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <V2Field label={t('Código de rastreio')} htmlFor="rastreio"><V2Input id="rastreio" maxLength={60} value={tracking} onChange={(e) => setTracking(e.target.value)} /></V2Field>
-              <V2Field label={t('Transportadora')} htmlFor="transportadora"><V2Input id="transportadora" maxLength={40} placeholder={t('Correios')} value={carrier} onChange={(e) => setCarrier(e.target.value)} /></V2Field>
+              <V2Field label={t('Código de rastreio')} htmlFor="rastreio"><V2Input id="rastreio" maxLength={60} value={tracking} onChange={(e) => onTracking(e.target.value)} /></V2Field>
+              <V2Field label={t('Transportadora')} htmlFor="transportadora">
+                <V2Select id="transportadora" value={carrierId} onChange={(e) => setCarrierId(e.target.value)}>
+                  {CARRIERS.map((c) => <option key={c.id} value={c.id}>{c.id === 'other' ? t(c.label) : c.label}</option>)}
+                </V2Select>
+              </V2Field>
+              {carrierId === 'other' && (
+                <V2Field label={t('Nome da transportadora')} htmlFor="transportadora-outra" className="sm:col-span-2">
+                  <V2Input id="transportadora-outra" maxLength={40} value={carrierOther} onChange={(e) => setCarrierOther(e.target.value)} />
+                </V2Field>
+              )}
             </div>
           )}
           {action.id === 'send_proof' && (
@@ -313,6 +356,111 @@ function History({ orderId }) {
   );
 }
 
+/** O rastreio como cartão: o código para copiar e o link da transportadora, para os dois lados. */
+function TrackingCard({ tracking }) {
+  if (!tracking?.code) return null;
+  const url = trackingLink(tracking);
+  const nome = tracking.carrier || findCarrier(detectCarrier(tracking.code)?.id)?.label || '';
+  return (
+    <div className="space-y-2 rounded-2xl bg-paper p-3">
+      <p className="text-xs text-gray-500">{t('Rastreio')}{nome ? ` · ${nome}` : ''}</p>
+      <CopyCodeButton code={tracking.code} size="sm" successMessage={t('Código de rastreio copiado.')} label={t('Copiar o código de rastreio')} />
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-ink underline">
+          <ExternalLink className="h-4 w-4" aria-hidden="true" /> {t('Rastrear na {transportadora}', { transportadora: nome })}
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Comprador, pedido terminado: os itens que ainda estão no ar voltam ao carrinho. */
+function BuyAgainButton({ order, uid }) {
+  const navigate = useNavigate();
+  const carrinho = useMarketCart(uid);
+  const [busy, setBusy] = useState(false);
+  const itens = (order.items || []).filter((i) => i.listing_id);
+  if (!itens.length) return null;
+  const comprar = async () => {
+    setBusy(true);
+    try {
+      const anuncios = await getListings(itens.map((i) => i.listing_id));
+      const fora = [];
+      let postos = 0;
+      for (const i of itens) {
+        const l = anuncios[i.listing_id];
+        if (!l || l.status !== 'active') { fora.push(i.title); continue; }
+        const r = await carrinho.add({ id: i.listing_id, ...l }, i.quantity);
+        if (r.error) fora.push(i.title); else postos += 1;
+      }
+      if (fora.length) toast.warning(t('Não está mais à venda: {itens}', { itens: fora.join(', ') }));
+      if (postos) navigate('/mercado/carrinho');
+    } catch (err) {
+      toast.error(err.message || t('Não foi possível conferir os anúncios.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <V2Button type="button" variant="ghost" disabled={busy} onClick={comprar}>
+      <RotateCcw className="h-4 w-4" /> {busy ? t('Conferindo…') : t('Comprar de novo')}
+    </V2Button>
+  );
+}
+
+/**
+ * A folha do recibo: fora da árvore do app (portal), visível SÓ no
+ * `@media print` — o mesmo mecanismo do cartão de campeões
+ * (`imprimindo-cartao` no body, `.cartao-folha-raiz`).
+ */
+function Receipt({ order, role }) {
+  const digital = order.fulfillment === 'digital';
+  const linhas = [
+    [t('Pedido'), order.code],
+    [t('Feito em'), dataHora(order.placed_at_ms)],
+    order.paid_at_ms && [t('Pago em'), dataHora(order.paid_at_ms)],
+    order.completed_at_ms && [t('Concluído em'), dataHora(order.completed_at_ms)],
+    [t('Situação'), ORDER_STATUS_LABELS[order.status] ? t(ORDER_STATUS_LABELS[order.status]) : order.status],
+    [t('Vendedor'), order.seller_name],
+    [t('Comprador'), order.buyer_name],
+    !digital && [t('Entrega'), FULFILLMENT_LABELS[order.fulfillment] ? t(FULFILLMENT_LABELS[order.fulfillment]) : order.fulfillment],
+    order.tracking?.code && [t('Rastreio'), `${order.tracking.code}${order.tracking.carrier ? ` · ${order.tracking.carrier}` : ''}`],
+    [t('Pagamento'), order.payment?.pix_key ? t('Pix para {nome}', { nome: order.payment.receiver_name || order.seller_name }) : t('Pix')],
+  ].filter(Boolean);
+  return (
+    <div className="tema-claro recibo-imprimivel space-y-4 text-ink">
+      <h1 className="font-display text-2xl font-bold">{t('Recibo · {codigo}', { codigo: order.code })}</h1>
+      <p className="text-xs text-gray-600">{t('Emitido por {quem} no Mercado PickleRush.', { quem: role === 'seller' ? order.seller_name : order.buyer_name })}</p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        {linhas.map(([k, v]) => <React.Fragment key={k}><dt className="font-bold">{k}</dt><dd>{v}</dd></React.Fragment>)}
+      </dl>
+      <table className="w-full text-sm">
+        <thead><tr className="border-b border-gray-300 text-left"><th className="py-1">{t('Item')}</th><th className="py-1 text-right">{t('Qtd.')}</th><th className="py-1 text-right">{t('Valor')}</th></tr></thead>
+        <tbody>
+          {(order.items || []).map((i, n) => (
+            <tr key={i.listing_id || n} className="border-b border-gray-100"><td className="py-1">{i.title}</td><td className="py-1 text-right">{i.quantity}</td><td className="py-1 text-right">{formatBRL(i.unit_price_cents * i.quantity)}</td></tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr><td colSpan={2} className="py-1 text-right text-gray-600">{t('Produtos')}</td><td className="py-1 text-right">{formatBRL(order.subtotal_cents)}</td></tr>
+          {!digital && <tr><td colSpan={2} className="py-1 text-right text-gray-600">{t('Frete')}</td><td className="py-1 text-right">{order.shipping_to_agree ? t('A combinar') : formatBRL(order.shipping_cents || 0)}</td></tr>}
+          {(order.discount_cents > 0 || order.shipping_discount_cents > 0) && <tr><td colSpan={2} className="py-1 text-right text-gray-600">{t('Cupom')}</td><td className="py-1 text-right">− {formatBRL((order.discount_cents || 0) + (order.shipping_discount_cents || 0))}</td></tr>}
+          {order.gift_card_cents > 0 && <tr><td colSpan={2} className="py-1 text-right text-gray-600">{t('Vale-presente')}</td><td className="py-1 text-right">− {formatBRL(order.gift_card_cents)}</td></tr>}
+          <tr className="font-bold"><td colSpan={2} className="py-1 text-right">{t('Total')}</td><td className="py-1 text-right">{formatBRL(order.total_cents)}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+function imprimirRecibo() {
+  if (typeof document === 'undefined') return;
+  document.body.classList.add('imprimindo-cartao');
+  const fim = () => { document.body.classList.remove('imprimindo-cartao'); window.removeEventListener('afterprint', fim); };
+  window.addEventListener('afterprint', fim);
+  requestAnimationFrame(() => { window.print(); setTimeout(fim, 2000); });
+}
+
 function OrderPage() {
   const settings = useMarketSettings();
   const { orderId } = useParams();
@@ -345,8 +493,12 @@ function OrderPage() {
       ? { id: (order.seller_manager_uids || [])[0], platform_name: order.seller_name }
       : { id: order.buyer_uid, platform_name: order.buyer_name };
     const digital = order.fulfillment === 'digital';
-    const principal = acoes.filter((a) => a.tone !== 'danger');
+    // UMA ação principal (sólida); as outras em ghost; as destrutivas numa linha à parte.
+    const normais = acoes.filter((a) => a.tone !== 'danger');
+    const principal = normais.find((a) => a.tone === 'primary') || null;
+    const secundarias = normais.filter((a) => a !== principal);
     const perigo = acoes.filter((a) => a.tone === 'danger');
+    const terminado = ORDER_FINAL_STATUSES.includes(order.status);
     corpo = (
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-6 lg:col-span-8">
@@ -362,12 +514,10 @@ function OrderPage() {
             {role === 'seller' && <BuyerReputation uid={order.buyer_uid} />}
             <Timeline order={order} />
             {espera && (
-              <div className="rounded-2xl bg-paper p-4">
-                <p className="font-bold text-ink">{espera}</p>
-                {order.deadline_at_ms && !ORDER_FINAL_STATUSES.includes(order.status) && (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><Clock className="h-3.5 w-3.5" /> {t('Prazo: {data}', { data: dataHora(order.deadline_at_ms) })}</p>
-                )}
-              </div>
+              <p className="text-sm text-gray-600">
+                {espera}
+                {order.deadline_at_ms && !terminado && <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-500"><Clock className="h-3.5 w-3.5" /> {t('Prazo: {data}', { data: dataHora(order.deadline_at_ms) })}</span>}
+              </p>
             )}
             {order.status === 'cancelled' && order.cancel_reason && <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">{t('Cancelado: {motivo}', { motivo: order.cancel_reason })}</p>}
             {order.status === 'expired' && <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">{t('O pedido expirou porque passou do prazo. O estoque voltou ao anúncio.')}</p>}
@@ -375,10 +525,15 @@ function OrderPage() {
             {digital && role === 'buyer' && ['delivered', 'completed'].includes(order.status) && (
               <Link to="/mercado/vales" className="flex items-center gap-2 rounded-2xl bg-acid/30 p-4 text-sm font-bold text-ink"><Gift className="h-4 w-4" /> {t('O vale está em Vales-presente: mande para quem vai ganhar ou use você mesmo.')}</Link>
             )}
-            {(principal.length > 0 || perigo.length > 0) && (
-              <div className="flex flex-wrap gap-2">
-                {principal.map((a) => <V2Button key={a.id} type="button" variant={a.tone === 'primary' ? 'primary' : 'secondary'} onClick={() => setAcao(a)}>{a.label}</V2Button>)}
-                {perigo.map((a) => <V2Button key={a.id} type="button" variant="danger" onClick={() => setAcao(a)}>{a.label}</V2Button>)}
+            <div className="flex flex-wrap gap-2">
+              {principal && <V2Button type="button" variant="primary" onClick={() => setAcao(principal)}>{principal.label}</V2Button>}
+              {secundarias.map((a) => <V2Button key={a.id} type="button" variant="ghost" onClick={() => setAcao(a)}>{a.label}</V2Button>)}
+              {role === 'buyer' && ['completed', 'cancelled'].includes(order.status) && <BuyAgainButton order={order} uid={user?.uid} />}
+              <V2Button type="button" variant="ghost" onClick={imprimirRecibo}><Printer className="h-4 w-4" /> {t('Recibo')}</V2Button>
+            </div>
+            {perigo.length > 0 && (
+              <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                {perigo.map((a) => <V2Button key={a.id} type="button" variant="danger" size="sm" onClick={() => setAcao(a)}>{a.label}</V2Button>)}
               </div>
             )}
           </V2Surface>
@@ -419,12 +574,7 @@ function OrderPage() {
           {!digital && <V2Surface variant="compacto" className="space-y-3 p-5">
             <h2 className="flex items-center gap-2 font-bold text-ink">{order.fulfillment === 'shipping' ? <Truck className="h-4 w-4" /> : <MapPin className="h-4 w-4" />} {fulfillmentLabel(order.fulfillment)}</h2>
             <Address order={order} role={role} />
-            {order.tracking?.code && (
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500">{t('Rastreio')}{order.tracking.carrier ? ` · ${order.tracking.carrier}` : ''}</p>
-                <CopyCodeButton code={order.tracking.code} size="sm" successMessage={t('Código de rastreio copiado.')} label={t('Copiar o código de rastreio')} />
-              </div>
-            )}
+            <TrackingCard tracking={order.tracking} />
             {order.fulfillment !== 'shipping' && <p className="text-sm text-gray-500">{t('Combinem o local e o horário pela conversa.')}</p>}
             {[...new Set((order.items || []).map((i) => i.pickup_note).filter(Boolean))].map((n) => (
               <p key={n} className="rounded-2xl bg-paper p-3 text-sm text-gray-700"><span className="block text-xs text-gray-500">{t('Onde retirar (do anúncio)')}</span>{n}</p>
@@ -446,9 +596,12 @@ function OrderPage() {
               {(order.seller_manager_uids || [])[0] && <V2ChatLauncherButton athlete={{ id: order.seller_manager_uids[0], platform_name: order.seller_name }} variant="outline" label={t('Conversar com {nome}', { nome: order.seller_name || t('o vendedor') })} />}
             </V2Surface>
           )}
-          {role === 'seller' && <Link to={voltar} className="block text-center text-sm font-bold text-ink underline">{t('Voltar ao Mercado')}</Link>}
         </aside>
         {acao && <ActionDialog action={acao} order={order} onClose={() => setAcao(null)} />}
+        {typeof document !== 'undefined' && createPortal(
+          <div className="cartao-folha-raiz recibo-folha hidden" aria-hidden="true"><Receipt order={order} role={role} /></div>,
+          document.body,
+        )}
       </div>
     );
   }

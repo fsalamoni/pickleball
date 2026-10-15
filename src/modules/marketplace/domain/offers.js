@@ -77,6 +77,17 @@ function lastAmount(offer, by) {
   return h ? h.amount_cents : (by === 'buyer' ? offer.amount_cents : null);
 }
 
+/**
+ * O estado que a tela mostra: a oferta `pending`/`countered` cujo prazo passou
+ * é "expirada" (o servidor ainda não marcou), e não "responder".
+ */
+export function offerDisplayStatus(offer, now = Date.now()) {
+  if (!offer) return O.EXPIRED;
+  const prazo = Number(offer.expires_at_ms);
+  if ([O.PENDING, O.COUNTERED].includes(offer.status) && prazo && now > prazo) return O.EXPIRED;
+  return offer.status;
+}
+
 /** Botões da negociação para quem vê. */
 export function offerActionsFor(offer, role, { now = Date.now(), maxRounds = OFFER_RULES.maxRounds } = {}) {
   if (!offer || !role) return [];

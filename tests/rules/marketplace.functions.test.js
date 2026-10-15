@@ -282,6 +282,38 @@ describe('⭐ avaliação cega', () => {
     expect(s.rating_count).toBe(1);
     expect(s.rating_avg).toBe(4);
     expect((await listing('raq')).seller_rating_avg).toBe(4);
+    // Reveladas, cada lado é avisado da avaliação que RECEBEU — com o link do seu lado.
+    const avisos = (await db.collection('notifications').get()).docs.map((d) => d.data()).filter((n) => /avaliação/.test(n.title));
+    expect(avisos.map((n) => [n.user_id, n.link]).sort()).toEqual([[ANA, `/mercado/vendas/${id}`], [BIA, `/mercado/pedidos/${id}`]].sort());
+  });
+
+  it('a rotina revela a avaliação sozinha depois de 14 dias e avisa quem a recebeu', async () => {
+    const r = await comprar([{ listing_id: 'raq', quantity: 1 }]);
+    const id = r.orders[0].id;
+    await db.doc(`market_orders/${id}`).update({ status: 'completed' });
+    await market.submitReview(ctx(), { uid: BIA }, { orderId: id, rating: 3, comment: 'Demorou um pouco' });
+    expect((await market.housekeeping(ctx({ now: NOW + 13 * 86400000 }))).reviews).toBe(0);
+    expect((await market.housekeeping(ctx({ now: NOW + 15 * 86400000 }))).reviews).toBe(1);
+    expect((await db.doc(`market_reviews/${id}_buyer`).get()).data().visible).toBe(true);
+    const avisos = (await db.collection('notifications').where('user_id', '==', ANA).get()).docs.map((d) => d.data()).filter((n) => /avaliação/.test(n.title));
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].link).toBe(`/mercado/vendas/${id}`);
+  });
+});
+
+describe('lembrete ao vendedor antes de o pedido expirar', () => {
+  it('UM aviso por pedido, só nas últimas 12 h do prazo', async () => {
+    const r = await comprar([{ listing_id: 'raq', quantity: 1 }]);
+    const id = r.orders[0].id;
+    const dl = (await order(id)).deadline_at_ms;
+    const aviso = async () => (await db.collection('notifications').where('user_id', '==', ANA).get()).docs.map((d) => d.data()).filter((n) => /esperando a sua resposta/.test(n.title));
+    expect((await market.housekeeping(ctx({ now: dl - 20 * 3600000 }))).reminders).toBe(0);
+    expect((await market.housekeeping(ctx({ now: dl - 11 * 3600000 }))).reminders).toBe(1);
+    expect((await market.housekeeping(ctx({ now: dl - 2 * 3600000 }))).reminders).toBe(0);
+    const avisos = await aviso();
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].link).toBe(`/mercado/vendas/${id}`);
+    expect((await order(id)).deadline_reminded_at_ms).toBe(dl - 11 * 3600000);
   });
 });
 

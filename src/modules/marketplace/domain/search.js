@@ -22,8 +22,13 @@ const SORT_IDS = new Set(SORT_OPTIONS.map((s) => s.id));
 
 export const EMPTY_FILTERS = Object.freeze({
   q: '', cat: '', cond: '', min: null, max: null, sellers: [], ship: '',
-  offers: false, uf: '', city: '', attrs: {}, sort: 'relevance',
+  offers: false, freeShipping: false, uf: '', city: '', attrs: {}, sort: 'relevance',
 });
+
+/** Frete grátis: envia, custa zero e não é "a combinar" (a mesma regra do selo do cartão). */
+export function hasFreeShipping(l) {
+  return (l?.fulfillment || []).includes(FULFILLMENT.SHIPPING) && Number(l.shipping_cents) === 0 && !l.shipping_to_agree;
+}
 
 function ms(v) {
   if (!v) return 0;
@@ -70,6 +75,7 @@ export function filterListings(listings, f = EMPTY_FILTERS) {
     if (f.sellers?.length && !f.sellers.includes(l.seller_type)) return false;
     if (f.ship && !(l.fulfillment || []).includes(f.ship)) return false;
     if (f.offers && !l.accepts_offers) return false;
+    if (f.freeShipping && !hasFreeShipping(l)) return false;
     if (f.uf && String(l.state || '').toUpperCase() !== f.uf.toUpperCase()) return false;
     if (f.city && normalizeSearchText(l.city) !== normalizeSearchText(f.city)) return false;
     for (const [k, v] of attrs) {
@@ -149,6 +155,9 @@ export function facetCounts(listings, filters = EMPTY_FILTERS) {
     sellers: count(without('sellers', []), (l) => l.seller_type),
     ship: count(without('ship', ''), (l) => l.fulfillment || []),
     uf: count(without('uf', ''), (l) => String(l.state || '').toUpperCase()),
+    // Cidades só dentro do estado escolhido (sem estado, a lista seria o Brasil inteiro).
+    city: f.uf ? count(without('city', ''), (l) => String(l.city || '').trim()) : {},
+    freeShipping: without('freeShipping', false).filter(hasFreeShipping).length,
     attrs: f.cat ? Object.fromEntries(filterableAttributes(f.cat).map((a) => [
       a.key,
       count(filterListings(listings, { ...f, attrs: { ...f.attrs, [a.key]: '' } }), (l) => (l.attributes?.[a.key] ?? null)),
@@ -166,6 +175,7 @@ export function activeFilterChips(f, labels = {}) {
   (f.sellers || []).forEach((s) => chips.push({ key: `seller:${s}`, label: labels.sellers?.[s] || s }));
   if (f.ship) chips.push({ key: 'ship', label: labels.ship?.[f.ship] || f.ship });
   if (f.offers) chips.push({ key: 'offers', label: t('Aceita oferta') });
+  if (f.freeShipping) chips.push({ key: 'freeShipping', label: t('Frete grátis') });
   if (f.uf) chips.push({ key: 'uf', label: f.uf });
   if (f.city) chips.push({ key: 'city', label: f.city });
   Object.entries(f.attrs || {}).forEach(([k, v]) => { if (v !== '' && v != null) chips.push({ key: `attr:${k}`, label: t(String(v)) }); });
@@ -179,6 +189,7 @@ export function clearChip(f, key) {
     next.sellers = next.sellers.filter((s) => s !== key.slice(7));
   } else if (key.startsWith('attr:')) delete next.attrs[key.slice(5)];
   else if (key === 'offers') next.offers = false;
+  else if (key === 'freeShipping') next.freeShipping = false;
   else next[key] = '';
   return next;
 }
@@ -215,6 +226,7 @@ export function filtersFromParams(params) {
     sellers: (p.get('vende') || '').split(',').filter((s) => SELLER_IDS.has(s)),
     ship: SHIP_IDS.has(p.get('entrega')) ? p.get('entrega') : '',
     offers: p.get('oferta') === '1',
+    freeShipping: p.get('frete') === 'gratis',
     uf: /^[A-Za-z]{2}$/.test(p.get('uf') || '') ? p.get('uf').toUpperCase() : '',
     city: (p.get('cidade') || '').slice(0, 60),
     attrs,
@@ -233,6 +245,7 @@ export function filtersToParams(f) {
   if (f.sellers?.length) p.set('vende', f.sellers.join(','));
   if (f.ship) p.set('entrega', f.ship);
   if (f.offers) p.set('oferta', '1');
+  if (f.freeShipping) p.set('frete', 'gratis');
   if (f.uf) p.set('uf', f.uf);
   if (f.city) p.set('cidade', f.city);
   Object.entries(f.attrs || {}).forEach(([k, v]) => { if (v !== '' && v != null) p.set(`a_${k}`, String(v)); });

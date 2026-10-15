@@ -5,20 +5,20 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ExternalLink, Gift, MapPin, PackageCheck, Search, Share2, Star } from 'lucide-react';
+import { ExternalLink, Gift, MapPin, PackageCheck, Search, Share2 } from 'lucide-react';
 import { isAllowedImageUrl } from '@/core/domain/storageUrl.js';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { giftCardConfig, normalizeCouponCode } from '@/modules/marketplace/domain/promotions';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
 import { GiftCardBuyDialog, StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
-import { t, tk, tn, fmtData, fmtNumero } from '@/core/i18n';
-import { cn } from '@/core/lib/utils';
+import { t, tk, tn } from '@/core/i18n';
 import { normalizeSearchText } from '@/modules/marketplace/domain/listing';
 import { MARKET_CATEGORIES } from '@/modules/marketplace/domain/taxonomy';
-import { sellerBadges, summarizeReviews, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domain/reputation';
+import { sellerBadges } from '@/modules/marketplace/domain/reputation';
 import { publishedMs } from '@/modules/marketplace/domain/search';
-import { useSeller, useSellerListings, useSellerReviews } from '@/modules/marketplace/hooks/useMarket';
+import { useSeller, useSellerListings } from '@/modules/marketplace/hooks/useMarket';
+import SellerReviews from '@/v2/components/marketplace/SellerReviews';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2FilterChip, V2SearchInput, V2Select, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
@@ -34,55 +34,6 @@ function ordenar(xs, by) {
   if (by === 'price_asc') return c.sort((a, b) => a.price_cents - b.price_cents);
   if (by === 'price_desc') return c.sort((a, b) => b.price_cents - a.price_cents);
   return c.sort((a, b) => publishedMs(b) - publishedMs(a));
-}
-
-function Reviews({ sellerKey }) {
-  const q = useSellerReviews(sellerKey);
-  if (q.isError) return <V2ErrorState inline onRetry={() => q.refetch()} />;
-  if (q.isLoading) return <V2Skeleton lines={3} />;
-  const all = (q.data || []).filter((r) => r.visible && r.author_role === 'buyer');
-  const resumo = summarizeReviews(all);
-  return (
-    <section aria-labelledby="aval-titulo" className="space-y-4">
-      <h2 id="aval-titulo" className="font-display text-xl font-bold text-ink">{t('Avaliações de quem comprou')}</h2>
-      {!resumo.count ? (
-        <p className="text-sm text-gray-500">{t('Ainda sem avaliações. As avaliações aparecem depois das primeiras vendas concluídas.')}</p>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-[14rem_1fr]">
-          <div className="space-y-2">
-            <p className="font-display text-5xl font-bold text-ink">{resumo.showRating ? fmtNumero(Number(resumo.avg.toFixed(1)), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}</p>
-            <Stars avg={resumo.avg} count={resumo.count} />
-            {!resumo.showRating && <p className="text-xs text-gray-500">{t('A nota aparece a partir de {n} avaliações.', { n: MIN_REVIEWS_FOR_RATING })}</p>}
-            <ul className="space-y-1 pt-2">
-              {[5, 4, 3, 2, 1].map((n) => (
-                <li key={n} className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-3">{n}</span><Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-paper">
-                    <span className="block h-full rounded-full bg-amber-400" style={{ width: `${(resumo.histogram[n] / resumo.count) * 100}%` }} />
-                  </span>
-                  <span className="w-6 text-right">{resumo.histogram[n]}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <ul className="divide-y divide-gray-100">
-            {all.slice(0, 20).map((r) => (
-              <li key={r.id} className="py-3">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex" aria-label={t('{nota} de 5', { nota: r.rating })}>
-                    {[1, 2, 3, 4, 5].map((i) => <Star key={i} aria-hidden="true" className={cn('h-3.5 w-3.5', i <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />)}
-                  </span>
-                  <span className="text-xs text-gray-500">{r.author_name} · {r.created_at_ms ? fmtData(r.created_at_ms, { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</span>
-                </div>
-                {r.listing_title && <p className="mt-1 text-xs text-gray-500">{t('Comprou: {titulo}', { titulo: r.listing_title })}</p>}
-                {r.comment && <p className="mt-1 text-sm text-ink">{r.comment}</p>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </section>
-  );
 }
 
 function SellerPage() {
@@ -160,9 +111,9 @@ function SellerPage() {
           </div>
         </div>
         {seller.bio && <p className="whitespace-pre-line border-t border-gray-100 px-5 py-4 text-sm leading-6 text-gray-700 sm:px-6">{seller.bio}</p>}
-        {seller.seller_type === 'store' && seller.policies && (
+        {seller.policies && (seller.policies.return_days > 0 || seller.policies.ship_within_hours > 0 || seller.cnpj_masked) && (
           <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-gray-100 px-5 py-3 text-sm sm:px-6">
-            <div className="flex gap-1"><dt className="text-gray-500">{t('Devolução:')}</dt><dd className="font-medium text-ink">{t('até {n} dias', { n: seller.policies.return_days })}</dd></div>
+            {seller.policies.return_days > 0 && <div className="flex gap-1"><dt className="text-gray-500">{t('Devolução:')}</dt><dd className="font-medium text-ink">{t('até {n} dias', { n: seller.policies.return_days })}</dd></div>}
             {seller.policies.ship_within_hours > 0 && <div className="flex gap-1"><dt className="text-gray-500">{t('Despacha em:')}</dt><dd className="font-medium text-ink">{seller.policies.ship_within_hours < 48 ? t('até 24 horas') : t('até {n} dias', { n: Math.round(seller.policies.ship_within_hours / 24) })}</dd></div>}
             {seller.cnpj_masked && <div className="flex gap-1"><dt className="text-gray-500">{t('CNPJ:')}</dt><dd className="font-medium text-ink">{seller.cnpj_masked}</dd></div>}
           </dl>
@@ -211,15 +162,18 @@ function SellerPage() {
             </V2Select>
           </div>
         </div>
-        {cats.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            <V2FilterChip active={!cat} onClick={() => setCat('')}>{t('Tudo')}</V2FilterChip>
-            {cats.map((c) => <V2FilterChip key={c.slug} active={cat === c.slug} onClick={() => setCat(c.slug)}>{t(c.label)}</V2FilterChip>)}
+        {(cats.length > 1 || busca || cat || ordem !== 'recent') && (
+          <div className="flex flex-wrap items-center gap-2">
+            {cats.length > 1 && <V2FilterChip active={!cat} onClick={() => setCat('')}>{t('Tudo')}</V2FilterChip>}
+            {cats.length > 1 && cats.map((c) => <V2FilterChip key={c.slug} active={cat === c.slug} onClick={() => setCat(c.slug)}>{t(c.label)}</V2FilterChip>)}
+            {(busca || cat || ordem !== 'recent') && (
+              <V2Button type="button" size="sm" variant="ghost" onClick={() => { setBusca(''); setCat(''); setOrdem('recent'); }}>{t('Limpar')}</V2Button>
+            )}
           </div>
         )}
         {lista}
       </section>
-      {seller && <Reviews sellerKey={sellerKey} />}
+      {seller && <SellerReviews sellerKey={sellerKey} />}
     </V2Page>
   );
 }

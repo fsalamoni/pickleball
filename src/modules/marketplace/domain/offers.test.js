@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateOfferAmount, applyOfferAction, offerActionsFor, newOffer } from './offers.js';
+import { validateOfferAmount, applyOfferAction, offerActionsFor, newOffer, offerDisplayStatus } from './offers.js';
 
 const listing = { id: 'l', title: 'Raquete', price_cents: 100000, accepts_offers: true, seller_key: 'athlete_v', seller_uid: 'v', fulfillment: ['meetup'] };
 const now = 1_000_000;
@@ -34,5 +34,14 @@ describe('ofertas', () => {
     expect(offerActionsFor(o, 'seller', { now }).map((a) => a.id)).toEqual(['accept', 'decline', 'counter']);
     expect(offerActionsFor(o, 'buyer', { now }).map((a) => a.id)).toEqual(['withdraw']);
     expect(offerActionsFor({ ...o, round: 4 }, 'seller', { now }).map((a) => a.id)).toEqual(['accept', 'decline']);
+  });
+  it('estado mostrado: pendente vencida vira expirada, as outras ficam', () => {
+    const o = newOffer(listing, { uid: 'c', name: 'Ana' }, 70000, { now });
+    expect(offerDisplayStatus(o, now + 1000)).toBe('pending');
+    expect(offerDisplayStatus(o, o.expires_at_ms + 1)).toBe('expired');
+    expect(offerDisplayStatus({ ...o, status: 'countered' }, o.expires_at_ms + 1)).toBe('expired');
+    expect(offerDisplayStatus({ ...o, status: 'ordered' }, o.expires_at_ms + 1)).toBe('ordered');
+    expect(offerDisplayStatus({ ...o, expires_at_ms: null }, now + 1e12)).toBe('pending');
+    expect(offerDisplayStatus(null)).toBe('expired');
   });
 });

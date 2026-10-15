@@ -44,7 +44,7 @@ function FavoritesPage() {
     corpo = (
       <div className="space-y-8">
         {semLeitura > 0 && <V2ErrorState inline title={tn(semLeitura, '{n} favorito não carregou agora', '{n} favoritos não carregaram agora')} onRetry={() => l.refetch()} />}
-        {ativos.length > 0 && <ListingGrid>{ativos.map((x) => <ListingCard key={x.id} listing={x} />)}</ListingGrid>}
+        {ativos.length > 0 && <ListingGrid>{ativos.map((x) => <ListingCard key={x.id} listing={x} showPriceDrop />)}</ListingGrid>}
         {fora.length > 0 && (
           <section className="space-y-3" aria-label={t('Não estão mais à venda')}>
             <h2 className="font-display text-lg font-bold text-ink">{t('Não estão mais à venda ({n})', { n: fora.length })}</h2>

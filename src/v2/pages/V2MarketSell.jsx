@@ -10,9 +10,9 @@
  * trabalho: anúncios, vendas, ofertas, perguntas, Pix e a vitrine.
  */
 import React, { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertCircle, BarChart3, CheckCircle2, HandCoins, ImagePlus, LayoutDashboard, MessageCircleQuestion, Package, Pencil, Plus, Receipt, Store, TicketPercent, Wallet,
+  AlertCircle, BarChart3, CheckCircle2, Copy, ExternalLink, HandCoins, ImagePlus, LayoutDashboard, MessageCircleQuestion, MoreHorizontal, Package, Palmtree, Pencil, Plus, Receipt, Share2, Star, Store, TicketPercent, Trash2, Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -20,25 +20,32 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
-import { coverOf, listingCompleteness } from '@/modules/marketplace/domain/listing';
+import { coverOf, listingCompleteness, vacationState } from '@/modules/marketplace/domain/listing';
 import { PIX_KEY_TYPES, sellerKeyFor, sellingIdentities } from '@/modules/marketplace/domain/seller';
 import {
   LISTING_STATUS_LABELS, OFFER_STATUS_LABELS, ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS,
 } from '@/modules/marketplace/domain/constants';
 import { orderWaitingOn } from '@/modules/marketplace/domain/orderStatus';
+import { offerDisplayStatus } from '@/modules/marketplace/domain/offers';
 import { validateAnswer } from '@/modules/marketplace/domain/settings';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import {
-  answerQuestion, deleteListing, ensureSeller, quickEditListing, savePayment, setListingStatus, updateSellerProfile,
+  answerQuestion, deleteListing, duplicateListing, ensureSeller, quickEditListing, republishListing, savePayment, saveSellerPolicies, setListingStatus, updateSellerProfile,
 } from '@/modules/marketplace/services/marketService';
 import { prepareMarketFile, uploadMarketFile } from '@/modules/marketplace/services/marketMediaService';
 import {
-  useMarketMutation, useSeller, useSellerListings, useSellerOffers, useSellerOrders, useSellerPrivate, useSellerQuestions,
+  useMarketMutation, useMarketSettings, useSeller, useSellerListings, useSellerOffers, useSellerOrders, useSellerPrivate, useSellerQuestions,
 } from '@/modules/marketplace/hooks/useMarket';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
+import SellerReviews from '@/v2/components/marketplace/SellerReviews';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Page, V2PageIntro, V2Select,
-  V2Skeleton, V2Surface, V2Textarea,
+  V2Skeleton, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { MarketGate, statusTone } from '@/v2/components/marketplace/marketUi';
@@ -63,6 +70,7 @@ const SECOES = [
       { value: 'vendas', label: tk('Vendas'), icon: Receipt },
       { value: 'ofertas', label: tk('Ofertas'), icon: HandCoins },
       { value: 'perguntas', label: tk('Perguntas'), icon: MessageCircleQuestion },
+      { value: 'avaliacoes', label: tk('Avaliações'), icon: Star },
     ],
   },
   {
@@ -139,8 +147,15 @@ function Summary({ sellerKey, seller, go }) {
   ];
   const faltam = passos.filter((p) => !p.ok && !p.carregando);
   const recebido = (orders.data || []).filter((o) => o.status === 'completed').reduce((n, o) => n + (o.total_cents || 0), 0);
+  const ferias = !listings.isLoading && !listings.isError && vacationState(listings.data || []).todosPausados;
   return (
     <div className="space-y-6">
+      {ferias && (
+        <V2Surface variant="compacto" className="flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50 p-4">
+          <p className="flex items-center gap-2 text-sm text-ink"><Palmtree className="h-5 w-5 text-amber-600" /> {t('Modo férias: todos os seus anúncios estão pausados e ninguém os vê.')}</p>
+          <V2Button type="button" size="sm" variant="secondary" onClick={() => go('vitrine')}>{t('Retomar as vendas')}</V2Button>
+        </V2Surface>
+      )}
       {faltam.length > 0 && (
         <V2Surface variant="compacto" className="space-y-3 border-acid/60 p-5">
           <h2 className="font-display text-lg font-bold text-ink">{t('Para começar a vender')}</h2>
@@ -217,10 +232,95 @@ const FILTROS = [
   { id: 'encerrados', label: tk('Encerrados'), test: (l) => l.status === 'closed' || l.status === 'removed' },
 ];
 
-function ListingsTab({ sellerKey }) {
+const NO_AR = (l) => ['active', 'sold_out'].includes(l.status);
+
+function ListingShare({ listing, onClose }) {
+  const url = typeof window !== 'undefined' ? `${window.location.origin}/mercado/anuncio/${listing.id}` : '';
+  return (
+    <ShareImageDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={t('Compartilhar o anúncio')}
+      url={url}
+      fileName={`mercado-${listing.id}.png`}
+      shareText={t('{titulo} por {valor} no Mercado PickleRush', { titulo: listing.title, valor: formatBRL(listing.price_cents) })}
+      renderCard={({ ref, qr, showImage }) => (
+        <MarketShareCard ref={ref} image={coverOf(listing)?.url} showImage={showImage} qr={qr} title={listing.title}
+          subtitle={listing.seller_name} priceCents={listing.price_cents} compareAtCents={listing.compare_at_cents} />
+      )}
+    />
+  );
+}
+
+/**
+ * UMA ação principal por estado (no ar → Editar; rascunho → Publicar; pausado →
+ * Retomar; encerrado → Republicar) e o resto num menu "⋯". Antes eram até seis
+ * botões por linha, e no celular a lista virava uma parede de botões.
+ */
+function ListingRow({ listing: l, selecionavel, marcado, onMarcar, acoes }) {
+  const capa = coverOf(l);
+  const pct = Math.round(listingCompleteness(l) * 100);
+  const editor = `/mercado/vender/anuncio/${l.id}`;
+  const podeApagar = !(l.quantity_sold > 0) && ['draft', 'paused', 'closed'].includes(l.status);
+  let principal = null;
+  if (l.status === 'draft') principal = <V2Button type="button" size="sm" onClick={() => acoes.republicar(l)}>{t('Publicar')}</V2Button>;
+  else if (l.status === 'paused') principal = <V2Button type="button" size="sm" variant="secondary" onClick={() => acoes.status(l, 'active', t('Anúncio de volta ao ar.'))}>{t('Retomar')}</V2Button>;
+  else if (l.status === 'closed') principal = <V2Button type="button" size="sm" variant="secondary" onClick={() => acoes.republicar(l)}>{t('Republicar')}</V2Button>;
+  else if (NO_AR(l)) principal = <V2Button asChild size="sm" variant="secondary"><Link to={editor}><Pencil className="h-4 w-4" /> {t('Editar')}</Link></V2Button>;
+  return (
+    <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      {selecionavel && (
+        <input type="checkbox" aria-label={t('Selecionar {titulo}', { titulo: l.title || t('anúncio') })} className="h-5 w-5 shrink-0 accent-ink" checked={marcado} onChange={(e) => onMarcar(e.target.checked)} />
+      )}
+      <Link to={editor} className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <MarketPhoto src={capa.thumb_url || capa.url} aspect={capa.aspect} frame={capa.frame} loading="lazy" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
+        <span className="min-w-0">
+          <span className="block truncate font-bold text-ink">{l.title || t('Sem título')}</span>
+          <span className="block text-sm text-gray-600">{l.compare_at_cents > l.price_cents && <span className="mr-1 text-gray-500 line-through">{formatBRL(l.compare_at_cents)}</span>}{formatBRL(l.price_cents)} · {t('{n} em estoque', { n: l.quantity ?? 0 })}{l.quantity_sold ? ` · ${tn(l.quantity_sold, '{n} vendido', '{n} vendidos')}` : ''}</span>
+          <span className="block text-xs text-gray-500">{l.favorite_count ? `${t('{n} favoritos', { n: l.favorite_count })} · ` : ''}{t('{pct}% completo', { pct })}</span>
+        </span>
+      </Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <V2Badge tone={l.status === 'active' ? 'green' : l.status === 'removed' ? 'red' : 'neutral'}>{LISTING_STATUS_LABELS[l.status] ? t(LISTING_STATUS_LABELS[l.status]) : l.status}</V2Badge>
+        {(l.status === 'removed' || l.moderation?.auto) && l.moderation?.reason && <span className="text-xs text-red-600">{l.moderation.auto ? `${t('Pausado pela moderação:')} ` : ''}{l.moderation.reason}</span>}
+        {l.status !== 'removed' && (
+          <>
+            {principal}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label={t('Mais ações para {titulo}', { titulo: l.title || t('o anúncio') })} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink">
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!NO_AR(l) && <DropdownMenuItem asChild><Link to={editor}><Pencil className="mr-2 h-4 w-4" /> {t('Editar')}</Link></DropdownMenuItem>}
+                {NO_AR(l) && <DropdownMenuItem asChild><Link to={`/mercado/anuncio/${l.id}`}><ExternalLink className="mr-2 h-4 w-4" /> {t('Ver anúncio')}</Link></DropdownMenuItem>}
+                {['active', 'sold_out', 'paused'].includes(l.status) && <DropdownMenuItem onClick={() => acoes.precoEstoque(l)}>{t('Preço e estoque')}</DropdownMenuItem>}
+                {NO_AR(l) && <DropdownMenuItem onClick={() => acoes.status(l, 'paused', t('Anúncio pausado.'))}>{t('Pausar')}</DropdownMenuItem>}
+                {l.status === 'paused' && <DropdownMenuItem onClick={() => acoes.status(l, 'active', t('Anúncio de volta ao ar.'))}>{t('Retomar')}</DropdownMenuItem>}
+                <DropdownMenuItem onClick={() => acoes.duplicar(l)}><Copy className="mr-2 h-4 w-4" /> {t('Duplicar')}</DropdownMenuItem>
+                {NO_AR(l) && <DropdownMenuItem onClick={() => acoes.compartilhar(l)}><Share2 className="mr-2 h-4 w-4" /> {t('Compartilhar')}</DropdownMenuItem>}
+                {(['active', 'sold_out', 'paused'].includes(l.status) || podeApagar) && <DropdownMenuSeparator />}
+                {['active', 'sold_out', 'paused'].includes(l.status) && <DropdownMenuItem onClick={() => acoes.confirmar({ tipo: 'encerrar', listing: l })}>{t('Encerrar')}</DropdownMenuItem>}
+                {podeApagar && <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => acoes.confirmar({ tipo: 'apagar', listing: l })}><Trash2 className="mr-2 h-4 w-4" /> {t('Apagar')}</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function ListingsTab({ sellerKey, seller }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const q = useSellerListings(sellerKey);
+  const settings = useMarketSettings();
   const [filtro, setFiltro] = useState('ativos');
   const [editar, setEditar] = useState(null);
+  const [compartilhar, setCompartilhar] = useState(null);
+  const [confirmar, setConfirmar] = useState(null);
   const [marcados, setMarcados] = useState([]);
   const status = useMarketMutation(({ l, s }) => setListingStatus(l, s));
   const emLote = useMarketMutation(async ({ ls, s }) => {
@@ -228,20 +328,49 @@ function ListingsTab({ sellerKey }) {
     return r.filter((x) => x.status === 'rejected').length;
   });
   const apagar = useMarketMutation(deleteListing);
+  const republicar = useMarketMutation((l) => republishListing(l, { settings: settings.data }));
+  const duplicar = useMarketMutation((l) => duplicateListing(l, { uid: user.uid, seller: { ...seller, seller_key: sellerKey }, settings: settings.data }));
   if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={5} />;
   const todos = q.data || [];
-  const criar = <V2Button asChild><Link to={novoAnuncio(sellerKey)}><Plus className="h-4 w-4" /> {t('Novo anúncio')}</Link></V2Button>;
   if (!todos.length) {
-    return <V2EmptyState icon={Package} title={t('Nenhum anúncio ainda')} description={t('Fotos boas, um título com marca e modelo e o preço certo: em poucos minutos o seu produto está no ar.')} action={criar} />;
+    return <V2EmptyState icon={Package} title={t('Nenhum anúncio ainda')} description={t('Fotos boas, um título com marca e modelo e o preço certo: em poucos minutos o seu produto está no ar.')} action={<V2Button asChild><Link to={novoAnuncio(sellerKey)}><Plus className="h-4 w-4" /> {t('Criar o primeiro anúncio')}</Link></V2Button>} />;
   }
   const f = FILTROS.find((x) => x.id === filtro);
   const lista = todos.filter(f.test);
-  const agir = (l, s, msg) => status.mutate({ l, s }, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) });
   const sel = lista.filter((l) => marcados.includes(l.id) && l.status !== 'removed');
   const lote = (s, msg) => emLote.mutate({ ls: sel, s }, {
-    onSuccess: (falhas) => { setMarcados([]); if (falhas) toast.error(t('{n} não mudaram. Tente de novo.', { n: falhas })); else toast.success(msg); },
+    onSuccess: (falhas) => { setMarcados([]); setConfirmar(null); if (falhas) toast.error(t('{n} não mudaram. Tente de novo.', { n: falhas })); else toast.success(msg); },
   });
+  const ocupado = status.isPending || apagar.isPending || republicar.isPending || duplicar.isPending || emLote.isPending;
+  const acoes = {
+    status: (l, s, msg) => status.mutate({ l, s }, { onSuccess: () => toast.success(msg), onError: (e) => toast.error(e.message) }),
+    precoEstoque: setEditar,
+    compartilhar: setCompartilhar,
+    confirmar: setConfirmar,
+    republicar: (l) => republicar.mutate(l, {
+      onSuccess: () => toast.success(t('Anúncio no ar.')),
+      onError: (e) => {
+        // Falta algo para publicar: o editor mostra o que, campo a campo.
+        if (e.fieldErrors && Object.keys(e.fieldErrors).length) { toast.error(t('Falta completar o anúncio: {o}', { o: Object.values(e.fieldErrors).join(' ') })); navigate(`/mercado/vender/anuncio/${l.id}`); } else toast.error(e.message);
+      },
+    }),
+    duplicar: (l) => duplicar.mutate(l, {
+      onSuccess: (id) => { toast.success(t('Cópia criada como rascunho.')); navigate(`/mercado/vender/anuncio/${id}`); },
+      onError: (e) => toast.error(e.message),
+    }),
+  };
+  const executarConfirmado = () => {
+    if (!confirmar) return;
+    if (confirmar.tipo === 'encerrar-lote') { lote('closed', t('Anúncios encerrados.')); return; }
+    if (confirmar.tipo === 'encerrar') { status.mutate({ l: confirmar.listing, s: 'closed' }, { onSuccess: () => { toast.success(t('Anúncio encerrado.')); setConfirmar(null); }, onError: (e) => toast.error(e.message) }); return; }
+    apagar.mutate(confirmar.listing, { onSuccess: () => { toast.success(t('Anúncio apagado.')); setConfirmar(null); }, onError: (e) => toast.error(e.message) });
+  };
+  const textos = {
+    'encerrar-lote': { title: t('Encerrar {n} anúncios?', { n: sel.length }), description: t('Eles saem do ar. Dá para republicar depois, um a um.'), label: t('Encerrar') },
+    encerrar: { title: t('Encerrar este anúncio?'), description: t('Ele sai do ar e deixa de aparecer nas buscas. Dá para republicar depois.'), label: t('Encerrar') },
+    apagar: { title: t('Apagar este anúncio?'), description: t('As fotos e o texto somem do Mercado. Não dá para desfazer.'), label: t('Apagar') },
+  }[confirmar?.tipo] || {};
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -254,51 +383,36 @@ function ListingsTab({ sellerKey }) {
           <span className="font-bold text-ink">{tn(sel.length, '{n} selecionado', '{n} selecionados')}</span>
           {filtro === 'ativos' && <V2Button type="button" size="sm" variant="ghost" disabled={emLote.isPending} onClick={() => lote('paused', t('Anúncios pausados.'))}>{t('Pausar')}</V2Button>}
           {filtro === 'pausados' && <V2Button type="button" size="sm" variant="secondary" disabled={emLote.isPending} onClick={() => lote('active', t('Anúncios de volta ao ar.'))}>{t('Retomar')}</V2Button>}
-          {['ativos', 'pausados'].includes(filtro) && <V2Button type="button" size="sm" variant="ghost" disabled={emLote.isPending} onClick={() => { if (window.confirm(t('Encerrar {n} anúncios?', { n: sel.length }))) lote('closed', t('Anúncios encerrados.')); }}>{t('Encerrar')}</V2Button>}
+          {['ativos', 'pausados'].includes(filtro) && <V2Button type="button" size="sm" variant="ghost" disabled={emLote.isPending} onClick={() => setConfirmar({ tipo: 'encerrar-lote' })}>{t('Encerrar')}</V2Button>}
           <V2Button type="button" size="sm" variant="ghost" onClick={() => setMarcados([])}>{t('Limpar')}</V2Button>
         </div>
       )}
       {!lista.length ? <p className="py-10 text-center text-sm text-gray-500">{t('Nada aqui.')}</p> : (
         <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
-          {lista.map((l) => {
-            const capa = coverOf(l);
-            const pct = Math.round(listingCompleteness(l) * 100);
-            return (
-              <li key={l.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                {['ativos', 'pausados'].includes(filtro) && (
-                  <input type="checkbox" aria-label={t('Selecionar {titulo}', { titulo: l.title || t('anúncio') })} className="h-5 w-5 shrink-0 accent-ink" checked={marcados.includes(l.id)}
-                    onChange={(e) => setMarcados((m) => (e.target.checked ? [...m, l.id] : m.filter((x) => x !== l.id)))} />
-                )}
-                <Link to={l.status === 'active' || l.status === 'sold_out' ? `/mercado/anuncio/${l.id}` : `/mercado/vender/anuncio/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-paper">{capa ? <MarketPhoto src={capa.thumb_url || capa.url} aspect={capa.aspect} frame={capa.frame} loading="lazy" /> : <Package className="m-5 h-6 w-6 text-gray-300" />}</span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-bold text-ink">{l.title || t('Sem título')}</span>
-                    <span className="block text-sm text-gray-600">{l.compare_at_cents > l.price_cents && <span className="mr-1 text-gray-500 line-through">{formatBRL(l.compare_at_cents)}</span>}{formatBRL(l.price_cents)} · {t('{n} em estoque', { n: l.quantity ?? 0 })}{l.quantity_sold ? ` · ${tn(l.quantity_sold, '{n} vendido', '{n} vendidos')}` : ''}</span>
-                    <span className="block text-xs text-gray-500">{l.favorite_count ? `${t('{n} favoritos', { n: l.favorite_count })} · ` : ''}{t('{pct}% completo', { pct })}</span>
-                  </span>
-                </Link>
-                <div className="flex flex-wrap items-center gap-2">
-                  <V2Badge tone={l.status === 'active' ? 'green' : l.status === 'removed' ? 'red' : 'neutral'}>{LISTING_STATUS_LABELS[l.status] ? t(LISTING_STATUS_LABELS[l.status]) : l.status}</V2Badge>
-                  {(l.status === 'removed' || l.moderation?.auto) && l.moderation?.reason && <span className="text-xs text-red-600">{l.moderation.auto ? `${t('Pausado pela moderação:')} ` : ''}{l.moderation.reason}</span>}
-                  {l.status !== 'removed' && (
-                    <>
-                      <V2Button asChild size="sm" variant="ghost"><Link to={`/mercado/vender/anuncio/${l.id}`}><Pencil className="h-4 w-4" /> {t('Editar')}</Link></V2Button>
-                      {['active', 'sold_out', 'paused'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => setEditar(l)}>{t('Preço e estoque')}</V2Button>}
-                      {['active', 'sold_out'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => agir(l, 'paused', t('Anúncio pausado.'))}>{t('Pausar')}</V2Button>}
-                      {l.status === 'paused' && <V2Button type="button" size="sm" variant="secondary" onClick={() => agir(l, 'active', t('Anúncio de volta ao ar.'))}>{t('Retomar')}</V2Button>}
-                      {['active', 'sold_out', 'paused'].includes(l.status) && <V2Button type="button" size="sm" variant="ghost" onClick={() => agir(l, 'closed', t('Anúncio encerrado.'))}>{t('Encerrar')}</V2Button>}
-                      {!(l.quantity_sold > 0) && ['draft', 'paused', 'closed'].includes(l.status) && (
-                        <V2Button type="button" size="sm" variant="danger" onClick={() => { if (window.confirm(t('Apagar este anúncio? Não dá para desfazer.'))) apagar.mutate(l, { onSuccess: () => toast.success(t('Anúncio apagado.')), onError: (e) => toast.error(e.message) }); }}>{t('Apagar')}</V2Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </li>
-            );
-          })}
+          {lista.map((l) => (
+            <ListingRow
+              key={l.id}
+              listing={l}
+              selecionavel={['ativos', 'pausados'].includes(filtro)}
+              marcado={marcados.includes(l.id)}
+              onMarcar={(on) => setMarcados((m) => (on ? [...m, l.id] : m.filter((x) => x !== l.id)))}
+              acoes={acoes}
+            />
+          ))}
         </ul>
       )}
       {editar && <QuickEdit listing={editar} onClose={() => setEditar(null)} />}
+      {compartilhar && <ListingShare listing={compartilhar} onClose={() => setCompartilhar(null)} />}
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        onOpenChange={(o) => !o && setConfirmar(null)}
+        title={textos.title}
+        description={textos.description}
+        confirmLabel={textos.label}
+        destructive={confirmar?.tipo === 'apagar'}
+        loading={ocupado}
+        onConfirm={executarConfirmado}
+      />
     </div>
   );
 }
@@ -349,7 +463,8 @@ function OffersTab({ sellerKey }) {
   const q = useSellerOffers(sellerKey);
   if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={4} />;
-  const lista = [...(q.data || [])].sort((a, b) => (b.status === 'pending') - (a.status === 'pending'));
+  const agora = Date.now();
+  const lista = [...(q.data || [])].map((o) => ({ ...o, mostrado: offerDisplayStatus(o, agora) })).sort((a, b) => (b.mostrado === 'pending') - (a.mostrado === 'pending'));
   if (!lista.length) return <V2EmptyState icon={HandCoins} title={t('Nenhuma oferta')} description={t('Nos anúncios que aceitam oferta, o comprador propõe um valor e você responde aqui.')} />;
   return (
     <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
@@ -361,7 +476,7 @@ function OffersTab({ sellerKey }) {
               <span className="block text-xs text-gray-500">{o.buyer_name || t('Comprador')} · {t('anunciado por {valor}', { valor: formatBRL(o.list_price_cents) })}</span>
             </span>
             <span className="shrink-0 space-y-1 text-right">
-              <V2Badge tone={o.status === 'pending' ? 'amber' : o.status === 'ordered' ? 'green' : 'neutral'}>{o.status === 'pending' ? t('Responder') : OFFER_STATUS_LABELS[o.status] ? t(OFFER_STATUS_LABELS[o.status]) : o.status}</V2Badge>
+              <V2Badge tone={o.mostrado === 'pending' ? 'amber' : o.mostrado === 'ordered' ? 'green' : 'neutral'}>{o.mostrado === 'pending' ? t('Responder') : OFFER_STATUS_LABELS[o.mostrado] ? t(OFFER_STATUS_LABELS[o.mostrado]) : o.mostrado}</V2Badge>
               <span className="block font-bold text-ink">{formatBRL(o.amount_cents)}</span>
             </span>
           </Link>
@@ -396,24 +511,54 @@ function AnswerForm({ question }) {
   );
 }
 
+function QuestionCard({ x }) {
+  return (
+    <li>
+      <V2Surface variant="compacto" className="space-y-2 p-4">
+        <Link to={`/mercado/anuncio/${x.listing_id}?ancora=perguntas`} className="text-xs font-bold text-gray-500 hover:underline">{x.listing_title}</Link>
+        <p className="text-sm text-ink"><strong>{x.asker_name}:</strong> {x.text}</p>
+        {x.status === 'answered' ? <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">{x.answer}</p> : <AnswerForm question={x} />}
+      </V2Surface>
+    </li>
+  );
+}
+
 function QuestionsTab({ sellerKey }) {
   const q = useSellerQuestions(sellerKey);
+  const [soAbertas, setSoAbertas] = useState(false);
   if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={4} />;
   const lista = q.data || [];
   if (!lista.length) return <V2EmptyState icon={MessageCircleQuestion} title={t('Nenhuma pergunta')} description={t('As perguntas dos compradores sobre os seus anúncios aparecem aqui. Responder rápido ajuda a vender.')} />;
+  const abertas = lista.filter((x) => x.status === 'open');
+  const respondidas = lista.filter((x) => x.status !== 'open');
   return (
-    <ul className="space-y-3">
-      {lista.map((x) => (
-        <li key={x.id}>
-          <V2Surface variant="compacto" className="space-y-2 p-4">
-            <Link to={`/mercado/anuncio/${x.listing_id}?ancora=perguntas`} className="text-xs font-bold text-gray-500 hover:underline">{x.listing_title}</Link>
-            <p className="text-sm text-ink"><strong>{x.asker_name}:</strong> {x.text}</p>
-            {x.status === 'answered' ? <p className="rounded-2xl bg-paper p-3 text-sm text-gray-700">{x.answer}</p> : <AnswerForm question={x} />}
-          </V2Surface>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-5">
+      <div className="flex gap-2">
+        <V2FilterChip active={soAbertas} onClick={() => setSoAbertas(true)}>{t('Sem resposta ({n})', { n: abertas.length })}</V2FilterChip>
+        <V2FilterChip active={!soAbertas} onClick={() => setSoAbertas(false)}>{t('Todas ({n})', { n: lista.length })}</V2FilterChip>
+      </div>
+      <section aria-labelledby="perg-abertas" className="space-y-3">
+        <h2 id="perg-abertas" className="text-sm font-bold uppercase tracking-wide text-gray-500">{t('Sem resposta')} ({abertas.length})</h2>
+        {abertas.length ? <ul className="space-y-3">{abertas.map((x) => <QuestionCard key={x.id} x={x} />)}</ul> : <p className="text-sm text-gray-500">{t('Tudo respondido.')}</p>}
+      </section>
+      {!soAbertas && respondidas.length > 0 && (
+        <section aria-labelledby="perg-resp" className="space-y-3">
+          <h2 id="perg-resp" className="text-sm font-bold uppercase tracking-wide text-gray-500">{t('Respondidas')} ({respondidas.length})</h2>
+          <ul className="space-y-3">{respondidas.map((x) => <QuestionCard key={x.id} x={x} />)}</ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------- avaliações -- */
+
+function ReviewsTab({ sellerKey }) {
+  return (
+    <V2Surface>
+      <SellerReviews sellerKey={sellerKey} title={t('O que os compradores disseram')} emptyText={t('Ainda sem avaliações visíveis.')} />
+    </V2Surface>
   );
 }
 
@@ -488,6 +633,81 @@ function ImagePick({ label, url, onPick, wide }) {
   );
 }
 
+/** "Modo férias" = pausar TODOS os anúncios no ar de uma vez, e retomar depois. Nenhum campo novo. */
+function VacationMode({ sellerKey }) {
+  const q = useSellerListings(sellerKey);
+  const [confirmar, setConfirmar] = useState(false);
+  const m = useMarketMutation(async ({ ls, s }) => {
+    const r = await Promise.allSettled(ls.map((l) => setListingStatus(l, s)));
+    return r.filter((x) => x.status === 'rejected').length;
+  });
+  if (q.isError) return <V2ErrorState inline onRetry={() => q.refetch()} />;
+  if (q.isLoading) return <V2Skeleton lines={2} />;
+  const { noAr, pausados, todosPausados } = vacationState(q.data || []);
+  const ligado = todosPausados;
+  const nada = !noAr.length && !pausados.length;
+  const aplicar = () => m.mutate({ ls: ligado ? pausados : noAr, s: ligado ? 'active' : 'paused' }, {
+    onSuccess: (falhas) => { setConfirmar(false); if (falhas) toast.error(t('{n} não mudaram. Tente de novo.', { n: falhas })); else toast.success(ligado ? t('Anúncios de volta ao ar.') : t('Anúncios pausados.')); },
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <V2Surface className="max-w-2xl space-y-3">
+      <div className="flex items-center gap-2">
+        <Palmtree className="h-5 w-5 text-amber-600" />
+        <h2 className="font-display text-lg font-bold text-ink">{t('Modo férias')}</h2>
+      </div>
+      <V2Toggle
+        id="modo-ferias"
+        checked={ligado}
+        onChange={() => { if (!nada) setConfirmar(true); }}
+        label={ligado ? t('Retomar') : t('Pausar todos os anúncios enquanto estou fora')}
+        hint={nada ? t('Sem anúncios no ar nem pausados.') : ligado ? t('{n} anúncios pausados voltam ao ar.', { n: pausados.length }) : t('{n} anúncios saem do ar até você retomar. Ninguém consegue comprar nem perguntar.', { n: noAr.length })}
+      />
+      <ConfirmDialog
+        open={confirmar}
+        onOpenChange={setConfirmar}
+        title={ligado ? t('Retomar as vendas?') : t('Pausar todos os anúncios?')}
+        description={ligado ? t('{n} anúncios pausados voltam ao ar agora.', { n: pausados.length }) : t('{n} anúncios saem do ar até você retomar aqui. Os pedidos em andamento continuam.', { n: noAr.length })}
+        confirmLabel={ligado ? t('Retomar') : t('Pausar todos')}
+        loading={m.isPending}
+        onConfirm={aplicar}
+      />
+    </V2Surface>
+  );
+}
+
+function PoliciesForm({ sellerKey, seller }) {
+  const [f, setF] = useState({ ship_within_hours: String(seller.policies?.ship_within_hours || 48), return_days: String(seller.policies?.return_days ?? (seller.seller_type === 'store' ? 7 : 0)) });
+  const [erros, setErros] = useState({});
+  const m = useMarketMutation(({ k, v }) => saveSellerPolicies(k, v, { sellerType: seller.seller_type }));
+  return (
+    <V2Surface className="max-w-2xl space-y-4">
+      <div>
+        <h2 className="font-display text-lg font-bold text-ink">{t('Políticas')}</h2>
+        <p className="text-sm text-gray-500">{t('Aparecem na sua vitrine e no anúncio. Prometa só o que consegue cumprir.')}</p>
+      </div>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setErros({});
+          m.mutate({ k: sellerKey, v: f }, { onSuccess: () => toast.success(t('Políticas salvas.')), onError: (er) => { setErros(er.fieldErrors || {}); if (!er.fieldErrors) toast.error(er.message); } });
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <V2Field label={t('Envio em até (horas)')} htmlFor="pol-envio" error={erros.ship_within_hours} hint={t('Depois de confirmar o pagamento. Entre 1 e 240.')}>
+            <V2Input id="pol-envio" type="number" min={1} max={240} value={f.ship_within_hours} onChange={(e) => setF((x) => ({ ...x, ship_within_hours: e.target.value }))} />
+          </V2Field>
+          <V2Field label={t('Devolução em até (dias)')} htmlFor="pol-dev" error={erros.return_days} hint={seller.seller_type === 'store' ? t('Loja: ao menos 7 dias (Código de Defesa do Consumidor).') : t('0 = sem devolução, exceto por defeito.')}>
+            <V2Input id="pol-dev" type="number" min={0} max={90} value={f.return_days} onChange={(e) => setF((x) => ({ ...x, return_days: e.target.value }))} />
+          </V2Field>
+        </div>
+        <V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar políticas')}</V2Button>
+      </form>
+    </V2Surface>
+  );
+}
+
 function StorefrontTab({ sellerKey, seller }) {
   const [f, setF] = useState({ display_name: seller.display_name || '', bio: seller.bio || '', city: seller.city || '', state: seller.state || '', website: seller.website || '', logo_url: seller.logo_url || '', banner_url: seller.banner_url || '' });
   const m = useMarketMutation(({ k, v }) => updateSellerProfile(k, v));
@@ -530,6 +750,16 @@ function StorefrontTab({ sellerKey, seller }) {
         <V2Button type="submit" disabled={m.isPending}>{m.isPending ? t('Salvando…') : t('Salvar vitrine')}</V2Button>
       </form>
     </V2Surface>
+  );
+}
+
+function StoreSettingsTab({ sellerKey, seller }) {
+  return (
+    <div className="space-y-5">
+      <StorefrontTab key={sellerKey} sellerKey={sellerKey} seller={seller} />
+      <PoliciesForm key={`pol-${sellerKey}`} sellerKey={sellerKey} seller={seller} />
+      <VacationMode sellerKey={sellerKey} />
+    </div>
   );
 }
 
@@ -587,8 +817,9 @@ function SellPage() {
         {aba === 'vendas' && <SalesTab {...props} />}
         {aba === 'ofertas' && <OffersTab {...props} />}
         {aba === 'perguntas' && <QuestionsTab {...props} />}
+        {aba === 'avaliacoes' && <ReviewsTab {...props} />}
         {aba === 'pix' && <PixTab {...props} />}
-        {aba === 'vitrine' && <StorefrontTab key={como.key} {...props} />}
+        {aba === 'vitrine' && <StoreSettingsTab {...props} />}
         {aba === 'divulgar' && <SellerPromoTab key={como.key} {...props} />}
         {aba === 'desempenho' && <SellerInsightsTab {...props} />}
       </div>

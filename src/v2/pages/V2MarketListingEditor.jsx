@@ -12,7 +12,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Crop, ImagePlus, RotateCcw, RotateCw, Sparkles, Star, Trash2, Video,
+  ChevronLeft, ChevronRight, Crop, ExternalLink, Eye, ImagePlus, RotateCcw, RotateCw, Sparkles, Star, Trash2, Video,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -20,7 +20,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import { attributesFor, activeCategories } from '@/modules/marketplace/domain/taxonomy';
 import { CONDITION_LABELS, FULFILLMENT_LABELS, LISTING_TYPE, MEDIA_LIMITS, TEXT_LIMITS } from '@/modules/marketplace/domain/constants';
-import { listingCompleteness, validateListingInput } from '@/modules/marketplace/domain/listing';
+import { listingCompleteness, publishBlockers, validateListingInput } from '@/modules/marketplace/domain/listing';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { saveListing } from '@/modules/marketplace/services/marketService';
 import { linkArenaProduct } from '@/modules/marketplace/services/marketOrderService';
@@ -32,8 +32,10 @@ import {
   V2BackLink, V2Button, V2ErrorState, V2Field, V2Input, V2PageIntro, V2Select, V2Skeleton, V2Surface, V2Textarea, V2Page,
 } from '@/v2/ui/primitives';
 import { rolarAte } from '@/v2/ui/rolarAte';
+import { V2SubTabs } from '@/v2/ui/V2SectionNav';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { ListingCard, MarketGate } from '@/v2/components/marketplace/marketUi';
-import { t } from '@/core/i18n';
+import { t, tk } from '@/core/i18n';
 import MarketPhoto, { AiStamp } from '@/v2/components/marketplace/MarketPhoto';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -77,9 +79,50 @@ function toInput(f) {
   };
 }
 
+/** As seções do formulário, na ordem da tela: a barra que gruda no topo leva a cada uma. */
+const SECOES = [
+  { value: 'fotos', label: tk('Fotos') },
+  { value: 'oque', label: tk('Item') },
+  { value: 'caract', label: tk('Detalhes') },
+  { value: 'desc', label: tk('Descrição') },
+  { value: 'preco', label: tk('Preço') },
+  { value: 'entrega', label: tk('Entrega') },
+];
+
+/** Qual seção está à vista (a que cruza a faixa de cima da tela). */
+function useSecaoVisivel(ids) {
+  const [ativa, setAtiva] = useState(ids[0]);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+    const visiveis = new Map();
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) visiveis.set(e.target.id, e.boundingClientRect.top); else visiveis.delete(e.target.id); });
+      const topo = [...visiveis.entries()].sort((a, b) => a[1] - b[1])[0];
+      if (topo) setAtiva(topo[0]);
+    }, { rootMargin: '-20% 0px -65% 0px' });
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [ids]);
+  return ativa;
+}
+
+/** O medidor de completude + o cartão como o comprador vê. */
+function PreviewBlock({ preview, completo }) {
+  return (
+    <div className="space-y-3">
+      <div className="pointer-events-none mx-auto max-w-xs" aria-hidden="true"><ListingCard listing={preview} showFavorite={false} /></div>
+      <V2Surface variant="plano" className="space-y-2 p-4">
+        <p className="text-sm font-bold text-ink">{t('Anúncio {pct}% completo', { pct: completo })}</p>
+        <span className="block h-2 overflow-hidden rounded-full bg-gray-100"><span className="block h-full rounded-full bg-acid" style={{ width: `${completo}%` }} /></span>
+        <p className="text-xs text-gray-500">{t('Mais fotos, uma boa descrição e as características ajudam o anúncio a aparecer e a vender.')}</p>
+      </V2Surface>
+    </div>
+  );
+}
+
 function Section({ id, title, hint, children }) {
   return (
-    <V2Surface as="section" aria-labelledby={`${id}-t`} className="space-y-4">
+    <V2Surface as="section" id={id} aria-labelledby={`${id}-t`} className="scroll-mt-28 space-y-4">
       <div>
         <h2 id={`${id}-t`} className="font-display text-lg font-bold text-ink">{title}</h2>
         {hint && <p className="text-sm text-gray-500">{hint}</p>}
@@ -408,6 +451,7 @@ function EditorPage() {
   const settings = useMarketSettings();
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
+  const [abrirPrevia, setAbrirPrevia] = useState(false);
   const m = useMarketMutation(saveListing);
 
   useEffect(() => {
@@ -434,6 +478,9 @@ function EditorPage() {
   }, [form, listingId, sq.data]);
 
   const noAr = ['active', 'sold_out'].includes(listing?.status);
+  const faltam = useMemo(() => (form ? publishBlockers(toInput(form)) : []), [form]);
+  const secoesIds = useMemo(() => SECOES.map((x) => x.value).filter((id) => id !== 'caract' || attrs.length > 0), [attrs.length]);
+  const secaoAtiva = useSecaoVisivel(secoesIds);
   const salvar = (publish) => {
     const input = toInput(form);
     const r = validateListingInput(input, { publish });
@@ -486,10 +533,27 @@ function EditorPage() {
 
   const completo = Math.round(listingCompleteness(preview) * 100);
   const ship = form.fulfillment.includes('shipping');
+  const irPara = (tab) => { const el = document.getElementById(tab.value); if (el) rolarAte(el); };
+  const visualizar = () => {
+    if (noAr) { window.open(`/mercado/anuncio/${listingId}`, '_blank', 'noopener,noreferrer'); return; }
+    // Rascunho: a prévia do cartão (na coluna do lado, ou no cartão recolhível no celular).
+    setAbrirPrevia(true);
+    requestAnimationFrame(() => {
+      const el = [...document.querySelectorAll('[data-previa-anuncio]')].find((x) => x.offsetParent !== null);
+      if (el) rolarAte(el, { alinhar: 'centro' });
+    });
+  };
   return (
     <V2Page className="space-y-6 pb-28">
       <V2BackLink to={voltar}>{t('Meus anúncios')}</V2BackLink>
-      <V2PageIntro title={editing ? t('Editar anúncio') : t('Novo anúncio')} subtitle={t('Vendendo como {nome}', { nome: sq.data.display_name })} />
+      <V2PageIntro
+        title={editing ? t('Editar anúncio') : t('Novo anúncio')}
+        subtitle={t('Vendendo como {nome}', { nome: sq.data.display_name })}
+        action={<V2Button type="button" variant="ghost" onClick={visualizar}>{noAr ? <ExternalLink className="h-4 w-4" /> : <Eye className="h-4 w-4" />} {t('Visualizar')}</V2Button>}
+      />
+      <div className="sticky top-0 z-20 rounded-2xl bg-paper/95 py-2 backdrop-blur">
+        <V2SubTabs ariaLabel={t('Partes do anúncio')} tabs={SECOES.filter((x) => secoesIds.includes(x.value)).map((x) => ({ ...x, label: t(x.label) }))} activeValue={secaoAtiva} onSelect={irPara} />
+      </div>
       <div className="grid gap-6 lg:grid-cols-12">
         <form id="editor-anuncio" className="space-y-6 lg:col-span-8" onSubmit={(e) => { e.preventDefault(); salvar(true); }} noValidate>
           <Section id="fotos" title={t('Fotos e vídeo')}>
@@ -628,6 +692,22 @@ function EditorPage() {
             </div>
           </Section>
 
+          <div className="lg:hidden">
+            <V2CollapsibleCard sectionId="mercado-editor-previa" title={t('Como vai aparecer')} summary={t('{pct}% completo', { pct: completo })} defaultCollapsed forceOpen={abrirPrevia} iconClassName="text-ink" icon={Eye}>
+              <div data-previa-anuncio=""><PreviewBlock preview={preview} completo={completo} /></div>
+            </V2CollapsibleCard>
+          </div>
+
+          {!noAr && faltam.length > 0 && (
+            <V2Surface variant="plano" className="p-4" aria-live="polite">
+              <p className="text-sm font-bold text-ink">{t('Para publicar, falta:')}</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-gray-600">
+                {faltam.slice(0, 5).map((x) => <li key={x}>{x}</li>)}
+                {faltam.length > 5 && <li>{t('e mais {n}', { n: faltam.length - 5 })}</li>}
+              </ul>
+            </V2Surface>
+          )}
+
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 px-4 py-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
             <div className="mx-auto flex max-w-[1000px] justify-end gap-2">
               {/* No ar, "rascunho" tiraria o anúncio do ar sem querer: pausar é no painel. */}
@@ -638,14 +718,9 @@ function EditorPage() {
         </form>
 
         <aside className="hidden lg:col-span-4 lg:block">
-          <div className="sticky top-24 space-y-3">
+          <div className="sticky top-24 space-y-3" data-previa-anuncio="">
             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Como o comprador vê')}</p>
-            <div className="pointer-events-none" aria-hidden="true"><ListingCard listing={preview} showFavorite={false} /></div>
-            <V2Surface variant="plano" className="space-y-2 p-4">
-              <p className="text-sm font-bold text-ink">{t('Anúncio {pct}% completo', { pct: completo })}</p>
-              <span className="block h-2 overflow-hidden rounded-full bg-gray-100"><span className="block h-full rounded-full bg-acid" style={{ width: `${completo}%` }} /></span>
-              <p className="text-xs text-gray-500">{t('Mais fotos, uma boa descrição e as características ajudam o anúncio a aparecer e a vender.')}</p>
-            </V2Surface>
+            <PreviewBlock preview={preview} completo={completo} />
           </div>
         </aside>
       </div>

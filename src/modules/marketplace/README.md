@@ -154,3 +154,24 @@ em `docs/05-DATA-MODEL.md` § Mercado. Regras provadas em
   `MarketTermsGate` pede o aceite no primeiro acesso a `/mercado` e a cada
   versão nova (`pendingMarketConsents`), gravado em `legal_consents` como os
   demais. Subir a `version` de um deles pede novo aceite a todos.
+
+**Mais perto de Shopee e eBay (2026-10-15, zero banco).** Busca com sugestões
+(categorias e marcas) e buscas recentes no aparelho (`domain/suggestions.js`);
+"nada encontrado" com "Salvar esta busca" e "Talvez você goste"; filtro de
+frete grátis (`frete=gratis`, também na cópia do servidor) e cidade dentro da
+UF; preço aplicado ao digitar. No anúncio: "Comprar agora" compra SÓ aquele
+item (`?so=` no carrinho, `cartOnlyListing`), bloco "Entrega e garantias"
+(prazo de envio e devolução das `policies` de QUALQUER vendedor + janela de
+disputa), "Só {n} restantes", "No PickleRush desde", vistos recentemente. No
+pedido: rastreio com transportadora de lista e link (`domain/carriers.js`),
+motivos de cancelamento (`CANCEL_REASONS`), uma ação principal e as
+destrutivas em linha separada, linha do tempo que mostra onde parou
+(`timelineSteps`), "Comprar de novo", recibo para imprimir; lista de pedidos
+com busca e situações (`domain/orderFilters.js`). Quem vende: uma ação por
+estado + menu "⋯" (duplicar, republicar, compartilhar; confirmações em
+diálogo), perguntas sem resposta primeiro, oferta vencida sem "Responder"
+(`offerDisplayStatus`), aba Avaliações, políticas editáveis por todo vendedor
+(`saveSellerPolicies`), "Modo férias" (= pausar/retomar todos, sem campo novo),
+editor com navegação por partes e prévia no celular. Servidor: aviso de
+avaliação recebida e lembrete 12 h antes do prazo de resposta
+(`deadline_reminded_at_ms`, gravado só pelo servidor).
