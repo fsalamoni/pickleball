@@ -170,7 +170,7 @@ export default function Login() {
               </div>
 
               {(isGoogleAvailable || isAppleAvailable) && isAuthAvailable && (
-                <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-gray-300">
+                <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-gray-500">
                   <span className="h-px flex-1 bg-gray-100" />{t('ou')}<span className="h-px flex-1 bg-gray-100" />
                 </div>
               )}

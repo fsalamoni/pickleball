@@ -73,17 +73,41 @@
          Script clássico e em ES5 de propósito, para rodar em qualquer aparelho. -->
     <script>
       (function () {
+        var erro = null;
         function vazio() { var r = document.getElementById('root'); return r && !r.hasChildNodes(); }
+        // Conta para o monitoramento de erros (functions/clientErrors.js) que a
+        // tela não abriu — o único jeito de saber quais aparelhos ficam no branco.
+        function relatar() {
+          try {
+            if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || !navigator.sendBeacon) return;
+            navigator.sendBeacon('/api/erro', JSON.stringify({
+              mensagem: 'A tela não abriu: ' + ((erro && erro.mensagem) || 'passou de 20 s sem o aplicativo'),
+              pilha: (erro && erro.pilha) || '',
+              fonte: 'index.html',
+              fatal: true,
+              rota: location.pathname.replace(/\/[A-Za-z0-9_-]{20,}(?=\/|$)/g, '/:id')
+            }));
+          } catch (e) { /* nunca atrapalha o aviso */ }
+        }
+        function guardar(e) {
+          if (erro || !e) return;
+          var alvo = e.target && (e.target.src || e.target.href);
+          erro = {
+            mensagem: e.message || (e.reason && (e.reason.message || String(e.reason))) || (alvo ? 'não baixou ' + alvo : ''),
+            pilha: (e.error && e.error.stack) || (e.reason && e.reason.stack) || ''
+          };
+        }
         function avisar() {
           if (!vazio()) return;
+          relatar();
           var r = document.getElementById('root');
           r.innerHTML = '<div style="font-family:sans-serif;max-width:420px;margin:15vh auto 0;padding:24px;text-align:center">'
             + '<h1 style="font-size:18px;margin:0 0 8px">Não conseguimos abrir o PickleRush</h1>'
             + '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">Verifique a conexão e tente de novo. Se continuar, atualize o navegador ou abra o link no Chrome/Safari (fora do navegador de dentro de outro aplicativo).</p>'
             + '<button onclick="location.reload()" style="font-size:14px;font-weight:600;border:0;border-radius:999px;padding:10px 20px;background:#0B0F19;color:#fff">Tentar de novo</button></div>';
         }
-        window.addEventListener('error', function () { setTimeout(avisar, 1500); }, true);
-        window.addEventListener('unhandledrejection', function () { setTimeout(avisar, 1500); });
+        window.addEventListener('error', function (e) { guardar(e); setTimeout(avisar, 1500); }, true);
+        window.addEventListener('unhandledrejection', function (e) { guardar(e); setTimeout(avisar, 1500); });
         setTimeout(avisar, 20000);
       })();
     </script>

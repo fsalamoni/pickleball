@@ -38,6 +38,8 @@ jobs:
       VITE_BASE_PATH: /
       # PWA habilitado: app instalável (Android/iOS) direto do site, sem lojas.
       VITE_PWA_ENABLED: 'true'
+      # Versão que o monitoramento de erros anota em cada erro (Error Reporting).
+      VITE_RELEASE: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v5
 
@@ -337,3 +339,16 @@ jobs:
             FAILED=1
           done
           exit $FAILED
+
+      # O site no ar abre de verdade? Navegador real nas rotas públicas, depois
+      # do deploy (o build de produção, com o Firebase de produção). E o
+      # monitoramento de erros responde em /api/erro (corpo vazio não grava nada).
+      - name: Conferir o site no ar (navegador)
+        timeout-minutes: 8
+        run: |
+          npx playwright install --with-deps chromium
+          E2E_BASE_URL=https://picklerush.web.app npx playwright test tests/e2e/public-routes.spec.js --project=chromium
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: text/plain' --data '{}' https://picklerush.web.app/api/erro || true)
+          if [ "$CODE" != "204" ]; then
+            echo "::warning title=Monitoramento de erros::POST /api/erro respondeu $CODE (esperado 204). Confira se a função clientErrorReport foi publicada (passo das Cloud Functions acima)."
+          fi

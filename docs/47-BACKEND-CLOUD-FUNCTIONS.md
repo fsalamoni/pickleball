@@ -17,9 +17,9 @@
 | Banco | Firestore nomeado **`pickleball`** (`DATABASE_ID`). Todo gatilho declara `database: DATABASE_ID`; o Admin SDK usa `getFirestore(getApp(), DATABASE_ID)` |
 | Codebase | **`picklerush`** (`firebase.json` → `functions[0].codebase`). Nunca `default` |
 | Runtime | Node **22** (`functions/package.json` → `engines.node`) |
-| Dependências | `firebase-admin ^13.10.0`, `firebase-functions ^6.1.0` (v2: `onDocumentWritten/Created/Updated`, `onSchedule`, `onCall`) |
+| Dependências | `firebase-admin ^13.10.0`, `firebase-functions ^6.1.0` (v2: `onDocumentWritten/Created/Updated`, `onSchedule`, `onCall`, `onRequest`) |
 | Instâncias | `setGlobalOptions({ region, maxInstances: 3 })` — teto global; cada função só sobrescreve `timeoutSeconds`/`memory` |
-| Exportações | **46** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
+| Exportações | **47** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
 | Fuso das agendas | `America/Sao_Paulo` |
 | Regras de segurança | O Admin SDK **ignora** `firestore.rules`. Toda função que escreve em nome de alguém tem de conferir quem pede por conta própria (callables) ou depender do evento que a disparou (gatilhos) |
 
@@ -260,6 +260,28 @@ e-mail verificado**.
 `src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado
 tem de entrar na exclusão e na exportação). Docs:
 `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
+
+### 7.1 Erros do navegador → Error Reporting (`clientErrorReport`)
+
+A única função **HTTP** (`onRequest`, `invoker: 'public'`, `maxInstances: 2`,
+256 MiB). O Hosting do site `picklerush` encaminha `POST /api/erro` para ela
+(rewrite em `firebase.json`, antes do `**`). Ela não toca o banco: grava uma
+linha de log no formato `ReportedErrorEvent`, que o **Google Cloud Error
+Reporting** agrupa, conta e avisa por e-mail quando aparece um erro novo
+(console: `https://console.cloud.google.com/errors?project=pickletour`, serviço
+`picklerush-web`, versão = commit do deploy).
+
+| O quê | Como |
+|---|---|
+| Quem manda | `core/services/errorReport.js` (exceção solta, promessa rejeitada, `recordClientError` dos boundaries, falha da inicialização) e o script de segurança do `index.html` (tela que não abriu). Só no site publicado; nunca em desenvolvimento nem com emuladores |
+| O que chega | mensagem, nome, pilha, origem (`fonte`), fatal, rota com ids trocados por `:id`, versão e o uid (quando logado) |
+| Fronteira de confiança | o corpo vem de qualquer um: ≤ 16 KB, mensagem ≤ 500, pilha ≤ 4000 / 30 quadros, e-mail na mensagem vira `[e-mail]`, o user-agent vem do **cabeçalho**. Pilha do Safari/Firefox é convertida para o formato do V8 (senão o agrupamento não funciona) |
+| Volume | ≤ 10 relatórios por página no navegador (o mesmo erro conta uma vez) e ≤ 120 por minuto por instância no servidor |
+| Resposta | sempre `204` (`405` para quem não é POST) — o navegador nunca espera por ela |
+
+**Testes**: `functions/clientErrors.test.js` (formato, e-mail, pilhas, corpo
+hostil, teto); cliente em `src/core/domain/errorReport.test.js`. O deploy
+confere `POST /api/erro` → 204 depois de publicar (aviso, não falha).
 
 ## 8. Mercado (flag `marketplace`)
 

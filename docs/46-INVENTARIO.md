@@ -18,11 +18,11 @@
 | Coleções raiz no `firestore.rules` | 163 |
 | Blocos `match` (raiz + subcoleções) | 180 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 46 |
+| Cloud Functions exportadas | 47 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 5 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 6 |
-| Arquivos de teste (`*.test.js(x)`) | 649 |
+| Arquivos de teste (`*.test.js(x)`) | 651 |
 | Workflows do GitHub Actions | 6 |
 | Documentos/pastas em `docs/` | 54 |
 
@@ -341,6 +341,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `marketPriceDropNotify` | gatilho Firestore | `market_listings/{listingId}` |
 | `marketLinkArenaProduct` | chamável (callable) |  |
 | `marketArenaStockSync` | gatilho Firestore | `arena_inventory_products/{productId}` |
+| `clientErrorReport` | onRequest |  |
 
 ## 8. Feature flags
 
@@ -369,7 +370,8 @@ Workflows:
 | `npm run build:budget` | `node scripts/check-bundle-size.mjs` |
 | `npm run preview` | `vite preview` |
 | `npm run e2e:install` | `playwright install chromium` |
-| `npm run e2e` | `playwright test` |
+| `npm run e2e` | `bash scripts/e2e.sh` |
+| `npm run e2e:producao` | `E2E_BASE_URL=https://picklerush.web.app playwright test` |
 | `npm run lint` | `eslint . --quiet` |
 | `npm run lint:fix` | `eslint . --fix` |
 | `npm run privacy:legacy-email-cleanup` | `node scripts/privacy-legacy-email-cleanup.mjs` |

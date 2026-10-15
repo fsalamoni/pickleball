@@ -22,7 +22,7 @@
 | **Financeiro** | valores de reserva, venda no PDV, chave Pix da arena | `arena_bookings`, `arena_sales`, `arenas.payment` | sim (fraude) |
 | **Imagem** | foto de perfil, foto de torneio, anexo | Storage `uploads/`, `tournament_photos` | ⚠ direito de imagem |
 | **Comunicação** | mensagens de chat, posts de fórum | `conversations/messages`, `club_forum_threads` | ⚠ **sim** (sigilo) |
-| **Técnico** | `push_tokens`, `last_login`, user-agent | `push_tokens`, `users`, `audit_logs` | não |
+| **Técnico** | `push_tokens`, `last_login`, user-agent; relatório de erro (uid, rota sem ids, user-agent, pilha) | `push_tokens`, `users`, `audit_logs`; Cloud Logging / Error Reporting (fora do Firestore) | não |
 | **Consentimento** | aceites, versões, datas | `legal_consents` | não |
 
 **Não tratados** (e assim deve continuar, salvo decisão explícita):
@@ -101,6 +101,7 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | **Google / Firebase** (Auth, Firestore, Storage, Functions, Hosting, FCM) | tudo | operador (art. 39) | ⚠ **transferência internacional** (servidores fora do BR, exceto a região SP das Functions). Exige cláusula na Política de Privacidade e contrato de operador. Ver `06-LGPD` §6 |
 | **DUPR** (exportação CSV pelo admin — `dupr_match_export`, sempre ligada desde 2026-10-10) | nome, DUPR ID, uid como id externo, resultados (sem e-mail — `DUPR_CSV_HEADERS`) | consentimento | ⚠ documentar a transferência |
 | **Google Analytics / Performance** | uso (env `false` hoje ✅) | consentimento | desligado — se ligar, exige banner de cookies funcional |
+| **Google Cloud Logging / Error Reporting** (mesmo projeto, desde 2026-10-15) | relatório de erro do navegador: mensagem (e-mail apagado pelo servidor), pilha, rota com ids trocados por `:id`, versão, user-agent e o uid de quem estava logado | legítimo interesse (segurança e funcionamento do serviço) | ✅ sem terceiro novo (o mesmo Google, operador); sem nome, e-mail ou telefone; some com a retenção padrão do Cloud Logging (30 dias) — `functions/clientErrors.js` |
 | **Parceiros/afiliados** (`affiliate_links`) | nenhum dado pessoal | — | ✅ só link |
 | **YouTube / Vimeo** (vídeo por link no Treino) | o IP de quem toca no vídeo | consentimento (o toque) | ✅ fachada: o player (`youtube-nocookie.com`, `player.vimeo.com`) só carrega quando a pessoa toca |
 | **Arenas e professores** | dado do aluno/cliente | execução de contrato | ⚠ são **controladores independentes** ou operadores? Definir e contratualizar (`07-DOCUMENTOS-LEGAIS.md` §3) |

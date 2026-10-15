@@ -963,6 +963,10 @@ function ToolsTab({ navigate }) {
           <ExternalLink className="h-4 w-4 text-gray-500" />
           <div className="flex-1"><div className="font-semibold text-ink">{t('Console do Firestore')}</div><div className="text-xs text-gray-500">{t('Abre o banco no Firebase (use só para leitura).')}</div></div>
         </a>
+        <a href="https://console.cloud.google.com/errors?project=pickletour" target="_blank" rel="noopener noreferrer" className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink">
+          <ExternalLink className="h-4 w-4 text-gray-500" />
+          <div className="flex-1"><div className="font-semibold text-ink">{t('Erros em produção')}</div><div className="text-xs text-gray-500">{t('Os erros que as pessoas encontraram no aplicativo, agrupados e contados (Google Cloud Error Reporting).')}</div></div>
+        </a>
       </div>
     </V2Surface>
   );

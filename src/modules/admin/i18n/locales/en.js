@@ -267,6 +267,8 @@ export default {
   "Confirmada no DUPR": "Confirmed in DUPR",
   "Confirmar": "Confirm",
   "Console do Firestore": "Firestore console",
+  "Erros em produção": "Production errors",
+  "Os erros que as pessoas encontraram no aplicativo, agrupados e contados (Google Cloud Error Reporting).": "The errors people ran into in the app, grouped and counted (Google Cloud Error Reporting).",
   "Conta com poder de admin. Tire o poder em Governança → Acessos antes.": "Account with admin power. Remove the power in Governance → Access first.",
   "Conta de {nome} bloqueada.": "{nome}'s account blocked.",
   "Conta de {nome} reativada.": "{nome}'s account reactivated.",
