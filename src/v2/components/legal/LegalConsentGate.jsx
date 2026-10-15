@@ -13,6 +13,8 @@ import { ShieldCheck, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
+import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
+import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import { V2Button } from '@/v2/ui/primitives';
 import { legalIcon } from './legalIcons';
 import { t } from '@/core/i18n';
@@ -24,6 +26,8 @@ export default function LegalConsentGate() {
   const [checked, setChecked] = useState({});
 
   const pending = useMemo(() => pendingGateConsents(consentMap), [consentMap]);
+  // Só o que se MOSTRA é traduzido; o aceite grava o documento em português.
+  const traducoes = useLegalTranslations(pending.length > 0);
 
   // Só bloqueia quando: flag on, usuário logado, consentimentos carregados e há
   // pendências. Evita "piscar" durante o carregamento.
@@ -59,6 +63,7 @@ export default function LegalConsentGate() {
         <div className="flex-1 space-y-2 overflow-y-auto p-6">
           {pending.map((d) => {
             const Icon = legalIcon(d.icon);
+            const titulo = (legalDocTranslation(d, traducoes) || d).title;
             return (
               <label
                 key={d.key}
@@ -72,10 +77,10 @@ export default function LegalConsentGate() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 font-semibold text-ink">
-                    <Icon className="h-4 w-4 text-gray-400" /> {d.title}
+                    <Icon className="h-4 w-4 text-gray-400" /> {titulo}
                   </span>
                   <span className="mt-0.5 block text-xs text-gray-500">
-                    {t('Li e concordo com {documento} (v{versao}).', { documento: d.title.toLowerCase(), versao: d.version })}{' '}
+                    {t('Li e concordo com {documento} (v{versao}).', { documento: titulo.toLowerCase(), versao: d.version })}{' '}
                     <a
                       href={`/legal/${d.route}`}
                       target="_blank"

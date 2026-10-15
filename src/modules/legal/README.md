@@ -22,6 +22,16 @@ Dado puro (sem JSX), renderizado no padrão de conteúdo. Versionado por `versio
   (`termos-arena` — criar arena), Termos do Professor (`termos-professor` —
   ativar "Sou professor").
 
+## Tradução de cortesia (en, es)
+O português é o texto que vale. `i18n/documentos/<codigo>.js` traz, por `key`, a
+mesma estrutura de seções traduzida e a `fonte` (`legalSourceHash` do português).
+`hooks/useLegalTranslations` baixa só o idioma ativo (pt-BR não baixa nada) e
+`domain/legalTranslation.legalDocTranslation` só devolve a tradução se a `fonte`
+bater — senão a tela mostra o original. `LegalDocumentView` avisa que o
+português prevalece e oferece "Ver original em português". O aceite segue sobre
+o documento em português (`key`, `version` e título). Mudou um texto em
+português? `legalTranslation.test.js` reprova listando o documento.
+
 ## Consentimento
 - `domain/consent.js` — lógica pura (pendências, versão, mapa). Um documento é
   válido quando a versão aceita ≥ versão vigente.

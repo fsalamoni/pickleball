@@ -11,6 +11,8 @@ import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { LEGAL_DOCUMENTS, LEGAL_CATEGORY } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
+import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
+import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import { V2Badge, V2ContentHero, V2Surface } from '@/v2/ui/primitives';
 import { legalIcon } from '@/v2/components/legal/legalIcons';
 import { t, tn, tk, fmtData } from '@/core/i18n';
@@ -37,6 +39,7 @@ export default function V2Legal() {
   const { user } = useAuth();
   const { consentMap } = useMyConsents();
   const { flags } = useFeatureFlags();
+  const traducoes = useLegalTranslations();
   // Documento de funcionalidade desligada não aparece (`flag` no registro).
   const visiveis = LEGAL_DOCUMENTS.filter((d) => !d.flag || flags?.[d.flag]);
 
@@ -82,6 +85,7 @@ export default function V2Legal() {
               <div className="space-y-2">
                 {docs.map((d) => {
                   const Icon = legalIcon(d.icon);
+                  const visto = legalDocTranslation(d, traducoes) || d;
                   const accepted = user && isDocAccepted(consentMap, d);
                   const acceptedMs = consentMap[d.key]?.accepted_at_ms;
                   return (
@@ -95,10 +99,10 @@ export default function V2Legal() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-ink">{d.title}</span>
+                          <span className="font-semibold text-ink">{visto.title}</span>
                           {d.gate && <V2Badge tone="neutral">{t('Essencial')}</V2Badge>}
                         </div>
-                        <p className="mt-0.5 truncate text-sm text-gray-500">{d.description}</p>
+                        <p className="mt-0.5 truncate text-sm text-gray-500">{visto.description}</p>
                       </div>
                       {user && (
                         accepted

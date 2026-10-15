@@ -18,6 +18,8 @@ import { ExternalLink, CheckCircle2 } from 'lucide-react';
 import { getLegalDocument } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
+import { legalDocTranslation } from '@/modules/legal/domain/legalTranslation';
+import { useLegalTranslations } from '@/modules/legal/hooks/useLegalTranslations';
 import { t } from '@/core/i18n';
 
 export function useRoleConsent(docKey) {
@@ -25,6 +27,8 @@ export function useRoleConsent(docKey) {
   const { consentMap } = useMyConsents();
   const accept = useAcceptConsent();
   const [checked, setChecked] = useState(false);
+  // Só o que se MOSTRA é traduzido; o aceite grava o documento em português.
+  const titulo = (legalDocTranslation(doc, useLegalTranslations(!!doc)) || doc)?.title;
 
   const alreadyAccepted = !!doc && isDocAccepted(consentMap, doc);
   const active = !!doc && !alreadyAccepted;
@@ -32,7 +36,7 @@ export function useRoleConsent(docKey) {
   const guardBeforeSubmit = () => {
     if (!active) return true;
     if (!checked) {
-      toast.error(t('Você precisa aceitar os “{documento}” para continuar.', { documento: doc.title }));
+      toast.error(t('Você precisa aceitar os “{documento}” para continuar.', { documento: titulo }));
       return false;
     }
     return true;
@@ -52,7 +56,7 @@ export function useRoleConsent(docKey) {
     field = alreadyAccepted ? (
       <div className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
         <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span>{t('Você já aceitou os')} <strong>{doc.title}</strong>.</span>
+        <span>{t('Você já aceitou os')} <strong>{titulo}</strong>.</span>
       </div>
     ) : (
       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 bg-paper p-3 text-sm">
@@ -63,7 +67,7 @@ export function useRoleConsent(docKey) {
           className="mt-0.5 h-4 w-4 shrink-0 accent-ink"
         />
         <span className="text-gray-600">
-          {t('Li e aceito os')} <strong className="text-ink">{doc.title}</strong>.{' '}
+          {t('Li e aceito os')} <strong className="text-ink">{titulo}</strong>.{' '}
           <a
             href={`/legal/${doc.route}`}
             target="_blank"
