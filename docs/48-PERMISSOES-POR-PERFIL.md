@@ -120,7 +120,7 @@ torneio, `/c/:clubId`) existem para isso.
 | Ler `audit_logs` | ✖ | ✔ | rules (`create`: qualquer logado, mas `actor_id == uid`; nunca `update/delete`) |
 | Promover alguém a admin | ✖ | ✖ | **só no console do Firebase** (nenhum caminho de cliente concede `role`) |
 | Revogar o poder de outra conta | ✖ | ◐ **só o dono** (e-mail do token), resultado obrigatoriamente `role: 'user'` | rules |
-| Diretório público do atleta (`athlete_profiles`) | ✔ o próprio escreve; qualquer logado lê | ✔ | rules (`hidden*` só o admin) |
+| Diretório público do atleta (`athlete_profiles`) | ✔ o próprio escreve; qualquer logado lê. Telefone, e-mail e endereço só com a marca `*_public` no espelho **e** no `users/{uid}` | ✔ (contato só com a marca no espelho) | rules (`hidden*` só o admin; `contatosDoDonoPermitidos` / `contatosMarcados`) |
 | Arquivos em `uploads/{uid}/**` | ✔ só o próprio grava (< 25 MB); `get` por qualquer logado; `list` só o dono | — | storage.rules |
 | `uploads/{uid}/private/**` | ✔ só o dono lê/grava | ✖ | storage.rules (nem o admin) |
 | `treino/{uid}/*`, `mercado/{uid}/*` | ✔ dono grava (tipo e tamanho conferidos, sem sobrescrever); `get` por logado | ✖ | storage.rules (comprovante `comprovante-*` do Mercado: o dono não apaga) |
@@ -319,6 +319,7 @@ Princípios que seguem daí:
 | Torneio e inscrição | `registrations.rules.test.js`, `securitySweep.rules.test.js`, `misc.rules.test.js` |
 | Arena (documentos `{arena}_{uid}`, fila, módulos) | `arenaUserDocs.rules.test.js`, `matchmaking.rules.test.js`, `arenaModules.rules.test.js`, `couponsReferrals.rules.test.js`, `campaignBanners.rules.test.js`, `couponArt.rules.test.js` |
 | Usuário, poder e auditoria | `users.rules.test.js`, `auditlogs.rules.test.js`, `adminAccessLogs.rules.test.js` |
+| Contato no perfil público só com permissão | `athleteContacts.rules.test.js` |
 | Professor | `coachLessons.rules.test.js`, `promoMarketing.rules.test.js` |
 | Gamificação | `gamificationV2.rules.test.js`, `gamification.rules.emulator.mjs` |
 | Treino | `training.rules.test.js` |

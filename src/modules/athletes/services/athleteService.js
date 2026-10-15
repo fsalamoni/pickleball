@@ -150,6 +150,9 @@ export async function restoreAthleteProfileFromUserDoc(uid, actor) {
  *   (ex.: `hidden`, `hidden_at`, `restored_at`, `restored_by`).
  * - `filterEmptyStringFields` evita sobrescrever valores válidos (ex.: foto) com
  *   string vazia — mesma proteção do `syncAthleteProfile`.
+ * - Telefone, e-mail e endereço que a pessoa não deixou públicos são APAGADOS
+ *   do espelho (perfis antigos ainda podem guardá-los) — rodar a
+ *   re-sincronização é o que limpa o diretório inteiro de uma vez.
  * - `dryRun` apenas conta o que seria feito, sem escrever nada.
  * - Um único `audit_log` de resumo (não um por atleta).
  *
@@ -190,9 +193,11 @@ export async function resyncAllAthleteProfilesFromUsers(actor, options = {}) {
     const slice = writes.slice(i, i + CHUNK);
     const batch = writeBatch(db);
     for (const { uid, payload } of slice) {
+      // Apaga o contato que a pessoa não deixou público: com `merge`, o
+      // telefone antigo ficaria no documento (e a regra recusaria o lote).
       batch.set(
         doc(db, ATHLETE_DIRECTORY_COLLECTION, uid),
-        { ...payload, updated_at: serverTimestamp() },
+        comContatosPrivadosApagados({ ...payload, updated_at: serverTimestamp() }, payload),
         { merge: true },
       );
     }

@@ -1657,20 +1657,52 @@ service cloud.firestore {
     }
 
     // ---- Athlete directory (public projection of users) ------------------
-    // Documento público controlado: o cliente só grava aqui os campos que o
-    // próprio atleta autorizou. Dados privados nunca chegam a esta coleção.
+    // Documento público (qualquer conta logada lê): telefone, e-mail e
+    // endereço só ficam aqui com a permissão da pessoa. A REGRA impõe isso
+    // (princípio 10) — esconder na tela não basta, quem lê o documento vê tudo.
+    //  - todo escritor: contato gravado exige a própria marca `*_public` true;
+    //  - o dono: exige também a marca no `users/{uid}`, onde mora a escolha
+    //    (o app grava `users` antes do espelho; o `get` só roda com contato);
+    //  - o admin grava em lote (re-sincronização, até 400 por vez), e um `get`
+    //    por documento estouraria o limite de 20 do lote: para ele vale a
+    //    coerência do próprio documento, e só quando a escrita mexe em contato
+    //    ou marca — ocultar um perfil antigo com contato velho segue possível.
+    function contatoMarcado(d, campo, marca) {
+      return d.get(campo, '') == '' || d.get(marca, false) == true;
+    }
+    function contatosMarcados(d) {
+      return contatoMarcado(d, 'phone', 'phone_public')
+        && contatoMarcado(d, 'email', 'email_public')
+        && contatoMarcado(d, 'address', 'address_public');
+    }
+    function contatoPermitidoNoCadastro(uid, d, campo, marca) {
+      return d.get(campo, '') == ''
+        || get(/databases/$(database)/documents/users/$(uid)).data.get(marca, false) == true;
+    }
+    function contatosDoDonoPermitidos(uid, d) {
+      return contatosMarcados(d)
+        && contatoPermitidoNoCadastro(uid, d, 'phone', 'phone_public')
+        && contatoPermitidoNoCadastro(uid, d, 'email', 'email_public')
+        && contatoPermitidoNoCadastro(uid, d, 'address', 'address_public');
+    }
+    function mexeEmContato() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'phone', 'phone_public', 'email', 'email_public', 'address', 'address_public']);
+    }
     match /athlete_profiles/{uid} {
       allow read: if isAuthed();
       // platform_admin também pode escrever — usado por
-      // `restoreAthleteProfileFromUserDoc` pra recuperar perfis corrompidos
-      // pelo bug antigo do `syncAthleteProfile`.
+      // `restoreAthleteProfileFromUserDoc` e pela re-sincronização em lote.
       // A ocultação pela moderação (`hidden*`) é do admin: o dono não a
       // desfaz — nem gravando `hidden: false`, nem apagando e recriando.
-      allow create: if isPlatformAdmin()
-        || (isOwner(uid) && request.resource.data.get('hidden', false) == false);
-      allow update: if isPlatformAdmin()
+      allow create: if (isPlatformAdmin() && contatosMarcados(request.resource.data))
+        || (isOwner(uid) && request.resource.data.get('hidden', false) == false
+            && contatosDoDonoPermitidos(uid, request.resource.data));
+      allow update: if (isPlatformAdmin()
+            && (!mexeEmContato() || contatosMarcados(request.resource.data)))
         || (isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['hidden', 'hidden_at', 'hidden_by']));
+              .hasAny(['hidden', 'hidden_at', 'hidden_by'])
+            && contatosDoDonoPermitidos(uid, request.resource.data));
       allow delete: if isPlatformAdmin()
         || (isOwner(uid) && resource.data.get('hidden', false) != true);
     }
