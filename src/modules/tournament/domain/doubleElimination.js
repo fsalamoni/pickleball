@@ -14,7 +14,7 @@
  * Estrutura retornada é serializável e pode ser persistida diretamente.
  */
 
-import { seededRng, shuffle, nextPowerOfTwo, seedSlot } from './draw.js';
+import { seededRng, shuffle, nextPowerOfTwo, seedSlot } from './drawPrimitives.js';
 
 /**
  * @param {string[]} participantIds

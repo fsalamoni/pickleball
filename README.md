@@ -122,7 +122,7 @@ npm run dev
 | `npm run lint` | ESLint |
 | `npm test` | testes com Vitest |
 | `npm run test:rules` | testes das regras do Firestore/Storage no emulador |
-| `npm run typecheck` | checagem de tipos (JSDoc) |
+| `npm run typecheck` | sintaxe e resolução (`checkJs` desligado: tipos JSDoc não são verificados) |
 | `npm run e2e` | testes end-to-end (Playwright) |
 | `npm run docs:inventario` | regrava `docs/46-INVENTARIO.md` a partir do código |
 | `npm run docs:inventario:check` | falha se o inventário estiver desatualizado (CI) |

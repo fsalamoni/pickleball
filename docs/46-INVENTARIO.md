@@ -22,7 +22,7 @@
 | Feature flags ligáveis (`FEATURE_FLAG`) | 5 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 6 |
-| Arquivos de teste (`*.test.js(x)`) | 647 |
+| Arquivos de teste (`*.test.js(x)`) | 648 |
 | Workflows do GitHub Actions | 6 |
 | Documentos/pastas em `docs/` | 53 |
 
@@ -63,9 +63,47 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `search` | 1 | · | · | · | · | · | sim |
 | `sharing` | 1 | · | · | 2 | · | · | sim |
 | `social` | 1 | 1 | 2 | 1 | · | · | sim |
-| `tournament` | 52 | 15 | 3 | 15 | · | 2 | sim |
+| `tournament` | 53 | 15 | 3 | 15 | · | 2 | sim |
 | `training` | 19 | 13 | 12 | · | · | 2 | sim |
 | `trophies` | 2 | 1 | 1 | · | · | · | sim |
+
+### 3.1 Dependências entre módulos
+
+Lidas dos imports estáticos. **"Usado por"** é quem pode quebrar se você mudar
+o módulo: rode os testes desses módulos também. Ciclos de import em `src/`:
+**0** (o guarda `src/core/guards/fronteirasDeModulos.test.js` exige zero).
+
+| Módulo | Nº de módulos que o usam | Usado por | Usa |
+|---|---|---|---|
+| `achievements` | 1 | `progression` | `progression` |
+| `admin` | 1 | `tournament` | `athletes`, `leveling`, `rating`, `tournament` |
+| `analytics` | 2 | `games`, `tournament` | — |
+| `arenas` | 7 | `coaches`, `games`, `home`, `marketplace`, `promo`, `tournament`, `trophies` | `athletes`, `clubs`, `games`, `rating`, `sharing`, `tournament` |
+| `athletes` | 12 | `admin`, `arenas`, `chat`, `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `search`, `tournament`, `trophies` | `games`, `performance`, `rating`, `tournament` |
+| `chat` | 0 | — | `athletes` |
+| `circuits` | 0 | — | — |
+| `clubs` | 6 | `arenas`, `games`, `help`, `home`, `progression`, `training` | `athletes`, `games` |
+| `coaches` | 4 | `home`, `progression`, `promo`, `training` | `arenas`, `athletes`, `leveling`, `marketplace`, `promo`, `rating`, `sharing`, `training` |
+| `feed` | 0 | — | — |
+| `games` | 9 | `arenas`, `athletes`, `clubs`, `home`, `performance`, `progression`, `rating`, `social`, `training` | `analytics`, `arenas`, `athletes`, `clubs`, `leveling`, `performance`, `rating`, `tournament` |
+| `help` | 0 | — | `clubs`, `progression` |
+| `home` | 2 | `tournament`, `training` | `arenas`, `athletes`, `clubs`, `coaches`, `games`, `tournament` |
+| `legal` | 0 | — | — |
+| `leveling` | 5 | `admin`, `coaches`, `games`, `rating`, `tournament` | — |
+| `marketplace` | 1 | `coaches` | `arenas`, `training` |
+| `moderation` | 0 | — | — |
+| `notifications` | 0 | — | — |
+| `partners` | 0 | — | — |
+| `performance` | 3 | `athletes`, `games`, `progression` | `games`, `tournament` |
+| `progression` | 3 | `achievements`, `help`, `training` | `achievements`, `athletes`, `clubs`, `coaches`, `games`, `performance`, `rating` |
+| `promo` | 1 | `coaches` | `arenas`, `coaches` |
+| `rating` | 8 | `admin`, `arenas`, `athletes`, `coaches`, `games`, `progression`, `tournament`, `training` | `athletes`, `games`, `leveling`, `tournament` |
+| `search` | 0 | — | `athletes` |
+| `sharing` | 2 | `arenas`, `coaches` | — |
+| `social` | 0 | — | `games`, `tournament` |
+| `tournament` | 10 | `admin`, `arenas`, `athletes`, `games`, `home`, `performance`, `rating`, `social`, `training`, `trophies` | `admin`, `analytics`, `arenas`, `athletes`, `home`, `leveling`, `rating` |
+| `training` | 2 | `coaches`, `marketplace` | `clubs`, `coaches`, `games`, `home`, `progression`, `rating`, `tournament` |
+| `trophies` | 0 | — | `arenas`, `athletes`, `tournament` |
 
 Pastas de componentes V2: `admin`, `arenas`, `chat`, `clubs`, `coach`, `dicas`, `feed`, `games`, `gamification`, `home`, `i18n`, `idioma`, `legal`, `leveling`, `marketplace`, `notifications`, `onboarding`, `performance`, `profile`, `promo`, `rating`, `region`, `search`, `settings`, `theme`, `tournament`, `training`, `trophies`, `tutorial`, `userArea`.
 

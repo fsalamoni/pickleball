@@ -77,7 +77,9 @@ describe('⭐ a chave é preenchida pela posição canônica', () => {
   });
 
   it('⭐ a ordem canônica existe e é exportada', () => {
-    expect(ler('src/modules/tournament/domain/draw.js')).toContain('export function bracketSeedOrder');
+    // Mora em drawPrimitives.js (sem dependências) e draw.js a reexporta.
+    expect(ler('src/modules/tournament/domain/drawPrimitives.js')).toContain('export function bracketSeedOrder');
+    expect(ler('src/modules/tournament/domain/draw.js')).toMatch(/export \{[^}]*bracketSeedOrder/);
   });
 });
 

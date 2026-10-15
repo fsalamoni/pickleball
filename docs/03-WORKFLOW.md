@@ -743,7 +743,7 @@ npm run docs:inventario:check  # verifica sem gravar
 npm run security:secrets       # nada de segredo no Git
 npm test             # vitest
 npm run lint         # eslint --quiet
-npm run typecheck    # JSDoc check
+npm run typecheck    # sintaxe e resolução (checkJs desligado: tipos JSDoc não são verificados)
 npm run e2e          # playwright
 npm run e2e:install  # primeira vez
 

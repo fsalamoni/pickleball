@@ -60,7 +60,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 4. **MERGES + DEPLOYS AUTOMÁTICOS.** Quando terminar um conjunto coerente de tarefas, fazer squash merge + push em main → deploy sai sozinho. Veja `docs/03-WORKFLOW.md`.
 5. **Lógica pura em `domain/` com teste.** Service = I/O. Hook = React Query. Componente = UI. Regra de negócio NUNCA em componente. Sempre testada (Vitest).
 6. **Auditoria em toda escrita.** `auditService.createAuditLog(...)` após mutações relevantes.
-7. **Sem TypeScript, mas com JSDoc.** Typedefs em `core/domain/types.js`. `npm run typecheck` antes de commit.
+7. **Sem TypeScript, mas com JSDoc.** Typedefs em `core/domain/types.js`. Atenção: `checkJs` está desligado, então `npm run typecheck` não verifica os tipos — quem segura a correção são os testes e os guardas.
 8. **Sem `console.log` em services.** Use `core/lib/logger`.
 9. **pt-BR em tudo.** UI, comentários, mensagens, audit_logs. Sem inglês solto.
 10. **Dado pessoal: a regra é a única defesa.** Nesta arquitetura o cliente fala direto com o banco — validação no navegador é conveniência, não controle. Nunca coloque e-mail, telefone, endereço ou data de nascimento em coleção de leitura ampla; nunca deixe o usuário escrever campo que define permissão; preferência de privacidade tem que valer no SERVIDOR. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/`.

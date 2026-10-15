@@ -17,26 +17,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { resolver as resolverImport, IMPORTS } from './grafoDeImports.js';
 
 const RAIZ = process.cwd();
-const EXTENSOES = ['', '.js', '.jsx', '.ts', '.tsx', '/index.js', '/index.jsx'];
-
-/** Resolve um import como o Vite resolveria (só o que é do projeto). */
-function resolver(deArquivo, spec) {
-  let base;
-  if (spec.startsWith('@/')) base = path.join(RAIZ, 'src', spec.slice(2));
-  else if (spec.startsWith('@core/')) base = path.join(RAIZ, 'src/core', spec.slice(6));
-  else if (spec.startsWith('@modules/')) base = path.join(RAIZ, 'src/modules', spec.slice(9));
-  else if (spec.startsWith('.')) base = path.resolve(path.dirname(deArquivo), spec);
-  else return null;
-  for (const ext of EXTENSOES) {
-    const p = base + ext;
-    if (existsSync(p) && statSync(p).isFile()) return p;
-  }
-  return null;
-}
-
-const IMPORTS = /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|import\s+['"]([^'"]+)['"]/g;
+const resolver = (de, spec) => resolverImport(de, spec, RAIZ);
 
 function alcancaveis(entrada) {
   const vistos = new Set();
