@@ -15,12 +15,13 @@ function formatDate(iso) {
 
 /**
  * Renderiza um documento legal (dado puro do registro) no mesmo padrão de
- * design das páginas de conteúdo. `action` é opcional (ex.: botão de aceite).
+ * design das páginas de conteúdo. `status` (opcional) vai no topo; `action`
+ * (opcional, o botão de aceite) vai no FIM, depois do texto — nada depois dele.
  * Em en/es mostra a tradução de cortesia, com o aviso de que o português
  * prevalece e o botão para ver o original. O aceite (feito pela página) segue
  * sempre sobre o documento em português: mesma `key`, mesma `version`.
  */
-export default function LegalDocumentView({ doc, action }) {
+export default function LegalDocumentView({ doc, status, action }) {
   const traduzido = legalDocTranslation(doc, useLegalTranslations(!!doc));
   const [original, setOriginal] = useState(false);
   if (!doc) return null;
@@ -50,7 +51,7 @@ export default function LegalDocumentView({ doc, action }) {
         title={visto.title}
         description={visto.description}
         meta={meta}
-        action={action}
+        action={status}
       />
       <div className="space-y-4" lang={traduzido && original ? 'pt-BR' : undefined}>
         {visto.sections.map((s, i) => (
@@ -62,6 +63,7 @@ export default function LegalDocumentView({ doc, action }) {
           </V2ContentSection>
         ))}
       </div>
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 }

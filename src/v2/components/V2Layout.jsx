@@ -717,9 +717,12 @@ export default function V2Layout({ children }) {
   const levelCode = userProfile?.leveling?.result?.level;
   const levelLabel = levelCode ? getLevelByCode(levelCode)?.name : t('Não nivelado');
 
+  // Também quando os termos do Mercado entram ou saem: a página dos termos e a
+  // do Mercado usam o mesmo <main>, e o aceite (no fim dos termos) abriria o
+  // Mercado rolado lá para baixo.
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [location.pathname]);
+  }, [location.pathname, marketGateBlocking]);
 
   const pageTitlesOn = true;
   const globalSearchOn = true;
@@ -765,8 +768,6 @@ export default function V2Layout({ children }) {
           bloqueantes simultâneos. */}
       <LegalConsentGate />
       {!consentGateBlocking && !marketGateBlocking && <V2OnboardingWizard />}
-      {/* Termos do Mercado: no primeiro acesso a /mercado (e a cada versão nova). */}
-      {marketGateBlocking && <MarketTermsGate />}
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',
@@ -975,7 +976,8 @@ export default function V2Layout({ children }) {
 
         <V2OfflineBanner />
         <InstallInviteBar />
-        {subnavHub && <SubnavBar hub={subnavHub} pathname={location.pathname} />}
+        {/* Com os termos do Mercado na tela, as abas do Mercado não levam a lugar nenhum. */}
+        {subnavHub && !marketGateBlocking && <SubnavBar hub={subnavHub} pathname={location.pathname} />}
 
         <main
           id="conteudo-principal"
@@ -988,7 +990,9 @@ export default function V2Layout({ children }) {
             navHubsOn ? 'pt-6' : 'pt-28',
           )}
         >
-          {avisoNaTela ? null : children}
+          {/* Termos do Mercado: uma página no lugar do Mercado (no primeiro
+              acesso a /mercado e a cada versão nova), não uma janela por cima. */}
+          {marketGateBlocking ? <MarketTermsGate /> : (avisoNaTela ? null : children)}
         </main>
         {gamificacaoOn && user?.uid && (
           <Suspense fallback={null}><GamificationBackground /></Suspense>

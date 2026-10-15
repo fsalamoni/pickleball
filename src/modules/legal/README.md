@@ -3,7 +3,8 @@
 ## Status
 - **Flag**: nenhuma — sempre ligado (a antiga `legal_center` virou código)
 - **Páginas V2**: `V2Legal` (central `/legal`), `V2LegalDocument` (`/legal/:docRoute`)
-- **Componentes**: `LegalDocumentView`, `LegalConsentGate` (portão bloqueante),
+- **Componentes**: `LegalDocumentView`, `LegalConsentGate` e `MarketTermsGate`
+  (avisos bloqueantes, sobre `ConsentNotice`),
   `useRoleConsent` (caixa de aceite por papel nos fluxos)
 - **Coleção**: `legal_consents` (id determinístico `${uid}_${docKey}`)
 - **Tests**: 14 (consentimento + integridade do registro)
@@ -45,11 +46,20 @@ português? `legalTranslation.test.js` reprova listando o documento.
   Dialog do Radix de cima desliga os toques no de baixo). Com um aviso na tela,
   a página atrás não monta — nenhum diálogo dela (`?criar=1`, `?marcar=1`)
   abre por cima do aviso. Prova no e2e (`tests/e2e/logado.spec.js`).
-- O miolo dos dois avisos é `ConsentChecklist`: "Ler documento" abre o texto
-  DENTRO do aviso (nunca outra aba — no celular tirava a pessoa do aviso) e
-  "Li e concordo" marca a caixa. O aceite é UMA escrita em lote
-  (`recordConsents`), entra no cache na hora e o aviso fecha; a auditoria não
-  segura o aceite.
+- Os dois avisos leem de cima para baixo, numa ordem só (`ConsentNotice.jsx`):
+  os documentos numerados, cada um abrindo o texto ali mesmo (`<details>`,
+  nunca outra aba — no celular tirava a pessoa do aviso), e por ÚLTIMO a frase
+  "Ao selecionar … você declara que leu e aceita os documentos acima" e o
+  botão de aceite, sempre ativo. Nada vem depois do botão ("Agora não", no
+  Mercado, fica no topo). Os essenciais são uma camada que cobre o app (a
+  camada inteira rola); os do Mercado são uma PÁGINA no lugar do Mercado, no
+  `<main>` (rola como qualquer página). 🐞 Antes cada documento tinha uma caixa,
+  o botão só acendia com todas marcadas e ficava preso num rodapé com termos
+  rolando por baixo: no celular a pessoa via "2 de 4" com o botão apagado.
+- O aceite é UMA escrita em lote (`recordConsents`); confirmada pelo servidor,
+  entra no cache na hora e o aviso fecha. Não fecha ANTES da confirmação de
+  propósito: sem o registro gravado, a pessoa veria o aviso de novo ao
+  recarregar. A auditoria não segura o aceite.
 - `useRoleConsent(docKey)` — caixa "Li e aceito os Termos do X" + guarda de
   submit + registro, usada em criar torneio, criar arena e ativar professor.
 
