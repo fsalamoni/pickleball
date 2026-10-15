@@ -172,11 +172,11 @@ export async function requestLesson(coachId, actor, input) {
   });
 
   const first = lessonFirstSlot(value);
-  const when = first ? `${first.date} ${first.start}` : 'horário combinado';
+  const when = first ? `${first.date} ${first.start}` : tx('horário combinado');
   if (requestedBy === 'student') {
     notifyUsers([coachId], {
       title: tx('Nova solicitação de aula'),
-      message: tx('{nome} solicitou aula ({quando}). Toque para responder.', { nome: value.student_name || 'Um aluno', quando: when }),
+      message: tx('{nome} solicitou aula ({quando}). Toque para responder.', { nome: value.student_name || tx('Um aluno'), quando: when }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/aulas',
       actor: { uid: actor.uid, displayName: value.student_name },
@@ -258,26 +258,38 @@ export async function respondLesson(lesson, nextStatus, actor) {
   if (recipient) {
     const first = lessonFirstSlot(lesson);
     const when = first ? `${first.date} ${first.start}` : '';
-    const label = {
-      [LESSON_STATUS.CONFIRMED]: 'confirmada',
-      [LESSON_STATUS.DECLINED]: 'recusada',
-      [LESSON_STATUS.CANCELLED]: 'cancelada',
-      [LESSON_STATUS.COMPLETED]: 'concluída',
-    }[nextStatus] || 'atualizada';
     // A devolução do cupom só vai no aviso ao ALUNO (é dele o uso que volta);
     // quando é o aluno quem cancela, o aviso vai ao professor e não fala nisso.
     const cupomDoAviso = cupom?.coupon
       || (isCoach && pendingCouponReturn({ ...lesson, status: nextStatus }) ? lesson.coupon : null);
+    // ponytail: a linha do cupom segue em português dentro do aviso (é texto
+    // montado); traduzir pede a linha como marca em `lessonCouponLine`.
     const linhaDoCupom = cupomDoAviso ? ` ${lessonCouponLine(cupomDoAviso, { lessonStatus: nextStatus })}.` : '';
     notifyUsers([recipient], {
-      title: `Aula ${label}`,
-      message: `A aula ${when ? `de ${when} ` : ''}foi ${label}.${linhaDoCupom}`,
+      ...lessonStatusNotice(nextStatus, { quando: when, cupom: linhaDoCupom }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: isCoach ? '/minhas-aulas' : '/aulas',
       actor: { uid: actor.uid },
     });
   }
   await createAuditLog({ action: 'coach_lesson_status_changed', actor, details: { lesson_id: lesson.id, to: nextStatus } });
+}
+
+/** Título e texto do aviso de mudança de status da aula (uma chave por status). */
+function lessonStatusNotice(status, p) {
+  const c = p.quando;
+  switch (status) {
+    case LESSON_STATUS.CONFIRMED:
+      return { title: tx('Aula confirmada'), message: c ? tx('A aula de {quando} foi confirmada.{cupom}', p) : tx('A aula foi confirmada.{cupom}', p) };
+    case LESSON_STATUS.DECLINED:
+      return { title: tx('Aula recusada'), message: c ? tx('A aula de {quando} foi recusada.{cupom}', p) : tx('A aula foi recusada.{cupom}', p) };
+    case LESSON_STATUS.CANCELLED:
+      return { title: tx('Aula cancelada'), message: c ? tx('A aula de {quando} foi cancelada.{cupom}', p) : tx('A aula foi cancelada.{cupom}', p) };
+    case LESSON_STATUS.COMPLETED:
+      return { title: tx('Aula concluída'), message: c ? tx('A aula de {quando} foi concluída.{cupom}', p) : tx('A aula foi concluída.{cupom}', p) };
+    default:
+      return { title: tx('Aula atualizada'), message: c ? tx('A aula de {quando} foi atualizada.{cupom}', p) : tx('A aula foi atualizada.{cupom}', p) };
+  }
 }
 
 /**

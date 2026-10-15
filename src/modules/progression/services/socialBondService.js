@@ -314,8 +314,8 @@ export async function startMentorship({ mentorUid, apprenticeUid, proposedBy = n
       await notifyUsers([outro], {
         title: tx('Convite de mentoria'),
         message: proposedBy === mentorUid
-          ? tx('{nome} convidou você para ser aprendiz. Responda em Vínculos.', { nome: proposerName || 'Um atleta' })
-          : tx('{nome} convidou você para ser mentor. Responda em Vínculos.', { nome: proposerName || 'Um atleta' }),
+          ? tx('{nome} convidou você para ser aprendiz. Responda em Vínculos.', { nome: proposerName || tx('Um atleta') })
+          : tx('{nome} convidou você para ser mentor. Responda em Vínculos.', { nome: proposerName || tx('Um atleta') }),
         type: NOTIFICATION_TYPE.GAMIFICATION,
         link: '/vinculos?aba=mentorias',
       });

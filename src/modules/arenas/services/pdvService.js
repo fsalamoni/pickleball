@@ -89,6 +89,18 @@ function resumoDosItens(items = []) {
 
 function str(v) { return String(v ?? '').trim(); }
 
+/** O aviso do pedido cancelado: com/sem o nome da arena, com/sem motivo. */
+function pedidoCanceladoMsg(p) {
+  if (p.arena) {
+    return p.motivo
+      ? tx('A {arena} cancelou o pedido de {itens}. Motivo: {motivo}', p)
+      : tx('A {arena} cancelou o pedido de {itens}.', p);
+  }
+  return p.motivo
+    ? tx('A arena cancelou o pedido de {itens}. Motivo: {motivo}', p)
+    : tx('A arena cancelou o pedido de {itens}.', p);
+}
+
 /**
  * Quando isto aconteceu, em ms.
  *
@@ -528,7 +540,7 @@ export async function cancelSale(saleId, motivo, actor) {
   try {
     await notifyUsers(avisar, {
       title: tx('Pedido cancelado'),
-      message: `${sale.arena_name ? `A ${sale.arena_name}` : 'A arena'} cancelou o pedido de ${resumoDosItens(sale.items)}.${str(motivo) ? ` Motivo: ${str(motivo).slice(0, 120)}` : ''}`,
+      message: pedidoCanceladoMsg({ arena: str(sale.arena_name), itens: resumoDosItens(sale.items), motivo: str(motivo).slice(0, 120) }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/minhas-reservas',
       actor,

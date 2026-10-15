@@ -25,15 +25,18 @@ function listar(dir, saida = []) {
   return saida;
 }
 
+/** O texto de um literal entre aspas simples como o JS o lê (`\\n` vira quebra de linha). */
+export const desescapar = (s) => s.replace(/\\(.)/g, (_, c) => ({ n: '\n', t: '\t', r: '\r' }[c] ?? c));
+
 /** As chaves literais de `tx('…')`, fora de testes e catálogos. */
 export function chavesDeAvisos() {
-  const re = /(?<![\w.$])tx\(\s*'((?:[^'\\\n])+)'/g;
+  const re = /(?<![\w.$])tx\(\s*'((?:[^'\\\n]|\\.)+)'/g;
   const chaves = new Set();
   for (const pasta of ['src', 'functions']) {
     for (const f of listar(path.join(RAIZ, pasta))) {
       if (!/\.(jsx?|mjs)$/.test(f) || /\.test\.|[\\/]locales[\\/]/.test(f)) continue;
       const src = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
-      for (const m of src.matchAll(re)) chaves.add(m[1]);
+      for (const m of src.matchAll(re)) chaves.add(desescapar(m[1]));
     }
   }
   return [...chaves].sort();

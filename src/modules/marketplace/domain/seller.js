@@ -8,7 +8,7 @@
  */
 import { SELLER_TYPE, SELLER_STATUS } from './constants.js';
 import { normalizeSearchText } from './listing.js';
-import { t, tk } from '@/core/i18n';
+import { t, tk, tx } from '@/core/i18n';
 
 export function sellerKeyFor(type, id) {
   if (!Object.values(SELLER_TYPE).includes(type) || !id) return null;
@@ -132,22 +132,22 @@ export function validateStoreApplication(input = {}) {
  */
 export function sellerReviewNotice(seller = {}, { status, verified, reason } = {}) {
   const loja = seller.seller_type === SELLER_TYPE.STORE;
-  const nome = seller.display_name || (loja ? 'sua loja' : 'sua vitrine');
+  const nome = seller.display_name || (loja ? tx('sua loja') : tx('sua vitrine'));
   const link = `/mercado/vender?como=${encodeURIComponent(seller.seller_key || seller.id || '')}`;
   if (status === SELLER_STATUS.ACTIVE && seller.status === SELLER_STATUS.PENDING) {
-    return { title: `${nome} foi aprovada no Mercado`, message: 'Cadastre o Pix e publique os primeiros produtos.', link };
+    return { title: tx('{nome} foi aprovada no Mercado', { nome }), message: tx('Cadastre o Pix e publique os primeiros produtos.'), link };
   }
   if (status === SELLER_STATUS.ACTIVE && seller.status === SELLER_STATUS.SUSPENDED) {
-    return { title: `${nome} pode vender de novo`, message: 'Os seus anúncios podem voltar ao ar.', link };
+    return { title: tx('{nome} pode vender de novo', { nome }), message: tx('Os seus anúncios podem voltar ao ar.'), link };
   }
   if (status === SELLER_STATUS.REJECTED) {
-    return { title: `O cadastro de ${nome} não foi aprovado`, message: `Motivo: ${reason}. Você pode corrigir e pedir de novo.`, link: '/mercado/loja/abrir' };
+    return { title: tx('O cadastro de {nome} não foi aprovado', { nome }), message: tx('Motivo: {motivo}. Você pode corrigir e pedir de novo.', { motivo: reason }), link: '/mercado/loja/abrir' };
   }
   if (status === SELLER_STATUS.SUSPENDED) {
-    return { title: `As vendas de ${nome} foram suspensas`, message: `Motivo: ${reason}.`, link };
+    return { title: tx('As vendas de {nome} foram suspensas', { nome }), message: tx('Motivo: {motivo}.', { motivo: reason }), link };
   }
   if (verified === true && !status) {
-    return { title: `${nome} ganhou o selo de verificado`, message: 'Os compradores veem o selo na vitrine e nos anúncios.', link: `/mercado/vendedor/${seller.seller_key || seller.id}` };
+    return { title: tx('{nome} ganhou o selo de verificado', { nome }), message: tx('Os compradores veem o selo na vitrine e nos anúncios.'), link: `/mercado/vendedor/${seller.seller_key || seller.id}` };
   }
   return null;
 }

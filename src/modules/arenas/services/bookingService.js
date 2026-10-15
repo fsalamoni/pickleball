@@ -57,6 +57,32 @@ function str(v) {
 function displayName(user, profile) {
   return profile?.platform_name || profile?.full_name || user?.displayName || user?.email || 'Atleta';
 }
+/** O aviso do pedido de reserva à arena (avulso/recorrente, uma/várias quadras). */
+function pedidoDeReservaMsg(p) {
+  if (p.recorrente) {
+    return p.quadras > 1
+      ? tx('{nome} solicitou {n} horários (recorrente) ({quadras} quadras). Toque para responder.', p)
+      : tx('{nome} solicitou {n} horários (recorrente). Toque para responder.', p);
+  }
+  return p.quadras > 1
+    ? tx('{nome} solicitou {data} {inicio} ({quadras} quadras). Toque para responder.', p)
+    : tx('{nome} solicitou {data} {inicio}. Toque para responder.', p);
+}
+
+/** O título do aviso de mudança de status da reserva (uma chave por status). */
+function reservaStatusTitulo(status, arena) {
+  const p = { arena };
+  switch (status) {
+    case BOOKING_STATUS.REQUESTED: return tx('Reserva solicitada — "{arena}"', p);
+    case BOOKING_STATUS.NEGOTIATING: return tx('Reserva em negociação — "{arena}"', p);
+    case BOOKING_STATUS.CONFIRMED: return tx('Reserva confirmada — "{arena}"', p);
+    case BOOKING_STATUS.DECLINED: return tx('Reserva recusada — "{arena}"', p);
+    case BOOKING_STATUS.CANCELLED: return tx('Reserva cancelada — "{arena}"', p);
+    case BOOKING_STATUS.COMPLETED: return tx('Reserva concluída — "{arena}"', p);
+    default: return tx('Reserva atualizada — "{arena}"', p);
+  }
+}
+
 function num(v) {
   if (v === '' || v == null) return null;
   const n = Number(v);
@@ -414,11 +440,13 @@ export async function createBooking(arena, user, profile, input) {
   }
   await batch.commit();
 
-  const courtCountLabel = targetCourtIds.length > 1 ? ` (${targetCourtIds.length} quadras)` : '';
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
     title: tx('Nova solicitação de reserva em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
-    message: `${athleteName} solicitou ${kind === BOOKING_KIND.RECURRING ? `${slots.length} horários (recorrente)` : `${slots[0].date} ${slots[0].start}`}${courtCountLabel}. Toque para responder.`,
+    message: pedidoDeReservaMsg({
+      nome: athleteName, recorrente: kind === BOOKING_KIND.RECURRING, n: slots.length,
+      data: slots[0].date, inicio: slots[0].start, quadras: targetCourtIds.length,
+    }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
     actor: { uid: user.uid, displayName: athleteName },
@@ -650,7 +678,9 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
     title: tx('Nova solicitação de reserva em "{arena}"', { arena: str(arena.name).slice(0, 50) }),
-    message: `${athleteName} solicitou ${primeiro.date} ${primeiro.start}${totalDocs > 1 ? ` e mais ${totalDocs - 1} reserva(s)` : ''}. Toque para responder.`,
+    message: totalDocs > 1
+      ? tx('{nome} solicitou {data} {inicio} e mais {n} reserva(s). Toque para responder.', { nome: athleteName, data: primeiro.date, inicio: primeiro.start, n: totalDocs - 1 })
+      : tx('{nome} solicitou {data} {inicio}. Toque para responder.', { nome: athleteName, data: primeiro.date, inicio: primeiro.start }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
     actor: { uid: user.uid, displayName: athleteName },
@@ -840,7 +870,7 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
 
   const recipient = byManager ? [booking.athlete_id] : (await listArenaManagerIds(booking.arena_id).catch(() => []));
   notifyUsers(recipient, {
-    title: `Reserva ${BOOKING_STATUS_LABELS[nextStatus].toLowerCase()} — "${str(booking.arena_name).slice(0, 40)}"`,
+    title: reservaStatusTitulo(nextStatus, str(booking.arena_name).slice(0, 40)),
     message: byManager
       ? tx('A arena atualizou sua solicitação de reserva. Toque para ver.')
       : tx('{nome} atualizou a reserva.', { nome: booking.athlete_name }),

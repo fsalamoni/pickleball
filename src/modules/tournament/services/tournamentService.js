@@ -153,8 +153,8 @@ export async function decideTournamentArena(tournament, confirm, actor) {
   if (tournament.creator_uid) {
     notifyUsers([tournament.creator_uid], {
       title: confirm
-        ? tx('A arena confirmou a sede de "{torneio}"', { torneio: String(tournament.name || 'seu torneio').slice(0, 60) })
-        : tx('A arena recusou a sede de "{torneio}"', { torneio: String(tournament.name || 'seu torneio').slice(0, 60) }),
+        ? tx('A arena confirmou a sede de "{torneio}"', { torneio: tournament.name ? String(tournament.name).slice(0, 60) : tx('seu torneio') })
+        : tx('A arena recusou a sede de "{torneio}"', { torneio: tournament.name ? String(tournament.name).slice(0, 60) : tx('seu torneio') }),
       message: confirm
         ? tx('O torneio já aparece na página da arena e soma no ranking da casa.')
         : tx('O torneio segue de pé, sem sede vinculada. Fale com a arena ou escolha outra.'),

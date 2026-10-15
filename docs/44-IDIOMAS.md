@@ -24,7 +24,8 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 - Idioma da pessoa: `users/{uid}.language`, gravado ao trocar o idioma (e lido no login, para a escolha seguir a pessoa em outro aparelho).
 - Push: `pushOnNotificationCreate` lê `users.language` (na mesma leitura das preferências; falhou ⇒ português) e traduz por `functions/i18n/avisos.json`, **gerado** com `npm run i18n:avisos` a partir dos `tx('…')` de `src` e `functions` e dos catálogos. A guarda `src/core/guards/i18nAvisos.test.js` reprova o arquivo desatualizado; `functions/avisoI18n.parity.test.js` trava cliente × servidor.
 - Os textos dos avisos moram em `src/modules/notifications/i18n/locales/` (ou no catálogo do módulo, se a chave já existir lá).
-- Ainda em português (texto montado no domínio ou escrito por pessoas): campanhas e cupons de arena/professor/plataforma, aviso em massa do admin, mudança de status de aula, vínculo professor-aluno (`statusNotice`), cadastro de vendedor do Mercado (`sellerReviewNotice`), transições de pedido do Mercado.
+- Nome que pode faltar: o substituto também é marca — `{ nome: nome || tx('Um atleta') }`. Grava o português e `tparams: ['nome']`; o sino e o push traduzem esse parâmetro (`traduzirParams`). Quem não conhece `tparams` mostra o português.
+- Ainda em português (escrito por pessoas): campanhas e cupons de arena/professor/plataforma, aviso em massa do admin, chat, comentários e dúvidas do treino. E a linha do cupom dentro do aviso de status da aula (`{cupom}`, montada por `lessonCouponLine`).
 
 ## Incluir um idioma novo
 1. Uma linha em `src/core/i18n/languages.js`.

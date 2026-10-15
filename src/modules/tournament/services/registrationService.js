@@ -186,7 +186,7 @@ export async function createRegistration(input, actor) {
     try {
       await notifyUsers([playerBUserId], {
         title: tx('Convite de dupla'),
-        message: tx('{nome} te inscreveu como dupla em "{torneio}". Abra o torneio para confirmar ou recusar.', { nome: payload.player_a_name || 'Um atleta', torneio: tournament.name }),
+        message: tx('{nome} te inscreveu como dupla em "{torneio}". Abra o torneio para confirmar ou recusar.', { nome: payload.player_a_name || tx('Um atleta'), torneio: tournament.name }),
         type: NOTIFICATION_TYPE.PARTNER_INVITE,
         link: `/torneios/${tournament_id}`,
         // Payload que habilita confirmar/recusar direto no sino (flag
@@ -233,8 +233,8 @@ export async function respondPartnerInvite(id, accept, actor) {
     await notifyUsers(recipients, {
       title: accept ? tx('Dupla confirmada') : tx('Convite de dupla recusado'),
       message: accept
-        ? tx('{nome} confirmou a dupla em "{inscricao}".', { nome: registration.player_b_name || 'Seu parceiro', inscricao: registration.label || 'sua inscrição' })
-        : tx('{nome} recusou o convite de dupla. Ajuste ou cancele a inscrição.', { nome: registration.player_b_name || 'Seu parceiro' }),
+        ? tx('{nome} confirmou a dupla em "{inscricao}".', { nome: registration.player_b_name || tx('Seu parceiro'), inscricao: registration.label || tx('sua inscrição') })
+        : tx('{nome} recusou o convite de dupla. Ajuste ou cancele a inscrição.', { nome: registration.player_b_name || tx('Seu parceiro') }),
       type: NOTIFICATION_TYPE.PARTNER_RESPONSE,
       link: `/torneios/${registration.tournament_id}`,
       actor,
@@ -860,7 +860,7 @@ export async function declareRegistrationPayment(id, actor) {
     const adminIds = admins.map((a) => a.user_id).filter(Boolean);
     await notifyUsers(adminIds, {
       title: tx('Pagamento informado'),
-      message: tx('{nome} informou o pagamento da inscrição. Confira e confirme.', { nome: registration.label || registration.player_a_name || 'Um inscrito' }),
+      message: tx('{nome} informou o pagamento da inscrição. Confira e confirme.', { nome: registration.label || registration.player_a_name || tx('Um inscrito') }),
       type: NOTIFICATION_TYPE.GENERIC,
       link: `/torneios/${registration.tournament_id}/admin`,
       actor,

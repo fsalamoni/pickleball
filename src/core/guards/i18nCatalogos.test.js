@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { IDIOMAS, IDIOMA_PADRAO } from '@/core/i18n/languages.js';
+import { desescapar } from '../../../scripts/i18n-avisos.mjs';
 
 /**
  * Os catálogos de idioma (src/<área>/i18n/locales/<codigo>.js) têm de andar
@@ -57,14 +58,15 @@ describe('catálogos de idioma', () => {
     const todas = new Set();
     for (const p of pastas) Object.keys(await ler(p, alvos[0])).forEach((k) => todas.add(k));
     const faltando = [];
-    const re = /(?<![\w.$])t[kx]?\(\s*'((?:[^'\\\n])+)'/g;
+    const re = /(?<![\w.$])t[kx]?\(\s*'((?:[^'\\\n]|\\.)+)'/g;
     // tn(n, 'singular', 'plural'): a chave é o PLURAL.
-    const rePlural = /(?<![\w.$])tn\(\s*[^,]+,\s*'(?:[^'\\\n])+'\s*,\s*'((?:[^'\\\n])+)'/g;
+    const rePlural = /(?<![\w.$])tn\(\s*[^,]+,\s*'(?:[^'\\\n]|\\.)+'\s*,\s*'((?:[^'\\\n]|\\.)+)'/g;
     for (const f of arquivos) {
       if (!/\.(jsx?|mjs)$/.test(f) || /\.test\.|[\\/]locales[\\/]/.test(f)) continue;
       const src = fs.readFileSync(f, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
       for (const m of [...src.matchAll(re), ...src.matchAll(rePlural)]) {
-        if (!todas.has(m[1])) faltando.push(`${path.relative(RAIZ, f)}: ${m[1]}`);
+        const chave = desescapar(m[1]);
+        if (!todas.has(chave)) faltando.push(`${path.relative(RAIZ, f)}: ${chave}`);
       }
     }
     expect(faltando).toEqual([]);

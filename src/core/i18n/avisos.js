@@ -22,23 +22,31 @@ export const tx = (chave, params) => ({ $t: chave, params: params || null });
 const ehMarca = (v) => Boolean(v) && typeof v === 'object' && typeof v.$t === 'string';
 
 /** O texto em português (o que vai em `title`/`message`). */
-export const textoDoAviso = (v) => (ehMarca(v) ? interpolar(v.$t, v.params || undefined) : String(v ?? ''));
+/** Parâmetro que é ele mesmo uma marca (`tx('Um atleta')`) vira o texto dela. */
+const paramsEmPt = (p) => p && Object.fromEntries(Object.entries(p).map(([k, x]) => [k, ehMarca(x) ? x.$t : x]));
+
+export const textoDoAviso = (v) => (ehMarca(v) ? interpolar(v.$t, paramsEmPt(v.params) || undefined) : String(v ?? ''));
 
 /**
  * Só parâmetros simples (texto ≤ 300, número finito), até 12. Algum de outro
  * tipo ⇒ null: traduzir sem ele deixaria `{variavel}` no meio da frase.
+ * O parâmetro-marca (`{ nome: nome || tx('Um atleta') }`) grava o português e
+ * entra em `tparams`, para ser traduzido na hora de mostrar (quem não conhece
+ * `tparams` mostra o português — nada quebra).
  */
 function paramsSimples(params) {
-  if (!params) return {};
+  if (!params) return { params: {} };
   const out = {};
+  const tparams = [];
   const entradas = Object.entries(params);
   if (entradas.length > 12) return null;
   for (const [k, v] of entradas) {
     if (typeof v === 'string') out[k] = v.slice(0, 300);
     else if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (ehMarca(v) && !v.params) { out[k] = v.$t.slice(0, 300); tparams.push(k); }
     else return null;
   }
-  return out;
+  return tparams.length ? { params: out, tparams } : { params: out };
 }
 
 /** O campo `i18n` do aviso, ou null quando nenhum dos dois é marcado. */
@@ -46,15 +54,23 @@ export function i18nDoAviso({ title, message } = {}) {
   const out = {};
   [['title', title], ['message', message]].forEach(([campo, v]) => {
     if (!ehMarca(v)) return;
-    const params = paramsSimples(v.params);
-    if (params) out[campo] = { key: v.$t, params };
+    const r = paramsSimples(v.params);
+    if (r) out[campo] = { key: v.$t, ...r };
   });
   return Object.keys(out).length ? out : null;
+}
+
+/** Os parâmetros com os de `tparams` traduzidos por `traduzir(chave)`. */
+export function traduzirParams(m, traduzir) {
+  if (!m?.params || !Array.isArray(m.tparams)) return m?.params;
+  const out = { ...m.params };
+  m.tparams.forEach((k) => { if (typeof out[k] === 'string') out[k] = traduzir(out[k]); });
+  return out;
 }
 
 /** O texto do aviso para MOSTRAR: traduzido pela chave, ou o gravado. */
 export function noticeText(n, campo) {
   const m = n?.i18n?.[campo];
-  if (m && typeof m.key === 'string') return t(m.key, m.params || undefined);
+  if (m && typeof m.key === 'string') return t(m.key, traduzirParams(m, t) || undefined);
   return n?.[campo] || '';
 }

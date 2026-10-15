@@ -56,7 +56,7 @@ export async function upsertValidation(input, actor) {
 
   notifyUsers([value.student_id], {
     title: tx('Seu nível foi validado'),
-    message: tx('{nome} validou seu nível: {nivel}.', { nome: value.coach_name || 'Um professor', nivel: value.level_name }),
+    message: tx('{nome} validou seu nível: {nivel}.', { nome: value.coach_name || tx('Um professor'), nivel: value.level_name }),
     type: NOTIFICATION_TYPE.GENERIC,
     link: '/perfil',
     actor: { uid: actor.uid },
