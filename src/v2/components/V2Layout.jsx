@@ -879,9 +879,13 @@ export default function V2Layout({ children }) {
       )}
 
       <div className="relative flex min-w-0 w-full flex-1 flex-col">
+        {/* Sem `w-full`: com `content-box` a largura 100% NÃO conta o recuo lateral,
+            e o topo passava da tela em 2× o recuo (o avatar cortado). Esticado
+            pela coluna, ele cabe; o content-box fica só para a área segura somar
+            à altura. */}
         <header
           className={cn(
-            'glass z-20 flex w-full items-center justify-between px-4 sm:px-6 lg:px-10',
+            'glass z-20 flex items-center justify-between px-4 sm:px-6 lg:px-10',
             'h-14 lg:h-20',
             navHubsOn ? 'flex-shrink-0 border-b border-gray-100' : 'absolute top-0',
           )}

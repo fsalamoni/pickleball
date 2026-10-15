@@ -22,6 +22,12 @@ describe('navegação v3 (incorporada)', () => {
     expect(src).toMatch(/paddingTop: 'env\(safe-area-inset-top\)'/);
   });
 
+  it('o cabeçalho cabe na tela: content-box com w-full soma o recuo à largura', () => {
+    const header = src.slice(src.indexOf('<header'), src.indexOf('</header>'));
+    expect(header).toMatch(/boxSizing: 'content-box'/);
+    expect(header.slice(0, header.indexOf('style='))).not.toMatch(/\bw-full\b/);
+  });
+
   it('as âncoras de dica do menu continuam no lugar', () => {
     for (const a of ['menu-principal', 'menu-celular', 'menu-arenas', 'menu-jogar']) {
       expect(src, a).toContain(a);
