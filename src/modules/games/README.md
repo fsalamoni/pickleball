@@ -10,7 +10,7 @@
 ## Status
 - **Páginas V2**: `V2OpenGames` (Procura-se jogo), `V2GameDays` (Dia de jogo), `V2MyGames` (rota legada → redireciona)
 - **Coleções**: `games`, `open_games`, `participants`, `game_days` (+ subcoleções `participants`/`games`)
-- **Flags**: `open_games`, `athlete_game_day`
+- **Flags**: nenhuma própria — convites e dia de jogo do atleta são sempre ligados (as antigas `open_games`/`athlete_game_day` viraram código); formatos opcionais: `gameday_mexicano`, `gameday_king_of_court`
 - **Tests**: 36+
 
 ## Schema
@@ -19,7 +19,7 @@
   é o convite público de um dia de jogo (`game_day_id`).
 - `participants/{id}` — confirmações
 
-### Dia de jogo do atleta (flag `athlete_game_day`)
+### Dia de jogo do atleta
 - `game_days/{id}` — dia de jogo criado por um atleta. Público (publica convite em
   `open_games`) ou privado (só convidados). Campos-chave: `created_by`,
   `visibility` (`public`/`private`), `member_uids[]` (dono + convidados + quem
@@ -42,7 +42,7 @@ Ausentes os campos, nada muda — é o que mantém intacto tudo o que já existi
 No `firestore.rules`, `isArenaGameDayManagerOf` e `isClubGameDayManagerOf` são
 guardadas por `'arena_id' in …` / `'club_id' in …` pela mesma razão.
 
-### Formato "Play" (open play por ordem de chegada) — flag `gameday_play`
+### Formato "Play" (open play por ordem de chegada) (sempre ligado)
 Formato alternativo do dia de jogo do atleta, escolhido na criação. Sessão de
 jogo aberto com N quadras (`game_days/{id}.play_courts`), **sem sorteio de grade
 e sem resultados**. Os jogos são criados por ORDEM DE CHEGADA/ESPERA, quadra a

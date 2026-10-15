@@ -89,7 +89,7 @@ paridade cliente × servidor e os guardas de fonte (§6).
   `.catch(() => [])`. Detalhe e guardas: `docs/27-FALHA-NAO-E-VAZIO.md`.
 - **Sessão**: `FirebaseAuthContext` (Context) — `useAuth()` (`isAuthenticated`,
   `isLoadingAuth`, `isPlatformAdmin`…). Papéis administrativos e
-  "ver como usuário" (`impersonate`) também vivem ali.
+  "ver como usuário" (`viewAsUser` / `toggleViewAsUser`) também vivem ali.
 - **Flags**: `FeatureFlagsProvider` observa `platform_settings/global` e expõe
   o mapa; `useFeatureFlag(key)` lê um booleano. Só as chaves de `FEATURE_FLAG`
   (hoje 5) são ligáveis pelo admin; as incorporadas (`PERMANENT_FEATURE`) valem

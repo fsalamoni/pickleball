@@ -1,6 +1,6 @@
 # Central de ajuda
 
-> **Flag**: `help_center` (default **OFF**) · **Rota**: `/ajuda` ·
+> **Estado (2026-10-15)**: incorporada (`help_center`) — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico · **Rota**: `/ajuda` ·
 > **Banco de dados**: nenhum (a única memória é a parte preferida, no
 > `localStorage` por usuário).
 

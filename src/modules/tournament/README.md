@@ -110,9 +110,7 @@ Regras: `firestore.rules` — match por coleção.
 ## Hooks expostos
 
 ```js
-import { useTournament } from '@/modules/tournament/hooks/useTournament';
-import { useTournamentAnnouncements } from '@/modules/tournament/hooks/useTournamentAnnouncements';
-import { useTournamentWizard } from '@/modules/tournament/hooks/useTournamentWizard';
+import { useTournament, useTournamentAnnouncements } from '@/modules/tournament/hooks/useTournament';
 ```
 
 ## Onde achar mais

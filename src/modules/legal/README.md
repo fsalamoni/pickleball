@@ -1,7 +1,7 @@
 # `legal/` — Documentos legais e consentimento
 
 ## Status
-- **Flag**: `legal_center`
+- **Flag**: nenhuma — sempre ligado (a antiga `legal_center` virou código)
 - **Páginas V2**: `V2Legal` (central `/legal`), `V2LegalDocument` (`/legal/:docRoute`)
 - **Componentes**: `LegalDocumentView`, `LegalConsentGate` (portão bloqueante),
   `useRoleConsent` (caixa de aceite por papel nos fluxos)

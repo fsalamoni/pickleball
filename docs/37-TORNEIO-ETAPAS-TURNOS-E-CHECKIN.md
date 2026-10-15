@@ -1,8 +1,8 @@
 # 37 — Torneio: meu torneio no início, check-in que não trava, 2 turnos e o Americano aprimorado em etapas
 
 > Uma onda sobre torneios, a partir de três relatos do dono. O formato novo
-> nasce atrás da flag `tournament_americano_etapas` (padrão OFF); o resto vale
-> para todos. **Banco: nenhuma coleção, índice ou regra.** O formato novo usa
+> nasceu atrás da flag `tournament_americano_etapas` (padrão OFF), incorporada
+> em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada); o resto vale para todos. **Banco: nenhuma coleção, índice ou regra.** O formato novo usa
 > um campo opcional dentro da configuração da fase (`stages[].etapa_count`,
 > como os outros campos da fase — Onda AT), e a etapa de cada jogo mora no
 > NOME DO GRUPO que o jogo sempre teve.

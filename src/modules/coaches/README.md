@@ -156,12 +156,12 @@ mantém a ordem por data. Zero banco.
 ## Hooks expostos
 
 ```js
-import { useCoachProfile } from '@/modules/coaches/hooks/useCoachProfile';
-import { useCoachLessons } from '@/modules/coaches/hooks/useCoachLessons';
-import { useCoachStudents } from '@/modules/coaches/hooks/useCoachStudents';
-import { useCoachPackages } from '@/modules/coaches/hooks/useCoachPackages';
-import { useCoachClinics } from '@/modules/coaches/hooks/useCoachClinics';
-import { useCoachContent } from '@/modules/coaches/hooks/useCoachContent';
+import { useCoach, useUpsertCoachProfile } from '@/modules/coaches/hooks/useCoaches';
+import { useCoachLessons } from '@/modules/coaches/hooks/useLessons';
+import { useCoachStudents } from '@/modules/coaches/hooks/useStudents';
+import { useCoachPackages } from '@/modules/coaches/hooks/usePackages';
+import { useCoachClinics } from '@/modules/coaches/hooks/useClinics';
+import { useCoachContent } from '@/modules/coaches/hooks/useContent';
 ```
 
 ## Feature flags

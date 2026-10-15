@@ -43,9 +43,8 @@ dia de jogo, ranking interno, página pública.
 ## Hooks
 ```js
 import { useClubs, useClub } from '@/modules/clubs/hooks/useClubs';
-import { useClubForum } from '@/modules/clubs/hooks/useClubForum';
-import { useClubRanking } from '@/modules/clubs/hooks/useClubRanking';
-import { useClubPublicPage } from '@/modules/clubs/hooks/useClubPublicPage';
+import { useForumThreads, useForumComments } from '@/modules/clubs/hooks/useClubForum';
+import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
 ```
 
 ## Feature flags
@@ -183,7 +182,7 @@ numa aba à parte. `canManage` é calculado pelo próprio
 
 ### Arquivos modificados
 
-- `src/core/featureFlags.js` (nova flag `CLUB_INTERNAL_DOUBLES_RANKING`)
+- (a flag `CLUB_INTERNAL_DOUBLES_RANKING` desta entrega virou código: sempre ligado)
 - `src/v2/pages/V2ClubDetail.jsx` (sub-abas + toggle + tabelas
   individual/duplas)
 

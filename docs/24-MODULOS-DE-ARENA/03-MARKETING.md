@@ -2,7 +2,7 @@
 
 > **Módulos**: `marketing` · `marketing_coupons` · `marketing_campaigns` ·
 > `marketing_nps` · `marketing_referral` · `marketing_loyalty`
-> **Chave-mestra**: flag `arena_modules` (default OFF).
+> **Chave-mestra**: `arena_modules` — incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
 
 > **Atualização 2026-09-24 — dentro da arena.** O console virou a seção

@@ -294,7 +294,7 @@ privados de usuário, passos que exigem o dono).
 | O que posso fazer neste dia de jogo? | `useGameDayRoles(gameDay, participants)` → `ehCriador`, `ehGestorDaArena`, `ehAdminDoClube`, `ehAdmin`, `podeGerenciar`, `podeConfigurar`, `podeEditarGrupos` | `gameDayRoles.js` (puro) + os dois hooks acima | ✖ — "o que a TELA mostra; quem recusa de verdade é a regra" (cabeçalho do hook) |
 | Sou professor? | `useCoach(uid)` → `isCoach` | `coaches/{uid}` | ✖ |
 | A arena ligou este módulo? | `useArenaModules(arenaId)` | `platform_settings/arena_modules` + `arena_module_states` | ✖ — esconde, não bloqueia |
-| A funcionalidade está ligada? | `useFeatureFlag(key)` / `FeatureFlagGuard` | `platform_settings/global` | ✖ (exceto Mercado, onde `marketOn()` está na regra) |
+| A funcionalidade está ligada? | `useFeatureFlag(key)` (`core/lib/FeatureFlagsContext`) | `platform_settings/global` | ✖ (exceto Mercado, onde `marketOn()` está na regra) |
 | Grupos do Play | `usePlayGroups` / `usePlayGroupsContext` | flag + dia | ✖ |
 
 Princípios que seguem daí:

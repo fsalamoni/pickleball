@@ -3,7 +3,7 @@
 > **Módulos**: `pdv` (+ catálogo, Pix, divisão) · `white_label` (+ branding) ·
 > `multi_unit` (+ rede, BI, cross booking) · `ai` (+ preço, previsão) ·
 > `iot` (+ totem)
-> **Chave-mestra**: flag `arena_modules` (default OFF).
+> **Chave-mestra**: `arena_modules` — incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 > **Banco**: zero coleção nova, zero índice novo. **Uma regra ampliada** (rede).
 
 > **Atualização 2026-09-24 — a página "Avançado" deixou de existir.** Marca

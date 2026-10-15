@@ -72,29 +72,15 @@ git fetch origin
 
 ## 4. Snippets de código
 
-### 4.1 FeatureFlagGuard (gate de página)
+### 4.1 useFeatureFlag (gate de página ou inline)
+
+Não existe `FeatureFlagGuard`. A tela pergunta a `useFeatureFlag` e, desligada,
+some com a seção ou redireciona/explica (nunca renderiza desabilitado). Só as
+flags de `FEATURE_FLAG` são ligáveis; as de `PERMANENT_FEATURE` valem sempre
+`true` (`docs/02-STANDARDS.md` §3).
 
 ```jsx
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-
-export default function V2MyFeature() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.MY_NEW_FEATURE}
-      label="Minha Feature"
-      description="O que faz em 1 frase"
-    >
-      <MyFeatureContent />
-    </FeatureFlagGuard>
-  );
-}
-```
-
-### 4.2 useFeatureFlag (gate inline)
-
-```jsx
-import { useFeatureFlag } from '@/core/hooks/useFeatureFlag';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
 export default function V2Something() {
@@ -103,7 +89,7 @@ export default function V2Something() {
 }
 ```
 
-### 4.3 React Query hook
+### 4.2 React Query hook
 
 ```js
 // src/modules/X/hooks/useY.js
@@ -131,7 +117,7 @@ export function useCreateY() {
 }
 ```
 
-### 4.4 Service Firestore (CRUD + auditoria + notificação)
+### 4.3 Service Firestore (CRUD + auditoria + notificação)
 
 ```js
 // src/modules/X/services/yService.js
@@ -194,7 +180,7 @@ export const yService = {
 };
 ```
 
-### 4.5 Domain puro (lógica + test)
+### 4.4 Domain puro (lógica + test)
 
 ```js
 // src/modules/X/domain/something.js (puro)
@@ -220,7 +206,7 @@ describe('computeSomething', () => {
 });
 ```
 
-### 4.6 V2ConfirmDialog (substitui `confirm()` nativo)
+### 4.5 V2ConfirmDialog (substitui `confirm()` nativo)
 
 ```jsx
 import { useState } from 'react';
@@ -243,7 +229,7 @@ const [open, setOpen] = useState(false);
 </>
 ```
 
-### 4.7 V2Dialog (modal genérico)
+### 4.6 V2Dialog (modal genérico)
 
 ```jsx
 import { V2Dialog, V2Button, V2Input } from '@/v2/ui/primitives';
@@ -264,7 +250,7 @@ import { V2Dialog, V2Button, V2Input } from '@/v2/ui/primitives';
 </V2Dialog>
 ```
 
-### 4.8 Firestore rule (nova coleção)
+### 4.7 Firestore rule (nova coleção)
 
 ```
 match /my_new_collection/{id} {
@@ -277,7 +263,7 @@ match /my_new_collection/{id} {
 }
 ```
 
-### 4.9 Audit log (escrita)
+### 4.8 Audit log (escrita)
 
 ```js
 import { auditService } from '@/core/services/auditService';
@@ -289,7 +275,7 @@ await auditService.createAuditLog({
 });
 ```
 
-### 4.10 Notificação (criação)
+### 4.9 Notificação (criação)
 
 ```js
 import { createNotification, notifyUsers } from '@/core/services/notificationService';

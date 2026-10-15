@@ -44,6 +44,19 @@ Cada um tem um explicador em tela (`formatExplain.js`) que, para o número REAL
 de inscritos, mostra quantos jogos saem, quantas rodadas, quantos byes, e o que
 não fecha.
 
+**Onde está o código do sorteio** (`src/modules/tournament/`):
+`services/drawService.js` chama `generateDraw` (`domain/draw.js`), que despacha
+pelo formato da fase para `buildKnockoutBracket`, `distributeGroups` +
+`buildGroupMatches`, `buildRoundRobinMatches` e `buildAmericanoRotation` (no
+próprio `draw.js`), `buildDoubleEliminationBracket` (`doubleElimination.js`),
+`pairSwissRound` (`swiss.js`) e `buildMexicanoFirstRound` (`mexicano.js`); o
+Americano em etapas sai de `firstEtapaDraw` (`americanoEtapas.js`). As peças
+comuns (`seededRng`, `shuffle`, `nextPowerOfTwo`, `bracketSeedOrder`,
+`seedSlot`) moram em `domain/drawPrimitives.js` e são reexportadas por
+`draw.js`. Modalidade de várias fases sorteia por `buildPhaseDraw`
+(`domain/phaseDraw.js`, chamado por `services/phaseService.js`), que reaproveita
+o mesmo `generateDraw`.
+
 ---
 
 ## 2. Formar grupos com QUALQUER número de inscritos

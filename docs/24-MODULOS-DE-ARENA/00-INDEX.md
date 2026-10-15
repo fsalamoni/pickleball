@@ -9,6 +9,10 @@
 > Aquele conjunto de documentos descreve o desenho original (bom) e afirma
 > um estado de entrega (**100% deployado**) que **não corresponde ao código**.
 > Ver §1.
+>
+> **Estado (2026-10-15):** a chave-mestra `arena_modules` está incorporada —
+> sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10. Valem as camadas 1 e 2
+> (plataforma libera, arena ativa); onde o texto fala em ligar a flag, é histórico.
 
 ---
 
@@ -50,7 +54,7 @@ Conclusão: o chassi precisava ser **refeito e ligado**, não continuado.
 │ Painel admin → Funcionalidades → "Módulos de arena"                │
 │ Para cada módulo: LIBERAR ou não; e como (opcional / obrigatório). │
 │ Guardado em platform_settings/arena_modules (documento único).     │
-│ Chave-mestra: feature flag `arena_modules` (default OFF).          │
+│ Chave-mestra `arena_modules`: sempre ligada desde 2026-10-10.      │
 └────────────────────────────────────────────────────────────────────┘
                               ↓ só o que foi liberado aparece abaixo
 ┌─ CAMADA 2 · ARENA ─────────────────────────────────────────────────┐

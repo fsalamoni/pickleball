@@ -51,8 +51,10 @@ saíram (nada lia o que gravavam).
 
 ## Hooks
 ```js
-import { useAdminTournaments } from '@/modules/admin/hooks/useAdminTournaments';
-import { usePlatformSettings } from '@/modules/admin/hooks/usePlatformSettings';
+import { useAllPlatformUsers, useDeleteAccounts, useSetAccountStatus } from '@/modules/admin/hooks/usePlatformUsers';
+// Sem hook próprio: o console chama o serviço e o provider das flags.
+import { listAllTournaments } from '@/modules/admin/services/adminService';
+import { setFeatureFlag } from '@/core/services/platformSettingsService'; // platform_settings/global
 ```
 
 ## Audit logs gerados

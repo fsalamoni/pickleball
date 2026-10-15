@@ -1,7 +1,7 @@
 # 16 — Dia de jogo (Play): rodízio equilibrado
 
-> Flag `play_smart_rotation` — **padrão DESLIGADA**. Desligada, nada muda.
-> Código: `src/modules/games/domain/playRotation.js` (puro, 31 testes).
+> **Estado (2026-10-15):** `play_smart_rotation` incorporada — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico.
+> Código: `src/modules/games/domain/playRotation.js` (puro, com testes ao lado).
 > Ver também: **grupos dentro do Play** (`docs/39-PLAY-GRUPOS.md`) — cada grupo
 > usa este mesmo seletor (FIFO ou rodízio) dentro da sua fila.
 

@@ -1,6 +1,6 @@
 # Dia de jogo da arena
 
-> **Flag**: `arena_game_day` (default **OFF**) ·
+> **Estado (2026-10-15)**: incorporada (`arena_game_day`) — sempre ligada (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou desligar a flag é histórico ·
 > **Rotas**: `/arenas/:arenaId/gerir/dia-de-jogo[/:gameDayId]` (arena) e
 > `/dia-de-jogo/:id` (atleta, a de sempre) ·
 > **Coleções novas**: nenhuma.

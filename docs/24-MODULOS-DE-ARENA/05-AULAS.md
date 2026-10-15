@@ -2,7 +2,7 @@
 
 > **Módulos**: `classes` · `classes_catalog` · `classes_packages` ·
 > `classes_marketplace`
-> **Chave-mestra**: flag `arena_modules` (default OFF).
+> **Chave-mestra**: `arena_modules` — incorporada em 2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
 >
 > **Atualização 2026-09-24 (Onda BF)**: as aulas passaram a ser PARTE da

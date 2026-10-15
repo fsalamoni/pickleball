@@ -1,7 +1,8 @@
 # 39 — Play com GRUPOS (flag `play_groups`)
 
-> Flag `play_groups` — **padrão DESLIGADA**. Desligada, nada muda: o Play segue
-> uma fila única, exatamente como antes.
+> **Estado (2026-10-15):** `play_groups` incorporada — sempre ligada
+> (`PERMANENT_FEATURE`) desde 2026-10-10; o texto abaixo que fala em ligar ou
+> desligar a flag é histórico. Sem grupos gravados, o Play segue uma fila única.
 > Código: `src/modules/games/domain/playGroups.js` (modelo, nível, formação,
 > distribuição) e `playGroupsDraw.js` (a escolha da partida dentro dos grupos).
 > UI: `src/v2/components/games/playGroups/`.

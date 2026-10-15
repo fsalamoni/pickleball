@@ -118,12 +118,10 @@
 ## Hooks expostos
 
 ```js
-import { useArena } from '@/modules/arenas/hooks/useArena';
-import { useArenaBookings } from '@/modules/arenas/hooks/useArenaBookings';
-import { useArenaCourts } from '@/modules/arenas/hooks/useArenaCourts';
-import { useArenaWaitlist } from '@/modules/arenas/hooks/useArenaWaitlist';
-import { useArenaCRM } from '@/modules/arenas/hooks/useArenaCRM';
-import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellation';
+import { useArena, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
+import { useArenaBookings, useMyBookings } from '@/modules/arenas/hooks/useBookings';
+import { useArenaWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist'; // fila de reserva
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 ```
 
 ## Feature flags principais
@@ -148,7 +146,7 @@ import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellatio
   / listArenaPayments` agora usam query simples + sort por
   `created_at_ms` em memória. Padrão consistente com PRs #82/#84.
 
-## Catálogo padrão + Organização e Gestão do mercado (flag `arena_product_catalog`)
+## Catálogo padrão + Organização e Gestão do mercado (sempre ligado; a antiga flag `arena_product_catalog` virou código)
 
 - **`domain/productCatalog.js`** (+test): taxonomia (categorias/subcategorias/
   embalagens), normalização, `buildDedupKey`, similaridade (Jaccard) e

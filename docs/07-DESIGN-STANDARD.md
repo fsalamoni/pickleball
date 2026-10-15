@@ -132,7 +132,7 @@ longo vai em bloco contextual, não espalhado em cartões ornamentais.
 
 ## 7. Modo escuro
 
-Flag `dark_mode`; Claro, Escuro ou Automático por pessoa (`docs/30-MODO-ESCURO.md`).
+Sempre disponível (`dark_mode`, incorporada em 2026-10-10); Claro, Escuro ou Automático por pessoa (`docs/30-MODO-ESCURO.md`).
 **A tela não precisa de nada**: a paleta compila cada cor de `bg-*`/`text-*`/
 `border-*` como `rgb(calc(CLARO + (ESCURO − CLARO) × var(--k)))`; `--k` vale 0
 no claro (idêntico ao de sempre, provado token a token) e 1 no escuro

@@ -6,8 +6,10 @@
 > **Com as dicas guiadas ligadas (flag `guided_tips`, Onda CJ)** tudo o que
 > segue muda de forma: cada tutorial vira um GUIA na tela (`tutorial:<id>`, o
 > mesmo texto), o botão "Como funciona" começa o guia — destaque e seta sobre
-> os botões de verdade — e **nada abre sozinho**. O modal abaixo segue valendo
-> com a flag desligada. Ver `docs/32-DICAS-GUIADAS.md` §2.5.
+> os botões de verdade — e **nada abre sozinho**. Desde 2026-10-10
+> `guided_tips` está sempre ligada (`PERMANENT_FEATURE`): o modal abaixo só
+> aparece onde o lançador pede `explicar`; o resto do texto, que fala em
+> abrir sozinho, é histórico. Ver `docs/32-DICAS-GUIADAS.md` §2.5.
 
 ---
 

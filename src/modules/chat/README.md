@@ -17,8 +17,7 @@ Conversas 1:1 e em grupo. Gera notificações `chat_message` e `chat_invite`.
 
 ## Hooks
 ```js
-import { useChat } from '@/modules/chat/hooks/useChat';
-import { useConversations } from '@/modules/chat/hooks/useConversations';
+import { useConversations, useMessages, useChatActions } from '@/modules/chat/hooks/useChat';
 ```
 
 ## Onde achar mais

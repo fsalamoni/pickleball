@@ -11,7 +11,7 @@
 
 ---
 
-## ⚠️ LEIA ISTO PRIMEIRO — achados críticos abertos
+## ⚠️ LEIA ISTO PRIMEIRO — os 2 achados críticos (tratados; falta a migração do P0-02)
 
 A auditoria encontrou 2 vulnerabilidades CRÍTICAS. **As duas já foram
 tratadas** — mas o P0-02 só se fecha por completo depois de a migração
@@ -30,8 +30,9 @@ apagar os campos antigos, o que exige backup testado (S0). Detalhe em
 | ~~**P0-02**~~ 🟡 | ~~`tournament_registrations` guarda `player_a_email`/`player_b_email` numa coleção de leitura pública~~ | **CONTIDO em 2026-09-09**: nenhuma inscrição NOVA grava e-mail no documento público (vai para `{rid}/private/contact`). Os documentos ANTIGOS ainda expõem, até a migração — que exige S0. 29 asserções no emulador. |
 
 O que falta do P0-02 é **apagar** os campos dos documentos existentes —
-passo destrutivo e irreversível, por isso preso ao S0 (backup testado).
-Ver `patches/P0-02-*.md` §Parte 3.
+passo destrutivo e irreversível, que dependia do S0 (backup testado). O S0 foi
+concluído em 2026-09-30 (`19-PENDENCIAS.md`, item 1); a migração em si segue
+pendente (item 2). Ver `patches/P0-02-*.md` §Parte 3.
 
 ---
 
