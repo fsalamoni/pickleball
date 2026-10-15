@@ -8,6 +8,7 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 - Variáveis `t('Você tem {n} XP', { n })`; plural `tn(n, '{n} jogo', '{n} jogos')` (o catálogo guarda `['{n} game', '{n} games']` na chave do plural).
 - Datas/números/moeda: `fmtData`, `fmtNumero`, `fmtMoeda`, `fmtLista` (`Intl` pelo idioma ativo). Não escreva `'pt-BR'` em tela nova.
 - Catálogos por módulo: `src/<área>/i18n/locales/<codigo>.js` (`export default { 'texto pt': 'text' }`), carregados só para o idioma escolhido. pt-BR não baixa nada.
+- Onde se troca: a **bandeira no cabeçalho** (`LanguageMenu`, ao lado do sino), a tela de entrada e Configurações → Idioma. Bandeiras em `src/v2/components/idioma/Bandeira.jsx` (SVG, nunca emoji — no Windows o emoji vira letras).
 - Troca de idioma = grava `picklerush:idioma` e recarrega a página. Flag desligada: tudo em português e a escolha é apagada (`IdiomaBridge`).
 
 ## Regras que não podem regredir
@@ -28,7 +29,7 @@ Plano completo e fases: `/mnt/project-files/i18n/plano-multi-idiomas.md`. Códig
 - Ainda em português (escrito por pessoas): campanhas e cupons de arena/professor/plataforma, aviso em massa do admin, chat, comentários e dúvidas do treino. E a linha do cupom dentro do aviso de status da aula (`{cupom}`, montada por `lessonCouponLine`).
 
 ## Incluir um idioma novo
-1. Uma linha em `src/core/i18n/languages.js`.
+1. Uma linha em `src/core/i18n/languages.js` e o desenho da bandeira em `src/v2/components/idioma/Bandeira.jsx` (sem ele, aparece o ícone de idiomas).
 2. Copiar cada `locales/en.js` para `locales/<codigo>.js` e traduzir os valores.
 3. `npx vitest run src/core/guards/i18nCatalogos.test.js` mostra o que falta.
 

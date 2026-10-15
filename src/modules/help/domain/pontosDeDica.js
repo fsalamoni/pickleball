@@ -32,14 +32,6 @@ export const PONTOS_DE_DICA = Object.freeze([
     guide: 'escolher-cards-do-inicio',
   },
   {
-    id: 'inicio:procuro-jogo',
-    route: '/',
-    target: 'botao-procuro-jogo',
-    title: tk('Procuro jogo'),
-    body: tk('Leva aos convites de quem está procurando parceiros — e é onde você publica o seu.'),
-    guide: 'encontrar-jogo',
-  },
-  {
     id: 'inicio:avisos',
     route: '/',
     target: 'botao-notificacoes',

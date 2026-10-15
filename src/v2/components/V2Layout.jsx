@@ -24,7 +24,6 @@ import {
   FileText,
   Menu,
   X,
-  Plus,
   ChevronRight,
   Bell,
   LogOut,
@@ -82,6 +81,7 @@ import InstallInviteBar from '@/v2/components/InstallInviteBar';
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
 import DicasProvider from '@/v2/components/dicas/DicasProvider';
 import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
+import { LanguageMenu } from '@/v2/components/idioma/LanguageSwitcher';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
 // Gamificação V2 em segundo plano: só baixa o código com a flag ligada e uma conta logada.
 const GamificationBackground = lazy(() => import('@/v2/components/gamification/GamificationBackground'));
@@ -906,7 +906,7 @@ export default function V2Layout({ children }) {
             <kbd className="rounded-md border border-gray-200 px-1.5 py-0.5 text-2xs">Ctrl K</kbd>
           </button>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 xl:gap-4">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 xl:gap-3">
             {isRealPlatformAdmin && (
               <button
                 type="button"
@@ -914,7 +914,7 @@ export default function V2Layout({ children }) {
                 title={viewAsUser ? t('Você está vendo como usuário comum. Toque para voltar à visão de admin.') : t('Ver a plataforma como um usuário comum.')}
                 aria-pressed={viewAsUser}
                 className={cn(
-                  'btn-press flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold shadow-sm transition-colors',
+                  'btn-press flex h-10 min-w-10 items-center justify-center gap-2 rounded-full px-2.5 text-xs font-bold shadow-sm transition-colors sm:h-11 sm:min-w-11 xl:px-4',
                   viewAsUser ? 'bg-amber-400 text-ink hover:bg-amber-300' : 'bg-white text-gray-600 hover:text-ink',
                 )}
               >
@@ -929,7 +929,7 @@ export default function V2Layout({ children }) {
               onClick={() => abrirPaleta('icone')}
               aria-label={t('Buscar ou ir para')}
               title={t('Buscar')}
-              className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper xl:hidden"
+              className="btn-press flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper sm:h-11 sm:w-11 xl:hidden"
             >
               <SearchIcon className="h-5 w-5" />
             </button>
@@ -938,11 +938,13 @@ export default function V2Layout({ children }) {
               to="/chat"
               aria-label={t('Mensagens')}
               title={t('Mensagens')}
-              className="btn-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper"
+              className="btn-press flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-paper sm:h-11 sm:w-11"
             >
               <MessageSquare className="h-5 w-5" />
             </Link>
             <NotificationsBell />
+            {/* Idioma (flag multi_language): a bandeira do idioma atual; também em Configurações. */}
+            <LanguageMenu />
             {userMenuOn && (
               <UserMenu
                 displayName={displayName}
@@ -951,14 +953,6 @@ export default function V2Layout({ children }) {
                 onLogout={handleLogout}
               />
             )}
-            <Link
-              to="/procura-jogo"
-              data-dica="botao-procuro-jogo"
-              aria-label={t('Entrar num jogo')}
-              className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
-            >
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t('Entrar num jogo')}</span>
-            </Link>
           </div>
         </header>
 

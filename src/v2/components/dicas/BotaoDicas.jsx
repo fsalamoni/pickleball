@@ -24,7 +24,7 @@ export default function BotaoDicas() {
       aria-label={ligadas ? t('Dicas (ligadas)') : t('Dicas (desligadas)')}
       title={ligadas ? t('Dicas ligadas — ver os guias') : t('Dicas — ligar ou ver os guias')}
       className={cn(
-        'btn-press flex h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-bold shadow-sm transition-colors md:px-3.5',
+        'btn-press flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-bold shadow-sm transition-colors sm:h-11 sm:min-w-11 xl:px-4',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/40',
         ligadas ? 'bg-acid text-ink hover:bg-acid-light' : 'bg-white text-gray-500 hover:text-ink',
       )}
