@@ -332,7 +332,7 @@ npm run build
 npm test
 
 # 5. Flag tá ON no Firestore?
-# Console do Firebase → platform_settings/feature_flags/{key}
+# Console do Firebase → platform_settings/global → campo feature_flags.{key} (só as flags ligáveis; as permanentes ignoram o banco)
 
 # 6. Rule tá permitindo?
 # Firebase Console → Firestore → Rules → test rule

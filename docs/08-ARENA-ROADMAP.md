@@ -1,5 +1,7 @@
 # Roadmap de Arena — implementação completa
 
+> 📜 **Documento histórico.** Registra os sprints da arena e as contagens **da época** (módulos, coleções etc.). O estado atual está em [`46-INVENTARIO.md`](./46-INVENTARIO.md) e nos docs temáticos de arena ([`23`](./23-ARENA-CALENDARIO-E-RESERVA.md), [`24-MODULOS-DE-ARENA/`](./24-MODULOS-DE-ARENA/00-INDEX.md)).
+
 > **Status**: Sprints 0+1+2+3+4 ✅ DONE, **Sprint 5 (Refinamento) ✅ DONE**
 > (PRs #58 hotfix, #59 calendar, #60 PIX, #61 regras, #62 mercado).
 > Roadmap Arena COMPLETAMENTE CONCLUÍDO.

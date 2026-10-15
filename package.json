@@ -19,7 +19,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore,storage --project demo-picklerush \"vitest run --config vitest.rules.config.js\"",
-    "typecheck": "tsc -p ./jsconfig.json --noEmit"
+    "typecheck": "tsc -p ./jsconfig.json --noEmit",
+    "docs:inventario": "node scripts/gen-inventario.mjs",
+    "docs:inventario:check": "node scripts/gen-inventario.mjs --check"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",

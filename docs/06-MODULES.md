@@ -1,953 +1,328 @@
 # MODULES
 
-> O que cada módulo faz, arquivos-chave e fluxos principais. Panorama em
-> `docs/01-AI-CONTEXT.md`; dados em `docs/05-DATA-MODEL.md`.
+> O que cada módulo de `src/modules/` faz, onde estão os arquivos-chave, que
+> telas o consomem e que coleções toca. Panorama em `docs/01-AI-CONTEXT.md`;
+> dados em `docs/05-DATA-MODEL.md`; **números, rotas, coleções, índices,
+> Cloud Functions e flags exatos em [`docs/46-INVENTARIO.md`](./46-INVENTARIO.md)**
+> (arquivo GERADO do código — este aqui não repete contagens).
 
-A plataforma tem **26 módulos** em `src/modules/`. A camada de apresentação
-ativa (V2, `src/v2/`) consome os hooks e services desses módulos. A camada
-legada (V1, `src/pages/`) também, mas está em desuso.
+## Como ler
 
-**Módulos atuais** (além dos 19 originais): `home/` (personalização do
-início, Ondas CG/CI), `feed/`, `legal/`, `marketplace/`, `moderation/`,
-`promo/`, `help/` (tutoriais, dicas guiadas, central de ajuda).
+`src/modules/` tem **29 módulos**. Cada um segue (quando precisa) as camadas
+`domain/` (regra pura, com `.test.js` ao lado) → `services/` (I/O Firestore)
+→ `hooks/` (React Query) → `components/`; `i18n/locales/{en,es}.js` quando tem
+texto próprio. As telas ativas moram em `src/v2/pages/V2*.jsx` e os
+componentes de tela em `src/v2/components/<área>/`; a camada V1 (`src/pages/`)
+só mantém as quatro telas públicas/telão listadas em `docs/01-AI-CONTEXT.md`.
+Cada módulo tem um `README.md` próprio, que é a fonte mais detalhada.
 
-**Feature flags**: cada nova feature vive atrás de uma flag
-(`src/core/featureFlags.js` — **27 flags ativas**, ver
-`src/core/featureFlags.js` §FLAGS_DEFINIDAS). UI gateada com
-`<FeatureFlagGuard flag=...>` ou via hook `useFeatureFlag(key)`.
-**Sempre aditivo** — nunca quebra o que está OFF. As flags de Ondas
-antigas foram incorporadas ao código permanente (só restam as de
-Ondas CC-CJ e as da Fase FUTURO).
+**Feature flags** (`src/core/featureFlags.js`): `FEATURE_FLAG` tem só as flags
+que o admin liga (hoje `dupr_official_sync`, `gameday_mexicano`,
+`gameday_king_of_court`, `marketplace`, `multi_language`); as demais viraram
+`PERMANENT_FEATURE` (sempre `true`; os `if` que as consultam são dívida a
+remover). Nova feature nasce atrás de flag, default OFF, aditiva. Quantas são,
+em `docs/46-INVENTARIO.md` §8.
+
+**Coleções**: a lista abaixo é o que o módulo toca no código; o esquema vive em
+`docs/05-DATA-MODEL.md` e as regras em `firestore.rules`.
 
 ---
 
-## tournament/ — núcleo
-
-Torneios de ponta a ponta: criação, modalidades, inscrições, sorteio,
-agendamento por quadra, jogos, ranking ao vivo, admins compartilhados, visão
-pública, impressão, telão e courtside scoring.
-
-- **pages (V1 legacy)**: `Dashboard` (meus torneios), `CreateTournament`,
-  `JoinTournament` (código de convite), `PublicTournamentsList`,
-  `Tournament` (abas via `:tab`), `ModalityPage`, `TournamentFormatsGuide`.
-- **components (V1)**: `TournamentOverviewTab`, `TournamentModalitiesTab`,
-  `TournamentRegistrationsTab`, `TournamentDrawTab`, `TournamentMatchesTab`,
-  `TournamentRankingTab`, `TournamentAdminTab`/`TournamentAdminPanel`,
-  + dialogs (`ModalityRegistrationDialog`, `ModalityInfoModal`),
-  `StageExplanation`, `ParticipationHistoryCard`,
-  `ShareCardButton`, `Gallery`.
-- **V2 (ativo)**: `src/v2/pages/V2Tournament.jsx` (componente principal
-  que reusa a lógica e renderiza abas próprias) + `V2TournamentDrawTab`,
-  `V2TournamentModalitiesTab`, `V2TournamentRegistrationsTab`,
-  `V2MatchesBlock`, `V2RankingBlock`, `V2OverviewBlock`, `V2Gallery`,
-  `V2TournamentAdminPanel`, `V2ParticipationHistoryCard`,
-  `V2ModalityInfoContent`, `V2Collapsible`, `V2TournamentOpsDashboard`,
-  `V2TournamentWizard` (criação em etapas, Onda 5b), `V2TournamentTVMode`
-  (Telão, Onda 4), `V2CourtsideScoring` (placar courtside, Onda 4b),
-  `V2BracketTree` (árvore visual, Onda 4b), `V2TournamentTemplates`
-  (marcar como modelo, Onda 5). Páginas dedicadas: `V2Dashboard`,
-  `V2Tournaments`, `V2CreateTournament`, `V2JoinTournament`,
-  `V2ModalityPage`, `V2FormatsGuide`.
-- **services**: `tournamentService` (CRUD + `setTournamentStatus` → notifica
-  comunidade quando torneio **público** abre inscrições +
-  `archiveTournament`/`unarchiveTournament` para o criador/admin, exigindo
-  `status === 'cancelled'` para arquivar + `duplicateAsTemplate` (Onda 5)),
-  `modalityService`, `registrationService` (com export CSV — Onda 1),
-  `participationService`, `matchService`, `drawService`, `rankingService`,
-  `courtService`, `tournamentAnnouncementService` (Onda 9b),
-  `tournamentPhotoService` (galeria).
-- **domain (puro, testado)**: `scoring`, `draw`/`seeding`, `progression`,
-  `doubleElimination`, `swiss`, `mexicano` (Onda 2), `reinaQuadra` (Onda 2),
-  `schedule`/`scheduling`, `ranking`, `capacity`, `eligibility`,
-  `participation`, `formatExplain`, `whistTables`, `constants`,
-  `archiveValidation`, `bracketLayout` (Onda 4b — layout da árvore visual).
-- **hooks**: `useTournament`, `useTournamentAnnouncements`,
-  `useTournamentPhotos`, `useTournamentOps` (Onda 9b), `useTournamentWizard`
-  (Onda 5b).
-
-Fluxo típico: criar torneio → adicionar modalidades → abrir inscrições
-(notifica) → inscrições/check-in → sortear (`drawService`+`domain/draw`) →
-agendar quadras → registrar resultados (`matchService`) → ranking recalculado
-(`rankingService`+`domain/ranking`).
-
-**Americano aprimorado em etapas** (flag `tournament_americano_etapas`):
-`domain/americanoEtapas.js` — etapas de Americano em grupos refeitos a cada
-etapa para o máximo de encontros inéditos (`planEtapas` olha as etapas que
-faltam juntas), classificação única; a próxima etapa sai do avanço de rodada
-(`advanceStage` → `nextEtapa`). **Check-in**: "esta inscrição joga?" é
-`isActiveRegistration` (`domain/checkin.js`), e o próprio check-in só para
-quem criou a inscrição (`selfCheckInState`). Ver
-`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
-
-**Formatos extras (Onda 2)**: Mexicano (rodízio de duplas por rodada) e
-Rei da Quadra (vencedor fica, demais rotacionam) — ambos com domínio puro
-testado em `domain/mexicano.js` / `domain/reinaQuadra.js`.
-
-## arenas/ — arenas, reservas, PDV e Arena V3
-
-Diretório de arenas com perfil, fotos, contatos e preços; reservas avulsas,
-recorrentes, compartilhadas e aulas com professor; lista de espera; política
-de cancelamento; no-show tracking; favoritos, reviews, CRM; **Arena V3**:
-PDV, membros, ligas, marketing, IoT, operations, matchmaking.
-
-- **V2 (ativo)**: 67 páginas V2. Arenas: `V2Arenas` (lista),
-  `V2ArenaDetail`, `V2CreateArena`, `V2ArenaManage` (painel admin 2 níveis),
-  `V2ArenaOnboarding` (stepper 4 passos), `V2Bookings` (minhas reservas);
-  componentes `V2ArenaActions`, `V2ArenaEditors`, `V2ArenaReviews`,
-  `V2BookingRow`, `V2BookingCalendar` (mensal com badges), `V2DaySlotsDialog`
-  (info do dia com reservas), `V2CourtDayGrid` (PR #70: linhas=horários,
-  colunas=quadras), `V2CourtSchedules`, `V2CourtPriceRules`,
-  `V2ArenaCRM` (Onda 6b), `V2ArenaWaitlist` (Onda 6b),
-  `V2ArenaCancellationPolicy` (Onda 6), `V2ArenaNoShow` (Onda 6).
-  V3: `V2ArenaPDV`, `V2ArenaMembers`, `V2ArenaClasses`, `V2ArenaLeagues`,
-  `V2ArenaMarketing`, `V2ArenaOperations`, `V2ArenaMatchmaking`,
-  `V2ArenaModules`, `V2ArenaOpenMatch`, `V2ArenaAdvanced`, `V2ArenaAdminOpenMatch`,
-  `V2ArenaAdminMembers`, `V2ArenaCoaches` (Sistema C).
-  **Integração dos módulos à arena** (2026-09-24,
-  `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`): a Central tem abas
-  endereçáveis (`/arenas/:id/gerir?aba=`) e os módulos `members` e `classes`
-  são `native` — viram SEÇÕES da Central (Membros; Aulas → Agenda +
-  Professores) e seções da página pública (Planos e vantagens; Aulas e
-  professores). `/gerir/membros` e `/gerir/aulas` redirecionam para a aba.
-  Componentes de aulas em `src/v2/components/arenas/classes/`
-  (`ArenaClassesPanel`, `ArenaCoachRoster`, `ArenaClassesSection`,
-  `ProfessorForm`, `MyArenaClasses`).
-- **V1 (legado)**: `ArenasDirectory`, `CreateArena`, `ArenaDetail`,
-  `ArenaManage`, `MyBookings`.
-- **services**: CRUD de arenas, `arena_bookings` (com `booking_type`,
-  `responsibles[]`, auto-atribuição de `court_id`), `arena_courts`,
-  `arena_court_schedules`, `arena_favorites`, `arena_managers`,
-  `arena_reviews`, `arena_unavailabilities`, `arena_waitlist` (Onda 6b),
-  `arena_products`/`arena_sales`/`arena_payments` (PDV),
-  `arena_members`/`arena_packages`/`arena_subscriptions` (members),
-  `arena_ladders`/`arena_matches`/`arena_internal_tournaments` (leagues),
-  `arena_classes`/`arena_class_bookings` (Sistema C — aulas da arena),
-  `arena_campaigns`/`arena_coupons`/`arena_referrals` (marketing),
-  `arena_inventory_*` (operations), `arena_devices` (IoT),
-  `arena_open_slots` (matchmaking).
-- **domain (puro, testado)**: `booking` (compartilhamento, rateio),
-  `booking_conflict` (conflito entre slots), `booking_waitlist` (Onda 6b),
-  `calendar`/`calendar_aggregate` (resumo mensal), `cancellation_policy`
-  (Onda 6), `court`/`court_schedule`/`court_assignment` (PR #70:
-  `pickAvailableCourt`), `instant_booking`, `inventory` (operations),
-  `leagues` (V3), `marketing` (V3), `matchmaking`, `members`, `modules`,
-  `openMatch`, `operations`, `pdv`, `pix_payment` (V3), `pricing` (com
-  `court_id`), `review_response`, `shared_booking` (PR #68),
-  `settings`/`slot_status`/`waitlist` (legado).
-- **hooks**: `useArena`, `useArenaBookings`, `useArenaCourts`, `useArenaWaitlist`
-  (Onda 6b), `useArenaCRM` (Onda 6b), `useArenaCancellation` (Onda 6).
-
-Reservas: simple/recurring + **multi** (PR #78) + **shared** (múltiplos
-responsáveis com rateio por tempo de uso, PR #68 + #70) + **coach_lesson**
-(aula do professor em arena parceira, PR #68). `court_id` é **obrigatório**
-em toda reserva (PR #75) — auto-atribuído via `pickAvailableCourt` se user
-não escolhe (`domain/court_assignment.js`).
-
-**BookingRequestDialog reescrito** (PRs #77, #78): 3 modos de seleção
-de quadras — qualquer disponível (auto), específicas (1+ escolhidas, cada
-uma = reserva independente com `booking_group_id`), todas (cada quadra
-ativa = reserva). Convida participantes. Suporte a múltiplos horários
-(kind `multi`). Cancelar individual ou em lote no calendário.
-
-**Política de cancelamento (Onda 6)**: regras percentuais baseadas em
-`tempo até o slot`. Reembolso integral antes do limite, parcial depois,
-nenhum após o slot. Domain: `cancellation_policy.js`.
-
-**Lista de espera (Onda 6b)**: usuário entra na fila quando slot está
-cheio; arena é notificada ao abrir vaga.
-
-## coaches/ — produto do professor
-
-> Estende o **Sistema A** (professor = usuário real, uid). NÃO conflita com
-> Arena V3 Sistema C (`arena_classes` — aulas operadas por arena).
-
-Perfil público, diretório, residência em arena, agenda/aulas, roster de
-alunos, pacotes/créditos, biblioteca de conteúdo, loja, clínicas, validação
-de nível.
-
-- **V2 (ativo)**: `V2Coaches` (diretório), `V2CoachProfile` (público),
-  `V2CoachAgenda` (painel: agenda, alunos, pacotes, biblioteca, loja),
-  `V2StudentLessons` (aulas do aluno), `V2ArenaCoaches` (Sistema C).
-  Desde 2026-09-24, `/minhas-aulas` mostra também as matrículas nas aulas das
-  ARENAS e `/aulas` as aulas que a pessoa dá nas arenas (mesmo sem perfil de
-  professor da plataforma). Com o módulo `classes` ligado numa arena, os
-  parceiros (Sistema A) e os professores das aulas (`arena_coaches`) viram UMA
-  lista na Central (`mergeCoachRoster`, junção por uid).
-- **services**: `coachService` (perfil), `coachAvailabilityService`
-  (janelas), `coachLessonService` (aulas), `coachStudentService` (vínculo),
-  `coachPackageService` (pacotes), `coachPackageSaleService` (créditos),
-  `coachContentService` (biblioteca), `coachClinicService` (clínicas),
-  `coachClinicSignupService`, `coachLevelValidationService` (Onda 7b),
-  `coachProductService` (loja), `coachArenaService` (residência,
-  com `partnership_status` mútuo na Onda 7).
-- **domain (puro, testado)**: `availability`, `clinic`, `coach` (perfil),
-  `coachProduct` (loja), `content` (biblioteca), `lesson` (aulas),
-  `package` (pacotes), `student` (vínculo), `validation` (nível validado).
-- **hooks**: `useCoachProfile`, `useCoachLessons`, `useCoachStudents`,
-  `useCoachPackages`, `useCoachClinics`, `useCoachContent`.
-
-**Fases (PR #68)**:
-- **A**: agenda (coach_availability) + aulas (coach_lessons) + loja (coach_products)
-- **B**: roster (coach_students) + agenda de aulas por aluno
-- **C**: pacotes (coach_packages) + vendas (coach_package_sales) + financeiro
-- **D**: biblioteca de conteúdo (coach_content) — drills, vídeos, planos
-
-**Onda 7b**: clínicas/workshops abertos (coach_clinics) e validação de
-nível (coach_level_validations).
-
-**Hub "Aulas"** (PR #82): renomeado de "Professores" para "Aulas".
-Ordem: Professores / Minhas aulas / Painel do professor. Painel do
-professor só aparece para quem é professor.
-
-**`listCoaches` in-memory** (PR #82): query simples (`limit(500)`) +
-filtros/ordenação em memória. Resolve bug onde professores não
-apareciam na busca (índice composto `active+accepting+display_name`
-faltando). Padrão emergente — ver `02-STANDARDS.md §5.3.2`.
-
-**Perfil › Professor** (PR #82): ganha acesso direto ao Painel do
-Professor + texto atualizado.
-
-**Página pública sem botões de gestão** (Wave B, item 3.2):
-- ✅ Mantém: "Ver perfil de atleta" (navegação), "Solicitar aula" (CTA)
-- ✅ Mantém: Like (Heart) + Share (QR + WhatsApp + PNG)
-- ❌ Removidos: "Adicionar arena" (vai pro painel), "Gerenciar biblioteca"
-  (vai pro painel), "Minha agenda de aulas" (vai pro painel),
-  "Editar meu perfil" (vai pro painel)
-- ❌ `AddResidencyForm` + função "remover residência" removidas
-
-**BUG #2 do materializado corrigido (Wave C.6.1, Sprint 21)**:
-- **Causa**: faltavam **índices compostos** no Firestore para as
-  queries `where('club_id', '==', x) + orderBy('wins', 'desc')`
-  nas 4 coleções materializadas.
-- **Sintoma**: o Firestore lançava `FAILED_PRECONDITION` (código 9),
-  React Query tratava como erro, e o front mostrava "0 atletas do
-  clube, sem ranking" mesmo com o materializado populado no
-  servidor.
-- **Por que passou despercebido até agora**: a Wave C.3 introduziu
-  o materializado e as queries no frontend mas **esqueceu de criar
-  os índices compostos**. As Waves C.4, C.5 e C.6 mexeram no
-  backend (Cloud Function, callable, sideToUids) mas ninguém
-  olhou se a **leitura no cliente** tinha índice. Os testes
-  cobriam o pipeline do servidor; o `useClubInternalRanking`
-  nunca teve teste.
-- **Fix**: 4 índices compostos adicionados em
-  `firestore.indexes.json` (ASC club_id + DESC wins, um por
-  coleção). O workflow `deploy-firebase.yml` deploya
-  automaticamente. Comentário no hook documenta o requisito.
-- **D-MATERIALIZADO-EXIGE-INDICES (Wave C.6.1)**: toda coleção
-  materializada com `where + orderBy` em campos diferentes
-  PRECISA de índice composto.
-
-**BUG RAIZ do materializado corrigido (Wave C.6, Sprint 20)**:
-- **Causa raiz**: `GameDayOrganizer` salvava `side_a`/`side_b` em
-  `club_events/.../games` como `{ id, name }` onde `id` é
-  **doc_id de `event_participants`**, NÃO `user_id`. A Cloud
-  Function `sideToUids` retornava `p.id` (doc_id) e o
-  materializado ficava com chaves que não correspondiam a
-  `club_members.user_id` nem `athlete_profiles.uid`.
-- **Sintoma visível**: "0 atletas do clube" mesmo com 16 membros.
-  Materializado sempre VAZIO para clubes com game day organizer.
-- **Por que ficou visível agora**: antes da Wave C.3 (cálculo
-  client-side), o bug era latente — a UI mostrava nomes do
-  `name` salvo, dando impressão de funcionar. Com a materialização,
-  o cálculo tentou agregar por `user_id` real, expôs o bug.
-- **Fix server-side** (`functions/clubRanking.js`):
-  `sideToUids(side, participantById)` aceita mapa
-  `eventParticipantDocId → event_participant` e resolve
-  `p.id → user_id`. Convidados sem user_id são pulados. Nova
-  função `loadEventParticipantsMap` constrói o mapa por clube.
-- **Fix client-side** (`GameDayOrganizer` + `sanitizeGameSide`):
-  para dados NOVOS, salva `user_id` direto no `side_a`/`side_b`.
-  Mantém `id` para retrocompat. Schema novo funciona no
-  server-side sem precisar do mapa.
-- **10 testes novos** em `clubRankingUserIdFix.test.js`
-  (1387 total): regressão explícita "sem participantById,
-  materializado fica VAZIO" + cenário do Pickleholics.
-
-**Correções do materializado server-side (Wave C.5, Sprint 19)**:
-- **Bug #1 (crítico)**: `applyToIndividual` agora seta `user_id` no
-  row (era `undefined`, gerando doc id `{clubId}_undefined`).
-- **Bug #2**: torneios do clube (Wave B) agora contam como
-  `is_club=true` no escopo interno, via resolução de
-  `tournament.club_id` (novo `loadTournaments()` em chunks de 30).
-- **Bug #3**: callable `recomputeOneClubInternalRanking` aceita
-  `platform_admin` por custom claim **OU** por `users/{uid}.role`
-  (Fsa tinha role no Firestore, não no claim → 500 fix).
-- **Painel Admin V2** — novo `ClubRankingBackfillPanel` em
-  `src/modules/admin/components/`, usado em V2AdminConsole
-  (Visão geral) e V2AdminMetrics (`/admin/metricas`). Mostra
-  contagem (clubes/materializados/vazios), botão de backfill
-  total com confirm, lista de clubes vazios com botão granular
-  'Recalcular' por clube. Substituiu o `ClubRankingPanel` legado
-  (removido).
-- **Feature flag** `CLUB_INTERNAL_BACKFILL` (default ON quando
-  `CLUB_INTERNAL_RANKING` está ON).
-- **5 testes novos** em `clubRankingServer.test.js` cobrindo a
-  regressão `user_id` (1377 passing total).
-
-**Fix do filtro de clube + backfill do materializado (Wave C.4, Sprint 18)**:
-- **Filtro de clube no ranking nacional** (`NationalRanking.jsx`):
-  agora carrega `useClubs()` (diretório oficial) + mescla com
-  `player_ratings.clubs` denormalizado. Antes: dropdown
-  "Todos os clubes" não listava nenhum clube.
-- **`loadClubUids(clubId)`** no hook `useClubInternalRanking`:
-  lê `club_members` + `athlete_profiles.club_ids` (array-contains).
-  Antes: `clubUids` vinha do materializado (vazio para clubes
-  legados) → badge "0 atletas do clube" mesmo com 16 membros.
-- **Botão "Recalcular rankings de todos os clubes"** no `AdminMetrics`
-  (platform admin) — backfill manual via Callable.
-- **Botão "Materializar ranking agora"** no `ClubRankingTab` (admin
-  do clube) + CTA no empty state individual.
-- **Cloud Function mensal `recomputeAllClubsMonthly`** (1º dia às
-  4h) — auto-cura mensal sem interação humana.
-- **Workflow de deploy** com passo "Backfill club internal rankings"
-  (documenta o caminho).
-
-**Ranking interno do clube MATERIALIZADO no Firestore (Wave C.3, Sprint 17)**:
-- Cloud Function `recomputeClubInternalRankings` materializa 4 coleções
-  top-level com W/L/Aprov/Saldo **e** `display_name`/`photo_url`:
-  - `club_internal_ratings/{clubId_userId}` (individual, só clube)
-  - `club_internal_ratings_ext/{clubId_userId}` (individual, com externos)
-  - `club_internal_doubles_ratings/{clubId_pairKey}` (duplas, só clube)
-  - `club_internal_doubles_ratings_ext/{clubId_pairKey}` (duplas, com externos)
-- **5 gatilhos** (5 onDocumentWritten) cobrem todas as origens de
-  resultado: `club_events/{id}/games/{id}`, `club_event_games/{id}`,
-  `tournament_matches/{id}`, `club_members/{id}`,
-  `athlete_profiles/{id}` (quando `club_ids` muda).
-- **2 callable** (admin): `recomputeAllClubInternalRankings`
-  (platform admin) e `recomputeOneClubInternalRanking`
-  (admin do clube OU platform admin).
-- Frontend **só LÊ** (hook `useClubInternalRanking`). Toggle
-  "Incluir resultados externos" = trocar coleção. Sem nenhum
-  cálculo client-side. Sem latência. Múltiplos users leem do
-  mesmo materializado.
-- Bug do nome (Wave C.2 mostrava uid) resolvido: `display_name`
-  e `photo_url` desnormalizados no documento materializado.
-
-**Ranking interno do clube em duplas (Wave C.2, Sprint 16)**:
-- `ClubRankingTab` agora tem sub-abas **Individual** | **Duplas** (a
-  segunda só aparece se `CLUB_INTERNAL_DOUBLES_RANKING` estiver ON).
-- Ranking de duplas via `computeDoublesRanking` (domínio puro,
-  reusado do ranking nacional) — agrupa parcerias pelo par de
-  uids e soma vitórias/derrotas/saldo.
-- **Toggle "Incluir resultados externos"** (só admins do clube):
-  - Default OFF (escopo só do clube).
-  - Quando ON, agrega também:
-    * `tournament_matches` finalizados em que atletas do clube
-      participaram.
-    * `club_event_games` (Wave C) de outros clubes.
-- `useClubInternalRanking(clubId, { includeExternal })` centraliza
-  a coleta de fontes e o cálculo.
-- `clubRankingSources` (domínio puro) normaliza matches de qualquer
-  formato (`side_a_ids`/`side_b_ids` ou objetos) e filtra pelos
-  uids do clube. 13 testes unitários.
-
-**Dias de jogo → ranking nacional (Wave C, Sprint 15)**:
-- `club_events/{id}/dates/{dateId}.publish_to_ranking` (default false)
-- Criador do evento + admins do clube podem LIGAR a chave para espelhar
-  os jogos com resultado decidido em `club_event_games`
-- Apenas jogos DECIDIDOS (com placar lançado) entram no ranking; jogos
-  sem resultado são pulados
-- Publicação é idempotente (Republicar não duplica); despublicar remove
-  os jogos espelhados e recalcula o rating
-- `recomputeAllRatings` agora lê AMBAS as coleções
-  (`tournament_matches` + `club_event_games`)
-- `clearGameDayData` também limpa os espelhamentos quando o dia de
-  jogo é excluído
-
-## athletes/ — diretório de atletas
-
-Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
-
-- **V2 (ativo)**: `V2Athletes`, `V2AthleteProfile`, `V2ProfileEdit`.
-- **V1 (legado)**: `AthletesDirectory`, `AthleteProfile`.
-- **services**: `athleteService` (`syncAthleteProfile`, `listAthletes`,
-  `getAthlete`, `removeAthleteProfile`).
-- **domain (puro, testado)**: `publicProfile` (montagem do perfil público).
-- Reusado na busca de atletas para **convidar membros de clube** e como
-  audiência do aviso de "torneio aberto".
-- **ID DUPR** (PR #90, Sprint 27): campo `dupr_id` em
-  `users/{uid}` + espelhado em `athlete_profiles/{uid}` via
-  `buildAthletePublicProfile` (trim, null quando vazio).
-  Aparece em: editor de perfil (seção Identidade), cards do
-  diretório (+ busca por DUPR), perfil público (chip no herói),
-  inscrições de torneio (linha "DUPR: X / Y" por dupla), meu
-  perfil (chip). Aditivo/backward-compat, sem índice novo.
-- **Lado da quadra + Interesses** (PR #91, Sprint 28):
-  - **Lado da quadra**: campo `quadrant` (qualquer/esquerda/
-    direita) em `users` + espelhado em `athlete_profiles`.
-    Aparece no perfil público (ajuda parcerias).
-  - **Interesses na plataforma**: array `interests` em `users`
-    (multi-seleção de funcionalidades — ver
-    `athletes/domain/profileMeta.js`). Drive do painel
-    personalizado.
-  - **Cadastro completo obrigatório**: `profile_completeness`
-    calculado em tempo real (não armazenado). Valida campos-chave
-    +1+1 (interesses + lado da quadra).
-  - **Painel personalizado**: a home do usuário mostra conteúdo
-    baseado em `interests[]` + papel.
-  - **+1 componente** `profileMetaIcons.js` (ícones por interesse).
-
-## clubs/ — clubes e comunidade
-
-Clubes com associação por papel, mural, fórum (com enquetes), eventos e
-game-day (com Mexicano + Rei da Quadra), ranking interno, página pública.
-Acesso por papel: não-membro vê só o card+descrição; membros acessam
-abas; só admin acessa Administração.
-
-- **V2 (ativo)**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`,
-  `V2CreateClub`; componentes `V2ClubAdmin`, `V2ClubEvents`, `V2ClubFeed`,
-  `V2ClubForums`, `V2ClubMembers`, `V2EventChat`, `V2EventDatesPanel`,
-  `V2EventParticipantsPanel`, `V2ForumPoll`, `V2ForumThreadView`,
-  `ClubGameDayTab` (Onda AS — escolhe entre o MÓDULO único `game_days` e o
-  organizador legado, pela presença de `game_day_id` na data),
-  `V2ClubInternalRanking`
-  (Onda 8), `V2ClubPublicPage` (Onda 8b), `V2ClubRecurringEvents` (Onda 8b),
-  `V2ClubInviteLink` (Onda 8b). `V2GameDayOrganizer` foi **removido** na Onda
-  AS (cópia morta, sem import e fora do bundle).
-- **Peças de `modules/clubs/components/` usadas pelo V2** (a casca V1 —
-  `ClubsDirectory`, `ClubDetail`, `EventDetail` e as abas — já não existe):
-  `GameDayOrganizer` (o organizador LEGADO do dia de jogo, servido a toda data
-  anterior à Onda AS), `EventFormDialog` (o formulário de evento; era o
-  `ClubEventsTab`, cuja aba V1 morta saiu na varredura de 2026-09-30),
-  `CreateThreadDialog`, `PollBuilder`, `LinkedClubsSection`,
-  `GameDayLeaderboard`, `PublishToRankingToggle`. O guarda `src/core/guards/telaMorta.test.js`
-  reprova componente que ninguém importa.
-- **services**: `clubService` (clube, membros, pedidos, convites, com
-  `is_public`, `public_slug`, `invite_link` — Onda 8b), `forumService`.
-- **domain (puro, testado)**: `clubRanking` (Onda 8), `forumPoll`,
-  `gameDayDraw` (com Mexicano + Rei da Quadra — Onda 2), `constants`.
-- **hooks**: `useClubs`, `useClubForum`, `useClubRanking` (Onda 8),
-  `useClubPublicPage` (Onda 8b).
-
-Ingresso (3 caminhos): **pedir para ingressar** (`club_join_requests` → notifica
-admins → aprovação cria `club_members`), **convite do admin**
-(`club_member_invites` → notifica convidado → aceite cria membro),
-**link de convite** (Onda 8b), **código de convite**. Eventos públicos
-publicados notificam membros.
-
-**Eventos recorrentes (Onda 8b)**: `club_events` com `recurring_rule`
-(frequência semanal/mensal, weekdays, end_date). UI mostra a série.
-
-**Página pública (Onda 8b)**: `/clubes/p/:slug` — clubes com `is_public=true`
-exibem página para visitantes (sem login). Mostra membros, eventos, ranking
-interno (se configurado).
-
-## chat/ — mensagens
-
-Conversas 1:1 e em grupo.
-
-- **V2 (ativo)**: `V2Chat`; componentes `V2ConversationList`, `V2ChatWindow`,
-  `V2MessageBubble`, `V2ChatComposer`, `V2ChatLauncherButton`.
-- **Compartilhado**: `NewChatDialog` (`modules/chat/components/`). A versão
-  V1 do chat (`ChatPage` e as cinco peças) saiu — sem nenhum import, e ainda
-  afirmando "Nenhuma conversa" numa falha que tela nenhuma mostrava.
-- **Falha não é vazio**: `useConversations`/`useMessages` devolvem `isError`
-  e `retry` (a assinatura que falha está encerrada; `retry` assina de novo).
-- **services**: `chatService`.
-- **hooks**: `useChat`.
-- **domain**: `conversations` (resolução/ordenação, testado).
-- Gera notificações `chat_message` / `chat_invite`.
-
-## leveling/ — nivelamento (CBPE/USAP)
-
-Tabela de níveis + questionário auto-avaliativo.
-
-- **V2 (ativo)**: `V2Leveling` (página pública `/nivelamento`); componentes
-  `V2LevelTable`, `V2LevelingQuestionnaire`.
-- A versão V1 (`Leveling`, `LevelTable`, `LevelingQuestionnaire`,
-  `LevelingResultCard`) saiu na varredura de 2026-09-30 — sem nenhum import.
-- `data/levels.js` (catálogo), `domain/questionnaire.js` (cálculo do nível).
-- Resultado salvo em `users.leveling_*`. Integração no `Profile` (V1 e V2).
-- **Onda 7b**: validação por outro professor (coach_level_validations).
-
-## notifications/ — sino + preferências
-
-- `hooks/useNotifications` — lê `notifications` do usuário numa assinatura
-  ÚNICA e compartilhada (`useSyncExternalStore`), expõe `unreadCount`,
-  `markAsRead`, `markAsUnread`, **`markAllAsRead`**, `allNotifications` e
-  `muted` (o que as preferências escondem). Renderizado pelo
-  `NotificationsBell` (`v2/components/notifications/`) no `V2Layout`.
-- `domain/noticeFeed` — área de cada aviso (tipo → destino), hora, ordem,
-  grupos por dia, filtros e o recorte do sino. Rota `/notificacoes`
-  (`V2Notifications`, flag `notifications_center`). Ver
-  `docs/36-NOTIFICACOES.md`.
-- **Preferências (Onda 9b)**: hook `useNotificationPreferences` — categorias
-  silenciáveis (booking_confirmed, tournament_*, chat_*, forum_*, etc).
-  Salvo em `users/{uid}.notification_prefs: {category: bool}`.
-- Serviço de escrita é compartilhado: `core/services/notificationService.js`.
-- Lembretes de perfil/nivelamento são **derivados no Layout** (não persistidos).
-
-## admin/ — plataforma
-
-Painel exclusivo de `platform_admin` (`/admin/*`).
-
-- **V2 (ativo)**: `V2AdminTournaments` (arquivar/excluir/desarquivar
-  torneios), `V2AdminMetrics` (métricas), `V2AdminPartners` (espaço de
-  parceiros), `V2AdminConsole` (feature flags, 1-click on/off),
-  `V2AdminProfiles`, `V2AdminBootstrap`, `V2AdminOwnerDebug`,
-  `V2AdminOwnerRestore`.
-- **V1 (legado)**: `AdminTournaments`, `AdminMetrics`, `AdminPartners`.
-- **services**: `adminService`, `platformSettingsService` (feature flags).
-- **"Ver como usuário"** (PR #79): toggle no header (só admin) que faz
-  `isPlatformAdmin`/`canCreatePools` retornarem `false`. App se comporta
-  como user comum. Útil pra debug. Lógica em `FirebaseAuthContext.jsx`
-  via flag `impersonate`.
-  Ações geram `audit_logs` (`platform_archive_tournament`,
-  `platform_delete_tournament`, `feature_flag_changed`…).
-
-**V2AdminConsole** (PR #69): painel 2 níveis (sticky top-2 + sub-tab-bar),
-com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
-/ `arenas` / `coaches` / `community` / `arena_v3` / `other`).
-**Arena V3 Boot embutido** — sub-seção de bootstrap dos módulos V3
-(executa migração, ativa sub-flags).
-
-## games/ — jogos abertos, procura-jogo e dia de jogo do atleta
-
-- **V2 (ativo)**: `V2OpenGames` (Procura-se jogo), `V2GameDays` (Dia de jogo),
-  `V2MyGames` (rota legada → redireciona a `/meu-desempenho`).
-- **V1 (legado)**: `OpenGames`.
-- Coleções: `games`, `open_games`, `participants`, `game_days` (+ subcoleções
-  `participants`/`games`). Gera notificações para quem confirmou presença.
-- **Grupos dentro do Play** (flag `play_groups`, 2026-10-07): o Play ganha uma
-  fila por grupo (por nível, por tipo de dupla — mista ou do mesmo sexo — ou
-  turmas livres), política entre grupos, nível e sexo do convidado avulso,
-  telão e ajuda. Domínio em `games/domain/playGroups.js` + `playGroupsDraw.js`,
-  UI em `v2/components/games/playGroups/`. Campos opcionais em `game_days`,
-  `participants` e `games` — zero coleção, índice ou regra. Ver
-  `docs/39-PLAY-GRUPOS.md`.
-- **Dia de jogo do atleta** (flag `athlete_game_day`): qualquer atleta cria seu
-  próprio dia de jogo (público ou privado por convite), insere/convida qualquer
-  atleta da plataforma e organiza os jogos (reaproveita `gameDayDraw`/
-  `gameDayFormats` dos clubes). Dias de jogo públicos publicam um convite em
-  `open_games` (`kind='game_day'`); ao "Participar", o dia de jogo passa a
-  aparecer na aba "Dia de jogo" do atleta. O criador pode publicar os resultados
-  decididos no ranking geral (espelho em `club_event_games`) — e no ranking de um
-  clube quando todos os atletas de uma partida são do mesmo clube (`club_id`
-  resolvido por partida). Visível apenas ao criador e aos membros.
-- **Data nos convites** (Wave #88): "Publicar convite" exige data OU
-  descrição. Feed ordenado por data (mais próximos primeiro; sem
-  data ao final). Convites passados em seção colapsável fechada
-  por padrão. Mesmo padrão para "Dia de jogo".
-- **Editar dia de jogo** (PR #89): botão "Editar" no detalhe (só
-  para o criador) reaproveita `CreateGameDayDialog` em modo
-  edição. Atualização de visibilidade sincroniza o convite
-  público em `open_games` (privado→público publica, público→privado
-  remove, público→público atualiza data/descrição).
-- **Dia de jogo em "Meu desempenho"** (Wave #87): `myGames.js`
-  agrega todos os jogos de dia de jogo (publicados OU não) do
-  atleta, deduplicando por `gd_${gameDayId}_${gameId}`. Alimenta a
-  Estatística (fold em `usePlayerStats`) e a aba Meus jogos
-  (`MyGamesPanel`).
-- **Ranking de duplas consome dia de jogo** (Wave #87):
-  `listFinishedEngineMatches` lê `club_event_games` (dias de jogo
-  publicados) usando `side_a_ids`/`side_b_ids`. Ranking de duplas
-  agora reflete publicação de dia de jogo.
-- **Navegação**: em "Jogar" a aba "Meus jogos" passou a ser sub-aba de "Meu
-  desempenho" (abas "Estatística" + "Meus jogos"); no lugar dela entra "Dia de
-  jogo".
-- **Formato Play (open play)** (NOVO Onda F, PRs #101-#104): fila
-  de espera + substituição + próximo da fila. Visões separadas
-  organizador/participante (`AthletePlayOrganizer.jsx` +
-  `AthletePlayParticipant.jsx`). Sorteio aditivo (não destrutivo)
-  + ranking do dia.
-- **Play — polimento** (PRs #105-#109): sorteio Americano ciente
-  do histórico, `pickSwapReplacement` (substituído não volta à
-  mesma partida), `normalizeStatsFormat` (formato do jogo, não
-  da inscrição — americano = duplas), parceiro na rotação
-  do Americano.
-
-## help/ — tutoriais e ajuda em tela
-
-Conteúdo dos tutoriais que a plataforma mostra DENTRO das próprias ferramentas.
-Só domínio puro (`domain/tutorials.js`): quatro tutoriais — torneio, dia de jogo
-Play, Americano e Americano aprimorado —, cada um com passos de título, corpo e
-dica.
-
-A interface é `src/v2/components/tutorial/V2TutorialLauncher.jsx`: uma linha na
-tela (`<V2TutorialLauncher tutorialId={...} />`) e ele cuida de abrir na
-primeira vez, deixar DISPENSAR e manter o botão para REVER quando quiser.
-
-Quem já viu o quê fica no `localStorage` por usuário
-(`v2:view:<uid>:tutorial:<id>`, via `core/lib/viewPreference.js`) — **nada no
-Firestore**.
-
-Os ids dos tutoriais são contrato: renomear um faz o tutorial reaparecer para
-toda a base. Detalhes em `src/modules/help/README.md` e `docs/19-TUTORIAIS.md`.
-
-## legal/ — documentos legais e consentimento
-
-- **Flag**: `legal_center`. **V2**: `V2Legal` (central `/legal`),
-  `V2LegalDocument` (`/legal/:docRoute`).
-- Registro de documentos em `domain/legalDocuments.js` (dado puro, versionado):
-  essenciais (Termos de Uso, Política de Privacidade, Termo de Riscos — aceite
-  **bloqueante** via `LegalConsentGate` no `V2Layout`), complementares (Cookies,
-  Diretrizes da Comunidade, Pagamentos/Reembolsos, Cancelamento) e por papel
-  (Organizador, Arena, Professor — aceite no fluxo que assume o papel via
-  `useRoleConsent`).
-- Consentimento versionado em `legal_consents` (`domain/consent.js` +
-  `services/consentService.js` + `hooks/useConsents.js`). Bump de versão de um
-  documento reabre o portão de aceite.
-- A página legada `/politica-uso` (V2Privacy) segue existindo; com a flag
-  desligada, tudo isso fica oculto e só ela permanece.
-
-## partners/ — espaço de parceiros (admin)
-
-Área dedicada de parceiros (logos, banners, links). Painel do admin
-(`/admin/parceiros`).
-
-- **V2 (ativo)**: `V2Partners` (visualização) + `V2AdminPartners` (gestão).
-- **V1 (legado)**: `Partners`, `AdminPartners`.
-- Coleção: `affiliate_links`. Tráfego, LGPD (IP hash, UA truncado).
-
-## performance/ — meu desempenho
-
-Estatísticas e histórico individual do atleta.
-
-- **V2 (ativo)**: `V2Performance`, `V2AthleteAgenda` (Onda 3 — agenda do
-  atleta: aulas + torneios próximos).
-- **V1 (legado)**: `MyPerformance`.
-- Coleções: `player_ratings`, `rating_history`, `player_goals`, `follows`.
-- Ganchos com o módulo `rating/` (ranking nacional, head-to-head).
-
-## progression/ — progressão do atleta + Gamificação V2
-
-Curvas de progressão, níveis, metas e todo o sistema de **Gamificação V2**
-(Onda R), atrás da flag `gamification_v2` (default OFF).
-
-- **V1**: hooks/domain/services próprios, sem página dedicada (reusado por
-  `performance/` e `profile/`). Nada disso muda com a flag desligada.
-- **V2 (gated)**: tiers com nome (Calouro → Imortal), 5 trilhas paralelas
-  de XP, missões diárias, sequência semanal (folga automática e férias), kudos, indicações, rivais/crews/mentorias e
-  ranking mensal.
-- **Páginas V2**: `/gamification` (hub), `/gamification/como-funciona` (o guia
-  completo, por público, com busca — Onda W2), `/gamification/revisao`,
-  `/gamification/configuracoes`, `/conquistas`, `/hall-da-fama`, `/vinculos`
-  (rivais, crews, mentorias). Bloco "Sua progressão" no `/perfil` via
-  `ProfileProgressionSection`.
-- **Sequência**: uma conta só (`domain/weekStreak.js`): semanas de segunda a
-  domingo em Brasília, zera quando a pessoa para, folga automática de uma semana
-  por mês e férias declaradas (4 semanas, intervalo de 90 dias). Substituiu a
-  "proteção de sequência" decorativa.
-- **Texto explicativo**: `domain/gamificationGuide.js` é a fonte única do que a
-  plataforma diz sobre a gamificação (números lidos das constantes e da
-  configuração do admin); `TermHint`/`TermNote`/`HowItWorks` o levam às telas.
-- **XP**: atividade + bônus de conquista registrada + XP de missão concluída
-  (`domain/xpTotal.js`), tudo derivado — recalcular não infla.
-- **Ranking sazonal**: Cloud Function `recomputeSeasonRankingDaily` (03h BRT)
-  ranqueia por XP DA TEMPORADA (`xpTotal - baselineXp`), não por XP de vida.
-- **13 coleções** novas — detalhe em `docs/05-DATA-MODEL.md` § Gamificação V2. Desenvolvimento completo (hub, painéis de professor/arena/clube, console do admin, desafios, recompensas, Hall com privacidade): `docs/38-GAMIFICACAO-V2.md`.
-- **Vocabulário com fonte única**: `tiers.js` e `skillTrees.js` mandam; o
-  schema Zod e o `firestore.rules` derivam. Guardado na CI por
-  `domain/gamificationRulesSync.test.js`.
-- Detalhes e armadilhas: `src/modules/progression/README.md`.
-
-## rating/ — ranking nacional + DUPR + matchmaking
-
-Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking,
-**ranking estilo DUPR** (escala 2.0-8.0, Onda G Sprints 38-43).
-
-- **V2 (ativo)**: `V2Ranking` (com aba "Nivel 2.0-8.0" gated por
-  `skill_rating_dupr`), `V2DoublesRanking`, `V2FindPlayers`
-  (com score de matchmaking gated por `smart_matchmaking`).
-- **Componentes de rating (NOVO)**: `V2DuprRankingView`,
-  `V2DuprEvolution`, `V2DuprRatingBadge`, `HeadToHeadCard`,
-  `RatingSparkline` (em `v2/components/rating/`).
-- **domain (puro, testado)**:
-  - `headToHead` (legacy).
-  - `doublesRanking` (Onda 3).
-  - `matchmaking` (NOVO Onda H) — score 0-100 com
-    proximidade de rating, complementaridade de lado,
-    cidade, interesses.
-  - **`elo`** (testado) — ELO original (intacto).
-  - **`duprScale`** (NOVO Onda G) — escala 2.0-8.0 com
-    confiabilidade, baseado no placar, simples/duplas
-    separados, replay determinístico.
-  - **`gameLog`** (NOVO Onda G) — normalizador compartilhado
-    de jogos (espelha fonte do ELO, sem tocá-lo).
-  - **`coachSeed`** (NOVO Onda M) — semente de rating por
-    nível validado.
-  - **`ratingSignature`** (NOVO) — assinatura de rating
-    (replay determinístico).
-  - **`duprMatchExport`** (NOVO) — gera CSV para DUPR
-    (exclui `0×0`, resolve `dupr_id` de `users`).
-  - **`unifiedLevel`** (NOVO Onda R) ⭐ — a régua 2.0-8.0
-    usada por **todos os sorteios da plataforma**. Equipara
-    as quatro fontes de nível e define a prioridade: DUPR
-    informado → rating 2.0-8.0 da plataforma → ELO → nível
-    declarado (convertido para a mesma escala). Ver
-    `docs/13-NIVEL-UNIFICADO.md`.
-- **services**: `ratingService`, `headToHeadService`,
-  `duprRatingService`, `duprOfficial` (stub sem rede),
-  `duprExportService`,
-  **`unifiedLevelService`** (NOVO Onda R — leitura pura de
-  `athlete_profiles` + `player_skill_ratings` + `player_ratings`
-  por id de documento; nunca escreve, nunca lança).
-- **hooks**: `useRating`, `useHeadToHead`, `useDuprRating`,
-  `useDuprExport`.
-- **Materialização no client + Cloud Function
-  `recomputeRankingOnTournamentChange`**.
-- **Coleções (NOVAS)**: `player_skill_ratings/{userId_format}`
-  (rating DUPR), `skill_rating_history/{id}` (evolução).
-- **ELO intacto**: nada do ELO foi tocado. Tudo aditivo.
-
-## sharing/ — compartilhamento e certificados
-
-Componentes de compartilhamento social, geração de certificados, e
-**calendar export** (Onda 1 — `.ics` para download de aulas/torneios).
-
-- `ShareCardButton`, `CalendarExportButton` (Onda 1); o certificado virou o cartão de campeões (`docs/43-TROFEUS-E-CARTOES.md`).
-- Sem página dedicada. `domain/ics.js` (puro, testado).
-
-## social/ — feed, follows, metas
-
-Feed da comunidade, follows de atletas, metas pessoais.
-
-- **V2 (ativo)**: `V2Community` (página `/novidades`), `V2Search` (Onda 10
-  — busca global federada: atletas + torneios + arenas + clubes).
-- **V1 (legado)**: `CommunityFeed`.
-- Coleções: `follows`, `player_goals`, e leitura transversal em
-  `users` / `athlete_profiles`.
-
-## achievements/ — conquistas
-
-Conquistas e medalhas. V1 (20 conquistas, sempre ativa) e **V2**
-(catálogo de 5 famílias × 5 raridades), atrás de `gamification_v2`.
-
-- **V1**: hooks e domain próprios, integrados a `performance/`, `profile/`
-  e `social/`. Continuam intactos com a flag desligada.
-- **V2 (gated)**: páginas `/conquistas` e `/conquistas/:uid` (perfil
-  público de outro atleta, com botão de kudos). Coleção
-  `user_achievements_v2`.
-- O total de conquistas vem sempre de `ACHIEVEMENTS_V2.length` — nunca de
-  um número escrito à mão.
-- Detalhes: `src/modules/achievements/README.md`.
-
-## circuits/ — circuitos (séries de torneios)
-
-> Renomeado/separado de `tournament/` (estava agrupado antes). Séries de
-> torneios com ranking acumulado.
-
-- **V2 (ativo)**: `V2Circuits`, `V2CircuitManage`.
-- Coleções: `circuits`, `circuit_admins`, `circuit_tournaments`,
-  `circuit_results`. Ranking agregado (computeCircuitRanking) em
-  `domain/`.
-
-## analytics/ — funil e observabilidade
-
-Funil de uso, eventos de produto e observabilidade client-side.
-
-- `hooks/useFunnel`, `domain/funnelEvents` (com testes).
-- Eventos emitidos no `Profile` e em outros pontos críticos.
-
-## settings/ — configurações do usuário (Onda 9)
-
-Página `/configuracoes` (V2Settings) com:
-- Privacidade (`directory_listed`, nível visível publicamente)
-- Notificações (categorias silenciáveis — `notification_prefs`)
-- Tema (placeholder)
-- Conta (dados pessoais, nível)
-- **LGPD data export** (Onda 9) — gera JSON com tudo do user
-- **Push Notifications** (NOVO Onda H) — opt-in/opt-out
-  via `V2PushCard`. Gated por `push_notifications`.
-
-- `services/dataExportService` (gera arquivo em `user_data_exports/`)
-- `core/services/pushService.js` (NOVO Onda H) — opt-in,
-  opt-out, no-op gracioso sem VAPID.
-- `domain/dataExport` (formato do export)
-
-## home/ — Home orientada a ação (NOVO Onda H)
-
-Substitui a home neutra por uma home **orientada a ação** gated
-por `action_home` (default OFF). Componentes:
-
-- `v2/components/home/V2ActionHome.jsx` (NOVO) — bloco "O que
-  fazer agora" (próximo jogo, pendências, torneios abertos
-  perto da sua cidade) + faixa "Sua evolução" (streak,
-  nível/XP, próxima conquista, metas).
-- **Reuso**: `progression/`, `achievements/`, `performance/`.
-- **Sem query nova**: tudo via dedupe do React Query.
-- **Desligada, home segue exatamente como está**.
-
-### home/ — Início personalizado (NOVO Onda CG, `personalized_home`)
-
-Módulo `src/modules/home/` (domínio + hook) e telas em
-`src/v2/components/home/personal/`. A tela inicial passa a ser montada por
-pessoa: o que ela FAZ (gere arena, dá aula, organiza torneio) vence o que ela
-DISSE que quer (`users.interests`), e a atividade traz a seção sem passar na
-frente. Agenda unificada, atalhos diretos, seções por frente, nada vencido
-(`freshness.js`), falha ≠ vazio em cada seção. Botão **Personalizar** edita os
-interesses ali mesmo. Desligada, `/` segue a tela clássica (que também deixou
-de destacar torneio encerrado). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1.
-
-## promo/ — cupons e campanhas da plataforma e dos professores (NOVO Onda CG)
-
-Flags `platform_marketing` e `coach_marketing` (default OFF). As MESMAS
-ferramentas do marketing da arena (tipos de cupom, tíquete com arte, banner com
-cinco modelos ou imagem enviada, destino de lista fechada, aviso com o público
-contado antes, pausa, página da campanha, controle de uso), para a PLATAFORMA
-(Painel admin → Plataforma → Divulgação) e para CADA PROFESSOR (Painel do
-professor → Divulgação). O desconto do professor entra no **pedido de aula**
-e é aplicado na confirmação. Vitrine `/promocoes`, página `/campanhas/:id`,
-seção Promoções no perfil do professor e o carrossel da tela inicial (alcance
-Brasil/estado/cidade; "só para os meus alunos"). Coleções `promo_coupons`,
-`promo_campaigns`, `promo_settings`. Ver `src/modules/promo/README.md` e
-`docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2.
-
-## training/ — Centro de Treino (NOVO, flag `training_center`)
-
-Biblioteca de drills e treinos de TODOS os autores (Equipe PickleRush,
-professores, atletas), com autoria visível e visibilidade pública (com revisão
-para atleta), privada ou só para os alunos; indicar a outro atleta; enviar a
-aluno com prazo (só professor); treino de hoje, planos, diário, evolução e
-dúvidas privadas com o professor. Editor no modelo da pesquisa (certo × errado,
-dicas curtas, erros + correção, fases do movimento, variações, meta, segurança,
-diagrama da quadra, mídia por link ou envio), "Criar com IA" com validação
-local. Admin: Painel → Treino. Telas `V2Training` (`/treino`, abas por `?aba=`),
-`V2TrainingItem`, `V2TrainingEditor`, `V2TrainingPlan`. Ver
-`src/modules/training/README.md` e `docs/40-CENTRO-DE-TREINO.md`.
-
-**Balanço do jogo** (flag `game_debrief`, sobre `training_center`, ligado por
-cada pessoa): depois de um dia de jogo, torneio ou reserva, perguntas rápidas
-(nota, o que funcionou, o que faltou, evolução, corpo e cabeça) e a semana de
-drills sugerida, que a pessoa decide pôr nos treinos. Aba `/treino?aba=balanco`,
-cartão no início, configuração própria e missões opcionais. Ver
-`docs/42-BALANCO-DO-JOGO.md`.
-
-## marketplace/ — o Mercado aberto (`/mercado`, flag `marketplace`)
-
-Não confundir com o mercado da arena logo abaixo (`arena_*`, PDV). Lojas
-aprovadas, atletas, professores e arenas anunciam; o comprador fecha um
-carrinho com vários vendedores (um pedido por vendedor) e paga pelo Pix de
-quem vende. Pedido, oferta, avaliação, disputa, uso de cupom e vale-presente
-são escritos só pelo servidor (`functions/marketplace.js`, paridade de preço
-em `marketPromo.parity.test.js`). O anúncio de arena pode ser ligado a um
-produto do estoque dela (estoque único). Divulgação: cupons por loja (o link
-`/mercado/vendedor/:key?cupom=CODIGO` já aplica no carrinho), vale-presente,
-cartões PNG com QR (anúncio, loja, cupom, vale). Rotina diária expira
-pedidos parados, conclui entregues, revela avaliações e avisa vale perto de
-vencer. Admin: Painel admin → Mercado (Visão geral, Problemas em pedidos,
-Anúncios, Pedidos, Lojas, Cupons e vales, Configurações). Detalhe em
-`src/modules/marketplace/README.md`.
-
-## arenas/ — Mercado (NOVO Onda J)
-
-Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).
-Componentes:
-- `v2/components/arenas/V2ArenaMercadoTab.jsx` (NOVO)
-- `v2/components/arenas/V2ArenaCatalogBrowser.jsx` (NOVO)
-- `v2/components/arenas/V2ArenaFinanceTab.jsx` (NOVO)
-- `v2/components/arenas/V2ArenaGestaoTab.jsx` (NOVO)
-- `v2/components/arenas/ProductTypeahead.jsx` (NOVO)
-- `v2/components/admin/AdminCatalogTab.jsx` (NOVO)
-- **Painel "Como foi minha semana"** (gated
-  `arena_ops_kpis`, Onda N) — KPIs + heatmap de horários.
-
-Domínio (NOVO):
-- `arenas/domain/catalogSeed.js` — seed do catálogo padrão.
-- `arenas/domain/productCatalog.js` (testado) — CRUD catálogo.
-- `arenas/domain/marketReports.js` (testado) — relatórios
-  financeiros.
-- `arenas/domain/dynamic_pricing.js` (NOVO, testado) — preço
-  dinâmico.
-- `arenas/domain/arena_week.js` (NOVO, testado) — KPIs
-  semanais + heatmap.
-
-Coleções (NOVAS): `arena_products`, `arena_sales`,
-`arena_marketplace_catalog` (seed).
-
-## tournament/ — Torneio + Equipes (NOVO Onda I)
-
-Torneio cresceu **muito** com a Onda I (formato Equipes).
-Componentes novos:
-- `v2/components/tournament/TeamConfrontationCard.jsx` (NOVO)
-- `v2/components/tournament/TeamConfrontationDialogs.jsx` (NOVO)
-- `v2/components/tournament/TeamModalityConfig.jsx` (NOVO)
-- `v2/components/tournament/TeamModalityView.jsx` (NOVO)
-- `v2/components/tournament/TeamRegistrationDialog.jsx` (NOVO)
-- `v2/components/tournament/TeamRegistrationForm.jsx` (NOVO)
-- `v2/components/tournament/TeamStandingsTable.jsx` (NOVO)
-- `v2/components/tournament/V2TournamentAdminPanel.jsx` (NOVO)
-- `v2/components/tournament/V2TournamentOpsTab.jsx` (NOVO)
-- `v2/components/tournament/V2TournamentRegistrationsTab.jsx` (NOVO)
-- `v2/components/tournament/V2TournamentDrawTab.jsx` (NOVO)
-- `v2/components/tournament/V2TournamentModalitiesTab.jsx` (NOVO)
-- `v2/components/tournament/V2MatchesBlock.jsx` (NOVO)
-- `v2/components/tournament/V2Collapsible.jsx` (NOVO)
-- `v2/components/tournament/PartnerInviteNotificationAction.jsx` (NOVO)
-
-Páginas novas:
-- `v2/pages/V2TournamentAdmin.jsx` (NOVO) — console dedicado.
-- `v2/pages/V2MyTournamentsAdmin.jsx` (NOVO) — aba no Perfil.
-
-Coleções novas:
-- `tournament_team_registrations/{id}`
-- `tournament_team_lineups/{id}`
-- `tournament_team_confrontations/{id}`
-
-Flags:
-- `team_tournaments` (default OFF) — formato equipes.
-- `tournament_admin_console` (default OFF) — console dedicado.
-- `partner_invite_quick_confirm` (default OFF) — confirmar
-  dupla direto na notificação.
+## Núcleo esportivo
+
+### tournament/ — torneios
+Torneio de ponta a ponta: criação, modalidades e fases, inscrições (com
+contato privado), check-in, sorteio (grupos, chaves, pontos corridos, suíço,
+Americano em etapas, equipes), jogos e placar, classificação, admins, página
+pública, impressão e telão.
+- **Arquivos-chave**: `domain/draw.js`, `domain/tiebreak.js`, `domain/teamFormat.js`,
+  `domain/podium.js`, `domain/checkin.js`, `domain/americanoEtapas.js`,
+  `services/registrationService.js`, `hooks/useTournament.js`. Regras e
+  formatos: `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`, `docs/12-TEAM-TOURNAMENTS.md`,
+  `docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
+- **Telas**: `/torneios`, `/torneios/criar`, `/torneios/ingressar`,
+  `/torneios/guia`, `/torneios/:id` (`V2Tournament`), `/torneios/:id/gerenciar`
+  (`V2TournamentAdmin`), `/torneios/:id/modalidades/:modalityId`
+  (`V2ModalityPage`), `/perfil/torneios`; públicas em `src/App.jsx`:
+  `/p/:id`, `/torneios/:id/imprimir`, `/torneios/:id/telao`. Componentes em
+  `src/v2/components/tournament/`.
+- **Coleções**: `tournaments`, `tournament_modalities`, `tournament_registrations`
+  (+ `private/contact`), `tournament_matches`, `tournament_groups`,
+  `tournament_courts`, `tournament_admins`, `tournament_announcements`,
+  `tournament_photos`, `tournament_rankings`, `provisional_claims`,
+  `club_event_games` (espelho de equipes).
+
+### games/ — dia de jogo, jogo aberto e procura-jogo
+O dia de jogo é **um módulo só** para as três origens (atleta, arena, clube):
+formatos Play, Americano, Americano aprimorado, Mexicano e Rei da Quadra;
+sorteio, rodízio, grupos do Play, placar por sets, ranking do dia, publicação
+no ranking e telão.
+- **Arquivos-chave**: `services/gameDayService.js`, `domain/americanoLive.js`,
+  `domain/playRotation.js`, `domain/playGroups.js`, `domain/gameDayRoles.js`,
+  `domain/arenaGameDay.js`, `domain/playDiscovery.js`. Componente-mestre:
+  `src/v2/components/games/GameDayModule.jsx`. Docs `14` a `17`, `22`, `25`, `35`, `39`.
+- **Telas**: `/dia-de-jogo`, `/dia-de-jogo/:gameDayId` (`V2GameDays`),
+  `/procura-jogo` (`V2OpenGames`), `/meus-jogos` (`V2MyGames`); telão
+  `/dia-de-jogo/:id/telao` em `src/App.jsx`.
+- **Coleções**: `game_days` (+ `participants`, `games`), `open_games`,
+  `club_event_games`, `arena_open_slots`.
+
+### rating/ — ranking, rating 2.0–8.0 e DUPR
+Ranking nacional (ELO), rating estilo DUPR (escala 2.0–8.0), ranking de
+duplas, confronto direto, nível unificado dos sorteios, exportação/sync DUPR.
+O servidor é o único escritor dos rankings (`docs/18-RANKINGS.md`).
+- **Arquivos-chave**: `domain/unifiedLevel.js`, `domain/duprScale.js`,
+  `domain/duprReconcile.js`, `domain/duprMatchExport.js`, `services/ratingService.js`,
+  `services/duprExportService.js`. Espelho no servidor: `functions/engines/`.
+- **Telas**: `/ranking` (`V2Ranking`), `/ranking/duplas` (`V2DoublesRanking`),
+  `/encontrar-jogadores` (`V2FindPlayers`).
+- **Coleções**: `player_ratings`, `player_skill_ratings`, `rating_history`,
+  `skill_rating_history`, `doubles_rankings`, `dupr_export_log` (leitura;
+  escrita só do servidor).
+
+### circuits/ — circuitos
+Séries de torneios com ranking acumulado.
+- **Arquivos**: `domain/circuit.js`, `services/circuitService.js`, `hooks/useCircuits.js`.
+- **Telas**: `/circuits`, `/circuits/:circuitId` (`V2Circuits`, `V2CircuitManage`).
+- **Coleções**: `circuit_admins`, `circuit_results`, `circuit_tournaments`.
+
+### trophies/ — troféus e cartões de campeões
+Pódio, estante de troféus e cartões (PNG/PDF) derivados do que já está
+gravado. Zero coleção própria. Ver `src/modules/trophies/README.md` e
+`docs/43-TROFEUS-E-CARTOES.md`.
+- **Arquivos**: `domain/trophies.js`, `domain/medalCard.js`,
+  `services/trophyService.js`, `hooks/useTrophies.js`.
+- **Telas**: componentes `PodiumBlock`, `MedalCard`, `MedalCardDialog`,
+  `TrophyShelf` em `src/v2/components/trophies/` (resultados do torneio,
+  `/p/:id`, Minha área, perfil público).
+- **Coleções lidas**: `club_event_games` (+ torneio via `tournament/`).
 
 ---
 
-## core/lib/ — biblioteca compartilhada (perfil + onboarding)
+## Locais e comunidade
 
-Lógica de perfil e onboarding que não cabe em um módulo (usada
-por `athletes/`, `auth/`, `coaches/`, `arenas/`, etc.).
+### arenas/ — arenas, reservas e Arena V3
+Diretório, calendário e reserva (múltiplas quadras/horários, preço por hora,
+bloqueios), dia de jogo da arena, jogo aberto e fila de espera, membros,
+pacotes e carteira, aulas, torneios da casa e ranking da casa, loja/PDV,
+Mercado (estoque), marketing (cupons, campanhas, banners, NPS, indicação),
+operação, chegada/totem e catálogo de 50 módulos em 3 camadas. Docs `08`,
+`10-ARENA-V3/`, `22`, `23`, `24-MODULOS-DE-ARENA/`.
+- **Arquivos-chave**: `services/bookingService.js`, `hooks/useArenaV3.js`,
+  `hooks/arenaQueries.js`, `domain/marketing.js`, `domain/pricing.js`,
+  `domain/arenaBlocks.js`, `domain/memberBenefit.js`, `domain/inventory.js`,
+  `domain/moduleAccess.js`.
+- **Telas**: `/arenas`, `/arenas/:arenaId`, `/arenas/:arenaId/gerir` (Central,
+  `V2ArenaManage`, `?aba=`/`?secao=`), `/arenas/criar`, `/minhas-reservas`,
+  `/arenas/:arenaId/{loja,aulas,torneios,membros,marketing,matchmaking,open-match,chegada,avancado}`,
+  `/arenas/:arenaId/gerir/*`, `/arenas/:arenaId/campanhas/:campaignId`;
+  totem `/arenas/:arenaId/totem` em `src/App.jsx`.
+- **Coleções**: `arenas`, `arena_*` (reservas, quadras, horários, bloqueios,
+  membros, carteiras, pacotes, aulas, cupons, campanhas, estoque, vendas,
+  pagamentos, redes, dispositivos, NPS…), `booking_waitlist`, `catalog_products`,
+  `coach_arenas`.
 
-- **`profileValidation.js` + `profileValidation.test.js`** —
-  validação de `profile_completeness` (campos-chave do perfil).
-- **`onboarding/`** (PRs #92 e #94, Sprints 29 e 31):
-  - **3 caminhos para o nível** no passo final: teste /
-    lista explicativa / pular.
-  - **Onboarding não bloqueia** (PR #94): o wizard pode ser
-    interrompido e retomado.
-  - **Aceite persistido em `legal_consents`** (PR #94 + #86):
-    cada aceite no onboarding vira doc auditável
-    (`legal_consents/{uid}_privacy_policy`).
-- **`profileMeta.js`** + **`profileMetaIcons.js`** (PR #91,
-  Sprint 28): registro de lados da quadra + interesses, com
-  ícones correspondentes. Drive da home personalizada.
-- **`core/lib/utils.js`**: helpers de nível (reusa `LEVEL_TABLE`).
-- **Regra de ouro**: o onboarding é **opcional e destravado**.
-  Nada bloqueia o usuário de usar o app.
+### clubs/ — clubes
+Clubes com papéis, mural, fórum com enquetes, eventos, RSVP, ranking interno,
+página pública e dia de jogo do clube (datas novas nascem como `game_days`;
+as legadas seguem no `GameDayOrganizer`).
+- **Arquivos**: `services/clubService.js`, `components/GameDayOrganizer.jsx`,
+  `domain/gameDayDraw.js`, `domain/gameDayFormats.js`, `domain/rankingPublishing.js`,
+  `hooks/useClubs.js`.
+- **Telas**: `/clubes`, `/clubes/criar`, `/clubes/:clubId`,
+  `/clubes/:clubId/eventos/:eventId`; pública `/c/:clubId` em `src/App.jsx`.
+- **Coleções**: `clubs`, `club_members`, `club_events` (+ datas),
+  `club_event_games`, `club_event_rsvps`, `club_posts`, `club_forum_threads`,
+  `club_invite_codes`, `club_join_requests`, `club_member_invites`,
+  `club_internal_*_ratings`, `poll_votes`, `event_invites`.
+
+### coaches/ — professor (Sistema A)
+Perfil público e descoberta, agenda e aulas, alunos e anotações,
+pacotes/créditos, clínicas, loja, conteúdo, validação de nível e residência
+em arena. Não confundir com `arena_classes` (aulas da arena, em `arenas/`).
+- **Arquivos**: `services/coachService.js`, `services/lessonService.js`,
+  `components/CoachStudentsSection.jsx`, `components/CoachPackagesSection.jsx`.
+- **Telas**: `/coaches`, `/coaches/:coachId`, `/aulas` (`V2CoachAgenda`),
+  `/minhas-aulas` (`V2StudentLessons`).
+- **Coleções**: `coach_lessons`, `coach_students`, `coach_student_notes`,
+  `coach_availability`, `coach_packages`, `coach_package_sales`,
+  `coach_clinics`, `coach_clinic_signups`, `coach_products`, `coach_content`,
+  `coach_level_validations`, `coach_favorites`, `coach_arenas`.
+
+### athletes/ — diretório e perfil
+Perfis públicos pesquisáveis, privacidade, exportação de dados do titular,
+**Minha área** (`/perfil` como central da pessoa: `domain/userArea.js`,
+`docs/41-MINHA-AREA.md`), metadados do perfil (`domain/profileMeta.js`).
+- **Arquivos**: `services/athleteService.js`, `domain/publicProfile.js`,
+  `domain/dataExport.js`, `domain/globalSearch.js`, `domain/directoryResync.js`.
+- **Telas**: `/atletas`, `/atleta/:uid`, `/perfil`, `/perfil/editar`
+  (`V2Profile`, `V2ProfileEdit`); componentes em `src/v2/components/userArea/`
+  e `profile/`.
+- **Coleções**: `athlete_profiles`, `users`, `club_members`, `audit_logs`.
+
+### chat/ — mensagens
+Conversas 1:1 e em grupo; gera avisos de mensagem e convite.
+- **Arquivos**: `services/chatService.js`, `hooks/useChat.js`, `domain/conversations.js`.
+- **Telas**: `/chat` (`V2Chat`). **Coleções**: `conversations` (+ `messages`).
+
+### social/ — seguir e feed da comunidade
+Follows e a "comunidade" (atividade recente), busca federada do `/buscar`.
+- **Arquivos**: `services/followService.js`, `hooks/useFeed.js`, `domain/feed.js`.
+- **Telas**: `/novidades` (`V2Community`), `/buscar` (`V2Search`).
+- **Coleções**: `follows`.
+
+### search/ — paleta de comandos
+Índice puro da paleta de comandos (`commandIndex`). Zero banco. Ver
+`src/modules/search/README.md`.
+- **Arquivos**: `domain/commandIndex.js`.
+- **Consumidor**: `src/v2/components/search/V2CommandPalette.jsx` (lazy no `V2Layout`).
+
+### feed/ e moderation/ — planejados
+Pastas estruturadas só com `README.md`: **nenhum código** (desenho em
+`docs/FUTURO/FEED/` e `docs/FUTURO/CONFIANCA-E-MODERACAO/`). O que existe hoje
+de "feed" é `social/` e a moderação de atletas do `admin/`.
 
 ---
 
-## nav/ — navegação (V2)
+## Progressão, treino e evolução
 
-- **PR #93 (Sprint 30)**: "Termos e Documentos" unificado na
-  seção legal do Perfil (não é mais hub standalone).
-- **PR #93 (Sprint 30)**: "Meu desempenho" virou aba dentro de
-  Perfil (não é mais rota standalone).
-- **Regra D-NAV-SEM-DUPLICIDADE**: não há 2 caminhos para a
-  mesma coisa. Cada coisa fica em UM lugar.
+### progression/ — gamificação V2
+Motor único de XP (`useGamificationEngine`), missões, sequência semanal
+(`weekStreak.js`), temporada, desafios, recompensas, kudos, reputação, metas,
+hall da fama, painéis de professor/arena/clube/admin e o guia
+`/gamification/como-funciona`. Flag de gamificação em `docs/38-GAMIFICACAO-V2.md`.
+- **Arquivos**: `domain/progressionV2.js`, `domain/missions.js`,
+  `domain/gamificationGuide.js`, `domain/weekStreak.js`, `domain/supplyHealth.js`.
+- **Telas**: `/conquistas`, `/gamification*`, `/hall-da-fama`, `/vinculos`
+  (todas via `Gamified`).
+- **Coleções**: `user_progression_v2`, `user_xp_grants`, `user_missions`,
+  `user_streak_meta`, `user_kudos`, `user_kudos_index`, `user_reputation`,
+  `season_rankings`, `gamification_*`, `hall_of_fame`, `reward_claims`,
+  `player_goals`, `training_debriefs`, entre outras.
+
+### achievements/ — conquistas
+Conquistas V1 e V2 (`domain/achievementsV2.js`, `services/achievementsV2Service.js`,
+`hooks/useSyncAchievementsV2.js`). **Coleção**: `user_achievements_v2`.
+
+### performance/ — meu desempenho
+Estatísticas individuais e cobertura do ranking ("por que este jogo não
+conta"). **Arquivos**: `domain/playerStats.js`, `domain/rankingCoverage.js`,
+`hooks/usePlayerStats.js`. **Tela**: `/meu-desempenho` (`V2Performance`). Sem coleção própria.
+
+### leveling/ — nivelamento
+Tabela de níveis e questionário de autoavaliação. **Arquivos**:
+`domain/questionnaire.js`, `data/levels.js`. **Tela**: `/nivelamento`. Sem coleção.
+
+### training/ — Centro de Treino
+Biblioteca de drills e treinos (semente + professores + comunidade), planos,
+diário, evolução, dúvidas ao professor, alunos, balanço do jogo
+(`domain/debrief.js`) e revisão do admin. Docs `40`, `40a`, `42`.
+- **Arquivos**: `domain/debrief.js`, `content/seed/drills.js`,
+  `content/seed/fundamentos.js`, `services/` e `hooks/` (13 e 12 arquivos).
+- **Telas**: `/treino`, `/treino/novo`, `/treino/golpes`, `/treino/item/:itemId`,
+  `/treino/item/:itemId/editar`, `/treino/planos/:planId`; componentes em
+  `src/v2/components/training/`.
+- **Coleções**: `training_items`, `training_plans`, `training_sessions`,
+  `training_meta`, `training_questions`, `training_reports`, `training_shares`,
+  `training_debriefs` (+ `coach_content`). Storage `treino/{uid}/`.
 
 ---
 
-## Mapa rota → módulo (V2, app ativo)
+## Plataforma, conteúdo e comércio
 
-| Rota | Módulo / arquivo |
-|---|---|
-| `/` `/login` | `src/v2/pages/V2Landing` · `src/v2/pages/V2Login` |
-| `/inicio` | `src/v2/pages/V2Dashboard` |
-| `/torneios/*` `/torneios/:id/telao` `/torneios/:id/courtside` | `V2Tournaments` · `V2Tournament` · `V2TournamentTVMode` · `V2CourtsideScoring` |
-| `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | `V2CreateTournament` (wizard 5b) · `V2JoinTournament` · `V2FormatsGuide` |
-| `/arenas/*` `/minhas-reservas` | `V2Arenas` · `V2ArenaDetail` · `V2CreateArena` · `V2ArenaManage` · `V2Bookings` · `V2ArenaPDV` · `V2ArenaMembers` · `V2ArenaLeagues` · `V2ArenaClasses` · `V2ArenaMarketing` · `V2ArenaOperations` · `V2ArenaMatchmaking` |
-| `/atletas` `/atleta/:uid` | `V2Athletes` · `V2AthleteProfile` |
-| `/clubes/*` `/clubes/p/:slug` | `V2Clubs` · `V2ClubDetail` · `V2ClubPublicPage` · `V2CreateClub` · `V2EventDetail` |
-| `/coaches` `/coaches/:id` | `V2Coaches` · `V2CoachProfile` |
-| `/coach/agenda` `/aluno/aulas` | `V2CoachAgenda` · `V2StudentLessons` |
-| `/chat` `/novidades` | `V2Chat` · `V2Community` |
-| `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | `V2Ranking` · `V2DoublesRanking` · `V2FindPlayers` · `V2OpenGames` · `V2Partners` |
-| `/meu-desempenho` `/perfil*` `/configuracoes` | `V2Performance` · `V2AthleteAgenda` · `V2Profile` · `V2ProfileEdit` · `V2Settings` |
-| `/buscar` | `V2Search` (busca global, Onda 10) |
-| `/treino` `/treino/novo` `/treino/item/:itemId` `/treino/item/:itemId/editar` `/treino/planos/:planId` `/treino/golpes` | `V2Training` · `V2TrainingEditor` · `V2TrainingItem` · `V2TrainingPlan` · `V2TrainingTechniques` (trilha dos golpes) (Centro de Treino — flag `training_center`) |
-| `/promocoes` `/campanhas/:campaignId` | `V2Promotions` · `V2PromoCampaign` (divulgação da plataforma e dos professores, Onda CG — flags `platform_marketing`/`coach_marketing`) |
-| `/404` | `V2NotFound` (Onda 1) |
-| `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | `V2Rules` · `V2Leveling` · `V2History` · `V2Conduct` · `V2Privacy` |
-| `/admin/*` | `V2AdminTournaments` · `V2AdminMetrics` · `V2AdminPartners` · `V2AdminConsole` · `V2AdminProfiles` · `V2AdminBootstrap` · `V2AdminOwnerDebug` · `V2AdminOwnerRestore` |
-| `/p/:id` `/torneios/:id/imprimir` | `src/pages/PublicTournament` · `src/pages/PrintTournament` (públicas, mantidas em `pages/`) |
+### admin/ — painel da plataforma
+Console do `platform_admin` (`/admin/painel`): acessos e poderes, cadastros
+(edição, suspensão, exclusão, unificação), flags, divulgação, métricas,
+governança, ranking automático. Docs `20-SEGURANCA-E-PRIVACIDADE/`.
+- **Arquivos**: `services/adminService.js`, `domain/accessRoster.js`,
+  `domain/adminUserEdit.js`, `domain/accountStatus.js`,
+  `components/RankingAutomatico.jsx`.
+- **Telas**: `/admin/painel` (`V2AdminConsole`), `/admin/owner-restore`,
+  `/admin/owner-debug`; `/admin/torneios|metricas|parceiros|perfis` e
+  `/admin/v3-bootstrap` redirecionam para abas do painel.
+- **Coleções**: `audit_logs`, `admin_access_logs`, `users`, `platform_settings`
+  e as que o painel administra.
+
+### notifications/ — avisos
+Sino e central `/notificacoes` (agrupamento por dia, filtros na URL),
+preferências por categoria, push. O serviço de escrita é compartilhado em
+`src/core/services/notificationService.js`; links passam por `linkDeAviso`.
+- **Arquivos**: `hooks/useNotifications.js` (uma assinatura por usuário),
+  `domain/noticeFeed.js`, `domain/preferences.js`. Cópia servidor:
+  `functions/notificationPrefs.js`.
+- **Telas**: `V2Notifications`, `NotificationsBell`. **Coleção**: `notifications`.
+
+### home/ — tela inicial personalizada
+Início por pessoa (focos por papel, agenda unificada, cards escolhidos).
+- **Arquivos**: `domain/homeProfile.js`, `domain/homeCards.js`,
+  `domain/homeAgenda.js`, `domain/homeTournaments.js`, `domain/freshness.js`.
+- **Telas**: `/` (`V2Dashboard`/`V2PersonalHome`); `src/v2/components/home/`.
+  Docs `29`, `31`. Sem coleção própria (lê arenas, clubes, torneios, aulas).
+
+### promo/ — cupons e campanhas da plataforma e dos professores
+Mesmas ferramentas do marketing da arena para dois emissores novos.
+- **Arquivos**: `domain/promo.js`, `domain/lessonCoupon.js` (leve; nunca importe
+  `promo.js` do domínio de aulas), `services/promoService.js`, `hooks/usePromo.js`.
+- **Telas**: `/promocoes`, `/campanhas/:campaignId`; `src/v2/components/promo/`.
+- **Coleções**: `promo_coupons`, `promo_campaigns`, `promo_settings`.
+
+### marketplace/ — o Mercado (`/mercado`)
+Marketplace multi-vendedor: anúncios, carrinho, pedidos, ofertas, avaliações,
+disputas, cupons, vales-presente, buscas salvas; pedidos e disputas só o
+servidor escreve (`functions/marketplace.js`). Flag `marketplace`.
+- **Arquivos**: `services/marketService.js`, `hooks/useMarket.js`,
+  `domain/listing.js`, `domain/promotions.js`. README do módulo é a fonte.
+- **Telas**: `/mercado` e subrotas (`V2Market*`, ver inventário §4).
+- **Coleções**: `market_*` (listings, orders, offers, carts, coupons,
+  gift_cards, reviews, disputes, sellers…).
+- Não confundir com o PDV/"Mercado" de estoque da arena (`arena_*`).
+
+### help/ — tutoriais, dicas guiadas e central de ajuda
+Conteúdo puro e contas das telas de ajuda. Zero banco (memória no
+localStorage por usuário).
+- **Arquivos**: `domain/helpCenter.js` (artigos, só em telas de ajuda),
+  `domain/helpLink.js` (leve, para links), `domain/tutorials.js`,
+  `domain/guias.js`, `domain/pontosDeDica.js`.
+- **Telas**: `/ajuda` (`V2Help`); motor de dicas em `src/v2/components/dicas/`,
+  tutoriais em `src/v2/components/tutorial/`. Docs `19`, `21`, `32`.
+
+### legal/ — documentos legais e consentimento
+Termos, privacidade e demais documentos (pt/en/es), portão de aceite,
+registro de consentimento.
+- **Arquivos**: `domain/legalDocuments.js`, `domain/consent.js`,
+  `services/consentService.js`, `hooks/useConsents.js`.
+- **Telas**: `/legal`, `/legal/:docRoute`, `/politica-uso`. **Coleção**: `legal_consents`.
+
+### partners/ — parceiros
+Logos, banners e links de afiliados. **Arquivos**: `domain/affiliate.js`,
+`services/affiliateService.js`, `hooks/useAffiliates.js`. **Tela**: `/parceiros`
+(`V2Partners`; gestão no painel admin). **Coleção**: `affiliate_links`.
+
+### sharing/ — compartilhar
+Cartões de compartilhamento e links (`components/ShareCardDialog.jsx`,
+`components/ShareCardButton.jsx`, `domain/shareLinks.js`) e exportação `.ics`.
+Sem coleção.
+
+### analytics/ — funil
+Eventos de funil e rastreio client-side (`domain/funnelEvents.js`,
+`hooks/useFunnel.js`, `components/AuthFunnelTracker.jsx`). Sem coleção própria.
+
+---
+
+## Fora de `src/modules/`
+
+- **`src/core/`**: `featureFlags.js` (+ `featureFlagGroups.js`), `lib/` (auth,
+  tema, `viewPreference.js`, `profileValidation.js`, `queryState.js`,
+  `useWakeLock.js`, `useRelogio.js`), `domain/` (`instant.js`, `internalLink.js`,
+  `sidebarNav.js`, `errorRecovery.js`), `i18n/` (`t()`/`tk()`), `theme/`
+  (paleta do modo escuro), `geo/` (cidades do IBGE, import dinâmico),
+  `services/` (notificações, push, auditoria), `guards/` (testes de fonte que
+  travam as armadilhas documentadas no `CLAUDE.md`).
+- **`src/v2/`**: `V2App.jsx` (rotas), `pages/`, `components/`, `ui/`
+  (primitivos, `V2Page`, `pageFrame.js`). Moldura única: `docs/45-MOLDURA-DAS-PAGINAS.md`.
+
+## Mapa rota → tela
+
+A lista completa e atualizada de rotas (raiz e V2) está em
+`docs/46-INVENTARIO.md` §4 — gerada de `src/App.jsx` e `src/v2/V2App.jsx`.
+Não copie rotas para cá.

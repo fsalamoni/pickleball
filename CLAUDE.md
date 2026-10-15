@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **3 feature flags** (`dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`; as 33 que estavam ligadas viraram código permanente em 2026-10-10 — `PERMANENT_FEATURE`), **491 arquivos de teste** (7.573 casos, mais 550 no emulador de regras), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**, **Americano aprimorado em etapas** (torneio), **Gamificação V2 completa** (atrás de `gamification_v2`: XP, missões, sequência honesta, temporada, desafios, recompensas, painéis de professor/arena/clube/admin, com guia, dicas e ajuda), **Grupos dentro do Play** (atrás de `play_groups`: fila por grupo, por nível ou tipo de dupla, nível e sexo do convidado avulso), **Centro de Treino** (atrás de `training_center`: treinos e drills com autoria e visibilidade, planos, diário, evolução, dúvidas ao professor, remessa para alunos, painel do admin) **Minha área** (atrás de `user_hub`: o perfil vira a central da pessoa) e **Balanço do jogo** (atrás de `game_debrief`, ligado por cada pessoa: perguntas depois de jogar e a semana de drills sugerida). PWA `sw-v7`. Legado V1 removido.
+- **Estado**: módulos, telas, rotas, coleções, índices, Cloud Functions, flags e testes — com números reais — em [`docs/46-INVENTARIO.md`](docs/46-INVENTARIO.md), **gerado do código** (não copie números para outros docs). Flags: só um punhado é ligável pelo admin (`FEATURE_FLAG`); o resto virou código permanente (`PERMANENT_FEATURE`). Frentes recentes: Mercado (marketplace `/mercado`), vários idiomas (pt/en/es), moldura única de páginas (1200 px), Centro de Treino, Minha área, Balanço do jogo, troféus e cartões, gamificação V2, grupos do Play. PWA `sw-v7`. Legado V1 removido (`src/pages/` guarda só as quatro telas públicas e de impressão).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -55,7 +55,7 @@ Se você está **terminando uma feature** → §7 (checklist de entrega).
 Estes princípios vieram de bugs reais que custaram horas pra arrumar. São inegociáveis:
 
 1. **Não prejudicar nada.** Calma, cautela, atenção. Antes de remover/renomear, **grep + bundle grep + runtime test** pra garantir zero impacto.
-2. **Feature flags SEMPRE.** Toda nova feature nasce atrás de `FEATURE_FLAG.X` (default OFF). UI gated por `<FeatureFlagGuard flag=...>` ou `useFeatureFlag(key)`. Defaults em `platform_settings/feature_flags/{key}`. Veja `docs/02-STANDARDS.md` §3.
+2. **Feature flags SEMPRE.** Toda nova feature nasce atrás de `FEATURE_FLAG.X` (default OFF). UI gated por `<FeatureFlagGuard flag=...>` ou `useFeatureFlag(key)`. Valores em `platform_settings/global` (campo `feature_flags.{key}`). Veja `docs/02-STANDARDS.md` §3.
 3. **UX/UI é prioridade.** Refinamentos visuais depois de cada sprint. Não aceito "funciona, tá pronto". Tem que funcionar **e** ser bonito.
 4. **MERGES + DEPLOYS AUTOMÁTICOS.** Quando terminar um conjunto coerente de tarefas, fazer squash merge + push em main → deploy sai sozinho. Veja `docs/03-WORKFLOW.md`.
 5. **Lógica pura em `domain/` com teste.** Service = I/O. Hook = React Query. Componente = UI. Regra de negócio NUNCA em componente. Sempre testada (Vitest).
@@ -65,6 +65,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 9. **pt-BR em tudo.** UI, comentários, mensagens, audit_logs. Sem inglês solto.
 10. **Dado pessoal: a regra é a única defesa.** Nesta arquitetura o cliente fala direto com o banco — validação no navegador é conveniência, não controle. Nunca coloque e-mail, telefone, endereço ou data de nascimento em coleção de leitura ampla; nunca deixe o usuário escrever campo que define permissão; preferência de privacidade tem que valer no SERVIDOR. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/`.
 11. **Backward-compat SEMPRE.** Aditividade: nova coleção? Regra nova no `firestore.rules` sem mexer nas existentes. Nova flag? Default OFF. Schema change? Campo novo opcional. Migração de dados → `migrateLegacyFlags` com bump de `FLAGS_MIGRATION_VERSION`.
+
+12. **Documentação é parte da entrega — a cada implementação, sem exceção.** Todo PR que muda comportamento, tela, rota, dado, regra, função, flag ou padrão atualiza, **no mesmo PR**, o doc do assunto, o README do módulo e (se mudou o mapa ou um princípio) este arquivo, e roda `npm run docs:inventario` (gera `docs/46-INVENTARIO.md`). Documentar o que **existe**, conferido no código — nunca o que se pretendia. O CI cobra: `docs:inventario:check` reprova inventário desatualizado e o job `docs-obrigatorios` reprova PR que muda código sem tocar em documento; quando nada muda para quem lê, o corpo do PR traz `Docs: não se aplica — <motivo>`. Tabela "mudei X → atualizo Y" em `docs/00-INDEX.md` §8.
 
 **Se uma tarefa pedir para violar qualquer um desses, PARE e pergunte.**
 
@@ -79,13 +81,16 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 ├── README.md                       👤 usuário final (como rodar/usar)
 │
 ├── docs/
-│   ├── 00-INDEX.md                 📚 mapa de navegação detalhado
+│   ├── 00-INDEX.md                 📚 ⭐ PORTA DE ENTRADA dos docs + "mudei X → atualizo Y"
+│   ├── 46-INVENTARIO.md            ⚙️ ⭐ GERADO do código: módulos, rotas, coleções, índices, funções, flags
+│   ├── 47-BACKEND-CLOUD-FUNCTIONS.md ☁️ cada Cloud Function: gatilho, escrita, testes, deploy
+│   ├── 48-PERMISSOES-POR-PERFIL.md 🔐 perfil × recurso e onde a regra é imposta
 │   ├── 01-AI-CONTEXT.md            🧠 panorama da plataforma
 │   ├── 02-STANDARDS.md             📐 padrões de código (como codar)
 │   ├── 03-WORKFLOW.md              🔄 git, deploy, GitHub, Firebase
 │   ├── 04-ARCHITECTURE.md          🏗️ camadas, design system, testes
-│   ├── 05-DATA-MODEL.md            💾 92 coleções Firestore + regras
-│   ├── 06-MODULES.md               📦 19 módulos + fluxos + rotas
+│   ├── 05-DATA-MODEL.md            💾 coleções Firestore, Storage, índices (contagem: 46-INVENTARIO)
+│   ├── 06-MODULES.md               📦 os módulos + fluxos + rotas (contagem: 46-INVENTARIO)
 │   ├── 07-DESIGN-STANDARD.md       🎨 paleta/tipografia/componentes
 │   ├── 08-ARENA-ROADMAP.md         🏟️ sprints de arena (status)
 │   ├── 09-UX-ANALYSIS/             🔍 auditorias UX/UI por persona
@@ -184,7 +189,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 ├── src/
 │   ├── App.jsx                     # roteamento
 │   ├── core/                       # ⭐ auth, firebase, logger, feature flags
-│   ├── modules/                    # ⭐ BASE DE DOMÍNIO (19 módulos)
+│   ├── modules/                    # ⭐ BASE DE DOMÍNIO (29 módulos)
 │   │   ├── tournament/README.md
 │   │   ├── arenas/README.md
 │   │   ├── coaches/README.md
@@ -192,14 +197,16 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │   ├── help/README.md          🎓 tutoriais, dicas guiadas (guias + pontos) e ajuda
 │   │   └── ... (15 mais)
 │   ├── v2/                         # ⭐ APP ATIVO (Athleisure Premium)
-│   │   ├── pages/                  # 67 páginas V2
+│   │   ├── pages/                  # telas V2 (contagem: docs/46-INVENTARIO.md)
 │   │   ├── components/             # V2Layout, FeatureFlagGuard, ...
 │   │   └── ui/primitives.jsx       # V2Button, V2Card, V2Badge, ...
-│   ├── pages/                      # V1 legado (em desuso)
+│   ├── pages/                      # só as telas públicas/impressão/telão (V1 removido)
 │   └── components/                 # shadcn/ui primitives
 │
-├── firestore.rules                 # ⭐ regras de segurança (94 coleções)
+├── firestore.rules                 # ⭐ regras de segurança
 ├── firestore.indexes.json          # índices compostos
+├── storage.rules                   # regras do Storage
+├── scripts/                        # gen-inventario (docs), check-docs-updated, deploy de funções, utilitários
 ├── firebase.json                   # config hosting
 ├── functions/                      # Cloud Functions (region SP)
 ├── public/                         # assets, PWA
@@ -519,7 +526,11 @@ PRÉ-COMMIT
 [ ] Bundle grep — se importou lib nova, ela tá no bundle? (ver docs/03-WORKFLOW §8)
 [ ] i18n — todo texto visível em t()/tk() com en e es no catálogo (guarda i18nCatalogos)
 
-DOCS (atualizar ANTES do PR, não depois)
+DOCS (OBRIGATÓRIO, no mesmo PR — princípio 12; o CI cobra)
+[ ] npm run docs:inventario — regravou e comitou docs/46-INVENTARIO.md (CI: docs:inventario:check)
+[ ] Doc do assunto atualizado (mapa em docs/00-INDEX.md §8) — ou "Docs: não se aplica — motivo" no corpo do PR
+[ ] docs/47-BACKEND-CLOUD-FUNCTIONS.md — se mexeu em Cloud Function
+[ ] docs/48-PERMISSOES-POR-PERFIL.md — se mexeu em regra/permissão
 [ ] docs/01-AI-CONTEXT.md — se afeta panorama (rotas, coleções, etc)
 [ ] docs/05-DATA-MODEL.md — se afeta schema
 [ ] docs/06-MODULES.md — se afeta módulo/rota
@@ -604,7 +615,11 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
+## 10. Estado atual e histórico por onda
+
+**Estado atual = [`docs/46-INVENTARIO.md`](docs/46-INVENTARIO.md)** (gerado do código; não copie números para cá). O restante desta seção é o **registro histórico por onda**: o que cada entrega mudou e as armadilhas que ensinou. Os números citados nas ondas são os da época.
+
+### Registro histórico (snapshot de 2026-09-28; ondas posteriores estão em `docs/` e no `git log`)
 
 > Última atualização: 2026-10-12 (Troféus e cartões de campeões — ver `docs/43-TROFEUS-E-CARTOES.md`). Antes: 2026-10-10 (Balanço do jogo, atrás de `game_debrief` e ligado por cada pessoa — ver `docs/42-BALANCO-DO-JOGO.md`). Antes: 2026-10-09 (Centro de Treino, atrás de `training_center`, e Minha área, atrás de `user_hub` — ver `docs/40-CENTRO-DE-TREINO.md` e `docs/41-MINHA-AREA.md`). Antes: 2026-10-07 (Grupos dentro do Play, atrás de `play_groups` — ver `docs/39-PLAY-GRUPOS.md`). Antes: 2026-10-02 (Gamificação V2: a sequência honesta, o guia, as dicas e a ajuda completos — ver `docs/38-GAMIFICACAO-V2.md`). Antes: 2026-10-02 (Gamificação V2 completa atrás de `gamification_v2`). Antes: 2026-10-02 (Cloud Functions do Node.js 20, desligado
 > em 2026-10-31, para o Node.js 22). Antes: 2026-10-02 (conta excluída fora do ranking e a
@@ -2692,23 +2707,7 @@ chore(deps): bump firebase to 12.x
 > - **Onda Q — V1 Legacy Cleanup** (`0f824b0`): remoção de
 >   páginas V1 mortas em `src/modules/*/pages`.
 
-| Métrica | Valor | Delta do início do agente |
-|---|---|---|
-| **Testes Vitest** | **7573 passing** (491 arquivos) + 550 casos de regras no emulador (Firestore + Storage) | +7165 (era 408) |
-| **Lint errors** | 0 | era 30+ |
-| **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 85 (+V2Notifications — a central de notificações; +V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
-| **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
-| **Índices compostos Firestore** | **34 em `firestore.indexes.json`** (+`tournament_matches[modality_id, stage_index, round]`, importado do painel; +`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **3 default OFF** (`dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`). Em 2026-10-10 as 33 que estavam ligadas em produção foram incorporadas (`PERMANENT_FEATURE`, sempre `true`, fora do painel admin); antes, 137 já tinham virado código | −143 |
-| **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
-| **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
-| **Origin/main** | `106bd55` (PR #110) | — |
-| **Bundle deployed** | (deploy em curso) | — |
-| **Live URL** | https://picklerush.web.app | — |
-
-Quando você for commitar, atualize esta seção se os números mudarem.
+Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas lição nova crítica.
 
 ---
 
@@ -2770,25 +2769,26 @@ Quando você for commitar, atualize esta seção se os números mudarem.
 
 ```
 PLATAFORMA   PickleRush (picklerush.web.app)
-STACK        React+Vite, Tailwind+shadcn, Firebase (db 'pickleball'), React Query, Vitest
-MODELO       19 módulos em src/modules/X/{domain,services,hooks,pages,components}/
-UI ATIVA     src/v2/ (67 pages, 2-level nav, dark ink/acid/paper)
-FEATURES     6 flags (dupr_official_sync + dupr_match_export + action_home/smart_matchmaking/post_game_flow/push_notifications, default OFF)
-SCHEMA       94 coleções top-level em firestore.rules
-TESTES       1350 vitest (domain obrigatório)
-DEPLOY       push main → GitHub Actions → firebase hosting (sites picklerush+pickletour)
-SEGURANÇA    firestore.rules (aditivas), audit_logs em mutações
-PWA          VITE_PWA_ENABLED=true; sw-vN.js versionado; auto-unregister; reload deferido
-WORKTREE     SEMPRE 1 worktree por feature, remover após merge
-LINT         0 errors (npm run lint --quiet)
+STACK        React 18+Vite, Tailwind+shadcn(Radix), Firebase (db 'pickleball'), React Query, Vitest, Playwright
+MODELO       src/modules/X/{domain,services,hooks,components,i18n}/ (lista e contagem: docs/46-INVENTARIO.md)
+UI ATIVA     src/v2/ (V2Layout, V2App.jsx, pages, components, ui/primitives.jsx); moldura única 1200 px
+NÚMEROS      docs/46-INVENTARIO.md (gerado do código — nunca copie para outro doc)
+FLAGS        FEATURE_FLAG (poucas, ligáveis) + PERMANENT_FEATURE (sempre ligadas) em src/core/featureFlags.js
+SCHEMA       firestore.rules + docs/05-DATA-MODEL.md; Storage em storage.rules
+BACKEND      functions/ (southamerica-east1, codebase 'picklerush'); docs/47-BACKEND-CLOUD-FUNCTIONS.md
+PERMISSÕES   docs/48-PERMISSOES-POR-PERFIL.md (a regra é a única defesa — princípio 10)
+TESTES       npm test (vitest) + npm run test:rules (emulador) + e2e Playwright; domain/ sempre com teste
+DEPLOY       push main → GitHub Actions → Firebase Hosting + Rules + Functions (por nome)
+DOCUMENTAÇÃO OBRIGATÓRIA a cada PR (princípio 12): npm run docs:inventario + doc do assunto
+LINT         0 errors (npm run lint)
 TIPOS        JSDoc + core/domain/types.js
-I18N         pt-BR em tudo
-ADMIN        fsalamoni@gmail.com (platform_admin, uid Kx7CC0NVgogh8cCF4wIRmpOvo7r2)
+I18N         pt-BR é a chave; en/es por catálogo (docs/44-IDIOMAS.md)
+ADMIN        fsalamoni@gmail.com (platform_admin)
 ```
 
 ---
 
-> **Última atualização**: 2026-07-24 (pós sub-ondas 8b–5b + fixes de UX).
+> **Última atualização**: 2026-10-15 (revisão geral da documentação).
 > Ao mudar arquitetura, coleção, módulo, rota, fluxo de deploy, padrão de
 > código ou processo → atualizar este arquivo + 01-AI-CONTEXT + o doc
 > específico. Manter a estrutura: §0 TL;DR + §1 como usar + §2 princípios +

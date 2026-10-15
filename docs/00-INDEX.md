@@ -1,232 +1,112 @@
-# 00-INDEX — Mapa de navegação da documentação
+# 00-INDEX — Porta de entrada da documentação
 
-> **Você chegou aqui procurando algo específico?** Este é o índice
-> principal de `docs/`. Use-o como mapa — o guia-mestre está na raiz em
-> [`CLAUDE.md`](../CLAUDE.md).
+> **Comece aqui.** Este arquivo é o mapa do todo: diz **onde** está cada
+> assunto. O guia-mestre (como trabalhar, princípios, "onde está X") é o
+> [`CLAUDE.md`](../CLAUDE.md) na raiz — IA ou humano, leia-o antes de mexer.
 >
-> **Antes de qualquer tarefa**, leia o `CLAUDE.md` na raiz. Ele explica
-> **como** usar este material. Este arquivo só diz **onde** está.
+> **Números** (módulos, telas, rotas, coleções, índices, funções, flags) **não
+> são escritos à mão**: ficam em [`46-INVENTARIO.md`](./46-INVENTARIO.md),
+> gerado do código. Se um número aparecer em outro doc e discordar do
+> inventário, vale o inventário.
 
 ---
 
-## 1. Leitura obrigatória (antes de qualquer coisa)
+## 1. Regra de manutenção (obrigatória)
 
-> **Você é uma IA?** Abra o `CLAUDE.md` na raiz e siga o fluxo de §1.
-> **Você é humano novo no projeto?** Comece por `01-AI-CONTEXT.md`.
+**Toda implementação atualiza a documentação, no mesmo PR.** Não é etapa
+opcional nem "depois":
 
-| Ordem | Doc | Pra quê |
+1. Atualize o doc do **assunto** que você tocou (tabela abaixo) e, se o módulo
+   mudou, o `src/modules/X/README.md`.
+2. Mudou rota, coleção, regra, índice, Cloud Function, flag ou módulo?
+   Rode `npm run docs:inventario` e comite `docs/46-INVENTARIO.md`.
+3. Mudou princípio, mapa "onde está X" ou fluxo de trabalho? Atualize o
+   [`CLAUDE.md`](../CLAUDE.md) (§2, §4, §5).
+4. O CI cobra: o passo `docs:inventario:check` reprova inventário
+   desatualizado, e o job `docs-obrigatorios` reprova PR que muda código sem
+   tocar em nenhum documento. Quando de fato nada muda para quem lê a
+   documentação, escreva no corpo do PR `Docs: não se aplica — <motivo>`.
+
+Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
+
+---
+
+## 2. Visão geral e fundamentos (leia nesta ordem)
+
+| Ordem | Doc | Para quê |
 |---|---|---|
-| 0 | [`../CLAUDE.md`](../CLAUDE.md) | **GUIA-MESTRE** (raiz). Como usar este material, princípios, fluxos. |
-| 1 | [`01-AI-CONTEXT.md`](./01-AI-CONTEXT.md) | Panorama condensado da plataforma. 1 leitura = tá orientado. |
-| 2 | [`02-STANDARDS.md`](./02-STANDARDS.md) | **Padrões de código** (como codar, flags, services, domain). |
-| 3 | [`03-WORKFLOW.md`](./03-WORKFLOW.md) | **Git, deploy, GitHub Actions, Firebase** (como mandar pra produção). |
+| 0 | [`../CLAUDE.md`](../CLAUDE.md) | Guia-mestre: princípios, mapa "onde está X", checklist de entrega. |
+| 1 | [`01-AI-CONTEXT.md`](./01-AI-CONTEXT.md) | Panorama: o que é, stack, perfis, rotas, dados, deploy. Uma leitura e você está orientado. |
+| 2 | [`46-INVENTARIO.md`](./46-INVENTARIO.md) | ⚙️ **Gerado do código**: o que existe hoje (módulos, rotas, coleções, índices, funções, flags). |
+| 3 | [`04-ARCHITECTURE.md`](./04-ARCHITECTURE.md) | Camadas, estado, erros, PWA, testes, CI/CD. |
+| 4 | [`02-STANDARDS.md`](./02-STANDARDS.md) | Como codar (flags, domain/service/hook, JSDoc, i18n, testes, documentação). |
+| 5 | [`03-WORKFLOW.md`](./03-WORKFLOW.md) | Git, PR, GitHub Actions, deploy Firebase, Cloud Functions. |
 
-## 2. Documentos de plataforma
-
-| Doc | Conteúdo |
-|---|---|
-| [`01-AI-CONTEXT.md`](./01-AI-CONTEXT.md) | O que é, stack, arquitetura em 1 frase, papéis, rotas, dados, notificações, feature flags, deploy, convenções. **Leia 1x.** |
-| [`04-ARCHITECTURE.md`](./04-ARCHITECTURE.md) | Camadas, estado, design system, Firebase, PWA, testes, CI/CD, padrões. Aprofunda o que o `01-AI-CONTEXT` cita. |
-| [`05-DATA-MODEL.md`](./05-DATA-MODEL.md) | 92 coleções Firestore, campos, relacionamentos, princípios das regras. **Referência de schema.** |
-| [`06-MODULES.md`](./06-MODULES.md) | 19 módulos: o que cada um faz, arquivos-chave, fluxos, mapa rota → módulo. |
-| [`07-DESIGN-STANDARD.md`](./07-DESIGN-STANDARD.md) | Paleta (ink/acid/paper), tipografia (Outfit/Inter), componentes V2, padrões de composição. |
-| [`08-ARENA-ROADMAP.md`](./08-ARENA-ROADMAP.md) | Roadmap das arenas: Sprints 0–10, status, métricas, próximo passo. |
-
-## 3. Auditoria UX/UI
-
-> Onde estão as melhorias por persona, o backlog e o que já foi feito.
+## 3. Dados, backend e permissões
 
 | Doc | Conteúdo |
 |---|---|
-| [`09-UX-ANALYSIS/`](./09-UX-ANALYSIS/) | 15 docs de auditoria UX/UI por persona (atleta, organizador, arena, professor, clubes, transversais). |
-| [`09-UX-ANALYSIS/15-backlog-remanescente.md`](./09-UX-ANALYSIS/15-backlog-remanescente.md) | ⭐ **Backlog consolidado do que ainda falta.** Comece por aqui pra novas features. |
-| [`09-UX-ANALYSIS/14-professor-implementacao.md`](./09-UX-ANALYSIS/14-professor-implementacao.md) | Plano de implementação do professor (Sistema A greenfield). |
-| [`09-UX-ANALYSIS/13-arena-refino.md`](./09-UX-ANALYSIS/13-arena-refino.md) | Refino de UX/UI das arenas (entregue). |
+| [`05-DATA-MODEL.md`](./05-DATA-MODEL.md) | Coleções Firestore, campos, relações, Storage, índices. **Schema.** |
+| [`47-BACKEND-CLOUD-FUNCTIONS.md`](./47-BACKEND-CLOUD-FUNCTIONS.md) | Cada Cloud Function: gatilho, o que escreve, testes, deploy. |
+| [`48-PERMISSOES-POR-PERFIL.md`](./48-PERMISSOES-POR-PERFIL.md) | Matriz perfil × recurso e onde cada regra é imposta (regras, função ou só tela). |
+| [`18-RANKINGS.md`](./18-RANKINGS.md) | Quando ranking e rating atualizam; servidor como único escritor. |
+| [`13-NIVEL-UNIFICADO.md`](./13-NIVEL-UNIFICADO.md) | Régua 2.0–8.0 usada em todos os sorteios. |
+| [`20-SEGURANCA-E-PRIVACIDADE/`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 Segurança, LGPD, documentos legais, suporte do admin, varreduras. **Leia antes de tocar em dado pessoal.** |
 
-## 4. Arena V3 (sub-módulos opt-in)
-
-> 51+ sub-módulos ativáveis por flag. O coração da customização da arena.
-
-| Doc | Conteúdo |
-|---|---|
-| [`10-ARENA-V3/00-INDEX.md`](./10-ARENA-V3/00-INDEX.md) | Índice da documentação Arena V3. |
-| [`10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md`](./10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md) | ⭐ **Referência rápida** (status atual, métricas, arquitetura). |
-| [`10-ARENA-V3/10-MODULES-CATALOG.md`](./10-ARENA-V3/10-MODULES-CATALOG.md) | Catálogo dos 51+ módulos opt-in. |
-| [`10-ARENA-V3/11-DATA-MODEL.md`](./10-ARENA-V3/11-DATA-MODEL.md) | Schema Firestore do Arena V3. |
-| [`10-ARENA-V3/12-FEATURE-FLAGS.md`](./10-ARENA-V3/12-FEATURE-FLAGS.md) | Flags `ARENA_MODULE_*` → módulo. |
-| [`10-ARENA-V3/15-BUSINESS-LOGIC.md`](./10-ARENA-V3/15-BUSINESS-LOGIC.md) | Domínio puro (regras) do Arena V3. |
-
-## 5. Referência rápida (cheatsheet, FAQ, glossário)
+## 4. Módulos de domínio e telas
 
 | Doc | Conteúdo |
 |---|---|
-| [`11-REFERENCE/cheatsheet.md`](./11-REFERENCE/cheatsheet.md) | Cola de comandos, snippets, troubleshooting. |
-| [`11-REFERENCE/glossary.md`](./11-REFERENCE/glossary.md) | Glossário de termos (CBPE, USAP, Onda X, etc). |
-| [`11-REFERENCE/faq.md`](./11-REFERENCE/faq.md) | Perguntas frequentes: "como faço Y?", "onde está X?". |
+| [`06-MODULES.md`](./06-MODULES.md) | Um módulo por seção: o que faz, arquivos-chave, telas, coleções. |
+| `../src/modules/<módulo>/README.md` | README de cada módulo (propósito, arquivos, consumo). |
+| [`07-DESIGN-STANDARD.md`](./07-DESIGN-STANDARD.md) | Design system: tokens, tipografia, primitivos, navegação, acessibilidade. |
+| [`45-MOLDURA-DAS-PAGINAS.md`](./45-MOLDURA-DAS-PAGINAS.md) | Uma largura (1200 px), um recuo, um título. |
+| [`30-MODO-ESCURO.md`](./30-MODO-ESCURO.md) | Modo escuro por usuário (paleta como fonte única). |
+| [`44-IDIOMAS.md`](./44-IDIOMAS.md) | Inglês/espanhol: `t()`, `tk()`, catálogos por módulo. |
+| [`27-FALHA-NAO-E-VAZIO.md`](./27-FALHA-NAO-E-VAZIO.md) · [`28-ERRO-NAO-DERRUBA-O-APP.md`](./28-ERRO-NAO-DERRUBA-O-APP.md) | Estados de erro/vazio e boundaries por rota. |
 
-## 5.1 Docs temáticos
+## 5. Funcionalidades por área
+
+**Dia de jogo:** [`14` telão](./14-DIA-DE-JOGO-TELAO.md) · [`15` permissões](./15-DIA-DE-JOGO-PERMISSOES.md) · [`16` rodízio do Play](./16-DIA-DE-JOGO-RODIZIO.md) · [`17` Americano aprimorado](./17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md) · [`22` dia de jogo da arena](./22-DIA-DE-JOGO-DA-ARENA.md) · [`25` como módulo](./25-DIA-DE-JOGO-COMO-MODULO.md) · [`39` grupos do Play](./39-PLAY-GRUPOS.md) · [`35` jogar, entrar e sair](./35-JOGAR-ENTRAR-E-SAIR.md).
+
+**Torneio:** [`12` equipes](./12-TEAM-TOURNAMENTS.md) · [`26` formatos e regras](./26-TORNEIO-FORMATOS-E-REGRAS.md) · [`37` etapas, turnos e check-in](./37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md) · [`43` troféus e cartões](./43-TROFEUS-E-CARTOES.md).
+
+**Arena:** [`08` roadmap](./08-ARENA-ROADMAP.md) · [`23` calendário e reserva](./23-ARENA-CALENDARIO-E-RESERVA.md) · [`24-MODULOS-DE-ARENA/`](./24-MODULOS-DE-ARENA/00-INDEX.md) (matchmaking, membros, marketing, operações, aulas, PDV, chegada/totem, integração) · [`10-ARENA-V3/`](./10-ARENA-V3/00-INDEX.md) (histórico e referência do V3).
+
+**Atleta e comunidade:** [`29` início e divulgação](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) · [`31` início sob medida](./31-INICIO-SOB-MEDIDA.md) · [`34` minha região](./34-MINHA-REGIAO.md) · [`33` cadastro essencial](./33-CADASTRO-ESSENCIAL.md) · [`36` notificações](./36-NOTIFICACOES.md) · [`38` gamificação V2](./38-GAMIFICACAO-V2.md) · [`41` Minha área](./41-MINHA-AREA.md).
+
+**Treino:** [`40` Centro de Treino](./40-CENTRO-DE-TREINO.md) · [`40a` avaliação dos 100 drills](./40a-AVALIACAO-100-DRILLS.md) · [`42` balanço do jogo](./42-BALANCO-DO-JOGO.md).
+
+**Ajuda ao usuário:** [`19` tutoriais](./19-TUTORIAIS.md) · [`21` central de ajuda](./21-CENTRAL-DE-AJUDA.md) · [`32` dicas guiadas](./32-DICAS-GUIADAS.md).
+
+**Mercado (marketplace):** código em `src/modules/marketplace/README.md`; plano e decisões fora do repositório (pasta de arquivos do projeto). O desenho antigo está em [`FUTURO/MERCADO/`](./FUTURO/MERCADO/).
+
+## 6. Auditorias, histórico e referência
 
 | Doc | Conteúdo |
 |---|---|
-| [`12-TEAM-TOURNAMENTS.md`](./12-TEAM-TOURNAMENTS.md) | Torneio por equipes (modalidade, etapas, confrontos). |
-| [`13-NIVEL-UNIFICADO.md`](./13-NIVEL-UNIFICADO.md) | ⭐ A régua 2.0–8.0 usada por **todos os sorteios** (DUPR → rating → ELO → nível declarado). |
-| [`14-DIA-DE-JOGO-TELAO.md`](./14-DIA-DE-JOGO-TELAO.md) | Seções colapsáveis (preferência por usuário) + telão do dia de jogo. |
-| [`15-DIA-DE-JOGO-PERMISSOES.md`](./15-DIA-DE-JOGO-PERMISSOES.md) | Quem pode organizar o dia de jogo (modo de gestão + admins nomeados). |
-| [`16-DIA-DE-JOGO-RODIZIO.md`](./16-DIA-DE-JOGO-RODIZIO.md) | Rodízio equilibrado do Play: por que a fila em blocos de 4 repetia as duplas, e como previsão e ordem passaram a ser a mesma conta. |
-| [`17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`](./17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md) | ⭐ Formato `americano_live`: o Americano organizado como o Play (partida a partida, com placar). Sorteio, previsão, telão, permissões, banco. |
-| [`18-RANKINGS.md`](./18-RANKINGS.md) | ⭐ Quando e como ranking e rating são atualizados: gatilhos no servidor a cada resultado publicado, coalescência, a classificação de duplas e a paridade cliente × servidor dos motores. |
-| [`19-TUTORIAIS.md`](./19-TUTORIAIS.md) | ⭐ Tutoriais em tela (torneio e os três formatos de dia de jogo): onde aparecem, como se dispensa e se revê, e por que nada disso toca o banco. Com as dicas guiadas (doc 32) eles viram guias na tela. |
-| [`21-CENTRAL-DE-AJUDA.md`](./21-CENTRAL-DE-AJUDA.md) | ⭐ A página `/ajuda` (flag `help_center`): manual da plataforma por tipo de usuário (atleta, arena, professor), busca, links diretos e por que nada disso toca o banco. |
-| [`23-ARENA-CALENDARIO-E-RESERVA.md`](./23-ARENA-CALENDARIO-E-RESERVA.md) | ⭐ Auditoria da arena: o bug da reserva de nove horas, a quadra invisível, a matriz quadra × horário do atleta e o painel de prontidão. Registra **o que estava errado e por quê**. |
-| [`22-DIA-DE-JOGO-DA-ARENA.md`](./22-DIA-DE-JOGO-DA-ARENA.md) | ⭐ A arena cria o próprio dia de jogo, marcado no calendário (flag `arena_game_day`): quadras e horários fechados para reserva, inscrição no dia ou por quadra, limites, quem conduz — e por que **não existe coleção nova**. |
-| [`29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) | ⭐ Onda CG: a tela inicial montada por pessoa (papéis + interesses, nada vencido) e os cupons/campanhas da plataforma e de cada professor, com as ferramentas do marketing da arena. |
-| [`30-MODO-ESCURO.md`](./30-MODO-ESCURO.md) | ⭐ Onda CH: o modo escuro (Claro / Escuro / Automático, por usuário, flag `dark_mode`). A paleta decide a cor e as telas não mudam; o que fica claro de propósito; zero banco. |
-| [`31-INICIO-SOB-MEDIDA.md`](./31-INICIO-SOB-MEDIDA.md) | ⭐ Onda CI: cada pessoa escolhe os cards do seu início e a ordem (flag `home_cards`, sobre `personalized_home`). Padrão: Dias de jogo, Horários da arena e Ranking; sugestões; grade sem buraco; zero banco. |
-| [`32-DICAS-GUIADAS.md`](./32-DICAS-GUIADAS.md) | ⭐ Onda CJ: dicas que a pessoa liga e desliga (flag `guided_tips`). Nada aparece sozinho; 27 guias que levam à tela, apontam o botão de verdade com seta e avançam quando a pessoa faz; 40 pontos de dica; os tutoriais viraram guias; "Mostre na tela" na ajuda; zero banco. |
-| [`33-CADASTRO-ESSENCIAL.md`](./33-CADASTRO-ESSENCIAL.md) | ⭐ O que o cadastro exige e por quê. Flag `essential_profile`: categoria em que joga e nível passam a ser obrigatórios, UF de lista, quem já tinha cadastro vê só o que falta; o admin conta o mesmo que o cadastro; o sorteio misto usa a categoria. Zero banco. |
-| [`34-MINHA-REGIAO.md`](./34-MINHA-REGIAO.md) | ⭐ O "Jogar" com os dias de jogo das ARENAS (que nunca apareciam), "Participar" dentro do dia de jogo e nada do que já passou nas listas — sempre ligados. E a Minha região (flag `my_region`): cidade + raio, estado, outro lugar ou todo lugar, em toda tela de descoberta. Zero banco. |
-| [`35-JOGAR-ENTRAR-E-SAIR.md`](./35-JOGAR-ENTRAR-E-SAIR.md) | ⭐ O "Jogar" abre no Dia de jogo (abas: Dia de jogo, Procura-se jogo, Encontrar jogadores), os dias de jogo dos CLUBES para quem é membro e um botão só de entrar e sair (`PlayItemAction`) no início, no Procura-se jogo e no Dia de jogo, com os requisitos de cada jogo. 🐞 Sair podia falhar com administrador nomeado. Zero banco. |
-| [`37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`](./37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md) | 🏆 ⭐ O torneio que eu organizo e em que me inscrevi aparece como meu no início ("Seus torneios"); 🐞 o check-in de quem foi inscrito por outra pessoa dava "permissão negada" e o check-in vira fonte única (`isActiveRegistration`); 🐞 2 turnos passam a valer em várias fases e no Americano; e o **Americano aprimorado em etapas** (flag `tournament_americano_etapas`): grupos refeitos a cada etapa para o máximo de jogos inéditos, classificação única. Zero coleção, índice ou regra. |
-| [`39-PLAY-GRUPOS.md`](./39-PLAY-GRUPOS.md) | 👥 ⭐ Grupos dentro do Play (flag `play_groups`): fila por grupo, por nível ou tipo de dupla (mista / mesmo sexo), nível e sexo do convidado avulso, política entre grupos (tempo de espera, revezar, prioridade), "por que o grupo não joga", telão, resumo do dia, guia e ajuda. Previsão = criação (um sorteador só). Zero coleção, índice ou regra. |
-| [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md) | 🔔 ⭐ O sino que rola (🐞 a caixa crescia além da tela e escondia a maior parte dos avisos) e a central de notificações `/notificacoes` (flag `notifications_center`): os avisos novos e os antigos, por dia, com filtros de não lidas, área e busca, marcar lida/não lida. Uma escuta só por pessoa. Zero banco. |
-| [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
-| [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
-| [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
-| [`GAMIFICATION/README.md`](./GAMIFICATION/README.md) | ⭐ Porta de entrada da gamificação: estado atual, estudo × implementado, como retomar. |
+| [`09-UX-ANALYSIS/`](./09-UX-ANALYSIS/00-README.md) | Auditorias UX/UI por persona. [`15-backlog-remanescente.md`](./09-UX-ANALYSIS/15-backlog-remanescente.md) = backlog consolidado. |
+| [`AUDIT-2026-09-28.md`](./AUDIT-2026-09-28.md) | Relatório de auditoria geral. |
+| [`11-REFERENCE/`](./11-REFERENCE/cheatsheet.md) | Cheatsheet, glossário, FAQ. |
+| [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativar push (PWA + FCM). |
+| [`FUTURO/`](./FUTURO/00-INDEX.md) | 📐 Desenhado, **sem código**: feed/rede social, moderação compartilhada, marketplace aberto original. (A gamificação desenhada ali virou código: ver `38`.) |
+| `../diagnostico-club-ranking.md` | Roteiro de diagnóstico pontual (julho/2026), mantido por histórico. |
 
-## 6. Estrutura completa dos docs
+## 7. Documentos fora de `docs/`
 
-```
-docs/
-├── 00-INDEX.md                       # ⭐ este arquivo
-├── 01-AI-CONTEXT.md                  # panorama condensado
-├── 02-STANDARDS.md                   # como codar
-├── 03-WORKFLOW.md                    # como deployar
-├── 04-ARCHITECTURE.md                # camadas + design system
-├── 05-DATA-MODEL.md                  # 92 coleções Firestore
-├── 06-MODULES.md                     # 19 módulos + fluxos
-├── 07-DESIGN-STANDARD.md             # paleta + componentes
-├── 08-ARENA-ROADMAP.md               # sprints 0-10
-│
-├── 09-UX-ANALYSIS/                   # 15 docs de auditoria
-│   ├── 00-README.md
-│   ├── 01-fundacao-design-system.md
-│   ├── ... 13 docs ...
-│   └── 15-backlog-remanescente.md   # ⭐ backlog
-│
-├── 10-ARENA-V3/                      # docs Arena V3
-│   ├── 00-INDEX.md
-│   ├── 26-ARENA-V3-COMPLETE-REFERENCE.md
-│   └── ... sprints ...
-│
-├── 11-REFERENCE/                     # cheatsheet, FAQ, glossário
-│   ├── cheatsheet.md
-│   ├── glossary.md
-│   └── faq.md
-│
-├── 12-TEAM-TOURNAMENTS.md            # torneio por equipes
-├── 13-NIVEL-UNIFICADO.md             # ⭐ régua de nível dos sorteios
-├── 14-DIA-DE-JOGO-TELAO.md           # colapsáveis + telão do dia de jogo
-├── 15-DIA-DE-JOGO-PERMISSOES.md      # quem organiza o dia de jogo
-├── 16-DIA-DE-JOGO-RODIZIO.md         # rodízio equilibrado do Play
-├── 17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md  # ⭐ formato americano_live
-├── 18-RANKINGS.md                    # ⭐ rankings/rating: quando atualizam
-├── 19-TUTORIAIS.md                   # ⭐ tutoriais em tela (torneio + dia de jogo)
-├── 21-CENTRAL-DE-AJUDA.md            # ⭐ a página /ajuda, por tipo de usuário
-├── 22-DIA-DE-JOGO-DA-ARENA.md        # ⭐ a arena cria dia de jogo no calendário
-├── 23-ARENA-CALENDARIO-E-RESERVA.md  # ⭐ auditoria: calendário, reserva, prontidão
-├── 29-INICIO-PERSONALIZADO-E-DIVULGACAO.md  # ⭐ início por pessoa + divulgação plataforma/professor
-├── 30-MODO-ESCURO.md                 # ⭐ modo escuro por usuário (paleta, escolha, o que fica claro)
-├── 31-INICIO-SOB-MEDIDA.md           # ⭐ os cards do início, escolhidos por cada pessoa
-├── 32-DICAS-GUIADAS.md               # ⭐ dicas sob pedido: guias com seta sobre a tela de verdade
-├── 33-CADASTRO-ESSENCIAL.md          # ⭐ categoria e nível obrigatórios; o cadastro, o perfil e o admin com a mesma regra
-├── 34-MINHA-REGIAO.md               # ⭐ o "Jogar" com os dias de jogo das arenas + a região de cada pessoa
-├── 35-JOGAR-ENTRAR-E-SAIR.md        # ⭐ o "Jogar" abre no Dia de jogo, dias do clube, botão de entrar em todo lugar
-├── 36-NOTIFICACOES.md               # 🔔 o sino que rola + a central de notificações (flag notifications_center)
-├── 37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md # 🏆 meu torneio no início, check-in, 2 turnos, Americano em etapas
-├── 39-PLAY-GRUPOS.md                # 👥 grupos dentro do Play (flag play_groups): nível, formação, fila por grupo
-│
-├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
-│   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)
-│   ├── 01-AUDITORIA-ACHADOS.md       # 31 achados, 2 CRÍTICOS abertos
-│   ├── 05-ADMIN-SUPORTE.md           # ⭐ console de suporte do admin
-│   ├── 13-PLANO-DE-DESENVOLVIMENTO.md# 12 PRs priorizados por risco
-│   ├── ... 02 a 14 ...
-│   └── patches/                      # correções PRONTAS para aplicar
-│
-├── FUTURO/                           # 📐 desenhado, NADA no código
-│   ├── 00-INDEX.md                   # ⭐ as 4 funcionalidades futuras
-│   ├── GAMIFICACAO/                  # progressão V2 (flag existe, OFF)
-│   ├── MERCADO/                      # marketplace aberto (15 docs)
-│   ├── FEED/                         # rede social (14 docs)
-│   ├── CONFIANCA-E-MODERACAO/        # moderação compartilhada (6 docs)
-│   └── PLANO-MESTRE-MERCADO-FEED.md
-│
-├── PUSH-ATIVACAO.md                  # ativação do push
-│
-(a gamificação passou para docs/FUTURO/GAMIFICACAO/)
-```
+`../README.md` (visão para quem chega ao repositório) · `../AGENTS.md` (alias do CLAUDE.md) · `../.github/pull_request_template.md` (checklist de PR, inclui documentação) · `../functions/README.md` · `../Design System/` (insumos originais de design, histórico).
 
-## 7. Estrutura de docs por módulo (em `src/modules/X/README.md`)
+## 8. Mudei X → atualizo Y
 
-> Cada um dos 19 módulos tem um `README.md` curto (50-80 linhas) com:
-> visão, schema, hooks/services expostos, fluxos típicos, regras de
-> negócio em domain/, exemplos.
-
-```
-src/modules/
-├── tournament/README.md
-├── arenas/README.md
-├── coaches/README.md
-├── clubs/README.md
-├── circuits/README.md
-├── chat/README.md
-├── leveling/README.md
-├── notifications/README.md
-├── admin/README.md
-├── games/README.md
-├── partners/README.md
-├── performance/README.md
-├── progression/README.md
-├── rating/README.md
-├── sharing/README.md
-├── social/README.md
-├── athletes/README.md
-├── analytics/README.md
-└── achievements/README.md
-```
-
-## 8. Como manter atualizado
-
-### Ao mudar **arquitetura, coleções, rotas, papéis**:
-- Atualizar `01-AI-CONTEXT.md` (panorama)
-- Atualizar `05-DATA-MODEL.md` (schema)
-- Atualizar `06-MODULES.md` (módulo/rota)
-- Atualizar `04-ARCHITECTURE.md` (camadas)
-- Atualizar `CLAUDE.md` §10 (métricas, se mudaram)
-- Atualizar memory do agente (se for lição crítica)
-
-### Ao adicionar **feature nova**:
-- Marcar como ✅ em `09-UX-ANALYSIS/15-backlog-remanescente.md`
-- Criar/atualizar flag em `02-STANDARDS.md` §3
-- Atualizar `01-AI-CONTEXT.md` §9 (catálogo de flags)
-- Atualizar `src/modules/X/README.md` se for módulo novo
-- Atualizar `08-ARENA-ROADMAP.md` se for arena
-
-### Ao adicionar **módulo novo**:
-- Criar `src/modules/X/README.md` (50-80 linhas, ver template em `tournament/README.md`)
-- Adicionar entrada em `06-MODULES.md` § X
-- Adicionar entrada em `CLAUDE.md` §3
-
-### Ao mudar **padrão de código**:
-- Atualizar `02-STANDARDS.md` (regra)
-- Atualizar `03-WORKFLOW.md` (se for git/deploy)
-- Atualizar `CLAUDE.md` §2 e §5 (princípios + decisão rápida)
-- Atualizar memory do agente (lição crítica)
-
-**Mantenha o texto denso e factual** — o objetivo é custo baixo de leitura.
-
----
-
-> **Última atualização**: 2026-07-24. Mudou a estrutura de pastas?
-> Atualize este arquivo **e** o `CLAUDE.md` §3.
+| Mudei… | Atualize |
+|---|---|
+| Rota, tela, módulo, coleção, índice, função, flag | `npm run docs:inventario` + o doc do assunto |
+| Coleção/campo/regra do Firestore ou Storage | `05-DATA-MODEL.md`, `48-PERMISSOES-POR-PERFIL.md`, `20-SEGURANCA-E-PRIVACIDADE/` se for dado pessoal |
+| Cloud Function | `47-BACKEND-CLOUD-FUNCTIONS.md` |
+| Módulo (comportamento, arquivos-chave) | `src/modules/X/README.md` + seção em `06-MODULES.md` |
+| Componente de UI compartilhado, token, navegação | `07-DESIGN-STANDARD.md` (+ `45`/`30`/`44` se couber) |
+| Fluxo de dia de jogo / torneio / arena | o doc temático da §5; e o tutorial/guia/ajuda (`19`, `21`, `32`) |
+| Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
+| Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |
+| Novo princípio ou armadilha aprendida | `CLAUDE.md` §2/§4 |
+| Doc novo | linha neste índice |

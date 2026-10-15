@@ -52,7 +52,7 @@ Ver `cheatsheet.md` § 4 ("Onde está X") + `06-MODULES.md` § do módulo.
 
 ### Onde fica o schema do Firestore?
 
-- `docs/05-DATA-MODEL.md` — todas as 92 coleções documentadas
+- `docs/05-DATA-MODEL.md` — as coleções documentadas (lista e contagem reais em `docs/46-INVENTARIO.md`)
 - `firestore.rules` — regras de segurança (match por coleção)
 - `firestore.indexes.json` — índices compostos
 
@@ -60,7 +60,7 @@ Ver `cheatsheet.md` § 4 ("Onde está X") + `06-MODULES.md` § do módulo.
 
 - `src/core/featureFlags.js` — 124 flags (FEATURE_FLAG)
 - `src/core/featureFlagGroups.js` — agrupadas (admin)
-- `platform_settings/feature_flags/{key}` — defaults no Firestore
+- `platform_settings/global (campo feature_flags.{key})` — defaults no Firestore
 - `/admin/console` — UI para ativar/desativar
 
 ### Como adiciono uma feature?
@@ -202,7 +202,7 @@ E adicionar default no Firestore (via `migrateLegacyFlags`).
 
 Ou via Firebase Console:
 ```js
-firebase.firestore().doc('platform_settings/feature_flags/my_new_feature')
+firebase.firestore().doc("platform_settings/global") // campo feature_flags.my_new_feature
   .set({ value: true, ... });
 ```
 

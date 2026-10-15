@@ -501,7 +501,7 @@ nenhuma. Agora:
 ### 10.4. Impacto no banco
 
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Duas
-chaves novas em `platform_settings/feature_flags` quando o admin as ligar —
+chaves novas em `platform_settings/global.feature_flags` quando o admin as ligar —
 documento que já existia, sob a regra de sempre.
 
 ## 11. Jogo simples ou em duplas, e um ranking do dia por tipo (Onda CF)

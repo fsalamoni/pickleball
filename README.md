@@ -74,6 +74,10 @@ A PickleRush existe para:
 - 🔍 ampliação de fotos para melhor visualização da estrutura
 - ⛔ bloqueio de conflito com horários já confirmados
 
+### Além disso (visão completa em [`docs/46-INVENTARIO.md`](docs/46-INVENTARIO.md))
+
+Dia de jogo (Play, Americano, Mexicano, Rei da Quadra), rankings e rating 2.0–8.0, Mercado (`/mercado`), Centro de Treino, gamificação, marketing de arenas e professores, notificações e push, modo escuro, três idiomas (pt/en/es) e central de ajuda. O inventário lista tudo que existe, gerado do código.
+
 ### Base operacional da plataforma
 
 - 🔔 notificações in-app
@@ -82,34 +86,29 @@ A PickleRush existe para:
 - 🚩 feature flags para rollout controlado
 - 📱 PWA opcional
 
-## Padrão visual
+## Documentação
 
-O padrão obrigatório de design da plataforma está documentado em [docs/DESIGN_STANDARD.md](docs/DESIGN_STANDARD.md).
+Porta de entrada: [`docs/00-INDEX.md`](docs/00-INDEX.md). Guia-mestre (principalmente para quem desenvolve, humano ou IA): [`CLAUDE.md`](CLAUDE.md). Números e listas reais (módulos, rotas, coleções, índices, funções, flags): [`docs/46-INVENTARIO.md`](docs/46-INVENTARIO.md), **gerado do código**.
 
-A camada de apresentação ativa é o **V2 ("Athleisure Premium")** em `src/v2/` (rotas, layout e primitivos próprios). As primitivas compartilhadas de baixo nível (shadcn/ui) ficam em [src/components/ui/](src/components/ui/).
+**Toda implementação atualiza a documentação no mesmo PR** (`npm run docs:inventario` + o doc do assunto). O CI reprova inventário desatualizado e PR que muda código sem tocar em documento.
 
-## App ativo (V2) vs. legado (V1)
+## Arquitetura em um parágrafo
 
-A plataforma opera em **dois apps paralelos no mesmo código-fonte**, e a V2 é a experiência oficial e integral:
-
-- **V2 (ativo, `src/v2/`)** — design "Athleisure Premium". Atende **toda a navegação** do app autenticado em `/*` e as páginas públicas (landing, login, espectador, impressão). É o que o usuário final vê.
-- **V1 (legado, `src/pages/` + `src/V1Routes.jsx`)** — design antigo, mantido apenas como arquivo de rotas. **Não recebe mais navegação nova**; páginas que tinham par em V2 foram removidas. Sobrevive apenas como código morto em `src/V1Routes.jsx` (ver plano de remoção).
-
-A camada de **domínio** (`src/modules/`) é **compartilhada por V1 e V2** — V2 renderiza usando os hooks e services que V1 já consolidou. Toda a lógica de negócio, dados, regras e integrações mora em `src/modules/` e é reusada.
+Aplicativo React 18 + Vite (PWA) falando direto com o Firebase: Auth (Google), **Firestore (banco nomeado `pickleball`)**, Storage e Hosting; regras de segurança (`firestore.rules`, `storage.rules`) são a defesa real. **Cloud Functions** (Node 22, região `southamerica-east1`) mantêm rankings e rating, filas, notificações/push, gamificação, exclusão/unificação de contas e o Mercado. A interface ativa é a V2 (`src/v2/`); a lógica de negócio vive em `src/modules/<módulo>/{domain,services,hooks,components}`; a base compartilhada em `src/core/`. Detalhes: [`docs/04-ARCHITECTURE.md`](docs/04-ARCHITECTURE.md).
 
 ## Stack
 
-- React 18 + Vite + Tailwind + shadcn/ui (Radix)
-- Firebase: Auth (Google), **Firestore (database nomeada `pickleball`)**, Hosting, Storage, **Cloud Functions** (region `southamerica-east1`, apenas para recálculo do ranking nacional)
-- React Query para data fetching
-- Vitest para testes unitários (~408 testes)
-- Playwright para E2E
+- React 18, Vite 6, Tailwind 3 + shadcn/ui (Radix), React Query 5
+- Firebase JS 12 (Auth, Firestore, Storage, Hosting, Cloud Messaging) e Cloud Functions
+- Vitest (unitários e de componentes), testes de regras no emulador, Playwright (E2E)
+
+Versões exatas: `package.json` e `docs/46-INVENTARIO.md`.
 
 ## Como rodar
 
 ```bash
 npm install
-cp .env.example .env.local
+cp .env.example .env.local   # preencha as variáveis VITE_FIREBASE_*
 npm run dev
 ```
 
@@ -119,73 +118,42 @@ npm run dev
 | --- | --- |
 | `npm run dev` | desenvolvimento local com Vite |
 | `npm run build` | build de produção (`dist/`) |
-| `npm run lint` | validação estática com ESLint |
-| `npm run test` | testes unitários com Vitest |
-| `npm run e2e` | testes end-to-end com Playwright |
+| `npm run build:budget` | confere o orçamento do pacote inicial |
+| `npm run lint` | ESLint |
+| `npm test` | testes com Vitest |
+| `npm run test:rules` | testes das regras do Firestore/Storage no emulador |
+| `npm run typecheck` | checagem de tipos (JSDoc) |
+| `npm run e2e` | testes end-to-end (Playwright) |
+| `npm run docs:inventario` | regrava `docs/46-INVENTARIO.md` a partir do código |
+| `npm run docs:inventario:check` | falha se o inventário estiver desatualizado (CI) |
+| `npm run security:secrets` | varredura de segredos nos arquivos versionados |
 
 ## PWA
 
-A aplicação pode ser instalada no celular sem loja, via navegador.
-
-Controle:
-
-- `VITE_PWA_ENABLED=false`: sem service worker, sem botão de instalação
-- `VITE_PWA_ENABLED=true`: instala o PWA e habilita o CTA na landing
+Instalável pelo navegador, sem loja. Controle: `VITE_PWA_ENABLED=true` instala o service worker e habilita o convite de instalação; `false` desliga ambos.
 
 ## Feature flags
 
-Algumas capacidades nascem desligadas e são habilitadas pelo admin master.
-
-Exemplos importantes:
-
-- `multi_phase_tournaments`: múltiplas fases por modalidade
-- `modality_pages`: páginas próprias das modalidades
-- `tournament_gallery`: galeria de fotos de torneio
-- `arenas`: diretório e operação de arenas
-
-As flags vivem em `platform_settings/global` e são aditivas.
+Poucas capacidades são ligadas pelo admin (`FEATURE_FLAG` em `src/core/featureFlags.js`); as demais já viraram código permanente (`PERMANENT_FEATURE`). A lista atual está no inventário. Novas funcionalidades nascem atrás de flag desligada. Ver [`docs/02-STANDARDS.md`](docs/02-STANDARDS.md).
 
 ## Deploy
 
-Push em `main` dispara os workflows do GitHub Actions para CI e publicação.
-
-O repositório está preparado para:
-
-1. deploy em Firebase Hosting;
-2. deploy em GitHub Pages;
-3. publicação de regras e índices do Firestore;
-4. validação automática de build.
+Push em `main` dispara o GitHub Actions: CI (lint, testes, build, orçamento do pacote, inventário de docs) e publicação no Firebase (Hosting, regras e índices do Firestore, regras do Storage e Cloud Functions publicadas por nome). Detalhes e armadilhas em [`docs/03-WORKFLOW.md`](docs/03-WORKFLOW.md). Produção: https://picklerush.web.app.
 
 ## Estrutura
 
 ```text
 src/
-├── App.jsx                # Roteamento raiz + providers
-├── main.jsx               # Bootstrap + PWA (atrás de flag)
-├── core/                  # auth, firebase, services e base compartilhada
-├── components/            # layout, componentes globais e ui/ (shadcn)
-├── pages/                 # páginas públicas com auto-refresh (espectador, impressão)
-├── modules/               # ⭐ BASE DE DOMÍNIO — 17 módulos (hooks/services/domain)
-│   ├── tournament/        # torneios, modalidades, fases, jogos, ranking, sorteio
-│   ├── athletes/          # diretório e perfis públicos
-│   ├── clubs/             # clubes, mural, eventos, fóruns, game-day
-│   ├── chat/              # conversas diretas e em grupo
-│   ├── leveling/          # nivelamento do atleta (CBPE/USAP)
-│   ├── notifications/     # notificações in-app (sino)
-│   ├── admin/             # painel administrativo
-│   ├── arenas/            # arenas, reservas, fotos, preços
-│   ├── games/             # jogos abertos e procura-jogo
-│   ├── partners/          # espaço de parceiros
-│   ├── performance/       # meu desempenho
-│   ├── progression/       # progressão do atleta
-│   ├── rating/            # ranking nacional
-│   ├── sharing/           # compartilhamento e certificados
-│   ├── social/            # feed, follows, players, metas
-│   ├── achievements/      # conquistas
-│   └── analytics/         # funil e observabilidade
-└── v2/                    # ⭐ APP ATIVO — "Athleisure Premium"
-    ├── V2App.jsx          # Tabela de rotas do V2 (ativo em /*)
-    ├── components/        # V2Layout + componentes por módulo
-    ├── pages/             # V2Dashboard, V2Arenas, V2Tournament, ...
-    └── ui/primitives.jsx  # V2Button, V2Card, ...
+├── main.jsx, App.jsx      # bootstrap, providers e rotas raiz (públicas, telão, impressão)
+├── core/                  # auth, firebase, i18n, tema, PWA, flags, guardas de fonte, libs
+├── components/ui/         # primitivos shadcn/ui
+├── pages/                 # telas públicas/impressão/telão (V1 removido)
+├── modules/               # lógica de domínio por módulo (domain/services/hooks/components)
+└── v2/                    # APP ATIVO: V2App.jsx (rotas), V2Layout, pages/, components/, ui/
+functions/                 # Cloud Functions
+tests/                     # regras no emulador (tests/rules) e E2E (tests/e2e)
+docs/                      # documentação (ver docs/00-INDEX.md)
+scripts/                   # utilitários, deploy de funções, gerador do inventário
 ```
+
+A lista de módulos e a de pastas de componentes estão no inventário.

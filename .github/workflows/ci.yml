@@ -37,6 +37,9 @@ jobs:
       - name: Secret scan (arquivos versionados)
         run: npm run security:secrets
 
+      - name: Inventário de documentação em dia com o código
+        run: npm run docs:inventario:check
+
       - name: Lint
         run: npm run lint
 
@@ -112,3 +115,18 @@ jobs:
         run: npm audit --omit=dev || true
       - name: Vulnerabilidades no ferramental (desenvolvimento)
         run: npm audit || true
+
+  # Regra do projeto (CLAUDE.md §2.12): toda implementação atualiza a documentação.
+  docs-obrigatorios:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Código mudou, documentação também?
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/check-docs-updated.mjs
