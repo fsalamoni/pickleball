@@ -1238,6 +1238,40 @@ exports.marketFavoriteCount = onDocumentWritten(
   },
 );
 
+// Seguir / deixar de seguir uma loja → contagem no vendedor.
+exports.marketFollowCount = onDocumentWritten(
+  { document: 'market_follows/{followId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    const delta = (d ? 1 : 0) - (a ? 1 : 0);
+    const sellerKey = (d || a || {}).seller_key;
+    if (!delta || !sellerKey) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    try {
+      await db.collection('market_sellers').doc(sellerKey).update({ follower_count: FieldValueDel.increment(delta) });
+    } catch (err) {
+      logger.debug('Mercado: seguidor de loja que não existe mais.', { sellerKey });
+    }
+  },
+);
+
+// Anúncio entrou no ar → aviso a quem segue a loja (uma vez por anúncio).
+exports.marketFollowersNotify = onDocumentWritten(
+  { document: 'market_listings/{listingId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    const d = depois(event);
+    if (!d || d.status !== 'active' || (a && a.status === 'active') || d.followers_notified_at_ms) return;
+    const db = getFirestore(getApp(), DATABASE_ID);
+    try {
+      await marketplace.notifyFollowers({ db, now: Date.now() }, event.params.listingId, a, d);
+    } catch (err) {
+      logger.warn('Mercado: aviso aos seguidores não enviado.', { listingId: event.params.listingId, err: err && err.message });
+    }
+  },
+);
+
 // Pergunta feita ou respondida → aviso para o outro lado.
 exports.marketQuestionNotify = onDocumentWritten(
   { document: 'market_questions/{questionId}', database: DATABASE_ID, region: REGION },

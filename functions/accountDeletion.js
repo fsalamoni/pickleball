@@ -123,6 +123,7 @@ const DELETE_BY_ID = Object.freeze([
   // Modelos de banner/cupom e custo interno dos vales do professor (id = uid).
   { col: 'promo_settings', label: 'Configurações de divulgação (professor)' },
   { col: 'market_carts', label: 'Carrinho do Mercado' },
+  { col: 'market_addresses', label: 'Endereços salvos do Mercado' },
 ]);
 
 /**
@@ -181,6 +182,7 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'training_shares', field: 'to_uid', label: 'Treinos recebidos' },
   // Mercado: o que é só da pessoa.
   { col: 'market_favorites', field: 'uid', label: 'Favoritos do Mercado' },
+  { col: 'market_follows', field: 'uid', label: 'Lojas seguidas no Mercado' },
   { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
 ]);
 

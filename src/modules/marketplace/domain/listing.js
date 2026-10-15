@@ -61,6 +61,59 @@ export function availableQuantity(listing) {
   return q;
 }
 
+export const VARIANT_LIMITS = Object.freeze({ max: 20, label: 40 });
+
+/** As variações do anúncio (tamanho, cor…), ou `[]`. */
+export function variantsOf(listing) {
+  return Array.isArray(listing?.variants) ? listing.variants.filter((v) => v && v.id) : [];
+}
+
+/** Quantas unidades de UMA variação (ou do anúncio, sem variações). */
+export function variantQuantity(listing, variantId) {
+  const vs = variantsOf(listing);
+  if (!vs.length) return availableQuantity(listing);
+  const v = vs.find((x) => x.id === variantId);
+  return v ? Math.max(0, Math.floor(Number(v.quantity) || 0)) : 0;
+}
+
+/**
+ * Variações normalizadas: até 20, rótulo 1–40 letras sem repetir, quantidade
+ * 0–9999. O id é mantido (o pedido e o carrinho apontam para ele); o novo ganha um.
+ */
+export function normalizeVariants(raw) {
+  if (!Array.isArray(raw)) return { variants: [], error: null };
+  const out = [];
+  const vistos = new Set();
+  let error = null;
+  raw.forEach((v, i) => {
+    const label = String(v?.label || '').trim().replace(/\s+/g, ' ').slice(0, VARIANT_LIMITS.label);
+    if (!label) return;
+    const chave = normalizeSearchText(label);
+    if (vistos.has(chave)) { error = t('Duas variações com o mesmo nome.'); return; }
+    vistos.add(chave);
+    const quantity = Math.floor(Number(v.quantity));
+    out.push({ id: typeof v.id === 'string' && v.id ? v.id.slice(0, 40) : `v${i}_${Math.random().toString(36).slice(2, 8)}`, label, quantity: quantity >= 0 && quantity <= 9999 ? quantity : 0 });
+    if (!(quantity >= 0 && quantity <= 9999)) error = t('Quantidade entre 0 e 9999.');
+  });
+  if (out.length > VARIANT_LIMITS.max) error = t('Até {n} variações.', { n: VARIANT_LIMITS.max });
+  return { variants: out.slice(0, VARIANT_LIMITS.max), error };
+}
+
+/**
+ * O anúncio como ele VALE agora: a promoção com prazo vencido devolve o preço
+ * ao "de". A rotina do servidor grava isso depois; a leitura não espera por ela.
+ * ⚠️ Cópia em `functions/marketplace.js` (paridade).
+ */
+export function effectiveListing(listing, now = Date.now()) {
+  if (!listing) return listing;
+  const ate = Number(listing.sale_until_ms) || 0;
+  const de = Number(listing.compare_at_cents) || 0;
+  if (ate && now > ate && de > (Number(listing.price_cents) || 0)) {
+    return { ...listing, price_cents: de, compare_at_cents: null, sale_until_ms: null };
+  }
+  return listing;
+}
+
 /**
  * Dá para comprar agora? Devolve o motivo quando não dá — a tela mostra o
  * motivo em vez de um botão desabilitado mudo.
@@ -127,8 +180,25 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
     compareAt = null;
   }
 
-  const quantity = Math.floor(Number(input.quantity ?? 1));
+  const { variants, error: variantsError } = normalizeVariants(input.variants);
+  if (variantsError) errors.variants = variantsError;
+  // Com variações, a quantidade do anúncio é a SOMA delas (o campo solto não vale).
+  const quantity = variants.length ? variants.reduce((n, v) => n + v.quantity, 0) : Math.floor(Number(input.quantity ?? 1));
   if (!(quantity >= 0) || quantity > 9999) errors.quantity = t('Quantidade entre 0 e 9999.');
+
+  // Promoção com prazo: só faz sentido com o preço "de"; vencida, o preço volta ao "de".
+  let saleUntil = compareAt && input.sale_until_ms ? Math.round(Number(input.sale_until_ms)) : null;
+  if (saleUntil != null && !(saleUntil > 0)) saleUntil = null;
+
+  // Resposta automática a ofertas: aceita a partir de X e recusa abaixo de Y (Y < X < preço).
+  const centsOrNull = (v) => (v == null || v === '' ? null : Math.round(Number(v)));
+  let autoAccept = input.accepts_offers ? centsOrNull(input.offer_auto_accept_cents) : null;
+  let autoDecline = input.accepts_offers ? centsOrNull(input.offer_auto_decline_cents) : null;
+  if (autoAccept != null && !(autoAccept > 0 && autoAccept < price)) { errors.offer_auto_accept_cents = t('O valor de aceite automático precisa ser menor que o preço.'); autoAccept = null; }
+  if (autoDecline != null && !(autoDecline > 0 && autoDecline < price && (autoAccept == null || autoDecline < autoAccept))) {
+    errors.offer_auto_decline_cents = t('O valor de recusa automática precisa ser menor que o de aceite.');
+    autoDecline = null;
+  }
 
   const fulfillment = Array.isArray(input.fulfillment)
     ? [...new Set(input.fulfillment.filter((f) => Object.values(FULFILLMENT).includes(f)))]
@@ -190,7 +260,11 @@ export function validateListingInput(input = {}, { publish = false } = {}) {
     price_cents: price > 0 ? price : 0,
     compare_at_cents: compareAt,
     quantity: quantity >= 0 ? quantity : 0,
+    variants,
+    sale_until_ms: saleUntil,
     accepts_offers: Boolean(input.accepts_offers),
+    offer_auto_accept_cents: autoAccept,
+    offer_auto_decline_cents: autoDecline,
     fulfillment,
     shipping_cents: shippingCents,
     shipping_to_agree: fulfillment.includes(FULFILLMENT.SHIPPING) && Boolean(input.shipping_to_agree),
@@ -228,7 +302,8 @@ export function duplicateListingInput(listing) {
   const title = `${base.slice(0, TEXT_LIMITS.title - sufixo.length)}${sufixo}`.trim();
   const copia = {};
   ['description', 'category_slug', 'type', 'condition', 'brand', 'attributes', 'price_cents', 'compare_at_cents', 'quantity',
-    'accepts_offers', 'fulfillment', 'shipping_cents', 'shipping_to_agree', 'pickup_note', 'media', 'video_link', 'city', 'state']
+    'accepts_offers', 'fulfillment', 'shipping_cents', 'shipping_to_agree', 'pickup_note', 'media', 'video_link', 'city', 'state',
+    'variants', 'offer_auto_accept_cents', 'offer_auto_decline_cents']
     .forEach((k) => { if (listing?.[k] !== undefined) copia[k] = listing[k]; });
   return { ...copia, title };
 }

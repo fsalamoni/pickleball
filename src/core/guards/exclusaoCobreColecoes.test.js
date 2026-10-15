@@ -113,6 +113,8 @@ const MERCADO_EXPORTADO_POR = {
   market_listings: ['listSellerListings'],
   market_questions: ['listMyQuestions'],
   market_favorites: ['listMyFavorites'],
+  market_follows: ['listMyFollows'],
+  market_addresses: ['getMyAddresses'],
   market_saved_searches: ['listSavedSearches'],
   market_carts: ['getCart'],
   market_offers: ['listMyOffers'],

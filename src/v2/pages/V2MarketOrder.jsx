@@ -438,7 +438,7 @@ function Receipt({ order, role }) {
         <thead><tr className="border-b border-gray-300 text-left"><th className="py-1">{t('Item')}</th><th className="py-1 text-right">{t('Qtd.')}</th><th className="py-1 text-right">{t('Valor')}</th></tr></thead>
         <tbody>
           {(order.items || []).map((i, n) => (
-            <tr key={i.listing_id || n} className="border-b border-gray-100"><td className="py-1">{i.title}</td><td className="py-1 text-right">{i.quantity}</td><td className="py-1 text-right">{formatBRL(i.unit_price_cents * i.quantity)}</td></tr>
+            <tr key={`${i.listing_id || n}-${i.variant_id || ''}`} className="border-b border-gray-100"><td className="py-1">{i.title}{i.variant_label ? ` · ${i.variant_label}` : ''}</td><td className="py-1 text-right">{i.quantity}</td><td className="py-1 text-right">{formatBRL(i.unit_price_cents * i.quantity)}</td></tr>
           ))}
         </tbody>
         <tfoot>
@@ -546,10 +546,10 @@ function OrderPage() {
             <h2 id="itens-titulo" className="mb-2 font-display text-lg font-bold text-ink">{t('Itens')}</h2>
             <ul className="divide-y divide-gray-100">
               {(order.items || []).map((i) => (
-                <li key={i.listing_id} className="flex items-center gap-3 py-3">
+                <li key={`${i.listing_id}-${i.variant_id || ''}`} className="flex items-center gap-3 py-3">
                   <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-paper">{i.cover_url ? <MarketPhoto src={i.cover_url} aspect={i.cover_aspect} frame={i.cover_frame} loading="lazy" /> : <Package className="m-4 h-6 w-6 text-gray-300" />}</span>
                   {i.listing_id
-                    ? <Link to={`/mercado/anuncio/${i.listing_id}`} className="min-w-0 flex-1 text-sm text-ink hover:underline">{i.title}<span className="block text-xs text-gray-500">{i.quantity} × {formatBRL(i.unit_price_cents)}</span></Link>
+                    ? <Link to={`/mercado/anuncio/${i.listing_id}`} className="min-w-0 flex-1 text-sm text-ink hover:underline">{i.title}<span className="block text-xs text-gray-500">{i.variant_label ? `${i.variant_label} · ` : ''}{i.quantity} × {formatBRL(i.unit_price_cents)}</span></Link>
                     : <span className="min-w-0 flex-1 text-sm text-ink">{i.title}{i.gift?.recipient_name && <span className="block text-xs text-gray-500">{t('Para {nome}', { nome: i.gift.recipient_name })}</span>}</span>}
                   <span className="font-bold text-ink">{formatBRL(i.unit_price_cents * i.quantity)}</span>
                 </li>

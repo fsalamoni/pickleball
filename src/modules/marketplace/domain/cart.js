@@ -6,7 +6,7 @@
  * relendo o anúncio). Ao fechar, cada vendedor vira um pedido próprio, com o
  * Pix dele e a entrega que ele oferece.
  */
-import { availableQuantity, coverOf } from './listing.js';
+import { availableQuantity, coverOf, variantQuantity, variantsOf } from './listing.js';
 import { LISTING_STATUS } from './constants.js';
 import { t, tn } from '@/core/i18n';
 
@@ -21,10 +21,16 @@ function clean(cart) {
   };
 }
 
+/** A chave de uma linha: o anúncio, ou anúncio + variação (`id#variação`). */
+export const lineKey = (line) => (line?.variant_id ? `${line.listing_id}#${line.variant_id}` : line?.listing_id);
+const same = (line, key) => lineKey(line) === key;
+
 /** Linha do carrinho a partir do anúncio (cópia do que se viu, para mostrar mesmo se o anúncio sumir). */
-export function cartLine(listing, quantity = 1) {
+export function cartLine(listing, quantity = 1, variantId = null) {
+  const variant = variantsOf(listing).find((v) => v.id === variantId) || null;
   return {
     listing_id: listing.id,
+    ...(variant ? { variant_id: variant.id, variant_label: variant.label } : {}),
     seller_key: listing.seller_key,
     seller_name: listing.seller_name || '',
     title: listing.title || '',
@@ -36,51 +42,54 @@ export function cartLine(listing, quantity = 1) {
 }
 
 /** Acrescenta (ou soma, se já está). Nunca passa do estoque visto. */
-export function addToCart(cart, listing, quantity = 1) {
+export function addToCart(cart, listing, quantity = 1, variantId = null) {
   const c = clean(cart);
-  const max = Math.max(1, Math.min(CART_MAX_QTY, availableQuantity(listing)));
-  const i = c.items.findIndex((x) => x.listing_id === listing.id);
+  if (variantsOf(listing).length && !variantsOf(listing).some((v) => v.id === variantId)) return { cart: c, error: t('Escolha a variação.') };
+  const max = Math.max(1, Math.min(CART_MAX_QTY, variantQuantity(listing, variantId)));
+  const key = lineKey({ listing_id: listing.id, variant_id: variantId });
+  const i = c.items.findIndex((x) => same(x, key));
   if (i >= 0) {
     const q = Math.min(max, c.items[i].quantity + Math.max(1, quantity));
     c.items[i] = { ...c.items[i], quantity: q };
   } else {
     if (c.items.length >= CART_MAX_ITEMS) return { cart: c, error: t('O carrinho aceita até {n} itens.', { n: CART_MAX_ITEMS }) };
-    c.items.push(cartLine(listing, Math.min(max, quantity)));
+    c.items.push(cartLine(listing, Math.min(max, quantity), variantId));
   }
-  c.saved = c.saved.filter((x) => x.listing_id !== listing.id);
+  c.saved = c.saved.filter((x) => !same(x, key));
   return { cart: c, error: null };
 }
 
-export function setCartQuantity(cart, listingId, quantity) {
+/* As funções abaixo recebem a CHAVE da linha (`lineKey`): o id do anúncio, ou `id#variação`. */
+export function setCartQuantity(cart, key, quantity) {
   const c = clean(cart);
   const q = Math.floor(Number(quantity));
-  if (!(q >= 1)) return removeFromCart(c, listingId);
-  c.items = c.items.map((x) => (x.listing_id === listingId ? { ...x, quantity: Math.min(q, CART_MAX_QTY) } : x));
+  if (!(q >= 1)) return removeFromCart(c, key);
+  c.items = c.items.map((x) => (same(x, key) ? { ...x, quantity: Math.min(q, CART_MAX_QTY) } : x));
   return c;
 }
 
-export function removeFromCart(cart, listingId) {
+export function removeFromCart(cart, key) {
   const c = clean(cart);
-  c.items = c.items.filter((x) => x.listing_id !== listingId);
+  c.items = c.items.filter((x) => !same(x, key));
   return c;
 }
 
 /** "Salvar para depois": tira do carrinho sem perder. */
-export function saveForLater(cart, listingId) {
+export function saveForLater(cart, key) {
   const c = clean(cart);
-  const item = c.items.find((x) => x.listing_id === listingId);
+  const item = c.items.find((x) => same(x, key));
   if (!item) return c;
-  c.items = c.items.filter((x) => x.listing_id !== listingId);
-  c.saved = [item, ...c.saved.filter((x) => x.listing_id !== listingId)].slice(0, CART_MAX_ITEMS);
+  c.items = c.items.filter((x) => !same(x, key));
+  c.saved = [item, ...c.saved.filter((x) => !same(x, key))].slice(0, CART_MAX_ITEMS);
   return c;
 }
 
-export function moveToCart(cart, listingId) {
+export function moveToCart(cart, key) {
   const c = clean(cart);
-  const item = c.saved.find((x) => x.listing_id === listingId);
+  const item = c.saved.find((x) => same(x, key));
   if (!item) return c;
-  c.saved = c.saved.filter((x) => x.listing_id !== listingId);
-  if (!c.items.some((x) => x.listing_id === listingId)) c.items.push(item);
+  c.saved = c.saved.filter((x) => !same(x, key));
+  if (!c.items.some((x) => same(x, key))) c.items.push(item);
   return c;
 }
 
@@ -89,9 +98,9 @@ export function moveToCart(cart, listingId) {
  * aquela linha, e o resto fica intacto no documento. Se o item não está no
  * carrinho (a gravação falhou), vale o carrinho inteiro.
  */
-export function cartOnlyListing(cart, listingId) {
+export function cartOnlyListing(cart, key) {
   const c = clean(cart);
-  const line = c.items.find((x) => x.listing_id === listingId);
+  const line = c.items.find((x) => same(x, key));
   return line ? { items: [line], saved: [] } : c;
 }
 
@@ -115,7 +124,11 @@ export function checkLine(line, listing) {
   if (listing.status !== LISTING_STATUS.ACTIVE || availableQuantity(listing) < 1) {
     return { ok: false, problem: listing.status === LISTING_STATUS.PAUSED ? t('O vendedor pausou este anúncio.') : t('Esgotado.'), unit_price_cents: listing.price_cents, max: 0 };
   }
-  const max = availableQuantity(listing);
+  if (line.variant_id && !variantsOf(listing).some((v) => v.id === line.variant_id)) {
+    return { ok: false, problem: t('Essa variação não existe mais.'), unit_price_cents: listing.price_cents, max: 0 };
+  }
+  const max = line.variant_id ? variantQuantity(listing, line.variant_id) : availableQuantity(listing);
+  if (max < 1) return { ok: false, problem: t('Esgotado.'), unit_price_cents: listing.price_cents, max: 0 };
   const problems = [];
   if (line.quantity > max) problems.push(tn(max, 'Só há {n} disponível.', 'Só há {n} disponíveis.'));
   if (listing.price_cents !== line.price_cents_at_add) {

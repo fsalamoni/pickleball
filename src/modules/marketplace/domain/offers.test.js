@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateOfferAmount, applyOfferAction, offerActionsFor, newOffer, offerDisplayStatus } from './offers.js';
+import { validateOfferAmount, applyOfferAction, offerActionsFor, newOffer, offerDisplayStatus, autoOfferOutcome } from './offers.js';
 
 const listing = { id: 'l', title: 'Raquete', price_cents: 100000, accepts_offers: true, seller_key: 'athlete_v', seller_uid: 'v', fulfillment: ['meetup'] };
 const now = 1_000_000;
@@ -43,5 +43,16 @@ describe('ofertas', () => {
     expect(offerDisplayStatus({ ...o, status: 'ordered' }, o.expires_at_ms + 1)).toBe('ordered');
     expect(offerDisplayStatus({ ...o, expires_at_ms: null }, now + 1e12)).toBe('pending');
     expect(offerDisplayStatus(null)).toBe('expired');
+  });
+  it('resposta automática: aceita a partir de X, recusa abaixo de Y, senão espera o vendedor', () => {
+    const l = { ...listing, offer_auto_accept_cents: 80000, offer_auto_decline_cents: 50000 };
+    expect(autoOfferOutcome(l, 80000)).toBe('accept');
+    expect(autoOfferOutcome(l, 49999)).toBe('decline');
+    expect(autoOfferOutcome(l, 60000)).toBeNull();
+    expect(autoOfferOutcome(listing, 1)).toBeNull();
+    expect(autoOfferOutcome({ ...listing, offer_auto_decline_cents: 50000 }, 90000)).toBeNull();
+    const o = newOffer({ ...listing, variants: [{ id: 'g', label: 'G', quantity: 1 }] }, { uid: 'c' }, 70000, { now, variantId: 'g' });
+    expect(o.variant_label).toBe('G');
+    expect(newOffer(listing, { uid: 'c' }, 70000, { now, variantId: 'g' }).variant_id).toBeUndefined();
   });
 });

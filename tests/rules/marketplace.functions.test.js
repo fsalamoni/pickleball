@@ -328,3 +328,93 @@ describe('moderação automática', () => {
     expect(await market.moderateListing(ctx(), 'raq', anuncio())).toBeNull();
   });
 });
+
+describe('⭐ variações: estoque por variação, no pedido, na oferta e na devolução', () => {
+  const vs = () => [{ id: 'm', label: 'M', quantity: 1 }, { id: 'g', label: 'G', quantity: 2 }];
+  beforeEach(() => db.doc('market_listings/cam').set(anuncio({ title: 'Camiseta', price_cents: 9000, quantity: 3, variants: vs() })));
+
+  it('compra de duas variações do mesmo anúncio num pedido só, sem uma apagar a outra', async () => {
+    await expect(comprar([{ listing_id: 'cam', quantity: 1 }])).resolves.toMatchObject({ failures: [expect.objectContaining({ error: expect.stringMatching(/variação/) })] });
+    const r = await comprar([{ listing_id: 'cam', quantity: 1, variant_id: 'm' }, { listing_id: 'cam', quantity: 2, variant_id: 'g' }]);
+    expect(r.failures).toEqual([]);
+    const o = await order(r.orders[0].id);
+    expect(o.items.map((i) => i.variant_label)).toEqual(['M', 'G']);
+    const l = await listing('cam');
+    expect(l.variants.map((v) => v.quantity)).toEqual([0, 0]);
+    expect(l.quantity).toBe(0);
+    expect(l.status).toBe('sold_out');
+    await market.orderAction(ctx(), { uid: BIA }, { orderId: r.orders[0].id, action: 'cancel', reason: 'Desisti' });
+    const d = await listing('cam');
+    expect(d.variants.map((v) => v.quantity)).toEqual([1, 2]);
+    expect(d.status).toBe('active');
+  });
+  it('não vende além do estoque DA variação; variação que não existe é recusada', async () => {
+    const r = await comprar([{ listing_id: 'cam', quantity: 2, variant_id: 'm' }]);
+    expect(r.failures[0].error).toMatch(/só há 1/);
+    const r2 = await comprar([{ listing_id: 'cam', quantity: 1, variant_id: 'xl' }]);
+    expect(r2.failures[0].error).toMatch(/variação/);
+  });
+  it('a oferta leva a variação e o aceite desconta dela', async () => {
+    const { id } = await market.offerAction(ctx(), { uid: BIA }, { action: 'create', listingId: 'cam', variant_id: 'g', amount_cents: 8000 });
+    const r = await market.offerAction(ctx(), { uid: ANA }, { offerId: id, action: 'accept' });
+    expect((await order(r.orderId)).items[0].variant_label).toBe('G');
+    expect((await listing('cam')).variants.map((v) => v.quantity)).toEqual([1, 1]);
+  });
+});
+
+describe('⭐ oferta com resposta automática', () => {
+  beforeEach(() => db.doc('market_listings/raq').update({ offer_auto_accept_cents: 70000, offer_auto_decline_cents: 40000 }));
+  it('a partir do aceite automático vira pedido na hora, e os dois lados são avisados', async () => {
+    const r = await market.offerAction(ctx(), { uid: BIA }, { action: 'create', listingId: 'raq', amount_cents: 70000 });
+    expect(r).toMatchObject({ status: 'ordered', auto: true });
+    const o = await order(r.orderId);
+    expect(o.status).toBe('accepted');
+    expect(o.total_cents).toBe(70000);
+    const oferta = (await db.doc(`market_offers/${r.id}`).get()).data();
+    expect(oferta.history.at(-1)).toMatchObject({ by: 'seller', auto: true });
+    const avisos = await db.collection('notifications').where('user_id', '==', BIA).get();
+    expect(avisos.docs.map((d) => d.data().title)).toContain('Oferta aceita');
+  });
+  it('abaixo da recusa automática é recusada na hora, sem avisar o vendedor nem revelar o valor', async () => {
+    const r = await market.offerAction(ctx(), { uid: BIA }, { action: 'create', listingId: 'raq', amount_cents: 39999 });
+    expect(r).toMatchObject({ status: 'declined', auto: true });
+    expect((await db.collection('notifications').where('user_id', '==', ANA).get()).size).toBe(0);
+    // Recusada não é negociação aberta: dá para ofertar de novo.
+    const r2 = await market.offerAction(ctx(), { uid: BIA }, { action: 'create', listingId: 'raq', amount_cents: 50000 });
+    expect(r2.status).toBe('pending');
+  });
+});
+
+describe('⭐ promoção com prazo', () => {
+  it('vencida, o pedido sai pelo preço cheio e a rotina grava a volta', async () => {
+    await db.doc('market_listings/bola').update({ compare_at_cents: 8000, sale_until_ms: NOW - 1 });
+    const r = await comprar([{ listing_id: 'bola', quantity: 1, expected_price_cents: 6000 }]);
+    expect(r.failures[0].error).toMatch(/preço/i);
+    const feitos = await market.housekeeping(ctx());
+    expect(feitos.sales).toBe(1);
+    const l = await listing('bola');
+    expect(l.price_cents).toBe(8000);
+    expect(l.compare_at_cents).toBeNull();
+    expect(l.sale_until_ms).toBeNull();
+    await db.doc('market_listings/raq').update({ compare_at_cents: 99000, sale_until_ms: NOW + 1 });
+    expect((await market.housekeeping(ctx())).sales).toBe(0);
+  });
+});
+
+describe('⭐ quem segue a loja sabe do anúncio novo', () => {
+  it('um aviso por anúncio, só quando entra no ar, nunca para quem opera a loja', async () => {
+    await db.doc(`market_follows/${BIA}_athlete_${ANA}`).set({ uid: BIA, seller_key: `athlete_${ANA}` });
+    await db.doc(`market_follows/${ANA}_athlete_${ANA}`).set({ uid: ANA, seller_key: `athlete_${ANA}` });
+    const novo = anuncio({ title: 'Novo' });
+    await db.doc('market_listings/novo').set(novo);
+    await db.doc('market_listings/x').set(novo);
+    expect(await market.notifyFollowers(ctx(), 'novo', { ...novo, status: 'draft' }, novo)).toBe(1);
+    const depois = { ...novo, followers_notified_at_ms: NOW };
+    expect(await market.notifyFollowers(ctx(), 'novo', depois, depois)).toBe(0);
+    expect(await market.notifyFollowers(ctx(), 'x', { ...novo }, { ...novo, title: 'Editado' })).toBe(0);
+    const avisos = await db.collection('notifications').where('user_id', '==', BIA).get();
+    expect(avisos.size).toBe(1);
+    expect(avisos.docs[0].data().link).toBe('/mercado/anuncio/novo');
+  });
+});
+

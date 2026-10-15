@@ -13,6 +13,8 @@ export const MARKET_COLLECTIONS = Object.freeze({
   listings: 'market_listings',
   questions: 'market_questions',
   favorites: 'market_favorites',
+  follows: 'market_follows',
+  addresses: 'market_addresses',
   savedSearches: 'market_saved_searches',
   carts: 'market_carts',
   offers: 'market_offers',

@@ -12,7 +12,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Crop, ExternalLink, Eye, ImagePlus, RotateCcw, RotateCw, Sparkles, Star, Trash2, Video,
+  ChevronLeft, ChevronRight, Crop, ExternalLink, Eye, ImagePlus, RotateCcw, RotateCw, Sparkles, Star, Trash2, Video, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -20,7 +20,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
 import { attributesFor, activeCategories } from '@/modules/marketplace/domain/taxonomy';
 import { CONDITION_LABELS, FULFILLMENT_LABELS, LISTING_TYPE, MEDIA_LIMITS, TEXT_LIMITS } from '@/modules/marketplace/domain/constants';
-import { listingCompleteness, publishBlockers, validateListingInput } from '@/modules/marketplace/domain/listing';
+import { VARIANT_LIMITS, listingCompleteness, publishBlockers, validateListingInput } from '@/modules/marketplace/domain/listing';
+import { formatDateISO } from '@/modules/arenas/domain/calendar';
 import { formatBRL, parseBRL } from '@/modules/marketplace/domain/money';
 import { saveListing } from '@/modules/marketplace/services/marketService';
 import { linkArenaProduct } from '@/modules/marketplace/services/marketOrderService';
@@ -45,6 +46,9 @@ import {
 } from '@/modules/marketplace/domain/mediaFrame';
 
 const centsText = (c) => (c == null || c === '' ? '' : formatBRL(c).replace(/^R\$\s?/, ''));
+// A data de fim da promoção vale até 23:59:59 do dia escolhido, no fuso local.
+const dateFromMs = (ms) => (ms ? formatDateISO(new Date(ms)) : '');
+const msFromDate = (iso) => (iso ? new Date(`${iso}T23:59:59`).getTime() : null);
 
 function fromListing(l) {
   return {
@@ -58,6 +62,10 @@ function fromListing(l) {
     compare_at: centsText(l?.compare_at_cents),
     quantity: String(l?.quantity ?? 1),
     accepts_offers: Boolean(l?.accepts_offers),
+    sale_until: dateFromMs(l?.sale_until_ms),
+    offer_auto_accept: centsText(l?.offer_auto_accept_cents),
+    offer_auto_decline: centsText(l?.offer_auto_decline_cents),
+    variants: (l?.variants || []).map((v) => ({ id: v.id, label: v.label, quantity: String(v.quantity ?? 0) })),
     fulfillment: l?.fulfillment || ['meetup'],
     shipping: l?.shipping_cents == null ? '' : centsText(l.shipping_cents),
     shipping_to_agree: Boolean(l?.shipping_to_agree),
@@ -76,6 +84,10 @@ function toInput(f) {
     compare_at_cents: f.compare_at ? parseBRL(f.compare_at) : null,
     shipping_cents: f.shipping === '' ? null : parseBRL(f.shipping),
     quantity: f.quantity === '' ? 0 : Number(f.quantity),
+    sale_until_ms: f.compare_at ? msFromDate(f.sale_until) : null,
+    offer_auto_accept_cents: f.offer_auto_accept ? parseBRL(f.offer_auto_accept) : null,
+    offer_auto_decline_cents: f.offer_auto_decline ? parseBRL(f.offer_auto_decline) : null,
+    variants: (f.variants || []).map((v) => ({ ...v, quantity: v.quantity === '' ? 0 : Number(v.quantity) })),
   };
 }
 
@@ -628,11 +640,33 @@ function EditorPage() {
                 label={t('Quantidade')}
                 htmlFor="qtd"
                 error={errors.quantity}
-                hint={listing?.source?.tracked ? t('Acompanha o estoque da arena.') : undefined}
+                hint={listing?.source?.tracked ? t('Acompanha o estoque da arena.') : (form.variants.length ? t('A soma das variações.') : undefined)}
               >
-                <V2Input id="qtd" type="number" min={0} max={9999} value={form.quantity} disabled={Boolean(listing?.source?.tracked)} onChange={(e) => set({ quantity: e.target.value })} />
+                <V2Input id="qtd" type="number" min={0} max={9999} value={form.variants.length ? String(form.variants.reduce((n, v) => n + (Number(v.quantity) || 0), 0)) : form.quantity} disabled={Boolean(listing?.source?.tracked) || form.variants.length > 0} onChange={(e) => set({ quantity: e.target.value })} />
               </V2Field>
             </div>
+            {form.compare_at && (
+              <V2Field label={t('Promoção até (opcional)')} htmlFor="promo-ate" error={errors.sale_until_ms} hint={t('No dia seguinte o preço volta ao “de” sozinho. A tela mostra “Oferta até” para quem compra.')}>
+                <V2Input id="promo-ate" type="date" min={formatDateISO(new Date())} value={form.sale_until} onChange={(e) => set({ sale_until: e.target.value })} className="sm:max-w-xs" />
+              </V2Field>
+            )}
+            {!listing?.source?.tracked && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-semibold text-ink">{t('Variações (tamanho, cor…)')}</legend>
+                <p className="text-xs text-gray-500">{t('Opcional. Cada variação tem o seu estoque; quem compra escolhe uma. Até {n}.', { n: VARIANT_LIMITS.max })}</p>
+                {errors.variants && <p className="text-xs font-semibold text-red-600">{errors.variants}</p>}
+                {form.variants.map((v, i) => (
+                  <div key={v.id || i} className="flex items-center gap-2">
+                    <V2Input aria-label={t('Nome da variação')} maxLength={VARIANT_LIMITS.label} placeholder={t('Ex.: M, Azul, 4.0')} value={v.label} onChange={(e) => set((f) => ({ variants: f.variants.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)) }))} />
+                    <V2Input aria-label={t('Estoque da variação')} type="number" min={0} max={9999} className="w-24" value={v.quantity} onChange={(e) => set((f) => ({ variants: f.variants.map((x, k) => (k === i ? { ...x, quantity: e.target.value } : x)) }))} />
+                    <V2Button type="button" variant="ghost" size="sm" aria-label={t('Tirar variação')} onClick={() => set((f) => ({ variants: f.variants.filter((_, k) => k !== i) }))}><X className="h-4 w-4" /></V2Button>
+                  </div>
+                ))}
+                {form.variants.length < VARIANT_LIMITS.max && (
+                  <V2Button type="button" variant="secondary" size="sm" onClick={() => set((f) => ({ variants: [...f.variants, { id: '', label: '', quantity: '1' }] }))}>{t('Adicionar variação')}</V2Button>
+                )}
+              </fieldset>
+            )}
             {(listing?.source?.kind === 'arena_product' || (!editing && params.get('produto'))) && (
               <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-gray-600">
                 {t('Este anúncio usa o estoque da arena: o que sair no balcão, na loja do app ou aqui é descontado do mesmo lugar.')}
@@ -644,6 +678,16 @@ function EditorPage() {
                 <input type="checkbox" checked={form.accepts_offers} onChange={(e) => set({ accepts_offers: e.target.checked })} className="h-5 w-5 accent-ink" />
                 {t('Aceito ofertas (o comprador propõe um valor e você aceita, recusa ou contrapropõe)')}
               </label>
+            )}
+            {settings.data?.offers_enabled !== false && form.accepts_offers && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <V2Field label={t('Aceitar na hora a partir de (R$, opcional)')} htmlFor="oferta-aceita" error={errors.offer_auto_accept_cents} hint={t('Oferta igual ou acima vira pedido sem você responder.')}>
+                  <V2Input id="oferta-aceita" inputMode="decimal" placeholder={t('0,00')} value={form.offer_auto_accept} onChange={(e) => set({ offer_auto_accept: e.target.value })} />
+                </V2Field>
+                <V2Field label={t('Recusar na hora abaixo de (R$, opcional)')} htmlFor="oferta-recusa" error={errors.offer_auto_decline_cents} hint={t('O comprador não vê os valores; só recebe a resposta.')}>
+                  <V2Input id="oferta-recusa" inputMode="decimal" placeholder={t('0,00')} value={form.offer_auto_decline} onChange={(e) => set({ offer_auto_decline: e.target.value })} />
+                </V2Field>
+              </div>
             )}
           </Section>
 

@@ -20,12 +20,13 @@ import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
-import { cartOnlyListing, groupCartBySeller, groupShippingCost } from '@/modules/marketplace/domain/cart';
+import { cartOnlyListing, groupCartBySeller, groupShippingCost, lineKey } from '@/modules/marketplace/domain/cart';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { placeOrders } from '@/modules/marketplace/services/marketOrderService';
 import {
-  useListingsByIds, useMarketCart, useMarketMutation, useMarketSettings, useMyGiftCards, useMyOrders, useOrderShipping, usePublicCoupons,
+  useListingsByIds, useMarketCart, useMarketMutation, useMarketSettings, useMyAddresses, useMyGiftCards, useMyOrders, useOrderShipping, usePublicCoupons, useSaveAddresses,
 } from '@/modules/marketplace/hooks/useMarket';
+import { ADDRESSES_MAX } from '@/modules/marketplace/services/marketService';
 import { couponLive, couponProblem, giftCardProblem, orderPricing, sortGiftCardsForUse } from '@/modules/marketplace/domain/promotions';
 import CheckoutPromos from '@/v2/components/marketplace/promo/CheckoutPromos';
 import {
@@ -62,6 +63,7 @@ function Qty({ value, max, onChange, disabled }) {
 
 function Line({ line, cart, editable }) {
   const { check } = line;
+  const key = lineKey(line);
   const run = (p) => p.catch(() => toast.error(t('Não foi possível atualizar o carrinho. Tente de novo.')));
   return (
     <li className="flex gap-3 py-4">
@@ -70,7 +72,7 @@ function Line({ line, cart, editable }) {
       </Link>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start justify-between gap-3">
-          <Link to={`/mercado/anuncio/${line.listing_id}`} className="line-clamp-2 text-sm font-medium text-ink hover:underline">{line.title}</Link>
+          <Link to={`/mercado/anuncio/${line.listing_id}`} className="line-clamp-2 text-sm font-medium text-ink hover:underline">{line.title}{line.variant_label ? <span className="block text-xs text-gray-500">{line.variant_label}</span> : null}</Link>
           <span className="shrink-0 text-right font-bold text-ink">{formatBRL(check.unit_price_cents * line.quantity)}</span>
         </div>
         {check.problem && (
@@ -81,14 +83,14 @@ function Line({ line, cart, editable }) {
         {line.quantity > 1 && check.ok && <p className="text-xs text-gray-500">{t('{valor} cada', { valor: formatBRL(check.unit_price_cents) })}</p>}
         {editable && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-            {check.max > 0 && <Qty value={Math.min(line.quantity, check.max)} max={Math.min(check.max, 99)} disabled={cart.saving} onChange={(q) => run(cart.setQuantity(line.listing_id, q))} />}
+            {check.max > 0 && <Qty value={Math.min(line.quantity, check.max)} max={Math.min(check.max, 99)} disabled={cart.saving} onChange={(q) => run(cart.setQuantity(key, q))} />}
             {check.ok && line.quantity > check.max && check.max > 0 && (
-              <button type="button" onClick={() => run(cart.setQuantity(line.listing_id, check.max))} className="text-xs font-bold text-ink underline">{t('Ajustar para {n}', { n: check.max })}</button>
+              <button type="button" onClick={() => run(cart.setQuantity(key, check.max))} className="text-xs font-bold text-ink underline">{t('Ajustar para {n}', { n: check.max })}</button>
             )}
-            <button type="button" onClick={() => run(cart.later(line.listing_id))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-ink">
+            <button type="button" onClick={() => run(cart.later(key))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-ink">
               <Bookmark className="h-3.5 w-3.5" /> {t('Salvar para depois')}
             </button>
-            <button type="button" onClick={() => run(cart.remove(line.listing_id))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-red-600">
+            <button type="button" onClick={() => run(cart.remove(key))} className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-red-600">
               <Trash2 className="h-3.5 w-3.5" /> {t('Remover')}
             </button>
           </div>
@@ -128,7 +130,7 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
         </label>
         <SellerTypeTag type={g.seller_type} />
       </div>
-      <ul className="divide-y divide-gray-100">{g.lines.map((l) => <Line key={l.listing_id} line={l} cart={cart} editable={editable} />)}</ul>
+      <ul className="divide-y divide-gray-100">{g.lines.map((l) => <Line key={lineKey(l)} line={l} cart={cart} editable={editable} />)}</ul>
       {g.buyable > 0 && (
         <div className="space-y-3 border-t border-gray-100 pt-4">
           {opcoes.length === 0 ? (
@@ -170,14 +172,28 @@ function SellerGroup({ g, cart, choice, setChoice, patch, editable, promo }) {
   );
 }
 
-function AddressForm({ value, onChange, error }) {
+const addressLabel = (a) => [a.street, a.number].filter(Boolean).join(', ') + (a.city ? ` · ${a.city}` : '');
+
+function AddressForm({ value, onChange, error, saved, onPick, onRemove, remember, setRemember }) {
   const set = (k) => (e) => onChange({ ...value, [k]: e.target.value });
+  const lista = saved || [];
   return (
     <V2Surface variant="compacto" as="section" aria-labelledby="endereco-titulo" className="space-y-4 p-5">
       <div>
         <h2 id="endereco-titulo" className="font-display text-lg font-bold text-ink">{t('Endereço de entrega')}</h2>
         <p className="text-xs text-gray-500">{t('Só o vendedor que aceitar o pedido vê o endereço.')}</p>
       </div>
+      {lista.length > 0 && (
+        <div className="flex flex-wrap items-end gap-2">
+          <V2Field label={t('Usar endereço salvo')} htmlFor="end-salvo" className="min-w-[14rem] flex-1">
+            <V2Select id="end-salvo" value="" onChange={(e) => { const a = lista[Number(e.target.value)]; if (a) onPick(a); }}>
+              <option value="">{t('Escolha…')}</option>
+              {lista.map((a, i) => <option key={i} value={i}>{addressLabel(a)}</option>)}
+            </V2Select>
+          </V2Field>
+          <V2Button type="button" variant="ghost" size="sm" onClick={() => onRemove(value)} disabled={!lista.some((a) => a.cep === value.cep && a.street === value.street && a.number === value.number)}>{t('Esquecer este')}</V2Button>
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-6">
         <V2Field label={t('Quem recebe')} htmlFor="end-name" className="sm:col-span-4"><V2Input id="end-name" autoComplete="name" value={value.name} onChange={set('name')} /></V2Field>
         <V2Field label={t('CEP')} htmlFor="end-cep" className="sm:col-span-2"><V2Input id="end-cep" inputMode="numeric" autoComplete="postal-code" maxLength={9} value={value.cep} onChange={set('cep')} /></V2Field>
@@ -194,6 +210,12 @@ function AddressForm({ value, onChange, error }) {
         </V2Field>
         <V2Field label={t('Telefone (opcional)')} htmlFor="end-phone" hint={t('Para a transportadora.')} className="sm:col-span-2"><V2Input id="end-phone" type="tel" autoComplete="tel" value={value.phone} onChange={set('phone')} /></V2Field>
       </div>
+      {lista.length < ADDRESSES_MAX && (
+        <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-5 w-5 accent-ink" />
+          {t('Salvar este endereço para a próxima compra')}
+        </label>
+      )}
       {error && <p role="alert" className="text-sm font-medium text-red-500">{error}</p>}
     </V2Surface>
   );
@@ -251,6 +273,9 @@ function CartPage() {
     city: userProfile?.city || '', state: userProfile?.state || '', phone: '',
   }));
   const [addrErr, setAddrErr] = useState('');
+  const [lembrar, setLembrar] = useState(true);
+  const salvos = useMyAddresses(user?.uid);
+  const salvarEnderecos = useSaveAddresses(user?.uid);
   const [result, setResult] = useState(null);
   const place = useMarketMutation(placeOrders);
   const step = params.get('fechar') ? 'fechar' : 'carrinho';
@@ -290,9 +315,15 @@ function CartPage() {
     .filter((o) => o.fulfillment === 'shipping')
     .sort((a, b) => (b.placed_at_ms || 0) - (a.placed_at_ms || 0))[0]?.id || null, [compras.data]);
   const enderecoAnterior = useOrderShipping(ultimaComEnvio, { enabled: Boolean(ultimaComEnvio) && step === 'fechar' });
+  // O primeiro endereço salvo vence o da última compra; os dois só preenchem o que está vazio.
+  useEffect(() => {
+    const a = salvos.data?.[0];
+    if (!a || step !== 'fechar') return;
+    setAddress((atual) => (atual.street || atual.cep ? atual : { ...atual, ...Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, a[k] || atual[k] || ''])) }));
+  }, [salvos.data, step]);
   useEffect(() => {
     const a = enderecoAnterior.data?.address;
-    if (!a) return;
+    if (!a || salvos.data?.length) return;
     setAddress((atual) => (atual.street || atual.cep ? atual : { ...atual, ...Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, a[k] || atual[k] || ''])) }));
   }, [enderecoAnterior.data]);
   const cuponsPublicos = usePublicCoupons();
@@ -334,12 +365,18 @@ function CartPage() {
         buyer_note: choices[g.seller_key].note || '',
         coupon_code: choices[g.seller_key].coupon && !promos[g.seller_key].couponError ? choices[g.seller_key].couponCode : '',
         gift_card_ids: promos[g.seller_key].pricing.gift_card_uses.map((u) => u.id),
-        items: g.lines.filter((l) => l.check.ok).map((l) => ({ listing_id: l.listing_id, quantity: l.quantity, expected_price_cents: l.check.unit_price_cents })),
+        items: g.lines.filter((l) => l.check.ok).map((l) => ({ listing_id: l.listing_id, ...(l.variant_id ? { variant_id: l.variant_id } : {}), quantity: l.quantity, expected_price_cents: l.check.unit_price_cents })),
       })),
       ...(precisaEndereco ? { shipping: Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, address[k] || ''])) } : {}),
     };
     place.mutate(payload, {
       onSuccess: (r) => {
+        // Endereço salvo só depois de a compra sair, e sem repetir o que já está na lista.
+        if (precisaEndereco && lembrar && (r.orders || []).length) {
+          const atual = Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, address[k] || '']));
+          const lista = (salvos.data || []).filter((a) => !(a.cep === atual.cep && a.street === atual.street && a.number === atual.number));
+          salvarEnderecos.mutate([atual, ...lista].slice(0, ADDRESSES_MAX));
+        }
         const nomes = Object.fromEntries(grupos.groups.map((g) => [g.seller_key, g.seller_name]));
         setResult({ orders: r.orders || [], failures: (r.failures || []).map((f) => ({ ...f, seller_name: nomes[f.seller_key] })) });
         window.scrollTo?.({ top: 0 });
@@ -384,7 +421,18 @@ function CartPage() {
               promo={promos[g.seller_key]}
             />
           ))}
-          {fechar && precisaEndereco && <AddressForm value={address} onChange={(a) => { setAddress(a); setAddrErr(''); }} error={addrErr} />}
+          {fechar && precisaEndereco && (
+            <AddressForm
+              value={address}
+              onChange={(a) => { setAddress(a); setAddrErr(''); }}
+              error={addrErr}
+              saved={salvos.data}
+              remember={lembrar}
+              setRemember={setLembrar}
+              onPick={(a) => { setAddress((atual) => ({ ...atual, ...Object.fromEntries(ADDRESS_FIELDS.map((k) => [k, a[k] || ''])) })); setAddrErr(''); }}
+              onRemove={(a) => salvarEnderecos.mutate((salvos.data || []).filter((x) => !(x.cep === a.cep && x.street === a.street && x.number === a.number)), { onError: () => toast.error(t('Não foi possível esquecer o endereço. Tente de novo.')) })}
+            />
+          )}
           {!fechar && cart.cart.saved.length > 0 && (
             <V2Surface variant="plano" as="section" aria-labelledby="salvos-titulo" className="p-5">
               <h2 id="salvos-titulo" className="font-display text-lg font-bold text-ink">{t('Salvos para depois ({n})', { n: cart.cart.saved.length })}</h2>
@@ -393,11 +441,11 @@ function CartPage() {
                   const l = mapa[s.listing_id];
                   const ok = l && l.status === 'active';
                   return (
-                    <li key={s.listing_id} className="flex items-center gap-3 py-3">
+                    <li key={lineKey(s)} className="flex items-center gap-3 py-3">
                       <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-paper-pure">{s.cover_url && <MarketPhoto src={s.cover_url} aspect={s.cover_aspect} frame={s.cover_frame} loading="lazy" />}</span>
-                      <Link to={`/mercado/anuncio/${s.listing_id}`} className="min-w-0 flex-1 truncate text-sm text-ink hover:underline">{s.title}</Link>
+                      <Link to={`/mercado/anuncio/${s.listing_id}`} className="min-w-0 flex-1 truncate text-sm text-ink hover:underline">{s.title}{s.variant_label ? ` · ${s.variant_label}` : ''}</Link>
                       {ok ? (
-                        <V2Button type="button" size="sm" variant="ghost" onClick={() => cart.back(s.listing_id).catch(() => toast.error(t('Não foi possível mover. Tente de novo.')))}>{t('Mover para o carrinho')}</V2Button>
+                        <V2Button type="button" size="sm" variant="ghost" onClick={() => cart.back(lineKey(s)).catch(() => toast.error(t('Não foi possível mover. Tente de novo.')))}>{t('Mover para o carrinho')}</V2Button>
                       ) : <span className="text-xs text-gray-500">{t('Indisponível')}</span>}
                     </li>
                   );

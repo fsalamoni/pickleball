@@ -22,7 +22,9 @@ import { RECENT_PREF, parseRecent, pushRecent, recentListings } from '@/modules/
 import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
 import { StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
-import { availableQuantity, buyability, coverOf } from '@/modules/marketplace/domain/listing';
+import { availableQuantity, buyability, coverOf, variantQuantity, variantsOf } from '@/modules/marketplace/domain/listing';
+import { lineKey } from '@/modules/marketplace/domain/cart';
+import { bumpListingViews } from '@/modules/marketplace/services/marketService';
 import { attributesFor, categoryBreadcrumb, formatAttribute } from '@/modules/marketplace/domain/taxonomy';
 import { CONDITION_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { formatBRL } from '@/modules/marketplace/domain/money';
@@ -37,7 +39,7 @@ import ListingQuestions from '@/v2/components/marketplace/ListingQuestions';
 import OfferDialog from '@/v2/components/marketplace/OfferDialog';
 import { AdminModerationBox, ReportListingButton } from '@/v2/components/marketplace/ListingModeration';
 import {
-  FavoriteButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, StockUrgency, VerifiedMark, LOW_STOCK_MAX,
+  FavoriteButton, FollowButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, StockUrgency, VerifiedMark, LOW_STOCK_MAX,
 } from '@/v2/components/marketplace/marketUi';
 import { t, tn, fmtData } from '@/core/i18n';
 
@@ -113,21 +115,28 @@ function BuyBox({ listing, isOperator, settings }) {
   const [qtd, setQtd] = useState(1);
   const [oferta, setOferta] = useState(false);
   const [busy, setBusy] = useState(false);
+  const variantes = variantsOf(listing);
+  // Variação com estoque vem pré-escolhida quando é a única; senão a pessoa escolhe.
+  const comEstoque = variantes.filter((v) => Number(v.quantity) > 0);
+  const [variante, setVariante] = useState(comEstoque.length === 1 ? comEstoque[0].id : '');
   const pode = buyability(listing, { viewerUid: user?.uid });
   const own = isOperator || pode.own;
-  const disp = availableQuantity(listing);
-  const noCarrinho = cart.cart.items.find((i) => i.listing_id === listing.id);
+  const disp = variantes.length ? (variante ? variantQuantity(listing, variante) : 0) : availableQuantity(listing);
+  const chave = lineKey({ listing_id: listing.id, variant_id: variante || null });
+  const noCarrinho = cart.cart.items.find((i) => lineKey(i) === chave);
   const comprasAbertas = settings?.orders_enabled !== false;
+  const promoAte = Number(listing.sale_until_ms) || 0;
 
   const colocar = async (depois) => {
     if (!user) { navigate('/login'); return; }
+    if (variantes.length && !variante) { toast.error(t('Escolha a variação.')); return; }
     setBusy(true);
     try {
-      const r = noCarrinho ? (await cart.setQuantity(listing.id, qtd), { error: null }) : await cart.add(listing, qtd);
+      const r = noCarrinho ? (await cart.setQuantity(chave, qtd), { error: null }) : await cart.add(listing, qtd, variante || null);
       if (r.error) { toast.error(r.error); return; }
       // Já estava no carrinho com outra quantidade: a mudança é dita, nunca calada.
       if (noCarrinho && noCarrinho.quantity !== qtd) toast.info(t('Quantidade atualizada para {n}', { n: qtd }));
-      if (depois === 'fechar') navigate(`/mercado/carrinho?fechar=1&so=${encodeURIComponent(listing.id)}`);
+      if (depois === 'fechar') navigate(`/mercado/carrinho?fechar=1&so=${encodeURIComponent(chave)}`);
       else toast.success(t('No carrinho.'), { action: { label: t('Ver carrinho'), onClick: () => navigate('/mercado/carrinho') } });
     } catch {
       toast.error(t('Não foi possível guardar no carrinho. Tente de novo.'));
@@ -145,6 +154,9 @@ function BuyBox({ listing, isOperator, settings }) {
       </div>
       <h1 className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">{listing.title}</h1>
       <Price cents={listing.price_cents} compareAt={listing.compare_at_cents} size="lg" />
+      {promoAte > 0 && listing.compare_at_cents > listing.price_cents && (
+        <p className="text-xs font-semibold text-red-600">{t('Oferta até {data}', { data: fmtData(promoAte, { day: '2-digit', month: '2-digit' }) })}</p>
+      )}
 
       {own ? (
         <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">{t('Este anúncio é seu. Responda às perguntas logo abaixo.')}</p>
@@ -154,13 +166,28 @@ function BuyBox({ listing, isOperator, settings }) {
         <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">{t('As compras no Mercado estão pausadas no momento. Salve nos favoritos e volte depois.')}</p>
       ) : (
         <>
-          <div className="flex items-center gap-3">
-            <label htmlFor="quantidade" className="text-sm font-semibold text-ink">{t('Quantidade')}</label>
-            <V2Select id="quantidade" value={qtd} onChange={(e) => setQtd(Number(e.target.value))} className="h-11 w-24 py-0">
-              {Array.from({ length: Math.min(10, disp) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
-            </V2Select>
-            {disp <= LOW_STOCK_MAX ? <StockUrgency quantity={disp} /> : <span className="text-xs text-gray-500">{t('{n} disponíveis', { n: disp })}</span>}
-          </div>
+          {variantes.length > 0 && (
+            <div className="flex items-center gap-3">
+              <label htmlFor="variacao" className="text-sm font-semibold text-ink">{t('Variação')}</label>
+              <V2Select id="variacao" value={variante} onChange={(e) => { setVariante(e.target.value); setQtd(1); }} className="h-11 flex-1 py-0">
+                <option value="">{t('Escolha…')}</option>
+                {variantes.map((v) => (
+                  <option key={v.id} value={v.id} disabled={!(Number(v.quantity) > 0)}>
+                    {v.label}{Number(v.quantity) > 0 ? '' : ` · ${t('esgotado')}`}
+                  </option>
+                ))}
+              </V2Select>
+            </div>
+          )}
+          {(!variantes.length || variante) && (
+            <div className="flex items-center gap-3">
+              <label htmlFor="quantidade" className="text-sm font-semibold text-ink">{t('Quantidade')}</label>
+              <V2Select id="quantidade" value={qtd} onChange={(e) => setQtd(Number(e.target.value))} className="h-11 w-24 py-0">
+                {Array.from({ length: Math.max(1, Math.min(10, disp)) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+              </V2Select>
+              {disp <= LOW_STOCK_MAX ? <StockUrgency quantity={disp} /> : <span className="text-xs text-gray-500">{t('{n} disponíveis', { n: disp })}</span>}
+            </div>
+          )}
           <div className="grid gap-2">
             <V2Button type="button" size="lg" disabled={busy} onClick={() => colocar('fechar')}>{t('Comprar agora')}</V2Button>
             <V2Button type="button" variant="secondary" disabled={busy} onClick={() => colocar('carrinho')}>
@@ -179,12 +206,12 @@ function BuyBox({ listing, isOperator, settings }) {
       )}
 
       <DeliveryAndGuarantees listing={listing} seller={seller.data} settings={settings} />
-      {oferta && <OfferDialog listing={listing} open={oferta} onOpenChange={setOferta} />}
+      {oferta && <OfferDialog listing={listing} variantId={variante || null} open={oferta} onOpenChange={setOferta} />}
     </V2Surface>
   );
 }
 
-function SellerCard({ listing }) {
+function SellerCard({ listing, isOperator }) {
   const s = useSeller(listing.seller_key);
   const seller = s.data;
   const nome = seller?.display_name || listing.seller_name;
@@ -203,6 +230,7 @@ function SellerCard({ listing }) {
         <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
       </Link>
       {s.isError && <V2ErrorState inline onRetry={() => s.refetch()} />}
+      {!isOperator && <FollowButton sellerKey={listing.seller_key} size="sm" className="w-full" />}
       {badges.length > 0 && (
         <div className="flex flex-wrap gap-1.5">{badges.map((b) => <V2Badge key={b.id} tone={b.id === 'top' ? 'acid' : 'neutral'}>{b.label}</V2Badge>)}</div>
       )}
@@ -324,6 +352,16 @@ function ListingPage() {
     const ids = parseRecent(readViewPreference(user.uid, RECENT_PREF));
     writeViewPreference(user.uid, RECENT_PREF, JSON.stringify(pushRecent(ids, listing.id)));
   }, [visivel, listing?.id, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Contagem de visualizações: uma por aba por anúncio, nunca de quem opera a loja.
+  useEffect(() => {
+    if (!visivel || !user?.uid || isOperator) return;
+    const k = `mercado_visto_${listing.id}`;
+    try {
+      if (sessionStorage.getItem(k)) return;
+      sessionStorage.setItem(k, '1');
+    } catch { return; }
+    bumpListingViews(listing);
+  }, [visivel, listing?.id, user?.uid, isOperator]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let corpo;
   if (q.isError) corpo = <V2ErrorState onRetry={() => q.refetch()} />;
@@ -361,7 +399,7 @@ function ListingPage() {
             <div className="space-y-4 lg:sticky lg:top-4">
               <BuyBox listing={listing} isOperator={isOperator} settings={settings.data} />
               {!isOperator && <StoreCoupons sellerKey={listing.seller_key} title={t('Cupons da loja')} compact />}
-              <SellerCard listing={listing} />
+              <SellerCard listing={listing} isOperator={isOperator} />
               {isPlatformAdmin && <AdminModerationBox listing={listing} />}
               {!isOperator && <ReportListingButton listing={listing} />}
             </div>

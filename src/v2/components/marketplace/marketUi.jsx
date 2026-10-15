@@ -7,7 +7,7 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
-  BadgeCheck, Box, Dumbbell, Footprints, GraduationCap, Heart, MapPin, Network, Shirt, Star, Store, Tag, Truck, Volleyball, Backpack,
+  BadgeCheck, Bell, BellOff, Box, Dumbbell, Footprints, GraduationCap, Heart, MapPin, Network, Shirt, Star, Store, Tag, Truck, Volleyball, Backpack,
   Building2,
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
@@ -19,8 +19,8 @@ import { coverOf } from '@/modules/marketplace/domain/listing';
 import MarketPhoto, { AiStamp } from './MarketPhoto';
 import { FULFILLMENT_LABELS, LISTING_TYPE } from '@/modules/marketplace/domain/constants';
 import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domain/reputation';
-import { useFavorites, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { useFavorites, useFollows, useToggleFavorite, useToggleFollow } from '@/modules/marketplace/hooks/useMarket';
+import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
 import { toast } from 'sonner';
 import { t, tk, tn } from '@/core/i18n';
 
@@ -157,6 +157,30 @@ export function FavoriteButton({ listingId, className, size = 'md' }) {
     >
       <Heart className={cn('h-5 w-5', on && 'fill-current')} />
     </button>
+  );
+}
+
+/** Seguir uma loja: aviso quando ela põe algo novo à venda. */
+export function FollowButton({ sellerKey, className, size = 'md' }) {
+  const { user } = useAuth();
+  const uid = user?.uid;
+  const segue = useFollows(uid);
+  const toggle = useToggleFollow(uid);
+  const on = (segue.data || []).some((f) => f.seller_key === sellerKey);
+  if (!uid) return <V2Button asChild size={size} variant="secondary" className={className}><Link to="/login">{t('Seguir loja')}</Link></V2Button>;
+  return (
+    <V2Button
+      type="button"
+      size={size}
+      variant={on ? 'ghost' : 'secondary'}
+      aria-pressed={on}
+      disabled={segue.isLoading}
+      className={className}
+      onClick={() => toggle.mutate({ sellerKey, on: !on }, { onError: () => toast.error(t('Não foi possível salvar. Tente de novo.')) })}
+    >
+      {on ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+      {on ? t('Seguindo') : t('Seguir loja')}
+    </V2Button>
   );
 }
 

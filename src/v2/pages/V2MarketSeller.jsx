@@ -24,7 +24,7 @@ import {
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import {
-  ListingCard, ListingGrid, ListingGridSkeleton, MarketGate, SellerTypeTag, Stars, VerifiedMark,
+  FollowButton, ListingCard, ListingGrid, ListingGridSkeleton, MarketGate, SellerTypeTag, Stars, VerifiedMark,
 } from '@/v2/components/marketplace/marketUi';
 
 const ORDENS = [{ id: 'recent', label: tk('Mais recentes') }, { id: 'price_asc', label: tk('Menor preço') }, { id: 'price_desc', label: tk('Maior preço') }];
@@ -96,6 +96,7 @@ function SellerPage() {
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
               {seller.city && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{[seller.city, seller.state].filter(Boolean).join(' · ')}</span>}
               {seller.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3.5 w-3.5" />{tn(seller.sales_count, '{n} venda concluída', '{n} vendas concluídas')}</span>}
+              {seller.follower_count > 0 && <span>{tn(seller.follower_count, '{n} seguidor', '{n} seguidores')}</span>}
               {seller.website && /^https:\/\//.test(seller.website) && (
                 <a href={seller.website} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold text-ink hover:underline">{t('Site')} <ExternalLink className="h-3.5 w-3.5" /></a>
               )}
@@ -103,6 +104,7 @@ function SellerPage() {
             {badges.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{badges.map((b) => <V2Badge key={b.id} tone={b.id === 'top' ? 'acid' : 'neutral'}>{b.label}</V2Badge>)}</div>}
           </div>
           <div className="flex flex-wrap gap-2">
+            {seller.owner_uid !== user?.uid && <FollowButton sellerKey={sellerKey} />}
             {vendeVale && seller.owner_uid !== user?.uid && (
               <V2Button type="button" onClick={() => setDarVale(true)}><Gift className="h-4 w-4" /> {t('Dar vale-presente')}</V2Button>
             )}

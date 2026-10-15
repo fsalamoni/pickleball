@@ -15,7 +15,7 @@ import { V2Button, V2Field, V2Input, V2Select, V2Textarea } from '@/v2/ui/primit
 import { fulfillmentLabel } from './marketUi';
 import { t } from '@/core/i18n';
 
-export default function OfferDialog({ listing, open, onOpenChange }) {
+export default function OfferDialog({ listing, variantId = null, open, onOpenChange }) {
   const navigate = useNavigate();
   const [valor, setValor] = useState('');
   const [msg, setMsg] = useState('');
@@ -28,8 +28,19 @@ export default function OfferDialog({ listing, open, onOpenChange }) {
     const cents = parseBRL(valor);
     const err = validateOfferAmount(listing, cents);
     if (err) { setErro(err); return; }
-    m.mutate({ action: 'create', listingId: listing.id, amount_cents: cents, fulfillment: entrega, message: msg }, {
+    m.mutate({ action: 'create', listingId: listing.id, variant_id: variantId || undefined, amount_cents: cents, fulfillment: entrega, message: msg }, {
       onSuccess: (r) => {
+        // O vendedor pode ter deixado a resposta pronta (aceita a partir de X, recusa abaixo de Y).
+        if (r.auto && r.orderId) {
+          toast.success(t('Oferta aceita na hora! Agora é só pagar pelo pedido.'));
+          onOpenChange(false);
+          navigate(`/mercado/pedidos/${r.orderId}`);
+          return;
+        }
+        if (r.auto) {
+          setErro(t('O vendedor não aceita ofertas nesse valor. Tente um valor mais perto do preço.'));
+          return;
+        }
         toast.success(t('Oferta enviada. Você recebe um aviso quando o vendedor responder.'));
         onOpenChange(false);
         navigate(`/mercado/ofertas/${r.id}`);

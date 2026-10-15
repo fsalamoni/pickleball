@@ -9,12 +9,47 @@ import { Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { isPublicListing } from '@/modules/marketplace/domain/listing';
-import { useFavorites, useListingsByIds, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
+import { useFavorites, useFollows, useListingsByIds, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
+import { useQuery } from '@tanstack/react-query';
+import { getSeller } from '@/modules/marketplace/services/marketService';
+import { FollowButton } from '@/v2/components/marketplace/marketUi';
+import { V2Avatar } from '@/v2/ui/primitives';
 import { V2Button, V2EmptyState, V2ErrorState, V2Page, V2PageIntro } from '@/v2/ui/primitives';
 import MarketTabs from '@/v2/components/marketplace/MarketTabs';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
 import { ListingCard, ListingGrid, ListingGridSkeleton, MarketGate } from '@/v2/components/marketplace/marketUi';
 import { t, tn } from '@/core/i18n';
+
+/** As lojas que a pessoa segue (aviso quando entra produto novo). */
+function FollowedStores({ uid }) {
+  const f = useFollows(uid);
+  const keys = (f.data || []).map((x) => x.seller_key);
+  const lojas = useQuery({
+    queryKey: ['mercado', 'seguindo', uid, 'lojas', keys.slice().sort().join(',')],
+    queryFn: async () => Object.fromEntries(await Promise.all(keys.map(async (k) => [k, await getSeller(k)]))),
+    enabled: keys.length > 0,
+  });
+  if (f.isError) return <V2ErrorState inline onRetry={() => f.refetch()} />;
+  if (!keys.length) return null;
+  return (
+    <section className="space-y-3" aria-label={t('Lojas que você segue')}>
+      <h2 className="font-display text-lg font-bold text-ink">{t('Lojas que você segue ({n})', { n: keys.length })}</h2>
+      {lojas.isError && <V2ErrorState inline onRetry={() => lojas.refetch()} />}
+      <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100">
+        {keys.map((k) => {
+          const s = lojas.data?.[k];
+          return (
+            <li key={k} className="flex items-center gap-3 px-4 py-3 text-sm">
+              <V2Avatar name={s?.display_name || k} photoUrl={s?.logo_url} size="sm" />
+              <Link to={`/mercado/vendedor/${k}`} className="min-w-0 flex-1 truncate font-bold text-ink hover:underline">{s?.display_name || t('Loja')}</Link>
+              <FollowButton sellerKey={k} size="sm" />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 function FavoritesPage() {
   const { user } = useAuth();
@@ -75,6 +110,7 @@ function FavoritesPage() {
       <V2PageIntro title={t('Salvos')} subtitle={ids.length ? tn(ids.length, '{n} anúncio guardado', '{n} anúncios guardados') : undefined} />
       <MarketTabs grupo="salvos" ativo="favoritos" />
       {corpo}
+      <FollowedStores uid={user?.uid} />
     </V2Page>
   );
 }

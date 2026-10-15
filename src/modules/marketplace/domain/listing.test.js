@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  effectiveListing, normalizeVariants, variantQuantity,
   validateListingInput, buildSearchTerms, tokenize, coverOf, buyability, parseVideoLink, listingCompleteness,
   duplicateListingInput, publishBlockers, vacationState,
 } from './listing.js';
@@ -94,5 +95,40 @@ describe('anúncio', () => {
     expect(vacationState([{ status: 'paused' }, { status: 'closed' }]).todosPausados).toBe(true);
     expect(vacationState([{ status: 'paused', admin_paused: true }]).todosPausados).toBe(false);
     expect(vacationState([]).todosPausados).toBe(false);
+  });
+  it('variações: cada uma com estoque; a quantidade do anúncio é a soma; nome repetido é erro', () => {
+    const r = validateListingInput({ ...base, variants: [{ label: 'M', quantity: 2 }, { id: 'g', label: 'G', quantity: '1' }, { label: '  ', quantity: 9 }] });
+    expect(r.ok).toBe(true);
+    expect(r.value.variants.map((v) => v.label)).toEqual(['M', 'G']);
+    expect(r.value.variants[1].id).toBe('g');
+    expect(r.value.variants[0].id).toMatch(/^v0_/);
+    expect(r.value.quantity).toBe(3);
+    expect(variantQuantity(r.value, 'g')).toBe(1);
+    expect(variantQuantity(r.value, 'nao-existe')).toBe(0);
+    expect(variantQuantity({ ...base, variants: [] }, null)).toBe(1);
+    expect(normalizeVariants([{ label: 'Azul', quantity: 1 }, { label: 'azul', quantity: 1 }]).error).toMatch(/mesmo nome/);
+    expect(validateListingInput({ ...base, variants: Array.from({ length: 21 }, (_, i) => ({ label: `v${i}`, quantity: 1 })) }).errors.variants).toMatch(/Até 20/);
+  });
+  it('promoção com prazo: só com preço "de"; vencida, o anúncio lido volta ao preço cheio', () => {
+    const ate = Date.now() + 86400000;
+    const r = validateListingInput({ ...base, compare_at_cents: 120000, sale_until_ms: ate });
+    expect(r.value.sale_until_ms).toBe(ate);
+    expect(validateListingInput({ ...base, sale_until_ms: ate }).value.sale_until_ms).toBeNull();
+    const l = { ...r.value, id: 'l' };
+    expect(effectiveListing(l, ate - 1)).toBe(l);
+    const depois = effectiveListing(l, ate + 1);
+    expect(depois.price_cents).toBe(120000);
+    expect(depois.compare_at_cents).toBeNull();
+    expect(depois.sale_until_ms).toBeNull();
+    expect(effectiveListing({ price_cents: 10, compare_at_cents: 5, sale_until_ms: 1 }, 2).price_cents).toBe(10);
+  });
+  it('aceite e recusa automáticos de oferta: só com ofertas ligadas, abaixo do preço e em ordem', () => {
+    const r = validateListingInput({ ...base, accepts_offers: true, offer_auto_accept_cents: 80000, offer_auto_decline_cents: 50000 });
+    expect(r.ok).toBe(true);
+    expect(r.value.offer_auto_accept_cents).toBe(80000);
+    expect(r.value.offer_auto_decline_cents).toBe(50000);
+    expect(validateListingInput({ ...base, offer_auto_accept_cents: 80000 }).value.offer_auto_accept_cents).toBeNull();
+    expect(validateListingInput({ ...base, accepts_offers: true, offer_auto_accept_cents: 90000 }).errors.offer_auto_accept_cents).toBeTruthy();
+    expect(validateListingInput({ ...base, accepts_offers: true, offer_auto_accept_cents: 60000, offer_auto_decline_cents: 70000 }).errors.offer_auto_decline_cents).toBeTruthy();
   });
 });

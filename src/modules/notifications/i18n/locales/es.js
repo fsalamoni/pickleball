@@ -328,4 +328,8 @@ export default {
   "{vendedor} marcou o pedido {codigo} como entregue. Confirme o recebimento.": "{vendedor} marcó el pedido {codigo} como entregado. Confirma la recepción.",
   "{vendedor} não encontrou o Pix do pedido {codigo}.": "{vendedor} no encontró el Pix del pedido {codigo}.",
   "{vendedor} recusou o pedido {codigo}.": "{vendedor} rechazó el pedido {codigo}.",
+  "Sua oferta por \"{anuncio}\" foi aceita na hora. Pague pelo Pix no pedido.": "Tu oferta por \"{anuncio}\" fue aceptada al instante. Paga por Pix en el pedido.",
+  "Oferta de {nome} por \"{anuncio}\" aceita automaticamente, pelo valor que você definiu.": "La oferta de {nome} por \"{anuncio}\" se aceptó automáticamente, por el valor que definiste.",
+  "Novidade em {loja}": "Novedad en {loja}",
+  "{loja} pôs à venda: {anuncio}.": "{loja} puso a la venta: {anuncio}.",
 };

@@ -277,7 +277,7 @@ function ListingRow({ listing: l, selecionavel, marcado, onMarcar, acoes }) {
         <span className="min-w-0">
           <span className="block truncate font-bold text-ink">{l.title || t('Sem título')}</span>
           <span className="block text-sm text-gray-600">{l.compare_at_cents > l.price_cents && <span className="mr-1 text-gray-500 line-through">{formatBRL(l.compare_at_cents)}</span>}{formatBRL(l.price_cents)} · {t('{n} em estoque', { n: l.quantity ?? 0 })}{l.quantity_sold ? ` · ${tn(l.quantity_sold, '{n} vendido', '{n} vendidos')}` : ''}</span>
-          <span className="block text-xs text-gray-500">{l.favorite_count ? `${t('{n} favoritos', { n: l.favorite_count })} · ` : ''}{t('{pct}% completo', { pct })}</span>
+          <span className="block text-xs text-gray-500">{l.view_count ? `${tn(l.view_count, '{n} visualização', '{n} visualizações')} · ` : ''}{l.favorite_count ? `${t('{n} favoritos', { n: l.favorite_count })} · ` : ''}{t('{pct}% completo', { pct })}</span>
         </span>
       </Link>
       <div className="flex flex-wrap items-center gap-2">
@@ -557,7 +557,7 @@ function QuestionsTab({ sellerKey }) {
 function ReviewsTab({ sellerKey }) {
   return (
     <V2Surface>
-      <SellerReviews sellerKey={sellerKey} title={t('O que os compradores disseram')} emptyText={t('Ainda sem avaliações visíveis.')} />
+      <SellerReviews sellerKey={sellerKey} canReply title={t('O que os compradores disseram')} emptyText={t('Ainda sem avaliações visíveis.')} />
     </V2Surface>
   );
 }
