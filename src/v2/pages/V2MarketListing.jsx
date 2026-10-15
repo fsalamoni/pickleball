@@ -11,12 +11,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ChevronRight, HandCoins, MapPin, PackageCheck, Share2, ShieldCheck, ShoppingCart, Truck, Users, Store as StoreIcon,
+  CalendarDays, ChevronRight, Clock, HandCoins, MapPin, PackageCheck, RotateCcw, Share2, ShieldCheck, ShoppingCart, Truck, Users,
+  Store as StoreIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
-import { RECENT_PREF, parseRecent, pushRecent } from '@/modules/marketplace/domain/discovery';
+import { instanteEmMs } from '@/core/domain/instant';
+import { RECENT_PREF, parseRecent, pushRecent, recentListings } from '@/modules/marketplace/domain/discovery';
 import ShareImageDialog, { MarketShareCard } from '@/v2/components/marketplace/promo/ShareImageDialog';
 import { StoreCoupons } from '@/v2/components/marketplace/promo/GiftCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
@@ -35,9 +37,9 @@ import ListingQuestions from '@/v2/components/marketplace/ListingQuestions';
 import OfferDialog from '@/v2/components/marketplace/OfferDialog';
 import { AdminModerationBox, ReportListingButton } from '@/v2/components/marketplace/ListingModeration';
 import {
-  FavoriteButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, VerifiedMark,
+  FavoriteButton, ListingCard, ListingGrid, MarketGate, Price, SellerTypeTag, Stars, StockUrgency, VerifiedMark, LOW_STOCK_MAX,
 } from '@/v2/components/marketplace/marketUi';
-import { t, tn } from '@/core/i18n';
+import { t, tn, fmtData } from '@/core/i18n';
 
 function Breadcrumb({ slug }) {
   const trilha = categoryBreadcrumb(slug);
@@ -65,10 +67,49 @@ function deliveryLines(l) {
   });
 }
 
+/** Entrega e garantias num bloco só: frete, formas de receber, prazos do vendedor e a proteção do comprador. */
+function DeliveryAndGuarantees({ listing, seller, settings }) {
+  const dias = settings?.dispute_window_days;
+  const envia = seller?.policies?.ship_within_hours > 0 && (listing.fulfillment || []).includes('shipping');
+  const devolve = seller?.policies?.return_days > 0;
+  return (
+    <section aria-label={t('Entrega e garantias')} className="space-y-2 rounded-2xl bg-paper p-4">
+      <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Entrega e garantias')}</h2>
+      <ul className="space-y-2">
+        {deliveryLines(listing).map(({ f, Icon, text }) => (
+          <li key={f} className="flex items-start gap-2 text-sm text-ink">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-green-700" /> <span>{text}</span>
+          </li>
+        ))}
+        {envia && (
+          <li className="flex items-start gap-2 text-sm text-ink">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-green-700" /> <span>{t('Envia em até {n} h', { n: seller.policies.ship_within_hours })}</span>
+          </li>
+        )}
+        {devolve && (
+          <li className="flex items-start gap-2 text-sm text-ink">
+            <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-green-700" /> <span>{t('Devolução em até {n} dias', { n: seller.policies.return_days })}</span>
+          </li>
+        )}
+        <li className="flex items-start gap-2 text-xs text-gray-600">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
+          <span>
+            {dias
+              ? t('Pix direto ao vendedor · comprador protegido por disputa em até {n} dias', { n: dias })
+              : t('Pix direto ao vendedor · comprador protegido por disputa')}
+            {' '}{t('A chave só aparece depois que o vendedor aceita o pedido; se o produto não chegar ou vier diferente, relate pelo pedido.')}
+          </span>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 function BuyBox({ listing, isOperator, settings }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const cart = useMarketCart(user?.uid);
+  const seller = useSeller(listing.seller_key);
   const [qtd, setQtd] = useState(1);
   const [oferta, setOferta] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,7 +125,9 @@ function BuyBox({ listing, isOperator, settings }) {
     try {
       const r = noCarrinho ? (await cart.setQuantity(listing.id, qtd), { error: null }) : await cart.add(listing, qtd);
       if (r.error) { toast.error(r.error); return; }
-      if (depois === 'fechar') navigate('/mercado/carrinho?fechar=1');
+      // Já estava no carrinho com outra quantidade: a mudança é dita, nunca calada.
+      if (noCarrinho && noCarrinho.quantity !== qtd) toast.info(t('Quantidade atualizada para {n}', { n: qtd }));
+      if (depois === 'fechar') navigate(`/mercado/carrinho?fechar=1&so=${encodeURIComponent(listing.id)}`);
       else toast.success(t('No carrinho.'), { action: { label: t('Ver carrinho'), onClick: () => navigate('/mercado/carrinho') } });
     } catch {
       toast.error(t('Não foi possível guardar no carrinho. Tente de novo.'));
@@ -103,14 +146,6 @@ function BuyBox({ listing, isOperator, settings }) {
       <h1 className="font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">{listing.title}</h1>
       <Price cents={listing.price_cents} compareAt={listing.compare_at_cents} size="lg" />
 
-      <ul className="space-y-2">
-        {deliveryLines(listing).map(({ f, Icon, text }) => (
-          <li key={f} className="flex items-start gap-2 text-sm text-ink">
-            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-green-700" /> <span>{text}</span>
-          </li>
-        ))}
-      </ul>
-
       {own ? (
         <p className="rounded-2xl bg-paper p-4 text-sm text-gray-600">{t('Este anúncio é seu. Responda às perguntas logo abaixo.')}</p>
       ) : !pode.ok ? (
@@ -124,7 +159,7 @@ function BuyBox({ listing, isOperator, settings }) {
             <V2Select id="quantidade" value={qtd} onChange={(e) => setQtd(Number(e.target.value))} className="h-11 w-24 py-0">
               {Array.from({ length: Math.min(10, disp) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
             </V2Select>
-            <span className="text-xs text-gray-500">{disp === 1 ? t('Última unidade') : t('{n} disponíveis', { n: disp })}</span>
+            {disp <= LOW_STOCK_MAX ? <StockUrgency quantity={disp} /> : <span className="text-xs text-gray-500">{t('{n} disponíveis', { n: disp })}</span>}
           </div>
           <div className="grid gap-2">
             <V2Button type="button" size="lg" disabled={busy} onClick={() => colocar('fechar')}>{t('Comprar agora')}</V2Button>
@@ -143,10 +178,7 @@ function BuyBox({ listing, isOperator, settings }) {
         </>
       )}
 
-      <div className="flex items-start gap-2 rounded-2xl bg-paper p-3 text-xs text-gray-600">
-        <ShieldCheck className="h-4 w-4 shrink-0 text-ink" />
-        <span>{t('Você paga pelo Pix direto ao vendedor, só depois de ele aceitar o pedido. Se o produto não chegar ou vier diferente, relate pelo pedido e a moderação analisa.')}</span>
-      </div>
+      <DeliveryAndGuarantees listing={listing} seller={seller.data} settings={settings} />
       {oferta && <OfferDialog listing={listing} open={oferta} onOpenChange={setOferta} />}
     </V2Surface>
   );
@@ -157,15 +189,18 @@ function SellerCard({ listing }) {
   const seller = s.data;
   const nome = seller?.display_name || listing.seller_name;
   const badges = seller ? sellerBadges(seller) : [];
+  const desdeMs = instanteEmMs(seller?.created_at);
+  const desde = Number.isFinite(desdeMs) ? fmtData(desdeMs, { month: 'short', year: 'numeric' }) : '';
   return (
     <V2Surface variant="compacto" className="space-y-3 p-5">
       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{t('Vendido por')}</p>
-      <Link to={`/mercado/vendedor/${listing.seller_key}`} className="flex items-center gap-3 hover:underline">
+      <Link to={`/mercado/vendedor/${listing.seller_key}`} aria-label={t('Ver a vitrine de {nome}', { nome })} className="flex items-center gap-3 hover:underline">
         <V2Avatar name={nome} photoUrl={seller?.logo_url} />
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1 font-bold text-ink"><span className="truncate">{nome}</span>{seller?.verified && <VerifiedMark />}</span>
-          <Stars avg={seller?.rating_avg ?? listing.seller_rating_avg} count={seller?.rating_count ?? listing.seller_rating_count} />
+          <Stars avg={seller?.rating_avg ?? listing.seller_rating_avg} count={seller?.rating_count ?? listing.seller_rating_count} sales={seller?.sales_count} />
         </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
       </Link>
       {s.isError && <V2ErrorState inline onRetry={() => s.refetch()} />}
       {badges.length > 0 && (
@@ -174,8 +209,8 @@ function SellerCard({ listing }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
         {(seller?.city || listing.city) && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{[seller?.city || listing.city, seller?.state || listing.state].filter(Boolean).join(' · ')}</span>}
         {seller?.sales_count > 0 && <span className="inline-flex items-center gap-1"><PackageCheck className="h-3 w-3" />{tn(seller.sales_count, '{n} venda concluída', '{n} vendas concluídas')}</span>}
+        {desde && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{t('No PickleRush desde {data}', { data: desde })}</span>}
       </div>
-      <Link to={`/mercado/vendedor/${listing.seller_key}`} className="inline-flex text-sm font-bold text-ink hover:underline">{t('Ver a vitrine do vendedor')}</Link>
     </V2Surface>
   );
 }
@@ -235,12 +270,26 @@ function Similar({ listing }) {
   );
 }
 
+/** "Vistos recentemente": a mesma lista do aparelho que a vitrine usa, sem o anúncio aberto. */
+function RecentlyViewed({ listing, uid }) {
+  const feed = usePublicListings();
+  const [ids] = useState(() => parseRecent(readViewPreference(uid, RECENT_PREF)));
+  const itens = recentListings(ids, feed.data || [], { except: listing.id }).slice(0, 4);
+  if (!itens.length) return null;
+  return (
+    <section aria-label={t('Vistos recentemente')} className="space-y-3">
+      <h2 className="font-display text-xl font-bold text-ink">{t('Vistos recentemente')}</h2>
+      <ListingGrid>{itens.map((l) => <ListingCard key={l.id} listing={l} />)}</ListingGrid>
+    </section>
+  );
+}
+
 function ShareButton({ listing }) {
   const [open, setOpen] = useState(false);
   const url = typeof window !== 'undefined' ? `${window.location.origin}/mercado/anuncio/${listing.id}` : '';
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={t('Compartilhar o anúncio')} className="flex h-11 w-11 items-center justify-center rounded-full bg-paper-pure/90 text-ink shadow-sm">
+      <button type="button" onClick={() => setOpen(true)} aria-label={t('Compartilhar o anúncio')} className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-100 bg-paper-pure text-ink shadow-sm hover:border-ink">
         <Share2 className="h-5 w-5" />
       </button>
       <ShareImageDialog
@@ -296,14 +345,17 @@ function ListingPage() {
   } else {
     corpo = (
       <div className="space-y-10">
-        <Breadcrumb slug={listing.category_slug} />
+        {/* Favoritar e compartilhar ficam FORA da foto: por cima dela disputavam lugar com o carimbo "Gerado por IA". */}
+        <div className="flex items-center justify-between gap-3">
+          <Breadcrumb slug={listing.category_slug} />
+          <div className="flex shrink-0 gap-2">
+            <FavoriteButton listingId={listing.id} className="border border-gray-100" />
+            <ShareButton listing={listing} />
+          </div>
+        </div>
         <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
-          <div className="relative lg:col-span-7">
+          <div className="lg:col-span-7">
             <ListingGallery listing={listing} />
-            <div className="absolute right-3 top-3 flex flex-col gap-2">
-              <FavoriteButton listingId={listing.id} />
-              <ShareButton listing={listing} />
-            </div>
           </div>
           <div className="space-y-4 lg:col-span-5">
             <div className="space-y-4 lg:sticky lg:top-4">
@@ -329,6 +381,7 @@ function ListingPage() {
         </div>
         <MoreFrom listing={listing} />
         <Similar listing={listing} />
+        <RecentlyViewed listing={listing} uid={user?.uid} />
       </div>
     );
   }

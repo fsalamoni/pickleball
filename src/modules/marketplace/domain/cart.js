@@ -84,6 +84,17 @@ export function moveToCart(cart, listingId) {
   return c;
 }
 
+/**
+ * "Comprar agora" fecha SÓ um item: o carrinho que vai ao fechamento tem só
+ * aquela linha, e o resto fica intacto no documento. Se o item não está no
+ * carrinho (a gravação falhou), vale o carrinho inteiro.
+ */
+export function cartOnlyListing(cart, listingId) {
+  const c = clean(cart);
+  const line = c.items.find((x) => x.listing_id === listingId);
+  return line ? { items: [line], saved: [] } : c;
+}
+
 /** Quantas unidades no carrinho (o número do selo). */
 export function cartCount(cart) {
   return clean(cart).items.reduce((n, i) => n + i.quantity, 0);

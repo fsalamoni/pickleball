@@ -214,3 +214,9 @@ export const TEXT_LIMITS = Object.freeze({
   answer: 1000,
   review: 1000,
 });
+
+/** Motivos oferecidos ao cancelar/recusar (o texto gravado é "<rótulo> · <detalhe>"). */
+export const CANCEL_REASONS = Object.freeze({
+  buyer: [tk('Comprei por engano'), tk('Encontrei mais barato'), tk('Demora na resposta'), tk('Mudei de ideia'), tk('Outro')],
+  seller: [tk('Sem estoque'), tk('Não consigo entregar nessa região'), tk('Preço errado no anúncio'), tk('Comprador não respondeu'), tk('Outro')],
+});

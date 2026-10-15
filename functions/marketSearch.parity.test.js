@@ -16,16 +16,16 @@ const dia = 86400000;
 const agora = Date.UTC(2026, 9, 14, 12);
 const LISTINGS = [
   { id: '1', status: 'active', quantity: 1, title: 'Raquete JOOLA Perseus', category_path: ['raquetes', 'raquete-controle'], type: 'product_used', price_cents: 80000, seller_type: 'athlete', fulfillment: ['meetup'], state: 'SP', city: 'São Paulo', attributes: { core_mm: '16' }, search_terms: ['raquete', 'joola'], accepts_offers: true, published_at: agora - dia, created_by: 'u1' },
-  { id: '2', status: 'active', quantity: 3, title: 'Bola Franklin X-40 (6 un.)', category_path: ['bolas'], type: 'product_new', price_cents: 9000, seller_type: 'store', fulfillment: ['shipping', 'pickup'], state: 'RJ', city: 'Niterói', published_at: agora - 3 * dia, created_by: 'u2' },
+  { id: '2', status: 'active', quantity: 3, title: 'Bola Franklin X-40 (6 un.)', category_path: ['bolas'], type: 'product_new', price_cents: 9000, seller_type: 'store', fulfillment: ['shipping', 'pickup'], shipping_cents: 0, state: 'RJ', city: 'Niterói', published_at: agora - 3 * dia, created_by: 'u2' },
   { id: '3', status: 'sold_out', quantity: 0, title: 'Raquete Selkirk Vanguard', category_path: ['raquetes'], type: 'product_new', price_cents: 120000, seller_type: 'arena', fulfillment: ['pickup'], state: 'SP', city: 'Campinas', published_at: agora - 2 * dia },
-  { id: '4', status: 'active', quantity: 2, title: 'Tênis de quadra', description: 'Ótimo para pickleball, número 42', category_path: ['calcados'], type: 'product_used', price_cents: 25000, seller_type: 'coach', fulfillment: ['meetup', 'shipping'], state: 'sp', city: 'sao paulo', created_at_ms: agora - 5 * dia },
+  { id: '4', status: 'active', quantity: 2, title: 'Tênis de quadra', description: 'Ótimo para pickleball, número 42', category_path: ['calcados'], type: 'product_used', price_cents: 25000, seller_type: 'coach', fulfillment: ['meetup', 'shipping'], shipping_cents: 1500, state: 'sp', city: 'sao paulo', created_at_ms: agora - 5 * dia },
   { id: '5', status: 'paused', quantity: 1, title: 'Raquete pausada', category_path: ['raquetes'], type: 'product_new', price_cents: 50000, published_at: agora },
   { id: '6', status: 'active', quantity: 0, title: 'Raquete esgotada mas ativa', category_path: ['raquetes'], type: 'product_new', price_cents: 50000, published_at: agora },
 ];
 const BUSCAS = [
   '', 'q=raquete', 'q=Ráquete+joola', 'cat=raquetes', 'estado=used', 'estado=new&uf=sp', 'min=100&max=900',
   'vende=store,coach', 'entrega=shipping', 'oferta=1', 'cidade=S%C3%A3o+Paulo', 'cat=raquetes&a_core_mm=16',
-  'q=pickleball', 'q=de+para', 'max=abc&vende=hacker', 'q=tenis&estado=used&entrega=meetup',
+  'q=pickleball', 'q=de+para', 'max=abc&vende=hacker', 'q=tenis&estado=used&entrega=meetup', 'frete=gratis', 'cat=bolas&frete=gratis',
 ];
 
 describe('paridade: busca do Mercado', () => {

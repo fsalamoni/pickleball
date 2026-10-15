@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { i18nDoAviso, textoDoAviso } from '@/core/i18n/avisos';
 import {
-  sellerKeyFor, parseSellerKey, slugify, sellingIdentities, isValidCnpj, maskCnpj, validatePixKey, validatePayment, validateStoreApplication, sellerReviewNotice,
+  sellerKeyFor, parseSellerKey, slugify, sellingIdentities, isValidCnpj, maskCnpj, validatePixKey, validatePayment, validateStoreApplication, sellerReviewNotice, validateSellerPolicies,
 } from './seller.js';
 
 describe('vendedor', () => {
@@ -72,5 +72,14 @@ describe('sellerReviewNotice', () => {
     const n = sellerReviewNotice({ ...loja, display_name: '' }, { status: 'active' });
     expect(txt(n.title)).toBe('sua loja foi aprovada no Mercado');
     expect(i18nDoAviso(n).title).toEqual({ key: '{nome} foi aprovada no Mercado', params: { nome: 'sua loja' }, tparams: ['nome'] });
+  });
+  it('políticas: horas 1–240, dias 0–90, loja ≥ 7 dias', () => {
+    expect(validateSellerPolicies({ ship_within_hours: 48, return_days: 0 }).ok).toBe(true);
+    expect(validateSellerPolicies({ ship_within_hours: 48, return_days: 0 }).value).toEqual({ ship_within_hours: 48, return_days: 0 });
+    expect(validateSellerPolicies({ ship_within_hours: 0, return_days: 7 }).errors.ship_within_hours).toBeTruthy();
+    expect(validateSellerPolicies({ ship_within_hours: 241, return_days: 7 }).errors.ship_within_hours).toBeTruthy();
+    expect(validateSellerPolicies({ ship_within_hours: 24, return_days: 91 }).errors.return_days).toBeTruthy();
+    expect(validateSellerPolicies({ ship_within_hours: 24, return_days: 3 }, { sellerType: 'store' }).errors.return_days).toMatch(/7 dias/);
+    expect(validateSellerPolicies({ ship_within_hours: 24, return_days: 3 }, { sellerType: 'athlete' }).ok).toBe(true);
   });
 });

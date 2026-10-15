@@ -200,7 +200,7 @@ function Showcase({ listings, stores, settings, uid }) {
  * "Salvar busca": guarda os filtros de agora e avisa quando chegar anúncio
  * novo que bata com eles (o servidor confere uma vez por dia).
  */
-function SaveSearchButton({ filters }) {
+function SaveSearchButton({ filters, rotulo }) {
   const { user } = useAuth();
   const buscas = useSavedSearches(user?.uid);
   const { save } = useSavedSearchActions(user?.uid);
@@ -228,8 +228,41 @@ function SaveSearchButton({ filters }) {
   };
   return (
     <V2Button type="button" variant="ghost" size="sm" onClick={salvar} disabled={buscas.isLoading || save.isPending}>
-      <Bell className="h-4 w-4" /> {save.isPending ? t('Salvando…') : t('Salvar busca')}
+      <Bell className="h-4 w-4" /> {save.isPending ? t('Salvando…') : (rotulo || t('Salvar busca'))}
     </V2Button>
+  );
+}
+
+/**
+ * Nada encontrado: diz O QUE se buscou, dá os dois caminhos (limpar filtros,
+ * salvar a busca para ser avisado) e mostra "Talvez você goste" — a mesma
+ * categoria, ou os mais novos.
+ */
+function NoResults({ base, filters, setFilters, nFiltros }) {
+  const ativos = base.filter((l) => l.status === 'active' && l.quantity > 0);
+  const mesmaCat = filters.cat ? ativos.filter((l) => (l.category_path || [l.category_slug]).includes(filters.cat)) : [];
+  const talvez = searchListings(mesmaCat.length ? mesmaCat : ativos, { sort: 'recent' }).items.slice(0, 8);
+  return (
+    <div className="space-y-8">
+      <V2EmptyState
+        icon={SlidersHorizontal}
+        title={filters.q ? t('Nada encontrado para “{busca}”', { busca: filters.q }) : t('Nada encontrado com esses filtros')}
+        description={nFiltros ? t('Tente outras palavras ou tire algum filtro. Se preferir, salve esta busca: avisamos quando chegar anúncio que combine.') : t('Tente outras palavras. Se preferir, salve esta busca: avisamos quando chegar anúncio que combine.')}
+        action={(
+          <div className="flex flex-wrap justify-center gap-2">
+            {nFiltros > 0 && <V2Button variant="secondary" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })} type="button">{t('Limpar filtros')}</V2Button>}
+            <SaveSearchButton filters={filters} rotulo={t('Salvar esta busca para ser avisado')} />
+            <V2Button variant="ghost" onClick={() => setFilters({ ...EMPTY_FILTERS })} type="button">{t('Ver todos os anúncios')}</V2Button>
+          </div>
+        )}
+      />
+      {talvez.length > 0 && (
+        <section className="space-y-3" aria-label={t('Talvez você goste')}>
+          <h2 className="font-display text-xl font-bold text-ink">{t('Talvez você goste')}</h2>
+          <ListingGrid className="xl:grid-cols-3 2xl:grid-cols-4">{talvez.map((l) => <ListingCard key={l.id} listing={l} />)}</ListingGrid>
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -311,12 +344,7 @@ function Results({ listings, filters, setFilters, settings, viewer }) {
         </aside>
         <div className="min-w-0 space-y-6">
           {!items.length ? (
-            <V2EmptyState
-              icon={SlidersHorizontal}
-              title={t('Nada encontrado com esses filtros')}
-              description={filters.q ? t('Tente outras palavras ou tire algum filtro.') : t('Tire algum filtro para ver mais anúncios.')}
-              action={<V2Button variant="ghost" onClick={() => setFilters({ ...EMPTY_FILTERS })} type="button">{t('Ver todos os anúncios')}</V2Button>}
-            />
+            <NoResults base={base} filters={filters} setFilters={setFilters} nFiltros={nFiltros} />
           ) : (
             <>
               <ListingGrid className="xl:grid-cols-3 2xl:grid-cols-4">
@@ -369,8 +397,8 @@ function MarketPage() {
 
   return (
     <V2Page largura="larga" className="space-y-6 pb-16">
-      {/* Na vitrine os departamentos já aparecem em grade, com a contagem. */}
-      <MarketHeader categorias={buscando} />
+      {/* Os departamentos ficam num lugar só: a grade na vitrine, o painel de filtros nos resultados. */}
+      <MarketHeader categorias={false} listings={feed.data} />
       {corpo}
     </V2Page>
   );

@@ -155,3 +155,35 @@ export function orderTimeline(order) {
   const at = rank[order?.status];
   return steps.map((s, i) => ({ ...s, done: at != null && i <= at, current: i === at }));
 }
+
+/** Pedido que PAROU no meio do caminho (o marcador vermelho/âmbar da linha do tempo). */
+const STOPPED = Object.freeze({
+  cancelled: { label: tk('Cancelado'), tone: 'danger' },
+  expired: { label: tk('Expirado'), tone: 'danger' },
+  disputed: { label: tk('Em disputa'), tone: 'warning' },
+});
+
+/**
+ * A linha do tempo COMPLETA: em pedido vivo é `orderTimeline`; em cancelado,
+ * expirado ou em disputa, os passos feitos saem dos carimbos de data
+ * (`accepted_at_ms`, `paid_at_ms`…) e `stopped` diz onde e quando parou —
+ * `afterIndex` é o último passo concluído (−1 = antes de qualquer um).
+ * @returns {{ steps: Array, stopped: null | { status, label, tone, at_ms, afterIndex } }}
+ */
+export function timelineSteps(order) {
+  const parada = STOPPED[order?.status];
+  if (!parada) return { steps: orderTimeline(order), stopped: null };
+  const digital = order.fulfillment === 'digital';
+  const base = orderTimeline({ ...order, status: 'placed' }).map((s) => ({ ...s, done: false, current: false }));
+  const feitos = digital
+    ? ['accepted', 'paid', 'delivered'].map((k) => Boolean(order[`${k}_at_ms`]))
+    : [true, order.accepted_at_ms, order.paid_at_ms, order.shipped_at_ms || order.ready_at_ms || order.delivered_at_ms, false].map(Boolean);
+  let afterIndex = -1;
+  const steps = base.map((s, i) => {
+    const done = feitos[i] && (i === 0 || feitos[i - 1] || digital);
+    if (done) afterIndex = i;
+    return { ...s, done };
+  });
+  const at_ms = Number(order.cancelled_at_ms || (order.status === 'disputed' ? order.status_at_ms : 0)) || null;
+  return { steps, stopped: { status: order.status, label: t(parada.label), tone: parada.tone, at_ms, afterIndex } };
+}

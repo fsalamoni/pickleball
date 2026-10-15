@@ -22,7 +22,7 @@ import { ratingLabel, MIN_REVIEWS_FOR_RATING } from '@/modules/marketplace/domai
 import { useFavorites, useToggleFavorite } from '@/modules/marketplace/hooks/useMarket';
 import { V2Skeleton } from '@/v2/ui/primitives';
 import { toast } from 'sonner';
-import { t, tk } from '@/core/i18n';
+import { t, tk, tn } from '@/core/i18n';
 
 /**
  * O Mercado só existe com a flag ligada. Enquanto as flags carregam, nada;
@@ -92,10 +92,14 @@ export function Price({ cents, compareAt, size = 'md', className }) {
   );
 }
 
-/** Estrelas + nota. Vendedor com menos de 3 avaliações é "novo" (média de 1 avaliação não diz nada). */
-export function Stars({ avg = 0, count = 0, className, showLabel = true }) {
+/**
+ * Estrelas + nota. Com menos de 3 avaliações a média não diz nada: vale o
+ * número de vendas (`sales`), e só quem nunca vendeu é "Vendedor novo".
+ */
+export function Stars({ avg = 0, count = 0, sales = 0, className, showLabel = true }) {
   if (!(count >= MIN_REVIEWS_FOR_RATING)) {
-    return showLabel ? <span className={cn('text-xs font-medium text-gray-500', className)}>{t('Vendedor novo')}</span> : null;
+    if (!showLabel) return null;
+    return <span className={cn('text-xs font-medium text-gray-500', className)}>{sales > 0 ? tn(sales, '{n} venda', '{n} vendas') : t('Vendedor novo')}</span>;
   }
   const full = Math.round(avg);
   return (
@@ -156,13 +160,26 @@ export function FavoriteButton({ listingId, className, size = 'md' }) {
   );
 }
 
+/** "Só 2 restantes": urgência de estoque, só quando restam 1 a 3 unidades. */
+export const LOW_STOCK_MAX = 3;
+export function StockUrgency({ quantity, className }) {
+  const n = Math.floor(Number(quantity) || 0);
+  if (n < 1 || n > LOW_STOCK_MAX) return null;
+  return <span className={cn('text-xs font-bold text-amber-700', className)}>{tn(n, 'Só {n} restante', 'Só {n} restantes')}</span>;
+}
+
 const CONDITION_SHORT = { like_new: tk('Usado · como novo'), good: tk('Usado · bom estado'), fair: tk('Usado · marcas de uso') };
 
-/** O cartão do anúncio na vitrine e nas listas. */
-export function ListingCard({ listing, className, showFavorite = true }) {
+/**
+ * O cartão do anúncio na vitrine e nas listas. `showPriceDrop` (favoritos):
+ * mostra "Preço baixou" com o preço antigo quando o anúncio já foi mais caro
+ * (`price_alert_cents`, gravado pelo servidor — só leitura).
+ */
+export function ListingCard({ listing, className, showFavorite = true, showPriceDrop = false }) {
   const cover = coverOf(listing);
   const sold = listing.status === 'sold_out' || !(listing.quantity > 0);
   const ship = (listing.fulfillment || []).includes('shipping');
+  const baixou = showPriceDrop && listing.price_alert_cents > listing.price_cents;
   // O coração fica FORA do link: botão dentro de link é dois controles num só
   // para o leitor de tela e o teclado.
   return (
@@ -185,6 +202,11 @@ export function ListingCard({ listing, className, showFavorite = true }) {
           <div className="flex h-full items-center justify-center text-gray-300"><Box className="h-12 w-12" /></div>
         )}
         {cover?.ai_generated && <AiStamp className="absolute bottom-3 left-3" />}
+        {baixou && (
+          <span className="absolute bottom-3 right-3 rounded-full bg-green-600 px-3 py-1 text-xs font-bold text-white">
+            {t('Preço baixou · de {valor}', { valor: formatBRL(listing.price_alert_cents) })}
+          </span>
+        )}
         {sold && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">{t('Esgotado')}</span>}
         {!sold && listing.type === LISTING_TYPE.USED && (
           <span className="absolute left-3 top-3 rounded-full bg-paper-pure/90 px-3 py-1 text-xs font-bold text-ink backdrop-blur">
@@ -203,6 +225,8 @@ export function ListingCard({ listing, className, showFavorite = true }) {
             </span>
           )}
           {listing.accepts_offers && !sold && <span className="text-xs font-medium text-blue-600">{t('Aceita oferta')}</span>}
+          {listing.quantity_sold > 0 && <span className="text-xs text-gray-500">{tn(listing.quantity_sold, '{n} vendido', '{n} vendidos')}</span>}
+          {!sold && <StockUrgency quantity={listing.quantity} />}
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-gray-500">
           <span className="inline-flex min-w-0 items-center gap-1 truncate">

@@ -14,6 +14,26 @@ const L = [
 ];
 
 describe('busca do Mercado', () => {
+  it('frete grátis: envia, custa zero e não é a combinar; vai e volta na URL', () => {
+    const G = [
+      { ...L[1], id: 'g', shipping_cents: 0 },
+      { ...L[1], id: 'p', shipping_cents: 1500 },
+      { ...L[1], id: 'c', shipping_cents: 0, shipping_to_agree: true },
+      { ...L[0], id: 'm', shipping_cents: 0 },
+    ];
+    expect(filterListings(G, { ...EMPTY_FILTERS, freeShipping: true }).map((l) => l.id)).toEqual(['g']);
+    expect(facetCounts(G, { ...EMPTY_FILTERS, freeShipping: true }).freeShipping).toBe(1);
+    const f = filtersFromParams('frete=gratis');
+    expect(f.freeShipping).toBe(true);
+    expect(filtersToParams(f).get('frete')).toBe('gratis');
+    expect(filtersFromParams('frete=x').freeShipping).toBe(false);
+    expect(activeFilterChips(f).map((c) => c.key)).toEqual(['freeShipping']);
+    expect(clearChip(f, 'freeShipping').freeShipping).toBe(false);
+  });
+  it('cidades só com o estado escolhido', () => {
+    expect(facetCounts(L, EMPTY_FILTERS).city).toEqual({});
+    expect(facetCounts(L, { ...EMPTY_FILTERS, uf: 'SP' }).city).toEqual({ 'São Paulo': 1, Campinas: 1 });
+  });
   it('só mostra no ar e esgotado; pausado some', () => {
     expect(filterListings(L).map((l) => l.id)).toEqual(['1', '2', '3']);
   });

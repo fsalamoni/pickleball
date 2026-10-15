@@ -18,6 +18,7 @@ import {
   V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2BackLink, V2Skeleton, V2Surface, V2Page,
 } from '@/v2/ui/primitives';
 import MarketHeader from '@/v2/components/marketplace/MarketHeader';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MarketGate, fulfillmentLabel } from '@/v2/components/marketplace/marketUi';
 import { t, fmtData } from '@/core/i18n';
 
@@ -34,11 +35,16 @@ function OfferPage() {
   const [valor, setValor] = useState('');
   const [contra, setContra] = useState(null);
   const [erro, setErro] = useState('');
+  const [confirmar, setConfirmar] = useState(null);
   const m = useMarketMutation(offerAction);
 
-  const agir = (id) => {
+  // Aceitar cria o pedido na hora e recusar encerra a negociação: os dois pedem confirmação.
+  const PEDE_CONFIRMACAO = ['accept', 'accept_counter', 'decline'];
+  const agir = (id, { confirmado = false } = {}) => {
     const precisaValor = id === 'counter' || id === 'counter_back';
     if (precisaValor && contra !== id) { setContra(id); setErro(''); return; }
+    if (PEDE_CONFIRMACAO.includes(id) && !confirmado) { setConfirmar(id); return; }
+    setConfirmar(null);
     const amount = precisaValor ? parseBRL(valor) : undefined;
     if (precisaValor && !(amount > 0)) { setErro(t('Diga o valor.')); return; }
     m.mutate({ action: id, offerId, ...(precisaValor ? { amount_cents: amount } : {}) }, {
@@ -136,6 +142,18 @@ function OfferPage() {
             </ol>
           </V2Surface>
         </aside>
+        <ConfirmDialog
+          open={Boolean(confirmar)}
+          onOpenChange={(o) => !o && setConfirmar(null)}
+          title={confirmar === 'decline' ? t('Recusar esta oferta?') : t('Aceitar {valor}?', { valor: formatBRL(offer.amount_cents) })}
+          description={confirmar === 'decline'
+            ? t('A negociação termina aqui e o outro lado é avisado. Se quiser outro valor, use "Contrapropor".')
+            : t('Ao aceitar, o pedido é criado na hora por este valor e o outro lado é avisado. Não dá para voltar atrás.')}
+          confirmLabel={confirmar === 'decline' ? t('Recusar') : t('Aceitar e criar o pedido')}
+          destructive={confirmar === 'decline'}
+          loading={m.isPending}
+          onConfirm={() => agir(confirmar, { confirmado: true })}
+        />
       </div>
     );
   }

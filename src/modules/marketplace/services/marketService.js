@@ -16,9 +16,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C, MARKET_SETTINGS_DOC, PUBLIC_LISTING_STATUSES, REPORT_REASON_LABELS, SELLER_STATUS, SELLER_TYPE } from '../domain/constants.js';
-import { validateListingInput } from '../domain/listing.js';
+import { duplicateListingInput, validateListingInput } from '../domain/listing.js';
 import { normalizeMarketSettings, findBannedTerm, validateQuestion, validateAnswer } from '../domain/settings.js';
-import { sellerKeyFor, sellerReviewNotice, validatePayment, validateStoreApplication } from '../domain/seller.js';
+import { sellerKeyFor, sellerReviewNotice, validatePayment, validateSellerPolicies, validateStoreApplication } from '../domain/seller.js';
 import { createAuditLog } from '@/core/services/auditService';
 import { couponDocId, giftCardConfig, normalizeCouponCode, validateCouponInput } from '../domain/promotions.js';
 import { notifyUsers } from '@/core/services/notificationService';
@@ -276,6 +276,30 @@ export async function setListingStatus(listing, status) {
   const next = status === 'active' && !(listing.quantity > 0) ? 'sold_out' : status;
   await updateDoc(doc(db, C.listings, listing.id), { status: next, updated_at: serverTimestamp() });
   return next;
+}
+
+/**
+ * Põe de volta no ar um anúncio encerrado ou pausado, com a MESMA conferência
+ * de publicar: se falta algo, o erro traz os campos (a tela abre o editor).
+ */
+export async function republishListing(listing, { settings } = {}) {
+  const r = validateListingInput(listing, { publish: true });
+  if (!r.ok) throw new MarketError(t('Falta completar o anúncio para publicar.'), r.errors);
+  conferirTermos(r.value, settings);
+  return setListingStatus(listing, 'active');
+}
+
+/** Uma cópia do anúncio, como RASCUNHO (mesmas fotos, mesma quantidade). Devolve o id novo. */
+export async function duplicateListing(listing, { uid, seller, settings }) {
+  return saveListing({ input: duplicateListingInput(listing), publish: false, seller, uid, settings });
+}
+
+/** As políticas da vitrine (envio em até N horas, devolução em até N dias). */
+export async function saveSellerPolicies(key, input, { sellerType } = {}) {
+  const r = validateSellerPolicies(input, { sellerType });
+  if (!r.ok) throw new MarketError(t('Confira as políticas.'), r.errors);
+  await updateSellerProfile(key, { policies: r.value });
+  return r.value;
 }
 
 /** Ajuste rápido de preço e estoque (na lista do vendedor). */

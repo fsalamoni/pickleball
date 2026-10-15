@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BR_UFS } from '@/core/domain/ufs';
-import { groupCartBySeller, groupShippingCost } from '@/modules/marketplace/domain/cart';
+import { cartOnlyListing, groupCartBySeller, groupShippingCost } from '@/modules/marketplace/domain/cart';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { placeOrders } from '@/modules/marketplace/services/marketOrderService';
 import {
@@ -254,13 +254,15 @@ function CartPage() {
   const [result, setResult] = useState(null);
   const place = useMarketMutation(placeOrders);
   const step = params.get('fechar') ? 'fechar' : 'carrinho';
+  // "Comprar agora" (`?so=<anúncio>`): só aquele item vai ao fechamento; o resto fica no carrinho.
+  const so = step === 'fechar' ? params.get('so') || '' : '';
 
   // Mapa id → anúncio (`undefined` enquanto lê ou se a leitura falhou; `null` quando saiu do ar).
   const mapa = useMemo(() => {
     if (!ls.isSuccess) return {};
     return Object.fromEntries(ids.map((id) => [id, id in ls.data ? ls.data[id] : undefined]));
   }, [ls.isSuccess, ls.isPlaceholderData, ls.data, ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
-  const grupos = useMemo(() => groupCartBySeller(cart.cart, mapa), [cart.cart, mapa]);
+  const grupos = useMemo(() => groupCartBySeller(so ? cartOnlyListing(cart.cart, so) : cart.cart, mapa), [cart.cart, mapa, so]);
 
   useEffect(() => {
     if (!ls.isSuccess || ls.isPlaceholderData) return; // decidir "marcado" só com os anúncios na mão
@@ -364,10 +366,10 @@ function CartPage() {
     corpo = (
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-8">
-          {fechar && (
-            <button type="button" onClick={() => setParams({})} className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
+          {step === 'fechar' && (
+            <Link to="/mercado/carrinho" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
               <ChevronLeft className="h-4 w-4" /> {t('Voltar ao carrinho')}
-            </button>
+            </Link>
           )}
           {grupos.groups.length === 0 && <p className="text-sm text-gray-500">{t('Nada no carrinho agora — só itens salvos para depois.')}</p>}
           {(fechar ? escolhidos : grupos.groups).map((g) => (
@@ -441,6 +443,13 @@ function CartPage() {
     <V2Page className="space-y-6 pb-16">
       <MarketHeader categorias={false} />
       {!result && <V2PageIntro title={step === 'fechar' ? t('Fechar pedido') : t('Carrinho')} />}
+      {!result && step === 'fechar' && (
+        <ol aria-label={t('Etapas da compra')} className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+          <li><Link to="/mercado/carrinho" className="hover:underline">{t('Carrinho')}</Link></li>
+          <li aria-hidden="true">→</li>
+          <li aria-current="step" className="font-bold text-ink">{t('Entrega e pagamento')}</li>
+        </ol>
+      )}
       {corpo}
     </V2Page>
   );

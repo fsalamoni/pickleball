@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ORDER_ACTIONS, checkOrderAction, nextActionsFor, computeOrderTotals, orderCode, orderRoleOf, orderTimeline, orderWaitingOn,
+  ORDER_ACTIONS, checkOrderAction, nextActionsFor, computeOrderTotals, orderCode, orderRoleOf, orderTimeline, orderWaitingOn, timelineSteps,
 } from './orderStatus.js';
 import { ORDER_STATUS } from './constants.js';
 
@@ -71,5 +71,35 @@ describe('pedido', () => {
     const o = { status: 'shipped', paid_at_ms: now - 9 * 86400000, shipped_at_ms: now - 3 * 86400000 };
     expect(nextActionsFor(o, 'buyer', { now }).map((a) => a.id)).toContain('open_dispute');
     expect(nextActionsFor(o, 'buyer', { now, disputeWindowDays: 2 }).map((a) => a.id)).not.toContain('open_dispute');
+  });
+});
+
+describe('linha do tempo do pedido que parou', () => {
+  it('pedido vivo: a mesma linha, sem marcador', () => {
+    const r = timelineSteps({ status: 'paid', fulfillment: 'shipping' });
+    expect(r.stopped).toBeNull();
+    expect(r.steps.find((s) => s.current).id).toBe('paid');
+  });
+  it('cancelado depois de pago: passos até "Pago" feitos, marcador em seguida', () => {
+    const r = timelineSteps({ status: 'cancelled', fulfillment: 'shipping', accepted_at_ms: 1, paid_at_ms: 2, cancelled_at_ms: 3 });
+    expect(r.steps.map((s) => s.done)).toEqual([true, true, true, false, false]);
+    expect(r.steps.some((s) => s.current)).toBe(false);
+    expect(r.stopped).toMatchObject({ status: 'cancelled', tone: 'danger', at_ms: 3, afterIndex: 2 });
+  });
+  it('expirado sem aceite: só "Pedido feito"', () => {
+    const r = timelineSteps({ status: 'expired', fulfillment: 'pickup', cancelled_at_ms: 9 });
+    expect(r.steps.map((s) => s.done)).toEqual([true, false, false, false, false]);
+    expect(r.stopped.afterIndex).toBe(0);
+    expect(r.stopped.label).toBe('Expirado');
+  });
+  it('em disputa depois do envio: âmbar, data do estado', () => {
+    const r = timelineSteps({ status: 'disputed', fulfillment: 'shipping', accepted_at_ms: 1, paid_at_ms: 2, shipped_at_ms: 3, status_at_ms: 4 });
+    expect(r.steps.map((s) => s.done)).toEqual([true, true, true, true, false]);
+    expect(r.stopped).toMatchObject({ tone: 'warning', at_ms: 4, afterIndex: 3 });
+  });
+  it('vale-presente cancelado antes de pagar', () => {
+    const r = timelineSteps({ status: 'cancelled', fulfillment: 'digital', accepted_at_ms: 1 });
+    expect(r.steps.map((s) => s.done)).toEqual([true, false, false]);
+    expect(r.stopped.afterIndex).toBe(0);
   });
 });

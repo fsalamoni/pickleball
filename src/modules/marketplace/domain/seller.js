@@ -95,6 +95,21 @@ export function validatePayment(input = {}) {
   };
 }
 
+/**
+ * As políticas da vitrine, para QUALQUER vendedor: "envio em até N horas" e
+ * "devolução em até N dias". A loja (CNPJ) dá ao menos 7 dias de devolução —
+ * a mesma regra do cadastro da loja.
+ */
+export function validateSellerPolicies(input = {}, { sellerType } = {}) {
+  const errors = {};
+  const hours = Math.floor(Number(input.ship_within_hours));
+  if (!(hours >= 1 && hours <= 240)) errors.ship_within_hours = t('Envio entre 1 e 240 horas.');
+  const days = Math.floor(Number(input.return_days));
+  if (!(days >= 0 && days <= 90)) errors.return_days = t('Devolução entre 0 e 90 dias.');
+  else if (sellerType === SELLER_TYPE.STORE && days < 7) errors.return_days = t('Loja dá ao menos 7 dias para devolução (Código de Defesa do Consumidor).');
+  return { ok: !Object.keys(errors).length, errors, value: { ship_within_hours: hours, return_days: days } };
+}
+
 /** O cadastro "Abrir minha loja". */
 export function validateStoreApplication(input = {}) {
   const errors = {};

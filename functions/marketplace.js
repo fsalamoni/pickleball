@@ -897,6 +897,8 @@ async function offerAction(ctx, actor, data = {}) {
 /* -------------------------------------------------------- reputação ----- */
 
 const REVIEW_REVEAL_DAYS = 14;
+/** Lembrete ao vendedor antes de o pedido expirar sem resposta (horas). */
+const SELLER_REMIND_HOURS = 12;
 
 function validateReview({ rating, comment } = {}) {
   const r = Math.round(Number(rating));
@@ -923,6 +925,18 @@ async function recomputeSellerRating(db, sellerKey, now) {
   return { avg, count };
 }
 
+/** Avisa o OUTRO lado que a avaliação dele chegou (só quando ela fica visível). */
+async function notifyReviewVisible(db, review, now) {
+  const paraVendedor = review.author_role === 'buyer';
+  const uids = paraVendedor ? await operatorUids(db, review.seller_key) : [review.target_uid];
+  const link = `/mercado/${paraVendedor ? 'vendas' : 'pedidos'}/${review.order_id}`;
+  await notify(db, uids, {
+    title: tx('Você recebeu uma avaliação'),
+    message: tx('{nome} avaliou o pedido {codigo} com {nota} de 5.', { nome: review.author_name || tx('O outro lado'), codigo: review.order_code, nota: review.rating }),
+    link,
+  }, now);
+}
+
 async function submitReview(ctx, actor, data = {}) {
   const { db, now = Date.now() } = ctx;
   const orderId = texto(data.orderId, 64);
@@ -938,22 +952,29 @@ async function submitReview(ctx, actor, data = {}) {
 
   const mineRef = db.collection('market_reviews').doc(`${orderId}_${role}`);
   const otherRef = db.collection('market_reviews').doc(`${orderId}_${role === 'buyer' ? 'seller' : 'buyer'}`);
-  const revealed = await db.runTransaction(async (tx) => {
+  const minha = {
+    order_id: orderId, order_code: order.code, author_uid: actor.uid, author_role: role,
+    author_name: role === 'buyer' ? order.buyer_name : order.seller_name,
+    seller_key: order.seller_key, target_uid: role === 'seller' ? order.buyer_uid : null,
+    listing_title: (order.items && order.items[0] && order.items[0].title) || '',
+    rating: v.value.rating, comment: v.value.comment, created_at_ms: now, created_at: new Date(now),
+  };
+  const outra = await db.runTransaction(async (tx) => {
     const [mine, other] = await tx.getAll(mineRef, otherRef);
     if (mine.exists) fail('already-exists', 'Você já avaliou este pedido.');
     const visible = other.exists;
-    tx.set(mineRef, {
-      order_id: orderId, order_code: order.code, author_uid: actor.uid, author_role: role,
-      author_name: role === 'buyer' ? order.buyer_name : order.seller_name,
-      seller_key: order.seller_key, target_uid: role === 'seller' ? order.buyer_uid : null,
-      listing_title: (order.items && order.items[0] && order.items[0].title) || '',
-      rating: v.value.rating, comment: v.value.comment, visible, created_at_ms: now, created_at: new Date(now),
-    });
+    tx.set(mineRef, { ...minha, visible });
     if (visible) tx.update(otherRef, { visible: true });
     tx.update(snap.ref, { [`reviewed_by_${role}`]: true, updated_at: new Date(now) });
-    return visible;
+    return visible ? other.data() : null;
   });
-  if (revealed) await recomputeSellerRating(db, order.seller_key, now);
+  const revealed = Boolean(outra);
+  if (revealed) {
+    await recomputeSellerRating(db, order.seller_key, now);
+    // As DUAS ficaram visíveis agora: cada lado é avisado da que recebeu.
+    await notifyReviewVisible(db, minha, now);
+    await notifyReviewVisible(db, outra, now);
+  }
   return { visible: revealed };
 }
 
@@ -963,7 +984,7 @@ async function housekeeping(ctx) {
   const { db, now = Date.now(), logger } = ctx;
   const { settings } = await loadContext(db);
   const c = { ...ctx, now, settings };
-  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0, giftCards: 0 };
+  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0, giftCards: 0, reminders: 0 };
   const run = async (orderId, action) => {
     try {
       await applyOrderAction(c, orderId, action, 'system', null, {});
@@ -1042,9 +1063,27 @@ async function housekeeping(ctx) {
     if (now - (Number(d.data().created_at_ms) || now) >= REVIEW_REVEAL_DAYS * 86400000) {
       // eslint-disable-next-line no-await-in-loop
       await d.ref.update({ visible: true });
+      // eslint-disable-next-line no-await-in-loop
+      await notifyReviewVisible(db, d.data(), now);
       sellers.add(d.data().seller_key);
       feitos.reviews += 1;
     }
+  }
+  // Vendedor com o prazo de resposta perto de acabar: UM lembrete por pedido.
+  const parados = await db.collection('market_orders').where('status', '==', S.PLACED).get();
+  for (const d of parados.docs) {
+    const o = d.data();
+    const dl = Number(o.deadline_at_ms) || 0;
+    if (!dl || dl <= now || dl - now > SELLER_REMIND_HOURS * 3600000 || o.deadline_reminded_at_ms) continue;
+    // eslint-disable-next-line no-await-in-loop
+    await d.ref.update({ deadline_reminded_at_ms: now, updated_at: new Date(now) });
+    // eslint-disable-next-line no-await-in-loop
+    await notify(db, await operatorUids(db, o.seller_key), {
+      title: tx('Pedido esperando a sua resposta'),
+      message: tx('O pedido {codigo} de {comprador} expira em menos de {horas} h. Aceite ou recuse.', { codigo: o.code, comprador: o.buyer_name || tx('um comprador'), horas: SELLER_REMIND_HOURS }),
+      link: `/mercado/vendas/${d.id}`,
+    }, now);
+    feitos.reminders += 1;
   }
   for (const k of sellers) {
     // eslint-disable-next-line no-await-in-loop

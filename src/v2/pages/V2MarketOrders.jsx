@@ -3,12 +3,13 @@
  * ofertas de quem compra. A aba mora na URL (`?aba=ofertas`) e cada linha
  * diz o que falta, e de quem.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { HandCoins, Package, ShoppingBag } from 'lucide-react';
+import { HandCoins, Package, Search, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { orderWaitingOn } from '@/modules/marketplace/domain/orderStatus';
-import { ORDER_FINAL_STATUSES, ORDER_STATUS_LABELS, OFFER_STATUS_LABELS } from '@/modules/marketplace/domain/constants';
+import { ORDER_FILTERS, filterOrders } from '@/modules/marketplace/domain/orderFilters';
+import { ORDER_STATUS_LABELS, OFFER_STATUS_LABELS } from '@/modules/marketplace/domain/constants';
 import { formatBRL } from '@/modules/marketplace/domain/money';
 import { useMyOffers, useMyOrders } from '@/modules/marketplace/hooks/useMarket';
 import {
@@ -22,7 +23,7 @@ import MarketPhoto from '@/v2/components/marketplace/MarketPhoto';
 
 const data = (ms) => (ms ? fmtData(ms, { day: '2-digit', month: 'short' }) : '');
 
-function OrdersList({ uid, filtro }) {
+function OrdersList({ uid, filtro, busca }) {
   const q = useMyOrders(uid);
   if (q.isError) return <V2ErrorState onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={4} />;
@@ -30,8 +31,8 @@ function OrdersList({ uid, filtro }) {
   if (!todos.length) {
     return <V2EmptyState icon={ShoppingBag} title={t('Nenhuma compra ainda')} description={t('O que você comprar no Mercado aparece aqui, com o andamento de cada pedido.')} action={<V2Button asChild><Link to="/mercado">{t('Explorar o Mercado')}</Link></V2Button>} />;
   }
-  const lista = todos.filter((o) => (filtro === 'fim' ? ORDER_FINAL_STATUSES.includes(o.status) : !ORDER_FINAL_STATUSES.includes(o.status)));
-  if (!lista.length) return <p className="py-10 text-center text-sm text-gray-500">{filtro === 'fim' ? t('Nenhum pedido encerrado.') : t('Nenhum pedido em andamento.')}</p>;
+  const lista = filterOrders(todos, { q: busca, f: filtro });
+  if (!lista.length) return <p className="py-10 text-center text-sm text-gray-500">{busca ? t('Nenhum pedido combina com “{busca}”.', { busca }) : t('Nenhum pedido nesta situação.')}</p>;
   return (
     <ul className="divide-y divide-gray-100 rounded-[1.5rem] border border-gray-100 bg-paper-pure">
       {lista.map((o) => {
@@ -96,8 +97,17 @@ function OrdersPage() {
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const aba = params.get('aba') === 'ofertas' ? 'ofertas' : 'compras';
-  const filtro = params.get('f') === 'fim' ? 'fim' : 'andamento';
+  const filtro = ORDER_FILTERS.some((f) => f.id === params.get('f')) ? params.get('f') : '';
+  const busca = params.get('q') || '';
   const mudar = (patch) => setParams((p) => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; }, { replace: true });
+  // A busca mora na URL, mas só depois de a pessoa parar de digitar.
+  const [texto, setTexto] = useState(busca);
+  useEffect(() => { setTexto(busca); }, [busca]);
+  useEffect(() => {
+    if (texto === busca) return undefined;
+    const id = setTimeout(() => mudar({ q: texto.trim() }), 300);
+    return () => clearTimeout(id);
+  }, [texto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <V2Page className="space-y-6 pb-16">
@@ -106,11 +116,26 @@ function OrdersPage() {
       <MarketTabs grupo="compras" ativo={aba === 'ofertas' ? 'ofertas' : 'pedidos'} />
       {aba === 'compras' ? (
         <>
-          <div className="flex gap-2">
-            <V2FilterChip active={filtro === 'andamento'} onClick={() => mudar({ f: '' })}>{t('Em andamento')}</V2FilterChip>
-            <V2FilterChip active={filtro === 'fim'} onClick={() => mudar({ f: 'fim' })}>{t('Encerrados')}</V2FilterChip>
+          <div className="relative">
+            <label htmlFor="busca-pedidos" className="sr-only">{t('Buscar pedido')}</label>
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <input
+              id="busca-pedidos"
+              type="search"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder={t('Código do pedido, produto ou vendedor')}
+              className="h-11 w-full rounded-full border border-gray-200 bg-paper-pure pl-11 pr-4 text-sm text-ink placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-gray-100"
+              maxLength={80}
+            />
           </div>
-          <OrdersList uid={user?.uid} filtro={filtro} />
+          <div className="flex flex-wrap gap-2">
+            <V2FilterChip active={!filtro} onClick={() => mudar({ f: '' })}>{t('Todos')}</V2FilterChip>
+            {ORDER_FILTERS.map((f) => (
+              <V2FilterChip key={f.id} active={filtro === f.id} onClick={() => mudar({ f: f.id })}>{t(f.label)}</V2FilterChip>
+            ))}
+          </div>
+          <OrdersList uid={user?.uid} filtro={filtro} busca={busca} />
         </>
       ) : <OffersList uid={user?.uid} />}
     </V2Page>

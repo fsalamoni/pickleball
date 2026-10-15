@@ -84,6 +84,7 @@ function filtersFromParams(params) {
     sellers: (p.get('vende') || '').split(',').filter((s) => SELLER_IDS.has(s)),
     ship: SHIP_IDS.has(p.get('entrega')) ? p.get('entrega') : '',
     offers: p.get('oferta') === '1',
+    freeShipping: p.get('frete') === 'gratis',
     uf: /^[A-Za-z]{2}$/.test(p.get('uf') || '') ? p.get('uf').toUpperCase() : '',
     city: (p.get('cidade') || '').slice(0, 60),
     attrs,
@@ -102,6 +103,7 @@ function filterListings(listings, f) {
     if (f.sellers && f.sellers.length && !f.sellers.includes(l.seller_type)) return false;
     if (f.ship && !(l.fulfillment || []).includes(f.ship)) return false;
     if (f.offers && !l.accepts_offers) return false;
+    if (f.freeShipping && !((l.fulfillment || []).includes('shipping') && Number(l.shipping_cents) === 0 && !l.shipping_to_agree)) return false;
     if (f.uf && String(l.state || '').toUpperCase() !== f.uf.toUpperCase()) return false;
     if (f.city && normalizeSearchText(l.city) !== normalizeSearchText(f.city)) return false;
     for (const [k, v] of attrs) {

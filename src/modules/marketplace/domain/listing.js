@@ -217,3 +217,35 @@ export function listingCompleteness(listing) {
   score += (listing.video_link || (listing.media || []).some((m) => m.kind === 'video')) ? 0.1 : 0;
   return Math.round(score * 100) / 100;
 }
+
+/**
+ * O formulário de uma CÓPIA do anúncio (vira rascunho): o mesmo conteúdo com
+ * " (cópia)" no título, sem o vínculo com o estoque da arena nem as contagens.
+ */
+export function duplicateListingInput(listing) {
+  const sufixo = t(' (cópia)');
+  const base = String(listing?.title || '').trim();
+  const title = `${base.slice(0, TEXT_LIMITS.title - sufixo.length)}${sufixo}`.trim();
+  const copia = {};
+  ['description', 'category_slug', 'type', 'condition', 'brand', 'attributes', 'price_cents', 'compare_at_cents', 'quantity',
+    'accepts_offers', 'fulfillment', 'shipping_cents', 'shipping_to_agree', 'pickup_note', 'media', 'video_link', 'city', 'state']
+    .forEach((k) => { if (listing?.[k] !== undefined) copia[k] = listing[k]; });
+  return { ...copia, title };
+}
+
+/** O que falta para publicar: as mensagens de erro, sem repetir. */
+export function publishBlockers(input) {
+  const { errors } = validateListingInput(input, { publish: true });
+  return [...new Set(Object.values(errors))];
+}
+
+/**
+ * "Modo férias": tudo o que está no ar pausado de uma vez. Devolve quem pausar,
+ * quem retomar e se TODOS os anúncios publicáveis estão pausados.
+ */
+export function vacationState(listings = []) {
+  const vivos = listings.filter((l) => l && !['removed', 'draft', 'closed'].includes(l.status));
+  const noAr = vivos.filter((l) => PUBLIC_LISTING_STATUSES.includes(l.status));
+  const pausados = vivos.filter((l) => l.status === 'paused' && !l.admin_paused);
+  return { noAr, pausados, todosPausados: vivos.length > 0 && noAr.length === 0 && pausados.length > 0 };
+}

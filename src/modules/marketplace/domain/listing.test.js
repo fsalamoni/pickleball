@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateListingInput, buildSearchTerms, tokenize, coverOf, buyability, parseVideoLink, listingCompleteness,
+  duplicateListingInput, publishBlockers, vacationState,
 } from './listing.js';
 
 const base = {
@@ -69,5 +70,29 @@ describe('anúncio', () => {
     expect(buyability({ status: 'active', quantity: 0 }).reason).toBe('Esgotado.');
     expect(buyability({ status: 'paused', quantity: 1 }).ok).toBe(false);
     expect(buyability({ status: 'active', quantity: 1, seller_uid: 'v' }, { viewerUid: 'v' }).own).toBe(true);
+  });
+  it('a cópia vira rascunho com o título marcado, sem vínculo nem contagens', () => {
+    const c = duplicateListingInput({ ...base, id: 'l1', status: 'closed', source: { kind: 'arena_product', id: 'p' }, quantity_sold: 3, favorite_count: 2, seller_key: 'k' });
+    expect(c.title).toBe('Raquete JOOLA Perseus 16mm (cópia)');
+    expect(c.id).toBeUndefined();
+    expect(c.source).toBeUndefined();
+    expect(c.quantity_sold).toBeUndefined();
+    expect(c.quantity).toBe(1);
+    expect(validateListingInput(c).ok).toBe(true);
+    expect(validateListingInput(duplicateListingInput({ ...base, title: 'x'.repeat(200) })).errors.title).toBeUndefined();
+  });
+  it('o que falta para publicar, sem repetir', () => {
+    expect(publishBlockers(base)).toEqual([]);
+    const faltas = publishBlockers({ ...base, media: [], city: '' });
+    expect(faltas).toHaveLength(2);
+    expect(faltas.join(' ')).toMatch(/foto/);
+  });
+  it('modo férias: todos pausados só quando não sobra nada no ar', () => {
+    const ls = [{ status: 'active' }, { status: 'paused' }, { status: 'draft' }];
+    expect(vacationState(ls).todosPausados).toBe(false);
+    expect(vacationState(ls).noAr).toHaveLength(1);
+    expect(vacationState([{ status: 'paused' }, { status: 'closed' }]).todosPausados).toBe(true);
+    expect(vacationState([{ status: 'paused', admin_paused: true }]).todosPausados).toBe(false);
+    expect(vacationState([]).todosPausados).toBe(false);
   });
 });

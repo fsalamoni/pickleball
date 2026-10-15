@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  addToCart, setCartQuantity, removeFromCart, saveForLater, moveToCart, cartCount, groupCartBySeller, checkLine,
+  addToCart, setCartQuantity, removeFromCart, saveForLater, moveToCart, cartCount, groupCartBySeller, checkLine, cartOnlyListing,
 } from './cart.js';
 
 const a = { id: 'a', seller_key: 'store_1', seller_name: 'Loja', title: 'Raquete', price_cents: 50000, quantity: 2, status: 'active', fulfillment: ['shipping', 'meetup'], media: [{ url: 'https://a' }] };
@@ -8,6 +8,17 @@ const b = { id: 'b', seller_key: 'store_1', seller_name: 'Loja', title: 'Bolas',
 const c = { id: 'c', seller_key: 'arena_9', seller_name: 'Arena', title: 'Camiseta', price_cents: 7000, quantity: 1, status: 'active', fulfillment: ['pickup'] };
 
 describe('carrinho', () => {
+  it('"comprar agora" leva só o item ao fechamento, sem mexer no carrinho', () => {
+    let cart = addToCart({}, a).cart;
+    cart = addToCart(cart, c).cart;
+    cart = addToCart(cart, b, 2).cart;
+    const so = cartOnlyListing(cart, 'b');
+    expect(so.items.map((i) => i.listing_id)).toEqual(['b']);
+    expect(so.saved).toEqual([]);
+    expect(groupCartBySeller(so, { a, b, c }).groups).toHaveLength(1);
+    expect(cart.items).toHaveLength(3);
+    expect(cartOnlyListing(cart, 'zzz')).toEqual(cart);
+  });
   it('soma sem passar do estoque', () => {
     let cart = addToCart({}, a, 1).cart;
     cart = addToCart(cart, a, 5).cart;
