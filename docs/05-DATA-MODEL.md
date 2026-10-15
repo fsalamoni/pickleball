@@ -1,18 +1,52 @@
 # DATA_MODEL
 
 > Coleções Firestore (database **`pickleball`**), seus campos-chave e
-> relacionamentos. Tudo top-level (sem subcoleções aninhadas). Sem joins:
-> desnormalização e ids deterministas. Campos comuns: `created_at`,
-> `updated_at` (`serverTimestamp`). Para o panorama, ver `docs/01-AI-CONTEXT.md`.
+> relacionamentos. A maioria é **raiz** (`match /<coleção>/{id}`); as
+> **subcoleções** que têm regra própria estão listadas abaixo, com o caminho.
+> Sem joins: desnormalização e ids deterministas. Campos comuns: `created_at`,
+> `updated_at` (`serverTimestamp`) — mas confira o campo no service: há
+> coleções que gravam `createdAt` (gamificação) ou `*_ms` (número). Para o
+> panorama, ver `docs/01-AI-CONTEXT.md`.
+>
+> **Contagens (coleções, subcoleções, índices) não são mantidas à mão aqui**:
+> a fonte é o `docs/46-INVENTARIO.md`, GERADO a partir de `firestore.rules`,
+> `firestore.indexes.json` e do código. Este documento descreve o *shape* e as
+> regras; o inventário diz *quantas* e *quais*.
 
 ## Convenções
 
 - **Id determinista** (`clubId_uid`, `tournamentId_uid`): evita duplicidade e
   simplifica regras (1 doc por par recurso+usuário).
-- **Desnormalização**: nomes/e-mails do ator são copiados no doc para evitar
-  leitura cruzada (ex.: `user_name` em membros e admins).
-- **Auditoria**: mutações relevantes gravam `audit_logs` (ver fim do doc).
-- Toda escrita é validada por `firestore.rules` (lógica roda no client).
+- **Desnormalização**: nomes do ator são copiados no doc para evitar leitura
+  cruzada (ex.: `user_name` em membros e admins). **E-mail não**: coleção de
+  leitura ampla (`isAuthed()`/pública) nunca guarda e-mail, telefone,
+  endereço ou nascimento (`CLAUDE.md` §2.10).
+- **Auditoria**: mutações relevantes gravam `audit_logs` (ver "Transversal").
+- Toda escrita é validada por `firestore.rules` (lógica roda no client). O que
+  define **posição, prêmio, reputação, XP concedido e ranking** é escrito só
+  pelo servidor (Admin SDK ignora as regras) e a regra recusa o cliente.
+- **Campo que a regra confere é contrato**: o nome (`user_id`, `student_id`,
+  `athlete_id`…) tem de ser o que a regra usa, senão a escrita é recusada em
+  silêncio.
+- Consulta tem de filtrar pelo campo que a regra confere, e `where`+`orderBy`
+  exige índice composto — ver "Índices" no fim.
+
+### Subcoleções com regra própria
+
+| Caminho | Observação |
+|---|---|
+| `game_days/{id}/participants/{pid}` · `game_days/{id}/games/{gid}` | dia de jogo (ver `game_days`) |
+| `tournament_registrations/{rid}/private/contact` | e-mail/contato da inscrição (nunca no doc público) |
+| `club_events/{id}/dates/{dateId}` · `…/date_rsvps/{docId}` · `…/messages/{mid}` · `…/participants/{pid}` · `…/games/{gid}` | evento de clube; `participants`/`games` são o dia de jogo LEGADO |
+| `club_forum_threads/{id}/comments/{cid}` · `…/poll_votes/{uid}` | respostas e votos do fórum (o id do voto é o uid de quem votou) |
+| `conversations/{id}/messages/{mid}` | mensagens do chat |
+| `training_sessions/{id}/comments/{cid}` · `training_questions/{id}/messages/{mid}` | Centro de Treino |
+| `market_sellers/{key}/private/data` | Pix e dados da loja |
+| `market_coupons/{id}/market_coupon_uses/{uid}` | uso do cupom (só o servidor) |
+| `market_orders/{id}/events/{eid}` · `market_orders/{id}/private/shipping` | linha do tempo e endereço de entrega do pedido |
+
+Não existem coleções raiz `comments`, `messages`, `poll_votes`, `dates` nem
+`date_rsvps`: são as subcoleções acima.
 
 ## Identidade
 
@@ -52,6 +86,9 @@ Perfil privado/operacional do usuário autenticado.
   tempo real** (não armazenado). Score 0-1 com base em
   campos-chave + `interests.length >= 1` + `court_side` preenchido.
 - Criado/atualizado pelo `FirebaseAuthContext`.
+- **Regra**: lê só o dono e o admin da plataforma. O dono NÃO escreve `role`,
+  `can_create_pools`, `hidden*` nem `account_status*` (campos de poder e
+  moderação); o dono da plataforma é reconhecido pelo e-mail do token.
 
 ### `athlete_profiles/{uid}`
 Perfil **público** do diretório de atletas (espelho controlado de `users`).
@@ -64,6 +101,8 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - **`court_side`** (PR #91, Sprint 28): espelho de `users/{uid}.court_side`.
 - **`interests`** (PR #91, Sprint 28): espelho de `users/{uid}.interests`
   (array).
+- **Regra**: lê qualquer conta logada; o dono cria/edita/apaga, mas **não** mexe
+  em `hidden`/`hidden_at`/`hidden_by` (moderação, só do admin da plataforma).
 - Sincronizado por `athleteService.syncAthleteProfile` (login, salvar perfil,
   entrar em clube, inscrição). **Edições feitas direto no `users` (ex.: importação
   manual de `dupr_id`/gênero/lado da quadra) NÃO disparam o sync** e deixam o
@@ -75,12 +114,13 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
     `buildAthleteProfilesResyncPlan`; auditoria `athlete_profiles_resynced`.
     UI: `/admin/console` → Perfis → "Re-sincronizar diretório (em lote)".
 
-### `legal_consents/{uid}_{docKey}` (PR #86 + #94)
+### `legal_consents/{uid}_{docKey}` (PR #86 + #94 — resumo)
 Registro auditável de aceites legais (LGPD).
-- `uid`: usuário que aceitou.
-- `docKey`: `'privacy_policy' | 'terms_of_use' | 'community_guidelines' | ...`
-- `accepted_at`: timestamp do aceite.
-- `version`: versão do documento aceito.
+- `user_id`: usuário que aceitou (é o campo que a regra confere).
+- `doc_key`: `'privacy_policy' | 'terms_of_use' | 'community_guidelines' | ...`
+- `accepted_at` (+ `accepted_at_ms`): momento do aceite.
+- `version`: versão do documento aceito. Shape completo e regra: seção
+  `legal_consents/{uid_docKey}` mais abaixo.
 - **PR #94 (Sprint 31)**: cada aceite no onboarding vira doc
   nesta coleção. Versão de Política de Privacidade é bumpada
   e reabre aceite.
@@ -98,6 +138,10 @@ Registro auditável de aceites legais (LGPD).
   `validateArchiveRequest` + server na Firestore rule). Visibilidade: se
   `archived == true`, o doc (e as 6 coleções filhas) só são lidos pelo
   criador e pelo `platform_admin`; público some do `/p/:id` e das listas.
+- **Regra**: `creator_uid` (não `owner_id`) é o campo que a regra confere na
+  criação. Quem não gere a arena cria o torneio com a sede **pendente**
+  (`arena_confirmed: false`) e a arena confirma ou recusa (`arena_id`,
+  `arena_confirmed`, `updated_at`). O co-administrador não vira criador.
 
 ### `tournament_modalities/{id}`
 Modalidade dentro de um torneio: `tournament_id`, formato
@@ -145,13 +189,19 @@ tela. Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
 
 ### `tournament_admins/{tournamentId_uid}`
 Admin compartilhado do torneio (não afeta admin da plataforma).
-`tournament_id`, `user_id`, `user_email`, `user_name`, `role`, `created_at`.
+`tournament_id`, `user_id`, `user_name`, `role` (`owner|admin`), `created_at`.
+**Sem e-mail** (P1-01: a coleção é legível por qualquer conta logada). O primeiro
+admin (`owner`) só é gravado por quem consta como `creator_uid` do torneio.
 
 ### `tournament_registrations/{id}`
 Inscrição: `tournament_id`, `modality_id`, jogador(es) (`player_a_*`,
 `player_b_*` em duplas), `player_a_level`, check-in, status, taxa.
 Inscrições provisórias podem ser "reivindicadas" ao completar o perfil
-(`claimProvisionalRegistrationsForUser`).
+(`claimProvisionalRegistrationsForUser`). **Leitura pública** (o quadro do
+torneio mostra nomes), por isso o e-mail NÃO mora aqui: fica em
+`tournament_registrations/{rid}/private/contact` (lê/escreve o admin, o
+organizador do torneio e as partes da inscrição) e a prova de posse em
+`provisional_claims` (abaixo). Equipes: ver "Torneio por equipes".
 
 ### `tournament_matches/{id}`
 Jogo: modalidade, fase/rodada, duplas/jogadores, placar por set, status
@@ -161,7 +211,11 @@ Jogo: modalidade, fase/rodada, duplas/jogadores, placar por set, status
 Grupos da fase de grupos (composição e classificação por grupo).
 
 ### `tournament_rankings/{id}`
-Ranking **materializado pelo client** após cada resultado, por formato.
+Coleção declarada em `tournamentService` e com regra (lê quem vê o torneio —
+respeita `archived`; escreve o admin do torneio ou da plataforma), mas **nenhum
+service ou função a escreve hoje**: o ranking da modalidade é calculado na
+leitura (`computeModalityRankingStructured`) e os rankings da plataforma saem
+do servidor. Não dependa dela.
 
 ### `tournament_courts/{id}`
 Quadras do torneio para agendamento (slots, descanso mínimo).
@@ -174,6 +228,9 @@ Quadras do torneio para agendamento (slots, descanso mínimo).
 ### `club_members/{clubId_uid}`
 Vínculo de associação. `club_id`, `user_id`, `user_name`, `role`
 (`admin | member`), `created_at`. Fonte de verdade de "quem é membro/admin".
+O id é a credencial (`{clubId}_{uid}`). Entrar sozinho exige ser o criador do
+clube, ter convite pendente (`club_member_invites`) ou a prova do código
+(`club_code_joins`).
 
 ### `club_join_requests/{clubId_uid}`
 Pedido de ingresso (fluxo "Pedir para ingressar"). `status`
@@ -202,8 +259,13 @@ Mural do clube (posts dos membros). `club_id`, autor, conteúdo.
 Tópicos do fórum. Pin/unpin, autor, título, conteúdo; podem conter enquete.
 Respostas e menções geram notificações (`forum_reply`, `forum_mention`).
 
-### `poll_votes/{id}`
-Votos de enquetes do fórum (lógica pura em `clubs/domain/forumPoll.js`).
+### `club_forum_threads/{id}/poll_votes/{uid}` (subcoleção)
+Votos de enquetes do fórum (lógica pura em `clubs/domain/forumPoll.js`). O id é
+o uid de quem votou: cada um só grava e apaga o próprio voto.
+
+### `club_forum_threads/{id}/comments/{cid}` (subcoleção)
+Respostas do tópico; `author_id`. Lê/cria quem é membro do clube do tópico; edita
+o autor; apaga o autor ou quem modera o tópico.
 
 ### `club_events/{id}`
 Eventos do clube. `club_id`, `visibility` (público/privado ao clube), datas,
@@ -213,21 +275,25 @@ local, status (rascunho/publicado). Publicar evento público notifica membros
 ### `club_event_rsvps/{id}` · `event_invites/{id}`
 Presença/convites de eventos.
 
-### `dates/{id}` · `date_rsvps/{id}`
-**Game-day**: datas de jogo e confirmações; sorteio em
-`clubs/domain/gameDayDraw.js`.
+### `club_events/{id}/dates/{dateId}` · `club_events/{id}/date_rsvps/{docId}` (subcoleções)
+**Game-day**: datas de jogo e confirmações (`user_id`, uma por pessoa);
+sorteio em `clubs/domain/gameDayDraw.js`. Lê/escreve quem é membro do clube do
+evento. Campos de publicação no ranking e `game_day_id` em
+`club_events/{id}/dates/{dateId}` (mais abaixo).
 
-### `comments/{id}`
-Comentários genéricos (mural/fórum/eventos), com `parent` referenciado.
 
 ## Chat
 
 ### `conversations/{id}`
-Conversa 1:1 ou em grupo: `participants[]`, último texto/horário, tipo.
+Conversa 1:1 ou em grupo: `member_ids[]` (é o que a regra confere), `members`,
+`created_by`, `title`, `last_message`, `last_message_at_ms`, `hidden_for[]`.
+Conversa direta tem id `dm_<uidA>__<uidB>` (a regra amarra o id aos dois
+membros). Quem sai só tira a si mesmo; apagar é do último que sobrou.
 Lógica pura em `chat/domain/conversations.js`.
 
-### `messages/{id}`
-Mensagens: `conversation_id`, `sender_id`, `text`, `created_at`.
+### `conversations/{id}/messages/{mid}` (subcoleção)
+Mensagens: `sender_id`, `text`, `created_at`. Lê/cria quem é membro da conversa;
+edita (só `text`, `edited`, `edited_at`) e apaga só o remetente.
 Mensagens/convites geram `chat_message` / `chat_invite`.
 
 ## Arenas
@@ -395,20 +461,30 @@ Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
 ## Transversal
 
 ### `notifications/{id}`
-Notificações do sino. `userId`, `title`, `message`, `type`
-(ver `NOTIFICATION_TYPE` em `01-AI-CONTEXT.md` §7), `link`, `read`, `actor`,
-`created_at`. Escrita por `createNotification` / `notifyUsers` (lote ≤400).
+Notificações do sino. `user_id` (destinatário — o campo que a regra confere),
+`title`, `message`, `type` (lista fechada na regra, `isKnownNotificationType`;
+ver `NOTIFICATION_TYPE` em `01-AI-CONTEXT.md` §7), `link` (só rota interna,
+`isInternalLink`; âncora `#` é recusada — use `linkDeAviso`), `read`
+(nasce `false`), `actor_id`, `created_at`. Escrita por `createNotification` /
+`notifyUsers` (lote ≤400). **Regra**: lê e atualiza (marcar lida) só o
+destinatário; qualquer conta logada cria (limite de tamanho; texto livre no
+sino de outra pessoa é limitação conhecida); só o admin apaga.
 `i18n` (opcional, 2026-10-14): `{ title?: {key, params}, message?: {key, params} }`
 — a chave em português e os parâmetros simples de um `tx('…')`; o sino e o push
 mostram o aviso no idioma de quem recebe. Ausente ⇒ vale `title`/`message`
 (o português, sempre gravado). Ver `docs/44-IDIOMAS.md`.
 
 ### `audit_logs/{id}`
-Trilha de auditoria. `action` (ex.: `tournament_created`,
+Trilha de auditoria. Campos: `log_number`, `action`, `action_label`, `actor_id`,
+`actor_name`, `actor_email`, `tournament_id`, `user_id`, `user_name`,
+`user_email`, `details`, `created_at_ms`, `created_at`. **Regra**: lê só o admin
+da plataforma; qualquer conta logada cria, mas com `actor_id == uid` (a trilha
+não pode ser atribuída a terceiros); ninguém atualiza nem apaga. `action` (ex.:
+`tournament_created`,
 `club_member_invited`, `match_result_recorded`, `club_join_approved`,
 `booking_cancelled`, `booking_transferred`, `booking_responsibles_changed`,
-`coach_lesson_created`, `clinic_signup`, `club_recurring_event_added`…),
-`actor`, `details`, `created_at`. Escrita por `auditService.createAuditLog`.
+`coach_lesson_created`, `clinic_signup`, `club_recurring_event_added`…).
+Escrita por `auditService.createAuditLog` (melhor esforço: erro só vai ao log).
 
 ### `admin_access_logs/{id}` (2026-10-11)
 Registro de leitura do suporte (`05-ADMIN-SUPORTE.md` §7). Escrito SÓ pela
@@ -419,7 +495,8 @@ função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field
 `create/update/delete: false`.
 
 ### `platform_settings/{docId}`
-Singletons: `feature_flags/{key}` (defaults de `FEATURE_FLAG`),
+Leitura pública; escrita só do admin da plataforma. Singletons:
+`global.feature_flags.{key}` (valores de `FEATURE_FLAG`),
 `app_version`, `flags_migration_version`, etc. Migração em
 `migrateLegacyFlags` (bump `FLAGS_MIGRATION_VERSION` ao adicionar
 defaults novos).
@@ -482,9 +559,10 @@ Pacotes de aulas (5 aulas / mês, etc).
 
 ### `coach_package_sales/{saleId}` (Fase C)
 Venda de pacote (gera créditos).
-- `package_id`, `coach_id`, `buyer_id`, `buyer_name`, `price_paid`,
-  `payment_method`, `lessons_remaining` (decrementa ao consumir).
-- `status` ('active'|'expired'|'cancelled'), `purchased_at`, `expires_at`.
+- `id`, `package_id`, `package_name`, `coach_id`, `student_id`, `student_name`,
+  `credits_total`, `credits_used`, `price`, `paid`, `sold_at`, `sold_by`,
+  `expires_at`.
+- **Regra**: lê o professor (`coach_id`) ou o aluno (`student_id`).
 
 ### `coach_content/{contentId}` (Fase D)
 Biblioteca de conteúdo do professor (drills, vídeos, planos de aula).
@@ -517,6 +595,8 @@ Validação de nível de um atleta por um professor. **Id determinístico**.
 Loja: equipamento, roupas, acessórios vendidos pelo professor.
 - `coach_id`, `name`, `description` (max 500), `price`, `stock`,
   `image_url`, `active: bool`, `sold_count`, `category`.
+- **Regra**: lê qualquer conta se `visible_public == true`; senão só o professor
+  e o admin.
 
 ## Shared Bookings (PR #68 + #70 — reservas compartilhadas)
 
@@ -536,10 +616,14 @@ professor↔alunos. **NÃO é coleção nova** — é o campo aditivo
 - Avulsos (sem conta): `{name, percent}` sem `user_id`.
 
 ### `arena_waitlist/{entryId}` (Onda 6b — lista de espera)
-- `arena_id`, `court_id` (opcional), `date` ('YYYY-MM-DD'),
-  `user_id`, `user_name`, `time_window` (`{start, end}`), `notes`.
-- `status` ('waiting'|'notified'|'converted'|'expired'),
-  `created_at`, `notified_at`.
+Fila do **jogo aberto** (`arena_open_slots`), não do horário de reserva (essa é
+`booking_waitlist`, mais abaixo). Id `{slotId}_{uid}`.
+- `arena_id`, `slot_id`, `slot_kind: 'open_match'`, `athlete_id`,
+  `athlete_name`, `position`, `window_minutes`, `joined_at`, `created_at`,
+  `updated_at`.
+- `status`: `waiting | notified | accepted | declined`.
+- **Regra**: lê qualquer conta logada; o atleta entra/sai e responde à chamada
+  só por si mesmo; quem chama o próximo é o servidor (`functions/openSlotWaitlist.js`).
 
 ### `club_event_games/{eventId_dateId_gameId}` (Wave C — id determinístico)
 Espelhamento de jogos decididos de dias de jogo para o ranking nacional.
@@ -715,8 +799,9 @@ versionado): essenciais (Termos de Uso, Política de Privacidade, Termo de Risco
 — aceite bloqueante), complementares (Cookies, Diretrizes da Comunidade,
 Pagamentos/Reembolsos, Cancelamento) e por papel (Organizador, Arena, Professor).
 
-Regras: cada usuário lê/grava apenas o próprio consentimento; platform admin
-pode ler (auditoria) e excluir.
+Regras: cada usuário lê, cria e atualiza apenas o próprio consentimento
+(`user_id == uid`; o update confere o dono atual); o platform admin lê
+(auditoria) e é o único que apaga.
 
 ### `club_events/{id}/dates/{dateId}` (campos Wave C)
 - `publish_to_ranking: bool` (default false) — chave de publicação.
@@ -849,12 +934,11 @@ do `rating_history` ELO).
 - **Regras**: leitura pública; escrita só da Cloud Function (`if false` no
   cliente).
 
-### Coleção: `audit_logs/{id}` (NOVO PR #120)
-Registro de ações admin (moderação, etc.).
-- `actor_id`, `action` (`'athlete_hide' | 'athlete_unhide' | ...`),
-  `target_id`, `payload`, `created_at`.
-- **Regras**: leitura só `isPlatformAdmin()`; escrita
-  via service account.
+### `audit_logs` — ações de moderação (PR #120)
+Mesma coleção da seção "Transversal" (não há outra): as ações de moderação de
+atleta (`athlete_hide`, `athlete_unhide`…) são linhas de `audit_logs` com o
+shape de lá. A escrita é do cliente (com `actor_id == uid`), não de service
+account.
 
 ## Cross-cutting (transversal)
 
@@ -869,40 +953,25 @@ vez, se ele já tinha escolhido antes); lido no login de outro aparelho e pelo
 `pushOnNotificationCreate` para o push sair no idioma dela. Opcional: ausente ⇒
 português. A regra de `users` já deixa o dono escrevê-lo (não é campo de poder).
 
-### `users/{uid}.data_export_request: object` (Onda 9)
-LGPD: request de export de dados (`{requested_at, status}`).
+### Exportação de dados (LGPD)
+Não há `data_export_request` em `users` nem coleção `user_data_exports`: a
+exportação é gerada no cliente (`athletes/domain/dataExport.js`) e entregue como
+arquivo. Coleção nova entra na exportação e na exclusão de conta (guarda
+`src/core/guards/exclusaoCobreColecoes.test.js`).
 
-### `user_data_exports/{id}` (Onda 9)
-Histórico de exports gerados. `user_id`, `data_url`, `expires_at`.
+### `push_tokens/{uid}_{hash(token)}` (`push_notifications`)
+Um documento por aparelho. `user_id`, `token` (FCM), `user_agent`, `updated_at`,
+`updated_at_ms`. Cada pessoa lê/escreve só os próprios; a Cloud Function
+`pushOnNotificationCreate` lê para enviar e remove os inválidos.
 
-### `push_tokens/{uid}` (NOVO Onda H — `push_notifications`)
-Tokens FCM por usuário. Cada user gerencia os próprios.
-- `token: string` (FCM token).
-- `created_at`, `updated_at`, `platform`, `user_agent`.
-- **Regras**: cada user lê/escreve **só os próprios**
-  (`request.auth.uid == uid`). Cloud Function
-  `pushOnNotificationCreate` lê para enviar push.
-- **Limpeza**: tokens inválidos são removidos pela CF.
-
-### `tournament_team_registrations/{id}` (NOVO Onda I — `team_tournaments`)
-Inscrição de equipe em torneio.
-- `tournament_id`, `modality_id`, `team_name`,
-  `captain_id`, `created_at`.
-- `lineup: array` (referência a `tournament_team_lineups`).
-
-### `tournament_team_lineups/{id}` (NOVO Onda I)
-Elenco de uma equipe.
-- `team_id`, `athlete_ids[]` (com `user_id`, `gender`),
-  `created_at`, `updated_at`.
-
-### `tournament_team_confrontations/{id}` (NOVO Onda I)
-Confronto equipe × equipe.
-- `tournament_id`, `modality_id`, `phase_id`, `round`,
-  `team_a_id`, `team_b_id`, `winner_team_id`, `score_a`,
-  `score_b`, `status`, `stages[]` (cada etapa decidida).
-- Cada `stage` espelha em `club_event_games` com
-  `kind=singles/doubles` e `source='team_confrontation'`
-  (entra no ELO + DUPR individual).
+### Torneio por equipes (`team_tournaments`)
+Não há coleções `tournament_team_*`. As equipes usam as coleções do torneio:
+- `tournament_registrations` com `kind: 'team'`, `team_name`, `members[]`,
+  `member_uids`.
+- `tournament_matches` com `team_confrontation: true`, `etapas[]`,
+  `etapa_wins_a/b`, `sets_*`, `points_*`.
+- Cada etapa espelha em `club_event_games` com `source: 'team_confrontation'`
+  (entra no ELO e no DUPR individual).
 
 ## Gamificação V2 (flag `gamification_v2`, default OFF)
 
@@ -917,6 +986,14 @@ Confronto equipe × equipe.
 > `gamificationRulesSync.test.js` quebra a CI se um lado divergir do outro.
 
 ### `user_progression_v2/{uid}` (Onda R)
+> Leitura (vale também para `user_achievements_v2`): o dono e o admin sempre;
+> outra conta logada só se `user_gamification_prefs.privacy.showOnPublicProfile`
+> não for `false` (`gamificationPublicOk`). Kudo: lê `fromUid`, `toUid` ou admin;
+> `user_kudos_index`: dono ou admin; `user_referrals`: indicado, indicador ou
+> admin; `user_rivals`: os dois lados; `mentorships`: mentor, aprendiz ou admin;
+> `crews`: pública ou criador/membro/admin; `crew_members` e
+> `user_referral_codes`: qualquer conta logada.
+
 Snapshot materializado da progressão. Recalculado no cliente a partir dos
 stats V1 (`useSyncProgressionV2`).
 - `uid`, `schemaVersion: 1`, `xpTotal: int`, `level: int`.
@@ -1005,7 +1082,9 @@ Ranking mensal. `seasonId` = `YYYY-MM` no fuso de Brasília.
 - **Regras**: leitura por qualquer autenticado (é placar público);
   **escrita só de platform_admin** — posição no ranking não pode ser
   decidida pelo cliente. O cálculo é trabalho de Cloud Function / admin.
-- **Índices**: `seasonId ASC, xp DESC` e `uid ASC, xp DESC`.
+- **Índices** (4 em `firestore.indexes.json`): `seasonId ASC, xp DESC`,
+  `uid ASC, xp DESC`, `seasonId + public + publicPosition` e
+  `seasonId + public + state + publicPosition`.
 
 ### `dupr_export_log/{matchId}` (Onda G — `dupr_match_export`)
 Situação de cada partida perante o DUPR e presença dela na **lista de
@@ -1424,25 +1503,237 @@ pedidos, ofertas, perguntas e avaliações ficam sem o nome; a ficha pessoal
 fica "Vendedor removido", suspensa, com os anúncios encerrados; pedido em
 andamento impede a exclusão.
 
+## Coleções conferidas na regra (complemento)
+
+> Coleções que faltavam neste documento. Cada item foi conferido em
+> `firestore.rules` e nos services/funções citados; campo que não foi possível
+> confirmar não está listado. "Servidor" = Admin SDK (ignora a regra; o cliente
+> é `write: false`).
+
+### Social e perfil
+
+#### `player_goals/{uid}_{goalId}`
+Meta pessoal (`goalService`). `id`, `uid`, `metric`, `target`, `created_at`.
+Só o dono lê, cria, atualiza e apaga (confere `uid`).
+
+#### `follows/{followerUid}_{targetUid}`
+Quem segue quem. `id`, `follower_uid`, `target_uid`, `follower_name`,
+`created_at`. Lê qualquer conta logada; só o seguidor cria e apaga; não há
+update. Seguir notifica o seguido (`new_follower`).
+
+#### `affiliate_links/{autoId}`
+Links de parceiros. `title` (≤100), `description` (≤300), `url`, `image_url`,
+`category` (`equipment|store|sponsor|academy|other`), `active`, `sort_order`,
+`created_by`, `created_at`, `updated_at`. Leitura pública; escrita só do admin
+da plataforma (auditoria `affiliate_link_*`).
+
+#### `rating_history/{id}` · `open_games/{id}` · `arena_unavailabilities/{id}`
+- `rating_history`: leitura pública; cliente não escreve.
+- `open_games` (convites do "Procura-se jogo"): lê conta logada; cria quem
+  assina em `created_by`; atualiza/apaga o autor ou admin; `status` `open|closed`.
+- `arena_unavailabilities`: leitura pública; cria/edita/apaga gestor da arena
+  ou admin (`source: 'game_day'` quando vem do dia de jogo).
+
+### Arenas
+
+#### `booking_waitlist/{arena_id}_{user_id}_{date}_{start}`
+Espera por um **horário de reserva** (distinta de `arena_waitlist`, que é a fila
+do jogo aberto). `id`, `arena_id`, `user_id`, `date`, `start`, `end`,
+`court_id|null`, `user_name`, `user_photo`, `notes` (≤300), `created_at`,
+`created_at_ms`. Lê o dono, o gestor da arena ou o admin; cria o dono; apaga
+dono, gestor ou admin; não há update. Entrar avisa os gestores.
+
+#### `arena_market_reports/{arenaId}_{periodType}_{periodKey}`
+Fechamento financeiro do Mercado (flag `arena_market_reports`). `arena_id`,
+`period_type`, `period_key`, `period_start`, `period_end`, `label`, `lines[]`,
+`totals`, `status`, `edited`, `generated_at`, `generated_by`, `updated_at`.
+Lê e escreve só gestor da arena ou admin.
+
+### Torneios
+
+#### `provisional_claims/{rid}_a|b`
+Prova de posse de uma inscrição provisória. `email_lc`, `registration_id`,
+`tournament_id`, `modality_id`, `slot` (`a|b`), `claimed`, `claimed_by`
+(+ `claimed_at`, `updated_at` ao reivindicar). Id = `registration_id + '_' + slot`.
+Lê o admin ou quem tem no token o e-mail igual a `email_lc` (consulta sempre
+`where email_lc == meu`). Cria o organizador, uma das partes ou o admin; quem
+reivindica só toca `claimed`, `claimed_by`, `claimed_at`, `updated_at`. Apagada
+pelo servidor ao vincular a conta (`functions/registrationLink.js`).
+
+### Professores
+
+#### `coach_student_notes/{coachId}_{studentId}`
+Anotações privadas do professor sobre o aluno (saíram de
+`coach_students.private_notes`). `coach_id`, `student_id`, `text`, `updated_at`.
+Só o professor e o admin leem e escrevem (consulta por `coach_id == uid`).
+
+### Gamificação V2 — preferências, XP e integridade
+
+#### `user_gamification_prefs/{uid}`
+Chaves permitidas (`hasOnly`): `uid`, `schemaVersion` (1),
+`privacy{showInHallOfFame, showOnPublicProfile}`,
+`social{acceptDuels, acceptReviews, acceptLetters}`,
+`notifications{weeklyReview, duels, challengeResults}`,
+`display{title, celebrations}`, `onboarding{dismissed, done{}}` (≤24 passos),
+`celebrated{}` (≤120). O dono lê, cria, atualiza e apaga; o admin lê e apaga.
+O servidor a lê para respeitar as escolhas.
+
+#### `user_xp_grants/{uid}_{kind}_{ref}`
+Crédito de XP. `uid`, `kind`, `xp`, `label`, `refId`, `at`, `serverAt`,
+`schemaVersion`. Só o servidor escreve (com `create`, para nunca creditar duas
+vezes). Lê o dono ou o admin.
+
+#### `gamification_moderation/{uid}`
+`excluded`, `hiddenFromPublic`, `reason`, `by`, `at`. Só o admin lê e escreve;
+o documento é apagado quando nenhuma das marcas está ligada.
+
+#### `gamification_flags/{id}`
+Alertas antifarm. `type`, `severity`, `subjectUid`, `otherUid`, `detail`,
+`status` (`open|reviewed|dismissed|actioned`), `createdAt`, `schemaVersion`;
+revisão: `reviewNote`, `reviewedBy`, `reviewedAt`. O servidor abre (cliente
+não cria). O admin lê e só altera `status`, `reviewNote`, `reviewedBy`,
+`reviewedAt`.
+
+#### `gamification_metrics/{day}`
+Retrato diário (dia de Brasília): `day`, `at`, `athletes`, `active7`,
+`active30`, `referrals`, `referralsActivated`, `kudos7`, `reviews7`, `letters7`,
+`challengesActive`, `duelsActive`, `rewardClaimsOpen`, `flagsOpen`, `prefsDocs`,
+`onboarding{dismissed, steps}`, `schemaVersion`. Lê o admin; escreve o servidor.
+
+#### `gamification_integrity/{uid}`
+`{ xp, at }`. Só o servidor; a regra bloqueia leitura **e** escrita do cliente.
+
+#### `gamification_goals/{ownerType}_{ownerId}_{month}`
+Metas mensais de painel. `ownerType` (`coach|arena|club`), `ownerId`, `month`,
+`goals[]` (≤6, cada `{metric, target}`), `updatedAt`. Lê e escreve só o dono do
+painel (professor = ele mesmo, gestor da arena, admin do clube); o admin da
+plataforma lê e apaga.
+
+### Gamificação V2 — social
+
+#### `hall_of_fame/{uid}`
+Quadro de honra. `uid`, `xp`, `tier`, `level`, `achievements`, `position`,
+`displayName`, `photoUrl`, `state`, `city`, `updatedAt`, `schemaVersion`. Só
+entra quem consentiu (`showInHallOfFame`). Lê qualquer conta logada; só o
+servidor escreve (quem retira o consentimento sai).
+
+#### `match_reviews/{matchKey}__{fromUid}__{toUid}`
+Avaliação de parceiro de jogo. `fromUid`, `toUid`, `matchKey` (≤120), `rating`
+(inteiro 1–5), `tags` (≤4), `issues` (≤4), `relation`, `createdAt` (número).
+Nota 1–2 exige ao menos um `issues`. Não há update. Lê e apaga o autor ou o
+admin; **quem foi avaliado não vê quem deu o quê**, só o agregado.
+
+#### `user_reputation/{uid}`
+Agregado público. `uid`, `count`, `average`, `publicScore`, `fiveStarCount`,
+`topTags`, `updatedAt`, `schemaVersion`. Lê conta logada; só o servidor escreve.
+
+#### `user_reputation_private/{uid}`
+`uid`, `issues{}`, `count`, `updatedAt`, `schemaVersion`. Lê o dono ou o admin;
+só o servidor escreve.
+
+#### `partner_letters/{matchKey}__{fromUid}__{toUid}`
+Cartinha ao parceiro. `toUid`, `fromUid` (`null` se anônima), `fromName`, `text`
+(3–280), `showName`, `matchKey`, `createdAt`, `readAt`, `reported`. Lê o
+destinatário ou o admin. O autor cria, e `partner_letter_authors` precisa ser
+criado no mesmo lote (`getAfter`). O destinatário só atualiza `readAt` e
+`reported`; apaga o destinatário ou o admin.
+
+#### `partner_letter_authors/{mesmo id da carta}`
+Quem escreveu (a carta pode ser anônima). `fromUid`, `toUid`, `matchKey`,
+`createdAt`. Lê o autor ou o admin; o autor cria; só o admin atualiza/apaga.
+
+#### `duels/{week}_{uidA}_{uidB}`
+Duelo semanal. `week`, `uidA`, `uidB`, `nameA`, `nameB`, `levelA`, `levelB`,
+`status` (`active|finished|declined`), `startsAt`, `endsAt`, `createdAt`,
+`schemaVersion`; no fechamento: `outcome`, `winner`, `resultA{games,wins}`,
+`resultB`, `finishedAt`. O servidor cria e fecha. Lê os dois lados ou o admin;
+o cliente só muda `active → declined` (grava `declinedBy`, `declinedAt`).
+
+### Gamificação V2 — desafios e recompensas
+
+#### `gamification_challenges/{autoId}`
+Desafio de um emissor. `issuerType` (`platform|arena|club|coach`), `issuerId`,
+`issuerName`, `title` (4–80), `description`, `rules`, `emoji`, `metric`,
+`subject` (`athlete|club`), `startsAt`, `endsAt` (≤92 dias), `regionState`,
+`prizes[]` (≤5), `status` (`draft|active|cancelled|finished`), `createdBy`,
+`schemaVersion`, `createdAt`. Lê conta logada, exceto rascunho (só emissor e
+admin). O emissor cria/edita sem trocar `issuerType`, `issuerId`, `createdBy`;
+desafio clube × clube é só da plataforma; só o servidor marca `finished`.
+Apaga o emissor (rascunho ou cancelado) ou o admin.
+
+#### `challenge_entries/{challengeId}_{uid}` ou `{challengeId}_club_{clubId}`
+Adesão. Na criação: `challengeId`, `subjectType`, `subjectId`, `uid`,
+`joinedAt`, `value` = 0, `position` = null, `finalized` = false, `prizeXp` = 0;
+o servidor depois acrescenta `eligible`, `updatedAt`. Exige desafio ativo e
+antes de `endsAt`. Lê conta logada; cliente não atualiza. Sai o dono (ou o
+admin do clube) enquanto `finalized != true`; o admin sempre.
+
+#### `gamification_rewards/{autoId}`
+Recompensa de um emissor. `issuerType`, `issuerId`, `issuerName`, `title`
+(4–80), `description`, `instructions`, `kind`, `eligibility`, `quantity`,
+`approvedCount`, `validUntil`, `status` (`active|paused|ended`), `createdBy`,
+`schemaVersion`, `createdAt`. Lê conta logada; o emissor cria/edita
+(`approvedCount` só sobe, de 1 em 1); apaga o emissor ou o admin.
+
+#### `reward_claims/{rewardId}_{uid}`
+Pedido de resgate. `uid`, `userName`, `rewardId`, `rewardTitle`, `issuerType`,
+`issuerId`, `status` (`requested → approved|rejected → redeemed`; a pessoa pode
+marcar `cancelled`), `code` (6–20), `snapshot{tier, level, games, streakWeeks}`,
+`createdAt`. Lê a pessoa, o emissor ou o admin; apaga só o admin.
+
+### Mercado
+
+#### `market_addresses/{uid}`
+Endereços de entrega. `addresses[]` (≤5), `updated_at`. Só o dono lê, cria,
+atualiza e apaga. Guarda dado pessoal: nunca em coleção de leitura ampla.
+
+#### `market_follows/{uid}_{seller_key}`
+Seguir vendedor. `uid`, `seller_key`, `created_at`. Só o dono lê, cria e apaga.
+O servidor mantém `market_sellers.follower_count` (`marketFollowCount`) e avisa
+os seguidores de anúncio novo (`marketFollowersNotify`).
+
+## Storage (`storage.rules`)
+
+Seis blocos; o resto é negado (`/{allPaths=**}`: sem leitura nem escrita).
+
+| Caminho | Quem lê | Quem escreve | Limite |
+|---|---|---|---|
+| `uploads/{uid}/private/**` | só o dono | só o dono (grava e apaga) | < 25 MB |
+| `uploads/{uid}/{pasta}/**` (exceto `private`) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
+| `uploads/{uid}/{arquivo}` (legado, solto) | `get`: conta logada; `list`: o dono | o dono | < 25 MB |
+| `treino/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria (sem sobrescrever) | imagem webp/jpeg/png < 3 MB; vídeo mp4/webm/quicktime < 60 MB |
+| `mercado/{uid}/{arquivo}` | `get`: conta logada; `list`: o dono | o dono, só cria; apaga, exceto `comprovante-*` | como `treino`, mais PDF < 3 MB |
+| `/{allPaths=**}` | ninguém | ninguém | — |
+
+## Índices
+
+Os índices compostos estão em `firestore.indexes.json` (38 hoje; `fieldOverrides`
+vazio). Números e a lista atual: `docs/46-INVENTARIO.md` §6. A regra do projeto:
+um `where` só, ordenação em memória. Quando `where` + `orderBy` for
+inevitável, o guarda `src/core/guards/indicesCompostos.test.js` exige índice
+**exato** (igualdades primeiro, depois só os campos do `orderBy`; o Firestore
+desempata por `__name__`, então um campo a mais não serve). Sem índice a
+consulta **falha** e a tela vê lista vazia.
+
 ## Relacionamentos (resumo)
 
 ```
 users (1) ──< tournaments (owner) ──< tournament_modalities ──< tournament_registrations
                          │                                  └──< tournament_matches >── tournament_courts
-                         ├──< tournament_admins                    │
-                         ├──< tournament_groups                    └──> tournament_rankings (materializado)
+                         ├──< tournament_admins
+                         ├──< tournament_groups
                          ├──< tournament_announcements · tournament_photos
 users (1) ──< athlete_profiles (perfil público, directory_listed)
 clubs (1) ──< club_members ──> users
        ├──< club_join_requests / club_member_invites  (ingresso)
-       ├──< club_posts (mural) · club_forum_threads ──< poll_votes / comments
+       ├──< club_posts (mural) · club_forum_threads ──< poll_votes / comments (subcoleções)
        ├──< club_events (com recurring_rule) ──< club_event_rsvps / event_invites
-       ├──< dates (game-day) ──< date_rsvps
+       ├──< club_events/{id}/dates (game-day) ──< date_rsvps (subcoleção)
        ├──< (ranking interno — Onda 8)
        └──< (página pública /clubes/p/:slug — Onda 8b)
 arenas (1) ──< arena_managers ──> users
        ├──< arena_courts ──< arena_court_schedules
-       ├──< arena_bookings (com court_id obrigatório) · arena_waitlist
+       ├──< arena_bookings (com court_id obrigatório) · booking_waitlist
        │              └── responsibles[] (multi, com rateio) · booking_type
        │                            (single|recurring|coach_lesson|shared)
        ├──< arena_unavailabilities · arena_reviews · arena_favorites
@@ -1462,11 +1753,11 @@ coaches/{uid} (1) ──< coach_arenas/{coachId_arenaId} (residência) ──> a
        ├──< coach_content (biblioteca) · coach_clinics ──< coach_clinic_signups
        ├──< coach_level_validations (validação de nível)
        └──< coach_products (loja)
-users (1) ──< follows (social) · player_goals · conversations ──< messages
+users (1) ──< follows (social) · player_goals · conversations ──< messages (subcoleção)
 tournaments (1) ──< circuits (via circuit_tournaments) ──< circuit_results
 (qualquer ação) ──> audit_logs ;  (qualquer usuário) ──> notifications
                                           └─ preferences: {category: bool}
-platform_settings/feature_flags/{key} — defaults de FEATURE_FLAG
+platform_settings/global (campo feature_flags.{key}) — valores de FEATURE_FLAG
 ```
 
 ## Regras de segurança (`firestore.rules`) — princípios

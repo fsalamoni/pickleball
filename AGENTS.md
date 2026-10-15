@@ -12,6 +12,13 @@
 
 ---
 
+## Regra obrigatória para qualquer agente
+
+**Toda implementação atualiza a documentação, no mesmo PR** (CLAUDE.md §2, princípio 12):
+atualize o doc do assunto (mapa em `docs/00-INDEX.md` §8), o README do módulo e rode
+`npm run docs:inventario`. O CI reprova inventário desatualizado e PR que muda código sem
+tocar em documento (isenção só com `Docs: não se aplica — <motivo>` no corpo do PR).
+
 # (Conteúdo do guia-mestre — abre [`CLAUDE.md`](./CLAUDE.md))
 
 Para evitar duplicação e drift entre dois arquivos enormes, o conteúdo

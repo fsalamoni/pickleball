@@ -1,149 +1,208 @@
-# DESIGN_STANDARD — padrão visual obrigatório da plataforma
+# DESIGN_STANDARD — padrão visual da plataforma ("Athleisure Premium")
 
-Documento normativo para páginas, tabs e modais da PickleRush. Ele existe para
-eliminar deriva visual: qualquer nova tela deve parecer parte do mesmo produto,
-não uma implementação isolada.
+Documento normativo para páginas, abas e diálogos da PickleRush. Existe para
+eliminar deriva visual: toda tela nova deve parecer parte do mesmo produto.
+O visual atual é o **Athleisure Premium** do V2 (tinta escura + verde-ácido +
+papel claro); o antigo padrão "emerald/arena-panel" (`PlatformSurfaceCard` etc.,
+`src/components/ui/platform-page.jsx`) é **legado** — não use em tela nova.
+
+Fontes de verdade (se este texto divergir, o código vence e este texto está
+errado — corrija): `tailwind.config.js`, `src/core/theme/palette.js`,
+`src/v2/ui/primitives.jsx`, `src/v2/ui/pageFrame.js`, `src/index.css`.
 
 ## 1. Escopo
 
-Aplicação obrigatória em:
+Obrigatório em páginas novas, abas que funcionam como páginas, diálogos com
+mais de um bloco e qualquer refino de tela existente. Exceção só deliberada e
+escrita (ex.: telão, totem, impressão têm layout próprio e ficam sempre claros).
 
-1. páginas novas;
-2. tabs que funcionam como páginas internas;
-3. modais de criação/edição com mais de um bloco de informação;
-4. refinamentos futuros de páginas existentes.
+## 2. Tokens
 
-## 2. Fundamentos visuais
+### 2.1 Cores da marca (`tailwind.config.js` ← `palette.js` `BRAND`)
 
-Os tokens-base vivem em [src/index.css](../src/index.css).
+| Token | Valores | Uso |
+|---|---|---|
+| `acid` | `DEFAULT #D4F82E`, `light #E5FA7A`, `dark #A6C61A` | ação primária, destaque, selo |
+| `ink` | `DEFAULT #0B0F19`, `light #1A2235`, `lighter #2D3A54` | texto principal, superfície escura, botão secundário |
+| `paper` | `DEFAULT #F7F9FC`, `pure #FFFFFF`, `dark #E2E8F0` | fundo da aplicação (`paper`), cartão (`paper-pure`/`white`) |
 
-Classes estruturais obrigatórias:
+Texto secundário é `text-gray-500` (nunca `gray-400` em fundo claro: 2,5:1,
+reprova no AA). Estado usa só as famílias `green`, `amber`, `red`, `blue`
+(`V2Badge` também admite `cyan` e `purple`). Os tokens shadcn (`background`,
+`primary`, `border`…) existem por compatibilidade com Radix; em tela V2 prefira
+os da marca.
 
-1. `arena-panel-strong`: hero principal ou bloco de destaque máximo.
-2. `arena-chip`: etiqueta curta de contexto no topo de heros e painéis.
-3. `match-surface`: cards de listagem clicáveis.
-4. `rounded-[2rem] border-white/80 bg-white/82`: superfície neutra principal.
-5. `rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5`: bloco interno de formulário ou conteúdo agrupado.
+### 2.2 Tipografia
 
-## 3. Componentes padrão
+- **Inter** (corpo, via `index.css`) e **Outfit** (`font-display`, títulos),
+  carregadas do Google Fonts em `index.html`. Classes: `font-display`, `font-inter`.
+- Título da página (h1): `PAGE_TITLE` (fundo claro) ou `HERO_TITLE` (herói escuro)
+  — `font-display text-3xl sm:text-4xl font-bold tracking-tight`, **um tamanho só**
+  (`TITLE_TYPE`). Nunca escreva h1 à mão.
+- Título de seção: `V2SectionHeader` (`font-display text-2xl sm:text-3xl font-bold`).
+- Eyebrow/legenda: `text-2xs font-bold uppercase tracking-widest text-gray-500`.
+- **Piso tipográfico: 11 px** (`text-2xs`, só selo e legenda). `text-[10px]` e
+  menores são dívida e o guarda reprova aumento.
 
-Para reduzir variação, novas telas devem priorizar os componentes de
-[src/components/ui/platform-page.jsx](../src/components/ui/platform-page.jsx).
+### 2.3 Raios, sombras e espaçamento
 
-Componentes canônicos:
+- Raios: `--radius` 1.25rem (1rem no mobile); `rounded-2.5xl` (1.25rem),
+  `rounded-3xl` (1.75rem), `rounded-4xl` (2.25rem) — os "squircles" do V2.
+- Sombras: `shadow-organic` e `shadow-organic-sm` (difusas; mais fundas no
+  escuro, vêm de variáveis da paleta) e `shadow-glow` (brilho ácido, só em ação
+  primária).
+- Cartões: `V2Surface` com `variant` `padrao` (seção, `rounded-4xl`, `p-6/8`),
+  `compacto` (cartão interno, `rounded-3xl`, `p-4`) ou `plano` (apoio, sem sombra).
+  Cartão ou campo "escrito à mão" fora de `src/v2/ui` é dívida (guarda).
+- Espaçamento vertical entre blocos: `space-y-*` no container da página; o
+  recuo lateral/superior é do `<main>` do layout.
 
-1. `PlatformSurfaceCard`: card neutro principal da página.
-2. `PlatformSectionHeader`: cabeçalho de seção com eyebrow, título, descrição e ação.
-3. `PlatformMetricCard`: card pequeno de métrica ou resumo.
-4. `PlatformFormSection`: bloco interno de formulário/configuração.
-5. `PlatformNotice`: aviso ou nota operacional em tom informativo.
+## 3. Primitivos
 
-## 4. Composição obrigatória por tipo de tela
+### 3.1 `src/v2/ui/primitives.jsx` (exportações reais)
 
-### 4.1 Página de entrada de fluxo
+`SURFACE_VARIANTS`, `V2Surface`, `V2CollapsibleSection`, `PAGE_FRAME`,
+`TITLE_TYPE`, `PAGE_TITLE`, `HERO_TITLE`, `V2Page`, `V2PageIntro`, `V2BackLink`,
+`V2PageHeader`, `V2SectionHeader`, `V2Button`, `V2Badge`, `V2StatCard`,
+`V2Avatar`, `V2AvatarStack`, `V2EmptyState`, `V2ErrorState`, `V2Skeleton`,
+`V2FilterChip`, `V2SearchInput`, `V2Field`, `V2Input`, `V2Textarea`, `V2Select`,
+`V2Toggle`, `V2ContentHero`, `V2ContentSection`, `V2BulletList`.
 
-Exemplos: criar torneio, ingressar com código, listagem pública.
+- `V2Button`: `variant` = `primary | secondary | ghost | subtle | danger`;
+  `size` = `sm | md | lg | icon`. `sm`/`md` levam `coarse:min-h-11`; `icon` é 44×44.
+- `V2Badge`: `tone` = `neutral | acid | ink | green | blue | amber | red | cyan | purple`.
+- `V2Select` aceita `children` **ou** `options`.
+- `V2Field` junta rótulo (sempre acima), dica e erro.
 
-Estrutura:
+### 3.2 Demais peças de `src/v2/ui/`
 
-1. hero forte à esquerda (`arena-panel-strong`);
-2. painel de apoio/resumo à direita (`PlatformSurfaceCard`);
-3. corpo principal em `PlatformSurfaceCard`;
-4. seções internas divididas por `PlatformFormSection`.
+`V2CollapsibleCard` (seção colapsável que lembra por pessoa; `sectionId`
+estável, ações em `actions`), `V2SectionNav` + `V2SubTabs` (barras de seções
+que **quebram em linhas, nunca rolam de lado**), `V2Pagination`, `BrandMark`
+(logo que troca por tema), `CopyCodeButton` (código = botão de copiar),
+`rolarAte`/`useHashScroll`/`useAncoraDoAviso` (rolagem por âncora — nunca
+`scrollIntoView` cru), `useDesfazivel` (desfazer).
+Confirmação de ação destrutiva usa `ConfirmDialog` (`src/components/`), não `confirm()`.
+Componentes Radix/shadcn de `src/components/ui/` são a base de diálogos e menus.
 
-### 4.2 Página de detalhe
+## 4. Moldura única de página
 
-Exemplos: torneio, modalidade.
+Toda página está dentro de `<V2Page>` (`PAGE_FRAME` = `mx-auto w-full
+max-w-[1200px]`), **sem recuo próprio**: o recuo é do `<main>` do `V2Layout`.
+`className` do `V2Page` leva `space-y-*`, nunca `p-*`/`px-*`/`pt-*`/`mt-*`.
+Estados de carregamento, erro e vazio ficam **dentro** da moldura. A barra de
+abas usa a mesma moldura. Isentos (com motivo): telão, totem, login, convite,
+modo quadra, apresentação. Guarda: `larguraDePagina.test.js`. Ver
+`docs/45-MOLDURA-DAS-PAGINAS.md`.
 
-Estrutura:
+## 5. Composição por tipo de tela
 
-1. hero com nome, contexto e poucas badges;
-2. painel lateral de decisão ou ações rápidas;
-3. grid curto de métricas usando `PlatformMetricCard`;
-4. seções internas com cabeçalhos consistentes;
-5. tabs em superfície neutra, nunca soltas no fundo.
+1. **Página de entrada/lista**: `V2PageHeader` (título, subtítulo, ações) →
+   filtros (`V2FilterChip`/`V2SearchInput`) → lista em `V2Surface`.
+2. **Página de detalhe**: herói (`V2ContentHero` ou painel `bg-ink` com
+   `HERO_TITLE`) com poucas badges → grade curta de `V2StatCard` → seções em
+   `V2Surface`/`V2CollapsibleCard` → abas em `V2SectionNav`/`V2SubTabs`.
+3. **Diálogo complexo**: blocos com título e descrição curta; não misturar
+   identidade, vagas, pontuação e operação; rolagem interna (`DialogContent`
+   já traz `max-h-[90dvh] overflow-y-auto`).
+4. **Formulário**: rótulo acima, ajuda no mesmo bloco, configuração avançada
+   depois da básica, `gap-3`/`gap-4`.
 
-### 4.3 Modal ou diálogo complexo
+Regras de densidade: no máximo uma camada de destaque forte por viewport
+inicial; métrica pequena responde a uma pergunta concreta; texto explicativo
+longo vai em bloco contextual, não espalhado em cartões ornamentais.
 
-Exemplos: criação e edição de modalidade.
+## 6. Navegação
 
-Regras:
+- **Barra lateral** (desktop): hubs de nível 1, recolhível; cada pessoa escolhe
+  o que aparece (padrão por papel: atleta, arena, professor), em Configurações →
+  Menu. Lógica pura em `core/domain/sidebarNav.js`; `Início` fica em 1º e
+  `Minha área`/`Admin` nunca saem. A busca indexa todos os hubs.
+- **Barra inferior do celular**: 5 itens fixos em ordem (`Início · Jogar ·
+  Arenas · [contextual] · Minha área`), o quarto muda com a pessoa
+  (`core/domain/bottomNav.js`); não é configurável. Gaveta do celular espelha o menu.
+- **Cabeçalho**: busca, sino de notificações (uma assinatura compartilhada),
+  idioma, menu do usuário, ajuda e dicas.
+- **Paleta de comandos**: `Ctrl/⌘+K` (`V2CommandPalette`, lazy): ações por papel,
+  telas, atletas, torneios, arenas, clubes e artigos da ajuda; teclado por setas,
+  Enter, Esc (combobox/listbox WAI-ARIA).
+- **Centrais** (arena, professor, torneio): `V2SectionNav` + `V2SubTabs`; a aba
+  ativa vive na URL (`?aba=`/`?secao=`), e os valores são contrato de link.
+- Link de "voltar" é `V2BackLink`; link de ajuda por tela, `helpLinkFor`.
 
-1. o conteúdo deve ser agrupado em blocos lógicos;
-2. cada bloco deve ter título explícito e descrição curta;
-3. não misturar identidade, vagas, pontuação e operação no mesmo bloco;
-4. formulários longos precisam de rolagem interna e hierarquia clara.
+## 7. Modo escuro
 
-## 5. Regras de conteúdo e densidade
+Flag `dark_mode`; Claro, Escuro ou Automático por pessoa (`docs/30-MODO-ESCURO.md`).
+**A tela não precisa de nada**: a paleta compila cada cor de `bg-*`/`text-*`/
+`border-*` como `rgb(calc(CLARO + (ESCURO − CLARO) × var(--k)))`; `--k` vale 0
+no claro (idêntico ao de sempre, provado token a token) e 1 no escuro
+(`.dark`, só na tela — impresso é claro). Texto e linha usam um segundo
+interruptor `--kf`, que "superfícies de cor" (`bg-ink`, `bg-acid`) zeram para o
+design original continuar valendo lá dentro.
 
-1. O hero não deve repetir tudo o que aparecerá nas métricas.
-2. Cards laterais não devem inflar a interface com promessas vagas ou marketing genérico.
-3. “Por que participar” ou equivalentes só podem usar razões objetivas derivadas dos dados da tela.
-4. Métricas pequenas devem responder a uma pergunta concreta: perfil, capacidade, datas, acesso, operação.
-5. Quando houver texto explicativo maior, ele deve ficar em bloco técnico ou contextual, não espalhado em vários cards ornamentais.
+1. Use os tokens de sempre (`bg-white` cartão, `bg-paper` recuo, `text-ink`/
+   `text-gray-500`, `bg-ink` destaque). Cor arbitrária (`bg-[#…]`, `style`)
+   **não** troca.
+2. **Nunca** use `dark:` para cor — só para trocar arquivo (logo, via `BrandMark`).
+3. O que precisa ficar claro: `tema-claro` no trecho (arte exportada, moldura
+   de QR) ou `<AparenciaClara>` na rota (telão, totem, impressão).
+4. `palette.js`/`tailwindTheme.js` são de build: importá-los numa tela põe
+   `tailwindcss/colors` no pacote (guarda `modoEscuro.test.js`).
+5. Confira a tela no escuro antes de concluir.
 
-## 6. Tipografia e hierarquia
+## 8. Acessibilidade
 
-0. Título da página (h1): `PAGE_TITLE` (fundo claro) ou `HERO_TITLE` (herói escuro), um tamanho só — ver `docs/45-MOLDURA-DAS-PAGINAS.md`.
-1. Eyebrow: `text-xs font-semibold uppercase tracking-[0.16em]` a `0.2em`.
-2. Título principal de seção: `text-2xl font-semibold text-slate-950`.
-3. Descrição de seção: `text-sm leading-6 text-slate-600`.
-4. Texto de apoio: evitar corpo menor que `text-xs` fora de hints e badges.
+- **Alvo de toque 44 px** em ponteiro grosso: variante `coarse:` (= `@media
+  (pointer: coarse)`, em `tailwind.config.js`); `V2Button` e `V2BackLink` já
+  cumprem.
+- **Piso de 11 px** de fonte e contraste AA (texto secundário `gray-500`; o
+  escuro tem contraste conferido por teste).
+- Botão só com ícone leva nome acessível (`aria-label`); `<button>` sempre com
+  `type` (dentro de `<form>`, sem `type` envia o formulário). Guardas:
+  `botaoSoIcone.test.js`, `dividaDeDesign.test.js`.
+- Navegação com `aria-label`, listas/combobox com os papéis ARIA corretos;
+  nada crítico depende de hover; respeitar "menos movimento" (carrosséis).
+- Rotas públicas passam pelo **axe** (`tests/e2e/acessibilidade.spec.js`:
+  violações `serious`/`critical` em WCAG 2 A/AA barram).
 
-## 7. Formulários
+## 9. Estados de interface
 
-1. Inputs e selects sempre com label acima.
-2. O espaçamento vertical padrão entre campos é `gap-3` ou `gap-4`.
-3. Ajuda contextual deve ficar no mesmo bloco do campo que ela explica.
-4. Configuração avançada não pode aparecer antes da definição básica da entidade.
-5. Pontos por game e sets por partida devem ficar na modalidade/fase, nunca no pano de fundo do torneio.
+- **Carregando**: `V2Skeleton` com a geometria real da página; telas inteiras
+  em `Suspense` caem no spinner do `V2App`.
+- **Erro**: `<V2ErrorState onRetry={refetch} />` (`tipo` `rede`/`servidor`,
+  `inline` para uma seção que falhou numa tela que carregou). Nunca um bloco de
+  erro escrito à mão, nunca "não encontrado" para uma falha de rede.
+- **Vazio**: `V2EmptyState`, e **só** quando `podeAfirmarVazio(consulta)`
+  (`core/lib/queryState.js`: terminou e não falhou). Sem a lista na mão, não
+  renderize "Criar"/"Salvar" que dependam dela. Guarda: `falhaNaoEVazio.test.js`.
+- Aviso operacional: bloco contextual no mesmo lugar do que ele explica
+  (na impressão, o aviso de falha **deve** sair no papel).
 
-## 8. Estados de interface
+## 10. Responsividade
 
-1. Empty state deve usar `EmptyState` quando a ausência de dados for o foco.
-2. Loading state deve refletir a geometria real da página com `Skeleton`.
-3. Avisos operacionais usam `PlatformNotice` ou bloco equivalente, nunca texto solto perdido entre seções.
+Phone-first; sem rolagem horizontal da página (`overflow-x: clip` no corpo, para
+não quebrar `sticky`). Herói e painel lateral viram uma coluna no celular;
+métricas refluem 1–2 colunas antes de 4; barras de abas quebram linha. Gutter
+lateral vem do `<main>`.
 
-## 9. Responsividade
+## 11. Texto e idioma
 
-0. Toda página está dentro da MESMA moldura (`<V2Page>`, 1200 px centralizada, sem recuo próprio) — ver `docs/45-MOLDURA-DAS-PAGINAS.md`.
-1. Hero e painel lateral quebram para uma coluna no mobile.
-2. Tabs precisam manter rolagem horizontal controlada (`overflow-x-auto`).
-3. Cards de métrica devem refluír para 1 ou 2 colunas antes de 4.
-4. Nenhum texto crítico pode depender de hover.
+Todo texto visível passa por `t('…')`/`tk('…')` com `en` e `es` nos catálogos
+(`docs/44-IDIOMAS.md`); datas e números por `fmtData`/`fmtNumero`/`fmtMoeda`.
+Nunca `'pt-BR'` fixo em tela nova.
 
-## 10. Checklist de revisão visual
+## 12. Checklist de revisão visual
 
-Antes de concluir uma página nova ou refatorada, valide:
+1. Está em `<V2Page>` e usa `PAGE_TITLE`/`HERO_TITLE`?
+2. Usa primitivos V2 (sem cartão/campo/botão/erro escrito à mão)?
+3. Carregando, erro e vazio tratados (e o vazio só quando é verdade)?
+4. Mobile legível, alvos de 44 px, nada abaixo de 11 px, contraste AA?
+5. Conferida no escuro; nenhuma cor arbitrária nem `dark:` para cor?
+6. Texto em `t()` com catálogos; ajuda/dicas atualizadas se houver guia (`data-dica`)?
+7. Há mais de uma camada de destaque forte no primeiro viewport? Se sim, reduza.
 
-1. A página usa hero forte + superfície neutra + blocos internos coerentes?
-2. Há no máximo uma camada de destaque forte por viewport inicial?
-3. As métricas explicam algo real ou só ocupam espaço?
-4. O cabeçalho de cada seção segue o mesmo padrão?
-5. O formulário está dividido por intenção e ordem lógica?
-6. O mobile continua legível sem colapsar a hierarquia?
+## 13. Regra final
 
-## 11. Modo escuro
-
-A plataforma tem modo escuro por usuário (flag `dark_mode`, ver
-[30-MODO-ESCURO.md](./30-MODO-ESCURO.md)). Ele NÃO pede classe nova: a paleta
-(`src/core/theme/palette.js`) decide a cor de cada `bg-*`/`text-*`/`border-*`
-nos dois modos. O que isso exige de quem desenha uma tela:
-
-1. Use os tokens de sempre (`bg-white` para cartão, `bg-paper` para recuo,
-   `text-ink`/`text-gray-500` para texto, `bg-ink` para destaque). Cor
-   arbitrária (`bg-[#…]`, `style={{ color }}`) **não** troca no escuro.
-2. Superfície "de cor" (`bg-ink`, `bg-acid`, cores ≥ 300) mantém o texto do
-   design original lá dentro; superfície neutra acompanha o modo.
-3. **Nunca** use a variante `dark:` para cor — ela existe só para trocar
-   ARQUIVO (ex.: o logo, via `BrandMark`).
-4. Algo que precisa ficar claro nos dois modos (arte exportada, moldura de QR):
-   `tema-claro` no trecho. Tela inteira (telão, totem, impressão):
-   `<AparenciaClara>` na rota.
-5. Confira a tela no escuro antes de concluir (Configurações → Aparência).
-
-## 12. Regra final
-
-Se uma nova implementação precisar inventar um padrão visual fora destes
-componentes e regras, isso deve ser tratado como exceção deliberada e
-documentada, não como liberdade default.
+Se uma implementação precisar inventar um padrão fora destes primitivos e
+regras, trate como exceção deliberada, escreva o motivo no código e atualize
+este documento — não como liberdade default.

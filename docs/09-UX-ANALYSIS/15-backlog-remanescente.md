@@ -4,8 +4,8 @@
 > (`docs/09-UX-ANALYSIS/01–14`, `docs/08-ARENA-ROADMAP.md`, `docs/10-ARENA-V3/*`),
 > com uma **limpeza do que já foi implementado**. Este documento é a fonte
 > única de "o que ainda falta". Status apurado por: catálogo de flags
-> (`src/core/featureFlags.js`, 27 flags ativas — o resto virou código
-> permanente nas Ondas antigas), trabalho desta branch e verificação no
+> (`src/core/featureFlags.js`; hoje só poucas flags são ligáveis e o resto virou
+> código permanente — lista atual em `docs/46-INVENTARIO.md`), trabalho desta branch e verificação no
 > código.
 >
 > **Auditoria 2026-09-28** (`docs/AUDIT-2026-09-28.md`): o catálogo de

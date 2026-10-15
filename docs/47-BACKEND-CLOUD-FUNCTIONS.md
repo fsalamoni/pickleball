@@ -1,0 +1,427 @@
+# 47 — Backend: as Cloud Functions do PickleRush
+
+> Conferido contra `functions/index.js`, `functions/*.js`, `firebase.json`,
+> `scripts/functions-deploy.sh` e os workflows em 2026-10-15. A lista
+> mecânica de nomes, tipos e agendas é gerada em
+> [`46-INVENTARIO.md`](./46-INVENTARIO.md) §7; este documento responde o que o
+> inventário não diz: **por quê**, **o que lê e escreve**, **quem pode chamar**
+> e **o que cobre cada uma com teste**.
+>
+> Quem pode o quê em cada perfil: [`48-PERMISSOES-POR-PERFIL.md`](./48-PERMISSOES-POR-PERFIL.md).
+
+## 1. Visão geral
+
+| Item | Valor (onde se confere) |
+|---|---|
+| Região | `southamerica-east1` (`REGION` em `functions/index.js`; `setGlobalOptions`) |
+| Banco | Firestore nomeado **`pickleball`** (`DATABASE_ID`). Todo gatilho declara `database: DATABASE_ID`; o Admin SDK usa `getFirestore(getApp(), DATABASE_ID)` |
+| Codebase | **`picklerush`** (`firebase.json` → `functions[0].codebase`). Nunca `default` |
+| Runtime | Node **22** (`functions/package.json` → `engines.node`) |
+| Dependências | `firebase-admin ^13.10.0`, `firebase-functions ^6.1.0` (v2: `onDocumentWritten/Created/Updated`, `onSchedule`, `onCall`) |
+| Instâncias | `setGlobalOptions({ region, maxInstances: 3 })` — teto global; cada função só sobrescreve `timeoutSeconds`/`memory` |
+| Exportações | **46** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
+| Fuso das agendas | `America/Sao_Paulo` |
+| Regras de segurança | O Admin SDK **ignora** `firestore.rules`. Toda função que escreve em nome de alguém tem de conferir quem pede por conta própria (callables) ou depender do evento que a disparou (gatilhos) |
+
+Por que existem funções: o cliente fala direto com o banco e a regra recusa
+o que só o servidor deve decidir — **ranking** (`allow write: if false`),
+**pedido/oferta/avaliação do Mercado**, **prêmios de XP**, **chamar o próximo
+da fila**, **suspender conta**, **excluir cadastro**. Cada função abaixo existe
+porque a escrita não pode ser do navegador.
+
+### 1.1 Convenções que valem para todas
+
+- **Erro de agendada/gatilho não vira alerta**: ranking, gamificação e push
+  capturam o erro, logam e retornam (o próximo ciclo refaz). Exceções que
+  relançam: `advanceOpenSlotWaitlist`, `refreshLadderWeekly`,
+  `aggregateNpsDaily`, `autoCloseChecklists` (`throw err`).
+- **Idempotência**: prêmios de XP e avisos da gamificação usam id fixo e
+  `create` (a mesma concessão nunca vale duas vezes); o recálculo de ranking
+  refaz tudo do zero.
+- **Pacote isolado**: `functions/` é publicado sozinho e **não importa
+  `src/`**. Tudo que o cliente também calcula existe em duas cópias com teste
+  de paridade (§9).
+- **Texto de aviso** vai por `functions/avisoI18n.js` (`tx`, `textoDoAviso`,
+  `i18nDoAviso`) para o aviso carregar as traduções (`functions/i18n/avisos.json`,
+  gerado por `npm run i18n:avisos`).
+
+## 2. Ranking e rating da plataforma
+
+Lógica em `functions/platformRankings.js` (passada única), `functions/ranking.js`
+(ELO, elegibilidade, assinatura), `functions/engines/dupr.js` e
+`functions/engines/doubles.js` (rating 2.0–8.0 e duplas) e
+`functions/rankingCatchUp.js` (recuperação).
+
+Uma passada lê as duas fontes de resultado — `tournament_matches` (status
+`finished`/`walkover`) e `club_event_games` (`status == 'finished'`) — mais
+`tournament_registrations`, `athlete_profiles` e `tournaments`, e grava **os
+três rankings juntos**:
+
+| Ranking | Coleções escritas |
+|---|---|
+| ELO / nacional | `player_ratings`, `rating_history` |
+| Rating 2.0–8.0 | `player_skill_ratings`, `skill_rating_history` |
+| Duplas | `doubles_rankings` |
+| Estado da passada | `platform_settings/global` (campo do último recálculo) e `platform_settings/ranking_worker` (lease + `last_result`) |
+
+Todas essas coleções têm `allow write: if false` no `firestore.rules`: **o
+servidor é o único escritor** (nem o admin da plataforma escreve pelo cliente).
+
+| Função | Gatilho / agenda | Dispara quando | Arquivo |
+|---|---|---|---|
+| `recomputeRankingOnTournamentChange` | `tournaments/{tournamentId}` (written) | muda a elegibilidade (`isEligible` antes ou depois) | `index.js` + `ranking.js` |
+| `recomputeRankingOnTournamentMatch` | `tournament_matches/{matchId}` (written) | `mudouResultado(antes, depois, CAMPOS_PARTIDA_TORNEIO)` | `platformRankings.js` |
+| `recomputeRankingOnTournamentRegistration` | `tournament_registrations/{registrationId}` (written) | `mudouResultado(..., CAMPOS_INSCRICAO)` — trocar o uid por trás da inscrição muda de quem é o jogo | `platformRankings.js` |
+| `recomputeRankingOnClubEventGame` | `club_event_games/{gameId}` (written) | `mudouResultado(..., CAMPOS_JOGO_EVENTO)` — é por aqui que a **publicação do dia de jogo** chega ao ranking | `platformRankings.js` |
+| `catchUpPlatformRankings` | agendada, `every 30 minutes` | compara a **impressão** da última passada com o banco; só recalcula se faltou | `rankingCatchUp.js` |
+
+Os quatro gatilhos têm `timeoutSeconds: 540`, `memory: 512MiB`, e chamam
+`requestRankingRecompute` (erro vira log, retorna `{ ran: false, reason: 'error' }`).
+Quem chama: ninguém diretamente — são eventos do banco; a "autorização" é a
+regra de quem escreveu o documento de origem.
+
+### 2.1 Lease e coalescência (`requestRankingRecompute`)
+
+Publicar um dia de jogo escreve dezenas de partidas; recalcular a plataforma
+por partida seria absurdo. Controle em `platform_settings/ranking_worker`:
+
+1. `tomarLease` (transação): se `running_since` tem menos de `LEASE_TTL_MS`
+   (**9 min**), marca `pending: true` e **sai** (`reason: 'coalesced'`); senão
+   grava `running_since` e segue.
+2. Recalcula. `consumirPendente` (transação): se chegou pedido no meio, limpa
+   `pending`, renova o lease e manda **mais uma passada**; senão solta o lease
+   e grava `last_run_at` e `last_result`.
+3. Teto: no máximo `MAX_PASSADAS_EXTRAS = 2` passadas extras; ao bater, solta o
+   lease (`soltarLease`) — o pedido não se perde, a próxima escrita chama tudo
+   de novo.
+4. Falha: `soltarLease(db, err)` grava `last_error`/`last_error_at`; se nem isso
+   grava, o TTL de 9 min resolve.
+
+`last_result` carrega `fingerprint`, `matchesUsed`, `excluded` (por que cada
+partida decidida ficou de fora — só contagens e ids, o documento é público),
+`eloPlayers`, `duprPlayers`, `doublesPairs`, `removedAccounts`. O painel admin
+lê isso (`src/modules/rating/domain/rankingWorkerStatus.js`).
+
+### 2.2 Recuperação (`catchUpPlatformRankings`)
+
+Gatilho não tem fila: resultado escrito enquanto a função não existe se perde
+(incidente de 2026-09-22). A cada 30 min a função lê `platform_settings/ranking_worker.last_result.fingerprint`
+e a impressão atual — duas contagens (`count()` de `tournament_matches`
+finalizadas e de `club_event_games` finalizados) + hash SHA-1 da assinatura dos
+torneios (`computeSignature`) — e só pede recálculo se diferirem ou se não
+houver impressão. Em dia, **não grava nada**. Limite assumido: editar o
+placar de um jogo já publicado não muda contagem nem assinatura; se acontecer
+com as funções fora do ar, só entra na próxima passada.
+
+**Testes**: `functions/platformRankings.test.js`, `functions/rankingCatchUp.test.js`,
+`functions/singlesRankings.test.js` (jogo simples → rating de simples, fora das
+duplas), `functions/engines/parity.test.js` (§9). Doc de produto:
+[`18-RANKINGS.md`](./18-RANKINGS.md).
+
+## 3. Clubes
+
+Lógica em `functions/clubRanking.js` (`recomputeClubInternalRankings(db, clubId)`).
+Lê `club_members`, `athlete_profiles`, `club_events` (+ subcoleção `games`),
+`club_event_games`, `tournament_matches`, `tournament_registrations`,
+`tournaments`; escreve `club_internal_ratings`, `club_internal_ratings_ext`,
+`club_internal_doubles_ratings`, `club_internal_doubles_ratings_ext`
+(o cliente só lê — ver `useClubInternalRanking`).
+
+| Função | Tipo / gatilho | O que faz | Quem chama |
+|---|---|---|---|
+| `recomputeClubRankingOnClubGame` | `club_events/{eventId}/games/{gameId}` (written), 120 s/512 MiB | recalcula o clube dono do evento | evento do banco |
+| `recomputeClubRankingOnClubEventGame` | `club_event_games/{gameId}` (written), 120 s | recalcula o clube do jogo **e** os clubes de cada atleta dos lados (`athlete_profiles.club_ids`) | evento do banco |
+| `recomputeClubRankingOnTournamentMatch` | `tournament_matches/{matchId}` (written), 180 s | resolve inscrição → uids (até 30) → clubes e recalcula cada um | evento do banco |
+| `recomputeClubRankingOnMemberChange` | `club_members/{memberId}` (written), 60 s/256 MiB | recalcula o clube do membro | evento do banco |
+| `recomputeClubRankingOnAthleteProfileChange` | `athlete_profiles/{uid}` (written), 60 s | recalcula cada clube que entrou/saiu de `club_ids` | evento do banco |
+| `recomputeAllClubsMonthly` | agendada `0 4 1 * *`, 540 s/1 GiB | defesa mensal: recalcula **todos** os clubes | agenda |
+| `recomputeAllClubInternalRankings` | **callable**, 540 s/1 GiB | backfill de todos os clubes | **só platform admin** (`isPlatformAdminUser`: claim `platform_admin` ou `users/{uid}.role == 'platform_admin'`); senão `permission-denied` |
+| `recomputeOneClubInternalRanking` | **callable**, 120 s | recalcula um clube (`data.clubId`) | exige login (`unauthenticated`); passa se platform admin **ou** `club_members/{clubId}_{uid}.role == 'admin'`; senão `permission-denied`. Cliente: `useClubRankingAdmin.js` |
+
+Observação: `recalcOneClub` captura o erro e só loga — um clube que falha não
+derruba os outros. **Teste**: não há `*.test.js` em `functions/` para
+`clubRanking.js` nem para os wrappers de `index.js` (não encontrei cobertura
+dedicada; o cálculo é o mesmo motor de rating, coberto indiretamente pelos
+testes de motores no cliente).
+
+## 4. Arenas: fila de espera do jogo aberto e rotinas
+
+### 4.1 Fila de espera (`functions/openSlotWaitlist.js`)
+
+Chamar o próximo da fila é escrever na entrada de **outra** pessoa — o
+navegador de quem sai não pode (a regra recusa). Por isso é servidor.
+`promoverProximo` roda **numa transação** (dois gatilhos quase juntos não
+chamam duas pessoas para o mesmo lugar): lugares livres = total − quem está na
+vaga − quem foi chamado e ainda está no prazo; chama quantos couberem, na ordem
+da fila. A ordem usa o `createTime` do documento (`_criado`), não `position` /
+`joined_at`, que o navegador de quem entra escreve. Janela de aceite:
+`JANELA_PROMOCAO_MIN = 60` min.
+
+| Função | Gatilho | Faz | Lê / escreve |
+|---|---|---|---|
+| `advanceOpenSlotWaitlist` | agendada `every 10 minutes` | expira (`status: 'expired'`) as chamadas `notified` com prazo vencido (até 300) e chama o próximo de cada vaga afetada | lê `arena_waitlist`; escreve `arena_waitlist`; via `promoverProximo`: `arena_open_slots`, `game_days`(+`participants`), `notifications` |
+| `promoteOpenSlotWaitlistOnSlot` | `arena_open_slots/{slotId}` (updated) | `vagaAbriuLugar(antes, depois)` → promove na hora | idem |
+| `promoteOpenSlotWaitlistOnEntry` | `arena_waitlist/{entryId}` (written) | `chamadaLiberouLugar(antes, depois)` (recusada, expirada, apagada) → promove | idem |
+
+**Testes**: `functions/openSlotWaitlist.test.js`; cliente espelha prazo/limites
+em `src/modules/arenas/domain/waitlist.js` (`waitlist.test.js`).
+Doc: `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`.
+
+### 4.2 Rotinas agendadas das arenas (código em `index.js`, sem módulo próprio)
+
+| Função | Agenda | Faz | Lê / escreve |
+|---|---|---|---|
+| `refreshLadderWeekly` | `0 23 * * 0` (domingo 23h), 540 s | para cada arena com `leagues_ladder` ligado, agrega vitórias/derrotas das últimas 500 `arena_matches` e grava o top 50 | lê `arena_module_states` (`module_id == 'leagues_ladder'`, `enabled == true`), `arena_matches`; escreve `arena_ladders/{arenaId}_current` (`source: 'cloud_function_refreshLadderWeekly'`) |
+| `aggregateNpsDaily` | `0 4 * * *` | consolida o NPS das últimas 24 h por arena (promotores ≥ 9, detratores ≤ 6) | lê `arena_nps_responses`; escreve `arena_nps_daily/{arenaId}_{AAAA-MM-DD}` |
+| `autoCloseChecklists` | `0 1 * * *` | fecha checklists com `auto_close == true` e `closed == false` que estão 100% concluídos ou têm > 24 h (até 200) | lê/escreve `arena_checklists` (`closed`, `closed_at`, `auto_closed`) |
+| `expireStaleNotifications` | `0 3 1 1 *` (uma vez por ano) | **aposentada (no-op)** em 2026-10-10: falhava todo dia por falta de índice e ninguém lia `archived`. Fica exportada porque o deploy é por nome e não apaga função; para remover: `firebase functions:delete expireStaleNotifications --region southamerica-east1` e apagar o bloco | nada |
+
+Sem testes unitários dedicados em `functions/` (verificação em
+`scripts/health-check-arena-v3.mjs`). `aggregateNpsDaily` e `autoCloseChecklists`
+relançam o erro (o agendador registra a falha).
+
+## 5. Notificações e push
+
+`pushOnNotificationCreate` — gatilho `notifications/{notifId}` (**created**).
+Espelha a notificação in-app para o celular. Passos (todos conferidos em
+`index.js`):
+
+1. Lê `push_tokens` com `user_id == n.user_id`; sem tokens, retorna (o normal
+   até o opt-in).
+2. Lê `users/{uid}`: `notification_prefs` (categoria silenciada **não** vira
+   push — `notificationPrefs.isNotificationMuted(prefs, n.type)`) e `language`
+   (o push sai no idioma da pessoa quando o aviso tem `i18n` —
+   `avisoI18n.campoNoIdioma`). Se as preferências não puderem ser lidas,
+   **envia assim mesmo** (perder um aviso é pior que um a mais).
+3. Monta o link absoluto sobre `https://picklerush.web.app`, envia por
+   `getMessaging().sendEachForMulticast`.
+4. Apaga tokens inválidos (`registration-token-not-registered`,
+   `invalid-registration-token`, `invalid-argument`) em lote.
+
+Nunca lança. Não escreve a notificação in-app. **Quem "chama"**: qualquer
+escrita de notificação permitida pela regra (`notifications` create exige
+`user_id`, tipo conhecido, link interno, `read == false`; o servidor também as
+cria com o Admin SDK).
+
+**Testes**: só os helpers — `functions/notificationPrefs.parity.test.js`
+(cópia servidor × `src/modules/notifications/domain`),
+`functions/avisoI18n.parity.test.js` e `avisoI18n.test.js`. A função em si não
+tem teste. Doc: [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md), `PUSH-ATIVACAO.md`.
+
+## 6. Gamificação (agendadas)
+
+Lógica em `functions/gamification.js` (tarefas), `functions/gamificationCore.js`
+(matemática pura, "Brasília", semana de segunda a domingo) e
+`functions/seasonRanking.js`. Todas leem a configuração do admin em
+`platform_settings/gamification` e **respeitam o módulo desligado**
+(`moduloLigado`); respeitam também `user_gamification_prefs` e
+`gamification_moderation`. `gamificacaoLigada()` hoje devolve sempre `true` (a
+flag virou permanente em 2026-10-10). Nunca relançam o erro
+(`rodarGamificacao` devolve `{ error }`).
+
+| Função | Agenda | Faz | Lê → escreve |
+|---|---|---|---|
+| `gamificationChallengeStandings` | `every 3 hours`, 540 s | placar dos desafios ativos e fechamento dos que terminaram; concede XP e avisa | lê `gamification_challenges`, `challenge_entries`, `athlete_profiles`, `club_members`, `coach_students`, `arena_bookings`, `coach_lessons`, jogos normalizados (`tournament_matches`, `tournament_registrations`, `club_event_games`, `tournaments`) → escreve `challenge_entries`, `gamification_challenges`, `user_xp_grants`, `notifications` |
+| `gamificationWeeklyDuels` | `30 5 * * 1` (segunda 05:30) | fecha os duelos da semana que passou e emparelha os novos | lê `duels`, `player_skill_ratings`, `gamification_moderation` → escreve `duels`, `user_xp_grants`, `notifications` |
+| `gamificationWeeklyDigest` | `0 8 * * 1` (segunda 8h), 300 s | "Sua semana em revisão" só para quem jogou nos últimos 30 dias e quer receber | lê jogos, `user_gamification_prefs` → escreve `notifications` (id `weekly_{uid}_{semana}`) |
+| `gamificationDailyUpkeep` | `0 4 * * *`, 1 GiB | reputação das avaliações, sinais de integridade e retrato diário de métricas | lê `match_reviews`, `club_event_games`, `tournament_matches`, `tournament_registrations`, `user_progression_v2`, `user_kudos`, contagens de `user_*`/`duels`/`reward_claims`/`gamification_flags` → escreve `user_reputation`, `user_reputation_private`, `gamification_flags`, `gamification_integrity`, `gamification_metrics/{dia}` |
+| `recomputeSeasonRankingDaily` | `0 3 * * *`, 300 s | ranking sazonal (XP da temporada = `xpTotal − baselineXp`); fecha a temporada anterior e premia | lê `user_progression_v2`, `athlete_profiles`, `gamification_moderation`, `season_rankings` → escreve `season_rankings/{seasonId}_{uid}`, `hall_of_fame`, `user_xp_grants` (prêmio) |
+
+As regras do cliente recusam escrever essas coleções (posição e prêmio não se
+decidem no navegador).
+
+**Testes**: `functions/gamification.test.js` (fakes de Firestore: flag e
+módulos, duelo, desafios, reputação, integridade, resumo, métricas),
+`functions/gamificationCore.test.js`, `functions/seasonRanking.test.js`;
+paridade cliente × servidor em `src/modules/progression/domain/serverParity.test.js`.
+Doc: [`38-GAMIFICACAO-V2.md`](./38-GAMIFICACAO-V2.md).
+
+## 7. Conta, admin e torneio (callables)
+
+Todas são `onCall` (v2) em `southamerica-east1`. O papel de admin é decidido
+por `isPlatformAdminUser` (`index.js`): custom claim `platform_admin` **ou**
+`users/{uid}.role == 'platform_admin'`. "Dono" é o e-mail em
+`OWNER_EMAILS` (`functions/accountDeletion.js`: `fsalamoni@gmail.com`) **com
+e-mail verificado**.
+
+| Função | Faz | Quem pode chamar | Lê / escreve |
+|---|---|---|---|
+| `adminDeleteAccounts` | exclusão de cadastro. `mode: 'preview'` só lê; `'execute'` refaz a análise no servidor e apaga. Motivo obrigatório, até 25 contas por vez, uma por vez (falha numa não contamina as outras) | `permission-denied` se não for platform admin; **`execute` exige ainda o e-mail do dono verificado** | dezenas de coleções (tabela em `accountDeletion.js`), Firebase Auth e Storage; trilha em `audit_logs`. 540 s/1 GiB |
+| `adminMergeAccountHistory` | unifica o histórico de uma conta **excluída** na conta que ficou. Prévia / `execute` | platform admin; `execute` só o dono | `tournament_registrations`, `club_event_games`, `game_days`(+`participants`,`games`), `club_events`, `athlete_profiles`, `arena_ladders`, `coach_level_validations` etc.; `audit_logs`; chama `requestRankingRecompute` ao fim. 540 s/1 GiB |
+| `adminSetAccountStatus` | suspender (1 a N dias), bloquear ou reativar. Desliga o login no Firebase Auth e grava `users.account_status*` | só platform admin; travas no servidor: não a própria conta, não outro admin, não e-mail de dono (`targetBlockedReason`) | `users`, Auth, `audit_logs`. 60 s |
+| `adminSupportReveal` | revela campos mascarados da ficha (e-mail, telefone, nascimento, endereço) com categoria de motivo + texto ≥ 20 caracteres | só platform admin | lê `users`; escreve `admin_access_logs` (hash do valor, IP, user-agent — registro **interno**, o titular não é avisado). 60 s |
+| `tournamentLinkRegistrationAccount` | liga o jogador provisório de uma inscrição à conta real (nome, nível, categoria, foto, e-mail oficial em `private/contact`) e apaga a prova `provisional_claims/{rid}_{slot}` | exige login (`unauthenticated`); passa se platform admin **ou** `tournament_admins/{tournamentId}_{uid}` existe; senão `permission-denied` (`status: 'denied'`) | `tournament_registrations`(+`private`), `provisional_claims`, `users`. Cliente: `registrationService.js` |
+
+**Testes**: `accountDeletion.test.js`, `accountDeletion.engine.test.js`,
+`accountDeletion.pseudo.test.js`, `accountDeletion.mercado.test.js`,
+`accountDeletion.treino.test.js`; `accountMerge.test.js`;
+`accountStatus.test.js`; `supportAccess.test.js`;
+`registrationLink.test.js`. Guarda de cobertura de coleções:
+`src/core/guards/exclusaoCobreColecoes.test.js` (a coleção nova do treino/mercado
+tem de entrar na exclusão e na exportação). Docs:
+`docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`, `05-ADMIN-SUPORTE.md`.
+
+## 8. Mercado (flag `marketplace`)
+
+Lógica em `functions/marketplace.js` (1.694 linhas), `marketPromo.js` (cupom,
+vale-presente, `orderPricing`) e `marketSearch.js` (busca salva). A regra do
+Firestore **não deixa o navegador escrever** `market_orders`, `market_offers`,
+`market_reviews`, `market_disputes` (`allow write: if false`); o servidor
+confere estoque, preço (sempre o do banco) e a vez de cada um.
+
+**Callables** (todas via `marketCallable`, 60 s): sem login →
+`unauthenticated`; `actor = { uid, isPlatformAdmin }`; `MarketError` vira
+`HttpsError` com o mesmo código; erro inesperado vira `internal`. O flag
+`marketplace` e as chaves de `platform_settings/marketplace` são relidos a cada
+chamada (`loadContext`).
+
+| Função | Faz | Quem pode (checagem no servidor) |
+|---|---|---|
+| `marketPlaceOrders` | fecha o carrinho: um pedido por vendedor, cada um numa transação que relê o anúncio, confere estoque/preço e baixa o estoque; aplica cupom e vale | conta logada; falha se `marketplace`/`orders_enabled` desligados; **recusa comprar de si mesmo** (`operatorUids` do vendedor contém o comprador) |
+| `marketOrderAction` | máquina do pedido (`ORDER_ACTIONS`: aceitar, recusar, enviar comprovante, confirmar pagamento, enviar, entregar, confirmar recebimento, cancelar, disputar, resolver…) | papel por ação: `buyer` = `buyer_uid`; `seller` = quem opera a chave (`operatorUids`: dono do uid, ou **gestores da arena** em `arena_managers`); `admin` = platform admin; `system` = só a rotina. Sem papel → `permission-denied` |
+| `marketOfferAction` | oferta, contraproposta, aceite (cria o pedido já aceito, pelo valor combinado) | conta logada; dono do anúncio não oferta; uma negociação aberta por anúncio |
+| `marketSubmitReview` | avaliação cega (comprador ou vendedor, depois de `completed`) | só as duas partes do pedido |
+| `marketGiftCardAction` | `buy` / `claim` / `issue` / `cancel` de vale-presente | `issue`/`cancel`: só quem opera a loja; `claim`: conta logada, vale ativo/não vencido/não resgatado por outra conta |
+| `marketLinkArenaProduct` | liga um anúncio de **arena** a um produto do estoque (`arena_inventory_products.market_listing_id`) | só gestor da arena (`operatorUids`) |
+
+**Gatilhos e agenda**:
+
+| Função | Gatilho | Faz |
+|---|---|---|
+| `marketHousekeeping` | `every 60 minutes`, 300 s | expira pedidos/ofertas vencidos, conclui entregues, vale-presente (vencimento/lembrete), fim de promoção, revela avaliações, lembra pedido parado |
+| `marketFavoriteCount` | `market_favorites/{favId}` | `favorite_count` do anúncio (`FieldValue.increment`) |
+| `marketFollowCount` | `market_follows/{followId}` | `follower_count` em `market_sellers` |
+| `marketFollowersNotify` | `market_listings/{listingId}` | avisa seguidores quando o anúncio entra no ar (uma vez: `followers_notified_at_ms`) |
+| `marketQuestionNotify` | `market_questions/{questionId}` | avisa o outro lado da pergunta/resposta |
+| `marketModerateListing` | `market_listings/{listingId}` | termo proibido (`banned_terms` + padrão) pausa o anúncio e avisa; texto corrigido remove a marca |
+| `marketPriceDropNotify` | `market_listings/{listingId}` | preço baixou → avisa quem favoritou |
+| `marketSavedSearchAlerts` | `every day 10:00` | um aviso por dia por busca salva com anúncio novo (cópia da busca do cliente em `marketSearch.js`) |
+| `marketArenaStockSync` | `arena_inventory_products/{productId}` | refaz a quantidade do anúncio ligado (`stock_qty − reservado`); confere os **dois lados** do vínculo |
+
+Coleções tocadas (contagem de `collection('…')` em `marketplace.js`):
+`market_listings`, `market_orders`, `market_sellers`(+`private`),
+`market_offers`, `market_reviews`, `market_disputes`, `market_coupons`(+`market_coupon_uses`),
+`market_gift_cards`, `market_favorites`, `market_follows`, `market_saved_searches`,
+`market_carts`, `arena_managers`, `arena_inventory_products`/saídas, `users`,
+`notifications`, `audit_logs`, `platform_settings`.
+
+**Testes**: `functions/marketplace.parity.test.js` (tabelas e regras de ação do
+pedido e da oferta × `src/modules/marketplace/domain`),
+`marketPromo.test.js` + `marketPromo.parity.test.js`,
+`marketSearch.parity.test.js`, `marketAlerts.test.js`,
+`marketArenaStock.test.js`, `marketplaceQuestions.test.js`, e
+`tests/rules/marketplace.functions.test.js` / `marketplace.rules.test.js`
+(emulador). Módulo: `src/modules/marketplace/README.md`.
+
+## 9. Motores duplicados e testes de paridade
+
+O pacote de Functions não importa `src/`, então estas regras existem **duas
+vezes** — cópia que diverge é uma plataforma com duas verdades. Cada par tem
+teste que roda as duas implementações sobre as mesmas entradas e exige
+resultado idêntico (mexer num lado só quebra o teste, de propósito):
+
+| Regra | Servidor | Cliente | Teste de paridade |
+|---|---|---|---|
+| ELO, rating 2.0–8.0, duplas, tabela de níveis | `functions/ranking.js`, `functions/engines/dupr.js`, `functions/engines/doubles.js`, `LEVEL_TABLE` de `platformRankings.js` | `src/modules/rating/domain/{elo,duprScale,doublesRanking}.js`, `leveling/data/levels` | `functions/engines/parity.test.js` (400 partidas; confere também a ordem da tabela de níveis) |
+| Elegibilidade do torneio para o ranking | `isEligible` (`functions/ranking.js`) | `isTournamentRankingEligible` | `src/modules/tournament/domain/rankingEligibility.test.js` |
+| Mercado: ações do pedido e da oferta, avaliação, termos proibidos | `functions/marketplace.js` | `src/modules/marketplace/domain/{orderStatus,offers,reputation,settings,listing}.js` | `functions/marketplace.parity.test.js` |
+| Mercado: preço com cupom/vale | `functions/marketPromo.js` | `src/modules/marketplace/domain/promotions.js` | `functions/marketPromo.parity.test.js` |
+| Mercado: busca salva | `functions/marketSearch.js` | domínio de descoberta do cliente | `functions/marketSearch.parity.test.js` |
+| Preferências de notificação e área do aviso | `functions/notificationPrefs.js` | `src/modules/notifications/domain/{preferences,noticeFeed}.js` | `functions/notificationPrefs.parity.test.js` |
+| Textos de aviso traduzidos | `functions/avisoI18n.js` + `functions/i18n/avisos.json` | `src/core/i18n/avisos.js` | `functions/avisoI18n.parity.test.js` (+ guarda do JSON gerado) |
+| Gamificação: matemática e ids dos primeiros passos | `functions/gamificationCore.js`, `gamification.js` | `src/modules/progression/domain` | `src/modules/progression/domain/serverParity.test.js` |
+| Fila de espera: prazo e lugares | `functions/openSlotWaitlist.js` | `src/modules/arenas/domain/waitlist.js` | `functions/openSlotWaitlist.test.js` / `waitlist.test.js` |
+
+## 10. Deploy, vigilância e como testar
+
+### 10.1 Por que um codebase próprio e deploy por nome
+
+O projeto Firebase é **compartilhado com outro aplicativo**. `firebase deploy
+--only functions --force` apaga toda função do mesmo codebase ausente do código
+local; em 2026-09 isso apagou funções nos dois sentidos. Duas camadas:
+
+1. **Codebase `picklerush`** (`firebase.json`): a CLI só considera "removidas"
+   funções do **mesmo** codebase — o deploy do outro app (codebase `default`)
+   não enxerga as nossas, e o nosso não toca nas dele.
+2. **Deploy por nome**: `scripts/functions-deploy.sh` lista
+   `grep -oE '^exports\.[A-Za-z0-9_]+' functions/index.js` e publica
+   `firebase deploy --only functions:picklerush:a,functions:picklerush:b,…`.
+   Lista vazia **não publica nada** (um `--only` vazio voltaria a significar
+   "tudo"). O script recusa codebase vazio ou `default`.
+
+Consequência prática: **toda função nova precisa ser `exports.nome = …` no
+início da linha de `functions/index.js`** (é o que o script e a vigilância
+leem). Para aposentar uma função, não basta tirar a exportação (a versão antiga
+continua rodando): veja o roteiro de `expireStaleNotifications` em §4.2.
+
+Guarda: `src/core/guards/deployFunctions.test.js` (codebase próprio; nenhum
+workflow faz deploy amplo; deploy e vigilância usam o mesmo script) e
+`src/core/guards/deployFirebaseWorkflow.test.js`.
+
+### 10.2 Publicação automática
+
+`.github/workflows/deploy-firebase.yml` (push em `main`): `npm --prefix
+functions ci` e `bash scripts/functions-deploy.sh` no passo **"Deploy Cloud
+Functions (non-fatal)"**. É não-fatal: Hosting e Firestore já foram aplicados;
+o passo emite avisos específicos para Blaze ausente e IAM (a service account
+precisa de Cloud Functions Admin e Service Account User, e as APIs
+cloudfunctions/cloudbuild/artifactregistry/run/eventarc/pubsub habilitadas — ver
+`functions/README.md`).
+
+### 10.3 Vigilância (`functions-watchdog.yml`)
+
+Agenda `7,37 * * * *` (a cada 30 min) + `workflow_dispatch`, `timeout-minutes: 20`,
+`concurrency: functions-watchdog`. Instala `firebase-tools@13`, usa a service
+account do secret `FIREBASE_SERVICE_ACCOUNT` e:
+
+1. compara as funções exportadas em `functions/index.js` com
+   `firebase functions:list --json` na região `southamerica-east1`;
+2. se faltar alguma — ou se alguma nossa não tiver o rótulo do codebase —
+   roda `npm --prefix functions ci` + `bash scripts/functions-deploy.sh`;
+3. se algo **sumiu**, **falha o job de propósito** (e-mail ao dono do
+   repositório), dizendo que algo fora do repositório apagou funções; a
+   recuperação agendada do ranking (`catchUpPlatformRankings`) cobre os
+   resultados do intervalo.
+
+Só lê a lista de funções; não toca no banco. O que segue compartilhado mesmo
+assim (Auth, bucket do Storage, service account): `docs/03-WORKFLOW.md` §9.1.
+
+### 10.4 Testar e publicar localmente
+
+```bash
+npm test                                   # vitest: inclui functions/**/*.test.js e engines/parity
+npx vitest run functions/platformRankings.test.js   # um arquivo
+npm run test:rules                         # emulador (Firestore + Storage): tests/rules/*
+npm run i18n:avisos                        # regenera functions/i18n/avisos.json
+npm run docs:inventario                    # regenera o 46-INVENTARIO.md (CI reprova se desatualizado)
+```
+
+Os testes de `functions/` usam Firestore falso (`tests/fakes/fakeFirestore.cjs`,
+`fakeFirestoreRico.cjs`) e `createRequire` para carregar os módulos CommonJS.
+**Limite**: o falso nunca recusa — o que depende de regra precisa de teste no
+emulador. Os wrappers de `functions/index.js` (gatilhos e callables) não são
+carregados pelos testes; a lógica testável mora nos módulos ao lado.
+
+Publicação manual (exige login na CLI e `FIREBASE_PROJECT_ID`; o script usa
+`jq`):
+
+```bash
+FIREBASE_PROJECT_ID=<projeto> bash scripts/functions-deploy.sh
+```
+
+Nunca use `firebase deploy --only functions` (amplo).
+
+## 11. Roteiro para criar uma função nova
+
+1. Lógica em módulo próprio em `functions/` (CommonJS, sem importar `src/`),
+   com `*.test.js` ao lado; se o cliente tem a mesma regra, escreva o teste de
+   paridade.
+2. Em `functions/index.js`: `exports.nome = onX({ …, database: DATABASE_ID,
+   region: REGION }, …)` com a exportação **no início da linha**.
+3. Callable: confira `req.auth` e o papel **dentro da função** (o Admin SDK não
+   passa pelas regras); erro conhecido vira `HttpsError` com código; `execute`
+   destrutivo exige prévia e motivo.
+4. Escrita em coleção nova: `match` aditivo no `firestore.rules` (normalmente
+   `allow write: if false` do lado do cliente); coleção com dado da pessoa entra
+   na exclusão e na exportação de conta.
+5. Rode `npm run docs:inventario` e atualize esta página.

@@ -1,459 +1,236 @@
 # AI_CONTEXT — Leia isto primeiro
 
-> Documento-mestre, denso e otimizado para IA. Em ~1 leitura você entende a
-> plataforma sem abrir o código. Os demais docs em `docs/` aprofundam temas.
-> Atualize este arquivo quando mudar arquitetura, coleções ou rotas.
+> Panorama denso para IA e humanos: em uma leitura você entende a plataforma
+> sem abrir o código. **Não há contagens aqui de propósito** (módulos, telas,
+> coleções, índices, funções, flags, testes envelhecem em semanas): os números
+> e as listas exatas vêm de [`docs/46-INVENTARIO.md`](./46-INVENTARIO.md),
+> GERADO do código (`npm run docs:inventario`). Regras de trabalho e armadilhas
+> aprendidas: `CLAUDE.md` (raiz). Mapa de todos os docs: `docs/00-INDEX.md`.
 
 ## 1. O que é
 
-**PickleRush** — plataforma web (PWA) para criar e administrar **torneios
-amadores de pickleball no Brasil**, com camada de **comunidade** (atletas,
-clubes, eventos, fórum, chat) e ecossistema de **arenas, professores e
-aulas**. Domínio em produção: `picklerush.web.app` (site Firebase
-`picklerush`). O site legado `pickletour.web.app` redireciona 301 para o
-oficial. UI e textos em **português (pt-BR)**.
-
-Pilares:
-1. **Torneios** — formatos (single, duplas, americana, Mexicano, Rei da
-   Quadra, Americano aprimorado em etapas), 1 ou 2 turnos, modalidades por nível/categoria, sorteio, agendamento por
-   quadra, ranking ao vivo, visão pública sem login, versão impressão,
-   telão e courtside scoring.
-2. **Comunidade** — diretório de atletas, clubes (membros, mural, fórum com
-   enquetes, eventos/game-days, ranking interno, página pública), chat 1:1
-   e em grupo, feed.
-3. **Arenas** — perfil público-editável, quadras nomeadas, janelas de
-   horário, preços dinâmicos (regras e overrides por quadra), reservas
-   simples, recorrentes, compartilhadas e aulas com professor; lista de
-   espera, política de cancelamento, no-show tracking; PDV, pacotes,
-   membros, ligas, marketing, IoT.
-4. **Professores** — perfil público, diretório, residência em arena,
-   agenda/aulas, roster de alunos, pacotes/créditos, biblioteca de
-   conteúdo, loja, clínicas/workshops, validação de nível.
-5. **Notificações in-app** (sino com preferências por categoria) e
-   **auditoria** de ações.
+**PickleRush** — PWA para o pickleball amador brasileiro: **torneios**,
+**dias de jogo** (Play, Americano e variantes), **arenas** (reserva, jogo
+aberto, aulas, loja, membros), **professores**, **clubes**, **ranking e rating**
+(ELO, 2.0–8.0 estilo DUPR, duplas), **Centro de Treino**, **gamificação**,
+**Mercado** (marketplace) e comunidade (chat, follows). Produção:
+`https://picklerush.web.app` (site Firebase `picklerush`; `pickletour` só
+redireciona). UI e textos em **pt-BR**, com inglês e espanhol atrás da flag
+`multi_language` (`docs/44-IDIOMAS.md`).
 
 ## 2. Stack
 
-- **React 18 + Vite**, JSX (sem TypeScript; há `typecheck` via JSDoc/`types.js`).
-- **Tailwind + shadcn/ui** (Radix) — primitivos em `src/components/ui/`.
-- **Firebase**: Auth (Google), **Firestore** (database nomeada `pickleball`),
-  Hosting (sites `picklerush` ativo + `pickletour` redirect-only),
-  Storage e **Cloud Functions** (region `southamerica-east1`, usada apenas
-  para recálculo do ranking nacional via gatilho `onDocumentWritten` em
-  `tournaments/{id}`). Toda a lógica de UI/Hooks roda no client; a
-  segurança é garantida por `firestore.rules`.
-- **React Query** (`@tanstack/react-query`) para data fetching/cache.
-- **Vitest** (unit, **~1800 asserts em 296 arquivos** de teste: 212 domain,
-  68 runtime, 16 rules) + **Playwright** (E2E).
-- **react-router-dom** (BrowserRouter), **react-hook-form + zod**, `sonner`
-  (toasts), `date-fns`, `lucide-react`, `ics` (calendar export).
+- **React 18 + Vite**, JSX com JSDoc (sem TypeScript; `npm run typecheck`).
+- **Tailwind + shadcn/ui** (Radix, `src/components/ui/`) e primitivos próprios
+  em `src/v2/ui/`. Modo escuro por paleta (`docs/30-MODO-ESCURO.md`).
+- **Firebase**: Auth (Google, Apple, e-mail/senha), **Firestore** (banco
+  nomeado `pickleball`), Hosting, Storage e **Cloud Functions** (Node 22,
+  região `southamerica-east1`, codebase próprio `picklerush`, em `functions/`).
+  O cliente fala direto com o banco: **a segurança é `firestore.rules`**
+  (e `storage.rules`), provada no emulador em `tests/rules/`.
+- **React Query**, `react-router-dom` (BrowserRouter), `react-hook-form` + `zod`.
+- **Vitest** (unidade, `*.runtime.test.jsx` para telas críticas, guardas de
+  fonte em `src/core/guards/`) e **Playwright** (`tests/e2e/`).
+- Versões exatas: `docs/46-INVENTARIO.md` §2.
 
-## 3. Arquitetura em uma frase
+## 3. Arquitetura
 
-App **client-only por módulos de domínio** (V1 + V2 coexistem; **V2 é a
-experiência oficial e integral**), cada módulo em camadas
-`domain → services → hooks → components/pages`. Domínio é **puro e testado**;
-services falam com Firestore; hooks expõem React Query; UI consome hooks.
-V2 (`src/v2/`) é a camada de apresentação ativa; **reusa integralmente** os
-hooks e services dos módulos em `src/modules/`. **Feature flags controlam
-toda nova funcionalidade** (`src/core/featureFlags.js` — 125 flags, +95 nas
-Ondas 1-10).
+App **client-first por módulos de domínio**. Cada módulo em
+`src/modules/<x>/` tem as camadas que precisa: `domain/` (regra pura +
+`.test.js`) → `services/` (I/O Firestore, auditoria) → `hooks/` (React Query)
+→ `components/`; `i18n/locales/{en,es}.js` quando tem texto. A UI ativa é
+`src/v2/` (rotas em `V2App.jsx`, telas `pages/V2*.jsx`, componentes por área
+em `components/`, primitivos em `ui/`) e **consome os hooks/services dos
+módulos**. Regra de negócio nunca mora em componente.
 
 ```
 src/
-├── App.jsx              # Roteamento + providers (QueryClient, Auth, Router)
-├── main.jsx             # Bootstrap + registro PWA (atrás de flag)
-├── V1Routes.jsx         # Tabela de rotas legada (V1) — somente /v1/*, sem uso real
-├── pages/               # Páginas V1-style que V2 ainda não substituiu (espectador, impressão)
-├── components/          # shadcn/ui primitives + Layout V1 (em desuso)
-├── core/
-│   ├── config/firebase.js        # init app/auth/db (database 'pickleball')
-│   ├── lib/FirebaseAuthContext.jsx  # AuthProvider + useAuth (user, perfil, papéis)
-│   ├── lib/profileValidation.js  # perfil obrigatório, cálculo de idade
-│   ├── lib/{logger,utils,useClipboard}.js
-│   ├── domain/types.js           # typedefs JSDoc compartilhados
-│   ├── featureFlags.js           # 125 flags (FEATURE_FLAG)
-│   ├── featureFlagGroups.js      # agrupamento por assunto (admin)
-│   └── services/                 # auditService, notificationService,
-│                                 # baseService, storageService, observabilityService
-├── modules/             # ⭐ BASE DE DOMÍNIO (26 módulos — reusado por V2;
-                        #   V1 está em desuso desde Onda AS)
-│   ├── tournament/      # núcleo: torneios, modalidades, jogos, ranking, sorteio
-│   ├── athletes/        # diretório de atletas (perfis públicos)
-│   ├── clubs/           # clubes, membros, eventos, fórum, game-day
-│   ├── chat/            # conversas 1:1 e grupo
-│   ├── leveling/        # tabela + questionário de nível (CBPE/USAP)
-│   ├── notifications/   # hook do sino + preferências
-│   ├── admin/           # painel da plataforma (métricas, torneios, parceiros)
-│   ├── arenas/          # arenas, reservas, PDV, membros, ligas, marketing
-│   ├── athletes/        # diretório de atletas
-│   ├── chat/            # mensagens
-│   ├── coaches/         # professores (perfil, agenda, alunos, pacotes, clínicas)
-│   ├── clubs/           # clubes e comunidade (game day, ranking interno, feed)
-│   ├── games/           # jogos abertos, procura-jogo, dia de jogo do atleta (PR #85)
-│   ├── legal/           # documentos jurídicos + consentimento versionado (PR #86, LGPD)
-│   ├── leveling/        # nivelamento (CBPE/USAP)
-│   ├── notifications/   # sino + preferências
-│   ├── partners/        # espaço de parceiros (admin)
-│   ├── performance/     # meu desempenho (estatística + meus jogos)
-│   ├── progression/     # progressão do atleta
-│   ├── rating/          # ranking nacional, head-to-head, duplas
-│   ├── sharing/         # compartilhamento, certificados, calendar export
-│   ├── social/          # feed, follows, players, metas
-│   ├── achievements/    # conquistas
-│   ├── circuits/        # circuitos (séries com ranking)
-│   ├── settings/        # configurações do usuário (Onda 9)
-│   └── analytics/       # funil e observabilidade
-└── v2/                  # ⭐ APP ATIVO — "Athleisure Premium"
-    ├── V2App.jsx        # Tabela de rotas (ativo em /*, autenticado)
-    ├── components/      # V2Layout + componentes por módulo
-    │                    #   + FeatureFlagGuard (padrão para flag-gating)
-    │                    #   + /games (AthleteGameDayOrganizer, CreateGameDayDialog)
-    │                    #   + /legal (LegalConsentGate, LegalDocumentView)
-    │                    #   + /performance (MyGamesPanel)
-    ├── pages/           # 72 páginas V2: V2Dashboard, V2Arenas, V2Tournament,
-    │                    #   V2Coaches, V2CoachProfile, V2CoachAgenda,
-    │                    #   V2StudentLessons, V2Settings, V2NotFound, V2Search,
-    │                    #   V2Legal, V2LegalDocument, V2GameDays, ...
-    └── ui/primitives.jsx # V2Button, V2Card, V2Badge, V2Dialog, V2Skeleton, ...
+├── main.jsx · App.jsx     # bootstrap, providers e rotas de raiz (públicas, telão, impressão, totem)
+├── pages/                 # só 4 telas V1 públicas: PublicTournament, PrintTournament, Telao, PublicClub
+├── components/            # shadcn/ui, ErrorBoundary, InstallAppButton
+├── core/                  # auth, firebase, featureFlags, i18n, theme, geo, services, guards
+├── modules/               # domínio (lista e camadas: docs/06-MODULES.md e 46-INVENTARIO §3)
+└── v2/                    # app ativo: V2App.jsx, V2Layout, pages/, components/, ui/
+functions/                 # Cloud Functions (ranking, fila, push, gamificação, exclusão, Mercado…)
+tests/                     # rules/ (emulador) · e2e/ (Playwright)
+firestore.rules · firestore.indexes.json · storage.rules · firebase.json
 ```
 
-Convenção de camadas por módulo (nem todo módulo tem todas):
-`domain/` (lógica pura + `.test.js`) · `services/` (Firestore CRUD + auditoria)
-· `hooks/` (React Query) · `pages/` (rotas) · `components/` (UI do módulo).
+Convenções que sustentam o resto (detalhe em `CLAUDE.md` §2 e `docs/02-STANDARDS.md`):
+feature flag default OFF para o novo; campo/regra **aditivos**; `audit_logs`
+em escrita relevante; `logger` (não `console.log`) em services; consulta que
+falha **não** é lista vazia (`docs/27`); lista de formatos/opções tem **fonte
+única** (guardas de fonte reprovam cópia).
 
-## 4. Autenticação e papéis
+## 4. Autenticação, papéis e permissões
 
-- Login **Google** via Firebase Auth. `AuthProvider` cria/lê `users/{uid}` e
-  expõe via `useAuth()`: `user`, `userProfile`, `isAuthenticated`,
-  `isPlatformAdmin`, `canCreatePools`, `signOut`, `updateProfile`.
-- **Papéis** (campo `users/{uid}.role`):
-  - `platform_admin` — admin global (definido por e-mail "owner" no primeiro
-    login). Acessa `/admin/*`. `isPlatformAdmin === role === 'platform_admin'`.
-  - `user` — atleta comum.
-- **Admin de torneio / clube / arena / circuito** são papéis *por recurso*
-  (coleções `tournament_admins` / `club_members` / `arena_managers` /
-  `circuit_admins`), independentes do admin global.
-- Perfil obrigatório (`isRequiredProfileComplete`): nome de exibição, data de
-  nascimento, telefone, tempo de experiência. Nivelamento (`leveling_level`) é
-  recomendado, não obrigatório.
+- Login por **Google, Apple ou e-mail/senha** (`FirebaseAuthContext`).
+  `useAuth()` expõe `user`, `userProfile`, `isAuthenticated`, `isPlatformAdmin`,
+  `canCreatePools`, `signOut`, `updateProfile`. Conta suspensa/bloqueada é
+  deslogada com o motivo.
+- **Papel global** (`users/{uid}.role`): `platform_admin` (define-se pelo
+  e-mail do dono no primeiro login; acessa `/admin/*`) ou `user`.
+  `isPlatformAdmin` respeita o "ver como usuário" do admin; `can_create_pools`
+  libera criar torneio. Quem tem poder e como tirá-lo: `docs/20-SEGURANCA-E-PRIVACIDADE/17-ACESSOS-E-PODERES.md`.
+- **Papéis por recurso** (todos checados na regra, não só na tela):
+  - **gestor de arena** — `arena_managers` (`isArenaManager`); também decide o
+    dia de jogo e os módulos da arena.
+  - **professor** — perfil + `coach_arenas`/`coach_students`; reconhecido nas
+    aulas da arena pelo `user_id` em `arena_coaches`.
+  - **admin de clube** — `club_members` com papel de admin (`isClubAdmin`); vale
+    também para o dia de jogo do clube.
+  - **admin de torneio** — `tournament_admins` (`isTournamentAdmin`).
+  - **organizador do dia de jogo** — criador, `admin_uids` nomeados, gestor da
+    arena (dia com `arena_id`) e admin do clube (dia com `club_id`); fonte única
+    no cliente: `games/domain/gameDayRoles.js` (`docs/15`).
+  - **admin de circuito** — `circuit_admins`.
+  - **atleta** — o usuário comum; entra e sai sozinho de dia de jogo/jogo aberto
+    por regras de "só a si mesmo".
+- **Perfil obrigatório** (`missingRegistrationFields`, `core/lib/profileValidation.js`):
+  o cadastro essencial exige nome, nascimento, telefone, experiência, gênero,
+  cidade, UF, lado da quadra, interesses, categoria e nível (`docs/33`). O
+  onboarding não trava o uso do app.
+- **Dado pessoal**: e-mail/telefone/endereço/nascimento nunca em coleção de
+  leitura ampla; a privacidade vale na regra e no servidor
+  (`docs/20-SEGURANCA-E-PRIVACIDADE/`).
 
 ## 5. Rotas
 
-A navegação autenticada roda 100% na **V2App** (`src/v2/V2App.jsx`),
-montada em `/*` quando o usuário está autenticado. Visitantes em `/` veem a
-landing (V2) e nas demais rotas são levados a `/login`. A `V1Routes` (V1
-legado) está presente em `App.jsx` mas só atende `/v1/*` — não recebe
-navegação nova.
+Duas tabelas, e **a lista completa e atual está em `docs/46-INVENTARIO.md` §4**
+(gerada de `src/App.jsx` e `src/v2/V2App.jsx`; não copie rotas para cá):
 
-| Rota | Acesso | Tela |
-| --- | --- | --- |
-| `/` `/login` | público | landing, login (V2) |
-| `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | público | conteúdo institucional (V2) |
-| `/p/:tournamentId` | público (sem layout) | visão de espectador, auto-refresh |
-| `/r/:code` | público | destino do link de convite (guarda o código para creditar a indicação no cadastro) |
-| `/torneios/:id/imprimir` | público | versão impressão |
-| `/torneios/:id/telao` | público (Telão) | TV mode fullscreen |
-| `/inicio` | autenticado (V2) | Dashboard |
-| `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
-| `/treino` `/treino/novo` `/treino/item/:id` `/treino/item/:id/editar` `/treino/planos/:id` `/treino/golpes` | autenticado (V2), flag `training_center` | Centro de Treino (desligada ⇒ volta ao início) |
-| `/configuracoes` | autenticado (V2) | Settings (privacidade, notificações, exportar dados) |
-| `/notificacoes` | autenticado (V2) | Central de notificações — todos os avisos, por dia, com filtros (flag `notifications_center`) |
-| `/404` | autenticado (V2) | NotFound (page_titles + not_found_page) |
-| `/buscar` | autenticado (V2) | GlobalSearch (busca federada) |
-| `/torneios` `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | autenticado (V2) | lista/criar/ingressar/guia |
-| `/torneios/:id` `/torneios/:id/:tab` `/torneios/:id/modalidades/:modId` `/torneios/:id/courtside` | autenticado (V2) | Tournament (abas) + página de modalidade + courtside scoring |
-| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/arenas/:id/onboarding` `/minhas-reservas` | autenticado (V2) | arenas + reservas (onboarding é o stepper de 4 passos pós-criação) |
-| `/atletas` `/atleta/:uid` | autenticado (V2) | diretório + perfil público |
-| `/clubes` `/clubes/criar` `/clubes/:id` `/clubes/:id/eventos/:eventId` | autenticado (V2) | clubes + eventos + página pública |
-| `/coaches` `/coaches/:id` | autenticado (V2) | diretório + perfil público do professor |
-| `/coach/agenda` | autenticado (V2) | Painel do professor (aulas, alunos, pacotes) |
-| `/aluno/aulas` | autenticado (V2) | Aulas do aluno (com professor) |
-| `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
-| `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating (simples+duplas) + jogos + parceiros |
-| `/meu-desempenho` | autenticado (V2) | performance |
-| `/promocoes` `/campanhas/:campaignId` | autenticado (V2) | vitrine e página de campanha da **divulgação da plataforma e dos professores** (Onda CG) — gated por `platform_marketing`/`coach_marketing` (as duas OFF ⇒ volta ao início). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` |
-| `/mercado` `/mercado/anuncio/:id` `/mercado/vendedor/:key` `/mercado/carrinho` `/mercado/pedidos` `/mercado/vender` `/mercado/vales` `/mercado/buscas` | autenticado (V2), flag `marketplace` | **Mercado** (marketplace aberto: lojas, atletas, professores e arenas vendendo; Pix direto ao vendedor; cupons, vale-presente, cartões para compartilhar). Ver `src/modules/marketplace/README.md` |
-| `/gamification` `/conquistas` `/conquistas/:uid` `/hall-da-fama` `/vinculos` | autenticado (V2) | Gamificação V2 — **gated por `gamification_v2`** (flag OFF ⇒ empty state). Cada rota isolada em `GamificationErrorBoundary`. `/vinculos` = rivais (derivados do H2H), crews e mentorias |
-| `/admin/torneios` `/admin/metricas` `/admin/parceiros` `/admin/console` | platform_admin (V2) | painel + console (flags, migrations) |
-| `/admin/owner-debug` `/admin/owner-restore` `/admin/profiles` | platform_admin (V2) | admin tools |
+- **Raiz (`src/App.jsx`)**: públicas e sem layout — `/login`, `/p/:id`
+  (torneio público), `/torneios/:id/imprimir`, `/torneios/:id/telao`,
+  `/dia-de-jogo/:id/telao`, `/arenas/:id/totem`, `/c/:clubId`, `/r/:code`
+  (convite); redirecionamentos legados; o resto cai no `MainEntry`.
+- **Aplicativo (`V2App.jsx`)**: dentro do `V2Layout`, exige login
+  (`ProtectedRoute`); `/admin/*` exige `platform_admin` (`AdminRoute`). Áreas:
+  torneios, arenas (Central em `/arenas/:id/gerir?aba=`), dia de jogo, procura-jogo,
+  clubes, professores/aulas, ranking, perfil/Minha área, Mercado, Centro de
+  Treino, gamificação, ajuda, legal, notificações, busca.
+- **Gates**: `useFeatureFlag(key)` (`core/lib/FeatureFlagsContext.jsx`) decide
+  na tela se a flag que o admin liga está ativa (não existe `FeatureFlagGuard`); telas novas de dia de jogo/torneio
+  entram em `<Isolada>` (`docs/28`); página nova usa `<V2Page>`
+  (`docs/45-MOLDURA-DAS-PAGINAS.md`).
 
-> Itens do sidebar são **condicionais**: a flag `ARENAS` liga `/arenas` na
-> seção Plataforma; com o user sendo `manager`/`owner` de alguma arena,
-> surge "Minhas arenas" (com badge de reservas pendentes) na seção Você;
-> `Minhas reservas` só aparece se `ARENAS` estiver ligada. `/coach/agenda`
-> surge se o user é professor; `/aluno/aulas` se tem vínculo
-> `coach_students`.
+## 6. Dados (Firestore `pickleball`)
 
-**Tabs do /arenas/:id/gerir** (Sprint 1 ARE-02/04/05/07 + Sprint 6/7/8):
-Reservas (calendário por quadra com múltiplos responsáveis), Calendário
-(visualização mensal 6x7 com filtro por quadra e cores por status + badges
-numéricos PENDING/CONFIRMED), Quadras (CRUD com reorder, soft delete, modal
-de horários), Preços (com campo "Aplicar à quadra"), Fotos, Informações,
-Admins, Retornos, Parceiros (professores parceiros). A página usa
-**navegação em 2 níveis** (sticky top-2 + sub-tab-bar).
+Lista de coleções, subcoleções, regras e índices: `docs/46-INVENTARIO.md` §5–6
+(gerado) e campos/relações em `docs/05-DATA-MODEL.md`. Famílias:
 
-**FeatureFlagGuard** (`src/v2/components/FeatureFlagGuard.jsx`) é o padrão
-para wrappear páginas V2 por flag. Quando a flag está OFF:
-- Mostra empty state com Flag icon + título + descrição
-- Platform admin vê botão "Ativar {label}" 1-click (chama `setFeatureFlag`)
-- Não-admin vê instrução para pedir ao admin
+- **Identidade**: `users`, `athlete_profiles` (diretório; `directory_listed`).
+- **Torneio**: `tournaments`, `tournament_modalities`, `tournament_registrations`
+  (contato em `private/contact`), `tournament_matches`, `tournament_groups`,
+  `tournament_admins`, `tournament_courts`, `tournament_rankings`; equipes ficam
+  em campos de `tournament_modalities`/`tournament_registrations` (ver
+  `docs/12-TEAM-TOURNAMENTS.md`).
+- **Dia de jogo/jogos**: `game_days` (+ `participants`, `games`), `open_games`,
+  `club_event_games` (espelho para ranking).
+- **Arena**: `arenas` e a família `arena_*` (reservas, quadras, horários,
+  bloqueios, membros, carteiras, aulas, cupons, estoque, vendas…).
+- **Professor**: `coach_*`. **Clube**: `clubs`, `club_*`.
+- **Ranking/rating** (escrita só do servidor): `player_ratings`,
+  `rating_history`, `player_skill_ratings`, `skill_rating_history`,
+  `doubles_rankings`, `club_internal_*`.
+- **Treino**: `training_*`. **Mercado**: `market_*`. **Promo**: `promo_*`.
+  **Gamificação**: `user_*`, `gamification_*`, `season_rankings`, `hall_of_fame`.
+- **Transversal**: `notifications`, `audit_logs`, `admin_access_logs`,
+  `legal_consents`, `push_tokens`, `platform_settings`, `follows`,
+  `conversations`.
 
-NUNCA redirecionar silenciosamente para `/` quando a flag está off.
+Princípios: sem joins (desnormalização), ids determinísticos
+(`clubId_uid`, `arenaId_uid`…), campo novo sempre opcional, datas lidas do
+banco por `instanteEmMs` (`Timestamp`, não `Date`), nome do campo que a regra
+confere é contrato. Coleção nova que guarda dado da pessoa entra na **exclusão
+de conta** e na **exportação** (guarda `exclusaoCobreColecoes.test.js`).
 
-Guards: `ProtectedRoute` (auth), `AdminRoute` (platform_admin),
-`FeatureFlagGuard` (flag). Redirects legados `/dashboard`, `/boloes*` →
-rotas novas. Páginas via `React.lazy`. `basename = import.meta.env.BASE_URL`.
-Em DEV sem Firebase há "local preview" em `LOCAL_PREVIEW_PROTECTED_PATHS`.
+## 7. Notificações
 
-**V2CoachAvailabilityCalendar** (Wave B): calendário público de
-disponibilidade do professor (14 dias, slots livres derivados de
-`generateWeekSlots`). CTA "marcar aula" abre `RequestLessonDialog` com
-seleção de arena parceira. Lazy-loaded via `useFeatureFlag(COACH_LESSONS)`.
+`core/services/notificationService.js` (`createNotification`, `notifyUsers`
+em lotes; devolve quantos avisos gravou) escreve em `notifications`. O hook
+`modules/notifications/hooks/useNotifications.js` mantém **uma assinatura por
+usuário**, usada pelo sino (`NotificationsBell`), pelo menu e pela central
+`/notificacoes` (`docs/36`). Preferências por categoria em
+`users/{uid}.notification_prefs`; **push** (FCM, `push_tokens`) sai da função
+`pushOnNotificationCreate` respeitando as mesmas preferências
+(`functions/notificationPrefs.js`, paridade testada; `docs/PUSH-ATIVACAO.md`).
+Link de aviso passa por `linkDeAviso` (a regra recusa `#`) e a navegação por
+`destinoDeAviso`.
 
-**V2FavoriteCoachButton + V2CoachShareButton** (Wave B): espelham o
-padrão de arenas (V2ArenaActions). `coach_favorites/{uid_coachId}` no
-Firestore. Share com QR Code + WhatsApp + download PNG.
+## 8. Domínio que mais se mexe (e onde está a regra)
 
-## 6. Modelo de dados (Firestore, database `pickleball`)
+Cada item tem README no módulo e doc próprio; abra-os antes do código.
 
-**103 coleções top-level** (39 antes do Arena V3, +64 com as Ondas 1-10
-+ Wave B + Wave C + PRs #85-#88 + Ondas G/H/I/J/L/M).
-- **Mercado (PRs #238–#248, flag `marketplace`)**: coleções `market_*`
-  (vendedores, anúncios, perguntas, favoritos, buscas salvas, carrinhos,
-  ofertas, pedidos, avaliações, disputas, denúncias, cupons, vales-presente).
-  Pedido, oferta, avaliação, disputa, uso de cupom e vale só o SERVIDOR
-  escreve (`functions/marketplace.js`). Detalhe em `docs/05-DATA-MODEL.md`
-  § Mercado.
-- **PR #85 (2026-07-29)**: +1 coleção `game_days/{id}` (dia de jogo do
-  atleta, com subcoleções `participants`/`games`).
-- **PR #86 (2026-07-29)**: +1 coleção `legal_consents/{uid_docKey}`
-  (consentimento versionado de documentos jurídicos, LGPD).
-- **PR #94 (2026-07-30)**: cada aceite no onboarding vira
-  doc nesta coleção (auditável; bump de versão reabre aceite).
-- **PRs #128-#133 (Onda G, Sprints 38-43)**: +2 coleções
-  `player_skill_ratings/{userId_format}` (rating estilo DUPR,
-  escala 2.0-8.0) + `skill_rating_history/{id}` (evolução
-  por jogo). Independente do ELO (`player_ratings`/`rating_history`).
-  Lê de `tournament_matches` + `club_event_games`
-  (espelha fonte do ELO).
-- **PR #120 (Onda L)**: +1 coleção `audit_logs/{id}` (moderação
-  de atletas — `hidden: true` em `users/{uid}` +
-  `athlete_profiles/{uid}`, reversível, auditado).
-- **PR #134 (Onda H — `push_notifications`)**: +1 coleção
-  `push_tokens/{uid}` (token FCM por usuário, gerenciado
-  pelo próprio user).
-- **PRs #110-#112 (Onda I — `team_tournaments`)**: +3 coleções
-  `tournament_team_registrations/{id}`,
-  `tournament_team_lineups/{id}`,
-  `tournament_team_confrontations/{id}`. Etapas dos confrontos
-  espelham em `club_event_games` com
-  `source='team_confrontation'`.
-- **Wave C.3 (2026-07-28)**: +4 coleções `club_internal_ratings`/
-  `_ext`/`_doubles`/`_doubles_ext` (ranking interno do clube materializado).
-- **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}`
-  (espelhamento de jogos decididos de dias de jogo no ranking nacional).
-- **Wave B (2026-07-27)**: +1 coleção `coach_favorites/{uid_coachId}` (curtir professor).
-Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`,
-`uid_docKey`, `clubId_userId`, `clubId_pairKey`).
-Detalhe de campos em `docs/05-DATA-MODEL.md`.
+| Assunto | Módulo / fonte | Doc |
+|---|---|---|
+| Sorteio, grupos, chaves, desempate, classificação | `tournament/domain/` (`draw`, `tiebreak`, `groupPlan`, `crossGroup`, `directEntry`) | 26, 37 |
+| Dia de jogo (todas as origens) | `games/` + `v2/components/games/GameDayModule.jsx` | 14–17, 22, 25, 35, 39 |
+| Nível dos sorteios (régua 2.0–8.0) | `rating/domain/unifiedLevel.js` | 13 |
+| Ranking e rating (servidor escreve) | `rating/` + `functions/ranking.js`, `platformRankings.js`, `rankingCatchUp.js` | 18 |
+| Reserva e calendário da arena | `arenas/domain/` (`calendar`, `pricing`, `bookingSelection`, `arenaBlocks`) | 23, 24-MODULOS-DE-ARENA |
+| Gamificação | `progression/` | 38 |
+| Treino e balanço do jogo | `training/` | 40, 42 |
+| Mercado | `marketplace/` + `functions/marketplace.js` | `modules/marketplace/README.md` |
+| Troféus e cartões | `trophies/` | 43 |
 
-- **Identidade**: `users/{uid}` (perfil + role + **`dupr_id`** PR #90 +
-  **`quadrant`** + **`interests[]`** + **`profile_completeness`** calculado,
-  PR #91) · `athlete_profiles/{uid}` (perfil público do diretório;
-  `directory_listed: bool` controla visibilidade; **`dupr_id`** + **`quadrant`**
-  + **`interests[]`** espelhados, PRs #90 e #91).
-- **Torneios**: `tournaments` · `tournament_modalities` · `tournament_admins`
-  (id `tournamentId_uid`) · `tournament_registrations` · `tournament_matches` ·
-  `tournament_groups` · `tournament_rankings` (materializado no client) ·
-  `tournament_courts` · `tournament_announcements/{id}` ·
-  `tournament_photos/{id}`. O doc `tournaments/{id}` tem `archived`/`templates`.
-- **Arenas**: `arenas` · `arena_managers` (id `arenaId_uid`) ·
-  `arena_courts` (quadras nomeadas) · `arena_court_schedules` (janelas) ·
-  `arena_unavailabilities` (admin bloqueia slot) · `arena_waitlist` (lista
-  de espera) · `arena_bookings` (com `booking_type` aditivo: 'single'/
-  'recurring'/'coach_lesson'/'shared' e `court_id` obrigatório via
-  `pickAvailableCourt`) · `arena_reviews` · `arena_favorites` ·
-  `arena_modules` (PDV/membros/ligas/marketing/IoT — 35+ coleções V3).
-- **Professores** (greenfield, Onda 8 + 7b):
-  `coaches/{uid}` (perfil) · `coach_arenas/{coachId_arenaId}` (residência) ·
-  `coach_availability/{coachId}` (janelas semanais) ·
-  `coach_lessons/{lessonId}` (aulas) · `coach_students/{coachId_studentId}` ·
-  `coach_packages/{packageId}` · `coach_package_sales/{saleId}` (créditos) ·
-  `coach_content/{contentId}` (biblioteca) · `coach_clinics/{clinicId}` ·
-  `coach_clinic_signups/{signupId}` · `coach_level_validations/{validationId}` ·
-  `coach_products/{productId}` (loja).
-- **Clubes**: `clubs` · `club_members` (id `clubId_uid`) · `club_join_requests`
-  · `club_member_invites` · `club_posts` (mural) · `club_forum_threads` ·
-  `club_events` (com `recurring_rule`) · `club_event_rsvps` · `event_invites` ·
-  `dates`/`date_rsvps` (game-day) · `poll_votes` · `comments`.
-- **Games** (PR #85): `game_days/{id}` (com subcoleções
-  `participants`/`games` + `dates/{dateId}`). Visibilidade pública/privada.
-  Publicação no ranking: espelho em `club_event_games` com
-  `source='athlete_game_day'` e `club_id` resolvido por partida.
-- **Legal** (PR #86, LGPD): `legal_consents/{uid_docKey}` (aceite
-  versionado de documentos jurídicos). Documentos em código puro
-  (`domain/legalDocuments.js`).
-- **Chat**: `conversations` · `messages`.
-- **Social**: `follows` · `player_goals` (metas).
-- **Rating**: `player_ratings` · `rating_history` ·
-  `club_internal_ratings` (e `_ext`/`_doubles`/`_doubles_ext` — Wave C.3).
-- **Treino** (flag `training_center`): `training_items` · `training_shares` ·
-  `training_sessions` (+ `comments`) · `training_plans` · `training_meta` ·
-  `training_questions` (+ `messages`) · `training_reports` ·
-  `training_debriefs` (balanço do jogo, flag `game_debrief`) ·
-  `platform_settings/training` · Storage `treino/{uid}/`. Ver
-  `docs/40-CENTRO-DE-TREINO.md` e `docs/42-BALANCO-DO-JOGO.md`.
-- **Transversal**: `notifications` (com `preferences` por categoria) ·
-  `audit_logs` · `platform_settings`.
+## 9. Feature flags
 
-Princípios: **sem joins** — desnormalização e leitura por coleção; ids
-deterministas (`clubId_uid`, `arenaId_uid`, `coachId_arenaId`) evitam
-duplicidade e simplificam regras; escritas sempre acompanhadas de
-`audit_logs` via `auditService`. Toda nova feature **primeiro entra como
-flag OFF no Firestore + código**, depois migra (ver `migrateLegacyFlags`).
-
-## 7. Notificações (sino) + Preferências
-
-`core/services/notificationService.js`: `createNotification(...)` e
-`notifyUsers(ids, ...)` (em lote, ≤400/batch). Coleção `notifications`.
-Hook `modules/notifications/hooks/useNotifications.js` — **uma assinatura por
-usuário, compartilhada** (sino, menu do avatar, gaveta, início e central) —
-alimenta o sino (`v2/components/notifications/NotificationsBell.jsx`, com
-rolagem própria) e a central `/notificacoes` (flag `notifications_center`):
-todos os avisos, por dia, filtráveis por não lidas, ÁREA (`noticeArea`, que
-lê o tipo e, no `generic`, o destino do `link`) e busca; marcar lida e não
-lida. Ver `docs/36-NOTIFICACOES.md`. Tipos (`NOTIFICATION_TYPE`): `chat_message`, `chat_invite`,
-`forum_reply`, `forum_mention`, `event_invite`, `club_join_request`,
-`club_join_approved`, `club_join_rejected`, `club_invite`,
-`club_invite_accepted`, `club_event_published`, `tournament_open`,
-`profile_reminder`, `leveling_reminder`, `generic`.
-
-**Preferências por categoria** (flag `notification_prefs`): o user pode
-silenciar categorias inteiras (`booking_confirmed`, `tournament_*`, etc).
-Default: todas ON. Salvo em `users/{uid}.notification_prefs: {category: bool}`.
-
-**Lembretes derivados** (`profile_reminder`/`leveling_reminder`) NÃO são
-gravados no banco: o `Layout` os computa do `userProfile` e mostra no sino
-enquanto a pendência existir. **Marcar todas como lidas** (flag
-`notifications_mark_all`): botão "Marcar todas" no sino.
-
-## 8. Domínio de torneio (lógica pura testada)
-
-Em `modules/tournament/domain/` — funções puras com `.test.js`:
-`scoring` (CBP/USAP, 11/15/21 pts, sets) · `draw`/`seeding` (sorteio com seed
-reproduzível) · `progression`/`doubleElimination`/`swiss`/`mexicano`/
-`reinaQuadra` (formatos de fase) · `schedule`/`scheduling` (quadras, slots,
-descanso) · `ranking` (por formato) · `capacity`/`eligibility`/
-`participation` · `formatExplain`/`whistTables` · `americanoEtapas`
-(Americano aprimorado em etapas: grupos refeitos a cada etapa para o máximo de
-encontros inéditos, classificação única — flag `tournament_americano_etapas`)
-· `checkin` (`isActiveRegistration`: confirmada ou com check-in JOGA igual;
-`selfCheckInState`: o próprio check-in só para quem criou a inscrição). Ver
-`docs/37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md`.
-**Regra de ouro**: lógica de negócio mora aqui (pura, testável), nunca em
-componentes ou services.
-
-## 9. Feature flags (catálogo)
-
-`src/core/featureFlags.js` define **3 flags** (`FEATURE_FLAG`), todas
-default OFF, lidas de `platform_settings/global.feature_flags`:
-- `dupr_official_sync` — integração oficial DUPR (fase 2, stub).
-- `gameday_mexicano` — o Mexicano entre os formatos do dia de jogo.
-- `gameday_king_of_court` — o Rei da Quadra entre os formatos do dia de jogo.
-
-**Incorporação de 2026-10-10.** As **33 funcionalidades que estavam LIGADAS
-em produção viraram permanentes** por decisão do dono: `PERMANENT_FEATURE`
-no mesmo arquivo (início personalizado e sob medida, Minha área, Centro de
-Treino, balanço do jogo, gamificação V2, grupos e rodízio do Play, Americano
-aprimorado, dia de jogo da arena, módulos de arena, dicas guiadas, central de
-ajuda, central de notificações, modo escuro, Minha região, cadastro
-essencial, campanhas da plataforma e dos professores, as quatro de arena e
-as quatro de professor, engajamento, push, exportação DUPR e Americano em
-etapas). Elas valem `true` sempre (`normalizeFeatureFlags` não as lê do
-banco), **não aparecem no painel admin** e `functions/gamification.js` não
-consulta mais a flag. As constantes continuam existindo só enquanto houver
-`if` consultando-as: o próximo passo é apagar esses `if` e os ramos
-"desligado" tela a tela (há três versões de início, por exemplo), o que faz
-parte do plano de UX. Guarda: `src/core/guards/flagsIncorporadas.test.js`.
-Antes disso, na Onda O (Sprints 47-48), 137 flags já tinham virado código.
-`FeatureFlagGuard` não existe; o gate é explícito no código de cada tela.
+`src/core/featureFlags.js` tem dois grupos: **`FEATURE_FLAG`** — o que o admin
+liga/desliga (lidas de `platform_settings/global.feature_flags`, default OFF;
+hoje `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`,
+`marketplace`, `multi_language`) — e **`PERMANENT_FEATURE`** — funcionalidades
+incorporadas ao código em 2026-10-10, sempre `true`, fora do painel admin. As
+constantes antigas permanecem enquanto houver `if` consultando-as; remover
+esses `if` tela a tela é dívida declarada. Guarda: `flagsIncorporadas.test.js`.
+Agrupamento do painel: `featureFlagGroups.js`. **Nova funcionalidade: flag nova,
+default OFF, aditiva.** Contagem atual: `docs/46-INVENTARIO.md` §8.
 
 ## 10. Build, testes e deploy
 
 ```bash
-npm run dev       # Vite dev (http://localhost:5173)
-npm run lint      # ESLint (--quiet no CI) — esperado 0 errors
-npm run test      # Vitest unit (~1800 asserts em 296 arquivos)
-npm run e2e       # Playwright
-npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
+npm run dev            # Vite (http://localhost:5173)
+npm run lint           # ESLint — 0 errors
+npm test               # Vitest
+npm run typecheck      # JSDoc
+npm run build          # produção (VITE_PWA_ENABLED=true liga o PWA)
+npm run docs:inventario  # regenera docs/46-INVENTARIO.md
+npm run e2e            # Playwright
 ```
 
-- **Deploy**: push em `main` dispara `.github/workflows/deploy-firebase.yml`
-  (workflow "Deploy Firebase Hosting") → Firebase Hosting nos sites
-  `picklerush` (ativo) + `pickletour` (redirect-only 301). Regras do
-  Firestore (`firestore.rules`) e índices (`firestore.indexes.json`) são
-  publicados pelo mesmo fluxo/CLI. Cloud Function
-  `recomputeRankingOnTournamentChange` (region `southamerica-east1`) é
-  implantada junto.
-- **Env**: variáveis `VITE_FIREBASE_*` (ver `.env.example`),
-  `VITE_FIRESTORE_DATABASE_ID` (padrão `pickleball`), `VITE_PWA_ENABLED`.
-- **PWA**: aditivo, atrás de `VITE_PWA_ENABLED`; ícones via
-  `scripts/generate-pwa-icons.mjs`. Sem service worker quando desligado.
-  Auto-unregister de SWs stale (`sw-vN.js`) é padrão, sempre. Reload é
-  **deferido** se o user está interagindo (5s de janela de idle).
+- **Deploy**: push em `main` → `.github/workflows/deploy-firebase.yml` →
+  Hosting, regras, índices e Cloud Functions (publicadas **por nome** no
+  codebase `picklerush`; nunca deploy amplo — projeto Firebase compartilhado).
+  `functions-watchdog.yml` recria função apagada. `ci.yml` roda lint/testes e
+  confere se o inventário e os docs acompanham o código. Detalhes e armadilhas:
+  `docs/03-WORKFLOW.md`.
+- **Env**: `VITE_FIREBASE_*`, `VITE_FIRESTORE_DATABASE_ID` (padrão
+  `pickleball`), `VITE_PWA_ENABLED`.
+- **PWA**: `public/sw.js` versionado, `manifest.webmanifest`,
+  `firebase-messaging-sw.js` (push); bump de versão do SW em deploy de UI.
 
-## 11. "Ver como usuário" (debug do admin)
+## 11. "Ver como usuário"
 
-`/admin/painel` e `/admin/console` mostram o cabeçalho com toggle "Ver como
-usuário" (apenas para `platform_admin`). Quando ativo:
-- `isPlatformAdmin` retorna `false`
-- `canCreatePools` retorna `false`
-- O app se comporta como user comum
+O admin de plataforma pode ligar "Ver como usuário" no console: `isPlatformAdmin`
+e `canCreatePools` passam a `false` e o app se comporta como atleta comum.
 
-Útil pra debugar UX do usuário sem precisar fazer logout.
+## 12. Convenções para quem edita
 
-## 12. Convenções para quem edita (humano ou IA)
-
-1. **Lógica pura → `domain/` com teste.** Service só I/O; componente só UI.
-2. **Toda nova feature atrás de uma flag** (`FEATURE_FLAG.*`). Default OFF.
-   UI usa `FeatureFlagGuard` ou checa via `useFeatureFlag(key)`.
-3. Mudou Firestore? Atualize **`firestore.rules`** (aditivas, sem quebrar
-   coleções existentes) e `docs/05-DATA-MODEL.md` + `docs/01-AI-CONTEXT.md` §6.
-4. Toda escrita relevante gera **`audit_logs`** via `auditService`.
-5. Alias de import: `@/` → `src/`.
-6. Antes de commitar: `npm run lint && npm run build && npm test` verdes.
-7. Não quebrar a **visão pública** (`/p/:id`) nem o fluxo sem login.
-8. Textos de UI em **pt-BR**.
-9. Ao adicionar ícone `lucide-react` no JSX, **SEMPRE** adicionar no
-   import. Rodar `node scripts/validate-lucide-imports.mjs`.
-10. Componentes críticos DEVEM ter `*.runtime.test.jsx` que renderiza com
-    dados mockados (vite-merge pega tree-shaking; static tests não).
-11. **PWA**: bump `sw-vN.js` em todo deploy de UI. Auto-unregister sempre.
-    Reload deferido se user interagindo (5s janela).
-12. Deploy só com a tríade verde; confira o run do workflow após o push.
+1. Lógica pura em `domain/` com teste; service só I/O; componente só UI.
+2. Funcionalidade nova atrás de flag (default OFF); mudança de schema aditiva.
+3. Mexeu em Firestore: `firestore.rules` (aditivo, teste em `tests/rules/`),
+   `docs/05-DATA-MODEL.md` e, se for coleção de dado pessoal, exclusão e exportação.
+4. Escrita relevante gera `audit_logs` (`auditService`).
+5. Texto de UI em `t()`/`tk()` com `en` e `es` (`docs/44`); alias `@/` → `src/`.
+6. Antes do PR: lint, build e testes verdes; rode `npm run docs:inventario`
+   se mexeu em rota/coleção/regra/índice/função/flag/módulo.
+7. Não quebre a visão pública (`/p/:id`) nem o fluxo sem login.
+8. Ícone `lucide-react` novo: importe (`node scripts/validate-lucide-imports.mjs`).
+9. Tela crítica tem `*.runtime.test.jsx`.
 
 ## 13. Mapa dos demais docs
 
-- `docs/04-ARCHITECTURE.md` — camadas, design system, PWA, testes, padrões.
-- `docs/05-DATA-MODEL.md` — coleções, campos, relacionamentos, resumo das regras.
-- `docs/06-MODULES.md` — o que cada módulo faz, arquivos-chave e fluxos.
-- `docs/08-ARENA-ROADMAP.md` — roadmap das arenas (Sprint 0-10, status).
-- `docs/10-ARENA-V3/00-INDEX.md` → `26-ARENA-V3-COMPLETE-REFERENCE.md` — referência
-  completa do Arena V3.
-- `docs/09-UX-ANALYSIS/01-15` — UX/UI docs, incluindo backlog remanescente (15).
-- `docs/feature-flags-catalog.md` — catálogo detalhado de todas as flags.
-- `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` — tela inicial personalizada
-  e cupons/campanhas da plataforma e dos professores (Onda CG).
-- `docs/30-MODO-ESCURO.md` — o modo escuro por usuário: paleta, escolha,
-  o que fica claro de propósito (Onda CH).
-- `docs/31-INICIO-SOB-MEDIDA.md` — cada pessoa escolhe os cards do seu início
-  e a ordem, sem tocar o banco (Onda CI).
-- `docs/32-DICAS-GUIADAS.md` — as dicas sob pedido: guias com seta sobre a tela
-  de verdade, pontos de dica, tutoriais como guias (Onda CJ).
-- `docs/40-CENTRO-DE-TREINO.md` — o Centro de Treino: biblioteca de todos os
-  autores, criar, indicar, enviar a alunos, hoje, planos, diário, evolução,
-  dúvidas e o admin (flag `training_center`).
-- `docs/41-MINHA-AREA.md` — o `/perfil` como central do usuário (flag `user_hub`).
-- `docs/42-BALANCO-DO-JOGO.md` — o balanço depois do jogo e a semana de drills
-  sugerida, ligado por cada pessoa (flag `game_debrief`).
+`docs/00-INDEX.md` é o mapa completo. Os essenciais: `02-STANDARDS` (como
+codar), `03-WORKFLOW` (git/deploy), `04-ARCHITECTURE`, `05-DATA-MODEL`,
+`06-MODULES` (cada módulo), `07-DESIGN-STANDARD`, `46-INVENTARIO` (gerado),
+`09-UX-ANALYSIS/15-backlog-remanescente.md` (o que falta), `11-REFERENCE/`
+(cheatsheet, glossário, FAQ) e `FUTURO/` (desenhado, não implementado).

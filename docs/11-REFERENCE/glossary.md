@@ -83,7 +83,7 @@ Tailwind `emerald-*` → `green-*` em arenas.
 
 **feature_flag** — Toggle runtime de feature. Definido em
 `core/featureFlags.js`. Default OFF. Default no Firestore em
-`platform_settings/feature_flags/{key}`. Ativado pelo admin em
+`platform_settings/global (campo feature_flags.{key})`. Ativado pelo admin em
 `/admin/console`. Migração em `migrateLegacyFlags` (bump
 `FLAGS_MIGRATION_VERSION`).
 
