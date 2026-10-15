@@ -151,12 +151,16 @@ Refs: 13-arena-refino.md, 15-backlog-remanescente.md
 ### 2.4 Antes de commitar
 
 ```bash
-npm run lint       # 0 errors esperado
-npm run build      # sem warnings críticos
-npm test           # tudo verde
+npm run security:secrets     # nenhum segredo/chave/dump no Git
+npm run docs:inventario      # regenera docs/46-INVENTARIO.md (e comite o resultado)
+npm run lint                 # 0 errors esperado
+npm test                     # tudo verde
+npm run build && npm run build:budget   # build + orçamento do pacote inicial
+npm run test:rules           # se tocou firestore.rules / storage.rules (precisa de Java)
 ```
 
-Se algum falhou, **NÃO faça o commit**. Volte, arrume.
+Se algum falhou, **NÃO faça o commit**. Volte, arrume. A **documentação** do que
+você mexeu entra no mesmo PR (`docs/02-STANDARDS.md` §15): o CI reprova sem ela.
 
 ---
 
@@ -164,39 +168,37 @@ Se algum falhou, **NÃO faça o commit**. Volte, arrume.
 
 ### 3.1 Estrutura de uma boa PR
 
-**Título:**
-```
-feat(arenas): V2DaySlotsDialog com info de reservas + badges (sw-v73.6)
-```
+**Título:** Conventional Commits, ex.: `feat(arenas): calendário com horas-quadra livres`.
 
-**Descrição (use esse template):**
+**Descrição:** parta do template `.github/pull_request_template.md` (Resumo,
+Validação, Segurança e dados, Observações) e acrescente o que o template não
+cobre:
 
 ```markdown
-## O que
-[1-2 frases: o que essa PR faz]
-
-## Por que
-[1-2 frases: por que estamos fazendo, qual problema resolve]
-
-Refs: #issue, docs/15-backlog-remanescente.md §X
+## O que / Por que
+[1-2 frases cada. Cite o pedido e o doc do assunto.]
 
 ## Como testar
-1. [passo 1]
-2. [passo 2]
-3. [resultado esperado]
+1. [passo]  2. [passo]  3. [resultado esperado]
 
 ## Screenshots / vídeos
-[anexe se for UI — use `gh pr attach` ou arraste no GitHub]
+[se for UI, claro e escuro, celular e desktop]
 
 ## Checklist
-- [x] Lint passa
-- [x] Build passa
-- [x] Tests passam (+N novos)
-- [x] Smoke test manual
-- [x] Docs atualizadas (01-AI-CONTEXT, 05-DATA-MODEL, 06-MODULES, 15-backlog)
-- [x] Feature flag criada/validada
-- [x] Bundle grep (se importou lib nova)
+- [x] security:secrets, lint, test, build, build:budget
+- [x] test:rules (se tocou regras)
+- [x] Flag criada/validada (default OFF) — ou "não aplicável"
+- [x] Docs atualizadas: doc do assunto, README do módulo, CLAUDE.md se mudou o mapa,
+      e `npm run docs:inventario` rodado
+- [x] Texto novo em t()/tk() com en e es
+
+Docs: não se aplica — <motivo>   ← SÓ se nada muda para quem lê a documentação
 ```
+
+**Documentação no PR.** O job `docs-obrigatorios` do CI reprova o PR que muda
+código de produto sem tocar em nenhum doc. A isenção é uma linha no CORPO do PR:
+`Docs: não se aplica — <motivo>` (motivo obrigatório, com sentido: "refator
+interno sem mudança de comportamento", não "n/a"). Detalhe em `docs/02-STANDARDS.md` §15.
 
 ### 3.2 Tamanho
 
@@ -207,7 +209,7 @@ Refs: #issue, docs/15-backlog-remanescente.md §X
 ### 3.3 Review
 
 - **Você mesmo revisa** (IA pode fazer self-review via `gh pr view` + tools)
-- **Aprova** quando lint+build+test+smoke+docs ok
+- **Aprova** quando o CI está verde (secrets, inventário, lint, test, build, orçamento, regras, docs) + smoke + docs ok
 - **Squash merge** (botão do GitHub) — mantém main linear
 - **Delete branch** após merge (botão do GitHub)
 
@@ -240,24 +242,30 @@ gh pr merge <num> --squash --delete-branch
 
 ```
 push em main
-  ↓
-GitHub Actions: .github/workflows/deploy-firebase.yml
-  ↓
-1. Validate required secrets
-2. Install dependencies
-3. Install Firebase CLI
-4. Write service account credentials
-5. Ensure Firestore database "pickleball" exists (cria se faltar)
-6. Ensure Hosting sites exist (cria se faltar — picklerush + pickletour)
-7. Build (vite build → dist/)
-8. Deploy:
-   - firebase deploy --only firestore:rules,firestore:pickleball (bloqueante; falha se a CLI não disser "released rules")
-   - firebase deploy --only firestore:indexes,firestore:pickleball (sem `--force`; se houver índice remoto não versionado, preserva e avisa)
-   - firebase deploy --only functions (por codebase/nome, via script seguro)
-   - firebase deploy --only hosting
+  ├─ ci.yml (em paralelo): secrets · inventário · lint · test · build · orçamento · regras
+  └─ deploy-firebase.yml  (concurrency "firebase-hosting", timeout 30 min)
+       1. Validate required secrets
+       2. Install dependencies + Firebase CLI (firebase-tools@13)
+       3. Write service account credentials
+       4. Ensure Firestore database "pickleball" exists (cria se faltar)
+       5. Ensure Hosting sites exist (picklerush + pickletour)
+       6. Build (vite build → dist/, VITE_PWA_ENABLED=true)
+       7. Deploy Firestore rules   → --only firestore:rules,firestore:pickleball
+          (falha se a CLI não disser "released rules")
+       8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
+          (sem --force: índice remoto não versionado é preservado e avisado)
+       9. Install functions deps + Deploy Cloud Functions (não fatal)
+          → scripts/functions-deploy.sh (codebase `picklerush`, por nome)
+      10. Deploy Storage rules (não fatal)
+      11. Deploy Hosting (picklerush e pickletour; pickletour é redirect-only)
   ↓
 ✅ Site atualizado em https://picklerush.web.app
 ```
+
+⚠️ O deploy **não espera** o CI: os dois disparam no mesmo push. Por isso o
+merge só acontece com o CI do PR verde (§3.3) — o `main` é sempre implantável.
+Os passos de Functions e Storage são não fatais de propósito (Hosting e
+Firestore já saíram); falha de Functions é refeita pela vigilância (§4.7).
 
 **Tempo típico**: 2-4 minutos.
 
@@ -332,34 +340,54 @@ firebase hosting:clone picklerush:<versão-anterior> picklerush:live
 
 ### 4.6 PWA / Service Worker
 
-Toda mudança de UI **DEVE** bumpar `sw-vN.js`:
+O PWA é ligado no build de produção (`VITE_PWA_ENABLED=true` em
+`deploy-firebase.yml`); desligado, nenhum SW é registrado e qualquer registro
+anterior é removido. A versão do cache está em `public/sw.js`
+(`const VERSION = 'v7'` → cache `picklerush-v7`). **Bumpe `VERSION` quando o
+conjunto de assets mudar**: a próxima ativação apaga os caches antigos
+(`activate`), e `skipWaiting` + `clients.claim` evitam atualização presa.
 
-```js
-// src/core/pwa/registerPwa.js
-const SW_VERSION = 'sw-v74.js';  // ⬅️ bumpar
-```
+`src/core/pwa/registerPwa.js` registra `sw.js`, procura versão nova a cada
+carregamento e, **só quando já havia um SW controlando a página**, recarrega
+uma vez na troca de controlador. Push usa `public/firebase-messaging-sw.js`.
+Cache HTTP em `firebase.json`: `index.html`, `sw.js` e manifest sem cache;
+assets com hash, `immutable` por 1 ano.
 
-**Auto-unregister de SWs stale**: sempre, independente de `PWA_ENABLED`.
-Lógica em helper separado (não early-return).
+Depois de um deploy, quem está com a aba aberta pode pedir um pedaço de código
+que já não existe: a tela mostra "Uma versão nova foi publicada — Recarregar"
+(`isChunkLoadError`, `docs/28-ERRO-NAO-DERRUBA-O-APP.md`). Não é bug.
 
-**Reload deferido**: NUNCA `window.location.reload()` durante interação
-do user. Track via sessionStorage + 5s janela de idle.
+### 4.7 Workflows do repositório (`.github/workflows/`)
 
-```js
-const lastActivity = Number(sessionStorage.getItem('pwa-stale-last-activity') || '0');
-const isInteracting = (Date.now() - lastActivity) < 5000;
-if (isInteracting) {
-  setTimeout(() => {
-    if (document.visibilityState === 'visible') {
-      window.location.reload();
-    }
-  }, 5000);
-} else {
-  setTimeout(() => { window.location.reload(); }, 50);
-}
-```
+| Workflow | Quando roda | O que faz |
+|---|---|---|
+| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
+| `deploy-firebase.yml` | push em `main` + manual | Deploy completo (§4.1) |
+| `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
+| `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
+| `privacy-legacy-email-cleanup.yml` | manual | Limpeza de e-mails legados em etapas (`report` por padrão = dry-run; `apply` exige texto de confirmação) |
+| `deploy-pages.yml` | push em `main` + manual | **Legado**: publica o build no GitHub Pages (não é a produção) |
 
-Track em: `keydown`, `mousedown`, `touchstart`, `pointerdown`, `scroll`, `input`, `change`.
+Guardas de fonte dos workflows: `deployFirebaseWorkflow.test.js`,
+`deployFunctions.test.js`, `firestoreBackupWorkflow.test.js`,
+`legacyEmailCleanupWorkflow.test.js`. Mexeu num workflow? Rode-os.
+
+### 4.8 Checagem de documentação no CI
+
+Dois pontos, ambos em `ci.yml`:
+
+1. **Inventário em dia** (todo push/PR): `npm run docs:inventario:check` compara
+   `docs/46-INVENTARIO.md` com o que `scripts/gen-inventario.mjs` gera do código
+   (rotas, coleções, regras, índices, funções, flags, módulos). Reprovou? Rode
+   `npm run docs:inventario` e comite o arquivo — nunca edite à mão.
+2. **Docs obrigatórios** (só PR): `BASE_REF=origin/main PR_BODY=… node
+   scripts/check-docs-updated.mjs`. Código de produto no diff sem nenhum doc
+   (`docs/`, `CLAUDE.md`, `AGENTS.md`, `README.md`, README de módulo,
+   `functions/README.md`) ⇒ falha, a menos que o corpo do PR tenha a linha
+   `Docs: não se aplica — <motivo>`.
+
+Para rodar localmente antes do PR:
+`BASE_REF=origin/main PR_BODY="$(cat corpo.md)" node scripts/check-docs-updated.mjs`.
 
 ---
 
@@ -501,23 +529,20 @@ curl -s https://picklerush.web.app/assets/index-XXX.js | grep -c "novoCodigo"
 ### 8.1 Antes de mergear
 
 ```bash
-# 1. Build
-npm run build
-
-# 2. Ver tamanho do bundle
+npm run build && npm run build:budget   # orçamento do pacote inicial (gzip)
 ls -la dist/assets/
-
-# 3. Verificar que código novo está no bundle
-grep -c "novoCodigo" dist/assets/index-*.js
-
-# 4. Se importou lib nova, ela tá no bundle?
-grep -c "nomeDaLib" dist/assets/index-*.js
+grep -c "novoCodigo" dist/assets/*.js    # o código novo está no bundle?
 ```
+
+`build:budget` (`scripts/check-bundle-size.mjs`) soma o JS/CSS que o
+`index.html` carrega e reprova acima de 440 kB gzip (`BUNDLE_BUDGET_KB`). O teto
+só desce; estourou? divida o que acrescentou com `lazy` ou tire do caminho crítico.
 
 ### 8.2 Code splitting
 
 - Componentes > 30KB devem ser `lazy(() => import(...))`
-- Routes são auto-lazy via React Router
+- Toda página é `React.lazy` (`App.jsx`, `V2App.jsx`); mapa de cidades, semente do treino e catálogos de idioma entram só por import dinâmico
+- Libs pesadas e isoladas têm chunk próprio em `manualChunks` (`vite.config.js`)
 - Componentes auxiliares: lazy quando fizer sentido
 
 ### 8.3 Tree shaking
@@ -543,24 +568,20 @@ export const db = getFirestore(app, 'pickleball');
 
 ### 9.2 Region
 
-**Cloud Functions: `southamerica-east1`** (São Paulo).
-
-```js
-// functions/index.js
-exports.recomputeRankingOnTournamentChange = functions
-  .region('southamerica-east1')
-  .firestore.document('tournaments/{id}')
-  .onWrite(async (change, context) => { /* ... */ });
-```
+**Cloud Functions: `southamerica-east1`** (São Paulo) — constante `REGION` em
+`functions/index.js`, e é nessa região que a vigilância procura as funções.
+O banco `pickleball` também fica em `southamerica-east1`.
 
 ### 9.3 Hosting sites
 
 - `picklerush` — site ativo (`picklerush.web.app` e domínio custom)
-- `pickletour` — legacy, redirect-only 301 → picklerush
+- `pickletour` — redirect-only para o `picklerush`
+
+Ambos são publicados pelo `deploy-firebase.yml` (`HOSTING_SITE_IDS`).
 
 ### 9.4 Storage
 
-- Bucket: `picklerush.appspot.com` (default)
+- Bucket: o padrão do projeto (compartilhado com outro app — §9.1)
 - Upload via `storageService.js`
 - Regras em `storage.rules`
 
@@ -600,7 +621,11 @@ firebase emulators:start
 
 ### 9.7 Backup e restore
 
-Não temos backup automatizado. Firestore tem export manual via Console.
+Backup sob demanda: workflow **Backup manual do Firestore**
+(`firestore-manual-export.yml`, `workflow_dispatch`, exige digitar `EXPORTAR`) —
+exporta o banco `pickleball` para o GCS depois de conferir banco e privacidade do
+bucket. Para PITR, backup agendado e teste de restauração há o helper local `scripts/firestore-s0-backup.sh` (não grava nada no repositório). Antes de qualquer
+migração destrutiva, tenha PITR/backup testado.
 
 ---
 
@@ -661,28 +686,34 @@ Guarda: `src/core/guards/deployFunctions.test.js`.
 Depois de qualquer deploy, confira no log do passo *Deploy Cloud Functions*
 que não há linha `Successful delete operation` de função que não é daqui.
 
-## 10. GitHub Actions secrets
+## 10. GitHub Actions secrets e variáveis
 
-Para o workflow de deploy funcionar, estes secrets DEVEM estar configurados
-em **Settings → Secrets and variables → Actions**:
+Em **Settings → Secrets and variables → Actions** (só os NOMES; nunca cole
+valores em doc, issue ou PR):
 
-| Secret | Origem | Obrigatório |
-|---|---|---|
-| `VITE_FIREBASE_API_KEY` | Firebase Console → Project settings | Sim |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Console | Sim |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase Console | Sim |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Console | Sim |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Console | Sim |
-| `VITE_FIREBASE_APP_ID` | Firebase Console | Sim |
-| `VITE_FIREBASE_MEASUREMENT_ID` | Firebase Console | Não (analytics) |
-| `FIREBASE_SERVICE_ACCOUNT` | Service Account JSON completo | Sim |
-| `FIREBASE_PROJECT_ID` | Id do projeto Firebase | Sim |
+| Nome | Tipo | Usado por | Obrigatório |
+|---|---|---|---|
+| `VITE_FIREBASE_API_KEY` | secret (Pages: também variável) | deploy, Pages | Sim |
+| `VITE_FIREBASE_AUTH_DOMAIN` | secret | deploy, Pages | Sim |
+| `VITE_FIREBASE_PROJECT_ID` | secret | deploy, watchdog, backup, limpeza (vira `FIREBASE_PROJECT_ID`) | Sim |
+| `VITE_FIREBASE_STORAGE_BUCKET` | secret | deploy, Pages | Sim |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | secret | deploy, Pages | Sim |
+| `VITE_FIREBASE_APP_ID` | secret | deploy, Pages | Sim |
+| `VITE_FIREBASE_MEASUREMENT_ID` | secret | deploy, Pages | Não (analytics) |
+| `FIREBASE_SERVICE_ACCOUNT` | secret (JSON da service account) | deploy, watchdog, backup, limpeza | Sim |
+| `VITE_FIRESTORE_DATABASE_ID` | secret/variável (Pages; o deploy fixa `pickleball`) | Pages | Não |
+| `VITE_ENABLE_FIREBASE_ANALYTICS`, `VITE_ENABLE_FIREBASE_PERFORMANCE` | variável (Pages; o deploy fixa `false`) | Pages | Não |
 
-**Adicionar/rotacionar secret**:
+O `ci.yml` **não usa segredo**: o build do CI roda com variáveis fictícias.
+O `deploy-firebase.yml` fixa `VITE_FIRESTORE_DATABASE_ID=pickleball`,
+`VITE_PWA_ENABLED=true` e `VITE_BASE_PATH=/`.
+
+**Adicionar/rotacionar a service account**:
 1. Firebase Console → Project settings → Service accounts → Generate new private key
-2. Copiar JSON inteiro
-3. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-4. Name: `FIREBASE_SERVICE_ACCOUNT`, Value: colar o JSON
+2. Copiar o JSON inteiro
+3. GitHub repo → Settings → Secrets and variables → Actions → `FIREBASE_SERVICE_ACCOUNT`
+4. Papéis necessários: Firebase Admin (regras, índices, Storage, Hosting) e, para
+   Functions, Cloud Functions Admin + Service Account User (§4.3)
 
 ---
 
@@ -705,6 +736,11 @@ git worktree remove ../path
 # === Build / test ===
 npm run dev          # dev server (5173)
 npm run build        # build prod
+npm run build:budget # orçamento do pacote inicial
+npm run test:rules   # regras no emulador (Java)
+npm run docs:inventario        # regenera docs/46-INVENTARIO.md
+npm run docs:inventario:check  # verifica sem gravar
+npm run security:secrets       # nada de segredo no Git
 npm test             # vitest
 npm run lint         # eslint --quiet
 npm run typecheck    # JSDoc check
@@ -735,13 +771,14 @@ WORKTREE  1 worktree por feature, remove após merge
 BRANCH    feat/X, fix/X, docs/X, refactor/X
 COMMIT    conventional commits (feat/fix/docs/refactor)
 PR        self-review + squash merge + delete branch
-DEPLOY    push main → GitHub Actions → firebase hosting
+DEPLOY    push main → deploy-firebase.yml (regras → índices → funções por nome → storage → hosting)
+DOCS      toda mudança de código leva doc; npm run docs:inventario; CI reprova sem (ou 'Docs: não se aplica — motivo')
 VERIFY    smoke test manual + bundle grep
 HOTFIX    fix/X → PR → merge (mesmo que feature)
 DEBUG     bundle → build → test → e2e → flag → rule → service
-PWA       bump sw-vN.js; auto-unregister; reload deferido
+PWA       bump VERSION em public/sw.js quando os assets mudam
 SECRETS   FIREBASE_SERVICE_ACCOUNT + VITE_FIREBASE_* no GitHub
 ```
 
-> **Última atualização**: 2026-07-24. Mudou o fluxo? Atualize este doc
+> **Última atualização**: 2026-10-15. Mudou o fluxo? Atualize este doc
 > **e** o `CLAUDE.md` §6-§7 e a memory do agente.

@@ -15,35 +15,37 @@
 
 ```
 src/
+├── main.jsx / App.jsx        # boot, providers, rotas públicas e telas "soltas" (telões, totem, impressão)
 ├── core/                     # infraestrutura transversal
-│   ├── config/               # init (firebase.js)
-│   ├── lib/                  # utils (logger, useClipboard, profileValidation)
-│   ├── domain/               # types.js (JSDoc typedefs compartilhados)
-│   ├── services/             # auditService, notificationService, baseService
-│   ├── featureFlags.js       # 3 flags opcionais (as 33 ligadas viraram código em 2026-10-10) (FEATURE_FLAG)
-│   ├── featureFlagGroups.js  # agrupamento pra admin
-│   └── pwa/                  # registerPwa + sw lifecycle
+│   ├── config/               # firebase.js (banco nomeado `pickleball`)
+│   ├── lib/                  # auth, flags, tema, logger, queryState, preferências por usuário
+│   ├── domain/               # lógica pura transversal + types.js (typedefs JSDoc)
+│   ├── services/             # auditService, notificationService, platformSettingsService, webVitals…
+│   ├── i18n/ · theme/ · pwa/ · seo/ · geo/
+│   ├── guards/               # guardas de fonte (testes que leem o código) — ver §10.5
+│   ├── featureFlags.js       # FEATURE_FLAG (ligáveis) e PERMANENT_FEATURE (incorporadas)
+│   └── featureFlagGroups.js  # agrupamento no painel do admin
 │
-├── modules/                  # ⭐ BASE DE DOMÍNIO (19 módulos, ver 06-MODULES)
+├── modules/                  # ⭐ BASE DE DOMÍNIO (lista em docs/46-INVENTARIO.md)
 │   └── X/
 │       ├── domain/           # lógica pura + .test.js (SEMPRE)
 │       ├── services/         # Firestore CRUD + auditoria
 │       ├── hooks/            # React Query (useX)
-│       ├── pages/            # páginas V1 do módulo
 │       ├── components/       # UI específica
 │       └── README.md         # visão, schema, hooks, fluxos
 │
 ├── v2/                       # ⭐ APP ATIVO
-│   ├── V2App.jsx             # tabela de rotas autenticadas
-│   ├── components/           # V2Layout, FeatureFlagGuard, V2Arena*, V2Coaches*
-│   ├── pages/                # 67 páginas V2 (V2Xxx.jsx)
-│   ├── ui/primitives.jsx     # V2Button, V2Card, V2Badge, V2Dialog, ...
-│   └── lib/                  # utils V2
+│   ├── V2App.jsx             # tabela de rotas autenticadas (tudo lazy; telas sensíveis em <Isolada>)
+│   ├── components/           # V2Layout, V2RouteBoundary, e uma pasta por área (arenas, tournament, games…)
+│   ├── pages/                # V2Xxx.jsx (uma por rota)
+│   └── ui/                   # primitives.jsx, pageFrame.js, V2SectionNav, V2CollapsibleCard…
 │
-├── pages/                    # V1 legado (espectador, impressão)
-├── components/               # shadcn/ui primitives (Radix)
-└── App.jsx                   # roteamento + providers
+├── pages/                    # telas públicas V1 fora do V2 (/p/:id, impressão, telão do torneio, /c/:clubId)
+└── components/               # shadcn/Radix (ui/) e diálogos compartilhados
 ```
+
+Números (páginas, módulos, coleções…) mudam toda semana: consulte
+`docs/46-INVENTARIO.md`, que é gerado.
 
 ### 1.2 Convenção de camadas (dentro de cada módulo)
 
@@ -96,7 +98,7 @@ Domain **nunca** importa services ou hooks.
 
 ### 2.2 Mensagens, UI, comentários
 
-- **100% pt-BR** em strings de UI, comentários, mensagens de erro, audit_logs
+- **pt-BR é a língua do código**: comentários, mensagens de erro, audit_logs e o texto-fonte da UI. Todo texto visível passa por `t('Texto em português')` (o português é a chave) ou `tk('…')` para rótulo em constante (e `t(rotulo)` no render); tradução em `src/<área>/i18n/locales/{en,es}.js`; **nunca** `t()` no nível do módulo. Datas/números por `fmtData`/`fmtNumero`/`fmtMoeda`. O que vai para o BANCO segue em português. `i18nCatalogos.test.js` reprova chave sem tradução (`docs/44-IDIOMAS.md`)
 - Logs técnicos em inglês (código) — mas em PT quando forem mensagens para user
 - Sem emoji decorativo em código (só na UI, e via `lucide`)
 
@@ -121,136 +123,90 @@ import { bookingService } from '../services/bookingService';// 3
 
 ## 3. Feature flags (regra de ouro)
 
-**Toda nova funcionalidade visível ao usuário DEVE nascer atrás de uma flag.**
+**Toda nova funcionalidade visível ao usuário nasce atrás de uma flag, default OFF.**
+
+Estado atual (conferido em `src/core/featureFlags.js`):
+
+- `FEATURE_FLAG` — as flags **ligáveis** pelo admin. Hoje são só cinco:
+  `dupr_official_sync`, `gameday_mexicano`, `gameday_king_of_court`,
+  `marketplace`, `multi_language`.
+- `PERMANENT_FEATURE` — as 33 funcionalidades que estavam ligadas em produção
+  e foram **incorporadas** em 2026-10-10. Valem sempre `true`, não aparecem no
+  painel, e o banco não as desliga (`normalizeFeatureFlags` as força). Chaves
+  antigas no documento do banco são ignoradas. Leitura de `PERMANENT_FEATURE`
+  fora do catálogo é dívida (ramo morto a apagar) e o guarda só aceita o número
+  DESCER (`dividaDeDesign.test.js`). Nenhuma chave pode estar nos dois
+  catálogos (`flagsIncorporadas.test.js`).
+- Flags não listadas nos catálogos **não existem** — não referencie
+  `FEATURE_FLAG.X` sem declarar.
 
 ### 3.1 Onde definir
 
-**`src/core/featureFlags.js`** — adicionar ao `FEATURE_FLAG` object:
+1. `src/core/featureFlags.js` — adicione a chave ao `FEATURE_FLAG`, com um
+   comentário em pt-BR dizendo o que liga, o que NÃO muda quando desligada e o
+   impacto no banco. Atualize o teste `flagsIncorporadas.test.js` (ele lista as
+   chaves esperadas) e o `featureFlags`/`featureFlagGroups` tests.
+2. `src/core/featureFlagGroups.js` — coloque no grupo apropriado do painel
+   (senão cai em `FLAG_GROUP_OTHER`).
+3. `FEATURE_FLAG_META` — rótulo e descrição mostrados ao admin.
 
-```js
-export const FEATURE_FLAG = Object.freeze({
-  // ... existentes
-  MY_NEW_FEATURE: 'my_new_feature',  // ⬅️ nova
-});
-```
+### 3.2 Onde o valor mora
 
-**`src/core/featureFlagGroups.js`** — adicionar ao grupo apropriado:
+No documento único **`platform_settings/global`**, campo `feature_flags` (mapa
+`chave → boolean`), lido pelo `FeatureFlagsProvider` por `onSnapshot`
+(`platformSettingsService`). Ausente ou não booleano ⇒ `false` (default OFF).
+Só o admin da plataforma escreve (a regra de `platform_settings` reforça), e a
+mudança gera `audit_logs`. Não existe mais um documento por flag nem
+`migrateLegacyFlags`: **default OFF não precisa de migração**. Flag nova que
+precise nascer LIGADA para quem já usa exige decisão explícita do dono
+(princípio 11 do `CLAUDE.md`) e teste de propriedade provando que desligada nada muda.
 
-```js
-{
-  id: 'arenas',  // ou outro grupo
-  label: 'Arenas e reservas',
-  keys: [
-    FEATURE_FLAG.MY_NEW_FEATURE,  // ⬅️ nova
-  ],
-},
-```
-
-Se não encaixar em grupo existente, vai pra `FLAG_GROUP_OTHER` (renderizado
-no fim do admin console).
-
-### 3.2 Default no Firestore
-
-Criar (ou atualizar) o default em `platform_settings/feature_flags/my_new_feature`:
-
-```js
-{
-  value: false,  // ⬅️ sempre false por default
-  description: 'Descrição visível no admin',
-  updated_at: <serverTimestamp>,
-  updated_by: 'system',
-}
-```
-
-### 3.3 Migração de flags
-
-Ao **adicionar** flag nova OU **mudar** default de existente, **SEMPRE**:
-
-1. Atualizar `migrateLegacyFlags` em `src/core/featureFlags.js`
-2. **Bump `FLAGS_MIGRATION_VERSION`** (constante no mesmo arquivo)
-3. Adicionar teste em `featureFlags.test.js` que valida:
-   - Defaults batem com `FEATURE_FLAG` object
-   - Migração roda idempotente
-   - Defaults novos aparecem sem quebrar docs existentes
-
-**Por quê?** Sem migração, o Firestore fica com defaults velhos e a feature
-"nasce desligada mas não aparece no admin" — fachada. Lição da Onda 1.
-
-### 3.4 Como usar na UI
-
-**Opção A — gate de página inteira** (mais comum):
+### 3.3 Como usar na UI
 
 ```jsx
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
-export default function V2MyFeature() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.MY_NEW_FEATURE}
-      label="Minha Feature"
-      description="O que essa feature faz em 1 frase"
-    >
-      <MyFeatureContent />
-    </FeatureFlagGuard>
-  );
-}
-```
-
-**Opção B — gate inline** (esconder só um botão/seção):
-
-```jsx
-import { useFeatureFlag } from '@/core/hooks/useFeatureFlag';
-
 export default function V2Something() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.MY_NEW_FEATURE);
-  return (
-    <div>
-      {enabled && <NewButton />}
-      <ExistingStuff />
-    </div>
-  );
+  const ativo = useFeatureFlag(FEATURE_FLAG.MULTI_LANGUAGE);
+  return ativo ? <NovoBotao /> : null;   // desligada ⇒ a tela é a de sempre
 }
 ```
 
-**NUNCA redirecionar silenciosamente** para `/` quando flag off. Use
-`FeatureFlagGuard` — o admin precisa DESCobrir a feature. (Lição sw-v73.3.)
+- Flag desligada: a seção **some** ou a rota **redireciona/explica** — nunca
+  renderize desabilitado, e nunca deixe a rota em branco.
+- Guia de dicas, artigo da ajuda e pista de rota da funcionalidade levam
+  `flags: ['chave']` e só aparecem com a flag ligada (`helpCatalog`).
+- Flag de FUNCIONALIDADE vale mesmo para dado já gravado; flag que só tira a
+  opção de ESCOLHER nunca tira o que já está gravado (ex.: formatos de dia de jogo).
+- O painel do admin mostra a contagem "X ativas de Y" a partir de `countFlags`.
 
-### 3.5 Como ativar para teste local
+### 3.4 Como ativar para teste local
 
-1. Logado como platform_admin (`fsalamoni@gmail.com`)
-2. Ir em `/admin/console`
-3. Togglear a flag
-4. Refresh
+Logado como `platform_admin`, abra o painel admin → Funcionalidades e ligue a
+flag (ou grave `feature_flags.<chave> = true` em `platform_settings/global` no
+emulador/console). Atualize a página.
 
-Ou via console do Firebase:
-```js
-firebase.firestore().doc('platform_settings/feature_flags/my_new_feature')
-  .set({ value: true, updated_at: firebase.firestore.FieldValue.serverTimestamp() });
-```
+### 3.5 Quando virar permanente
 
----
+Quando a funcionalidade está ligada e estável, o dono decide incorporá-la: a
+chave sai de `FEATURE_FLAG` para `PERMANENT_FEATURE`, os `if` viram dívida a
+remover tela a tela, e docs/CLAUDE.md são atualizados.
 
+### 3.6 Navegação (histórico: `NAV_HUBS`)
 
-### 3.6 Navegação em hubs (`NAV_HUBS`)
+A navegação em hubs (flag `NAV_HUBS`) foi incorporada. Hoje a barra lateral e a
+gaveta mostram os hubs que a **pessoa** escolhe (`core/domain/sidebarNav.js`,
+`useSidebarNav`, zero banco), a barra inferior do celular é fixa
+(`core/domain/bottomNav.js`) e a barra de abas de cada central é
+`V2SectionNav`/`V2SubTabs`. Ver `docs/07-DESIGN-STANDARD.md` §6.
 
-Quando a flag `NAV_HUBS` está ON, o `V2Layout` muda:
-
-- **Sidebar lateral**: mostra apenas os **hubs** (nível 1) — não mais a
-  lista plana. Colapsável para só ícones.
-- **Barra superior**: mostra as **subpáginas do hub ativo** (nível 2).
-- **Mobile**: mesmo padrão (drawer com hubs + barra superior com subs).
-
-Quando OFF, renderiza a lista plana antiga (legado).
-
-OFF por default. Aditivo — pode ser ativado em runtime pelo admin.
-
-### 3.7 Central de documentos jurídicos (`LEGAL_CENTER`)
+### 3.7 Central de documentos jurídicos (incorporada; era `LEGAL_CENTER`)
 
 > **REGRA**: novos documentos jurídicos **DEVEM** ter versão
 > (`version: 'N.M'`). Bump de versão reabre o aceite do usuário.
 
-Quando a flag `LEGAL_CENTER` está ON, o usuário vê:
+O usuário vê:
 - `/legal` — central com lista de documentos
 - `/legal/:docRoute` — página de documento com botão "Li e concordo"
 - `LegalConsentGate` no `V2Layout` bloqueia acesso até aceite dos
@@ -284,14 +240,14 @@ Quando a flag `LEGAL_CENTER` está ON, o usuário vê:
 `LegalConsentGate` reabre o aceite. Não destrói o aceite antigo
 (histórico).
 
-### 3.8 Dia de jogo do atleta (`ATHLETE_GAME_DAY`)
+### 3.8 Dia de jogo do atleta (incorporado; era `ATHLETE_GAME_DAY`)
 
 > **REGRA**: dia de jogo do atleta **respeita visibilidade**:
 > público (aparece em "Procura-se jogo") OU privado (só convidados).
 > Publicação no ranking é opt-in por dia (`publish_to_ranking` no
 > `game_days/{id}/dates/{dateId}`).
 
-Quando a flag está ON, o atleta pode:
+O atleta pode:
 - Criar dia de jogo próprio (público ou privado)
 - Convidar/inserir qualquer atleta da plataforma
 - Reaproveitar o motor `gameDayDraw`/`gameDayFormats` (Americano /
@@ -322,41 +278,51 @@ game_days/{id}
 
 ```jsx
 // src/v2/pages/V2Xxx.jsx
-import { lazy, Suspense } from 'react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/hooks/useFeatureFlag';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { V2Shell, V2Loading } from '@/v2/components/V2Shell';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
-
-// Lazy-load de sub-componentes pesados
-const V2XxxContent = lazy(() => import('@/v2/components/Xxx/V2XxxContent'));
+import { V2Page, V2PageHeader, V2ErrorState, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
+import { podeAfirmarVazio } from '@/core/lib/queryState';
+import { t } from '@/core/i18n';
 
 export default function V2Xxx() {
+  const consulta = useXxx();               // hook React Query do módulo
   return (
-    <V2Shell title="Xxx" subtitle="O que essa tela faz">
-      <FeatureFlagGuard flag={FEATURE_FLAG.XXX} label="Xxx" description="...">
-        <Suspense fallback={<V2Loading />}>
-          <V2XxxContent />
-        </Suspense>
-      </FeatureFlagGuard>
-    </V2Shell>
+    <V2Page className="space-y-6">          {/* moldura única: 1200 px, sem recuo próprio */}
+      <V2PageHeader title={t('Xxx')} subtitle={t('O que esta tela faz')} />
+      {consulta.isLoading && <V2Skeleton lines={4} />}
+      {consulta.isError && <V2ErrorState onRetry={consulta.refetch} />}
+      {podeAfirmarVazio(consulta) && !consulta.data?.length && (
+        <V2EmptyState title={t('Nada por aqui ainda')} />
+      )}
+      {/* conteúdo */}
+    </V2Page>
   );
 }
 ```
 
+- A página inteira vai em `<V2Page>`; **sem** `p-*`/`px-*`/`mt-*` próprios nem
+  h1 escrito à mão (`PAGE_TITLE`) — `docs/45-MOLDURA-DAS-PAGINAS.md`.
+- Funcionalidade atrás de flag: `useFeatureFlag` e, desligada, explicar ou
+  redirecionar (§3.3). Não existe `FeatureFlagGuard` nem `V2Shell`.
+- Carregando, erro e vazio sempre tratados; vazio só com `podeAfirmarVazio`.
+- Texto sempre em `t()` (§2.2). Tela de dia de jogo, torneio ou promoção entra
+  em `<Isolada nome="…">` no `V2App.jsx` (§4.2).
+- Subcomponentes pesados em `lazy` com `<Suspense>` só em volta da área que muda.
+
 ### 4.2 Rotas
 
-- Tabela em `src/v2/V2App.jsx` (autenticadas) ou `App.jsx` (públicas)
-- `basename = import.meta.env.BASE_URL`
-- Use `React.lazy` + `Suspense` para code splitting
-- Adicione à tabela **na posição correta** (manter agrupamento lógico)
+- Tabela em `src/v2/V2App.jsx` (autenticadas) ou `App.jsx` (públicas/sem layout).
+- Toda página é `React.lazy` + `Suspense`; `basename = import.meta.env.BASE_URL`.
+- Rota autenticada dentro do `V2Layout`; exigir admin da plataforma usa `AdminRoute`.
+- **Tela de dia de jogo, torneio ou promoção** (e qualquer tela que possa quebrar
+  por dado inesperado) entra em `<Isolada nome="…">`: um erro vira cartão no
+  lugar da tela, não "Algo deu errado" no app inteiro. Telão/totem usam
+  `<V2RouteBoundary unattended>`. Guarda: `telaIsolada.test.js`.
+- Telão, totem e impressão ficam claros: `<AparenciaClara>` na rota.
+- Rota nova com ajuda: pista em `HELP_ROUTE_HINTS` e artigos que a citam; rota de
+  módulo de arena segue o catálogo (`rotasDeModulos.test.js`).
 
 ```jsx
 const V2MyFeature = lazy(() => import('@/v2/pages/V2MyFeature'));
-
-// dentro do <Routes>:
-<Route path="/minha-feature" element={<V2MyFeature />} />
+<Route path="/minha-feature" element={<Isolada nome="minha-feature"><V2MyFeature /></Isolada>} />
 ```
 
 ### 4.3 Componentes críticos: SEMPRE `*.runtime.test.jsx`
@@ -374,7 +340,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ user: { uid: 'u1' }, userProfile: {} }),
 }));
-vi.mock('@/core/hooks/useArena', () => ({
+vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: MOCK_ARENA, isLoading: false }),
 }));
 // ... mockar TODOS os hooks que a página usa
@@ -396,39 +362,32 @@ describe('V2ArenaDetail', () => {
 
 ### 4.4 V2 UI primitives
 
-Use os primitivos V2 (`src/v2/ui/primitives.jsx`):
+Use `src/v2/ui/primitives.jsx` (lista completa e variantes em
+`docs/07-DESIGN-STANDARD.md` §3): `V2Page`, `V2PageHeader`, `V2Surface`
+(`variant` padrao/compacto/plano), `V2Button`, `V2Badge`, `V2Field`/`V2Input`/
+`V2Textarea`/`V2Select`/`V2Toggle`, `V2EmptyState`, `V2ErrorState`, `V2Skeleton`,
+`V2FilterChip`, `V2SearchInput`, `V2StatCard`… e, em `src/v2/ui/`,
+`V2CollapsibleCard`, `V2SectionNav`/`V2SubTabs`, `V2Pagination`, `CopyCodeButton`.
+Diálogos usam Radix (`src/components/ui/dialog.jsx`) e `ConfirmDialog`.
 
-- `V2Button` (variants: primary, secondary, ghost, danger)
-- `V2Card` (header, body, footer)
-- `V2Badge` (tones: blue, green, amber, red, neutral)
-- `V2Dialog` (modal)
-- `V2Skeleton` (loading)
-- `V2Select` (aceita children OU options — ver §6)
-- `V2Input`, `V2Textarea`, `V2Switch`
-- `V2Tabs` (sub-tab-bar)
-- `V2Surface` (wrapper com sombra orgânica)
-- `V2ConfirmDialog` (substitui `confirm()` nativo)
+**Não** escreva à mão o que já tem primitivo (cartão, campo, botão, bloco de
+erro, "voltar", código copiável): `dividaDeDesign.test.js` e as demais guardas
+contam e só aceitam o número descer. Cor só pela paleta (§4.6); texto secundário
+`text-gray-500`; fonte ≥ 11 px; `<button>` sempre com `type`.
 
-**NÃO use shadcn/ui direto em código novo V2.** Reaproveite primitivos V2.
+### 4.5 Navegação de seções
 
-### 4.5 Navegação 2 níveis (admin da arena, admin do clube)
+Barras de seções/abas de uma central são `V2SectionNav` (seções, com `grupos`)
+e `V2SubTabs` (abas); **quebram em linhas, nunca rolam de lado**. A aba ativa
+vive na URL (`?aba=`/`?secao=`) e o valor é contrato de link — nunca renomeie.
+Âncoras de seção (`id="arena-…"`) também são contrato.
 
-```jsx
-import { V2TabBar } from '@/v2/components/V2TabBar';
-import { V2SubTabBar } from '@/v2/components/V2SubTabBar';
+### 4.6 Cor e modo escuro
 
-<V2TabBar sticky="top-2" tabs={[
-  { id: 'reservas', label: 'Reservas', icon: Calendar },
-  { id: 'calendario', label: 'Calendário', icon: CalendarDays },
-  // ... 5+ tabs no nível 1
-]} />
-
-<V2SubTabBar sticky="top-[68px]" tabs={[
-  // sub-tabs do nível 2 (se necessário)
-]} />
-```
-
-**Ordem da nav:** `arena-tab-bar` → `arena-subtab-bar` (sticky top correto).
+Escreva `bg-white`/`text-gray-500`/`border-gray-100`/`bg-ink` como sempre: a
+paleta (`core/theme/palette.js`) decide a cor nos dois modos. Cor arbitrária
+(`bg-[#…]`, `style`) não troca; **nunca** `dark:` para cor. Ver
+`docs/30-MODO-ESCURO.md` e `docs/07-DESIGN-STANDARD.md` §7.
 
 ---
 
@@ -438,7 +397,7 @@ import { V2SubTabBar } from '@/v2/components/V2SubTabBar';
 
 **Nunca quebrar uma coleção existente.** Novas coleções, novos campos
 opcionais, novas regras (aditivas). Migração sempre via script idempotente
-ou via `migrateLegacyFlags` para flags.
+(flag nova com default OFF não precisa de migração — §3.2).
 
 ### 5.2 Adicionar nova coleção
 
@@ -873,37 +832,38 @@ describe('pickAvailableCourt', () => {
 ### 7.1 Estrutura de um componente V2
 
 ```jsx
-// src/v2/components/V2BookingRow.jsx
-import { Calendar, User, Copy } from 'lucide-react';  // ⬅️ SEMPRE importar tudo que usa
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { V2Card, V2Badge, V2Button } from '@/v2/ui/primitives';
+// src/v2/components/arenas/V2BookingRow.jsx
+import { Calendar } from 'lucide-react';                 // ⬅️ SEMPRE importar tudo que usa
+import { V2Surface, V2Badge, V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { t, fmtData } from '@/core/i18n';
 
 export function V2BookingRow({ booking, onCancel, className }) {
   return (
-    <V2Card className={cn('p-4', className)}>
+    <V2Surface variant="compacto" className={cn(className)}>
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4" />  // ⬅️ ícone importado
-        <span>{format(booking.date, "dd 'de' MMMM", { locale: ptBR })}</span>
+        <Calendar className="h-4 w-4" aria-hidden="true" />
+        <span>{fmtData(booking.date)}</span>
         <V2Badge tone={booking.status === 'confirmed' ? 'green' : 'amber'}>
-          {booking.status}
+          {t(booking.status === 'confirmed' ? 'Confirmada' : 'Pendente')}
         </V2Badge>
       </div>
-      <V2Button variant="ghost" onClick={onCancel}>
-        Cancelar
-      </V2Button>
-    </V2Card>
+      <V2Button variant="ghost" onClick={onCancel}>{t('Cancelar')}</V2Button>
+    </V2Surface>
   );
 }
 ```
 
+Não ponha margem vertical própria no componente que entra num módulo
+composto (o container espaça); data na tela por `fmtData`/`formatSlotLabel`,
+nunca a ISO crua.
+
 ### 7.2 Imports de ícones (LIÇÃO sw-v72.5 + sw-v73.4)
 
 **SEMPRE** adicione o ícone ao import de `lucide-react` quando usar no JSX.
-Build passa mas runtime quebra se você esquecer.
-
-**Verificação**: `node scripts/validate-lucide-imports.mjs` (roda antes de CI).
+O build passa, mas o runtime quebra se você esquecer — por isso componente
+crítico tem `*.runtime.test.jsx`. Ícone sem texto vizinho leva `aria-label`
+(ou `aria-hidden` se decorativo).
 
 ### 7.3 `cn()` helper (LIÇÃO sw-v73.5)
 
@@ -967,22 +927,22 @@ com `V2CollapsibleSection`:
 
 ### 7.5 Confirmação de ações destrutivas (LIÇÃO sw-v73.3)
 
-**SEMPRE** use `V2ConfirmDialog` em vez de `confirm()` nativo:
+**NUNCA** `confirm()` nativo. Use o `ConfirmDialog` controlado
+(`@/components/ui/confirm-dialog`) ou o de gatilho (`@/components/ConfirmDialog`,
+para botões de lista). Para ação que dá para desfazer, prefira `useDesfazivel`
+(toast com "Desfazer") a pedir confirmação — confirmação demais treina a
+clicar em "sim" sem ler.
 
 ```jsx
-import { V2ConfirmDialog } from '@/v2/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-const [open, setOpen] = useState(false);
-
-<V2ConfirmDialog
+<ConfirmDialog
   open={open}
   onOpenChange={setOpen}
-  title="Cancelar reserva?"
-  description="Esta ação não pode ser desfeita."
-  confirmLabel="Sim, cancelar"
-  cancelLabel="Voltar"
+  title={t('Cancelar reserva?')}
+  description={t('Esta ação não pode ser desfeita.')}
+  confirmLabel={t('Sim, cancelar')}
   onConfirm={handleCancel}
-  variant="danger"
 />
 ```
 
@@ -1021,16 +981,21 @@ export function useCreateBooking(arenaId) {
 
 ### 8.2 Query keys centralizadas
 
+Cada módulo concentra suas chaves num arquivo (ex.:
+`modules/arenas/hooks/arenaKeys.js`); **nunca** escreva `queryKey` à mão numa
+tela. A pré-busca e o hook têm de bater bit a bit, e chave divergente não dá
+erro — só busca de novo o que estava em cache.
+
 ```js
-// src/modules/arenas/hooks/queryKeys.js
-export const queryKeys = {
-  arenaBookings: (arenaId) => ['arenaBookings', arenaId],
-  arenasAll: () => ['arenas'],
+export const arenaKeys = {
+  bookings: (arenaId) => ['arenaBookings', arenaId],
   // ...
 };
 ```
 
-**Sempre** invalidar todas as keys relacionadas após mutação.
+**Sempre** invalidar todas as chaves relacionadas após mutação. `queryFn`
+nunca engole erro (`.catch(() => [])`): o erro vira vazio que parece resposta
+— use `Promise.allSettled` e marque a parte que falhou (`docs/27-FALHA-NAO-E-VAZIO.md`).
 
 ### 8.3 Convenção de nome
 
@@ -1100,32 +1065,59 @@ export const bookingService = {
 
 ### 10.1 Vitest (unit)
 
-- 1334+ testes verdes (target)
-- Rodar `npm test` (CI) ou `npm run test:watch` (dev)
-- Cada arquivo puro de `domain/` **DEVE** ter `*.test.js` ao lado
-- Cobrir: happy path, edge cases, inputs inválidos, null/undefined
-- Naming: `describe('functionName')` → `it('does X when Y')`
+- `npm test` (CI) ou `npm run test:watch`; jsdom; `functions/**` também roda.
+  Contagem atual: `docs/46-INVENTARIO.md` (não repita número aqui).
+- Cada arquivo puro de `domain/` **DEVE** ter `*.test.js` ao lado.
+- Cobrir: caminho feliz, bordas, entradas inválidas, `null`/`undefined`.
+- Data lida do banco em teste usa `Timestamp` de verdade (`firebase/firestore`),
+  não número — número é o que o código GRAVA, não o que o banco devolve.
+- Teste de storage/preferência: espione `Storage.prototype` (no jsdom,
+  `vi.spyOn(window.localStorage, …)` não troca o método).
 
 ### 10.2 Runtime tests (componentes V2 críticos)
 
-- `*.runtime.test.jsx` em `src/v2/pages/` ou `src/v2/components/`
-- Mockar **todos** os hooks (auth, feature flag, react-query)
-- Renderizar com dados mockados
-- **Clicar em cada tab** (lição sw-v73.5 — V2CourtsTab quebrava)
-- Cobre 80% dos "ReferenceError" e "cn is not defined"
+- `*.runtime.test.jsx` ao lado da tela/componente.
+- Mockar **todos** os hooks (auth, flags, react-query) e renderizar com dados.
+- Clicar em cada aba (V2CourtsTab já quebrou por isso). Cobre os "ReferenceError".
+- Teste de error boundary: controle a falha **de fora** (objeto mutável); um
+  componente que "se cura" na segunda renderização não serve (o React
+  re-renderiza uma vez antes do fallback).
+- Teste de consulta com conta que NÃO é admin: `isPlatformAdmin()` na regra
+  esconde consulta mal filtrada.
 
-### 10.3 Playwright (E2E)
+### 10.3 Regras no emulador
 
-- `npm run e2e` (precisa `npm run e2e:install` antes)
-- Auth injetada: criar user via signUp REST + PATCH role via Firestore +
-  IndexedDB injection em `firebaseLocalStorageDb` (NÃO `firebase:authUser:...`)
-- Lição: bugs que só aparecem logado precisam de E2E com auth
+`tests/rules/*.rules.test.js`, `npm run test:rules` (Java + emulador de
+Firestore/Storage; config `vitest.rules.config.js`, Node, sem paralelismo).
+**Toda** regra nova ou alterada tem asserção do que passou a funcionar e do que
+continua barrado. Serviço com banco falso não pega regra: o falso nunca recusa.
 
-### 10.4 O que NÃO testar
+### 10.4 Playwright (E2E)
 
-- Wrappers triviais de Firestore (vai pelo E2E)
-- Componentes puramente visuais sem lógica (Snapshot test basta)
-- Tudo de uma vez (teste focado = suite rápida)
+`npm run e2e` (antes, `npm run e2e:install`). Roda contra `E2E_BASE_URL`
+(padrão: produção) em Chromium desktop e Pixel 5. Hoje cobre rotas públicas e
+acessibilidade com axe (`serious`/`critical` barram). Bug que só aparece logado
+precisa de E2E com auth injetada (IndexedDB `firebaseLocalStorageDb`).
+O CI **não** roda E2E.
+
+### 10.5 Guardas de fonte
+
+`src/core/guards/*.test.js` leem o código-fonte e reprovam classes de defeito
+(falha-vira-vazio, tela sem isolamento, largura de página, dívida de design,
+tela morta, índice composto ausente, i18n sem catálogo, deploy de funções,
+coleção fora da exclusão de conta…). Regras:
+
+- Antes de fechar uma tarefa, rode os guardas do assunto
+  (`npx vitest run src/core/guards`) — eles são o jeito de a base se defender.
+- Descobriu uma **classe** de defeito? Escreva o guarda; não confie em quem lembrar.
+- Isenção de guarda exige motivo escrito; contador de dívida só pode DESCER.
+- Para consulta que "voltou vazia": `npx vitest run src/core/guards/indicesCompostos.test.js`.
+
+### 10.6 O que NÃO testar
+
+- Wrappers triviais de Firestore (a regra e o E2E cobrem).
+- Componentes puramente visuais sem lógica.
+- Tudo de uma vez — teste focado mantém a suíte rápida.
 
 ---
 
@@ -1176,7 +1168,8 @@ npm install -D <package>
 
 Depois:
 - Atualizar `package.json` (automático)
-- Documentar em `docs/04-ARCHITECTURE.md` §2 se for infraestrutura
+- Documentar em `docs/04-ARCHITECTURE.md` se for infraestrutura
+- Conferir o orçamento do pacote inicial (`npm run build && npm run build:budget`)
 - Checar que **builda** (rodar `npm run build`)
 - Checar que **tests passam** (rodar `npm test`)
 
@@ -1196,41 +1189,67 @@ Depois:
 FLUXO IDEAL:
 1. Lê CLAUDE.md → 01-AI-CONTEXT → README do módulo
 2. Planeja (3 passos) — §6 do CLAUDE.md
-3. Cria flag + domain + service + hook + UI + test
-4. Smoke test local
-5. PR + squash merge
-6. Deploy sai via GitHub Actions
-7. Atualiza docs (01-AI-CONTEXT, 05-DATA-MODEL, 06-MODULES, 15-backlog)
-8. Atualiza memory se for lição crítica
+3. Cria flag (default OFF) + domain + service + hook + UI + testes
+4. Smoke test local; lint, test, build, build:budget
+5. ATUALIZA OS DOCS (§15) e roda npm run docs:inventario
+6. PR + squash merge → deploy sai via GitHub Actions
 
 NUNCA:
 - console.log em services (use logger)
-- redirect silencioso em flag off (use FeatureFlagGuard)
+- flag sem declarar em featureFlags.js; tela desabilitada em vez de oculta
 - commit direto em main (use PR)
-- ícone no JSX sem import (use scripts/validate-lucide-imports)
-- lógica em componente (use domain/)
-- quebrar coleção existente (use aditivade)
+- ícone no JSX sem import; cn sem import
+- lógica de negócio em componente (use domain/)
+- quebrar coleção existente (aditividade)
 - mutation sem audit_logs (se relevante)
-- bundle > 30KB sem lazy load
-- text em inglês (use pt-BR)
+- bundle inicial acima do teto (lazy)
+- texto fora de t()/tk(); 'pt-BR' fixo; cor arbitrária; dark: para cor
+- `.catch(() => [])` em queryFn; afirmar "vazio" sem podeAfirmarVazio
+- PR de código sem tocar em docs (o CI reprova)
 ```
-
-> **Última atualização**: 2026-07-24. Mudou o padrão? Atualize este doc
-> **e** o `CLAUDE.md` §5 + a memory do agente.
 
 ## 14. "Ver como usuário" (debug)
 
 Toggle no header (visível só para `platform_admin`). Quando ativo:
 - `useAuth().isPlatformAdmin` retorna `false`
-- `useAuth().canCreatePools` retorna `false`
-- O app se comporta como user comum
+- o app se comporta como usuário comum
 
-Útil pra debugar UX do usuário sem fazer logout.
+Útil para depurar a UX sem fazer logout. Lógica: `core/lib/FirebaseAuthContext.jsx`
+mantém o estado `impersonate`, e `isPlatformAdmin = role === 'platform_admin' && !impersonate`.
 
-Lógica: `core/lib/FirebaseAuthContext.jsx` tem o state `impersonate: bool`
-que, quando true, faz os getters retornarem `false`.
+## 15. Documentação é parte da entrega
 
-```js
-const { impersonate, setImpersonate, isPlatformAdmin, canCreatePools } = useAuth();
-// isPlatformAdmin = role === 'platform_admin' && !impersonate
-```
+Código sem documentação não está pronto. Em **toda** implementação (feature,
+correção de comportamento, mudança de regra, rota, coleção, índice, flag, função):
+
+1. **Doc do assunto**: atualize (ou crie) o `docs/NN-*.md` que explica o
+   assunto — o *porquê* e as regras que não podem regredir, não só o *como*.
+2. **README do módulo**: `src/modules/<x>/README.md` se mudou schema, hooks,
+   fluxos ou regras do módulo.
+3. **`CLAUDE.md`**: quando muda o mapa "onde está X" (§4), um princípio (§2) ou
+   uma regra que quem vier depois precisa saber antes de mexer.
+4. **Docs de apoio** quando couber: `05-DATA-MODEL` (schema), `06-MODULES`
+   (módulo/rota), `01-AI-CONTEXT` (panorama), backlog.
+5. **Ajuda ao usuário**: artigo, guia de dicas e pista de rota (`helpCenter`,
+   `guias`, `HELP_ROUTE_HINTS`) se a tela ou regra visível mudou — ajuda
+   desatualizada é pior que nenhuma.
+6. **Rode `npm run docs:inventario`** e comite `docs/46-INVENTARIO.md` (arquivo
+   **gerado** por `scripts/gen-inventario.mjs`: rotas, coleções, regras, índices,
+   funções, flags, módulos). Nunca o edite à mão. `npm run docs:inventario:check`
+   verifica sem gravar.
+
+**O que o CI cobra** (`.github/workflows/ci.yml`):
+
+- Passo `npm run docs:inventario:check`: reprova se o inventário não bate com o código.
+- Job `docs-obrigatorios` (só em PR, `scripts/check-docs-updated.mjs`): reprova
+  o PR que muda código de produto (`src/` exceto testes, `functions/`,
+  `firestore.rules`, `storage.rules`, `firestore.indexes.json`, `firebase.json`,
+  `.github/workflows/`) sem tocar em nenhum doc (`docs/`, `CLAUDE.md`,
+  `AGENTS.md`, `README.md`, README de módulo, `functions/README.md`).
+- Saída honesta, só quando de fato nada muda para quem lê a documentação
+  (refator interno, ajuste de teste): escreva no corpo do PR a linha
+  `Docs: não se aplica — <motivo>` (o motivo é obrigatório e não pode ser
+  genérico). Não use a isenção para fugir do passo 1.
+
+> **Última atualização**: 2026-10-15. Mudou o padrão? Atualize este doc
+> **e** o `CLAUDE.md` §5 e §2.
