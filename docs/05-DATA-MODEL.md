@@ -496,7 +496,7 @@ função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field
 
 ### `platform_settings/{docId}`
 Leitura pública; escrita só do admin da plataforma. Singletons:
-`feature_flags/{key}` (defaults de `FEATURE_FLAG`),
+`global.feature_flags.{key}` (valores de `FEATURE_FLAG`),
 `app_version`, `flags_migration_version`, etc. Migração em
 `migrateLegacyFlags` (bump `FLAGS_MIGRATION_VERSION` ao adicionar
 defaults novos).
@@ -1757,7 +1757,7 @@ users (1) ──< follows (social) · player_goals · conversations ──< mess
 tournaments (1) ──< circuits (via circuit_tournaments) ──< circuit_results
 (qualquer ação) ──> audit_logs ;  (qualquer usuário) ──> notifications
                                           └─ preferences: {category: bool}
-platform_settings/feature_flags/{key} — defaults de FEATURE_FLAG
+platform_settings/global (campo feature_flags.{key}) — valores de FEATURE_FLAG
 ```
 
 ## Regras de segurança (`firestore.rules`) — princípios

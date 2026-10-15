@@ -19,7 +19,7 @@
 | Runtime | Node **22** (`functions/package.json` → `engines.node`) |
 | Dependências | `firebase-admin ^13.10.0`, `firebase-functions ^6.1.0` (v2: `onDocumentWritten/Created/Updated`, `onSchedule`, `onCall`) |
 | Instâncias | `setGlobalOptions({ region, maxInstances: 3 })` — teto global; cada função só sobrescreve `timeoutSeconds`/`memory` |
-| Exportações | **46** `exports.*` em `functions/index.js` (o inventário §7 lista 45: `marketArenaStockSync`, a última do arquivo, não aparece lá — a expressão regular de `scripts/gen-inventario.mjs` termina cada bloco no próximo `exports.` ou `// =====` e a última exportação não tem terminador; a função existe e é publicada, e o script de deploy a inclui) |
+| Exportações | **46** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
 | Fuso das agendas | `America/Sao_Paulo` |
 | Regras de segurança | O Admin SDK **ignora** `firestore.rules`. Toda função que escreve em nome de alguém tem de conferir quem pede por conta própria (callables) ou depender do evento que a disparou (gatilhos) |
 

@@ -18,13 +18,13 @@
 | Coleções raiz no `firestore.rules` | 163 |
 | Blocos `match` (raiz + subcoleções) | 180 |
 | Índices compostos (`firestore.indexes.json`) | 38 |
-| Cloud Functions exportadas | 45 |
+| Cloud Functions exportadas | 46 |
 | Feature flags ligáveis (`FEATURE_FLAG`) | 5 |
 | Funcionalidades permanentes (`PERMANENT_FEATURE`) | 33 |
 | Caminhos de Storage com regra | 6 |
 | Arquivos de teste (`*.test.js(x)`) | 647 |
 | Workflows do GitHub Actions | 6 |
-| Documentos/pastas em `docs/` | 51 |
+| Documentos/pastas em `docs/` | 53 |
 
 ## 2. Stack (de `package.json`)
 
@@ -60,7 +60,7 @@ Colunas = arquivos de código (sem testes) por camada; `·` = a camada não exis
 | `progression` | 37 | 20 | 27 | 14 | · | 2 | sim |
 | `promo` | 2 | 1 | 1 | · | · | · | sim |
 | `rating` | 15 | 7 | 5 | 2 | · | · | sim |
-| `search` | 1 | · | · | · | · | · | — |
+| `search` | 1 | · | · | · | · | · | sim |
 | `sharing` | 1 | · | · | 2 | · | · | sim |
 | `social` | 1 | 1 | 2 | 1 | · | · | sim |
 | `tournament` | 52 | 15 | 3 | 15 | · | 2 | sim |
@@ -302,6 +302,7 @@ Cada coleção raiz tem um bloco `match`; a linha leva à regra exata. Campos e 
 | `marketSavedSearchAlerts` | agendada | `every day 10:00` |
 | `marketPriceDropNotify` | gatilho Firestore | `market_listings/{listingId}` |
 | `marketLinkArenaProduct` | chamável (callable) |  |
+| `marketArenaStockSync` | gatilho Firestore | `arena_inventory_products/{productId}` |
 
 ## 8. Feature flags
 
@@ -346,4 +347,4 @@ Workflows:
 
 ## 11. Documentos em `docs/`
 
-`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `PUSH-ATIVACAO.md`
+`00-INDEX.md` · `01-AI-CONTEXT.md` · `02-STANDARDS.md` · `03-WORKFLOW.md` · `04-ARCHITECTURE.md` · `05-DATA-MODEL.md` · `06-MODULES.md` · `07-DESIGN-STANDARD.md` · `08-ARENA-ROADMAP.md` · `09-UX-ANALYSIS` · `10-ARENA-V3` · `11-REFERENCE` · `12-TEAM-TOURNAMENTS.md` · `13-NIVEL-UNIFICADO.md` · `14-DIA-DE-JOGO-TELAO.md` · `15-DIA-DE-JOGO-PERMISSOES.md` · `16-DIA-DE-JOGO-RODIZIO.md` · `17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` · `18-RANKINGS.md` · `19-TUTORIAIS.md` · `20-SEGURANCA-E-PRIVACIDADE` · `21-CENTRAL-DE-AJUDA.md` · `22-DIA-DE-JOGO-DA-ARENA.md` · `23-ARENA-CALENDARIO-E-RESERVA.md` · `24-MODULOS-DE-ARENA` · `25-DIA-DE-JOGO-COMO-MODULO.md` · `26-TORNEIO-FORMATOS-E-REGRAS.md` · `27-FALHA-NAO-E-VAZIO.md` · `28-ERRO-NAO-DERRUBA-O-APP.md` · `29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` · `30-MODO-ESCURO.md` · `31-INICIO-SOB-MEDIDA.md` · `32-DICAS-GUIADAS.md` · `33-CADASTRO-ESSENCIAL.md` · `34-MINHA-REGIAO.md` · `35-JOGAR-ENTRAR-E-SAIR.md` · `36-NOTIFICACOES.md` · `37-TORNEIO-ETAPAS-TURNOS-E-CHECKIN.md` · `38-GAMIFICACAO-V2.md` · `39-PLAY-GRUPOS.md` · `40-CENTRO-DE-TREINO.md` · `40a-AVALIACAO-100-DRILLS.md` · `41-MINHA-AREA.md` · `42-BALANCO-DO-JOGO.md` · `43-TROFEUS-E-CARTOES.md` · `44-IDIOMAS.md` · `45-MOLDURA-DAS-PAGINAS.md` · `46-INVENTARIO.md` · `47-BACKEND-CLOUD-FUNCTIONS.md` · `48-PERMISSOES-POR-PERFIL.md` · `AUDIT-2026-09-28.md` · `FUTURO` · `PUSH-ATIVACAO.md`

@@ -81,7 +81,7 @@ idx.forEach((x) => {
 // ---------- Cloud Functions ----------
 const fsrc = read('functions/index.js');
 const funcs = [];
-const fre = /^exports\.(\w+)\s*=\s*(\w+)\(([\s\S]*?)(?=^exports\.|^\/\/ =====|\Z)/gm;
+const fre = /^exports\.(\w+)\s*=\s*(\w+)\(([\s\S]*?)(?=^exports\.|^\/\/ =====|$(?![\s\S]))/gm;
 let fm;
 while ((fm = fre.exec(fsrc))) {
   const [, nome, fn, corpo] = fm;
