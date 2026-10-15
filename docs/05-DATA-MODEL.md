@@ -103,6 +103,11 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
   (array).
 - **Regra**: lê qualquer conta logada; o dono cria/edita/apaga, mas **não** mexe
   em `hidden`/`hidden_at`/`hidden_by` (moderação, só do admin da plataforma).
+- **Contato (`phone`, `email`, `address`) só com permissão, imposto pela regra**:
+  cada um exige a sua marca (`phone_public`, `email_public`, `address_public`)
+  `true` no espelho; para o dono, também no `users/{uid}`. O serviço apaga
+  (`deleteField`) o contato desligado em toda escrita — sincronização,
+  restauração e re-sincronização em lote.
 - Sincronizado por `athleteService.syncAthleteProfile` (login, salvar perfil,
   entrar em clube, inscrição). **Edições feitas direto no `users` (ex.: importação
   manual de `dupr_id`/gênero/lado da quadra) NÃO disparam o sync** e deixam o

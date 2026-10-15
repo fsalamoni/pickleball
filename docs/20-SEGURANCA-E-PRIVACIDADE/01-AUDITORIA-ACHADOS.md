@@ -405,6 +405,10 @@ direta. Privacidade que só o cliente respeita não é privacidade.
 (`athletes/domain/publicProfile.js`) **faz certo** o que importa mais —
 telefone, e-mail e endereço só entram no espelho com opt-in explícito, e a
 data de nascimento vira apenas `age`. Esse é o padrão a replicar.
+> **2026-10-15**: o opt-in de contato deixou de depender só do cliente — a
+> regra de `athlete_profiles` recusa telefone, e-mail ou endereço sem a marca
+> `*_public` (e, para o dono, sem a mesma marca no `users/{uid}`). O
+> `directory_listed` segue como filtro de LISTA, não de leitura.
 
 ## P2-02 · 62 de 113 coleções com leitura irrestrita
 55% da base é legível sem qualquer condição — 36 delas **sem login**

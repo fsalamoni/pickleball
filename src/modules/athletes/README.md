@@ -12,6 +12,7 @@ Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
 
 ## Schema
 - `athlete_profiles/{uid}` — `directory_listed: bool`, espelho de `users/{uid}`
+- Telefone, e-mail e endereço só entram com a marca `*_public`, e a **regra** confere (no espelho e, para o dono, no `users/{uid}`). Todo escritor do espelho apaga o contato desligado (`comContatosPrivadosApagados`) — escrita que o mantém é recusada. Prova: `tests/rules/athleteContacts.rules.test.js`
 
 ## Hooks
 ```js

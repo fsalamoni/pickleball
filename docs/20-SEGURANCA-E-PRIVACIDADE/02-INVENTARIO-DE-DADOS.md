@@ -48,7 +48,7 @@ migração destrutiva (`19-PENDENCIAS.md`, itens 2 e 3).
 | `tournament_registrations/{rid}/private/contact` | `player_a_email`, `player_b_email` | admin da plataforma, organizador do torneio e as partes da inscrição (`isRegistrationParty`) |
 | `provisional_claims/{rid}_{a\|b}` | `email_lc` (prova de inscrição provisória) | admin da plataforma e quem tem aquele e-mail no token |
 | `club_join_requests`, `club_member_invites` | `user_email` | o próprio usuário, o admin do clube e o admin da plataforma |
-| `athlete_profiles/{uid}` | telefone, e-mail, endereço **só com opt-in** (`*_public`), gravados vazios sem ele por `buildAthletePublicProfile` | qualquer conta logada — o opt-in é aplicado pelo cliente; a regra não o confere |
+| `athlete_profiles/{uid}` | telefone, e-mail, endereço **só com opt-in** (`*_public`), gravados vazios sem ele por `buildAthletePublicProfile` | qualquer conta logada — **a regra impõe o opt-in** (desde 2026-10-15): o dono só grava contato com a marca no espelho e no `users/{uid}`, o admin só com a marca no espelho (`athleteContacts.rules.test.js`). Espelho antigo pode guardar contato velho até a próxima sincronização ou a re-sincronização do admin, que o apaga |
 | `market_addresses/{uid}` | endereço de entrega | só o titular (`get`) |
 | `audit_logs` | e-mail e nome do ator e do alvo | só o admin da plataforma |
 
