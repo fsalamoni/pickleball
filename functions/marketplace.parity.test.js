@@ -9,7 +9,8 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 import { ORDER_ACTIONS, checkOrderAction, RESTOCK_ON } from '@/modules/marketplace/domain/orderStatus.js';
-import { OFFER_ACTIONS, OFFER_RULES, applyOfferAction, validateOfferAmount } from '@/modules/marketplace/domain/offers.js';
+import { OFFER_ACTIONS, OFFER_RULES, applyOfferAction, validateOfferAmount, autoOfferOutcome } from '@/modules/marketplace/domain/offers.js';
+import { effectiveListing } from '@/modules/marketplace/domain/listing.js';
 import { validateReview } from '@/modules/marketplace/domain/reputation.js';
 import { DEFAULT_BANNED_TERMS, findBannedTerm, normalizeMarketSettings } from '@/modules/marketplace/domain/settings.js';
 import { ORDER_STATUS, OFFER_STATUS } from '@/modules/marketplace/domain/constants.js';
@@ -78,6 +79,17 @@ describe('paridade: a oferta', () => {
     })));
   });
 
+  it('a mesma resposta automática à oferta, e a mesma promoção vencida', () => {
+    const ls = [{ price_cents: 100000 }, { price_cents: 100000, offer_auto_accept_cents: 80000 }, { price_cents: 100000, offer_auto_decline_cents: 50000 }, { price_cents: 100000, offer_auto_accept_cents: 80000, offer_auto_decline_cents: 50000 }];
+    ls.forEach((l) => [0, 49999, 50000, 79999, 80000, 100000, 'x'].forEach((v) => {
+      expect(servidor.autoOfferOutcome(l, v), `${JSON.stringify(l)}/${v}`).toBe(autoOfferOutcome(l, v));
+    }));
+    [{ price_cents: 50, compare_at_cents: 90, sale_until_ms: 100 }, { price_cents: 50, compare_at_cents: 40, sale_until_ms: 100 }, { price_cents: 50, sale_until_ms: 100 }, { price_cents: 50, compare_at_cents: 90 }].forEach((l) => [50, 100, 101].forEach((now) => {
+      const a = servidor.effectiveListing(l, now);
+      const b = effectiveListing(l, now);
+      expect([a.price_cents, a.compare_at_cents ?? null, a.sale_until_ms ?? null]).toEqual([b.price_cents, b.compare_at_cents ?? null, b.sale_until_ms ?? null]);
+    }));
+  });
   it('o mesmo veredito sobre o valor oferecido', () => {
     const l = { price_cents: 100000, accepts_offers: true };
     [0, 1, 29999, 30000, 50000, 99999, 100000, 150000, 'x'].forEach((v) => {

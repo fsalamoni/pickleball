@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  addToCart, setCartQuantity, removeFromCart, saveForLater, moveToCart, cartCount, groupCartBySeller, checkLine, cartOnlyListing,
+  addToCart, setCartQuantity, removeFromCart, saveForLater, moveToCart, cartCount, groupCartBySeller, checkLine, cartOnlyListing, lineKey,
 } from './cart.js';
 
 const a = { id: 'a', seller_key: 'store_1', seller_name: 'Loja', title: 'Raquete', price_cents: 50000, quantity: 2, status: 'active', fulfillment: ['shipping', 'meetup'], media: [{ url: 'https://a' }] };
@@ -65,5 +65,20 @@ describe('carrinho', () => {
     expect(cart.items[0].quantity).toBe(99);
     cart = setCartQuantity(cart, 'm', 400);
     expect(cart.items[0].quantity).toBe(99);
+  });
+  it('variações: cada uma é uma linha, pela chave anúncio#variação, e o estoque é o da variação', () => {
+    const v = { ...a, id: 'v', quantity: 3, variants: [{ id: 'm', label: 'M', quantity: 1 }, { id: 'g', label: 'G', quantity: 2 }] };
+    expect(addToCart({}, v).error).toMatch(/variação/);
+    let cart = addToCart({}, v, 5, 'm').cart;
+    cart = addToCart(cart, v, 1, 'g').cart;
+    expect(cart.items.map(lineKey)).toEqual(['v#m', 'v#g']);
+    expect(cart.items[0]).toMatchObject({ quantity: 1, variant_label: 'M' });
+    cart = setCartQuantity(cart, 'v#g', 2);
+    expect(cart.items[1].quantity).toBe(2);
+    expect(removeFromCart(cart, 'v#m').items.map(lineKey)).toEqual(['v#g']);
+    expect(cartOnlyListing(cart, 'v#g').items).toHaveLength(1);
+    expect(checkLine(cart.items[0], { ...v, variants: [v.variants[1]] }).problem).toMatch(/não existe mais/);
+    expect(checkLine(cart.items[1], v).ok).toBe(true);
+    expect(checkLine({ ...cart.items[1], quantity: 3 }, v).max).toBe(2);
   });
 });

@@ -12,11 +12,11 @@
  */
 import {
   collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp,
-  setDoc, updateDoc, where, addDoc,
+  setDoc, updateDoc, where, addDoc, increment,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C, MARKET_SETTINGS_DOC, PUBLIC_LISTING_STATUSES, REPORT_REASON_LABELS, SELLER_STATUS, SELLER_TYPE } from '../domain/constants.js';
-import { duplicateListingInput, validateListingInput } from '../domain/listing.js';
+import { duplicateListingInput, effectiveListing, validateListingInput } from '../domain/listing.js';
 import { normalizeMarketSettings, findBannedTerm, validateQuestion, validateAnswer } from '../domain/settings.js';
 import { sellerKeyFor, sellerReviewNotice, validatePayment, validateSellerPolicies, validateStoreApplication } from '../domain/seller.js';
 import { createAuditLog } from '@/core/services/auditService';
@@ -183,16 +183,19 @@ export async function reviewSeller(seller, { status, reason = '', verified }, { 
 /* ------------------------------------------------------------ anúncios -- */
 
 /** A vitrine pública: no ar e esgotados. */
+/** Anúncio lido: a promoção com prazo vencido já volta ao preço cheio (o servidor grava depois). */
+const toListing = (snap) => effectiveListing(toDoc(snap));
+
 export async function listPublicListings() {
   const q = query(collection(db, C.listings), where('status', 'in', [...PUBLIC_LISTING_STATUSES]), limit(FEED_LIMIT));
-  return (await getDocs(q)).docs.map(toDoc);
+  return (await getDocs(q)).docs.map(toListing);
 }
 
 /** Tudo de um vendedor (para quem o opera: inclui rascunho e pausado). */
 export async function listSellerListings(key, { publicOnly = false } = {}) {
   const wh = [where('seller_key', '==', key)];
   if (publicOnly) wh.push(where('status', 'in', [...PUBLIC_LISTING_STATUSES]));
-  return (await getDocs(query(collection(db, C.listings), ...wh))).docs.map(toDoc);
+  return (await getDocs(query(collection(db, C.listings), ...wh))).docs.map(toListing);
 }
 
 /** Admin: os anúncios marcados pela moderação ou removidos. */
@@ -209,7 +212,7 @@ export async function getListing(id) {
   if (!id) return null;
   try {
     const snap = await getDoc(doc(db, C.listings, id));
-    return snap.exists() ? toDoc(snap) : null;
+    return snap.exists() ? toListing(snap) : null;
   } catch (err) {
     if (isNotPublicError(err)) return null;
     throw err;
@@ -451,6 +454,40 @@ export async function toggleFavorite(uid, listingId, on) {
   const ref = doc(db, C.favorites, `${uid}_${listingId}`);
   if (on) await setDoc(ref, { uid, listing_id: listingId, created_at: serverTimestamp() });
   else await deleteDoc(ref);
+}
+
+/* --------------------------------------------------------- seguir loja -- */
+
+export async function listMyFollows(uid) {
+  const q = query(collection(db, C.follows), where('uid', '==', uid));
+  return (await getDocs(q)).docs.map(toDoc);
+}
+
+export async function toggleFollow(uid, sellerKey, on) {
+  const ref = doc(db, C.follows, `${uid}_${sellerKey}`);
+  if (on) await setDoc(ref, { uid, seller_key: sellerKey, created_at: serverTimestamp() });
+  else await deleteDoc(ref);
+}
+
+/** +1 visualização, uma por sessão por anúncio (a regra só aceita +1 exato). Falha é silenciosa. */
+export async function bumpListingViews(listing) {
+  if (!listing?.id || !Number.isInteger(Number(listing.view_count ?? 0))) return;
+  try {
+    await updateDoc(doc(db, C.listings, listing.id), { view_count: increment(1) });
+  } catch { /* contagem é cortesia: nunca atrapalha a tela */ }
+}
+
+/* ------------------------------------------------- endereços salvos -- */
+
+export const ADDRESSES_MAX = 5;
+
+export async function getMyAddresses(uid) {
+  const snap = await getDoc(doc(db, C.addresses, uid));
+  return snap.exists() ? (snap.data().addresses || []) : [];
+}
+
+export async function saveMyAddresses(uid, addresses) {
+  await setDoc(doc(db, C.addresses, uid), { addresses: (addresses || []).slice(0, ADDRESSES_MAX), updated_at: serverTimestamp() });
 }
 
 export async function listSavedSearches(uid) {

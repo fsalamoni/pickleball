@@ -5,7 +5,7 @@
  * anúncios e as vendas; o que é da ARENA fica com a arena.
  */
 import {
-  getCart, getSeller, getSellerPrivate, listMyFavorites, listMyGiftCards, listMyQuestions, listSavedSearches, listSellerCoupons, listSellerListings,
+  getCart, getMyAddresses, getSeller, getSellerPrivate, listMyFavorites, listMyFollows, listMyGiftCards, listMyQuestions, listSavedSearches, listSellerCoupons, listSellerListings,
 } from './marketService.js';
 import { listMyOffers, listMyOrders, listMyReviews, listSellerOrders } from './marketOrderService.js';
 import { listMyMarketUploads } from './marketMediaService.js';
@@ -31,6 +31,8 @@ export async function collectMarketExport(uid) {
     ['questions', 'Perguntas no Mercado', () => listMyQuestions(uid)],
     ['reviews', 'Avaliações no Mercado', () => listMyReviews(uid)],
     ['favorites', 'Favoritos do Mercado', () => listMyFavorites(uid)],
+    ['follows', 'Lojas que segue no Mercado', () => listMyFollows(uid)],
+    ['addresses', 'Endereços salvos do Mercado', () => getMyAddresses(uid)],
     ['saved_searches', 'Buscas salvas do Mercado', () => listSavedSearches(uid)],
     ['cart', 'Carrinho do Mercado', () => getCart(uid)],
     ['gift_cards', 'Vales-presente do Mercado', () => listMyGiftCards(uid)],

@@ -3,16 +3,59 @@
  * nota, histograma e a lista. A MESMA peça na vitrine pública
  * (`V2MarketSeller`) e no painel de quem vende (Negociações → Avaliações).
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { Star } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { replyReview } from '@/modules/marketplace/services/marketOrderService';
 import { cn } from '@/core/lib/utils';
 import { t, fmtData, fmtNumero } from '@/core/i18n';
 import { summarizeReviews, MIN_REVIEWS_FOR_RATING, REVIEW_REVEAL_DAYS } from '@/modules/marketplace/domain/reputation';
 import { useSellerReviews } from '@/modules/marketplace/hooks/useMarket';
-import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton, V2Textarea } from '@/v2/ui/primitives';
 import { Stars } from '@/v2/components/marketplace/marketUi';
 
-export default function SellerReviews({ sellerKey, title = t('Avaliações de quem comprou'), emptyText }) {
+/** A resposta pública do vendedor: um por avaliação, só quem opera a loja (`canReply`). */
+function ReviewReply({ review, canReply, onReplied }) {
+  const { user } = useAuth();
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (review.reply) {
+    return (
+      <div className="mt-2 rounded-xl bg-paper p-3 text-sm">
+        <p className="text-xs font-bold text-gray-500">{t('Resposta do vendedor')}{review.reply_at_ms ? ` · ${fmtData(review.reply_at_ms, { day: '2-digit', month: '2-digit', year: 'numeric' })}` : ''}</p>
+        <p className="mt-1 text-ink">{review.reply}</p>
+      </div>
+    );
+  }
+  if (!canReply) return null;
+  if (!aberto) return <V2Button type="button" size="sm" variant="ghost" className="mt-1" onClick={() => setAberto(true)}>{t('Responder')}</V2Button>;
+  const enviar = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await replyReview(review, { uid: user?.uid, text: texto });
+      toast.success(t('Resposta publicada.'));
+      onReplied();
+    } catch (err) {
+      toast.error(err?.message || t('Não foi possível responder. Tente de novo.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={enviar} className="mt-2 space-y-2">
+      <V2Textarea rows={2} maxLength={500} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={t('Sua resposta aparece em público, abaixo da avaliação.')} aria-label={t('Resposta à avaliação')} />
+      <div className="flex justify-end gap-2">
+        <V2Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>{t('Cancelar')}</V2Button>
+        <V2Button type="submit" size="sm" disabled={busy || texto.trim().length < 2}>{busy ? t('Enviando…') : t('Publicar resposta')}</V2Button>
+      </div>
+    </form>
+  );
+}
+
+export default function SellerReviews({ sellerKey, title = t('Avaliações de quem comprou'), emptyText, canReply = false }) {
   const q = useSellerReviews(sellerKey);
   if (q.isError) return <V2ErrorState inline onRetry={() => q.refetch()} />;
   if (q.isLoading) return <V2Skeleton lines={3} />;
@@ -52,6 +95,7 @@ export default function SellerReviews({ sellerKey, title = t('Avaliações de qu
                 </div>
                 {r.listing_title && <p className="mt-1 text-xs text-gray-500">{t('Comprou: {titulo}', { titulo: r.listing_title })}</p>}
                 {r.comment && <p className="mt-1 text-sm text-ink">{r.comment}</p>}
+                <ReviewReply review={r} canReply={canReply} onReplied={() => q.refetch()} />
               </li>
             ))}
           </ul>

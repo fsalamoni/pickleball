@@ -175,3 +175,28 @@ diálogo), perguntas sem resposta primeiro, oferta vencida sem "Responder"
 editor com navegação por partes e prévia no celular. Servidor: aviso de
 avaliação recebida e lembrete 12 h antes do prazo de resposta
 (`deadline_reminded_at_ms`, gravado só pelo servidor).
+
+**Variações, endereços, resposta, oferta automática, promoção com prazo,
+seguir loja e visualizações (2026-10-15, campos novos, tudo aditivo).**
+(1) **Variações** (`listing.variants[] = { id, label, quantity }`, até
+`VARIANT_LIMITS.max`): a quantidade do anúncio é a SOMA (`normalizeVariants`),
+o carrinho tem uma linha por `lineKey` (`id#variação`), o pedido grava
+`variant_id`/`variant_label` e o servidor desconta e devolve POR variação
+(`stockPatch`, um `update` por anúncio mesmo com duas variações no pedido).
+Anúncio de arena com estoque vinculado não tem variações. (2) **Endereços
+salvos**: `market_addresses/{uid}` (só o dono, até `ADDRESSES_MAX` = 5),
+preenchem o fechamento e entram na exclusão e na exportação. (3) **Resposta
+do vendedor** à avaliação do comprador: a regra de `market_reviews` só deixa o
+operador escrever `reply/reply_at_ms/reply_by` numa avaliação já visível.
+(4) **Oferta automática**: `offer_auto_accept_cents` / `offer_auto_decline_cents`
+no anúncio (`autoOfferOutcome`, com cópia no servidor e teste de paridade) —
+o aceite vira pedido na hora (`respondOffer(..., { auto: true })`), a recusa
+não avisa o vendedor nem revela o valor. (5) **Promoção com prazo**
+(`sale_until_ms`): `effectiveListing` devolve o preço cheio depois do prazo
+(cliente E servidor) e `housekeeping` grava a volta. (6) **Seguir loja**:
+`market_follows/{uid}_{seller_key}`; `marketFollowCount` mantém
+`market_sellers.follower_count` e `marketFollowersNotify` avisa UMA vez por
+anúncio que entra no ar (`followers_notified_at_ms`, só do servidor), nunca
+quem opera a loja. (7) **Visualizações**: `view_count` só sobe de 1 em 1 por
+conta logada (`marketViewBumpOk`), uma vez por aba (`sessionStorage`), nunca
+pelo operador; quem vende vê o número na lista de anúncios.

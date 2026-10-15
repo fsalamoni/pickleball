@@ -27,6 +27,21 @@ export function validateOfferAmount(listing, amountCents, { minFraction = OFFER_
   return null;
 }
 
+/**
+ * O vendedor pode responder sozinho: a partir de `offer_auto_accept_cents`
+ * aceita na hora; abaixo de `offer_auto_decline_cents` recusa na hora; no meio,
+ * espera a pessoa. Os limites nunca chegam ao comprador.
+ * ⚠️ Cópia no servidor (paridade).
+ */
+export function autoOfferOutcome(listing, amountCents) {
+  const amount = Math.round(Number(amountCents)) || 0;
+  const aceita = Number(listing?.offer_auto_accept_cents) || 0;
+  const recusa = Number(listing?.offer_auto_decline_cents) || 0;
+  if (aceita > 0 && amount >= aceita) return 'accept';
+  if (recusa > 0 && amount < recusa) return 'decline';
+  return null;
+}
+
 /** Ações por papel e estado. `pending` = a vez é do vendedor; `countered` = do comprador. */
 export const OFFER_ACTIONS = Object.freeze({
   accept: { from: [O.PENDING], role: 'seller', to: O.ACCEPTED, label: tk('Aceitar oferta') },
@@ -99,9 +114,11 @@ export function offerActionsFor(offer, role, { now = Date.now(), maxRounds = OFF
 }
 
 /** Uma oferta nova (o documento, sem os campos de servidor). */
-export function newOffer(listing, buyer, amountCents, { fulfillment, message = '', now = Date.now(), ttlHours = OFFER_RULES.ttlHours } = {}) {
+export function newOffer(listing, buyer, amountCents, { fulfillment, message = '', now = Date.now(), ttlHours = OFFER_RULES.ttlHours, variantId = null } = {}) {
+  const variant = (listing.variants || []).find((v) => v.id === variantId) || null;
   return {
     listing_id: listing.id,
+    ...(variant ? { variant_id: variant.id, variant_label: variant.label } : {}),
     listing_title: listing.title,
     seller_key: listing.seller_key,
     seller_uid: listing.seller_uid,

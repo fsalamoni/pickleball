@@ -7,7 +7,7 @@
  * regra confere: `buyer_uid` ou `seller_key`).
  */
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { db, functions } from '@/core/config/firebase';
 import { MARKET_COLLECTIONS as C } from '../domain/constants.js';
 import { t } from '@/core/i18n';
@@ -107,6 +107,14 @@ export async function getOffer(id) {
 export async function listSellerReviews(key) {
   const q = query(collection(db, C.reviews), where('seller_key', '==', key), where('visible', '==', true));
   return recentes((await getDocs(q)).docs.map(toDoc));
+}
+
+/** A resposta pública do vendedor a uma avaliação de comprador (só a regra decide quem pode). */
+export async function replyReview(review, { uid, text }) {
+  const reply = String(text || '').trim().slice(0, 500);
+  if (reply.length < 2) throw new Error(t('Escreva a resposta.'));
+  await updateDoc(doc(db, C.reviews, review.id), { reply, reply_at_ms: Date.now(), reply_by: uid });
+  return reply;
 }
 
 /** O que vendedores disseram de quem compra (só as reveladas). */

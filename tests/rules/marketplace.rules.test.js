@@ -380,3 +380,63 @@ describe('avaliações do comprador', () => {
     await assertSucceeds(getDocs(query(collection(como(PROF), 'market_reviews'), where('target_uid', '==', BIA), where('visible', '==', true))));
   });
 });
+
+describe('⭐ variações, promoção com prazo e resposta automática (campos do anúncio)', () => {
+  it('quem vende grava; forma errada é recusada', async () => {
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { variants: [{ id: 'm', label: 'M', quantity: 1 }], offer_auto_accept_cents: 70000, offer_auto_decline_cents: 40000 }));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { compare_at_cents: 99000, sale_until_ms: 1_900_000_000_000 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { variants: 'M' }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { offer_auto_accept_cents: 80000 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { sale_until_ms: 'amanhã' }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_listings', 'l1'), { variants: [] }));
+  });
+});
+
+describe('⭐ visualizações: qualquer conta soma 1, e só 1', () => {
+  it('+1 exato em anúncio no ar; nada mais junto; não em rascunho', async () => {
+    await assertSucceeds(updateDoc(doc(como(BIA), 'market_listings', 'l1'), { view_count: 1 }));
+    await assertSucceeds(updateDoc(doc(como(BIA), 'market_listings', 'l1'), { view_count: 2 }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_listings', 'l1'), { view_count: 10 }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_listings', 'l1'), { view_count: 3, title: 'Outro' }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_listings', 'rasc'), { view_count: 1 }));
+    await assertFails(updateDoc(doc(testEnv.unauthenticatedContext().firestore(), 'market_listings', 'l1'), { view_count: 3 }));
+    // Quem vende não zera a contagem nem o aviso aos seguidores.
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { view_count: 0 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_listings', 'l1'), { followers_notified_at_ms: 1 }));
+  });
+});
+
+describe('⭐ seguir loja e endereços salvos: só do dono', () => {
+  it('segue pelo id {uid}_{chave}; outra pessoa não segue por mim; o vendedor não escreve a contagem', async () => {
+    const k = `athlete_${ANA}`;
+    await assertSucceeds(setDoc(doc(como(BIA), 'market_follows', `${BIA}_${k}`), { uid: BIA, seller_key: k, created_at: new Date() }));
+    await assertFails(setDoc(doc(como(BIA), 'market_follows', `${ANA}_${k}`), { uid: ANA, seller_key: k }));
+    await assertFails(setDoc(doc(como(BIA), 'market_follows', `${BIA}_x`), { uid: BIA, seller_key: k }));
+    await assertSucceeds(getDocs(query(collection(como(BIA), 'market_follows'), where('uid', '==', BIA))));
+    await assertFails(getDocs(query(collection(como(ANA), 'market_follows'), where('uid', '==', BIA))));
+    await assertSucceeds(deleteDoc(doc(como(BIA), 'market_follows', `${BIA}_${k}`)));
+    await assertFails(updateDoc(doc(como(ANA), 'market_sellers', k), { follower_count: 999 }));
+  });
+  it('endereços: o dono lê e grava até 5; ninguém mais', async () => {
+    const end = { name: 'Bia', cep: '01000-000', street: 'Rua A', number: '1', city: 'SP', state: 'SP' };
+    await assertSucceeds(setDoc(doc(como(BIA), 'market_addresses', BIA), { addresses: [end] }));
+    await assertFails(setDoc(doc(como(BIA), 'market_addresses', BIA), { addresses: Array(6).fill(end) }));
+    await assertFails(setDoc(doc(como(ANA), 'market_addresses', BIA), { addresses: [end] }));
+    await assertFails(getDoc(doc(como(ANA), 'market_addresses', BIA)));
+    await assertSucceeds(getDoc(doc(como(BIA), 'market_addresses', BIA)));
+  });
+});
+
+describe('⭐ resposta do vendedor à avaliação', () => {
+  it('só quem vende, só à avaliação de comprador já visível, só a resposta', async () => {
+    await assertFails(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'Obrigada!', reply_at_ms: 1, reply_by: ANA }));
+    await semRegras((db) => updateDoc(doc(db, 'market_reviews', 'r1'), { visible: true, author_role: 'buyer' }));
+    await assertSucceeds(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'Obrigada!', reply_at_ms: 1, reply_by: ANA }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'Obrigada!', rating: 1 }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'x', reply_at_ms: 1, reply_by: ANA }));
+    await assertFails(updateDoc(doc(como(BIA), 'market_reviews', 'r1'), { reply: 'Eu mesma', reply_at_ms: 1, reply_by: BIA }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'Obrigada!', reply_at_ms: 1, reply_by: BIA }));
+    await semRegras((db) => updateDoc(doc(db, 'market_reviews', 'r1'), { author_role: 'seller' }));
+    await assertFails(updateDoc(doc(como(ANA), 'market_reviews', 'r1'), { reply: 'Obrigada!', reply_at_ms: 1, reply_by: ANA }));
+  });
+});

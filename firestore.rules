@@ -4066,7 +4066,7 @@ service cloud.firestore {
     // Campos do vendedor que só o admin (ou o servidor) muda.
     function marketSellerLocked() {
       return ['seller_type', 'entity_id', 'owner_uid', 'status', 'verified', 'rating_avg',
-        'rating_count', 'sales_count', 'seller_key', 'reviewed_by', 'reviewed_at', 'reject_reason'];
+        'rating_count', 'sales_count', 'seller_key', 'reviewed_by', 'reviewed_at', 'reject_reason', 'follower_count'];
     }
 
     match /market_sellers/{key} {
@@ -4107,7 +4107,15 @@ service cloud.firestore {
     // Campos do anúncio que o navegador nunca escreve.
     function marketListingLocked() {
       return ['moderation', 'quantity_sold', 'favorite_count', 'seller_rating_avg',
-        'seller_rating_count', 'seller_verified', 'source', 'price_alert_cents'];
+        'seller_rating_count', 'seller_verified', 'source', 'price_alert_cents', 'view_count', 'followers_notified_at_ms'];
+    }
+    // Visualização: qualquer conta logada soma 1 ao contador de um anúncio no
+    // ar, e SÓ isso (nada mais do documento muda na mesma escrita).
+    function marketViewBumpOk() {
+      return isAuthed() && resource.data.status in ['active', 'sold_out']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['view_count'])
+        && request.resource.data.view_count is int
+        && request.resource.data.view_count == resource.data.get('view_count', 0) + 1;
     }
     function marketListingShapeOk(d) {
       return d.title is string && d.title.size() >= 3 && d.title.size() <= 120
@@ -4117,7 +4125,15 @@ service cloud.firestore {
         && d.get('description', '') is string && d.get('description', '').size() <= 5000
         // O "de" (preço riscado) só vale MAIOR que o preço: "de" inventado não sobe na vitrine de ofertas.
         && (d.get('compare_at_cents', null) == null
-          || (d.compare_at_cents is int && d.compare_at_cents > d.price_cents && d.compare_at_cents <= 100000000));
+          || (d.compare_at_cents is int && d.compare_at_cents > d.price_cents && d.compare_at_cents <= 100000000))
+        // Variações (tamanho, cor…): lista curta; o servidor confere cada uma na compra.
+        && d.get('variants', []) is list && d.get('variants', []).size() <= 20
+        // Promoção com prazo e resposta automática a ofertas: números opcionais, abaixo do preço.
+        && (d.get('sale_until_ms', null) == null || d.sale_until_ms is int)
+        && (d.get('offer_auto_accept_cents', null) == null
+          || (d.offer_auto_accept_cents is int && d.offer_auto_accept_cents > 0 && d.offer_auto_accept_cents < d.price_cents))
+        && (d.get('offer_auto_decline_cents', null) == null
+          || (d.offer_auto_decline_cents is int && d.offer_auto_decline_cents > 0 && d.offer_auto_decline_cents < d.price_cents));
     }
 
     match /market_listings/{listingId} {
@@ -4136,7 +4152,7 @@ service cloud.firestore {
         && request.resource.data.status in ['draft', 'active']
         && !request.resource.data.keys().hasAny(marketListingLocked())
         && marketListingShapeOk(request.resource.data);
-      allow update: if isPlatformAdmin() || (
+      allow update: if isPlatformAdmin() || marketViewBumpOk() || (
         isMarketOperator(resource.data.seller_key)
         && resource.data.status != 'removed'
         && request.resource.data.status in ['draft', 'active', 'paused', 'sold_out', 'closed']
@@ -4206,6 +4222,27 @@ service cloud.firestore {
         && (resource == null || resource.data.uid == request.auth.uid)
         && request.resource.data.get('label', '') is string
         && request.resource.data.get('label', '').size() <= 60;
+    }
+
+    // Endereços de entrega guardados (`market_addresses/{uid}`): só do dono, até 5.
+    match /market_addresses/{uid} {
+      allow get: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.get('addresses', []) is list
+        && request.resource.data.get('addresses', []).size() <= 5;
+      allow delete: if isOwner(uid);
+    }
+
+    // Seguir uma loja `{uid}_{vendedor}`: só do dono (como o favorito).
+    match /market_follows/{followId} {
+      allow get: if isAuthed() && followId.split('_')[0] == request.auth.uid;
+      allow list: if isAuthed() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasOnly(['uid', 'seller_key', 'created_at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.seller_key is string
+        && followId == request.auth.uid + '_' + request.resource.data.seller_key;
+      allow delete: if isAuthed() && followId.split('_')[0] == request.auth.uid;
     }
 
     match /market_carts/{uid} {
@@ -4309,13 +4346,20 @@ service cloud.firestore {
       }
     }
 
-    // Avaliação cega: aparece para todos só quando o servidor revela.
+    // Avaliação cega: aparece para todos só quando o servidor revela. Quem
+    // vende RESPONDE à avaliação revelada do comprador (só a resposta).
     match /market_reviews/{reviewId} {
       allow read: if isAuthed() && (
         resource.data.visible == true
         || resource.data.author_uid == request.auth.uid
         || isPlatformAdmin());
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if marketOn() && isMarketOperator(resource.data.seller_key)
+        && resource.data.author_role == 'buyer' && resource.data.visible == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reply', 'reply_at_ms', 'reply_by'])
+        && request.resource.data.reply is string
+        && request.resource.data.reply.size() >= 2 && request.resource.data.reply.size() <= 500
+        && request.resource.data.reply_by == request.auth.uid;
     }
 
     match /market_disputes/{disputeId} {

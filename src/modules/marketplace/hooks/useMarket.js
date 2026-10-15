@@ -29,6 +29,8 @@ export const marketKeys = {
   questions: (listingId) => ['mercado', 'anuncio', listingId, 'perguntas'],
   sellerQuestions: (key) => ['mercado', 'vendedor', key, 'perguntas'],
   favorites: (uid) => ['mercado', 'favoritos', uid],
+  follows: (uid) => ['mercado', 'seguindo', uid],
+  addresses: (uid) => ['mercado', 'enderecos', uid],
   savedSearches: (uid) => ['mercado', 'buscas', uid],
   cart: (uid) => ['mercado', 'carrinho', uid],
   myOrders: (uid) => ['mercado', 'compras', uid],
@@ -181,6 +183,43 @@ export function useToggleFavorite(uid) {
   });
 }
 
+export function useFollows(uid) {
+  return useQuery({ queryKey: marketKeys.follows(uid), queryFn: () => svc.listMyFollows(uid), enabled: !!uid });
+}
+
+export function useToggleFollow(uid) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sellerKey, on }) => svc.toggleFollow(uid, sellerKey, on),
+    onMutate: async ({ sellerKey, on }) => {
+      const key = marketKeys.follows(uid);
+      await qc.cancelQueries({ queryKey: key });
+      const antes = qc.getQueryData(key);
+      qc.setQueryData(key, (xs = []) => (on
+        ? [...xs.filter((f) => f.seller_key !== sellerKey), { id: `${uid}_${sellerKey}`, uid, seller_key: sellerKey }]
+        : xs.filter((f) => f.seller_key !== sellerKey)));
+      return { antes };
+    },
+    onError: (_e, _v, ctx) => qc.setQueryData(marketKeys.follows(uid), ctx?.antes),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: marketKeys.follows(uid) });
+      qc.invalidateQueries({ queryKey: ['mercado', 'vendedor'] });
+    },
+  });
+}
+
+export function useMyAddresses(uid) {
+  return useQuery({ queryKey: marketKeys.addresses(uid), queryFn: () => svc.getMyAddresses(uid), enabled: !!uid });
+}
+
+export function useSaveAddresses(uid) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (addresses) => svc.saveMyAddresses(uid, addresses),
+    onSuccess: (_r, addresses) => qc.setQueryData(marketKeys.addresses(uid), addresses),
+  });
+}
+
 export function useSavedSearches(uid) {
   return useQuery({ queryKey: marketKeys.savedSearches(uid), queryFn: () => svc.listSavedSearches(uid), enabled: !!uid });
 }
@@ -241,16 +280,17 @@ export function useMarketCart(uid) {
     cart,
     count: cartCount(cart),
     saving: save.isPending,
-    add: async (listing, quantity = 1) => {
-      const r = addToCart(cart, listing, quantity);
+    add: async (listing, quantity = 1, variantId = null) => {
+      const r = addToCart(cart, listing, quantity, variantId);
       if (r.error) return { error: r.error };
       await grava(r.cart);
       return { error: null };
     },
-    setQuantity: (listingId, qty) => grava(setCartQuantity(cart, listingId, qty)),
-    remove: (listingId) => grava(removeFromCart(cart, listingId)),
-    later: (listingId) => grava(saveForLater(cart, listingId)),
-    back: (listingId) => grava(moveToCart(cart, listingId)),
+    // As quatro recebem a CHAVE da linha (`lineKey`): anúncio, ou anúncio#variação.
+    setQuantity: (key, qty) => grava(setCartQuantity(cart, key, qty)),
+    remove: (key) => grava(removeFromCart(cart, key)),
+    later: (key) => grava(saveForLater(cart, key)),
+    back: (key) => grava(moveToCart(cart, key)),
   };
 }
 

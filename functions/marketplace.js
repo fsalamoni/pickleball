@@ -106,6 +106,56 @@ function validateOfferAmount(listing, amountCents, { minFraction = OFFER_RULES.m
   return null;
 }
 
+/** Cópia de `domain/offers.js#autoOfferOutcome` (paridade). */
+function autoOfferOutcome(listing, amountCents) {
+  const amount = Math.round(Number(amountCents)) || 0;
+  const aceita = Number(listing && listing.offer_auto_accept_cents) || 0;
+  const recusa = Number(listing && listing.offer_auto_decline_cents) || 0;
+  if (aceita > 0 && amount >= aceita) return 'accept';
+  if (recusa > 0 && amount < recusa) return 'decline';
+  return null;
+}
+
+/** Cópia de `domain/listing.js#effectiveListing` (paridade): promoção vencida devolve o preço ao "de". */
+function effectiveListing(listing, now = Date.now()) {
+  if (!listing) return listing;
+  const ate = Number(listing.sale_until_ms) || 0;
+  const de = Number(listing.compare_at_cents) || 0;
+  if (ate && now > ate && de > (Number(listing.price_cents) || 0)) {
+    return { ...listing, price_cents: de, compare_at_cents: null, sale_until_ms: null };
+  }
+  return listing;
+}
+
+const variantsOf = (l) => (Array.isArray(l && l.variants) ? l.variants.filter((v) => v && v.id) : []);
+const variantOf = (l, id) => variantsOf(l).find((v) => v.id === id) || null;
+/** Quantas unidades da variação (ou do anúncio, sem variações). */
+function stockOf(l, variantId) {
+  const vs = variantsOf(l);
+  if (!vs.length) return Number(l.quantity) || 0;
+  const v = variantOf(l, variantId);
+  return v ? Number(v.quantity) || 0 : 0;
+}
+/**
+ * O anúncio depois de vender (`delta` < 0) ou devolver (`delta` > 0) unidades
+ * de uma variação. Com variações, `quantity` é a soma delas.
+ */
+function stockPatch(l, variantId, delta, now) {
+  const vs = variantsOf(l);
+  let variants = null;
+  let quantity;
+  if (vs.length && variantOf(l, variantId)) {
+    variants = vs.map((v) => (v.id === variantId ? { ...v, quantity: Math.max(0, (Number(v.quantity) || 0) + delta) } : v));
+    quantity = variants.reduce((n, v) => n + (Number(v.quantity) || 0), 0);
+  } else {
+    quantity = Math.max(0, (Number(l.quantity) || 0) + delta);
+  }
+  const sold = Math.max(0, (Number(l.quantity_sold) || 0) - delta);
+  const status = quantity <= 0 && l.status === 'active' ? 'sold_out' : (quantity > 0 && l.status === 'sold_out' ? 'active' : l.status);
+  return { ...l, quantity, quantity_sold: sold, status, ...(variants ? { variants } : {}), updated_at: new Date(now) };
+}
+const stockWrite = ({ quantity, quantity_sold, status, variants, updated_at }) => ({ quantity, quantity_sold, status, ...(variants ? { variants } : {}), updated_at });
+
 function lastAmount(offer, by) {
   const h = [...(offer.history || [])].reverse().find((x) => x.by === by && x.amount_cents);
   return h ? h.amount_cents : (by === 'buyer' ? offer.amount_cents : null);
@@ -299,11 +349,13 @@ function validatePlaceRequest(data = {}) {
     const its = [];
     for (const i of items) {
       const q = Math.floor(Number(i && i.quantity));
-      if (!i || typeof i.listing_id !== 'string' || !i.listing_id || seen.has(i.listing_id) || !(q >= 1 && q <= 99)) {
+      const variantId = i && typeof i.variant_id === 'string' && i.variant_id ? i.variant_id.slice(0, 40) : null;
+      const chave = variantId ? `${i && i.listing_id}#${variantId}` : i && i.listing_id;
+      if (!i || typeof i.listing_id !== 'string' || !i.listing_id || seen.has(chave) || !(q >= 1 && q <= 99)) {
         return { error: 'Item inválido no carrinho.' };
       }
-      seen.add(i.listing_id);
-      its.push({ listing_id: i.listing_id, quantity: q, expected_price_cents: Math.round(Number(i.expected_price_cents) || 0) });
+      seen.add(chave);
+      its.push({ listing_id: i.listing_id, variant_id: variantId, quantity: q, expected_price_cents: Math.round(Number(i.expected_price_cents) || 0) });
     }
     const giftIds = [...new Set((Array.isArray(g.gift_card_ids) ? g.gift_card_ids : []).filter((x) => typeof x === 'string' && /^[\w-]{1,64}$/.test(x)))];
     if (giftIds.length > promo.GIFT_CARD_LIMITS.maxPerOrder) return { error: `Use até ${promo.GIFT_CARD_LIMITS.maxPerOrder} vales por loja.` };
@@ -415,12 +467,17 @@ async function placeOrders(ctx, uid, data) {
         const giftSnaps = rest.slice(refs.length + (couponRef ? 2 : 0));
         if (!sellerSnap.exists || sellerSnap.data().status !== 'active') fail('failed-precondition', 'Este vendedor não está vendendo agora.');
         const seller = sellerSnap.data();
+        // O mesmo anúncio pode aparecer duas vezes (duas variações): o estoque é descontado em sequência.
+        const estado = {};
         const listings = snaps.map((s, k) => {
-          const l = s.exists ? { id: s.id, ...s.data() } : null;
+          const bruto = s.exists ? effectiveListing({ id: s.id, ...s.data() }, now) : null;
+          const l = bruto && (estado[bruto.id] || (estado[bruto.id] = bruto));
           const it = g.items[k];
           if (!l || l.seller_key !== g.seller_key) fail('failed-precondition', 'Um item não está mais à venda.');
           if (l.status !== 'active') fail('failed-precondition', `"${l.title}" não está à venda agora.`);
-          if ((Number(l.quantity) || 0) < it.quantity) fail('failed-precondition', `"${l.title}": só há ${Number(l.quantity) || 0} disponível.`);
+          if (variantsOf(l).length && !variantOf(l, it.variant_id)) fail('failed-precondition', `"${l.title}": escolha a variação.`);
+          const ha = stockOf(l, it.variant_id);
+          if (ha < it.quantity) fail('failed-precondition', `"${l.title}": só há ${ha} disponível.`);
           if (it.expected_price_cents && it.expected_price_cents !== l.price_cents) {
             fail('aborted', `O preço de "${l.title}" mudou. Confira o carrinho.`);
           }
@@ -432,6 +489,7 @@ async function placeOrders(ctx, uid, data) {
           listing_id: l.id, title: l.title, cover_url: coverUrl(l), ...coverFrame(l), condition: l.condition || '',
           ...(g.fulfillment !== 'shipping' && l.pickup_note ? { pickup_note: texto(l.pickup_note, 140), city: texto(l.city, 60) } : {}),
           unit_price_cents: l.price_cents, quantity: g.items[k].quantity,
+          ...(variantOf(l, g.items[k].variant_id) ? { variant_id: g.items[k].variant_id, variant_label: variantOf(l, g.items[k].variant_id).label } : {}),
           ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
         }));
         const ship = groupShipping(listings, g.fulfillment);
@@ -457,15 +515,8 @@ async function placeOrders(ctx, uid, data) {
           placed_at_ms: now, status_at_ms: now, deadline_at_ms: now + settings.seller_answer_hours * 3600000,
           created_at: new Date(now), updated_at: new Date(now),
         };
-        listings.forEach((l, k) => {
-          const left = (Number(l.quantity) || 0) - g.items[k].quantity;
-          tx.update(refs[k], {
-            quantity: left,
-            quantity_sold: (Number(l.quantity_sold) || 0) + g.items[k].quantity,
-            ...(left <= 0 ? { status: 'sold_out' } : {}),
-            updated_at: new Date(now),
-          });
-        });
+        listings.forEach((l, k) => { estado[l.id] = stockPatch(estado[l.id], g.items[k].variant_id, -g.items[k].quantity, now); });
+        Object.values(estado).forEach((l) => tx.update(db.collection('market_listings').doc(l.id), stockWrite(l)));
         tx.set(orderRef, order);
         if (req.address && g.fulfillment === 'shipping') tx.set(orderRef.collection('private').doc('shipping'), { address: req.address });
         tx.set(orderRef.collection('events').doc(), { action: 'placed', by_role: 'buyer', by_uid: uid, at_ms: now });
@@ -479,12 +530,13 @@ async function placeOrders(ctx, uid, data) {
   }
 
   if (orders.length) {
+    const chave = (i) => (i.variant_id ? `${i.listing_id}#${i.variant_id}` : i.listing_id);
     const comprados = new Set(req.groups.filter((g) => orders.some((o) => o.seller_key === g.seller_key))
-      .flatMap((g) => g.items.map((i) => i.listing_id)));
+      .flatMap((g) => g.items.map(chave)));
     const cartRef = db.collection('market_carts').doc(uid);
     const cart = await cartRef.get();
     if (cart.exists) {
-      const items = (cart.data().items || []).filter((i) => !comprados.has(i.listing_id));
+      const items = (cart.data().items || []).filter((i) => !comprados.has(chave(i)));
       await cartRef.set({ items, updated_at: new Date(now) }, { merge: true });
     }
     for (const o of orders) {
@@ -520,20 +572,14 @@ const itensComAnuncio = (order) => (order.items || []).filter((i) => i && i.list
 
 function restockUpdates(order, snaps, now) {
   const itens = itensComAnuncio(order);
-  return snaps.map((s, k) => {
-    if (!s || !s.exists) return null;
-    const l = s.data();
-    const q = itens[k].quantity;
-    return {
-      ref: s.ref,
-      data: {
-        quantity: (Number(l.quantity) || 0) + q,
-        quantity_sold: Math.max(0, (Number(l.quantity_sold) || 0) - q),
-        ...(l.status === 'sold_out' ? { status: 'active' } : {}),
-        updated_at: new Date(now),
-      },
-    };
-  }).filter(Boolean);
+  const estado = new Map();
+  snaps.forEach((s, k) => {
+    if (!s || !s.exists) return;
+    const atual = estado.get(s.ref.path) || { ref: s.ref, l: s.data() };
+    atual.l = stockPatch(atual.l, itens[k].variant_id || null, itens[k].quantity, now);
+    estado.set(s.ref.path, atual);
+  });
+  return [...estado.values()].map(({ ref, l }) => ({ ref, data: stockWrite(l) }));
 }
 
 const OTHER_SIDE_MSG = {
@@ -760,8 +806,9 @@ async function orderAction(ctx, actor, data) {
 async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sellerSnap) {
   let offer = offerIn;
   const { db, now, settings } = ctx;
-  const l = listingSnap.data();
-  if (l.status !== 'active' || (Number(l.quantity) || 0) < 1) fail('failed-precondition', 'O produto esgotou. A oferta foi encerrada.');
+  const l = effectiveListing(listingSnap.data(), now);
+  const variant = variantOf(l, offerIn.variant_id);
+  if (l.status !== 'active' || stockOf(l, offerIn.variant_id) < 1 || (variantsOf(l).length && !variant)) fail('failed-precondition', 'O produto esgotou. A oferta foi encerrada.');
   const p = privSnap.exists ? privSnap.data() : {};
   if (!p.pix_key) fail('failed-precondition', 'O vendedor ainda não cadastrou o Pix. Ele foi avisado.');
   const seller = sellerSnap.exists ? sellerSnap.data() : {};
@@ -769,11 +816,7 @@ async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sel
   // Se o preço caiu abaixo do combinado, vale o preço de agora.
   offer = { ...offer, amount_cents: Math.min(Math.round(Number(offer.amount_cents) || 0), Math.round(Number(l.price_cents) || Infinity)) };
   const orderRef = db.collection('market_orders').doc();
-  const left = (Number(l.quantity) || 0) - 1;
-  tx.update(listingSnap.ref, {
-    quantity: left, quantity_sold: (Number(l.quantity_sold) || 0) + 1,
-    ...(left <= 0 ? { status: 'sold_out' } : {}), updated_at: new Date(now),
-  });
+  tx.update(listingSnap.ref, stockWrite(stockPatch(l, offerIn.variant_id, -1, now)));
   const fulfillment = (l.fulfillment || []).includes(offer.fulfillment) ? offer.fulfillment : (l.fulfillment || [])[0] || 'meetup';
   const ship = groupShipping([l], fulfillment);
   const order = {
@@ -783,6 +826,7 @@ async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sel
     seller_manager_uids: offer.seller_manager_uids || [],
     items: [{
       listing_id: listingSnap.id, title: l.title, cover_url: coverUrl(l), ...coverFrame(l), condition: l.condition || '', unit_price_cents: offer.amount_cents, quantity: 1,
+      ...(variant ? { variant_id: variant.id, variant_label: variant.label } : {}),
       ...(arenaProductIdOf(l) ? { arena_product_id: arenaProductIdOf(l) } : {}),
     }],
     item_count: 1, listing_ids: [listingSnap.id],
@@ -798,64 +842,19 @@ async function createOrderFromOffer(ctx, tx, offerIn, listingSnap, privSnap, sel
   return orderRef.id;
 }
 
-async function offerAction(ctx, actor, data = {}) {
-  const { db, now = Date.now() } = ctx;
-  const { enabled, settings } = await loadContext(db);
-  const action = texto(data.action, 32);
-  const c = { ...ctx, now, settings };
-
-  if (action === 'create') {
-    if (!enabled || !settings.offers_enabled) fail('failed-precondition', 'As ofertas estão fechadas no momento.');
-    const listingId = texto(data.listingId, 64);
-    const snap = await db.collection('market_listings').doc(listingId).get();
-    if (!snap.exists) fail('not-found', 'Anúncio não encontrado.');
-    const l = { id: snap.id, ...snap.data() };
-    if (l.status !== 'active') fail('failed-precondition', 'Este anúncio não está à venda agora.');
-    const ops = await operatorUids(db, l.seller_key);
-    if (ops.includes(actor.uid)) fail('failed-precondition', 'O anúncio é seu.');
-    const err = validateOfferAmount(l, data.amount_cents);
-    if (err) fail('invalid-argument', err);
-    const mine = await db.collection('market_offers').where('buyer_uid', '==', actor.uid).get();
-    if (mine.docs.some((d) => d.data().listing_id === listingId && [O.PENDING, O.COUNTERED].includes(d.data().status))) {
-      fail('already-exists', 'Você já tem uma negociação aberta neste anúncio.');
-    }
-    const amount = Math.round(Number(data.amount_cents));
-    const ref = db.collection('market_offers').doc();
-    const name = await buyerName(db, actor.uid);
-    await ref.set({
-      listing_id: listingId, listing_title: l.title, cover_url: coverUrl(l), ...coverFrame(l),
-      seller_key: l.seller_key, seller_name: l.seller_name || '', seller_manager_uids: ops,
-      buyer_uid: actor.uid, buyer_name: name, list_price_cents: l.price_cents, amount_cents: amount,
-      fulfillment: (l.fulfillment || []).includes(data.fulfillment) ? data.fulfillment : (l.fulfillment || [])[0] || 'meetup',
-      message: texto(data.message, 300), status: O.PENDING, round: 1,
-      history: [{ by: 'buyer', amount_cents: amount, at_ms: now }],
-      expires_at_ms: now + settings.offer_ttl_hours * 3600000,
-      created_at: new Date(now), updated_at: new Date(now),
-    });
-    await notify(db, ops, { title: tx('Nova oferta'), message: tx('{nome} ofereceu por "{anuncio}".', { nome: name, anuncio: l.title }), link: `/mercado/ofertas/${ref.id}` }, now);
-    return { id: ref.id, status: O.PENDING };
-  }
-
-  if (['accept', 'accept_counter'].includes(action) && (!enabled || !settings.orders_enabled)) {
-    fail('failed-precondition', 'As compras no Mercado estão fechadas no momento. A oferta continua aberta.');
-  }
-  const offerId = texto(data.offerId, 64);
-  const pre = await db.collection('market_offers').doc(offerId).get();
-  if (!pre.exists) fail('not-found', 'Oferta não encontrada.');
-  const offer0 = pre.data();
-  const role = offer0.buyer_uid === actor.uid ? 'buyer'
-    : (await operatorUids(db, offer0.seller_key)).includes(actor.uid) ? 'seller' : null;
-  if (!role) fail('permission-denied', 'Esta negociação não é sua.');
-
-  const res = await db.runTransaction(async (tx) => {
+/** Aplica a ação numa transação; aceita vira pedido na mesma escrita. */
+async function respondOffer(c, offerId, action, role, { amountCents, auto = false } = {}) {
+  const { db, now, settings } = c;
+  return db.runTransaction(async (tx) => {
     const offerRef = db.collection('market_offers').doc(offerId);
     const s = await tx.get(offerRef);
     const offer = { id: s.id, ...s.data() };
     const r = applyOfferAction(offer, action, role, {
-      amountCents: data.amount_cents, now, maxRounds: settings.offer_max_rounds, ttlHours: settings.offer_ttl_hours,
+      amountCents, now, maxRounds: settings.offer_max_rounds, ttlHours: settings.offer_ttl_hours,
     });
     if (r.error) fail('failed-precondition', r.error);
     const next = r.offer;
+    if (auto) next.history[next.history.length - 1].auto = true;
     let orderId = null;
     if (next.status === O.ACCEPTED) {
       const [lSnap, privSnap, sellerSnap] = await tx.getAll(
@@ -872,6 +871,76 @@ async function offerAction(ctx, actor, data = {}) {
     tx.set(offerRef, { ...save, updated_at: new Date(now) });
     return { offer: next, orderId };
   });
+}
+
+async function offerAction(ctx, actor, data = {}) {
+  const { db, now = Date.now() } = ctx;
+  const { enabled, settings } = await loadContext(db);
+  const action = texto(data.action, 32);
+  const c = { ...ctx, now, settings };
+
+  if (action === 'create') {
+    if (!enabled || !settings.offers_enabled) fail('failed-precondition', 'As ofertas estão fechadas no momento.');
+    const listingId = texto(data.listingId, 64);
+    const snap = await db.collection('market_listings').doc(listingId).get();
+    if (!snap.exists) fail('not-found', 'Anúncio não encontrado.');
+    const l = effectiveListing({ id: snap.id, ...snap.data() }, now);
+    if (l.status !== 'active') fail('failed-precondition', 'Este anúncio não está à venda agora.');
+    const variantId = typeof data.variant_id === 'string' && data.variant_id ? data.variant_id.slice(0, 40) : null;
+    const variant = variantOf(l, variantId);
+    if (variantsOf(l).length && !variant) fail('invalid-argument', 'Escolha a variação.');
+    if (stockOf(l, variantId) < 1) fail('failed-precondition', 'Esgotado.');
+    const ops = await operatorUids(db, l.seller_key);
+    if (ops.includes(actor.uid)) fail('failed-precondition', 'O anúncio é seu.');
+    const err = validateOfferAmount(l, data.amount_cents);
+    if (err) fail('invalid-argument', err);
+    const mine = await db.collection('market_offers').where('buyer_uid', '==', actor.uid).get();
+    if (mine.docs.some((d) => d.data().listing_id === listingId && [O.PENDING, O.COUNTERED].includes(d.data().status))) {
+      fail('already-exists', 'Você já tem uma negociação aberta neste anúncio.');
+    }
+    const amount = Math.round(Number(data.amount_cents));
+    const ref = db.collection('market_offers').doc();
+    const name = await buyerName(db, actor.uid);
+    // O vendedor pode ter deixado a resposta pronta: aceita a partir de X, recusa abaixo de Y.
+    const auto = autoOfferOutcome(l, amount);
+    const oferta = {
+      listing_id: listingId, listing_title: l.title, cover_url: coverUrl(l), ...coverFrame(l),
+      ...(variant ? { variant_id: variant.id, variant_label: variant.label } : {}),
+      seller_key: l.seller_key, seller_name: l.seller_name || '', seller_manager_uids: ops,
+      buyer_uid: actor.uid, buyer_name: name, list_price_cents: l.price_cents, amount_cents: amount,
+      fulfillment: (l.fulfillment || []).includes(data.fulfillment) ? data.fulfillment : (l.fulfillment || [])[0] || 'meetup',
+      message: texto(data.message, 300), status: O.PENDING, round: 1,
+      history: [{ by: 'buyer', amount_cents: amount, at_ms: now }],
+      expires_at_ms: now + settings.offer_ttl_hours * 3600000,
+      created_at: new Date(now), updated_at: new Date(now),
+    };
+    if (auto === 'decline') {
+      await ref.set({ ...oferta, status: O.DECLINED, history: [...oferta.history, { by: 'seller', action: 'decline', at_ms: now, auto: true }] });
+      return { id: ref.id, status: O.DECLINED, auto: true };
+    }
+    await ref.set(oferta);
+    if (auto === 'accept' && enabled && settings.orders_enabled) {
+      const r = await respondOffer(c, ref.id, 'accept', 'seller', { auto: true });
+      await notify(db, [actor.uid], { title: tx('Oferta aceita'), message: tx('Sua oferta por "{anuncio}" foi aceita na hora. Pague pelo Pix no pedido.', { anuncio: l.title }), link: `/mercado/pedidos/${r.orderId}` }, now);
+      await notify(db, ops, { title: tx('Venda combinada'), message: tx('Oferta de {nome} por "{anuncio}" aceita automaticamente, pelo valor que você definiu.', { nome: name, anuncio: l.title }), link: `/mercado/vendas/${r.orderId}` }, now);
+      return { id: ref.id, status: O.ORDERED, orderId: r.orderId, auto: true };
+    }
+    await notify(db, ops, { title: tx('Nova oferta'), message: tx('{nome} ofereceu por "{anuncio}".', { nome: name, anuncio: l.title }), link: `/mercado/ofertas/${ref.id}` }, now);
+    return { id: ref.id, status: O.PENDING };
+  }
+
+  if (['accept', 'accept_counter'].includes(action) && (!enabled || !settings.orders_enabled)) {
+    fail('failed-precondition', 'As compras no Mercado estão fechadas no momento. A oferta continua aberta.');
+  }
+  const offerId = texto(data.offerId, 64);
+  const pre = await db.collection('market_offers').doc(offerId).get();
+  if (!pre.exists) fail('not-found', 'Oferta não encontrada.');
+  const offer0 = pre.data();
+  const role = offer0.buyer_uid === actor.uid ? 'buyer'
+    : (await operatorUids(db, offer0.seller_key)).includes(actor.uid) ? 'seller' : null;
+  if (!role) fail('permission-denied', 'Esta negociação não é sua.');
+
+  const res = await respondOffer(c, offerId, action, role, { amountCents: data.amount_cents });
 
   const o = res.offer;
   const toBuyer = role === 'seller';
@@ -984,7 +1053,7 @@ async function housekeeping(ctx) {
   const { db, now = Date.now(), logger } = ctx;
   const { settings } = await loadContext(db);
   const c = { ...ctx, now, settings };
-  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0, giftCards: 0, reminders: 0 };
+  const feitos = { expired: 0, completed: 0, offers: 0, reviews: 0, giftCards: 0, reminders: 0, sales: 0 };
   const run = async (orderId, action) => {
     try {
       await applyOrderAction(c, orderId, action, 'system', null, {});
@@ -1056,6 +1125,17 @@ async function housekeeping(ctx) {
       link: '/mercado/vales',
     }, now);
     feitos.giftCards += 1;
+  }
+  // Promoção com prazo vencido: o preço volta ao "de" (a leitura já mostra assim; aqui fica gravado).
+  const vencidas = await db.collection('market_listings').where('sale_until_ms', '<=', now).get();
+  for (const d of vencidas.docs) {
+    const l = d.data();
+    const e = effectiveListing(l, now);
+    // eslint-disable-next-line no-await-in-loop
+    await d.ref.update(e === l
+      ? { sale_until_ms: null, updated_at: new Date(now) }
+      : { price_cents: e.price_cents, compare_at_cents: null, sale_until_ms: null, updated_at: new Date(now) });
+    feitos.sales += 1;
   }
   const ocultas = await db.collection('market_reviews').where('visible', '==', false).get();
   const sellers = new Set();
@@ -1216,6 +1296,30 @@ async function notifyPriceDrop(ctx, listingId, before, after) {
   await notify(db, alvos, {
     title: tx('Baixou {pct}%: {anuncio}', { pct, anuncio: texto(after.title, 60) }),
     message: tx('O anúncio que você favoritou foi de {antes} para {depois}.', { antes: brl(antes), depois: brl(depois) }),
+    link: `/mercado/anuncio/${listingId}`,
+  }, now);
+  return alvos.length;
+}
+
+/**
+ * Anúncio que ENTRA no ar pela primeira vez → aviso a quem segue a loja (até
+ * 500; nunca a quem opera a loja). `followers_notified_at_ms` garante um só.
+ */
+async function notifyFollowers(ctx, listingId, before, after) {
+  const { db, now = Date.now() } = ctx;
+  if (!after || after.status !== 'active' || (before && before.status === 'active') || after.followers_notified_at_ms) return 0;
+  const { enabled } = await loadContext(db);
+  if (!enabled) return 0;
+  const [seg, ops] = await Promise.all([
+    db.collection('market_follows').where('seller_key', '==', after.seller_key).limit(500).get(),
+    operatorUids(db, after.seller_key),
+  ]);
+  await db.collection('market_listings').doc(listingId).update({ followers_notified_at_ms: now });
+  const alvos = seg.docs.map((f) => f.data().uid).filter((u) => u && !ops.includes(u));
+  if (!alvos.length) return 0;
+  await notify(db, alvos, {
+    title: tx('Novidade em {loja}', { loja: texto(after.seller_name || 'uma loja', 60) }),
+    message: tx('{loja} pôs à venda: {anuncio}.', { loja: texto(after.seller_name || 'A loja', 60), anuncio: texto(after.title, 80) }),
     link: `/mercado/anuncio/${listingId}`,
   }, now);
   return alvos.length;
@@ -1584,6 +1688,7 @@ module.exports = {
   MarketError, placeOrders, orderAction, applyOrderAction, offerAction, submitReview,
   housekeeping, moderateListing, recomputeSellerRating, operatorUids, notifyQuestion,
   reservedFor, linkedListingPatch, syncArenaListing, linkArenaProduct,
-  savedSearchAlerts, notifyPriceDrop,
+  savedSearchAlerts, notifyPriceDrop, notifyFollowers,
   hasBoughtFrom, applyPromotions, giftCardAction,
+  autoOfferOutcome, effectiveListing, stockPatch,
 };
