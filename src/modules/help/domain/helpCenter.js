@@ -986,6 +986,7 @@ const ATLETA = {
         link('/minhas-reservas', tk('Minhas reservas')),
         link('/coaches', tk('Procurar professor')),
         link('/minhas-aulas', tk('Minhas aulas')),
+        tip(tk('Ao marcar aula, só aparecem os horários livres do professor. Nenhum serve, ou ele ainda não publicou horários? Mande uma mensagem para combinar ou entre na lista de espera: avisamos quando ele abrir horários ou uma vaga for liberada.')),
         warn(tk('Pedir reserva não é o mesmo que ter reserva: só vale depois que a arena confirma.')),
       ],
     },
@@ -1463,6 +1464,7 @@ const PROFESSOR = {
         p(tk('Dá aula na agenda de uma arena? Quando a arena vincula o cadastro de professor à sua conta, as aulas dela aparecem na sua agenda — e, abrindo a aula, você vê os alunos matriculados.')),
         link('/aulas', tk('Minha agenda')),
         warn(tk('Mantenha a agenda fiel à realidade: ela é o que o aluno vê ao tentar marcar.')),
+        p(tk('Quem não acha horário livre pode entrar na sua LISTA DE ESPERA. Ela aparece em Hoje e na Agenda; ao abrir horários novos, a plataforma avisa quem está esperando.')),
       ],
     },
     {

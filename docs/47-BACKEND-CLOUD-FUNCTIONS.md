@@ -167,6 +167,21 @@ da fila. A ordem usa o `createTime` do documento (`_criado`), não `position` /
 em `src/modules/arenas/domain/waitlist.js` (`waitlist.test.js`).
 Doc: `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`.
 
+### 4.1a Lista de espera do professor (`functions/coachWaitlist.js`)
+
+Avisar o aluno é escrever para **outra** pessoa (o aviso e o `notified_at`
+da entrada dele), então é servidor. Os mesmos gatilhos mantêm a lista
+pública de horários ocupados (`coach_busy_slots`), que o pedido de aula lê.
+
+| Função | Gatilho | Faz | Lê / escreve |
+|---|---|---|---|
+| `onCoachAvailabilityWritten` | `coach_availability/{coachId}` (written) | recalcula os ocupados; se `abriuHorario` (janela nova ou folga futura retirada), avisa a lista | lê `coach_lessons`, `coach_waitlist`, `coaches`; escreve `coach_busy_slots`, `notifications`, `coach_waitlist` |
+| `onCoachLessonWritten` | `coach_lessons/{lessonId}` (written) | recalcula os ocupados se status/horários mudaram; se `aulaLiberouHorario` (confirmada futura cancelada/recusada) num professor com janelas, avisa a lista | lê `coach_lessons`, `coach_availability`, `coach_waitlist`, `coaches`; escreve `coach_busy_slots`, `notifications`, `coach_waitlist` |
+
+Cada entrada é avisada no máximo uma vez a cada `INTERVALO_HORAS = 6`; a
+pessoa fica na lista até pedir aula ou sair. Textos por `tx` (catálogo
+`functions/i18n/avisos.json`). **Testes**: `functions/coachWaitlist.test.js`.
+
 ### 4.2 Rotinas agendadas das arenas (código em `index.js`, sem módulo próprio)
 
 | Função | Agenda | Faz | Lê / escreve |

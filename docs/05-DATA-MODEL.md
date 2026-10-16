@@ -592,6 +592,24 @@ Aulas marcadas (avulsas ou recorrentes).
   de `requested`/`negotiating`/`confirmed`); o aluno não apaga. É o que o
   serviço sempre fez. `tests/rules/coachLessons.rules.test.js` (17).
 
+### `coach_waitlist/{coachId}_{uid}` (lista de espera do professor)
+Aluno esperando o professor abrir horário. Um por aluno e professor.
+- `coach_id`, `user_id`, `student_name`, `coach_name` (≤ 120),
+  `format?`, `periods?` (`manha|tarde|noite`, ≤ 3), `weekdays?` (0-6, ≤ 7),
+  `note?` (≤ 500), `created_at`, `created_at_ms`, `updated_at`.
+- `notified_at`, `notify_count` — só o servidor (`functions/coachWaitlist.js`).
+- **Regra:** o aluno cria a própria (id `{coach}_{uid}`, professor existe,
+  não é ele mesmo) e edita só as preferências; lê o aluno, o professor e o
+  admin; apagam os três. Zero índice composto (consultas de uma igualdade).
+  Entra na exclusão de conta pelos dois lados. `tests/rules/coachWaitlist.rules.test.js`.
+
+### `coach_busy_slots/{coachId}` (horários ocupados, público)
+- `coach_id`, `slots[]` (`{ date, start, end }` das aulas confirmadas de hoje
+  em diante, até 500), `updated_at`. Sem nome de aluno.
+- **Regra:** leitura pública, escrita só do servidor (gatilhos de
+  `coach_lessons` e `coach_availability`). Professor sem documento = nenhum
+  ocupado (até a próxima escrita numa aula ou na agenda dele).
+
 ### `coach_students/{coachId_studentId}` (Fase B)
 Vínculo professor ↔ aluno. Id determinista.
 - `coach_id`, `student_id`, `student_name` (desnormalizado),

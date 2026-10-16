@@ -12,6 +12,7 @@ import { useCoachAvailability } from '../hooks/useLessons';
 import { useCoachStudents } from '../hooks/useStudents';
 import { useCoachTrainingQuestions } from '@/modules/training/hooks/useTrainingQuestions';
 import { coachActivation, coachToday } from '../domain/coachToday';
+import CoachWaitlistSection from './CoachWaitlistSection';
 import { lessonFirstSlot } from '../domain/lesson';
 import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { t, fmtNumero } from '@/core/i18n';
@@ -86,6 +87,8 @@ export default function CoachTodaySection({
           <div className="space-y-2">{resumo.pedidos.map(renderLesson)}</div>
         )}
       </V2Surface>
+
+      <CoachWaitlistSection coachId={coachId} compact onAbrir={onAbrir} />
 
       <V2Surface>
         <h2 className="mb-3 font-display text-lg font-bold text-ink">{t('Aulas de hoje')}</h2>

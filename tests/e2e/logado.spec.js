@@ -14,6 +14,9 @@ const FIRESTORE = 'http://127.0.0.1:8080';
 function campo(v) {
   if (Array.isArray(v)) return { arrayValue: { values: v.map(campo) } };
   if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return { integerValue: String(v) };
+  if (v && typeof v === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, campo(x)])) } };
   return { stringValue: String(v) };
 }
 
@@ -128,6 +131,17 @@ async function ligarFlag(chave) {
   expect(r.ok, `ligar a flag ${chave} no emulador`).toBe(true);
 }
 
+/** Grava um documento no emulador (sem regras), a partir de um objeto simples. */
+async function semear(caminho, dados) {
+  const fields = Object.fromEntries(Object.entries(dados).map(([k, v]) => [k, campo(v)]));
+  const r = await fetch(`${FIRESTORE}/v1/projects/${PROJETO}/databases/pickleball/documents/${caminho}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ fields }),
+  });
+  expect(r.ok, `semear ${caminho}`).toBe(true);
+}
+
 // As telas que quase todo mundo abre. Cada uma tem de montar sem erro e sem
 // cair na tela de "Algo deu errado".
 const TELAS = ['/', '/dia-de-jogo', '/torneios', '/arenas', '/ranking', '/perfil', '/treino', '/notificacoes', '/configuracoes', '/ajuda'];
@@ -176,5 +190,57 @@ test.describe('@emuladores com conta', () => {
     await expect.poll(() => page.locator('main').evaluate((el) => el.scrollTop)).toBe(0);
     // …e, aceitos os termos, é a vez do cadastro.
     await expect(page.getByRole('dialog')).toHaveCount(1);
+  });
+
+  // 🐞 Com o professor sem horários publicados, o pedido mostrava "propor
+  // horário" e o botão "Solicitar aula" ficava apagado com tudo preenchido.
+  // Agora: só horários livres; sem eles, a tela diz e oferece a lista de
+  // espera — gravada de verdade, pela regra do banco.
+  test('⭐ professor sem horários: o pedido de aula oferece a lista de espera', async ({ page }) => {
+    const prof = `prof_${Date.now()}`;
+    await semear(`coaches/${prof}`, {
+      uid: prof, display_name: 'Prof. Teste', active: true, accepting_students: true, hourly_rate: 100,
+    });
+    await entrar(page, await criarAtleta());
+    await aceitar(page, page.getByRole('dialog', { name: 'Antes de continuar' }), 'Aceitar e continuar');
+
+    await page.goto(`/coaches/${prof}?marcar=1`);
+    const pedido = page.getByRole('dialog', { name: /Solicitar aula com Prof\. Teste/ });
+    await expect(pedido).toBeVisible();
+    await expect(pedido.getByText('Este professor ainda não tem horários disponíveis.')).toBeVisible();
+    await expect(pedido.locator('input[type="date"]')).toHaveCount(0);
+    await expect(pedido.getByRole('button', { name: 'Solicitar aula' })).toHaveCount(0);
+    await expect(pedido.getByRole('button', { name: 'Mandar mensagem ao professor' })).toBeVisible();
+
+    await tocar(pedido.getByRole('button', { name: 'Noite' }));
+    const entrarNaLista = pedido.getByRole('button', { name: 'Entrar na lista de espera' });
+    await rolarAte(page, entrarNaLista);
+    await tocar(entrarNaLista);
+    await expect(pedido.getByText(/Você está na lista de espera desde/)).toBeVisible();
+  });
+
+  test('⭐ professor com horários: só os livres aparecem e o pedido sai', async ({ page }) => {
+    const prof = `prof_${Date.now()}`;
+    await semear(`coaches/${prof}`, {
+      uid: prof, display_name: 'Prof. Agenda', active: true, accepting_students: true, hourly_rate: 100,
+    });
+    await semear(`coach_availability/${prof}`, {
+      coach_id: prof, slot_minutes: 60,
+      windows: [{ id: 'w1', weekdays: [0, 1, 2, 3, 4, 5, 6], start: '07:00', end: '21:00' }],
+    });
+    await entrar(page, await criarAtleta());
+    await aceitar(page, page.getByRole('dialog', { name: 'Antes de continuar' }), 'Aceitar e continuar');
+
+    await page.goto(`/coaches/${prof}?marcar=1`);
+    const pedido = page.getByRole('dialog', { name: /Solicitar aula com Prof\. Agenda/ });
+    await expect(pedido.getByText('Horários livres', { exact: true })).toBeVisible();
+    await expect(pedido.locator('input[type="date"], input[type="time"]')).toHaveCount(0);
+    const solicitar = pedido.getByRole('button', { name: 'Solicitar aula' });
+    await expect(solicitar).toBeDisabled();
+    await tocar(pedido.locator('button[aria-pressed]').first());
+    await expect(solicitar).toBeEnabled();
+    await rolarAte(page, solicitar);
+    await tocar(solicitar);
+    await expect(pedido).toBeHidden();
   });
 });

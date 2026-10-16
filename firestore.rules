@@ -2601,6 +2601,60 @@ service cloud.firestore {
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
+    // coach_busy_slots/{coachId} — os horários JÁ CONFIRMADOS do professor
+    // (só data e hora, sem aluno), escritos SÓ pelo servidor
+    // (`functions/coachWaitlist.js`, `recalcularOcupados`). Público: é o que o
+    // pedido de aula e o calendário do perfil descontam dos horários livres —
+    // a consulta às aulas (`coach_lessons`) é recusada para quem não é parte.
+    match /coach_busy_slots/{coachId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // coach_waitlist/{coachId_uid} — lista de espera do professor (aditivo,
+    // 2026-10-16). O aluno sem horário livre entra e é avisado quando o
+    // professor abrir horários ou uma aula confirmada for desfeita. Quem avisa
+    // é o SERVIDOR (`functions/coachWaitlist.js`, que grava `notified_at` e
+    // `notify_count` pelo Admin SDK) — por isso o aluno não grava esses campos.
+    //  - o ALUNO cria e apaga a PRÓPRIA entrada (id `{coachId}_{uid}`), e edita
+    //    só as preferências;
+    //  - o PROFESSOR lê e apaga as da lista dele (não edita a entrada do aluno);
+    //  - lê-se por CONSULTA (`user_id` ou `coach_id` == uid): `get` de id que
+    //    não existe seria recusado.
+    function isCoachWaitlistPrefs(d) {
+      return d.get('note', '') is string && d.get('note', '').size() <= 500
+        && d.get('student_name', '') is string && d.get('student_name', '').size() <= 120
+        && d.get('coach_name', '') is string && d.get('coach_name', '').size() <= 120
+        && d.get('periods', []) is list && d.get('periods', []).size() <= 3
+        && d.get('weekdays', []) is list && d.get('weekdays', []).size() <= 7;
+    }
+    match /coach_waitlist/{wid} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.coach_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.coach_id is string
+        && request.resource.data.coach_id != request.auth.uid
+        && wid == request.resource.data.coach_id + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/coaches/$(request.resource.data.coach_id))
+        && request.resource.data.keys().hasOnly([
+          'coach_id', 'user_id', 'student_name', 'coach_name', 'format', 'periods', 'weekdays', 'note',
+          'created_at', 'created_at_ms', 'updated_at'
+        ])
+        && isCoachWaitlistPrefs(request.resource.data);
+      allow update: if isAuthed()
+        && request.auth.uid == resource.data.user_id
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['student_name', 'format', 'periods', 'weekdays', 'note', 'updated_at'])
+        && isCoachWaitlistPrefs(request.resource.data);
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.user_id ||
+        request.auth.uid == resource.data.coach_id ||
+        isPlatformAdmin()
+      );
+    }
     // coach_student_notes/{coachId_studentId} — notas privadas do professor sobre
     // o aluno. O vínculo (`coach_students`) é legível pelo aluno e regra não
     // esconde campo; por isso a nota mora aqui, só do professor e do admin.
