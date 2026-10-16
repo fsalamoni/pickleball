@@ -2,8 +2,9 @@
  * Firestore FALSO e mais completo, em memória — para provar as tarefas
  * agendadas da gamificação (que leem, calculam e gravam) sem emulador.
  *
- * Cobre o que elas usam: consultas com `==`, `in`, `>=`, `>`, `array-contains`,
- * `orderBy`, `limit` e `count()`; documentos com `get/create/set/update/delete`;
+ * Cobre o que elas usam: consultas com `==`, `in`, `>=`, `>`, `<=`, `<`,
+ * `array-contains`, `orderBy`, `limit`, `count()` e `aggregate` (soma);
+ * `set` com `merge` (e os sentinelas `FieldValue.delete`/`arrayUnion`), `add`; documentos com `get/create/set/update/delete`;
  * `db.getAll(...)` e o lote (`set/update/create/delete`). `create` num
  * documento que existe lança o erro ALREADY_EXISTS (code 6), como o real —
  * é nele que a idempotência dos avisos e dos prêmios se apoia.
@@ -20,6 +21,20 @@ function jaExiste(path) {
   return e;
 }
 
+/** Os sentinelas do Admin SDK (`FieldValue.delete()`, `arrayUnion`) num `set` com `merge`. */
+const sentinela = (v) => (v && typeof v === 'object' && v.constructor ? v.constructor.name : '');
+function mescla(atual, patch) {
+  const novo = { ...(atual && typeof atual === 'object' ? atual : {}) };
+  Object.entries(patch).forEach(([k, v]) => {
+    const tipo = sentinela(v);
+    if (tipo === 'DeleteTransform') delete novo[k];
+    else if (tipo === 'ArrayUnionTransform') novo[k] = [...new Set([...(Array.isArray(novo[k]) ? novo[k] : []), ...v.elements])];
+    else if (tipo === 'Object' && !Array.isArray(v)) novo[k] = mescla(novo[k], v);
+    else novo[k] = JSON.parse(JSON.stringify(v));
+  });
+  return novo;
+}
+
 function aplica(atual, patch) {
   const novo = { ...atual };
   Object.entries(patch).forEach(([k, v]) => { novo[k] = v; });
@@ -29,7 +44,10 @@ function aplica(atual, patch) {
 class Ref {
   constructor(store, path) { this.store = store; this.path = path; this.id = path.split('/').pop(); }
   async get() { return new Snap(this, this.store.docs.get(this.path)); }
-  async set(data) { this.store.log.push(['set', this.path]); this.store.docs.set(this.path, JSON.parse(JSON.stringify(data))); }
+  async set(data, opts) {
+    this.store.log.push(['set', this.path]);
+    this.store.docs.set(this.path, opts && opts.merge ? mescla(this.store.docs.get(this.path), data) : JSON.parse(JSON.stringify(data)));
+  }
   async create(data) {
     if (this.store.docs.has(this.path)) throw jaExiste(this.path);
     this.store.log.push(['create', this.path]);
@@ -53,6 +71,8 @@ const casa = (data, [campo, op, valor]) => {
     case 'in': return Array.isArray(valor) && valor.includes(v);
     case '>=': return v !== undefined && v >= valor;
     case '>': return v !== undefined && v > valor;
+    case '<=': return v !== undefined && v !== null && v <= valor;
+    case '<': return v !== undefined && v !== null && v < valor;
     case 'array-contains': return Array.isArray(v) && v.includes(valor);
     default: throw new Error(`operador não suportado: ${op}`);
   }
@@ -62,7 +82,11 @@ class Query {
   constructor(store, col, filtros = [], ordem = null, lim = Infinity) {
     this.store = store; this.col = col; this.filtros = filtros; this.ordem = ordem; this.lim = lim;
   }
-  doc(id) { return new Ref(this.store, `${this.col}/${id}`); }
+  doc(id) {
+    this.store.seq = (this.store.seq || 0) + 1;
+    return new Ref(this.store, `${this.col}/${id === undefined ? `auto${this.store.seq}` : id}`);
+  }
+  async add(data) { const r = this.doc(); await r.set(data); return r; }
   where(c, op, v) { return new Query(this.store, this.col, [...this.filtros, [c, op, v]], this.ordem, this.lim); }
   orderBy(c, dir = 'asc') { return new Query(this.store, this.col, this.filtros, [c, dir], this.lim); }
   limit(n) { return new Query(this.store, this.col, this.filtros, this.ordem, n); }
@@ -82,6 +106,19 @@ class Query {
     return { docs, size: docs.length, empty: docs.length === 0 };
   }
   count() { return { get: async () => ({ data: () => ({ count: this._linhas().length }) }) }; }
+  /** `aggregate({ total: AggregateField.sum('campo') })`. */
+  aggregate(spec) {
+    return {
+      get: async () => {
+        const linhas = this._linhas();
+        const out = {};
+        Object.entries(spec).forEach(([nome, f]) => {
+          out[nome] = linhas.reduce((s, [, d]) => s + (Number(valorDoCampo(d, f._field)) || 0), 0);
+        });
+        return { data: () => out };
+      },
+    };
+  }
 }
 
 function createRichFakeDb(seed = {}) {
@@ -93,14 +130,14 @@ function createRichFakeDb(seed = {}) {
     batch() {
       const ops = [];
       return {
-        set: (r, d) => ops.push(['set', r, d]),
+        set: (r, d, o) => ops.push(['set', r, d, o]),
         create: (r, d) => ops.push(['create', r, d]),
         update: (r, d) => ops.push(['update', r, d]),
         delete: (r) => ops.push(['delete', r]),
         async commit() {
-          for (const [t, r, d] of ops) {
+          for (const [t, r, d, o] of ops) {
             // eslint-disable-next-line no-await-in-loop
-            await r[t](d);
+            await r[t](d, o);
           }
         },
       };

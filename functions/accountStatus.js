@@ -29,6 +29,7 @@
  * de dono. Motivo obrigatório (vai para a Auditoria e para o titular, que lê
  * ao tentar entrar). Nada é apagado; reativar devolve exatamente o que era.
  */
+const { tx, textoDoAviso, i18nDoAviso } = require('./avisoI18n');
 
 const { isOwnerEmail, targetBlockedReason } = require('./accountDeletion');
 
@@ -127,7 +128,33 @@ async function applyAccountStatus(ctx, { uid, action, reason, days }, { actor, n
     created_at: new Date(now),
     created_at_ms: now,
   });
+  await avisarTitular(db, { uid, action, reason, until, now });
   return { uid, status: 'ok', account_status: status, until, authApplied };
+}
+
+/**
+ * O aviso ESSENCIAL ao titular (`origin: 'server'`, `essential: true`): com
+ * os avisos por e-mail ligados, vai para o e-mail mesmo que a pessoa tenha
+ * desligado tudo — suspensa, ela não entra no app para ler o sino. Falhar
+ * aqui não desfaz a mudança de status.
+ */
+async function avisarTitular(db, { uid, action, reason, until, now }) {
+  const data = until ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short' }).format(new Date(until)) : '';
+  const textos = {
+    suspend: [tx('Sua conta foi suspensa'), tx('A conta fica suspensa até {data}. Motivo: {motivo}', { data, motivo: reason })],
+    block: [tx('Sua conta foi bloqueada'), tx('Motivo: {motivo}', { motivo: reason })],
+    reactivate: [tx('Sua conta foi reativada'), tx('Você já pode entrar de novo no PickleRush.')],
+  }[action];
+  if (!textos) return;
+  const [title, message] = textos;
+  const i18n = i18nDoAviso({ title, message });
+  try {
+    await db.collection('notifications').add({
+      user_id: uid, title: textoDoAviso(title), message: textoDoAviso(message), type: 'account_status',
+      link: '/configuracoes', read: false, archived: false, origin: 'server', essential: true,
+      created_at: new Date(now), created_at_ms: now, ...(i18n ? { i18n } : {}),
+    });
+  } catch (_) { /* o status já foi gravado; o aviso é um extra */ }
 }
 
 module.exports = {

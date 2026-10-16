@@ -31,6 +31,7 @@ import {
 } from '@/v2/ui/primitives';
 
 import V2PushCard from '@/v2/components/settings/V2PushCard';
+import MessagingSettingsCard from '@/v2/components/settings/MessagingSettingsCard';
 import SettingsSection, { SettingsGroup } from '@/v2/components/settings/SettingsSection';
 import { IdiomaSettingsCard } from '@/v2/components/idioma/LanguageSwitcher';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
@@ -106,8 +107,18 @@ export default function V2Settings() {
       } catch (_) {
         mercado = { market: undefined, incomplete: [t('Mercado')] };
       }
+      // O que saiu por e-mail, WhatsApp e SMS (registro dos últimos 90 dias).
+      let mensagens;
+      let mensagensFalhou = false;
+      try {
+        const { listMyMessageLog } = await import('@/modules/messaging/services/messagingService');
+        mensagens = await listMyMessageLog(user?.uid);
+      } catch (_) {
+        mensagensFalhou = true;
+      }
       // Falha não é vazio: o que não carregou vai escrito no arquivo e no aviso.
       const incomplete = [
+        ...(mensagensFalhou ? [t('E-mails e mensagens enviados')] : []),
         ...(inscricoes.isSuccess ? [] : [t('Inscrições em torneio')]),
         ...(reservas.isSuccess ? [] : [t('Reservas de quadra')]),
         ...extra.incomplete,
@@ -121,6 +132,7 @@ export default function V2Settings() {
         goals: extra.goals,
         training: extra.training,
         market: mercado.market,
+        messages: mensagens,
         incomplete,
       });
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
@@ -242,6 +254,9 @@ export default function V2Settings() {
           </SettingsSection>
 
           {pushOn && <V2PushCard />}
+
+          {/* `/configuracoes#email-e-celular` (flag `external_messaging`): os e-mails levam direto para cá. */}
+          <MessagingSettingsCard />
 
           {/* Mercado (flag `marketplace`): os atalhos do que se configura lá. */}
           {mercadoOn && (

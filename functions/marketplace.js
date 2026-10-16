@@ -305,7 +305,7 @@ async function notify(db, uids, { title, message, link }, now) {
   alvos.forEach((uid) => {
     batch.set(db.collection('notifications').doc(), {
       user_id: uid, title: texto(textoDoAviso(title), 120), message: texto(textoDoAviso(message), 300), type: 'market',
-      link, read: false, archived: false, created_at: new Date(now), created_at_ms: now,
+      link, read: false, archived: false, created_at: new Date(now), created_at_ms: now, origin: 'server',
       ...(i18n ? { i18n } : {}),
     });
   });
