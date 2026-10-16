@@ -254,6 +254,26 @@ const COMECAR = {
         tip(tk('Procurando uma FUNCIONALIDADE, e não um nome? Use a busca desta central de ajuda — ela procura no corpo dos textos, não só nos títulos.')),
       ],
     },
+    {
+      id: 'instalar-o-app',
+      title: tk('Instalar o PickleRush no celular'),
+      summary: tk('O app na tela inicial, sem loja de aplicativos.'),
+      keywords: ['instalar', 'app', 'aplicativo', 'baixar', 'tela inicial', 'ícone', 'android', 'iphone', 'pwa'],
+      blocks: [
+        p(tk('O PickleRush se instala direto do navegador, sem App Store nem Play Store. Instalado, ele abre em tela cheia, como um aplicativo, e fica com o ícone na tela inicial.')),
+        steps(
+          tk('ANDROID — no Chrome, toque em "Instalar" na faixa "Instale o PickleRush" ou, no menu ⋮ do navegador, em "Instalar app" (ou "Adicionar à tela inicial").'),
+          tk('IPHONE E IPAD — no Safari (ou no Chrome, a partir do iOS 16.4), toque em Compartilhar e em "Adicionar à Tela de Início", e confirme em "Adicionar".'),
+          tk('COMPUTADOR — no Chrome ou no Edge, clique no ícone de instalar na barra de endereço.'),
+        ),
+        p(tk('O ícone sai na versão clara ou escura do logo, conforme o tema do celular na hora de instalar. Ele não troca sozinho depois: para ter a outra versão, remova o app e instale de novo com o celular no outro tema.')),
+        list(
+          tk('As notificações push no iPhone e no iPad só funcionam com o PickleRush adicionado à Tela de Início.'),
+          tk('Dentro do navegador de outro aplicativo (Instagram, WhatsApp) não dá para instalar: abra o link no Chrome ou no Safari.'),
+          tk('Tocou em "Agora não" na faixa? Ela volta depois de 30 dias; o menu do navegador instala a qualquer hora.'),
+        ),
+      ],
+    },
   ],
 };
 
@@ -976,7 +996,7 @@ const ATLETA = {
       id: 'reservas-aulas',
       title: tk('Reservar quadra e marcar aula'),
       summary: tk('Do lado de quem contrata.'),
-      keywords: ['reserva', 'quadra', 'aula', 'professor', 'agendar'],
+      keywords: ['reserva', 'quadra', 'aula', 'professor', 'agendar', 'lista de espera', 'espera'],
       guias: ['reservar-quadra', 'minhas-reservas', 'encontrar-professor'],
       blocks: [
         p(tk('Em Arenas você encontra quadras por cidade, vê preços e horários, e pede a reserva. A arena responde confirmando ou recusando — você acompanha em "Minhas reservas".')),
@@ -1457,7 +1477,7 @@ const PROFESSOR = {
       id: 'agenda-professor',
       title: tk('Agenda e calendário'),
       summary: tk('Onde as suas aulas vivem.'),
-      keywords: ['agenda', 'calendário', 'aula', 'horário'],
+      keywords: ['agenda', 'calendário', 'aula', 'horário', 'lista de espera', 'espera'],
       guias: ['disponibilidade-professor'],
       blocks: [
         p(tk('O painel do professor tem a AGENDA (o que vem a seguir) e o CALENDÁRIO (a visão do período). É por ali que você acompanha e organiza as aulas marcadas.')),
@@ -1611,6 +1631,7 @@ const CONTA = {
         link('/configuracoes#notificacoes', tk('Ajustar minhas notificações')),
         p(tk('Para receber os avisos no aparelho mesmo com a plataforma fechada, ative as notificações push em Configurações → Notificações push. Vale por aparelho: ative em cada celular ou computador. No iPhone e no iPad, só com o PickleRush adicionado à Tela de Início.')),
         link('/configuracoes#notificacoes-push', tk('Ativar as notificações push')),
+        link('/ajuda?s=comecar&a=instalar-o-app', tk('Como instalar o PickleRush no celular')),
       ],
     },
     {
@@ -1998,7 +2019,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/perfil', label: tk('seu perfil'),
     refs: [[HELP_SECTION.START, 'minha-area'], [HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/notificacoes', label: tk('as notificações'),
-    refs: [[HELP_SECTION.ACCOUNT, 'central-de-notificacoes'], [HELP_SECTION.ACCOUNT, 'notificacoes']] },
+    refs: [[HELP_SECTION.ACCOUNT, 'central-de-notificacoes'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'email-e-celular']] },
   { pattern: '/configuracoes', label: tk('configurações'),
     refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.ATHLETE, 'minha-regiao'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.START, 'dicas'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'email-e-celular'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/legal', label: tk('os documentos'),
@@ -2062,6 +2083,10 @@ export const HELP_FAQ = Object.freeze([
   { q: tk('Quem vê meu telefone e meu e-mail?'), section: HELP_SECTION.ACCOUNT, article: 'privacidade' },
   { q: tk('Como publico minha arena?'), section: HELP_SECTION.ARENA, article: 'criar-arena' },
   { q: tk('Como apareço como professor?'), section: HELP_SECTION.COACH, article: 'virar-professor' },
+  { q: tk('Como instalo o PickleRush no celular?'), section: HELP_SECTION.START, article: 'instalar-o-app' },
+  { q: tk('O professor não tem horário livre. E agora?'), section: HELP_SECTION.ATHLETE, article: 'reservas-aulas' },
+  // Some com a flag external_messaging desligada, junto com o artigo.
+  { q: tk('Como recebo avisos por e-mail ou WhatsApp?'), section: HELP_SECTION.ACCOUNT, article: 'email-e-celular' },
   // Gamificação: com a flag desligada, as perguntas somem junto com os artigos.
   { q: tk('Como o meu XP é calculado?'), section: HELP_SECTION.ATHLETE, article: 'gamificacao-xp' },
   { q: tk('Perdi a minha sequência. E agora?'), section: HELP_SECTION.ATHLETE, article: 'gamificacao-sequencia' },

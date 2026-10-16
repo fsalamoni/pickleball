@@ -408,7 +408,7 @@ exports.pushOnNotificationCreate = onDocumentCreated(
       },
       webpush: {
         fcmOptions: { link },
-        notification: { icon: '/pwa-192.png', badge: '/pwa-192.png' },
+        notification: { icon: '/icones/app-claro-192-v1.png', badge: '/icones/aviso-badge-96-v1.png' },
       },
       data: { link, type: String(n.type || 'generic'), area: notificationPrefs.noticeArea(n) },
       tokens,

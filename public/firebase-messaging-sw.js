@@ -15,7 +15,8 @@
  * Testado em src/core/services/pushWorker.test.js.
  */
 
-const ICONE = '/pwa-192.png';
+const ICONE = '/icones/app-claro-192-v1.png';
+const SELO = '/icones/aviso-badge-96-v1.png'; // silhueta branca: o Android pinta o selo da barra
 
 function lerCorpo(event) {
   try {
@@ -42,7 +43,7 @@ self.addEventListener('push', (event) => {
       return self.registration.showNotification(n.title || d.title || 'PickleRush', {
         body: n.body || d.message || '',
         icon: n.icon || ICONE,
-        badge: n.badge || ICONE,
+        badge: n.badge || SELO,
         tag: p.fcmMessageId || undefined,
         data: { link },
       });

@@ -56,7 +56,7 @@ export default function CoachWaitlistSection({ coachId, compact = false, onAbrir
   };
 
   return (
-    <V2Surface data-secao-professor="lista-de-espera">
+    <V2Surface data-secao-professor="lista-de-espera" data-dica="professor-lista-de-espera">
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <h2 className="font-display text-lg font-bold text-ink">{t('Lista de espera')}</h2>
         {q.isSuccess && lista.length > 0 && <V2Badge tone="amber">{lista.length}</V2Badge>}

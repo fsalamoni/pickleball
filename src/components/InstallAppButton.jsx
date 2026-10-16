@@ -60,7 +60,7 @@ export default function InstallAppButton({
               {t('Instalar no iPhone / iPad')}
             </DialogTitle>
             <DialogDescription>
-              {t('No iOS, o app é instalado direto pelo Safari, sem App Store. Siga os passos:')}
+              {t('No iOS, o app é instalado pelo Safari (ou pelo Chrome, a partir do iOS 16.4), sem App Store. Siga os passos:')}
             </DialogDescription>
           </DialogHeader>
           <ol className="mt-2 space-y-3 text-sm text-gray-600">
@@ -78,7 +78,7 @@ export default function InstallAppButton({
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">3</span>
-              <span>{t('Confirme em')} <strong>{t('Adicionar')}</strong>. {t('O ícone do Pickleball aparece na tela inicial.')}</span>
+              <span>{t('Confirme em')} <strong>{t('Adicionar')}</strong>. {t('O ícone do PickleRush aparece na tela inicial, na versão clara ou escura conforme o tema do celular.')}</span>
             </li>
           </ol>
         </DialogContent>
@@ -92,7 +92,7 @@ export default function InstallAppButton({
               {t('Instalar o app')}
             </DialogTitle>
             <DialogDescription>
-              {t('Você pode instalar o Pickleball direto do navegador, sem loja de apps:')}
+              {t('Você pode instalar o PickleRush direto do navegador, sem loja de apps:')}
             </DialogDescription>
           </DialogHeader>
           <ul className="mt-2 space-y-3 text-sm text-gray-600">

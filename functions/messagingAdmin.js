@@ -293,7 +293,7 @@ async function pushTest(deps, ctx, actor, data) {
   try {
     res = await deps.fcm.sendEachForMulticast({
       notification: { title: m.title, body: m.body },
-      webpush: { fcmOptions: { link }, notification: { icon: '/pwa-192.png', badge: '/pwa-192.png' } },
+      webpush: { fcmOptions: { link }, notification: { icon: '/icones/app-claro-192-v1.png', badge: '/icones/aviso-badge-96-v1.png' } },
       data: { link, type: 'push_test', teste: '1' },
       tokens: docs.map((d) => d.data().token),
     });

@@ -194,14 +194,63 @@ quem lembrar.
 
 - Atrás de `VITE_PWA_ENABLED` (só build de produção). Desligada: nenhum SW é
   registrado, qualquer registro anterior é removido e o botão de instalar some.
-- `public/sw.js` (versão atual: `VERSION = 'v7'`, cache `picklerush-v7`) usa
+- `public/sw.js` (versão atual: `VERSION = 'v8'`, cache `picklerush-v8`) usa
   `skipWaiting` + `clients.claim`; ao ativar, apaga caches de outras versões.
   **Bumpar `VERSION` quando o conjunto de assets mudar.** O `registerPwa`
-  recarrega uma única vez na troca de controlador.
-- `public/firebase-messaging-sw.js` atende o push (FCM); `public/manifest.webmanifest`
-  e os ícones vêm de `scripts/generate-pwa-icons.mjs`.
-- Cache no hosting (`firebase.json`): assets imutáveis (1 ano); `index.html`,
-  `sw.js` e manifest sem cache.
+  recarrega uma única vez na troca de controlador. O **manifesto não passa pelo
+  cache do SW** (guardado lá, o Chrome nunca veria ícone ou nome novo do app
+  instalado).
+- `public/firebase-messaging-sw.js` atende o push (FCM), com o ícone claro
+  (`/icones/app-claro-192-v1.png`) e o selo monocromático da barra do Android
+  (`/icones/aviso-badge-96-v1.png`) — os mesmos caminhos que `functions/index.js`
+  e `functions/messagingAdmin.js` mandam no aviso.
+
+### 7.1 Ícone do app: claro ou escuro conforme o tema do celular
+
+- **Dois manifestos**: `public/manifest.webmanifest` (logo claro, fundo branco)
+  e `public/manifest-escuro.webmanifest` (logo escuro, fundo ink `#0B0F19`).
+  Mesmo `id`, `start_url` e `scope`; mudam ícones e `background_color` (a cor
+  da tela de abertura no Android). Sem `orientation`: o app instalado gira
+  (telão e tablet em paisagem).
+- **Ícones** em `public/icones/`, gerados dos dois logos por
+  `python3 scripts/gerar-icones-app.py` (Pillow): `any` 192/512, `maskable`
+  192/512 (logo dentro da zona segura de 40%), `monochrome` 512 (silhueta,
+  para os ícones temáticos do Android 13+ quando o navegador usa), Apple 180,
+  favicon 64 e selo de aviso 96. `public/apple-touch-icon.png` é a cópia clara,
+  para o iOS que procura esse caminho sozinho. O cache (Hosting e SW) é pelo
+  NOME por 1 ano: **logo novo ⇒ troque o sufixo `-v1`** em todos os caminhos e
+  suba o `VERSION` do SW.
+- **Quem escolhe** é `src/core/pwa/iconeDoApp.js` (chamado em `main.jsx`): o
+  `index.html` aponta para o claro e o módulo troca `<link rel="manifest">` e
+  `<link rel="apple-touch-icon">` pela versão do `prefers-color-scheme` do
+  aparelho — e acompanha a troca de tema com a página aberta. É o TEMA DO
+  CELULAR, não a aparência escolhida dentro do app.
+- **Nenhum sistema troca o ícone da tela inicial sozinho**: Android e iOS
+  gravam o ícone na instalação. Por isso, depois de instalado, a versão é
+  **fixada** (`localStorage` `picklerush:icone-app`, no `appinstalled` ou na
+  primeira abertura como app): sem isso, o Chrome, que confere o manifesto a
+  cada abertura, reinstalaria o ícone a cada troca de tema de quem usa o modo
+  automático. Quem quiser a outra versão desinstala e instala com o celular no
+  outro tema. No iOS 18+ os modos "Escuro" e "Colorido" da tela inicial ajustam
+  o ícone por conta do sistema; o site não controla isso.
+- **Aba do navegador**: dois `<link rel="icon" media="(prefers-color-scheme: …)">`
+  no `index.html` — aqui o navegador troca sozinho, ao vivo.
+
+### 7.2 Instalar
+
+- `src/core/pwa/pedidoDeInstalacao.js` guarda o `beforeinstallprompt`
+  (Android/Chrome/Edge) desde a inicialização (`registerPwa`). 🐞 Antes cada
+  botão escutava o evento ao montar, e ele chega uma vez só: quem entrava pela
+  página inicial e via a faixa "Instale o PickleRush" já logado recebia as
+  instruções manuais em vez da instalação.
+- `usePwaInstall` (estado) + `InstallAppButton` (o clique: convite nativo,
+  instruções do iPhone/iPad ou instruções gerais) + `InstallInviteBar` (a faixa,
+  a partir da 2ª visita; "Agora não" silencia 30 dias — `conviteInstalar.js`).
+- iOS: `apple-mobile-web-app-status-bar-style` é `default`. O
+  `black-translucent` de antes punha relógio e bateria BRANCOS sobre o topo, que
+  no tema claro é branco.
+- Cache no hosting (`firebase.json`): assets imutáveis (1 ano); `index.html` e
+  `sw.js` sem cache; manifestos (`/manifest*.webmanifest`) por 1 hora.
 
 ## 8. Medição
 

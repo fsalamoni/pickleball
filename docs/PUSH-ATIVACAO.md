@@ -68,6 +68,18 @@ por área e ao horário de silêncio (Configurações → "E-mail e celular"); v
 A partir daí, toda notificação in-app (avisos de torneio, convites de dupla,
 mensagens, eventos de clube etc.) também chega como **push** para quem optou.
 
+## Em que aparelho o push chega
+
+- **Android e computador** (Chrome, Edge, Firefox): no navegador mesmo, sem
+  instalar; vale por aparelho.
+- **iPhone e iPad**: só com o PickleRush adicionado à Tela de Início (iOS/iPadOS
+  16.4 ou mais novo) e aberto por aquele ícone — é regra da Apple. A ajuda
+  ("Instalar o PickleRush no celular") ensina o caminho.
+- O aviso mostra o ícone claro do app (`/icones/app-claro-192-v1.png`) e, na
+  barra do Android, o selo monocromático (`/icones/aviso-badge-96-v1.png`):
+  o Android pinta o selo de uma cor só, e um ícone colorido viraria um
+  quadrado branco. Ver `docs/04-ARCHITECTURE.md` §7.
+
 ## Eventos específicos (follow-up opcional)
 
 O push espelha as notificações que **já existem**. Para os avisos citados que

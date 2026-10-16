@@ -107,6 +107,8 @@ Tabela "mudei X → atualizo Y" em [§8](#8-mudei-x--atualizo-y).
 | Módulo (comportamento, arquivos-chave) | `src/modules/X/README.md` + seção em `06-MODULES.md` |
 | Componente de UI compartilhado, token, navegação | `07-DESIGN-STANDARD.md` (+ `45`/`30`/`44` se couber) |
 | Fluxo de dia de jogo / torneio / arena | o doc temático da §5; e o tutorial/guia/ajuda (`19`, `21`, `32`) |
+| Tela ou funcionalidade que a pessoa vê (qualquer área) | o artigo da central de ajuda e a pista de rota (`helpCenter.js`, doc `21`), o guia e o ponto de dica (`guias.js`, `pontosDeDica.js`, doc `32`) e os catálogos en/es (`44`) |
+| Ícone, manifesto ou instalação do app (PWA) | `04-ARCHITECTURE.md` §7 (+ `python3 scripts/gerar-icones-app.py`, sufixo `-vN` dos ícones e `VERSION` do `sw.js`) |
 | Aviso novo, canal de envio (e-mail/WhatsApp/SMS/push), provedor | `49-AVISOS-POR-EMAIL-E-CELULAR.md` (+ paridade `messagingPolicy`, `npm run i18n:avisos`) |
 | Regra de ranking/rating | `18-RANKINGS.md` (+ paridade cliente × servidor) |
 | Padrão de código, fluxo de trabalho, deploy | `02-STANDARDS.md` / `03-WORKFLOW.md` e `CLAUDE.md` |

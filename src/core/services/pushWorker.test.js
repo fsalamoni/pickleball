@@ -35,7 +35,7 @@ function montar({ janelas = [] } = {}) {
 
 const pushDo = (corpo) => ({ data: { json: () => corpo } });
 const AVISO = {
-  notification: { title: 'Reserva confirmada', body: 'Sábado, 18h', icon: '/pwa-192.png' },
+  notification: { title: 'Reserva confirmada', body: 'Sábado, 18h', icon: '/icones/app-claro-192-v1.png' },
   data: { link: 'https://picklerush.web.app/minhas-reservas', type: 'generic' },
   fcmOptions: { link: 'https://picklerush.web.app/minhas-reservas' },
   fcmMessageId: 'm1',
@@ -51,7 +51,7 @@ describe('service worker do push', () => {
     const sw = montar();
     await sw.disparar('push', pushDo(AVISO));
     expect(sw.mostradas).toEqual([{
-      titulo: 'Reserva confirmada', body: 'Sábado, 18h', icon: '/pwa-192.png', badge: '/pwa-192.png', tag: 'm1',
+      titulo: 'Reserva confirmada', body: 'Sábado, 18h', icon: '/icones/app-claro-192-v1.png', badge: '/icones/aviso-badge-96-v1.png', tag: 'm1',
       data: { link: 'https://picklerush.web.app/minhas-reservas' },
     }]);
   });

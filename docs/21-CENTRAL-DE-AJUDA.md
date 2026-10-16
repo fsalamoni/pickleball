@@ -15,15 +15,19 @@ garimpar o que não interessa.
 
 | Parte | Público | Artigos |
 |---|---|---|
-| **Começar aqui** | todos | 9 |
-| **Atleta** | quem joga | 29 |
-| **Arena** | quem tem quadra | 12 |
-| **Professor** | quem dá aula | 7 |
-| **Conta e privacidade** | todos | 7 |
+| **Começar aqui** | todos | 10 |
+| **Atleta** | quem joga | 38 |
+| **Arena** | quem tem quadra | 13 |
+| **Professor** | quem dá aula | 8 |
+| **Conta e privacidade** | todos | 9 |
 
-64 artigos no total (19 atrás de flag — §4; 11 deles são a gamificação, atrás
-de `gamification_v2`: visão geral, XP/nível/tier, missões, sequência, competir,
-social, recompensas, privacidade, clube, arena e professor).
+78 artigos no total (contados no código em 2026-10-16). Só 5 seguem atrás de
+flag (§4): os 4 do Mercado (`marketplace`) e "Avisos por e-mail, WhatsApp e
+SMS" (`external_messaging`). As demais funcionalidades que já tiveram flag
+(gamificação, treino, dicas…) viraram código permanente e os artigos delas
+aparecem sempre. O mais novo é "Instalar o PickleRush no celular" (Começar
+aqui), que explica a instalação no Android, no iPhone/iPad e no computador e o
+ícone claro/escuro conforme o tema do celular.
 
 ## 2. O momento em que esta tela é usada
 
@@ -142,7 +146,7 @@ src/v2/pages/V2Help.runtime.test.jsx        # 44 testes de runtime
 ```
 
 **Por que `helpLinkFor` mora sozinho.** Quem o chama é o LAYOUT, presente em
-toda tela; `helpCenter.js` carrega 64 artigos de texto. Importar do arquivo do
+toda tela; `helpCenter.js` carrega todos os artigos de texto. Importar do arquivo do
 conteúdo arrasta o manual inteiro para o chunk que todo mundo baixa — medido:
 **216 kB contra 184 kB** (63 kB contra 52 kB comprimidos) por uma função de
 três linhas. Rollup não consegue descartar o conteúdo: são objetos montados por

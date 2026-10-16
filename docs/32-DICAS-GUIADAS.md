@@ -23,7 +23,7 @@
 | Antes (tutoriais, Onda X) | Com as dicas guiadas |
 |---|---|
 | Um **modal** de leitura abria sozinho na primeira vez que a pessoa entrava na ferramenta — no meio do que ela tinha ido fazer | **Nada abre sozinho.** A dica aparece quando a pessoa pede |
-| Só quatro ferramentas tinham ajuda (torneio e três formatos de dia de jogo) | **44 guias** para tudo o que se faz na plataforma — reservar, criar dia de jogo, torneio, clube, a Central da arena, a agenda do professor, as configurações **e a gamificação** (17 guias: do atleta, de quem oferece e do admin) — e **60 pontos de dica** em 29 telas |
+| Só quatro ferramentas tinham ajuda (torneio e três formatos de dia de jogo) | **62 guias** (contados no código em 2026-10-16) para tudo o que se faz na plataforma — reservar, criar dia de jogo, torneio, clube, a Central da arena, a agenda do professor e a lista de espera, as configurações (inclusive "E-mail e celular", atrás de `external_messaging`), o Painel admin → Comunicações **e a gamificação** (17 guias: do atleta, de quem oferece e do admin) — e **76 pontos de dica** em 33 telas |
 | O texto dizia "vá em Dia de jogo → Criar" e a pessoa procurava o botão sozinha | O guia **leva à tela**, **destaca o botão de verdade** com uma seta, e **avança sozinho** quando a pessoa faz o que ele pediu |
 | — | Um interruptor por pessoa: **Dicas na tela ligadas / desligadas** |
 

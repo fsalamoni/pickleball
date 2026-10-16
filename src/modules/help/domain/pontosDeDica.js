@@ -335,6 +335,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     guide: 'personalizar-menu',
   },
   {
+    id: 'config:email-celular',
+    route: '/configuracoes',
+    target: 'config-email-celular',
+    title: tk('E-mail e celular'),
+    body: tk('Os avisos que também chegam por e-mail, WhatsApp ou SMS, e quando.'),
+    flags: ['external_messaging'],
+    guide: 'avisos-email-celular',
+  },
+  {
     id: 'notificacoes:filtros',
     route: '/notificacoes',
     target: 'notificacoes-filtros',
@@ -476,6 +485,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     audience: 'professor',
   },
   {
+    id: 'aulas:lista-de-espera',
+    route: '/aulas',
+    target: 'professor-lista-de-espera',
+    title: tk('Lista de espera'),
+    body: tk('Alunos que não acharam horário. Salvar horários novos avisa todos eles.'),
+    guide: 'disponibilidade-professor',
+    audience: 'professor',
+  },
+  {
     id: 'clube:atividade',
     route: '/clubes/*',
     target: 'clube-aba-atividade',
@@ -507,6 +525,15 @@ export const PONTOS_DE_DICA = Object.freeze([
     title: tk('Mercado'),
     body: tk('Visão geral, problemas em pedidos, denúncias de anúncios, pedidos, lojas, cupons e vales e as configurações do Mercado.'),
     flags: ['marketplace'],
+    audience: 'admin',
+  },
+  {
+    id: 'admin:comunicacoes',
+    route: '/admin/painel',
+    target: 'admin-secao-comunicacoes',
+    title: tk('Comunicações'),
+    body: tk('Os avisos por e-mail, WhatsApp, SMS e push: provedores, regras, limites e as entregas.'),
+    guide: 'comunicacoes-admin',
     audience: 'admin',
   },
 

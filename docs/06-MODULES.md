@@ -141,13 +141,21 @@ Perfil público e descoberta, agenda e aulas, alunos e anotações,
 pacotes/créditos, clínicas, loja, conteúdo, validação de nível e residência
 em arena. Não confundir com `arena_classes` (aulas da arena, em `arenas/`).
 - **Arquivos**: `services/coachService.js`, `services/lessonService.js`,
-  `components/CoachStudentsSection.jsx`, `components/CoachPackagesSection.jsx`.
+  `services/waitlistService.js` (lista de espera e horários ocupados),
+  `components/CoachStudentsSection.jsx`, `components/CoachPackagesSection.jsx`,
+  `components/CoachWaitlistJoin.jsx` (aluno entra na lista),
+  `components/CoachWaitlistSection.jsx` (professor: Hoje e Agenda),
+  `components/MyCoachWaitlists.jsx` (aluno, em `/minhas-aulas`). O pedido de
+  aula só oferece horários LIVRES; sem nenhum, a lista de espera avisa sozinha
+  quando abrir horário (`functions/coachWaitlist.js`).
 - **Telas**: `/coaches`, `/coaches/:coachId`, `/aulas` (`V2CoachAgenda`),
   `/minhas-aulas` (`V2StudentLessons`).
 - **Coleções**: `coach_lessons`, `coach_students`, `coach_student_notes`,
   `coach_availability`, `coach_packages`, `coach_package_sales`,
   `coach_clinics`, `coach_clinic_signups`, `coach_products`, `coach_content`,
-  `coach_level_validations`, `coach_favorites`, `coach_arenas`.
+  `coach_level_validations`, `coach_favorites`, `coach_arenas`,
+  `coach_waitlist` (quem espera horário) e `coach_busy_slots` (só data e hora
+  ocupadas, pública, escrita pelo servidor).
 
 ### athletes/ — diretório e perfil
 Perfis públicos pesquisáveis, privacidade, exportação de dados do titular,
@@ -233,7 +241,8 @@ diário, evolução, dúvidas ao professor, alunos, balanço do jogo
 ### admin/ — painel da plataforma
 Console do `platform_admin` (`/admin/painel`): acessos e poderes, cadastros
 (edição, suspensão, exclusão, unificação), flags, divulgação, métricas,
-governança, ranking automático. Docs `20-SEGURANCA-E-PRIVACIDADE/`.
+governança, ranking automático e **Comunicações** (avisos por e-mail,
+WhatsApp, SMS e push — módulo `messaging/`). Docs `20-SEGURANCA-E-PRIVACIDADE/`.
 - **Arquivos**: `services/adminService.js`, `domain/accessRoster.js`,
   `domain/adminUserEdit.js`, `domain/accountStatus.js`,
   `components/RankingAutomatico.jsx`.
@@ -263,7 +272,8 @@ Doc `49`.
 - **Telas**: `src/v2/components/admin/messaging/`,
   `src/v2/components/settings/MessagingSettingsCard.jsx`.
 - **Coleções**: `message_outbox`, `message_suppressions`, `message_reports`,
-  `phone_verifications`, `platform_secrets`; campos
+  `phone_verifications`, `platform_secrets`; documentos
+  `platform_settings/messaging` e `platform_settings/messaging_status`; campos
   `users.notification_channels` e `users.phone_verified_*`.
 
 ### home/ — tela inicial personalizada
