@@ -196,10 +196,9 @@ function SmsTab({ estado }) {
           {PROVEDORES_SMS.map((p) => {
             const ativo = p.id === provedor;
             return (
-              <button
+              <button type="button"
                 key={p.id}
-                type="button"
-                role="radio"
+                                role="radio"
                 aria-checked={ativo}
                 disabled={form.saving}
                 onClick={() => { if (!ativo) form.salvar({ provider: p.id }); }}

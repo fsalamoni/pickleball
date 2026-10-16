@@ -25,11 +25,14 @@ segue exatamente como está (nenhum token é registrado, nenhum push é enviado)
 1. **Gerar a chave VAPID** — Firebase Console → Configurações do projeto →
    **Cloud Messaging** → *Web configuration* → **Web Push certificates** →
    *Generate key pair*. Copie a chave pública.
-2. **Definir a env de build** `VITE_FIREBASE_VAPID_KEY` com essa chave:
-   - no GitHub Actions (secret + passar como env no passo de build), e
-   - localmente, se for testar (`.env`).
-   Sem essa env, o card de push aparece como "em configuração" e nada é
-   registrado.
+2. **Colar a chave pública** em **Painel admin → Comunicações → Push** (grava
+   `platform_settings/messaging.push.vapid_public_key`, leitura pública; o
+   navegador lê na hora, sem novo build). A env de build
+   `VITE_FIREBASE_VAPID_KEY`, se existir, vence a do painel. Sem nenhuma das
+   duas, o card de push aparece como "em configuração" e nada é registrado.
+   ⚠️ O projeto Firebase é compartilhado com outro app: se já existir um par
+   de chaves em *Web Push certificates*, **use o existente** — gerar outro
+   invalida as inscrições do outro app.
 3. **Deploy** — o push das regras (`push_tokens`) e da função
    (`pushOnNotificationCreate`) sai no deploy automático (push em `main`). O
    novo `firebase-messaging-sw.js` também vai junto (Firebase Hosting).
@@ -37,6 +40,10 @@ segue exatamente como está (nenhum token é registrado, nenhum push é enviado)
    2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 5. **Cada atleta** ativa em **Configurações → Notificações push** e concede a
    permissão do navegador.
+
+Com a flag `external_messaging` ligada, o push também obedece às escolhas
+por área e ao horário de silêncio (Configurações → "E-mail e celular"); ver
+`docs/49-AVISOS-POR-EMAIL-E-CELULAR.md`.
 
 A partir daí, toda notificação in-app (avisos de torneio, convites de dupla,
 mensagens, eventos de clube etc.) também chega como **push** para quem optou.

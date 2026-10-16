@@ -25,7 +25,7 @@ import { CHANNEL_META, EMAIL_MODE_META } from '@/modules/messaging/domain/meta';
 import { noticeAreaMeta } from '@/modules/notifications/domain/noticeFeed';
 import SettingsSection from '@/v2/components/settings/SettingsSection';
 import {
-  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Toggle,
+  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Skeleton, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
 import { t, fmtData } from '@/core/i18n';
 
@@ -122,7 +122,7 @@ function Contatos({ status, recarregar, onEsquecer }) {
   return (
     <section className="space-y-3">
       <Titulo>{t('Seus contatos')}</Titulo>
-      <div className="space-y-3 rounded-3xl border border-gray-100 bg-paper-pure p-4">
+      <V2Surface variant="compacto" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink">{t('E-mail')}</p>
@@ -141,7 +141,7 @@ function Contatos({ status, recarregar, onEsquecer }) {
         {status.email?.verified && status.ready?.email && (
           <V2Button type="button" size="sm" variant="ghost" disabled={acao.isPending} onClick={teste}>{t('Mandar um e-mail de teste')}</V2Button>
         )}
-      </div>
+      </V2Surface>
       {celularDisponivel && <Celular status={status} onEsquecer={onEsquecer} />}
     </section>
   );
@@ -180,7 +180,7 @@ function Celular({ status, onEsquecer }) {
   };
   const mostrarFormulario = !confirmado || trocando;
   return (
-    <div className="space-y-3 rounded-3xl border border-gray-100 bg-paper-pure p-4">
+    <V2Surface variant="compacto" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink">{t('Celular')}</p>
@@ -220,7 +220,7 @@ function Celular({ status, onEsquecer }) {
           <V2Button type="submit" size="sm" disabled={codigo.length !== 6 || acao.isPending}>{t('Confirmar')}</V2Button>
         </form>
       )}
-    </div>
+    </V2Surface>
   );
 }
 
@@ -251,7 +251,7 @@ function Canais({ status, prefs, gravar }) {
       <Titulo>{t('Por onde receber')}</Titulo>
       {linhas.length === 0 && <p className="text-sm text-gray-500">{t('Nenhum canal está disponível ainda. Por enquanto, os avisos ficam no aplicativo.')}</p>}
       {linhas.map((l) => (
-        <div key={l.ch} className="rounded-3xl border border-gray-100 bg-paper-pure p-4">
+        <V2Surface key={l.ch} variant="compacto">
           {l.pode ? (
             <V2Toggle id={`canal-${l.ch}`} checked={prefs[l.ch].on === true} onChange={(v) => gravar(`${l.ch}.on`, v)} label={t(CHANNEL_META[l.ch].label)} hint={l.hint} />
           ) : (
@@ -260,9 +260,9 @@ function Canais({ status, prefs, gravar }) {
               <p className="text-xs leading-5 text-gray-500">{l.hint}</p>
             </div>
           )}
-        </div>
+        </V2Surface>
       ))}
-      <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4">
+      <V2Surface variant="compacto">
         <V2Toggle
           id="canal-novidades"
           checked={prefs.marketing === true}
@@ -270,7 +270,7 @@ function Canais({ status, prefs, gravar }) {
           label={t('Novidades e promoções')}
           hint={t('Cupons, campanhas e novidades da plataforma, das arenas e dos professores, pelos canais ligados. Desligado, você continua vendo as promoções no aplicativo.')}
         />
-      </div>
+      </V2Surface>
     </section>
   );
 }
@@ -328,14 +328,14 @@ function PorArea({ status, prefs, settings, gravar, mercadoOn }) {
       </p>
       <ul className="space-y-3">
         {areas.map((area) => (
-          <li key={area} className="rounded-3xl border border-gray-100 bg-paper-pure p-4">
+          <V2Surface as="li" key={area} variant="compacto">
             <p className="mb-3 text-sm font-semibold text-ink">{t(noticeAreaMeta(area).label)}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {canais.filter((ch) => effectiveValue(settings, prefs, ch, area).lock !== 'admin_off').map((ch) => (
                 <Celula key={ch} ch={ch} area={area} settings={settings} prefs={prefs} gravar={gravar} />
               ))}
             </div>
-          </li>
+          </V2Surface>
         ))}
       </ul>
     </section>
@@ -350,7 +350,7 @@ function Silencio({ prefs, settings, gravar, status }) {
   return (
     <section className="space-y-3">
       <Titulo>{t('Horário silencioso')}</Titulo>
-      <div className="space-y-3 rounded-3xl border border-gray-100 bg-paper-pure p-4">
+      <V2Surface variant="compacto" className="space-y-3">
         <V2Toggle
           id="silencio-on"
           checked={q.on}
@@ -372,7 +372,7 @@ function Silencio({ prefs, settings, gravar, status }) {
           </>
         )}
         {!celularOn && q.on && <p className="text-xs text-gray-500">{t('Vale assim que você ligar o WhatsApp ou o SMS.')}</p>}
-      </div>
+      </V2Surface>
     </section>
   );
 }
@@ -396,14 +396,14 @@ function Bloqueados({ prefs, uid, onDesbloquear }) {
     <section className="space-y-3">
       <Titulo>{t('Pessoas bloqueadas')}</Titulo>
       <p className="text-xs leading-5 text-gray-500">{t('Avisos escritos por estas pessoas não chegam por e-mail, WhatsApp nem SMS (continuam no sino). Você bloqueia pelo botão "Denunciar" do e-mail.')}</p>
-      <ul className="divide-y divide-gray-100 rounded-3xl border border-gray-100 bg-paper-pure">
+      <V2Surface as="ul" variant="compacto" className="divide-y divide-gray-100 p-0">
         {ids.map((id) => (
           <li key={id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
             <span className="min-w-0 truncate text-ink">{nomes.data?.[id] || (nomes.isLoading ? '…' : t('Atleta'))}</span>
             <V2Button type="button" size="sm" variant="ghost" disabled={tirando === id} onClick={() => desbloquear(id)}>{t('Desbloquear')}</V2Button>
           </li>
         ))}
-      </ul>
+      </V2Surface>
     </section>
   );
 }

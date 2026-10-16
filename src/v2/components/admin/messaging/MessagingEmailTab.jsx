@@ -2,7 +2,7 @@
  * Comunicações → E-mail: provedor (Amazon SES ou Resend), chaves, domínio e
  * registros DNS, remetente, "esqueci a senha" pelo domínio, teste e ligar.
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { CheckCircle2, RefreshCw, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMessagingAdminAction } from '@/modules/messaging/hooks/useMessaging';
@@ -132,10 +132,9 @@ function ProviderBlock({ form, provedor }) {
         {PROVEDORES.map((p) => {
           const ativo = p.id === provedor;
           return (
-            <button
+            <button type="button"
               key={p.id}
-              type="button"
-              role="radio"
+                            role="radio"
               aria-checked={ativo}
               disabled={form.saving}
               onClick={() => escolher(p.id)}

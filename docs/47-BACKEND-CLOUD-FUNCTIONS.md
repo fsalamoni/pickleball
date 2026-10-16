@@ -19,7 +19,7 @@
 | Runtime | Node **22** (`functions/package.json` → `engines.node`) |
 | Dependências | `firebase-admin ^13.10.0`, `firebase-functions ^6.1.0` (v2: `onDocumentWritten/Created/Updated`, `onSchedule`, `onCall`, `onRequest`) |
 | Instâncias | `setGlobalOptions({ region, maxInstances: 3 })` — teto global; cada função só sobrescreve `timeoutSeconds`/`memory` |
-| Exportações | **47** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
+| Exportações | **53** `exports.*` em `functions/index.js` (lista gerada: `docs/46-INVENTARIO.md` §7) |
 | Fuso das agendas | `America/Sao_Paulo` |
 | Regras de segurança | O Admin SDK **ignora** `firestore.rules`. Toda função que escreve em nome de alguém tem de conferir quem pede por conta própria (callables) ou depender do evento que a disparou (gatilhos) |
 
@@ -192,7 +192,10 @@ Espelha a notificação in-app para o celular. Passos (todos conferidos em
    push — `notificationPrefs.isNotificationMuted(prefs, n.type)`) e `language`
    (o push sai no idioma da pessoa quando o aviso tem `i18n` —
    `avisoI18n.campoNoIdioma`). Se as preferências não puderem ser lidas,
-   **envia assim mesmo** (perder um aviso é pior que um a mais).
+   **envia assim mesmo** (perder um aviso é pior que um a mais). Com a flag
+   `external_messaging` ligada, também confere `messagingPolicy.pushAllowed`:
+   área desligada (pelo admin ou pela pessoa) e horário de silêncio estendido
+   ao push não viram push.
 3. Monta o link absoluto sobre `https://picklerush.web.app`, envia por
    `getMessaging().sendEachForMulticast`.
 4. Apaga tokens inválidos (`registration-token-not-registered`,
@@ -207,6 +210,27 @@ cria com o Admin SDK).
 (cópia servidor × `src/modules/notifications/domain`),
 `functions/avisoI18n.parity.test.js` e `avisoI18n.test.js`. A função em si não
 tem teste. Doc: [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md), `PUSH-ATIVACAO.md`.
+
+### 5.1 Avisos por e-mail, WhatsApp e SMS (flag `external_messaging`)
+
+Código em `functions/messaging.js` (motor), `messagingPolicy.js` (regra pura),
+`messagingProviders.js` (HTTP com SES/Resend/Meta/Twilio/Zenvia, AWS
+Signature V4 própria, zero dependência nova), `messagingTemplates.js` e
+`messagingAdmin.js` (ações). Doc: [`49-AVISOS-POR-EMAIL-E-CELULAR.md`](./49-AVISOS-POR-EMAIL-E-CELULAR.md).
+
+| Função | Gatilho | O que faz |
+|---|---|---|
+| `messagingOnNotificationCreate` | `notifications/{id}` **created** | `handleNotice`: decide cada canal (`decideChannel`), confere supressão, tetos e orçamento, grava `message_outbox/{aviso}_{canal}` e envia o que é "agora". Nada com a flag desligada |
+| `messagingQueue` | agenda, a cada 10 min | Envia o que esperava (silêncio, chat não lido), monta resumos diário/semanal, repete falhas (até 3), apaga registro com mais de 90 dias |
+| `messagingAdmin` | callable, só admin da plataforma | Estado, chaves (`platform_secrets`), preparar/verificar domínio, testes, prévias, "por que não chegou", bloqueios, denúncias, modelos do WhatsApp, registro. Audita em `audit_logs` |
+| `messagingUser` | callable, a própria pessoa | Código do celular (envia/confirma/esquece — só o servidor grava `users.phone_verified_number`), confirmação e teste de e-mail |
+| `messagingAuthEmail` | callable sem login | "Esqueci a senha" pelo nosso provedor, quando `email.login_emails` está ligado; nunca diz se o e-mail existe |
+| `messagingHook` | HTTP público, `/api/mensagens/**` (`firebase.json`) | Retornos dos provedores (assinatura conferida em cada um), PARAR, páginas de descadastro e denúncia (links assinados; GET mostra, POST confirma) |
+
+**Testes**: `functions/messaging.test.js`, `messagingAdmin.test.js`,
+`messagingProviders.test.js`, `messagingTemplates.test.js`,
+`messagingPolicy.test.js`, `messagingPolicy.parity.test.js` e
+`accountDeletion.mensagens.test.js`.
 
 ## 6. Gamificação (agendadas)
 
@@ -352,6 +376,7 @@ resultado idêntico (mexer num lado só quebra o teste, de propósito):
 | Preferências de notificação e área do aviso | `functions/notificationPrefs.js` | `src/modules/notifications/domain/{preferences,noticeFeed}.js` | `functions/notificationPrefs.parity.test.js` |
 | Textos de aviso traduzidos | `functions/avisoI18n.js` + `functions/i18n/avisos.json` | `src/core/i18n/avisos.js` | `functions/avisoI18n.parity.test.js` (+ guarda do JSON gerado) |
 | Gamificação: matemática e ids dos primeiros passos | `functions/gamificationCore.js`, `gamification.js` | `src/modules/progression/domain` | `src/modules/progression/domain/serverParity.test.js` |
+| Avisos por e-mail/celular: configuração, escolhas, decisão por canal | `functions/messagingPolicy.js` | `src/modules/messaging/domain/policy.js` | `functions/messagingPolicy.parity.test.js` |
 | Fila de espera: prazo e lugares | `functions/openSlotWaitlist.js` | `src/modules/arenas/domain/waitlist.js` | `functions/openSlotWaitlist.test.js` / `waitlist.test.js` |
 
 ## 10. Deploy, vigilância e como testar

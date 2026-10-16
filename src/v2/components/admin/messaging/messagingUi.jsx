@@ -70,9 +70,8 @@ export function CopyValue({ value, label }) {
   return (
     <div className="flex min-w-0 items-start gap-2">
       <code className="min-w-0 flex-1 break-all rounded-lg bg-paper-pure px-2 py-1 font-mono text-xs leading-5 text-ink ring-1 ring-gray-100">{value}</code>
-      <button
-        type="button"
-        onClick={() => copy(value, t('Copiado.'), t('Não foi possível copiar. Selecione o texto e copie à mão.'))}
+      <button type="button"
+                onClick={() => copy(value, t('Copiado.'), t('Não foi possível copiar. Selecione o texto e copie à mão.'))}
         aria-label={label ? t('Copiar {o_que}', { o_que: label }) : t('Copiar')}
         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-paper-pure text-ink hover:border-ink coarse:h-11 coarse:w-11"
       >

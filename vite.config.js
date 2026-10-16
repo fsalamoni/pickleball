@@ -47,6 +47,9 @@ export default defineConfig(({ mode }) => {
             if (normalizedId.includes('@firebase/firestore') || normalizedId.includes('/firebase/firestore')) return 'vendor-firebase-firestore';
             if (normalizedId.includes('@firebase/auth') || normalizedId.includes('/firebase/auth')) return 'vendor-firebase-auth';
             if (normalizedId.includes('@firebase/functions') || normalizedId.includes('/firebase/functions')) return 'vendor-firebase-functions';
+            // Push (FCM): só carrega quando a pessoa ativa o push. No pedaço
+            // "core" ele iria para a primeira tela de todo mundo.
+            if (normalizedId.includes('@firebase/messaging') || normalizedId.includes('/firebase/messaging')) return 'vendor-firebase-messaging';
             if (normalizedId.includes('@firebase') || normalizedId.includes('/firebase/')) return 'vendor-firebase-core';
             // React fica num pedaço só; o resto vai junto de quem o importa —
             // antes tudo caía em `vendor`, baixado na primeira tela, inclusive
