@@ -1424,7 +1424,7 @@ exports.clientErrorReport = onRequest(
 // =====================================================================
 const messagingAdmin = require('./messagingAdmin');
 
-const deMensagens = () => ({ db: getFirestore(getApp(), DATABASE_ID), auth: getAuth() });
+const deMensagens = () => ({ db: getFirestore(getApp(), DATABASE_ID), auth: getAuth(), fcm: getMessaging() });
 
 /** Erro de ação vira HttpsError com a mensagem que o painel mostra. */
 function erroDeMensagens(nome, err) {

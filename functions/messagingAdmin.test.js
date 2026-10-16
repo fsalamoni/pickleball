@@ -81,7 +81,9 @@ describe('chaves', () => {
 describe('estado e prévia', () => {
   it('o estado traz o que falta, os endereços dos webhooks e as contagens', async () => {
     const s = await A.adminAction(deps, admin, { action: 'status' });
-    expect(s.ready).toEqual({ email: true, whatsapp: false, sms: true });
+    expect(s.ready).toEqual({ email: true, whatsapp: false, sms: true, push: false });
+    expect(s.missing.push).toEqual(['vapid_key']);
+    expect(s.people.push_devices).toBe(0);
     expect(s.missing.whatsapp).toContain('credentials');
     expect(s.webhooks.twilio).toBe('https://picklerush.web.app/api/mensagens/webhook/twilio');
     expect(JSON.stringify(s)).not.toContain('segredo');
@@ -168,5 +170,52 @@ describe('e-mails de sistema', () => {
     const r = await A.authEmailAction({ ...deps, now: AGORA + 5000 }, { action: 'password_reset', email: 'bia@x.com' });
     expect(r).toEqual({ handled: true, limited: true });
     expect(fetchImpl.calls).toHaveLength(3);
+  });
+});
+
+describe('push de teste (aba Push)', () => {
+  function fakeFcm(respostas) {
+    const f = {
+      calls: [],
+      async sendEachForMulticast(m) {
+        f.calls.push(m);
+        if (respostas instanceof Error) throw respostas;
+        const responses = m.tokens.map((tk) => respostas[tk] || { success: true });
+        return { responses, successCount: responses.filter((r) => r.success).length, failureCount: responses.filter((r) => !r.success).length };
+      },
+    };
+    return f;
+  }
+
+  it('sem aparelho com push ativo, diz que não há para onde mandar', async () => {
+    deps.fcm = fakeFcm({});
+    const r = await A.adminAction(deps, admin, { action: 'push_test' });
+    expect(r).toMatchObject({ ok: false, devices: 0 });
+    expect(deps.fcm.calls).toHaveLength(0);
+  });
+
+  it('⭐ manda para os aparelhos DO ADMIN, sempre visível, e tira da lista o aparelho morto', async () => {
+    db = createRichFakeDb({
+      ...base(),
+      'push_tokens/adm_1': { user_id: 'adm', token: 'tok-bom' },
+      'push_tokens/adm_2': { user_id: 'adm', token: 'tok-morto' },
+      'push_tokens/u1_1': { user_id: 'u1', token: 'tok-de-outra-pessoa' },
+    });
+    deps = { ...deps, db, fcm: fakeFcm({ 'tok-morto': { success: false, error: { code: 'messaging/registration-token-not-registered' } } }) };
+    const r = await A.adminAction(deps, admin, { action: 'push_test', lang: 'en' });
+    expect(r).toMatchObject({ ok: true, devices: 2, sent: 1, failed: 1, removed: 1, errors: ['messaging/registration-token-not-registered'] });
+    const m = deps.fcm.calls[0];
+    expect(m.tokens.sort()).toEqual(['tok-bom', 'tok-morto']);
+    expect(m.data).toMatchObject({ teste: '1', type: 'push_test' });
+    expect(m.notification.title).toBe('PickleRush push test');
+    expect(m.webpush.fcmOptions.link).toBe('https://picklerush.web.app/configuracoes#notificacoes-push');
+    expect(Object.keys(db.dump('push_tokens')).sort()).toEqual(['adm_1', 'u1_1']);
+  });
+
+  it('falha do FCM vira resposta (o painel mostra o motivo), não erro', async () => {
+    db = createRichFakeDb({ ...base(), 'push_tokens/adm_1': { user_id: 'adm', token: 'tok' } });
+    deps = { ...deps, db, fcm: fakeFcm(Object.assign(new Error('x'), { code: 'messaging/mismatched-credential' })) };
+    const r = await A.adminAction(deps, admin, { action: 'push_test' });
+    expect(r).toMatchObject({ ok: false, devices: 1, errors: ['messaging/mismatched-credential'] });
   });
 });

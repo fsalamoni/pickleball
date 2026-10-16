@@ -147,6 +147,11 @@ continua sendo UM documento em `notifications`; quem decide o canal é o
 servidor, pela origem do aviso (`origin`, `sent_by`, `broadcast` — a regra
 trava os campos). Tudo em `docs/49-AVISOS-POR-EMAIL-E-CELULAR.md`.
 
+O push no aparelho: com o app aberto e à vista, o aviso fica só no sino; com
+ele fechado, vira notificação, e tocar nela abre o `link` do aviso (com o app
+já aberto, o service worker do push pede ao app para navegar —
+`usePushNoAparelho`, pelo crivo `destinoDeAviso`). Ver `docs/PUSH-ATIVACAO.md`.
+
 ## Código
 
 - Domínio: `modules/notifications/domain/noticeFeed.js` (área, hora, ordem,

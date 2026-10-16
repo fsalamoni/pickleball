@@ -204,6 +204,10 @@ export const GUIDE_PUSH = Object.freeze([
   },
   {
     title: tk('Copie a chave pública e cole aqui'),
-    body: tk('É o texto longo da coluna "Key pair" (uns 88 caracteres, começa geralmente com B). Salve. A partir daí, as pessoas veem "Ativar notificações push" nas Configurações e escolhem por área o que chega no aparelho.'),
+    body: tk('É o texto longo da coluna "Key pair" (87 caracteres, começa com B). Não use a chave privada (o "Show private key"). Salve. A partir daí, as pessoas veem "Ativar notificações push" nas Configurações e escolhem por área o que chega no aparelho.'),
+  },
+  {
+    title: tk('Teste neste aparelho'),
+    body: tk('Logo abaixo: "Ativar o push neste aparelho" e depois "Mandar um push de teste para mim". Se a notificação aparecer, está tudo certo. Se o Firebase recusar, a mensagem diz o motivo (quase sempre a chave de outro projeto).'),
   },
 ]);

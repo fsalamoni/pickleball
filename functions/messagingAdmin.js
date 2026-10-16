@@ -90,6 +90,7 @@ async function statusAction(deps, ctx, now) {
     sms_on: await contar(db.collection('users').where('notification_channels.sms.on', '==', true)),
     email_off: await contar(db.collection('users').where('notification_channels.email.on', '==', false)),
     marketing_on: await contar(db.collection('users').where('notification_channels.marketing', '==', true)),
+    push_devices: await contar(db.collection('push_tokens')),
   };
   const suppressions = await contar(db.collection(M.SUPPRESSIONS));
   const openReports = await contar(db.collection(M.REPORTS).where('status', '==', 'open'));
@@ -266,6 +267,56 @@ async function sendTest(deps, ctx, actor, data, now) {
     if (err instanceof ActionError) throw err;
     return { ok: false, error: String((err && err.message) || err).slice(0, 400) };
   }
+}
+
+/* -------------------------------------------------------------- push --- */
+
+/** Códigos do FCM que querem dizer "este aparelho não recebe mais" (os mesmos de `pushOnNotificationCreate`). */
+const FCM_TOKEN_MORTO = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+  'messaging/invalid-argument',
+]);
+
+/**
+ * Um push de verdade para os aparelhos em que o PRÓPRIO admin ativou o push:
+ * a única prova de que chave, aparelho e Firebase Cloud Messaging conversam.
+ * Aparelho que o FCM diz que morreu sai da lista, como no envio normal.
+ */
+async function pushTest(deps, ctx, actor, data) {
+  const snap = await deps.db.collection('push_tokens').where('user_id', '==', actor.uid).get();
+  const docs = snap.docs.filter((d) => d.data() && d.data().token);
+  if (!docs.length) return { ok: false, devices: 0, sent: 0, failed: 0, removed: 0, errors: [] };
+  const m = Tpl.pushTest(data.lang);
+  const link = `${ctx.settings.public_origin}/configuracoes#notificacoes-push`;
+  let res;
+  try {
+    res = await deps.fcm.sendEachForMulticast({
+      notification: { title: m.title, body: m.body },
+      webpush: { fcmOptions: { link }, notification: { icon: '/pwa-192.png', badge: '/pwa-192.png' } },
+      data: { link, type: 'push_test', teste: '1' },
+      tokens: docs.map((d) => d.data().token),
+    });
+  } catch (err) {
+    return { ok: false, devices: docs.length, sent: 0, failed: docs.length, removed: 0, errors: [String((err && (err.code || err.message)) || err).slice(0, 200)] };
+  }
+  const mortos = [];
+  const erros = [];
+  res.responses.forEach((r, i) => {
+    if (r.success) return;
+    const code = (r.error && r.error.code) || 'unknown';
+    erros.push(code);
+    if (FCM_TOKEN_MORTO.has(code)) mortos.push(docs[i].ref);
+  });
+  if (mortos.length) {
+    const b = deps.db.batch();
+    mortos.forEach((ref) => b.delete(ref));
+    await b.commit().catch(() => {});
+  }
+  return {
+    ok: res.successCount > 0, devices: docs.length, sent: res.successCount, failed: res.failureCount,
+    removed: mortos.length, errors: [...new Set(erros)].slice(0, 5),
+  };
 }
 
 function preview(ctx, data) {
@@ -484,6 +535,7 @@ async function adminAction(deps, actor, data = {}) {
     case 'email_domain_setup': return domainSetup(deps, ctx, actor, now);
     case 'email_domain_check': return domainCheck(deps, ctx, actor, now);
     case 'send_test': return sendTest(deps, ctx, actor, data, now);
+    case 'push_test': return pushTest(deps, ctx, actor, data);
     case 'preview': return preview(ctx, data);
     case 'explain_user': return explainUser(deps, ctx, actor, data, now);
     case 'suppression_list': return suppressionList(deps);
@@ -540,7 +592,7 @@ async function userStatus(deps, ctx, uid) {
   const ready = M.readiness(ctx);
   return {
     flagOn: ctx.flagOn,
-    ready: ctx.flagOn ? ready : { email: false, whatsapp: false, sms: false },
+    ready: ctx.flagOn ? ready : { email: false, whatsapp: false, sms: false, push: false },
     code_channel: ctx.flagOn ? codeChannel(ctx) : '',
     email: { masked: P.maskEmail(user.email), verified: user.emailVerified },
     phone: { masked: P.maskPhone(user.phone), verified: Boolean(user.phone) },

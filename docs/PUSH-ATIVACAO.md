@@ -9,22 +9,37 @@ segue exatamente como está (nenhum token é registrado, nenhum push é enviado)
 - **Cliente** (`src/core/services/pushService.js`): opt-in do atleta (pede
   permissão, registra o token FCM em `push_tokens`). Gracioso — no-op sem VAPID,
   sem suporte do navegador ou sem permissão.
-- **Service worker do FCM** (`public/firebase-messaging-sw.js`): recebe o push em
-  segundo plano e trata o clique. É **separado** do `sw.js` do PWA e só é
-  registrado quando o atleta opta.
+- **Service worker do push** (`public/firebase-messaging-sw.js`): recebe o push
+  e trata o toque. É **separado** do `sw.js` do PWA e só é registrado quando o
+  atleta opta. **Não usa o SDK do Firebase**: a URL reservada
+  `/__/firebase/init.js` desta hospedagem não traz `appId`, o SDK exige e
+  quebrava ao iniciar — o aviso não aparecia (o navegador mostrava só "o site
+  foi atualizado em segundo plano"). Ele lê o corpo JSON do FCM sozinho
+  (`notification`, `data`, `fcmOptions.link`); com o app aberto e à vista, o
+  aviso fica no sino. Teste em `src/core/services/pushWorker.test.js`.
+- **Renovação** (`src/core/lib/usePushNoAparelho.js`, montado no `V2Layout`):
+  para quem ativou o push NESTE aparelho (marca `picklerush:push:<uid>` ou o
+  token deste aparelho já gravado em nome da conta), atualiza o service worker
+  e regrava o token ao abrir o app. Também recebe o toque na notificação com o
+  app aberto e navega pelo crivo `destinoDeAviso` (o SW do push não controla
+  as páginas e não consegue navegar por elas). O código do push só é baixado
+  por quem ativou.
 - **Coleção `push_tokens`** + regra no `firestore.rules` (cada usuário gerencia
   só os próprios tokens).
 - **Cloud Function `pushOnNotificationCreate`**: espelha cada notificação in-app
   (coleção `notifications`) para os tokens do usuário. Retorna cedo se não houver
   tokens (o normal até alguém optar). Nunca lança.
-- **UI de opt-in**: Configurações → "Notificações push" (aparece com a flag
-  `push_notifications` ligada).
+- **UI de opt-in**: Configurações → "Notificações push". "Ativo" = permissão do
+  navegador **e** o registro desta conta neste aparelho; "Desativar" apaga só o
+  token deste aparelho (os outros seguem recebendo).
 
 ## Passos para ativar (uma vez)
 
-1. **Gerar a chave VAPID** — Firebase Console → Configurações do projeto →
-   **Cloud Messaging** → *Web configuration* → **Web Push certificates** →
-   *Generate key pair*. Copie a chave pública.
+1. **Pegar a chave VAPID** — Firebase Console → Configurações do projeto →
+   **Cloud Messaging** → *Web configuration* → **Web Push certificates**.
+   Copie a chave **pública** (coluna *Key pair*: 87 caracteres, começa com B).
+   O painel recusa a privada (43 caracteres) e qualquer outro formato
+   (`vapidKeyProblem`).
 2. **Colar a chave pública** em **Painel admin → Comunicações → Push** (grava
    `platform_settings/messaging.push.vapid_public_key`, leitura pública; o
    navegador lê na hora, sem novo build). A env de build
@@ -33,9 +48,14 @@ segue exatamente como está (nenhum token é registrado, nenhum push é enviado)
    ⚠️ O projeto Firebase é compartilhado com outro app: se já existir um par
    de chaves em *Web Push certificates*, **use o existente** — gerar outro
    invalida as inscrições do outro app.
-3. **Deploy** — o push das regras (`push_tokens`) e da função
-   (`pushOnNotificationCreate`) sai no deploy automático (push em `main`). O
-   novo `firebase-messaging-sw.js` também vai junto (Firebase Hosting).
+3. **Testar** — na mesma aba: **Ativar o push neste aparelho** e **Mandar um
+   push de teste para mim** (`messagingAdmin` → `push_test`, manda só para os
+   aparelhos do próprio admin, aparece mesmo com a tela aberta). Se o
+   navegador ou o Firebase recusar, a aba diz o motivo (`PUSH_FAILURE_META`,
+   `PUSH_TEST_ERROR_META`) — quase sempre a chave de outro projeto do Firebase
+   ou a chave de API do app bloqueando a "Firebase Installations API" / "FCM
+   Registration API". O Resumo mostra o push como **Configurado** assim que a
+   chave está salva, e quantos aparelhos têm o push ativo.
 4. ~~Ligar a flag `push_notifications`~~ — não é mais preciso: incorporada em
    2026-10-10 (`PERMANENT_FEATURE`, sempre ligada).
 5. **Cada atleta** ativa em **Configurações → Notificações push** e concede a

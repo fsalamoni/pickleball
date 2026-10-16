@@ -1038,7 +1038,11 @@ arquivo. Coleção nova entra na exportação e na exclusão de conta (guarda
 ### `push_tokens/{uid}_{hash(token)}` (`push_notifications`)
 Um documento por aparelho. `user_id`, `token` (FCM), `user_agent`, `updated_at`,
 `updated_at_ms`. Cada pessoa lê/escreve só os próprios; a Cloud Function
-`pushOnNotificationCreate` lê para enviar e remove os inválidos.
+`pushOnNotificationCreate` lê para enviar e remove os inválidos. O app regrava
+o do aparelho ao abrir (`refreshPush`, só para quem ativou ali) e "Desativar"
+apaga só o deste aparelho. O teste da aba Push (`messagingAdmin` →
+`push_test`) manda para os do próprio admin e também remove os inválidos; o
+Resumo conta os documentos ("aparelhos com o push ativo").
 
 ### Torneio por equipes (`team_tournaments`)
 Não há coleções `tournament_team_*`. As equipes usam as coleções do torneio:

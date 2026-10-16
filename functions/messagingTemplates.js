@@ -40,6 +40,8 @@ const T = {
     senhaBotao: 'Escolher nova senha',
     naoFoiVoce: 'O link vale por pouco tempo e só pode ser usado uma vez.',
     codigoSms: 'PickleRush: seu codigo e {codigo}. Vale por 10 minutos. Nao compartilhe com ninguem.',
+    pushTesteTitulo: 'Teste de push do PickleRush',
+    pushTesteTexto: 'Se esta notificação apareceu, o push está funcionando neste aparelho.',
     areas: {
       jogos: 'jogos e dias de jogo', torneios: 'torneios', arenas: 'reservas e arenas', clubes: 'clubes', aulas: 'aulas',
       treino: 'treino', mercado: 'Mercado', social: 'mensagens e comunidade', promocoes: 'novidades e promoções',
@@ -73,6 +75,8 @@ const T = {
     senhaBotao: 'Choose a new password',
     naoFoiVoce: 'The link is valid for a short time and can be used only once.',
     codigoSms: 'PickleRush: your code is {codigo}. It is valid for 10 minutes. Do not share it.',
+    pushTesteTitulo: 'PickleRush push test',
+    pushTesteTexto: 'If you can see this notification, push is working on this device.',
     areas: {
       jogos: 'games and game days', torneios: 'tournaments', arenas: 'bookings and venues', clubes: 'clubs', aulas: 'lessons',
       treino: 'training', mercado: 'Marketplace', social: 'messages and community', promocoes: 'news and promotions',
@@ -106,6 +110,8 @@ const T = {
     senhaBotao: 'Elegir nueva contraseña',
     naoFoiVoce: 'El enlace vale por poco tiempo y solo se puede usar una vez.',
     codigoSms: 'PickleRush: tu codigo es {codigo}. Vale por 10 minutos. No lo compartas.',
+    pushTesteTitulo: 'Prueba de push de PickleRush',
+    pushTesteTexto: 'Si ves esta notificación, el push funciona en este dispositivo.',
     areas: {
       jogos: 'partidos y días de juego', torneios: 'torneos', arenas: 'reservas y canchas', clubes: 'clubes', aulas: 'clases',
       treino: 'entrenamiento', mercado: 'Mercado', social: 'mensajes y comunidad', promocoes: 'novedades y promociones',
@@ -324,6 +330,12 @@ function smsNotice({ notice, classified, language, settings }) {
 
 const smsCode = (codigo, language) => fill(textos(langOf(language)).codigoSms, { codigo });
 
+/** O push de teste do painel (aba Push). */
+function pushTest(language) {
+  const x = textos(langOf(language));
+  return { title: x.pushTesteTitulo, body: x.pushTesteTexto };
+}
+
 module.exports = {
   T,
   langOf,
@@ -336,5 +348,6 @@ module.exports = {
   whatsappNotice,
   smsNotice,
   smsCode,
+  pushTest,
   unsubscribeHeaders,
 };

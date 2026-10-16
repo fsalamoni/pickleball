@@ -113,6 +113,26 @@ function num(v, d, min, max) {
   if (v === null || v === undefined || v === '' || !Number.isFinite(n)) return d;
   return Math.min(max, Math.max(min, n));
 }
+
+/**
+ * A chave pública do Web Push (VAPID) do Firebase: um ponto P-256 sem
+ * compressão em base64url — 65 bytes, 87 letras começando por "B". Aceita a
+ * colagem com espaços ou "=" no fim. A PRIVADA (43 letras) tem motivo
+ * próprio: colada no lugar da pública, nenhum aparelho conseguiria ativar.
+ */
+function normalizeVapidKey(v) {
+  return typeof v === 'string' ? v.replace(/\s+/g, '').replace(/=+$/, '') : '';
+}
+
+/** '' quando a chave serve; senão 'empty' | 'private_key' | 'format'. */
+function vapidKeyProblem(v) {
+  const k = normalizeVapidKey(v);
+  if (!k) return 'empty';
+  if (!/^[A-Za-z0-9_-]+$/.test(k)) return 'format';
+  if (k.length === 43) return 'private_key';
+  if (k.length !== 87 || k[0] !== 'B') return 'format';
+  return '';
+}
 const oneOf = (v, lista, d) => (lista.includes(v) ? v : d);
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const hhmm = (v, d) => (typeof v === 'string' && HHMM.test(v) ? v : d);
@@ -209,7 +229,7 @@ function normalizeSettings(raw) {
       unit_cost_brl: num(s.unit_cost_brl, D.sms.unit_cost_brl, 0, 10),
       max_chars: Math.round(num(s.max_chars, D.sms.max_chars, 70, 600)),
     },
-    push: { vapid_public_key: /^[A-Za-z0-9_-]{40,200}$/.test(str(obj(r.push).vapid_public_key)) ? str(obj(r.push).vapid_public_key) : '' },
+    push: { vapid_public_key: vapidKeyProblem(obj(r.push).vapid_public_key) ? '' : normalizeVapidKey(obj(r.push).vapid_public_key) },
     verification: { channel: oneOf(obj(r.verification).channel, VERIFY_CHANNELS, 'auto') },
     limits: {
       email_per_user_day: Math.round(num(l.email_per_user_day, D.limits.email_per_user_day, 1, 500)),
@@ -511,6 +531,8 @@ module.exports = {
   DEFAULT_SETTINGS,
   defaultMatrix,
   normalizeSettings,
+  normalizeVapidKey,
+  vapidKeyProblem,
   normalizeDomain,
   normalizeEmailAddress,
   fromAddress,

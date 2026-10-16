@@ -6,38 +6,58 @@
  *       sem ela, a que o admin colou em Painel admin → Comunicações → Push
  *       (`platform_settings/messaging.push.vapid_public_key`, leitura pública),
  *   (b) o navegador suporta Service Worker + Notification + FCM,
- *   (c) o atleta concede permissão (opt-in explícito).
+ *   (c) a pessoa concede permissão (opt-in explícito).
  * Em qualquer outro caso, todas as funções abaixo são no-op e retornam um
  * status — NADA é registrado e NADA muda para quem não optou.
  *
- * O envio dos pushes é feito por uma Cloud Function que espelha as
+ * O envio é do servidor (`pushOnNotificationCreate`), que espelha as
  * notificações in-app (coleção `notifications`) para os tokens registrados.
+ * Quem mostra a notificação no aparelho é `public/firebase-messaging-sw.js`.
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where,
+  deleteDoc, doc, getDoc, serverTimestamp, setDoc,
 } from 'firebase/firestore';
 import { app, db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { PUSH_SCOPE, marcarPushAqui, pushAtivoAqui } from '@/core/lib/pushNoAparelho';
 
 const ENV_VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
-const VAPID_RE = /^[A-Za-z0-9_-]{40,200}$/;
+// Ponto P-256 sem compressão em base64url: 87 letras começando por "B" (a
+// mesma conta de `vapidKeyProblem`, em modules/messaging/domain/policy.js).
+const VAPID_RE = /^B[A-Za-z0-9_-]{86}$/;
+
+/** A chave do push vem do build (e o painel não manda nela)? */
+export const hasBuildVapidKey = Boolean(ENV_VAPID_KEY);
 
 let vapidPromise = null;
 
-/** A chave pública VAPID: a do build vence; senão, a gravada pelo admin. '' sem nenhuma. */
+/**
+ * A chave pública VAPID: a do build vence; senão, a gravada pelo admin. ''
+ * sem nenhuma. Só a chave ACHADA fica guardada na memória: o "não tem" é
+ * lido de novo na próxima pergunta — senão quem abriu a tela antes de o
+ * admin salvar a chave seguiria vendo "falta a chave" até recarregar.
+ */
 export function getVapidKey() {
   if (ENV_VAPID_KEY) return Promise.resolve(ENV_VAPID_KEY);
   if (!vapidPromise) {
     vapidPromise = (db ? getDoc(doc(db, 'platform_settings', 'messaging')) : Promise.resolve(null))
       .then((snap) => {
         const k = snap && snap.exists() ? String(snap.data()?.push?.vapid_public_key || '') : '';
-        return VAPID_RE.test(k) ? k : '';
+        if (!VAPID_RE.test(k)) {
+          vapidPromise = null;
+          return '';
+        }
+        return k;
       })
-      // Falhou a leitura: não guarda o vazio, a próxima tentativa lê de novo.
       .catch(() => { vapidPromise = null; return ''; });
   }
   return vapidPromise;
+}
+
+/** Esquece a chave guardada (o admin acabou de trocá-la). */
+export function forgetVapidKey() {
+  vapidPromise = null;
 }
 
 let messagingModulePromise = null;
@@ -71,8 +91,13 @@ export function getPermissionState() {
   return Notification.permission;
 }
 
+/** O push está ativo neste aparelho para esta conta (permissão + marca)? */
+export function isPushActiveHere(uid) {
+  return getPermissionState() === 'granted' && pushAtivoAqui(uid);
+}
+
 /** Id de documento estável e válido a partir do token (hash simples). */
-function tokenDocId(uid, token) {
+export function tokenDocId(uid, token) {
   let h = 0;
   for (let i = 0; i < token.length; i += 1) {
     h = (Math.imul(h, 31) + token.charCodeAt(i)) | 0;
@@ -81,8 +106,57 @@ function tokenDocId(uid, token) {
 }
 
 /**
+ * Traduz a falha do navegador/FCM num motivo que a tela explica.
+ * @returns {'bad_key'|'fcm_rejected'|'sw_failed'|'push_service'|'denied'|'error'}
+ */
+export function pushFailureReason(err) {
+  const code = String(err?.code || '');
+  const name = String(err?.name || '');
+  const msg = String(err?.message || '');
+  if (code === 'messaging/permission-blocked' || code === 'messaging/permission-default') return 'denied';
+  if (name === 'InvalidAccessError' || /applicationServerKey|vapid/i.test(msg)) return 'bad_key';
+  if (code === 'messaging/token-subscribe-failed' || code === 'messaging/token-update-failed') return 'fcm_rejected';
+  if (code === 'messaging/failed-service-worker-registration' || code === 'messaging/invalid-sw-registration') return 'sw_failed';
+  if (name === 'AbortError' || name === 'NotAllowedError' || /push service/i.test(msg)) return 'push_service';
+  return 'error';
+}
+
+/** Registra (ou atualiza) o service worker do push e devolve o token deste aparelho. */
+async function tokenDoAparelho(ctx) {
+  // Registrar de novo também confere se há versão nova do service worker
+  // (o arquivo vai sem cache) — é assim que o aparelho recebe as correções.
+  const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: PUSH_SCOPE });
+  return ctx.mod.getToken(ctx.messaging, { vapidKey: await getVapidKey(), serviceWorkerRegistration: registration });
+}
+
+/** Este aparelho já tem a inscrição do push (alguém o ativou aqui)? */
+async function temInscricao() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(PUSH_SCOPE);
+    return Boolean(reg && await reg.pushManager.getSubscription());
+  } catch {
+    return false;
+  }
+}
+
+function gravarToken(uid, token) {
+  return setDoc(
+    doc(db, 'push_tokens', tokenDocId(uid, token)),
+    {
+      user_id: uid,
+      token,
+      user_agent: (typeof navigator !== 'undefined' && navigator.userAgent)
+        ? String(navigator.userAgent).slice(0, 300) : null,
+      updated_at: serverTimestamp(),
+      updated_at_ms: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
  * Opt-in: pede permissão, registra o token FCM e o grava em `push_tokens`.
- * @returns {Promise<{ ok: boolean, reason?: string }>}
+ * @returns {Promise<{ ok: boolean, reason?: string, detail?: string }>}
  */
 export async function enablePush(user) {
   try {
@@ -93,66 +167,69 @@ export async function enablePush(user) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return { ok: false, reason: 'denied' };
 
-    // Escopo próprio e estreito: NÃO colide com o service worker do PWA (sw.js),
-    // que controla a raiz "/". É o mesmo escopo que o FCM usa por padrão.
-    const registration = await navigator.serviceWorker
-      .register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' })
-      .catch(() => undefined);
-
-    const token = await ctx.mod.getToken(ctx.messaging, {
-      vapidKey: await getVapidKey(),
-      serviceWorkerRegistration: registration,
-    });
+    const token = await tokenDoAparelho(ctx);
     if (!token) return { ok: false, reason: 'no-token' };
-
-    await setDoc(
-      doc(db, 'push_tokens', tokenDocId(user.uid, token)),
-      {
-        user_id: user.uid,
-        token,
-        user_agent: (typeof navigator !== 'undefined' && navigator.userAgent)
-          ? String(navigator.userAgent).slice(0, 300) : null,
-        updated_at: serverTimestamp(),
-        updated_at_ms: Date.now(),
-      },
-      { merge: true },
-    );
+    await gravarToken(user.uid, token);
+    marcarPushAqui(user.uid, true);
     return { ok: true };
   } catch (err) {
     logger.error('enablePush falhou:', err);
-    return { ok: false, reason: 'error' };
+    return { ok: false, reason: pushFailureReason(err), detail: String(err?.message || err).slice(0, 300) };
   }
 }
 
-/** Opt-out: apaga os tokens do usuário e invalida o token atual. Best-effort. */
-export async function disablePush(user) {
+/**
+ * Renova o push deste aparelho ao abrir o app: atualiza o service worker e
+ * regrava o token (o navegador troca a inscrição de tempos em tempos, e o
+ * token antigo para de receber). Só age para quem ATIVOU o push aqui: a marca
+ * desta conta ou, para quem ativou antes de a marca existir, o próprio token
+ * deste aparelho já gravado em nome dela. Nunca pede permissão.
+ */
+export async function refreshPush(user) {
   try {
+    if (!user?.uid || !db || getPermissionState() !== 'granted') return { ok: false };
+    // Sem a marca e sem inscrição, ninguém ativou o push aqui: não cria nada.
+    if (!pushAtivoAqui(user.uid) && !(await temInscricao())) return { ok: false };
     const ctx = await getMessagingSafe();
-    if (ctx) {
-      try { await ctx.mod.deleteToken(ctx.messaging); } catch { /* noop */ }
+    if (!ctx) return { ok: false };
+    const token = await tokenDoAparelho(ctx);
+    if (!token) return { ok: false };
+    let minha = pushAtivoAqui(user.uid);
+    if (!minha) {
+      // Sem a marca: só continua se este aparelho já era desta conta.
+      minha = await getDoc(doc(db, 'push_tokens', tokenDocId(user.uid, token)))
+        .then((s) => s.exists())
+        .catch(() => false);
     }
-    if (user?.uid && db) {
-      const snap = await getDocs(query(collection(db, 'push_tokens'), where('user_id', '==', user.uid)));
-      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref).catch(() => {})));
-    }
+    if (!minha) return { ok: false };
+    await gravarToken(user.uid, token);
+    marcarPushAqui(user.uid, true);
     return { ok: true };
   } catch (err) {
-    logger.error('disablePush falhou:', err);
+    logger.warn('refreshPush falhou:', err);
     return { ok: false };
   }
 }
 
 /**
- * Escuta mensagens em primeiro plano (app aberto) para exibir um aviso in-app.
- * @param {(payload: any) => void} handler
- * @returns {Promise<() => void>} função para cancelar a escuta
+ * Opt-out DESTE aparelho: apaga o token dele e cancela a inscrição. Os outros
+ * aparelhos da pessoa continuam recebendo. Best-effort.
  */
-export async function listenForegroundPush(handler) {
-  const ctx = await getMessagingSafe();
-  if (!ctx) return () => {};
+export async function disablePush(user) {
   try {
-    return ctx.mod.onMessage(ctx.messaging, handler);
-  } catch {
-    return () => {};
+    const ctx = (await temInscricao()) ? await getMessagingSafe() : null;
+    if (ctx) {
+      const token = await tokenDoAparelho(ctx).catch(() => null);
+      if (token && user?.uid && db) {
+        await deleteDoc(doc(db, 'push_tokens', tokenDocId(user.uid, token))).catch(() => {});
+      }
+      try { await ctx.mod.deleteToken(ctx.messaging); } catch { /* noop */ }
+    }
+    return { ok: true };
+  } catch (err) {
+    logger.error('disablePush falhou:', err);
+    return { ok: false };
+  } finally {
+    marcarPushAqui(user?.uid, false);
   }
 }

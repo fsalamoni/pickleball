@@ -292,6 +292,18 @@ describe('o que falta para cada canal', () => {
       email: ['disabled', 'domain', 'credentials'],
       whatsapp: ['disabled', 'ids', 'credentials', 'templates'],
       sms: ['disabled', 'sender', 'credentials'],
+      push: ['vapid_key'],
     });
+  });
+  it('⭐ o push fica pronto só com a chave PÚBLICA válida (a privada não serve)', async () => {
+    const PUBLICA = `B${'x'.repeat(86)}`;
+    db = createRichFakeDb({ 'platform_settings/messaging': { push: { vapid_public_key: ` ${PUBLICA}= ` } } });
+    M.resetCache();
+    expect(M.readiness(await M.loadContext(db, { fresh: true })).push).toBe(true);
+    db = createRichFakeDb({ 'platform_settings/messaging': { push: { vapid_public_key: 'y'.repeat(43) } } });
+    M.resetCache();
+    const ctx = await M.loadContext(db, { fresh: true });
+    expect(ctx.settings.push.vapid_public_key).toBe('');
+    expect(M.missing(ctx).push).toEqual(['vapid_key']);
   });
 });

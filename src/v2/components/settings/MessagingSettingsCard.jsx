@@ -316,7 +316,7 @@ function PorArea({ status, prefs, settings, gravar, mercadoOn }) {
     pronto.email && prefs.email.on && 'email',
     pronto.whatsapp && celular && prefs.whatsapp.on && 'whatsapp',
     pronto.sms && celular && prefs.sms.on && 'sms',
-    'push',
+    pronto.push && 'push',
   ].filter(Boolean);
   const areas = AREAS.filter((a) => a !== 'mercado' || mercadoOn)
     .filter((a) => canais.some((ch) => effectiveValue(settings, prefs, ch, a).lock !== 'admin_off'));
@@ -368,7 +368,9 @@ function Silencio({ prefs, settings, gravar, status }) {
                 <V2Input id="silencio-fim" type="time" value={q.end || settings.quiet_hours.end} onChange={(e) => gravar('quiet.end', e.target.value)} />
               </V2Field>
             </div>
-            <V2Toggle id="silencio-push" checked={q.push} onChange={(v) => gravar('quiet.push', v)} label={t('Silenciar o push também')} hint={t('Nesse horário o aparelho não toca; o aviso fica no sino.')} />
+            {status.ready?.push && (
+              <V2Toggle id="silencio-push" checked={q.push} onChange={(v) => gravar('quiet.push', v)} label={t('Silenciar o push também')} hint={t('Nesse horário o aparelho não toca; o aviso fica no sino.')} />
+            )}
           </>
         )}
         {!celularOn && q.on && <p className="text-xs text-gray-500">{t('Vale assim que você ligar o WhatsApp ou o SMS.')}</p>}
