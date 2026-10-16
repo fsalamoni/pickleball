@@ -139,7 +139,7 @@ async function avisar(db, id, { userId, title, message, link, type = 'gamificati
     const i18n = i18nDoAviso({ title, message });
     await db.collection('notifications').doc(id).create({
       user_id: userId, title: textoDoAviso(title), message: textoDoAviso(message), type, link: link || null, data: null,
-      actor_id: null, actor_name: null, read: false, read_at: null,
+      actor_id: null, actor_name: null, read: false, read_at: null, origin: 'server',
       created_at: FieldValue.serverTimestamp(), created_at_ms: Date.now(),
       ...(i18n ? { i18n } : {}),
     });

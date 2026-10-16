@@ -99,7 +99,7 @@ function marketBlock(m = {}) {
  * @returns {object}
  */
 export function buildDataExport({
-  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, incomplete = [],
+  uid, profile, registrations = [], bookings = [], lessons = [], goals, training, market, messages, incomplete = [],
 } = {}) {
   const out = {
     schema: 'picklerush.data-export.v1',
@@ -119,6 +119,8 @@ export function buildDataExport({
   if (goals !== undefined) out.goals = lista(goals);
   if (training !== undefined) out.training = trainingBlock(training || {});
   if (market !== undefined) out.market = marketBlock(market || {});
+  // E-mails, WhatsApp e SMS que a plataforma mandou (90 dias; endereço mascarado).
+  if (messages !== undefined) out.messages = lista(messages);
   return out;
 }
 

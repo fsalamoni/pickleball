@@ -252,6 +252,20 @@ preferências por categoria, push. O serviço de escrita é compartilhado em
   `functions/notificationPrefs.js`.
 - **Telas**: `V2Notifications`, `NotificationsBell`. **Coleção**: `notifications`.
 
+### messaging/ — avisos por e-mail, WhatsApp, SMS e push
+Leva o aviso para fora da plataforma conforme o admin configurou (Painel admin
+→ Comunicações) e a pessoa escolheu (Configurações → "E-mail e celular"). Quem
+envia é o servidor (`functions/messaging*.js`). Flag `external_messaging`.
+Doc `49`.
+- **Arquivos**: `domain/policy.js` (cópia de `functions/messagingPolicy.js`,
+  com paridade), `domain/meta.js`, `domain/guides.js`,
+  `services/messagingService.js`, `hooks/useMessaging.js`.
+- **Telas**: `src/v2/components/admin/messaging/`,
+  `src/v2/components/settings/MessagingSettingsCard.jsx`.
+- **Coleções**: `message_outbox`, `message_suppressions`, `message_reports`,
+  `phone_verifications`, `platform_secrets`; campos
+  `users.notification_channels` e `users.phone_verified_*`.
+
 ### home/ — tela inicial personalizada
 Início por pessoa (focos por papel, agenda unificada, cards escolhidos).
 - **Arquivos**: `domain/homeProfile.js`, `domain/homeCards.js`,

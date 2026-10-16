@@ -302,6 +302,8 @@ exports.promoteOpenSlotWaitlistOnEntry = onDocumentWritten(
 // tokens em `push_tokens`. Sem tokens (o normal até o opt-in), retorna cedo.
 // Nunca lança — falhas são apenas logadas. Não altera a notificação in-app.
 const PWA_ORIGIN = 'https://picklerush.web.app';
+const messagingPolicy = require('./messagingPolicy');
+const messaging = require('./messaging');
 
 exports.pushOnNotificationCreate = onDocumentCreated(
   {
@@ -339,6 +341,18 @@ exports.pushOnNotificationCreate = onDocumentCreated(
       if (notificationPrefs.isNotificationMuted(prefs, n.type)) {
         logger.info('pushOnNotificationCreate: categoria silenciada, sem push.', { user: n.user_id, type: n.type });
         return;
+      }
+      // Com os avisos por e-mail e celular ligados, o push também obedece à
+      // escolha por ÁREA e ao horário silencioso estendido ao celular.
+      const ctxMsg = await messaging.loadContext(db);
+      if (ctxMsg.flagOn) {
+        const canais = messagingPolicy.normalizeUserChannels(userSnap.exists ? userSnap.data().notification_channels : null);
+        const area = messagingPolicy.classifyNotice(n).area;
+        const v = messagingPolicy.pushAllowed({ area }, { settings: ctxMsg.settings, prefs: canais, flagOn: true });
+        if (!v.allowed) {
+          logger.info('pushOnNotificationCreate: push desligado pela escolha de canais.', { user: n.user_id, reason: v.reason });
+          return;
+        }
       }
     } catch (err) {
       logger.warn('pushOnNotificationCreate: preferências ilegíveis; envia assim mesmo.', err);
@@ -1358,5 +1372,109 @@ exports.clientErrorReport = onRequest(
       if (entrada) logger.write(entrada);
     }
     res.status(204).end();
+  },
+);
+
+// =====================================================================
+// AVISOS POR E-MAIL E CELULAR (`external_messaging`, padrão desligado).
+// Cada aviso novo passa pela regra de canais (`messagingPolicy.js`) e sai por
+// e-mail (Amazon SES ou Resend), WhatsApp (Cloud API da Meta) ou SMS (Twilio
+// ou Zenvia) conforme o admin configurou e a pessoa escolheu. A fila manda o
+// que esperava e monta os resumos; `/api/mensagens/**` recebe os retornos
+// dos provedores e as páginas de descadastro e denúncia.
+// Ver `functions/messaging.js` e `docs/49-AVISOS-POR-EMAIL-E-CELULAR.md`.
+// =====================================================================
+const messagingAdmin = require('./messagingAdmin');
+
+const deMensagens = () => ({ db: getFirestore(getApp(), DATABASE_ID), auth: getAuth() });
+
+/** Erro de ação vira HttpsError com a mensagem que o painel mostra. */
+function erroDeMensagens(nome, err) {
+  if (err instanceof HttpsError) return err;
+  if (err instanceof messagingAdmin.ActionError) return new HttpsError(err.code, err.message);
+  if (err && err.name === 'ProviderError') return new HttpsError('failed-precondition', err.message);
+  logger.error(`${nome} falhou`, err);
+  return new HttpsError('internal', 'Falha inesperada. Tente de novo.');
+}
+
+exports.messagingOnNotificationCreate = onDocumentCreated(
+  { document: 'notifications/{notifId}', database: DATABASE_ID, region: REGION, timeoutSeconds: 60 },
+  async (event) => {
+    const n = event.data && typeof event.data.data === 'function' ? event.data.data() : null;
+    if (!n) return;
+    try {
+      const r = await messaging.handleNotice(deMensagens(), event.params.notifId, n);
+      if (r.handled) logger.info('messagingOnNotificationCreate', { notice: event.params.notifId, results: r.results });
+    } catch (err) {
+      logger.error('messagingOnNotificationCreate falhou', { notice: event.params.notifId, err });
+    }
+  },
+);
+
+exports.messagingQueue = onSchedule(
+  { schedule: 'every 10 minutes', timeZone: 'America/Sao_Paulo', region: REGION, timeoutSeconds: 300, memory: '512MiB' },
+  async () => {
+    try {
+      const r = await messaging.processQueue(deMensagens());
+      if (r.due || r.digests || r.cleaned) logger.info('messagingQueue', r);
+    } catch (err) {
+      logger.error('messagingQueue falhou', err);
+    }
+  },
+);
+
+exports.messagingAdmin = onCall(
+  { region: REGION, timeoutSeconds: 120 },
+  async (req) => {
+    const deps = deMensagens();
+    if (!(await isPlatformAdminUser(req, deps.db))) {
+      throw new HttpsError('permission-denied', 'Só o admin da plataforma configura as comunicações.');
+    }
+    const token = (req.auth && req.auth.token) || {};
+    try {
+      return await messagingAdmin.adminAction(deps, { uid: req.auth.uid, email: token.email || '' }, req.data || {});
+    } catch (err) {
+      throw erroDeMensagens('messagingAdmin', err);
+    }
+  },
+);
+
+exports.messagingUser = onCall(
+  { region: REGION, timeoutSeconds: 60 },
+  async (req) => {
+    if (!req.auth || !req.auth.uid) throw new HttpsError('unauthenticated', 'Entre na sua conta.');
+    try {
+      return await messagingAdmin.userAction(deMensagens(), req.auth.uid, req.data || {});
+    } catch (err) {
+      throw erroDeMensagens('messagingUser', err);
+    }
+  },
+);
+
+exports.messagingAuthEmail = onCall(
+  { region: REGION, timeoutSeconds: 30, maxInstances: 2 },
+  async (req) => {
+    try {
+      return await messagingAdmin.authEmailAction(deMensagens(), req.data || {});
+    } catch (err) {
+      throw erroDeMensagens('messagingAuthEmail', err);
+    }
+  },
+);
+
+exports.messagingHook = onRequest(
+  { region: REGION, maxInstances: 3, memory: '256MiB', invoker: 'public' },
+  async (req, res) => {
+    try {
+      const r = await messaging.handleHttp(deMensagens(), req);
+      res.set('Cache-Control', 'no-store');
+      if (r.html) res.status(r.code).type('html').send(r.html);
+      else if (r.xml) res.status(r.code).type('text/xml').send(r.xml);
+      else if (r.text !== undefined) res.status(r.code).type('text/plain').send(r.text);
+      else res.status(r.code).end();
+    } catch (err) {
+      logger.error('messagingHook falhou', err);
+      res.status(500).end();
+    }
   },
 );

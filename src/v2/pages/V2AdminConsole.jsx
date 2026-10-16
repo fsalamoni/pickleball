@@ -48,6 +48,12 @@ import {
   Store,
   Package,
   MessageSquareWarning,
+  Mail,
+  MessageCircle,
+  Smartphone,
+  Gauge,
+  FileText,
+  Inbox,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -111,6 +117,7 @@ import { t, tk, tn } from '@/core/i18n';
 const AdminGamificationPanel = lazy(() => import('@/v2/components/admin/gamification/AdminGamificationPanel'));
 const AdminTrainingPanel = lazy(() => import('@/v2/components/admin/training/AdminTrainingPanel'));
 const AdminMarketPanel = lazy(() => import('@/v2/components/admin/market/AdminMarketPanel'));
+const AdminMessagingPanel = lazy(() => import('@/v2/components/admin/messaging/AdminMessagingPanel'));
 
 const SECTIONS = Object.freeze([
   { id: 'today', label: tk('Hoje'), icon: LayoutDashboard, tabs: [
@@ -161,6 +168,18 @@ const SECTIONS = Object.freeze([
     { id: 'promo', label: tk('Cupons e campanhas'), icon: Megaphone, keywords: ['divulgação', 'banner'] },
     { id: 'broadcast', label: tk('Aviso em massa'), icon: Bell, keywords: ['notificação', 'sino', 'comunicado', 'todos'] },
     { id: 'partners', label: tk('Parceiros'), icon: Handshake, keywords: ['afiliados', 'logos'] },
+  ] },
+  // Avisos por e-mail, WhatsApp, SMS e push: provedores, regras, limites e entregas.
+  { id: 'communications', label: tk('Comunicações'), icon: Mail, dica: 'admin-secao-comunicacoes', tabs: [
+    { id: 'com-resumo', label: tk('Resumo'), icon: LayoutDashboard, keywords: ['e-mail', 'whatsapp', 'sms', 'push', 'avisos', 'canais'] },
+    { id: 'com-email', label: tk('E-mail'), icon: Mail, keywords: ['domínio', 'dns', 'amazon ses', 'resend', 'remetente', 'esqueci a senha'] },
+    { id: 'com-whatsapp', label: tk('WhatsApp'), icon: MessageCircle, keywords: ['meta', 'modelos', 'token', 'webhook'] },
+    { id: 'com-sms', label: tk('SMS'), icon: Smartphone, keywords: ['twilio', 'zenvia', 'torpedo'] },
+    { id: 'com-push', label: tk('Push'), icon: Bell, keywords: ['vapid', 'firebase', 'notificação no aparelho'] },
+    { id: 'com-regras', label: tk('Regras'), icon: SlidersHorizontal, keywords: ['o que vai por onde', 'horário silencioso', 'resumo', 'código do celular'] },
+    { id: 'com-limites', label: tk('Limites e custos'), icon: Gauge, keywords: ['orçamento', 'teto', 'spam'] },
+    { id: 'com-modelos', label: tk('Modelos'), icon: FileText, keywords: ['prévia', 'como chega', 'idioma'] },
+    { id: 'com-entregas', label: tk('Entregas'), icon: Inbox, keywords: ['por que não chegou', 'bloqueio', 'denúncia', 'registro'] },
   ] },
   { id: 'features', label: tk('Funcionalidades'), icon: Flag, tabs: [
     { id: 'flags', label: tk('Funcionalidades'), icon: Flag, keywords: ['flags', 'ligar', 'desligar', 'opcionais'] },
@@ -240,6 +259,11 @@ export default function V2AdminConsole() {
         {tab.startsWith('mercado-') && (
           <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
             <AdminMarketPanel tab={tab} />
+          </Suspense>
+        )}
+        {tab.startsWith('com-') && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <AdminMessagingPanel tab={tab} onTab={setTab} />
           </Suspense>
         )}
         {tab === 'promo' && (

@@ -84,6 +84,19 @@ export const FEATURE_FLAG = Object.freeze({
    */
   MULTI_LANGUAGE: 'multi_language',
 
+  /**
+   * AVISOS POR E-MAIL E CELULAR — os avisos do sino também saem por e-mail
+   * (Amazon SES ou Resend), WhatsApp (Cloud API da Meta) e SMS (Twilio ou
+   * Zenvia), conforme o que o admin configurou em Painel admin →
+   * Comunicações e o que cada pessoa escolheu em Configurações → E-mail e
+   * celular. Cada canal tem a sua chave no painel e só envia quando está
+   * pronto (domínio verificado, chaves, modelos aprovados). Desligada, nada
+   * sai da plataforma e o push segue como sempre. O servidor confere esta
+   * flag (`platform_settings/global.feature_flags.external_messaging`).
+   * Ver docs/49-AVISOS-POR-EMAIL-E-CELULAR.md.
+   */
+  EXTERNAL_MESSAGING: 'external_messaging',
+
 });
 /**
  * Funcionalidades INCORPORADAS (2026-10-10): eram flags, estavam ligadas em
@@ -482,6 +495,10 @@ export const FEATURE_FLAG_META = Object.freeze({
   [FEATURE_FLAG.MULTI_LANGUAGE]: {
     label: tk('Vários idiomas (português, inglês, espanhol)'),
     description: tk('Mostra o seletor de idioma (Configurações e tela de entrada) e, na primeira visita, adota o idioma do navegador. O que ainda não foi traduzido aparece em português. Desligada, tudo em português e a escolha antiga é apagada. A escolha fica no aparelho.'),
+  },
+  [FEATURE_FLAG.EXTERNAL_MESSAGING]: {
+    label: tk('Avisos por e-mail e celular'),
+    description: tk('Liga o envio dos avisos por e-mail, WhatsApp e SMS e mostra a cada pessoa o cartão "E-mail e celular" em Configurações. Cada canal só envia depois de configurado e testado em Painel admin → Comunicações. Desligada, nada sai da plataforma e o push segue como sempre.'),
   },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: tk('DUPR oficial (fase 2 — reservado)'),

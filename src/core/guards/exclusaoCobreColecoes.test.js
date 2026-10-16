@@ -149,3 +149,36 @@ describe('a exclusão e a exportação cobrem o Mercado', () => {
     }));
   });
 });
+
+/* ------------------------------------------- avisos por e-mail e celular -- */
+
+const DAS_MENSAGENS = [...REGRAS.matchAll(/^\s{4}match \/((?:message_[a-z_]+)|phone_verifications)\//gm)].map((m) => m[1]);
+const MENSAGENS_EXPORTADAS_POR = {
+  message_outbox: ['listMyMessageLog'],
+};
+const MENSAGENS_FORA_DA_EXPORTACAO = {
+  message_suppressions: 'É o bloqueio de um ENDEREÇO (devolução, spam, PARAR), guardado pelo resumo do endereço; a exclusão apaga o endereço e a lista de contas.',
+  message_reports: 'A denúncia serve à moderação; quem denunciou fica só pelo uid, como nas denúncias do Mercado.',
+  phone_verifications: 'O código em andamento vale 10 minutos e é apagado ao confirmar; o número confirmado já sai no perfil exportado.',
+};
+
+describe('a exclusão e a exportação cobrem os avisos por e-mail e celular', () => {
+  it('o rules tem as coleções das mensagens', () => {
+    expect(DAS_MENSAGENS).toEqual(expect.arrayContaining(['message_outbox', 'message_suppressions', 'message_reports', 'phone_verifications']));
+  });
+
+  it('⭐ toda coleção das mensagens entra na exclusão de conta', () => {
+    const cobre = colecoesDaExclusao();
+    expect(DAS_MENSAGENS.filter((c) => !cobre.has(c)), 'coleção das mensagens sem tratamento na exclusão').toEqual([]);
+  });
+
+  it('⭐ toda coleção das mensagens tem caminho para a exportação (ou isenção com motivo)', () => {
+    expect(DAS_MENSAGENS.filter((c) => !MENSAGENS_EXPORTADAS_POR[c] && !MENSAGENS_FORA_DA_EXPORTACAO[c])).toEqual([]);
+    const servico = readFileSync('src/modules/messaging/services/messagingService.js', 'utf8');
+    const tela = readFileSync('src/v2/pages/V2Settings.jsx', 'utf8');
+    Object.values(MENSAGENS_EXPORTADAS_POR).flat().forEach((fn) => {
+      expect(servico).toMatch(new RegExp(`export async function ${fn}\\b`));
+      expect(tela, `${fn} não é usada pela exportação`).toMatch(new RegExp(`\\b${fn}\\b`));
+    });
+  });
+});

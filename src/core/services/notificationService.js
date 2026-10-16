@@ -13,7 +13,7 @@
  */
 
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { db } from '@/core/config/firebase';
+import { db, auth } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { linkDeAviso } from '@/core/domain/internalLink';
 import { i18nDoAviso, textoDoAviso, tx } from '@/core/i18n/avisos';
@@ -100,9 +100,26 @@ function normalizeRecipients(userIds, actorId) {
  * português de sempre E, só quando há marca, `i18n` (a chave e os parâmetros)
  * — é por ele que o sino e o push mostram o aviso no idioma de quem recebe.
  */
-function buildPayload({ userId, title, message, type, link, actor, data }) {
+/**
+ * Canais de um aviso em massa (só o admin da plataforma — a regra recusa o
+ * campo de qualquer outra conta). `kind`: 'servico' (aviso de serviço) ou
+ * 'novidade' (vai como promoção: só para quem aceitou receber novidades).
+ */
+function sanitizeBroadcast(b) {
+  if (!b || typeof b !== 'object') return null;
+  const channels = ['email', 'whatsapp', 'sms'].filter((c) => Array.isArray(b.channels) && b.channels.includes(c));
+  return { kind: b.kind === 'novidade' ? 'novidade' : 'servico', channels };
+}
+
+function buildPayload({ userId, title, message, type, link, actor, data, broadcast }) {
   const titulo = trimText(textoDoAviso(title), 140) ? title : tx('Nova atividade');
   const i18n = i18nDoAviso({ title: titulo, message });
+  // `sent_by`: quem escreveu (a regra exige que seja a conta logada). É por
+  // ele que o servidor decide se o aviso pode sair por e-mail ou celular, e
+  // que o e-mail diz "Enviado por" e leva o botão de denunciar. Aviso sem
+  // ele (aplicativo antigo) fica só no sino e no push. Ver docs/49.
+  const autor = auth?.currentUser?.uid || null;
+  const massa = sanitizeBroadcast(broadcast);
   return {
     user_id: userId,
     title: trimText(textoDoAviso(titulo), 140),
@@ -121,6 +138,8 @@ function buildPayload({ userId, title, message, type, link, actor, data }) {
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
     ...(i18n ? { i18n } : {}),
+    ...(autor ? { sent_by: autor } : {}),
+    ...(massa ? { broadcast: massa } : {}),
   };
 }
 
@@ -144,7 +163,7 @@ export async function createNotification({ userId, title, message, type, link, a
  * Cria a mesma notificação para vários usuários (exceto o ator). Best-effort.
  * Divide em lotes de 400 operações para respeitar o limite do Firestore (500).
  */
-export async function notifyUsers(userIds, { title, message, type, link, actor, data } = {}) {
+export async function notifyUsers(userIds, { title, message, type, link, actor, data, broadcast } = {}) {
   if (!db) return 0;
   const recipients = normalizeRecipients(userIds, actor?.uid);
   if (recipients.length === 0) return 0;
@@ -158,7 +177,7 @@ export async function notifyUsers(userIds, { title, message, type, link, actor, 
       const batch = writeBatch(db);
       slice.forEach((uid) => {
         const ref = doc(collection(db, NOTIFICATION_COLLECTION));
-        batch.set(ref, buildPayload({ userId: uid, title, message, type, link, actor, data }));
+        batch.set(ref, buildPayload({ userId: uid, title, message, type, link, actor, data, broadcast }));
       });
       await batch.commit();
       entregues += slice.length;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { BellRing } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -11,12 +11,19 @@ import { t } from '@/core/i18n';
 
 /**
  * Card de opt-in de notificações push (flag push_notifications).
- * Gracioso: se o push não estiver configurado (sem VAPID) ou o navegador não
+ * Gracioso: se o push não estiver configurado (sem VAPID, nem no build nem no
+ * painel admin → Comunicações → Push) ou o navegador não
  * suportar, mostra apenas uma mensagem — nada é registrado.
  */
 export default function V2PushCard() {
   const { user } = useAuth();
-  const configured = isPushConfigured();
+  // A chave pode vir do build ou do painel admin (leitura no banco).
+  const [configured, setConfigured] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    isPushConfigured().then((ok) => { if (vivo) setConfigured(ok); });
+    return () => { vivo = false; };
+  }, []);
   const [state, setState] = useState(() => getPermissionState());
   const [busy, setBusy] = useState(false);
   const granted = state === 'granted';

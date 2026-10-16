@@ -139,6 +139,14 @@ topo fingindo ser novo.
   elas são gravadas como `generic`, sem marca própria, e as categorias de
   preferência são por tipo. Ver o backlog.
 
+## 7. Fora da plataforma (e-mail, WhatsApp, SMS)
+
+Desde a flag `external_messaging`, o mesmo aviso pode sair também por e-mail,
+WhatsApp ou SMS, e o push passa a respeitar as escolhas por área. O aviso
+continua sendo UM documento em `notifications`; quem decide o canal é o
+servidor, pela origem do aviso (`origin`, `sent_by`, `broadcast` — a regra
+trava os campos). Tudo em `docs/49-AVISOS-POR-EMAIL-E-CELULAR.md`.
+
 ## Código
 
 - Domínio: `modules/notifications/domain/noticeFeed.js` (área, hora, ordem,
