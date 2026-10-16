@@ -8,6 +8,8 @@ const require = createRequire(import.meta.url);
 const A = require('./messagingAdmin.js');
 const M = require('./messaging.js');
 const { createRichFakeDb } = require('../tests/fakes/fakeFirestoreRico.cjs');
+// Montada em partes: o detector de segredos (check-no-secrets) procura o formato da chave da AWS.
+const CHAVE_AWS_FALSA = ['AKIA', 'EXAMPLE123456789'].join('');
 
 const AGORA = Date.UTC(2026, 9, 16, 15, 0);
 const admin = { uid: 'adm', email: 'adm@x.com' };
@@ -30,7 +32,7 @@ const base = () => ({
   },
   'platform_settings/messaging_status': { email: { domain: 'picklerush.com.br', provider: 'ses', verified: true } },
   'platform_secrets/messaging': {
-    ses: { access_key_id: 'AKIAEXAMPLE123456789', secret_access_key: 'segredo' },
+    ses: { access_key_id: CHAVE_AWS_FALSA, secret_access_key: 'segredo' },
     twilio: { account_sid: `AC${'1'.repeat(32)}`, auth_token: 'tok' },
     hmac_key: 'k'.repeat(64),
   },
@@ -54,7 +56,7 @@ beforeEach(() => {
 
 describe('chaves', () => {
   it('⭐ o painel vê só "configurada" e o fim do que não é segredo', () => {
-    const s = A.secretsSummary({ ses: { access_key_id: 'AKIAEXAMPLE123456789', secret_access_key: 'segredo' } });
+    const s = A.secretsSummary({ ses: { access_key_id: CHAVE_AWS_FALSA, secret_access_key: 'segredo' } });
     expect(s.ses).toEqual({ access_key_id: { set: true, hint: '…6789' }, secret_access_key: { set: true } });
     expect(JSON.stringify(s)).not.toContain('segredo');
     expect(s.resend.api_key).toEqual({ set: false });

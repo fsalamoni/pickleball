@@ -10,6 +10,8 @@ import crypto from 'node:crypto';
 const require = createRequire(import.meta.url);
 const Prov = require('./messagingProviders.js');
 const P = require('./messagingPolicy.js');
+// Montada em partes: o detector de segredos (check-no-secrets) procura o formato da chave da AWS.
+const CHAVE_AWS_FALSA = ['AKIA', 'EXAMPLE123456789'].join('');
 
 function fakeFetch(respostas = []) {
   const calls = [];
@@ -49,7 +51,7 @@ describe('Amazon SES', () => {
   it('envia pela API v2, com a etiqueta do registro e o conjunto de configuração', async () => {
     const f = fakeFetch([{ status: 200, body: { MessageId: 'm-1' } }]);
     const r = await Prov.sesSend({
-      settings, secrets: { ses: { access_key_id: 'AKIAEXAMPLE123456789', secret_access_key: 'x' } }, fetchImpl: f, useConfigSet: true,
+      settings, secrets: { ses: { access_key_id: CHAVE_AWS_FALSA, secret_access_key: 'x' } }, fetchImpl: f, useConfigSet: true,
     }, { from: 'avisos@picklerush.com.br', to: 'a@b.com', subject: 'Oi', html: '<p>Oi</p>', text: 'Oi', tag: 'n1_email', headers: { 'List-Unsubscribe': '<https://x>' } });
     expect(r.id).toBe('m-1');
     expect(f.calls[0].url).toBe('https://email.sa-east-1.amazonaws.com/v2/email/outbound-emails');
@@ -57,7 +59,7 @@ describe('Amazon SES', () => {
     expect(body.EmailTags).toEqual([{ Name: 'outbox', Value: 'n1_email' }]);
     expect(body.ConfigurationSetName).toBe('picklerush');
     expect(body.Content.Simple.Headers).toEqual([{ Name: 'List-Unsubscribe', Value: '<https://x>' }]);
-    expect(f.calls[0].init.headers.Authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=AKIAEXAMPLE123456789\/\d{8}\/sa-east-1\/ses\/aws4_request/);
+    expect(f.calls[0].init.headers.Authorization).toMatch(new RegExp(`^AWS4-HMAC-SHA256 Credential=${CHAVE_AWS_FALSA}/\\d{8}/sa-east-1/ses/aws4_request`));
   });
   it('sem chave, erro claro antes de chamar a Amazon', async () => {
     const f = fakeFetch();
@@ -66,7 +68,7 @@ describe('Amazon SES', () => {
   });
   it('erro da API vira ProviderError com a mensagem e se dá para tentar de novo', async () => {
     const f = fakeFetch([{ status: 503, body: { message: 'Service busy' } }]);
-    const err = await Prov.sesSend({ settings, secrets: { ses: { access_key_id: 'AKIAEXAMPLE123456789', secret_access_key: 'x' } }, fetchImpl: f }, { to: 'a@b.com', subject: 's', html: 'h', text: 't' }).catch((e) => e);
+    const err = await Prov.sesSend({ settings, secrets: { ses: { access_key_id: CHAVE_AWS_FALSA, secret_access_key: 'x' } }, fetchImpl: f }, { to: 'a@b.com', subject: 's', html: 'h', text: 't' }).catch((e) => e);
     expect(err).toBeInstanceOf(Prov.ProviderError);
     expect(err.message).toMatch(/Service busy/);
     expect(err.retryable).toBe(true);

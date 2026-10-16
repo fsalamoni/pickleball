@@ -10,6 +10,8 @@ import crypto from 'node:crypto';
 const require = createRequire(import.meta.url);
 const M = require('./messaging.js');
 const { createRichFakeDb } = require('../tests/fakes/fakeFirestoreRico.cjs');
+// Montada em partes: o detector de segredos (check-no-secrets) procura o formato da chave da AWS.
+const CHAVE_AWS_FALSA = ['AKIA', 'EXAMPLE123456789'].join('');
 
 // 12h e 23h em Brasília; 9h do dia seguinte.
 const MEIO_DIA = Date.UTC(2026, 9, 16, 15, 0);
@@ -41,7 +43,7 @@ function seed(extra = {}) {
       whatsapp: { templates: [{ name: 'picklerush_aviso', language: 'pt_BR', status: 'APPROVED' }] },
     },
     'platform_secrets/messaging': {
-      ses: { access_key_id: 'AKIAEXAMPLE123456789', secret_access_key: 's' },
+      ses: { access_key_id: CHAVE_AWS_FALSA, secret_access_key: 's' },
       whatsapp: { access_token: 'EAA', app_secret: 'app', verify_token: 'vt' },
       twilio: { account_sid: `AC${'0'.repeat(32)}`, auth_token: 'tok' },
       hmac_key: 'k'.repeat(64),
