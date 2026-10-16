@@ -56,8 +56,36 @@ mantém a ordem por data. Zero banco.
   vínculo `pending`. Arena aceita depois.
 - **`CoachShareDialog.jsx`**: card de share com QR Code, WhatsApp,
   copy link, download PNG.
-- **`RequestLessonDialog`**: agora tem seletor de arena parceira
-  (se professor tem mais de uma residência ativa).
+- **`RequestLessonDialog`** (pedido de aula): seletor de arena parceira
+  (se o professor tem mais de uma residência ativa) e **só os horários
+  livres** dos próximos 14 dias (`generateWeekSlots` sobre a disponibilidade
+  menos os ocupados). Não há mais "Propor horário": data e hora digitadas
+  deixavam pedir o que o professor não oferece. Sem horário livre, o diálogo
+  **diz que não há** e oferece duas saídas: **mandar mensagem** ao professor
+  (combinar outro horário) e **entrar na lista de espera**
+  (`CoachWaitlistJoin`). Com horários, "Nenhum horário serve?" abre as mesmas
+  duas saídas. Leitura que falhou mostra erro com "Tentar de novo", nunca
+  "sem horários" (docs/27). Pedir a aula tira a pessoa da lista daquele
+  professor. Cupom digitado e não aplicado avisa que não vai no pedido.
+  🐞 Antes o professor sem horários publicados deixava o botão "Solicitar
+  aula" apagado com tudo preenchido. Teste: `RequestLessonDialog.runtime.test.jsx`
+  e e2e em `tests/e2e/logado.spec.js` (com e sem horários).
+- **Lista de espera do professor** (`coach_waitlist/{coachId}_{uid}`,
+  `domain/waitlist.js`, `services/waitlistService.js`,
+  `hooks/useCoachWaitlist.js`): o aluno entra com preferências opcionais
+  (manhã/tarde/noite, dias, recado) e o professor é avisado. **Quem avisa o
+  aluno é o servidor** (`functions/coachWaitlist.js`): quando o professor
+  abre janela nova ou tira uma folga futura (`onCoachAvailabilityWritten`) e
+  quando uma aula confirmada futura é desfeita (`onCoachLessonWritten`); no
+  máximo um aviso a cada 6 h por pessoa. O professor vê a lista em Agenda
+  (`CoachWaitlistSection`) e uma linha em Hoje; o aluno vê "Esperando
+  horário" em Minhas aulas (`MyCoachWaitlists`). Regra provada em
+  `tests/rules/coachWaitlist.rules.test.js`.
+- **Horários ocupados** (`coach_busy_slots/{coachId}`, público, só data e
+  hora, sem aluno): mantido pelo servidor a cada escrita em `coach_lessons`
+  e quando o professor salva a agenda; `getBusySlots` lê só ele. 🐞 Antes a
+  tela consultava `coach_lessons` do professor, a regra recusava para quem
+  não era aluno daquelas aulas e o horário já confirmado aparecia livre.
 
 **Página pública sem botões de gestão** (item 3.2): removidos
 "Adicionar arena", "Gerenciar biblioteca", "Minha agenda de aulas",

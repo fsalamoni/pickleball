@@ -24,6 +24,7 @@ import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
 import MyCoachLinks from '@/v2/components/coach/MyCoachLinks';
+import MyCoachWaitlists from '@/modules/coaches/components/MyCoachWaitlists';
 
 import {
   V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface, V2Page,
@@ -165,6 +166,8 @@ function V2StudentLessonsContent() {
           </div>
         )}
       </V2Surface>
+
+      <MyCoachWaitlists />
 
       {history.length > 0 && (
         <V2Surface>

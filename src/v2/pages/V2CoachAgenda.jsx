@@ -36,6 +36,7 @@ import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBo
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
 import CoachTodaySection from '@/modules/coaches/components/CoachTodaySection';
+import CoachWaitlistSection from '@/modules/coaches/components/CoachWaitlistSection';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -500,6 +501,7 @@ function V2CoachAgendaContent() {
             </V2Surface>
             {/* As aulas que ele dá na agenda das ARENAS (módulo de aulas). */}
             <MyTaughtArenaClasses />
+            <CoachWaitlistSection coachId={coachId} />
             <AvailabilityEditor coachId={coachId} />
             <CoachCourtBookingsSection coach={coach} />
             {history.length > 0 && (
