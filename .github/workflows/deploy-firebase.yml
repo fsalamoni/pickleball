@@ -318,6 +318,16 @@ jobs:
             OUT=$(firebase deploy --only "hosting:$HOSTING_SITE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --message "Deploy from GitHub Actions @ ${{ github.sha }}" 2>&1)
             RC=$?
             echo "$OUT"
+            # "An unexpected error has occurred" ao finalizar a versão é falha
+            # passageira do Firebase (2026-10-16: a vigilância publicava as
+            # funções no mesmo minuto). Uma segunda tentativa, só nesse caso.
+            if [ $RC -ne 0 ] && echo "$OUT" | grep -qi "unexpected error"; then
+              echo "Erro inesperado do Firebase; tentando de novo em 30 s."
+              sleep 30
+              OUT=$(firebase deploy --only "hosting:$HOSTING_SITE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive --message "Deploy from GitHub Actions @ ${{ github.sha }}" 2>&1)
+              RC=$?
+              echo "$OUT"
+            fi
             if [ $RC -eq 0 ]; then
               echo "Live URL: https://$HOSTING_SITE_ID.web.app"
               echo "::endgroup::"

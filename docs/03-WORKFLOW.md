@@ -257,7 +257,9 @@ push em main
        9. Install functions deps + Deploy Cloud Functions (não fatal)
           → scripts/functions-deploy.sh (codebase `picklerush`, por nome)
       10. Deploy Storage rules (não fatal)
-      11. Deploy Hosting (picklerush e pickletour; pickletour é redirect-only)
+      11. Deploy Hosting (picklerush e pickletour; pickletour é redirect-only).
+          "An unexpected error has occurred" do Firebase ganha UMA segunda
+          tentativa após 30 s (falha passageira, 2026-10-16)
       12. Conferir o site no ar: Playwright nas rotas públicas de
           https://picklerush.web.app (falha o job) + POST /api/erro → 204
           (monitoramento de erros; só avisa)
