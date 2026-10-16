@@ -5,6 +5,8 @@
  * zero impacto no app.
  */
 
+import { capturarPedidoDeInstalacao } from './pedidoDeInstalacao';
+
 export const PWA_ENABLED = import.meta.env.VITE_PWA_ENABLED === 'true';
 
 export function registerPwa() {
@@ -18,6 +20,8 @@ export function registerPwa() {
       .catch(() => {});
     return;
   }
+
+  capturarPedidoDeInstalacao();
 
   // Em dev o SW não traz benefício e pode confundir o HMR; só em produção.
   if (import.meta.env.DEV) return;

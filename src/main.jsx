@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { registerPwa } from '@core/pwa/registerPwa';
+import { iniciarIconeDoApp } from '@core/pwa/iconeDoApp';
 import { firebaseReady, firebaseServicesEnabled, firebaseDisabledReason } from '@/core/config/firebase';
 import { iniciarIdiomas } from '@/core/i18n/loader';
 import { instalarRelatorioDeErros, reportarErro } from '@/core/services/errorReport';
@@ -116,5 +117,7 @@ setTimeout(() => {
   }
 }, 15000);
 
+// Ícone do app instalado na versão do tema do celular (ver iconeDoApp.js).
+iniciarIconeDoApp();
 // Registro do PWA (no-op quando VITE_PWA_ENABLED !== 'true').
 registerPwa();

@@ -93,6 +93,11 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | `training_questions` + `messages` | conversa privada aluno ↔ professor | 👥 os dois | execução de contrato | conta ativa | ✅ |
 | `training_reports` | denúncia: quem denunciou, o motivo | 🔒 denunciante + 🛡 | legítimo interesse (moderação) | retida na exclusão (só o uid) | ✅ |
 | Storage `treino/{uid}/**` | fotos e vídeos de treino (≤ 60 s) | segue o item | execução de contrato | conta ativa; menor de 18 não envia | ✅ |
+| `users.notification_channels` / `users.phone_verified_*` (2026-10-16, `external_messaging`) | escolhas de aviso por canal; o celular CONFIRMADO para WhatsApp/SMS | 🔒 (o `phone_verified_*` só o servidor grava) | consentimento (a pessoa liga cada canal) | conta ativa | ✅ |
+| `message_outbox` | cada envio por e-mail/WhatsApp/SMS: uid, canal, área, situação e o endereço MASCARADO (`to_masked`) | 🔒 titular + 🛡 (só o servidor escreve) | execução de contrato (avisos do serviço) / consentimento (promoções) | 90 dias | ✅ |
+| `phone_verifications` | celular em confirmação e o hash do código | ninguém pelo cliente | consentimento | 10 min; apagado ao confirmar | ✅ |
+| `message_suppressions` | e-mail/celular bloqueado (devolução, reclamação, PARAR) | ninguém pelo cliente | legítimo interesse (não insistir em quem pediu para parar) | na exclusão o endereço sai, o bloqueio fica | ✅ |
+| `message_reports` | denúncia de e-mail: quem denunciou e quem mandou | 🛡 | legítimo interesse (moderação) | retida (uids) | ✅ |
 
 ## 3. Fluxos de dado para fora
 
@@ -102,6 +107,7 @@ Legenda de exposição: 🌍 público sem login · 🔓 qualquer autenticado ·
 | **DUPR** (exportação CSV pelo admin — `dupr_match_export`, sempre ligada desde 2026-10-10) | nome, DUPR ID, uid como id externo, resultados (sem e-mail — `DUPR_CSV_HEADERS`) | consentimento | ⚠ documentar a transferência |
 | **Google Analytics / Performance** | uso (env `false` hoje ✅) | consentimento | desligado — se ligar, exige banner de cookies funcional |
 | **Google Cloud Logging / Error Reporting** (mesmo projeto, desde 2026-10-15) | relatório de erro do navegador: mensagem (e-mail apagado pelo servidor), pilha, rota com ids trocados por `:id`, versão, user-agent e o uid de quem estava logado | legítimo interesse (segurança e funcionamento do serviço) | ✅ sem terceiro novo (o mesmo Google, operador); sem nome, e-mail ou telefone; some com a retenção padrão do Cloud Logging (30 dias) — `functions/clientErrors.js` |
+| **Provedores de e-mail, WhatsApp e SMS** (Amazon SES ou Resend; Cloud API da Meta; Twilio ou Zenvia — `external_messaging`, desligada até o admin conectar cada um) | e-mail ou celular de quem ligou o canal, o texto do aviso e o primeiro nome | operador (art. 39) | ⚠ antes de ligar: contrato de operador com cada provedor escolhido, e citar os provedores (e a transferência internacional, salvo Zenvia) na Política de Privacidade — hoje ela cita só o Google Firebase como exemplo (`legalDocuments.js`). Ver `docs/49` |
 | **Parceiros/afiliados** (`affiliate_links`) | nenhum dado pessoal | — | ✅ só link |
 | **YouTube / Vimeo** (vídeo por link no Treino) | o IP de quem toca no vídeo | consentimento (o toque) | ✅ fachada: o player (`youtube-nocookie.com`, `player.vimeo.com`) só carrega quando a pessoa toca |
 | **Arenas e professores** | dado do aluno/cliente | execução de contrato | ⚠ são **controladores independentes** ou operadores? Definir e contratualizar (`07-DOCUMENTOS-LEGAIS.md` §3) |

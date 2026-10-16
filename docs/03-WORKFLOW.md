@@ -301,6 +301,7 @@ Ou no GitHub: **Actions** tab → último workflow → verificar verde.
 | `Build failed` | Erro de import/sintaxe | Rodar `npm run build` local, ver erro |
 | `Lint errors` | ESLint quebrou | Rodar `npm run lint`, ver warnings |
 | `Tests failed` | Algum teste quebrou | Rodar `npm test`, ver qual |
+| `An unexpected error has occurred` no passo do **Hosting** | Falha passageira do Firebase ao publicar o site | O workflow tenta de novo uma vez, 30 s depois (passo 11). Falhou duas vezes: reexecute o job; nesta sessão sem permissão de reexecutar, um PR mergeado publica de novo. Não confundir com a linha dos índices, abaixo |
 | `Pass the --force flag` ao publicar índices | Existe índice remoto que não está em `firestore.indexes.json` | **Não use `--force` às cegas**: ele apagaria o índice remoto. O workflow preserva o índice e continua; importe o índice para o JSON antes de voltar a tratar índices como bloqueantes. A divergência de 2026-09-28 (`tournament_matches`: `modality_id`, `stage_index`, `round` — criado pelo link de erro, é o que serve a lista de jogos da fase) foi importada em 2026-09-30. |
 | `An unexpected error has occurred` logo depois de "deploying indexes…", ou o passo de regras verde **sem** "released rules" | O `--only` não nomeia o banco. O `firebase.json` declara o banco nomeado em LISTA, e a firebase-tools 13 só o enxerga quando o alvo o nomeia: `firestore:rules` sozinho resolve **zero** bancos (verde sem publicar nada) e `firestore:indexes` sozinho quebra | Use sempre o PAR `firestore:<parte>,firestore:pickleball`. 🐞 Foi o que segurou os deploys de 29/09 (PRs #175–#178): o site parou no #174 e as regras de segurança novas nunca foram publicadas, com o passo de regras verde. Guarda em `src/core/guards/deployFirebaseWorkflow.test.js` |
 
@@ -348,14 +349,15 @@ firebase hosting:clone picklerush:<versão-anterior> picklerush:live
 O PWA é ligado no build de produção (`VITE_PWA_ENABLED=true` em
 `deploy-firebase.yml`); desligado, nenhum SW é registrado e qualquer registro
 anterior é removido. A versão do cache está em `public/sw.js`
-(`const VERSION = 'v7'` → cache `picklerush-v7`). **Bumpe `VERSION` quando o
+(`const VERSION = 'v8'` → cache `picklerush-v8`). **Bumpe `VERSION` quando o
 conjunto de assets mudar**: a próxima ativação apaga os caches antigos
 (`activate`), e `skipWaiting` + `clients.claim` evitam atualização presa.
 
 `src/core/pwa/registerPwa.js` registra `sw.js`, procura versão nova a cada
 carregamento e, **só quando já havia um SW controlando a página**, recarrega
-uma vez na troca de controlador. Push usa `public/firebase-messaging-sw.js`.
-Cache HTTP em `firebase.json`: `index.html`, `sw.js` e manifest sem cache;
+uma vez na troca de controlador. Ícones do app (claro/escuro pelo tema do
+celular) e instalação: `docs/04-ARCHITECTURE.md` §7.1–§7.2. Push usa `public/firebase-messaging-sw.js`.
+Cache HTTP em `firebase.json`: `index.html` e `sw.js` sem cache, manifestos por 1 h;
 assets com hash, `immutable` por 1 ano.
 
 Depois de um deploy, quem está com a aba aberta pode pedir um pedaço de código

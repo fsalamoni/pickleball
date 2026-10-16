@@ -13,7 +13,7 @@
  * migração de V1 → V2). O cache key inclui o nome do produto e a versão; a
  * próxima ativação apaga caches antigos em `activate`.
  */
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `picklerush-${VERSION}`;
 const SHELL_URL = '/index.html';
 
@@ -35,10 +35,12 @@ self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
+// O manifesto (.webmanifest) fica de FORA de propósito: guardado aqui, o
+// Chrome nunca veria um ícone ou nome novo do app instalado.
 function isStaticAsset(url) {
   return (
     url.pathname.startsWith('/assets/') ||
-    /\.(?:js|css|png|svg|webp|ico|woff2?|ttf|otf|webmanifest)$/.test(url.pathname)
+    /\.(?:js|css|png|svg|webp|ico|woff2?|ttf|otf)$/.test(url.pathname)
   );
 }
 

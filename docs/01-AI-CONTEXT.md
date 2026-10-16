@@ -136,7 +136,9 @@ Lista de coleções, subcoleções, regras e índices: `docs/46-INVENTARIO.md` �
   **Gamificação**: `user_*`, `gamification_*`, `season_rankings`, `hall_of_fame`.
 - **Transversal**: `notifications`, `audit_logs`, `admin_access_logs`,
   `legal_consents`, `push_tokens`, `platform_settings`, `follows`,
-  `conversations`.
+  `conversations`. **Avisos fora da plataforma**: `message_outbox`,
+  `message_suppressions`, `message_reports`, `phone_verifications`,
+  `platform_secrets` (só o servidor).
 
 Princípios: sem joins (desnormalização), ids determinísticos
 (`clubId_uid`, `arenaId_uid`…), campo novo sempre opcional, datas lidas do
@@ -156,6 +158,13 @@ usuário**, usada pelo sino (`NotificationsBell`), pelo menu e pela central
 (`functions/notificationPrefs.js`, paridade testada; `docs/PUSH-ATIVACAO.md`).
 Link de aviso passa por `linkDeAviso` (a regra recusa `#`) e a navegação por
 `destinoDeAviso`.
+
+**E-mail, WhatsApp e SMS** (flag `external_messaging`, `docs/49`): o aviso
+continua sendo UM documento em `notifications`; `messagingOnNotificationCreate`
+decide, no servidor, se ele também sai por fora, pela ORIGEM (`origin: 'server'`
+e `essential` só o Admin SDK grava; `sent_by` é sempre a conta logada) e pelo
+que a pessoa escolheu em Configurações → "E-mail e celular". O admin configura
+provedores, regras e limites em Painel admin → Comunicações.
 
 ## 8. Domínio que mais se mexe (e onde está a regra)
 
@@ -203,11 +212,16 @@ npm run e2e            # Playwright
   `functions-watchdog.yml` recria função apagada. `ci.yml` roda lint/testes,
   os testes de navegador (Playwright com emuladores) e confere se o inventário
   e os docs acompanham o código. Erros que acontecem no aparelho das pessoas
-  vão para o Google Cloud Error Reporting (`/api/erro`, `docs/03-WORKFLOW.md` §7.4). Detalhes e armadilhas:
+  vão para o Google Cloud Error Reporting (`/api/erro`, `docs/03-WORKFLOW.md` §7.4);
+  `/api/mensagens/**` recebe os retornos dos provedores de e-mail/WhatsApp/SMS.
+  O Hosting tenta de novo uma vez no "An unexpected error has occurred" do
+  Firebase. Detalhes e armadilhas:
   `docs/03-WORKFLOW.md`.
 - **Env**: `VITE_FIREBASE_*`, `VITE_FIRESTORE_DATABASE_ID` (padrão
   `pickleball`), `VITE_PWA_ENABLED`.
-- **PWA**: `public/sw.js` versionado, `manifest.webmanifest`,
+- **PWA**: `public/sw.js` versionado, dois manifestos (`manifest.webmanifest`
+  claro e `manifest-escuro.webmanifest`, escolhidos pelo tema do celular em
+  `core/pwa/iconeDoApp.js`), ícones em `public/icones/`,
   `firebase-messaging-sw.js` (push); bump de versão do SW em deploy de UI.
 
 ## 11. "Ver como usuário"

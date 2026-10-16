@@ -2,7 +2,9 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <!-- Aba do navegador: o logo na versão do tema do aparelho (o navegador troca sozinho). -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/icones/favicon-escuro-64-v1.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/icones/favicon-claro-64-v1.png" media="(prefers-color-scheme: light)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="PickleRush — conectando e organizando o pickleball globalmente. Single, duplas e americana, regras CBP/USAP, sorteio automatizado e ranking ao vivo." />
     <meta name="theme-color" content="#0B0F19" />
@@ -33,7 +35,9 @@
 
     <title>PickleRush</title>
 
-    <!-- PWA: metadados de instalação (inertes sem o service worker, registrado por flag) -->
+    <!-- PWA: metadados de instalação. O manifesto e o apple-touch-icon apontam
+         para o CLARO aqui; src/core/pwa/iconeDoApp.js troca para a versão do
+         tema do celular (e a fixa depois de instalado). -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Modo escuro: pinta a PRIMEIRA tela na aparência escolhida, antes de o
          aplicativo carregar (sem o clarão branco a cada abertura). Lê só o
@@ -54,10 +58,12 @@
         } catch (e) { /* armazenamento bloqueado: abre no claro */ }
       })();
     </script>
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icones/apple-claro-180-v1.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- "default", não "black-translucent": o translúcido põe relógio e bateria
+         BRANCOS por cima do topo, que no tema claro é branco (sumiam). -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PickleRush" />
 
     <!-- V2 (Athleisure Premium) design system fonts — usadas pelo app oficial -->
