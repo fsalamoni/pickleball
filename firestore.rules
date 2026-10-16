@@ -1233,6 +1233,8 @@ service cloud.firestore {
           && !request.resource.data.keys().hasAny(['hidden', 'hidden_at', 'hidden_by'])
           // Ninguém nasce suspenso nem "se reativa" criando o documento de novo.
           && !request.resource.data.keys().hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
+          // O número CONFIRMADO do celular só o servidor grava (código por SMS).
+          && !request.resource.data.keys().hasAny(['phone_verified_number', 'phone_verified_at'])
         )
       );
 
@@ -1254,6 +1256,11 @@ service cloud.firestore {
           // (`adminSetAccountStatus`). O titular suspenso não se reativa.
           && !request.resource.data.diff(resource.data).affectedKeys()
                 .hasAny(['account_status', 'status_reason', 'status_until', 'status_set_at', 'status_set_by'])
+          // CELULAR CONFIRMADO: só o servidor (`messagingUser`, código por
+          // SMS/WhatsApp). Gravado pelo dono, mandaria mensagem paga para o
+          // número de outra pessoa.
+          && !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['phone_verified_number', 'phone_verified_at'])
         )
         || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
@@ -1615,7 +1622,12 @@ service cloud.firestore {
       );
     }
     match /notifications/{nid} {
-      allow read, update: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow read: if isAuthed() && resource.data.user_id == request.auth.uid;
+      // O titular marca lida/não lida. Os campos que decidem se o aviso sai
+      // por e-mail ou celular (e para quem) não mudam depois de criados.
+      allow update: if isAuthed() && resource.data.user_id == request.auth.uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['user_id', 'origin', 'essential', 'sent_by', 'broadcast']);
       allow create: if isAuthed()
         && request.resource.data.user_id is string
         && request.resource.data.user_id.size() > 0
@@ -1629,8 +1641,41 @@ service cloud.firestore {
         && request.resource.data.get('message', '').size() <= 600
         && isInternalLink(request.resource.data.get('link', null))
         // Nasce sempre não lida — ninguém cria já marcada para escapar do sino.
-        && request.resource.data.get('read', false) == false;
+        && request.resource.data.get('read', false) == false
+        // E-MAIL E CELULAR (docs/49): o servidor decide se o aviso sai da
+        // plataforma pela ORIGEM. `origin`/`essential` só o servidor grava
+        // (Admin SDK, fora destas regras); `sent_by` é sempre quem escreve —
+        // é ele que leva "Enviado por" e o botão de denunciar ao e-mail; e os
+        // canais do aviso em massa (`broadcast`) só valem do admin.
+        && request.resource.data.get('sent_by', request.auth.uid) == request.auth.uid
+        && !request.resource.data.keys().hasAny(['origin', 'essential'])
+        && (!('broadcast' in request.resource.data) || isPlatformAdmin());
       allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Avisos por e-mail e celular (docs/49) ---------------------------
+    // Chaves dos provedores e estado interno do envio: SÓ o servidor.
+    match /platform_secrets/{docId} {
+      allow read, write: if false;
+    }
+    // O registro do que saiu (e-mail, WhatsApp, SMS): fila, contagem e prova.
+    // A pessoa lê o dela (exportação); o admin lê tudo. Só o servidor escreve.
+    match /message_outbox/{oid} {
+      allow read: if isAuthed() && (resource.data.user_id == request.auth.uid || isPlatformAdmin());
+      allow write: if false;
+    }
+    // Endereços bloqueados (devolução, reclamação, PARAR) e o código do
+    // celular em andamento (hash): ninguém lê pelo cliente.
+    match /message_suppressions/{sid} {
+      allow read, write: if false;
+    }
+    match /phone_verifications/{uid} {
+      allow read, write: if false;
+    }
+    // Denúncia de e-mail pelo link do rodapé: o admin lê; o servidor escreve.
+    match /message_reports/{rid} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
     }
 
     // ---- Acessos do suporte (05-ADMIN-SUPORTE §7) ------------------------

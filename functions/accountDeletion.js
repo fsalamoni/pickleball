@@ -125,6 +125,8 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'promo_settings', label: 'Configurações de divulgação (professor)' },
   { col: 'market_carts', label: 'Carrinho do Mercado' },
   { col: 'market_addresses', label: 'Endereços salvos do Mercado' },
+  // Código de confirmação do celular em andamento (id = uid).
+  { col: 'phone_verifications', label: 'Confirmação do celular em andamento' },
 ]);
 
 /**
@@ -187,6 +189,9 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'market_favorites', field: 'uid', label: 'Favoritos do Mercado' },
   { col: 'market_follows', field: 'uid', label: 'Lojas seguidas no Mercado' },
   { col: 'market_saved_searches', field: 'uid', label: 'Buscas salvas do Mercado' },
+  // E-mails, WhatsApp e SMS que a plataforma mandou para a pessoa (registro
+  // de 90 dias; o resumo diário também leva o `user_id`).
+  { col: 'message_outbox', field: 'user_id', label: 'Registro de e-mails e mensagens recebidos' },
 ]);
 
 /**
@@ -217,6 +222,9 @@ const RETAINED_AS_IS = Object.freeze([
   { col: 'market_disputes', field: 'buyer_uid', label: 'Problemas relatados em pedidos do Mercado' },
   // A denúncia de anúncio é sobre o conteúdo de OUTRA pessoa (como a do treino) e não guarda nome.
   { col: 'market_reports', field: 'reporter_uid', label: 'Denúncias de anúncios do Mercado que fez' },
+  // Denúncia de e-mail (link do rodapé): só uids e o id do aviso, sem nome.
+  { col: 'message_reports', field: 'reporter_uid', label: 'Denúncias de e-mail que fez' },
+  { col: 'message_reports', field: 'sender_uid', label: 'Denúncias de e-mail sobre avisos da conta' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -802,6 +810,23 @@ function patchDerivedFrom(it, uid, mantidos) {
 }
 
 /** Tira o uid da lista de quem pode ler o item de outra pessoa. */
+/**
+ * Bloqueio de envio (devolução, reclamação, PARAR): o bloqueio fica — o id do
+ * documento é o hash do endereço, e é por ele que o envio confere —, mas o
+ * endereço em claro e a conta saem.
+ */
+function patchSuppression(d, uid) {
+  const ids = Array.isArray(d && d.user_ids) ? d.user_ids : [];
+  if (!ids.includes(uid)) return null;
+  return { address: null, masked: null, user_ids: ids.filter((u) => u !== uid) };
+}
+
+/** Avisos que a pessoa mandou a outras (o registro é de quem recebeu). */
+function patchOutboxSender(d, uid) {
+  if (!d || d.sent_by !== uid) return null;
+  return { sent_by: null, k_sender: null, k_pair: null };
+}
+
 function patchSharedUids(it, uid) {
   if (!it || !Array.isArray(it.shared_uids) || !it.shared_uids.includes(uid)) return null;
   return { shared_uids: it.shared_uids.filter((u) => u !== uid) };
@@ -1031,6 +1056,9 @@ const PSEUDO_SPECS = Object.freeze([
   { label: 'Ofertas feitas no Mercado', col: 'market_offers', wheres: [['buyer_uid', '==']], patch: campos('buyer_uid', ['buyer_name'], [], REMOVED_USER) },
   { label: 'Perguntas feitas no Mercado', col: 'market_questions', wheres: [['asker_uid', '==']], patch: campos('asker_uid', ['asker_name'], [], REMOVED_USER) },
   { label: 'Avaliações no Mercado', col: 'market_reviews', wheres: [['author_uid', '==']], patch: campos('author_uid', ['author_name'], [], REMOVED_USER) },
+  // E-mail e celular
+  { label: 'Bloqueios de envio (ficam, sem o endereço)', bucket: 'retained', col: 'message_suppressions', wheres: [['user_ids', 'array-contains']], patch: patchSuppression },
+  { label: 'Avisos que mandou por e-mail ou celular (ficam com quem recebeu)', col: 'message_outbox', wheres: [['sent_by', '==']], patch: patchOutboxSender },
   // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
   { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
   { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
@@ -1503,6 +1531,8 @@ module.exports = {
   patchBooking,
   patchInternalTournament,
   patchPairRanking,
+  patchSuppression,
+  patchOutboxSender,
   trainingItemStays,
   patchTrainingItemAuthor,
   patchDerivedFrom,

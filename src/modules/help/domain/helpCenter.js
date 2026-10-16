@@ -1612,6 +1612,30 @@ const CONTA = {
       ],
     },
     {
+      id: 'email-e-celular',
+      flags: ['external_messaging'],
+      title: tk('Avisos por e-mail, WhatsApp e SMS'),
+      summary: tk('Receba os avisos importantes fora da plataforma, do jeito que você escolher.'),
+      keywords: ['e-mail', 'email', 'whatsapp', 'sms', 'celular', 'telefone', 'resumo', 'silêncio', 'bloquear', 'descadastrar', 'promoção'],
+      blocks: [
+        p(tk('Além do sino e do push, a plataforma pode mandar avisos por e-mail, WhatsApp e SMS. Você escolhe o que chega por onde, em Configurações → "E-mail e celular". Os canais que aparecem lá são os que a plataforma já ligou.')),
+        steps(
+          tk('Confirme o seu e-mail: toque em "Enviar confirmação" e abra o link que chegar. Sem confirmar, nada é enviado para ele.'),
+          tk('Para WhatsApp e SMS, cadastre o celular e digite o código de 6 números que chegar. O número fica guardado só para os avisos e nunca aparece para outras pessoas.'),
+          tk('Em "Por área", escolha para cada assunto (jogos, torneios, reservas, mercado…) se vem por e-mail na hora, num resumo do dia ou da semana, ou se não vem.'),
+          tk('Em "Horário de silêncio", diga as horas em que nada pode chegar. O que for urgente espera o fim do silêncio; o resto entra no resumo.'),
+        ),
+        list(
+          tk('AVISOS ESSENCIAIS — confirmação de conta, troca de senha e avisos sobre a sua conta chegam sempre por e-mail, mesmo com o resto desligado.'),
+          tk('PROMOÇÕES — só chegam se você ligar "Novidades e promoções". Sem isso, nenhuma promoção sai por e-mail, WhatsApp ou SMS.'),
+          tk('MENSAGENS DO CHAT — esperam alguns minutos: se você ler na plataforma antes, o e-mail não sai.'),
+          tk('SAIR E DENUNCIAR — todo e-mail traz no rodapé como parar de receber aquele assunto. O que veio de outra pessoa traz também "Denunciar este e-mail", que bloqueia quem mandou. Os bloqueados aparecem no cartão, onde dá para desfazer.'),
+        ),
+        tip(tk('No WhatsApp, responda PARAR para não receber mais por ali. No SMS, responda SAIR (ou STOP).')),
+        link('/configuracoes#email-e-celular', tk('Escolher os avisos por e-mail e celular')),
+      ],
+    },
+    {
       id: 'central-de-notificacoes',
       title: tk('Ver as notificações antigas'),
       summary: tk('Todos os seus avisos num lugar só, com filtros e busca.'),
@@ -1974,7 +1998,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/notificacoes', label: tk('as notificações'),
     refs: [[HELP_SECTION.ACCOUNT, 'central-de-notificacoes'], [HELP_SECTION.ACCOUNT, 'notificacoes']] },
   { pattern: '/configuracoes', label: tk('configurações'),
-    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.ATHLETE, 'minha-regiao'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.START, 'dicas'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.ATHLETE, 'minha-regiao'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.START, 'dicas'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'email-e-celular'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/legal', label: tk('os documentos'),
     refs: [[HELP_SECTION.ACCOUNT, 'documentos']] },
 ]);

@@ -478,6 +478,45 @@ sino de outra pessoa é limitação conhecida); só o admin apaga.
 — a chave em português e os parâmetros simples de um `tx('…')`; o sino e o push
 mostram o aviso no idioma de quem recebe. Ausente ⇒ vale `title`/`message`
 (o português, sempre gravado). Ver `docs/44-IDIOMAS.md`.
+Campos de ORIGEM (2026-10-16, `external_messaging`, ver `docs/49`):
+`origin: 'server'` e `essential: true` só o servidor grava (a regra recusa do
+cliente); `sent_by` é sempre a conta que escreve (a regra confere); `broadcast:
+{ kind: 'servico'|'novidade', channels: ['email'|'whatsapp'|'sms'] }` só do
+admin da plataforma. Depois de criado, o titular só muda `read`/`read_at`.
+
+### `message_outbox/{aviso}_{canal}` (2026-10-16, `external_messaging`)
+Registro de cada envio por e-mail/WhatsApp/SMS e fila do que espera.
+`notice_id`, `user_id`, `channel`, `area`, `trust`, `sent_by`, `essential`,
+`kind` (`notice` | `digest_daily` | `digest_weekly` | envios de sistema),
+`status` (`sending`, `queued`, `sent`, `delivered`, `bounced`, `complained`,
+`failed`, `suppressed`, `capped`, `skipped`, `digest_daily`, `digest_weekly`),
+`reason`, `send_after_ms`, `attempts`, `provider`, `provider_id`,
+`to_masked` (nunca o endereço inteiro), `cost_brl`, `segments`, `day`/`month`
+(Brasília) e as chaves de contagem `k_user`/`k_sender`/`k_pair`/`k_day`/
+`k_month` (tetos e orçamento por igualdade, sem índice composto),
+`created_at_ms`, `expire_at_ms`. Regra: a pessoa lê os dela (exportação), o
+admin todos; só o servidor escreve. Apagado depois de 90 dias.
+
+### `message_suppressions/{sha256(canal:endereço)}` (2026-10-16)
+Bloqueio de envio (devolução definitiva, reclamação, PARAR, descadastro
+geral): `channel`, `address`, `masked`, `reason`, `source`, `user_ids[]`,
+`created_at_ms`. Na
+exclusão de conta o endereço sai e o bloqueio fica. Ninguém lê pelo cliente.
+
+### `message_reports/{id}` (2026-10-16)
+Denúncia pelo link do rodapé do e-mail: `reporter_uid`, `sender_uid`,
+`notice_id`, `channel`, `status` (`open` | `resolved` | `dismissed`), datas. Só o
+admin lê; só o servidor escreve.
+
+### `phone_verifications/{uid}` (2026-10-16)
+Código do celular em andamento: `phone`, `phone_masked`, `channel`,
+`code_hash` (nunca o código), `attempts`, `expires_ms` (10 min), `sends[]`.
+Ninguém pelo cliente; apagado ao confirmar.
+
+### `platform_secrets/{messaging|messaging_runtime}` (2026-10-16)
+Chaves dos provedores (SES, Resend, WhatsApp, Twilio, Zenvia), a chave HMAC
+dos links assinados e identificadores internos. `allow read, write: if false`
+— só o servidor.
 
 ### `audit_logs/{id}`
 Trilha de auditoria. Campos: `log_number`, `action`, `action_label`, `actor_id`,
@@ -503,7 +542,11 @@ função `adminSupportReveal`; `admin_uid`, `target_uid`, `action: 'reveal_field
 Leitura pública; escrita só do admin da plataforma. Singletons:
 `global` (`feature_flags.{key}` — valores das flags de `FEATURE_FLAG` — e
 `inicio.promocoes`), `arena_modules`, `gamification`, `marketplace`,
-`training` e `ranking_worker` (este escrito pelo servidor). Não há migração de
+`training`, `messaging` (configuração dos avisos por e-mail/celular, sem
+segredo: provedores, domínio, remetente, matriz área × canal, horários,
+limites, `push.vapid_public_key` — ver `docs/49`), `messaging_status` (estado
+do domínio e dos modelos, escrito pelo servidor) e `ranking_worker` (este
+escrito pelo servidor). Não há migração de
 flags: `normalizeFeatureFlags` lê só as chaves de `FEATURE_FLAG` (ausente ⇒
 `false`), ignora as desconhecidas — inclusive as chaves antigas das
 funcionalidades incorporadas — e as de `PERMANENT_FEATURE` valem sempre `true`.
@@ -970,6 +1013,14 @@ account.
 ### `users/{uid}.notification_prefs: object` (Onda 9b)
 Preferências por categoria: `{booking_confirmed: bool, tournament_*: bool,
 chat_*: bool, forum_*: bool, ...}`. Default todas ON.
+
+### `users/{uid}.notification_channels: object` (2026-10-16, `external_messaging`)
+Escolhas da pessoa por canal: `{ email|whatsapp|sms|push: { on, areas: {
+<área>: 'imediato'|'diario'|'semanal'|'nao' (e-mail) ou bool } }, marketing,
+quiet: { on, start, end, push }, blocked_senders: [uid] }`. Ausente ⇒ os
+padrões do admin. Escrito pelo dono por caminho com ponto. Ao lado,
+`phone_verified_number` (E.164) e `phone_verified_at` — **só o servidor**
+grava (código por SMS/WhatsApp; a regra recusa o dono).
 
 ### `users/{uid}.language: string` (2026-10-14, flag `multi_language`)
 Idioma escolhido pela pessoa (`'pt-BR' | 'en' | 'es'`, os códigos de

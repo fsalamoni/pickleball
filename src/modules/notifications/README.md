@@ -53,6 +53,13 @@ propagação para não fechar/navegar o item do menu.
 `profile_reminder` e `leveling_reminder` NÃO são gravados no banco —
 o `Layout` computa do `userProfile` enquanto a pendência existir.
 
+## Fora da plataforma
+Com a flag `external_messaging`, o mesmo aviso pode sair também por e-mail,
+WhatsApp ou SMS (e o push obedece às escolhas por área). O serviço grava
+`sent_by` em todo aviso do cliente e `broadcast` no aviso em massa do admin;
+`origin`/`essential` só o servidor. Ver `src/modules/messaging/README.md` e
+`docs/49-AVISOS-POR-EMAIL-E-CELULAR.md`.
+
 ## Onde achar mais
 - `docs/06-MODULES.md` § notifications
 - `docs/01-AI-CONTEXT.md` §7

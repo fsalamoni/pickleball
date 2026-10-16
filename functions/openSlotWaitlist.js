@@ -139,6 +139,7 @@ async function promoverProximo(ctx, slotId) {
       message: textoDoAviso(message),
       ...(i18n ? { i18n } : {}),
       type: 'generic',
+      origin: 'server',
       link: slot && slot.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
       read: false,
       archived: false,

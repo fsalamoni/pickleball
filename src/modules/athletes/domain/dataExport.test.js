@@ -97,3 +97,11 @@ describe('exportação: o Mercado', () => {
     expect(out.market.counts).toMatchObject({ orders: 1, selling_as: 1, media: 1, offers: 0 });
   });
 });
+
+describe('exportação: e-mails e mensagens enviados', () => {
+  it('entra só quando coletado', () => {
+    expect(buildDataExport({ uid: 'u1' })).not.toHaveProperty('messages');
+    const out = buildDataExport({ uid: 'u1', messages: [{ id: 'n1_email', channel: 'email', to: 'a***@b.com' }] });
+    expect(out.messages).toEqual([{ id: 'n1_email', channel: 'email', to: 'a***@b.com' }]);
+  });
+});

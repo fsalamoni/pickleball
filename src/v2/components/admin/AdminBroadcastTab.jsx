@@ -8,6 +8,8 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Megaphone, Send } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { PLATFORM_INTEREST_META } from '@/modules/athletes/domain/profileMeta';
 import {
@@ -19,9 +21,15 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   V2Button, V2ErrorState, V2Field, V2FilterChip, V2Input, V2Select, V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
-import { t, tn } from '@/core/i18n';
+import { t, tk, tn } from '@/core/i18n';
 
 const AUDIENCIAS = PROMO_AUDIENCES_BY_ISSUER[PROMO_ISSUER.PLATFORM];
+
+const CANAIS_EXTRAS = [
+  { id: 'email', label: tk('E-mail') },
+  { id: 'whatsapp', label: tk('WhatsApp') },
+  { id: 'sms', label: tk('SMS') },
+];
 
 export default function AdminBroadcastTab() {
   const { user, isPlatformAdmin } = useAuth();
@@ -29,6 +37,9 @@ export default function AdminBroadcastTab() {
   const [f, setF] = useState({ title: '', message: '', link: '', audience: PROMO_AUDIENCE.ALL, detail: { interest: '', state: '', city: '' } });
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const externo = useFeatureFlag(FEATURE_FLAG.EXTERNAL_MESSAGING);
+  const [massa, setMassa] = useState({ kind: 'servico', channels: [] });
+  const alternarCanal = (c) => setMassa((m) => ({ ...m, channels: m.channels.includes(c) ? m.channels.filter((x) => x !== c) : [...m.channels, c] }));
   const set = (patch) => setF((a) => ({ ...a, ...patch }));
   const setDetail = (patch) => setF((a) => ({ ...a, detail: { ...a.detail, ...patch } }));
 
@@ -45,6 +56,7 @@ export default function AdminBroadcastTab() {
       const r = await sendAdminBroadcast({
         title: f.title.trim(), message: f.message.trim(), link: f.link.trim(), audience: f.audience,
         detail: precisa ? f.detail : null, recipients: destinatarios, actor: user,
+        broadcast: externo ? massa : { kind: 'servico', channels: [] },
       });
       toast.success(tn(r.requested, 'Aviso gravado para {sent} de {n} pessoa.', 'Aviso gravado para {sent} de {n} pessoas.', { sent: r.sent }));
       set({ title: '', message: '', link: '' });
@@ -116,6 +128,28 @@ export default function AdminBroadcastTab() {
                       <V2Input id="bc-cidade" maxLength={80} value={f.detail.city} onChange={(e) => setDetail({ city: e.target.value })} placeholder="Porto Alegre" />
                     </V2Field>
                   )}
+                </div>
+              )}
+              {externo && (
+                <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper p-3">
+                  <p className="text-xs font-semibold text-ink">{t('Também enviar por')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CANAIS_EXTRAS.map((c) => (
+                      <V2FilterChip key={c.id} active={massa.channels.includes(c.id)} onClick={() => alternarCanal(c.id)} aria-pressed={massa.channels.includes(c.id)}>
+                        {t(c.label)}
+                      </V2FilterChip>
+                    ))}
+                  </div>
+                  <V2Field label={t('Tipo do aviso')} htmlFor="bc-tipo" hint={massa.kind === 'novidade'
+                    ? t('Novidade: por e-mail, WhatsApp ou SMS só para quem aceitou receber novidades. No sino, para todos do público.')
+                    : t('Serviço (manutenção, mudança de regra, algo que a pessoa precisa saber): segue as escolhas de cada pessoa para a área do link.')}
+                  >
+                    <V2Select id="bc-tipo" value={massa.kind} onChange={(e) => setMassa((m) => ({ ...m, kind: e.target.value }))}>
+                      <option value="servico">{t('Serviço')}</option>
+                      <option value="novidade">{t('Novidade ou promoção')}</option>
+                    </V2Select>
+                  </V2Field>
+                  <p className="text-xs text-gray-500">{t('Nenhum canal marcado: só no sino e no push. Os limites por pessoa e o orçamento do mês valem (Comunicações → Limites e custos).')}</p>
                 </div>
               )}
               <p className={`text-sm font-semibold ${destinatarios.length > 0 ? 'text-ink' : 'text-amber-700'}`}>

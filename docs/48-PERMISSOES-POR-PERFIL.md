@@ -111,7 +111,9 @@ torneio, `/c/:clubId`) existem para isso.
 | Ação | Atl (titular) | Plat | Onde |
 |---|---|---|---|
 | Ler `users/{uid}` | ✔ o próprio | ✔ todos | rules (`isOwner` / `isPlatformAdmin`) |
-| Editar o próprio perfil | ✔ exceto `role`, `can_create_pools`, `hidden*`, `account_status*` | — | rules |
+| Editar o próprio perfil | ✔ exceto `role`, `can_create_pools`, `hidden*`, `account_status*`, `phone_verified_*` | — | rules |
+| Confirmar o celular (`phone_verified_number`) | ◐ só pelo código de 6 números | ✖ pelo cliente | **Cloud Function** `messagingUser` (+ rules recusam o cliente — senão mandaria mensagem paga para o número de outra pessoa) |
+| Escolher canais de aviso (`notification_channels`) | ✔ o próprio | — | rules (campo do dono) |
 | Corrigir cadastro de outro | ✖ | ◐ lista **fechada** de campos (nome, nascimento, telefone, cidade…); **nunca** `role`, privacidade (`*_public`, `directory_listed`) nem `email` | rules (`hasOnly`) + `adminUserEdit.js` na tela |
 | Ocultar atleta (moderação) | ✖ | ✔ (`hidden*`) | rules |
 | Suspender / bloquear / reativar | ✖ | ✔ via função | **Cloud Function** `adminSetAccountStatus` (+ rules recusam o cliente) |
@@ -277,6 +279,8 @@ validada por formato/autoria/revisão; só o admin modera. Detalhe em
 | Suspender / bloquear / revelar contato | ✔ | ✔ | **Cloud Function** |
 | Restaurar o próprio `role` (bootstrap) | — | ✔ | rules (`isOwner && isPlatformOwnerEmail`) e `FirebaseAuthContext` |
 | Revogar o poder de outra conta | ✖ | ✔ | rules |
+| Comunicações: chaves dos provedores, domínio, testes, registro de envios | ✔ via função | ✔ | **Cloud Function** `messagingAdmin`; `platform_secrets` é `read, write: if false` (nem o admin lê pelo cliente — o painel vê só "configurada") |
+| Aviso em massa com e-mail/WhatsApp/SMS (`broadcast`) | ✔ | ✔ | rules (`broadcast` só de `isPlatformAdmin()`) + servidor confere de novo |
 | Promover a admin | ✖ | ✖ | só console |
 
 Quase toda coleção tem um ramo `|| isPlatformAdmin()` (383 ocorrências no
@@ -321,6 +325,7 @@ Princípios que seguem daí:
 | Torneio e inscrição | `registrations.rules.test.js`, `securitySweep.rules.test.js`, `misc.rules.test.js` |
 | Arena (documentos `{arena}_{uid}`, fila, módulos) | `arenaUserDocs.rules.test.js`, `matchmaking.rules.test.js`, `arenaModules.rules.test.js`, `couponsReferrals.rules.test.js`, `campaignBanners.rules.test.js`, `couponArt.rules.test.js` |
 | Usuário, poder e auditoria | `users.rules.test.js`, `auditlogs.rules.test.js`, `adminAccessLogs.rules.test.js` |
+| Avisos por e-mail e celular (origem do aviso, segredos, celular confirmado) | `messaging.rules.test.js` |
 | Contato no perfil público só com permissão | `athleteContacts.rules.test.js` |
 | Professor | `coachLessons.rules.test.js`, `promoMarketing.rules.test.js` |
 | Gamificação | `gamificationV2.rules.test.js`, `gamification.rules.emulator.mjs` |

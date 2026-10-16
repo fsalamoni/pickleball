@@ -2,7 +2,9 @@
  * Notificações push (Web/PWA) via Firebase Cloud Messaging.
  *
  * TOTALMENTE OPCIONAL E GRACIOSO: só faz algo quando
- *   (a) a env `VITE_FIREBASE_VAPID_KEY` está configurada,
+ *   (a) há chave pública VAPID: a env `VITE_FIREBASE_VAPID_KEY` do build ou,
+ *       sem ela, a que o admin colou em Painel admin → Comunicações → Push
+ *       (`platform_settings/messaging.push.vapid_public_key`, leitura pública),
  *   (b) o navegador suporta Service Worker + Notification + FCM,
  *   (c) o atleta concede permissão (opt-in explícito).
  * Em qualquer outro caso, todas as funções abaixo são no-op e retornam um
@@ -13,18 +15,36 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where,
+  collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where,
 } from 'firebase/firestore';
 import { app, db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
+const ENV_VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
+const VAPID_RE = /^[A-Za-z0-9_-]{40,200}$/;
+
+let vapidPromise = null;
+
+/** A chave pública VAPID: a do build vence; senão, a gravada pelo admin. '' sem nenhuma. */
+export function getVapidKey() {
+  if (ENV_VAPID_KEY) return Promise.resolve(ENV_VAPID_KEY);
+  if (!vapidPromise) {
+    vapidPromise = (db ? getDoc(doc(db, 'platform_settings', 'messaging')) : Promise.resolve(null))
+      .then((snap) => {
+        const k = snap && snap.exists() ? String(snap.data()?.push?.vapid_public_key || '') : '';
+        return VAPID_RE.test(k) ? k : '';
+      })
+      // Falhou a leitura: não guarda o vazio, a próxima tentativa lê de novo.
+      .catch(() => { vapidPromise = null; return ''; });
+  }
+  return vapidPromise;
+}
 
 let messagingModulePromise = null;
 
 /** Carrega o módulo FCM sob demanda; retorna null se indisponível/não suportado. */
 async function getMessagingSafe() {
-  if (!app || !VAPID_KEY) return null;
+  if (!app || !(await getVapidKey())) return null;
   if (typeof window === 'undefined' || !('serviceWorker' in navigator) || typeof Notification === 'undefined') {
     return null;
   }
@@ -40,9 +60,9 @@ async function getMessagingSafe() {
   return messagingModulePromise;
 }
 
-/** A env VAPID está configurada? (sem ela, push não é oferecido.) */
-export function isPushConfigured() {
-  return Boolean(VAPID_KEY);
+/** Há chave VAPID (do build ou do painel)? Sem ela, o push não é oferecido. */
+export async function isPushConfigured() {
+  return Boolean(await getVapidKey());
 }
 
 /** Estado da permissão do navegador: 'unsupported' | 'default' | 'granted' | 'denied'. */
@@ -68,7 +88,7 @@ export async function enablePush(user) {
   try {
     if (!user?.uid || !db) return { ok: false, reason: 'no-user' };
     const ctx = await getMessagingSafe();
-    if (!ctx) return { ok: false, reason: isPushConfigured() ? 'unsupported' : 'unconfigured' };
+    if (!ctx) return { ok: false, reason: (await isPushConfigured()) ? 'unsupported' : 'unconfigured' };
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return { ok: false, reason: 'denied' };
@@ -80,7 +100,7 @@ export async function enablePush(user) {
       .catch(() => undefined);
 
     const token = await ctx.mod.getToken(ctx.messaging, {
-      vapidKey: VAPID_KEY,
+      vapidKey: await getVapidKey(),
       serviceWorkerRegistration: registration,
     });
     if (!token) return { ok: false, reason: 'no-token' };

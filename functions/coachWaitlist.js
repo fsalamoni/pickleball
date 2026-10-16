@@ -106,6 +106,7 @@ async function avisarListaDeEspera(ctx, coachId, motivo) {
         link: `/coaches/${coachId}?marcar=1`,
         read: false,
         archived: false,
+        origin: 'server',
         created_at: agora,
       });
       lote.update(d.ref, { notified_at: agora, notify_count: (Number(e.notify_count) || 0) + 1 });

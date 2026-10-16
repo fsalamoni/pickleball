@@ -36,6 +36,11 @@ export const FLAG_GROUPS = Object.freeze([
     label: tk('Idiomas'),
     keys: [FEATURE_FLAG.MULTI_LANGUAGE],
   },
+  {
+    id: 'messaging',
+    label: tk('Comunicações'),
+    keys: [FEATURE_FLAG.EXTERNAL_MESSAGING],
+  },
 ]);
 
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: tk('Outras') });

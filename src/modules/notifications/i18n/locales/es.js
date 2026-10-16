@@ -332,4 +332,9 @@ export default {
   "Oferta de {nome} por \"{anuncio}\" aceita automaticamente, pelo valor que você definiu.": "La oferta de {nome} por \"{anuncio}\" se aceptó automáticamente, por el valor que definiste.",
   "Novidade em {loja}": "Novedad en {loja}",
   "{loja} pôs à venda: {anuncio}.": "{loja} puso a la venta: {anuncio}.",
+  "Sua conta foi suspensa": "Tu cuenta fue suspendida",
+  "A conta fica suspensa até {data}. Motivo: {motivo}": "La cuenta queda suspendida hasta el {data}. Motivo: {motivo}",
+  "Sua conta foi bloqueada": "Tu cuenta fue bloqueada",
+  "Sua conta foi reativada": "Tu cuenta fue reactivada",
+  "Você já pode entrar de novo no PickleRush.": "Ya puedes volver a entrar en PickleRush.",
 };

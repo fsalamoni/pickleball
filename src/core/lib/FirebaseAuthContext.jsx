@@ -15,7 +15,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 import { isOwnerEmail } from '@/core/config/owners';
-import { t, fmtData } from '@/core/i18n';
+import { t, fmtData, idiomaAtivo } from '@/core/i18n';
 
 const AuthContext = createContext(null);
 
@@ -292,7 +292,16 @@ export const AuthProvider = ({ children }) => {
 
   const sendPasswordReset = async (email) => {
     requireAuthReady();
-    return runSignIn(() => fbSendPasswordResetEmail(auth, String(email || '').trim()));
+    const endereco = String(email || '').trim();
+    // Com o e-mail da plataforma configurado (Painel admin → Comunicações),
+    // o link sai pelo domínio dela, no idioma da pessoa. Qualquer falha cai
+    // no e-mail do Firebase, como sempre. Import dinâmico: fora do pacote inicial.
+    try {
+      const { requestPasswordResetEmail } = await import('@/modules/messaging/services/messagingService');
+      const r = await requestPasswordResetEmail(endereco, idiomaAtivo());
+      if (r?.handled) return undefined;
+    } catch { /* segue pelo Firebase */ }
+    return runSignIn(() => fbSendPasswordResetEmail(auth, endereco));
   };
 
   const signOut = async () => {
