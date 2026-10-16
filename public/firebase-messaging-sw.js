@@ -1,54 +1,75 @@
 /* eslint-disable */
 /*
- * Service worker dedicado ao Firebase Cloud Messaging (notificações push).
+ * Service worker do push (Firebase Cloud Messaging).
  *
- * ADITIVO E ISOLADO: é um SW separado do PWA (`sw.js`) e só é registrado
- * quando o atleta opta por receber push (getToken em pushService.js). Se o
- * push não estiver configurado/ativo, este arquivo nunca é registrado e não
- * tem efeito algum.
+ * Só é registrado quando a pessoa ativa o push (`enablePush` em
+ * src/core/services/pushService.js), com escopo próprio — não colide com o
+ * service worker do PWA (`sw.js`), que controla a raiz.
  *
- * A configuração do Firebase vem da URL reservada do Firebase Hosting
- * (`/__/firebase/init.js`), então nada precisa ser embutido aqui.
+ * NÃO usa o SDK do Firebase. O SDK exige a configuração completa do app
+ * (inclusive o appId) e a URL reservada `/__/firebase/init.js` desta
+ * hospedagem não traz appId: o SDK falhava ao iniciar e nenhum push aparecia
+ * (o navegador mostrava só "o site foi atualizado em segundo plano"). O aviso
+ * do FCM chega como Web Push comum, com o corpo em JSON:
+ *   { notification: { title, body, icon }, data: { link, … }, fcmOptions: { link } }
+ * Testado em src/core/services/pushWorker.test.js.
  */
-importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
-try {
-  // Config automática do projeto (servida pelo Firebase Hosting).
-  importScripts('/__/firebase/init.js');
-  const messaging = firebase.messaging();
+const ICONE = '/pwa-192.png';
 
-  // Mensagens data-only em segundo plano: exibe uma notificação amigável.
-  messaging.onBackgroundMessage((payload) => {
-    const n = payload.notification || {};
-    const d = payload.data || {};
-    const title = n.title || d.title || 'PickleRush';
-    const options = {
-      body: n.body || d.message || '',
-      icon: '/pwa-192.png',
-      badge: '/pwa-192.png',
-      data: { link: (payload.fcmOptions && payload.fcmOptions.link) || d.link || '/' },
-    };
-    self.registration.showNotification(title, options);
-  });
-} catch (err) {
-  // Sem config/hosting (ex.: dev local): push simplesmente não funciona aqui.
+function lerCorpo(event) {
+  try {
+    return event.data ? event.data.json() : {};
+  } catch (e) {
+    return {};
+  }
 }
 
-// Clique na notificação: foca uma aba aberta (navegando para o link) ou abre uma nova.
+// A versão nova entra na hora (a antiga, com o SDK, não mostrava nada).
+self.addEventListener('install', () => self.skipWaiting());
+
+self.addEventListener('push', (event) => {
+  const p = lerCorpo(event);
+  const n = p.notification || {};
+  const d = p.data || {};
+  const link = (p.fcmOptions && p.fcmOptions.link) || d.link || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
+      // App aberto e à vista: o sino já mostra o aviso na hora. O teste do
+      // painel (data.teste) aparece sempre.
+      const aVista = janelas.some((w) => w.visibilityState === 'visible' && !String(w.url).startsWith('chrome-extension://'));
+      if (aVista && d.teste !== '1') return undefined;
+      return self.registration.showNotification(n.title || d.title || 'PickleRush', {
+        body: n.body || d.message || '',
+        icon: n.icon || ICONE,
+        badge: n.badge || ICONE,
+        tag: p.fcmMessageId || undefined,
+        data: { link },
+      });
+    }),
+  );
+});
+
+// Toque na notificação: abre a página do aviso, sempre dentro do site.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const link = (event.notification.data && event.notification.data.link) || '/';
+  let destino;
+  try {
+    destino = new URL((event.notification.data && event.notification.data.link) || '/', self.location.origin);
+  } catch (e) {
+    destino = new URL('/', self.location.origin);
+  }
+  if (destino.origin !== self.location.origin) destino = new URL('/', self.location.origin);
+  const caminho = destino.pathname + destino.search + destino.hash;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      for (const w of wins) {
-        if ('focus' in w) {
-          if ('navigate' in w) { try { w.navigate(link); } catch (e) { /* noop */ } }
-          return w.focus();
-        }
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(link);
-      return undefined;
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
+      const janela = janelas.find((w) => 'focus' in w);
+      if (!janela) return self.clients.openWindow ? self.clients.openWindow(destino.href) : undefined;
+      // Este service worker não controla as páginas do app (quem controla é o
+      // sw.js) e por isso não pode navegar por elas: pede ao app aberto, que
+      // confere o caminho e navega (`usePushNoAparelho`).
+      janela.postMessage({ tipo: 'picklerush:abrir-aviso', link: caminho });
+      return janela.focus();
     }),
   );
 });

@@ -83,6 +83,7 @@ import DicasProvider from '@/v2/components/dicas/DicasProvider';
 import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
 import { LanguageMenu } from '@/v2/components/idioma/LanguageSwitcher';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
+import { usePushNoAparelho } from '@/core/lib/usePushNoAparelho';
 // Gamificação V2 em segundo plano: só baixa o código com a flag ligada e uma conta logada.
 const GamificationBackground = lazy(() => import('@/v2/components/gamification/GamificationBackground'));
 // Paleta de comandos: só baixa quando a pessoa abre.
@@ -644,6 +645,8 @@ export default function V2Layout({ children }) {
   const navigate = useNavigate();
   // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
   useAncoraDoAviso();
+  // Push deste aparelho: renova o token e abre o aviso tocado com o app aberto.
+  usePushNoAparelho(user, navigate);
   const { sections, hubs, hubsVisiveis, myArenas, pendingByArena, isCoach, marketplaceOn } = useV2Nav();
   const bottomItems = useBottomNav({
     uid: user?.uid, pathname: location.pathname, arenas: myArenas, pendingByArena, ehProfessor: isCoach,

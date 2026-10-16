@@ -97,6 +97,35 @@ export const MISSING_META = Object.freeze({
     sender: { label: tk('Informar o remetente'), tab: 'com-sms' },
     credentials: { label: tk('Colar as chaves do provedor'), tab: 'com-sms' },
   },
+  push: {
+    vapid_key: { label: tk('Salvar a chave pública do Web Push (VAPID)'), tab: 'com-push' },
+  },
+});
+
+/**
+ * Por que o push não ativou neste aparelho (`pushFailureReason` em
+ * core/services/pushService.js). `label` é para a pessoa; `admin`, a pista
+ * extra que o painel mostra a quem configura.
+ */
+export const PUSH_FAILURE_META = Object.freeze({
+  denied: { label: tk('O navegador bloqueou as notificações deste site. Libere nas permissões do navegador (o cadeado ao lado do endereço) e tente de novo.') },
+  unsupported: { label: tk('Este navegador não recebe notificações push. No iPhone e no iPad, adicione o PickleRush à Tela de Início (Compartilhar → Adicionar à Tela de Início) e ative o push por lá.') },
+  unconfigured: { label: tk('O push ainda não foi configurado na plataforma.'), admin: tk('Salve a chave pública na aba Push.') },
+  bad_key: { label: tk('O navegador não aceitou a chave do push. Avise o suporte.'), admin: tk('A chave salva na aba Push não é uma chave pública do Web Push válida. Copie de novo a coluna "Key pair" do Firebase.') },
+  fcm_rejected: { label: tk('O serviço de notificações recusou este aparelho agora. Tente de novo mais tarde.'), admin: tk('O Firebase recusou o cadastro do aparelho. Quase sempre é a chave: ela precisa ser a do MESMO projeto do Firebase do app. Se for, confira se a chave de API do app não bloqueia a "Firebase Installations API" e a "FCM Registration API" (Google Cloud → APIs e serviços → Credenciais).') },
+  sw_failed: { label: tk('Não deu para instalar o serviço de notificações neste navegador. Recarregue a página e tente de novo.') },
+  push_service: { label: tk('Este navegador não conseguiu falar com o serviço de push. Em janela anônima o push não funciona; no Brave, ligue "Usar os serviços do Google para mensagens push" nas configurações dele.') },
+  'no-token': { label: tk('Não foi possível ativar as notificações push.') },
+  error: { label: tk('Não foi possível ativar as notificações push.') },
+});
+
+/** O que cada erro do FCM no push de teste quer dizer. */
+export const PUSH_TEST_ERROR_META = Object.freeze({
+  'messaging/registration-token-not-registered': tk('Um aparelho não estava mais inscrito (push desativado, navegador limpo ou desinstalado) e saiu da lista.'),
+  'messaging/invalid-registration-token': tk('Um aparelho tinha um cadastro inválido e saiu da lista.'),
+  'messaging/invalid-argument': tk('Um aparelho tinha um cadastro inválido e saiu da lista.'),
+  'messaging/mismatched-credential': tk('O aparelho foi cadastrado com uma chave de OUTRO projeto do Firebase. Confira a chave da aba Push e ative de novo.'),
+  'messaging/third-party-auth-error': tk('O serviço de push do navegador recusou a credencial. Confira a chave da aba Push e ative de novo.'),
 });
 
 export const ALERT_META = Object.freeze({

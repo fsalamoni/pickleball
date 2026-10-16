@@ -201,7 +201,10 @@ Espelha a notificação in-app para o celular. Passos (todos conferidos em
 4. Apaga tokens inválidos (`registration-token-not-registered`,
    `invalid-registration-token`, `invalid-argument`) em lote.
 
-Nunca lança. Não escreve a notificação in-app. **Quem "chama"**: qualquer
+Nunca lança. Não escreve a notificação in-app. No aparelho, quem mostra é
+`public/firebase-messaging-sw.js`, **sem o SDK do Firebase** (o
+`/__/firebase/init.js` desta hospedagem não traz `appId`; ver
+`PUSH-ATIVACAO.md`). **Quem "chama"**: qualquer
 escrita de notificação permitida pela regra (`notifications` create exige
 `user_id`, tipo conhecido, link interno, `read == false`; o servidor também as
 cria com o Admin SDK).
@@ -209,7 +212,8 @@ cria com o Admin SDK).
 **Testes**: só os helpers — `functions/notificationPrefs.parity.test.js`
 (cópia servidor × `src/modules/notifications/domain`),
 `functions/avisoI18n.parity.test.js` e `avisoI18n.test.js`. A função em si não
-tem teste. Doc: [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md), `PUSH-ATIVACAO.md`.
+tem teste; o service worker tem (`src/core/services/pushWorker.test.js`).
+Doc: [`36-NOTIFICACOES.md`](./36-NOTIFICACOES.md), `PUSH-ATIVACAO.md`.
 
 ### 5.1 Avisos por e-mail, WhatsApp e SMS (flag `external_messaging`)
 
@@ -222,7 +226,7 @@ Signature V4 própria, zero dependência nova), `messagingTemplates.js` e
 |---|---|---|
 | `messagingOnNotificationCreate` | `notifications/{id}` **created** | `handleNotice`: decide cada canal (`decideChannel`), confere supressão, tetos e orçamento, grava `message_outbox/{aviso}_{canal}` e envia o que é "agora". Nada com a flag desligada |
 | `messagingQueue` | agenda, a cada 10 min | Envia o que esperava (silêncio, chat não lido), monta resumos diário/semanal, repete falhas (até 3), apaga registro com mais de 90 dias |
-| `messagingAdmin` | callable, só admin da plataforma | Estado, chaves (`platform_secrets`), preparar/verificar domínio, testes, prévias, "por que não chegou", bloqueios, denúncias, modelos do WhatsApp, registro. Audita em `audit_logs` |
+| `messagingAdmin` | callable, só admin da plataforma | Estado (inclui o push: pronto com a chave pública salva, e o total de `push_tokens`), chaves (`platform_secrets`), preparar/verificar domínio, testes (e-mail, WhatsApp, SMS e `push_test` — FCM para os aparelhos do próprio admin, removendo os inválidos), prévias, "por que não chegou", bloqueios, denúncias, modelos do WhatsApp, registro. Audita em `audit_logs` |
 | `messagingUser` | callable, a própria pessoa | Código do celular (envia/confirma/esquece — só o servidor grava `users.phone_verified_number`), confirmação e teste de e-mail |
 | `messagingAuthEmail` | callable sem login | "Esqueci a senha" pelo nosso provedor, quando `email.login_emails` está ligado; nunca diz se o e-mail existe |
 | `messagingHook` | HTTP público, `/api/mensagens/**` (`firebase.json`) | Retornos dos provedores (assinatura conferida em cada um), PARAR, páginas de descadastro e denúncia (links assinados; GET mostra, POST confirma) |

@@ -97,7 +97,7 @@ function approvedWaLang(ctx, template, lang) {
 /** O que falta para cada canal funcionar. Lista vazia = pronto. */
 function missing(ctx) {
   const { settings: s, secrets: k, status: st } = ctx;
-  const falta = { email: [], whatsapp: [], sms: [] };
+  const falta = { email: [], whatsapp: [], sms: [], push: [] };
   const em = st.email || {};
   if (!s.email.enabled) falta.email.push('disabled');
   if (!s.email.domain) falta.email.push('domain');
@@ -112,12 +112,14 @@ function missing(ctx) {
   if (!s.sms.sender) falta.sms.push('sender');
   const cred = s.sms.provider === 'zenvia' ? k.zenvia && k.zenvia.api_token : k.twilio && k.twilio.account_sid && k.twilio.auth_token;
   if (!cred) falta.sms.push('credentials');
+  // O push não tem interruptor nem chave secreta: basta a chave pública.
+  if (!s.push.vapid_public_key) falta.push.push('vapid_key');
   return falta;
 }
 
 const readiness = (ctx) => {
   const f = missing(ctx);
-  return { email: f.email.length === 0, whatsapp: f.whatsapp.length === 0, sms: f.sms.length === 0 };
+  return { email: f.email.length === 0, whatsapp: f.whatsapp.length === 0, sms: f.sms.length === 0, push: f.push.length === 0 };
 };
 
 /* ---------------------------------------------------------- pessoas ---- */

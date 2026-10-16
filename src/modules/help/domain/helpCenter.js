@@ -1605,8 +1605,10 @@ const CONTA = {
           tk('"Marcar todas como lidas" zera o número de uma vez.'),
           tk('A engrenagem no rodapé do sino leva às preferências.'),
         ),
-        p(tk('Em Configurações você escolhe quais categorias quer ver: uma categoria silenciada some do sino, não conta no número e não chega como notificação no celular. Se a plataforma estiver instalada como aplicativo no celular, também pode receber notificações push.')),
+        p(tk('Em Configurações você escolhe quais categorias quer ver: uma categoria silenciada some do sino, não conta no número e não chega como notificação no celular.')),
         link('/configuracoes#notificacoes', tk('Ajustar minhas notificações')),
+        p(tk('Para receber os avisos no aparelho mesmo com a plataforma fechada, ative as notificações push em Configurações → Notificações push. Vale por aparelho: ative em cada celular ou computador. No iPhone e no iPad, só com o PickleRush adicionado à Tela de Início.')),
+        link('/configuracoes#notificacoes-push', tk('Ativar as notificações push')),
       ],
     },
     {

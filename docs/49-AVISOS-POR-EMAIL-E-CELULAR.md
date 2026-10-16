@@ -27,7 +27,15 @@ que falta em cada canal.
 3. **SMS** — Twilio ou Zenvia, chaves, remetente, custo por mensagem.
 4. **Push** — a chave pública VAPID (antes era só variável de build). O
    projeto Firebase é compartilhado com outro app: **reaproveite o par de
-   chaves existente**, nunca gere outro (o guia diz isso).
+   chaves existente**, nunca gere outro (o guia diz isso). O painel confere o
+   formato (pública = 87 caracteres começando por B; a privada é recusada com
+   aviso próprio — `vapidKeyProblem`). O push **não tem interruptor**: com a
+   chave salva ele está pronto (`missing.push`/`ready.push` no servidor) e o
+   Resumo o mostra como "Configurado", com quantos aparelhos o ativaram. Na
+   própria aba: **Ativar o push neste aparelho** e **Mandar um push de teste
+   para mim** (`push_test`), que diz o motivo quando o navegador ou o Firebase
+   recusa. Com a chave geral ligada e só o push pronto, o aviso do Resumo diz
+   que o push já sai e que e-mail, WhatsApp e SMS ainda não.
 5. **Regras** — por área × canal: desligado / a pessoa escolhe / sempre, e o
    padrão de quem nunca mexeu. Horário de silêncio, hora do resumo, espera do
    chat, canal do código do celular.
@@ -46,7 +54,9 @@ e-mail, cadastrar o celular por código de 6 números (WhatsApp ou SMS, 10 min,
 5 tentativas), ligar cada canal pronto, escolher por área (e-mail: na hora /
 resumo do dia / da semana / não; celular e push: sim/não), novidades e
 promoções (consentimento próprio), horário de silêncio (opcionalmente também
-no push) e desbloquear remetentes. Cadeado = escolha travada pelo admin.
+no push) e desbloquear remetentes. Cadeado = escolha travada pelo admin. A
+coluna e o silêncio do push só aparecem com o push pronto (`ready.push`); ligar
+o push no aparelho é o cartão "Notificações push" (`V2PushCard`).
 
 ## 3. Peças
 
@@ -60,6 +70,8 @@ no push) e desbloquear remetentes. Cadeado = escolha travada pelo admin.
 | `src/modules/messaging/` | `domain/` (policy, meta, guides), `services/messagingService.js`, `hooks/useMessaging.js` |
 | `src/v2/components/admin/messaging/` | O painel Comunicações (9 abas) |
 | `src/v2/components/settings/MessagingSettingsCard.jsx` | O cartão da pessoa |
+| `src/core/services/pushService.js` + `public/firebase-messaging-sw.js` | O push no aparelho: ativar, renovar, desativar (só este aparelho) e o service worker que mostra o aviso **sem o SDK do Firebase** (ver `PUSH-ATIVACAO.md`) |
+| `src/core/lib/usePushNoAparelho.js` | No `V2Layout`: renova o push de quem o ativou aqui e abre o aviso tocado com o app aberto |
 
 Funções (`functions/index.js`, codebase `picklerush`): `messagingOnNotificationCreate`
 (gatilho em `notifications`), `messagingQueue` (a cada 10 min),
@@ -149,5 +161,7 @@ Firebase Auth no console: o projeto é compartilhado com outro app.
 
 `functions/messaging*.test.js` (motor, provedores, modelos, ações, paridade),
 `functions/accountDeletion.mensagens.test.js`,
-`tests/rules/messaging.rules.test.js` (emulador) e
-`src/modules/athletes/domain/dataExport.test.js`.
+`tests/rules/messaging.rules.test.js` (emulador),
+`src/modules/athletes/domain/dataExport.test.js` e, do push,
+`src/core/services/pushService.test.js`, `pushWorker.test.js` e
+`src/core/lib/usePushNoAparelho.test.jsx`.

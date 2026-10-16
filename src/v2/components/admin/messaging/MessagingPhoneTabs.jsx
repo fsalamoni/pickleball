@@ -2,19 +2,25 @@
  * Comunicações → WhatsApp, SMS e Push.
  *  - WhatsApp: identificadores, token, webhook, modelos da Meta, custo, teste.
  *  - SMS: provedor (Twilio ou Zenvia), chaves, remetente, custo, teste.
- *  - Push: a chave pública do Web Push (o resto o Firebase já faz).
+ *  - Push: a chave pública do Web Push (o resto o Firebase já faz) e o
+ *    teste de ponta a ponta neste aparelho.
  */
 import React, { useState } from 'react';
-import { CheckCircle2, RefreshCw, Wand2 } from 'lucide-react';
+import { BellRing, CheckCircle2, RefreshCw, Send, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMessagingAdminAction } from '@/modules/messaging/hooks/useMessaging';
-import { WA_TEMPLATE_STATUS_META } from '@/modules/messaging/domain/meta';
+import { PUSH_FAILURE_META, PUSH_TEST_ERROR_META, WA_TEMPLATE_STATUS_META } from '@/modules/messaging/domain/meta';
+import { normalizeVapidKey, vapidKeyProblem } from '@/modules/messaging/domain/policy';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import {
+  enablePush, forgetVapidKey, getPermissionState, hasBuildVapidKey, isPushActiveHere,
+} from '@/core/services/pushService';
 import { GUIDE_PUSH, GUIDE_TWILIO, GUIDE_WHATSAPP, GUIDE_ZENVIA } from '@/modules/messaging/domain/guides';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2Field, V2Input } from '@/v2/ui/primitives';
-import { t, tk, fmtMoeda } from '@/core/i18n';
+import { t, tk, fmtMoeda, idiomaAtivo } from '@/core/i18n';
 import {
-  Block, ChannelSwitch, CopyValue, Facts, GuideSteps, MissingChecklist, NumInput, SaveBar, SecretsForm, TestSend, quando, useSectionDraft,
+  Block, ChannelSwitch, CopyValue, Facts, GuideSteps, MissingChecklist, NumInput, SaveBar, SecretsForm, TestSend, numero, quando, useSectionDraft,
 } from './messagingUi';
 
 export default function MessagingPhoneTabs({ tab, estado }) {
@@ -250,26 +256,138 @@ function SmsTab({ estado }) {
 
 /* ---------------------------------------------------------------- Push -- */
 
-const VAPID_RE = /^[A-Za-z0-9_-]{40,200}$/;
+const PROBLEMA_DA_CHAVE = {
+  private_key: tk('Esta é a chave PRIVADA (43 letras). Cole a pública: a da coluna "Key pair", com 87 letras, começando por B.'),
+  format: tk('Isto não parece a chave pública do Web Push: ela tem 87 letras (só letras, números, - e _) e começa por B.'),
+};
 
 function PushTab({ estado }) {
+  const { user } = useAuth();
   const form = useSectionDraft(estado.settings, 'push');
   const valor = form.draft.vapid_public_key || '';
-  const invalido = valor && !VAPID_RE.test(valor);
+  const problema = valor ? vapidKeyProblem(valor) : '';
   const gravado = estado.settings.push?.vapid_public_key || '';
+  const configurado = Boolean(gravado || hasBuildVapidKey);
+  const salvar = async () => {
+    // A tela que já tinha perguntado pela chave não fica com a resposta velha.
+    if (await form.salvar()) forgetVapidKey();
+  };
   return (
-    <Block
-      title={t('Push (notificação no aparelho)')}
-      description={t('O push usa o Firebase Cloud Messaging, que já faz parte do projeto. Só falta a chave pública do Web Push: com ela, as pessoas veem "Ativar notificações push" nas Configurações. O push não tem custo por envio e obedece às mesmas áreas da aba Regras.')}
-    >
-      <GuideSteps title={t('Como pegar a chave pública no Firebase')} steps={GUIDE_PUSH} defaultOpen={!gravado} />
-      <V2Field htmlFor="push-vapid" label={t('Chave pública do Web Push (VAPID)')} hint={t('Se a variável VITE_FIREBASE_VAPID_KEY estiver definida no build, ela vale no lugar desta.')} error={invalido ? t('A chave tem só letras, números, - e _, sem espaços (uns 88 caracteres).') : undefined}>
-        <V2Input id="push-vapid" value={valor} onChange={(e) => form.set('vapid_public_key', e.target.value.trim())} autoComplete="off" spellCheck={false} placeholder="B…" />
-      </V2Field>
+    <>
+      <Block
+        title={t('Push (notificação no aparelho)')}
+        description={t('O push usa o Firebase Cloud Messaging, que já faz parte do projeto. Só falta a chave pública do Web Push: com ela, as pessoas veem "Ativar notificações push" nas Configurações. O push não tem custo por envio e não tem interruptor próprio: com a chave salva, ele está pronto.')}
+      >
+        <GuideSteps title={t('Como pegar a chave pública no Firebase')} steps={GUIDE_PUSH} defaultOpen={!gravado} />
+        {hasBuildVapidKey && (
+          <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">
+            {t('Este build tem a chave na variável VITE_FIREBASE_VAPID_KEY, e ela vale no lugar da salva aqui.')}
+          </p>
+        )}
+        <V2Field htmlFor="push-vapid" label={t('Chave pública do Web Push (VAPID)')} hint={t('Espaços e "=" no fim são tirados sozinhos.')} error={problema ? t(PROBLEMA_DA_CHAVE[problema] || PROBLEMA_DA_CHAVE.format) : undefined}>
+          <V2Input id="push-vapid" value={valor} onChange={(e) => form.set('vapid_public_key', normalizeVapidKey(e.target.value))} autoComplete="off" spellCheck={false} placeholder="B…" />
+        </V2Field>
+        <div className="flex flex-wrap items-center gap-3">
+          <V2Button type="button" size="sm" disabled={!form.dirty || Boolean(problema) || form.saving} onClick={salvar}>{form.saving ? t('Salvando…') : t('Salvar a chave')}</V2Button>
+          {gravado ? <V2Badge tone="green">{t('Chave salva')}</V2Badge> : <V2Badge tone="amber">{t('Sem chave')}</V2Badge>}
+          <span className="text-xs text-gray-500">{t('Aparelhos com o push ativo: {n}', { n: numero(estado.people?.push_devices) })}</span>
+        </div>
+      </Block>
+
+      <Block
+        title={t('Testar neste aparelho')}
+        description={t('A prova de que tudo conversa (chave, navegador e Firebase): ative o push neste aparelho e mande um push de teste para você. Se ele aparecer, as pessoas também vão receber.')}
+      >
+        <PushDeviceTest user={user} configurado={configurado} />
+      </Block>
+
+      <Block title={t('Como o push funciona')}>
+        <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-gray-600">
+          <li>{t('Cada pessoa ativa em Configurações → Notificações push, aparelho por aparelho.')}</li>
+          <li>{t('Todo aviso do sino vira push. Com a chave geral ligada, ele obedece às áreas da aba Regras (coluna Push), à escolha de cada pessoa e ao horário de silêncio de quem o estendeu ao push.')}</li>
+          <li>{t('Com o app aberto e à vista, o aviso fica só no sino, sem notificação. O teste daqui aparece sempre.')}</li>
+          <li>{t('No iPhone e no iPad, o push só funciona com o PickleRush adicionado à Tela de Início (iOS 16.4 ou mais novo).')}</li>
+          <li>{t('Aparelho que deixou de receber (push desativado, navegador limpo) sai da lista sozinho no envio seguinte.')}</li>
+        </ul>
+      </Block>
+    </>
+  );
+}
+
+function PushDeviceTest({ user, configurado }) {
+  const acao = useMessagingAdminAction();
+  const uid = user?.uid || null;
+  const lerAparelho = () => ({ permissao: getPermissionState(), ativo: isPushActiveHere(uid) });
+  const [aparelho, setAparelho] = useState(lerAparelho);
+  const [ativando, setAtivando] = useState(false);
+  const [falha, setFalha] = useState(null);
+  const [resultado, setResultado] = useState(null);
+
+  const ativar = async () => {
+    setAtivando(true);
+    setFalha(null);
+    const r = await enablePush(user);
+    setAtivando(false);
+    setAparelho(lerAparelho());
+    if (r.ok) toast.success(t('Push ativado neste aparelho.'));
+    else setFalha(r);
+  };
+  const testar = async () => {
+    setResultado(null);
+    try {
+      setResultado(await acao.mutateAsync({ action: 'push_test', lang: idiomaAtivo() }));
+    } catch (err) {
+      setResultado({ ok: false, devices: null, errors: [err?.message || t('sem detalhe')] });
+    }
+  };
+
+  if (!configurado) {
+    return <p className="text-sm text-gray-600">{t('Salve a chave acima para poder testar.')}</p>;
+  }
+  const meta = falha ? (PUSH_FAILURE_META[falha.reason] || PUSH_FAILURE_META.error) : null;
+  return (
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <V2Button type="button" size="sm" disabled={!form.dirty || invalido || form.saving} onClick={() => form.salvar()}>{form.saving ? t('Salvando…') : t('Salvar a chave')}</V2Button>
-        {gravado ? <V2Badge tone="green">{t('Chave salva')}</V2Badge> : <V2Badge tone="amber">{t('Sem chave')}</V2Badge>}
+        {aparelho.permissao === 'unsupported' && <p className="text-sm text-gray-600">{t(PUSH_FAILURE_META.unsupported.label)}</p>}
+        {aparelho.permissao === 'denied' && <p className="text-sm text-gray-600">{t(PUSH_FAILURE_META.denied.label)}</p>}
+        {aparelho.ativo && <V2Badge tone="green"><CheckCircle2 className="h-3 w-3" aria-hidden /> {t('Ativo neste aparelho')}</V2Badge>}
+        {!aparelho.ativo && !['unsupported', 'denied'].includes(aparelho.permissao) && (
+          <V2Button type="button" size="sm" variant="secondary" disabled={ativando} onClick={ativar}>
+            <BellRing className="h-4 w-4" aria-hidden /> {ativando ? t('Ativando…') : t('Ativar o push neste aparelho')}
+          </V2Button>
+        )}
+        <V2Button type="button" size="sm" disabled={acao.isPending} onClick={testar}>
+          <Send className="h-4 w-4" aria-hidden /> {acao.isPending ? t('Enviando…') : t('Mandar um push de teste para mim')}
+        </V2Button>
       </div>
-    </Block>
+      {meta && (
+        <div className="space-y-1 rounded-2xl bg-red-50 p-3 text-sm text-red-600">
+          <p>{t(meta.admin || meta.label)}</p>
+          {falha.detail && <p className="text-xs">{t('Detalhe do navegador: {erro}', { erro: falha.detail })}</p>}
+        </div>
+      )}
+      {resultado && <PushTestResult r={resultado} />}
+    </div>
+  );
+}
+
+function PushTestResult({ r }) {
+  if (r.devices === 0) {
+    return (
+      <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">
+        {t('Você ainda não tem o push ativo em nenhum aparelho. Ative neste aparelho (botão acima) e mande o teste de novo.')}
+      </p>
+    );
+  }
+  const erros = (r.errors || []).map((e) => (PUSH_TEST_ERROR_META[e] ? t(PUSH_TEST_ERROR_META[e]) : e));
+  return (
+    <div className={cn('space-y-1 rounded-2xl p-3 text-sm', r.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600')}>
+      {r.ok ? (
+        <p>{t('Enviado para {sent} de {devices} aparelho(s). A notificação aparece em segundos; se não aparecer, confira se o sistema não está em "Não perturbe" e se as notificações do navegador estão liberadas.', { sent: r.sent, devices: r.devices })}</p>
+      ) : (
+        <p>{t('O push não saiu.')}</p>
+      )}
+      {erros.map((e) => <p key={e} className="text-xs">• {e}</p>)}
+    </div>
   );
 }

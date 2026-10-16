@@ -490,8 +490,6 @@ describe('⭐ a varredura na plataforma inteira', () => {
       'o estado do domínio (retornos recebidos) chega por props do AdminMessagingPanel, que só monta a aba com a consulta carregada e mostra V2ErrorState quando ela falha; o único hook aqui é o de ação'],
     ['src/v2/components/admin/messaging/MessagingPhoneTabs.jsx',
       '"ainda não há token" vem do resumo das chaves recebido por props do AdminMessagingPanel, que trata a falha com V2ErrorState antes de montar a aba; os hooks aqui são de ação'],
-    ['src/v2/components/settings/V2PushCard.jsx',
-      'a frase é um toast DEPOIS de a pessoa pedir para ativar o push, não um estado vazio de tela'],
     ['src/v2/components/tournament/TeamConfrontationDialogs.jsx',
       'recebe a escalação por props — quem consulta (e trata a falha) é a tela de cima'],
     ['src/v2/components/tournament/V2Gallery.jsx',

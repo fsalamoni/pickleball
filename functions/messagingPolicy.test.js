@@ -189,3 +189,21 @@ describe('telefone, máscaras e texto', () => {
     expect(P.inQuietWindow(12 * 60, '22:00', '07:00')).toBe(false);
   });
 });
+
+describe('chave pública do Web Push (VAPID)', () => {
+  const PUBLICA = `B${'A1_-'.repeat(21)}xy`;
+  it('⭐ aceita a pública (87 letras, começa por B), tirando espaços e "="', () => {
+    expect(PUBLICA).toHaveLength(87);
+    expect(P.vapidKeyProblem(PUBLICA)).toBe('');
+    expect(P.normalizeVapidKey(`  ${PUBLICA}=\n`)).toBe(PUBLICA);
+    expect(P.normalizeSettings({ push: { vapid_public_key: ` ${PUBLICA}=` } }).push.vapid_public_key).toBe(PUBLICA);
+  });
+  it('recusa a privada com motivo próprio e o resto como formato', () => {
+    expect(P.vapidKeyProblem('k'.repeat(43))).toBe('private_key');
+    expect(P.vapidKeyProblem(`A${PUBLICA.slice(1)}`)).toBe('format');
+    expect(P.vapidKeyProblem(`${PUBLICA}+`)).toBe('format');
+    expect(P.vapidKeyProblem('')).toBe('empty');
+    expect(P.vapidKeyProblem(null)).toBe('empty');
+    expect(P.normalizeSettings({ push: { vapid_public_key: 'k'.repeat(43) } }).push.vapid_public_key).toBe('');
+  });
+});
