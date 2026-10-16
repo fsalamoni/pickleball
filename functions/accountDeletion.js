@@ -119,6 +119,7 @@ const DELETE_BY_ID = Object.freeze([
   { col: 'user_kudos_index', label: 'Índice de kudos' },
   { col: 'coaches', label: 'Perfil de professor' },
   { col: 'coach_availability', label: 'Disponibilidade de professor' },
+  { col: 'coach_busy_slots', label: 'Horários ocupados de professor (público, sem aluno)' },
   { col: 'training_meta', label: 'Rotina e preferências do treino' },
   // Modelos de banner/cupom e custo interno dos vales do professor (id = uid).
   { col: 'promo_settings', label: 'Configurações de divulgação (professor)' },
@@ -136,6 +137,8 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'arena_favorites', field: 'user_id', label: 'Arenas favoritas' },
   { col: 'coach_favorites', field: 'user_id', label: 'Professores favoritos' },
   { col: 'coach_favorites', field: 'coach_id', label: 'Favoritos em que é o professor' },
+  { col: 'coach_waitlist', field: 'user_id', label: 'Listas de espera de professor' },
+  { col: 'coach_waitlist', field: 'coach_id', label: 'Lista de espera (como professor)' },
   { col: 'follows', field: 'follower_uid', label: 'Quem segue' },
   { col: 'follows', field: 'target_uid', label: 'Quem o segue' },
   { col: 'player_goals', field: 'uid', label: 'Metas pessoais' },

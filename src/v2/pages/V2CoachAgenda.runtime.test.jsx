@@ -38,6 +38,7 @@ vi.mock('@/modules/coaches/components/CoachContentSection', () => ({ default: Na
 vi.mock('@/modules/coaches/components/CoachStoreSection', () => ({ default: Nada }));
 vi.mock('@/modules/coaches/components/CoachPartnersSection', () => ({ default: Nada }));
 vi.mock('@/modules/coaches/components/CoachCourtBookingsSection', () => ({ default: Nada }));
+vi.mock('@/modules/coaches/components/CoachWaitlistSection', () => ({ default: Nada }));
 vi.mock('@/modules/clubs/components/LinkedClubsSection', () => ({ default: Nada }));
 vi.mock('@/modules/training/hooks/useTrainingQuestions', () => ({ useCoachTrainingQuestions: () => estado.duvidas }));
 vi.mock('@/modules/coaches/hooks/useStudents', () => ({ useCoachStudents: () => estado.alunos }));

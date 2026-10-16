@@ -1904,4 +1904,6 @@ export default {
   "as suas compras": "your purchases",
   "os salvos": "saved items",
   "as buscas salvas": "saved searches",
+  "Ao marcar aula, só aparecem os horários livres do professor. Nenhum serve, ou ele ainda não publicou horários? Mande uma mensagem para combinar ou entre na lista de espera: avisamos quando ele abrir horários ou uma vaga for liberada.": "When booking a lesson, only the coach's free times show up. None works, or the coach hasn't published times yet? Send a message to arrange one or join the waitlist: we'll let you know when the coach opens times or a spot frees up.",
+  "Quem não acha horário livre pode entrar na sua LISTA DE ESPERA. Ela aparece em Hoje e na Agenda; ao abrir horários novos, a plataforma avisa quem está esperando.": "Students who can't find a free time can join your WAITLIST. It shows in Today and in Schedule; when you open new times, the platform notifies whoever is waiting.",
 };

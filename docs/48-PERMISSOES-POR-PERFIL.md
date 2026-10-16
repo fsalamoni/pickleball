@@ -232,6 +232,8 @@ quadra (reserva × bloqueio) não depende de flag.
 | Apagar perfil de professor | ✖ | ✖ | — | ✔ | rules |
 | Pedir aula (`coach_lessons`) | ✔ como aluno (`isLessonStudentRequest`: solicitada, sem preço, cupom pendente) e cancelar a própria | ✔ cria/edita/apaga | ✔ | ✔ | rules |
 | Ler aula | ◐ a própria | ✔ | ✔ | ✔ | rules |
+| Horários ocupados (`coach_busy_slots`) | ✔ ler (público, sem aluno) | ✔ ler; ✖ escreve (só o servidor) | ✔ ler | ✔ ler | rules + servidor |
+| Lista de espera (`coach_waitlist`) | ✔ entra (id `{coach}_{uid}`), edita só as preferências, sai | ✔ lê a própria e remove; ✖ cria | — | ✔ | rules (`isCoachWaitlistPrefs`); aviso só pelo servidor |
 | Vínculo (`coach_students`) | ✖ cria | ✔ cria/convida (id `{coach}_{aluno}`), encerra | ✔ só **aceita** o convite (`invited` → `active`) ou encerra | ✔ | rules |
 | Notas privadas do aluno (`coach_student_notes`) | ✖ | ✔ | ✖ | ✔ | rules |
 | Selo de nível (`coach_level_validations`) | ✔ ler (público) | ✔ grava sobre **outra** pessoa, id `{coach}_{aluno}` | — | ✔ | rules |

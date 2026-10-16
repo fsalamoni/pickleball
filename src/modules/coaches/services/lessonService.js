@@ -38,6 +38,7 @@ import { t, tx } from '@/core/i18n';
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
   lessons: 'coach_lessons',
+  busy: 'coach_busy_slots',
 };
 
 const str = (v) => String(v ?? '').trim();
@@ -104,13 +105,19 @@ export async function listStudentLessons(studentId) {
 
 /**
  * Slots ocupados (aulas confirmadas) de um professor — alimenta a geração de
- * horários livres da disponibilidade.
+ * horários livres da disponibilidade. Lê `coach_busy_slots/{coachId}`, que o
+ * SERVIDOR mantém (só data e hora, sem aluno, legível por todos).
+ *
+ * 🐞 Antes lia as aulas do professor (`coach_lessons` por `coach_id`), e a
+ * regra recusa essa consulta para quem não é o professor: para o aluno ela
+ * falhava, a tela engolia o erro e o horário já confirmado com outra pessoa
+ * aparecia livre. Documento ausente = nenhuma aula confirmada por vir.
  */
 export async function getBusySlots(coachId) {
-  const lessons = await listCoachLessons(coachId);
-  return lessons
-    .filter((l) => l.status === LESSON_STATUS.CONFIRMED)
-    .flatMap((l) => lessonSlots(l));
+  if (!coachId) return [];
+  const snap = await getDoc(doc(db, COACH_LESSON_COLLECTIONS.busy, coachId));
+  if (!snap.exists()) return [];
+  return Array.isArray(snap.data().slots) ? snap.data().slots : [];
 }
 
 /**

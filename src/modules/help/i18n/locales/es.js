@@ -1904,4 +1904,6 @@ export default {
   "as suas compras": "tus compras",
   "os salvos": "los guardados",
   "as buscas salvas": "las búsquedas guardadas",
+  "Ao marcar aula, só aparecem os horários livres do professor. Nenhum serve, ou ele ainda não publicou horários? Mande uma mensagem para combinar ou entre na lista de espera: avisamos quando ele abrir horários ou uma vaga for liberada.": "Al reservar una clase, solo aparecen los horarios libres del profesor. ¿Ninguno te sirve, o aún no publicó horarios? Envíale un mensaje para coordinar o entra en la lista de espera: te avisamos cuando abra horarios o se libere un lugar.",
+  "Quem não acha horário livre pode entrar na sua LISTA DE ESPERA. Ela aparece em Hoje e na Agenda; ao abrir horários novos, a plataforma avisa quem está esperando.": "Quien no encuentra un horario libre puede entrar en tu LISTA DE ESPERA. Aparece en Hoy y en Agenda; al abrir horarios nuevos, la plataforma avisa a quien está esperando.",
 };

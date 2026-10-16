@@ -149,6 +149,10 @@ export default function LessonCouponField({ coachId, hourlyRate = null, slot = n
         </div>
       )}
 
+      {/* Digitado e não conferido: o cupom não vai no pedido — dizer, não sumir com ele. */}
+      {codigo.trim() && !value && !estado.erro && !estado.carregando && (
+        <p className="mt-1 text-xs text-gray-500">{t('Toque em Aplicar para usar o cupom. Sem isso, ele não vai no pedido.')}</p>
+      )}
       {estado.erro && <p role="alert" className="mt-1 text-xs font-semibold text-red-700">{estado.erro}</p>}
       {value && (
         <p className="mt-1 text-xs font-semibold text-green-700">

@@ -1,17 +1,21 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
+import { CalendarOff } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 import { generateWeekSlots } from '../domain/availability.js';
-import { LESSON_FORMAT, LESSON_FORMAT_LABELS, isValidSlot } from '../domain/lesson.js';
+import { LESSON_FORMAT, LESSON_FORMAT_LABELS } from '../domain/lesson.js';
 import { useCoachAvailability, useCoachBusySlots, useRequestLesson } from '../hooks/useLessons.js';
+import { useLeaveCoachWaitlist, useMyCoachWaitlists } from '../hooks/useCoachWaitlist.js';
+import CoachWaitlistJoin from './CoachWaitlistJoin.jsx';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { useCoachResidencies } from '../hooks/useCoaches.js';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { t, tk } from '@/core/i18n';
@@ -35,9 +39,19 @@ function fmtDay(iso) {
 const LessonCouponField = lazy(() => import('@/v2/components/promo/LessonCouponField'));
 
 /**
- * Diálogo do aluno para solicitar uma aula a um professor. Mostra os horários
- * livres derivados da disponibilidade do professor (descontando aulas
- * confirmadas) e permite propor um horário manual como alternativa.
+ * Diálogo do aluno para solicitar uma aula a um professor. Mostra SÓ os
+ * horários livres derivados da disponibilidade do professor (descontando aulas
+ * confirmadas) — não dá para pedir um dia ou horário que o professor não abriu.
+ *
+ * Sem horário livre (o professor ainda não publicou, ou as próximas duas
+ * semanas estão tomadas), a tela diz isso e oferece as duas saídas: mandar
+ * mensagem ao professor para combinar outro horário e entrar na LISTA DE
+ * ESPERA (`CoachWaitlistJoin`), que avisa quando ele abrir horários. Com
+ * horários, a lista de espera fica a um toque ("Nenhum horário serve?").
+ *
+ * 🐞 Antes havia "Propor horário" com data e hora livres, e com o professor sem
+ * horários publicados o botão "Solicitar aula" ficava apagado com tudo
+ * preenchido: o diálogo lia o horário da lista que não estava na tela.
  *
  * `initialCouponCode`: o código de um cupom do professor, quando o aluno veio
  * de "Usar ao pedir a aula" (perfil do professor ou vitrine).
@@ -45,19 +59,21 @@ const LessonCouponField = lazy(() => import('@/v2/components/promo/LessonCouponF
 export default function RequestLessonDialog({ coach, open, onOpenChange, initialCouponCode = '' }) {
   const coachId = coach?.id;
   const { user } = useAuth();
-  const { data: availability } = useCoachAvailability(coachId);
-  const { data: busy = [] } = useCoachBusySlots(coachId);
+  const dispQ = useCoachAvailability(coachId);
+  const busyQ = useCoachBusySlots(coachId);
+  const availability = dispQ.data;
   const { data: residencies = [] } = useCoachResidencies(coachId);
   const { data: allArenas = [] } = useArenas();
   const request = useRequestLesson();
+  const minhasEsperas = useMyCoachWaitlists();
+  const sairDaEspera = useLeaveCoachWaitlist();
   const cuponsOn = true;
   const [cupom, setCupom] = useState(null);
 
-  const [mode, setMode] = useState('slots'); // 'slots' | 'custom'
   const [selected, setSelected] = useState(null); // { date, start, end }
-  const [custom, setCustom] = useState({ date: '', start: '08:00', end: '09:00' });
   const [format, setFormat] = useState(LESSON_FORMAT.PRIVATE);
   const [notes, setNotes] = useState('');
+  const [verEspera, setVerEspera] = useState(false);
   // Arenas parceiras: o aluno escolhe em qual arena quer a aula (item 3.1).
   // Se o professor não tem residência ativa, fica em branco (o professor confirma local).
   const [arenaId, setArenaId] = useState('');
@@ -72,17 +88,22 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
   }, [allArenas]);
 
   const freeDays = useMemo(() => {
-    if (!availability) return [];
-    return generateWeekSlots(availability, todayISO(), { days: 14, busy });
-  }, [availability, busy]);
+    if (!availability || !busyQ.isSuccess) return [];
+    return generateWeekSlots(availability, todayISO(), { days: 14, busy: busyQ.data || [] });
+  }, [availability, busyQ.isSuccess, busyQ.data]);
 
+  // Sem saber as aulas já marcadas, a lista ofereceria horário ocupado: a
+  // falha de qualquer das duas leituras é falha, nunca "sem horários".
+  const carregando = dispQ.isLoading || busyQ.isLoading;
+  const falhou = dispQ.isError || busyQ.isError;
   const hasAvailability = freeDays.length > 0;
-
-  const slot = mode === 'slots' ? selected : (isValidSlot(custom) ? custom : null);
+  const publicou = (availability?.windows || []).length > 0;
+  const podePedir = hasAvailability && !carregando && !falhou;
+  const slot = selected;
 
   async function handleSubmit() {
     if (!user?.uid) { toast.error(t('Entre na plataforma para solicitar uma aula.')); return; }
-    if (!slot) { toast.error(t('Escolha um horário para a aula.')); return; }
+    if (!slot) { toast.error(t('Escolha um dos horários livres.')); return; }
     try {
       await request.mutateAsync({
         coachId,
@@ -97,6 +118,10 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
         },
       });
       toast.success(t('Solicitação enviada! O professor vai responder em breve.'));
+      // Conseguiu horário: sai da lista de espera deste professor (se estava).
+      if ((minhasEsperas.data || []).some((e) => e.coach_id === coachId)) {
+        sairDaEspera.mutate({ coachId });
+      }
       onOpenChange(false);
       setSelected(null);
       setNotes('');
@@ -108,15 +133,15 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('Solicitar aula com {nome}', { nome: coach?.display_name })}</DialogTitle>
-          <DialogDescription>{t('Escolha um horário livre ou proponha outro. O professor confirma.')}</DialogDescription>
+          <DialogDescription>{t('Escolha um dos horários livres do professor. Ele confirma a aula.')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Arena (item 3.1): o aluno escolhe a arena parceira (se houver) */}
-          {activeResidencies.length > 0 && (
+          {podePedir && activeResidencies.length > 0 && (
             <div>
               <Label className="text-xs">{t('Onde quer a aula?')}</Label>
               <select
@@ -154,91 +179,84 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
             </div>
           </div>
 
-          {/* Seletor de modo */}
-          {hasAvailability && (
-            <div className="flex gap-2">
-              {[
-                { k: 'slots', label: t('Horários livres') },
-                { k: 'custom', label: t('Propor horário') },
-              ].map(({ k, label }) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => { setMode(k); setSelected(null); }}
-                  className={cn(
-                    'flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
-                    mode === k ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {(mode === 'slots' && hasAvailability) ? (
-            <div className="max-h-64 space-y-3 overflow-y-auto rounded-2xl border border-gray-100 bg-paper p-3">
-              {freeDays.map((day) => (
-                <div key={day.date}>
-                  <div className="text-xs font-bold uppercase tracking-wider text-gray-400">{fmtDay(day.date)}</div>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {day.slots.map((s) => {
-                      const isSel = selected && selected.date === s.date && selected.start === s.start;
-                      return (
-                        <button
-                          key={`${s.date}_${s.start}`}
-                          type="button"
-                          onClick={() => setSelected({ date: s.date, start: s.start, end: s.end })}
-                          className={cn(
-                            'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
-                            isSel ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300',
-                          )}
-                        >
-                          {s.start}–{s.end}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {!hasAvailability && (
-                <p className="text-xs text-gray-500">
-                  {t('Este professor ainda não publicou horários. Proponha um horário e ele confirma.')}
-                </p>
-              )}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-3 sm:col-span-1">
-                  <Label className="text-xs">{t('Data')}</Label>
-                  <Input type="date" min={todayISO()} value={custom.date} onChange={(e) => setCustom((s) => ({ ...s, date: e.target.value }))} />
-                </div>
-                <div>
-                  <Label className="text-xs">{t('Início')}</Label>
-                  <Input type="time" value={custom.start} onChange={(e) => setCustom((s) => ({ ...s, start: e.target.value }))} />
-                </div>
-                <div>
-                  <Label className="text-xs">{t('Fim')}</Label>
-                  <Input type="time" value={custom.end} onChange={(e) => setCustom((s) => ({ ...s, end: e.target.value }))} />
+          {carregando ? (
+            <div aria-busy="true"><V2Skeleton lines={3} /></div>
+          ) : falhou ? (
+            <V2ErrorState
+              inline
+              title={t('Não foi possível carregar os horários do professor')}
+              description={t('Os horários dele continuam lá — só não conseguimos buscá-los agora.')}
+              onRetry={() => { dispQ.refetch(); busyQ.refetch(); }}
+            />
+          ) : hasAvailability ? (
+            <>
+              <div>
+                <Label className="text-xs">{t('Horários livres')}</Label>
+                <div className="mt-1 max-h-64 space-y-3 overflow-y-auto rounded-2xl border border-gray-100 bg-paper p-3">
+                  {freeDays.map((day) => (
+                    <div key={day.date}>
+                      <div className="text-xs font-bold uppercase tracking-wider text-gray-500">{fmtDay(day.date)}</div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {day.slots.map((s) => {
+                          const isSel = selected && selected.date === s.date && selected.start === s.start;
+                          return (
+                            <button
+                              key={`${s.date}_${s.start}`}
+                              type="button"
+                              aria-pressed={Boolean(isSel)}
+                              onClick={() => setSelected({ date: s.date, start: s.start, end: s.end })}
+                              className={cn(
+                                'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+                                isSel ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300',
+                              )}
+                            >
+                              {s.start}–{s.end}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+              <div>
+                <Label htmlFor="aula-mensagem" className="text-xs">{t('Mensagem ao professor (opcional)')}</Label>
+                <textarea
+                  id="aula-mensagem"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder={t('Seu nível, objetivo da aula, preferências…')}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-ink" role="status">
+                <CalendarOff className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
+                <div>
+                  <p className="font-semibold">
+                    {publicou
+                      ? t('Nenhum horário livre nas próximas duas semanas.')
+                      : t('Este professor ainda não tem horários disponíveis.')}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600">
+                    {t('Mande uma mensagem para combinar outro horário, ou entre na lista de espera: avisamos você assim que abrir horário ou vaga.')}
+                  </p>
+                </div>
+              </div>
+              <V2ChatLauncherButton
+                athlete={{ id: coachId, platform_name: coach?.display_name, photo_url: coach?.photo_url }}
+                variant="outline"
+                label={t('Mandar mensagem ao professor')}
+              />
+              <CoachWaitlistJoin coach={coach} format={format} />
             </div>
           )}
 
-          <div>
-            <Label className="text-xs">{t('Mensagem ao professor (opcional)')}</Label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              maxLength={1000}
-              placeholder={t('Seu nível, objetivo da aula, preferências…')}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          {cuponsOn && (
+          {cuponsOn && podePedir && (
             <Suspense fallback={null}>
               <LessonCouponField coachId={coachId} hourlyRate={coach?.hourly_rate ?? null} slot={slot}
                 value={cupom} onChange={setCupom} initialCode={open ? initialCouponCode : ''} />
@@ -257,14 +275,40 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
               )}
             </div>
           )}
+
+          {podePedir && (!verEspera ? (
+            <button type="button" onClick={() => setVerEspera(true)} className="text-left text-xs font-semibold text-ink underline-offset-2 hover:underline">
+              {t('Nenhum horário serve? Entre na lista de espera ou fale com o professor.')}
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <CoachWaitlistJoin coach={coach} format={format} />
+              <V2ChatLauncherButton
+                athlete={{ id: coachId, platform_name: coach?.display_name, photo_url: coach?.photo_url }}
+                variant="outline"
+                label={t('Mandar mensagem ao professor')}
+              />
+            </div>
+          ))}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Cancelar')}</Button>
-          <Button onClick={handleSubmit} disabled={request.isPending || !slot}>
-            {request.isPending ? t('Enviando…') : t('Solicitar aula')}
-          </Button>
-        </DialogFooter>
+        {podePedir ? (
+          <>
+            {!slot && (
+              <p role="status" className="text-right text-xs text-gray-500">{t('Escolha um dos horários livres.')}</p>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Cancelar')}</Button>
+              <Button onClick={handleSubmit} disabled={request.isPending || !slot}>
+                {request.isPending ? t('Enviando…') : t('Solicitar aula')}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>{t('Fechar')}</Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

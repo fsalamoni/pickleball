@@ -296,6 +296,44 @@ exports.promoteOpenSlotWaitlistOnEntry = onDocumentWritten(
 );
 
 // =====================================================================
+// LISTA DE ESPERA DO PROFESSOR (2026-10-16) — ver functions/coachWaitlist.js
+// =====================================================================
+// O aluno sem horário livre entra em `coach_waitlist`; quando o professor
+// abre horário (ou uma aula confirmada é desfeita), o servidor avisa a lista.
+// Os mesmos gatilhos mantêm `coach_busy_slots/{coachId}` — os horários já
+// confirmados, públicos e sem aluno, que o pedido de aula desconta.
+// Consultas de igualdade (`coach_id`), sem índice novo.
+
+const coachWaitlist = require('./coachWaitlist');
+
+/** O professor salvou a disponibilidade: recalcula os ocupados e, se abriu horário, avisa a lista. */
+exports.onCoachAvailabilityWritten = onDocumentWritten(
+  { document: 'coach_availability/{coachId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    try {
+      await coachWaitlist.aoMudarDisponibilidade(ctxFila(), event.params.coachId, antes(event), depois(event));
+    } catch (err) {
+      logger.error('onCoachAvailabilityWritten: erro.', err);
+    }
+  },
+);
+
+/**
+ * Uma aula mudou: recalcula os horários ocupados do professor (públicos, sem
+ * aluno) e, se uma confirmada foi desfeita, avisa a lista de espera.
+ */
+exports.onCoachLessonWritten = onDocumentWritten(
+  { document: 'coach_lessons/{lessonId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    try {
+      await coachWaitlist.aoMudarAula(ctxFila(), antes(event), depois(event));
+    } catch (err) {
+      logger.error('onCoachLessonWritten: erro.', err);
+    }
+  },
+);
+
+// =====================================================================
 // PUSH (PWA/FCM) — espelha as notificações in-app para os tokens do usuário
 // =====================================================================
 // ADITIVO E INERTE por padrão: só age quando o usuário optou por push e há
