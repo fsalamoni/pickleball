@@ -184,6 +184,15 @@ jobs:
       # occurred" (a lista de índices nunca era montada). Por isso o alvo é o
       # PAR `firestore:<parte>,firestore:<banco>`. Guarda em
       # src/core/guards/deployFirebaseWorkflow.test.js.
+      # ⚠️ O Firebase recusa fonte de regras com 262144 bytes ou mais ("Total
+      # size of sources must be smaller than 262144"). O firestore.rules é
+      # escrito COM os comentários que explicam cada regra e passou do teto em
+      # 2026-10-18 (os deploys dos PRs #282 e #283 pararam aqui). O que vai ao
+      # ar é a cópia sem comentário, sem linha vazia e sem recuo — as mesmas
+      # regras. Guarda em src/core/guards/firestoreRulesTamanho.test.js.
+      - name: Compactar regras do Firestore para o deploy
+        run: node scripts/firestore-rules-compactar.mjs --escrever
+
       - name: Deploy Firestore rules
         run: |
           set +e
