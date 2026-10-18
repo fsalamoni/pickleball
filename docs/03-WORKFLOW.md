@@ -250,7 +250,10 @@ push em main
        4. Ensure Firestore database "pickleball" exists (cria se faltar)
        5. Ensure Hosting sites exist (picklerush + pickletour)
        6. Build (vite build → dist/, VITE_PWA_ENABLED=true)
-       7. Deploy Firestore rules   → --only firestore:rules,firestore:pickleball
+       7. Compactar regras (scripts/firestore-rules-compactar.mjs --escrever:
+          sem comentário, linha vazia nem recuo — o Firebase recusa fonte
+          ≥ 262144 bytes) + Deploy Firestore rules
+          → --only firestore:rules,firestore:pickleball
           (falha se a CLI não disser "released rules")
        8. Deploy Firestore indexes → --only firestore:indexes,firestore:pickleball
           (sem --force: índice remoto não versionado é preservado e avisado)
@@ -303,6 +306,7 @@ Ou no GitHub: **Actions** tab → último workflow → verificar verde.
 | `Tests failed` | Algum teste quebrou | Rodar `npm test`, ver qual |
 | `An unexpected error has occurred` no passo do **Hosting** | Falha passageira do Firebase ao publicar o site | O workflow tenta de novo uma vez, 30 s depois (passo 11). Falhou duas vezes: reexecute o job; nesta sessão sem permissão de reexecutar, um PR mergeado publica de novo. Não confundir com a linha dos índices, abaixo |
 | `Pass the --force flag` ao publicar índices | Existe índice remoto que não está em `firestore.indexes.json` | **Não use `--force` às cegas**: ele apagaria o índice remoto. O workflow preserva o índice e continua; importe o índice para o JSON antes de voltar a tratar índices como bloqueantes. A divergência de 2026-09-28 (`tournament_matches`: `modality_id`, `stage_index`, `round` — criado pelo link de erro, é o que serve a lista de jogos da fase) foi importada em 2026-09-30. |
+| `Total size of sources must be smaller than 262144` no passo de regras | O `firestore.rules` (com os comentários) passou do teto de 256 KiB que o Firebase aceita como fonte de regras | O deploy publica a cópia compactada por `scripts/firestore-rules-compactar.mjs --escrever` (sem comentário, linha vazia nem recuo; o CI testa as regras no emulador já compactadas). 🐞 Foi o que segurou os deploys dos PRs #282 e #283 em 2026-10-18: produção ficou sem regras, site e funções dos dois. Se a versão compactada chegar a 90% do teto, o guarda `src/core/guards/firestoreRulesTamanho.test.js` reprova antes do PR — aí é dividir ou enxugar as regras de verdade. `node scripts/firestore-rules-compactar.mjs` (sem `--escrever`) só mede |
 | `An unexpected error has occurred` logo depois de "deploying indexes…", ou o passo de regras verde **sem** "released rules" | O `--only` não nomeia o banco. O `firebase.json` declara o banco nomeado em LISTA, e a firebase-tools 13 só o enxerga quando o alvo o nomeia: `firestore:rules` sozinho resolve **zero** bancos (verde sem publicar nada) e `firestore:indexes` sozinho quebra | Use sempre o PAR `firestore:<parte>,firestore:pickleball`. 🐞 Foi o que segurou os deploys de 29/09 (PRs #175–#178): o site parou no #174 e as regras de segurança novas nunca foram publicadas, com o passo de regras verde. Guarda em `src/core/guards/deployFirebaseWorkflow.test.js` |
 
 ### 4.4 Deploy manual (emergência)
@@ -368,7 +372,7 @@ que já não existe: a tela mostra "Uma versão nova foi publicada — Recarrega
 
 | Workflow | Quando roda | O que faz |
 |---|---|---|
-| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java). Job `e2e`: `npm run e2e` — testes de navegador no build do PR com Auth e Firestore nos emuladores (relatório do Playwright como artefato quando falha). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
+| `ci.yml` | push em `main`/`copilot/**` e PR para `main` | Job `build-and-test`: `security:secrets`, `docs:inventario:check`, lint, `npm test`, build (variáveis fictícias), `build:budget`. Job `firestore-rules`: `test:rules` no emulador (Java), sobre o `firestore.rules` **compactado** como vai ao ar (`scripts/firestore-rules-compactar.mjs --escrever`). Job `e2e`: `npm run e2e` — testes de navegador no build do PR com Auth e Firestore nos emuladores (relatório do Playwright como artefato quando falha). Job `dependencias`: `npm audit`, **informativo**. Job `docs-obrigatorios` (só PR): `scripts/check-docs-updated.mjs`. Cancela run anterior do mesmo ref |
 | `deploy-firebase.yml` | push em `main` + manual | Deploy completo (§4.1) |
 | `functions-watchdog.yml` | a cada 30 min (`7,37 * * * *`) + manual | Confere se todas as funções exportadas existem em `southamerica-east1` com o rótulo `picklerush`; recria o que sumiu pelo mesmo script e **falha o job de propósito** para avisar por e-mail (§9.1) |
 | `firestore-manual-export.yml` | manual (`confirm = EXPORTAR`) | Exporta o Firestore para o GCS, conferindo banco e privacidade do bucket; aceita prefixo e instante de snapshot |
@@ -782,6 +786,7 @@ npm run e2e:install  # primeira vez
 firebase login
 firebase deploy
 firebase deploy --only hosting
+node scripts/firestore-rules-compactar.mjs --escrever          # o Firebase recusa fonte ≥ 256 KiB; depois `git checkout firestore.rules`
 firebase deploy --only firestore:rules,firestore:pickleball   # o banco nomeado PRECISA estar no alvo
 firebase emulators:start
 

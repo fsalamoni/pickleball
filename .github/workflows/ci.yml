@@ -87,6 +87,9 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
+      # As regras são testadas como vão ao ar: compactadas (ver deploy-firebase.yml).
+      - name: Compactar regras do Firestore como no deploy
+        run: node scripts/firestore-rules-compactar.mjs --escrever
       - name: Test (regras do Firestore no emulador)
         run: npm run test:rules
         timeout-minutes: 10

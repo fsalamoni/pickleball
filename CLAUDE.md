@@ -670,6 +670,16 @@ Ao commitar: os números vêm de `npm run docs:inventario`; aqui entra apenas li
   🐞 Foi o que segurou os deploys dos PRs #175–#178 (site parado no #174 e
   regras de segurança novas nunca publicadas). Guarda em
   `src/core/guards/deployFirebaseWorkflow.test.js`; ver `docs/03-WORKFLOW.md` §4.3
+- **O Firebase recusa fonte de regras com 256 KiB ou mais** (`Total size of
+  sources must be smaller than 262144`). O `firestore.rules` é escrito com os
+  comentários que explicam cada regra e passou do teto em 2026-10-18 — os
+  deploys dos PRs #282 e #283 pararam no passo de regras, e produção ficou sem
+  regras, site e funções dos dois. O deploy publica a cópia compactada
+  (`scripts/firestore-rules-compactar.mjs --escrever`: sem comentário, linha
+  vazia nem recuo; o CI testa as regras no emulador já compactadas). Continue
+  comentando as regras à vontade; o guarda
+  `src/core/guards/firestoreRulesTamanho.test.js` reprova quando a cópia
+  compactada chega a 90% do teto. Ver `docs/03-WORKFLOW.md` §4.3
 - **O runtime das Cloud Functions tem prazo.** `engines.node` em
   `functions/package.json` (e no lockfile) decide o `nodejs<N>` do deploy. O
   Node.js 20 é DESLIGADO em 2026-10-31 — depois disso nenhum deploy passa, nem
