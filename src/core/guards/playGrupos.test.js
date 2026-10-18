@@ -145,9 +145,9 @@ describe('⭐ banco: só campos opcionais e UMA cláusula estreita de regra', ()
     expect(regras.match(/play_groups/g).length).toBe(clausula.match(/play_groups/g).length);
     expect(regras).toContain("hasOnly(['play_groups', 'play_groups_policy', 'updated_at'])");
     // …e ela é estreita: só nomeado, só Play, dono intocado, grupos conferidos.
-    expect(clausula).toContain("resource.data.format == 'play'");
-    expect(clausula).toContain('request.auth.uid in resource.data.admin_uids');
-    expect(clausula).toContain('request.resource.data.created_by == resource.data.created_by');
+    expect(clausula).toContain("od().format == 'play'");
+    expect(clausula).toContain('me() in od().admin_uids');
+    expect(clausula).toContain('nd().created_by == od().created_by');
     expect(clausula).toContain('size() <= 10');
     expect(clausula).toContain("['queue', 'rotate', 'priority']");
     // Nada de abrir para quem só participa: a cláusula não consulta a gestão aberta.

@@ -411,7 +411,7 @@ opcionais, novas regras (aditivas). Migração sempre via script idempotente
 ### 5.2 Adicionar nova coleção
 
 1. **Schema em `docs/05-DATA-MODEL.md`**
-2. **Regra em `firestore.rules`** (aditiva, após o `match /<col>/` existente)
+2. **Regra em `firestore.rules`** (aditiva, após o `match /<col>/` existente). ⚠️ Escreva com os atalhos `nd()` (= `request.resource.data`), `od()` (= `resource.data`), `me()` (= `request.auth.uid`), `chg()` (o `affectedKeys()` do update), `isOwner(x)`, `arenaOd()`/`arenaNd()`, `clubOd()` — o ruleset compilado tem teto de 250 KB e o guarda `firestoreRulesTamanho.test.js` reprova a expressão por extenso (`docs/03-WORKFLOW.md` §4.3). Os exemplos abaixo são anteriores a isso
 3. **Service em `src/modules/X/services/collectionService.js`** com CRUD
 4. **Hook em `src/modules/X/hooks/useCollection.js`** com React Query
 5. **UI** consome o hook
